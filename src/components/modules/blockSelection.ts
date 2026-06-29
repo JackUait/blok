@@ -8,6 +8,7 @@ import type { SanitizerConfig } from '../../../types/configs';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { Dom as $ } from '../dom';
+import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
 import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
@@ -161,6 +162,15 @@ export class BlockSelection extends Module {
   private readyToBlockSelection = false;
 
   /**
+   * Flag used to define the container-scoped intermediate stage.
+   * When the working Block is nested inside a container (column/toggle/callout),
+   * the first escalation selects the container's siblings; the next selects all
+   * Blocks. This flag records that the container stage has already happened.
+   * @type {boolean}
+   */
+  private containerBlocksSelected = false;
+
+  /**
    * SelectionUtils instance
    * @type {SelectionUtils}
    */
@@ -258,6 +268,7 @@ export class BlockSelection extends Module {
     this.needToSelectAll = false;
     this.nativeInputSelected = false;
     this.readyToBlockSelection = false;
+    this.containerBlocksSelected = false;
 
     /**
      * Disable navigation mode when selection is cleared
@@ -321,7 +332,6 @@ export class BlockSelection extends Module {
     }
 
     const fakeClipboard = $.make('div');
-    const textPlainChunks: string[] = [];
 
     /**
      * Build custom Blok MIME_TYPE data synchronously using preserved data.
@@ -335,44 +345,8 @@ export class BlockSelection extends Module {
      * (e.g. when a collapsed toggle is copied — its hidden children must travel with it
      * so paste can restore the full toggle with its children).
      */
-    const serializeBlock = (block: Block): { id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[] } => ({
-      id: block.id,
-      tool: block.name,
-      data: block.preservedData,
-      tunes: block.preservedTunes,
-      parentId: block.parentId,
-      contentIds: block.contentIds,
-    });
-
-    const collectBlocksWithChildren = (blocks: Block[]): Block[] => {
-      const collected: Block[] = [];
-      const seen = new Set<string>();
-
-      const collect = (block: Block): void => {
-        if (seen.has(block.id)) {
-          return;
-        }
-        seen.add(block.id);
-        collected.push(block);
-
-        for (const childId of block.contentIds) {
-          const child = this.Blok.BlockManager.getBlockById(childId);
-
-          if (child !== undefined && !seen.has(child.id)) {
-            collect(child);
-          }
-        }
-      };
-
-      for (const block of blocks) {
-        collect(block);
-      }
-
-      return collected;
-    };
-
-    const allBlocksToSerialize = collectBlocksWithChildren(this.selectedBlocks);
-    const savedData = allBlocksToSerialize.map(serializeBlock);
+    const savedData = this.serializeBlocksForClipboard(this.selectedBlocks);
+    const textPlainChunks: string[] = [];
 
     this.selectedBlocks.forEach((block) => {
       const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
@@ -399,6 +373,13 @@ export class BlockSelection extends Module {
       }
     });
 
+    /**
+     * The text/plain flavor carries the rendered text with Markdown syntax
+     * stripped — matching Notion's default Cmd+C, which puts plain rendered text
+     * (no `#`/`**`/`- `) into text/plain. Markdown is produced only by the
+     * explicit "Copy as Markdown" command ({@link copySelectedBlocksAsMarkdown},
+     * bound to Cmd/Ctrl+Shift+C), mirroring Notion.
+     */
     const textPlain = textPlainChunks.join('\n\n');
     const textHTML = fakeClipboard.innerHTML;
 
@@ -422,6 +403,73 @@ export class BlockSelection extends Module {
         console.warn('Failed to set custom clipboard data:', error.message);
       }
     }
+  }
+
+  /**
+   * Copy the selected Blocks (or, if none are selected, the current Block) to the
+   * clipboard as Markdown. Mirrors Notion's "Copy as Markdown" (Cmd/Ctrl+Shift+C),
+   * which is the only Notion copy path that emits Markdown — the default Cmd+C
+   * copies stripped plain text (see {@link copySelectedBlocks}).
+   * @returns {Promise<void>}
+   */
+  public async copySelectedBlocksAsMarkdown(): Promise<void> {
+    const blocks = this.anyBlockSelected ? this.selectedBlocks : [this.Blok.BlockManager.currentBlock].filter((block): block is Block => block != null);
+
+    if (blocks.length === 0) {
+      return;
+    }
+
+    const savedData = this.serializeBlocksForClipboard(blocks);
+    const markdown = blocksToMarkdown(savedData);
+
+    const { clipboard } = navigator;
+
+    if (clipboard !== undefined && typeof clipboard.writeText === 'function') {
+      await clipboard.writeText(markdown);
+    }
+  }
+
+  /**
+   * Serialize Blocks (and any nested children not explicitly in the list) into the
+   * plain shape used for clipboard payloads. Children of selected blocks are
+   * included even when not explicitly selected (e.g. a collapsed toggle's hidden
+   * children must travel with it so paste can restore the full subtree).
+   * @param blocks - the blocks to serialize
+   * @returns serialized block data in document order
+   */
+  private serializeBlocksForClipboard(blocks: Block[]): Array<{ id: string; tool: string; data: Record<string, unknown>; tunes: Record<string, unknown>; parentId: string | null; contentIds: string[]; indent: number }> {
+    const collected: Block[] = [];
+    const seen = new Set<string>();
+
+    const collect = (block: Block): void => {
+      if (seen.has(block.id)) {
+        return;
+      }
+      seen.add(block.id);
+      collected.push(block);
+
+      for (const childId of block.contentIds) {
+        const child = this.Blok.BlockManager.getBlockById(childId);
+
+        if (child !== undefined && !seen.has(child.id)) {
+          collect(child);
+        }
+      }
+    };
+
+    for (const block of blocks) {
+      collect(block);
+    }
+
+    return collected.map((block) => ({
+      id: block.id,
+      tool: block.name,
+      data: block.preservedData,
+      tunes: block.preservedTunes,
+      parentId: block.parentId,
+      contentIds: block.contentIds,
+      indent: this.Blok.BlockManager.getBlockDepth(block),
+    }));
   }
 
   /**
@@ -456,6 +504,15 @@ export class BlockSelection extends Module {
     blockToSelect.selected = true;
 
     this.clearCache();
+
+    /**
+     * Prime the Cmd+A escalation state so a block selected via any path
+     * (caret, rectangle selection, public API, or the Cmd+A handler itself)
+     * escalates on the next Cmd+A — to the container's siblings when nested,
+     * otherwise to all Blocks — instead of dropping back to the text stage.
+     */
+    this.readyToBlockSelection = true;
+    this.needToSelectAll = true;
 
     /** close InlineToolbar when we selected any Block */
     this.Blok.InlineToolbar.close();
@@ -657,20 +714,41 @@ export class BlockSelection extends Module {
       return;
     }
 
-    const inputs = workingBlock.inputs;
-
     /**
-     * If Block has more than one editable element allow native selection
-     * Second cmd+a will select whole Block
+     * Once every Block is selected, further Cmd+A is a terminal no-op — Notion
+     * stays at "all selected" until the selection is cleared (typing, click,
+     * arrows, Escape) rather than looping back to text selection.
      */
-    if (inputs.length > 1 && !this.readyToBlockSelection) {
-      this.readyToBlockSelection = true;
+    if (this.allBlocksSelected) {
+      event.preventDefault();
 
       return;
     }
 
-    if (inputs.length === 1 && !this.needToSelectAll) {
-      this.needToSelectAll = true;
+    /**
+     * First Cmd+A: allow the native selection of the Block's content (text).
+     * The next press escalates to block-level selection. This mirrors Notion's
+     * three-stage Cmd+A — text → this block → all blocks — for both single-input
+     * and multi-input tools (single-input tools previously skipped the per-block
+     * stage and jumped straight to all-blocks).
+     */
+    if (!this.readyToBlockSelection) {
+      /**
+       * An empty block has no text to select natively, and a block whose text is
+       * already fully selected has nothing left to escalate at the text stage —
+       * both jump straight to block-level selection so the press count matches
+       * Notion (two presses to all-blocks instead of three).
+       */
+      if (workingBlock.isEmpty || this.isBlockFullySelected(workingBlock)) {
+        event.preventDefault();
+        this.selectBlock(workingBlock);
+        this.needToSelectAll = true;
+        this.readyToBlockSelection = true;
+
+        return;
+      }
+
+      this.readyToBlockSelection = true;
 
       return;
     }
@@ -681,6 +759,19 @@ export class BlockSelection extends Module {
        */
       event.preventDefault();
 
+      /**
+       * Container-scoped intermediate stage (Notion parity): when the working
+       * Block is nested inside a container, the first escalation selects the
+       * container's sibling Blocks; only the next press selects every Block in
+       * the document.
+       */
+      if (workingBlock.parentId !== null && !this.containerBlocksSelected) {
+        this.selectContainerBlocks(workingBlock);
+        this.containerBlocksSelected = true;
+
+        return;
+      }
+
       this.selectAllBlocks();
 
       /**
@@ -688,6 +779,7 @@ export class BlockSelection extends Module {
        */
       this.needToSelectAll = false;
       this.readyToBlockSelection = false;
+      this.containerBlocksSelected = false;
 
       return;
     }
@@ -716,6 +808,74 @@ export class BlockSelection extends Module {
    * Select All Blocks
    * Each Block has selected setter that makes Block copyable
    */
+  /**
+   * Whether the current native selection already spans the whole of the given
+   * block's text. Used so the first Cmd+A promotes straight to block selection
+   * when there is nothing left to select at the text stage (Notion parity).
+   * @param block - the block whose content to compare against the selection
+   */
+  private isBlockFullySelected(block: Block): boolean {
+    const selection = SelectionUtils.get();
+
+    if (selection === null || selection.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const normalize = (value: string): string => value.replace(/\s+/g, ' ').trim();
+    const selectedText = normalize(selection.toString());
+    const blockText = normalize(block.pluginsContent.textContent ?? '');
+
+    return blockText.length > 0 && selectedText === blockText;
+  }
+
+  /**
+   * Select the sibling Blocks that share the working Block's container.
+   * Used by the Cmd+A escalation as the intermediate stage between selecting
+   * the single Block and selecting every Block in the document.
+   * @param block - a Block nested inside the container whose siblings to select
+   */
+  private selectContainerBlocks(block: Block): void {
+    const { BlockManager } = this.Blok;
+    const { parentId } = block;
+
+    if (parentId === null) {
+      return;
+    }
+
+    const parent = BlockManager.getBlockById(parentId);
+
+    if (parent === undefined) {
+      return;
+    }
+
+    /**
+     * Save selection — will be restored when closeSelection fires
+     */
+    this.selection.save();
+
+    const selection = SelectionUtils.get();
+
+    selection?.removeAllRanges();
+
+    for (const childId of parent.contentIds) {
+      const child = BlockManager.getBlockById(childId);
+
+      if (child !== undefined) {
+        child.selected = true;
+      }
+    }
+
+    this.clearCache();
+
+    /** close InlineToolbar when we selected the container's Blocks */
+    this.Blok.InlineToolbar.close();
+
+    /**
+     * Show toolbar for multi-block selection
+     */
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+  }
+
   private selectAllBlocks(): void {
     /**
      * Save selection

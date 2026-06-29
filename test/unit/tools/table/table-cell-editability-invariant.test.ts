@@ -729,6 +729,13 @@ describe('Table cell editability invariant', () => {
       });
     };
 
+    // Each case builds 20 full tables synchronously. That fits comfortably in the
+    // 5s default in isolation, but under a saturated full-suite run the worker is
+    // preempted and a single case can blow the wall-clock budget. Give the heavy
+    // fuzz cases generous headroom so contention spikes don't flake them — a real
+    // hang still trips this ceiling.
+    const FUZZ_TIMEOUT_MS = 20_000;
+
     it('constructor render: every cell editable for all shapes', () => {
       for (let t = 0; t < 20; t++) {
         const local = document.createElement('div');
@@ -744,7 +751,7 @@ describe('Table cell editability invariant', () => {
         assertEveryCellEditable(element);
         local.remove();
       }
-    });
+    }, FUZZ_TIMEOUT_MS);
 
     it('setData in edit mode: every cell editable for all shapes', () => {
       for (let t = 0; t < 20; t++) {
@@ -766,7 +773,7 @@ describe('Table cell editability invariant', () => {
         assertEveryCellEditable(wrapper);
         local.remove();
       }
-    });
+    }, FUZZ_TIMEOUT_MS);
 
     it('onPaste: every cell editable for all shapes', () => {
       for (let t = 0; t < 20; t++) {
@@ -789,7 +796,7 @@ describe('Table cell editability invariant', () => {
         assertEveryCellEditable(wrapper);
         local.remove();
       }
-    });
+    }, FUZZ_TIMEOUT_MS);
 
     it('read-only render then setReadOnly(false): every cell editable for all shapes', () => {
       for (let t = 0; t < 20; t++) {
@@ -808,6 +815,6 @@ describe('Table cell editability invariant', () => {
         assertEveryCellEditable(element);
         local.remove();
       }
-    });
+    }, FUZZ_TIMEOUT_MS);
   });
 });

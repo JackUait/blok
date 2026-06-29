@@ -212,43 +212,41 @@ test.describe('placeholders', () => {
     await expectPlaceholderContent(paragraph, 'none');
   });
 
-  test('keeps placeholder visible when paragraph is blurred in empty editor', async ({ page }) => {
+  // FIX D11: Notion shows NOTHING on an unfocused empty paragraph — the
+  // placeholder appears only on focus and disappears on blur.
+  test('hides placeholder when paragraph is blurred in empty editor (Notion D11)', async ({ page }) => {
     await createBlok(page, { placeholder: PLACEHOLDER_TEXT, autofocus: true });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
     await expect(paragraph).toBeVisible();
-    // Placeholder should be visible when focused
+    // Placeholder is visible when focused
     await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
 
     // Blur the paragraph by clicking outside of it
     await page.mouse.click(10, 10);
 
-    // In an empty editor, placeholder remains visible even when blurred
-    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
+    // Notion-correct: the placeholder hides once the empty paragraph loses focus
+    await expectPlaceholderContent(paragraph, 'none');
   });
 
-  test('shows placeholder in empty editor regardless of focus state', async ({ page }) => {
+  test('shows placeholder only on focus, not on an unfocused empty editor (Notion D11)', async ({ page }) => {
     await createBlok(page, { placeholder: PLACEHOLDER_TEXT });
 
     const paragraph = getParagraphWithPlaceholder(page, PLACEHOLDER_TEXT);
 
     await expect(paragraph).toBeVisible();
 
-    // In an empty editor, placeholder is visible even without focus
-    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
+    // Unfocused empty editor: no placeholder (matches Notion)
+    await expectPlaceholderContent(paragraph, 'none');
 
-    // Click to focus
+    // Click to focus → placeholder appears
     await paragraph.click();
-
-    // Placeholder should still be visible when focused
     await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
 
-    // Blur by clicking outside
+    // Blur by clicking outside → placeholder disappears again
     await page.mouse.click(10, 10);
-
-    // In an empty editor, placeholder remains visible after blur
-    await expectPlaceholderContent(paragraph, PLACEHOLDER_TEXT);
+    await expectPlaceholderContent(paragraph, 'none');
   });
 });
 

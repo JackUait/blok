@@ -90,6 +90,14 @@ export const createDocumentClickedHandler = (
     const context = analyzeClickContext(deps, event);
 
     /**
+     * A click places a new caret, so any sticky vertical-navigation goal column
+     * from prior ArrowUp/Down must be discarded.
+     */
+    if (context.clickedInsideRedactor) {
+      Blok.Caret.resetGoalColumn();
+    }
+
+    /**
      * Don't clear current block when clicking on settings toggler, plus button, or inside block settings
      * These elements need the current block to function properly
      */

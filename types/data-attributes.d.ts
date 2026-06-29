@@ -28,6 +28,7 @@ export const DATA_ATTR: {
 
   // Editor Modes
   readonly rtl: 'data-blok-rtl';
+  readonly width: 'data-blok-width';
 
   // Drag and Drop
   readonly dragging: 'data-blok-dragging';

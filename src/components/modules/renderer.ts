@@ -13,6 +13,9 @@ import {
   type DataFormatAnalysis,
 } from '../utils/data-model-transform';
 import { migrateMarkColors } from '../utils/color-migration';
+import { applyLinkConfig } from '../utils/apply-link-config';
+import { DATA_ATTR } from '../constants';
+import { BlocksRendered } from '../events';
 
 /**
  * Map of legacy EditorJS tool names to their Blok equivalents.
@@ -85,147 +88,187 @@ export class Renderer extends Module {
    * @param blocksData - blocks to render
    */
   public render(blocksData: OutputBlockData[]): Promise<void> {
+    const { wrapper } = this.Blok.UI.nodes;
+
+    /**
+     * Flip the render-readiness gate off synchronously: while a (re-)render is
+     * in flight the previously rendered content may already be cleared.
+     */
+    wrapper.removeAttribute(DATA_ATTR.rendered);
+
     return new Promise((resolve) => {
-      const { Tools, BlockManager } = this.Blok;
-
-      if (blocksData.length === 0) {
-        BlockManager.insert();
-      } else {
-        // Analyze and potentially transform the input data
-        const dataModelConfig = this.config.dataModel || 'auto';
-        const analysis = analyzeDataFormat(blocksData);
-        this.detectedInputFormat = analysis.format;
-
-        // Transform to hierarchical if config requires it
-        const expandedBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
-          ? expandToHierarchical(blocksData)
-          : blocksData;
-
-        // Recover migrated cells whose text a pre-fix save detached to root:
-        // re-attach `cell-<row>-<col>`-id orphans back into their empty cell.
-        // Runs before normalize so reclaimed refs get parented in the same pass.
-        const reclaimedBlocks = reclaimDetachedTableCells(expandedBlocks);
-
-        // Tables persist child references via `data.content[r][c].blocks = [<id>]`
-        // rather than an explicit `parent` field on each child. Pre-normalize
-        // those parent references so downstream code that gates on parentId
-        // (read-only cell mounter, saver filter, hierarchy queries) correctly
-        // recognizes the children as belonging to their table.
-        const processedBlocks = normalizeTableChildParents(reclaimedBlocks);
-
-        // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
-
-        /**
-         * Track seen IDs to detect and resolve duplicates
-         */
-        const seenIds = new Set<string>();
-
-        /**
-         * Create Blocks instances
-         */
-        const blocks = processedBlocks.map((blockData: OutputBlockData) => {
-          const { tunes, parent, content, lastEditedAt, lastEditedBy } = blockData;
-          const hasDuplicateId = blockData.id !== undefined && seenIds.has(blockData.id);
-
-          if (hasDuplicateId) {
-            logLabeled(`Duplicate block id «${blockData.id}» replaced with a generated id to ensure uniqueness`, 'warn');
-          }
-
-          const id = hasDuplicateId ? generateBlockId() : blockData.id;
-
-          if (id !== undefined) {
-            seenIds.add(id);
-          }
-          const originalTool = blockData.type;
-
-          /**
-           * Validate that block data has the expected shape.
-           * Since OutputBlockData<Data> defaults to `any` for Data, we need to narrow the type.
-           */
-          const isValidBlockData = (data: unknown): data is Record<string, unknown> => {
-            return typeof data === 'object' && data !== null;
-          };
-
-          const blockToolData = isValidBlockData(blockData.data) ? blockData.data : {};
-
-          const availabilityResult = (() => {
-            if (Tools.available.has(originalTool)) {
-              return {
-                tool: originalTool,
-                data: blockToolData,
-              };
-            }
-
-            const aliasTarget = TOOL_ALIASES[originalTool];
-
-            if (aliasTarget !== undefined && Tools.available.has(aliasTarget)) {
-              return {
-                tool: aliasTarget,
-                data: blockToolData,
-              };
-            }
-
-            logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Blok config.`, 'warn');
-
-            return {
-              tool: Tools.stubTool,
-              data: this.composeStubDataForTool(originalTool, blockToolData, id),
-            };
-          })();
-
-          const buildBlock = (tool: string, data: BlockToolData): Block => {
-            try {
-              return BlockManager.composeBlock({
-                id,
-                tool,
-                data,
-                tunes,
-                parentId: parent,
-                contentIds: content,
-                lastEditedAt,
-                lastEditedBy,
-              });
-            } catch (error) {
-              log(`Block «${tool}» skipped because of plugins error`, 'error', {
-                data,
-                error,
-              });
-
-              /**
-               * If tool throws an error during render, we should render stub instead of it
-               */
-              const stubData = this.composeStubDataForTool(tool, data, id);
-
-              return BlockManager.composeBlock({
-                id,
-                tool: Tools.stubTool,
-                data: stubData,
-                tunes,
-                parentId: parent,
-                contentIds: content,
-                lastEditedAt,
-                lastEditedBy,
-              });
-            }
-          };
-
-          return buildBlock(availabilityResult.tool, availabilityResult.data);
-        });
-
-        /**
-         * Insert batch of Blocks
-         */
-        BlockManager.insertMany(blocks);
-        migrateMarkColors(this.Blok.UI.nodes.redactor);
-      }
+      const renderedCount = this.insertRenderedBlocks(blocksData);
 
       /**
        * Wait till browser will render inserted Blocks and resolve a promise
        */
       window.requestIdleCallback(() => {
+        wrapper.setAttribute(DATA_ATTR.rendered, '');
+        this.eventsDispatcher.emit(BlocksRendered, { count: renderedCount });
+        this.config.onAfterRender?.(this.Blok.API.methods);
         resolve();
       }, { timeout: 2000 });
     });
+  }
+
+  /**
+   * Inserts the given blocks (or a single default block when the input is
+   * empty) and returns the number of top-level blocks rendered in this batch.
+   * @param blocksData - blocks to render
+   */
+  private insertRenderedBlocks(blocksData: OutputBlockData[]): number {
+    const { Tools, BlockManager } = this.Blok;
+
+    // Give consumers a chance to transform the blocks array before anything is
+    // rendered — e.g. to run app-specific legacy-data migrations inside Blok.
+    // Runs on the raw saved shape (before format analysis / hierarchical
+    // expansion) so the hook sees exactly what was passed to render().
+    const sourceBlocks = this.config.onBeforeRender !== undefined
+      ? this.config.onBeforeRender(blocksData)
+      : blocksData;
+
+    if (sourceBlocks.length === 0) {
+      BlockManager.insert();
+
+      return 1;
+    }
+
+    // Analyze and potentially transform the input data
+    const dataModelConfig = this.config.dataModel || 'auto';
+    const analysis = analyzeDataFormat(sourceBlocks);
+    this.detectedInputFormat = analysis.format;
+
+    // Transform to hierarchical if config requires it
+    const expandedBlocks = shouldExpandToHierarchical(dataModelConfig, analysis.format)
+      ? expandToHierarchical(sourceBlocks)
+      : sourceBlocks;
+
+    // Recover migrated cells whose text a pre-fix save detached to root:
+    // re-attach `cell-<row>-<col>`-id orphans back into their empty cell.
+    // Runs before normalize so reclaimed refs get parented in the same pass.
+    const reclaimedBlocks = reclaimDetachedTableCells(expandedBlocks);
+
+    // Tables persist child references via `data.content[r][c].blocks = [<id>]`
+    // rather than an explicit `parent` field on each child. Pre-normalize
+    // those parent references so downstream code that gates on parentId
+    // (read-only cell mounter, saver filter, hierarchy queries) correctly
+    // recognizes the children as belonging to their table.
+    const processedBlocks = normalizeTableChildParents(reclaimedBlocks);
+
+    // Note: Yjs data layer is loaded via BlockManager.insertMany() with the correct block IDs
+
+    /**
+     * Track seen IDs to detect and resolve duplicates
+     */
+    const seenIds = new Set<string>();
+
+    /**
+     * Create Blocks instances
+     */
+    const blocks = processedBlocks.map((blockData: OutputBlockData) => {
+      const { tunes, parent, content, lastEditedAt, lastEditedBy } = blockData;
+      const hasDuplicateId = blockData.id !== undefined && seenIds.has(blockData.id);
+
+      if (hasDuplicateId) {
+        logLabeled(`Duplicate block id «${blockData.id}» replaced with a generated id to ensure uniqueness`, 'warn');
+      }
+
+      const id = hasDuplicateId ? generateBlockId() : blockData.id;
+
+      if (id !== undefined) {
+        seenIds.add(id);
+      }
+      const originalTool = blockData.type;
+
+      /**
+       * Validate that block data has the expected shape.
+       * Since OutputBlockData<Data> defaults to `any` for Data, we need to narrow the type.
+       */
+      const isValidBlockData = (data: unknown): data is Record<string, unknown> => {
+        return typeof data === 'object' && data !== null;
+      };
+
+      const blockToolData = isValidBlockData(blockData.data) ? blockData.data : {};
+
+      const availabilityResult = (() => {
+        if (Tools.available.has(originalTool)) {
+          return {
+            tool: originalTool,
+            data: blockToolData,
+          };
+        }
+
+        const aliasTarget = TOOL_ALIASES[originalTool];
+
+        if (aliasTarget !== undefined && Tools.available.has(aliasTarget)) {
+          return {
+            tool: aliasTarget,
+            data: blockToolData,
+          };
+        }
+
+        logLabeled(`Tool «${originalTool}» is not found. Check 'tools' property at the Blok config.`, 'warn');
+
+        return {
+          tool: Tools.stubTool,
+          data: this.composeStubDataForTool(originalTool, blockToolData, id),
+        };
+      })();
+
+      const buildBlock = (tool: string, data: BlockToolData): Block => {
+        try {
+          return BlockManager.composeBlock({
+            id,
+            tool,
+            data,
+            tunes,
+            parentId: parent,
+            contentIds: content,
+            lastEditedAt,
+            lastEditedBy,
+          });
+        } catch (error) {
+          log(`Block «${tool}» skipped because of plugins error`, 'error', {
+            data,
+            error,
+          });
+
+          /**
+           * If tool throws an error during render, we should render stub instead of it
+           */
+          const stubData = this.composeStubDataForTool(tool, data, id);
+
+          return BlockManager.composeBlock({
+            id,
+            tool: Tools.stubTool,
+            data: stubData,
+            tunes,
+            parentId: parent,
+            contentIds: content,
+            lastEditedAt,
+            lastEditedBy,
+          });
+        }
+      };
+
+      return buildBlock(availabilityResult.tool, availabilityResult.data);
+    });
+
+    /**
+     * Insert batch of Blocks
+     */
+    BlockManager.insertMany(blocks);
+    migrateMarkColors(this.Blok.UI.nodes.redactor);
+
+    // Apply the editor's `link` config (target / rel / transformHref) to every
+    // anchor coming from stored block HTML, mirroring the interactive Link
+    // inline tool. Without this, link config only governs links the user
+    // creates by hand — anchors from saved articles keep their stored attrs.
+    if (this.config.link !== undefined) {
+      applyLinkConfig(this.Blok.UI.nodes.redactor, this.config.link);
+    }
+
+    return blocks.length;
   }
 
   /**

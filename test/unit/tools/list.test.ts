@@ -94,6 +94,26 @@ describe('List Tool - rAF timing fixes', () => {
     expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('calls markerManager.scheduleUpdateAll() on moved() so the source list renumbers after an item leaves it', () => {
+    const options = createListOptions({ text: 'item', style: 'ordered' });
+    const list = new List(options);
+    list.render();
+
+    const scheduleUpdateAllSpy = vi.fn();
+    const markerManager = (list as unknown as { markerManager: { scheduleUpdateAll: () => void } | null }).markerManager;
+
+    if (markerManager) {
+      markerManager.scheduleUpdateAll = scheduleUpdateAllSpy;
+    }
+
+    // Dragging the middle item of a list into another list leaves the source
+    // group short an item — every ordered group must be renumbered, not just
+    // the destination siblings around the moved block.
+    list.moved({ fromIndex: 1, toIndex: 5, isGroupMove: false });
+
+    expect(scheduleUpdateAllSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('calls markerManager.scheduleUpdateAll() when setStyle changes to a different style and rerenders the element', () => {
     const options = createListOptions({ text: 'item', style: 'ordered' });
     const list = new List(options);
@@ -860,5 +880,111 @@ describe('List Tool - setReadOnly', () => {
     list.setReadOnly(false);
 
     expect(list.render()).toBe(element);
+  });
+});
+
+describe('List Tool - moved() marker refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * A stub list block at a given depth, shaped so ListMarkerCalculator and
+   * ListDepthValidator can read its depth from the holder's listitem margin.
+   */
+  const makeListBlock = (depth: number): { name: string; holder: HTMLElement } => {
+    const holder = document.createElement('div');
+    const listItem = document.createElement('div');
+
+    listItem.setAttribute('role', 'listitem');
+
+    if (depth > 0) {
+      listItem.style.marginLeft = `${depth * 27}px`;
+    }
+    holder.appendChild(listItem);
+
+    return { name: 'list', holder };
+  };
+
+  /**
+   * Regression: dropping an unordered list item to a deeper position changes its
+   * depth via the moved() hook, but adjustDepthTo only touched margin/data-depth.
+   * The bullet glyph (•/◦/▪) is depth-derived and must refresh too — otherwise a
+   * depth-2 item keeps showing the depth-0 "•".
+   */
+  it('refreshes the unordered bullet glyph when moved() deepens the item', () => {
+    // Preceding run: depth 0 → 1 → 2, so the dropped item is promoted to depth 2.
+    const neighbors = [makeListBlock(0), makeListBlock(1), makeListBlock(2)];
+    const api = createMockAPI();
+
+    api.blocks.getBlockByIndex = (index: number) => neighbors[index] as never;
+    api.blocks.getBlockIndex = () => 3;
+    api.blocks.getCurrentBlockIndex = () => 3;
+    api.blocks.getBlocksCount = () => 4;
+
+    const list = new List({
+      data: { text: '', style: 'unordered', depth: 0 } as ListItemData,
+      config: {},
+      api,
+      readOnly: false,
+      block: {} as never,
+    });
+    const element = list.render();
+    const marker = element.querySelector('[data-list-marker]') as HTMLElement;
+
+    expect(marker.textContent).toBe('•');
+
+    list.moved({ fromIndex: 5, toIndex: 3, isGroupMove: false });
+
+    expect(element.getAttribute('data-list-depth')).toBe('2');
+    expect(marker.textContent).toBe('▪');
+  });
+
+  /**
+   * Structural nesting (keyboard Tab): the item is nested under another list via
+   * parentId/contentIds, NOT a flat data.depth. moved() (emitted by the structural
+   * reparent) must DERIVE the depth from the tree and refresh the depth-derived
+   * carriers: the data-list-depth attribute, the depth-formatted ordered marker
+   * (depth 1 → alpha "a."), and the saved data.depth (kept in sync for drag and
+   * serialization).
+   */
+  it('derives depth from the structural parent on moved() and refreshes the marker', () => {
+    const tree: Record<string, { id: string; name: string; parentId: string | null }> = {
+      child: { id: 'child', name: 'list', parentId: 'parent' },
+      parent: { id: 'parent', name: 'list', parentId: null },
+    };
+    const api = createMockAPI();
+
+    api.blocks.getById = (id: string) => (tree[id] ?? null) as never;
+    api.blocks.getBlockByIndex = () => undefined;
+    api.blocks.getBlockIndex = () => 1;
+    api.blocks.getCurrentBlockIndex = () => 1;
+    api.blocks.getBlocksCount = () => 2;
+
+    const list = new List({
+      data: { text: 'item', style: 'ordered', depth: 0 } as ListItemData,
+      config: {},
+      api,
+      readOnly: false,
+      block: { id: 'child' } as never,
+    });
+    const element = list.render();
+    const marker = element.querySelector('[data-list-marker]') as HTMLElement;
+
+    // Before the reparent move is processed, the item renders at depth 0 → "1.".
+    expect(marker.textContent).toBe('1.');
+
+    // The structural reparent emits BlockMoved with fromIndex === toIndex.
+    list.moved({ fromIndex: 1, toIndex: 1, isGroupMove: false });
+
+    // Depth is derived from the parentId chain (1), not the stored data.depth (0).
+    expect(element.getAttribute('data-list-depth')).toBe('1');
+    expect(marker.textContent).toBe('a.');
+    // data.depth stays in sync so drag and serialization keep working.
+    expect(list.save().depth).toBe(1);
   });
 });

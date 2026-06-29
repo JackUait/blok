@@ -71,6 +71,7 @@ const createMockAPIMethods = (): APIInterface => ({
   tools: {
     getBlockTools: vi.fn(() => []),
     getToolsConfig: vi.fn(() => ({ tools: undefined })),
+    update: vi.fn(),
   },
   events: {
     on: vi.fn(),

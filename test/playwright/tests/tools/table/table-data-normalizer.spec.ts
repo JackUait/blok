@@ -167,7 +167,7 @@ test.describe('Data Normalizer Edge Cases', () => {
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(tableBlock?.data.withHeadings).toBe(false);
   });
 
@@ -206,7 +206,7 @@ test.describe('Data Normalizer Edge Cases', () => {
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(tableBlock?.data.withHeadingColumn).toBe(false);
   });
 

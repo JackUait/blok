@@ -1,10 +1,13 @@
 import { Module } from '../../__module';
+import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
 import { addColumnToList, wrapInNewColumnList } from '../../../tools/column-drop';
+import { INDENT_PER_LEVEL } from '../../../tools/list/constants';
+import { LIST_TEST_IDS } from '../../../tools/list/dom-builder';
 import { DragA11y } from './a11y/DragA11y';
 import { DragOperations } from './operations/DragOperations';
 import { DragPreview } from './preview/DragPreview';
@@ -19,6 +22,7 @@ import { ToggleSpringLoader } from './utils/ToggleSpringLoader';
 import { hasPassedThreshold } from './utils/drag.constants';
 import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
+import { getListItemDepth } from './utils/depthUtils';
 
 interface BoundHandlers {
   onMouseMove: (e: MouseEvent) => void;
@@ -412,7 +416,11 @@ export class DragController extends Module {
     // full editor width (gutters included), so without these offsets the
     // top/bottom reorder line stretches across the whole screen and the side
     // bars land out in the margins. Applies to every edge.
-    this.applyContentIndicatorOffsets(dropTarget.block);
+    //
+    // The indicator is tucked to the predicted nesting depth for ANY dragged
+    // block — a header/paragraph/etc. nests into a list just like a list item,
+    // so the preview must show the same indented slot the block will land at.
+    this.applyContentIndicatorOffsets(dropTarget.block, dropTarget.edge, dropTarget.depth);
 
     // For a column side-drop, stretch the vertical indicator bar to the full
     // height of the column row, not just the single target block.
@@ -436,7 +444,11 @@ export class DragController extends Module {
    *
    * @param block - The drop target block
    */
-  private applyContentIndicatorOffsets(block: Block): void {
+  private applyContentIndicatorOffsets(
+    block: Block,
+    edge: 'top' | 'bottom' | 'left' | 'right',
+    depth: number
+  ): void {
     const content = block.holder.querySelector('[data-blok-element-content]');
 
     if (!(content instanceof HTMLElement)) {
@@ -448,6 +460,97 @@ export class DragController extends Module {
 
     block.holder.style.setProperty('--drop-indicator-side-left', `${contentRect.left - holderRect.left}px`);
     block.holder.style.setProperty('--drop-indicator-side-right', `${holderRect.right - contentRect.right}px`);
+
+    // For a list item reorder (top/bottom line), tuck the indicator under the
+    // text: start it where the text begins (past the bullet/number marker) and
+    // cut it where the text ends, rather than running across the full content
+    // width. Side drops (columns) keep the content-box offsets above. Applies to
+    // any dragged block — a non-list block nests into a list too, so its preview
+    // must sit at the same indented slot it will land at.
+    if (edge === 'top' || edge === 'bottom') {
+      this.applyListItemTextOffsets(block, holderRect, depth);
+    }
+  }
+
+  /**
+   * Aligns the horizontal drop indicator with a list item: `--drop-indicator-
+   * side-left` to the item's start (the marker, at the predicted nesting depth)
+   * and `--drop-indicator-side-right` to the text end. The full indent is baked
+   * into the left offset, so `--drop-indicator-depth` is zeroed to cancel the
+   * CSS depth multiplier. No-op for non-list blocks.
+   *
+   * @param block - The drop target block
+   * @param holderRect - The block holder's bounding rect (already measured)
+   * @param predictedDepth - The depth the dropped item will land at
+   */
+  private applyListItemTextOffsets(block: Block, holderRect: DOMRect, predictedDepth: number): void {
+    const container = block.holder.querySelector(
+      `[data-blok-testid="${LIST_TEST_IDS.contentContainer}"], [data-blok-testid="${LIST_TEST_IDS.checklistContent}"]`
+    );
+
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+
+    // The blue line starts at the very beginning of the list item — the marker
+    // (bullet/number/checkbox) — which is the left edge of the listitem element.
+    // It falls back to the text container if the listitem wrapper is missing.
+    const item = block.holder.querySelector('[role="listitem"]');
+    const startRect = item instanceof HTMLElement
+      ? item.getBoundingClientRect()
+      : container.getBoundingClientRect();
+
+    const containerRect = container.getBoundingClientRect();
+
+    // Shift the line to the PREDICTED depth relative to the target item's own
+    // depth. The shift is signed: a deeper predicted depth pushes the line right
+    // (nest), a shallower one (e.g. a block landing at root next to a nested
+    // item) pulls it back toward the editor edge — without this, the indicator
+    // would tuck under the nested item yet the block would land at root, the
+    // exact indicator-vs-drop mismatch this whole path exists to prevent.
+    const targetDepth = getListItemDepth(block) ?? 0;
+    const depthShift = (predictedDepth - targetDepth) * INDENT_PER_LEVEL;
+
+    const textRight = this.measureTextRight(container) ?? containerRect.right;
+    const left = Math.max(0, startRect.left - holderRect.left + depthShift);
+    const right = Math.max(0, holderRect.right - textRight);
+
+    block.holder.style.setProperty('--drop-indicator-side-left', `${left}px`);
+    block.holder.style.setProperty('--drop-indicator-side-right', `${right}px`);
+    block.holder.style.setProperty('--drop-indicator-depth', '0');
+
+    // Enable the grayish lead-in segment (editor edge → blue line start) only
+    // when the line is actually offset from the editor edge (left > 0). A list
+    // reorder always tucks under the marker (left = the bullet/number gap), so it
+    // keeps the lead even at depth 0; a block landing flush at root (left = 0) is
+    // full-width and gets no lead — leaving it on would falsely preview a nest.
+    if (left > 0) {
+      block.holder.setAttribute('data-drop-indicator-lead', '');
+    } else {
+      block.holder.removeAttribute('data-drop-indicator-lead');
+    }
+  }
+
+  /**
+   * Returns the x-coordinate where the rendered text inside a container ends, by
+   * measuring its content range. Returns null when the range has no measurable
+   * width (empty text, or environments without layout) so callers can fall back
+   * to the container edge.
+   *
+   * @param container - The contenteditable text container of a list item
+   */
+  private measureTextRight(container: HTMLElement): number | null {
+    const range = document.createRange();
+
+    range.selectNodeContents(container);
+
+    if (typeof range.getBoundingClientRect !== 'function') {
+      return null;
+    }
+
+    const rect = range.getBoundingClientRect();
+
+    return rect.width > 0 ? rect.right : null;
   }
 
   /**
@@ -540,6 +643,7 @@ export class DragController extends Module {
     block.holder.style.removeProperty('--drop-indicator-side-right');
     block.holder.style.removeProperty('--drop-indicator-side-top');
     block.holder.style.removeProperty('--drop-indicator-side-bottom');
+    block.holder.removeAttribute('data-drop-indicator-lead');
   }
 
   private onMouseUp(e: MouseEvent): void {
@@ -755,6 +859,15 @@ export class DragController extends Module {
       preMoveParentIds.set(block.id, block.parentId);
     }
 
+    // Predict the flat list-nesting depth for the drop slot BEFORE the move (it
+    // reads the target's current neighbours). This is the SAME value the drop
+    // indicator showed, so the block lands exactly where the preview promised.
+    // Applied below to non-list blocks; list items derive their own depth via
+    // the list tool's moved() hook.
+    const dropDepth = this.targetDetector
+      ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock)
+      : 0;
+
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
 
     // Layer 13: stale-drop abort guard.
@@ -778,6 +891,11 @@ export class DragController extends Module {
     const movedBlockIds = new Set(result.movedBlocks.map(b => b.id));
     const reparentedBlocks: Block[] = [];
     const affectedParentIds = new Set<string>();
+    // List blocks whose structural parent this drop actually CHANGED. Only these
+    // need their moved() hook re-fired below — a flat-depth list dragged without a
+    // structural reparent must keep the depth its in-move moved() already computed
+    // (re-firing would re-run the flat maxAllowedDepth cap and collapse a subtree).
+    const reparentedListIds = new Set<string>();
 
     for (const movedBlock of result.movedBlocks) {
       // Skip blocks whose parent is also being moved — their internal hierarchy is preserved
@@ -807,6 +925,34 @@ export class DragController extends Module {
       }
       this.Blok.BlockManager.setBlockParent(movedBlock, newParentId);
       reparentedBlocks.push(movedBlock);
+      if (newParentId !== null && movedBlock.name === 'list') {
+        reparentedListIds.add(movedBlock.id);
+      }
+    }
+
+    // Apply STRUCTURAL nesting so a block dropped at a visual depth becomes a
+    // real child in the block tree. List items derive their depth from their own
+    // moved() hook (skip them). Blocks dropped INTO an explicit container
+    // (toggle/column) already got their parent above. Blocks dropped at "root"
+    // with dropDepth > 0 are re-homed under the preceding block at dropDepth-1.
+    if (newParentId === null) {
+      this.applyStructuralDropDepth(reparentedBlocks, dropDepth, movedBlockIds, affectedParentIds, reparentedListIds);
+    }
+
+    // A list item derives its nesting depth from its position in the block tree.
+    // The moved() hook fired during the flat-array move ran BEFORE the reparenting
+    // above set each item's FINAL structural parent, so it read a stale parent.
+    // Re-fire moved() now that parentId is final, so the list tool recomputes its
+    // depth/indent/marker/numbering from the actual tree — keeping data.depth
+    // consistent with the structural parent (no stale flat depth leaking into save()).
+    for (const movedBlock of result.movedBlocks) {
+      if (movedBlock.name !== 'list' || !reparentedListIds.has(movedBlock.id)) {
+        continue;
+      }
+
+      const listIndex = this.Blok.BlockManager.getBlockIndex(movedBlock);
+
+      movedBlock.call(BlockToolAPI.MOVED, { fromIndex: listIndex, toIndex: listIndex });
     }
 
     // Notify affected parent blocks so toggle tools update their visual state
@@ -831,6 +977,137 @@ export class DragController extends Module {
     }
 
     this.Blok.Toolbar.moveAndOpen(sourceBlock);
+  }
+
+  /**
+   * Maps a drop-slot depth (what the indicator showed) to a STRUCTURAL parent:
+   * the nearest preceding block (not part of the moving group) whose depth is one
+   * less than the target depth. Returns null for a root-level drop (depth 0) or
+   * when there is no suitable ancestor at this position.
+   * @param movedBlock - the block that was dropped
+   * @param dropDepth - the visual depth the drop indicator showed
+   * @param movingIds - ids of every block in the moving group (skipped as anchors)
+   */
+  private resolveStructuralParentForDepth(
+    movedBlock: Block,
+    dropDepth: number,
+    movingIds: Set<string>
+  ): string | null {
+    if (dropDepth <= 0) {
+      return null;
+    }
+
+    const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
+    const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
+
+    for (const candidate of preceding) {
+      if (movingIds.has(candidate.id)) {
+        continue;
+      }
+
+      const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
+
+      if (candidateDepth === dropDepth - 1) {
+        return candidate.id;
+      }
+
+      // A shallower block than the target parent depth means there is no valid
+      // ancestor at this slot — fall back to root rather than over-nesting.
+      if (candidateDepth < dropDepth - 1) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Re-homes each dropped root block under the preceding block at dropDepth-1 so
+   * a block dropped at a visual depth becomes a real structural child. List items
+   * nest only under a preceding LIST item (resolvePrecedingListParentForDepth);
+   * every other block nests under any preceding block at dropDepth-1
+   * (resolveStructuralParentForDepth). No-ops when the parent is already correct.
+   * @param reparentedBlocks - the dropped blocks that landed at root level
+   * @param dropDepth - the visual depth the drop indicator showed
+   * @param movingIds - ids of the moving group (skipped as anchors)
+   * @param affectedParentIds - accumulator of parents to notify afterwards
+   */
+  private applyStructuralDropDepth(
+    reparentedBlocks: Block[],
+    dropDepth: number,
+    movingIds: Set<string>,
+    affectedParentIds: Set<string>,
+    reparentedListIds: Set<string>
+  ): void {
+    for (const movedBlock of reparentedBlocks) {
+      const structuralParentId = movedBlock.name === 'list'
+        ? this.resolvePrecedingListParentForDepth(movedBlock, dropDepth, movingIds)
+        : this.resolveStructuralParentForDepth(movedBlock, dropDepth, movingIds);
+
+      if (structuralParentId === movedBlock.parentId) {
+        continue;
+      }
+
+      this.Blok.BlockManager.setBlockParent(movedBlock, structuralParentId);
+
+      // This list item's structural parent genuinely changed — its moved() hook
+      // must re-derive depth from the final tree (see the re-fire loop in onDrop).
+      if (movedBlock.name === 'list') {
+        reparentedListIds.add(movedBlock.id);
+      }
+
+      if (structuralParentId !== null) {
+        affectedParentIds.add(structuralParentId);
+      }
+    }
+  }
+
+  /**
+   * Maps a list item's drop-slot depth to its STRUCTURAL list parent: the nearest
+   * preceding LIST block (not part of the moving group) whose structural depth is
+   * one less than the drop depth. A list item nests only under a preceding list
+   * item — never under a paragraph — so a non-list predecessor (or a shallower
+   * block than the target parent depth) breaks the run and lands the item at root.
+   * Returns null for a root-level drop (depth 0) or when no such list parent exists.
+   * @param movedBlock - the list block that was dropped
+   * @param dropDepth - the visual depth the drop indicator showed
+   * @param movingIds - ids of every block in the moving group (skipped as anchors)
+   */
+  private resolvePrecedingListParentForDepth(
+    movedBlock: Block,
+    dropDepth: number,
+    movingIds: Set<string>
+  ): string | null {
+    if (dropDepth <= 0) {
+      return null;
+    }
+
+    const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
+    const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
+
+    for (const candidate of preceding) {
+      if (movingIds.has(candidate.id)) {
+        continue;
+      }
+
+      if (candidate.name !== 'list') {
+        return null;
+      }
+
+      const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
+
+      if (candidateDepth === dropDepth - 1) {
+        return candidate.id;
+      }
+
+      // A list item shallower than the target parent depth means there is no valid
+      // list ancestor at this slot — fall back to root rather than over-nesting.
+      if (candidateDepth < dropDepth - 1) {
+        return null;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -1025,6 +1302,129 @@ export class DragController extends Module {
     this.Blok.Toolbar.moveAndOpen(result.duplicatedBlocks[0]);
   }
 
+  /**
+   * Duplicate a block (or the active block selection) in place — directly below
+   * the source group and in the same parent — for the Cmd/Ctrl+D shortcut. A
+   * single block is expanded to its full subtree (list/flat-indent followers via
+   * depth, toggle/callout children via contentIds) so the copy carries its
+   * children, mirroring alt-drag duplication.
+   * @param block - the block the shortcut fired on (or a selected block)
+   * @returns the duplicated blocks (empty when nothing was duplicated)
+   */
+  public async duplicateBlocksInPlace(block: Block): Promise<Block[]> {
+    // Drag internals initialize lazily on the first drag; Cmd+D can fire before
+    // any drag has happened, so ensure operations/descendant helpers exist.
+    this.lazyInit();
+
+    if (!this.operations) {
+      return [];
+    }
+
+    const isBlockSelected = block.selected;
+    const baseBlocks = isBlockSelected
+      ? this.Blok.BlockSelection.selectedBlocks
+      : [block];
+
+    // Expand EVERY base block to its full subtree (list/flat-indent followers
+    // via depth, toggle/callout children via contentIds), de-duplicating across
+    // the set. The expansion must run for multi-block selections too: a selected
+    // block's nested descendants are usually not themselves selected, yet they
+    // must travel with their parent into the copy (Notion's Cmd+D parity).
+    const seen = new Set<string>();
+    const sourceBlocks = baseBlocks
+      .flatMap((baseBlock) => [baseBlock, ...this.collectDuplicateDescendants(baseBlock)])
+      .filter((member) => {
+        if (seen.has(member.id)) {
+          return false;
+        }
+
+        seen.add(member.id);
+
+        return true;
+      });
+
+    if (sourceBlocks.length === 0) {
+      return [];
+    }
+
+    /**
+     * Anchor the copies after the LAST block of the source group (in document
+     * order), so the whole group is duplicated below itself in the same parent.
+     */
+    const anchor = sourceBlocks.reduce((latest, candidate) =>
+      this.Blok.BlockManager.getBlockIndex(candidate) > this.Blok.BlockManager.getBlockIndex(latest)
+        ? candidate
+        : latest
+    );
+
+    const prep = await this.operations.prepareDuplicates(sourceBlocks, anchor, 'bottom');
+
+    if (prep.aborted) {
+      return [];
+    }
+
+    const resultRef: { current: { duplicatedBlocks: Block[]; targetIndex: number } } = {
+      current: { duplicatedBlocks: [], targetIndex: prep.baseInsertIndex },
+    };
+
+    const applyAndReparent = (): void => {
+      if (!this.operations) {
+        return;
+      }
+
+      resultRef.current = this.operations.applyDuplicates(prep);
+
+      /**
+       * applyDuplicates wires up internal child→parent links among the
+       * duplicated set. The remaining job is to keep each ROOT of the set (a
+       * block whose original parent is NOT itself being duplicated) in the same
+       * parent as its source — insert() only auto-inherits a column parent, so
+       * a root copied from inside a toggle/callout would otherwise escape it.
+       */
+      resultRef.current.duplicatedBlocks.forEach((dup, index) => {
+        const original = prep.sortedBlocks[index];
+
+        if (original === undefined) {
+          return;
+        }
+
+        const originalParentId = original.parentId;
+        const isRootOfSet = originalParentId === null || !prep.sourceIds.has(originalParentId);
+
+        if (isRootOfSet && dup.parentId !== originalParentId) {
+          this.Blok.BlockManager.setBlockParent(dup, originalParentId);
+        }
+      });
+    };
+
+    if (typeof this.Blok.BlockManager.transactForTool === 'function') {
+      this.Blok.BlockManager.transactForTool(applyAndReparent);
+    } else {
+      applyAndReparent();
+    }
+
+    const duplicated = resultRef.current.duplicatedBlocks;
+
+    if (duplicated.length > 0) {
+      const [firstCopy] = duplicated;
+
+      /**
+       * applyDuplicates block-selects the copies — correct for alt-drag, but the
+       * Cmd/Ctrl+D path mirrors Notion by landing a text caret in the new copy
+       * ready to edit. Clear that lingering block selection and focus the first
+       * copy instead. Guarded because narrow drag test harnesses omit Caret.
+       */
+      if (this.Blok.Caret !== undefined) {
+        this.Blok.BlockSelection.clearSelection();
+        this.Blok.Caret.setToBlock(firstCopy, this.Blok.Caret.positions.END);
+      }
+
+      this.Blok.Toolbar.moveAndOpen(firstCopy);
+    }
+
+    return duplicated;
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
       this.cleanup(true);
@@ -1120,6 +1520,30 @@ export class DragController extends Module {
       return;
     }
     this.Blok.Toolbar.moveAndOpen(blockToShow);
+  }
+
+  /**
+   * Collects a block's full set of duplicable descendants, unifying the two
+   * nesting carriers: list/flat-indent followers (via `data-list-depth`) take
+   * precedence, otherwise toggle/callout children via `parentId`/`contentIds`.
+   * Returns an empty array for a leaf block.
+   * @param block - block whose subtree should be collected
+   * @returns descendant blocks (excluding the block itself)
+   */
+  private collectDuplicateDescendants(block: Block): Block[] {
+    const listDescendants = this.listItemDescendants
+      ? this.listItemDescendants.getDescendants(block)
+      : [];
+
+    if (listDescendants.length > 0) {
+      return listDescendants;
+    }
+
+    if (block.contentIds?.length > 0) {
+      return this.getHierarchyDescendants(block);
+    }
+
+    return [];
   }
 
   /**

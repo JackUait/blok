@@ -1,5 +1,8 @@
 import type { Block } from './block';
 import { BlockToolAPI } from './block';
+import { BlockRendered } from './events';
+import type { BlokEventMap } from './events';
+import type { EventsDispatcher } from './utils/events';
 import { moveElementBefore, moveElementToEnd } from './utils/html';
 
 
@@ -21,12 +24,31 @@ export class Blocks {
   public workingArea: HTMLElement;
 
   /**
+   * Editor-wide event bus used to broadcast block lifecycle events
+   * (e.g. `block:rendered`). Optional so the class can be used and
+   * unit-tested standalone without an event bus.
+   */
+  private readonly eventsDispatcher?: EventsDispatcher<BlokEventMap>;
+
+  /**
    * @class
    * @param {HTMLElement} workingArea — blok`s working node
+   * @param [eventsDispatcher] - editor-wide event bus for lifecycle events
    */
-  constructor(workingArea: HTMLElement) {
+  constructor(workingArea: HTMLElement, eventsDispatcher?: EventsDispatcher<BlokEventMap>) {
     this.blocks = [];
     this.workingArea = workingArea;
+    this.eventsDispatcher = eventsDispatcher;
+  }
+
+  /**
+   * Invokes the tool's `rendered()` lifecycle hook and broadcasts the
+   * `block:rendered` event for the freshly rendered block.
+   * @param block - block that has just been inserted into the DOM
+   */
+  private callRenderedHook(block: Block): void {
+    block.call(BlockToolAPI.RENDERED);
+    this.eventsDispatcher?.emit(BlockRendered, { blockId: block.id });
   }
 
   /**
@@ -226,7 +248,7 @@ export class Blocks {
       blockToReplace.holder.replaceWith(block.holder);
 
       this.blocks.splice(insertIndex, 1, block);
-      block.call(BlockToolAPI.RENDERED);
+      this.callRenderedHook(block);
 
       return;
     }
@@ -358,7 +380,7 @@ export class Blocks {
 
     this.blocks[index] = block;
 
-    block.call(BlockToolAPI.RENDERED);
+    this.callRenderedHook(block);
   }
 
   /**
@@ -388,7 +410,7 @@ export class Blocks {
       this.blocks.push(...blocks);
       this.workingArea.appendChild(fragment);
 
-      blocks.forEach((block) => block.call(BlockToolAPI.RENDERED));
+      blocks.forEach((block) => this.callRenderedHook(block));
 
       return;
     }
@@ -417,7 +439,7 @@ export class Blocks {
     /**
      * Call Rendered event for each block
      */
-    blocks.forEach((block) => block.call(BlockToolAPI.RENDERED));
+    blocks.forEach((block) => this.callRenderedHook(block));
   }
 
   /**
@@ -549,7 +571,7 @@ export class Blocks {
    */
   public activateBlock(block: Block): void {
     if (block.holder.parentElement !== null) {
-      block.call(BlockToolAPI.RENDERED);
+      this.callRenderedHook(block);
 
       return;
     }
@@ -588,13 +610,13 @@ export class Blocks {
   private insertToDOM(block: Block, position?: InsertPosition, target?: Block): void {
     if (!position || target === undefined) {
       this.workingArea.appendChild(block.holder);
-      block.call(BlockToolAPI.RENDERED);
+      this.callRenderedHook(block);
 
       return;
     }
 
     target.holder.insertAdjacentElement(position, block.holder);
-    block.call(BlockToolAPI.RENDERED);
+    this.callRenderedHook(block);
   }
 
   /**
@@ -627,7 +649,7 @@ export class Blocks {
       );
     }
 
-    block.call(BlockToolAPI.RENDERED);
+    this.callRenderedHook(block);
   }
 
   /**
@@ -678,7 +700,7 @@ export class Blocks {
       moveElementBefore(block.holder, nextBlock.holder);
     }
 
-    block.call(BlockToolAPI.RENDERED);
+    this.callRenderedHook(block);
   }
 
   /**

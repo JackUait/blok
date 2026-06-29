@@ -10,7 +10,7 @@ import {
 } from '../../../../src/components/events';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
-import type { BlokConfig } from '../../../../types';
+import type { BlokConfig, OutputData } from '../../../../types';
 import type { BlockMutationEvent, BlockMutationType } from '../../../../types/events/block';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 
@@ -87,6 +87,7 @@ describe('ModificationsObserver', () => {
     redactor: HTMLDivElement;
     apiMethods: Record<string, never>;
     onChange: ReturnType<typeof vi.fn>;
+    saverSave: ReturnType<typeof vi.fn>;
   } => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
     const onChange = vi.fn();
@@ -102,6 +103,7 @@ describe('ModificationsObserver', () => {
 
     const redactor = document.createElement('div');
     const apiMethods = {} as Record<string, never>;
+    const saverSave = vi.fn().mockResolvedValue(undefined);
 
     observer.state = {
       UI: {
@@ -112,6 +114,9 @@ describe('ModificationsObserver', () => {
       API: {
         methods: apiMethods,
       },
+      Saver: {
+        save: saverSave,
+      },
     } as unknown as BlokModules;
 
     return {
@@ -121,6 +126,7 @@ describe('ModificationsObserver', () => {
       redactor,
       apiMethods,
       onChange,
+      saverSave,
     };
   };
 
@@ -221,6 +227,96 @@ describe('ModificationsObserver', () => {
 
     eventsDispatcher.emit(FakeCursorHaveBeenSet, { state: true });
     expect(instance?.observe).toHaveBeenCalledTimes(2);
+  });
+
+  describe('onSave (serialized output callback)', () => {
+    const sampleOutput: OutputData = {
+      time: 1,
+      version: '1',
+      blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'hi' } }],
+    };
+
+    it('serializes the editor and emits onSave with the full OutputData after batching', async () => {
+      const onSave = vi.fn();
+      const { eventsDispatcher, apiMethods, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+
+      saverSave.mockResolvedValue(sampleOutput);
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+
+      expect(saverSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledWith(sampleOutput, apiMethods);
+    });
+
+    it('emits onSave even when no onChange callback is configured', async () => {
+      const onSave = vi.fn();
+      const { eventsDispatcher, saverSave } = createObserver({
+        onChange: undefined,
+        onSave,
+      } as Partial<BlokConfig>);
+
+      saverSave.mockResolvedValue(sampleOutput);
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledWith(sampleOutput, expect.anything());
+    });
+
+    it('serializes only once per batch of multiple events (debounced)', async () => {
+      const onSave = vi.fn();
+      const { eventsDispatcher, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+
+      saverSave.mockResolvedValue(sampleOutput);
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-2') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+
+      expect(saverSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not serialize or emit onSave while disabled', async () => {
+      const onSave = vi.fn();
+      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+
+      saverSave.mockResolvedValue(sampleOutput);
+      observer.disable();
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(saverSave).not.toHaveBeenCalled();
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it('does not emit onSave after destroy even if serialization was already in flight', async () => {
+      const onSave = vi.fn();
+      let resolveSave: (data: OutputData) => void = () => {};
+      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+
+      saverSave.mockReturnValue(
+        new Promise<OutputData>((resolve) => {
+          resolveSave = resolve;
+        })
+      );
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      // Fire the batch timer synchronously -> triggers save() (still pending)
+      vi.advanceTimersByTime(modificationsObserverBatchTimeout);
+      expect(saverSave).toHaveBeenCalledTimes(1);
+
+      observer.destroy();
+      resolveSave(sampleOutput);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(onSave).not.toHaveBeenCalled();
+    });
   });
 
   describe('destroy()', () => {

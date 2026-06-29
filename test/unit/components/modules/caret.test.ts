@@ -334,6 +334,24 @@ describe('Caret module', () => {
       expect(caret.navigateNext()).toBe(false);
       expect(blockManager.insertAtEnd).not.toHaveBeenCalled();
     });
+
+    it('does not create a trailing block when block creation is disallowed (arrow navigation)', () => {
+      const { caret, blockManager } = createCaret();
+      const block = createBlock({
+        tool: { isDefault: false },
+        inputs: { current: createContentEditable('text') },
+      });
+
+      blockManager.currentBlock = block;
+      blockManager.nextBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const result = caret.navigateNext(false, false);
+
+      expect(result).toBe(false);
+      expect(blockManager.insertAtEnd).not.toHaveBeenCalled();
+    });
   });
 
   describe('navigatePrevious', () => {
@@ -519,6 +537,28 @@ describe('Caret module', () => {
       vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
 
       expect(caret.navigateVerticalNext()).toBe(false);
+    });
+
+    it('does not create a trailing block on Arrow Down when block creation is disallowed', () => {
+      const { caret, blockManager } = createCaret();
+      const currentInput = createContentEditable('text');
+      const currentBlock = createBlock({
+        tool: { isDefault: false },
+        inputs: { current: currentInput },
+      });
+
+      blockManager.currentBlock = currentBlock;
+      blockManager.nextBlock = null;
+      blockManager.nextVisibleBlock = null;
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+      vi.spyOn(caretUtils, 'getCaretXPosition').mockReturnValue(100);
+
+      const result = caret.navigateVerticalNext(false);
+
+      expect(result).toBe(false);
+      expect(blockManager.insertAtEnd).not.toHaveBeenCalled();
     });
 
     it('skips multiple hidden blocks to find next visible block', () => {
@@ -907,6 +947,126 @@ describe('Caret module', () => {
       // Resolves to the root block before the column_list, never the left column.
       expect(setToBlock).toHaveBeenCalledWith(above, caret.positions.END);
       expect(setToBlock).not.toHaveBeenCalledWith(l1, expect.anything());
+    });
+  });
+
+  describe('sticky goal column (vertical navigation)', () => {
+    it('reuses the goal column captured on the first vertical move when passing through shorter lines', () => {
+      const { caret, blockManager } = createCaret();
+      const blockA = createBlock({ inputs: { current: createContentEditable('a long first line of text') } });
+      const shortBlock = createBlock({ inputs: { current: createContentEditable('hi') } });
+      const thirdBlock = createBlock({ inputs: { current: createContentEditable('another line of text') } });
+
+      blockManager.currentBlock = blockA;
+      blockManager.nextVisibleBlock = shortBlock;
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+
+      /**
+       * Simulate horizontal drift: the first read is far to the right (200), but
+       * after landing on the short line the live caret X collapses to the line end (30).
+       */
+      const getX = vi.spyOn(caretUtils, 'getCaretXPosition');
+
+      getX.mockReturnValueOnce(200).mockReturnValue(30);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      // First vertical move captures the goal column (200)
+      caret.navigateVerticalNext();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(shortBlock, 200, true);
+
+      // Now the caret sits on the short line; a fresh read would drift to 30
+      blockManager.currentBlock = shortBlock;
+      blockManager.nextVisibleBlock = thirdBlock;
+
+      // Second consecutive vertical move must STILL use the sticky goal (200), not 30
+      caret.navigateVerticalNext();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(thirdBlock, 200, true);
+    });
+
+    it('reuses the goal column across consecutive ArrowUp moves through shorter lines', () => {
+      const { caret, blockManager } = createCaret();
+      const blockA = createBlock({ inputs: { current: createContentEditable('a long bottom line of text') } });
+      const shortBlock = createBlock({ inputs: { current: createContentEditable('hi') } });
+      const topBlock = createBlock({ inputs: { current: createContentEditable('top line of text') } });
+
+      blockManager.currentBlock = blockA;
+      blockManager.previousVisibleBlock = shortBlock;
+
+      vi.spyOn(caretUtils, 'isCaretAtFirstLine').mockReturnValue(true);
+
+      const getX = vi.spyOn(caretUtils, 'getCaretXPosition');
+
+      getX.mockReturnValueOnce(200).mockReturnValue(30);
+
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      caret.navigateVerticalPrevious();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(shortBlock, 200, false);
+
+      blockManager.currentBlock = shortBlock;
+      blockManager.previousVisibleBlock = topBlock;
+
+      caret.navigateVerticalPrevious();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(topBlock, 200, false);
+    });
+
+    it('recomputes the goal column after a horizontal navigation resets it', () => {
+      const { caret, blockManager } = createCaret();
+      const blockA = createBlock({ inputs: { current: createContentEditable('first long line') } });
+      const blockB = createBlock({ inputs: { current: createContentEditable('second') } });
+      const blockC = createBlock({ inputs: { current: createContentEditable('third') } });
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+
+      const getX = vi.spyOn(caretUtils, 'getCaretXPosition');
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      // First vertical move captures 200
+      getX.mockReturnValue(200);
+      blockManager.currentBlock = blockA;
+      blockManager.nextVisibleBlock = blockB;
+      caret.navigateVerticalNext();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(blockB, 200, true);
+
+      // A horizontal navigation (ArrowLeft/Right) must reset the sticky goal
+      blockManager.currentBlock = blockB;
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+      caret.navigateNext();
+
+      // Next vertical move recomputes from the fresh (drifted) X
+      getX.mockReturnValue(75);
+      blockManager.nextVisibleBlock = blockC;
+      caret.navigateVerticalNext();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(blockC, 75, true);
+    });
+
+    it('resetGoalColumn() forces the next vertical move to recompute the column', () => {
+      const { caret, blockManager } = createCaret();
+      const blockA = createBlock({ inputs: { current: createContentEditable('first long line') } });
+      const blockB = createBlock({ inputs: { current: createContentEditable('second') } });
+      const blockC = createBlock({ inputs: { current: createContentEditable('third') } });
+
+      vi.spyOn(caretUtils, 'isCaretAtLastLine').mockReturnValue(true);
+
+      const getX = vi.spyOn(caretUtils, 'getCaretXPosition');
+      const setToBlockAtXPosition = vi.spyOn(caret, 'setToBlockAtXPosition').mockImplementation(() => undefined);
+
+      getX.mockReturnValue(200);
+      blockManager.currentBlock = blockA;
+      blockManager.nextVisibleBlock = blockB;
+      caret.navigateVerticalNext();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(blockB, 200, true);
+
+      // An external edit/click hook resets the sticky goal
+      caret.resetGoalColumn();
+
+      getX.mockReturnValue(75);
+      blockManager.currentBlock = blockB;
+      blockManager.nextVisibleBlock = blockC;
+      caret.navigateVerticalNext();
+      expect(setToBlockAtXPosition).toHaveBeenLastCalledWith(blockC, 75, true);
     });
   });
 

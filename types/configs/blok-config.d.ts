@@ -1,6 +1,6 @@
 import type { ThemeMode, ResolvedTheme } from '../api/theme';
 import {ToolConstructable, ToolSettings} from '../tools';
-import {API, LogLevels, OutputData} from '../index';
+import {API, Blok, LogLevels, OutputBlockData, OutputData} from '../index';
 import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
@@ -58,6 +58,17 @@ export interface BlokConfig {
    * @see {@link sanitizer}
    */
   sanitizer?: SanitizerConfig;
+
+  /**
+   * Transform or clean the raw clipboard HTML before Blok processes it.
+   * Runs on the unmodified `text/html` payload, before any Blok preprocessing
+   * or sanitization, so you no longer need a capture-phase paste interceptor.
+   *
+   * @param html - the raw `text/html` clipboard string
+   * @returns the transformed HTML to feed into the rest of the paste pipeline,
+   *          or `null` to skip the HTML paste path (paste falls through to plain text).
+   */
+  onBeforePaste?: (html: string) => string | null;
 
   /**
    * If true, toolbar won't be shown
@@ -125,17 +136,50 @@ export interface BlokConfig {
   i18n?: I18nConfig;
 
   /**
-   * Notion-style link-paste behavior.
+   * Configures how Blok builds anchor (`<a>`) elements, so consumers can control
+   * the created links instead of post-processing the rendered DOM.
+   *
+   * Applies on every path that produces anchors:
+   * - the interactive **Link inline tool** (links the user creates by hand),
+   * - **render** — anchors coming from stored block HTML when `blocks.render()`
+   *   runs (e.g. saved articles whose `<a>` never went through the inline tool),
+   * - **paste** — `<a>` arriving via the clipboard.
+   *
+   * On the render and paste paths `target`/`rel` are forced and `transformHref`
+   * rewrites the href, exactly as for hand-created links.
+   */
+  link?: {
+    /**
+     * `target` attribute applied to created anchors.
+     * @default '_blank'
+     */
+    target?: string;
+
+    /**
+     * `rel` attribute applied to created anchors.
+     * @default 'nofollow'
+     */
+    rel?: string;
+
+    /**
+     * Transforms the href just before it is assigned to the anchor.
+     *
+     * On the inline-tool path it runs after URL validation/normalization, on the
+     * final value. On the render and paste paths it runs against each anchor's
+     * existing href, so it must be idempotent (re-rendering already-transformed
+     * content must not change the result again).
+     *
+     * @param href - the href to transform
+     * @returns the href to set on the anchor
+     */
+    transformHref?: (href: string) => string;
+  };
+
+  /**
+   * Notion-style link-paste behavior. Pasting a URL always opens a small menu
+   * (Plain link / Bookmark / Embed) instead of auto-inserting a block.
    */
   linkPaste?: {
-    /**
-     * When true, pasting a URL opens a small menu (Plain link / Bookmark / Embed)
-     * instead of auto-inserting the first matching block. Requires an interactive
-     * DOM. Leave off for headless/programmatic use to keep deterministic auto-claim.
-     * @default false
-     */
-    menu?: boolean;
-
     /**
      * When true, pasting a URL that matches no registered embed provider still
      * offers "Create embed", framing it in a sandboxed iframe. Default false keeps
@@ -146,9 +190,16 @@ export interface BlokConfig {
   };
 
   /**
-   * Fires when Blok is ready to work
+   * Fires when Blok is ready to work.
+   *
+   * Receives the fully-initialized {@link Blok} instance, so you can drive the
+   * editor's API straight from the handler (mirrors the React/Vue/Angular
+   * adapters, whose `ready` events emit the live instance). The argument is
+   * optional — existing zero-argument handlers keep working unchanged.
+   *
+   * @param blok - the ready Blok instance
    */
-  onReady?(): void;
+  onReady?(blok?: Blok): void;
 
   /**
    * Fires when something changed in DOM
@@ -156,6 +207,49 @@ export interface BlokConfig {
    * @param event - custom event describing mutation. If several mutations happened at once, they will be batched and you'll get an array of events here.
    */
   onChange?(api: API, event: BlockMutationEvent | BlockMutationEvent[]): void;
+
+  /**
+   * Fires with the full serialized {@link OutputData} whenever the content
+   * changes. This is the "output half" of a controlled editor: pair it with the
+   * `data` config (or the React `data` prop) to mirror the editor state into your
+   * own store with a single callback instead of calling `saver.save()` by hand.
+   *
+   * Serialization is debounced through the same change-batching window as
+   * `onChange`, so a burst of edits produces a single `onSave` call. Only
+   * user-driven content changes trigger it — programmatic `render()` does not
+   * (the change observer is disabled during render), so a controlled
+   * `data → render → onSave → setData` round-trip won't recurse.
+   *
+   * @param data - the full serialized output of the editor
+   * @param api - blok.js api
+   */
+  onSave?(data: OutputData, api: API): void;
+
+  /**
+   * Transforms the blocks array just before it is rendered, on every render
+   * (the initial render and every `blocks.render()` call). Use it to run
+   * app-specific data migrations inside Blok instead of pre-processing the
+   * data before handing it to the editor.
+   *
+   * Receives the raw saved blocks (the exact array passed to render, before any
+   * format analysis or hierarchical expansion) and must return the blocks to
+   * render. Returning an empty array renders an empty document; returning blocks
+   * for an empty input injects them.
+   *
+   * @param blocks - the blocks about to be rendered
+   * @returns the blocks to actually render
+   */
+  onBeforeRender?(blocks: OutputBlockData[]): OutputBlockData[];
+
+  /**
+   * Fires after a render completes and the blocks are in the DOM — on the
+   * initial render and on every `blocks.render()` call. Use it for post-render
+   * side effects (scroll restoration, attaching observers, …). Distinct from
+   * `onReady`, which fires once when the editor first becomes ready.
+   *
+   * @param api - blok.js api
+   */
+  onAfterRender?(api: API): void;
 
   /**
    * Defines default toolbar for all tools.

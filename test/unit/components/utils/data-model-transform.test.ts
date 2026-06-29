@@ -1231,9 +1231,10 @@ describe('data-model-transform', () => {
       const result = collapseToLegacy(blocks);
 
       expect(result[0].data.body).toBeDefined();
-      expect(result[0].data.body.blocks).toHaveLength(2);
-      expect(result[0].data.body.blocks[0].type).toBe('paragraph');
-      expect(result[0].data.body.blocks[1].type).toBe('header');
+      const body = (result[0].data as { body: { blocks: OutputBlockData[] } }).body;
+      expect(body.blocks).toHaveLength(2);
+      expect(body.blocks[0].type).toBe('paragraph');
+      expect(body.blocks[1].type).toBe('header');
     });
 
     it('strips parent/content from collapsed child blocks', () => {
@@ -1244,7 +1245,7 @@ describe('data-model-transform', () => {
 
       const result = collapseToLegacy(blocks);
 
-      const childBlocks = result[0].data.body.blocks;
+      const childBlocks = (result[0].data as { body: { blocks: OutputBlockData[] } }).body.blocks;
 
       expect(childBlocks[0].parent).toBeUndefined();
       expect(childBlocks[0].content).toBeUndefined();
@@ -1305,8 +1306,9 @@ describe('data-model-transform', () => {
 
       const result = collapseToLegacy(blocks);
 
-      expect(result[0].data.body.blocks).toHaveLength(2);
-      expect(result[0].data.body.blocks[0].data.text).toBe('first child');
+      const body = (result[0].data as { body: { blocks: OutputBlockData[] } }).body;
+      expect(body.blocks).toHaveLength(2);
+      expect((body.blocks[0].data as { text: string }).text).toBe('first child');
     });
 
     it('handles toggleable header with no children in collapse', () => {
@@ -1474,9 +1476,10 @@ describe('data-model-transform', () => {
       const result = collapseToLegacy(blocks);
 
       expect(result[0].data.body).toBeDefined();
-      expect(result[0].data.body.blocks).toHaveLength(2);
-      expect(result[0].data.body.blocks[0].type).toBe('paragraph');
-      expect(result[0].data.body.blocks[1].type).toBe('header');
+      const body = (result[0].data as { body: { blocks: OutputBlockData[] } }).body;
+      expect(body.blocks).toHaveLength(2);
+      expect(body.blocks[0].type).toBe('paragraph');
+      expect(body.blocks[1].type).toBe('header');
     });
 
     it('strips parent/content from collapsed child blocks', () => {
@@ -1487,7 +1490,7 @@ describe('data-model-transform', () => {
 
       const result = collapseToLegacy(blocks);
 
-      const childBlocks = result[0].data.body.blocks;
+      const childBlocks = (result[0].data as { body: { blocks: OutputBlockData[] } }).body.blocks;
 
       expect(childBlocks[0].parent).toBeUndefined();
       expect(childBlocks[0].content).toBeUndefined();
@@ -1546,7 +1549,7 @@ describe('data-model-transform', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('callout');
-      const body = result[0].data.body;
+      const body = (result[0].data as { body: { blocks: OutputBlockData[] } }).body;
 
       expect(body).toBeDefined();
       expect(body.blocks).toHaveLength(3);
@@ -1566,7 +1569,7 @@ describe('data-model-transform', () => {
 
       // Stale content[] must not cause paragraphs to get ejected as root siblings.
       expect(result).toHaveLength(1);
-      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['h1', 'p1', 'p2']);
+      expect((result[0].data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['h1', 'p1', 'p2']);
     });
 
     it('drops dead ids from content[] when block is missing from input', () => {
@@ -1577,8 +1580,9 @@ describe('data-model-transform', () => {
 
       const result = collapseToLegacy(blocks);
 
-      expect(result[0].data.body.blocks).toHaveLength(1);
-      expect(result[0].data.body.blocks[0].id).toBe('h1');
+      const body = (result[0].data as { body: { blocks: OutputBlockData[] } }).body;
+      expect(body.blocks).toHaveLength(1);
+      expect(body.blocks[0].id).toBe('h1');
     });
 
     /**
@@ -1604,7 +1608,7 @@ describe('data-model-transform', () => {
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('toggleList');
       expect(result[0].data.body).toBeDefined();
-      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
+      expect((result[0].data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
     });
 
     it('keeps toggle children when content[] is stale (partial list)', () => {
@@ -1619,7 +1623,7 @@ describe('data-model-transform', () => {
       const result = collapseToLegacy(blocks);
 
       expect(result).toHaveLength(1);
-      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2', 'p3']);
+      expect((result[0].data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2', 'p3']);
     });
 
     it('keeps toggleable-header children when content[] is missing but parent fields are set', () => {
@@ -1633,7 +1637,7 @@ describe('data-model-transform', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('toggleList');
-      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
+      expect((result[0].data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
     });
 
     it('keeps toggleable-header children when content[] is stale (partial list)', () => {
@@ -1645,7 +1649,7 @@ describe('data-model-transform', () => {
 
       const result = collapseToLegacy(blocks);
 
-      expect(result[0].data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
+      expect((result[0].data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['p1', 'p2']);
     });
 
     it('keeps nested flat-list children when content[] is missing but parent fields are set', () => {
@@ -1659,7 +1663,8 @@ describe('data-model-transform', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe('list');
-      const items = result[0].data.items;
+      type ListItem = { content: string; items: ListItem[] };
+      const items = (result[0].data as { items: ListItem[] }).items;
 
       expect(items).toHaveLength(1);
       expect(items[0].content).toBe('root');
@@ -1689,9 +1694,9 @@ describe('data-model-transform', () => {
       const toggle = result.find(b => b.id === 't1');
       const header = result.find(b => b.id === 'h1');
 
-      expect(callout?.data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['cp1']);
-      expect(toggle?.data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['tp1']);
-      expect(header?.data.body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['hp1']);
+      expect((callout?.data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['cp1']);
+      expect((toggle?.data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['tp1']);
+      expect((header?.data as { body: { blocks: OutputBlockData[] } }).body.blocks.map((b: OutputBlockData) => b.id)).toEqual(['hp1']);
     });
   });
 
@@ -3014,7 +3019,7 @@ describe('data-model-transform', () => {
       ];
 
       const result = expandToHierarchical(blocks);
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect(data.frame).toBe('border');
       expect('withBorder' in data).toBe(false);
@@ -3026,7 +3031,7 @@ describe('data-model-transform', () => {
       ];
 
       const result = expandToHierarchical(blocks);
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect('frame' in data).toBe(false);
       expect('withBorder' in data).toBe(false);
@@ -3039,8 +3044,8 @@ describe('data-model-transform', () => {
       const falseCase = expandToHierarchical([
         { type: 'image', data: { file: { url: 'u' }, withBackground: false } },
       ]);
-      const trueData = trueCase[0].data as Record<string, unknown>;
-      const falseData = falseCase[0].data as Record<string, unknown>;
+      const trueData = trueCase[0].data;
+      const falseData = falseCase[0].data;
 
       expect('withBackground' in trueData).toBe(false);
       expect('withBackground' in falseData).toBe(false);
@@ -3052,7 +3057,7 @@ describe('data-model-transform', () => {
       ];
 
       const result = expandToHierarchical(blocks);
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect(data.size).toBe('full');
       expect('stretched' in data).toBe(false);
@@ -3064,7 +3069,7 @@ describe('data-model-transform', () => {
       ];
 
       const result = expandToHierarchical(blocks);
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect('size' in data).toBe(false);
       expect('stretched' in data).toBe(false);
@@ -3076,7 +3081,7 @@ describe('data-model-transform', () => {
       ];
 
       const result = expandToHierarchical(blocks);
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect(data.customField).toBe('x');
       expect(data.url).toBe('u');
@@ -3262,7 +3267,7 @@ describe('data-model-transform', () => {
       ];
 
       const result = expandToHierarchical(blocks);
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect('withBackground' in data).toBe(false);
       expect(console.warn).toHaveBeenCalledTimes(1);
@@ -3304,7 +3309,7 @@ describe('data-model-transform', () => {
       ];
 
       const result = expandToHierarchical(blocks);
-      const data = result[0].data as Record<string, unknown>;
+      const data = result[0].data;
 
       expect('site_name' in data).toBe(false);
       expect(console.warn).toHaveBeenCalledTimes(1);
@@ -3343,7 +3348,7 @@ describe('data-model-transform', () => {
 
       // Caption rescued as a following paragraph sibling.
       expect(result[1].type).toBe('paragraph');
-      expect((result[1].data as Record<string, unknown>).text).toBe('Shakespeare');
+      expect((result[1].data).text).toBe('Shakespeare');
       expect(typeof result[1].id).toBe('string');
       expect((result[1].id as string).length).toBeGreaterThan(0);
 
@@ -3391,11 +3396,11 @@ describe('data-model-transform', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0].type).toBe('quote');
-      const quoteData = result[0].data as Record<string, unknown>;
+      const quoteData = result[0].data;
       expect('alignment' in quoteData).toBe(false);
       expect('caption' in quoteData).toBe(false);
       expect(result[1].type).toBe('paragraph');
-      expect((result[1].data as Record<string, unknown>).text).toBe('Author');
+      expect((result[1].data).text).toBe('Author');
 
       const warnArgs = vi.mocked(console.warn).mock.calls.map(call => String(call[0]));
       expect(warnArgs.some(arg => arg.includes('alignment'))).toBe(true);

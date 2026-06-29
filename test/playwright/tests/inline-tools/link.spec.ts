@@ -358,7 +358,7 @@ test.describe('inline tool link', () => {
 
     const paragraphBlock = savedData?.blocks.find((block) => block.type === 'paragraph');
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Paragraph data has text property
+     
     expect(paragraphBlock?.data.text).toContain('<a href="https://google.com" target="_blank" rel="nofollow">Persist me</a>');
   });
 
@@ -442,6 +442,73 @@ test.describe('inline tool link', () => {
 
     await submitLink(page, 'https://shortcut.com');
     await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'https://shortcut.com');
+  });
+
+  test('CMD+K opens ONLY the link menu, not the format-button row', async ({ page }) => {
+    // Notion parity: the link shortcut replaces the inline toolbar with just the
+    // link menu — the B/i/link/… format buttons must not flank a fly-out input.
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Shortcut text',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByText(page, 'Shortcut text');
+
+    await selectText(paragraph, 'Shortcut');
+
+    await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeVisible();
+
+    await page.keyboard.press('ControlOrMeta+k');
+
+    const linkInput = page.locator(LINK_INPUT_SELECTOR);
+
+    await expect(linkInput).toBeVisible();
+
+    // The format-button row must NOT be rendered — only the link menu shows.
+    await expect(page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="bold"]`)).toHaveCount(0);
+  });
+
+  test('CMD+K link menu is placed right below the selection, not below the whole block', async ({ page }) => {
+    // Regression: the direct menu's popover root is inline-block; once its height
+    // collapsed to 0 (the absolute container carries the size), baseline
+    // alignment dropped it ~one line-height too low, so on a multi-line block the
+    // menu landed below the wrong line. It must sit just under the selection.
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'This is a deliberately long paragraph that wraps onto more than one visual line so the gap between the selection and the menu is easy to measure precisely here.',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByText(page, 'This is a deliberately');
+
+    // Select a word on the FIRST visual line.
+    await selectText(paragraph, 'deliberately');
+
+    const selectionBottom = await page.evaluate(() => {
+      const range = window.getSelection()?.getRangeAt(0);
+
+      return range ? range.getBoundingClientRect().bottom : -1;
+    });
+
+    await page.keyboard.press('ControlOrMeta+k');
+
+    const menu = page.locator(`${INLINE_TOOLBAR_SELECTOR} [data-blok-popover-container]`);
+
+    await expect(menu).toBeVisible();
+
+    const menuTop = await menu.evaluate((el) => el.getBoundingClientRect().top);
+
+    // The menu should hug the selection (a few px of toolbar margin), not be
+    // pushed a full line-height (~16px) below it.
+    expect(menuTop - selectionBottom).toBeGreaterThanOrEqual(0);
+    expect(menuTop - selectionBottom).toBeLessThanOrEqual(12);
   });
 
   test('should unlink if input is cleared and Enter is pressed', async ({ page }) => {

@@ -1,4 +1,6 @@
 import { BlockToolData } from './block-tool-data';
+import { MaxSizeConfig } from './max-size';
+import { MediaSource } from './media-source';
 
 /** Persisted data shape for the File block tool. */
 export interface FileData extends BlockToolData {
@@ -41,7 +43,8 @@ export interface FileUploader {
 /**
  * Tool configuration. Pass via Blok config:
  *   tools: { file: { class: File, config: FileConfig } }
- * No paywall: when `types`/`maxSize` are omitted, all files of any size are accepted.
+ * When `types` is omitted all MIME types are accepted; `maxSize` defaults to
+ * 30 MiB. Pass `maxSize: Infinity` to allow files of any size.
  */
 export interface FileConfig {
   uploader?: FileUploader;
@@ -61,8 +64,17 @@ export interface FileConfig {
   additionalRequestHeaders?: Record<string, string>;
   /** Optional MIME allowlist. Default: accept all. */
   types?: string[];
-  /** Optional max file size in bytes. Default: unlimited. */
-  maxSize?: number;
+  /**
+   * Max upload size. A number caps every type (bytes); an object caps per MIME
+   * type with `'*'` as the fallback. Default 30 MiB; pass `Infinity` for
+   * unlimited. See {@link MaxSizeConfig}.
+   */
+  maxSize?: MaxSizeConfig;
+  /**
+   * Restrict how a file may be added. Default `'both'` (Upload + Link).
+   * Use `'upload'` for file-only or `'url'` for link-only. See {@link MediaSource}.
+   */
+  sources?: MediaSource;
   /** Caption placeholder. */
   captionPlaceholder?: string;
 }

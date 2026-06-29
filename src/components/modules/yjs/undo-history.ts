@@ -175,12 +175,24 @@ export class UndoHistory {
 
       if (event.type === 'undo') {
         // New undo entry was created - record caret positions
-        this.caretUndoStack.push({
+        const entry: CaretHistoryEntry = {
           before: this.pendingCaretBefore,
           after: this.captureCaretSnapshot(),
-        });
+          kind: 'edit',
+        };
+
+        this.caretUndoStack.push(entry);
         // Clear redo stack on new action (standard undo/redo behavior)
         this.caretRedoStack = [];
+
+        // Defense-in-depth backstop for "redo caret does not catch up to the new
+        // block". This listener runs mid-transaction, BEFORE a structural handler
+        // (Enter split, paste, tool insert) calls Caret.setToBlock on the newly
+        // created block — so `after` above still points at the original block.
+        // Re-capture once the synchronous gesture has settled focus, making redo
+        // land on the right block AUTOMATICALLY for every tool, instead of relying
+        // on each handler to remember updateLastCaretAfterPosition() by hand.
+        this.scheduleAfterSnapshotRefresh(entry);
       }
       this.resetPendingCaretState();
     });
@@ -211,6 +223,48 @@ export class UndoHistory {
   }
 
   /**
+   * Re-capture the "after" snapshot of a freshly recorded undo entry once the
+   * current synchronous gesture has settled focus.
+   *
+   * Yjs fires `stack-item-added` mid-transaction, before control returns to the
+   * handler that created the block and moved the caret into it. A microtask
+   * drains after that handler completes (still before any user interaction or
+   * undo/redo), so by then `Caret.setToBlock` has run and the live selection
+   * reflects where the caret truly ended up. Updating the captured entry there
+   * is what makes redo restore the caret to the new block for ANY tool — the
+   * generalized form of the per-handler updateLastCaretAfterPosition() calls.
+   *
+   * The scheduled entry's identity is checked against the current top of the
+   * stack so a later unrelated entry can't be clobbered if more changes land
+   * before the drain.
+   */
+  private scheduleAfterSnapshotRefresh(entry: CaretHistoryEntry): void {
+    queueMicrotask(() => {
+      // Never fight an in-flight undo/redo (it owns caret restoration).
+      if (this.isPerformingUndoRedo) {
+        return;
+      }
+
+      // Only refresh while the scheduled entry is still the most recent one — if
+      // another change (or a clear) landed before this microtask drained, leave
+      // it alone rather than rewriting an unrelated entry.
+      const lastIndex = this.caretUndoStack.length - 1;
+
+      if (lastIndex < 0 || this.caretUndoStack[lastIndex] !== entry) {
+        return;
+      }
+
+      const settled = this.captureCaretSnapshot();
+
+      // Never downgrade a good snapshot to null if focus has since left every
+      // block (e.g. moved to a toolbar control) by the time the microtask runs.
+      if (settled !== null) {
+        this.caretUndoStack[lastIndex].after = settled;
+      }
+    });
+  }
+
+  /**
    * Reset pending caret capture state.
    * Called after caret positions are recorded or when batching completes.
    */
@@ -231,8 +285,13 @@ export class UndoHistory {
     // caret restoration to catch cases where the referenced block no longer exists.
     const savedScrollY = window.scrollY;
 
-    // Check if the last operation was a move (or group of moves)
-    const lastMoveGroup = this.moveUndoStack.pop();
+    // The caret stack interleaves moves and Yjs edits in chronological order, so
+    // its top entry tells us which timeline the most recent operation belongs to.
+    // Unwind that one — keeping undo strictly reverse-chronological even when a
+    // move is sandwiched between text edits (otherwise moves were always undone
+    // first, regardless of when they happened).
+    const lastWasMove = this.caretUndoStack[this.caretUndoStack.length - 1]?.kind === 'move';
+    const lastMoveGroup = lastWasMove ? this.moveUndoStack.pop() : undefined;
 
     if (lastMoveGroup !== undefined && lastMoveGroup.length > 0) {
       // Push to redo stack for potential redo
@@ -276,8 +335,11 @@ export class UndoHistory {
     // Save scroll position before DOM manipulation (same rationale as undo).
     const savedScrollY = window.scrollY;
 
-    // Check if the last undone operation was a move (or group of moves)
-    const lastMoveGroup = this.moveRedoStack.pop();
+    // Mirror undo(): the caret redo stack's top entry tells us whether the next
+    // redo is a move or a Yjs edit, so they replay in the same chronological order
+    // they were undone.
+    const nextIsMove = this.caretRedoStack[this.caretRedoStack.length - 1]?.kind === 'move';
+    const lastMoveGroup = nextIsMove ? this.moveRedoStack.pop() : undefined;
 
     if (lastMoveGroup !== undefined && lastMoveGroup.length > 0) {
       // Push back to undo stack
@@ -429,6 +491,7 @@ export class UndoHistory {
     this.caretUndoStack.push({
       before: this.pendingCaretBefore,
       after: this.captureCaretSnapshot(),
+      kind: 'move',
     });
     this.caretRedoStack = [];
     this.resetPendingCaretState();
@@ -561,28 +624,52 @@ export class UndoHistory {
 
     const { BlockManager } = this.blok;
 
-    // If currentBlock is not set (e.g., debounced selectionchange hasn't fired yet
-    // for nested blocks like table cell paragraphs), resolve it from the selection.
-    const currentBlock = BlockManager.currentBlock ?? (() => {
-      const anchorNode = window.getSelection()?.anchorNode;
+    // Prefer the block the caret is *actually* in (the live DOM selection) over
+    // `BlockManager.currentBlock`. The latter is updated by a debounced (180ms)
+    // selectionchange handler, so it can lag behind the real caret — e.g. when
+    // the caret just moved into another block and an undoable change fires before
+    // the debounce. Trusting the stale block records a snapshot whose blockId
+    // belongs to one block while the offset is read from another, sending the
+    // caret to the wrong block on undo/redo.
+    //
+    // Resolution must stay side-effect free: this runs inside the Yjs
+    // `stack-item-added` / `stack-item-updated` listeners (mid-transaction), so
+    // it uses the read-only `getBlockByChildNode` rather than
+    // `setCurrentBlockByChildNode`, which would mutate `currentBlockIndex` and
+    // corrupt in-flight merge/undo operations.
+    //
+    // Fall back to currentBlock when there is no in-block selection (e.g. focus
+    // is on a toolbar control, or selectionchange hasn't set it yet for nested
+    // blocks like table cell paragraphs).
+    const anchorNode = window.getSelection()?.anchorNode ?? null;
+    const selectionBlock = anchorNode !== null
+      ? BlockManager.getBlockByChildNode(anchorNode)
+      : undefined;
 
-      if (anchorNode !== null && anchorNode !== undefined) {
-        return BlockManager.setCurrentBlockByChildNode(anchorNode);
-      }
-
-      return undefined;
-    })();
+    const currentBlock = selectionBlock ?? BlockManager.currentBlock;
 
     if (currentBlock === undefined) {
       return null;
     }
 
-    const currentInput = currentBlock.currentInput;
-    const offset = currentInput !== undefined ? getCaretOffset(currentInput) : 0;
+    // When the snapshot comes from the live selection, derive the input + offset
+    // from that same selection so the inputIndex/offset stay consistent with the
+    // block id (a multi-input block records the input the caret is actually in).
+    // Otherwise fall back to the block's tracked current input.
+    const selectedIndex = selectionBlock !== undefined && anchorNode !== null
+      ? currentBlock.inputs.findIndex(
+        candidate => candidate === anchorNode || candidate.contains(anchorNode)
+      )
+      : -1;
+
+    const inputIndex = selectedIndex !== -1 ? selectedIndex : currentBlock.currentInputIndex;
+    const input = selectedIndex !== -1 ? currentBlock.inputs[selectedIndex] : currentBlock.currentInput;
+
+    const offset = input !== undefined ? getCaretOffset(input) : 0;
 
     return {
       blockId: currentBlock.id,
-      inputIndex: currentBlock.currentInputIndex,
+      inputIndex,
       offset,
     };
   }
@@ -590,10 +677,23 @@ export class UndoHistory {
   /**
    * Mark the caret position before a change starts.
    * Call this before any operation that might be undoable.
-   * Only captures on first call; subsequent calls are ignored until reset.
+   *
+   * By default only the first call captures; subsequent calls are ignored until
+   * the pending state is reset (when a change is recorded). This dedupes the
+   * keydown + beforeinput pair for one keystroke and, crucially, prevents a
+   * change's own follow-up writes (e.g. the deferred `syncBlockDataToYjs` after
+   * an Enter split) from overwriting the genuine pre-change caret with the
+   * post-change one.
+   *
+   * @param force - When true, always (re)capture, discarding any existing
+   *   pending snapshot. Pass this from keyboard gesture handlers (keydown /
+   *   beforeinput): a new gesture means the caret-before is the caret *now*, so
+   *   a stale pending left dangling by a prior operation's no-op follow-up write
+   *   must not survive into this one. Without it, the caret would restore to that
+   *   stale position (e.g. the start of the wrong block) on undo.
    */
-  public markCaretBeforeChange(): void {
-    if (this.hasPendingCaret) {
+  public markCaretBeforeChange(force = false): void {
+    if (this.hasPendingCaret && !force) {
       return;
     }
 
@@ -642,12 +742,12 @@ export class UndoHistory {
     const { BlockManager, Caret } = this.blok;
     const block = BlockManager.getBlockById(snapshot.blockId);
 
-    // Block no longer exists - focus first block if available
-    if (block === undefined && BlockManager.firstBlock !== undefined) {
-      Caret.setToBlock(BlockManager.firstBlock, Caret.positions.START);
-      return;
-    }
-
+    // Block no longer exists. Do NOT yank the caret to the first block at the
+    // document START — that is the user-visible "caret jumps to the very
+    // beginning on undo/redo" bug. The snapshot recorded a position deep in the
+    // document; teleporting to the top is never the right recovery and loses the
+    // user's place. Preserve whatever focus state exists after the DOM update
+    // instead (same philosophy as the null-snapshot branch above).
     if (block === undefined) {
       return;
     }

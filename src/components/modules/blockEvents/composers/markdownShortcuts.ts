@@ -1,7 +1,90 @@
 import type { Block } from '../../../block';
-import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN, QUOTE_TOOL_NAME, QUOTE_PATTERN, CODE_TOOL_NAME, CODE_PATTERN } from '../constants';
+import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, ALPHA_ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN, QUOTE_TOOL_NAME, QUOTE_PATTERN, CODE_TOOL_NAME, CODE_PATTERN } from '../constants';
 
 import { BlockEventComposer } from './__base';
+
+/**
+ * Per-marker inline-markdown rules. `literal` is the regex-escaped marker,
+ * `double` the tag for the `**`/`__`/`~~` form (null when there is none), and
+ * `single` the tag for the single-marker form.
+ *
+ * `singleOpenGuard` is an optional regex lookbehind prepended to the single-marker
+ * rule. CommonMark disallows intraword `_` emphasis (so `snake_case_` must NOT
+ * italicise), while intraword `*` IS allowed — hence the guard only exists for `_`.
+ */
+const INLINE_RULES: Record<string, { literal: string; double: string | null; single: string; singleOpenGuard?: string }> = {
+  '*': { literal: '\\*', double: 'strong', single: 'i' },
+  '_': { literal: '_', double: 'strong', single: 'i', singleOpenGuard: '(?<![A-Za-z0-9])' },
+  '`': { literal: '`', double: null, single: 'code' },
+  '~': { literal: '~', double: 's', single: 's' },
+};
+
+interface InlineMarkdownMatch {
+  /**
+   * Tags the span should be wrapped in, outermost first (e.g. ['strong'] or,
+   * for the triple `***…***` form, ['strong', 'i'] → `<strong><i>…</i></strong>`).
+   */
+  tags: string[];
+  /** Text content between the markers. */
+  inner: string;
+  /** Length (in characters) of the full `marker + inner + marker` match. */
+  length: number;
+}
+
+/**
+ * Detect a completed inline-markdown span ending at the end of `text` (the text
+ * just before the caret), given the closing marker character that was typed.
+ *
+ * Double markers (`**`, `__`, `~~`) take priority over single ones, and the
+ * single form uses a negative lookbehind so a span is not detected while a
+ * double-marker span is still being typed (e.g. `**bold*`). `inner` excludes the
+ * marker character, so nested same-marker spans are intentionally not matched.
+ * @param text - text immediately before the caret
+ * @param marker - the closing marker character just inserted
+ * @returns the match, or null when no complete span ends at the caret
+ */
+const detectInlineMarkdown = (text: string, marker: string): InlineMarkdownMatch | null => {
+  const rule = INLINE_RULES[marker];
+
+  if (rule === undefined) {
+    return null;
+  }
+
+  const { literal, double: doubleTag, single: singleTag, singleOpenGuard = '' } = rule;
+
+  // Notion only auto-formats CONTIGUOUS spans: leading/trailing inner whitespace
+  // (e.g. `** bold **`, `* x *`) is left as typed.
+  const hasEdgeWhitespace = (inner: string): boolean => /^\s|\s$/.test(inner);
+
+  // Triple markers (`***bolditalic***`) wrap the inner text as BOTH bold and
+  // italic, consuming all three markers on each side. The leading `(?<!literal)`
+  // also stops the double rule below from half-matching `***x**` mid-typing.
+  if (doubleTag !== null && doubleTag !== singleTag) {
+    const triple = new RegExp(
+      `(?<!${literal})${literal}${literal}${literal}([^${marker}]+)${literal}${literal}${literal}$`
+    ).exec(text);
+
+    if (triple !== null && !hasEdgeWhitespace(triple[1])) {
+      return { tags: [doubleTag, singleTag], inner: triple[1], length: triple[0].length };
+    }
+  }
+
+  if (doubleTag !== null) {
+    const double = new RegExp(`(?<!${literal})${literal}${literal}([^${marker}]+)${literal}${literal}$`).exec(text);
+
+    if (double !== null && !hasEdgeWhitespace(double[1])) {
+      return { tags: [doubleTag], inner: double[1], length: double[0].length };
+    }
+  }
+
+  const single = new RegExp(`${singleOpenGuard}(?<!${literal})${literal}([^${marker}]+)${literal}$`).exec(text);
+
+  if (single !== null && !hasEdgeWhitespace(single[1])) {
+    return { tags: [singleTag], inner: single[1], length: single[0].length };
+  }
+
+  return null;
+};
 
 /**
  * MarkdownShortcuts Composer handles markdown-like shortcuts for auto-converting to lists or headers.
@@ -31,8 +114,22 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return this.handleDividerShortcut();
     }
 
+    /**
+     * Code-block shortcut triggers on the third backtick — no space needed,
+     * mirroring the divider's "---" behaviour. When the text is not a bare
+     * "```" the backtick falls through to inline `code` auto-formatting below.
+     */
+    if (event.data === '`' && this.handleCodeShortcut()) {
+      return true;
+    }
+
     if (event.data !== ' ') {
-      return false;
+      /**
+       * Inline markdown auto-format (Notion): typing the closing marker of
+       * `**bold**`, `*italic*`, `` `code` `` or `~strike~` wraps the span in
+       * place. Other characters are ignored here.
+       */
+      return this.handleInlineMarkdown(event.data);
     }
 
     const handledList = this.handleListShortcut();
@@ -126,15 +223,20 @@ export class MarkdownShortcuts extends BlockEventComposer {
     }
 
     const orderedMatch = ORDERED_LIST_PATTERN.exec(textContent);
+    const alphaMatch = orderedMatch ? null : ALPHA_ORDERED_LIST_PATTERN.exec(textContent);
+    const listMatch = orderedMatch ?? alphaMatch;
 
-    if (!orderedMatch) {
+    if (!listMatch) {
       return false;
     }
 
     this.Blok.YjsManager.stopCapturing();
 
-    const startNumber = parseInt(orderedMatch[1], 10);
-    const shortcutLength = orderedMatch[1].length + 2;
+    const marker = listMatch[1];
+    // Numeric markers ("5. ") start at their value; the alpha/roman aliases
+    // ("a. " / "i. ") both start at 1 — their glyph is depth-driven, not the letter.
+    const startNumber = orderedMatch ? parseInt(marker, 10) : 1;
+    const shortcutLength = marker.length + 2;
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
     const caretOffset = this.getCaretOffset(currentInput) - shortcutLength;
 
@@ -155,6 +257,117 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const newBlock = BlockManager.replace(currentBlock, LIST_TOOL_NAME, listData);
 
     this.setCaretAfterConversion(newBlock, caretOffset);
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
+   * Inline markdown auto-format. Triggered when the user types a closing marker
+   * character (`*`, `_`, `` ` `` or `~`). Detects a completed `**bold**`,
+   * `*italic*`, `` `code` `` or `~strike~` span ending at the caret — within the
+   * single text node the caret sits in — and replaces it with the editor's
+   * inline markup (`<strong>` / `<i>` / `<code>` / `<s>`), keeping the caret
+   * after the new span. Operating on one text node keeps this safe: the markers
+   * were just typed, so they are plain text, never split across existing marks.
+   * @param closingChar - the character that was just inserted
+   * @returns true if a span was auto-formatted
+   */
+  private handleInlineMarkdown(closingChar: string | null): boolean {
+    if (closingChar === null || INLINE_RULES[closingChar] === undefined) {
+      return false;
+    }
+
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const currentInput = currentBlock?.currentInput;
+
+    if (!currentBlock || !currentInput) {
+      return false;
+    }
+
+    const selection = window.getSelection();
+
+    if (selection === null || !selection.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    const caretOffset = range.startOffset;
+
+    if (node.nodeType !== Node.TEXT_NODE || !currentInput.contains(node)) {
+      return false;
+    }
+
+    // Never auto-format inside an existing code span — its content is literal.
+    if (node.parentElement?.closest('code')) {
+      return false;
+    }
+
+    const textBeforeCaret = (node.textContent ?? '').slice(0, caretOffset);
+    const match = detectInlineMarkdown(textBeforeCaret, closingChar);
+
+    if (match === null) {
+      return false;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    const fullText = node.textContent ?? '';
+    const matchStart = caretOffset - match.length;
+    const beforeText = fullText.slice(0, matchStart);
+    const afterText = fullText.slice(caretOffset);
+
+    const fragment = document.createDocumentFragment();
+
+    if (beforeText.length > 0) {
+      fragment.appendChild(document.createTextNode(beforeText));
+    }
+
+    // Build the (possibly nested) wrapper, outermost tag first. For the triple
+    // `***…***` form this yields `<strong><i>…</i></strong>`.
+    const wrapper = document.createElement(match.tags[0]);
+    const innermost = match.tags.slice(1).reduce<HTMLElement>((parent, tag) => {
+      const child = document.createElement(tag);
+
+      parent.appendChild(child);
+
+      return child;
+    }, wrapper);
+
+    innermost.textContent = match.inner;
+    fragment.appendChild(wrapper);
+
+    const afterNode = afterText.length > 0 ? document.createTextNode(afterText) : null;
+
+    if (afterNode !== null) {
+      fragment.appendChild(afterNode);
+    }
+
+    const parent = node.parentNode;
+
+    if (parent === null) {
+      return false;
+    }
+
+    parent.replaceChild(fragment, node);
+
+    // Place the caret right after the new span so typing continues unformatted.
+    const caretRange = document.createRange();
+
+    if (afterNode !== null) {
+      caretRange.setStart(afterNode, 0);
+    } else {
+      caretRange.setStartAfter(wrapper);
+    }
+    caretRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(caretRange);
+
+    // The DOM was mutated directly (not via a Tool re-render), so notify the
+    // block to flush the change to Yjs — see the CRDT sync contract.
+    currentBlock.dispatchChange();
 
     this.Blok.YjsManager.stopCapturing();
 
@@ -491,7 +704,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
 
     this.Blok.YjsManager.stopCapturing();
 
-    const shortcutLength = 4; // "```" + space
+    // "```" alone removes 3 chars; "``` …" removes the backticks plus the space.
+    const remainingText = match[1] ?? '';
+    const shortcutLength = textContent.length - remainingText.length;
     const remainingHtml = this.extractRemainingHtml(currentInput, shortcutLength);
 
     const newBlock = BlockManager.replace(currentBlock, CODE_TOOL_NAME, {

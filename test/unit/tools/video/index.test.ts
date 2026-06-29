@@ -49,6 +49,23 @@ describe('VideoTool — RENDERED state', () => {
     expect(root.querySelector('[data-role="video-controls"]')).not.toBeNull();
   });
 
+  it('omits the control surface when hideControls is set (clean, control-free frame)', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', hideControls: true }));
+    const root = tool.render();
+    const video = root.querySelector('video');
+    expect(video).not.toBeNull();
+    // No custom chrome and no native controls — just the bare media surface.
+    expect(root.querySelector('[data-role="video-controls"]')).toBeNull();
+    expect(video?.hasAttribute('controls')).toBe(false);
+    expect(root.getAttribute('data-controls')).toBe('off');
+  });
+
+  it('keeps loop wiring intact even with controls hidden (loop is content)', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', hideControls: true, loop: true }));
+    const root = tool.render();
+    expect(root.querySelector('video')?.loop).toBe(true);
+  });
+
   it('save() returns the persisted shape', () => {
     const tool = new VideoTool(createOptions({
       url: 'https://x/y.mp4',
@@ -69,27 +86,6 @@ describe('VideoTool — RENDERED state', () => {
     });
   });
 
-  it('save() includes videoWidth and videoHeight when present in data', () => {
-    const tool = new VideoTool(createOptions({
-      url: 'https://x/y.mp4',
-      videoWidth: 1920,
-      videoHeight: 1080,
-    }));
-    const root = tool.render();
-    expect(tool.save(root)).toMatchObject({
-      videoWidth: 1920,
-      videoHeight: 1080,
-    });
-  });
-
-  it('save() omits videoWidth/videoHeight when not yet known', () => {
-    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
-    const root = tool.render();
-    const saved = tool.save(root);
-    expect(saved).not.toHaveProperty('videoWidth');
-    expect(saved).not.toHaveProperty('videoHeight');
-  });
-
   it('validate({ url: "" }) returns false, non-empty returns true', () => {
     const tool = new VideoTool(createOptions());
     expect(tool.validate({ url: '' } as VideoData)).toBe(false);
@@ -102,6 +98,47 @@ describe('VideoTool — RENDERED state', () => {
     expect(root.getAttribute('data-state')).toBe('rendered');
     expect(root.getAttribute('data-align')).toBe('right');
     expect(root.getAttribute('data-caption')).toBe('off');
+  });
+});
+
+describe('VideoTool — theater mode', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const figureOf = (root: HTMLElement): HTMLElement => {
+    const fig = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    if (!fig) throw new Error('figure missing');
+    return fig;
+  };
+  const enterTheater = (root: HTMLElement): void => {
+    figureOf(root).dispatchEvent(new CustomEvent('blok-video-theater', { detail: { on: true } }));
+  };
+
+  it('never persists theater state in save()', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', width: 50 }));
+    const root = tool.render();
+    enterTheater(root);
+    expect(tool.save(root)).not.toHaveProperty('theater');
+    expect(tool.save(root).width).toBe(50);
+  });
+
+  it('re-applies theater after a re-render (read-only toggle)', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+    const root = tool.render();
+    enterTheater(root);
+    tool.setReadOnly(true);
+    expect(figureOf(root).getAttribute('data-theater')).toBe('true');
+  });
+
+  it('does not corrupt the saved width when theater toggles', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4', width: 50 }));
+    const root = tool.render();
+    const fig = figureOf(root);
+    expect(fig.style.width).toBe('50%');
+    enterTheater(root);
+    // theater widens via CSS !important — the inline width is never mutated
+    expect(fig.style.width).toBe('50%');
+    expect(tool.save(root).width).toBe(50);
   });
 });
 
@@ -138,6 +175,29 @@ describe('VideoTool — onPaste', () => {
     expect(root.querySelector('video')?.getAttribute('src')).toBe('https://x/y.mp4');
   });
 
+  it('with sources "url" ignores a pasted file (no upload)', async () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    const tool = new VideoTool(createOptions({}, { sources: 'url' }));
+    tool.render();
+    const file = new File([new Uint8Array(10)], 'clip.mp4', { type: 'video/mp4' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('');
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {
+    const tool = new VideoTool(createOptions({}, { sources: 'upload' }));
+    tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'video', data: 'https://x/y.mp4' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(tool.save().url).toBe('');
+  });
+
   it('onPaste(file) routes through the uploader and sets a blob URL', async () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
     const tool = new VideoTool(createOptions());
@@ -149,6 +209,19 @@ describe('VideoTool — onPaste', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(tool.save().url).toBe('blob:fake');
     expect(root.querySelector('video')?.getAttribute('src')).toBe('blob:fake');
+  });
+
+  it('shows human-readable copy (not a raw error code) when the file exceeds maxSize', async () => {
+    const tool = new VideoTool(createOptions({}, { maxSize: 5 }));
+    const root = tool.render();
+    const file = new File([new Uint8Array(50)], 'big.mp4', { type: 'video/mp4' });
+    const event = new CustomEvent('paste', { detail: { file } }) as FilePasteEvent;
+    Object.defineProperty(event, 'type', { value: 'file' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    const msg = root.querySelector('[data-role="video-error"] span');
+    expect(msg?.textContent).toBe('tools.video.errorFileTooLarge');
+    expect(msg?.textContent).not.toContain('FILE_TOO_LARGE');
   });
 });
 
@@ -177,51 +250,150 @@ describe('VideoTool — EMPTY state', () => {
   });
 });
 
-describe('VideoTool — overlay actions', () => {
+describe('VideoTool — editor actions (block settings)', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('renders overlay when data.url is set and not readOnly', () => {
+  type SettingsItem = {
+    name?: string;
+    isActive?: boolean;
+    onActivate?: () => void;
+    children?: { items: SettingsItem[] };
+  };
+  const settings = (tool: VideoTool): SettingsItem[] => tool.renderSettings() as unknown as SettingsItem[];
+  const find = (items: SettingsItem[], name: string): SettingsItem | undefined =>
+    items.find((i) => i.name === name);
+
+  it('never renders the floating overlay toolbar — actions live in block settings', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     const root = tool.render();
-    expect(root.querySelector('[data-role="video-overlay"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
   });
 
-  it('does not render overlay in readOnly mode', () => {
+  it('never renders the floating overlay in readOnly mode either', () => {
     const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
     const root = tool.render();
     expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
   });
 
-  it('clicking a popover alignment option sets that exact value and dispatches change', () => {
+  it('block-settings alignment option sets that exact value and dispatches change', () => {
     const block = createMockBlock();
     const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
-    const root = tool.render();
-    const open = (): void => {
-      root.querySelector<HTMLButtonElement>('[data-action="align-trigger"]')?.click();
+    tool.render();
+    const pick = (value: string): void => {
+      find(settings(tool), 'video-alignment')?.children?.items
+        .find((c) => c.name === `video-alignment-${value}`)?.onActivate?.();
     };
-    open();
-    root.querySelector<HTMLButtonElement>('[data-action="align-right"]')?.click();
+    pick('right');
     expect(tool.save().alignment).toBe('right');
-    open();
-    root.querySelector<HTMLButtonElement>('[data-action="align-left"]')?.click();
+    pick('left');
     expect(tool.save().alignment).toBe('left');
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
-  it('caption-toggle flips captionVisible and updates data-caption', () => {
+  it('block-settings caption item flips captionVisible and updates data-caption', () => {
     const tool = new VideoTool(createOptions({ url: 'u' }));
     const root = tool.render();
     expect(root.getAttribute('data-caption')).toBe('on');
-    root.querySelector<HTMLButtonElement>('[data-action="caption-toggle"]')?.click();
+    find(settings(tool), 'video-caption')?.onActivate?.();
     expect(root.getAttribute('data-caption')).toBe('off');
     expect(tool.save().captionVisible).toBe(false);
   });
 
-  it('clicking replace returns the tool to EMPTY state', () => {
+  it('applies the configured glow level to the player (Blok config, not a block tune)', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }, { glow: 'more' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="video-ambient"]')?.getAttribute('data-glow')).toBe('more');
+  });
+
+  it('defaults the glow level to "minimal" when the config omits it', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="video-ambient"]')?.getAttribute('data-glow')).toBe('minimal');
+  });
+
+  it('does not expose a Glow block tune (it lives in the Blok config now)', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }));
+    tool.render();
+    const items = tool.renderSettings() as unknown[];
+    expect(items.map((i) => (i as { name?: string }).name)).not.toContain('video-glow');
+  });
+
+  it('exposes Autoplay and Loop block tunes reflecting the persisted state', () => {
+    const tool = new VideoTool(createOptions({ url: 'u', autoplay: true }));
+    tool.render();
+    const items = settings(tool);
+    expect(items.map((i) => i.name)).toEqual(expect.arrayContaining(['video-autoplay', 'video-loop']));
+    expect(find(items, 'video-autoplay')?.isActive).toBe(true);
+    expect(find(items, 'video-loop')?.isActive).toBe(false);
+  });
+
+  it('toggling the Autoplay and Loop tunes persists the flags and dispatches', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
+    tool.render();
+    find(settings(tool), 'video-autoplay')?.onActivate?.();
+    find(settings(tool), 'video-loop')?.onActivate?.();
+    expect(tool.save().autoplay).toBe(true);
+    expect(tool.save().loop).toBe(true);
+    expect(block.dispatchChange).toHaveBeenCalled();
+    // toggling back clears them
+    find(settings(tool), 'video-autoplay')?.onActivate?.();
+    expect(tool.save().autoplay).toBeUndefined();
+  });
+
+  it('exposes a Hide controls block tune reflecting the persisted state', () => {
+    const tool = new VideoTool(createOptions({ url: 'u', hideControls: true }));
+    tool.render();
+    const items = settings(tool);
+    expect(items.map((i) => i.name)).toContain('video-hide-controls');
+    expect(find(items, 'video-hide-controls')?.isActive).toBe(true);
+  });
+
+  it('Hide controls tune defaults to inactive when unset', () => {
+    const tool = new VideoTool(createOptions({ url: 'u' }));
+    tool.render();
+    expect(find(settings(tool), 'video-hide-controls')?.isActive).toBe(false);
+  });
+
+  it('toggling the Hide controls tune persists the flag, re-renders, and dispatches', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u' }, {}, block));
+    const root = tool.render();
+    expect(root.querySelector('[data-role="video-controls"]')).not.toBeNull();
+    find(settings(tool), 'video-hide-controls')?.onActivate?.();
+    expect(tool.save().hideControls).toBe(true);
+    expect(root.querySelector('[data-role="video-controls"]')).toBeNull();
+    expect(block.dispatchChange).toHaveBeenCalled();
+    // toggling back clears it and restores the controls
+    find(settings(tool), 'video-hide-controls')?.onActivate?.();
+    expect(tool.save().hideControls).toBeUndefined();
+    expect(root.querySelector('[data-role="video-controls"]')).not.toBeNull();
+  });
+
+  it('read-only autoplay renders a muted, looping gif-style player', () => {
+    const tool = new VideoTool({ ...createOptions({ url: 'u', autoplay: true, loop: true }), readOnly: true });
+    const root = tool.render();
+    const v = root.querySelector('video');
+    expect(v?.muted).toBe(true);
+    expect(v?.hasAttribute('autoplay')).toBe(true);
+    expect(v?.loop).toBe(true);
+  });
+
+  it('does not autoplay in edit mode (autoplay is a read-only viewer affordance)', () => {
+    const tool = new VideoTool(createOptions({ url: 'u', autoplay: true, loop: true }));
+    const root = tool.render();
+    const v = root.querySelector('video');
+    expect(v?.hasAttribute('autoplay')).toBe(false);
+    expect(v?.muted).toBe(false);
+    // loop still applies in edit mode — it is content, not an autoplay affordance
+    expect(v?.loop).toBe(true);
+  });
+
+  it('block-settings replace item returns the tool to EMPTY state', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     const root = tool.render();
-    root.querySelector<HTMLButtonElement>('[data-action="replace"]')?.click();
+    find(settings(tool), 'video-replace')?.onActivate?.();
     expect(root.getAttribute('data-state')).toBe('empty');
     expect(root.querySelector('input[type="file"]')).not.toBeNull();
   });
@@ -260,82 +432,51 @@ describe('VideoTool — resize', () => {
     handle.setPointerCapture = (): void => undefined;
     handle.releasePointerCapture = (): void => undefined;
     handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 700, bubbles: true }));
-    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 700, bubbles: true }));
-    expect(tool.save().width).toBe(40);
-    expect(block.dispatchChange).toHaveBeenCalled();
-  });
-});
-
-describe('VideoTool — dimension persistence', () => {
-  beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.restoreAllMocks());
-
-  it('applies aspect-ratio on figure when videoWidth/videoHeight are in data', () => {
-    const tool = new VideoTool(createOptions({
-      url: 'https://x/y.mp4',
-      videoWidth: 1920,
-      videoHeight: 1080,
-    }));
-    const root = tool.render();
-    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
-    expect(figure).not.toBeNull();
-    expect(figure!.style.aspectRatio).toBe('1920 / 1080');
-  });
-
-  it('does not set aspect-ratio when dimensions are absent', () => {
-    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
-    const root = tool.render();
-    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
-    expect(figure!.style.aspectRatio).toBe('');
-  });
-
-  it('captures natural video dimensions on metadata load and dispatches change', () => {
-    const block = createMockBlock();
-    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }, {}, block));
-    const root = tool.render();
-    const video = root.querySelector('video')!;
-    // Simulate the browser reporting natural dimensions
-    Object.defineProperty(video, 'videoWidth', { value: 1280, configurable: true });
-    Object.defineProperty(video, 'videoHeight', { value: 720, configurable: true });
-    video.dispatchEvent(new Event('loadedmetadata'));
-    expect(tool.save().videoWidth).toBe(1280);
-    expect(tool.save().videoHeight).toBe(720);
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 800, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 800, bubbles: true }));
+    expect(tool.save().width).toBe(60);
     expect(block.dispatchChange).toHaveBeenCalled();
   });
 
-  it('does not overwrite existing dimensions on subsequent metadata loads', () => {
+  it('floors the player width at the 440px minimum when dragged narrower', () => {
     const block = createMockBlock();
-    const tool = new VideoTool(createOptions({
-      url: 'https://x/y.mp4',
-      videoWidth: 1920,
-      videoHeight: 1080,
-    }, {}, block));
+    const tool = new VideoTool(createOptions({ url: 'u', width: 100 }, {}, block));
     const root = tool.render();
-    const video = root.querySelector('video')!;
-    Object.defineProperty(video, 'videoWidth', { value: 640, configurable: true });
-    Object.defineProperty(video, 'videoHeight', { value: 480, configurable: true });
-    video.dispatchEvent(new Event('loadedmetadata'));
-    // Should keep the original 1920x1080, not overwrite with 640x480
-    expect(tool.save().videoWidth).toBe(1920);
-    expect(tool.save().videoHeight).toBe(1080);
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    if (!figure) throw new Error('figure missing');
+    stubRect(root, 1000);
+    stubRect(figure, 1000);
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    // Drag the edge way past the left wall — width wants to collapse to ~0.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+    // 440px floor on a 1000px container → 44%, not the global 10%.
+    expect(tool.save().width).toBe(44);
   });
 
-  it('re-applies aspect-ratio after a re-render (e.g. alignment change)', () => {
-    const tool = new VideoTool(createOptions({
-      url: 'https://x/y.mp4',
-      videoWidth: 1920,
-      videoHeight: 1080,
-    }));
+  it('flags the figure as resize-blocked while dragged past the floor, clears on commit', () => {
+    const block = createMockBlock();
+    const tool = new VideoTool(createOptions({ url: 'u', width: 100 }, {}, block));
     const root = tool.render();
-    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]')!;
-    expect(figure.style.aspectRatio).toBe('1920 / 1080');
-    // Trigger re-render via alignment change
-    const items = tool.renderSettings() as unknown as { name?: string; children?: { items: { name?: string; onActivate?: () => void }[] } }[];
-    items.find(i => i.name === 'video-alignment')?.children?.items
-      .find(c => c.name === 'video-alignment-left')?.onActivate?.();
-    const newFigure = root.querySelector<HTMLElement>('[data-role="video-figure"]')!;
-    expect(newFigure.style.aspectRatio).toBe('1920 / 1080');
+    const figure = root.querySelector<HTMLElement>('[data-role="video-figure"]');
+    if (!figure) throw new Error('figure missing');
+    stubRect(root, 1000);
+    stubRect(figure, 1000);
+    const handle = root.querySelector<HTMLElement>('[data-role="resize-handle"][data-edge="right"]');
+    if (!handle) throw new Error('handle missing');
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 1000, bubbles: true }));
+    // Yank past the wall — width pins at the floor.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).toBe('true');
+    // Releasing clears the blocked state.
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
   });
 });
 
@@ -343,22 +484,24 @@ describe('VideoTool — setReadOnly', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('removes the overlay and locks the caption when read-only is enabled', () => {
+  it('removes editing affordances and locks the caption when read-only is enabled', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
     const root = tool.render();
-    expect(root.querySelector('[data-role="video-overlay"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).not.toBeNull();
     tool.setReadOnly(true);
-    expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).toBeNull();
     const caption = root.querySelector('[data-role="video-caption"]');
     expect(caption?.getAttribute('contenteditable')).toBe('false');
   });
 
-  it('restores the overlay when read-only is disabled again', () => {
+  it('restores editing affordances when read-only is disabled again', () => {
     const tool = new VideoTool({ ...createOptions({ url: 'https://x/y.mp4' }), readOnly: true });
     const root = tool.render();
-    expect(root.querySelector('[data-role="video-overlay"]')).toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).toBeNull();
     tool.setReadOnly(false);
-    expect(root.querySelector('[data-role="video-overlay"]')).not.toBeNull();
+    expect(root.querySelector('[data-role="resize-handle"]')).not.toBeNull();
+    const caption = root.querySelector('[data-role="video-caption"]');
+    expect(caption?.getAttribute('contenteditable')).toBe('true');
   });
 });
 
@@ -379,6 +522,8 @@ describe('VideoTool — renderSettings', () => {
       'video-download',
       'video-copy-url',
     ]));
+    // Glow is a Blok-config option now, not a per-block tune.
+    expect(names(items)).not.toContain('video-glow');
   });
 
   it('activating copy-url writes the video URL to the clipboard', () => {

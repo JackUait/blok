@@ -1516,4 +1516,32 @@ describe("UI module", () => {
       expect(nodes.wrapper.getAttribute(DATA_ATTR.contentAlign)).toBe("left");
     });
   });
+
+  describe("width mode", () => {
+    it("defaults to 'narrow' with no width attribute on the wrapper", () => {
+      const { ui, wrapper } = createUI();
+
+      expect(ui.getWidthMode()).toBe("narrow");
+      expect(wrapper.hasAttribute(DATA_ATTR.width)).toBe(false);
+    });
+
+    it("sets data-blok-width to 'full' and reflects it in getWidthMode", () => {
+      const { ui, wrapper } = createUI();
+
+      ui.setWidthMode("full");
+
+      expect(wrapper.getAttribute(DATA_ATTR.width)).toBe("full");
+      expect(ui.getWidthMode()).toBe("full");
+    });
+
+    it("removes the width attribute when set back to 'narrow'", () => {
+      const { ui, wrapper } = createUI();
+
+      ui.setWidthMode("full");
+      ui.setWidthMode("narrow");
+
+      expect(wrapper.hasAttribute(DATA_ATTR.width)).toBe(false);
+      expect(ui.getWidthMode()).toBe("narrow");
+    });
+  });
 });

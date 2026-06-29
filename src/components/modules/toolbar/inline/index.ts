@@ -60,6 +60,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
+   * Returns true while a shortcut-opened direct menu (Link/Equation/Marker) is
+   * showing. Such a menu deliberately moves focus into its own input, which
+   * collapses the document selection — the SelectionController uses this to
+   * avoid tearing the menu down on the resulting selectionchange (mirrors the
+   * fake-background guard used when a range is selected).
+   */
+  public get hasDirectMenuOpen(): boolean {
+    return this.directMenuChildren !== null;
+  }
+
+  /**
    * Popover instance reference
    */
   private popover: Popover | null = null;
@@ -69,6 +80,23 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    * Used to ensure shortcuts wait for popover initialization
    */
   private openingPromise: Promise<void> | null = null;
+
+  /**
+   * When a popover-entry tool (Link, Equation, Marker — any tool whose render
+   * config carries `children`) is triggered by its keyboard shortcut we skip the
+   * format-button row entirely and present only that tool's dedicated menu. This
+   * holds the tool name for the next `open()` call.
+   */
+  private directToolName: string | null = null;
+
+  /**
+   * The active direct menu's open/close hooks, captured from the tool's
+   * `render().children` config so they can be driven without a parent popover.
+   */
+  private directMenuChildren: {
+    onOpen?: () => void;
+    onClose?: () => void;
+  } | null = null;
 
   /**
    * Helper instances
@@ -218,6 +246,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       return;
     }
 
+    /**
+     * Direct menus (Link/Equation opened via shortcut) have no parent popover to
+     * fire their nested onClose, so run the tool's cleanup here before tearing
+     * down the popover.
+     */
+    if (this.directMenuChildren) {
+      this.directMenuChildren.onClose?.();
+      this.directMenuChildren = null;
+    }
+    this.directToolName = null;
+
     this.tools = new Map();
     this.opened = false;
     this.openingPromise = null;
@@ -326,8 +365,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     // Clear wrapper
     this.nodes.wrapper.innerHTML = '';
 
-    // Build popover items
-    const popoverItems = await this.buildPopoverItems();
+    /**
+     * Direct mode (shortcut-triggered Link/Equation): render only the tool's
+     * dedicated menu. Otherwise render the full format-button row.
+     */
+    const directName = this.directToolName;
+
+    this.directToolName = null;
+
+    const popoverItems = directName !== null
+      ? await this.buildDirectMenuItems(directName)
+      : await this.buildPopoverItems();
 
     // Create popover
     this.popover = new PopoverInline({
@@ -353,6 +401,11 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.popover.show?.();
+
+    if (directName !== null) {
+      this.applyDirectMenuLook();
+      this.directMenuChildren?.onOpen?.();
+    }
   }
 
   /**
@@ -406,6 +459,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    * Activates inline tool triggered by keyboard shortcut
    */
   private async activateToolByShortcut(toolName: string): Promise<void> {
+    /**
+     * Popover-entry tools (Link, Equation, Marker) present their own menu.
+     * Triggered by shortcut they replace the inline toolbar with just that menu
+     * — never the full format-button row flanking a fly-out input.
+     */
+    if (this.toolOpensPopover(toolName)) {
+      await this.openToolMenuDirect(toolName);
+
+      return;
+    }
+
     if (!this.opened) {
       await this.tryToShow();
     }
@@ -427,6 +491,146 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.invokeToolActionDirectly(toolName);
+  }
+
+  /**
+   * Whether the named inline tool renders as a nested popover (e.g. Link,
+   * Equation) — i.e. its render config carries `children` rather than a direct
+   * `onActivate`. Such tools open an input/menu when activated.
+   * @param toolName - inline tool name
+   */
+  private toolOpensPopover(toolName: string): boolean {
+    const tool = this.Blok.Tools.inlineTools.get(toolName);
+
+    if (!tool) {
+      return false;
+    }
+
+    const rendered = tool.create().render();
+    const items = Array.isArray(rendered) ? rendered : [rendered];
+
+    return items.some((item) => 'children' in item && Boolean(item.children));
+  }
+
+  /**
+   * Opens just the named tool's dedicated menu (Link/Equation/Marker) at the
+   * caret, replacing any open inline toolbar. The collapsed-caret gate is
+   * relaxed so the shortcut works with nothing selected (the user types a fresh
+   * value); all other validity checks still apply.
+   * @param toolName - inline tool whose menu should open
+   */
+  private async openToolMenuDirect(toolName: string): Promise<void> {
+    // Tear down whatever is open (full toolbar or a previous menu) first.
+    this.close();
+    this.initialize();
+
+    /**
+     * Only caret-insert tools (Equation) may open with nothing selected; a
+     * selection-wrapping tool (Link, Marker) needs a range to act on, so its
+     * shortcut is a no-op at a collapsed caret.
+     */
+    const allowCollapsed = this.Blok.Tools.inlineTools.get(toolName)?.allowCaretShortcut ?? false;
+    const { allowed } = this.selectionValidator.canShow({ allowCollapsed });
+
+    if (!allowed) {
+      return;
+    }
+
+    this.directToolName = toolName;
+    this.openingPromise = this.open();
+
+    try {
+      await this.openingPromise;
+    } catch {
+      this.opened = false;
+      this.directToolName = null;
+      this.directMenuChildren = null;
+
+      if (this.popover) {
+        this.popover.hide?.();
+        this.popover.destroy?.();
+        this.popover = null;
+      }
+
+      return;
+    } finally {
+      this.openingPromise = null;
+    }
+
+    this.Blok.Toolbar.hideBlockActions();
+  }
+
+  /**
+   * Build popover items for a direct tool menu: the tool's `render().children`
+   * content (its input/menu) with the open/close hooks captured so they can be
+   * driven without a parent popover. Returns an empty list when the tool has no
+   * nested menu.
+   * @param toolName - inline tool whose menu should be built
+   */
+  private async buildDirectMenuItems(toolName: string): Promise<PopoverItemParams[]> {
+    const entry = Array.from(this.tools.entries()).find(([tool]) => tool.name === toolName);
+
+    if (entry === undefined) {
+      return [];
+    }
+
+    const rendered = await entry[1].render();
+    const items = Array.isArray(rendered) ? rendered : [rendered];
+    const withChildren = items.find((item) => 'children' in item && Boolean(item.children));
+
+    if (withChildren === undefined || !('children' in withChildren)) {
+      return [];
+    }
+
+    const { children } = withChildren;
+
+    this.directMenuChildren = {
+      onOpen: children.onOpen,
+      onClose: children.onClose,
+    };
+
+    return children.items ?? [];
+  }
+
+  /**
+   * Restyles the direct menu's popover from the horizontal toolbar shape into a
+   * vertical menu box (matching the nested-popover look), so it reads as a
+   * standalone menu rather than a one-item toolbar.
+   */
+  private applyDirectMenuLook(): void {
+    const popoverEl = this.popover?.getElement?.();
+
+    if (!popoverEl) {
+      return;
+    }
+
+    // The inline popover pins its root to the horizontal bar size; clear it so
+    // the vertical box sizes to its own content.
+    popoverEl.style.width = '';
+    popoverEl.style.height = '';
+
+    // The root is `inline-block`; once its height collapses to 0 (the absolute
+    // container carries the size), default baseline alignment drops it ~one
+    // line-height below the wrapper top, placing the menu too low. Align its top
+    // to the wrapper so it sits right under the selection like the toolbar does.
+    popoverEl.style.verticalAlign = 'top';
+
+    const container = popoverEl.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
+
+    if (container) {
+      // show() pins the container to the 38px toolbar height and zeroes its
+      // max-height — both crop a stacked menu (e.g. the equation input +
+      // preview). Release the height; keep overflow clipping so KaTeX's hidden
+      // MathML stays hidden.
+      container.style.height = '';
+      container.className = twMerge(container.className, 'h-fit w-max flex-col p-1.5 max-h-none');
+    }
+
+    const items = popoverEl.querySelector<HTMLElement>(`[${DATA_ATTR.popoverItems}]`);
+
+    if (items) {
+      items.className = twMerge(items.className, 'block w-full pb-0');
+    }
   }
 
   /**

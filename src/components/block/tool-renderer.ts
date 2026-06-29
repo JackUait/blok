@@ -1,5 +1,5 @@
 import type { BlockTool as IBlockTool , ToolConfig } from '../../../types';
-import { DATA_ATTR } from '../constants';
+import { DATA_ATTR, TEST_ID } from '../constants';
 import { Dom as $ } from '../dom';
 import { log } from '../utils';
 
@@ -107,7 +107,7 @@ export class ToolRenderer {
     contentNode.setAttribute(DATA_ATTR.elementContent, '');
     contentNode.setAttribute('data-blok-testid', 'block-content');
 
-    wrapper.setAttribute('data-blok-testid', 'block-wrapper');
+    wrapper.setAttribute(DATA_ATTR.testid, TEST_ID.blockWrapper);
 
     if (this.name && !wrapper.hasAttribute('data-blok-component')) {
       wrapper.setAttribute('data-blok-component', this.name);

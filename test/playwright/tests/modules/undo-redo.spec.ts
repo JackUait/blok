@@ -186,6 +186,38 @@ test.describe('yjs undo/redo', () => {
     await expect(paragraphInput).toContainText('Original text added');
   });
 
+  test('redoes text input with Ctrl+Y alias', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Original text',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByIndex(page, 0);
+    const paragraphInput = paragraph.locator('[contenteditable="true"]');
+
+    await paragraphInput.click();
+    await page.keyboard.press('End');
+    await paragraphInput.type(' added');
+    await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+    // Undo
+    await page.keyboard.press(UNDO_SHORTCUT);
+    await waitForDelay(page, 200);
+
+    await expect(paragraphInput).toContainText('Original text');
+    await expect(paragraphInput).not.toContainText('added');
+
+    // Redo via the Ctrl+Y alias (Windows/Linux redo shortcut; also accepted on Mac)
+    await page.keyboard.press('Control+y');
+    await waitForDelay(page, 200);
+
+    await expect(paragraphInput).toContainText('Original text added');
+  });
+
   test('undo preserves data correctly after save', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
@@ -2614,8 +2646,10 @@ test.describe('yjs undo/redo', () => {
 
       const firstParagraph = getParagraphByIndex(page, 0);
 
-      // Focus on first block and select all blocks with Cmd/Ctrl+A twice
+      // Focus on first block and select all blocks. Three-stage Cmd+A escalation
+      // on a non-empty block with a collapsed caret: text -> this block -> all blocks.
       await firstParagraph.click();
+      await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press(SELECT_ALL_SHORTCUT);
       await page.keyboard.press(SELECT_ALL_SHORTCUT);
 
@@ -4074,6 +4108,230 @@ test.describe('yjs undo/redo', () => {
       expect(isFirstItemFocused).toBe(false);
     });
 
+    test('redo after paragraph split places caret in the new block', async ({ page }) => {
+      // Regression: on redo of an Enter split, the caret must land at the start
+      // of the new (second) block where the split occurred — not stay at the
+      // split point in the first block. The "after" snapshot is captured during
+      // Yjs stack-item-added, which fires inside split() BEFORE Caret.setToBlock
+      // moves focus to the new block, leaving the snapshot stale. handleEnter
+      // refreshes it after the caret moves so redo restores the correct position.
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: { text: 'First Second' },
+        },
+      ]);
+
+      const firstInput = getParagraphByIndex(page, 0).locator('[contenteditable="true"]');
+
+      await firstInput.click();
+
+      // Position caret after "First"
+      await page.evaluate(() => {
+        const paragraph = document.querySelector('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]');
+        const textNode = paragraph?.firstChild;
+
+        if (textNode) {
+          const range = document.createRange();
+          const sel = window.getSelection();
+
+          range.setStart(textNode, 5);
+          range.setEnd(textNode, 5);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      });
+
+      // Split
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // Undo merges the blocks back
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(1);
+
+      // Redo should re-split and focus the new (second) block
+      await page.keyboard.press(REDO_SHORTCUT);
+      await waitForDelay(page, 200);
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+      // KEY TEST: caret lands in the new (second) block, not the first
+      const secondInput = getParagraphByIndex(page, 1).locator('[contenteditable="true"]');
+      const isSecondFocused = await isFocused(secondInput);
+
+      expect(isSecondFocused).toBe(true);
+
+      const isFirstFocused = await isFocused(getParagraphByIndex(page, 0).locator('[contenteditable="true"]'));
+
+      expect(isFirstFocused).toBe(false);
+
+      // Caret should be at the start of the new block (the split point)
+      const offset = await getCaretOffset(secondInput);
+
+      expect(offset).toBe(0);
+    });
+
+    test('redo of consecutive splits never jumps caret to the document top', async ({ page }) => {
+      // Regression: stepping through redo of several splits must land the caret
+      // at the start of each newly-created block (offset 0), NOT at the very
+      // beginning of the document. The leading blocks make a stray jump to the
+      // top (the firstBlock fallback in restoreCaretSnapshot) detectable: a
+      // buggy redo would focus index 0 instead of the descending new blocks.
+      await createBlokWithBlocks(page, [
+        { type: 'paragraph', data: { text: 'LEAD ZERO top block' } },
+        { type: 'paragraph', data: { text: 'LEAD ONE second block' } },
+        { type: 'paragraph', data: { text: 'ABCDEFGHIJKL' } },
+      ]);
+
+      const TARGET = 2; // index of the paragraph we split
+
+      const setCaret = async (paraIndex: number, charOffset: number): Promise<void> => {
+        await getParagraphByIndex(page, paraIndex).locator('[contenteditable="true"]').click();
+        await page.evaluate(({ paraIndex, charOffset }) => {
+          const wrappers = document.querySelectorAll('[data-blok-testid="block-wrapper"][data-blok-component="paragraph"] [contenteditable="true"]');
+          const el = wrappers[paraIndex];
+          const textNode = el?.firstChild;
+
+          if (textNode) {
+            const range = document.createRange();
+            const sel = window.getSelection();
+
+            range.setStart(textNode, charOffset);
+            range.setEnd(textNode, charOffset);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+        }, { paraIndex, charOffset });
+      };
+
+      const focusedIndex = async (): Promise<number | null> => {
+        const count = await page.locator(BLOCK_WRAPPER_SELECTOR).count();
+
+        for (let i = 0; i < count; i++) {
+          if (await isFocused(getParagraphByIndex(page, i).locator('[contenteditable="true"]'))) {
+            return i;
+          }
+        }
+
+        return null;
+      };
+
+      // Three rapid middle splits: ABC|DEF|GHI|JKL on the paragraph at TARGET
+      await setCaret(TARGET, 3);
+      await page.keyboard.press('Enter');
+      await setCaret(TARGET + 1, 3);
+      await page.keyboard.press('Enter');
+      await setCaret(TARGET + 2, 3);
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(6);
+
+      // Undo all three splits, back to the single ABCDEFGHIJKL paragraph
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(UNDO_SHORTCUT);
+        await waitForDelay(page, 250);
+      }
+      await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(3);
+
+      // Redo each split: caret must land at the start (offset 0) of the new
+      // lower block (index 3, then 4, then 5) — never the document-top block.
+      const expectedNewBlock = [3, 4, 5];
+
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press(REDO_SHORTCUT);
+        await waitForDelay(page, 250);
+
+        const index = await focusedIndex();
+
+        expect(index).toBe(expectedNewBlock[i]);
+
+        const offset = await getCaretOffset(getParagraphByIndex(page, expectedNewBlock[i]).locator('[contenteditable="true"]'));
+
+        expect(offset).toBe(0);
+      }
+    });
+
+    test('undo of consecutive heading splits reverts one split per press with caret at the junction', async ({ page }) => {
+      // Regression: splitting a header (a tool whose data has keys beyond `text`,
+      // e.g. `level`) used to create the new block in Yjs with only `{ text }`.
+      // The missing `level` key was then written by a deferred
+      // didMutated→syncBlockDataToYjs in a SEPARATE Yjs transaction, producing a
+      // spurious no-op undo entry. That polluted the undo stack (the first undo
+      // appeared to do nothing) and desynced caret restoration, so undoing a
+      // heading split landed the caret at the block START instead of the split
+      // junction. A paragraph has only `text`, so its split was never affected —
+      // hence "unify the heading behaviour with the regular text block".
+      await createBlokWithBlocks(page, [
+        { type: 'header', data: { text: 'Heading level 1', level: 1 } },
+      ]);
+
+      const editSel = `${HEADER_SELECTOR} [contenteditable="true"]`;
+      const nthInput = (i: number): Locator => page.locator(`:nth-match(${editSel}, ${i + 1})`);
+
+      const setCaret = async (index: number, charOffset: number): Promise<void> => {
+        await nthInput(index).click();
+        await page.evaluate(({ editSel, index, charOffset }) => {
+          const el = document.querySelectorAll(editSel)[index];
+          const textNode = el?.firstChild;
+
+          if (textNode) {
+            const range = document.createRange();
+            const sel = window.getSelection();
+
+            range.setStart(textNode, charOffset);
+            range.setEnd(textNode, charOffset);
+            sel?.removeAllRanges();
+            sel?.addRange(range);
+          }
+        }, { editSel, index, charOffset });
+      };
+
+      // Three middle splits: "Headi|ng level 1" -> "ng| level 1" -> " lev|el 1"
+      await setCaret(0, 5);
+      await page.keyboard.press('Enter');
+      await setCaret(1, 2);
+      await page.keyboard.press('Enter');
+      await setCaret(2, 4);
+      await page.keyboard.press('Enter');
+      await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
+
+      // All four pieces stay headers and the new pieces inherit level 1 (the
+      // partial-data write previously reset them to the default level).
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(4);
+      const savedAfterSplits = await saveBlok(page);
+      const headerLevels = savedAfterSplits.blocks
+        .filter(b => b.type === 'header')
+        .map(b => (b.data as { level: number }).level);
+
+      expect(headerLevels).toEqual([1, 1, 1, 1]);
+
+      // First undo must revert exactly ONE split (4 -> 3), not be swallowed by a
+      // spurious no-op entry.
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 250);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(3);
+
+      // Caret lands at the split junction (" lev" + "el 1" -> " level 1", offset 4),
+      // not at the start of the merged block.
+      const merged = nthInput(2);
+
+      expect(await isFocused(merged)).toBe(true);
+      expect(await getCaretOffset(merged)).toBe(4);
+
+      // Remaining undos also revert one split each, back to the single heading.
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 250);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(2);
+
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await waitForDelay(page, 250);
+      await expect(page.locator(HEADER_SELECTOR)).toHaveCount(1);
+      await expect(nthInput(0)).toHaveText('Heading level 1');
+    });
+
     test('redo after undoing list item deletion restores deleted items', async ({ page }) => {
       // Create multiple list items
       await resetBlok(page);
@@ -4096,9 +4354,11 @@ test.describe('yjs undo/redo', () => {
       // Verify we have 3 list items
       await expect(page.locator(LIST_SELECTOR)).toHaveCount(3);
 
-      // Select all list items using Cmd/Ctrl+A twice (first selects text, second selects all blocks)
+      // Select all list items. Three-stage Cmd+A escalation on a non-empty block
+      // with a collapsed caret: text -> this block -> all blocks.
       const firstItem = getListBlockByIndex(page, 0).locator('[contenteditable="true"]');
       await firstItem.click();
+      await page.keyboard.press('Meta+a');
       await page.keyboard.press('Meta+a');
       await page.keyboard.press('Meta+a');
       await waitForDelay(page, 100);
@@ -4865,7 +5125,7 @@ test.describe('yjs undo/redo', () => {
       await expect(paragraphInput).toHaveText('');
     });
 
-    test('boundary character with no timeout does not create checkpoint', async ({ page }) => {
+    test('boundary character with quick resume does not create checkpoint', async ({ page }) => {
       await createBlokWithBlocks(page, [
         {
           type: 'paragraph',
@@ -4878,11 +5138,19 @@ test.describe('yjs undo/redo', () => {
 
       await paragraphInput.click();
 
-      // Type "Hello " (with space - boundary character)
-      await page.keyboard.type('Hello ');
-      // Immediately continue typing before timeout (less than 100ms)
-      await waitForDelay(page, 50);
-      await page.keyboard.type('world');
+      // Type a boundary character (space) and immediately resume typing. The
+      // boundary arms a BOUNDARY_TIMEOUT_MS (100ms) checkpoint timer; resuming
+      // before it elapses must clear the pending boundary (the clearBoundary
+      // path in handleSmartGrouping) so both words stay in ONE undo group.
+      //
+      // NOTE: the resume is driven continuously (no artificial mid-typing
+      // waitForDelay). A real wall-clock pause here races the 100ms product timer
+      // against Playwright's variable CDP keystroke delivery (observed 11-139ms),
+      // which makes the test flaky under load. The exact timed-pause boundary
+      // semantics are covered deterministically by the unit tests in
+      // undo-history.test.ts (markBoundary / checkAndHandleBoundary with fake
+      // timers); this E2E asserts the end-to-end grouping outcome.
+      await page.keyboard.type('Hello world');
 
       await waitForDelay(page, YJS_CAPTURE_TIMEOUT);
 

@@ -277,8 +277,8 @@ test.describe('Toggle paste from Google Docs', () => {
       const rootParagraph = saved?.blocks.find(
         b => b.type === 'paragraph' &&
           typeof b.data === 'object' && b.data !== null &&
-          typeof (b.data as Record<string, unknown>).text === 'string' &&
-          ((b.data as Record<string, unknown>).text as string).includes('Regular paragraph after toggle') &&
+          typeof (b.data).text === 'string' &&
+          ((b.data).text).includes('Regular paragraph after toggle') &&
           !b.parent
       );
 

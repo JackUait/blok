@@ -5,6 +5,9 @@ import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
+import { preprocessNotionHtml } from './notion-preprocessor';
+import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
+import { NEXT_SPACE_MIMES, parseNextSpaceBlocks } from './next-space-blocks';
 import type { PasteHandler } from './handlers/base';
 import { BlokDataHandler } from './handlers/blok-data-handler';
 import { FilesHandler } from './handlers/files-handler';
@@ -35,6 +38,15 @@ export class Paste extends Module {
   private handlers!: PasteHandler[];
 
   /**
+   * Whether the most recent keyboard activity had Shift held. A `paste`
+   * ClipboardEvent carries no modifier flags, so we read Shift from the
+   * keydown/keyup that drives Cmd/Ctrl+Shift+V and use it to route the paste
+   * to the raw plain-text path (paste-without-formatting), bypassing the
+   * markdown/HTML→blocks conversion pipeline.
+   */
+  private isShiftHeld = false;
+
+  /**
    * Set onPaste callback and collect tools' paste configurations.
    */
   public async prepare(): Promise<void> {
@@ -45,14 +57,19 @@ export class Paste extends Module {
 
     await this.toolRegistry.processTools();
 
-    // Initialize handlers in priority order (higher priority first)
+    // Initialize handlers in priority order (higher priority first).
+    // HtmlHandler (40) must precede MarkdownHandler (30): rich clipboards such
+    // as Notion ship both a faithful text/html payload and a lossy markdown
+    // text/plain twin, and routing picks the first eligible handler in this
+    // list. Trying HTML first keeps images, links and other structure that the
+    // markdown twin drops; markdown still wins when no usable HTML is present.
     this.handlers = [
       new BlokDataHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
       new TableCellsHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new FilesHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new PatternHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
+      new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
       new MarkdownHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
-      new HtmlHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder),
       new TextHandler(this.Blok, this.toolRegistry, this.sanitizerBuilder, this.config),
     ];
   }
@@ -104,9 +121,27 @@ export class Paste extends Module {
    * Handle pasted data transfer object.
    */
   public async processDataTransfer(dataTransfer: DataTransfer, pasteTarget?: Element): Promise<void> {
-    const blokData = dataTransfer.getData(this.MIME_TYPE);
     const plainData = dataTransfer.getData('text/plain');
-    const rawHtmlData = dataTransfer.getData('text/html');
+
+    // Give consumers a chance to transform or drop the raw clipboard HTML
+    // before any Blok preprocessing/sanitization runs. Returning a string
+    // replaces the HTML for the rest of the pipeline; returning null aborts the
+    // HTML paste path entirely (an empty string makes HtmlHandler bail, so the
+    // paste falls through to the plain-text handler).
+    const clipboardHtml = dataTransfer.getData('text/html');
+    const rawHtmlData = clipboardHtml && this.config.onBeforePaste
+      ? this.config.onBeforePaste(clipboardHtml) ?? ''
+      : clipboardHtml;
+
+    // Native Blok clipboard data always wins. When absent, fall back to the
+    // lossless proprietary flavours of other editors (web→web paste): they
+    // carry full block state (checked, language, nesting, colour…) that the
+    // HTML flavour cannot. We translate them into the Blok clipboard shape so
+    // they flow through the existing BlokDataHandler two-pass hierarchy builder.
+    const blokData =
+      dataTransfer.getData(this.MIME_TYPE) ||
+      this.readNotionBlocksV3(dataTransfer) ||
+      this.readNextSpaceBlocks(dataTransfer);
 
     // Route to handlers based on data type
     const handled = await this.routeToHandlers(dataTransfer, plainData, rawHtmlData, blokData, pasteTarget);
@@ -117,6 +152,50 @@ export class Paste extends Module {
 
     // Fallback: process as plain text
     await this.processAsText(plainData);
+  }
+
+  /**
+   * Read Notion's `text/_notion-blocks-v3-production` clipboard flavour and
+   * translate it into the Blok clipboard JSON shape, or return '' when it is
+   * absent / unparseable (so the caller falls back to the HTML path).
+   */
+  private readNotionBlocksV3(dataTransfer: DataTransfer): string {
+    const raw = dataTransfer.getData(NOTION_BLOCKS_V3_MIME);
+
+    if (!raw) {
+      return '';
+    }
+
+    const parsed = parseNotionBlocksV3(raw);
+
+    if (parsed === null || parsed.length === 0) {
+      return '';
+    }
+
+    return JSON.stringify(parsed);
+  }
+
+  /**
+   * Read buildin.ai's `text/next-space-blocks` / `text/next-space-content`
+   * clipboard flavours and translate them into the Blok clipboard JSON shape,
+   * or return '' when absent / unparseable (so the caller falls back to HTML).
+   */
+  private readNextSpaceBlocks(dataTransfer: DataTransfer): string {
+    for (const mime of NEXT_SPACE_MIMES) {
+      const raw = dataTransfer.getData(mime);
+
+      if (!raw) {
+        continue;
+      }
+
+      const parsed = parseNextSpaceBlocks(raw);
+
+      if (parsed !== null && parsed.length > 0) {
+        return JSON.stringify(parsed);
+      }
+    }
+
+    return '';
   }
 
   /**
@@ -222,7 +301,7 @@ export class Paste extends Module {
       { br: {} }
     );
 
-    const preprocessed = preprocessGoogleDocsHtml(rawHtmlData);
+    const preprocessed = preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData));
     const cleanData = clean(preprocessed, customConfig);
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
@@ -264,6 +343,8 @@ export class Paste extends Module {
     const holder = this.Blok.UI.nodes.holder;
 
     this.listeners.on(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.on(holder, 'keydown', this.handleShiftStateWrapper);
+    this.listeners.on(holder, 'keyup', this.handleShiftStateWrapper);
     this.listeners.on(holder, 'drop', this.handleDropEventWrapper);
     this.listeners.on(holder, 'dragover', this.handleDragOverEventWrapper);
     this.listeners.on(holder, 'dragleave', this.handleDragLeaveEventWrapper);
@@ -276,6 +357,8 @@ export class Paste extends Module {
     const holder = this.Blok.UI.nodes.holder;
 
     this.listeners.off(holder, 'paste', this.handlePasteEventWrapper);
+    this.listeners.off(holder, 'keydown', this.handleShiftStateWrapper);
+    this.listeners.off(holder, 'keyup', this.handleShiftStateWrapper);
     this.listeners.off(holder, 'drop', this.handleDropEventWrapper);
     this.listeners.off(holder, 'dragover', this.handleDragOverEventWrapper);
     this.listeners.off(holder, 'dragleave', this.handleDragLeaveEventWrapper);
@@ -286,6 +369,15 @@ export class Paste extends Module {
    */
   private handlePasteEventWrapper = (event: Event): void => {
     void this.handlePasteEvent(event as ClipboardEvent);
+  };
+
+  /**
+   * Track whether Shift is currently held so a following paste can route to
+   * the raw plain-text path. Reading shiftKey on both keydown and keyup keeps
+   * the flag in sync as the modifier is pressed and released.
+   */
+  private handleShiftStateWrapper = (event: Event): void => {
+    this.isShiftHeld = (event as KeyboardEvent).shiftKey;
   };
 
   private handleDropEventWrapper = (event: Event): void => {
@@ -493,7 +585,14 @@ export class Paste extends Module {
     if (event.clipboardData) {
       const pasteTarget = event.target instanceof Element ? event.target : undefined;
 
-      await this.processDataTransfer(event.clipboardData, pasteTarget);
+      // Cmd/Ctrl+Shift+V (paste without formatting): insert the clipboard's
+      // raw text/plain payload, skipping the markdown/HTML→blocks conversion
+      // that processDataTransfer would otherwise apply.
+      if (this.isShiftHeld) {
+        await this.processAsText(event.clipboardData.getData('text/plain'));
+      } else {
+        await this.processDataTransfer(event.clipboardData, pasteTarget);
+      }
     }
 
     Toolbar.moveAndOpen();

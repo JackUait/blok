@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/header';
 import { IconToggleH1, IconToggleH2, IconToggleH3 } from '../../../src/components/icons';
 import { TOGGLE_ATTR } from '../../../src/tools/toggle/constants';
-import type { API, BlockToolConstructorOptions } from '../../../types';
+import { clean } from '../../../src/components/utils/sanitizer';
+import type { API, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 
 const createMockAPI = (): API => ({
@@ -23,6 +24,7 @@ const createMockAPI = (): API => ({
   },
   blocks: {
     getChildren: vi.fn().mockReturnValue([]),
+    setBlockParent: vi.fn(),
   },
   events: {
     on: vi.fn(),
@@ -39,7 +41,7 @@ const createHeaderOptions = (
   config,
   api: createMockAPI(),
   readOnly: false,
-  block: { id: 'test-block-id' } as never,
+  block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
 });
 
 /**
@@ -47,6 +49,17 @@ const createHeaderOptions = (
  */
 const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
   return (Array.isArray(config) ? config : [config]) as Array<Record<string, unknown>>;
+};
+
+/**
+ * renderSettings now mixes level entries with the block-color submenus (D1) and
+ * the toggle-convert entry (D2). Tests that assert on the heading LEVEL choices
+ * filter to just those entries via the 'blok-header-level' dataset marker.
+ */
+const levelEntries = (config: MenuConfig): Array<Record<string, unknown>> => {
+  return toMenuArray(config).filter(
+    s => (s.dataset as Record<string, string> | undefined)?.['blok-header-level'] !== undefined
+  );
 };
 
 describe('Header Tool - Custom Configurations', () => {
@@ -66,6 +79,14 @@ describe('Header Tool - Custom Configurations', () => {
 
       expect(element).toHaveAttribute('data-placeholder', 'Heading 2');
     });
+
+    it('does not render a placeholder in read-only mode', () => {
+      const options = { ...createHeaderOptions({}, {}), readOnly: true };
+      const header = new Header(options);
+      const element = header.render();
+
+      expect(element).not.toHaveAttribute('data-placeholder');
+    });
   });
 
 
@@ -73,7 +94,7 @@ describe('Header Tool - Custom Configurations', () => {
     it('restricts available levels when levels config is provided', () => {
       const options = createHeaderOptions({}, { levels: [1, 2, 3] });
       const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
+      const settings = levelEntries(header.renderSettings());
 
       expect(settings).toHaveLength(3);
       expect(settings.filter(s => s.dataset !== undefined).map(s => s.dataset as Record<string, string>)).toEqual([
@@ -86,7 +107,7 @@ describe('Header Tool - Custom Configurations', () => {
     it('shows all levels (1-6) when levels config is not provided', () => {
       const options = createHeaderOptions({}, {});
       const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
+      const settings = levelEntries(header.renderSettings());
 
       expect(settings).toHaveLength(6);
     });
@@ -94,7 +115,7 @@ describe('Header Tool - Custom Configurations', () => {
     it('only allows specified levels in settings', () => {
       const options = createHeaderOptions({}, { levels: [2, 4, 6] });
       const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
+      const settings = levelEntries(header.renderSettings());
 
       expect(settings).toHaveLength(3);
     });
@@ -107,7 +128,7 @@ describe('Header Tool - Custom Configurations', () => {
         config: { defaultLevel: 3 },
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -121,7 +142,7 @@ describe('Header Tool - Custom Configurations', () => {
         config: {},
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -136,7 +157,7 @@ describe('Header Tool - Custom Configurations', () => {
         config: { levels: [1, 2], defaultLevel: 5 },
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -263,7 +284,7 @@ describe('Header Tool - Custom Configurations', () => {
         }
       );
       const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
+      const settings = levelEntries(header.renderSettings());
 
       expect(settings).toHaveLength(2);
       expect(settings[0].title).toBe('Main Title');
@@ -279,7 +300,7 @@ describe('Header Tool - Custom Configurations', () => {
         },
         api: createMockAPI(),
         readOnly: false,
-        block: {} as never,
+        block: { dispatchChange: vi.fn() } as never,
       };
       const header = new Header(options);
       const element = header.render();
@@ -394,13 +415,38 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api: createMockAPI(),
           readOnly: true,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         };
         const header = new Header(options);
         const wrapper = header.render();
         const heading = wrapper.querySelector(`[${TOGGLE_ATTR.toggleOpen}]`);
 
         expect(heading?.getAttribute(TOGGLE_ATTR.toggleOpen)).toBe('true');
+      });
+
+      it('calls block.dispatchChange on collapse/expand so isOpen syncs to Yjs', () => {
+        // Regression: toggle-heading open state only mutates mutation-free
+        // containers and the ignored data-blok-toggle-open attribute, so the
+        // MutationObserver never fires. Without an explicit dispatchChange the
+        // new isOpen never reaches Yjs (no undo, no remote propagation).
+        const dispatchChange = vi.fn();
+        const options = createHeaderOptions({ text: 'Toggle', level: 2, isToggleable: true });
+
+        options.block = { id: 'test-block-id', dispatchChange } as never;
+
+        const header = new Header(options);
+
+        const element = header.render();
+
+        dispatchChange.mockClear();
+
+        header.collapse();
+        expect(header.save(element).isOpen).toBe(false);
+        expect(dispatchChange).toHaveBeenCalledTimes(1);
+
+        header.expand();
+        expect(header.save(element).isOpen).toBe(true);
+        expect(dispatchChange).toHaveBeenCalledTimes(2);
       });
 
       it('arrow element is outside the contenteditable heading (wrapper sibling)', () => {
@@ -430,7 +476,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         });
         const wrapper = header.render();
         header.rendered();
@@ -449,7 +495,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         });
         const wrapper = header.render();
         header.rendered();
@@ -531,7 +577,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api: mockAPI,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         };
 
         const header = new Header(options);
@@ -738,7 +784,7 @@ describe('Header Tool - Custom Configurations', () => {
           config: {},
           api: mockAPI,
           readOnly: false,
-          block: { id: 'test-block-id' } as never,
+          block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
         };
 
         const header = new Header(options);
@@ -987,7 +1033,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       config: {},
       api: mockAPI,
       readOnly: false,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
     const wrapper = header.render();
     header.rendered();
@@ -1036,7 +1082,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       config: {},
       api: mockAPI,
       readOnly: false,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
     const wrapper = header.render();
     header.rendered();
@@ -1076,7 +1122,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
       config: {},
       api: mockAPI,
       readOnly: true,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
     const wrapper = header.render();
     header.rendered();
@@ -1173,7 +1219,7 @@ describe('Header Tool - setData() for undo/redo', () => {
       config: {},
       api,
       readOnly: false,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
 
     const wrapper = header.render();
@@ -1288,6 +1334,217 @@ describe('Header Tool - setReadOnly', () => {
 
       expect(header.render()).toBe(element);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX D3-header: Turn-into / save round-trip must NOT strip inline formatting.
+// Conversion re-sanitizes the source HTML with the TARGET tool's `text` config
+// (block-mutation.ts). With text:{} the header stripped bold/italic/link/code/
+// color marks on conversion. Spreading INLINE_TEXT_SANITIZE keeps them.
+// ---------------------------------------------------------------------------
+describe('Header Tool - sanitize preserves inline formatting (D3)', () => {
+  it('preserves bold/italic/link/code and a colored mark through the text sanitize config', () => {
+    const config = Header.sanitize.text as SanitizerConfig;
+    const dirty =
+      '<strong>b</strong><em>i</em><a href="https://x.test">l</a><code>c</code>' +
+      '<mark style="color: red; position: fixed;">m</mark>';
+    const result = clean(dirty, config);
+
+    expect(result).toContain('<strong>b</strong>');
+    expect(result).toContain('<em>i</em>');
+    expect(result).toContain('href="https://x.test"');
+    expect(result).toContain('<code>c</code>');
+    expect(result).toContain('<mark');
+    expect(result).toContain('color: red');
+    // style-injection vector dropped
+    expect(result).not.toContain('position: fixed');
+  });
+
+  it('still strips block-level junk and scripts from the text field', () => {
+    const result = clean('<div>x</div><script>bad()</script>y', Header.sanitize.text as SanitizerConfig);
+
+    expect(result).not.toContain('<div>');
+    expect(result).not.toContain('<script>');
+    expect(result).toContain('x');
+    expect(result).toContain('y');
+  });
+
+  it('declares block color fields in sanitize so they round-trip', () => {
+    expect(Header.sanitize.textColor).toBe(false);
+    expect(Header.sanitize.backgroundColor).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX D2: Plain <-> Toggle heading conversion via the block settings menu.
+// ---------------------------------------------------------------------------
+describe('Header Tool - plain <-> toggle conversion (D2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('a plain heading gains a "Toggle heading" convert entry', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2 });
+    const header = new Header(options);
+    const settings = toMenuArray(header.renderSettings());
+    const entry = settings.find(s => s.name === 'header-toggle-convert');
+
+    expect(entry).toBeDefined();
+    // mock i18n.t echoes the key
+    expect(entry?.title).toBe('tools.header.toggleHeading');
+  });
+
+  it('a toggle heading shows the convert entry as active (toggle-switch back to plain)', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2, isToggleable: true });
+    const header = new Header(options);
+    const settings = toMenuArray(header.renderSettings());
+    const entry = settings.find(s => s.name === 'header-toggle-convert');
+
+    expect(entry).toBeDefined();
+    // Single shared label (no collision with the "Heading 2" level selector).
+    expect(entry?.title).toBe('tools.header.toggleHeading');
+    expect(entry?.isActive).toBe(true);
+  });
+
+  it('a plain heading shows the convert entry as inactive', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2 });
+    const header = new Header(options);
+    const settings = toMenuArray(header.renderSettings());
+    const entry = settings.find(s => s.name === 'header-toggle-convert');
+
+    expect(entry?.isActive).toBe(false);
+  });
+
+  it('activating the convert entry turns a plain heading into a toggle (arrow + children container)', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2 });
+    const header = new Header(options);
+
+    header.render();
+
+    const entry = toMenuArray(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
+
+    (entry?.onActivate as () => void)();
+
+    const wrapper = header.render();
+
+    expect(wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
+    expect(wrapper.querySelector('[data-blok-toggle-children]')).not.toBeNull();
+    expect(header.save(wrapper).isToggleable).toBe(true);
+  });
+
+  it('converting a toggle-with-children back to plain releases children as siblings (not orphaned)', () => {
+    const setBlockParent = vi.fn();
+    const child1 = { id: 'c1', holder: document.createElement('div') };
+    const child2 = { id: 'c2', holder: document.createElement('div') };
+    const mockAPI = createMockAPI();
+
+    (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([child1, child2]);
+    (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = setBlockParent;
+
+    const header = new Header({
+      data: { text: 'Hi', level: 2, isToggleable: true } as HeaderData,
+      config: {},
+      api: mockAPI,
+      readOnly: false,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
+    });
+
+    header.render();
+    header.rendered();
+
+    const entry = toMenuArray(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
+
+    (entry?.onActivate as () => void)();
+
+    // Children un-nested to top-level (null), never deleted → they survive in the tree.
+    expect(setBlockParent).toHaveBeenCalledWith('c1', null);
+    expect(setBlockParent).toHaveBeenCalledWith('c2', null);
+
+    const saved = header.save(document.createElement('div'));
+    expect(saved.isToggleable).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIX D1-header: Notion-style block-level text/background color.
+// ---------------------------------------------------------------------------
+describe('Header Tool - block-level color (D1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('applies textColor as a CSS var on render', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2, textColor: 'red' });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.style.color).toBe('var(--blok-color-red-text)');
+  });
+
+  it('applies backgroundColor as a CSS var on render', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2, backgroundColor: 'blue' });
+    const header = new Header(options);
+    const element = header.render();
+
+    expect(element.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
+  });
+
+  it('persists textColor and backgroundColor in save()', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2, textColor: 'red', backgroundColor: 'blue' });
+    const header = new Header(options);
+    const element = header.render();
+    const saved = header.save(element);
+
+    expect(saved.textColor).toBe('red');
+    expect(saved.backgroundColor).toBe('blue');
+  });
+
+  it('does not include color fields in save() when absent', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2 });
+    const header = new Header(options);
+    const element = header.render();
+    const saved = header.save(element);
+
+    expect(saved.textColor).toBeUndefined();
+    expect(saved.backgroundColor).toBeUndefined();
+  });
+
+  it('renderSettings includes Text color and Background submenus', () => {
+    const options = createHeaderOptions({ text: 'Hi', level: 2 });
+    const header = new Header(options);
+    const settings = toMenuArray(header.renderSettings());
+
+    expect(settings.find(s => s.name === 'block-text-color')).toBeDefined();
+    expect(settings.find(s => s.name === 'block-background-color')).toBeDefined();
+  });
+
+  it('picking a swatch updates the element and persists in save()', () => {
+    const dispatchChange = vi.fn();
+    const options = createHeaderOptions({ text: 'Hi', level: 2 });
+
+    options.block = { id: 'test-block-id', dispatchChange } as never;
+
+    const header = new Header(options);
+    const element = header.render();
+
+    const settings = toMenuArray(header.renderSettings());
+    const textColorEntry = settings.find(s => s.name === 'block-text-color') as Record<string, unknown>;
+    const items = (textColorEntry.children as { items: Array<Record<string, unknown>> }).items;
+    const redItem = items.find(i => i.name === 'textColor-red') as Record<string, unknown>;
+
+    (redItem.onActivate as () => void)();
+
+    expect(element.style.color).toBe('var(--blok-color-red-text)');
+    expect(header.save(element).textColor).toBe('red');
   });
 });
 

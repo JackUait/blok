@@ -1,8 +1,10 @@
+import type { BlokConfig } from '../../../../../types/configs/blok-config';
 import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { Dom as dom$ } from '../../../dom';
 import type { BlockToolAdapter } from '../../../tools/block';
 import { isObject } from '../../../utils';
+import { applyLinkConfig } from '../../../utils/apply-link-config';
 import { clean } from '../../../utils/sanitizer';
 import { SAFE_STRUCTURAL_TAGS, collectTagNames } from '../constants';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
@@ -18,12 +20,16 @@ import { BasePasteHandler } from './base';
  * Handles HTML string content.
  */
 export class HtmlHandler extends BasePasteHandler implements PasteHandler {
+  private readonly linkConfig?: BlokConfig['link'];
+
   constructor(
     Blok: BlokModules,
     toolRegistry: ToolRegistry,
-    sanitizerBuilder: SanitizerConfigBuilder
+    sanitizerBuilder: SanitizerConfigBuilder,
+    config?: BlokConfig
   ) {
     super(Blok, toolRegistry, sanitizerBuilder);
+    this.linkConfig = config?.link;
   }
 
   canHandle(data: unknown): number {
@@ -63,6 +69,13 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const wrapper = dom$.make('DIV');
 
     wrapper.innerHTML = innerHTML;
+
+    // Apply the editor's `link` config to pasted anchors before they are split
+    // into blocks, mirroring the interactive Link inline tool. Pasted `<a>`
+    // would otherwise keep their original (foreign) target/rel/href.
+    if (this.linkConfig !== undefined) {
+      applyLinkConfig(wrapper, this.linkConfig);
+    }
 
     const nodes = this.getNodes(wrapper);
 

@@ -13,9 +13,9 @@ export class EventsAPI extends Module {
    */
   public get methods(): Events {
     return {
-      emit: (eventName: keyof BlokEventMap, data: BlokEventMap[keyof BlokEventMap] | undefined): void => this.emit(eventName, data),
-      off: (eventName: keyof BlokEventMap, callback: (data?: unknown) => void): void => this.off(eventName, callback),
-      on: (eventName: keyof BlokEventMap, callback: () => void): void => this.on(eventName, callback),
+      emit: (eventName: string, data?: unknown): void => this.emit(eventName, data),
+      off: (eventName: string, callback: (data?: unknown) => void): void => this.off(eventName, callback),
+      on: (eventName: string, callback: (data?: unknown) => void): void => this.on(eventName, callback),
     };
   }
 
@@ -24,8 +24,8 @@ export class EventsAPI extends Module {
    * @param {string} eventName - event name to subscribe
    * @param {Function} callback - event handler
    */
-  public on(eventName: keyof BlokEventMap, callback: (data?: unknown) => void): void {
-    this.eventsDispatcher.on(eventName, callback);
+  public on(eventName: string, callback: (data?: unknown) => void): void {
+    this.eventsDispatcher.on(eventName as keyof BlokEventMap, callback);
   }
 
   /**
@@ -33,10 +33,10 @@ export class EventsAPI extends Module {
    * @param {string} eventName - event to emit
    * @param {object} data - event's data
    */
-  public emit(eventName: keyof BlokEventMap, data: BlokEventMap[keyof BlokEventMap] | undefined): void {
+  public emit(eventName: string, data?: unknown): void {
     this.eventsDispatcher.emit(
-      eventName,
-      data
+      eventName as keyof BlokEventMap,
+      data as BlokEventMap[keyof BlokEventMap]
     );
   }
 
@@ -45,7 +45,7 @@ export class EventsAPI extends Module {
    * @param {string} eventName - event to unsubscribe
    * @param {Function} callback - event handler
    */
-  public off(eventName: keyof BlokEventMap, callback: (data?: unknown) => void): void {
-    this.eventsDispatcher.off(eventName, callback);
+  public off(eventName: string, callback: (data?: unknown) => void): void {
+    this.eventsDispatcher.off(eventName as keyof BlokEventMap, callback);
   }
 }

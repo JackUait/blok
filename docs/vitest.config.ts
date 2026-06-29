@@ -40,6 +40,24 @@ export default defineConfig({
         return null;
       },
       load(id) {
+        // Provide mock implementation for /dist/react.mjs in tests
+        if (id === '/dist/react.mjs') {
+          return {
+            code: `
+              import React from 'react';
+              export const BlokEditor = React.forwardRef(function MockBlokEditor(props, ref) {
+                React.useImperativeHandle(ref, () => ({
+                  save: () => Promise.resolve({ blocks: [] }),
+                  clear: () => Promise.resolve(),
+                  undo: () => Promise.resolve(),
+                  redo: () => Promise.resolve(),
+                }));
+
+                return React.createElement('div', { className: props.className, 'data-testid': 'mock-blok-editor' });
+              });
+            `,
+          };
+        }
         // Provide mock implementation for /dist/full.mjs in tests
         if (id === '/dist/full.mjs') {
           return {

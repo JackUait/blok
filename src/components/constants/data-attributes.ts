@@ -24,6 +24,10 @@ export const DATA_ATTR = {
   editor: 'data-blok-editor',
   /** Redactor zone */
   redactor: 'data-blok-redactor',
+  /** Present on the editor wrapper once a `blocks.render()` batch has finished
+   *  inserting blocks into the DOM; removed while a re-render is in flight.
+   *  Acts as a stable render-readiness gate for consumers (e.g. E2E waits). */
+  rendered: 'data-blok-rendered',
 
   // ============================================
   // Block Identifiers
@@ -35,8 +39,10 @@ export const DATA_ATTR = {
   component: 'data-blok-component',
   /** Tool type attribute */
   tool: 'data-blok-tool',
-  /** Block nesting depth */
+  /** Block nesting depth (derived from the parentId chain) */
   depth: 'data-blok-depth',
+  /** Flat list-nesting indentation level (0 = root); tool-agnostic, mirrors list depth */
+  indent: 'data-blok-indent',
 
   // ============================================
   // Global States
@@ -63,6 +69,8 @@ export const DATA_ATTR = {
   contentAlign: 'data-blok-content-align',
   /** Right-to-left mode */
   rtl: 'data-blok-rtl',
+  /** Editor content width mode (present with value "full" for wide mode; absent = narrow) */
+  width: 'data-blok-width',
 
   // ============================================
   // Drag and Drop

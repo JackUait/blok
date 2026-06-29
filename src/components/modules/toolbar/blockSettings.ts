@@ -1,15 +1,17 @@
 import type { MenuConfigItem } from '../../../../types/tools';
+import type { BlockTuneRenderContext } from '../../../../types/block-tunes/block-tune';
 import { Module } from '../../__module';
 import type { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { Dom as $ } from '../../dom';
 import { BlockSettingsClosed, BlockSettingsOpened, BlokMobileLayoutToggled } from '../../events';
 import { Flipper } from '../../flipper';
-import { IconColumns, IconReplace, IconTrash } from '../../icons';
+import { IconColumns, IconCopy, IconReplace, IconTrash } from '../../icons';
 import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
+import { getCaretOffset } from '../../utils/caret/selection';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
@@ -186,6 +188,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.selection.save();
 
       /**
+       * Capture the caret offset within the block BEFORE selectBlock highlights
+       * the whole block content (which clears the collapsed caret). Turn-into
+       * restores the caret to this offset rather than forcing it to the end.
+       */
+      const caretOffset = getCaretOffset();
+
+      /**
        * Highlight content of a Block we are working with
        * For multiple blocks, they should already be selected
        */
@@ -194,10 +203,21 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         this.Blok.BlockSelection.clearCache();
       }
 
-      /** Get tool-specific tunes and common tunes (delete, move, etc.) */
-      const { toolTunes, commonTunes } = block.getTunes();
+      /**
+       * Expose the (not-yet-created) tune popover element to custom tunes via
+       * their render context. The popover is built further down, so the element
+       * is filled in after construction; tunes capturing the context resolve it
+       * lazily (e.g. when opening a sub-menu) instead of reaching into the DOM.
+       */
+      const popoverRef: { current: HTMLElement | null } = { current: null };
+      const renderContext: BlockTuneRenderContext = {
+        getPopoverElement: () => popoverRef.current,
+      };
 
-      const items = await this.getTunesItems(block, commonTunes, toolTunes);
+      /** Get tool-specific tunes and common tunes (delete, move, etc.) */
+      const { toolTunes, commonTunes } = block.getTunes(renderContext);
+
+      const items = await this.getTunesItems(block, commonTunes, toolTunes, caretOffset);
 
       const activeEntry = hasMultipleBlocksSelected
         ? undefined
@@ -235,7 +255,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       }
 
       this.popover = new PopoverClass(popoverParams);
-      this.popover.getElement().setAttribute('data-blok-testid', 'block-tunes-popover');
+      popoverRef.current = this.popover.getElement();
+      popoverRef.current.setAttribute('data-blok-testid', 'block-tunes-popover');
 
       this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 
@@ -342,8 +363,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * @param currentBlock –  block we are about to open block tunes for
    * @param commonTunes – common tunes
    * @param toolTunes – tool-specific tunes from renderSettings()
+   * @param caretOffset – caret offset captured before the block was highlighted, restored after a turn-into conversion
    */
-  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[], toolTunes?: MenuConfigItem[]): Promise<PopoverItemParams[]> {
+  private async getTunesItems(currentBlock: Block, commonTunes: MenuConfigItem[], toolTunes?: MenuConfigItem[], caretOffset = 0): Promise<PopoverItemParams[]> {
     const items = [] as MenuConfigItem[];
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
@@ -421,23 +443,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           onActivate: async () => {
             const { Caret, Toolbar } = this.Blok;
 
-            // Warn before converting a block that has nested children — they will be
-            // promoted to sibling level (or lost if the host cannot hold children).
-            const childCount = currentBlock.contentIds.length;
-
-            if (childCount > 0) {
-              const message = this.Blok.I18n.t('blockSettings.convertWithChildrenWarning', {
-                count: childCount,
-              });
-              const fallback = `This block has ${childCount} nested block${childCount === 1 ? '' : 's'}. Converting it will promote them to the top level. Continue?`;
-              // eslint-disable-next-line no-alert
-              const confirmed = window.confirm(message !== 'blockSettings.convertWithChildrenWarning' ? message : fallback);
-
-              if (!confirmed) {
-                return;
-              }
-            }
-
+            // Convert immediately — no blocking confirm() prompt. A child-bearing
+            // block's children are outdented to its original parent (see
+            // BlockOperations.replace), matching Notion's instant "Turn into".
             const newBlock = await this.convertBlock(
               currentBlock,
               selectedBlocks,
@@ -449,7 +457,15 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
             Toolbar.close();
 
             if (newBlock) {
-              Caret.setToBlock(newBlock, Caret.positions.END);
+              /**
+               * Multi-block conversions have no single caret to preserve, so
+               * land at the end; a single-block turn-into keeps its prior offset.
+               */
+              if (hasMultipleBlocksSelected) {
+                Caret.setToBlock(newBlock, Caret.positions.END);
+              } else {
+                Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
+              }
             }
           },
         });
@@ -519,12 +535,56 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     /**
-     * For single block selection, show common tunes (delete, move, etc.)
-     * For multiple blocks, only show delete option with multi-block delete behavior
+     * Explicit "Duplicate" item (Notion parity) — sits beside delete and runs
+     * the SAME pipeline as Cmd/Ctrl+D (DragManager.duplicateBlocksInPlace), so
+     * nested children/colors/flat-indent followers are carried into the copy.
+     *
+     * The target blocks are captured HERE, at build time: the document mousedown
+     * that fires when the popover item is clicked clears the block selection
+     * before onActivate runs (same caveat as "turn-into-columns" above). For a
+     * multi-block selection we re-select the captured blocks so the whole group
+     * is duplicated; for a single block we duplicate the menu's own block.
+     */
+    const duplicateSelected = hasMultipleBlocksSelected ? [...selectedBlocks] : [];
+    const duplicateItem: MenuConfigItem = {
+      icon: IconCopy,
+      title: this.Blok.I18n.t('blockSettings.duplicate'),
+      name: 'duplicate',
+      secondaryLabel: '⌘D',
+      closeOnActivate: true,
+      onActivate: () => {
+        const { BlockSelection, DragManager, Toolbar } = this.Blok;
+
+        if (duplicateSelected.length > 1) {
+          BlockSelection.clearSelection();
+          duplicateSelected.forEach((selected) => BlockSelection.selectBlock(selected));
+        }
+
+        void DragManager?.duplicateBlocksInPlace(currentBlock);
+
+        Toolbar.close();
+      },
+    };
+
+    /**
+     * For single block selection, show common tunes (delete, move, etc.).
+     * Duplicate sits directly before the delete entry so it reads "Duplicate /
+     * Delete" like Notion (and delete stays the trailing action). When there is
+     * no delete entry (nothing to sit beside) the duplicate is omitted.
+     * For multiple blocks, show Duplicate + a multi-block delete.
      */
     if (!hasMultipleBlocksSelected) {
-      items.push(...commonTunes);
+      const deleteIndex = commonTunes.findIndex(
+        (tune) => 'name' in tune && tune.name === 'delete'
+      );
+
+      if (deleteIndex === -1) {
+        items.push(...commonTunes);
+      } else {
+        items.push(...commonTunes.slice(0, deleteIndex), duplicateItem, ...commonTunes.slice(deleteIndex));
+      }
     } else {
+      items.push(duplicateItem);
       items.push({
         icon: IconTrash,
         title: this.Blok.I18n.t('blockSettings.delete'),

@@ -1,12 +1,7 @@
-export const DEFAULT_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-] as const;
+// Accept any image type by default; consumers restrict via the `types` config.
+export const DEFAULT_MIME_TYPES = ['image/*'] as const;
 
-export const DEFAULT_MAX_SIZE = 10 * 1024 * 1024; // 10 MiB
+export const DEFAULT_MAX_SIZE = 30 * 1024 * 1024; // 30 MiB
 
 export const DEFAULT_CAPTION_PLACEHOLDER = 'Write a caption…';
 

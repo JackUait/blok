@@ -9,15 +9,18 @@ import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-dat
 import type { BlockMutationEventMap, BlockMutationType } from '../../../../types/events/block';
 import { BlockAddedMutationType } from '../../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
+import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
 import { BlockRemovedMutationType } from '../../../../types/events/block/BlockRemoved';
 import { Module } from '../../__module';
 import type { Block } from '../../block';
+import { BlockToolAPI } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { Blocks } from '../../blocks';
 import { DATA_ATTR } from '../../constants';
 import { BlockChanged } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
+import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import * as Y from 'yjs';
 
 // Imported modules
@@ -154,6 +157,25 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Apply a new editor-level placeholder to existing blocks and future ones.
+   * Backs the reactive `editor.placeholder` API: mutates the shared config,
+   * updates the default tool adapter (so blocks created afterward use it), and
+   * sweeps existing blocks for an in-place update.
+   * @param value - new placeholder text, or false to clear it
+   */
+  public setPlaceholder(value: string | false): void {
+    this.config.placeholder = value;
+
+    const defaultToolName = this.config.defaultBlock ?? 'paragraph';
+
+    this.Blok.Tools.blockTools.get(defaultToolName)?.setDefaultPlaceholder(value);
+
+    for (const block of this.blocks) {
+      block.setPlaceholder(value);
+    }
+  }
+
+  /**
    * Check if each Block is empty
    * @returns {boolean}
    */
@@ -250,7 +272,7 @@ export class BlockManager extends Module {
    * Define this._blocks property
    */
   public prepare(): void {
-    const blocks = new Blocks(this.Blok.UI.nodes.redactor);
+    const blocks = new Blocks(this.Blok.UI.nodes.redactor, this.eventsDispatcher);
 
     /**
      * We need to use Proxy to overload set/get [] operator.
@@ -407,6 +429,8 @@ export class BlockManager extends Module {
       {
         onMoveUp: this.moveCurrentBlockUp.bind(this),
         onMoveDown: this.moveCurrentBlockDown.bind(this),
+        onCopyAsMarkdown: () => void this.Blok.BlockSelection.copySelectedBlocksAsMarkdown(),
+        onDuplicate: this.duplicateCurrentBlock.bind(this),
       }
     );
   }
@@ -498,8 +522,14 @@ export class BlockManager extends Module {
    * Used during initial rendering of the editor
    * @param blocks - blocks to insert
    * @param index - index where to insert
+   * @param options - extra behavior
+   * @param options.notify - when true, emit ONE BlockChanged (block-added) mutation
+   *   for the whole batch so reactive consumers (e.g. the React useBlocks hook)
+   *   re-render. Defaults to false: the render/seed path (Renderer.render) loads a
+   *   document without firing a change mutation. The public api.blocks.insertMany
+   *   wrapper passes true so a programmatic bulk insert mirrors single insert().
    */
-  public insertMany(blocks: Block[], index = 0): void {
+  public insertMany(blocks: Block[], index = 0, { notify = false }: { notify?: boolean } = {}): void {
     const blockById = new Map<string, Block>();
 
     for (const block of blocks) {
@@ -516,7 +546,7 @@ export class BlockManager extends Module {
     // Those nested inserts sync to Yjs. If fromJSON() ran after, it would wipe
     // them (fromJSON replaces the entire Yjs array). Running fromJSON first
     // ensures nested blocks created during rendered() persist in Yjs.
-    const blockDataArray: OutputBlockData<string, Record<string, unknown>>[] = blocks.map(block => {
+    const blockDataArray: OutputBlockData[] = blocks.map(block => {
       const tunes = block.preservedTunes;
 
       return {
@@ -541,12 +571,23 @@ export class BlockManager extends Module {
       this.blocksStore.insertMany(blocks, index);
     }, { extendThroughRAF: true });
 
-    // Apply indentation for blocks with parentId (hierarchical structure)
+    // Apply indentation for blocks with parentId (hierarchical structure).
     blocks.forEach(block => {
       if (block.parentId !== null) {
         this.updateBlockIndentation(block);
       }
     });
+
+    // Notify reactive consumers (React useBlocks hook) that blocks were added.
+    // Single insert() fires one BlockAdded mutation per block; a bulk insert
+    // fires ONE for the whole atomic batch — enough to bump a subscription
+    // version without an event storm. Gated on `notify` so the render/seed path
+    // (Renderer.render) stays silent (it has its own block:rendered events).
+    if (notify && blocks.length > 0) {
+      this.blockDidMutated(BlockAddedMutationType, blocks[0], {
+        index,
+      });
+    }
   }
 
   /**
@@ -634,14 +675,54 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Expand a set of blocks to include each block's flat-indent followers — the
+   * consecutive following blocks nested more deeply via the unified list-nesting
+   * depth ({@link getBlockNestingDepth}). This mirrors Notion, where selecting a
+   * Tab-indented parent also selects everything nested under it, so a delete on
+   * the parent carries its nested children as a unit.
+   * @param blocks - the explicitly selected blocks
+   * @returns the expanded set, in document order, deduplicated
+   */
+  private withFlatIndentFollowers(blocks: Block[]): Block[] {
+    const all = this.blocks;
+    const included = new Set<Block>();
+
+    const followersOf = (block: Block): Block[] => {
+      const startIndex = all.indexOf(block);
+
+      if (startIndex < 0) {
+        return [];
+      }
+
+      const parentDepth = getBlockNestingDepth(block) ?? 0;
+      const rest = all.slice(startIndex + 1);
+      const boundary = rest.findIndex((follower) => (getBlockNestingDepth(follower) ?? 0) <= parentDepth);
+
+      return boundary === -1 ? rest : rest.slice(0, boundary);
+    };
+
+    for (const block of blocks) {
+      included.add(block);
+
+      for (const follower of followersOf(block)) {
+        included.add(follower);
+      }
+    }
+
+    return all.filter((block) => included.has(block));
+  }
+
+  /**
    * Delete all selected blocks and insert a replacement block at their position.
    * Only inserts a replacement block if all blocks were deleted.
    */
   public deleteSelectedBlocksAndInsertReplacement(): Block | undefined {
-    // Collect selected blocks with their indices (sorted by index descending for safe removal)
-    const selectedBlockEntries = this.blocks
-      .map((block, index) => ({ block, index }))
-      .filter(({ block }) => block.selected)
+    // Collect selected blocks, expanded to include each one's flat-indent
+    // followers (Notion deletes a Tab-nested parent together with its children),
+    // then attach indices sorted descending for safe removal.
+    const expandedBlocks = this.withFlatIndentFollowers(this.blocks.filter((block) => block.selected));
+    const selectedBlockEntries = expandedBlocks
+      .map((block) => ({ block, index: this.blocks.indexOf(block) }))
       .sort((a, b) => b.index - a.index);
 
     if (selectedBlockEntries.length === 0) {
@@ -902,6 +983,42 @@ export class BlockManager extends Module {
     const oldParentId = block.parentId;
 
     this.hierarchy.setBlockParent(block, newParentId);
+
+    // Notify 'block changed' listeners that the tree structure changed, so
+    // consumers like the React `useBlocks` hook re-render on a programmatic
+    // nest/unnest. A reparent is a move in the tree — emit BlockMoved (which,
+    // unlike BlockChanged, does not re-sync block data to Yjs; setBlockParent
+    // owns its own parentId/contentIds Yjs writes below).
+    //
+    // Guard against the paths that emit their own structural events:
+    //   - reparents that do not actually change the parent (drag re-asserts the
+    //     same parent to fix DOM placement; tools re-claim already-owned blocks),
+    //   - the drag move pipeline (pointer drag / open move group) which fires
+    //     BlockMoved through `move()` already,
+    //   - Yjs sync (undo/redo/remote) which drives re-renders via its own path.
+    const actualNewParentId = block.parentId;
+    const isDragMove = this.Blok.YjsManager.isInMoveGroup || this._isPointerDragActive;
+
+    if (actualNewParentId !== oldParentId && !this.yjsSync.isSyncingFromYjs && !isDragMove) {
+      const index = this.repository.getBlockIndex(block);
+
+      this.blockDidMutated(BlockMovedMutationType, block, {
+        fromIndex: index,
+        toIndex: index,
+      });
+
+      // A reparent IS a move in the tree, so fire the tool's MOVED lifecycle hook
+      // too — not just the BlockMoved mutation event. Tools re-render their
+      // nesting-dependent UI here (e.g. the list tool recomputes its structural
+      // depth and applies the indent margin in moved()). Without this, keyboard
+      // Tab/Shift+Tab nesting changed the model but left the block visually
+      // un-indented. The drag path fires MOVED itself (and is excluded above via
+      // isDragMove), so this never double-fires.
+      block.call(BlockToolAPI.MOVED, {
+        fromIndex: index,
+        toIndex: index,
+      });
+    }
 
     // Sync the child block's parentId to Yjs so undo/redo can restore the relationship.
     // Without this, blocks created via insertDefaultBlockAtIndex + setBlockParent (e.g.,
@@ -1214,9 +1331,13 @@ export class BlockManager extends Module {
       return;
     }
 
+    const selectedBlocks = this.selectedBlocksForMove();
+
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    this.operations.moveCurrentBlockUp(this.blocksStore);
+    this.operations.moveCurrentBlockUp(this.blocksStore, selectedBlocks);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
+
+    this.reselectAfterMove(selectedBlocks);
   }
 
   /**
@@ -1228,9 +1349,73 @@ export class BlockManager extends Module {
       return;
     }
 
+    const selectedBlocks = this.selectedBlocksForMove();
+
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    this.operations.moveCurrentBlockDown(this.blocksStore);
+    this.operations.moveCurrentBlockDown(this.blocksStore, selectedBlocks);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
+
+    this.reselectAfterMove(selectedBlocks);
+  }
+
+  /**
+   * Block-level selection that a keyboard move should carry as one group, or
+   * undefined for a plain caret move. Returns the selected blocks in document
+   * order so the move resolves a contiguous span.
+   */
+  private selectedBlocksForMove(): Block[] | undefined {
+    const { BlockSelection } = this.Blok;
+
+    if (BlockSelection === undefined || !BlockSelection.anyBlockSelected) {
+      return undefined;
+    }
+
+    const selected = BlockSelection.selectedBlocks;
+
+    return selected.length > 0 ? selected : undefined;
+  }
+
+  /**
+   * Re-applies block-level selection to the moved blocks so a multi/single
+   * block selection survives the move and the user can repeat the shortcut.
+   * No-op for caret moves (selectedBlocks undefined).
+   * @param selectedBlocks - the selection captured before the move
+   */
+  private reselectAfterMove(selectedBlocks: Block[] | undefined): void {
+    if (selectedBlocks === undefined) {
+      return;
+    }
+
+    const { BlockSelection } = this.Blok;
+
+    for (const block of selectedBlocks) {
+      BlockSelection.selectBlock(block);
+    }
+  }
+
+  /**
+   * Duplicate the current block (or the whole block selection) right below it,
+   * carrying nested children/flat-indent followers — Notion's Cmd/Ctrl+D. Reuses
+   * the drag module's duplicate pipeline so saves, deep-clones and internal
+   * reparenting stay consistent with alt-drag duplication.
+   */
+  public duplicateCurrentBlock(): void {
+    // Layer 21: see moveCurrentBlockUp above — never mutate mid-drag.
+    if (this.Blok.DragManager?.isDragging) {
+      return;
+    }
+
+    const { BlockSelection } = this.Blok;
+    const selected = BlockSelection.selectedBlocks;
+    const anchor = BlockSelection.anyBlockSelected
+      ? selected[selected.length - 1]
+      : this.currentBlock;
+
+    if (anchor === undefined) {
+      return;
+    }
+
+    void this.Blok.DragManager?.duplicateBlocksInPlace(anchor);
   }
 
   /**
@@ -1410,7 +1595,7 @@ export class BlockManager extends Module {
    * @param blocks - the fully reconciled blocks about to be handed to Yjs
    */
   private assertInsertManyHierarchy(blocks: Block[]): void {
-    const snapshot: OutputBlockData<string, Record<string, unknown>>[] = blocks.map((block) => ({
+    const snapshot: OutputBlockData[] = blocks.map((block) => ({
       id: block.id,
       type: block.name,
       data: {},

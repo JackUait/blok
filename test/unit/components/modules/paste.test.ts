@@ -74,6 +74,8 @@ interface CreatePasteOptions {
   defaultBlock?: string;
   sanitizer?: SanitizerConfig;
   defaultTool?: BlockToolAdapter;
+  onBeforePaste?: BlokConfig['onBeforePaste'];
+  link?: BlokConfig['link'];
 }
 
 type ListenersMock = {
@@ -182,6 +184,8 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     config: {
       defaultBlock: options?.defaultBlock ?? 'paragraph',
       sanitizer: options?.sanitizer ?? {},
+      onBeforePaste: options?.onBeforePaste,
+      link: options?.link,
     },
     eventsDispatcher: {
       on: vi.fn(),
@@ -903,6 +907,101 @@ describe('Paste module', () => {
       expect(mocks.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
       expect(mocks.BlockManager.paste).not.toHaveBeenCalled();
     });
+
+    it('inserts raw plain text and bypasses markdown conversion when Shift is held (paste-without-formatting)', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      // Guard: markdown conversion must not run for the Shift paste.
+      const markdownSpy = vi.spyOn(MarkdownHandler.prototype, 'handle').mockResolvedValue(true);
+
+      const div = document.createElement('div');
+
+      mocks.holder.appendChild(div);
+
+      const currentBlock = {
+        name: 'paragraph',
+        tool: { isDefault: true, baseSanitizeConfig: {} },
+        isEmpty: false,
+        currentInput: document.createElement('div'),
+      };
+
+      mocks.BlockManager.currentBlock = currentBlock;
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(currentBlock);
+
+      paste.toggleReadOnly(false);
+
+      // Cmd/Ctrl+Shift+V: the browser paste event itself carries no shiftKey,
+      // so the module must track Shift via a preceding keydown.
+      const keydown = new KeyboardEvent('keydown', { bubbles: true, shiftKey: true, key: 'v' });
+
+      div.dispatchEvent(keydown);
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer(
+        { 'text/plain': '# Title', 'text/html': '<h1>Title</h1>' },
+        {} as FileList,
+        ['text/plain', 'text/html']
+      );
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      div.dispatchEvent(event);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Markdown/HTML conversion is bypassed; the literal text is inserted.
+      expect(markdownSpy).not.toHaveBeenCalled();
+      expect(mocks.Caret.insertContentAtCaretPosition).toHaveBeenCalledWith('# Title');
+
+      markdownSpy.mockRestore();
+    });
+
+    it('still converts markdown text on a normal paste (no Shift)', async () => {
+      const { paste, mocks } = createPaste();
+
+      mocks.Tools.blockTools.set('paragraph', mocks.Tools.defaultTool);
+
+      await paste.prepare();
+
+      const markdownSpy = vi.spyOn(MarkdownHandler.prototype, 'handle').mockResolvedValue(true);
+
+      const div = document.createElement('div');
+
+      mocks.holder.appendChild(div);
+
+      const currentBlock = {
+        name: 'paragraph',
+        tool: { isDefault: true, baseSanitizeConfig: {} },
+        isEmpty: false,
+        currentInput: document.createElement('div'),
+      };
+
+      mocks.BlockManager.currentBlock = currentBlock;
+      mocks.BlockManager.setCurrentBlockByChildNode.mockReturnValue(currentBlock);
+
+      paste.toggleReadOnly(false);
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+      const clipboardData = new MockDataTransfer(
+        { 'text/plain': '# Title' },
+        {} as FileList,
+        ['text/plain']
+      );
+
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+      div.dispatchEvent(event);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(markdownSpy).toHaveBeenCalledWith('# Title', expect.anything());
+
+      markdownSpy.mockRestore();
+    });
   });
 
   describe('FilesHandler', () => {
@@ -962,14 +1061,16 @@ describe('Paste module', () => {
   });
 
   describe('PatternHandler', () => {
-    it('substitutes pattern matches on inline paste and replaces current default block', async () => {
+    // URLs are routed to the link paste menu (covered separately); a non-URL
+    // pattern still auto-substitutes its block on inline paste.
+    it('substitutes a non-URL pattern match on inline paste and replaces current default block', async () => {
       const { paste, mocks } = createPaste();
 
       const patternTool = {
         name: 'link',
         pasteConfig: {
           patterns: {
-            link: /^https:\/\/example\.com$/,
+            link: /^::link::$/,
           },
         },
         baseSanitizeConfig: {},
@@ -997,7 +1098,7 @@ describe('Paste module', () => {
       });
 
       const dataTransfer = new MockDataTransfer(
-        { 'text/plain': 'https://example.com' },
+        { 'text/plain': '::link::' },
         { length: 0 } as FileList,
         ['text/plain']
       );
@@ -1011,7 +1112,7 @@ describe('Paste module', () => {
       expect(tool).toBe('link');
       expect(event).toBeInstanceOf(CustomEvent);
       expect(event.type).toBe('pattern');
-      expect((event.detail as { data: string; key: string }).data).toBe('https://example.com');
+      expect((event.detail as { data: string; key: string }).data).toBe('::link::');
       expect((event.detail as { data: string; key: string }).key).toBe('link');
       expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'link-block' }, mocks.Caret.positions.END);
     });
@@ -1423,6 +1524,57 @@ describe('Paste module', () => {
   });
 
   describe('HtmlHandler', () => {
+    it('applies the link config to pasted anchors', async () => {
+      const transformHref = vi.fn((href: string) => `https://public.example/?u=${encodeURIComponent(href)}`);
+      const { paste, mocks } = createPaste({
+        link: { target: '_top', rel: 'noreferrer', transformHref },
+      });
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.getAllInlineToolsSanitizeConfig.mockReturnValue({ a: { href: true, target: true, rel: true } });
+
+      await paste.prepare();
+
+      // Passthrough clean so the anchor survives sanitization in this unit test.
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html);
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p>See <a href="https://kb.internal/page">this</a></p>',
+          'text/plain': 'See this',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+      const anchor = detail.data.querySelector('a');
+
+      expect(transformHref).toHaveBeenCalledWith('https://kb.internal/page');
+      expect(anchor?.getAttribute('href')).toBe('https://public.example/?u=https%3A%2F%2Fkb.internal%2Fpage');
+      expect(anchor?.getAttribute('target')).toBe('_top');
+      expect(anchor?.getAttribute('rel')).toBe('noreferrer');
+    });
+
     it('preserves Google Docs bold/italic through processDataTransfer flow', async () => {
       const { paste, mocks } = createPaste();
 
@@ -1752,9 +1904,61 @@ describe('Paste module', () => {
       expect(handlers[1]).toBe(tableCellsHandler);
       expect(handlers[2]).toBe(filesHandler);
       expect(handlers[3]).toBe(patternHandler);
-      expect(handlers[4]).toBe(markdownHandler);
-      expect(handlers[5]).toBe(htmlHandler);
+      expect(handlers[4]).toBe(htmlHandler);
+      expect(handlers[5]).toBe(markdownHandler);
       expect(handlers[6]).toBe(textHandler);
+    });
+
+    it('prefers HtmlHandler over MarkdownHandler when paste carries both rich HTML and markdown-like text (Notion paste)', async () => {
+      const { paste, mocks } = createPaste();
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+
+      await paste.prepare();
+
+      // Keep the cleaned HTML as real HTML so HtmlHandler is eligible.
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html);
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      // MarkdownHandler routes through insertMany/composeBlock; if it wrongly
+      // wins, these run instead of BlockManager.paste.
+      const insertMany = vi.fn();
+      const composeBlock = vi.fn(() => ({ id: 'composed' }));
+      (mocks.BlockManager as unknown as { insertMany: unknown }).insertMany = insertMany;
+      (mocks.BlockManager as unknown as { composeBlock: unknown }).composeBlock = composeBlock;
+
+      // Notion's clipboard ships rich HTML *and* a markdown plain-text twin
+      // (note the `# ` heading and `**bold**` markdown signals).
+      const html = '<h1>Heading</h1><p>Some <strong>bold</strong> words</p>';
+      const plain = '# Heading\n\nSome **bold** words';
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': html,
+          'text/plain': plain,
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      // HtmlHandler (priority 40) must win over MarkdownHandler (priority 30).
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+      expect(insertMany).not.toHaveBeenCalled();
     });
 
     it('BlokDataHandler returns priority 100 for valid JSON', () => {
@@ -2727,6 +2931,183 @@ describe('Paste module', () => {
         expect((result[1] as { content: HTMLElement }).content).toHaveTextContent('你好');
         expect((result[2] as { content: HTMLElement }).content).toHaveTextContent('مرحبا');
       });
+    });
+  });
+
+  describe('Notion v3 clipboard flavor', () => {
+    const notionV3 = JSON.stringify({
+      blocks: [
+        {
+          blockId: 'a',
+          blockSubtree: {
+            __version__: 3,
+            block: {
+              a: {
+                value: {
+                  id: 'a',
+                  type: 'text',
+                  properties: { title: [['hi from notion']] },
+                  parent_id: 'page',
+                  parent_table: 'block',
+                  alive: true,
+                },
+              },
+            },
+          },
+        },
+      ],
+      action: 'paste',
+      wasContiguousSelection: true,
+    });
+
+    it('routes the lossless Notion JSON through the Blok data handler', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      mocks.BlockManager.insert.mockReturnValue({ id: 'new-a' });
+
+      const dataTransfer = new MockDataTransfer({
+        'text/_notion-blocks-v3-production': notionV3,
+        'text/plain': 'hi from notion',
+      });
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.insert).toHaveBeenCalledTimes(1);
+      expect(mocks.BlockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tool: 'paragraph',
+          data: expect.objectContaining({ text: 'hi from notion' }),
+        })
+      );
+    });
+
+    it('prefers native application/x-blok data over the Notion flavor', async () => {
+      const { paste, mocks } = createPaste();
+
+      await paste.prepare();
+      mocks.BlockManager.insert.mockReturnValue({ id: 'new-x' });
+
+      const dataTransfer = new MockDataTransfer({
+        'application/x-blok': JSON.stringify([{ id: 'x', tool: 'paragraph', data: { text: 'native' } }]),
+        'text/_notion-blocks-v3-production': notionV3,
+        'text/plain': 'hi',
+      });
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ text: 'native' }) })
+      );
+    });
+  });
+
+  describe('onBeforePaste hook', () => {
+    const setUpDefaultTool = (mocks: PasteMocks): void => {
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      // eslint-disable-next-line no-param-reassign -- configuring shared test mocks by design
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      // eslint-disable-next-line no-param-reassign -- configuring shared test mocks by design
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+    };
+
+    it('passes raw clipboard HTML through unchanged when no hook is configured', async () => {
+      const { paste, mocks } = createPaste();
+
+      setUpDefaultTool(mocks);
+
+      await paste.prepare();
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p>hello world</p>',
+          'text/plain': 'hello world',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      expect(detail.data.textContent).toBe('hello world');
+    });
+
+    it('feeds the transformed HTML into the pipeline when the hook returns a string', async () => {
+      const onBeforePaste = vi.fn((_html: string) => '<p>transformed text</p>');
+      const { paste, mocks } = createPaste({ onBeforePaste });
+
+      setUpDefaultTool(mocks);
+
+      await paste.prepare();
+
+      // Pass the (transformed) HTML straight through sanitization so we can
+      // observe exactly what reached the handler.
+      vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html);
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p>original text</p>',
+          'text/plain': 'original text',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(onBeforePaste).toHaveBeenCalledWith('<p>original text</p>');
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      expect(detail.data.textContent).toBe('transformed text');
+    });
+
+    it('skips the HTML paste path and falls through to plain text when the hook returns null', async () => {
+      const onBeforePaste = vi.fn((_html: string): string | null => null);
+      const { paste, mocks } = createPaste({ onBeforePaste });
+
+      setUpDefaultTool(mocks);
+
+      await paste.prepare();
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p><strong>rich</strong> html</p>',
+          'text/plain': 'plain fallback',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(onBeforePaste).toHaveBeenCalledWith('<p><strong>rich</strong> html</p>');
+      expect(mocks.BlockManager.paste).toHaveBeenCalledTimes(1);
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const detail = event.detail as { data: HTMLElement };
+
+      // The rich HTML must be ignored; only the plain-text fallback is inserted.
+      expect(detail.data.textContent).toBe('plain fallback');
+      expect(detail.data.querySelector('strong')).toBeNull();
     });
   });
 });

@@ -154,10 +154,10 @@ test.describe('Data Save and Load', () => {
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(tableBlock?.data.withHeadings).toBe(true);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[] }[][];
 
     // 3. Verify content is 2x2 with blocks arrays
@@ -175,7 +175,7 @@ test.describe('Data Save and Load', () => {
 
     // 4. Verify paragraph blocks contain the original text
     const paragraphBlocks = savedData?.blocks.filter((b: { type: string }) => b.type === 'paragraph');
-    const paragraphTexts = paragraphBlocks?.map((b: { data: { text: string } }) => b.data.text) as string[];
+    const paragraphTexts = paragraphBlocks?.map((b) => (b.data as { text: string }).text) as string[];
 
     expect(paragraphTexts).toContain('Name');
     expect(paragraphTexts).toContain('Value');
@@ -280,7 +280,7 @@ test.describe('Data Save and Load', () => {
 
     expect(tableBlock).toBeDefined();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[] }[][];
 
     // 4. Verify saved content uses block format (each cell has a blocks array)
@@ -334,7 +334,7 @@ test.describe('Data Save and Load', () => {
     // After deletion, only a default empty paragraph (from the editor) may remain,
     // but no paragraph with text 'Hello' that belonged to the deleted table cell
     const paragraphBlocks = savedData?.blocks.filter((b: { type: string }) => b.type === 'paragraph');
-    const paragraphTexts = (paragraphBlocks ?? []).map((b: { data: { text: string } }) => b.data.text);
+    const paragraphTexts = (paragraphBlocks ?? []).map((b) => (b.data as { text: string }).text);
 
     expect(paragraphTexts).not.toContain('Hello');
   });
@@ -386,7 +386,7 @@ test.describe('Data Save and Load', () => {
 
     expect(tableBlock).toBeDefined();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[] }[][];
 
     // 6. Verify 3 rows in saved data

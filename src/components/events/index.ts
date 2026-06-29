@@ -1,6 +1,10 @@
 import type { BlockChangedPayload } from './BlockChanged';
 import { BlockChanged } from './BlockChanged';
 import type { BlockHovered, BlockHoveredPayload } from './BlockHovered';
+import type { BlockRenderedPayload } from './BlockRendered';
+import { BlockRendered } from './BlockRendered';
+import type { BlocksRenderedPayload } from './BlocksRendered';
+import { BlocksRendered } from './BlocksRendered';
 import type { BlockSettingsClosedPayload } from './BlockSettingsClosed';
 import { BlockSettingsClosed } from './BlockSettingsClosed';
 import type { BlockSettingsOpenedPayload } from './BlockSettingsOpened';
@@ -20,6 +24,8 @@ import type { RedactorDomChangedPayload } from './RedactorDomChanged';
 export {
   RedactorDomChanged,
   BlockChanged,
+  BlockRendered,
+  BlocksRendered,
   FakeCursorAboutToBeToggled,
   FakeCursorHaveBeenSet,
   BlokMobileLayoutToggled,
@@ -34,6 +40,8 @@ export interface BlokEventMap {
   [BlockHovered]: BlockHoveredPayload;
   [RedactorDomChanged]: RedactorDomChangedPayload;
   [BlockChanged]: BlockChangedPayload;
+  [BlockRendered]: BlockRenderedPayload;
+  [BlocksRendered]: BlocksRenderedPayload;
   [FakeCursorAboutToBeToggled]: FakeCursorAboutToBeToggledPayload;
   [FakeCursorHaveBeenSet]: FakeCursorHaveBeenSetPayload;
   [BlokMobileLayoutToggled]: BlokMobileLayoutToggledPayload;

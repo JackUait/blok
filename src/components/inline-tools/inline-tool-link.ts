@@ -3,6 +3,7 @@ import type {
   InlineToolConstructorOptions,
   SanitizerConfig
 } from '../../../types';
+import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
@@ -42,15 +43,18 @@ export class LinkInlineTool implements InlineTool {
 
   /**
    * Sanitizer Rule
-   * Leave <a> tags
+   * Leave <a> tags. target/rel pass through (instead of being forced to the
+   * defaults) so consumer-configured BlokConfig.link.target / .rel values
+   * survive save-time sanitization. Created anchors still default to
+   * '_blank'/'nofollow' via insertLink().
    * @returns {object}
    */
   public static get sanitize(): SanitizerConfig {
     return {
       a: {
         href: true,
-        target: '_blank',
-        rel: 'nofollow',
+        target: true,
+        rel: true,
       },
     } as SanitizerConfig;
   }
@@ -120,6 +124,11 @@ export class LinkInlineTool implements InlineTool {
   private i18n: I18n;
 
   /**
+   * Global anchor-building config (target / rel / transformHref)
+   */
+  private linkConfig: NonNullable<BlokConfig['link']>;
+
+  /**
    * @param api - Blok API
    */
   constructor({ api }: InlineToolConstructorOptions) {
@@ -127,6 +136,7 @@ export class LinkInlineTool implements InlineTool {
     this.inlineToolbar = api.inlineToolbar;
     this.notifier = api.notifier;
     this.i18n = api.i18n;
+    this.linkConfig = api.config.link ?? {};
     this.selection = new SelectionUtils();
     this.nodes.input = this.createInput();
     this.nodes.suggestion = this.createSuggestion();
@@ -676,6 +686,10 @@ export class LinkInlineTool implements InlineTool {
    * @param {string} link - "href" value
    */
   private insertLink(link: string): void {
+    const href = this.linkConfig.transformHref ? this.linkConfig.transformHref(link) : link;
+    const target = this.linkConfig.target ?? '_blank';
+    const rel = this.linkConfig.rel ?? 'nofollow';
+
     /**
      * Edit all link, not selected part
      */
@@ -684,9 +698,9 @@ export class LinkInlineTool implements InlineTool {
     if (anchorTag instanceof HTMLAnchorElement) {
       this.selection.expandToTag(anchorTag);
 
-      anchorTag.href = link;
-      anchorTag.target = '_blank';
-      anchorTag.rel = 'nofollow';
+      anchorTag.href = href;
+      anchorTag.target = target;
+      anchorTag.rel = rel;
 
       return;
     }
@@ -699,9 +713,9 @@ export class LinkInlineTool implements InlineTool {
 
     const anchor = document.createElement('a');
 
-    anchor.href = link;
-    anchor.target = '_blank';
-    anchor.rel = 'nofollow';
+    anchor.href = href;
+    anchor.target = target;
+    anchor.rel = rel;
 
     anchor.appendChild(range.extractContents());
 

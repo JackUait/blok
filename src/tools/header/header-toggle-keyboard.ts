@@ -27,8 +27,10 @@ export interface HeaderToggleKeyboardContext {
  * Handle Enter in a toggle heading.
  *
  * - Open + caret at end → create a child paragraph inside the toggle.
- * - Otherwise (closed, or caret mid-text) → split into two toggle headings at
- *   the same level.
+ * - Collapsed + caret at end → insert a plain paragraph sibling below the
+ *   collapsed block (matches Notion; not a toggle split, not a hidden child).
+ * - Otherwise (caret mid-text) → split into two toggle headings at the same
+ *   level.
  */
 export const handleHeaderToggleEnter = async (
   context: HeaderToggleKeyboardContext
@@ -59,6 +61,18 @@ export const handleHeaderToggleEnter = async (
     // a single Yjs undo entry, so one CMD+Z removes the new block completely.
     const insertIndex = getInsertAfterLastDescendantIndex(api, blockId, currentBlockIndex);
     const newBlock = api.blocks.insertInsideParent(blockId, insertIndex);
+
+    api.caret.setToBlock(newBlock.id, 'start');
+
+    return;
+  }
+
+  if (!isOpen && afterContent === '') {
+    // Collapsed toggle, caret at end → insert ONE plain paragraph sibling below
+    // the whole collapsed subtree (after the last descendant), matching Notion.
+    // insert() (not insertInsideParent) keeps it a sibling, not a hidden child.
+    const insertIndex = getInsertAfterLastDescendantIndex(api, blockId, currentBlockIndex);
+    const newBlock = api.blocks.insert('paragraph', undefined, undefined, insertIndex, false);
 
     api.caret.setToBlock(newBlock.id, 'start');
 

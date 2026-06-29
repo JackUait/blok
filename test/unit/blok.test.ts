@@ -101,6 +101,13 @@ vi.mock('../../src/components/core', () => {
         getResolved: vi.fn().mockReturnValue('light'),
       },
     } as unknown as BlokModules['ThemeAPI'],
+    UI: {
+      getWidthMode: vi.fn().mockReturnValue('narrow'),
+      setWidthMode: vi.fn(),
+    } as unknown as BlokModules['UI'],
+    BlockManager: {
+      setPlaceholder: vi.fn(),
+    } as unknown as BlokModules['BlockManager'],
   });
 
   const mockModuleInstances = createMockModuleInstances();
@@ -307,6 +314,31 @@ describe('Blok', () => {
       expect(typeof blok.destroy).toBe('function');
     });
 
+    it('passes the ready Blok instance to the onReady callback', async () => {
+      const onReady = vi.fn();
+      const config: BlokConfig = {
+        holder: 'blok',
+        onReady,
+      };
+
+      if (mocks.mockIsObject) {
+        mocks.mockIsObject.mockReturnValue(true);
+      }
+      if (mocks.mockIsFunction) {
+        mocks.mockIsFunction.mockReturnValue(true);
+      }
+
+      const blok = new Blok(config);
+
+      await blok.isReady;
+
+      // The ready hook now receives the live instance (parity with the
+      // React/Vue/Angular adapters, which all hand the editor to their `ready`).
+      // Identity check (not toHaveBeenCalledWith, whose deep-compare would walk
+      // the instance's `isMobile` getter into the partial test mock).
+      expect(onReady.mock.calls[0][0]).toBe(blok);
+    });
+
     it('should use default empty onReady function when not provided', async () => {
       const config: BlokConfig = {
         holder: 'blok',
@@ -337,10 +369,20 @@ describe('Blok', () => {
   });
 
   describe('isReady promise', () => {
-    it('should resolve when Core is ready', async () => {
+    it('should resolve with the ready Blok instance when Core is ready', async () => {
       const blok = new Blok();
 
-      await expect(blok.isReady).resolves.toBeUndefined();
+      await expect(blok.isReady).resolves.toBe(blok);
+    });
+
+    it('should resolve with an instance exposing the exported module API', async () => {
+      const blok = new Blok();
+
+      const ready = await blok.isReady;
+
+      // After isReady resolves, exportAPI has set the prototype to the API methods,
+      // so module shorthands like save() are live on the resolved handle.
+      expect(typeof (ready as unknown as Record<string, unknown>).save).toBe('function');
     });
 
     it('should call exportAPI when Core is ready', async () => {
@@ -1182,6 +1224,273 @@ describe('Blok', () => {
       const instance = coreModuleForInstance.lastInstance?.();
 
       expect(instance?.moduleInstances.ThemeManager?.setMode).toHaveBeenCalledWith('dark');
+    });
+  });
+
+  describe('width API availability before isReady', () => {
+    const createDeferred = (): { promise: Promise<void>; resolve: () => void } => {
+      let resolve!: () => void;
+      const promise = new Promise<void>(r => { resolve = r; });
+
+      return { promise, resolve };
+    };
+
+    it('should expose width API immediately after construction, before isReady resolves', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.isReady = deferredIsReady;
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      const widthApi = (blok as unknown as Record<string, unknown>).width as
+        | { set: (mode: string) => void; get: () => string; toggle: () => void }
+        | undefined;
+
+      expect(widthApi).toBeDefined();
+      expect(typeof widthApi?.set).toBe('function');
+      expect(typeof widthApi?.get).toBe('function');
+      expect(typeof widthApi?.toggle).toBe('function');
+
+      deferred.resolve();
+      await blok.isReady;
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should default to "narrow" from get() before any set() call', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      const widthApi = (blok as unknown as Record<string, unknown>).width as
+        { get: () => string };
+
+      // UI module is not available yet, so get() reads the buffer default.
+      expect(widthApi.get()).toBe('narrow');
+
+      deferred.resolve();
+      await blok.isReady;
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should toggle between "narrow" and "full" using the pre-ready buffer', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      const widthApi = (blok as unknown as Record<string, unknown>).width as
+        { get: () => string; toggle: () => void };
+
+      // UI module is not available yet, so get()/toggle() operate on the buffer.
+      expect(widthApi.get()).toBe('narrow');
+      widthApi.toggle();
+      expect(widthApi.get()).toBe('full');
+      widthApi.toggle();
+      expect(widthApi.get()).toBe('narrow');
+
+      deferred.resolve();
+      await blok.isReady;
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should buffer width set() calls made before isReady and replay after modules are ready', async () => {
+      const deferred = createDeferred();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+        lastInstance?: () => Core | undefined;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok();
+
+      const widthApi = (blok as unknown as Record<string, unknown>).width as
+        { set: (mode: string) => void; get: () => string };
+
+      widthApi.set('full');
+      expect(widthApi.get()).toBe('full');
+
+      deferred.resolve();
+      await blok.isReady;
+
+      const lastCoreInstance = coreModule.lastInstance?.();
+      const ui = lastCoreInstance?.moduleInstances.UI;
+
+      expect(ui?.setWidthMode).toHaveBeenCalledWith('full');
+
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
+    });
+
+    it('should delegate to UI.setWidthMode after isReady resolves', async () => {
+      const blok = new Blok();
+
+      await blok.isReady;
+
+      const widthApi = (blok as unknown as Record<string, unknown>).width as
+        { set: (mode: string) => void };
+
+      widthApi.set('full');
+
+      const coreModuleForInstance = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+      const instance = coreModuleForInstance.lastInstance?.();
+
+      expect(instance?.moduleInstances.UI?.setWidthMode).toHaveBeenCalledWith('full');
+    });
+  });
+
+  describe('placeholder API', () => {
+    it('should expose placeholder.get/set immediately after construction', () => {
+      const blok = new Blok({ placeholder: 'Hello' });
+      const api = (blok as unknown as Record<string, unknown>).placeholder as {
+        get: () => string | false;
+        set: (v: string | false) => void;
+      };
+
+      expect(typeof api.set).toBe('function');
+      expect(typeof api.get).toBe('function');
+      expect(api.get()).toBe('Hello');
+    });
+
+    it('should route placeholder.set to BlockManager.setPlaceholder once ready', async () => {
+      const blok = new Blok({ placeholder: 'Hello' });
+
+      await blok.isReady;
+
+      const api = (blok as unknown as Record<string, unknown>).placeholder as {
+        set: (v: string | false) => void;
+      };
+      api.set('Changed');
+
+      const coreModule = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+      const instance = coreModule.lastInstance?.();
+
+      expect(instance?.moduleInstances.BlockManager?.setPlaceholder).toHaveBeenCalledWith('Changed');
+    });
+
+    it('should buffer placeholder.set made before isReady and replay after', async () => {
+      const deferred: { promise: Promise<void>; resolve: () => void } = (() => {
+        let resolve: () => void = () => {};
+        const promise = new Promise<void>((res) => { resolve = res; });
+
+        return { promise, resolve };
+      })();
+
+      const coreModule = await import('../../src/components/core') as {
+        Core: new (...args: unknown[]) => Core;
+        lastInstance?: () => Core | undefined;
+      };
+      const OriginalMockCore = coreModule.Core;
+      const deferredIsReady = deferred.promise;
+
+      const PatchedCore = class extends OriginalMockCore {
+        constructor(...args: unknown[]) {
+          super(...args);
+          this.moduleInstances = {} as BlokModules;
+          this.isReady = deferredIsReady.then(() => {
+            const mockInstances = (coreModule as { mockModuleInstances?: Partial<BlokModules> }).mockModuleInstances;
+
+            if (mockInstances) {
+              Object.assign(this.moduleInstances, mockInstances);
+            }
+          });
+        }
+      } as unknown as typeof coreModule.Core;
+
+      (coreModule as Record<string, unknown>).Core = PatchedCore;
+
+      const blok = new Blok({ placeholder: 'Hello' });
+
+      const api = (blok as unknown as Record<string, unknown>).placeholder as
+        { set: (v: string | false) => void; get: () => string | false };
+
+      api.set('Buffered');
+      expect(api.get()).toBe('Buffered');
+
+      deferred.resolve();
+      await blok.isReady;
+
+      const lastCoreInstance = coreModule.lastInstance?.();
+
+      expect(lastCoreInstance?.moduleInstances.BlockManager?.setPlaceholder).toHaveBeenCalledWith('Buffered');
+
+      (coreModule as Record<string, unknown>).Core = OriginalMockCore;
     });
   });
 

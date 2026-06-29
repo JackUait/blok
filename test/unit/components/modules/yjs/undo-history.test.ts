@@ -8,6 +8,7 @@ const createMockBlok = (): BlokModules => {
   const blockManager = {
     currentBlock: undefined,
     getBlockById: vi.fn(),
+    getBlockByChildNode: vi.fn(),
     firstBlock: undefined,
   };
 
@@ -156,6 +157,68 @@ describe('UndoHistory', () => {
     });
   });
 
+  describe('chronological undo across moves and edits', () => {
+    const getText = (id: string): string =>
+      (yblocks.toArray().find((b) => b.get('id') === id)?.get('text') as string) ?? '';
+
+    it('undoes the most recent operation first when a move is sandwiched between text edits', () => {
+      // Seed two blocks without tracking (no 'local' origin → no undo entries).
+      ydoc.transact(() => {
+        const b1 = new Y.Map<unknown>();
+
+        b1.set('id', 'b1');
+        b1.set('text', '');
+        const b2 = new Y.Map<unknown>();
+
+        b2.set('id', 'b2');
+        b2.set('text', '');
+        yblocks.insert(0, [b1, b2]);
+      });
+
+      const moveCallback = vi.fn();
+
+      history.setMoveCallback(moveCallback);
+
+      // Edit 1 (tracked) — typing into b1.
+      ydoc.transact(() => {
+        getBlock('b1').set('text', 'A');
+      }, 'local');
+      history.stopCapturing();
+
+      // Move b1 (recorded between the two edits).
+      history.recordMove('b1', 0, 1, false);
+      history.stopCapturing();
+
+      // Edit 2 (tracked) — more typing into b1.
+      ydoc.transact(() => {
+        getBlock('b1').set('text', 'AB');
+      }, 'local');
+
+      // 1st undo: the most recent operation is Edit 2, NOT the move.
+      history.undo();
+      expect(getText('b1')).toBe('A');
+      expect(moveCallback).not.toHaveBeenCalled();
+
+      // 2nd undo: now the move.
+      history.undo();
+      expect(moveCallback).toHaveBeenCalledWith('b1', 0, 'move-undo');
+
+      // 3rd undo: Edit 1.
+      history.undo();
+      expect(getText('b1')).toBe('');
+    });
+
+    function getBlock(id: string): Y.Map<unknown> {
+      const block = yblocks.toArray().find((b) => b.get('id') === id);
+
+      if (block === undefined) {
+        throw new Error(`block ${id} not found`);
+      }
+
+      return block;
+    }
+  });
+
   describe('caret tracking', () => {
     it('captures caret snapshot', () => {
       const mockBlock = {
@@ -170,6 +233,50 @@ describe('UndoHistory', () => {
 
       expect(snapshot).not.toBeNull();
       expect(snapshot?.blockId).toBe('b1');
+    });
+
+    it('captures the block from the live selection when currentBlock is stale', () => {
+      // `BlockManager.currentBlock` is updated by a debounced selectionchange
+      // handler (180ms), so it can lag behind the real caret. If we trust it
+      // blindly, the snapshot records the wrong block id while reading the
+      // offset from the live selection — undo/redo then sends the caret to the
+      // wrong block. The snapshot must reflect the block the caret is actually in.
+      const staleBlock = {
+        id: 'stale-block',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+
+      const liveInput = document.createElement('div');
+
+      liveInput.setAttribute('contenteditable', 'true');
+      const liveTextNode = document.createTextNode('live block text');
+
+      liveInput.appendChild(liveTextNode);
+      const liveBlock = {
+        id: 'live-block',
+        currentInputIndex: 0,
+        currentInput: liveInput,
+        inputs: [liveInput],
+      };
+
+      (blok.BlockManager as unknown as { currentBlock: typeof staleBlock }).currentBlock = staleBlock;
+      (blok.BlockManager as unknown as { getBlockByChildNode: ReturnType<typeof vi.fn> })
+        .getBlockByChildNode.mockImplementation((node: Node) =>
+          (node === liveTextNode ? liveBlock : undefined));
+
+      const getSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue({
+        anchorNode: liveTextNode,
+        rangeCount: 0,
+      } as unknown as Selection);
+
+      const snapshot = history.captureCaretSnapshot();
+
+      getSelectionSpy.mockRestore();
+
+      expect(snapshot?.blockId).toBe('live-block');
+      expect(snapshot?.inputIndex).toBe(0);
     });
 
     it('returns null when no current block', () => {
@@ -219,6 +326,36 @@ describe('UndoHistory', () => {
       // The caret before should still be from the first call
       // (This tests the hasPendingCaret guard)
       expect(history.captureCaretSnapshot()).not.toBeNull();
+    });
+
+    it('forced markCaretBeforeChange re-captures past a stale pending snapshot', () => {
+      const mockBlock = {
+        id: 'b1',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+      };
+
+      (blok.BlockManager as unknown as { currentBlock: typeof mockBlock }).currentBlock = mockBlock;
+
+      const captureSpy = vi.spyOn(history, 'captureCaretSnapshot');
+
+      // First call captures the pending snapshot.
+      history.markCaretBeforeChange();
+      expect(captureSpy).toHaveBeenCalledTimes(1);
+
+      // Unforced call while a pending snapshot exists is ignored (dedupes the
+      // keydown + beforeinput pair, and keeps a change's own follow-up writes
+      // from overwriting the genuine pre-change caret).
+      history.markCaretBeforeChange();
+      expect(captureSpy).toHaveBeenCalledTimes(1);
+
+      // A forced call (from a fresh keyboard gesture) re-captures, discarding a
+      // stale pending left dangling by a prior operation's no-op follow-up
+      // write. Without this the caret resets to that stale position on undo.
+      history.markCaretBeforeChange(true);
+      expect(captureSpy).toHaveBeenCalledTimes(2);
+
+      captureSpy.mockRestore();
     });
   });
 
@@ -298,6 +435,21 @@ describe('UndoHistory', () => {
       vi.advanceTimersByTime(60); // Now 110ms total
 
       history.checkAndHandleBoundary();
+      expect(stopSpy).toHaveBeenCalledTimes(1);
+      expect(history.hasPendingBoundary()).toBe(false);
+
+      vi.useRealTimers();
+    });
+
+    it('boundary timer fires stopCapturing to checkpoint a finished word', () => {
+      vi.useFakeTimers();
+      const stopSpy = vi.spyOn(history.undoManager, 'stopCapturing');
+
+      history.markBoundary();
+      // Let the boundary timer fire on its own after the idle window.
+      vi.advanceTimersByTime(150);
+
+      // A per-word checkpoint is created and the pending boundary clears.
       expect(stopSpy).toHaveBeenCalledTimes(1);
       expect(history.hasPendingBoundary()).toBe(false);
 
@@ -397,8 +549,91 @@ describe('UndoHistory', () => {
     });
   });
 
+  describe('after-snapshot auto-refresh (defense-in-depth)', () => {
+    it('refreshes the "after" snapshot once focus settles after the change', async () => {
+      // Root-cause guard for "redo caret does not catch up to the new block":
+      // Yjs `stack-item-added` fires mid-transaction, BEFORE a structural handler
+      // (Enter split, paste, tool insert) moves the caret to the new block. So the
+      // "after" snapshot captured there points at the OLD block. A microtask
+      // re-capture, after the synchronous gesture settles focus, makes redo land
+      // on the right block automatically — without each handler having to call
+      // updateLastCaretAfterPosition() by hand.
+      const blockA = {
+        id: 'block-a',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+      const blockB = {
+        id: 'block-b',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+
+      // Caret is in block A when the undoable change is recorded.
+      (blok.BlockManager as unknown as { currentBlock: typeof blockA }).currentBlock = blockA;
+
+      // A tracked ('local') change creates an undo stack item; stack-item-added
+      // fires mid-transaction and captures after = block A.
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'block-a');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      const stack = (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack;
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-a');
+
+      // The gesture handler now moves focus to the new block (mirrors
+      // handleEnter's Caret.setToBlock, which runs AFTER the listener).
+      (blok.BlockManager as unknown as { currentBlock: typeof blockB }).currentBlock = blockB;
+
+      // Microtask drains: the "after" snapshot catches up to where focus settled.
+      await Promise.resolve();
+
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-b');
+    });
+
+    it('does not downgrade a captured "after" snapshot to null when focus leaves all blocks', async () => {
+      const blockA = {
+        id: 'block-a',
+        currentInputIndex: 0,
+        currentInput: document.createElement('div'),
+        inputs: [document.createElement('div')],
+      };
+
+      (blok.BlockManager as unknown as { currentBlock: typeof blockA }).currentBlock = blockA;
+
+      ydoc.transact(() => {
+        const yblock = new Y.Map<unknown>();
+        yblock.set('id', 'block-a');
+        yblock.set('type', 'paragraph');
+        yblock.set('data', new Y.Map<unknown>());
+        yblocks.push([yblock]);
+      }, 'local');
+
+      const stack = (history as unknown as { caretUndoStack: CaretHistoryEntry[] }).caretUndoStack;
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-a');
+
+      // Focus leaves every block (e.g. moved to a toolbar control). The refresh
+      // must NOT overwrite the good snapshot with null.
+      (blok.BlockManager as unknown as { currentBlock: undefined }).currentBlock = undefined;
+
+      await Promise.resolve();
+
+      expect(stack[stack.length - 1].after?.blockId).toBe('block-a');
+    });
+  });
+
   describe('caret restoration edge cases', () => {
-    it('restores to first block when snapshot block no longer exists', () => {
+    it('preserves focus (no document-top jump) when snapshot block no longer exists', () => {
+      // Regression: when the snapshot's block can't be resolved, undo/redo must
+      // NOT teleport the caret to the first block at the document START — that
+      // is the user-visible "caret jumps to the very beginning on redo" bug.
+      // Focus is preserved instead.
       const firstBlock = { id: 'first-block', inputs: [] };
       const snapshot = { blockId: 'deleted-block', inputIndex: 0, offset: 5 };
 
@@ -415,8 +650,32 @@ describe('UndoHistory', () => {
 
       history.undo();
 
-      // Should fall back to first block
-      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(firstBlock, 'start');
+      // Must NOT jump to the first block / document top — focus is preserved
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Caret.setToInput).not.toHaveBeenCalled();
+    });
+
+    it('does not jump caret to document top on redo when after-block is gone', () => {
+      // The redo path restores the entry's "after" snapshot. If that block no
+      // longer exists, redo must preserve focus rather than yanking the caret to
+      // the very beginning of the document.
+      const firstBlock = { id: 'first-block', inputs: [] };
+
+      (blok.BlockManager as unknown as { getBlockById: typeof vi.fn; firstBlock: typeof firstBlock })
+        .getBlockById = vi.fn().mockReturnValue(undefined);
+      (blok.BlockManager as unknown as { firstBlock: typeof firstBlock }).firstBlock = firstBlock;
+
+      // Seed a redo entry whose "after" points at a since-removed block
+      const redoEntry: CaretHistoryEntry = {
+        before: { blockId: 'b-before', inputIndex: 0, offset: 2 },
+        after: { blockId: 'gone-block', inputIndex: 0, offset: 0 },
+      };
+      (history as unknown as { caretRedoStack: CaretHistoryEntry[] }).caretRedoStack.push(redoEntry);
+
+      history.redo();
+
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Caret.setToInput).not.toHaveBeenCalled();
     });
 
     it('preserves existing focus when snapshot is null', () => {

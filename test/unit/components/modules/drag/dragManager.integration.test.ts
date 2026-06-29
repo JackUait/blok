@@ -158,6 +158,7 @@ const createDragManager = (
     move: vi.fn(),
     insert: vi.fn(),
     setBlockParent: vi.fn(),
+    setBlockIndent: vi.fn(),
   };
 
   const blockSelection = {
@@ -269,6 +270,67 @@ describe("DragManager - Component Integration", () => {
     vi.useRealTimers();
   });
 
+  describe("duplicateBlocksInPlace (Cmd+D)", () => {
+    it("duplicates a single block right below it and opens the toolbar on the copy", async () => {
+      const { dragManager, blocks, modules } = createDragManager();
+      const blockManager = modules.BlockManager as unknown as {
+        insert: ReturnType<typeof vi.fn>;
+        getBlockIndex: (block: Block) => number;
+      };
+      const toolbar = modules.Toolbar as unknown as { moveAndOpen: ReturnType<typeof vi.fn> };
+
+      (blocks[0] as unknown as { save: () => Promise<unknown> }).save = vi
+        .fn()
+        .mockResolvedValue({ data: { text: "Hello" }, tunes: {} });
+
+      const dup = createBlockStub({ id: "dup-1" });
+      blockManager.insert.mockReturnValue(dup);
+
+      const result = await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+      // The source block was saved and a copy of its tool/data inserted below it.
+      expect(blockManager.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ tool: "paragraph", index: 1 })
+      );
+      expect(result).toEqual([dup]);
+      expect(toolbar.moveAndOpen).toHaveBeenCalledWith(dup);
+    });
+
+    it("duplicates a multi-block selection together with each block's unselected nested descendants (M9)", async () => {
+      const { dragManager, blocks, modules } = createDragManager();
+      const blockManager = modules.BlockManager as unknown as {
+        insert: ReturnType<typeof vi.fn>;
+      };
+      const blockSelection = modules.BlockSelection as unknown as {
+        selectedBlocks: Block[];
+      };
+
+      // block-1 is a container whose child block-3 is NOT part of the selection;
+      // block-1 and block-2 are the two selected blocks.
+      (blocks[0] as unknown as { contentIds: string[] }).contentIds = ["block-3"];
+      (blocks[2] as unknown as { parentId: string | null }).parentId = "block-1";
+
+      for (const block of [blocks[0], blocks[1], blocks[2]]) {
+        (block as unknown as { save: () => Promise<unknown> }).save = vi
+          .fn()
+          .mockResolvedValue({ data: { text: block.id }, tunes: {} });
+      }
+
+      blocks[0].selected = true;
+      blocks[1].selected = true;
+      blockSelection.selectedBlocks = [blocks[0], blocks[1]];
+
+      blockManager.insert.mockImplementation(() => createBlockStub({ id: `dup-${Math.random().toString(16).slice(2)}` }));
+
+      await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+      // Without descendant expansion only the two selected blocks duplicate (2
+      // inserts). The unselected nested child must travel with its parent, so
+      // all three blocks duplicate.
+      expect(blockManager.insert).toHaveBeenCalledTimes(3);
+    });
+  });
+
   describe("AutoScroll + DropTargetDetector integration", () => {
     it("should detect drop target during drag operation", () => {
       const { dragManager, blocks, wrapper } = createDragManager();
@@ -312,6 +374,236 @@ describe("DragManager - Component Integration", () => {
       expect(targetBlock.holder).toHaveAttribute("data-drop-indicator");
 
       // Cleanup
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+  });
+
+  describe("List item drop indicator alignment", () => {
+    it("anchors the drop line from the list item marker to the text end", () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // The dragged source must itself be a list item — the marker-aligned tuck
+      // only previews a real list reorder. A non-list source lands at root, so it
+      // keeps a full-width indicator (covered separately below).
+      blocks[0].holder.setAttribute("data-list-depth", "0");
+
+      // Turn block-4 into a list item: a listitem (starting at the marker) that
+      // holds a text content container (starting past the marker).
+      const targetBlock = blocks[3];
+      targetBlock.holder.setAttribute("data-list-depth", "0");
+
+      const itemContent = targetBlock.holder.querySelector(
+        "[data-blok-element-content]",
+      ) as HTMLElement;
+      const item = document.createElement("div");
+      item.setAttribute("role", "listitem");
+      const container = document.createElement("div");
+      container.setAttribute("data-blok-testid", "list-content-container");
+      container.textContent = "Fifth item";
+      item.appendChild(container);
+      itemContent.appendChild(item);
+
+      // Holder spans the full content width (0..300). The list item (marker)
+      // starts at 16; the text content starts at 40 (past the marker).
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 300,
+        width: 300,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+      item.getBoundingClientRect = vi.fn(() => ({
+        top: 200,
+        bottom: 250,
+        left: 16,
+        right: 280,
+        width: 264,
+        height: 50,
+        x: 16,
+        y: 200,
+        toJSON: () => ({}),
+      }));
+      container.getBoundingClientRect = vi.fn(() => ({
+        top: 200,
+        bottom: 250,
+        left: 40,
+        right: 280,
+        width: 240,
+        height: 50,
+        x: 40,
+        y: 200,
+        toJSON: () => ({}),
+      }));
+
+      // The rendered text ends at x=120 (shorter than the flex container).
+      const realCreateRange = document.createRange.bind(document);
+      vi.spyOn(document, "createRange").mockImplementation(() => {
+        const range = realCreateRange();
+        range.getBoundingClientRect = () =>
+          ({
+            top: 200,
+            bottom: 218,
+            left: 40,
+            right: 120,
+            width: 80,
+            height: 18,
+            x: 40,
+            y: 200,
+            toJSON: () => ({}),
+          }) as DOMRect;
+        return range;
+      });
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      // Bottom half of the target -> drop below it.
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+
+      expect(targetBlock.holder).toHaveAttribute("data-drop-indicator");
+      // Line starts at the list item marker (item left edge), not after it.
+      expect(
+        targetBlock.holder.style.getPropertyValue("--drop-indicator-side-left"),
+      ).toBe("16px");
+      // Line ends where the text ends: 300 (holder right) - 120 (text right).
+      expect(
+        targetBlock.holder.style.getPropertyValue("--drop-indicator-side-right"),
+      ).toBe("180px");
+      // Indentation is baked into side-left, so the CSS depth multiplier is off.
+      expect(
+        targetBlock.holder.style.getPropertyValue("--drop-indicator-depth"),
+      ).toBe("0");
+      // The grayish lead-in segment (editor left edge -> blue line start) is
+      // enabled for list items via this attribute.
+      expect(targetBlock.holder).toHaveAttribute("data-drop-indicator-lead");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("clears the lead-in attribute when the indicator moves to a non-list block", () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // The dragged source is a list item, so a list-item target gets the
+      // marker-aligned lead-in; moving onto a plain block clears it.
+      blocks[0].holder.setAttribute("data-list-depth", "0");
+
+      // block-4 is a list item with a text container; block-3 is a plain block.
+      const listTarget = blocks[3];
+      listTarget.holder.setAttribute("data-list-depth", "0");
+      const listContent = listTarget.holder.querySelector(
+        "[data-blok-element-content]",
+      ) as HTMLElement;
+      const container = document.createElement("div");
+      container.setAttribute("data-blok-testid", "list-content-container");
+      container.textContent = "List item";
+      listContent.appendChild(container);
+      container.getBoundingClientRect = vi.fn(
+        () => new DOMRect(40, 200, 240, 50),
+      );
+      (listTarget.holder.getBoundingClientRect as Mock).mockReturnValue(
+        new DOMRect(0, 200, 300, 50),
+      );
+
+      const plainTarget = blocks[2];
+      (plainTarget.holder.getBoundingClientRect as Mock).mockReturnValue(
+        new DOMRect(0, 120, 300, 50),
+      );
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      // First hover the list item -> lead-in is enabled.
+      vi.mocked(document.elementFromPoint).mockReturnValue(listTarget.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+      expect(listTarget.holder).toHaveAttribute("data-drop-indicator-lead");
+
+      // Then move to a plain block -> the list block's lead-in is cleared and
+      // the plain block never gets one.
+      vi.mocked(document.elementFromPoint).mockReturnValue(plainTarget.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 160 }),
+      );
+
+      expect(plainTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
+      expect(listTarget.holder).not.toHaveAttribute("data-drop-indicator-lead");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("tucks the indicator (nested preview) when a non-list block is dropped after a deeper list item", () => {
+      // Any block nests inside a list now. Dropping a non-list block after a
+      // depth-1 list item (no following list item) predicts depth 1, so the
+      // indicator tucks under the item's text (lead-in present) to preview the
+      // nested slot the block will actually land at.
+      const { dragManager, blocks, wrapper } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Source (blocks[0]) is a plain paragraph — it will nest, not stay at root.
+      const listTarget = blocks[3];
+      listTarget.holder.setAttribute("data-list-depth", "1");
+      const listContent = listTarget.holder.querySelector(
+        "[data-blok-element-content]",
+      ) as HTMLElement;
+      const item = document.createElement("div");
+      item.setAttribute("role", "listitem");
+      const container = document.createElement("div");
+      container.setAttribute("data-blok-testid", "list-content-container");
+      container.textContent = "List item";
+      item.appendChild(container);
+      listContent.appendChild(item);
+      item.getBoundingClientRect = vi.fn(() => new DOMRect(16, 200, 264, 50));
+      container.getBoundingClientRect = vi.fn(() => new DOMRect(40, 200, 240, 50));
+      (listTarget.holder.getBoundingClientRect as Mock).mockReturnValue(
+        new DOMRect(0, 200, 300, 50),
+      );
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, blocks[0]);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(listTarget.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+
+      expect(listTarget.holder).toHaveAttribute("data-drop-indicator");
+      // Nested preview: the indented lead-in segment is enabled (tucked under text).
+      expect(listTarget.holder).toHaveAttribute("data-drop-indicator-lead");
+
       document.dispatchEvent(createMouseEvent("mouseup"));
     });
   });
@@ -387,6 +679,115 @@ describe("DragManager - Component Integration", () => {
       // Verify drag state is cleaned up (observable behavior)
       expect(dragManager.isDragging).toBe(false);
       expect(wrapper).not.toHaveAttribute(DATA_ATTR.dragging);
+    });
+
+    it("fires the moved() hook on a same-slot drop so list items can re-nest (regression)", () => {
+      // Regression (commit 7baeee54): dropping a block at the slot it already
+      // occupies (drop on the bottom edge of its immediate predecessor) makes
+      // fromIndex === toIndex, so the flat array does not change. The moved()
+      // lifecycle hook MUST still fire — list items recompute their depth only
+      // there — otherwise dropping a top-level item at the end of a nested
+      // sub-list it already follows silently does nothing.
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag block-2 (index 1) and drop it on the BOTTOM edge of block-1
+      // (index 0) — the slot block-2 already occupies.
+      const sourceBlock = blocks[1];
+      const targetBlock = blocks[0];
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      // target block-1 occupies the top of the editor (rect top 0, bottom 50);
+      // drop near its bottom edge (central X to avoid the side-drop zones).
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 45 }),
+      );
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      // No flat-array reorder happened (same slot)...
+      expect(modules.BlockManager.move).not.toHaveBeenCalled();
+      // ...but the moved() hook fired on the dragged block so depth can recompute.
+      expect(sourceBlock.call).toHaveBeenCalledWith(
+        "moved",
+        expect.objectContaining({ fromIndex: 1, toIndex: 1 }),
+      );
+    });
+
+    it("does NOT re-fire moved() on a flat root-level list reorder, so a dragged subtree keeps its child depths (regression)", () => {
+      // The post-drop moved() re-fire exists ONLY to recompute depth for a list
+      // item whose STRUCTURAL parent the drop actually changed (it is gated on
+      // that). A flat list reorder at root level changes no structural parent, so
+      // re-firing would be spurious — and harmful: moved()'s flat path re-runs the
+      // maxAllowedDepth cap against the new previous block, collapsing the depths of
+      // a dragged nested subtree (a depth-2 grandchild capped to 1). The structural
+      // depth recompute IS covered by the save round-trip tests (block-operations)
+      // and the nested-drag E2E specs; here we lock in that a plain root reorder
+      // triggers NO re-fire.
+      const { dragManager, blocks, wrapper, modules } = createDragManager();
+
+      document.body.appendChild(wrapper);
+      blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Drag the list item at index 1 down past block-4 (index 3) — a real
+      // reorder, not a same-slot drop.
+      const sourceBlock = blocks[1];
+      (sourceBlock as unknown as { name: string }).name = "list";
+      sourceBlock.holder.setAttribute("data-list-depth", "0");
+
+      const targetBlock = blocks[3];
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+
+      const dragHandle = document.createElement("div");
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      // Bottom half of block-4 -> drop below it (a real move at root depth).
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+      );
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: false }));
+
+      // A real reorder happened...
+      expect(modules.BlockManager.move).toHaveBeenCalled();
+      // ...but the drop changed no structural parent (root-level reorder), so the
+      // structural re-fire pass must NOT call moved() on the dragged list item.
+      // (The stub's BlockManager.move is a no-op, so the in-move moved() doesn't
+      // fire either — the re-fire pass is the only thing that could, and it must not.)
+      expect(sourceBlock.call).not.toHaveBeenCalledWith(
+        "moved",
+        expect.objectContaining({}),
+      );
     });
 
     it("should abort handleDrop completely when target became stale mid-drag (Layer 13)", () => {
@@ -1000,6 +1401,7 @@ describe("DragManager - Component Integration", () => {
         }),
         insert: vi.fn(),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
     };
 
@@ -1710,6 +2112,7 @@ describe("DragManager - Component Integration", () => {
           return newBlock;
         }),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
     };
 
@@ -2005,6 +2408,7 @@ describe("DragManager - Component Integration", () => {
         setBlockParent: vi.fn(() => {
           callLog.push("setBlockParent");
         }),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
 
       let insideTransactMoves = false;
@@ -2081,6 +2485,7 @@ describe("DragManager - Component Integration", () => {
         }),
         insert: vi.fn(),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       } as unknown as BlokModules["BlockManager"];
 
       const yjsManagerMock = {
@@ -2196,6 +2601,7 @@ describe("DragManager - Component Integration", () => {
         setBlockParent: vi.fn(() => {
           callLog.push("setBlockParent");
         }),
+        setBlockIndent: vi.fn(),
         transactForTool: vi.fn(),
       } as unknown as BlokModules["BlockManager"] & {
         transactForTool: Mock;
@@ -2404,6 +2810,7 @@ describe("DragManager - Component Integration", () => {
       const apiBlocks = {
         insert,
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
         getById: vi.fn((id: string) => {
           const b = allBlocks.find((blk) => blk.id === id);
 
@@ -2426,6 +2833,7 @@ describe("DragManager - Component Integration", () => {
         move: vi.fn(),
         insert: vi.fn(),
         setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
       };
 
       const { dragManager } = createDragManager({

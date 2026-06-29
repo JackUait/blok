@@ -69,4 +69,15 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
 
     return constructable['titleKey'];
   }
+
+  /**
+   * Whether the tool's keyboard shortcut may open its menu at a collapsed caret
+   * (nothing selected). True for caret-insert tools like Equation; false for
+   * selection-wrapping tools like Link and Marker.
+   */
+  public get allowCaretShortcut(): boolean {
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+
+    return constructable?.allowCaretShortcut ?? false;
+  }
 }

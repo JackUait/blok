@@ -6,6 +6,7 @@ import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table
 import { Module } from '../../__module';
 import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
+import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
@@ -32,7 +33,7 @@ export class BlocksAPI extends Module {
       clear: (): Promise<void> => this.clear(),
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
-      delete: (index?: number): Promise<void> => this.delete(index),
+      delete: (index?: number, setCaret?: boolean): Promise<void> => this.delete(index, setCaret),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
       getById: (id: string): BlockAPIInterface | null => this.getById(id),
@@ -161,8 +162,15 @@ export class BlocksAPI extends Module {
   /**
    * Deletes Block
    * @param {number} blockIndex - index of Block to delete
+   * @param {boolean} setCaret - whether to move the caret to the surviving current
+   *   block after deletion. Defaults to `true` (interactive delete). Pass `false`
+   *   for programmatic deletion (e.g. React `useBlocks.remove`) so the user's
+   *   caret is not stolen from wherever they are typing.
    */
-  public async delete(blockIndex: number = this.Blok.BlockManager.currentBlockIndex): Promise<void> {
+  public async delete(
+    blockIndex: number = this.Blok.BlockManager.currentBlockIndex,
+    setCaret = true
+  ): Promise<void> {
     const block = this.Blok.BlockManager.getBlockByIndex(blockIndex);
 
     if (block === undefined) {
@@ -190,7 +198,7 @@ export class BlocksAPI extends Module {
     /**
      * After Block deletion currentBlock is updated
      */
-    if (this.Blok.BlockManager.currentBlock) {
+    if (setCaret && this.Blok.BlockManager.currentBlock) {
       this.Blok.Caret.setToBlock(this.Blok.BlockManager.currentBlock, this.Blok.Caret.positions.END);
     }
 
@@ -275,6 +283,7 @@ export class BlocksAPI extends Module {
    * @param {boolean?} needToFocus - flag to focus inserted Block
    * @param replace - pass true to replace the Block existed under passed index
    * @param {string} id — An optional id for the new block. If omitted then the new id will be generated
+   * @param tunes — optional block tune data to apply at creation, keyed by tune name
    */
   public insert = (
     type?: string,
@@ -283,7 +292,8 @@ export class BlocksAPI extends Module {
     index?: number,
     needToFocus?: boolean,
     replace?: boolean,
-    id?: string
+    id?: string,
+    tunes?: { [name: string]: BlockTuneData }
   ): BlockAPIInterface => {
     const defaultTool = type ?? (this.config.defaultBlock);
     const tool = (() => {
@@ -308,6 +318,7 @@ export class BlocksAPI extends Module {
       index,
       needToFocus,
       replace,
+      tunes,
     });
 
     return new BlockAPI(insertedBlock);
@@ -321,7 +332,7 @@ export class BlocksAPI extends Module {
     const tool = this.Blok.Tools.blockTools.get(toolName);
 
     if (tool === undefined) {
-      throw new Error(`Block Tool with type "${toolName}" not found`);
+      throw new ToolNotFoundError(toolName, `Block Tool with type "${toolName}" not found`);
     }
 
     const block = new Block({
@@ -373,7 +384,7 @@ export class BlocksAPI extends Module {
     const targetBlockTool = Tools.blockTools.get(newType);
 
     if (!targetBlockTool) {
-      throw new Error(`Block Tool with type "${newType}" not found`);
+      throw new ToolNotFoundError(newType, `Block Tool with type "${newType}" not found`);
     }
 
     const originalBlockConvertable = originalBlockTool?.conversionConfig?.export !== undefined;
@@ -416,7 +427,7 @@ export class BlocksAPI extends Module {
       return this.Blok.BlockManager.composeBlock({
         id,
         tool: type || (this.config.defaultBlock as string),
-        data: data as BlockToolData,
+        data: data,
         tunes,
         parentId: parent,
         contentIds: content,
@@ -425,7 +436,11 @@ export class BlocksAPI extends Module {
       });
     });
     
-    this.Blok.BlockManager.insertMany(blocksToInsert, index);
+    // notify: a programmatic bulk insert through the public API must emit a
+    // BlockChanged mutation (mirroring single insert) so reactive consumers like
+    // the React useBlocks hook re-render. Renderer.render() bypasses this wrapper
+    // and calls BlockManager.insertMany directly, so initial render stays silent.
+    this.Blok.BlockManager.insertMany(blocksToInsert, index, { notify: true });
 
     return blocksToInsert.map((block) => new BlockAPI(block));
   };

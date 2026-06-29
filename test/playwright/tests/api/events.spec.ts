@@ -185,4 +185,39 @@ test.describe('api.events', () => {
       });
     }
   });
+
+  test('emits blocks:rendered and block:rendered when blocks are rendered', async ({ page }) => {
+    await createBlok(page);
+
+    const result = await page.evaluate(async () => {
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
+      }
+
+      const batches: unknown[] = [];
+      const perBlock: unknown[] = [];
+
+      window.blokInstance.on('blocks:rendered', (payload) => {
+        batches.push(payload);
+      });
+      window.blokInstance.on('block:rendered', (payload) => {
+        perBlock.push(payload);
+      });
+
+      await window.blokInstance.render({
+        blocks: [
+          { type: 'paragraph', data: { text: 'First' } },
+          { type: 'paragraph', data: { text: 'Second' } },
+        ],
+      });
+
+      return {
+        batches,
+        perBlockCount: perBlock.length,
+      };
+    });
+
+    expect(result.batches).toContainEqual({ count: 2 });
+    expect(result.perBlockCount).toBeGreaterThanOrEqual(2);
+  });
 });

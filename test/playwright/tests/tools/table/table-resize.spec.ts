@@ -281,9 +281,9 @@ test.describe('Column Resizing', () => {
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
     expect(tableBlock).toBeDefined();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(Array.isArray(tableBlock?.data.colWidths)).toBe(true);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect((tableBlock?.data.colWidths as number[]).length).toBe(2);
   });
 

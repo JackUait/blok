@@ -4,6 +4,7 @@
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { DragOperations } from '../../../../../../src/components/modules/drag/operations/DragOperations';
+import { BlockToolAPI } from '../../../../../../src/components/block';
 import type { Block } from '../../../../../../src/components/block';
 import type { SavedData } from '../../../../../../types/data-formats';
 
@@ -112,7 +113,7 @@ describe('DragOperations', () => {
       expect(result.targetIndex).toBe(2);
     });
 
-    it('should not move if position unchanged', () => {
+    it('should not reorder the flat array if position unchanged', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
 
@@ -128,6 +129,35 @@ describe('DragOperations', () => {
       expect(mockBlockManager.move).not.toHaveBeenCalled();
       expect(result.movedBlocks).toEqual([sourceBlock]);
       expect(result.targetIndex).toBe(2);
+    });
+
+    /**
+     * Regression: dropping a list item at the end of a nested sub-list lands it
+     * immediately after the block it already follows, so the flat-array position
+     * does not change (fromIndex === toIndex). List depth is recalculated ONLY in
+     * the tool's moved() hook — so the hook MUST still fire on a same-position
+     * drop, otherwise the depth never updates and the drop is a silent no-op
+     * ("the item does not get dropped").
+     */
+    it('should still fire the moved() hook when position is unchanged (depth-only drop)', () => {
+      const sourceBlock = createMockBlock('source', 'list', { text: 'source' });
+      const targetBlock = createMockBlock('target', 'list', { text: 'target' });
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === sourceBlock) return 2;
+        if (block === targetBlock) return 3;
+        return -1;
+      });
+
+      operations.moveBlocks([sourceBlock], targetBlock, 'top');
+
+      // No flat-array reorder, but the tool's moved() hook must run so a list
+      // item can recompute its depth against its new neighbours.
+      expect(mockBlockManager.move).not.toHaveBeenCalled();
+      expect(sourceBlock.call).toHaveBeenCalledWith(
+        BlockToolAPI.MOVED,
+        expect.objectContaining({ fromIndex: 2, toIndex: 2 })
+      );
     });
   });
 
@@ -153,7 +183,9 @@ describe('DragOperations', () => {
       // Moving down: insertIndex = 5, reverse order; skipMovedHook=true defers lifecycle hooks
       expect(mockBlockManager.move).toHaveBeenCalledWith(4, 1, false, true); // block2 to position 4
       expect(mockBlockManager.move).toHaveBeenCalledWith(3, 0, false, true); // block1 to position 3
-      expect(mockYjsManager.transactMoves).toHaveBeenCalled();
+      // The undo group is owned by the caller (DragController.handleDrop), so
+      // moveMultipleBlocks must NOT open its own nested transactMoves.
+      expect(mockYjsManager.transactMoves).not.toHaveBeenCalled();
       expect(result.movedBlocks).toEqual([block1, block2]);
       expect(result.targetIndex).toBe(5);
     });
@@ -200,6 +232,31 @@ describe('DragOperations', () => {
       expect(mockBlockSelection.clearSelection).toHaveBeenCalled();
       expect(mockBlockSelection.selectBlock).toHaveBeenCalledWith(block1);
       expect(mockBlockSelection.selectBlock).toHaveBeenCalledWith(block2);
+    });
+
+    it('does NOT open its own move group so the drop caller can keep move+reparent in ONE undo entry', () => {
+      // Regression: DragController.handleDrop wraps the whole drop (the array
+      // move AND the subsequent setBlockParent reparent loop) in a single
+      // transactMoves group. If moveMultipleBlocks opens a NESTED transactMoves,
+      // its finally clears YjsManager.isMoveGroupActive before the reparent loop
+      // runs — so setBlockParent lands on a SEPARATE Y.UndoManager entry and a
+      // drag-reparent splits into a two-step undo. Grouping is the caller's job.
+      const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
+      const block2 = createMockBlock('block-2', 'paragraph', { text: '2' });
+      const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === block1) return 0;
+        if (block === block2) return 1;
+        if (block === targetBlock) return 4;
+        return -1;
+      });
+
+      operations.moveBlocks([block1, block2], targetBlock, 'bottom');
+
+      expect(mockYjsManager.transactMoves).not.toHaveBeenCalled();
+      // The actual moves still happen (just inside the caller's group, not a nested one)
+      expect(mockBlockManager.move).toHaveBeenCalledTimes(2);
     });
   });
 

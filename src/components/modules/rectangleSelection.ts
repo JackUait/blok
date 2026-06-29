@@ -590,17 +590,7 @@ export class RectangleSelection extends Module {
    * Shrink rect to singular point
    */
   private shrinkRectangleToPoint(): void {
-    if (this.overlayRectangle === null) {
-      return;
-    }
-
-    const scrollLeft = this.getScrollLeft();
-    const scrollTop = this.getScrollTop();
-
-    this.overlayRectangle.style.left = `${this.startX - scrollLeft}px`;
-    this.overlayRectangle.style.top = `${this.startY - scrollTop}px`;
-    this.overlayRectangle.style.bottom = `calc(100% - ${this.startY - scrollTop}px)`;
-    this.overlayRectangle.style.right = `calc(100% - ${this.startX - scrollLeft}px)`;
+    this.positionRectangle(this.startX, this.startY, this.startX, this.startY);
   }
 
   /**
@@ -636,30 +626,64 @@ export class RectangleSelection extends Module {
    * Updates size of rectangle
    */
   private updateRectangleSize(): void {
+    this.positionRectangle(this.startX, this.startY, this.mouseX, this.mouseY);
+  }
+
+  /**
+   * Positions and sizes the overlay rectangle so it spans two page-space points.
+   *
+   * Coordinates are converted into the overlay container's own local space (its
+   * top-left, measured live via getBoundingClientRect) rather than assumed to be
+   * the viewport. The overlay is `position: fixed`, but `fixed` only resolves
+   * against the viewport when no ancestor establishes a containing block — any
+   * ancestor with a non-`none` transform/filter/perspective/contain/will-change/
+   * backdrop-filter re-anchors the overlay to that ancestor's box. Measuring the
+   * container's actual origin keeps the rectangle under the pointer in every case
+   * (when nothing re-anchors it, the origin is 0,0 and this is a no-op).
+   * @param {number} pageAX - X page-coordinate of the first corner
+   * @param {number} pageAY - Y page-coordinate of the first corner
+   * @param {number} pageBX - X page-coordinate of the second corner
+   * @param {number} pageBY - Y page-coordinate of the second corner
+   */
+  private positionRectangle(pageAX: number, pageAY: number, pageBX: number, pageBY: number): void {
     if (this.overlayRectangle === null) {
       return;
     }
 
     const scrollLeft = this.getScrollLeft();
     const scrollTop = this.getScrollTop();
+    const origin = this.getOverlayOrigin();
 
-    // Depending on the position of the mouse relative to the starting point,
-    // change this.e distance from the desired edge of the screen*/
-    if (this.mouseY >= this.startY) {
-      this.overlayRectangle.style.top = `${this.startY - scrollTop}px`;
-      this.overlayRectangle.style.bottom = `calc(100% - ${this.mouseY - scrollTop}px)`;
-    } else {
-      this.overlayRectangle.style.bottom = `calc(100% - ${this.startY - scrollTop}px)`;
-      this.overlayRectangle.style.top = `${this.mouseY - scrollTop}px`;
+    const ax = pageAX - scrollLeft - origin.left;
+    const ay = pageAY - scrollTop - origin.top;
+    const bx = pageBX - scrollLeft - origin.left;
+    const by = pageBY - scrollTop - origin.top;
+
+    const { style } = this.overlayRectangle;
+
+    style.left = `${Math.min(ax, bx)}px`;
+    style.top = `${Math.min(ay, by)}px`;
+    style.width = `${Math.abs(bx - ax)}px`;
+    style.height = `${Math.abs(by - ay)}px`;
+  }
+
+  /**
+   * Returns the client-space top-left of the overlay rectangle's positioning
+   * context (its container). All rectangle coordinates are expressed relative to
+   * this origin so the rectangle is drawn under the pointer regardless of what
+   * anchors the fixed overlay. See positionRectangle for the rationale.
+   * @returns {{ left: number; top: number }} container origin in client coords
+   */
+  private getOverlayOrigin(): { left: number; top: number } {
+    const container = this.overlayRectangle?.parentElement ?? null;
+
+    if (!container) {
+      return { left: 0, top: 0 };
     }
 
-    if (this.mouseX >= this.startX) {
-      this.overlayRectangle.style.left = `${this.startX - scrollLeft}px`;
-      this.overlayRectangle.style.right = `calc(100% - ${this.mouseX - scrollLeft}px)`;
-    } else {
-      this.overlayRectangle.style.right = `calc(100% - ${this.startX - scrollLeft}px)`;
-      this.overlayRectangle.style.left = `${this.mouseX - scrollLeft}px`;
-    }
+    const rect = container.getBoundingClientRect();
+
+    return { left: rect.left, top: rect.top };
   }
 
   /**

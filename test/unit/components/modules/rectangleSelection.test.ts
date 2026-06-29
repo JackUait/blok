@@ -586,11 +586,65 @@ describe('RectangleSelection', () => {
 
     expect(internal.overlayRectangle.style.left).toBe('140px');
     expect(internal.overlayRectangle.style.top).toBe('240px');
-    expect(internal.overlayRectangle.style.bottom).toBe('calc(100% - 240px)');
-    expect(internal.overlayRectangle.style.right).toBe('calc(100% - 140px)');
+    expect(internal.overlayRectangle.style.width).toBe('0px');
+    expect(internal.overlayRectangle.style.height).toBe('0px');
 
     scrollXSpy.mockRestore();
     scrollYSpy.mockRestore();
+  });
+
+  it('draws the rectangle under the pointer when an ancestor re-anchors the fixed overlay', () => {
+    const {
+      rectangleSelection,
+      blokWrapper,
+    } = createRectangleSelection();
+
+    rectangleSelection.prepare();
+
+    const internal = rectangleSelection as unknown as {
+      updateRectangleSize: () => void;
+      overlayRectangle: HTMLDivElement;
+      startX: number;
+      startY: number;
+      mouseX: number;
+      mouseY: number;
+    };
+
+    internal.overlayRectangle = blokWrapper.querySelector('[data-blok-testid="overlay-rectangle"]') as HTMLDivElement;
+
+    /**
+     * Regression: a `position: fixed` overlay only resolves against the viewport
+     * when no ancestor establishes a containing block. Any ancestor with a
+     * non-`none` transform/filter/contain/will-change re-anchors the overlay to
+     * that ancestor's box. Here the overlay container is offset 12px right / 81px
+     * down from the viewport origin (e.g. below a fixed header). The rectangle
+     * must be drawn relative to that container so it still lands under the pointer.
+     */
+    const container = internal.overlayRectangle.parentElement as HTMLElement;
+
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+      top: 81,
+      bottom: 81,
+      left: 12,
+      right: 12,
+      width: 0,
+      height: 0,
+      x: 12,
+      y: 81,
+      toJSON: () => ({}),
+    });
+
+    internal.startX = 180;
+    internal.startY = 300;
+    internal.mouseX = 420;
+    internal.mouseY = 520;
+
+    internal.updateRectangleSize();
+
+    expect(internal.overlayRectangle.style.left).toBe('168px'); // 180 - 12 (container left)
+    expect(internal.overlayRectangle.style.top).toBe('219px'); // 300 - 81 (container top)
+    expect(internal.overlayRectangle.style.width).toBe('240px'); // 420 - 180
+    expect(internal.overlayRectangle.style.height).toBe('220px'); // 520 - 300
   });
 
   it('selects or unselects blocks based on rectangle overlap', () => {
@@ -683,8 +737,8 @@ describe('RectangleSelection', () => {
 
     expect(internal.overlayRectangle.style.left).toBe('100px');
     expect(internal.overlayRectangle.style.top).toBe('150px');
-    expect(internal.overlayRectangle.style.right).toBe('calc(100% - 200px)');
-    expect(internal.overlayRectangle.style.bottom).toBe('calc(100% - 250px)');
+    expect(internal.overlayRectangle.style.width).toBe('100px');
+    expect(internal.overlayRectangle.style.height).toBe('100px');
   });
 
   it('computes block information for current cursor position', () => {

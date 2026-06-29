@@ -66,3 +66,11 @@
   60%  { background-color: var(--blok-selection); }
   100% { background-color: transparent; }
 }
+
+/* Soft nudge when a resizable block (image/video/embed) hits its minimum
+   width — shared by the resize-cue rules in resize-cue.css. */
+@keyframes blok-resize-recoil {
+  0%   { transform: translateX(0); }
+  50%  { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}

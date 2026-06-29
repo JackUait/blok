@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { MockInstance } from 'vitest';
 
 import { Renderer } from '../../../../src/components/modules/renderer';
+import { BlocksRendered } from '../../../../src/components/events';
 import type { OutputBlockData } from '../../../../types';
 import type { StubData } from '../../../../src/tools/stub';
 import * as utils from '../../../../src/components/utils';
@@ -31,6 +32,9 @@ interface RendererTestContext {
   renderer: Renderer;
   blockManager: MockBlockManager;
   tools: MockTools;
+  emit: ReturnType<typeof vi.fn>;
+  redactor: HTMLElement;
+  wrapper: HTMLElement;
 }
 
 const createMockBlock = ({ id, tool, marker }: { id?: string; tool: string; marker?: string }): ComposeBlockReturn => {
@@ -45,6 +49,8 @@ const createRenderer = (
   options?: {
     blockManager?: Partial<MockBlockManager>;
     tools?: Partial<MockTools>;
+    config?: Renderer['config'];
+    redactor?: HTMLElement;
   }
 ): RendererTestContext => {
   const defaultBlockManager: MockBlockManager = {
@@ -83,20 +89,31 @@ const createRenderer = (
     ...options?.tools,
   };
 
+  const emit = vi.fn();
+
   const renderer = new Renderer({
-    config: {},
+    config: options?.config ?? {},
     eventsDispatcher: {
       on: vi.fn(),
       off: vi.fn(),
+      emit,
     } as unknown as Renderer['eventsDispatcher'],
   });
+
+  const redactor = options?.redactor ?? document.createElement('div');
+  const wrapper = document.createElement('div');
+  const apiMethods = { marker: 'api-methods' };
 
   const blokState = {
     BlockManager: blockManager,
     Tools: tools,
+    API: {
+      methods: apiMethods,
+    },
     UI: {
       nodes: {
-        redactor: document.createElement('div'),
+        redactor,
+        wrapper,
       },
     },
   };
@@ -107,6 +124,9 @@ const createRenderer = (
     renderer,
     blockManager,
     tools,
+    emit,
+    redactor,
+    wrapper,
   };
 };
 
@@ -550,6 +570,193 @@ describe('Renderer module', () => {
       expect.stringContaining('dupe-id'),
       'warn'
     );
+  });
+
+  it('emits blocks:rendered with the rendered block count after a batch render', async () => {
+    const { renderer, tools, emit } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    await renderer.render([
+      { id: 'b1', type: 'paragraph', data: {} },
+      { id: 'b2', type: 'paragraph', data: {} },
+    ]);
+
+    expect(emit).toHaveBeenCalledWith(BlocksRendered, { count: 2 });
+  });
+
+  it('emits blocks:rendered with count 1 when rendering an empty document', async () => {
+    const { renderer, emit } = createRenderer();
+
+    await renderer.render([]);
+
+    expect(emit).toHaveBeenCalledWith(BlocksRendered, { count: 1 });
+  });
+
+  it('applies the link config to anchors already rendered in the redactor', async () => {
+    const redactor = document.createElement('div');
+
+    redactor.innerHTML = '<a href="https://kb.internal/page">stored link</a>';
+
+    const transformHref = vi.fn((href: string) => `https://public.example/?u=${encodeURIComponent(href)}`);
+
+    const { renderer, tools } = createRenderer({
+      redactor,
+      config: { link: { target: '_top', rel: 'noreferrer', transformHref } },
+    });
+
+    tools.available.set('paragraph', {});
+
+    await renderer.render([
+      { id: 'b1', type: 'paragraph', data: {} },
+    ]);
+
+    const anchor = redactor.querySelector('a');
+
+    expect(transformHref).toHaveBeenCalledWith('https://kb.internal/page');
+    expect(anchor?.getAttribute('href')).toBe('https://public.example/?u=https%3A%2F%2Fkb.internal%2Fpage');
+    expect(anchor?.getAttribute('target')).toBe('_top');
+    expect(anchor?.getAttribute('rel')).toBe('noreferrer');
+  });
+
+  it('leaves rendered anchors untouched when no link config is provided', async () => {
+    const redactor = document.createElement('div');
+
+    redactor.innerHTML = '<a href="https://kb.internal/page">stored link</a>';
+
+    const { renderer, tools } = createRenderer({ redactor });
+
+    tools.available.set('paragraph', {});
+
+    await renderer.render([
+      { id: 'b1', type: 'paragraph', data: {} },
+    ]);
+
+    const anchor = redactor.querySelector('a');
+
+    expect(anchor?.getAttribute('href')).toBe('https://kb.internal/page');
+    expect(anchor?.hasAttribute('target')).toBe(false);
+    expect(anchor?.hasAttribute('rel')).toBe(false);
+  });
+
+  it('marks the editor wrapper as rendered once a batch render completes', async () => {
+    const { renderer, tools, wrapper } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    expect(wrapper.hasAttribute('data-blok-rendered')).toBe(false);
+
+    await renderer.render([
+      { id: 'b1', type: 'paragraph', data: {} },
+    ]);
+
+    expect(wrapper.getAttribute('data-blok-rendered')).toBe('');
+  });
+
+  it('clears the rendered attribute while a re-render is in flight and re-sets it on completion', async () => {
+    const { renderer, tools, wrapper } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    // First render marks the wrapper as rendered.
+    await renderer.render([{ id: 'b1', type: 'paragraph', data: {} }]);
+    expect(wrapper.getAttribute('data-blok-rendered')).toBe('');
+
+    // Defer the idle callback so we can observe the in-flight (not-yet-rendered) state.
+    let deferredIdleCallback: (() => void) | undefined;
+
+    requestIdleCallbackMock.mockImplementationOnce((callback) => {
+      deferredIdleCallback = () => callback({
+        didTimeout: false,
+        timeRemaining: () => 0,
+      });
+
+      return 0;
+    });
+
+    const renderPromise = renderer.render([{ id: 'b2', type: 'paragraph', data: {} }]);
+
+    // The attribute must be removed synchronously at render start.
+    expect(wrapper.hasAttribute('data-blok-rendered')).toBe(false);
+
+    deferredIdleCallback?.();
+    await renderPromise;
+
+    expect(wrapper.getAttribute('data-blok-rendered')).toBe('');
+  });
+
+  it('marks the wrapper as rendered even for an empty document', async () => {
+    const { renderer, wrapper } = createRenderer();
+
+    await renderer.render([]);
+
+    expect(wrapper.getAttribute('data-blok-rendered')).toBe('');
+  });
+
+  it('runs onBeforeRender to transform the blocks array before composing blocks', async () => {
+    const onBeforeRender = vi.fn((blocks: OutputBlockData[]) =>
+      blocks.map((block) => ({ ...block, data: { ...block.data, migrated: true } }))
+    );
+
+    const { renderer, blockManager, tools } = createRenderer({
+      config: { onBeforeRender },
+    });
+
+    tools.available.set('paragraph', {});
+
+    const input: OutputBlockData = { id: 'b1', type: 'paragraph', data: { text: 'Hello' } };
+
+    await renderer.render([input]);
+
+    expect(onBeforeRender).toHaveBeenCalledWith([input]);
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'b1',
+        tool: 'paragraph',
+        data: { text: 'Hello', migrated: true },
+      })
+    );
+  });
+
+  it('lets onBeforeRender inject blocks when the input document is empty', async () => {
+    const onBeforeRender = vi.fn((): OutputBlockData[] => [
+      { id: 'injected', type: 'paragraph', data: { text: 'From migration' } },
+    ]);
+
+    const { renderer, blockManager, tools } = createRenderer({
+      config: { onBeforeRender },
+    });
+
+    tools.available.set('paragraph', {});
+
+    await renderer.render([]);
+
+    expect(onBeforeRender).toHaveBeenCalledWith([]);
+    // The injected block is composed; the empty-document default block is NOT inserted.
+    expect(blockManager.insert).not.toHaveBeenCalled();
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'injected', tool: 'paragraph' })
+    );
+  });
+
+  it('calls onAfterRender with the editor API once a render completes', async () => {
+    const onAfterRender = vi.fn();
+
+    const { renderer, tools, emit } = createRenderer({
+      config: { onAfterRender },
+    });
+
+    tools.available.set('paragraph', {});
+
+    await renderer.render([{ id: 'b1', type: 'paragraph', data: {} }]);
+
+    expect(onAfterRender).toHaveBeenCalledTimes(1);
+    expect(onAfterRender).toHaveBeenCalledWith({ marker: 'api-methods' });
+    // Fires after the blocks:rendered event is emitted.
+    const emitOrder = emit.mock.invocationCallOrder[0];
+    const hookOrder = onAfterRender.mock.invocationCallOrder[0];
+
+    expect(hookOrder).toBeGreaterThan(emitOrder);
   });
 
   it('falls back to the tool name when toolbox metadata is missing', () => {

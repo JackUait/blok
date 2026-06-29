@@ -26,6 +26,8 @@ declare global {
   interface Window {
     blokInstance?: Blok;
     __blokBundleInjectionRequested?: boolean;
+    __tuneRenderContext?: { getPopoverElement(): HTMLElement | null } | null;
+    __tuneRenderTimePopover?: HTMLElement | null;
   }
 }
 
@@ -245,6 +247,69 @@ test.describe('api.tunes', () => {
     await expect(page.locator(POPOVER_SELECTOR)).toContainText(sampleText);
   });
 
+
+  test('exposes the host popover element to a custom tune via the render context', async ({ page }) => {
+    await resetBlok(page);
+    await ensureBlokBundleLoaded(page);
+
+    await page.evaluate(async ({ holder }: { holder: string }) => {
+      interface RenderContext {
+        getPopoverElement(): HTMLElement | null;
+      }
+
+      /** Tune that captures its render context for later inspection. */
+      class ContextTune {
+        public static readonly isTune = true;
+
+        public render(context?: RenderContext): HTMLElement {
+          // Synchronously, the popover does not exist yet.
+          window.__tuneRenderTimePopover = context?.getPopoverElement() ?? null;
+          window.__tuneRenderContext = context ?? null;
+
+          const element = document.createElement('div');
+
+          element.setAttribute('data-blok-testid', 'tune-ctx-probe');
+          element.textContent = 'ctx probe';
+
+          return element;
+        }
+
+        public save(): void {}
+      }
+
+      const blok = new window.Blok({
+        holder,
+        tools: { contextTune: ContextTune },
+        tunes: ['contextTune'],
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    await focusBlockAndType(page, 'some text');
+    await openBlockTunes(page);
+
+    await expect(page.locator('[data-blok-testid="tune-ctx-probe"]')).toBeVisible();
+
+    const result = await page.evaluate(() => {
+      const context = window.__tuneRenderContext;
+      const popoverElement = context?.getPopoverElement() ?? null;
+      const probe = document.querySelector('[data-blok-testid="tune-ctx-probe"]');
+
+      return {
+        renderTimeWasNull: window.__tuneRenderTimePopover === null,
+        resolvesAfterMount: popoverElement !== null,
+        isPopoverRoot: popoverElement?.matches('[data-blok-popover]') ?? false,
+        containsProbe: probe !== null && popoverElement !== null && popoverElement.contains(probe),
+      };
+    });
+
+    expect(result.renderTimeWasNull).toBe(true);
+    expect(result.resolvesAfterMount).toBe(true);
+    expect(result.isPopoverRoot).toBe(true);
+    expect(result.containsProbe).toBe(true);
+  });
 
   test('displays installed tunes above default tunes', async ({ page }) => {
     await createBlokWithTune(page, {

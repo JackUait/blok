@@ -1,0 +1,654 @@
+- 
+    
+    asasdasd
+    
+- toggle list
+    
+    test
+    
+
+### toggle heading
+
+test
+
+asdasd
+
+/
+
+# Heading 1
+
+The Man Replacing LLMs (And He Has $1B to Prove It)
+
+https://www.youtube.com/watch?v=X_nWKJg_D6Q
+
+## Heading 2
+
+Список_документов_для_взрослого_Франция.pdf
+
+asdasd
+
+~~asdasd~~
+
+asdasdasasdas
+sadas
+sadas
+
+coluc
+
+text
+
+asdsad
+
+/asd
+
+- [ ]  asdsa
+- asdasd
+    - asdasdasdasdasdsadnsakdaskdasdkjasjkdkjaskjdkjasdkjajksdksadkjkjaskjdajksdkjaskjdkajsdkjasdjkasjkdjkasdjkaskjdjaskjdkjasdjkasdjkas
+    
+    support@drinkit.
+    
+- adasd
+    
+    asdasd
+    
+
+Связаться с поддержкой можно через 4 канала связи:
+
+Бот в телеграм
+
+asdasdasdasd
+
+<aside>
+💡
+
+asdsad
+
+asdsad
+
+</aside>
+
+|  |  |  |
+| --- | --- | --- |
+|  |  |  |
+|  |  |  |
+
+# asdsad
+
+<aside>
+👩🏻‍🍳
+
+asdasd
+
+<aside>
+🥺
+
+</aside>
+
+/
+
+asdasdasd
+
+</aside>
+
+<aside>
+👩‍🍳
+
+sadasdasd
+
+adasd
+
+asdasd
+
+asdasd
+
+</aside>
+
+> /
+> 
+
+<aside>
+📫
+
+# 
+
+</aside>
+
+# 
+
+# asdasda
+
+- asdasd
+    
+    asdasd
+    
+
+<aside>
+👩‍🍳
+
+</aside>
+
+|  |  |  |
+| --- | --- | --- |
+|  |  |  |
+|  |  |  |
+|  |  |  |
+
+> *adsasd*
+**dsasd**
+> 
+
+Test
+
+Elen
+
+- [ ]  
+
+Untitled
+
+Tab 1
+
+Tab 2
+
+Tab 3
+		
+
+Movies 
+
+Автоинструктор о сложных учениках, любимых машинах и лошадях
+
+Database
+
+---
+
+---
+
+---
+
+---
+
+> asd
+> 
+
+> 
+> 
+
+asdasd
+
+```jsx
+const test = "fuck"
+```
+
+Untitled
+
+Упаковка
+
+- Ногинск
+- Екатеринбург
+- Москва
+- Москва ЮГ
+- Санкт-Петербург
+- Новосибирск
+- Краснодар
+
+- asdasdas
+    - asdasd
+    - asdas
+        - asdasdasd
+
+# The Art of Technical Documentation: A Comprehensive Guide to Modern Markdown
+
+> *"Good documentation is not about what you write; it's about what your reader understands."*
+
+> — Every Senior Developer Ever
+
+---
+
+## Table of Contents
+
+1. Introduction
+2. The Anatomy of Structured Content
+3. Formatting Mastery
+4. Data Presentation
+5. Advanced Technical Elements
+6. Interactive & Extended Features
+7. Conclusion
+
+---
+
+## Introduction
+
+In the realm of software engineering and technical writing, **Markdown** has emerged as the lingua franca of documentation. Born from the need for a lightweight markup language that prioritizes readability in its raw form, Markdown bridges the gap between plain text and rich formatting.
+
+This guide demonstrates the full spectrum of Markdown capabilities—from basic typography to advanced technical extensions—while maintaining a cohesive narrative about documentation best practices.
+
+### Why Markdown Dominates
+
+- **Portability**: Raw Markdown files are human-readable without rendering
+- **Universality**: Supported by GitHub, GitLab, Notion, Obsidian, and countless CMS platforms
+- **Version Control Friendly**: Line-based diffs work perfectly with Git workflows
+- **Extensible**: Flavors like GitHub Flavored Markdown (GFM), MultiMarkdown, and CommonMark add powerful features
+
+---
+
+## The Anatomy of Structured Content
+
+### Hierarchical Organization
+
+Effective documentation relies on clear information architecture. Markdown provides six levels of headings:
+
+### Level 4: Specific Implementation Details
+
+Use H4 headers for granular subsections within feature descriptions.
+
+### Level 5: Edge Cases and Exceptions
+
+Rarely used, but valuable for deeply nested technical specifications.
+
+### Level 6: Theoretical Limits
+
+The deepest nesting level, typically reserved for API parameter descriptions or footnote-level details.
+
+---
+
+## Formatting Mastery
+
+<aside>
+💡
+
+# asdas
+
+aasd
+
+</aside>
+
+### Text Emphasis and Intent
+
+Markdown allows nuanced expression through typographic emphasis:
+
+/
+
+**Bold text** commands attention for critical warnings or key terms.
+
+*Italicized content* indicates terminology, emphasis, or introductory concepts.
+
+***Bold italics*** create hierarchical emphasis for absolutely critical information.
+
+~~Strikethrough~~ denotes deprecated features or completed tasks in changelogs.
+
+`Monospace formatting` distinguishes code variables, file paths (`/etc/nginx/nginx.conf`), or keyboard shortcuts (`Ctrl+Alt+Delete`).
+
+|  |  |  |  |  |
+| --- | --- | --- | --- | --- |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+
+### Advanced Typography
+
+Superscripts and subscripts enable mathematical notation: H~2~O is water, and E=mc^2^ is relativity.
+
+++Insertions++ and ==highlights== mark recent additions or review points (in supported flavors).
+
+---
+
+## Data Presentation
+
+### Complex Tables
+
+Modern documentation requires structured data presentation. Consider this comparison of Markdown flavors:
+
+| Feature | CommonMark | GitHub Flavored | MultiMarkdown | Obsidian |
+| --- | --- | --- | --- | --- |
+| **Tables** | ❌ | ✅ | ✅ | ✅ |
+| **Task Lists** | ❌ | ✅ | ❌ | ✅ |
+| **Footnotes** | ❌ | ❌ | ✅ | ✅ |
+| **Diagrams** | ❌ | ✅ (Mermaid) | ❌ | ✅ |
+| **Math (LaTeX)** | ❌ | ✅ | ✅ | ✅ |
+
+*Table 1: Feature matrix of popular Markdown specifications*
+
+### Alignment Techniques
+
+| Left Aligned | Center Aligned | Right Aligned |
+| --- | --- | --- |
+| Default text | Visual balance | Numeric data |
+| Easy reading | Aesthetics | $1,234.56 |
+| Casual flow | Formal symmetry | €789.00 |
+
+### Lists and Hierarchies
+
+### Unordered Lists
+
+Documentation structures often require categorization without sequence:
+
+- **Core Concepts**
+    - Syntax fundamentals
+    - Parser behavior
+    - Rendering engines
+- **Advanced Patterns**
+    - Custom containers
+    - Plugin architecture
+    - Transform pipelines
+        - Pre-processing hooks
+        - Post-processing sanitization
+        - Output optimization
+
+### Ordered Procedures
+
+Installation workflows demand sequential precision:
+
+1. **Environment Setup**
+    1. Install Node.js (v18.0 or higher)
+    2. Configure package managers
+    3. Set environment variables
+2. **Dependency Resolution**
+    
+    ```bash
+    npm install -g @docsify/cli
+    yarn add -D markdownlint-cli
+    ```
+    
+3. **Validation**
+    - Run linting checks
+    - Verify cross-references
+    - Execute build pipeline
+
+### Task Management
+
+Project documentation often tracks completion states:
+
+- [x]  Initialize repository structure
+- [x]  Configure CI/CD pipelines
+- [ ]  Write comprehensive test coverage
+    - [x]  Unit tests for parser
+    - [ ]  Integration tests for renderers
+    - [ ]  End-to-end documentation builds
+- [ ]  Deploy to production CDN
+
+---
+
+## Advanced Technical Elements
+
+### Code Documentation
+
+### Fenced Code Blocks with Syntax Highlighting
+
+Modern Markdown processors support extensive language highlighting:
+
+```python
+def parse_markdown(content: str, flavor: str = "commonmark") -&gt; Document:
+    """
+    Parse raw Markdown into an Abstract Syntax Tree (AST).
+
+    Args:
+        content: Raw markdown string
+        flavor: Markdown specification variant
+
+    Returns:
+        Document: Parsed document object
+
+    Raises:
+        ParseError: When encountering malformed syntax
+    """
+    parser = ParserFactory.get_parser(flavor)
+    ast = parser.parse(content)
+
+    # Validate internal links
+    for node in ast.walk():
+        if node.type == 'link' and node.is_internal:
+            node.validate_target()
+
+    return Document(ast, metadata=extract_yaml_frontmatter(content))
+```
+
+### Diff Comparisons
+
+Showing code evolution is essential in changelogs:
+
+```diff
+  function calculateTotal(items) {
+-   return items.reduce((sum, item) =&gt; sum + item.price, 0);
++   return items.reduce((sum, item) =&gt; {
++     const tax = item.price * (item.taxRate || 0.08);
++     return sum + item.price + tax;
++   }, 0);
+  }
+```
+
+### Mathematical Expressions
+
+Technical documentation often requires mathematical notation using LaTeX:
+
+**The Quadratic Formula:**
+
+$$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
+
+**Inline Mathematics:**
+
+The area of a circle is given by $A = \pi r^2$, where $r$ represents the radius.
+
+**Complex Equations (using `$$` blocks):**
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi} \quad \text{and} \quad \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
+$$
+
+$$
+\begin{aligned}
+  e^{i\pi} + 1 &= 0 \\
+  x &= \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} \\
+  \nabla \cdot \mathbf{E} &= \frac{\rho}{\varepsilon_0} \\
+  \nabla \times \mathbf{B} &= \mu_0 \mathbf{J} + \mu_0 \varepsilon_0
+    \frac{\partial \mathbf{E}}{\partial t}
+\end{aligned}
+$$
+
+---
+
+## Interactive & Extended Features
+
+### Collapsible Sections
+
+For lengthy supplementary information, HTML5 details elements enhance readability:
+
+<details>
+<summary><strong>📋 View Complete API Response Schema</strong></summary>
+
+```json
+{
+  "documentation": {
+    "id": "doc_8842",
+    "metadata": {
+      "title": "Advanced Markdown Patterns",
+      "author": "Technical Writing Team",
+      "version": "2.1.0",
+      "tags": ["markdown", "documentation", "technical-writing"]
+    },
+    "content": {
+      "format": "markdown",
+      "encoding": "utf-8",
+      "checksum": "sha256:a3f5..."
+    },
+    "relationships": {
+      "parent": null,
+      "children": ["sec_001", "sec_002"],
+      "related": ["doc_9912", "doc_1056"]
+    }
+  }
+}
+```
+
+*Note: Collapsible sections use HTML5 `&lt;details&gt;` elements and may not render in all Markdown viewers.*
+</details>
+
+### Blockquotes and Citations
+
+> **Important Security Consideration**
+>
+> Never commit sensitive credentials to Markdown documentation, even within code blocks. Use environment variable references like `process.env.API_KEY` instead.
+>
+> <cite>— Security Best Practices Guide, OWASP Foundation</cite>
+
+Nested quotations provide conversational context:
+
+> Original specification states:
+>> "A Markdown-formatted document should be publishable as-is, as plain text, without looking like it's been marked up with tags or formatting instructions."
+>>> — John Gruber, creator of Markdown
+
+### Visual Diagrams (Mermaid)
+
+Modern platforms support diagram generation from text:
+
+```livescript
+graph TD
+    A[Raw Markdown] -->|Parse| B[AST]
+    B -->|Transform| C[Enhanced AST]
+    C -->|Render| D[HTML]
+    C -->|Render| E[PDF]
+    C -->|Render| F[ePub]
+
+    B -.->|Validate| G[Linting Errors]
+    G -.->|Fix| B
+
+    style A fill:#f9f,stroke:#333,stroke-width:4px
+    style D fill:#bbf,stroke:#333
+```
+
+```mermaid
+
+```
+
+### Footnotes and References
+
+Comprehensive documentation requires citation management. Markdown supports reference-style linking[^1] and footnotes[^2].
+
+[^1]: Reference-style links keep the main text clean while providing full URLs at the document's end.
+[^2]: Footnotes automatically number themselves and appear at the bottom of the rendered document.
+
+---
+
+## Horizontal Rules and Transitions
+
+Thematic breaks visually separate major sections:
+
+---
+
+Or using alternative syntax:
+
+---
+
+Or:
+
+---
+
+---
+
+## Conclusion
+
+Mastering Markdown syntax transforms technical writing from mere text entry into structured information architecture. By leveraging:
+
+1. **Semantic hierarchy** (headers H1-H6)
+2. **Rich formatting** (emphasis, code, mathematics)
+3. **Structured data** (tables, lists, task items)
+4. **Technical extensions** (diagrams, collapsible sections)
+5. **Reference systems** (footnotes, citations)
+
+...you create documentation that is simultaneously machine-readable, human-friendly, and professionally polished.
+
+### Quick Reference Card
+
+Untitled
+
+---
+
+**Document Metadata**
+
+!blok-logo.png
+
+![](https://static.cdnbridge.com/resources/18/160536/picture/7F/86925951.jpg)
+
+!text
+
+test
+
+- **Version**: 1.0.0
+- **Last Updated**: `2026-04-04`
+- **Author**: `Technical Documentation Team`
+- **License**: CC BY-SA 4.0
+
+!image.png
+
+https://docs.google.com/document/d/1Aoobk9BMIUzSDUKsGTbE38Z5obyO_qDOYmvyMee1dFM/edit?tab=t.0
+
+*Generated with comprehensive Markdown flavor compatibility in mind.*
+
+---
+
+- 
+
+```latex
+\begin{aligned}
+  e^{i\pi} + 1 &= 0 \\
+  x &= \frac{-b \pm \sqrt{b^2 - 4ac}}{2a} \\
+  \nabla \cdot \mathbf{E} &= \frac{\rho}{\varepsilon_0} \\
+  \nabla \times \mathbf{B} &= \mu_0 \mathbf{J} + \mu_0 \varepsilon_0
+    \frac{\partial \mathbf{E}}{\partial t}
+\end{aligned}
+```
+
+```latex
+
+```
+
+|  |  |  |
+| --- | --- | --- |
+|  |  |  |
+|  |  |  |
+
+test
+
+asdaksdkl
+
+sad;
+
+alskdsakdasl;dka
+
+sdka
+
+ld
+
+askdalskdsa
+
+kldkalsdlksad
+
+lkasd
+
+a
+
+lkdlsakdl
+
+asd
+
+lksakdlsa
+
+ldlakdk
+
+ask
+
+as
+
+```mermaid
+graph TD
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Action 1]
+  B -->|No| D[Action 2]
+  C --> E[Result]
+  D --> E
+```

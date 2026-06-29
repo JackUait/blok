@@ -1,8 +1,26 @@
+import type { Block } from '../../../block';
 import { SelectionUtils as Selection } from '../../../selection/index';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
+import { HEADER_TOOL_NAME } from '../../blockEvents/constants';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
 
 import { Controller } from './_base';
+
+/**
+ * Maps the "Turn into" shortcut digit (event.code) to the target heading level.
+ * Mirrors Notion: Cmd+Opt+1…6 (Mac) or Ctrl+Shift+1…6 (Win/Linux) convert the
+ * focused block to Heading 1–6 (Blok supports H1-H6), while 0 converts it back
+ * to plain Text.
+ */
+const TURN_INTO_LEVEL_BY_CODE: Record<string, number> = {
+  Digit0: 0,
+  Digit1: 1,
+  Digit2: 2,
+  Digit3: 3,
+  Digit4: 4,
+  Digit5: 5,
+  Digit6: 6,
+};
 
 /**
  * KeyboardController handles all document-level keyboard events.
@@ -20,9 +38,22 @@ export class KeyboardController extends Controller {
   private someToolbarOpened: () => boolean;
 
   /**
-   * Timestamp of last undo/redo call to prevent double-firing
+   * Timestamp and identity of the last undo/redo dispatched, used to dedupe a
+   * single physical keypress that emits duplicate keydown events. Keyed by
+   * action so the guard only ever swallows an IDENTICAL repeat — a genuinely
+   * distinct follow-up (e.g. redo right after undo) is never debounced.
    */
   private lastUndoRedoTime = 0;
+  private lastUndoRedoAction: 'undo' | 'redo' | null = null;
+
+  /**
+   * Timestamp and digit of the last "Turn into" conversion dispatched, used to
+   * dedupe a single physical keypress that emits duplicate keydown events (same
+   * 50ms window rationale as the undo/redo guard above). Without this, one
+   * Cmd+Opt+1 press could fire two conversions and leave two undo entries.
+   */
+  private lastTurnIntoTime = 0;
+  private lastTurnIntoCode: string | null = null;
 
   /**
    * The redactor element for keydown capture
@@ -57,7 +88,10 @@ export class KeyboardController extends Controller {
   };
 
   private readonly redactorBeforeinputHandler = (): void => {
-    this.Blok.YjsManager.markCaretBeforeChange();
+    // force: a beforeinput is the start of a fresh user edit, so the
+    // caret-before is the caret right now — discard any stale pending snapshot
+    // left dangling by a previous operation's no-op follow-up write.
+    this.Blok.YjsManager.markCaretBeforeChange(true);
   };
 
   private readonly redactorKeydownHandler = (event: Event): void => {
@@ -81,7 +115,11 @@ export class KeyboardController extends Controller {
     }
 
     if (KEYS_REQUIRING_CARET_CAPTURE.has(event.key)) {
-      this.Blok.YjsManager.markCaretBeforeChange();
+      // force: this keydown begins a new gesture (Enter split, Backspace merge,
+      // etc.). Re-capture so a stale pending from a prior operation's deferred
+      // sync can't become this gesture's caret-before (which would reset the
+      // caret to the wrong position on undo).
+      this.Blok.YjsManager.markCaretBeforeChange(true);
     }
   };
 
@@ -129,8 +167,9 @@ export class KeyboardController extends Controller {
 
     /**
      * Capture caret position on keydown for keys that tools commonly intercept.
-     * Uses capture phase to run before tool handlers.
-     * markCaretBeforeChange() is idempotent - if beforeinput also fires, the second call is ignored.
+     * Uses capture phase to run before tool handlers. Both this and the
+     * beforeinput handler force a re-capture; when both fire for one keystroke
+     * they capture the same pre-change caret, so the duplicate is harmless.
      */
     this.readOnlyMutableListeners.on(this.redactorElement, 'keydown', this.redactorKeydownHandler, true);
   }
@@ -183,6 +222,17 @@ export class KeyboardController extends Controller {
       }
     }
 
+    /**
+     * "Turn into" shortcuts (Notion parity): Cmd+Opt+0/1/2/3 (Mac) or
+     * Ctrl+Shift+0/1/2/3 (Win/Linux). Matched on event.code (layout-independent)
+     * because the shifted/option-modified `key` for a digit is unreliable
+     * (Shift+1 = "!", Opt+1 = "¡"). Handled before the switch so the digit is
+     * never inserted as text.
+     */
+    if (this.handleTurnInto(event)) {
+      return;
+    }
+
     switch (key) {
       case 'Enter':
         this.handleEnter(event);
@@ -206,10 +256,91 @@ export class KeyboardController extends Controller {
         this.handleZ(event);
         break;
 
+      case 'y':
+      case 'Y':
+        this.handleY(event);
+        break;
+
       default:
         this.handleDefault(event);
         break;
     }
+  }
+
+  /**
+   * Handle the "Turn into" shortcut (Cmd+Opt / Ctrl+Shift + digit).
+   * Converts the focused block to a heading (1–6) or back to plain text (0).
+   * @param event - keyboard event
+   * @returns true when the shortcut was recognized and handled
+   */
+  private handleTurnInto(event: KeyboardEvent): boolean {
+    // Mac = Cmd+Opt+digit, Win/Linux = Ctrl+Shift+digit.
+    const matchesModifiers = (event.metaKey && event.altKey) || (event.ctrlKey && event.shiftKey);
+
+    if (!matchesModifiers) {
+      return false;
+    }
+
+    const level = TURN_INTO_LEVEL_BY_CODE[event.code];
+
+    if (level === undefined) {
+      return false;
+    }
+
+    const block = this.Blok.BlockManager.currentBlock;
+
+    if (block === undefined) {
+      return false;
+    }
+
+    // Don't replay the conversion while a drag is in progress (mirrors the
+    // undo/redo guard in handleZ — mutating the tree under the drag is unsafe).
+    if (this.Blok.DragManager.isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return true;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Dedupe a single physical keypress that emits duplicate keydown events.
+    const now = Date.now();
+
+    if (event.code === this.lastTurnIntoCode && now - this.lastTurnIntoTime < 50) {
+      return true;
+    }
+    this.lastTurnIntoTime = now;
+    this.lastTurnIntoCode = event.code;
+
+    void this.turnBlockInto(block, level);
+
+    return true;
+  }
+
+  /**
+   * Convert the given block to the target type and restore the caret.
+   * Wrapped in stopCapturing() so the conversion is its own undo step (mirrors
+   * the markdown shortcut conversions).
+   * @param block - block to convert
+   * @param level - 0 for plain text (paragraph), 1-6 for the heading level
+   */
+  private async turnBlockInto(block: Block, level: number): Promise<void> {
+    const { BlockManager, Caret, YjsManager } = this.Blok;
+    const isText = level === 0;
+    // Core guarantees config.defaultBlock is populated at init; fall back to
+    // 'paragraph' to satisfy the optional config type.
+    const targetToolName = isText ? this.config.defaultBlock ?? 'paragraph' : HEADER_TOOL_NAME;
+    const dataOverrides = isText ? {} : { level };
+
+    YjsManager.stopCapturing();
+
+    const newBlock = await BlockManager.convert(block, targetToolName, dataOverrides);
+
+    Caret.setToBlock(newBlock, Caret.positions.END);
+
+    YjsManager.stopCapturing();
   }
 
   /**
@@ -380,10 +511,25 @@ export class KeyboardController extends Controller {
     }
 
     /**
-     * Clear blocks selection by ESC (but not when entering navigation mode)
+     * Clear blocks selection by ESC (but not when entering navigation mode).
+     *
+     * Notion parity (BUG #19): Escape from the all-blocks selection (Cmd+A
+     * twice) must clear the highlight AND return a text caret, so that case
+     * restores the caret; partial selections just clear.
      */
     if (this.Blok.BlockSelection.anyBlockSelected) {
-      this.Blok.BlockSelection.clearSelection(event);
+      if (this.Blok.BlockSelection.allBlocksSelected) {
+        this.clearAllBlocksSelectionRestoringCaret(event);
+
+        /**
+         * Stop the event here so downstream Escape listeners (block.holder keydown,
+         * navigation mode) don't run and blur the caret we just restored.
+         */
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      } else {
+        this.Blok.BlockSelection.clearSelection(event);
+      }
 
       return;
     }
@@ -442,6 +588,32 @@ export class KeyboardController extends Controller {
     }
 
     this.Blok.Toolbar.close();
+  }
+
+  /**
+   * Clears an all-blocks selection on Escape and returns a text caret to the
+   * editor (Notion parity, BUG #19). selectAllBlocks removed the native range,
+   * so restore the saved selection; if nothing was restored, fall back to
+   * focusing a previously selected block so the user never ends up caretless.
+   * @param event - the Escape keydown event that triggered the clear
+   */
+  private clearAllBlocksSelectionRestoringCaret(event: KeyboardEvent): void {
+    const { BlockSelection, Caret } = this.Blok;
+    const [fallbackBlock] = BlockSelection.selectedBlocks;
+
+    BlockSelection.clearSelection(event, true);
+
+    /**
+     * `selectAllBlocks` removed the native range, so `restoreSelection` has no real
+     * caret to bring back, and any leftover range from the block selection is not
+     * inside an editable block. Deterministically return the caret to the END of the
+     * first formerly-selected block so focus lands back in the editor (Notion's
+     * Escape behaviour) — gating on `isSelectionExists` skipped it, because that flag
+     * can be true for a stale, non-editable range.
+     */
+    if (fallbackBlock !== undefined) {
+      Caret.setToBlock(fallbackBlock, Caret.positions.END);
+    }
   }
 
   /**
@@ -512,24 +684,67 @@ export class KeyboardController extends Controller {
       return;
     }
 
-    // Prevent double-firing within 50ms
+    // Dedupe a single physical keypress that emits duplicate keydown events,
+    // but ONLY when the SAME action repeats inside the window. Duplicates of one
+    // press always share the same modifiers, so an undo followed by a redo (Shift
+    // toggled) is a genuinely distinct gesture and must never be swallowed —
+    // sharing one timestamp across both wrongly dropped a redo issued right after
+    // an undo (e.g. redoing a just-undone column creation did nothing).
     const now = Date.now();
+    const action: 'undo' | 'redo' = event.shiftKey ? 'redo' : 'undo';
 
-    if (now - this.lastUndoRedoTime < 50) {
+    if (action === this.lastUndoRedoAction && now - this.lastUndoRedoTime < 50) {
       event.preventDefault();
 
       return;
     }
     this.lastUndoRedoTime = now;
+    this.lastUndoRedoAction = action;
 
     event.preventDefault();
     event.stopPropagation();
 
-    if (event.shiftKey) {
+    if (action === 'redo') {
       this.Blok.YjsManager.redo();
     } else {
       this.Blok.YjsManager.undo();
     }
+  }
+
+  /**
+   * Handle Ctrl+Y (redo) — the Windows/Linux redo alias. Notion accepts both
+   * Ctrl+Shift+Z and Ctrl+Y for redo; the latter is routed here. Uses the same
+   * drag guard and double-fire dedup as handleZ so a single press redoes once.
+   * @param event - keyboard event
+   */
+  private handleY(event: KeyboardEvent): void {
+    if (!event.ctrlKey) {
+      this.handleDefault(event);
+
+      return;
+    }
+
+    if (this.Blok.DragManager.isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return;
+    }
+
+    const now = Date.now();
+
+    if (this.lastUndoRedoAction === 'redo' && now - this.lastUndoRedoTime < 50) {
+      event.preventDefault();
+
+      return;
+    }
+    this.lastUndoRedoTime = now;
+    this.lastUndoRedoAction = 'redo';
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.Blok.YjsManager.redo();
   }
 
   /**

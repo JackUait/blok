@@ -528,7 +528,21 @@ describe('BlocksAPI', () => {
       expect(blok.Toolbar.close).toHaveBeenCalled();
     });
 
-    it('does not insert default block from delete — removeBlock handles it', async () => {  
+    it('does not re-focus the current block when setCaret is false', async () => {
+      const blocks = [createBlockStub({ id: 'a' }), createBlockStub({ id: 'b' })];
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks });
+
+      blockManager.currentBlockIndex = 0;
+
+      await blocksApi.delete(0, false);
+
+      expect(blockManager.removeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }));
+      // Programmatic deletion (e.g. React useBlocks.remove) must not steal the caret.
+      expect(blok.Caret.setToBlock).not.toHaveBeenCalled();
+      expect(blok.Toolbar.close).toHaveBeenCalled();
+    });
+
+    it('does not insert default block from delete — removeBlock handles it', async () => {
       const block = createBlockStub({ id: 'only' });
       const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
@@ -861,6 +875,15 @@ describe('BlocksAPI', () => {
       expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'custom' }) as unknown });
     });
 
+    it('forwards tunes to BlockManager.insert', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+      const tunes = { align: 'center' };
+
+      blocksApi.insert('paragraph', { text: 'x' }, {}, 0, false, false, 'id1', tunes);
+
+      expect(blockManager.insert).toHaveBeenCalledWith(expect.objectContaining({ tunes }));
+    });
+
     it('uses default block type when insert arguments are omitted', () => {
       const { blocksApi, blockManager } = createBlocksApi({
         configOverrides: { defaultBlock: 'header' },
@@ -918,9 +941,12 @@ describe('BlocksAPI', () => {
       const result = blocksApi.methods.insertMany(blocksToInsert, 0);
 
       expect(blockManager.composeBlock).toHaveBeenCalledTimes(2);
+      // notify: true so a programmatic bulk insert emits BlockChanged and
+      // reactive consumers (React useBlocks insertTree/insertMarkdown) re-render.
       expect(blockManager.insertMany).toHaveBeenCalledWith(
         expect.arrayContaining([ expect.objectContaining({ id: '1' }) ]),
-        0
+        0,
+        { notify: true }
       );
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty('wrappedBlock');

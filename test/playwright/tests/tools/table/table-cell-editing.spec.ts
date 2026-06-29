@@ -201,7 +201,7 @@ test.describe('Cell Editing', () => {
       (b: { id?: string }) => b.id === firstCellBlockId
     );
 
-    expect((cellParagraph as { data: { text: string } })?.data.text).toBe('Hello World');
+    expect((cellParagraph as unknown as { data: { text: string } })?.data.text).toBe('Hello World');
   });
 
   test('Pressing Enter in a cell creates a new block within the same cell', async ({ page }) => {

@@ -144,10 +144,12 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
+      updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       toJSON: vi.fn(() => []),
       getBlockById: vi.fn(() => undefined),
+      getBlockDataObject: vi.fn(() => undefined),
       onBlocksChanged: vi.fn(() => vi.fn()),
       fromJSON: vi.fn(),
     } as unknown as YjsManager,
@@ -330,6 +332,232 @@ describe('BlockOperations', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('moveCurrentBlockUp/Down flat-indent group cohesion', () => {
+    it('carries a flat-indented follower when moving the parent up (Notion Tab nesting)', () => {
+      const above = createMockBlock({ id: 'above' });
+      const parent = createMockBlock({ id: 'parent' });
+      const follower = createMockBlock({ id: 'follower' });
+      follower.holder.setAttribute('data-blok-depth', '1');
+
+      const store = createBlocksStore([above, parent, follower]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['parent', 'follower', 'above']);
+    });
+
+    it('carries a flat-indented follower when moving the parent down', () => {
+      const parent = createMockBlock({ id: 'parent' });
+      const follower = createMockBlock({ id: 'follower' });
+      follower.holder.setAttribute('data-blok-depth', '1');
+      const below = createMockBlock({ id: 'below' });
+
+      const store = createBlocksStore([parent, follower, below]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['below', 'parent', 'follower']);
+    });
+  });
+
+  describe('moveCurrentBlockUp/Down stepping over a neighbour subtree (H14)', () => {
+    it('moves a block DOWN over the whole subtree of the block below it', () => {
+      // A has no followers; B owns the flat-indented child B1. Moving A down
+      // must land it AFTER B1, not between B and B1.
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b' });
+      const b1 = createMockBlock({ id: 'b1' });
+      b1.holder.setAttribute('data-blok-depth', '1');
+
+      const store = createBlocksStore([a, b, b1]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['b', 'b1', 'a']);
+    });
+
+    it('moves a block UP over the whole subtree of the block above it', () => {
+      // B owns the flat-indented child B1; A sits below. Moving A up must land
+      // it ABOVE B (the subtree root), not between B and B1.
+      const b = createMockBlock({ id: 'b' });
+      const b1 = createMockBlock({ id: 'b1' });
+      b1.holder.setAttribute('data-blok-depth', '1');
+      const a = createMockBlock({ id: 'a' });
+
+      const store = createBlocksStore([b, b1, a]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'b1']);
+    });
+
+    it('preserves the STRUCTURAL nesting of the subtree it steps over (down)', () => {
+      // B owns the structural child B1 (parentId/contentIds, not flat depth).
+      // Moving A down lifts B's whole subtree past A; B1 must stay nested under B,
+      // not get flattened to the root by the per-block move auto-heal.
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b', contentIds: ['b1'] });
+      const b1 = createMockBlock({ id: 'b1', parentId: 'b' });
+
+      const store = createBlocksStore([a, b, b1]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['b', 'b1', 'a']);
+      expect(b1.parentId).toBe('b');
+      expect(b.contentIds).toEqual(['b1']);
+    });
+
+    it('preserves the STRUCTURAL nesting of the subtree it steps over (up)', () => {
+      const b = createMockBlock({ id: 'b', contentIds: ['b1'] });
+      const b1 = createMockBlock({ id: 'b1', parentId: 'b' });
+      const a = createMockBlock({ id: 'a' });
+
+      const store = createBlocksStore([b, b1, a]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'b1']);
+      expect(b1.parentId).toBe('b');
+      expect(b.contentIds).toEqual(['b1']);
+    });
+  });
+
+  describe('moveCurrentBlock container boundary clamp (H15)', () => {
+    it('does NOT move the last child of a callout past the container edge (down)', () => {
+      const callout = createMockBlock({ id: 'callout', name: 'callout', contentIds: ['c1', 'c2'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'callout' });
+      const c2 = createMockBlock({ id: 'c2', parentId: 'callout' });
+      const after = createMockBlock({ id: 'after' });
+
+      const store = createBlocksStore([callout, c1, c2, after]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 2);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['callout', 'c1', 'c2', 'after']);
+      expect(c2.parentId).toBe('callout');
+      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atBottom');
+    });
+
+    it('does NOT move the first child of a toggle above the container (up)', () => {
+      const toggle = createMockBlock({ id: 'toggle', name: 'toggle', contentIds: ['c1', 'c2'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'toggle' });
+      const c2 = createMockBlock({ id: 'c2', parentId: 'toggle' });
+
+      const store = createBlocksStore([toggle, c1, c2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['toggle', 'c1', 'c2']);
+      expect(c1.parentId).toBe('toggle');
+      expect(dependencies.YjsManager.moveBlock).not.toHaveBeenCalled();
+      expect(dependencies.I18n.t).toHaveBeenCalledWith('a11y.atTop');
+    });
+
+    it('reorders two children WITHIN a toggle container (down)', () => {
+      const toggle = createMockBlock({ id: 'toggle', name: 'toggle', contentIds: ['c1', 'c2'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'toggle' });
+      const c2 = createMockBlock({ id: 'c2', parentId: 'toggle' });
+
+      const store = createBlocksStore([toggle, c1, c2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['toggle', 'c2', 'c1']);
+      expect(c1.parentId).toBe('toggle');
+      expect(c2.parentId).toBe('toggle');
+    });
+
+    it('carries a container and its children together when moving it down', () => {
+      const toggle = createMockBlock({ id: 'toggle', name: 'toggle', contentIds: ['c1'] });
+      const c1 = createMockBlock({ id: 'c1', parentId: 'toggle' });
+      const after = createMockBlock({ id: 'after' });
+
+      const store = createBlocksStore([toggle, c1, after]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['after', 'toggle', 'c1']);
+    });
+  });
+
+  describe('moveCurrentBlockUp/Down for a multi-block selection (H13)', () => {
+    it('moves a contiguous selection down together as one group', () => {
+      const x = createMockBlock({ id: 'x' });
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b' });
+      const y = createMockBlock({ id: 'y' });
+
+      const store = createBlocksStore([x, a, b, y]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockDown(store, [a, b]);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['x', 'y', 'a', 'b']);
+    });
+
+    it('moves a contiguous selection up together as one group', () => {
+      const x = createMockBlock({ id: 'x' });
+      const a = createMockBlock({ id: 'a' });
+      const b = createMockBlock({ id: 'b' });
+      const y = createMockBlock({ id: 'y' });
+
+      const store = createBlocksStore([x, a, b, y]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      ops.moveCurrentBlockUp(store, [a, b]);
+
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'b', 'x', 'y']);
+    });
   });
 
   describe('currentBlockIndexValue getter/setter', () => {
@@ -1071,7 +1299,7 @@ describe('BlockOperations', () => {
       expect(newBlock).toBeDefined();
     });
 
-    it('promotes children to sibling level after new block when replacing toggle with non-hosting tool', () => {
+    it('keeps children nested under the converted block when replacing with any tool (structural turn-into)', () => {
       // Set up a toggle block with 2 child blocks
       const child1 = createMockBlock({ id: 'child-1', name: 'paragraph', parentId: 'toggle-1' });
       const child2 = createMockBlock({ id: 'child-2', name: 'paragraph', parentId: 'toggle-1' });
@@ -1092,23 +1320,44 @@ describe('BlockOperations', () => {
       );
       testOps.setYjsSync(yjsSync);
 
-      // Replace the toggle with a paragraph (a non-hosting tool)
+      // Replace the toggle with a plain paragraph — nesting is structural and
+      // tool-agnostic, so the children stay nested under the converted block.
       const newBlock = testOps.replace(toggleBlock, 'paragraph', { text: '' }, testStore);
 
-      // The new block should not have contentIds pointing to children
-      expect(newBlock.contentIds).toHaveLength(0);
+      expect(newBlock.contentIds).toEqual(['child-1', 'child-2']);
+      expect(child1.parentId).toBe(newBlock.id);
+      expect(child2.parentId).toBe(newBlock.id);
+    });
 
-      // Children should have parentId set to null (promoted to root level)
-      expect(child1.parentId).toBeNull();
-      expect(child2.parentId).toBeNull();
+    it('keeps a nested block\'s children nested under it after converting (structural)', () => {
+      // outerToggle > innerToggle > grandchild. Converting innerToggle to a plain
+      // paragraph keeps grandchild nested under the converted block, and the
+      // converted block itself stays a child of outerToggle.
+      const grandchild = createMockBlock({ id: 'grandchild', name: 'paragraph', parentId: 'inner' });
+      const innerToggle = createMockBlock({ id: 'inner', name: 'toggle', parentId: 'outer', contentIds: ['grandchild'] });
+      const outerToggle = createMockBlock({ id: 'outer', name: 'toggle', contentIds: ['inner'] });
 
-      // Children should appear after the new paragraph in the block list
-      const newBlockIndex = testRepo.getBlockIndex(newBlock);
-      const child1Index = testRepo.getBlockIndex(child1);
-      const child2Index = testRepo.getBlockIndex(child2);
+      const testStore = createBlocksStore([outerToggle, innerToggle, grandchild]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      testOps.setYjsSync(yjsSync);
 
-      expect(child1Index).toBeGreaterThan(newBlockIndex);
-      expect(child2Index).toBeGreaterThan(child1Index);
+      const newBlock = testOps.replace(innerToggle, 'paragraph', { text: '' }, testStore);
+
+      // The converted block stays inside the surrounding container (outer).
+      expect(newBlock.parentId).toBe('outer');
+      // Grandchild stays nested under the converted block.
+      expect(grandchild.parentId).toBe(newBlock.id);
+      expect(newBlock.contentIds).toEqual(['grandchild']);
     });
 
     it('keeps children when replacing toggle with another hosting tool (toggle→toggle)', () => {
@@ -1137,7 +1386,7 @@ describe('BlockOperations', () => {
       expect(child1.parentId).toBe(newBlock.id);
     });
 
-    it('promotes children to root level when replacing toggle header with regular header', () => {
+    it('keeps children nested when replacing toggle header with regular header', () => {
       // Register header tool in the factory
       const headerAdapter = createMockBlockToolAdapter('header');
 
@@ -1168,23 +1417,13 @@ describe('BlockOperations', () => {
       );
       testOps.setYjsSync(yjsSync);
 
-      // Replace toggle header with a regular (non-toggleable) header via Backspace
+      // Replace toggle header with a regular (non-toggleable) header — nesting is
+      // structural, so the children stay nested under the converted header.
       const newBlock = testOps.replace(toggleHeader, 'header', { text: '', level: 2 }, testStore);
 
-      // Children should be promoted to root level (parentId = null)
-      expect(child1.parentId).toBeNull();
-      expect(child2.parentId).toBeNull();
-
-      // New block should have no children
-      expect(newBlock.contentIds).toHaveLength(0);
-
-      // Children should appear after the new header in the block list
-      const newBlockIndex = testRepo.getBlockIndex(newBlock);
-      const child1Index = testRepo.getBlockIndex(child1);
-      const child2Index = testRepo.getBlockIndex(child2);
-
-      expect(child1Index).toBeGreaterThan(newBlockIndex);
-      expect(child2Index).toBeGreaterThan(child1Index);
+      expect(newBlock.contentIds).toEqual(['child-1', 'child-2']);
+      expect(child1.parentId).toBe(newBlock.id);
+      expect(child2.parentId).toBe(newBlock.id);
     });
 
     it('keeps children when replacing regular header with toggle header', () => {
@@ -1933,6 +2172,37 @@ describe('BlockOperations', () => {
       );
 
       expect(splitAddCall).toBeDefined();
+    });
+
+    it('creates the new block with the source block\'s FULL data, not just text', () => {
+      // Regression guard for the heading undo-caret bug: the new block must
+      // inherit ALL of the source block's tool data (e.g. a header's `level`),
+      // with only `text` overridden by the extracted content. Writing partial
+      // `{ text }` left other keys missing in Yjs, so a deferred
+      // didMutated→syncBlockDataToYjs wrote them in a SEPARATE transaction — a
+      // spurious undo entry that desynced caret restoration. If anyone reverts
+      // split() to `data: { text: extractedText }`, this test must fail.
+      (dependencies.YjsManager.getBlockDataObject as ReturnType<typeof vi.fn>).mockReturnValue({
+        text: 'HelloWorld',
+        level: 2,
+      });
+
+      const fragment = document.createDocumentFragment();
+      fragment.appendChild(document.createTextNode('World'));
+      (dependencies.Caret.extractFragmentFromCaretPosition as ReturnType<typeof vi.fn>).mockReturnValue(fragment);
+
+      operations.currentBlockIndexValue = 0;
+      operations.split(blocksStore);
+
+      const addBlockCalls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const newBlockArg = addBlockCalls
+        .map((call: unknown[]) => call[0] as { data?: Record<string, unknown> })
+        .find(arg => arg?.data !== undefined && 'level' in (arg.data ?? {}));
+
+      // The new block inherits `level` from the source...
+      expect(newBlockArg?.data?.level).toBe(2);
+      // ...while `text` is the extracted tail, not the source's original text.
+      expect(newBlockArg?.data?.text).toBe('World');
     });
   });
 

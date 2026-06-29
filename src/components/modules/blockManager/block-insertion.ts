@@ -10,6 +10,7 @@ import type { Block } from '../../block';
 import { BlockToolAPI } from '../../block';
 import { Dom as $ } from '../../dom';
 import { generateBlockId } from '../../utils';
+import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
@@ -54,6 +55,24 @@ export class BlockInsertion {
 
   private get blockDidMutated(): BlockDidMutated {
     return this.ctx.blockDidMutated;
+  }
+
+  /**
+   * Re-home each child onto a new parent via `setBlockParent` so DOM reparenting
+   * and collapsed-state propagation run atomically per child. Mirrors
+   * BlockMutation.reparentChildren — used by the insert-replace path to keep a
+   * replaced container's children instead of orphaning them.
+   * @param childIds - ids of the children to reparent
+   * @param newParentId - the block to reparent them onto
+   */
+  private reparentChildrenTo(childIds: string[], newParentId: string): void {
+    for (const childId of childIds) {
+      const childBlock = this.repository.getBlockById(childId);
+
+      if (childBlock !== undefined) {
+        this.hierarchy.setBlockParent(childBlock, newParentId);
+      }
+    }
   }
 
   /**
@@ -141,6 +160,17 @@ export class BlockInsertion {
      */
     const replacedParentId = blockToReplace?.parentId ?? null;
     const replacedBlockId = blockToReplace?.id;
+    /**
+     * Capture the replaced block's children BEFORE it leaves the repository so
+     * they can be re-homed onto the new block. A replaced CONTAINER (toggle,
+     * callout, header/paragraph with nested blocks) would otherwise leave its
+     * children with a parentId pointing at the now-removed block — orphaned and
+     * unreachable via getChildren. Mirrors block-mutation.replace() (the convert
+     * path), which already re-parents children; this is the missing counterpart
+     * on the generic insert-replace path (toolbox/shortcut turn-into and
+     * useBlocks.insert({ replace })).
+     */
+    const replacedContentIds = blockToReplace !== undefined ? [...blockToReplace.contentIds] : [];
 
     if (replace && blockToReplace !== undefined) {
       this.blockDidMutated(BlockRemovedMutationType, blockToReplace, {
@@ -159,6 +189,19 @@ export class BlockInsertion {
      */
     if (replace && replacedParentId !== null && replacedBlockId !== undefined) {
       this.ctx.transferParentLinkToNewBlock(replacedBlockId, block, replacedParentId);
+    }
+
+    /**
+     * Re-home the replaced container's children onto the new block. Routed
+     * through `setBlockParent` (not a bare parentId write) so DOM reparenting
+     * and collapsed-state propagation run atomically per child — the same
+     * primitive block-mutation.replace() uses. Guarded on the new block having
+     * no children of its own so an explicit replace-with-a-prebuilt-container
+     * (which carries its own contentIds) is not overwritten; the common
+     * turn-into case composes an empty block, so it adopts the old children.
+     */
+    if (replace && replacedContentIds.length > 0 && block.contentIds.length === 0) {
+      this.reparentChildrenTo(replacedContentIds, block.id);
     }
 
     /**
@@ -303,6 +346,16 @@ export class BlockInsertion {
     const newBlockId = generateBlockId();
     const insertIndex = this.ctx.rawCurrentBlockIndex + 1;
 
+    // The new block must inherit ALL of the source block's tool data (e.g. a
+    // header's `level`), not just its text. Creating it with only `{ text }`
+    // leaves other keys missing in Yjs; the new block then renders with default
+    // data and a deferred didMutated→syncBlockDataToYjs writes the missing keys
+    // in a SEPARATE transaction. That extra, no-op undo entry pollutes the undo
+    // stack and desyncs caret restoration — the heading undo-caret bug. A
+    // paragraph has no extra keys, so its split never hit this. Reading the data
+    // before the transaction keeps the snapshot free of the truncation write.
+    const sourceData = this.dependencies.YjsManager.getBlockDataObject(currentBlock.id) ?? {};
+
     return this.yjsSync.withAtomicOperation(() => {
       // Extract fragment (mutates DOM - removes text after caret)
       const extractedFragment = this.dependencies.Caret.extractFragmentFromCaretPosition();
@@ -316,13 +369,17 @@ export class BlockInsertion {
       const truncatedText = currentBlock.holder
         .querySelector('[contenteditable="true"]')?.innerHTML ?? '';
 
+      // New block carries the source block's full data with only `text` replaced
+      // by the extracted content, so it is complete in a single transaction.
+      const newBlockData = { ...sourceData, text: extractedText };
+
       // Atomic Yjs transaction: update original + add new (single undo entry)
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.updateBlockData(currentBlock.id, 'text', truncatedText);
         this.dependencies.YjsManager.addBlock({
           id: newBlockId,
           type: currentBlock.name,
-          data: { text: extractedText },
+          data: newBlockData,
           parent: currentBlock.parentId ?? undefined,
         }, insertIndex);
       });
@@ -331,7 +388,7 @@ export class BlockInsertion {
       const newBlock = this.ctx.insert({
         id: newBlockId,
         tool: currentBlock.name,
-        data: { text: extractedText },
+        data: newBlockData,
         needToFocus: false,
         skipYjsSync: true,
       }, blocksStore);
@@ -375,6 +432,14 @@ export class BlockInsertion {
 
     if (currentBlock === undefined) {
       throw new Error(`Block with id "${currentBlockId}" not found`);
+    }
+
+    // Validate the NEW block's tool BEFORE any mutation runs. If the tool is
+    // unregistered, throw here so the document is left completely unchanged —
+    // otherwise the Yjs truncation + addBlock below would commit a partial,
+    // corrupt mutation before the tool error surfaces from the DOM insert.
+    if (this.factory.getTool(newBlockType) === undefined) {
+      throw new ToolNotFoundError(newBlockType, `Could not split Block. Tool «${newBlockType}» not found.`);
     }
 
     const newBlockId = generateBlockId();

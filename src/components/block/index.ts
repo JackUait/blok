@@ -8,6 +8,7 @@ import type {
   PopoverItemParams
 } from '../../../types';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
+import type { BlockTuneRenderContext } from '../../../types/block-tunes/block-tune';
 import type { SavedData } from '../../../types/data-formats';
 import { Dom as $, toggleEmptyMark } from '../dom';
 import type { BlokEventMap } from '../events';
@@ -501,14 +502,14 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * Returns data to render in Block Tunes menu.
    * Splits block tunes into 2 groups: block specific tunes and common tunes
    */
-  public getTunes(): {
+  public getTunes(renderContext?: BlockTuneRenderContext): {
       toolTunes: PopoverItemParams[];
       commonTunes: PopoverItemParams[];
       } {
     /** Tool's tunes: may be defined as return value of optional renderSettings method */
     const tunesDefinedInTool = typeof this.toolInstance.renderSettings === 'function' ? this.toolInstance.renderSettings() : [];
 
-    return this.tunesManager.getMenuConfig(tunesDefinedInTool);
+    return this.tunesManager.getMenuConfig(tunesDefinedInTool, renderContext);
   }
 
   /**
@@ -607,6 +608,19 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     if (typeof (this.toolInstance as unknown as { setReadOnly?: unknown }).setReadOnly === 'function') {
       (this.toolInstance as unknown as { setReadOnly: (s: boolean) => void }).setReadOnly(state);
+    }
+  }
+
+  /**
+   * Update the block's placeholder in place (reactive editor.placeholder API).
+   * Delegates to the tool instance if it implements `setPlaceholder`. No-op otherwise.
+   * @param value - new placeholder text, or false to clear it
+   */
+  public setPlaceholder(value: string | false): void {
+    const tool = this.toolInstance as unknown as { setPlaceholder?: (v: string | false) => void };
+
+    if (typeof tool.setPlaceholder === 'function') {
+      tool.setPlaceholder(value);
     }
   }
 

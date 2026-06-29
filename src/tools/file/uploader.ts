@@ -1,4 +1,6 @@
 import type { FileConfig, FileUploadResult } from '../../../types/tools/file';
+import { resolveMaxSize } from '../../components/utils/max-size';
+import { DEFAULT_MAX_SIZE } from './constants';
 import { FileToolError } from './errors';
 
 export interface UploadOptions {
@@ -120,12 +122,13 @@ export class Uploader {
   }
 
   private validateFile(file: File): void {
-    const { types, maxSize } = this.config;
+    const { types } = this.config;
+    const maxSize = resolveMaxSize(this.config.maxSize, file.type, DEFAULT_MAX_SIZE);
 
     if (types !== undefined && !types.includes(file.type)) {
       throw new FileToolError('UNSUPPORTED_TYPE', file.type || 'unknown');
     }
-    if (maxSize !== undefined && file.size > maxSize) {
+    if (file.size > maxSize) {
       throw new FileToolError('FILE_TOO_LARGE', `${file.size} > ${maxSize}`);
     }
   }

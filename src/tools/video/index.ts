@@ -18,17 +18,22 @@ import {
   IconCaption,
   IconCopy,
   IconDownload,
+  IconPlayerLoop,
+  IconPlayerPlay,
+  IconPlayerSettings,
   IconReplace,
   IconVideo,
 } from '../../components/icons';
 import { attachResizeHandle, type ResizeEdge } from '../image/resizer';
 import { renderUploadingState, type UploadingStateElement } from '../image/uploading-state';
-import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, MIN_WIDTH_PX, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { tr } from './i18n';
-import { renderCaptionRow, renderOverlay, renderVideo } from './ui';
+import { renderCaptionRow, renderVideo } from './ui';
 import { attachControls, type ControlsHandle } from './controls';
-import { Uploader, type UploadResult } from './uploader';
+import { Uploader, VideoUploadError, type UploadResult } from './uploader';
+import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { pickDisplayMaxSize } from '../../components/utils/max-size';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -43,9 +48,12 @@ export class VideoTool implements BlockTool {
   private state: ToolState;
   private uploadingEl: UploadingStateElement | null = null;
   private lastFileName: string | null = null;
+  private errorMessage: string | null = null;
   private lastSource: { kind: 'file'; file: File } | { kind: 'url'; url: string } | null = null;
   private resizeDetach: (() => void)[] = [];
   private controlsHandle: ControlsHandle | null = null;
+  // Ephemeral theater (cinema-width) state — presentation only, never saved.
+  private theater = false;
 
   constructor(options: BlockToolConstructorOptions<VideoData, VideoConfig>) {
     this.api = options.api;
@@ -71,10 +79,12 @@ export class VideoTool implements BlockTool {
     if (this.data.captionVisible !== undefined) out.captionVisible = this.data.captionVisible;
     if (this.data.width !== undefined) out.width = this.data.width;
     if (this.data.alignment !== undefined) out.alignment = this.data.alignment;
+    if (this.data.autoplay) out.autoplay = true;
+    if (this.data.loop) out.loop = true;
+    if (this.data.hideControls) out.hideControls = true;
     if (this.data.fileName !== undefined) out.fileName = this.data.fileName;
     if (this.data.mimeType !== undefined) out.mimeType = this.data.mimeType;
-    if (this.data.videoWidth !== undefined) out.videoWidth = this.data.videoWidth;
-    if (this.data.videoHeight !== undefined) out.videoHeight = this.data.videoHeight;
+    if (this.data.aspectRatio !== undefined) out.aspectRatio = this.data.aspectRatio;
     return out;
   }
 
@@ -102,11 +112,14 @@ export class VideoTool implements BlockTool {
   }
 
   public onPaste(event: PasteEvent): void {
+    const sources = this.config.sources;
     if (event.type === 'pattern') {
+      if (sources === 'upload') return;
       this.applyResult({ url: (event as PatternPasteEvent).detail.data });
       return;
     }
     if (event.type === 'file') {
+      if (sources === 'url') return;
       this.startUpload((event as FilePasteEvent).detail.file);
     }
   }
@@ -164,6 +177,30 @@ export class VideoTool implements BlockTool {
         onActivate: (): void => this.toggleCaption(),
       },
       {
+        icon: IconPlayerPlay,
+        title: tr(i18n, 'tools.video.autoplay', 'Autoplay'),
+        name: 'video-autoplay',
+        isActive: this.data.autoplay === true,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleAutoplay(),
+      },
+      {
+        icon: IconPlayerLoop,
+        title: tr(i18n, 'tools.video.loop', 'Loop'),
+        name: 'video-loop',
+        isActive: this.data.loop === true,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleLoop(),
+      },
+      {
+        icon: IconPlayerSettings,
+        title: tr(i18n, 'tools.video.hideControls', 'Hide controls'),
+        name: 'video-hide-controls',
+        isActive: this.data.hideControls === true,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleHideControls(),
+      },
+      {
         icon: IconReplace,
         title: tr(i18n, 'tools.video.replace', 'Replace video'),
         name: 'video-replace',
@@ -204,7 +241,7 @@ export class VideoTool implements BlockTool {
     void this.uploader
       .handleFile(file, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyResult(result, file.type))
-      .catch(() => this.applyError());
+      .catch((err) => this.applyError(err));
   }
 
   private startUrl(url: string): void {
@@ -215,7 +252,7 @@ export class VideoTool implements BlockTool {
     void this.uploader
       .handleUrl(url, { onProgress: (p) => this.uploadingEl?.setProgress(p) })
       .then((result) => this.applyResult(result))
-      .catch(() => this.applyError());
+      .catch((err) => this.applyError(err));
   }
 
   private applyResult(result: UploadResult, mimeType?: string): void {
@@ -225,12 +262,19 @@ export class VideoTool implements BlockTool {
       fileName: result.fileName ?? this.lastFileName ?? this.data.fileName,
       mimeType: mimeType || this.data.mimeType,
     };
+    this.errorMessage = null;
     this.state = 'RENDERED';
     this.renderState();
     this.block.dispatchChange();
   }
 
-  private applyError(): void {
+  private applyError(err?: unknown): void {
+    this.errorMessage = err instanceof VideoUploadError
+      ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
+        tooLarge: 'tools.video.errorFileTooLarge',
+        generic: 'tools.video.errorUploadFailed',
+      })
+      : null;
     this.state = 'ERROR';
     this.renderState();
   }
@@ -247,6 +291,7 @@ export class VideoTool implements BlockTool {
     r.setAttribute('data-state', this.state.toLowerCase());
     r.setAttribute('data-align', this.data.alignment ?? 'center');
     r.setAttribute('data-caption', this.data.captionVisible === false ? 'off' : 'on');
+    r.setAttribute('data-controls', this.data.hideControls === true ? 'off' : 'on');
   }
 
   private renderState(): void {
@@ -279,7 +324,8 @@ export class VideoTool implements BlockTool {
       onFile: (file) => this.startUpload(file),
       onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
-      maxSize: this.config.maxSize,
+      maxSize: pickDisplayMaxSize(this.config.maxSize),
+      sources: this.config.sources,
       i18n: this.api.i18n,
     });
     this.root.appendChild(el);
@@ -302,7 +348,7 @@ export class VideoTool implements BlockTool {
     wrap.setAttribute('data-role', 'video-error');
 
     const message = document.createElement('span');
-    message.textContent = tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
+    message.textContent = this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
 
     const retry = document.createElement('button');
     retry.type = 'button';
@@ -324,35 +370,51 @@ export class VideoTool implements BlockTool {
     // viewers too, so they attach regardless of read-only.
     const video = media.querySelector('video');
     if (video) {
-      this.controlsHandle = attachControls({ video, figure });
-      media.appendChild(this.controlsHandle.element);
+      // Loop is content — honour it in both modes. Autoplay is a read-only viewer
+      // affordance: muted + autoplay + loop turns the block into a gif. Browsers
+      // only honour autoplay when muted, so we mute here; editing never autoplays.
+      video.loop = this.data.loop === true;
+      if (this.readOnly && this.data.autoplay === true) {
+        video.muted = true;
+        video.setAttribute('muted', '');
+        video.setAttribute('autoplay', '');
+      }
+      // "Hide controls" tune renders a clean, control-free frame — the custom
+      // chrome is skipped entirely (native controls were never attached). Loop
+      // and autoplay above still apply: they are content/viewer affordances.
+      if (this.data.hideControls !== true) {
+        this.controlsHandle = attachControls({
+          video,
+          figure,
+          glow: this.config.glow ?? 'minimal',
+          loop: this.data.loop === true,
+        });
+        media.appendChild(this.controlsHandle.element);
+      }
 
-      // Capture natural video dimensions on first metadata load so the player
-      // can restore its aspect ratio immediately on subsequent loads (no
-      // layout shift while the video buffer initializes).
-      if (this.data.videoWidth === undefined) {
-        video.addEventListener('loadedmetadata', () => {
-          if (video.videoWidth > 0 && video.videoHeight > 0) {
-            this.data.videoWidth = video.videoWidth;
-            this.data.videoHeight = video.videoHeight;
+      // When metadata arrives, update the media wrapper's aspect ratio so it
+      // matches the video's intrinsic dimensions.  If the ratio differs from
+      // the default 16 : 9 (or a previously stored value) we persist it so
+      // subsequent renders skip the layout pop.
+      video.addEventListener('loadedmetadata', () => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          const ratio = `${video.videoWidth} / ${video.videoHeight}`;
+          if (ratio !== this.data.aspectRatio) {
+            this.data.aspectRatio = ratio;
+            media.style.aspectRatio = ratio;
             this.block.dispatchChange();
           }
-        }, { once: true });
-      }
+        }
+      }, { once: true });
     }
 
-    if (!this.readOnly) {
-      const overlay = renderOverlay({
-        alignment: this.data.alignment ?? 'center',
-        captionVisible: this.data.captionVisible !== false,
-        onAlign: (next) => this.setAlignment(next),
-        onToggleCaption: () => this.toggleCaption(),
-        onReplace: () => this.transitionToEmpty(),
-        onMore: (trigger) => this.openBlockSettings(trigger),
-        i18n: this.api.i18n,
-      });
-      media.appendChild(overlay);
-    }
+    // Theater is an ephemeral view mode: observe the player's toggle to keep our
+    // copy, and re-apply it after a re-render so alignment/caption changes don't
+    // eject the viewer. Never written to save() — presentation, not content.
+    figure.addEventListener('blok-video-theater', (event) => {
+      this.theater = (event as CustomEvent<{ on: boolean }>).detail.on;
+    });
+    if (this.theater) this.controlsHandle?.setTheater(true);
 
     const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
     const captionVisible = this.data.captionVisible !== false;
@@ -377,15 +439,6 @@ export class VideoTool implements BlockTool {
     }
   }
 
-  private openBlockSettings(trigger?: HTMLElement): void {
-    const toolbar = (this.api as unknown as {
-      toolbar?: { toggleBlockSettings?: (state: boolean, trigger?: HTMLElement, options?: { placeLeftOfAnchor?: boolean }) => void };
-    }).toolbar;
-    if (!toolbar?.toggleBlockSettings) return;
-    trigger?.setAttribute('aria-expanded', 'true');
-    toolbar.toggleBlockSettings(true, trigger, { placeLeftOfAnchor: false });
-  }
-
   private attachResizeHandles(figure: HTMLElement): void {
     const edges: ResizeEdge[] = ['left', 'right'];
     for (const edge of edges) {
@@ -399,6 +452,7 @@ export class VideoTool implements BlockTool {
         container: figure.parentElement ?? figure,
         edge,
         alignment: this.data.alignment ?? 'center',
+        minWidthPx: MIN_WIDTH_PX,
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);
         },
@@ -420,6 +474,24 @@ export class VideoTool implements BlockTool {
 
   private toggleCaption(): void {
     this.data.captionVisible = this.data.captionVisible === false;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private toggleAutoplay(): void {
+    this.data.autoplay = this.data.autoplay !== true ? true : undefined;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private toggleLoop(): void {
+    this.data.loop = this.data.loop !== true ? true : undefined;
+    this.block.dispatchChange();
+    this.renderState();
+  }
+
+  private toggleHideControls(): void {
+    this.data.hideControls = this.data.hideControls !== true ? true : undefined;
     this.block.dispatchChange();
     this.renderState();
   }

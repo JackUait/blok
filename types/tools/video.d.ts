@@ -1,7 +1,12 @@
 import { BlockToolData } from './block-tool-data';
+import { MaxSizeConfig } from './max-size';
+import { MediaSource } from './media-source';
 
 /** Horizontal alignment of the video within its container. */
 export type VideoAlignment = 'left' | 'center' | 'right';
+
+/** Ambient glow intensity behind the player. Default 'minimal'. */
+export type VideoGlow = 'more' | 'less' | 'minimal' | 'none';
 
 /**
  * Persisted data shape for the Video block tool.
@@ -17,14 +22,18 @@ export interface VideoData extends BlockToolData {
   width?: number;
   /** Horizontal alignment */
   alignment?: VideoAlignment;
+  /** Autoplay (muted) for read-only viewers — pairs with `loop` for a gif feel. */
+  autoplay?: boolean;
+  /** Loop playback. Applies in both edit and read-only modes. */
+  loop?: boolean;
+  /** Hide the playback controls — renders a clean, control-free media frame. */
+  hideControls?: boolean;
   /** Original filename, when known */
   fileName?: string;
   /** Source MIME type (e.g. video/mp4), when known */
   mimeType?: string;
-  /** Natural (intrinsic) pixel width of the video, captured on first metadata load. */
-  videoWidth?: number;
-  /** Natural (intrinsic) pixel height of the video, captured on first metadata load. */
-  videoHeight?: number;
+  /** Intrinsic aspect ratio string (e.g. '16 / 9'), cached from loadedmetadata. */
+  aspectRatio?: string;
 }
 
 /**
@@ -50,10 +59,23 @@ export interface VideoUploader {
  */
 export interface VideoConfig {
   uploader?: VideoUploader;
-  /** Accepted MIME types. Default: video/mp4, video/webm, video/ogg */
+  /**
+   * Accepted MIME types. Entries may be exact (`video/mp4`) or family wildcards
+   * (`video/*`). Default: `['video/*']` — any video type.
+   */
   types?: string[];
-  /** Max file size in bytes. Default 100 MiB. */
-  maxSize?: number;
+  /**
+   * Max upload size. A number caps every type (bytes); an object caps per MIME
+   * type with `'*'` as the fallback. Default 100 MiB. See {@link MaxSizeConfig}.
+   */
+  maxSize?: MaxSizeConfig;
+  /**
+   * Restrict how a video may be added. Default `'both'` (Upload + Link).
+   * Use `'upload'` for file-only or `'url'` for link-only. See {@link MediaSource}.
+   */
+  sources?: MediaSource;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
+  /** Ambient glow intensity behind every player. Default 'minimal'. */
+  glow?: VideoGlow;
 }

@@ -1,6 +1,6 @@
 import type { API as ApiMethods, I18n } from '../../../types';
 import type { BlokConfig } from '../../../types/configs';
-import type { ToolConstructable, ToolSettings } from '../../../types/tools';
+import type { ToolConfig, ToolConstructable, ToolSettings } from '../../../types/tools';
 import type { API as ApiModule } from '../modules/api';
 
 import { InternalInlineToolSettings, InternalTuneSettings } from './base';
@@ -43,6 +43,33 @@ export class ToolsFactory {
     this.api = api;
     this.config = config;
     this.blokConfig = blokConfig;
+  }
+
+  /**
+   * Shallow-merges new user configuration into a registered tool's stored config.
+   *
+   * The merge targets the tool's nested `config` object (the part passed to the
+   * tool constructor) and mutates it IN PLACE. Adapters read their config lazily
+   * and share this exact object reference, so the live adapter — and any freshly
+   * built adapter — both observe the new values immediately.
+   * @param name - tool name
+   * @param config - partial tool config to merge in
+   */
+  public updateConfig(name: string, config: Partial<ToolConfig>): void {
+    const settings = this.config[name];
+
+    if (settings === undefined) {
+      throw new Error(`Tool "${name}" is not registered.`);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: mutating legacy nested config in place to keep live + future adapters in sync
+    if (settings.config === undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: initialize nested config object before merging
+      settings.config = {};
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: in-place merge so the shared nested config reference reflects the update
+    Object.assign(settings.config, config);
   }
 
   /**

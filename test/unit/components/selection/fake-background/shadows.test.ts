@@ -88,7 +88,28 @@ describe('FakeBackgroundShadows', () => {
 
       const boxShadow = wrapper.style.boxShadow;
 
-      expect(boxShadow).toContain('rgba(0, 0, 0, 0.08)');
+      expect(boxShadow).toContain('var(--blok-selection-inline');
+    });
+
+    it('sources the highlight from the native-selection token so it matches the user selection exactly', () => {
+      // Regression: the fake background (shown while focus is in a Link/Equation
+      // menu input) used a faint hardcoded rgba(0, 0, 0, 0.08), which read as "no
+      // highlight". It must come from --blok-selection-inline — the SAME token
+      // the native ::selection uses — so the highlight is exactly the colour the
+      // user already sees and can never drift back to an invisible literal.
+      const parent = createParentWithLineHeight('24px');
+      const wrapper = createSpan();
+
+      parent.appendChild(wrapper);
+
+      vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 50, 16));
+
+      FakeBackgroundShadows.applyBoxShadowToWrapper(wrapper);
+
+      const boxShadow = wrapper.style.boxShadow;
+
+      expect(boxShadow).toContain('var(--blok-selection-inline');
+      expect(boxShadow).not.toContain('rgba(0, 0, 0, 0.08)');
     });
 
     it('uses 1.2x fontSize when lineHeight is "normal"', () => {
@@ -191,8 +212,8 @@ describe('FakeBackgroundShadows', () => {
       expect(span2.style.boxShadow).toBeDefined();
 
       // Verify the shadows contain the expected color and inset
-      expect(span1.style.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
-      expect(span2.style.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
+      expect(span1.style.boxShadow).toContain('var(--blok-selection-inline');
+      expect(span2.style.boxShadow).toContain('var(--blok-selection-inline');
     });
 
     it('applies multi-line box shadow-sm to each span', () => {
@@ -338,7 +359,7 @@ describe('FakeBackgroundShadows', () => {
   });
 
   describe('box shadow-sm values', () => {
-    it('uses rgba(0, 0, 0, 0.08) for background color', () => {
+    it('uses the --blok-selection token for the background color', () => {
       const parent = createParentWithLineHeight('24px');
       const wrapper = createSpan();
 
@@ -348,7 +369,7 @@ describe('FakeBackgroundShadows', () => {
 
       FakeBackgroundShadows.applyBoxShadowToWrapper(wrapper);
 
-      expect(wrapper.style.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
+      expect(wrapper.style.boxShadow).toContain('var(--blok-selection-inline');
     });
 
     it('creates inset shadow-sm for background effect', () => {

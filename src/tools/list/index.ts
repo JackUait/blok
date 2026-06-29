@@ -19,7 +19,7 @@ import {
   mergeListItemData,
   renderListSettings,
 } from './block-operations';
-import { PLACEHOLDER_KEY } from './constants';
+import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { getContentOffset } from './content-offset';
 import { parseHTML } from './content-operations';
 import { normalizeListItemData } from './data-normalizer';
@@ -54,6 +54,15 @@ export class ListItem implements BlockTool {
   private markerManager: OrderedMarkerManager | null;
   private placeholderCleanup: (() => void) | null = null;
   private boundHandleKeyDown: ((event: KeyboardEvent) => void) | null = null;
+
+  /**
+   * Whether this item was structurally nested (had a list parent) at the last
+   * move/render. Lets {@link moved} tell a structural outdent-to-root (depth must
+   * reset to 0) apart from a same-position drag at root (depth recomputed from
+   * neighbours). Drag never sets a list item's `parentId`, so the structural
+   * path only activates for keyboard Tab/Shift+Tab nesting.
+   */
+  private wasStructurallyNested = false;
 
   private blockId?: string;
 
@@ -204,12 +213,72 @@ export class ListItem implements BlockTool {
   }
 
   public rendered(): void {
+    // Seed the structural-nesting flag from the loaded tree so the first move
+    // after render can distinguish a structural outdent from a flat drag.
+    this.wasStructurallyNested = this.getStructuralListDepth() !== null;
     this.updateMarkersAfterPositionChange();
   }
 
   public moved(event: MoveEvent): void {
-    this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove);
+    const structuralDepth = this.getStructuralListDepth();
+    const isStructural = structuralDepth !== null || this.wasStructurallyNested;
+
+    if (isStructural) {
+      // Keyboard Tab/Shift+Tab nests/outdents list items STRUCTURALLY
+      // (parentId/contentIds) and emits BlockMoved. Derive depth from the tree
+      // and sync the flat carriers (margin + data.depth + marker) so rendering,
+      // numbering and serialization stay correct. An item that was nested and is
+      // now at root (structuralDepth === null) outdented to depth 0.
+      const derivedDepth = structuralDepth ?? 0;
+
+      this.adjustDepthTo(derivedDepth);
+      this.updateMarkerForDepth(derivedDepth, this._data.style);
+      this.wasStructurallyNested = structuralDepth !== null;
+    } else {
+      this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove);
+    }
+
     this.updateMarkersAfterPositionChange();
+    // updateMarkersAfterPositionChange only renumbers the destination group
+    // around this block. Dragging an item out of another list (e.g. the 2nd of
+    // three) leaves that source group short an item with no moved() hook of its
+    // own, so renumber every ordered group — same as removed() does.
+    this.markerManager?.scheduleUpdateAll();
+  }
+
+  /**
+   * Structural nesting depth of this list item, DERIVED from its position in the
+   * block tree (the parentId chain), not a stored `data.depth`. Returns the
+   * number of consecutive list ancestors (a list two levels under another list
+   * is depth 2), or null when the item is not structurally nested under another
+   * list — in which case depth falls back to the flat `data.depth` carrier that
+   * drag-and-drop still uses.
+   */
+  private getStructuralListDepth(): number | null {
+    if (this.blockId === undefined) {
+      return null;
+    }
+
+    const countListAncestors = (childId: string, depth: number): number => {
+      const child = this.api.blocks.getById(childId);
+      const parentId = child?.parentId ?? null;
+
+      if (parentId === null) {
+        return depth;
+      }
+
+      const parent = this.api.blocks.getById(parentId);
+
+      if (parent === null || parent.name !== TOOL_NAME) {
+        return depth;
+      }
+
+      return countListAncestors(parentId, depth + 1);
+    };
+
+    const depth = countListAncestors(this.blockId, 0);
+
+    return depth > 0 ? depth : null;
   }
 
   private updateMarkersAfterPositionChange(): void {
@@ -231,6 +300,11 @@ export class ListItem implements BlockTool {
 
     if (currentDepth !== targetDepth) {
       this.adjustDepthTo(targetDepth);
+      // adjustDepthTo only updates margin + data-depth. The marker glyph is
+      // depth-derived (unordered bullets •/◦/▪ and ordered a./i. formatting),
+      // so refresh it too — otherwise a depth-changed item keeps its old glyph.
+      // Mirrors the adjustDepthTo + updateMarkerForDepth pairing used on setData.
+      this.updateMarkerForDepth(targetDepth, this._data.style);
     }
   }
 
@@ -310,7 +384,11 @@ export class ListItem implements BlockTool {
   }
 
   private getDepth(): number {
-    return this._data.depth ?? 0;
+    // Prefer the STRUCTURAL depth (tree position) when the item is nested under
+    // another list via parentId/contentIds — keyboard Tab nesting. Fall back to
+    // the flat `data.depth` carrier for drag-nested items (which set depth but
+    // not parentId) and for un-nested root items.
+    return this.getStructuralListDepth() ?? this._data.depth ?? 0;
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -327,25 +405,37 @@ export class ListItem implements BlockTool {
       return;
     }
 
-    if (event.key !== 'Tab') {
-      return;
+    /**
+     * Tab / Shift+Tab nesting is normally structural (parentId/contentIds) and
+     * handled by the shared module keydown handler (KeyboardNavigation.handleTab)
+     * — the SAME path text and headers use. Leaving the event un-prevented lets
+     * it reach that handler, which nests the item under its preceding sibling
+     * (Tab) or outdents it to the grandparent (Shift+Tab).
+     *
+     * Exception: items nested via the FLAT `data.depth` carrier (drag-nested, or
+     * authored from data with `depth` but no list parentId) have no structural
+     * parent for that handler to act on — its outdent is a no-op for them. Handle
+     * Shift+Tab here for that case by decrementing the flat depth carrier and
+     * restoring the caret to the content element.
+     */
+    if (event.key === 'Tab' && this.getStructuralListDepth() === null) {
+      /**
+       * Flat-carrier items (drag-nested, or authored with `data.depth` but no
+       * list parentId) have no structural parent for the shared Tab handler to
+       * act on: its indent would no-op on the first item / derive the wrong
+       * depth, and its outdent is a no-op. Handle both here via the flat depth
+       * carrier — handleIndent caps at the max allowed depth, handleOutdent
+       * guards at depth 0. Structurally nested items fall through to the shared
+       * handler.
+       */
+      if (event.shiftKey && this.getDepth() > 0) {
+        event.preventDefault();
+        void this.handleOutdent();
+      } else if (!event.shiftKey) {
+        event.preventDefault();
+        void this.handleIndent();
+      }
     }
-
-    const selectedBlocks = document.querySelectorAll('[data-blok-selected="true"]');
-
-    if (selectedBlocks.length > 1) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (event.shiftKey) {
-      void this.handleOutdent();
-
-      return;
-    }
-
-    void this.handleIndent();
   }
 
   private async handleEnter(): Promise<void> {
@@ -373,7 +463,7 @@ export class ListItem implements BlockTool {
       getDepth: this.getDepth.bind(this),
     };
 
-    await handleBackspace(context, event);
+    await handleBackspace(context, event, this.depthValidator);
   }
 
   private async handleIndent(): Promise<void> {
@@ -475,7 +565,11 @@ export class ListItem implements BlockTool {
   }
 
   public save(): ListItemData {
-    return saveListItem(this._data, this._element, this.getContentElement.bind(this));
+    // Serialize the STRUCTURAL depth (derived from the parentId chain), not the
+    // stored flat data.depth — keeping the saved depth consistent with the block
+    // tree after a drag/keyboard nest. getDepth() falls back to data.depth for
+    // imported lists that are not yet structurally parented.
+    return saveListItem(this._data, this._element, this.getContentElement.bind(this), this.getDepth());
   }
 
   public setData(newData: ListItemData): boolean {

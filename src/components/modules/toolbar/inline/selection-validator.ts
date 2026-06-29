@@ -26,8 +26,14 @@ export class InlineSelectionValidator {
 
   /**
    * Check if inline toolbar can be shown
+   * @param options - validation options
+   * @param options.allowCollapsed - when true, a collapsed (empty) selection is
+   *   permitted. Used by popover-entry tools (Link, Equation) triggered via their
+   *   keyboard shortcut, which open an input at the caret instead of formatting a
+   *   range — all other validity checks (block present, tools available, not a
+   *   code block, contenteditable target) still apply.
    */
-  public canShow(): SelectionValidationResult {
+  public canShow(options: { allowCollapsed?: boolean } = {}): SelectionValidationResult {
     /**
      * Tags conflicts with window.selection function.
      * Ex. IMG tag returns null (Firefox) or Redactors wrapper (Chrome)
@@ -42,7 +48,7 @@ export class InlineSelectionValidator {
     }
 
     // empty selection
-    if (currentSelection.isCollapsed || selectedText.length < 1) {
+    if (!options.allowCollapsed && (currentSelection.isCollapsed || selectedText.length < 1)) {
       return { allowed: false, reason: 'Selection is collapsed or empty' };
     }
 

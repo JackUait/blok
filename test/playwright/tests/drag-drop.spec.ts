@@ -33,6 +33,29 @@ const getBlockDepth = (block: { data: unknown } | undefined): number | undefined
 };
 
 /**
+ * Asserts a saved block is structurally nested one level under a list block.
+ *
+ * Nesting moved from the removed flat `indent` field to the structural
+ * parentId/contentIds model: the child carries a `parent` id, and the parent
+ * (a list block) lists the child in its `content`. This mirrors the canonical
+ * toggle-nesting assertions (`para.parent === toggle.id`,
+ * `toggle.content.toContain(para.id)`).
+ * @param savedData - Full saved output.
+ * @param block - The saved block expected to be nested under a list.
+ */
+const expectNestedUnderList = (
+  savedData: OutputData | undefined,
+  block: OutputData['blocks'][number] | undefined
+): void => {
+  expect(block?.parent).toBeTruthy();
+
+  const parent = savedData?.blocks.find(candidate => candidate.id === block?.parent);
+
+  expect(parent?.type).toBe('list');
+  expect(parent?.content).toContain(block?.id);
+};
+
+/**
  * Helper function to get bounding box and throw if it doesn't exist.
  * @param locator Locator for the element.
  * @returns Bounding box of the element.
@@ -61,7 +84,16 @@ const performDragDrop = async (
   page: Page,
   sourceLocator: ReturnType<Page['locator']>,
   targetLocator: ReturnType<Page['locator']>,
-  targetVerticalPosition: 'top' | 'bottom'
+  targetVerticalPosition: 'top' | 'bottom',
+  /**
+   * Optional fraction of the target's height to probe for a 'top' drop instead
+   * of the default 1px-from-the-edge. A taller block (e.g. a checklist item,
+   * whose 20px checkbox makes its hit-box taller than a plain paragraph) can put
+   * the 1px edge in a margin/padding gap where elementFromPoint resolves to an
+   * adjacent block. A small fraction (e.g. 0.25) stays unambiguously in the top
+   * half while landing on the block's own content. No effect on 'bottom' drops.
+   */
+  topInsetFraction?: number
 ): Promise<void> => {
   const sourceBox = await getBoundingBox(sourceLocator);
   const targetBox = await getBoundingBox(targetLocator);
@@ -71,11 +103,12 @@ const performDragDrop = async (
   const targetX = targetBox.x + targetBox.width / 2;
   /**
    * For edge detection:
-   * For 'top', we position just 1px from the top edge to ensure unambiguous edge detection.
+   * For 'top', we position just 1px from the top edge to ensure unambiguous edge detection
+   * (or at `topInsetFraction` of the height when supplied, for taller hit-boxes).
    * For 'bottom', we position just 1px from the bottom edge.
    */
   const targetY = targetVerticalPosition === 'top'
-    ? targetBox.y + 1 // Very close to the top edge
+    ? targetBox.y + (topInsetFraction !== undefined ? targetBox.height * topInsetFraction : 1)
     : targetBox.y + targetBox.height - 1; // Very close to the bottom edge
 
   /**
@@ -653,10 +686,23 @@ test.describe('drag and drop', () => {
       data: { blocks },
     });
 
-    // Select just block 1
-    const block1 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 1' });
+    // Block-select just block 1 via the BlockSelection API. A plain click only
+    // places a caret (block.selected stays false), which routes the drag through
+    // the SINGLE-block path — not the multi-block path this test is named for.
+    // Selecting through the module sets block.selected = true so the drag goes
+    // through selectedBlocks (the multi-block path) with a single member.
+    await page.evaluate(() => {
+      const blok = window.blokInstance;
 
-    await block1.click();
+      if (!blok) {
+        throw new Error('Blok instance not found');
+      }
+      const blockSelection = (blok as unknown as { module: { blockSelection: { selectBlockByIndex: (index: number) => void } } }).module.blockSelection;
+
+      blockSelection.selectBlockByIndex(1);
+    });
+
+    const block1 = page.getByTestId('block-wrapper').filter({ hasText: 'Block 1' });
 
     // Hover to show settings button
     await block1.hover();
@@ -1100,6 +1146,53 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[3])).toBe('Nested B');
     });
 
+    test('renumbers the source ordered list when its middle item is dragged into another list', async ({ page }) => {
+      // Two separate ordered lists (split by a paragraph). Drag the middle item
+      // of the first list into the second list. The first list must renumber the
+      // item left behind — regression: moved() only renumbered the destination
+      // group, so "Alpha three" stayed "3." instead of becoming "2.".
+      const blocks: OutputData['blocks'] = [
+        { id: 'a1', type: 'list', data: { text: 'Alpha one', style: 'ordered' } },
+        { id: 'a2', type: 'list', data: { text: 'Alpha two', style: 'ordered' } },
+        { id: 'a3', type: 'list', data: { text: 'Alpha three', style: 'ordered' } },
+        { id: 'sep', type: 'paragraph', data: { text: 'separator' } },
+        { id: 'b1', type: 'list', data: { text: 'Bravo one', style: 'ordered' } },
+        { id: 'b2', type: 'list', data: { text: 'Bravo two', style: 'ordered' } },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      const markerFor = (text: string): ReturnType<Page['locator']> =>
+        page.getByTestId('block-wrapper').filter({ hasText: text }).locator('[data-list-marker]');
+
+      // Sanity: first list is 1./2./3. before the drag.
+      await expect(markerFor('Alpha three')).toHaveText('3.');
+
+      // Drag the middle item ("Alpha two") to the bottom of the second list.
+      const middleItem = page.getByTestId('block-wrapper').filter({ hasText: 'Alpha two' });
+
+      await middleItem.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Bravo two' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      // Source list renumbers: the item left behind moves from 3. to 2.
+      await expect(markerFor('Alpha one')).toHaveText('1.');
+      await expect(markerFor('Alpha three')).toHaveText('2.');
+
+      // Destination list absorbs the moved item as the third entry.
+      await expect(markerFor('Bravo one')).toHaveText('1.');
+      await expect(markerFor('Bravo two')).toHaveText('2.');
+      await expect(markerFor('Alpha two')).toHaveText('3.');
+    });
+
     test('should preserve depth of deeply nested children when dragging parent subtree', async ({ page }) => {
       // Create a list with deeply nested children:
       // - First (depth 0) <- drag this
@@ -1437,6 +1530,290 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[1])).toBe('Second');
       expect(getBlockText(savedData?.blocks[2])).toBe('First');
       expect(getBlockText(savedData?.blocks[3])).toBe('Child A');
+    });
+
+    /**
+     * Regression (commit 7baeee54): dropping a top-level list item at the END of
+     * a nested sub-list it ALREADY follows lands it at the slot it already
+     * occupies (fromIndex === toIndex). The flat-array move is a no-op, and the
+     * depth-recalculating moved() hook used to be skipped — so the item kept its
+     * depth and the drop silently did nothing ("the item does not get dropped").
+     *
+     * Regression (commit aeaa598f): the depth DID need to change, and when it
+     * does the unordered bullet glyph (•/◦/▪) must refresh — adjustDepthTo only
+     * updated margin + data-depth, leaving a depth-2 item showing the depth-0 "•".
+     */
+    test('nests a top-level item dropped at the end of a deeper sub-list (no-op slot) and refreshes its bullet glyph', async ({ page }) => {
+      // - First (depth 0)
+      //   - Nested A (depth 1)
+      //     - Deep A1 (depth 2)
+      // - Second (depth 0) <- already right after Deep A1; drop on Deep A1's bottom
+      const blocks = createListBlocks([
+        { text: 'First' },
+        { text: 'Nested A', depth: 1 },
+        { text: 'Deep A1', depth: 2 },
+        { text: 'Second' },
+      ]);
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      const secondBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await secondBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drop at the bottom edge of "Deep A1" — the end of the nested sub-list.
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Deep A1' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      // Order is unchanged (it was already last), but the depth must now match the
+      // end of the nested list — the drop must actually take effect.
+      expect(getBlockText(savedData?.blocks[0])).toBe('First');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Nested A');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Deep A1');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Second');
+      expect(getBlockDepth(savedData?.blocks[3])).toBe(2); // ← no-op without the fix
+
+      // The bullet glyph must reflect the new depth (depth 2 → "▪"), not the stale "•".
+      const droppedMarker = secondBlock.locator('[data-list-marker]');
+
+      await expect(droppedMarker).toHaveText('▪');
+    });
+
+    test('nests a top-level ORDERED item dropped at the end of a nested sub-list and renumbers it', async ({ page }) => {
+      // 1. First (depth 0)
+      //    a. Second (depth 1)
+      // 2. Third (depth 0) <- already right after Second; drop on Second's bottom
+      const blocks: OutputData['blocks'] = [
+        { id: 'ord-0', type: 'list', data: { text: 'First', style: 'ordered' } },
+        { id: 'ord-1', type: 'list', data: { text: 'Second', style: 'ordered', depth: 1 } },
+        { id: 'ord-2', type: 'list', data: { text: 'Third', style: 'ordered' } },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      const thirdBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Third' });
+
+      await thirdBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      // Drop at the bottom edge of "Second" — the end of the nested sub-list.
+      const targetBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Second' });
+
+      await performDragDrop(page, settingsButton, targetBlock, 'bottom');
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(getBlockText(savedData?.blocks[0])).toBe('First');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Second');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Third');
+      expect(getBlockDepth(savedData?.blocks[2])).toBe(1); // ← no-op without the fix
+
+      // Nested ordered item renumbers from "2." to the second sibling "b.".
+      const droppedMarker = thirdBlock.locator('[data-list-marker]');
+
+      await expect(droppedMarker).toHaveText('b.');
+    });
+
+    test('nests a non-list block dropped at the bottom edge of a nested item (nest from the bottom)', async ({ page }) => {
+      // Nest-from-the-bottom: dropped between a depth-1 item and a depth-0 item, a
+      // non-list block appends into the nested sub-list at depth 1 — the deeper
+      // previous item wins; a shallower next item must NOT pull it back to root
+      // (prev(1), dropped(1), next(0) is a valid structure). The indicator must
+      // reflect that: tucked under the nested item (indent lead-in present,
+      // side-left > 0), and the block saves with indent 1.
+      const blocks: OutputData['blocks'] = [
+        { id: 'h1', type: 'header', data: { text: 'Section', level: 2 } },
+        { id: 'l1', type: 'list', data: { text: 'First step', style: 'ordered' } },
+        { id: 'l2', type: 'list', data: { text: 'Second step', style: 'ordered', depth: 1 } },
+        { id: 'l3', type: 'list', data: { text: 'Third step', style: 'ordered' } },
+      ];
+
+      await createBlok(page, {
+        data: { blocks },
+      });
+
+      // Grab the header's drag handle.
+      const headerBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Section' });
+
+      await headerBlock.hover();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+
+      const settingsBox = await getBoundingBox(settingsButton);
+      // Hover the top half of "Third step" (depth 0) — this normalises to the
+      // bottom edge of the nested "Second step" (depth 1), the exact drop slot
+      // from the report: the gap at the END of the nested sub-list.
+      const thirdItem = page.getByTestId('block-wrapper').filter({ hasText: 'Third step' });
+      const thirdBox = await getBoundingBox(thirdItem);
+
+      await page.mouse.move(settingsBox.x + settingsBox.width / 2, settingsBox.y + settingsBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        thirdBox.x + thirdBox.width / 2,
+        thirdBox.y + 3,
+        { steps: 15 }
+      );
+
+      await page.waitForFunction(() => {
+        return document.querySelector('[data-drop-indicator]') !== null;
+      }, { timeout: 2000 });
+
+      // The indicator must be tucked under the nested item: an indent lead-in
+      // segment is present and the blue line starts offset from the editor edge
+      // (side-left > 0). The drop applies the SAME depth, so the preview is honest.
+      const indicator = await page.evaluate(() => {
+        const el = document.querySelector<HTMLElement>('[data-drop-indicator]');
+
+        if (!el) {
+          return null;
+        }
+
+        return {
+          hasLead: el.hasAttribute('data-drop-indicator-lead'),
+          sideLeft: parseFloat(el.style.getPropertyValue('--drop-indicator-side-left')),
+        };
+      });
+
+      expect(indicator).not.toBeNull();
+      expect(indicator?.hasLead).toBe(true);
+      expect(indicator?.sideLeft).toBeGreaterThan(0);
+
+      await page.mouse.up();
+
+      await page.waitForFunction(() => {
+        const wrapper = document.querySelector('[data-blok-interface=blok]');
+
+        return wrapper?.getAttribute('data-blok-dragging') !== 'true';
+      }, { timeout: 2000 });
+
+      // The header lands between the two list items and NESTS at depth 1.
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expect(getBlockText(savedData?.blocks[0])).toBe('First step');
+      expect(getBlockText(savedData?.blocks[1])).toBe('Second step');
+      expect(getBlockText(savedData?.blocks[2])).toBe('Section');
+      expect(getBlockText(savedData?.blocks[3])).toBe('Third step');
+      // Nested → the header is a structural child of the depth-0 list head.
+      expectNestedUnderList(savedData, savedData?.blocks[2]);
+
+      // The holder is visually indented (data-blok-depth set to level 1).
+      const droppedHolder = page.getByTestId('block-wrapper').filter({ hasText: 'Section' });
+
+      await expect(droppedHolder).toHaveAttribute('data-blok-depth', '1');
+    });
+
+    /**
+     * Drops a non-list block into a clearly-nested slot (top edge of the nested
+     * item, i.e. between the depth-0 head and the depth-1 item) and asserts it
+     * nests to depth 1: indented holder (data-blok-depth=1) and a structural
+     * parent/content link in saved output. Runs for every block type × list
+     * style so ANY block nests inside ANY list.
+     */
+    const nestsIntoList = (
+      label: string,
+      sourceType: string,
+      sourceData: Record<string, unknown>,
+      sourceText: string,
+      listStyle: 'ordered' | 'unordered' | 'checklist'
+    ): void => {
+      test(`nests a ${label} into a ${listStyle} list at the nested level`, async ({ page }) => {
+        const blocks: OutputData['blocks'] = [
+          { id: 'l1', type: 'list', data: { text: 'Head', style: listStyle } },
+          { id: 'l2', type: 'list', data: { text: 'Nested', style: listStyle, depth: 1 } },
+          { id: 's1', type: sourceType, data: sourceData },
+        ];
+
+        await createBlok(page, { data: { blocks } });
+
+        const sourceBlock = page.getByTestId('block-wrapper').filter({ hasText: sourceText });
+
+        await sourceBlock.hover();
+
+        const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+        await expect(settingsButton).toBeVisible();
+
+        // Drop on the TOP half of the nested item → slot between Head (depth 0)
+        // and Nested (depth 1) → matches the deeper next item → depth 1. Probe at
+        // 25% of the item height (still the top half) rather than 1px from the
+        // edge: a checklist item's checkbox makes its hit-box taller, so the 1px
+        // edge can fall in a gap that resolves to the wrong block.
+        const nestedItem = page.getByTestId('block-wrapper').filter({ hasText: 'Nested' });
+
+        await performDragDrop(page, settingsButton, nestedItem, 'top');
+
+        const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+        // Slot order: the source lands between the two list items at index 1,
+        // flanked by the list head and the nested item. (List-item text is not
+        // asserted here — some styles, e.g. checklist, store it differently.)
+        expect(savedData?.blocks).toHaveLength(3);
+        expect(savedData?.blocks[0].type).toBe('list');
+        expect(savedData?.blocks[1].type).toBe(sourceType);
+        expect(getBlockText(savedData?.blocks[1])).toBe(sourceText);
+        expect(savedData?.blocks[2].type).toBe('list');
+        // The dropped block nested to depth 1: a structural child of the list head.
+        expectNestedUnderList(savedData, savedData?.blocks[1]);
+
+        // The holder is visually indented (margin + data-blok-depth attribute).
+        const droppedHolder = page.getByTestId('block-wrapper').filter({ hasText: sourceText });
+
+        await expect(droppedHolder).toHaveAttribute('data-blok-depth', '1');
+      });
+    };
+
+    nestsIntoList('header', 'header', { text: 'Movable header', level: 2 }, 'Movable header', 'unordered');
+    nestsIntoList('paragraph', 'paragraph', { text: 'Movable paragraph' }, 'Movable paragraph', 'ordered');
+    nestsIntoList('quote', 'quote', { text: 'Movable quote', caption: '' }, 'Movable quote', 'checklist');
+
+    test('a nested block persists its parent link across a save/reload round-trip', async ({ page }) => {
+      const blocks: OutputData['blocks'] = [
+        { id: 'l1', type: 'list', data: { text: 'Head', style: 'unordered' } },
+        { id: 'l2', type: 'list', data: { text: 'Nested', style: 'unordered', depth: 1 } },
+        { id: 's1', type: 'header', data: { text: 'Reloadable', level: 2 } },
+      ];
+
+      await createBlok(page, { data: { blocks } });
+
+      const sourceBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Reloadable' });
+
+      await sourceBlock.hover();
+      await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+
+      const nestedItem = page.getByTestId('block-wrapper').filter({ hasText: 'Nested' });
+
+      await performDragDrop(page, page.locator(SETTINGS_BUTTON_SELECTOR), nestedItem, 'top');
+
+      const savedData = await page.evaluate(() => window.blokInstance?.save());
+
+      expectNestedUnderList(savedData, savedData?.blocks?.find(b => getBlockText(b) === 'Reloadable'));
+
+      // Re-create the editor from the saved output and confirm the nesting survives.
+      await createBlok(page, { data: savedData });
+
+      const reloadedHolder = page.getByTestId('block-wrapper').filter({ hasText: 'Reloadable' });
+
+      await expect(reloadedHolder).toHaveAttribute('data-blok-depth', '1');
+
+      const reSaved = await page.evaluate(() => window.blokInstance?.save());
+
+      expectNestedUnderList(reSaved, reSaved?.blocks?.find(b => getBlockText(b) === 'Reloadable'));
     });
   });
 

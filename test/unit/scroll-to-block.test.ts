@@ -330,8 +330,8 @@ describe('scroll-to-block', () => {
 
     const editor = new Blok({} as BlokConfig);
 
-    // isReady must resolve without throwing
-    await expect(editor.isReady).resolves.toBeUndefined();
+    // isReady must resolve (with the editor instance) without throwing
+    await expect(editor.isReady).resolves.toBe(editor);
 
     // No scroll should occur because the element wasn't found
     expect(mockScrollTo).not.toHaveBeenCalled();
@@ -543,7 +543,7 @@ describe('scroll-to-block', () => {
 
       const editor = new Blok({} as BlokConfig);
 
-      await expect(editor.isReady).resolves.toBeUndefined();
+      await expect(editor.isReady).resolves.toBe(editor);
     });
   });
 });

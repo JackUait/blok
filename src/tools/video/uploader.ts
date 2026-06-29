@@ -1,4 +1,6 @@
 import type { VideoConfig } from '../../../types/tools/video';
+import { resolveMaxSize } from '../../components/utils/max-size';
+import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 
 export interface UploadResult {
@@ -11,9 +13,12 @@ export interface UploadOptions {
 }
 
 export class VideoUploadError extends Error {
+  public readonly detail?: string;
+
   constructor(public readonly code: string, detail?: string) {
     super(detail ? `${code}: ${detail}` : code);
     this.name = 'VideoUploadError';
+    this.detail = detail;
   }
 }
 
@@ -59,9 +64,9 @@ export class Uploader {
 
   private validateFile(file: File): void {
     const types = this.config.types ?? [...DEFAULT_MIME_TYPES];
-    const maxSize = this.config.maxSize ?? DEFAULT_MAX_SIZE;
+    const maxSize = resolveMaxSize(this.config.maxSize, file.type, DEFAULT_MAX_SIZE);
 
-    if (file.type && !types.includes(file.type)) {
+    if (file.type && !matchesMime(file.type, types)) {
       throw new VideoUploadError('UNSUPPORTED_TYPE', file.type);
     }
     if (file.size > maxSize) {

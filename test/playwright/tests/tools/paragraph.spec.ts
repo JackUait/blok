@@ -449,7 +449,7 @@ test.describe('paragraph tool', () => {
 
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('paragraph');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toBe('Test paragraph content');
     });
 
@@ -469,7 +469,7 @@ test.describe('paragraph tool', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toBe('Original Updated');
     });
 
@@ -519,7 +519,7 @@ test.describe('paragraph tool', () => {
       });
 
       // Bold formatting should be saved as <b> tag
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toMatch(/<b>|<strong>/);
     });
   });

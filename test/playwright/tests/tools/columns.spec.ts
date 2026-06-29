@@ -700,6 +700,92 @@ test.describe('Columns tool', () => {
     expect(intro?.parent ?? null).toBeNull();
   });
 
+  // Regression (reported via screen recording): create columns by dragging a
+  // block beside a sibling (handleColumnDrop -> wrapInNewColumnList), THEN undo.
+  // The block array restores perfectly, but the promoted holders used to be left
+  // at the DOM position they occupied INSIDE the now-removed column_list — so the
+  // model said one order while the user saw another (here: the "Ordered" header
+  // stranded ahead of the list items it should follow). blocksStore.move() can't
+  // repair this because the array index already matches; the DOM order must be
+  // re-asserted against the array after the teardown.
+  //
+  // Covered on BOTH drop sides, asserting BOTH the saved model AND the live DOM
+  // order, so no variant of this model-vs-DOM divergence can slip back in.
+  for (const side of ['left', 'right'] as const) {
+    test(`undo of a drag-beside column creation (${side}) keeps the moved block in its original DOM slot`, async ({ page }) => {
+      const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+      const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
+      const ORIGINAL = ['h1', 'i1', 'i2', 'i3', 'h2', 'o1', 'o2', 'o3'];
+
+      const domOrder = (): Promise<(string | null)[]> => page.evaluate(() =>
+        Array.from(document.querySelectorAll('[data-blok-testid="block-wrapper"]'))
+          .filter(el => el.closest('[data-blok-column]') === null)
+          .map(el => el.getAttribute('data-blok-id'))
+      );
+
+      await page.setViewportSize({ width: 1024, height: 800 });
+      await createBlok(page, {
+        blocks: [
+          { id: 'h1', type: 'header', data: { text: 'Unordered', level: 2 } },
+          { id: 'i1', type: 'list', data: { text: 'First item', style: 'unordered' } },
+          { id: 'i2', type: 'list', data: { text: 'Second item', style: 'unordered' } },
+          { id: 'i3', type: 'list', data: { text: 'Third item', style: 'unordered' } },
+          { id: 'h2', type: 'header', data: { text: 'Ordered', level: 2 } },
+          { id: 'o1', type: 'list', data: { text: 'First step', style: 'ordered' } },
+          { id: 'o2', type: 'list', data: { text: 'Second step', style: 'ordered' } },
+          { id: 'o3', type: 'list', data: { text: 'Third step', style: 'ordered' } },
+        ],
+      });
+
+      // Drag the "Ordered" header onto an edge of "Second item" -> 2 columns,
+      // matching the reported gesture (a header dragged out of its slot into a
+      // column beside a list item).
+      const handle = page.locator(SETTINGS_BUTTON);
+
+      await page.locator('[data-blok-id="h2"]').hover();
+      await expect(handle).toBeVisible();
+      await performSideDrop(page, handle, page.locator('[data-blok-id="i2"]'), side);
+
+      await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+      // Undo -> back to plain blocks in the original order (model AND DOM).
+      await page.keyboard.press(UNDO_SHORTCUT);
+      await page.waitForFunction(
+        () => window.blokInstance !== undefined &&
+          window.blokInstance.blocks.getBlockIndex('h2') !== undefined &&
+          document.querySelector('[data-blok-columns]') === null,
+        { timeout: 2000 }
+      );
+
+      const afterUndo = await saveBlok(page);
+
+      expect(afterUndo.blocks.filter(b => b.type === 'column' || b.type === 'column_list')).toHaveLength(0);
+      expect(afterUndo.blocks.find(b => b.id === 'h2')?.parent ?? null).toBeNull();
+      expect(afterUndo.blocks.map(b => b.id)).toEqual(ORIGINAL);
+      expect(await domOrder()).toEqual(ORIGINAL);
+
+      // Redo immediately after the undo must rebuild BOTH columns. Regression:
+      // the undo/redo keydown guard shared ONE timestamp across undo + redo, so a
+      // redo landing within 50ms of the undo (faster than a human, but routine
+      // back-to-back) was swallowed by the double-fire debounce and silently did
+      // nothing — the columns never came back. The guard is now keyed per action,
+      // so a distinct redo right after an undo always fires.
+      await page.keyboard.press(REDO_SHORTCUT);
+      await page.waitForFunction(
+        () => document.querySelector('[data-blok-columns]') !== null,
+        { timeout: 2000 }
+      );
+
+      await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+
+      const afterRedo = await saveBlok(page);
+
+      expect(afterRedo.blocks.filter(b => b.type === 'column')).toHaveLength(2);
+      expect(afterRedo.blocks.filter(b => b.type === 'column_list')).toHaveLength(1);
+      expect(afterRedo.blocks.find(b => b.id === 'h2')?.parent ?? null).not.toBeNull();
+    });
+  }
+
   test('dropping in the far-left editor margin beside existing columns prepends a new column', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     await createBlok(page, {

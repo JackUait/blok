@@ -15,9 +15,68 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  detect:
+    name: Detect Docs Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether docs workflow should run
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          # Manual runs always proceed.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "Manual dispatch -> running docs workflow."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Collect the files changed by this push. For a normal push compare the
+          # before/after SHAs; for a brand-new branch (before is all-zeros and not a
+          # real commit) fall back to the files changed in the tip commit.
+          if git rev-parse --verify --quiet "$BEFORE^{commit}" >/dev/null; then
+            CHANGED="$(git diff --name-only "$BEFORE" "$AFTER")"
+          else
+            CHANGED="$(git show --name-only --format= "$AFTER")"
+          fi
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Condition 1: docs changed. The docs site is built from docs/** and embeds
+          # the root CHANGELOG.md into its output, so either is a docs change.
+          if echo "$CHANGED" | grep -qE '^docs/|^CHANGELOG\.md$'; then
+            echo "Docs changed -> running docs workflow."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Condition 2: a new package version was released. `yarn release` commits a
+          # package.json bump with a "chore(release): <version>" subject.
+          if echo "$CHANGED" | grep -qE '^package\.json$' \
+            && git log -1 --format='%s' "$AFTER" | grep -qiE '^chore\(release\)'; then
+            echo "New version released -> running docs workflow."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "No docs changes and no release -> skipping docs workflow."
+          echo "run=false" >> "$GITHUB_OUTPUT"
+
   docs-tests:
     name: Docs Unit Tests
     runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.run == 'true'
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -32,9 +91,9 @@ jobs:
   build:
     name: Build Docs
     runs-on: ubuntu-latest
-    needs: docs-tests
+    needs: [detect, docs-tests]
     timeout-minutes: 15
-    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    if: needs.detect.outputs.run == 'true' && (github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

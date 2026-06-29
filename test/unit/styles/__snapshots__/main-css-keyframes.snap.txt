@@ -1,3 +1,24 @@
+@keyframes blok-audio-cover-picker-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96) }
+  to { opacity: 1; transform: translateY(0) scale(1) }
+}
+
+@keyframes blok-audio-eq-bounce {
+  0%, 100% { height: 26% }
+  50% { height: 96% }
+}
+
+@keyframes blok-audio-pulse {
+  0% { box-shadow: var(--blok-image-shadow-resting), 0 0 0 0 var(--blok-audio-pulse-ring) }
+  70% { box-shadow: var(--blok-image-shadow-resting), 0 0 0 7px transparent }
+  100% { box-shadow: var(--blok-image-shadow-resting), 0 0 0 0 transparent }
+}
+
+@keyframes blok-audio-rise {
+  from { opacity: 0; transform: translateY(6px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+
 @keyframes blok-block-target-pulse {
   0% { background-color: var(--blok-selection) }
   60% { background-color: var(--blok-selection) }
@@ -104,6 +125,89 @@
 @keyframes blok-prop-popover-in {
   from { opacity: 0; transform: scale(0.96) translateY(-4px) }
   to { opacity: 1; transform: scale(1) translateY(0) }
+}
+
+@keyframes blok-resize-recoil {
+  0% { transform: translateX(0) }
+  50% { transform: translateX(3px) }
+  100% { transform: translateX(0) }
+}
+
+@keyframes blok-video-burst {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.66) }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.06) }
+  36% { transform: translate(-50%, -50%) scale(0.98) }
+  70% { opacity: 1; transform: translate(-50%, -50%) scale(1.02) }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.16) }
+}
+
+@keyframes blok-video-burst-glyph {
+  0% { transform: scale(0.6) }
+  55% { transform: scale(1.08) }
+  100% { transform: scale(1) }
+}
+
+@keyframes blok-video-burst-ring {
+  0% { opacity: 0.7; transform: scale(0.85) }
+  60% { opacity: 0.28 }
+  100% { opacity: 0; transform: scale(1.75) }
+}
+
+@keyframes blok-video-menu-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.94) }
+  to { opacity: 1; transform: translateY(0) scale(1) }
+}
+
+@keyframes blok-video-menu-rise {
+  from { transform: translateY(10px) }
+  to { transform: translateY(0) }
+}
+
+@keyframes blok-video-mute-pop {
+  0% { transform: scale(1) }
+  35% { transform: scale(0.78) }
+  100% { transform: scale(1) }
+}
+
+@keyframes blok-video-seek-flash-back {
+  0% { opacity: 0; transform: translate(-16px, -50%) scale(0.9) }
+  18% { opacity: 1; transform: translate(3px, -50%) scale(1.03) }
+  32% { transform: translate(0, -50%) scale(1) }
+  64% { opacity: 1; transform: translate(0, -50%) scale(1) }
+  100% { opacity: 0; transform: translate(-18px, -50%) scale(0.95) }
+}
+
+@keyframes blok-video-seek-flash-forward {
+  0% { opacity: 0; transform: translate(16px, -50%) scale(0.9) }
+  18% { opacity: 1; transform: translate(-3px, -50%) scale(1.03) }
+  32% { transform: translate(0, -50%) scale(1) }
+  64% { opacity: 1; transform: translate(0, -50%) scale(1) }
+  100% { opacity: 0; transform: translate(18px, -50%) scale(0.95) }
+}
+
+@keyframes blok-video-seek-glyph-back {
+  0%, 100% { transform: translateX(2px); opacity: 0.8 }
+  50% { transform: translateX(-3px); opacity: 1 }
+}
+
+@keyframes blok-video-seek-glyph-forward {
+  0%, 100% { transform: translateX(-2px); opacity: 0.8 }
+  50% { transform: translateX(3px); opacity: 1 }
+}
+
+@keyframes blok-video-spin {
+  to { transform: rotate(360deg) }
+}
+
+@keyframes blok-video-theater-curtain {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
+@keyframes blok-video-theater-in {
+  from { opacity: 0; transform: translateY(22px) scale(0.84) }
+  60% { opacity: 1 }
+  to { opacity: 1; transform: translateY(0) scale(1) }
 }
 
 @keyframes bounceIn {

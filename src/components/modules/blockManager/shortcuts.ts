@@ -3,7 +3,7 @@
  * @classdesc Handles keyboard shortcuts for block movement
  * @module BlockShortcuts
  */
-import { Shortcuts } from '../../utils/shortcuts';
+import { Shortcut } from '../../utils/shortcut';
 
 /**
  * Shortcut handler callbacks
@@ -13,6 +13,10 @@ export interface BlockShortcutsHandlers {
   onMoveUp: () => void;
   /** Handler for moving block down */
   onMoveDown: () => void;
+  /** Handler for copying the selection as Markdown (Notion's Cmd/Ctrl+Shift+C) */
+  onCopyAsMarkdown: () => void;
+  /** Handler for duplicating the current block / selection (Notion's Cmd/Ctrl+D) */
+  onDuplicate: () => void;
 }
 
 /**
@@ -26,7 +30,23 @@ export interface BlockShortcutsHandlers {
 export class BlockShortcuts {
   private readonly wrapper: HTMLElement;
   private readonly handlers: BlockShortcutsHandlers;
-  private readonly registeredShortcutNames: string[] = [];
+
+  /**
+   * This editor's own keydown shortcuts, bound directly to `document`.
+   *
+   * We deliberately do NOT use the global `Shortcuts` singleton here: it keys
+   * handlers by (element, name) and throws on a duplicate, so two editors on the
+   * same page would evict each other's `document`-level CMD+D / move handlers —
+   * leaving every editor but the last-initialized one silently dead. Per-instance
+   * `Shortcut` objects coexist; `shouldHandleShortcut` keeps each editor scoped
+   * to its own wrapper/selection so they never cross-fire.
+   */
+  private shortcuts: Shortcut[] = [];
+
+  /**
+   * Pending registration timer, so unregister() can cancel a not-yet-fired register().
+   */
+  private registerTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * @param wrapper - Editor wrapper element
@@ -42,47 +62,36 @@ export class BlockShortcuts {
    * Uses setTimeout to wait for UI to be ready (same pattern as History module)
    */
   public register(): void {
-    setTimeout(() => {
-    const shortcutNames = ['CMD+SHIFT+UP', 'CMD+SHIFT+DOWN'];
+    // Idempotent: tear down any prior/pending registration so re-registering
+    // never stacks duplicate listeners on document.
+    this.unregister();
 
-    // Clear any existing shortcuts to avoid duplicate registration errors
-    for (const name of this.registeredShortcutNames) {
-      Shortcuts.remove(document, name);
-    }
-    this.registeredShortcutNames.length = 0;
+    this.registerTimeout = setTimeout(() => {
+      this.registerTimeout = null;
 
-    // Clear shortcuts with same names that might already be registered
-    for (const name of shortcutNames) {
-      Shortcuts.remove(document, name);
-    }
+      const definitions: Array<{ name: string; handler: () => void }> = [
+        // Move block up/down: Cmd/Ctrl+Shift+Arrow.
+        { name: 'CMD+SHIFT+UP', handler: this.handlers.onMoveUp },
+        { name: 'CMD+SHIFT+DOWN', handler: this.handlers.onMoveDown },
+        // Copy selection as Markdown: Cmd/Ctrl+Shift+C.
+        { name: 'CMD+SHIFT+C', handler: this.handlers.onCopyAsMarkdown },
+        // Duplicate block(s): Cmd/Ctrl+D.
+        { name: 'CMD+D', handler: this.handlers.onDuplicate },
+      ];
 
-    // Move block up: Cmd+Shift+ArrowUp (Mac) / Ctrl+Shift+ArrowUp (Windows/Linux)
-    Shortcuts.add({
-      name: 'CMD+SHIFT+UP',
-      on: document,
-      handler: (event: KeyboardEvent) => {
-        if (!this.shouldHandleShortcut(event)) {
-          return;
-        }
-        event.preventDefault();
-        this.handlers.onMoveUp();
-      },
-    });
-    this.registeredShortcutNames.push('CMD+SHIFT+UP');
-
-    // Move block down: Cmd+Shift+ArrowDown (Mac) / Ctrl+Shift+ArrowDown (Windows/Linux)
-    Shortcuts.add({
-      name: 'CMD+SHIFT+DOWN',
-      on: document,
-      handler: (event: KeyboardEvent) => {
-        if (!this.shouldHandleShortcut(event)) {
-          return;
-        }
-        event.preventDefault();
-        this.handlers.onMoveDown();
-      },
-    });
-    this.registeredShortcutNames.push('CMD+SHIFT+DOWN');
+      for (const { name, handler } of definitions) {
+        this.shortcuts.push(new Shortcut({
+          name,
+          on: document,
+          callback: (event: KeyboardEvent) => {
+            if (!this.shouldHandleShortcut(event)) {
+              return;
+            }
+            event.preventDefault();
+            handler();
+          },
+        }));
+      }
     }, 0);
   }
 
@@ -90,21 +99,38 @@ export class BlockShortcuts {
    * Unregister all keyboard shortcuts
    */
   public unregister(): void {
-    for (const name of this.registeredShortcutNames) {
-      Shortcuts.remove(document, name);
+    if (this.registerTimeout !== null) {
+      clearTimeout(this.registerTimeout);
+      this.registerTimeout = null;
     }
-    this.registeredShortcutNames.length = 0;
+
+    for (const shortcut of this.shortcuts) {
+      shortcut.remove();
+    }
+    this.shortcuts = [];
   }
 
   /**
-   * Determines whether the block movement shortcut should be handled
+   * Determines whether the block movement shortcut should be handled.
+   *
+   * The common case is a caret inside a block: the event targets a
+   * contenteditable within the wrapper. But block-level / navigation selection
+   * blurs that contenteditable, so the keydown then targets document.body —
+   * outside the wrapper — even though THIS editor still owns the selection.
+   * Without a fallback, Cmd+Shift+Arrow / Cmd+D silently do nothing whenever a
+   * block is selected. Fall back to "does this wrapper currently hold a selected
+   * block?", which stays multi-editor safe because each instance only inspects
+   * its own subtree.
    * @param event - Keyboard event
    * @returns true if shortcut should be handled
    */
   private shouldHandleShortcut(event: KeyboardEvent): boolean {
     const target = event.target;
 
-    return target instanceof HTMLElement &&
-      this.wrapper.contains(target);
+    if (target instanceof HTMLElement && this.wrapper.contains(target)) {
+      return true;
+    }
+
+    return this.wrapper.querySelector('[data-blok-selected="true"], [data-blok-navigation-focused="true"]') !== null;
   }
 }

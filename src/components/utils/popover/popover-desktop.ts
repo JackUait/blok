@@ -15,7 +15,7 @@ import { resolvePosition } from './popover-position';
 import { stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
 
-import type { PopoverParams } from '@/types/utils/popover/popover';
+import type { PopoverParams, Flipper as FlipperHandle } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 
@@ -51,9 +51,12 @@ if (typeof document !== 'undefined' && !(document as unknown as Record<string, u
  */
 export class PopoverDesktop extends PopoverAbstract {
   /**
-   * Flipper - module for keyboard iteration between elements
+   * Flipper - module for keyboard iteration between elements.
+   * Typed as the published structural handle so a reused flipper passed via
+   * params (also the handle type) assigns cleanly; `new Flipper()` is
+   * structurally assignable to it.
    */
-  public flipper: Flipper | undefined;
+  public flipper: FlipperHandle | undefined;
 
   /**
    * Popover nesting level. 0 value means that it is a root popover

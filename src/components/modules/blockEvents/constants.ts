@@ -45,10 +45,10 @@ export const CHECKLIST_PATTERN = /^\[(x|X| )?\]\s([\s\S]*)$/;
 
 /**
  * Regex pattern for detecting bulleted list shortcuts.
- * Matches patterns like "- " or "* " at the start of text
+ * Matches patterns like "- ", "* " or "+ " at the start of text
  * Captures remaining content after the shortcut in group 1
  */
-export const UNORDERED_LIST_PATTERN = /^[-*]\s([\s\S]*)$/;
+export const UNORDERED_LIST_PATTERN = /^[-*+]\s([\s\S]*)$/;
 
 /**
  * Regex patterns for detecting list shortcuts.
@@ -56,6 +56,16 @@ export const UNORDERED_LIST_PATTERN = /^[-*]\s([\s\S]*)$/;
  * Captures remaining content after the shortcut in group 2
  */
 export const ORDERED_LIST_PATTERN = /^(\d+)[.)]\s([\s\S]*)$/;
+
+/**
+ * Regex pattern for detecting the alphabetic/roman ordered-list aliases, matching
+ * Notion's "a. " (alpha) and "i. " (roman) shortcuts only. Other single letters
+ * (e.g. "q. ", "z) ") stay literal text — Notion never turns them into a list —
+ * so the character class is restricted to exactly `a` and `i`. Both aliases start
+ * at 1; the list tool renders the actual 1/a/i glyph based on nesting depth.
+ * Captures the letter in group 1 and remaining content in group 2.
+ */
+export const ALPHA_ORDERED_LIST_PATTERN = /^([ai])[.)]\s([\s\S]*)$/;
 
 /**
  * Regex pattern for detecting header shortcuts.
@@ -113,7 +123,9 @@ export const CODE_TOOL_NAME = 'code';
 
 /**
  * Regex pattern for detecting code block shortcuts.
- * Matches ``` followed by a space at the start of text.
- * Captures remaining content after the shortcut in group 1.
+ * Matches ``` on its own — like the "---" divider, no trailing space is required;
+ * the code block fires on the third backtick. An optional trailing space plus
+ * content is still accepted (e.g. "``` foo") for backward compatibility.
+ * Captures any remaining content after the shortcut in group 1.
  */
-export const CODE_PATTERN = /^```\s([\s\S]*)$/;
+export const CODE_PATTERN = /^```(?:\s([\s\S]*))?$/;

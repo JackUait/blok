@@ -163,10 +163,13 @@ describe('BlokDataHandler', () => {
       // All three blocks should be inserted
       expect(blockInstances).toHaveLength(3);
 
-      // Children are inserted first (Pass 1), then the parent (Pass 2)
-      const newChild1 = blockInstances[0];
-      const newChild2 = blockInstances[1];
-      const newParent = blockInstances[2];
+      // Blocks are inserted in DOCUMENT ORDER (parent before its children) so
+      // flow-nested blocks (lists, toggle/callout/column children) keep their
+      // relative position. Only table cells are inserted children-first
+      // (see the table-remap test below).
+      const newParent = blockInstances[0];
+      const newChild1 = blockInstances[1];
+      const newChild2 = blockInstances[2];
 
       // The newly inserted parent block should have contentIds pointing to new child block IDs
       expect(newParent.contentIds).toContain(newChild1.id);
@@ -175,6 +178,37 @@ describe('BlokDataHandler', () => {
       // The newly inserted child blocks should have parentId pointing to new parent block ID
       expect(newChild1.parentId).toBe(newParent.id);
       expect(newChild2.parentId).toBe(newParent.id);
+    });
+
+    it('inserts flow-nested blocks in document order so a child never precedes its parent', async () => {
+      // Regression: pasting nested Notion content (e.g. a bulleted list with a
+      // sub-item) scrambled document order — the two-pass insert put ALL
+      // children first, so a nested list child rendered ABOVE its parent and the
+      // whole document order collapsed. Flow-nested blocks must be inserted in
+      // document order; only table cells stay children-first.
+      const { modules, insertedBlocks, blockInstances } = createBlokModulesMock();
+      const handler = new BlokDataHandler(
+        modules,
+        createToolRegistryMock(),
+        createSanitizerBuilderMock(),
+        { sanitizer: {} }
+      );
+
+      const pasteData = JSON.stringify([
+        { id: 'p1', tool: 'list', data: { text: 'Parent', style: 'unordered' } },
+        { id: 'c1', tool: 'list', data: { text: 'Child', style: 'unordered' }, parentId: 'p1' },
+        { id: 'a1', tool: 'paragraph', data: { text: 'After' } },
+      ]);
+
+      await handler.handle(pasteData, { canReplaceCurrentBlock: false });
+
+      // Insertion (and therefore document) order is preserved.
+      expect(insertedBlocks.map(b => b.data.text)).toEqual(['Parent', 'Child', 'After']);
+
+      // The child still ends up reparented under the parent.
+      const [newParent, newChild] = blockInstances;
+
+      expect(newChild.parentId).toBe(newParent.id);
     });
 
     it('routes parent-child restoration through BlockManager.setBlockParent instead of mutating fields directly', async () => {
@@ -221,9 +255,10 @@ describe('BlokDataHandler', () => {
       expect(blockInstances).toHaveLength(3);
       expect(setBlockParentMock).toHaveBeenCalledTimes(2);
 
-      const newChild1 = blockInstances[0];
-      const newChild2 = blockInstances[1];
-      const newCallout = blockInstances[2];
+      // Document order: the callout (container) is inserted before its children.
+      const newCallout = blockInstances[0];
+      const newChild1 = blockInstances[1];
+      const newChild2 = blockInstances[2];
 
       expect(setBlockParentMock).toHaveBeenCalledWith(newChild1, newCallout.id);
       expect(setBlockParentMock).toHaveBeenCalledWith(newChild2, newCallout.id);

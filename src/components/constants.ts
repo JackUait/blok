@@ -4,6 +4,11 @@
 export { DATA_ATTR, createSelector } from './constants/data-attributes';
 
 /**
+ * Re-export the stable public test-id hooks
+ */
+export { TEST_ID } from './constants/test-ids';
+
+/**
  * Debounce timeout for selection change event
  * {@link modules/ui.ts}
  */

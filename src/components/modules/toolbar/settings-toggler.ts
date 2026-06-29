@@ -1,6 +1,6 @@
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { Block } from '../../block';
-import { DATA_ATTR } from '../../constants';
+import { DATA_ATTR, TEST_ID } from '../../constants';
 import { Dom as $ } from '../../dom';
 import { IconMenu } from '../../icons';
 import { getUserOS } from '../../utils';
@@ -136,7 +136,7 @@ export class SettingsTogglerHandler {
 
     settingsToggler.setAttribute(DATA_ATTR.settingsToggler, '');
     settingsToggler.setAttribute(DATA_ATTR.dragHandle, '');
-    settingsToggler.setAttribute('data-blok-testid', 'settings-toggler');
+    settingsToggler.setAttribute(DATA_ATTR.testid, TEST_ID.settingsToggler);
 
     // Accessibility: make the drag handle accessible to screen readers
     // Using tabindex="-1" keeps it accessible but removes from tab order

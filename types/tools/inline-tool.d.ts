@@ -34,4 +34,11 @@ export interface InlineToolConstructable extends BaseToolConstructable {
    * Can be used, for example, by comments tool
    */
   isReadOnlySupported?: boolean;
+
+  /**
+   * When true, the tool's keyboard shortcut opens its menu even at a collapsed
+   * caret (nothing selected) — for tools that insert at the caret (e.g.
+   * Equation) rather than wrap an existing selection (Link, Marker).
+   */
+  allowCaretShortcut?: boolean;
 }

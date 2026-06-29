@@ -1,4 +1,5 @@
 import type { BlockTune as IBlockTune } from '../../../types';
+import type { BlockTuneRenderContext } from '../../../types/block-tunes/block-tune';
 import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { MenuConfigItem } from '../../../types/tools';
@@ -52,9 +53,13 @@ export class TunesManager {
    * Splits tunes into tool-specific (from tool's renderSettings) and common tunes.
    *
    * @param toolRenderSettings - Optional render settings from the tool
+   * @param renderContext - Optional context exposing the host tune popover element
    * @returns Object with toolTunes and commonTunes arrays
    */
-  public getMenuConfig(toolRenderSettings?: MenuConfigItem | MenuConfigItem[] | HTMLElement): {
+  public getMenuConfig(
+    toolRenderSettings?: MenuConfigItem | MenuConfigItem[] | HTMLElement,
+    renderContext?: BlockTuneRenderContext
+  ): {
     toolTunes: PopoverItemParams[];
     commonTunes: PopoverItemParams[];
   } {
@@ -96,7 +101,7 @@ export class TunesManager {
     const commonTunes = [
       ...this.tunesInstances.values(),
       ...this.defaultTunesInstances.values(),
-    ].map(tuneInstance => tuneInstance.render());
+    ].map(tuneInstance => tuneInstance.render(renderContext));
 
     /** Separate custom html from Popover items params for common tunes */
     commonTunes.forEach(tuneConfig => {

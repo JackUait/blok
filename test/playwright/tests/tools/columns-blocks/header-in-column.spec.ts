@@ -118,7 +118,7 @@ test.describe('Header inside a column', () => {
     // breakage that only surfaces when the block is nested in a column.
     const normalize = (data: OutputData): unknown =>
       data.blocks.map((block) => {
-        const raw = (block.data ?? {}) as Record<string, unknown>;
+        const raw = (block.data ?? {});
         const data_: Record<string, unknown> = {};
 
         if (block.type === 'header') {

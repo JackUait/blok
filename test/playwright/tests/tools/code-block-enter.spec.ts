@@ -277,7 +277,7 @@ test.describe('Code block Enter regression', () => {
       }
       const saved = await blok.save();
 
-      return saved.blocks.map((b) => ({ type: b.type, data: b.data as Record<string, unknown> }));
+      return saved.blocks.map((b) => ({ type: b.type, data: b.data }));
     });
 
     expect(result).toHaveLength(2);

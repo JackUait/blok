@@ -59,7 +59,20 @@ new Blok({
 
 ### Other entry points
 
-- `@jackuait/blok/react` — a `useBlok` hook and a `BlokContent` component for React 18/19.
+- `@jackuait/blok/react` — React 18/19 adapter. The recommended entry point is `<BlokEditor>`, an all-in-one component that forwards a ref to the live `Blok` instance:
+
+  ```tsx
+  const [data, setData] = useState(initialData);
+  <BlokEditor tools={tools} data={data} onSave={setData} theme={theme} />;
+  ```
+
+  `data` + `onSave` make `<BlokEditor>` a true **controlled component**. `data` is reactive: passing new content re-renders the editor in place (deep-equal–deduped, so identical content never clobbers the caret). `onSave` is the output half: it fires — debounced — with the full serialized `OutputData` on every content change, so you no longer poll `ref.current.save()` by hand. Wiring `onSave={setData}` is safe and caret-stable: the adapter records the editor's own emitted output as the content baseline, so echoing it back deep-equal–dedupes to a no-op (no re-render) while genuine external `data` changes still render. (You can still forward a ref and call `ref.current.render(newData)` for ad-hoc reloads, or use the lower-level `onChange(api, event)` for mutation events.)
+
+  Reactive props (`readOnly`, `theme`, `width`, `autofocus`) sync without remounting. When structural config like `tools` needs to change, pass a `deps` array — the editor is destroyed and recreated whenever any dep value changes. Keep each value inside `deps` referentially stable: pass primitives or `useMemo`-stable objects, since a dep value whose identity changes every render recreates the editor each time. (The individual values are compared, not the array wrapper, so a fresh `[a, b]` literal each render is fine when `a` and `b` are stable; omitting `deps` creates the editor once.)
+
+  Don't wrap `<BlokEditor>` in `styled()` or any HOC that reserves the `theme` prop — styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it through `className`.
+
+  For advanced control (e.g., rendering outside a single container), use `useBlok` + `BlokContent` directly.
 - `@jackuait/blok/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.
 - `@jackuait/blok/locales` — locale data, if you'd rather load it yourself.
 

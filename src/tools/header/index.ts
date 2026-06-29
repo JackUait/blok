@@ -7,6 +7,7 @@
  */
 import type {
   API,
+  BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
   BlockToolData,
@@ -21,6 +22,8 @@ import { DATA_ATTR } from '../../components/constants';
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3 } from '../../components/icons';
 import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
+import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
 import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
@@ -29,7 +32,7 @@ import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-t
 /**
  * Tool's input and output data format
  */
-export interface HeaderData extends BlockToolData {
+export interface HeaderData extends BlockToolData, BlockColorData {
   /** Header's content */
   text: string;
   /** Header's level from 1 to 6 */
@@ -175,6 +178,13 @@ export class Header implements BlockTool {
   private blockId?: string;
 
   /**
+   * Block instance — used to force a Yjs sync of `isOpen` on collapse/expand,
+   * since the open-state visuals all land in mutation-free/ignored DOM that
+   * the MutationObserver never reports.
+   */
+  private block?: BlockAPI;
+
+  /**
    * Render plugin's main Element and fill it with saved data
    *
    * @param options - constructor options
@@ -194,6 +204,7 @@ export class Header implements BlockTool {
 
     if (block) {
       this.blockId = block.id;
+      this.block = block;
     }
 
     if (!readOnly && this._data.isToggleable) {
@@ -252,6 +263,14 @@ export class Header implements BlockTool {
 
     if (typeof data.isOpen === 'boolean') {
       normalized.isOpen = data.isOpen;
+    }
+
+    if (typeof data.textColor === 'string') {
+      normalized.textColor = data.textColor;
+    }
+
+    if (typeof data.backgroundColor === 'string') {
+      normalized.backgroundColor = data.backgroundColor;
     }
 
     /**
@@ -367,6 +386,7 @@ export class Header implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
+    this.syncOpenState();
   }
 
   /**
@@ -389,6 +409,7 @@ export class Header implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
+    this.syncOpenState();
   }
 
   /**
@@ -397,7 +418,7 @@ export class Header implements BlockTool {
    * @returns MenuConfig array
    */
   public renderSettings(): MenuConfig {
-    return this.levels.map(level => {
+    const levelEntries = this.levels.map(level => {
       const translated = this.api.i18n.t(level.nameKey);
       const title = translated !== level.nameKey ? translated : level.name;
 
@@ -412,6 +433,162 @@ export class Header implements BlockTool {
         },
       };
     });
+
+    const colorTunes = buildBlockColorTunes({
+      data: this._data,
+      labels: {
+        textColor: this.api.i18n.t('tools.marker.textColor'),
+        background: this.api.i18n.t('tools.marker.background'),
+        default: this.api.i18n.t('tools.marker.default'),
+      },
+      onPick: (field, value): void => this.setBlockColor(field, value),
+    });
+
+    const colorItems = Array.isArray(colorTunes) ? colorTunes : [colorTunes];
+
+    return [...levelEntries, this.buildToggleConvertEntry(), ...colorItems] as MenuConfig;
+  }
+
+  /**
+   * Build the "Toggle heading" settings entry: a single toggle-switch entry that
+   * is active when the heading is already a toggle. Activating it flips the
+   * state — plain → toggle (same level, no children) or toggle → plain (releasing
+   * children as following siblings, matching Notion). A single label avoids
+   * colliding with the per-level "Heading N" selector entries.
+   *
+   * Reuses the existing `tools.header.toggleHeading` i18n key (no new keys).
+   *
+   * @returns the menu entry config
+   */
+  private buildToggleConvertEntry(): MenuConfig {
+    const level = this.currentLevel;
+    const isToggle = this._data.isToggleable === true;
+    const toggleIcons: Record<number, string> = { 1: IconToggleH1, 2: IconToggleH2, 3: IconToggleH3 };
+
+    return {
+      icon: toggleIcons[level.number] ?? IconToggleH3,
+      title: this.api.i18n.t('tools.header.toggleHeading'),
+      name: 'header-toggle-convert',
+      closeOnActivate: true,
+      isActive: isToggle,
+      onActivate: (): void => this.setToggleable(!isToggle),
+    };
+  }
+
+  /**
+   * Convert this heading between plain and toggle in place, matching Notion's
+   * Turn-into. plain → toggle starts with no children; toggle → plain releases
+   * existing children as following siblings so they are never orphaned.
+   *
+   * @param isToggleable - target toggle state
+   */
+  private setToggleable(isToggleable: boolean): void {
+    if (this._data.isToggleable === isToggleable) {
+      return;
+    }
+
+    if (isToggleable) {
+      this.convertToToggle();
+    } else {
+      this.convertToPlain();
+    }
+
+    this.syncOpenState();
+  }
+
+  /**
+   * Wrap the plain heading element in the full toggle structure (arrow, body
+   * placeholder, children container) and start it open with no children.
+   */
+  private convertToToggle(): void {
+    this._data.isToggleable = true;
+    this._isOpen = true;
+    this._data.isOpen = true;
+
+    this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
+    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-8');
+
+    if (!this.readOnly) {
+      this._element.addEventListener('keydown', this.handleKeyDown);
+      this.api.events.on('block changed', this.handleBlockChanged);
+    }
+
+    const parent = this._element.parentNode;
+    const nextSibling = this._element.nextSibling;
+
+    // buildWrapper() moves this._element into a fresh wrapper and wires the
+    // arrow / body placeholder / children container + their references.
+    this._wrapper = this.buildWrapper();
+
+    parent?.insertBefore(this._wrapper, nextSibling);
+
+    this.rendered();
+  }
+
+  /**
+   * Tear down the toggle structure back to a plain heading. Children are
+   * un-nested to top-level so they survive as following siblings.
+   */
+  private convertToPlain(): void {
+    this.releaseChildrenAsSiblings();
+
+    this._data.isToggleable = false;
+    delete this._data.isOpen;
+
+    this._element.removeEventListener('keydown', this.handleKeyDown);
+    this.api.events.off('block changed', this.handleBlockChanged);
+
+    this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
+    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+
+    if (this._wrapper) {
+      const parent = this._wrapper.parentNode;
+
+      parent?.replaceChild(this._element, this._wrapper);
+    }
+
+    this._wrapper = null;
+    this._headerRow = null;
+    this._arrowElement = null;
+    this._childContainerElement = null;
+    this._bodyPlaceholderElement = null;
+  }
+
+  /**
+   * Un-nest every child of this heading to top-level so they become following
+   * siblings instead of being orphaned when the toggle wrapper is removed.
+   * Snapshot the list first since setBlockParent mutates the hierarchy.
+   */
+  private releaseChildrenAsSiblings(): void {
+    if (this.blockId === undefined) {
+      return;
+    }
+
+    const children = [...this.api.blocks.getChildren(this.blockId)];
+
+    for (const child of children) {
+      this.api.blocks.setBlockParent(child.id, null);
+    }
+  }
+
+  /**
+   * Persist a block-level color pick (text or background) and re-paint the
+   * heading. Mirrors the toggle open-state sync: mutate _data, update the live
+   * element, and dispatch a change so the new color reaches Yjs (save() reads
+   * the color back off _data).
+   *
+   * @param field - 'textColor' or 'backgroundColor'
+   * @param value - preset name, or undefined to clear the field
+   */
+  private setBlockColor(field: keyof BlockColorData, value: string | undefined): void {
+    if (value === undefined) {
+      this._data[field] = undefined;
+    } else {
+      this._data[field] = value;
+    }
+
+    applyBlockColor(this._element, this._data);
+    this.block?.dispatchChange();
   }
 
   /**
@@ -424,6 +601,11 @@ export class Header implements BlockTool {
       level: level,
       text: this.data.text,
       isToggleable: this._data.isToggleable,
+      // Block-level color is a separate data field (not part of the text export),
+      // so it must be retained explicitly on a level change — exactly like
+      // isToggleable — or normalizeData() drops it and the heading loses its color.
+      textColor: this._data.textColor,
+      backgroundColor: this._data.backgroundColor,
     };
   }
 
@@ -510,6 +692,14 @@ export class Header implements BlockTool {
       data.isOpen = this._isOpen;
     }
 
+    if (this._data.textColor) {
+      data.textColor = this._data.textColor;
+    }
+
+    if (this._data.backgroundColor) {
+      data.backgroundColor = this._data.backgroundColor;
+    }
+
     return data;
   }
 
@@ -529,10 +719,17 @@ export class Header implements BlockTool {
   public static get sanitize(): SanitizerConfig {
     return {
       level: false,
-      text: {},
+      // Spread the shared inline whitelist so bold/italic/underline/strike/link/
+      // code/color marks survive save AND "Turn into" conversion (conversion
+      // re-sanitizes with the TARGET tool's `text` config). Matches Notion.
+      text: {
+        ...INLINE_TEXT_SANITIZE,
+      },
       isToggleable: false,
       isOpen: false,
-    };
+      // Block-level color fields hold plain preset names (not HTML) — pass through.
+      ...BLOCK_COLOR_SANITIZE,
+    } as SanitizerConfig;
   }
 
   /**
@@ -723,15 +920,26 @@ export class Header implements BlockTool {
     const translatedName = this.api.i18n.t(this.currentLevel.nameKey);
     const placeholderText = this.resolvePlaceholderText(translatedName);
 
+    /**
+     * Only wire up the placeholder when editable. In read-only mode the heading
+     * must not display a placeholder (matching the paragraph tool and Notion),
+     * so we leave data-placeholder unset — the empty:before content then resolves
+     * to an empty string and nothing is rendered.
+     */
     if (!this.readOnly) {
       this.placeholderCleanup = setupPlaceholder(tag, placeholderText);
-    } else {
-      tag.setAttribute('data-placeholder', placeholderText);
     }
 
     if (!this.readOnly && this._data.isToggleable) {
       tag.addEventListener('keydown', this.handleKeyDown);
     }
+
+    /**
+     * Apply Notion-style block-level text/background color (stored as preset
+     * names in data, rendered via CSS vars). Runs on every getTag() so a level
+     * change (which rebuilds the element) re-applies the current color.
+     */
+    applyBlockColor(tag, this._data);
 
     return tag;
   }
@@ -899,6 +1107,21 @@ export class Header implements BlockTool {
 
     this.updateChildrenVisibility();
     this.updateBodyPlaceholderVisibility();
+    this.syncOpenState();
+  }
+
+  /**
+   * Force a Yjs sync of the toggle-heading open state.
+   *
+   * Collapse/expand only mutates mutation-free child containers and the
+   * ignored `data-blok-toggle-open` attribute, so the MutationObserver never
+   * reports it. Without this dispatch the new `isOpen` would not reach Yjs —
+   * leaving it non-undoable and invisible to remote collaborators.
+   */
+  private syncOpenState(): void {
+    if (!this.readOnly) {
+      this.block?.dispatchChange();
+    }
   }
 
   /**

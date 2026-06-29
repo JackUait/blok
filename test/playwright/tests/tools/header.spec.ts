@@ -481,9 +481,9 @@ test.describe('header Tool', () => {
 
       expect(savedData?.blocks).toHaveLength(1);
       expect(savedData?.blocks[0].type).toBe('header');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.text).toBe('Test Header');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.level).toBe(3);
     });
 
@@ -503,7 +503,7 @@ test.describe('header Tool', () => {
         return await window.blokInstance?.save();
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- savedData is typed as OutputData | undefined, we're safely accessing with optional chaining
+       
       expect(savedData?.blocks[0].data.level).toBe(4);
     });
   });

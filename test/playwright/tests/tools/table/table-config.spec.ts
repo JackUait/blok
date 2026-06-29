@@ -226,7 +226,7 @@ test.describe('Table Configuration Options', () => {
 
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     expect(tableBlock?.data.withHeadings).toBe(true);
   });
 

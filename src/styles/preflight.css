@@ -275,9 +275,15 @@
   border-radius: revert;
 }
 
-/* Restore browser-default ::selection styles inside Blok boundaries. */
+/* Define the text-selection highlight inside Blok boundaries as a single
+   design token (--blok-selection-inline) instead of leaving it to the
+   unpredictable per-browser default. This is the one source of truth for the
+   selection colour: the fake-background highlight (shown while a Link/Equation
+   menu input holds focus) reads the SAME token, so opening a menu never changes
+   the highlight colour. `color` stays reverted so selected text keeps its own
+   colour on the light highlight. */
 [data-blok-interface] ::selection,
 [data-blok-popover] ::selection {
-  background-color: revert;
+  background-color: var(--blok-selection-inline);
   color: revert;
 }

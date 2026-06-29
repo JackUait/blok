@@ -86,94 +86,71 @@
 /* Only the rendered state carries a player; hide caption otherwise. */
 [data-blok-tool="video"]:not([data-state="rendered"]) .blok-video-caption-row { display: none; }
 
-/* ----- floating toolbar (align / caption / replace / more) ----- */
-[data-blok-tool="video"] .blok-video-toolbar {
-  position: absolute;
-  top: 10px; right: 10px;
-  display: inline-flex;
-  background: var(--blok-overlay-surface);
-  border-radius: var(--blok-space-2);
-  padding: var(--blok-space-1);
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  pointer-events: none;
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  z-index: 2;
-}
-[data-blok-tool="video"] .blok-video-inner:hover .blok-video-toolbar,
-[data-blok-tool="video"][data-selected="true"] .blok-video-toolbar,
-[data-blok-tool="video"][data-settings-open="true"] .blok-video-toolbar,
-[data-blok-tool="video"][data-align-open="true"] .blok-video-toolbar {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-[data-blok-tool="video"] .blok-video-toolbar button {
-  width: 28px; height: 28px;
-  display: grid; place-items: center;
-  color: var(--blok-overlay-fg);
-  background: transparent;
-  border: 0;
-  border-radius: var(--blok-space-1);
-  cursor: pointer;
-  transition: background 80ms ease, color 80ms ease;
-}
-[data-blok-tool="video"] .blok-video-toolbar button:hover {
-  background: var(--blok-overlay-fg-hover);
-  color: var(--blok-overlay-fg-strong);
-}
-[data-blok-tool="video"] .blok-video-toolbar button svg { width: 14px; height: 14px; }
-[data-blok-tool="video"] .blok-video-toolbar button[aria-pressed="true"],
-[data-blok-tool="video"] .blok-video-toolbar button[aria-expanded="true"] {
-  background: var(--blok-overlay-fg-pressed);
-  color: var(--blok-overlay-fg-strong);
-}
-[data-blok-tool="video"] .blok-video-toolbar__divider {
-  width: 1px; align-self: stretch;
-  margin: var(--blok-space-1) var(--blok-space-0-5);
-  background: var(--blok-overlay-divider);
+/* ----- fullscreen — strip the editor chrome down to the playback bar -----
+   Native fullscreen promotes the whole figure, dragging the caption row and
+   resize pills into the viewing surface. Neither belongs in a fullscreen
+   player, so hide them and leave only the playback controls. */
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-caption-row,
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] [data-role="resize-handle"] {
+  display: none;
 }
 
-/* ----- alignment popover — floats under the trigger on the same dark surface ----- */
-[data-blok-tool="video"] .blok-video-toolbar__align { position: relative; }
-[data-blok-tool="video"] .blok-video-toolbar__align-popover {
+/* The figure fills the screen (UA :fullscreen); centre the player inside it so
+   a clip that doesn't match the screen aspect is letterboxed on all sides
+   instead of pinned to the top-left. The media box fills the figure and the
+   <video> keeps its UA object-fit:contain, which centres + letterboxes the
+   frame within that box. */
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--blok-video-stage);
+  /* Beat the inline width:N% a resized player carries — otherwise a clip scaled
+     down in the page would only fill a fraction of the screen in fullscreen. */
+  width: 100% !important;
+  height: 100%;
+}
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-media video {
+  height: 100%;
+}
+
+/* Fullscreen title bar — the caption surfaced at the top of the immersive
+   surface (YouTube-style), fading together with the bottom control bar. Lives
+   inside the controls overlay; `hidden` keeps it out of the inline player. */
+[data-blok-tool="video"] .blok-video-controls__title {
   position: absolute;
-  top: calc(100% + var(--blok-space-1));
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  gap: var(--blok-space-0-5);
-  padding: var(--blok-space-1);
-  background: var(--blok-overlay-surface);
-  border-radius: var(--blok-space-2);
-  box-shadow:
-    inset 0 0 0 1px var(--blok-overlay-ring),
-    var(--blok-image-shadow-toolbar);
-  z-index: 3;
+  top: 0; left: 0; right: 0;
+  padding: var(--blok-space-4) var(--blok-space-5) var(--blok-space-6);
+  background: linear-gradient(to bottom, var(--blok-video-scrim-strong) 0%, var(--blok-video-scrim-mid) 55%, transparent 100%);
+  color: var(--blok-video-control-fg);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 1;
 }
-[data-blok-tool="video"] .blok-video-toolbar__align-popover[hidden] { display: none; }
-[data-blok-tool="video"] .blok-video-toolbar__align-popover button {
-  width: 28px; height: 28px;
-  display: grid; place-items: center;
-  color: var(--blok-overlay-fg);
-  background: transparent;
-  border: 0;
-  border-radius: var(--blok-space-1);
-  cursor: pointer;
-  transition: background 80ms ease, color 80ms ease;
+[data-blok-tool="video"] .blok-video-inner:hover .blok-video-controls__title,
+[data-blok-tool="video"] .blok-video-controls:focus-within .blok-video-controls__title,
+[data-blok-tool="video"] .blok-video-inner:not([data-playing="true"]) .blok-video-controls__title {
+  opacity: 1;
+  transform: translateY(0);
 }
-[data-blok-tool="video"] .blok-video-toolbar__align-popover button:hover {
-  background: var(--blok-overlay-fg-hover);
-  color: var(--blok-overlay-fg-strong);
+[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__title {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
 }
-[data-blok-tool="video"] .blok-video-toolbar__align-popover button[aria-pressed="true"] {
-  background: var(--blok-overlay-fg-pressed);
-  color: var(--blok-overlay-fg-strong);
-}
-[data-blok-tool="video"] .blok-video-toolbar__align-popover button svg { width: 14px; height: 14px; }
 
 /* ----- resize handle — Notion-style pill straddling the edge ----- */
 [data-blok-tool="video"] [data-role="resize-handle"] {
@@ -255,43 +232,198 @@
 /* =================================================
    Custom player controls — Airbnb-inspired
 
-   Replaces native browser chrome: a big frosted centre play affordance while
-   paused, and a bottom scrim + control bar (play/pause, scrubber, time,
-   volume, fullscreen) that fades in on hover. White glyphs on a dark scrim,
-   pill geometry, and the brand coral on the progress fill.
+   Replaces native browser chrome with a bottom scrim + control bar (play/pause,
+   scrubber, time, volume, fullscreen) that fades in on hover. Clicking the
+   video toggles play/pause; a centre play disc shows while paused at the start.
+   White glyphs on a dark scrim, pill geometry, neutral white progress fill.
    ================================================= */
 [data-blok-tool="video"] .blok-video-controls {
   --blok-seek-pct: 0%;
+  --blok-buffered-pct: 0%;
+  --blok-vol-pct: 100%;
+  --blok-speed-pct: 42.86%;
+  --blok-tooltip-x: 0%;
+  --blok-ctx-x: 50%;
+  --blok-ctx-y: 50%;
   position: absolute;
   inset: 0;
   pointer-events: none;
   font-family: var(--blok-font-family, var(--blok-font-sans));
 }
 
-/* centre play — frosted disc, only while paused */
-[data-blok-tool="video"] .blok-video-controls__center {
+/* the media reads as a play/pause surface */
+[data-blok-tool="video"] .blok-video-media video { cursor: pointer; }
+
+/* centre burst — a frosted disc that snaps the just-taken action's glyph into
+   the middle of the player and drifts out as a ring ripples past it, echoing the
+   tactile feedback of native players. Inert by default; the .is-active class
+   (re-applied per toggle) drives the one-shot animation. */
+@keyframes blok-video-burst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.66); }
+  18%  { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+  36%  { transform: translate(-50%, -50%) scale(0.98); }
+  70%  { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.16); }
+}
+/* the ripple: a hairline ring that radiates out from the disc and dissolves */
+@keyframes blok-video-burst-ring {
+  0%   { opacity: 0.7; transform: scale(0.85); }
+  60%  { opacity: 0.28; }
+  100% { opacity: 0; transform: scale(1.75); }
+}
+@keyframes blok-video-burst-glyph {
+  0%   { transform: scale(0.6); }
+  55%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+[data-blok-tool="video"] .blok-video-controls__burst {
   position: absolute;
   top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 64px; height: 64px;
+  width: 78px; height: 78px;
   display: grid; place-items: center;
-  color: var(--blok-video-center-fg);
-  background: var(--blok-video-center-bg);
-  border: 0;
   border-radius: var(--blok-radius-pill);
-  cursor: pointer;
-  pointer-events: auto;
-  box-shadow: var(--blok-video-center-shadow);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 160ms ease;
+  color: var(--blok-video-burst-fg);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.68);
+  pointer-events: none;
+  z-index: 1;
 }
-[data-blok-tool="video"] .blok-video-controls__center svg { width: 28px; height: 28px; margin-left: 2px; }
-[data-blok-tool="video"] .blok-video-controls__center:hover { transform: translate(-50%, -50%) scale(1.06); }
-[data-blok-tool="video"] .blok-video-controls__center:active { transform: translate(-50%, -50%) scale(0.97); }
-[data-blok-tool="video"] .blok-video-inner[data-playing="true"] .blok-video-controls__center {
+[data-blok-tool="video"] .blok-video-controls__burst::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--blok-radius-pill);
+  border: 2px solid var(--blok-video-burst-ring);
+  opacity: 0;
+}
+[data-blok-tool="video"] .blok-video-controls__burst svg {
+  width: 34px; height: 34px;
+  /* keep the entrance pop crisp from the centre */
+  transform-origin: center;
+}
+/* nudge the play triangle to its optical centre */
+[data-blok-tool="video"] .blok-video-controls__burst svg path:only-child { transform: translateX(1px); }
+[data-blok-tool="video"] .blok-video-controls__burst.is-active {
+  animation: blok-video-burst 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[data-blok-tool="video"] .blok-video-controls__burst.is-active::after {
+  animation: blok-video-burst-ring 540ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[data-blok-tool="video"] .blok-video-controls__burst.is-active svg {
+  animation: blok-video-burst-glyph 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* press-and-hold speed badge — a frosted "2×" pill that slides down from the top
+   edge while the user holds the video to scrub at double speed, then fades. Reuses
+   the burst frosting tokens for visual kinship with the centre flash. */
+[data-blok-tool="video"] .blok-video-controls__speed {
+  position: absolute;
+  top: var(--blok-space-3); left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-pill);
+  color: var(--blok-video-burst-fg);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translate(-50%, -8px);
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+[data-blok-tool="video"] .blok-video-controls__speed.is-active {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* arrow-key seek indicator — a frosted pill that flashes in from the matching
+   edge (rewind ← left, skip → right) when the user nudges playback 5s. Reuses
+   the burst frosting tokens. Inert until the .is-active class re-arms the side
+   keyframe. The pill slides in with a slight inward overshoot, holds, then
+   drifts back out toward its edge; the glyph marquees in the seek direction to
+   sell the motion. */
+@keyframes blok-video-seek-flash-back {
+  0%   { opacity: 0; transform: translate(-16px, -50%) scale(0.9); }
+  18%  { opacity: 1; transform: translate(3px, -50%) scale(1.03); }
+  32%  { transform: translate(0, -50%) scale(1); }
+  64%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-18px, -50%) scale(0.95); }
+}
+@keyframes blok-video-seek-flash-forward {
+  0%   { opacity: 0; transform: translate(16px, -50%) scale(0.9); }
+  18%  { opacity: 1; transform: translate(-3px, -50%) scale(1.03); }
+  32%  { transform: translate(0, -50%) scale(1); }
+  64%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(18px, -50%) scale(0.95); }
+}
+/* glyph marquee — the triangles drift in the seek direction and ease back, run
+   a couple of times within the pill's life to read as fast motion */
+@keyframes blok-video-seek-glyph-back {
+  0%, 100% { transform: translateX(2px); opacity: 0.8; }
+  50%      { transform: translateX(-3px); opacity: 1; }
+}
+@keyframes blok-video-seek-glyph-forward {
+  0%, 100% { transform: translateX(-2px); opacity: 0.8; }
+  50%      { transform: translateX(3px); opacity: 1; }
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash {
+  position: absolute;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-pill);
+  color: var(--blok-video-burst-fg);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
   opacity: 0;
   pointer-events: none;
+  z-index: 1;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash svg { width: 16px; height: 16px; display: block; }
+[data-blok-tool="video"] .blok-video-controls__seek-flash[data-side="back"] {
+  left: var(--blok-space-5);
+  transform: translate(-10px, -50%);
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash[data-side="forward"] {
+  right: var(--blok-space-5);
+  transform: translate(10px, -50%);
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="back"] {
+  animation: blok-video-seek-flash-back 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="forward"] {
+  animation: blok-video-seek-flash-forward 720ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="back"] svg {
+  animation: blok-video-seek-glyph-back 340ms ease-in-out 2;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-flash.is-active[data-side="forward"] svg {
+  animation: blok-video-seek-glyph-forward 340ms ease-in-out 2;
 }
 
 /* bottom scrim + bar */
@@ -340,8 +472,43 @@
   user-select: none;
 }
 
-/* scrubber — flex-grows; coral elapsed fill, white thumb */
+/* scrubber wrap — flex-grows; layers a base track, a buffered fill, the range
+   input (transparent track so the layers show through), and a hover tooltip */
+[data-blok-tool="video"] .blok-video-controls__seek-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+/* base (unbuffered) track behind everything */
+[data-blok-tool="video"] .blok-video-controls__seek-wrap::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-track);
+  transition: height 120ms ease;
+}
+/* buffered-ahead fill */
+[data-blok-tool="video"] .blok-video-controls__buffered {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--blok-buffered-pct, 0%);
+  height: 4px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-buffered);
+  pointer-events: none;
+  transition: height 120ms ease;
+}
+/* scrubber — white elapsed fill, transparent track (layers show through) */
 [data-blok-tool="video"] .blok-video-controls__seek {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
   height: 4px;
@@ -351,11 +518,57 @@
   background: linear-gradient(
     to right,
     var(--blok-video-accent) var(--blok-seek-pct),
-    var(--blok-video-track) var(--blok-seek-pct)
+    transparent var(--blok-seek-pct)
   );
   border-radius: var(--blok-radius-pill);
   cursor: pointer;
   outline: none;
+}
+/* the whole bar thickens on hover for an easier grab */
+[data-blok-tool="video"] .blok-video-controls__seek-wrap:hover::before,
+[data-blok-tool="video"] .blok-video-controls__seek-wrap:hover .blok-video-controls__buffered,
+[data-blok-tool="video"] .blok-video-controls__seek-wrap:hover .blok-video-controls__seek { height: 6px; }
+/* hover time bubble */
+[data-blok-tool="video"] .blok-video-controls__seek-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: var(--blok-tooltip-x, 0%);
+  transform: translateX(-50%);
+  margin-bottom: var(--blok-space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blok-space-1);
+  padding: var(--blok-space-1);
+  border-radius: var(--blok-radius-sm);
+  background: var(--blok-video-burst-bg);
+  color: var(--blok-video-burst-fg);
+  box-shadow: var(--blok-video-burst-shadow);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__seek-tooltip[aria-hidden="false"] { opacity: 1; }
+/* frame preview thumbnail — only shown once a frame has been painted */
+[data-blok-tool="video"] .blok-video-controls__seek-thumb {
+  display: none;
+  width: 160px;
+  height: auto;
+  border-radius: var(--blok-radius-xs);
+  background: var(--blok-video-stage);
+}
+[data-blok-tool="video"] .blok-video-controls__seek-thumb[data-ready="true"] { display: block; }
+/* the hidden source video that frames are grabbed from */
+[data-blok-tool="video"] .blok-video-controls__preview-source {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 [data-blok-tool="video"] .blok-video-controls__seek::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -391,13 +604,19 @@
   margin: 0;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--blok-video-volume-track);
+  background: linear-gradient(
+    to right,
+    var(--blok-video-accent) var(--blok-vol-pct),
+    var(--blok-video-volume-track) var(--blok-vol-pct)
+  );
+  box-shadow: var(--blok-video-thumb-shadow);
   border-radius: var(--blok-radius-pill);
   opacity: 0;
   cursor: pointer;
   transition: width 160ms ease, opacity 160ms ease;
 }
 [data-blok-tool="video"] .blok-video-controls__volume-wrap:hover .blok-video-controls__volume,
+[data-blok-tool="video"] .blok-video-controls__volume-wrap:focus-within .blok-video-controls__volume,
 [data-blok-tool="video"] .blok-video-controls__volume:focus-visible {
   width: 64px;
   opacity: 1;
@@ -408,16 +627,595 @@
   width: 11px; height: 11px;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
 }
 [data-blok-tool="video"] .blok-video-controls__volume::-moz-range-thumb {
   width: 11px; height: 11px;
   border: 0;
   border-radius: var(--blok-radius-pill);
   background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
 }
+/* mute glyph pops when the user flips audible↔muted */
+@keyframes blok-video-mute-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.78); }
+  100% { transform: scale(1); }
+}
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="mute-toggle"].is-bumped svg {
+  animation: blok-video-mute-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* gear settings popover — speed / loop */
+[data-blok-tool="video"] .blok-video-controls__menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+/* Frosted-glass settings card: a fixed-width pane whose height tweens between
+   views (set inline from JS), with a horizontal track that slides the main pane
+   out and the speed submenu in. The hairline border + saturated blur give it a
+   floating-glass edge that lifts it off the video. */
+[data-blok-tool="video"] .blok-video-controls__menu {
+  position: absolute;
+  /* right/bottom set from JS (anchored to the gear); sits on the figure, outside the
+     media overflow clip, so it can spill out of a short player. */
+  width: 224px;
+  overflow: hidden;
+  padding: var(--blok-space-1-5);
+  border: 1px solid var(--blok-video-menu-border);
+  border-radius: var(--blok-radius-lg);
+  box-shadow: var(--blok-video-burst-shadow);
+  color: var(--blok-video-control-fg);
+  transform-origin: bottom right;
+  transition: height 320ms cubic-bezier(0.2, 0.85, 0.25, 1);
+  z-index: 3;
+}
+/* Frosted glass lives on a ::before so it is NOT on the same box as overflow: hidden —
+   backdrop-filter on the clipping element makes it drop the clip (a compositing
+   quirk), which leaked the off-screen speed pane beside the card. */
+[data-blok-tool="video"] .blok-video-controls__menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--blok-video-menu-bg);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
+}
+[data-blok-tool="video"] .blok-video-controls__menu[hidden] { display: none; }
+@keyframes blok-video-menu-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* each speed row lifts into place — drives the staggered cascade on submenu entry.
+   Transform-only: the pane cross-fade (below) owns the opacity, so rows stay visible
+   and merely settle up — no fade-stacked-on-fade that left late rows pouring into an
+   already-full card. */
+@keyframes blok-video-menu-rise {
+  from { transform: translateY(10px); }
+  to   { transform: translateY(0); }
+}
+/* Entrance is motion only — honour reduced-motion by dropping the animation. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="video"] .blok-video-controls__menu {
+    animation: blok-video-menu-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+/* the two panes ride a 200%-wide flex track; data-view slides it sideways */
+[data-blok-tool="video"] .blok-video-controls__menu-track {
+  display: flex;
+  align-items: flex-start;
+  width: 200%;
+  /* Spring curve (control-point y > 1) overshoots the slide a touch, so the panes
+     land with a gentle settle instead of snapping flat to a stop. */
+  transition: transform 320ms cubic-bezier(0.32, 1.12, 0.4, 1);
+}
+[data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] .blok-video-controls__menu-track {
+  transform: translateX(-50%);
+}
+[data-blok-tool="video"] .blok-video-controls__menu-pane {
+  flex: 0 0 50%;
+  display: flex;
+  flex-direction: column;
+  /* Each pane recedes (shrinks + fades back) as it parks and pushes forward (grows
+     in) as it enters, so the view-switch reads as a layered depth swap rather than a
+     flat sideways slide. Opacity runs quicker than the transform so the outgoing pane
+     clears the seam before the slide settles — no double-stack of text mid-slide. */
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms ease, transform 320ms cubic-bezier(0.32, 1.12, 0.4, 1);
+}
+[data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-main"],
+[data-blok-tool="video"] .blok-video-controls__menu[data-view="main"] [data-role="menu-speed"] {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+/* a single tappable row — leading glyph + label left, value/chevron right */
+[data-blok-tool="video"] .blok-video-controls__menu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  width: 100%;
+  min-height: 34px;
+  padding: var(--blok-space-1-5) var(--blok-space-2-5);
+  border: 0;
+  border-radius: var(--blok-radius-md);
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__menu-row:hover { background: var(--blok-video-control-bg-hover); }
+[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-icon,
+[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-value,
+[data-blok-tool="video"] .blok-video-controls__menu-row:hover .blok-video-controls__menu-chevron {
+  color: var(--blok-video-control-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__menu-row:active { transform: scale(0.985); }
+[data-blok-tool="video"] .blok-video-controls__menu-row:focus-visible {
+  outline: none;
+  background: var(--blok-video-control-bg-hover);
+  box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
+}
+/* leading glyph — a scannable icon per setting; dims at rest, lifts on hover */
+[data-blok-tool="video"] .blok-video-controls__menu-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--blok-video-menu-icon);
+  transition: color 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__menu-icon svg { width: 18px; height: 18px; }
+[data-blok-tool="video"] .blok-video-controls__menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* current-value hint on the right of a main row (e.g. "Normal", "On") */
+[data-blok-tool="video"] .blok-video-controls__menu-value {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--blok-video-menu-value-fg);
+  font-variant-numeric: tabular-nums;
+  transition: color 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__menu-chevron {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-right: calc(-1 * var(--blok-space-1));
+  color: var(--blok-video-menu-icon);
+  transition: color 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__menu-chevron svg { width: 14px; height: 14px; }
+
+/* speed submenu back header — set apart by weight + spacing; no border-radius override
+   so its hover stays a rounded pill, not a squared-off full-width band. */
+[data-blok-tool="video"] .blok-video-controls__menu-back {
+  margin-bottom: var(--blok-space-1-5);
+  padding-left: var(--blok-space-1);
+  font-weight: 600;
+}
+[data-blok-tool="video"] .blok-video-controls__menu-back .blok-video-controls__menu-chevron { margin-right: 0; }
+
+/* ===== Notion-style speed control: quiet readout + flat steppers + segmented presets ===== */
+/* The live value, stated calmly (Notion never shouts a number); tabular so the card
+   width doesn't jitter as digits change. */
+[data-blok-tool="video"] .blok-video-controls__speed-readout {
+  margin: var(--blok-space-1) 0 var(--blok-space-2);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--blok-video-control-fg);
+}
+
+/* − [slider] ＋ — flat icon steppers (no filled discs) flank a flexible track */
+[data-blok-tool="video"] .blok-video-controls__speed-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-1-5);
+  padding: 0;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-step {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--blok-radius-md);
+  background: transparent;
+  color: var(--blok-video-menu-icon);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease, opacity 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-step:hover {
+  background: var(--blok-video-control-bg-hover);
+  color: var(--blok-video-control-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-step:active { transform: scale(0.92); }
+[data-blok-tool="video"] .blok-video-controls__speed-step:disabled { opacity: 0.3; cursor: default; transform: none; }
+[data-blok-tool="video"] .blok-video-controls__speed-step:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1.5px var(--blok-video-focus-ring);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-step svg { width: 16px; height: 16px; }
+
+/* the continuous slider — a thin white elapsed fill + small knob on a faint track.
+   The fill gradient is JS-driven via --blok-speed-pct, exactly like the volume slider. */
+[data-blok-tool="video"] .blok-video-controls__speed-slider {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 3px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    var(--blok-video-accent) var(--blok-speed-pct),
+    var(--blok-video-track) var(--blok-speed-pct)
+  );
+  border-radius: var(--blok-radius-pill);
+  cursor: pointer;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
+  transition: transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-thumb);
+  box-shadow: var(--blok-video-thumb-shadow);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-slider:active::-webkit-slider-thumb { transform: scale(1.2); }
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible { outline: none; }
+[data-blok-tool="video"] .blok-video-controls__speed-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--blok-video-thumb-shadow), 0 0 0 4px var(--blok-video-focus-ring);
+}
+
+/* preset rates float on the frosted glass like the menu rows — no filled track, no
+   raised card (those read as a foreign block against the airy list). Inactive labels
+   are muted; the active rate fills with the same subtle tint a row gets on hover. */
+[data-blok-tool="video"] .blok-video-controls__speed-chips {
+  display: flex;
+  gap: var(--blok-space-1);
+  margin-top: var(--blok-space-2-5);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-chip {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blok-space-0-5);
+  min-width: 0;
+  min-height: 30px;
+  padding: var(--blok-space-1);
+  border: 0;
+  border-radius: var(--blok-radius-md);
+  background: transparent;
+  color: var(--blok-video-menu-value-fg);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+[data-blok-tool="video"] .blok-video-controls__speed-chip:hover {
+  background: var(--blok-video-control-bg-hover);
+  color: var(--blok-video-control-fg);
+}
+[data-blok-tool="video"] .blok-video-controls__speed-chip:active { transform: scale(0.96); }
+[data-blok-tool="video"] .blok-video-controls__speed-chip:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--blok-video-focus-ring);
+}
+
+/* Entering the speed submenu: the sections (back header → readout → slider → chips)
+   settle up in sequence as the card grows, instead of snapping in as one rigid block.
+   `backwards` holds the lowered position through the delay, then frees the transform so
+   each section's press-scale still works. The stagger is tight so the last section lands
+   as the height tween settles. Reduced-motion keeps the plain slide. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > * {
+    animation: blok-video-menu-rise 300ms cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
+  }
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(2) { animation-delay: 45ms; }
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(3) { animation-delay: 90ms; }
+  [data-blok-tool="video"] .blok-video-controls__menu[data-view="speed"] [data-role="menu-speed"] > :nth-child(4) { animation-delay: 135ms; }
+}
+
+/* view-mode + gear toggles read as selected when active: a filled pill + accent tint */
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="gear"][aria-expanded="true"],
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="theater"][aria-pressed="true"],
+[data-blok-tool="video"] .blok-video-controls__btn[data-action="picture-in-picture"][aria-pressed="true"] {
+  background: var(--blok-video-control-bg-active);
+  color: var(--blok-video-accent);
+}
+
+/* ambient glow — blurred frame sample bleeding out behind the player */
+[data-blok-tool="video"] .blok-video-controls__ambient {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  filter: blur(28px) saturate(1.5);
+  transform: scale(1.06);
+  /* glow is dark until the video plays; data-active fades it in, and dropping it
+     on pause fades the bloom back out instead of freezing the last frame */
+  opacity: 0;
+  transition: opacity 420ms ease;
+  pointer-events: none;
+}
+/* user-chosen glow intensity (block settings → Glow): more / less / minimal / none.
+   minimal is the default — a barely-there bloom that lifts the player off the page
+   without competing with the frame. */
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="minimal"][data-active="true"] { opacity: 0.3; }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="less"][data-active="true"] { opacity: 0.55; }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="more"][data-active="true"] { opacity: 0.85; }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-glow="none"] { display: none; }
+[data-blok-tool="video"] .blok-video-controls__ambient[data-ambient="off"] { display: none; }
+
+/* theater (cinema) — promote the player into the browser top layer (Popover
+   API) so it sits above every editor surface, lands dead-centre in the viewport
+   (fixed + inset:0 + margin:auto), and gets a real ::backdrop that dims the page
+   and light-dismisses on an outside click. !important only overrides
+   renderVideo's inline position/margin/width — it never mutates them, so the
+   saved width survives. The 100vmax box-shadow is the scrim fallback for
+   browsers without the Popover API; once promoted, ::backdrop owns the dimming. */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] {
+  position: fixed !important;
+  inset: 0;
+  margin: auto !important;
+  width: min(92vw, 1200px) !important;
+  max-width: 92vw;
+  height: -moz-fit-content;
+  height: fit-content;
+  max-height: 94vh;
+  /* reset the UA popover frame so the card centres on the video exactly and the
+     caption (top:100%) isn't clipped. background:transparent kills the UA popover's
+     white Canvas fill, which the rounded video now reveals as white corner slivers. */
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  z-index: 2147483000;
+  box-shadow:
+    0 0 0 100vmax var(--blok-video-theater-scrim),
+    var(--blok-video-theater-shadow);
+  transform-origin: center;
+}
+/* Popover-less fallback (no top layer): the card can't FLIP from its inline slot,
+   so it rises + expands in place with an easeOutExpo settle. */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"]:not(:popover-open) {
+  animation: blok-video-theater-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Promoted (top layer): the JS FLIP morphs the card from its inline rect into the
+   centre, so no keyframe here — only shed the scrim fallback shadow. */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open {
+  box-shadow: var(--blok-video-theater-shadow);
+}
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {
+  background: var(--blok-video-theater-scrim);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  opacity: 1;
+  /* the page dims to black like house lights going down, a touch behind the card */
+  animation: blok-video-theater-curtain 300ms ease-out;
+}
+/* exit: the house lights come back up — the scrim fades out while the JS shrinks
+   the card back into its inline slot, so the page is never revealed by a hard cut */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"][data-theater-leaving="true"]:popover-open::backdrop {
+  animation: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+@keyframes blok-video-theater-in {
+  from { opacity: 0; transform: translateY(22px) scale(0.84); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes blok-video-theater-curtain {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* honour reduced-motion: snap in, no rise/zoom/curtain */
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:not(:popover-open),
+  [data-blok-tool="video"] .blok-video-inner[data-theater="true"]:popover-open::backdrop {
+    animation: none;
+  }
+}
+/* the cinema card owns its own depth via the scrim — drop the resting page
+   shadow, and shed the chrome that doesn't belong in a presentation view */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media {
+  box-shadow: none;
+}
+/* Pin the <video> to its own composited layer for the whole theater session.
+   Otherwise Chromium paints it as a low-level hardware-overlay quad that doesn't
+   follow the card's FLIP transform — it lingers at the inline slot for a frame or
+   two, leaving a frozen "ghost" of the small video as the card morphs out. */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-media video {
+  transform: translateZ(0);
+  /* the composited layer escapes the media's overflow:hidden rounding, so round
+     the <video> itself to keep the theater frame's corners soft */
+  border-radius: var(--blok-radius-lg);
+}
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] [data-role="resize-handle"],
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-controls__ambient {
+  display: none;
+}
+/* theater is a presentation view — drop the caption entirely so the centred box
+   is the VIDEO itself and the frame lands exactly mid-viewport */
+[data-blok-tool="video"] .blok-video-inner[data-theater="true"] .blok-video-caption-row {
+  display: none;
+}
+
+/* centre play affordance — shown while paused at the start */
+[data-blok-tool="video"] .blok-video-controls__center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px; height: 64px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--blok-radius-pill);
+  background: var(--blok-video-burst-bg);
+  color: var(--blok-video-burst-fg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  pointer-events: auto;
+}
+[data-blok-tool="video"] .blok-video-controls__center[hidden] { display: none; }
+[data-blok-tool="video"] .blok-video-controls__center svg { width: 30px; height: 30px; }
+
+/* buffering spinner */
+[data-blok-tool="video"] .blok-video-controls__spinner {
+  position: absolute;
+  inset: 0;
+  width: 38px; height: 38px;
+  margin: auto;
+  border-radius: 50%;
+  border: 3px solid var(--blok-video-track);
+  border-top-color: var(--blok-video-control-fg);
+  opacity: 0;
+  pointer-events: none;
+}
+[data-blok-tool="video"] .blok-video-controls__spinner[data-active="true"] {
+  opacity: 1;
+  animation: blok-video-spin 720ms linear infinite;
+}
+@keyframes blok-video-spin { to { transform: rotate(360deg); } }
+
+/* idle auto-hide — fade the bar + hide the cursor during playback */
+[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__bar {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] video { cursor: none; }
+
+/* the time label is an interactive elapsed/remaining toggle */
+[data-blok-tool="video"] .blok-video-controls__time { cursor: pointer; }
+
+/* keyboard focus rings */
+[data-blok-tool="video"] .blok-video-controls__btn:focus-visible,
+[data-blok-tool="video"] .blok-video-controls__center:focus-visible,
+[data-blok-tool="video"] .blok-video-controls__time:focus-visible,
+[data-blok-tool="video"] .blok-video-controls__ctx-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--blok-video-focus-ring);
+}
+
+/* right-click context menu */
+[data-blok-tool="video"] .blok-video-controls__ctx {
+  position: absolute;
+  top: var(--blok-ctx-y, 50%);
+  left: var(--blok-ctx-x, 50%);
+  min-width: 210px;
+  max-width: 90%;
+  padding: var(--blok-space-1-5);
+  border-radius: var(--blok-radius-md);
+  background: var(--blok-video-burst-bg);
+  box-shadow: var(--blok-video-burst-shadow);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--blok-video-control-fg);
+  pointer-events: auto;
+  z-index: 4;
+}
+[data-blok-tool="video"] .blok-video-controls__ctx[hidden] { display: none; }
+[data-blok-tool="video"] .blok-video-controls__ctx-item {
+  display: block;
+  width: 100%;
+  padding: var(--blok-space-1-5) var(--blok-space-2);
+  border: 0;
+  border-radius: var(--blok-radius-sm);
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+[data-blok-tool="video"] .blok-video-controls__ctx-item:hover { background: var(--blok-video-control-bg-hover); }
+
+/* stats-for-nerds overlay */
+[data-blok-tool="video"] .blok-video-controls__stats {
+  position: absolute;
+  top: var(--blok-space-3);
+  left: var(--blok-space-3);
+  padding: var(--blok-space-2) var(--blok-space-2-5);
+  border-radius: var(--blok-radius-sm);
+  background: var(--blok-video-burst-bg);
+  color: var(--blok-video-control-fg);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 4;
+}
+[data-blok-tool="video"] .blok-video-controls__stats[hidden] { display: none; }
+
+/* bottom mini progress — revealed by CSS only while the control bar is hidden
+   (the auto-hide bucket sets data-controls-hidden on the figure) */
+[data-blok-tool="video"] .blok-video-controls__mini {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 3px;
+  width: var(--blok-seek-pct, 0%);
+  background: var(--blok-video-accent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+[data-blok-tool="video"] .blok-video-inner[data-controls-hidden="true"] .blok-video-controls__mini { opacity: 1; }
+/* In fullscreen the bottom edge-line is redundant — the full scrubber is one
+   mouse-move away — and reads as a stray hairline across the immersive frame. */
+[data-blok-tool="video"] .blok-video-inner[data-fullscreen="true"] .blok-video-controls__mini { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-blok-tool="video"] .blok-video-controls__bar,
-  [data-blok-tool="video"] .blok-video-controls__center,
-  [data-blok-tool="video"] .blok-video-controls__volume { transition: none; }
+  [data-blok-tool="video"] .blok-video-controls__title,
+  [data-blok-tool="video"] .blok-video-controls__volume,
+  [data-blok-tool="video"] .blok-video-controls__mini,
+  [data-blok-tool="video"] .blok-video-controls__seek-tooltip,
+  [data-blok-tool="video"] .blok-video-controls__seek-wrap::before,
+  [data-blok-tool="video"] .blok-video-controls__buffered,
+  [data-blok-tool="video"] .blok-video-controls__seek,
+  [data-blok-tool="video"] .blok-video-controls__speed { transition: none; }
+  [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active,
+  [data-blok-tool="video"] .blok-video-controls__seek-flash.is-active svg { animation: none; opacity: 0; }
+  [data-blok-tool="video"] .blok-video-controls__spinner[data-active="true"] { animation: none; }
+  [data-blok-tool="video"] .blok-video-controls__burst.is-active,
+  [data-blok-tool="video"] .blok-video-controls__burst.is-active::after,
+  [data-blok-tool="video"] .blok-video-controls__burst.is-active svg { animation: none; opacity: 0; }
+  [data-blok-tool="video"] .blok-video-controls__btn[data-action="mute-toggle"].is-bumped svg { animation: none; }
 }

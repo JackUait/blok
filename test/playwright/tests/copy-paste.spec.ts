@@ -4,6 +4,8 @@ import type { Blok } from '@/types';
 import type { BlokConfig, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -734,6 +736,8 @@ test.describe('copy and paste', () => {
       await secondParagraph.click();
       const commandModifier = await getCommandModifierKey(page);
 
+      // Cmd+A is a 3-stage escalation: text → this block → all blocks.
+      await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
 
@@ -786,6 +790,8 @@ test.describe('copy and paste', () => {
       await secondParagraph.click();
       const commandModifier = await getCommandModifierKey(page);
 
+      // Cmd+A is a 3-stage escalation: text → this block → all blocks.
+      await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
       await page.keyboard.press(`${commandModifier}+A`);
 
@@ -824,6 +830,8 @@ test.describe('copy and paste', () => {
       const firstParagraph = getParagraphByIndex(page, 0);
 
       await firstParagraph.click();
+      // Cmd+A is a 3-stage escalation: text → this block → all blocks.
+      await page.keyboard.press('Control+A');
       await page.keyboard.press('Control+A');
       await page.keyboard.press('Control+A');
 
@@ -1247,6 +1255,118 @@ test.describe('copy and paste', () => {
       await expect(listBlock).toHaveAttribute('data-list-style', 'ordered');
       await expect(listBlock).toContainText('Lower roman item');
     });
+  });
+});
+
+/**
+ * buildin.ai writes a lossless `text/next-space-blocks` clipboard flavour (its
+ * analogue of Notion's v3 JSON). Pasting it must reconstruct the SAME native
+ * Blok blocks a Blok→Blok paste would — not the lossy markdown-HTML twin (where
+ * the table collapses to literal `|pipes|`, media to links, and callout/toggle/
+ * columns/to-do flatten away). The fixture is the real Demo Page capture.
+ */
+test.describe('buildin.ai paste (next-space-blocks lossless flavour)', () => {
+  const fixture = readFileSync(
+    resolve(__dirname, '../../unit/components/modules/paste/fixtures/buildin-next-space-blocks.json'),
+    'utf8'
+  );
+
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+  });
+
+  test('imports the full Demo Page as native Blok blocks', async ({ page }) => {
+    await createBlok(page);
+
+    const firstBlock = getParagraphByIndex(page, 0);
+
+    await firstBlock.click();
+    await paste(page, firstBlock, {
+      'text/next-space-blocks': fixture,
+      'text/plain': 'just a simple text block',
+    });
+
+    const saved = await saveBlok(page);
+    const allRoots = saved.blocks.filter((b) => !b.parent);
+
+    // createBlok seeds one empty default paragraph; a multi-block paste inserts
+    // AFTER it (a Blok→Blok paste into an empty editor behaves identically), so
+    // drop a single leading empty paragraph before comparing the content.
+    const leadingEmpty = allRoots.length > 0
+      && allRoots[0].type === 'paragraph'
+      && ((allRoots[0].data as { text?: string }).text ?? '') === '';
+    const roots = leadingEmpty ? allRoots.slice(1) : allRoots;
+
+    // Top-level block sequence matches the Demo Page in document order.
+    expect(roots.map((b) => b.type)).toEqual([
+      'paragraph',
+      'list', 'list', 'list', // 3 to-dos
+      'header', 'header', 'header', 'header', // H1-H4
+      'table',
+      'list', 'list', 'list', // bullets
+      'list', 'list', 'list', 'list', // numbered
+      'toggle',
+      'divider',
+      'quote',
+      'callout',
+      'code', // YAML
+      'code', // equation -> latex
+      'header', 'header', 'header', 'header', // toggle headings
+      'column_list', 'column_list',
+      'image', 'bookmark', 'video', 'audio', 'file',
+    ]);
+
+    // Heading levels 1-4 survive.
+    expect(roots.filter((b) => b.type === 'header').slice(0, 4).map((b) => b.data.level)).toEqual([1, 2, 3, 4]);
+
+    // Table reconstructs as a 3x3 grid with a header row; cells are parented
+    // paragraphs carrying the grid text (NOT the lossy `|pipes|` markdown twin).
+    const table = roots.find((b) => b.type === 'table');
+
+    expect(table).toBeDefined();
+    expect((table?.data as { withHeadings?: boolean }).withHeadings).toBe(true);
+    const cellIds = (table?.data as { content: { blocks: string[] }[][] }).content.flat().flatMap((c) => c.blocks);
+
+    expect(cellIds).toHaveLength(9);
+    const cellText = cellIds.map((id) => {
+      const cell = saved.blocks.find((b) => b.id === id);
+
+      return (cell?.data as { text?: string }).text;
+    });
+
+    expect(cellText).toEqual(['just', 'a', 'or', 'table', 'nothing', 'is', 'special', 'here', 'here?']);
+
+    // Code language + callout emoji preserved (impossible via the HTML twin).
+    expect((roots.find((b) => b.type === 'code')?.data as { language?: string }).language).toBe('yaml');
+
+    const callout = roots.find((b) => b.type === 'callout');
+
+    expect((callout?.data as { emoji?: string }).emoji).toBe('⚠️');
+
+    // Callout body reconstructs as a CHILD paragraph (Blok callouts have no
+    // inline text field) — not silently dropped.
+    const calloutBody = saved.blocks.filter((b) => b.parent === callout?.id && b.type === 'paragraph');
+
+    expect(calloutBody.map((b) => (b.data as { text?: string }).text)).toContain('call me out!');
+
+    // Toggle keeps its revealed child block, parented under the toggle.
+    const toggle = roots.find((b) => b.type === 'toggle');
+    const toggleChildren = saved.blocks.filter((b) => b.parent === toggle?.id);
+
+    expect(toggleChildren.length).toBeGreaterThan(0);
+
+    // No stray empty paragraphs within the imported content (a hierarchy-
+    // reconstruction smell) — the only permitted empty root is the harness seed.
+    const importedEmpties = roots.filter(
+      (b) => b.type === 'paragraph' && ((b.data as { text?: string }).text ?? '') === ''
+    );
+
+    expect(importedEmpties).toHaveLength(0);
   });
 });
 

@@ -134,6 +134,8 @@ const selectAllBlocksViaKeyboard = async (page: Page): Promise<void> => {
   const firstParagraph = getParagraphByIndex(page, 0);
 
   await firstParagraph.click();
+  // 3-stage Cmd+A on a non-empty block: text selection, then this block, then all blocks.
+  await page.keyboard.press(SELECT_ALL_SHORTCUT);
   await page.keyboard.press(SELECT_ALL_SHORTCUT);
   await page.keyboard.press(SELECT_ALL_SHORTCUT);
 };

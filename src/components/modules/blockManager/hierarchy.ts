@@ -380,12 +380,37 @@ export class BlockHierarchy {
       }
     }
 
-    // Update visual indentation
-    this.updateBlockIndentation(block);
+    // Update visual indentation for the block AND its whole subtree — a reparent
+    // shifts every descendant's structural depth, so their margins move too.
+    this.reindentSubtree(block);
 
     // Notify listener so parent data can be synced (e.g. to Yjs)
     if (sanitizedParentId !== null && this.onParentChanged !== undefined) {
       this.onParentChanged(sanitizedParentId);
+    }
+  }
+
+  /**
+   * Re-applies visual indentation to a block and every descendant (via the
+   * contentIds tree). Needed after a reparent, since structural depth — and thus
+   * the depth-based margin — changes for the entire subtree, not just the block
+   * that moved. Cycle-safe via a visited set.
+   * @param block - the subtree root to re-indent
+   */
+  private reindentSubtree(block: Block, visited: Set<string> = new Set<string>()): void {
+    if (visited.has(block.id)) {
+      return;
+    }
+    visited.add(block.id);
+
+    this.updateBlockIndentation(block);
+
+    for (const childId of block.contentIds) {
+      const child = this.repository.getBlockById(childId);
+
+      if (child !== undefined) {
+        this.reindentSubtree(child, visited);
+      }
     }
   }
 
@@ -436,7 +461,20 @@ export class BlockHierarchy {
       return;
     }
 
-    // Blocks inside toggle child containers should not receive margin-left indentation.
+    // List items render their own nesting indentation on their inner
+    // [role="listitem"] element (so the marker glyph aligns with the indent),
+    // derived from their STRUCTURAL depth. Applying the generic parentId-depth
+    // margin to the holder too would double the indent. Keep the holder flush
+    // and still expose the structural depth via data-blok-depth.
+    if (block.name === 'list') {
+      holder.style.marginLeft = '';
+      holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
+
+      return;
+    }
+
+    // Blocks inside toggle child containers should not receive parentId-depth
+    // margin (the container indents them).
     if (holder.closest('[data-blok-toggle-children]')) {
       holder.style.marginLeft = '';
       holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
@@ -449,7 +487,7 @@ export class BlockHierarchy {
     // Depth-based margin would push the column holders off their even split and
     // indent the column content. Keep them flush.
     //
-    // The DOM check (`closest`) misses blocks indented BEFORE their holder is
+    // The DOM check (`closest`) misses blocks reparented BEFORE their holder is
     // mounted into the columns container — e.g. a toolbox-seeded paragraph,
     // whose indentation runs during insertInsideParent, before the Column tool
     // appends it. The column ancestry is always in the block tree, so consult
@@ -466,9 +504,8 @@ export class BlockHierarchy {
     }
 
     const depth = this.getBlockDepth(block);
-    const indentationPx = depth * 24; // 24px per level
 
-    holder.style.marginLeft = indentationPx > 0 ? `${indentationPx}px` : '';
+    holder.style.marginLeft = depth > 0 ? `${depth * 24}px` : ''; // 24px per parentId level
     holder.setAttribute('data-blok-depth', depth.toString());
   }
 }

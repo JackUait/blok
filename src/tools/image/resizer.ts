@@ -41,13 +41,26 @@ export function clampPercent(value: number, minPercent: number = MIN_WIDTH_PERCE
   return value;
 }
 
+export interface WidthResult {
+  /** The clamped width as a percent of the container. */
+  percent: number;
+  /**
+   * True when the drag wanted to shrink past the lower floor and was pinned
+   * there — used to surface a "can't go smaller" cue to the user.
+   */
+  clampedToMin: boolean;
+}
+
 /**
  * Pointer follows the dragged edge; width grows around the alignment anchor.
  * Center (frac 0.5) → both edges move → width delta = 2× pointer delta.
  * Edge-anchored (frac 0 or 1) → single side grows → width delta = 1× pointer delta.
+ *
+ * Returns the clamped percent plus whether it hit the lower floor, so callers
+ * can animate a resistance cue when the player refuses to shrink further.
  */
-export function computeWidthPercent(input: ComputeWidthInput): number {
-  if (input.containerWidth <= 0) return clampPercent(0);
+export function computeWidthResult(input: ComputeWidthInput): WidthResult {
+  if (input.containerWidth <= 0) return { percent: clampPercent(0), clampedToMin: true };
   const frac = input.alignFrac ?? 0;
   const denom = input.edge === 'right' ? 1 - frac : frac;
   const multiplier = denom === 0 ? 1 : 1 / denom;
@@ -57,8 +70,22 @@ export function computeWidthPercent(input: ComputeWidthInput): number {
   const minPercent = input.minWidthPx !== undefined
     ? Math.round((input.minWidthPx / input.containerWidth) * 100)
     : MIN_WIDTH_PERCENT;
-  return clampPercent(Math.round((nextWidth / input.containerWidth) * 100), minPercent);
+  const floor = Math.min(Math.max(minPercent, MIN_WIDTH_PERCENT), MAX_WIDTH_PERCENT);
+  const raw = Math.round((nextWidth / input.containerWidth) * 100);
+  return { percent: clampPercent(raw, minPercent), clampedToMin: raw < floor };
 }
+
+export function computeWidthPercent(input: ComputeWidthInput): number {
+  return computeWidthResult(input).percent;
+}
+
+/**
+ * Marker set on the figure while a drag is pinned at the lower floor. Shared
+ * resize-cue CSS keys off it to recoil the player/image/embed and neutralise
+ * the dragged handle, so every resizable tool gets the "can't shrink further"
+ * feedback for free.
+ */
+export const RESIZE_BLOCKED_ATTR = 'data-resize-blocked';
 
 export interface AttachResizeHandleOptions {
   handle: HTMLElement;
@@ -103,7 +130,7 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
 
   const onMove = (event: PointerEvent): void => {
     if (!state.active) return;
-    const next = computeWidthPercent({
+    const result = computeWidthResult({
       edge: opts.edge,
       containerWidth: state.containerWidth,
       startWidth: state.startWidth,
@@ -112,13 +139,19 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
       alignFrac,
       minWidthPx: opts.minWidthPx,
     });
-    state.lastPercent = next;
-    opts.onPreview(next);
+    state.lastPercent = result.percent;
+    if (result.clampedToMin) {
+      opts.figure.setAttribute(RESIZE_BLOCKED_ATTR, 'true');
+    } else {
+      opts.figure.removeAttribute(RESIZE_BLOCKED_ATTR);
+    }
+    opts.onPreview(result.percent);
   };
 
   const onUp = (event: PointerEvent): void => {
     if (!state.active) return;
     state.active = false;
+    opts.figure.removeAttribute(RESIZE_BLOCKED_ATTR);
     opts.handle.releasePointerCapture(event.pointerId);
     if (state.lastPercent !== undefined) opts.onCommit(state.lastPercent);
   };

@@ -4,7 +4,19 @@ import type { LineGroup, LineRect } from './types';
  * Box-shadow calculations for fake background functionality.
  */
 export class FakeBackgroundShadows {
-  private static readonly BG_COLOR = 'rgba(0, 0, 0, 0.08)';
+  /**
+   * Highlight colour for the fake background — the "selection is still here"
+   * indicator shown while focus is in a Link/Equation menu input.
+   *
+   * MUST be the SAME token the native text selection uses (`--blok-selection-
+   * inline`, applied to `::selection` in the scoped preflight) so the highlight
+   * is EXACTLY the colour the user already sees when they select text — opening
+   * a menu must not change the highlight colour. Sharing one token also keeps it
+   * visible and theme-aware (incl. dark mode) automatically. The literal
+   * fallback keeps it visible if the token ever fails to resolve. Do NOT hardcode
+   * a colour here, and do NOT let it drift from the `::selection` colour.
+   */
+  private static readonly BG_COLOR = 'var(--blok-selection-inline, #d4ecff)';
 
   /**
    * Applies box-shadow to a wrapper to extend the background to fill line-height

@@ -54,9 +54,18 @@ function externalsInSource(source: string): string[] {
     .filter((pkg): pkg is string => pkg !== null)
 }
 
+// The Angular adapter (`dist/angular`) is a self-contained APF sub-package with
+// its OWN package.json declaring `@angular/*` + `@jackuait/blok` as peers. The
+// root-package externals guards reason about the root manifest, so they must not
+// scan into it (otherwise the Angular peers read as undeclared root externals).
+const angularDist = resolve(dist, 'angular')
+
 function collectDistExternals(): Set<string> {
   const externals = new Set<string>()
   for (const file of listJsFiles(dist)) {
+    if (file.startsWith(angularDist)) {
+      continue
+    }
     for (const pkg of externalsInSource(readFileSync(file, 'utf-8'))) {
       externals.add(pkg)
     }
@@ -83,7 +92,7 @@ function specifiersInSource(source: string): string[] {
 /** Resolve a relative specifier from a file to an on-disk module path, or null. */
 function resolveRelativeModule(fromFile: string, spec: string): string | null {
   const base = resolve(dirname(fromFile), spec)
-  for (const candidate of [`${base}.ts`, join(base, 'index.ts'), `${base}.d.ts`, base]) {
+  for (const candidate of [`${base}.ts`, join(base, 'index.ts'), `${base}.d.ts`, join(base, 'index.d.ts'), base]) {
     if (existsSync(candidate)) {
       return candidate
     }
@@ -139,6 +148,51 @@ function danglingRefsInDeclaration(dts: string, publishedRoots: Set<string>): st
         : `${dts} -> ${spec} (resolves into unpublished "${topLevel}/")`
     })
     .filter((entry): entry is string => entry !== null)
+}
+
+/**
+ * Walk the declaration graph reachable from a published entry's `.d.ts`,
+ * following only relative `.d.ts` imports, and collect every relative
+ * specifier that resolves into `src/`.
+ *
+ * A consumer that does a bare `import ... from '@jackuait/blok'` resolves to
+ * `types/index.d.ts`. TypeScript follows that file's imports; `skipLibCheck`
+ * skips other `.d.ts` files, but any reference that resolves to a raw `src/*.ts`
+ * module pulls that source into the consumer's program and type-checks it under
+ * the consumer's compiler flags (e.g. `noUncheckedIndexedAccess`). The bare
+ * entry's declaration closure must therefore be self-contained — no `src/` leak.
+ */
+/** Relative imports of a declaration file, resolved to on-disk module paths. */
+function relativeTargets(file: string): { spec: string; resolved: string }[] {
+  return specifiersInSource(readFileSync(file, 'utf-8'))
+    .filter((spec) => spec.startsWith('.'))
+    .map((spec) => ({ spec, resolved: resolveRelativeModule(file, spec) }))
+    .filter((target): target is { spec: string; resolved: string } => target.resolved !== null)
+}
+
+function srcLeaksReachableFrom(entry: string): string[] {
+  const leaks: string[] = []
+  const visited = new Set<string>()
+  const queue = [entry]
+  while (queue.length > 0) {
+    const file = queue.pop()
+    if (file === undefined || visited.has(file)) {
+      continue
+    }
+    visited.add(file)
+    const targets = relativeTargets(file)
+    leaks.push(
+      ...targets
+        .filter((target) => target.resolved.startsWith(srcDir))
+        .map((target) => `${file.slice(repoRoot.length + 1)} -> ${target.spec}`),
+    )
+    queue.push(
+      ...targets
+        .filter((target) => !target.resolved.startsWith(srcDir) && target.resolved.endsWith('.d.ts'))
+        .map((target) => target.resolved),
+    )
+  }
+  return leaks
 }
 
 function collectTypeSurfaceExternals(): Set<string> {
@@ -324,6 +378,15 @@ describe('published package is self-contained (install footprint)', () => {
     expect(undeclared.filter((pkg) => !transitiveOnly.has(pkg))).toEqual([])
   })
 
+  it('the bare-import type entry is self-contained (drags no raw src into consumers)', () => {
+    // The default `import { Blok } from '@jackuait/blok'` resolves to
+    // types/index.d.ts. Its declaration closure must not re-export from `src/*.ts`,
+    // or consumers with stricter flags (noUncheckedIndexedAccess) inherit type
+    // errors from Blok's raw source they never wrote.
+    const leaks = srcLeaksReachableFrom(resolve(typesDir, 'index.d.ts'))
+    expect(leaks).toEqual([])
+  })
+
   it('no published type declaration references a path outside the published files', () => {
     // Removing `src` from `files` while types/*.d.ts still re-export from `../src`
     // leaves dangling module references that break consumers' type resolution.
@@ -331,5 +394,61 @@ describe('published package is self-contained (install footprint)', () => {
       danglingRefsInDeclaration(dts, publishedRoots),
     )
     expect(dangling).toEqual([])
+  })
+})
+
+describe('Angular adapter package.json wiring', () => {
+  const exportsMap = packageJson.exports as Record<string, Record<string, string>>
+  const typesVersions = (packageJson as unknown as {
+    typesVersions?: Record<string, Record<string, string[]>>
+  }).typesVersions
+
+  it('"./angular" export resolves to the APF FESM bundle', () => {
+    // Angular libraries are ESM-only (no CJS `require` condition); the APF bundle
+    // is partial-Ivy so the consumer's AOT compiler links it.
+    expect(exportsMap['./angular']?.['default']).toBe(
+      './dist/angular/fesm2022/jackuait-blok-angular.mjs',
+    )
+  })
+
+  it('"./angular" export carries its flattened type declarations', () => {
+    expect(exportsMap['./angular']?.['types']).toBe('./dist/angular/index.d.ts')
+  })
+
+  it('typesVersions maps the "angular" subpath for node10 module resolution', () => {
+    expect(typesVersions?.['*']?.['angular']).toEqual(['./dist/angular/index.d.ts'])
+  })
+})
+
+describe('Angular adapter APF output', () => {
+  const angularPkgPath = resolve(angularDist, 'package.json')
+  const fesm = resolve(angularDist, 'fesm2022/jackuait-blok-angular.mjs')
+
+  it('emits the FESM2022 bundle and flattened declarations', () => {
+    expect(existsSync(fesm)).toBe(true)
+    expect(existsSync(resolve(angularDist, 'index.d.ts'))).toBe(true)
+  })
+
+  it('compiles to partial-Ivy (AOT-linkable, not raw decorators)', () => {
+    const code = readFileSync(fesm, 'utf-8')
+    // Partial compilation emits ɵɵngDeclare* calls the consumer's linker resolves.
+    expect(code).toMatch(/ɵɵngDeclareComponent/)
+    expect(code).toMatch(/ɵɵngDeclareDirective/)
+  })
+
+  it('externalizes the Blok core instead of bundling it', () => {
+    const code = readFileSync(fesm, 'utf-8')
+    expect(code).toMatch(/from ['"]@jackuait\/blok['"]/)
+    // The core editor must never be inlined into the adapter bundle.
+    expect(code).not.toMatch(/class BlockManager\b/)
+  })
+
+  it('declares @jackuait/blok as an exact-version peer in its own manifest', () => {
+    const manifest = JSON.parse(readFileSync(angularPkgPath, 'utf-8')) as {
+      version: string
+      peerDependencies?: Record<string, string>
+    }
+    expect(manifest.peerDependencies?.['@jackuait/blok']).toBe(packageJson.version)
+    expect(manifest.peerDependencies?.['@angular/core']).toBeDefined()
   })
 })

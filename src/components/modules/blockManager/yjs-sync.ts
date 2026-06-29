@@ -7,7 +7,7 @@ import type { Map as YMap } from 'yjs';
 
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
-import { moveElementBefore } from '../../utils/html';
+import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent } from '../yjs/types';
 
@@ -79,6 +79,20 @@ export class BlockYjsSync {
    * Flag to prevent multiple move syncs in the same event batch
    */
   private moveSyncScheduled = false;
+
+  /**
+   * Flag to prevent multiple holder-order reconciles in the same event batch
+   */
+  private orderReconcileScheduled = false;
+
+  /**
+   * Whether the current event batch removed a block. Only a removal can promote
+   * a surviving descendant back to root and strand its holder, so the holder
+   * auto-fix runs ONLY for remove-driven batches. Reconstruction batches
+   * (add/batch-add during redo) settle their own DOM across a RAF; reordering
+   * holders mid-rebuild corrupts the layout, so they are never auto-moved here.
+   */
+  private batchHadRemove = false;
 
   /**
    * Blocks store access
@@ -215,33 +229,188 @@ export class BlockYjsSync {
   }
 
   /**
-   * Sync a block from Yjs data after undo/redo
+   * Sync a block from Yjs data after undo/redo (or a remote change).
+   *
+   * Every event type ends by scheduling a holder-order reconcile: any undo,
+   * redo, or remote teardown/rebuild can leave a block's holder at a DOM
+   * position that no longer matches the (authoritative) block array — and
+   * blocksStore.move() can't catch it because it keys on the array index, which
+   * is already correct. The reconcile is the single chokepoint that re-asserts
+   * DOM order against the array, then asserts the invariant in dev/test.
+   *
    * @param event - the block change event from YjsManager
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
     if (event.type === 'update') {
       this.handleYjsUpdate(event.blockId);
-      return;
-    }
-
-    if (event.type === 'move') {
+    } else if (event.type === 'move') {
       this.handleYjsMove();
-      return;
-    }
-
-    if (event.type === 'add') {
+    } else if (event.type === 'add') {
       this.handleYjsAdd(event.blockId);
-      return;
-    }
-
-    if (event.type === 'batch-add') {
+    } else if (event.type === 'batch-add') {
       this.handleYjsBatchAdd(event.blockIds);
+    } else if (event.type === 'remove') {
+      this.handleYjsRemove(event.blockId);
+      this.batchHadRemove = true;
+    }
+
+    this.scheduleHolderReconcile();
+  }
+
+  /**
+   * Schedule a single holder-order reconcile + invariant check for the current
+   * event batch. Debounced via a microtask so a multi-event sync (e.g. a
+   * column_list + its columns being torn down) settles exactly once, after the
+   * block array and parent relationships have stabilised.
+   *
+   * The auto-fix only runs for remove-driven batches (see {@link batchHadRemove})
+   * — the proven, safe case. The invariant check runs for EVERY batch: it never
+   * touches the DOM, so it can't disturb a redo reconstruction, but it WILL trip
+   * a test the instant any sync leaves the holder order diverged from the array.
+   */
+  private scheduleHolderReconcile(): void {
+    if (this.orderReconcileScheduled) {
       return;
     }
 
-    if (event.type === 'remove') {
-      this.handleYjsRemove(event.blockId);
+    this.orderReconcileScheduled = true;
+
+    queueMicrotask(() => {
+      this.orderReconcileScheduled = false;
+      const shouldFix = this.batchHadRemove;
+
+      this.batchHadRemove = false;
+
+      // Run inside an atomic operation so the holder moves don't echo back to
+      // Yjs as fresh local writes (which would pollute the undo/redo stacks).
+      this.withAtomicOperation(() => {
+        if (shouldFix) {
+          this.reconcileHolderOrder();
+        }
+
+        this.assertDomOrderInvariantInDev('yjs-sync reconcile');
+      });
+    });
+  }
+
+  /**
+   * Re-assert that every block's holder sits in document order matching the
+   * block array, scoped to true DOM siblings.
+   *
+   * Blocks are grouped by `parentId` (preserving array order); within each
+   * group the holders must appear in document order. Any holder that drifted
+   * is moved back into place. The `parentElement` guard means ONLY genuine DOM
+   * siblings are ever reordered — a stray holder can never be yanked across a
+   * container boundary here, so the pass is safe for every tool (columns,
+   * toggles, tables, databases) regardless of how each manages its own subtree.
+   *
+   * This repairs the model-vs-DOM divergence left when an undo/redo/remote sync
+   * promotes or relocates a block but leaves its holder at the position it held
+   * in the now-changed structure: the array order is authoritative, the holder
+   * position is not.
+   */
+  private reconcileHolderOrder(): void {
+    for (const siblings of this.groupByParent().values()) {
+      this.reconcileSiblingOrder(siblings);
     }
+  }
+
+  /**
+   * Re-assert document order within a single group of true DOM siblings,
+   * moving any holder that drifted back after its array-order predecessor.
+   */
+  private reconcileSiblingOrder(siblings: Block[]): void {
+    siblings.slice(1).forEach((block, index) => {
+      const prevHolder = siblings[index].holder;
+      const currHolder = block.holder;
+
+      if (prevHolder.parentElement === null || currHolder.parentElement !== prevHolder.parentElement) {
+        return;
+      }
+
+      if ((prevHolder.compareDocumentPosition(currHolder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
+        moveElementAfter(currHolder, prevHolder);
+      }
+    });
+  }
+
+  /**
+   * Dev/test tripwire: throw if any block's holder is out of document order
+   * relative to its array-order sibling. This is the DOM-order analogue of
+   * assertHierarchyInvariantInDev — it catches a model-vs-DOM divergence at the
+   * point of introduction (a failing test) instead of as a silent visual bug
+   * the user only sees after an undo. No-op outside test/development.
+   *
+   * @param context - label of the sync that just ran (for error messages)
+   */
+  private assertDomOrderInvariantInDev(context: string): void {
+    const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+
+    if (env !== 'test' && env !== 'development') {
+      return;
+    }
+
+    const violations: string[] = [];
+
+    for (const siblings of this.groupByParent().values()) {
+      violations.push(...this.collectDomOrderViolations(siblings));
+    }
+
+    if (violations.length === 0) {
+      return;
+    }
+
+    throw new Error(
+      `Block DOM order diverged from the block array after ${context}:\n${violations.join('\n')}`
+    );
+  }
+
+  /**
+   * Collect DOM-order violations within a single group of array-order siblings.
+   * Only genuine DOM siblings are compared — cross-container placement is a
+   * hierarchy concern covered by assertHierarchyInvariantInDev, not a
+   * sibling-order one.
+   */
+  private collectDomOrderViolations(siblings: Block[]): string[] {
+    return siblings.slice(1).reduce<string[]>((violations, curr, index) => {
+      const prev = siblings[index];
+      const prevHolder = prev.holder;
+      const currHolder = curr.holder;
+
+      if (prevHolder.parentElement === null || prevHolder.parentElement !== currHolder.parentElement) {
+        return violations;
+      }
+
+      if ((prevHolder.compareDocumentPosition(currHolder) & Node.DOCUMENT_POSITION_FOLLOWING) === 0) {
+        violations.push(
+          `  - "${prev.id}" must precede "${curr.id}" in the DOM ` +
+          `(parent: ${curr.parentId ?? 'root'})`
+        );
+      }
+
+      return violations;
+    }, []);
+  }
+
+  /**
+   * Group all blocks by `parentId` (null = root), preserving array order within
+   * each group. Shared by the holder-order reconcile and its invariant check.
+   */
+  private groupByParent(): Map<string | null, Block[]> {
+    const groups = new Map<string | null, Block[]>();
+
+    for (const block of this.repository.blocks) {
+      const key = block.parentId ?? null;
+      const siblings = groups.get(key);
+
+      if (siblings === undefined) {
+        groups.set(key, [block]);
+      } else {
+        siblings.push(block);
+      }
+    }
+
+    return groups;
   }
 
   /**

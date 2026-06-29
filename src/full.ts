@@ -21,9 +21,15 @@ import { LinkInlineTool as Link } from './components/inline-tools/inline-tool-li
 import { MarkerInlineTool as Marker } from './components/inline-tools/inline-tool-marker';
 import { UnderlineInlineTool as Underline } from './components/inline-tools/inline-tool-underline';
 import { StrikethroughInlineTool as Strikethrough } from './components/inline-tools/inline-tool-strikethrough';
+import { CodeInlineTool as InlineCode } from './components/inline-tools/inline-tool-code';
+import { EquationInlineTool as Equation } from './components/inline-tools/inline-tool-equation';
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
+import { Quote } from './tools/quote';
+import { CalloutTool as Callout } from './tools/callout';
+import { CodeTool as Code } from './tools/code';
+import { ToggleItem as Toggle } from './tools/toggle';
 
 export { Blok, version, DATA_ATTR } from './blok';
 
@@ -39,6 +45,8 @@ export {
   Marker,
   Underline,
   Strikethrough,
+  InlineCode,
+  Equation,
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
@@ -70,10 +78,16 @@ export const defaultTools = {
  */
 export const allTools = {
   ...defaultTools,
+  quote: { class: Quote, inlineToolbar: true },
+  callout: { class: Callout, inlineToolbar: true },
+  code: { class: Code, inlineToolbar: false },
+  toggle: { class: Toggle, inlineToolbar: true },
   bold: { class: Bold },
   italic: { class: Italic },
   marker: { class: Marker },
   underline: { class: Underline },
   strikethrough: { class: Strikethrough },
+  inlineCode: { class: InlineCode },
+  equation: { class: Equation },
   link: { class: Link },
 } as const;

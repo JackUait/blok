@@ -115,6 +115,7 @@ vi.mock('@/types/utils/popover/popover-event', () => ({
 
 vi.mock('../../../../../src/components/icons', () => ({
   IconColumns: '<svg data-blok-icon="columns" />',
+  IconCopy: '<svg data-blok-icon="copy" />',
   IconReplace: '<svg data-blok-icon="replace" />',
   IconTrash: '<svg data-blok-icon="trash" />',
 }));
@@ -209,7 +210,7 @@ type BlokMock = {
       END: string;
       DEFAULT: string;
     };
-    setToBlock: Mock<(block: Block, position: string) => void>;
+    setToBlock: Mock<(block: Block, position: string, offset?: number) => void>;
   };
   Toolbar: {
     close: Mock<() => void>;
@@ -485,6 +486,96 @@ describe('BlockSettings', () => {
     const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
 
     expect((convertToItem as { children?: { width?: string } } | undefined)?.children?.width).toBeUndefined();
+  });
+
+  it('converts a block that has children without a blocking confirm() prompt', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    (block as unknown as { contentIds: string[] }).contentIds = ['child-1'];
+    (block as unknown as { data: Promise<unknown> }).data = Promise.resolve({});
+    blokMock.BlockManager.currentBlock = block;
+
+    getConvertibleToolsForBlockMock.mockResolvedValue([{
+      name: 'header',
+      toolbox: [{ icon: '<svg/>', title: 'Heading', name: 'heading' }],
+    }]);
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const items = (popover?.params as { items: PopoverItemParams[] })?.items;
+    const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
+    const childItems = (convertToItem as { children?: { items?: PopoverItemParams[] } } | undefined)?.children?.items ?? [];
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    await (childItems[0] as unknown as { onActivate: () => Promise<void> }).onActivate();
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(blokMock.BlockManager.convert).toHaveBeenCalledWith(block, 'header', undefined);
+
+    confirmSpy.mockRestore();
+  });
+
+  it('preserves the caret offset when turning a block into another type (Notion parity)', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    const convertedBlock = createBlock();
+
+    blokMock.BlockManager.convert.mockResolvedValue(convertedBlock);
+
+    /**
+     * Place a real, collapsed caret in the middle of the block input. Turning
+     * the block into another type must keep the caret at this offset rather
+     * than forcing it to the end of the new block.
+     */
+    const editable = document.createElement('div');
+
+    editable.setAttribute('contenteditable', 'true');
+    editable.textContent = 'Hello world';
+    document.body.appendChild(editable);
+
+    const range = document.createRange();
+
+    range.setStart(editable.firstChild as Node, 5);
+    range.collapse(true);
+
+    const selection = window.getSelection();
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    getConvertibleToolsForBlockMock.mockResolvedValue([{
+      name: 'header',
+      toolbox: [{ icon: '<svg/>', title: 'Heading', name: 'heading' }],
+    }]);
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const items = (popover?.params as { items: PopoverItemParams[] })?.items;
+    const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
+    const childItems = (convertToItem as { children?: { items?: PopoverItemParams[] } } | undefined)?.children?.items ?? [];
+
+    await (childItems[0] as unknown as { onActivate: () => Promise<void> }).onActivate();
+
+    expect(blokMock.Caret.setToBlock).toHaveBeenCalledWith(convertedBlock, 'default', 5);
+
+    editable.remove();
   });
 
   it('falls back to current block and instantiates mobile popover without focusing flipper', async () => {

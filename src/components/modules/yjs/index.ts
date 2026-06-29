@@ -232,6 +232,28 @@ export class YjsManager extends Module {
     return this.documentStore.getBlockById(id);
   }
 
+  /**
+   * Get a block's `data` as a plain object by id.
+   *
+   * Used when an operation must create a sibling that inherits the source
+   * block's full tool data (e.g. a header's `level`) rather than only its
+   * text — writing a partial `data` leaves keys missing in Yjs, which a later
+   * didMutated→syncBlockDataToYjs then fills in as a SEPARATE transaction,
+   * producing a spurious extra undo entry.
+   *
+   * @param id - Block id
+   * @returns Plain object of the block's data, or undefined if not found
+   */
+  public getBlockDataObject(id: string): Record<string, unknown> | undefined {
+    const yblock = this.documentStore.getBlockById(id);
+
+    if (yblock === undefined) {
+      return undefined;
+    }
+
+    return this.serializer.yMapToObject(yblock.get('data') as Y.Map<unknown>);
+  }
+
   // ========== Public API: Undo/Redo ==========
 
   /**
@@ -282,9 +304,13 @@ export class YjsManager extends Module {
   /**
    * Mark the caret position before a change starts.
    * Call this before any operation that might be undoable.
+   * @param force - When true, re-capture even if a pending snapshot exists.
+   *   Pass this from keyboard gesture handlers so a stale pending left by a
+   *   prior operation cannot become this gesture's caret-before. See
+   *   {@link UndoHistory.markCaretBeforeChange}.
    */
-  public markCaretBeforeChange(): void {
-    this.undoHistory.markCaretBeforeChange();
+  public markCaretBeforeChange(force = false): void {
+    this.undoHistory.markCaretBeforeChange(force);
   }
 
   /**

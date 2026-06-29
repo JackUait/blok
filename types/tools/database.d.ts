@@ -1,4 +1,4 @@
-import { BlockToolData } from './block-tool';
+import { BlockToolData } from './block-tool-data';
 import { OutputData } from '../data-formats/output-data';
 
 // ─── Property types ───

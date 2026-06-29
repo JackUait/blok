@@ -514,7 +514,7 @@ test.describe('nesting any block type via toolbox inside toggle', () => {
 
     expect(savedData).toBeDefined();
 
-    const toggleHeadingBlock = savedData?.blocks.find(b => b.type === 'header' && (b.data as Record<string, unknown>)?.isToggleable === true);
+    const toggleHeadingBlock = savedData?.blocks.find(b => b.type === 'header' && (b.data)?.isToggleable === true);
     const listBlock = savedData?.blocks.find(b => b.type === 'list');
     const paragraphBlock = savedData?.blocks.find(b => b.type === 'paragraph');
 

@@ -258,8 +258,8 @@ describe('Editor.js -> Blok migration: realistic multi-block roundtrip', () => {
     expect(quote.type).toBe('quote');
     expect(quote.data).toEqual({ text: 'The quote body text.' });
     // alignment + caption must NOT survive on the quote.
-    expect((quote.data as Record<string, unknown>).alignment).toBeUndefined();
-    expect((quote.data as Record<string, unknown>).caption).toBeUndefined();
+    expect((quote.data).alignment).toBeUndefined();
+    expect((quote.data).caption).toBeUndefined();
 
     // The very next block must be the caption paragraph.
     const captionBlock = migrated[quoteIndex + 1];

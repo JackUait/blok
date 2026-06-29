@@ -6,7 +6,7 @@ import type { OutputBlockData } from '../../../../types/data-formats/output-data
  * Type alias for OutputBlockData with concrete types for the Yjs serializer.
  * Uses Record<string, unknown> for data to avoid the default `any` type.
  */
-export type YjsOutputBlockData = OutputBlockData<string, Record<string, unknown>>;
+export type YjsOutputBlockData = OutputBlockData;
 
 /**
  * Characters that mark potential undo checkpoint positions.

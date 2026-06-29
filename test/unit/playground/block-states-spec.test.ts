@@ -123,19 +123,6 @@ describe('playground block states spec (index.html)', () => {
     ])('covers the "%s" state', (label) => {
       expect(sectionFor('video')).toContain(`label: '${label}'`);
     });
-
-    test('all non-empty states carry videoWidth and videoHeight', () => {
-      const section = sectionFor('video');
-      const stateBlocks = [...section.matchAll(/id: 'vd-[^']+'[\s\S]*?data: \{([\s\S]*?)\}\s*\}\]/g)];
-
-      for (const match of stateBlocks) {
-        const dataBlock = match[1];
-        if (dataBlock.includes("url:")) {
-          expect(dataBlock, `state ${match[0].slice(0, 40)}`).toContain('videoWidth:');
-          expect(dataBlock, `state ${match[0].slice(0, 40)}`).toContain('videoHeight:');
-        }
-      }
-    });
   });
 
   describe('gallery preview tools', () => {

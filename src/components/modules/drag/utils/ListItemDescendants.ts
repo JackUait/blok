@@ -1,11 +1,16 @@
 /**
- * Utility for finding descendant list items of a block
- * List items with greater depth are considered descendants
+ * Utility for finding nesting descendants of a block.
+ *
+ * "Descendants" are the consecutive following blocks nested more deeply than the
+ * dragged block, using the unified flat list-nesting depth ({@link getBlockNestingDepth}):
+ * list items via `data-list-depth`, and any other block via its flat
+ * `data-blok-indent`. This lets a Tab-indented paragraph/header travel with its
+ * visual parent on drag, matching Notion's structural Tab nesting.
  */
 
 import type { Block } from '../../../block';
 
-import { getListItemDepth } from './depthUtils';
+import { getBlockNestingDepth } from './depthUtils';
 
 /**
  * Minimal interface for BlockManager dependency
@@ -28,11 +33,9 @@ export class ListItemDescendants {
    * @returns Array of descendant blocks (empty if block is not a list item or has no descendants)
    */
   getDescendants(block: Block): Block[] {
-    const parentDepth = getListItemDepth(block);
-
-    if (parentDepth === null) {
-      return [];
-    }
+    // A root/un-indented block has effective depth 0: it still hosts any
+    // following blocks indented under it (depth > 0).
+    const parentDepth = getBlockNestingDepth(block) ?? 0;
 
     const blockIndex = this.blockManager.getBlockIndex(block);
 
@@ -57,11 +60,12 @@ export class ListItemDescendants {
       return acc;
     }
 
-    const nextDepth = getListItemDepth(nextBlock);
+    // A root/un-indented follower has effective depth 0.
+    const nextDepth = getBlockNestingDepth(nextBlock) ?? 0;
 
-    // Stop if not a list item or depth <= parent depth (sibling or shallower level)
-    // A sibling is an item at the same depth - it's not a child of the dragged item
-    if (nextDepth === null || nextDepth <= parentDepth) {
+    // Stop at a sibling (same depth) or shallower block — only strictly deeper
+    // blocks are nested under the dragged block.
+    if (nextDepth <= parentDepth) {
       return acc;
     }
 

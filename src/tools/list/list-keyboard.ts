@@ -7,7 +7,7 @@
 import type { API } from '../../../types';
 
 import { setCaretToBlockContent } from './caret-manager';
-import { INDENT_PER_LEVEL, TOOL_NAME } from './constants';
+import { TOOL_NAME } from './constants';
 import {
   splitContentAtCursor,
   isAtStart,
@@ -99,6 +99,28 @@ export const handleEnter = async (
 };
 
 /**
+ * The id of this list item's structural parent when that parent is itself a
+ * list item — i.e. the item is nested via parentId/contentIds (keyboard Tab).
+ * Returns null when the item is not structurally nested under another list.
+ */
+const getStructuralListParentId = (api: API, blockId: string | undefined): string | null => {
+  if (blockId === undefined) {
+    return null;
+  }
+
+  const block = api.blocks.getById(blockId);
+  const parentId = block?.parentId ?? null;
+
+  if (parentId === null) {
+    return null;
+  }
+
+  const parent = api.blocks.getById(parentId);
+
+  return parent !== null && parent.name === TOOL_NAME ? parentId : null;
+};
+
+/**
  * Exit list or outdent when pressing Enter on empty item
  */
 const exitListOrOutdent = async (
@@ -106,9 +128,28 @@ const exitListOrOutdent = async (
   depthValidator?: ListDepthValidator
 ): Promise<void> => {
   const { api, blockId, getDepth } = context;
+
+  // Structurally nested (keyboard Tab) items outdent one level by reparenting to
+  // the grandparent — keeping nesting in the block tree rather than a flat depth.
+  const structuralParentId = getStructuralListParentId(api, blockId);
+
+  if (structuralParentId !== null && blockId !== undefined) {
+    const grandparentId = api.blocks.getById(structuralParentId)?.parentId ?? null;
+
+    api.blocks.setBlockParent(blockId, grandparentId);
+
+    const outdentedBlock = api.blocks.getById(blockId);
+
+    if (outdentedBlock !== null) {
+      setCaretToBlockContent(api, outdentedBlock);
+    }
+
+    return;
+  }
+
   const currentDepth = getDepth();
 
-  // If nested, outdent instead of exiting
+  // Drag-nested (flat depth) items still outdent via the flat carrier.
   if (currentDepth > 0) {
     await handleOutdent(context, depthValidator);
     return;
@@ -127,7 +168,8 @@ const exitListOrOutdent = async (
  */
 export const handleBackspace = async(
   context: KeyboardContext,
-  event: KeyboardEvent
+  event: KeyboardEvent,
+  depthValidator?: ListDepthValidator
 ): Promise<void> => {
   const { api, blockId, data, element, getContentElement, getDepth, syncContentFromDOM } = context;
 
@@ -172,54 +214,38 @@ export const handleBackspace = async(
     return;
   }
 
-  // Convert to paragraph using convert API for proper undo/redo support
-  const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
+  // Notion: Backspace at the START of a NESTED list item outdents it one level
+  // instead of converting it to a paragraph — mirroring the Enter-on-empty path.
+  // Only a top-level item converts to a paragraph.
+  const structuralParentId = getStructuralListParentId(api, blockId);
 
-  // Apply indentation to the new paragraph if the list item was nested
-  if (currentDepth > 0) {
-    requestAnimationFrame(() => {
-      const holder = newBlock.holder;
-      if (holder) {
-        holder.style.marginLeft = `${currentDepth * INDENT_PER_LEVEL}px`;
-        holder.setAttribute('data-blok-depth', String(currentDepth));
-      }
-    });
+  if (structuralParentId !== null) {
+    // Structurally nested (keyboard Tab): reparent to the grandparent, keeping
+    // nesting in the block tree rather than a flat depth.
+    const grandparentId = api.blocks.getById(structuralParentId)?.parentId ?? null;
+
+    api.blocks.setBlockParent(blockId, grandparentId);
+
+    const outdentedBlock = api.blocks.getById(blockId);
+
+    if (outdentedBlock !== null) {
+      setCaretToBlockContent(api, outdentedBlock, 'start');
+    }
+
+    return;
   }
 
+  // Drag-nested (flat depth) items still outdent via the flat carrier.
+  if (currentDepth > 0) {
+    await handleOutdent(context, depthValidator);
+
+    return;
+  }
+
+  // At top level, convert to paragraph using convert API for proper undo/redo support.
+  const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
+
   setCaretToBlockContent(api, newBlock, 'start');
-};
-
-/**
- * Handle Tab key - indent the list item
- */
-export const handleIndent = async(
-  context: KeyboardContext,
-  depthValidator: ListDepthValidator
-): Promise<void> => {
-  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
-
-  const currentBlockIndex = api.blocks.getCurrentBlockIndex();
-  const currentDepth = getDepth();
-  const maxAllowedDepth = depthValidator.getMaxAllowedDepth(currentBlockIndex);
-
-  // Can only indent if current depth is below the maximum
-  if (currentDepth >= maxAllowedDepth) return;
-
-  // Sync current content before updating
-  syncContentFromDOM();
-
-  // Increase depth by 1
-  const newDepth = currentDepth + 1;
-  data.depth = newDepth;
-
-  // Update the block data and re-render
-  const updatedBlock = await api.blocks.update(blockId || '', {
-    ...data,
-    depth: newDepth,
-  });
-
-  // Restore focus to the updated block after DOM has been updated
-  setCaretToBlockContent(api, updatedBlock);
 };
 
 /**
@@ -286,6 +312,48 @@ export const handleOutdent = async(
   if (depthValidator) {
     await cascadeDepthReduction(api, blockId, currentDepth, depthValidator);
   }
+
+  // Restore focus to the updated block after DOM has been updated
+  setCaretToBlockContent(api, updatedBlock);
+};
+
+/**
+ * Handle Tab — indent a FLAT-carrier list item one level via `data.depth`.
+ * Symmetric to {@link handleOutdent}. Used for authored / drag-nested items that
+ * have no structural list parent for the shared module handler to nest under:
+ * the first item (no preceding sibling) would otherwise no-op, and others would
+ * derive the wrong depth from the parentId chain. Caps at the depth-validator's
+ * max-allowed depth (first-in-group = 1, otherwise previous item depth + 1).
+ * @param context - keyboard context for the current list item
+ * @param depthValidator - validator providing the per-index max-allowed depth
+ */
+export const handleIndent = async(
+  context: KeyboardContext,
+  depthValidator: ListDepthValidator
+): Promise<void> => {
+  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
+
+  const currentBlockIndex = blockId !== undefined
+    ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
+    : api.blocks.getCurrentBlockIndex();
+  const currentDepth = getDepth();
+  const maxAllowedDepth = depthValidator.getMaxAllowedDepth(currentBlockIndex);
+
+  // Already at the deepest allowed level — nothing to do.
+  if (currentDepth >= maxAllowedDepth) {
+    return;
+  }
+
+  // Sync current content before updating
+  syncContentFromDOM();
+
+  const newDepth = currentDepth + 1;
+  data.depth = newDepth;
+
+  const updatedBlock = await api.blocks.update(blockId || '', {
+    ...data,
+    depth: newDepth,
+  });
 
   // Restore focus to the updated block after DOM has been updated
   setCaretToBlockContent(api, updatedBlock);

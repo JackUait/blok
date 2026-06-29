@@ -62,9 +62,10 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    // Notion-style menu: on a URL paste, offer the view choice instead of
-    // auto-claiming. Opt-in (linkPaste.menu); requires a collapsed caret.
-    if (this.isLinkMenuEnabled() && isHttpUrl(data) && !this.hasSelection()) {
+    // Notion-style menu: a URL paste always offers the view choice (Plain /
+    // Bookmark / Embed) instead of auto-claiming. Requires a collapsed caret;
+    // a selection keeps the native "hyperlink the selection" behavior.
+    if (isHttpUrl(data) && !this.hasSelection()) {
       this.openLinkPasteMenu(data);
 
       return true;
@@ -97,10 +98,6 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     const insertedBlock = await BlockManager.paste(match.tool, match.event, canReplace);
 
     Caret.setToBlock(insertedBlock, Caret.positions.END);
-  }
-
-  private isLinkMenuEnabled(): boolean {
-    return this.config?.linkPaste?.menu === true;
   }
 
   private hasSelection(): boolean {

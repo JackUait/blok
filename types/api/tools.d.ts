@@ -1,5 +1,5 @@
 import { BlockToolAdapter } from '../tools/adapters/block-tool-adapter';
-import { ToolConstructable, ToolSettings } from '../tools';
+import { ToolConfig, ToolConstructable, ToolSettings } from '../tools';
 import { ThemeMode } from './theme';
 
 /**
@@ -26,4 +26,19 @@ export interface Tools {
    * Useful for creating nested Blok editors with the same tools.
    */
   getToolsConfig(): ToolsConfig;
+
+  /**
+   * Shallow-merges new configuration into an already-installed tool, without
+   * recreating the editor. Useful for swapping config at runtime — e.g. pointing
+   * an image tool at a new uploader function.
+   *
+   * The merge targets the tool's `config` object (the part passed to the tool
+   * constructor). Blocks created after the call (and the next operation on the
+   * live tool) pick up the new config; blocks already mounted keep their current
+   * config until they are re-rendered.
+   * @param name - registered tool name
+   * @param config - partial tool config to merge in
+   * @throws if `name` is not a registered tool
+   */
+  update(name: string, config: Partial<ToolConfig>): void;
 }

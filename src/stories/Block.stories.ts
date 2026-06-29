@@ -156,11 +156,15 @@ export const SelectedByShortcut: Story = {
       const contentEditable = block?.querySelector(CONTENTEDITABLE_SELECTOR);
 
       if (contentEditable) {
+        // 3-stage Cmd+A on a non-empty block: text, then this block, then all blocks.
         // First select-all selects text within the block
         triggerSelectAll(contentEditable);
         // Short delay to let the first selection happen
         await new Promise((resolve) => setTimeout(resolve, 100));
-        // Second select-all selects all blocks (cross-block selection)
+        // Second select-all selects just this block (Notion's intermediate stage)
+        triggerSelectAll(contentEditable);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Third select-all selects all blocks (cross-block selection)
         triggerSelectAll(contentEditable);
       }
 
@@ -217,11 +221,15 @@ export const MultipleSelected: Story = {
       const contentEditable = firstBlock?.querySelector(CONTENTEDITABLE_SELECTOR);
 
       if (contentEditable) {
+        // 3-stage Cmd+A on a non-empty block: text, then this block, then all blocks.
         // First select-all selects text within the block
         triggerSelectAll(contentEditable);
         // Short delay to let the first selection happen
         await new Promise((resolve) => setTimeout(resolve, 100));
-        // Second select-all selects all blocks (cross-block selection)
+        // Second select-all selects just this block (Notion's intermediate stage)
+        triggerSelectAll(contentEditable);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Third select-all selects all blocks (cross-block selection)
         triggerSelectAll(contentEditable);
       }
 

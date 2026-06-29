@@ -307,6 +307,33 @@ describe('MarkdownShortcuts', () => {
       );
     });
 
+    it('converts "+ " to unordered list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = '+ ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+      const event = createInputEvent();
+
+      const result = markdownShortcuts.handleInput(event);
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({
+          style: 'unordered',
+        })
+      );
+    });
+
     it('converts "* " to unordered list', () => {
       const mockBlock = createBlock();
       if (mockBlock.currentInput) {
@@ -402,6 +429,274 @@ describe('MarkdownShortcuts', () => {
           start: 5,
         })
       );
+    });
+
+    it('converts "a. " to ordered list (Notion alphabetic alias)', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'a. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'ordered' })
+      );
+    });
+
+    it('converts "i. " to ordered list (Notion roman alias)', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'i. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'ordered' })
+      );
+    });
+
+    it('starts the "i. " roman alias at 1, not roman-numeral value 9', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'i. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      // start 1 is the default, so it is omitted entirely (never 9).
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.not.objectContaining({ start: expect.anything() })
+      );
+    });
+
+    it('starts the "a. " alpha alias at 1', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'a. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.not.objectContaining({ start: expect.anything() })
+      );
+    });
+
+    it('does NOT convert "q. " (a letter other than a/i) into a list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'q. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('does NOT convert "z) " (a letter other than a/i) into a list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'z) ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('does NOT convert a multi-letter word like "etc. " into a list', () => {
+      const mockBlock = createBlock();
+      if (mockBlock.currentInput) {
+        mockBlock.currentInput.textContent = 'etc. ';
+      }
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('inline markdown auto-format', () => {
+    const setupInline = (rawText: string, closingChar: string): {
+      input: HTMLElement;
+      result: boolean;
+      dispatchChange: ReturnType<typeof vi.fn>;
+    } => {
+      const input = document.createElement('div');
+      input.contentEditable = 'true';
+      document.body.appendChild(input);
+      const textNode = document.createTextNode(rawText);
+      input.appendChild(textNode);
+
+      const range = document.createRange();
+      range.setStart(textNode, rawText.length);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      const dispatchChange = vi.fn();
+      const mockBlock = createBlock({
+        currentInput: input,
+        firstInput: input,
+        lastInput: input,
+        inputs: [input],
+        dispatchChange,
+      } as unknown as Partial<Block>);
+      const blok = createBlokModules({
+        BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent({ data: closingChar }));
+
+      return { input, result, dispatchChange };
+    };
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('wraps **bold** in <strong> when the closing ** is typed', () => {
+      const { input, result, dispatchChange } = setupInline('**bold**', '*');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('strong')?.textContent).toBe('bold');
+      expect(input.textContent).toBe('bold');
+      expect(dispatchChange).toHaveBeenCalled();
+    });
+
+    it('wraps *italic* in <i>', () => {
+      const { input, result } = setupInline('*italic*', '*');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('i')?.textContent).toBe('italic');
+    });
+
+    it('wraps `code` in <code> literally', () => {
+      const { input, result } = setupInline('`x = 1`', '`');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('code')?.textContent).toBe('x = 1');
+    });
+
+    it('wraps ~strike~ in <s>', () => {
+      const { input, result } = setupInline('~gone~', '~');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('s')?.textContent).toBe('gone');
+    });
+
+    it('preserves leading text before the formatted span', () => {
+      const { input, result } = setupInline('say **hi**', '*');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('strong')?.textContent).toBe('hi');
+      expect(input.textContent).toBe('say hi');
+    });
+
+    it('does NOT format when there is no opening marker', () => {
+      const { input, result } = setupInline('just text*', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('strong')).toBeNull();
+      expect(input.querySelector('i')).toBeNull();
+    });
+
+    it('does NOT prematurely italicize while bold is still being typed (**bold*)', () => {
+      const { input, result } = setupInline('**bold*', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('i')).toBeNull();
+    });
+
+    it('does NOT format a double span padded with inner spaces (** bold **)', () => {
+      const { input, result } = setupInline('** bold **', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('strong')).toBeNull();
+      expect(input.textContent).toBe('** bold **');
+    });
+
+    it('does NOT format a single span padded with inner spaces (* x *)', () => {
+      const { input, result } = setupInline('* x *', '*');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('i')).toBeNull();
+      expect(input.textContent).toBe('* x *');
     });
   });
 

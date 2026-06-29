@@ -24,15 +24,29 @@ describe('API.config', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('exposes the linkPaste config slice', () => {
-    const api = makeApi({ linkPaste: { menu: true, allowGenericEmbed: true } });
+    const api = makeApi({ linkPaste: { allowGenericEmbed: true } });
 
     expect(api.methods.config.linkPaste?.allowGenericEmbed).toBe(true);
-    expect(api.methods.config.linkPaste?.menu).toBe(true);
   });
 
   it('returns undefined linkPaste when unset', () => {
     const api = makeApi({});
 
     expect(api.methods.config.linkPaste).toBeUndefined();
+  });
+
+  it('exposes the link config slice', () => {
+    const transformHref = (href: string): string => href;
+    const api = makeApi({ link: { target: '_self', rel: 'noopener', transformHref } });
+
+    expect(api.methods.config.link?.target).toBe('_self');
+    expect(api.methods.config.link?.rel).toBe('noopener');
+    expect(api.methods.config.link?.transformHref).toBe(transformHref);
+  });
+
+  it('returns undefined link when unset', () => {
+    const api = makeApi({});
+
+    expect(api.methods.config.link).toBeUndefined();
   });
 });

@@ -62,6 +62,14 @@ export const IconMarker = `
 </svg>
 `;
 
+// Equation/inline math icon (radical/square-root glyph)
+export const IconEquation = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3.25 10.5 5 14l2.75-8h8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.25 9.75 14.5 13M14.5 9.75 11.25 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
 // Underline icon
 export const IconUnderline = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -105,6 +113,13 @@ export const IconMenu = `
 export const IconPlus = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M4.5 10h11M10 4.5v11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Minus/Remove icon
+export const IconMinus = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4.5 10h11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -788,6 +803,22 @@ export const IconPlayerPause = `
 </svg>
 `;
 
+// Media rewind — two filled triangles pointing left
+export const IconPlayerBackward = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M17 5.5v9a.6.6 0 0 1-.92.5l-6.3-4.5a.6.6 0 0 1 0-1L16.08 5a.6.6 0 0 1 .92.5Z" fill="currentColor"/>
+  <path d="M10 5.5v9a.6.6 0 0 1-.92.5l-6.3-4.5a.6.6 0 0 1 0-1L9.08 5a.6.6 0 0 1 .92.5Z" fill="currentColor"/>
+</svg>
+`;
+
+// Media fast-forward — two filled triangles
+export const IconPlayerForward = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 5.5v9a.6.6 0 0 0 .92.5l6.3-4.5a.6.6 0 0 0 0-1L3.92 5a.6.6 0 0 0-.92.5Z" fill="currentColor"/>
+  <path d="M10 5.5v9a.6.6 0 0 0 .92.5l6.3-4.5a.6.6 0 0 0 0-1L10.92 5a.6.6 0 0 0-.92.5Z" fill="currentColor"/>
+</svg>
+`;
+
 // Volume on — speaker + sound waves
 export const IconPlayerVolume = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -801,6 +832,50 @@ export const IconPlayerVolumeMute = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M4 7.5h2.5L10 4.5v11L6.5 12.5H4a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5Z" fill="currentColor"/>
   <path d="m13 8 4 4M17 8l-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Player settings — sliders / tune (three adjustable tracks with knobs)
+export const IconPlayerSettings = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M3 6h7.5M15.5 6H17M3 10h2.5M10.5 10H17M3 14h5.5M13.5 14H17" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="13" cy="6" r="2" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="8" cy="10" r="2" stroke="currentColor" stroke-width="1.25"/>
+  <circle cx="11" cy="14" r="2" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+// Player picture-in-picture — frame with an inset mini frame
+export const IconPlayerPip = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="3" y="4.5" width="14" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+  <rect x="10" y="9.5" width="5.5" height="4.5" rx="1" fill="currentColor"/>
+</svg>
+`;
+
+// Player theater — wide cinema screen
+export const IconPlayerTheater = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="2.5" y="6" width="15" height="8" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
+
+// Player speed — tachometer gauge (arc + needle + hub) for the playback-speed row
+export const IconPlayerSpeed = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5.4 15.4a6.5 6.5 0 1 1 9.2 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 10.8 13.1 7.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <circle cx="10" cy="10.8" r="1" fill="currentColor"/>
+</svg>
+`;
+
+// Player loop — repeat glyph (two opposing arrowheads tracing a loop)
+export const IconPlayerLoop = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4 12V9a2.5 2.5 0 0 1 2.5-2.5H14.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.5 4.5 15 6.5l-2.5 2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16 8v3a2.5 2.5 0 0 1-2.5 2.5H5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7.5 15.5 5 13.5l2.5-2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

@@ -92,11 +92,37 @@ const applyResizeDelta = (
 /** Per-press keyboard resize step in px. */
 const KEYBOARD_RESIZE_STEP = 16;
 
+/**
+ * Flush the live flex-grow of the just-resized column holders into Yjs.
+ *
+ * The resizer writes flex-grow directly on each column's `block.holder`, which
+ * sits OUTSIDE the column tool's observed subtree — so the per-block
+ * MutationObserver never fires and `Column.save()` is never run. Dispatch a
+ * change on each affected column block so its `save()` runs, reads the new
+ * flex-grow back as `widthRatio`, and writes it to Yjs. Without this the resize
+ * is invisible to undo/redo and to remote collaborators (a full
+ * `editor.save()` still captures the live width, which is why reload is
+ * unaffected).
+ */
+const persistColumnWidths = (
+  api: API,
+  columnListId: string,
+  holders: HTMLElement[]
+): void => {
+  const columns = api.blocks.getChildren(columnListId) ?? [];
+
+  for (const holder of holders) {
+    columns.find(column => column.holder === holder)?.dispatchChange();
+  }
+};
+
 const onResizerKeydown = (
   event: KeyboardEvent,
   resizer: HTMLElement,
   leftHolder: HTMLElement,
-  rightHolder: HTMLElement
+  rightHolder: HTMLElement,
+  api: API,
+  columnListId: string
 ): void => {
   const pairWidth =
     leftHolder.getBoundingClientRect().width + rightHolder.getBoundingClientRect().width;
@@ -116,20 +142,24 @@ const onResizerKeydown = (
 
   event.preventDefault();
   applyResizeDelta(resizer, leftHolder, rightHolder, delta);
+  persistColumnWidths(api, columnListId, [leftHolder, rightHolder]);
 };
 
 /**
  * Drag handler for a single separator: redistribute flex-grow between the two
  * neighbouring column holders as the separator moves. Pointer capture keeps the
  * move/up events flowing even when the cursor leaves the thin handle. The
- * holder's flex-grow is the persisted source of truth (Column.save reads it
- * back), so no api.blocks.update is needed.
+ * holder's flex-grow is the live source of truth (Column.save reads it back),
+ * but it lives outside the column's observed subtree — so on pointer-up the new
+ * widths are flushed to Yjs via `persistColumnWidths` for undo/redo and collab.
  */
 const startColumnResize = (
   event: PointerEvent,
   resizer: HTMLElement,
   leftHolder: HTMLElement,
-  rightHolder: HTMLElement
+  rightHolder: HTMLElement,
+  api: API,
+  columnListId: string
 ): void => {
   if (event.button !== 0) {
     return;
@@ -170,6 +200,7 @@ const startColumnResize = (
     resizer.removeAttribute('data-dragging');
     resizer.removeEventListener('pointermove', onMove);
     resizer.removeEventListener('pointerup', onUp);
+    persistColumnWidths(api, columnListId, [leftEl, rightEl]);
   };
 
   resizer.addEventListener('pointermove', onMove);
@@ -195,7 +226,7 @@ const createColumnResizer = (
   updateResizerAria(resizer, leftHolder, rightHolder);
 
   resizer.addEventListener('pointerdown', event => {
-    startColumnResize(event, resizer, leftHolder, rightHolder);
+    startColumnResize(event, resizer, leftHolder, rightHolder, api, columnListId);
   });
 
   // Double-click equalizes every column in the list, à la Notion.
@@ -204,7 +235,7 @@ const createColumnResizer = (
   });
 
   resizer.addEventListener('keydown', event => {
-    onResizerKeydown(event, resizer, leftHolder, rightHolder);
+    onResizerKeydown(event, resizer, leftHolder, rightHolder, api, columnListId);
   });
 
   return resizer;
@@ -247,9 +278,17 @@ export const buildColumnResizers = (
 /**
  * Re-split a column_list evenly: reset every child column's holder flex-grow
  * to 1. Called only when a column is added, so the row re-balances; resize is
- * the only OTHER place widths change. The holder's flex-grow is the persisted
- * source of truth (Column.save reads it back), so setting it to 1 both resizes
- * live and drops any stored widthRatio on the next save.
+ * the only OTHER place widths change. The holder's flex-grow is the live source
+ * of truth (Column.save reads it back), so setting it to 1 resizes live and a
+ * full editor.save() correctly omits the now-default widthRatio.
+ *
+ * NOTE: this does not actively clear a widthRatio already written to the live
+ * Yjs doc by a prior resize — Column.save() returns {} for the even-split
+ * default, and the per-key data sync never deletes keys absent from save()
+ * output. So a reset that follows a persisted resize leaves the old ratio in
+ * the live doc (visible only to undo/redo and remote peers, never to
+ * save()/reload). Fully clearing it requires the per-key sync to delete omitted
+ * keys; tracked as a known limitation rather than recreating blocks mid-drop.
  */
 export const resetColumnsToEvenWidth = (api: API, columnListId: string): void => {
   for (const column of api.blocks.getChildren(columnListId)) {

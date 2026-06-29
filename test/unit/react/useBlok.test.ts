@@ -13,6 +13,9 @@ function createMockBlokInstance(): {
   readOnly: { set: ReturnType<typeof vi.fn> };
   focus: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
+  theme: { set: ReturnType<typeof vi.fn> };
+  width: { set: ReturnType<typeof vi.fn> };
+  placeholder: { set: ReturnType<typeof vi.fn> };
 } {
   return {
     isReady: Promise.resolve(),
@@ -20,6 +23,9 @@ function createMockBlokInstance(): {
     readOnly: { set: vi.fn().mockResolvedValue(false) },
     focus: vi.fn().mockReturnValue(true),
     save: vi.fn().mockResolvedValue({ time: 0, blocks: [], version: '0' }),
+    theme: { set: vi.fn() },
+    width: { set: vi.fn() },
+    placeholder: { set: vi.fn() },
   };
 }
 
@@ -48,6 +54,9 @@ vi.mock('../../../src/blok', () => {
       public readOnly: { set: ReturnType<typeof vi.fn> };
       public focus: ReturnType<typeof vi.fn>;
       public save: ReturnType<typeof vi.fn>;
+      public theme: { set: ReturnType<typeof vi.fn> };
+      public width: { set: ReturnType<typeof vi.fn> };
+      public placeholder: { set: ReturnType<typeof vi.fn> };
 
       constructor(config?: unknown) {
         MockBlokConstructor(config);
@@ -67,6 +76,9 @@ vi.mock('../../../src/blok', () => {
         this.readOnly = instance.readOnly;
         this.focus = instance.focus;
         this.save = instance.save;
+        this.theme = instance.theme;
+        this.width = instance.width;
+        this.placeholder = instance.placeholder;
         mockBlokInstances.push(instance);
       }
     },
@@ -499,6 +511,120 @@ describe('useBlok', () => {
     // Verify no editor recreation occurred
     expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
     expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('should use latest onSave callback ref without recreating editor', async () => {
+    const onSave1 = vi.fn();
+    const onSave2 = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ onSave }: { onSave: () => void }) => useBlok({ onSave }),
+      { initialProps: { onSave: onSave1 } }
+    );
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onSave: (...args: unknown[]) => void;
+    };
+
+    expect(typeof passedConfig.onSave).toBe('function');
+
+    // Update to new callback
+    rerender({ onSave: onSave2 });
+
+    // Call the wrapper — should call onSave2 (latest), not onSave1
+    passedConfig.onSave({ blocks: [] });
+
+    expect(onSave1).not.toHaveBeenCalled();
+    expect(onSave2).toHaveBeenCalledTimes(1);
+
+    // Verify no editor recreation occurred
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('does not pass an onSave callback to the editor config when the prop is omitted', async () => {
+    renderHook(() => useBlok({}));
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as { onSave?: unknown };
+
+    expect(passedConfig.onSave).toBeUndefined();
+  });
+
+  it('should use latest onBeforeRender callback ref without recreating editor', async () => {
+    type OnBeforeRender = NonNullable<UseBlokConfig['onBeforeRender']>;
+    const onBeforeRender1: OnBeforeRender = vi.fn((blocks: Parameters<OnBeforeRender>[0]) => blocks);
+    const onBeforeRender2: OnBeforeRender = vi.fn((blocks: Parameters<OnBeforeRender>[0]) => blocks);
+
+    const { rerender } = renderHook(
+      ({ onBeforeRender }: { onBeforeRender: OnBeforeRender }) => useBlok({ onBeforeRender }),
+      { initialProps: { onBeforeRender: onBeforeRender1 } }
+    );
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onBeforeRender: OnBeforeRender;
+    };
+
+    expect(typeof passedConfig.onBeforeRender).toBe('function');
+
+    rerender({ onBeforeRender: onBeforeRender2 });
+
+    const blocks: Parameters<OnBeforeRender>[0] = [{ type: 'paragraph', data: {} }];
+    const result = passedConfig.onBeforeRender(blocks);
+
+    expect(onBeforeRender1).not.toHaveBeenCalled();
+    expect(onBeforeRender2).toHaveBeenCalledWith(blocks);
+    expect(result).toBe(blocks);
+
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('should use latest onAfterRender callback ref without recreating editor', async () => {
+    const onAfterRender1 = vi.fn();
+    const onAfterRender2 = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ onAfterRender }: { onAfterRender: () => void }) => useBlok({ onAfterRender }),
+      { initialProps: { onAfterRender: onAfterRender1 } }
+    );
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onAfterRender: (...args: unknown[]) => void;
+    };
+
+    expect(typeof passedConfig.onAfterRender).toBe('function');
+
+    rerender({ onAfterRender: onAfterRender2 });
+
+    passedConfig.onAfterRender();
+
+    expect(onAfterRender1).not.toHaveBeenCalled();
+    expect(onAfterRender2).toHaveBeenCalledTimes(1);
+
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
+  it('does not pass onBeforeRender / onAfterRender to the editor config when omitted', async () => {
+    renderHook(() => useBlok({}));
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onBeforeRender?: unknown;
+      onAfterRender?: unknown;
+    };
+
+    expect(passedConfig.onBeforeRender).toBeUndefined();
+    expect(passedConfig.onAfterRender).toBeUndefined();
   });
 
   it('should not expose a stale editor when isReady resolves after deps change', async () => {

@@ -33,6 +33,8 @@ import {
 } from '../../components/icons';
 import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
+import { uploadErrorMessage } from '../../components/utils/upload-error-message';
+import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
@@ -50,6 +52,8 @@ import { openAltPopover } from './alt-popover';
 import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
+import { convertGifToWebm } from './gif-to-webm';
+import { resolveConvertedUploader } from './converted-uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -83,6 +87,7 @@ export class ImageTool implements BlockTool {
   private brokenImage = false;
   private retrying = false;
   private reloadAttempts = 0;
+  private converting = false;
 
   constructor(options: BlockToolConstructorOptions<ImageData, ImageConfig>) {
     this.api = options.api;
@@ -151,12 +156,19 @@ export class ImageTool implements BlockTool {
   }
 
   public onPaste(event: PasteEvent): void {
+    const sources = this.config.sources;
     if (event.type === 'pattern') {
+      if (sources === 'upload') return;
       const detail = (event as PatternPasteEvent).detail;
-      this.applyResult({ url: detail.data });
+      if (this.shouldConvertGifUrl(detail.data)) {
+        this.startUrl(detail.data);
+      } else {
+        this.applyResult({ url: detail.data });
+      }
       return;
     }
     if (event.type === 'tag') {
+      if (sources === 'upload') return;
       const node = (event as HTMLPasteEvent).detail.data;
       const src = node?.getAttribute?.('src') ?? '';
       if (!src) return;
@@ -164,6 +176,7 @@ export class ImageTool implements BlockTool {
       return;
     }
     if (event.type === 'file') {
+      if (sources === 'url') return;
       const detail = (event as FilePasteEvent).detail;
       this.startUpload(detail.file);
     }
@@ -174,6 +187,18 @@ export class ImageTool implements BlockTool {
   };
 
   private startUpload(file: File): void {
+    if (this.shouldConvertGif(file.type)) {
+      void this.convertGifToVideoBlock(file).then((handled) => {
+        if (!handled) this.uploadImageFile(file);
+      });
+      return;
+    }
+    this.uploadImageFile(file);
+  }
+
+  /** Existing upload body, extracted verbatim. */
+  private uploadImageFile(file: File): void {
+    this.converting = false;
     this.lastFileName = file.name;
     this.lastSource = { kind: 'file', file };
     this.state = 'LOADING';
@@ -186,7 +211,67 @@ export class ImageTool implements BlockTool {
       .catch((err) => this.applyError(err));
   }
 
+  private shouldConvertGif(mimeType: string): boolean {
+    return this.config.convertGifToVideo !== false && mimeType === 'image/gif';
+  }
+
+  /**
+   * Try to convert a GIF to a looping WebM video block. Returns true only when
+   * the block was swapped; false means the caller should keep the GIF (image).
+   */
+  private async convertGifToVideoBlock(file: File): Promise<boolean> {
+    this.converting = true;
+    this.state = 'LOADING';
+    this.errorMessage = null;
+    this.brokenImage = false;
+    this.lastFileName = file.name;
+    this.renderState();
+    try {
+      const blob = await convertGifToWebm(await file.arrayBuffer(), { onProgress: this.reportProgress });
+      if (!blob) { this.converting = false; return false; }
+      const webm = new File([blob], file.name.replace(/\.gif$/i, '.webm'), { type: 'video/webm' });
+      const url = await this.uploadConverted(webm);
+      if (url === null) { this.converting = false; return false; }
+      this.converting = false;
+      return this.swapToVideoBlock(url, webm.name);
+    } catch {
+      this.converting = false;
+      return false;
+    }
+  }
+
+  private async uploadConverted(file: File): Promise<string | null> {
+    const upload = resolveConvertedUploader(this.api, this.config);
+    if (upload) {
+      const res = await upload(file, { onProgress: this.reportProgress });
+      return res.url;
+    }
+    return URL.createObjectURL(file);
+  }
+
+  private swapToVideoBlock(url: string, fileName: string): boolean {
+    const index = this.api.blocks.getBlockIndex(this.block.id);
+    if (index === undefined) return false;
+    this.api.blocks.insert(
+      'video',
+      { url, autoplay: true, loop: true, mimeType: 'video/webm', fileName },
+      {}, index, false, true,
+    );
+    return true;
+  }
+
   private startUrl(url: string): void {
+    if (this.shouldConvertGifUrl(url)) {
+      void this.convertGifUrlToVideoBlock(url).then((handled) => {
+        if (!handled) this.loadImageUrl(url);
+      });
+      return;
+    }
+    this.loadImageUrl(url);
+  }
+
+  /** Existing startUrl body, extracted verbatim. */
+  private loadImageUrl(url: string): void {
     this.lastFileName = null;
     this.lastSource = { kind: 'url', url };
     this.state = 'LOADING';
@@ -197,6 +282,41 @@ export class ImageTool implements BlockTool {
       .handleUrl(url, { onProgress: this.reportProgress })
       .then((result) => this.applyResult(result))
       .catch((err) => this.applyError(err));
+  }
+
+  private shouldConvertGifUrl(url: string): boolean {
+    return this.config.convertGifToVideo !== false && /\.gif(\?|#|$)/i.test(url);
+  }
+
+  private async convertGifUrlToVideoBlock(url: string): Promise<boolean> {
+    const bytes = await this.fetchGifBytes(url);
+    if (!bytes) return false;
+    this.converting = true;
+    this.state = 'LOADING';
+    this.errorMessage = null;
+    this.renderState();
+    try {
+      const blob = await convertGifToWebm(bytes, { onProgress: this.reportProgress });
+      if (!blob) { this.converting = false; return false; }
+      const webm = new File([blob], 'animation.webm', { type: 'video/webm' });
+      const uploadedUrl = await this.uploadConverted(webm);
+      if (uploadedUrl === null) { this.converting = false; return false; }
+      this.converting = false;
+      return this.swapToVideoBlock(uploadedUrl, webm.name);
+    } catch {
+      this.converting = false;
+      return false;
+    }
+  }
+
+  private async fetchGifBytes(url: string): Promise<ArrayBuffer | null> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.arrayBuffer();
+    } catch {
+      return null; // CORS / network → keep the GIF as an image URL
+    }
   }
 
   private retryLastSource(): void {
@@ -231,7 +351,12 @@ export class ImageTool implements BlockTool {
 
   private applyError(err: unknown): void {
     this.state = 'ERROR';
-    this.errorMessage = err instanceof Error ? err.message : this.api.i18n.t('tools.image.errorUploadFailed');
+    this.errorMessage = err instanceof ImageError
+      ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
+        tooLarge: 'tools.image.errorFileTooLarge',
+        generic: 'tools.image.errorUploadFailed',
+      })
+      : this.api.i18n.t('tools.image.errorUploadFailed');
     this.brokenImage = false;
     this.retrying = false;
     this.renderState();
@@ -565,7 +690,8 @@ export class ImageTool implements BlockTool {
       onFile: (file) => this.startUpload(file),
       onUrl: (url) => this.startUrl(url),
       acceptTypes: this.config.types,
-      maxSize: this.config.maxSize,
+      maxSize: pickDisplayMaxSize(this.config.maxSize),
+      sources: this.config.sources,
       i18n: this.api.i18n,
     });
     this.emptyStateEl = el;
@@ -578,6 +704,7 @@ export class ImageTool implements BlockTool {
       fileName: this.lastFileName ?? this.api.i18n.t('tools.image.uploading'),
       onCancel: () => this.transitionToEmpty(),
       i18n: this.api.i18n,
+      ...(this.converting ? { statusLabel: this.api.i18n.t('tools.image.converting') } : {}),
     });
     this.uploadingEl = el;
     this.root.appendChild(el);

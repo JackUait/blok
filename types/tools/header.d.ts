@@ -1,4 +1,5 @@
-import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions, BlockToolData } from './block-tool';
+import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
+import { BlockToolData } from './block-tool-data';
 import { MenuConfig } from './menu-config';
 
 /**

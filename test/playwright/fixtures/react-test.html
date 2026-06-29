@@ -27,7 +27,7 @@
     import React, { useState, useCallback } from 'react';
     import { createRoot } from 'react-dom/client';
     import { jsx, jsxs } from 'react/jsx-runtime';
-    import { useBlok, BlokContent } from '/dist/react.mjs?_v=1';
+    import { useBlok, useBlocks, BlokContent } from '/dist/react.mjs?_v=1';
 
     // Import tools from the built dist
     const { Paragraph, Header } = await import('/dist/tools.mjs?_v=1');
@@ -53,6 +53,23 @@
         },
       });
 
+      // Expose the real useBlocks API (bound to the real built editor) on window
+      // so E2E can drive insertTree / insertMarkdown / insert against the genuine
+      // editor.blocks pipeline — no fakes. Re-exposed on every change so reads
+      // reflect the latest snapshot.
+      const blocks = useBlocks(editor);
+
+      React.useEffect(() => {
+        window.__blocksApi = blocks;
+      }, [blocks]);
+
+      // Reactive read: the number of ROOT blocks, derived in render from the live
+      // snapshot. It refreshes ONLY when useBlocks re-renders the component on a
+      // 'block changed' emission — so an e2e can assert this updates after a bulk
+      // insertTree/insertMarkdown WITHOUT any other interaction, proving the
+      // reactivity contract end-to-end against the real bundle.
+      const rootCount = blocks.getChildren(null).length;
+
       // Update status when editor becomes available
       React.useEffect(() => {
         if (editor !== null) {
@@ -73,6 +90,7 @@
       return jsxs('div', {
         children: [
           jsx('div', { 'data-blok-testid': 'status', children: status }),
+          jsx('div', { 'data-blok-testid': 'root-count', children: String(rootCount) }),
           jsx('button', { 'data-blok-testid': 'save', onClick: handleSave, children: 'Save' }),
           jsx('button', { 'data-blok-testid': 'toggle-readonly', onClick: toggleReadOnly, children: readOnly ? 'Enable Editing' : 'Toggle Read Only' }),
           jsx(BlokContent, { editor, 'data-blok-testid': 'editor-container', id: 'editor-container' }),

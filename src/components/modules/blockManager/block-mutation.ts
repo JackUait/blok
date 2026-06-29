@@ -13,6 +13,8 @@ import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
+import { ToolNotFoundError } from '../../errors/tool-not-found';
+import { getBlockNestingDepth } from '../drag/utils/depthUtils';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
@@ -199,46 +201,18 @@ export class BlockMutation {
     }
 
     /**
-     * Tools that can host children (have a toggle-children container in their DOM).
-     * When replacing with a non-hosting tool, children must be promoted to root level
-     * rather than orphaned inside a block that has no children container.
+     * Nesting is structural (parentId/contentIds) and tool-agnostic — any block,
+     * including a plain paragraph or header, can host children, which render as
+     * margin-indented siblings when the tool has no children container. So "turn
+     * into" keeps the children nested under the retyped block (matching Notion)
+     * regardless of the target tool: just re-home them onto the new block.
      *
-     * A header can only host children when isToggleable is true in its data.
-     * Regular (non-toggleable) headers have no children container.
+     * `reparentChildren` uses setBlockParent, which pushes each child id onto
+     * `newBlock.contentIds`. Reset it first so we don't end up with a pre-existing
+     * array plus appended ids.
      */
-    const newToolCanHostChildren = newTool === 'toggle' ||
-      newTool === 'callout' ||
-      newTool === 'column_list' ||
-      newTool === 'column' ||
-      (newTool === 'header' && (data as { isToggleable?: boolean }).isToggleable === true);
-
-    if (oldContentIds.length > 0 && !newToolCanHostChildren) {
-      // Promote each child to root level, inserting after the new block.
-      // Route through setBlockParent so the child holder is also moved out
-      // of the old (now-removed) parent's toggle-children container and any
-      // hidden/indentation state is recomputed — same reasoning as
-      // `reparentChildren` above.
-      const insertAfterIndex = this.repository.getBlockIndex(newBlock);
-
-      oldContentIds.forEach((childId, offset) => {
-        const childBlock = this.repository.getBlockById(childId);
-
-        if (childBlock === undefined) {
-          return;
-        }
-
-        this.hierarchy.setBlockParent(childBlock, null);
-        blocksStore.insert(insertAfterIndex + 1 + offset, childBlock, false, false);
-      });
-
-      newBlock.contentIds = [];
-    } else {
-      // `reparentChildren` uses setBlockParent, which pushes each child id
-      // onto `newBlock.contentIds`. Reset it first so we don't end up with a
-      // pre-existing array plus appended ids.
-      newBlock.contentIds = [];
-      this.reparentChildren(oldContentIds, newBlock.id);
-    }
+    newBlock.contentIds = [];
+    this.reparentChildren(oldContentIds, newBlock.id);
 
     this.ctx.assertHierarchyInvariantInDev('replace');
 
@@ -273,8 +247,13 @@ export class BlockMutation {
    * @param skipDOM - If true, do not manipulate DOM
    * @param blocksStore - The blocks store to modify
    * @param skipMovedHook - If true, do not fire the moved() lifecycle hook
+   * @param skipAutoHeal - If true, do not auto-heal the moved block's parentId from
+   *   its destination neighbour. Callers that perform an in-container reorder of a
+   *   whole subtree (keyboard moveUp/Down) must set this: their per-block lifts make
+   *   a subtree's inner child briefly neighbour an unrelated block, and the heal
+   *   would re-parent it to that transient neighbour, flattening the subtree.
    */
-  public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook = false): void {
+  public move(toIndex: number, fromIndex: number, skipDOM: boolean, blocksStore: BlocksStore, skipMovedHook = false, skipAutoHeal = false): void {
     // Make sure indexes are valid and within a valid range
     if (isNaN(toIndex) || isNaN(fromIndex)) {
       log(`Warning during 'move' call: incorrect indices provided.`, 'warn');
@@ -395,7 +374,8 @@ export class BlockMutation {
        * DragController's `transactMoves` wrapper is open.
        */
       if (
-        movedBlock.parentId !== destinationParentId
+        !skipAutoHeal
+        && movedBlock.parentId !== destinationParentId
         && !this.dependencies.YjsManager.isInMoveGroup
       ) {
         this.hierarchy.setBlockParent(movedBlock, destinationParentId);
@@ -591,7 +571,7 @@ export class BlockMutation {
     const replacingTool = this.factory.getTool(targetToolName);
 
     if (!replacingTool) {
-      throw new Error(`Could not convert Block. Tool «${targetToolName}» not found.`);
+      throw new ToolNotFoundError(targetToolName, `Could not convert Block. Tool «${targetToolName}» not found.`);
     }
 
     /**
@@ -622,6 +602,22 @@ export class BlockMutation {
     const newBlockData = blockDataOverrides
       ? Object.assign(baseBlockData, blockDataOverrides)
       : baseBlockData;
+
+    /**
+     * Block-level color (textColor / backgroundColor) is a separate data field
+     * that lives OUTSIDE the conversionConfig `text` export/import contract, so
+     * it is never carried by the exported string and would be dropped on every
+     * "turn into". Preserve it from the source block's saved data onto the
+     * converted block — generically, for ANY target tool — so Notion's "color
+     * survives turn-into" behavior holds. Explicit overrides win.
+     */
+    for (const colorField of ['textColor', 'backgroundColor'] as const) {
+      const sourceValue = savedBlock.data[colorField];
+
+      if (typeof sourceValue === 'string' && newBlockData[colorField] === undefined) {
+        newBlockData[colorField] = sourceValue;
+      }
+    }
 
     /**
      * Bracket the whole convert in a single undo group.
@@ -670,64 +666,219 @@ export class BlockMutation {
   }
 
   /**
-   * Moves the current block up by one position
-   * Does nothing if the block is already at the top
-   * @param blocksStore - The blocks store to modify
+   * Returns the flat-array index of the LAST block belonging to the subtree
+   * rooted at `startIndex`. A block's subtree spans the contiguous run of
+   * following blocks that are either:
+   *   - flat-indent followers — deeper {@link getBlockNestingDepth} than the
+   *     root (Notion's structural Tab nesting), or
+   *   - container children — reachable from the root through the
+   *     `parentId`/`contentIds` hierarchy (toggle/callout/column descendants).
+   *
+   * Both nesting carriers are unified here so a move treats any block plus its
+   * whole subtree as one indivisible group. A root block with no descendants
+   * returns `startIndex` itself.
+   * @param startIndex - index of the subtree's root block
+   * @returns index of the subtree's last block (>= startIndex)
    */
-  public moveCurrentBlockUp(blocksStore: BlocksStore): void {
-    const currentIndex = this.ctx.currentBlockIndexValue;
+  private subtreeEndIndex(startIndex: number): number {
+    const start = this.repository.getBlockByIndex(startIndex);
 
-    if (currentIndex <= 0) {
-      // Announce boundary condition
-      announce(
-        this.dependencies.I18n.t('a11y.atTop'),
-        { politeness: 'polite' }
-      );
-
-      return;
+    if (start === undefined || start === null) {
+      return startIndex;
     }
 
-    this.move(currentIndex - 1, currentIndex, false, blocksStore);
-    this.refocusCurrentBlock();
+    const rootDepth = getBlockNestingDepth(start) ?? 0;
+    const subtreeIds = new Set<string>([start.id]);
+    const followers = Array.from(
+      { length: this.repository.length - startIndex - 1 },
+      (_, offset) => this.repository.getBlockByIndex(startIndex + 1 + offset)
+    );
 
-    // Announce successful move (currentBlockIndex is now updated to new position)
-    const newPosition = this.ctx.currentBlockIndexValue + 1; // Convert to 1-indexed for user
-    const total = this.repository.length;
-    const message = this.dependencies.I18n.t('a11y.movedUp', {
-      position: newPosition,
-      total,
-    });
+    // Walk the contiguous followers, growing the subtree id set as each block is
+    // accepted; the first block that is neither a container child nor a deeper
+    // flat-indent follower stops the run.
+    const accepted = followers.reduce<{ count: number; stopped: boolean }>((acc, block) => {
+      if (acc.stopped || block === undefined || block === null) {
+        return { count: acc.count, stopped: true };
+      }
 
-    announce(message, { politeness: 'assertive' });
+      const isContainerChild = block.parentId !== null && subtreeIds.has(block.parentId);
+      const isDepthFollower = (getBlockNestingDepth(block) ?? 0) > rootDepth;
+
+      if (!isContainerChild && !isDepthFollower) {
+        return { count: acc.count, stopped: true };
+      }
+
+      subtreeIds.add(block.id);
+
+      return { count: acc.count + 1, stopped: false };
+    }, { count: 0, stopped: false });
+
+    return startIndex + accepted.count;
   }
 
   /**
-   * Moves the current block down by one position
-   * Does nothing if the block is already at the bottom
-   * @param blocksStore - The blocks store to modify
+   * Resolves the contiguous block group a move operates on. With no selection
+   * it is the current block plus its subtree; with a block-level selection it
+   * spans from the first selected block to the end of the last selected block's
+   * subtree. The container is the group's shared `parentId` — moves are bounded
+   * by it (a child never escapes its toggle/callout/column).
+   * @param selectedBlocks - blocks under block-level selection (empty/none for caret moves)
+   * @returns group span, anchor block and container parentId, or null when nothing is movable
    */
-  public moveCurrentBlockDown(blocksStore: BlocksStore): void {
-    const currentIndex = this.ctx.currentBlockIndexValue;
+  private resolveMoveGroup(selectedBlocks: Block[] | undefined): {
+    start: number;
+    end: number;
+    anchor: Block;
+    containerParentId: string | null;
+  } | null {
+    const indices = (selectedBlocks ?? [])
+      .map((block) => this.repository.getBlockIndex(block))
+      .filter((index) => index >= 0)
+      .sort((a, b) => a - b);
 
-    if (currentIndex < 0 || currentIndex >= this.repository.length - 1) {
-      // Announce boundary condition
-      announce(
-        this.dependencies.I18n.t('a11y.atBottom'),
-        { politeness: 'polite' }
-      );
+    if (indices.length > 0) {
+      const start = indices[0];
+      const anchor = this.repository.getBlockByIndex(start);
+
+      if (anchor === undefined) {
+        return null;
+      }
+
+      return {
+        start,
+        end: this.subtreeEndIndex(indices[indices.length - 1]),
+        anchor,
+        containerParentId: anchor.parentId,
+      };
+    }
+
+    const start = this.ctx.currentBlockIndexValue;
+    const anchor = this.ctx.currentBlock;
+
+    if (start < 0 || anchor === undefined) {
+      return null;
+    }
+
+    return {
+      start,
+      end: this.subtreeEndIndex(start),
+      anchor,
+      containerParentId: anchor.parentId,
+    };
+  }
+
+  /**
+   * Moves the current block (or block-level selection) up by one sibling
+   * position, stepping over the previous sibling's whole subtree and staying
+   * within the current container. Does nothing at the container's top edge.
+   * @param blocksStore - The blocks store to modify
+   * @param selectedBlocks - blocks under block-level selection (move them together)
+   */
+  public moveCurrentBlockUp(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
+    const group = this.resolveMoveGroup(selectedBlocks);
+
+    // Find the ROOT of the previous sibling subtree: the nearest block before the
+    // group, in the SAME container, at the same/shallower depth — skipping that
+    // sibling's own deeper descendants (whether nested via flat depth OR a
+    // structural parentId chain) so the whole subtree is hopped. `undefined` means
+    // there is no preceding sibling in the container, i.e. the group is already its
+    // first child (top edge / first block of a toggle/callout/column).
+    const predStart = ((): number | undefined => {
+      if (group === null) {
+        return undefined;
+      }
+
+      const movingDepth = getBlockNestingDepth(group.anchor) ?? 0;
+      const precedingIndices = Array.from({ length: group.start }, (_, offset) => group.start - 1 - offset);
+
+      return precedingIndices.find((index) => {
+        const candidate = this.repository.getBlockByIndex(index);
+
+        return candidate !== undefined &&
+          candidate.parentId === group.containerParentId &&
+          (getBlockNestingDepth(candidate) ?? 0) <= movingDepth;
+      });
+    })();
+
+    // Boundary: top of document, or the group is the first child of its container.
+    if (group === null || predStart === undefined) {
+      announce(this.dependencies.I18n.t('a11y.atTop'), { politeness: 'polite' });
 
       return;
     }
 
-    this.move(currentIndex + 1, currentIndex, false, blocksStore);
-    this.refocusCurrentBlock();
+    // Slide the group up so each member lands at predStart..(predStart + size).
+    const size = group.end - group.start + 1;
 
-    // Announce successful move (currentBlockIndex is now updated to new position)
-    const newPosition = this.ctx.currentBlockIndexValue + 1; // Convert to 1-indexed for user
-    const total = this.repository.length;
-    const message = this.dependencies.I18n.t('a11y.movedDown', {
-      position: newPosition,
-      total,
+    Array.from({ length: size }).forEach((_, offset) => {
+      // skipAutoHeal: this is an in-container reorder (boundary-checked above), so
+      // the group's parentId is unchanged and the per-block heal would only corrupt
+      // a moved subtree's inner children.
+      this.move(predStart + offset, group.start + offset, false, blocksStore, false, true);
+    });
+
+    this.finishMove(group.anchor, selectedBlocks, 'a11y.movedUp');
+  }
+
+  /**
+   * Moves the current block (or block-level selection) down by one sibling
+   * position, stepping over the next sibling's whole subtree and staying within
+   * the current container. Does nothing at the container's bottom edge.
+   * @param blocksStore - The blocks store to modify
+   * @param selectedBlocks - blocks under block-level selection (move them together)
+   */
+  public moveCurrentBlockDown(blocksStore: BlocksStore, selectedBlocks?: Block[]): void {
+    const group = this.resolveMoveGroup(selectedBlocks);
+    const successor = group !== null
+      ? this.repository.getBlockByIndex(group.end + 1)
+      : undefined;
+
+    // Boundary: bottom of document, or the block below belongs to a different
+    // container (the group is the last child of its toggle/callout/column).
+    if (group === null || successor === undefined ||
+        successor.parentId !== group.containerParentId) {
+      announce(this.dependencies.I18n.t('a11y.atBottom'), { politeness: 'polite' });
+
+      return;
+    }
+
+    // Lift the next sibling's whole subtree to just before the group, which
+    // descends the group past it by one sibling position.
+    const neighbourStart = group.end + 1;
+    const neighbourSize = this.subtreeEndIndex(neighbourStart) - neighbourStart + 1;
+
+    Array.from({ length: neighbourSize }).forEach((_, offset) => {
+      // skipAutoHeal: in-container reorder (boundary-checked above) — see moveCurrentBlockUp.
+      this.move(group.start + offset, neighbourStart + offset, false, blocksStore, false, true);
+    });
+
+    this.finishMove(group.anchor, selectedBlocks, 'a11y.movedDown');
+  }
+
+  /**
+   * Shared post-move bookkeeping: re-point the current index at the moved
+   * anchor, restore the user's interaction mode (block selection survives so
+   * the move can be repeated; otherwise the caret returns to the block), and
+   * announce the result.
+   * @param anchor - the group's anchor block (first block in document order)
+   * @param selectedBlocks - block-level selection that drove the move, if any
+   * @param messageKey - i18n key for the success announcement
+   */
+  private finishMove(anchor: Block, selectedBlocks: Block[] | undefined, messageKey: string): void {
+    this.ctx.currentBlockIndexValue = this.repository.getBlockIndex(anchor);
+
+    // A block-level selection must persist after the move so the user can keep
+    // pressing the shortcut. Re-seating the caret (setToBlock) tears the block
+    // selection down into a text caret, so skip it for selection moves and let
+    // BlockManager re-apply the selection; only caret moves refocus.
+    if (selectedBlocks === undefined || selectedBlocks.length === 0) {
+      this.refocusCurrentBlock();
+    }
+
+    const message = this.dependencies.I18n.t(messageKey, {
+      position: this.ctx.currentBlockIndexValue + 1, // 1-indexed for the user
+      total: this.repository.length,
     });
 
     announce(message, { politeness: 'assertive' });

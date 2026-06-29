@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleIndent, handleOutdent, handleEnter } from '../../../../src/tools/list/list-keyboard';
+import { handleOutdent, handleEnter } from '../../../../src/tools/list/list-keyboard';
 import { ListDepthValidator } from '../../../../src/tools/list/depth-validator';
 import type { KeyboardContext } from '../../../../src/tools/list/list-keyboard';
 import type { ListItemData } from '../../../../src/tools/list/types';
@@ -30,115 +30,13 @@ const createMockBlock = (options: { id?: string; name?: string; depth?: number }
   };
 };
 
-describe('handleIndent — first-in-group nesting', () => {
-  let data: ListItemData;
-  let syncContentFromDOM: () => void;
-  let updatedBlock: { id: string; holder: HTMLElement };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    data = { text: 'item', style: 'unordered', depth: 0 };
-    syncContentFromDOM = vi.fn<() => void>();
-
-    // Build a holder with a contenteditable child so setCaretToBlockContent
-    // resolves synchronously and doesn't fire a stale requestAnimationFrame.
-    const holder = document.createElement('div');
-    const contentEl = document.createElement('div');
-    contentEl.setAttribute('contenteditable', 'true');
-    holder.appendChild(contentEl);
-    updatedBlock = { id: 'updated', holder };
-  });
-
-  const buildContext = (overrides: {
-    currentBlockIndex: number;
-    blocks: ReturnType<typeof createMockBlock>[];
-    depth?: number;
-  }): { context: KeyboardContext; depthValidator: ListDepthValidator } => {
-    const { currentBlockIndex, blocks, depth = 0 } = overrides;
-    data.depth = depth;
-
-    const blocksAPI = {
-      getBlockByIndex: (i: number) => blocks[i] ?? undefined,
-      getBlockIndex: () => currentBlockIndex,
-      getBlocksCount: () => blocks.length,
-      getCurrentBlockIndex: () => currentBlockIndex,
-    };
-
-    const api = {
-      blocks: {
-        ...blocksAPI,
-        update: vi.fn().mockResolvedValue(updatedBlock),
-      },
-      caret: {
-        setToBlock: vi.fn(),
-        updateLastCaretAfterPosition: vi.fn(),
-      },
-    } as unknown as KeyboardContext['api'];
-
-    const context: KeyboardContext = {
-      api,
-      blockId: 'test-block',
-      data,
-      element: document.createElement('div'),
-      getContentElement: () => document.createElement('div'),
-      syncContentFromDOM,
-      getDepth: () => data.depth ?? 0,
-    };
-
-    const depthValidator = new ListDepthValidator(blocksAPI);
-
-    return { context, depthValidator };
-  };
-
-  it('indents a list item at block index 0 (first block in editor)', async () => {
-    const { context, depthValidator } = buildContext({
-      currentBlockIndex: 0,
-      blocks: [createMockBlock({ depth: 0 })],
-    });
-
-    await handleIndent(context, depthValidator);
-
-    expect(context.api.blocks.update).toHaveBeenCalledWith('test-block', expect.objectContaining({ depth: 1 }));
-    expect(data.depth).toBe(1);
-  });
-
-  it('indents a list item whose previous block is a paragraph (first in group)', async () => {
-    const { context, depthValidator } = buildContext({
-      currentBlockIndex: 1,
-      blocks: [
-        createMockBlock({ name: 'paragraph' }),
-        createMockBlock({ depth: 0 }),
-      ],
-    });
-
-    await handleIndent(context, depthValidator);
-
-    expect(context.api.blocks.update).toHaveBeenCalledWith('test-block', expect.objectContaining({ depth: 1 }));
-    expect(data.depth).toBe(1);
-  });
-
-  it('indents a first-in-group item once (depth 0 → 1) but blocks further nesting', async () => {
-    // First indent: 0 → 1
-    const { context: ctx1, depthValidator: dv1 } = buildContext({
-      currentBlockIndex: 0,
-      blocks: [createMockBlock({ depth: 0 })],
-      depth: 0,
-    });
-
-    await handleIndent(ctx1, dv1);
-    expect(data.depth).toBe(1);
-
-    // Second indent: 1 → blocked (first-in-group max is 1)
-    const { context: ctx2, depthValidator: dv2 } = buildContext({
-      currentBlockIndex: 0,
-      blocks: [createMockBlock({ depth: 1 })],
-      depth: 1,
-    });
-
-    await handleIndent(ctx2, dv2);
-    expect(data.depth).toBe(1); // unchanged
-  });
-});
+/**
+ * Single-block list-item indentation (Tab) is now STRUCTURAL — it reparents the
+ * item under its preceding sibling via the shared KeyboardNavigation handler,
+ * identical to text/headers. That behaviour is covered by
+ * test/unit/components/modules/blockEvents/composers/keyboardNavigation.test.ts.
+ * The flat `handleIndent` (data.depth mutation) it replaced has been removed.
+ */
 
 describe('handleOutdent — child depth cascading', () => {
   let data: ListItemData;
@@ -423,6 +321,9 @@ describe('handleEnter — cascades outdent on empty nested item', () => {
     const api = {
       blocks: {
         ...blocksAPI,
+        // A FLAT (drag-nested) item: depth lives on data.depth, parentId is null.
+        // Such items still outdent via the flat cascade.
+        getById: (id: string) => ({ id, name: 'list', parentId: null }),
         update: vi.fn().mockResolvedValue(updatedBlock),
         convert: vi.fn().mockResolvedValue(updatedBlock),
       },
@@ -465,5 +366,54 @@ describe('handleEnter — cascades outdent on empty nested item', () => {
       'child',
       expect.objectContaining({ depth: 1 })
     );
+  });
+
+  it('outdents a STRUCTURALLY nested empty item by reparenting to the grandparent', async () => {
+    // Tree: root(list) > parent(list) > empty-nested(list). Pressing Enter on the
+    // empty item promotes it to be a child of root (its grandparent) — structural
+    // outdent via parentId, not a flat data.depth decrement.
+    const tree: Record<string, { id: string; name: string; parentId: string | null }> = {
+      root: { id: 'root', name: 'list', parentId: null },
+      parent: { id: 'parent', name: 'list', parentId: 'root' },
+      'empty-nested': { id: 'empty-nested', name: 'list', parentId: 'parent' },
+    };
+
+    const setBlockParent = vi.fn();
+    const api = {
+      blocks: {
+        getById: (id: string) => tree[id] ?? null,
+        setBlockParent,
+        update: vi.fn(),
+        convert: vi.fn(),
+      },
+      caret: {
+        setToBlock: vi.fn(),
+        updateLastCaretAfterPosition: vi.fn(),
+      },
+    } as unknown as KeyboardContext['api'];
+
+    const contentEl = document.createElement('div');
+    contentEl.innerHTML = '';
+
+    const element = document.createElement('div');
+    element.appendChild(contentEl);
+
+    const data: ListItemData = { text: '', style: 'unordered' };
+
+    const context: KeyboardContext = {
+      api,
+      blockId: 'empty-nested',
+      data,
+      element,
+      getContentElement: () => contentEl,
+      syncContentFromDOM,
+      getDepth: () => 2,
+    };
+
+    await handleEnter(context);
+
+    // Reparented to the grandparent ('root'), not converted or flat-decremented.
+    expect(setBlockParent).toHaveBeenCalledWith('empty-nested', 'root');
+    expect(api.blocks.convert).not.toHaveBeenCalled();
   });
 });

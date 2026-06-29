@@ -12,12 +12,14 @@ const createMockBlock = (options: {
   id?: string;
   parentId?: string | null;
   contentIds?: string[];
+  name?: string;
 } = {}): Block => {
   const holder = document.createElement('div');
   holder.setAttribute('data-blok-element', '');
 
   const block = {
     id: options.id ?? `block-${Math.random().toString(16).slice(2)}`,
+    name: options.name ?? 'paragraph',
     holder,
     parentId: options.parentId ?? null,
     contentIds: options.contentIds ?? [],
@@ -31,7 +33,7 @@ const createMockBlock = (options: {
  * Create a BlocksStore with mock blocks and initialize repository
  */
 const createRepositoryWithBlocks = (
-  blockConfigs: Array<{ id: string; parentId?: string | null; contentIds?: string[] }>
+  blockConfigs: Array<{ id: string; parentId?: string | null; contentIds?: string[]; name?: string }>
 ): BlockRepository => {
   const workingArea = document.createElement('div');
   const blocksStore = new Blocks(workingArea);
@@ -1236,4 +1238,5 @@ describe('BlockHierarchy', () => {
       expect(tc.parentId).toBe('toggle');
     });
   });
+
 });

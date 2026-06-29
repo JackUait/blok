@@ -464,6 +464,81 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
       expect(Math.abs((xAfter ?? 0) - (xBefore ?? 0))).toBeLessThan(50);
     });
 
+    test('should keep a sticky goal column across repeated ArrowDown through shorter lines', async ({ page }) => {
+      // BUG #15 regression: the goal column (desired X) must be captured on the
+      // FIRST vertical move and reused on every subsequent move. Without it, the
+      // caret drifts toward shorter lines as it passes through them.
+      await createParagraphBlok(page, [
+        'This is a very long first line of text that extends quite far to the right',
+        'Short',
+        'Another reasonably long line of text that also extends far to the right',
+      ]);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const secondParagraph = getParagraphByIndex(page, 1);
+      const thirdParagraph = getParagraphByIndex(page, 2);
+
+      await firstParagraph.click();
+      await page.keyboard.press('End'); // far-right goal column
+
+      const xGoal = await getCaretXPosition(page);
+
+      // First ArrowDown: lands on the SHORT line (clamped to its end, smaller X)
+      await page.keyboard.press('ArrowDown');
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
+      // Second ArrowDown: must use the STICKY goal column, not the short line's X
+      await page.keyboard.press('ArrowDown');
+      await waitForCaretInBlock(page, thirdParagraph, 2);
+
+      const xAfter = await getCaretXPosition(page);
+
+      expect(xGoal).not.toBeNull();
+      expect(xAfter).not.toBeNull();
+
+      // The third (long) line is wide enough to honour the original goal column,
+      // so the caret should return near the far-right X — proving it did not drift
+      // to the short line's end while passing through it.
+      expect(Math.abs((xAfter ?? 0) - (xGoal ?? 0))).toBeLessThan(50);
+    });
+
+    test('should reset the goal column after a horizontal arrow move', async ({ page }) => {
+      // After moving horizontally, the next vertical move must start a fresh goal
+      // column from the caret's new position rather than reusing the old one.
+      await createParagraphBlok(page, [
+        'This is a very long first line of text that extends quite far to the right',
+        'Short',
+        'Another reasonably long line of text that also extends far to the right',
+      ]);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const secondParagraph = getParagraphByIndex(page, 1);
+      const thirdParagraph = getParagraphByIndex(page, 2);
+
+      await firstParagraph.click();
+      await page.keyboard.press('End');
+
+      // Vertical move captures the far-right goal column
+      await page.keyboard.press('ArrowDown');
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
+      // Horizontal move to the START of the short line resets the goal column
+      await page.keyboard.press('Home');
+
+      const xAfterHome = await getCaretXPosition(page);
+
+      // Next vertical move should land near the START of the long line (fresh
+      // goal from the Home position), NOT at the old far-right goal column.
+      await page.keyboard.press('ArrowDown');
+      await waitForCaretInBlock(page, thirdParagraph, 2);
+
+      const xAfter = await getCaretXPosition(page);
+
+      expect(xAfterHome).not.toBeNull();
+      expect(xAfter).not.toBeNull();
+      expect(Math.abs((xAfter ?? 0) - (xAfterHome ?? 0))).toBeLessThan(50);
+    });
+
     test('should clamp to end of shorter block when target X exceeds block length', async ({ page }) => {
       await createParagraphBlok(page, [
         'This is a very long line of text that extends far',

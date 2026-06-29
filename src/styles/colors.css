@@ -264,6 +264,9 @@
   /* Small UI surfaces that can't reach a var via Tailwind arbitrary syntax. */
   --blok-button-focus-bg-hover: #fbfcfe;
   --blok-dnd-drop-indicator-bg: #d4e3fc;
+  /* Grayish lead-in that runs from the editor's left edge to where the blue
+     list drop line starts, so an indented line reads as a full-width rule. */
+  --blok-dnd-drop-indicator-lead-bg: #dcdcda;
   /* Drop-line geometry. The horizontal (top/bottom) rule spans the content
      width, so 6px reads as a thin line; the vertical (left/right) bar is short,
      so it gets a slimmer width to read the same. */
@@ -415,25 +418,36 @@
   /* Image error-state radius (slightly larger than --blok-radius-md). */
   --blok-radius-md-plus: 8px;
 
-  /* Video player custom controls — sit over the video pixels, so this palette
-     is always-on (independent of page theme): white glyphs on a dark scrim,
-     coral progress fill. */
+  /* Video player custom controls — Notion-style minimal palette: white glyphs
+     on a subtle dark scrim, neutral progress fill, no coral. */
   --blok-video-stage: #000000;
-  --blok-video-accent: #ff385c;
+  --blok-video-accent: #ffffff;
   --blok-video-control-fg: #ffffff;
-  --blok-video-control-bg-hover: rgba(255, 255, 255, 0.16);
-  --blok-video-time-fg: rgba(255, 255, 255, 0.92);
-  --blok-video-track: rgba(255, 255, 255, 0.3);
-  --blok-video-volume-track: rgba(255, 255, 255, 0.35);
+  --blok-video-control-bg-hover: rgba(255, 255, 255, 0.1);
+  --blok-video-control-bg-active: rgba(255, 255, 255, 0.2);
+  --blok-video-time-fg: rgba(255, 255, 255, 0.8);
+  --blok-video-track: rgba(255, 255, 255, 0.2);
+  --blok-video-buffered: rgba(255, 255, 255, 0.35);
+  --blok-video-volume-track: rgba(0, 0, 0, 0.3);
   --blok-video-thumb: #ffffff;
-  --blok-video-thumb-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  --blok-video-center-fg: #1a1a1a;
-  --blok-video-center-bg: rgba(255, 255, 255, 0.92);
-  --blok-video-center-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.5);
-  --blok-video-scrim-strong: rgba(0, 0, 0, 0.72);
-  --blok-video-scrim-mid: rgba(0, 0, 0, 0.32);
-  --blok-video-shadow-hover: 0 14px 34px -12px rgba(15, 15, 14, 0.34), 0 0 0 1px rgba(15, 15, 14, 0.05);
-  --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 45%, transparent);
+  --blok-video-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --blok-video-burst-bg: rgba(0, 0, 0, 0.5);
+  --blok-video-burst-fg: #ffffff;
+  --blok-video-burst-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+  --blok-video-burst-ring: rgba(255, 255, 255, 0.4);
+  /* Settings popover — near-opaque dark so video never bleeds through the text. */
+  --blok-video-menu-bg: rgba(22, 22, 22, 0.94);
+  --blok-video-menu-value-fg: rgba(255, 255, 255, 0.62);
+  /* Frosted-glass edge + resting glyph tint + selected-row wash. */
+  --blok-video-menu-border: rgba(255, 255, 255, 0.08);
+  --blok-video-menu-icon: rgba(255, 255, 255, 0.9);
+  --blok-video-menu-row-active: color-mix(in srgb, var(--blok-video-accent) 14%, transparent);
+  --blok-video-theater-scrim: rgba(0, 0, 0, 0.8);
+  --blok-video-theater-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+  --blok-video-scrim-strong: rgba(0, 0, 0, 0.6);
+  --blok-video-scrim-mid: rgba(0, 0, 0, 0.2);
+  --blok-video-shadow-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.18);
+  --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 30%, transparent);
 }
 
 /* ─── Dark theme — system preference ────────────────── */
@@ -600,6 +614,7 @@
 
     --blok-button-focus-bg-hover: #2d2d2c;
     --blok-dnd-drop-indicator-bg: #1f3a5c;
+    --blok-dnd-drop-indicator-lead-bg: #3a3d42;
 
     --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
     --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
@@ -772,6 +787,7 @@
 
   --blok-button-focus-bg-hover: #2d2d2c;
   --blok-dnd-drop-indicator-bg: #1f3a5c;
+  --blok-dnd-drop-indicator-lead-bg: #3a3d42;
 
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);

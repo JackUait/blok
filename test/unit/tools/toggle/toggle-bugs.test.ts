@@ -49,7 +49,7 @@ const makeApi = (blocks: BlocksStub = makeBlocks()): API =>
     styles: { block: 'ce-block' },
   } as unknown as API);
 
-const makeBlock = (id = 'toggle-1'): BlockAPI => ({ id } as unknown as BlockAPI);
+const makeBlock = (id = 'toggle-1'): BlockAPI => ({ id, dispatchChange: vi.fn() } as unknown as BlockAPI);
 
 // ---------------------------------------------------------------------------
 // ToggleItem factory

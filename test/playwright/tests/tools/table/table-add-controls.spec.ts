@@ -449,7 +449,7 @@ test.describe('Add Row and Column Controls', () => {
 
     const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+     
     const content = tableBlock?.data.content as { blocks: string[] }[][];
 
     // 5. Verify saved data content array has 3 rows
@@ -465,7 +465,7 @@ test.describe('Add Row and Column Controls', () => {
       (b: { id?: string }) => b.id === newCellBlockId
     );
 
-    expect((cellParagraph as { data: { text: string } })?.data.text).toBe('NewContent');
+    expect((cellParagraph as unknown as { data: { text: string } })?.data.text).toBe('NewContent');
   });
 
   test('Add-row button appears when approaching from below the table', async ({ page }) => {

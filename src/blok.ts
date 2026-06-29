@@ -5,7 +5,7 @@
  */
 import '@babel/register';
 
-import type { BlokConfig, API } from '../types';
+import type { BlokConfig, API, EditorWidth, Blok as PublicBlok } from '../types';
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
@@ -26,6 +26,11 @@ export const version = getBlokVersion();
 export { DATA_ATTR } from './components/constants/data-attributes';
 
 /**
+ * Re-export the stable test-id hooks for targeting editor chrome in tests
+ */
+export { TEST_ID } from './components/constants/test-ids';
+
+/**
  * Blok
  * @license Apache-2.0
  */
@@ -36,9 +41,11 @@ class Blok {
   private readonly initialConfiguration: BlokConfig|string|undefined;
 
   /**
-   * Promise that resolves when core modules are ready and UI is rendered on the page
+   * Promise that resolves when core modules are ready and UI is rendered on the page.
+   * Resolves with the fully-initialized Blok instance, so awaiting it narrows a
+   * pre-ready reference (see {@link PendingBlok}) to the complete API surface.
    */
-  public isReady: Promise<void>;
+  public isReady: Promise<Blok>;
 
   /**
    * Stores destroy method implementation.
@@ -142,6 +149,71 @@ class Blok {
     };
 
     /**
+     * Width API — expose it on the instance immediately (mirrors the theme API),
+     * so host apps can call instance.width.set('full') before isReady without a
+     * silent no-op. The chosen mode is buffered and replayed once UI is ready.
+     */
+    const widthBuffer = { pendingMode: null as EditorWidth | null };
+
+    const getUIModule = (): BlokModules['UI'] | undefined =>
+      (blok.moduleInstances as Partial<BlokModules>).UI;
+
+    const readWidthMode = (): EditorWidth => {
+      const ui = getUIModule();
+
+      return ui !== undefined ? ui.getWidthMode() : (widthBuffer.pendingMode ?? 'narrow');
+    };
+
+    const applyWidthMode = (mode: EditorWidth): void => {
+      widthBuffer.pendingMode = mode;
+
+      const ui = getUIModule();
+
+      if (ui !== undefined) {
+        ui.setWidthMode(mode);
+      }
+    };
+
+    (this as Record<string, unknown>).width = {
+      get: (): EditorWidth => readWidthMode(),
+      set: (mode: EditorWidth): void => applyWidthMode(mode),
+      toggle: (): void => applyWidthMode(readWidthMode() === 'full' ? 'narrow' : 'full'),
+    };
+
+    /**
+     * Placeholder API — exposed immediately (mirrors theme/width) so host apps
+     * can call instance.placeholder.set(...) before isReady without a silent
+     * no-op. The value is buffered and replayed once BlockManager is ready.
+     */
+    const placeholderBuffer = { pending: null as string | false | null };
+
+    const getBlockManager = (): BlokModules['BlockManager'] | undefined =>
+      (blok.moduleInstances as Partial<BlokModules>).BlockManager;
+
+    const applyPlaceholder = (value: string | false): void => {
+      placeholderBuffer.pending = value;
+
+      const bm = getBlockManager();
+
+      if (bm !== undefined) {
+        bm.setPlaceholder(value);
+      }
+    };
+
+    (this as Record<string, unknown>).placeholder = {
+      get: (): string | false => {
+        if (placeholderBuffer.pending !== null) {
+          return placeholderBuffer.pending;
+        }
+
+        const cfg = this.initialConfiguration;
+
+        return isObject(cfg) ? ((cfg as BlokConfig).placeholder ?? false) : false;
+      },
+      set: (value: string | false): void => applyPlaceholder(value),
+    };
+
+    /**
      * We need to export isReady promise in the constructor
      * as it can be used before other API methods are exported
      * @type {Promise<void>}
@@ -186,7 +258,7 @@ class Blok {
 
         Object.setPrototypeOf(this, null);
 
-        return;
+        return this;
       }
 
       this.exportAPI(blok);
@@ -201,6 +273,26 @@ class Blok {
           tm.setMode(themeBuffer.pendingMode);
         }
         themeBuffer.pendingMode = null;
+      }
+
+      // Apply any width mode buffered before isReady resolved.
+      if (widthBuffer.pendingMode !== null) {
+        const ui = (blok.moduleInstances as Partial<BlokModules>).UI;
+
+        if (ui !== undefined) {
+          ui.setWidthMode(widthBuffer.pendingMode);
+        }
+        widthBuffer.pendingMode = null;
+      }
+
+      // Apply any placeholder buffered before isReady resolved.
+      if (placeholderBuffer.pending !== null) {
+        const bm = (blok.moduleInstances as Partial<BlokModules>).BlockManager;
+
+        if (bm !== undefined) {
+          bm.setPlaceholder(placeholderBuffer.pending);
+        }
+        placeholderBuffer.pending = null;
       }
 
       // Scroll to the block referenced by the URL hash, if present.
@@ -230,10 +322,13 @@ class Blok {
         }
       }
 
-      /**
-       * @todo pass API as an argument. It will allow to use Blok's API when blok is ready
-       */
-      onReady();
+      // Hand the fully-exported instance to onReady so callers can drive the
+      // editor's API the moment it's ready (parity with the React/Vue/Angular
+      // adapters, whose `ready` events all emit the live instance). The argument
+      // is optional, so existing zero-arg `onReady` handlers are unaffected.
+      onReady(this as unknown as PublicBlok);
+
+      return this;
     });
   }
 
@@ -453,3 +548,10 @@ export default Blok;
  * into Blok's `render()→MenuConfig` inline tool contract.
  */
 export { wrapLegacyInlineTool } from './components/inline-tools/wrap-legacy-inline-tool';
+
+/**
+ * Typed event-name constants for editor lifecycle events observable via
+ * `blok.events.on(...)`. Prefer these over raw strings to avoid typos and
+ * get typed payloads (see {@link BlokEditorEventMap}).
+ */
+export { BlockRendered, BlocksRendered } from './components/events';

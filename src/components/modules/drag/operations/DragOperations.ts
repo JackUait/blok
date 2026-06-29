@@ -324,8 +324,20 @@ export class DragOperations {
     // Adjust index if moving from before the target
     const toIndex = fromIndex < baseIndex ? baseIndex - 1 : baseIndex;
 
-    // Only move if position actually changed
+    // Position unchanged: the source is dropped at the slot it already occupies
+    // (e.g. a list item dropped at the end of a nested sub-list it already
+    // follows). Skip the flat-array reorder — there is nothing to move — but
+    // STILL fire the moved() hook so tools that derive state from their
+    // neighbours can react. List items recompute their depth only in moved(); on
+    // a same-position drop the depth must still update to nest into the sub-list,
+    // otherwise the drop is a silent no-op.
     if (fromIndex === toIndex) {
+      sourceBlock.call(BlockToolAPI.MOVED, { fromIndex, toIndex });
+
+      if (this.blockSelection) {
+        this.blockSelection.selectBlock(sourceBlock);
+      }
+
       return { movedBlocks: [sourceBlock], targetIndex: fromIndex };
     }
 
@@ -375,20 +387,17 @@ export class DragOperations {
     const firstBlockIndex = this.blockManager.getBlockIndex(firstBlock);
     const movingDown = insertIndex > firstBlockIndex;
 
-    // For multi-block moves, group them as a single undo entry using transactMoves
-    const isMultiBlockMove = sortedBlocks.length > 1;
-    const executeMoves = (): void => {
-      if (movingDown) {
-        this.moveBlocksDown(blocksToMove, insertIndex);
-      } else {
-        this.moveBlocksUp(blocksToMove, insertIndex);
-      }
-    };
-
-    if (isMultiBlockMove && this.yjsManager) {
-      this.yjsManager.transactMoves(executeMoves);
+    // Execute the array moves directly. Do NOT open a transactMoves group here:
+    // the sole caller, DragController.handleDrop, already wraps the entire drop
+    // (these moves AND the subsequent setBlockParent reparent loop) in one
+    // transactMoves. A nested group would close YjsManager.isMoveGroupActive in
+    // its finally before that reparent loop runs, routing setBlockParent onto a
+    // separate Y.UndoManager entry and splitting a drag-reparent into a
+    // two-step undo. Grouping is the caller's responsibility.
+    if (movingDown) {
+      this.moveBlocksDown(blocksToMove, insertIndex);
     } else {
-      executeMoves();
+      this.moveBlocksUp(blocksToMove, insertIndex);
     }
 
     // Clear selection first, then re-select all moved blocks

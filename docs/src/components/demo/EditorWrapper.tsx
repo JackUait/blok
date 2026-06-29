@@ -1,190 +1,63 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../contexts/I18nContext";
 import { useTheme } from "../../hooks/useTheme";
 
-interface BlokEditor {
+interface BlokEditorInstance {
   save: () => Promise<unknown>;
   clear: () => Promise<void>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
-  destroy?: () => void;
-  theme: { set: (mode: "dark" | "light" | "auto") => void };
 }
 
-interface BlokModule {
-  Blok: new (config: unknown) => BlokEditor;
-  Header: unknown;
-  Paragraph: unknown;
-  List: unknown;
-  Bold: unknown;
-  Italic: unknown;
-  Link: unknown;
-}
+// BlokEditor + tools are served from the parent /dist build by Vite at runtime.
+type BlokReactModule = {
+  BlokEditor: React.ForwardRefExoticComponent<
+    Record<string, unknown> & React.RefAttributes<BlokEditorInstance | null>
+  >;
+};
+type BlokToolsModule = {
+  Header: unknown; Paragraph: unknown; List: unknown;
+};
 
 export const EditorWrapper: React.FC<{
-  onEditorReady?: (editor: BlokEditor) => void;
-  onChange?: () => void;
-}> = ({ onEditorReady, onChange }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<BlokEditor | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  onEditorReady?: (editor: BlokEditorInstance) => void;
+}> = ({ onEditorReady }) => {
   const { t } = useI18n();
   const { resolvedTheme } = useTheme();
+  const [mods, setMods] = useState<{ react: BlokReactModule; tools: BlokToolsModule } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Use a ref so the init effect can read the current theme without re-running
-  const resolvedThemeRef = useRef(resolvedTheme);
-  resolvedThemeRef.current = resolvedTheme;
-
-  // Use a ref to store the latest callback without triggering re-runs
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
 
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
-
-  // Use a ref to access t inside the one-time effect without adding it as a dependency
-  const tRef = useRef(t);
-  tRef.current = t;
+  // Fires when BlokEditor attaches/detaches its instance to the forwarded ref.
+  // Using a callback ref (not onReady) guarantees the instance is committed
+  // before we hand it to the consumer — onReady fires before the ref commits.
+  const handleEditorRef = useCallback((instance: BlokEditorInstance | null) => {
+    if (instance) {
+      onEditorReadyRef.current?.(instance);
+    }
+  }, []);
 
   useEffect(() => {
-    const editorState = { editor: null as BlokEditor | null, isMounted: true };
-
-    const initEditor = async () => {
-      if (!containerRef.current || !editorState.isMounted) return;
-
+    let active = true;
+    void (async () => {
       try {
-        // Import the full bundle which includes all tools (resolved by Vite at runtime)
-        // @ts-expect-error - /dist/full.mjs is served by Vite, not resolvable at compile time
-        const module = (await import("/dist/full.mjs")) as BlokModule;
-
-        if (!editorState.isMounted || !containerRef.current) return;
-
-        // Make tools available globally for the editor config
-        (window as unknown as Record<string, unknown>).BlokHeader =
-          module.Header;
-        (window as unknown as Record<string, unknown>).BlokParagraph =
-          module.Paragraph;
-        (window as unknown as Record<string, unknown>).BlokList = module.List;
-        (window as unknown as Record<string, unknown>).BlokBold = module.Bold;
-        (window as unknown as Record<string, unknown>).BlokItalic =
-          module.Italic;
-        (window as unknown as Record<string, unknown>).BlokLink = module.Link;
-
-        // Create the editor
-        const BlokClass = module.Blok;
-        editorState.editor = new BlokClass({
-          holder: containerRef.current,
-          theme: resolvedThemeRef.current,
-          tools: {
-            header: {
-              class: module.Header,
-              config: {
-                placeholder: tRef.current("demo.headerPlaceholder"),
-                levels: [1, 2, 3, 4],
-                defaultLevel: 2,
-              },
-              inlineToolbar: ["bold", "italic", "link"],
-            },
-            paragraph: {
-              class: module.Paragraph,
-              inlineToolbar: ["bold", "italic", "link"],
-              config: {
-                preserveBlank: true,
-                placeholder: tRef.current("demo.paragraphPlaceholder"),
-              },
-            },
-            list: {
-              class: module.List,
-              inlineToolbar: true,
-              config: {
-                defaultStyle: "unordered",
-              },
-            },
-          },
-          data: {
-            blocks: [
-              {
-                id: "welcome-block",
-                type: "header",
-                data: {
-                  text: tRef.current("demo.welcomeTitle"),
-                  level: 2,
-                },
-              },
-              {
-                id: "intro-block",
-                type: "paragraph",
-                data: {
-                  text: tRef.current("demo.welcomeParagraph"),
-                },
-              },
-              {
-                id: "features-list",
-                type: "list",
-                data: {
-                  style: "unordered",
-                  items: [
-                    tRef.current("demo.welcomeListItem1"),
-                    tRef.current("demo.welcomeListItem2"),
-                    tRef.current("demo.welcomeListItem3"),
-                    tRef.current("demo.welcomeListItem4"),
-                  ],
-                },
-              },
-            ],
-          },
-          onChange: () => {
-            // Forward edits so hosts can mirror the live save() output.
-            onChangeRef.current?.();
-          },
-          onReady: () => {},
-        });
-
-        const { editor, isMounted } = editorState;
-        const shouldDestroy = !isMounted && editor?.destroy;
-
-        if (shouldDestroy) {
-          editor.destroy?.();
-          return;
-        }
-
-        if (!isMounted) {
-          return;
-        }
-
-        editorRef.current = editor;
-        setLoading(false);
-        if (editor) {
-          onEditorReadyRef.current?.(editor);
-        }
+        const [react, tools] = await Promise.all([
+          // @ts-expect-error - /dist/react.mjs is served by Vite, not resolvable at compile time
+          import("/dist/react.mjs") as Promise<BlokReactModule>,
+          // @ts-expect-error - /dist/full.mjs is served by Vite, not resolvable at compile time
+          import("/dist/full.mjs") as Promise<BlokToolsModule>,
+        ]);
+        if (active) setMods({ react, tools });
       } catch (err) {
-        if (editorState.isMounted) {
-          const errorMessage =
-            err instanceof Error ? err.message : tRef.current("common.unknownError");
-          setError(errorMessage);
-          setLoading(false);
+        if (active) {
+          setError(err instanceof Error ? err.message : t("common.unknownError"));
         }
       }
-    };
-
-    void initEditor();
-
-    return () => {
-      editorState.isMounted = false;
-      // Cleanup: destroy the editor instance
-      const currentEditor = editorRef.current;
-      if (currentEditor?.destroy) {
-        currentEditor.destroy();
-        editorRef.current = null;
-      }
-    };
-  }, []); // Empty deps array - only run once
-
-  // Sync docs theme changes to the editor instance
-  useEffect(() => {
-    editorRef.current?.theme.set(resolvedTheme);
-  }, [resolvedTheme]);
+    })();
+    return () => { active = false; };
+  }, [t]);
 
   if (error) {
     return (
@@ -203,9 +76,9 @@ export const EditorWrapper: React.FC<{
     );
   }
 
-  return (
-    <div ref={containerRef} className="blok-editor min-h-[24rem]">
-      {loading && (
+  if (mods === null) {
+    return (
+      <div className="blok-editor min-h-[24rem]">
         <div className="editor-placeholder flex min-h-[24rem] items-center justify-center p-8">
           <div className="flex flex-col items-center gap-4 text-center text-muted-foreground">
             <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
@@ -244,7 +117,30 @@ export const EditorWrapper: React.FC<{
             <p className="text-sm font-medium">{t("demo.editorWrapper.loading")}</p>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  const { BlokEditor } = mods.react;
+  const { Header, Paragraph, List } = mods.tools;
+
+  return (
+    <BlokEditor
+      ref={handleEditorRef}
+      className="blok-editor"
+      theme={resolvedTheme}
+      tools={{
+        header: { class: Header, config: { placeholder: t("demo.headerPlaceholder"), levels: [1, 2, 3, 4], defaultLevel: 2 }, inlineToolbar: ["bold", "italic", "link"] },
+        paragraph: { class: Paragraph, inlineToolbar: ["bold", "italic", "link"], config: { preserveBlank: true, placeholder: t("demo.paragraphPlaceholder") } },
+        list: { class: List, inlineToolbar: true, config: { defaultStyle: "unordered" } },
+      }}
+      data={{
+        blocks: [
+          { id: "welcome-block", type: "header", data: { text: t("demo.welcomeTitle"), level: 2 } },
+          { id: "intro-block", type: "paragraph", data: { text: t("demo.welcomeParagraph") } },
+          { id: "features-list", type: "list", data: { style: "unordered", items: [t("demo.welcomeListItem1"), t("demo.welcomeListItem2"), t("demo.welcomeListItem3"), t("demo.welcomeListItem4")] } },
+        ],
+      }}
+    />
   );
 };

@@ -35,6 +35,7 @@ const createBlokStub = (): BlokModules => {
       setCurrentBlockByChildNode: vi.fn(),
       getBlockByChildNode: vi.fn(),
       deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+      convert: vi.fn(() => Promise.resolve({ id: 'converted' })),
     },
     BlockSelection: {
       anyBlockSelected: false,
@@ -90,6 +91,7 @@ const createBlokStub = (): BlokModules => {
       markCaretBeforeChange: vi.fn(),
       undo: vi.fn(),
       redo: vi.fn(),
+      stopCapturing: vi.fn(),
     },
     DragManager: {
       isDragging: false,
@@ -493,6 +495,27 @@ describe('KeyboardController', () => {
       expect(blok.YjsManager.redo).not.toHaveBeenCalled();
     });
 
+    it('still fires redo when Cmd+Shift+Z follows Cmd+Z within 50ms (regression: redo-after-undo swallowed)', () => {
+      // The double-fire guard must dedupe only an IDENTICAL repeated action
+      // (one physical keypress emitting duplicate keydowns), never a genuinely
+      // distinct follow-up. A user undoing then immediately redoing fires two
+      // DIFFERENT actions back-to-back; sharing one timestamp across undo+redo
+      // wrongly swallowed the redo, so redo of a just-undone column creation
+      // silently did nothing. Distinct actions must never be debounced.
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const undoEvent = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true });
+      const redoEvent = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, shiftKey: true });
+
+      document.dispatchEvent(undoEvent);
+      document.dispatchEvent(redoEvent);
+
+      expect(blok.YjsManager.undo).toHaveBeenCalledTimes(1);
+      expect(blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+    });
+
     it('prevents double-firing within 50ms', () => {
       const { controller, blok } = createKeyboardController();
 
@@ -517,6 +540,238 @@ describe('KeyboardController', () => {
       expect(preventDefaultSpy2).toHaveBeenCalled();
       expect(event1.defaultPrevented).toBe(true);
       expect(event2.defaultPrevented).toBe(true);
+    });
+  });
+
+  describe('Turn into shortcuts (D5)', () => {
+    const isMac = process.platform === 'darwin';
+
+    const createTurnIntoEvent = (code: string): KeyboardEvent => {
+      // Mac: Cmd+Opt+N, Win/Linux: Ctrl+Shift+N
+      const modifiers = isMac
+        ? { metaKey: true, altKey: true }
+        : { ctrlKey: true, shiftKey: true };
+
+      return new KeyboardEvent('keydown', { key: code.replace('Digit', ''), code, ...modifiers });
+    };
+
+    const makeBlock = (): Block => ({
+      id: 'block-1',
+      name: 'paragraph',
+      holder: document.createElement('div'),
+    } as unknown as Block);
+
+    it('converts the current block to Heading 1 with Cmd+Opt+1 / Ctrl+Shift+1', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent('Digit1');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'header', { level: 1 });
+    });
+
+    it('converts the current block to Heading 2 with the digit-2 combo', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent('Digit2');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'header', { level: 2 });
+    });
+
+    it('converts the current block to Heading 3 with the digit-3 combo', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent('Digit3');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'header', { level: 3 });
+    });
+
+    it.each([
+      ['Digit4', 4],
+      ['Digit5', 5],
+      ['Digit6', 6],
+    ])('converts the current block to the matching heading with %s (levels 4-6)', (code, level) => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent(code);
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'header', { level });
+    });
+
+    it('converts the current block back to Text (paragraph) with the digit-0 combo', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent('Digit0');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'paragraph', {});
+    });
+
+    it('wraps the conversion in stopCapturing so it is its own undo step', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent('Digit1');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.stopCapturing).toHaveBeenCalled();
+    });
+
+    it('prevents the browser from inserting the digit', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createTurnIntoEvent('Digit1');
+      const preventDefaultSpy = vi.fn().mockImplementation(() => {
+        Object.defineProperty(event, 'defaultPrevented', { value: true, configurable: true });
+      });
+      Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('does NOT convert when the digit is pressed without the turn-into modifiers', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = new KeyboardEvent('keydown', { key: '1', code: 'Digit1' });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when there is no current block', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      blok.BlockManager.currentBlock = undefined;
+
+      const event = createTurnIntoEvent('Digit1');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Ctrl+Y redo alias (D9)', () => {
+    it('calls redo when Ctrl+Y is pressed', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const event = new KeyboardEvent('keydown', { key: 'y', ctrlKey: true });
+      const preventDefaultSpy = vi.fn().mockImplementation(() => {
+        Object.defineProperty(event, 'defaultPrevented', { value: true, configurable: true });
+      });
+      Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy });
+      const stopPropagationSpy = vi.fn();
+      Object.defineProperty(event, 'stopPropagation', { value: stopPropagationSpy });
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+      expect(blok.YjsManager.undo).not.toHaveBeenCalled();
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('calls redo when Ctrl+Y is pressed with uppercase Y', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const event = new KeyboardEvent('keydown', { key: 'Y', ctrlKey: true });
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.redo).toHaveBeenCalledTimes(1);
+    });
+
+    it('does nothing when Y is pressed without a modifier', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const event = new KeyboardEvent('keydown', { key: 'y' });
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.redo).not.toHaveBeenCalled();
+    });
+
+    it('does NOT redo via Ctrl+Y while a drag is active', () => {
+      const { controller, blok } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      Object.assign(blok.DragManager, { isDragging: true });
+
+      const event = new KeyboardEvent('keydown', { key: 'y', ctrlKey: true });
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.redo).not.toHaveBeenCalled();
     });
   });
 

@@ -931,11 +931,16 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, Video, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
+    import { renderEmptyState as renderImageEmptyState } from './src/tools/image/empty-state.ts';
+    import { renderEmptyState as renderVideoEmptyState } from './src/tools/video/empty-state.ts';
+    import { renderEmptyState as renderAudioEmptyState } from './src/tools/audio/empty-state.ts';
+    import { renderEmptyState as renderFileEmptyState } from './src/tools/file/empty-state.ts';
+    import { LightweightI18n } from './src/components/i18n/lightweight-i18n.ts';
     import { version } from './package.json';
 
     document.getElementById('pg-version').textContent = `v${version}`;
@@ -962,6 +967,7 @@
         image: true,
         file: true,
         video: true,
+        audio: true,
         columns: true,
       },
     };
@@ -1851,6 +1857,7 @@
         underline: Underline,
         strikethrough: Strikethrough,
         inlineCode: InlineCode,
+        equation: Equation,
         link: Link,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
@@ -1891,6 +1898,17 @@
           },
         },
       };
+      if (state.tools.audio) tools.audio = {
+        class: Audio,
+        config: {
+          uploader: {
+            uploadByFile: async (file) => ({
+              url: URL.createObjectURL(file),
+              fileName: file.name,
+            }),
+          },
+        },
+      };
       if (state.tools.columns) {
         tools.column_list = ColumnList;
         tools.column = Column;
@@ -1905,7 +1923,6 @@
         tools,
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
-        linkPaste: { menu: true },
         style: { contentAlign: 'center' },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
@@ -2235,11 +2252,11 @@
      * Icon gallery - group icons by category and render them
      */
     const iconGroups = {
-      'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronRightSmall', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine', 'IconMoreHorizontal', 'IconCloseThick', 'IconDice'],
-      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
+      'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconMinus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronRightSmall', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine', 'IconMoreHorizontal', 'IconCloseThick', 'IconDice'],
+      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconEquation', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
       'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
-      'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCaptionImage', 'IconCrop', 'IconCropImage', 'IconReplaceImage', 'IconExpandFullscreen', 'IconExpandFullscreenImage', 'IconCollapseFullscreen', 'IconPlayerFullscreenExit', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconDownloadImage', 'IconUpload'],
+      'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCaptionImage', 'IconCrop', 'IconCropImage', 'IconReplaceImage', 'IconExpandFullscreen', 'IconExpandFullscreenImage', 'IconCollapseFullscreen', 'IconPlayerFullscreenExit', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconDownloadImage', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement'],
       'Utility': ['IconCopy', 'IconTrash', 'IconPencil', 'IconWarning', 'IconPaintRoller', 'IconPreview', 'IconSplitView', 'IconDotsHorizontal'],
@@ -2326,6 +2343,44 @@
             { id: 'nl-2', type: 'list', data: { style: 'unordered', text: 'Nested item', depth: 1 } },
             { id: 'nl-3', type: 'list', data: { style: 'unordered', text: 'Double nested', depth: 2 } },
             { id: 'nl-4', type: 'list', data: { style: 'unordered', text: 'Back up top' } },
+          ] },
+          // Showcases the flat per-block `indent`: ANY block type can be nested
+          // inside a list (indent: 1 lines it up with the list's own content),
+          // not just other list items. One of every block tool, nested.
+          { label: 'Every block nested', blocks: [
+            { id: 'lnb-head', type: 'list', data: { style: 'unordered', text: 'Every block can nest inside a list' } },
+            { id: 'lnb-header', type: 'header', data: { text: 'Nested header', level: 3 }, indent: 1 },
+            { id: 'lnb-para', type: 'paragraph', data: { text: 'A paragraph nested one level into the list.' }, indent: 1 },
+            { id: 'lnb-quote', type: 'quote', data: { text: 'A quote, nested in the list.', size: 'default' }, indent: 1 },
+            { id: 'lnb-callout', type: 'callout', data: { text: 'A callout, nested.', emoji: '💡' }, indent: 1 },
+            { id: 'lnb-code', type: 'code', data: { code: 'const nested = true;', language: 'javascript', lineNumbers: true }, indent: 1 },
+            { id: 'lnb-divider', type: 'divider', data: {}, indent: 1 },
+            { id: 'lnb-image', type: 'image', data: { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400', alt: 'Nested image', width: 40, alignment: 'left' }, indent: 1 },
+            { id: 'lnb-video', type: 'video', data: { url: '/samples/big-buck-bunny.mp4', width: 40, alignment: 'left' }, indent: 1 },
+            { id: 'lnb-audio', type: 'audio', data: { url: '/samples/soundhelix-song-1.mp3', fileName: 'soundhelix-song-1.mp3', mimeType: 'audio/mpeg', title: 'SoundHelix Song 1', artist: 'SoundHelix', duration: 90, peaks: [0.2,0.3,0.35,0.3,0.25,0.85,0.84,0.86,0.83,0.97,0.95,0.96,0.93,0.98,0.96,0.94,0.99,0.96,0.95,0.83] }, indent: 1 },
+            { id: 'lnb-file', type: 'file', data: { url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf', fileName: 'tracemonkey-paper.pdf', size: 1016315, mimeType: 'application/pdf' }, indent: 1 },
+            { id: 'lnb-bookmark', type: 'bookmark', data: { url: 'https://github.com/jackuait/blok', title: 'Blok — headless block editor', description: 'Notion-style editor where every entity is a block.', favicon: 'https://github.com/favicon.ico', domain: 'github.com' }, indent: 1 },
+            { id: 'lnb-embed', type: 'embed', data: { service: 'youtube', source: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', embed: 'https://www.youtube.com/embed/aqz-KE-bpKQ', width: 580, height: 320, widthPercent: 60 }, indent: 1 },
+            { id: 'lnb-table', type: 'table', data: { content: [['A', 'B'], ['C', 'D']] }, indent: 1 },
+            { id: 'lnb-toggle', type: 'toggle', data: { text: 'Nested toggle', isOpen: true }, content: ['lnb-toggle-c'], indent: 1 },
+            { id: 'lnb-toggle-c', type: 'paragraph', data: { text: 'Toggle child content.' }, parent: 'lnb-toggle' },
+            { id: 'lnb-cols', type: 'column_list', data: {}, content: ['lnb-col-a', 'lnb-col-b'], indent: 1 },
+            { id: 'lnb-col-a', type: 'column', data: {}, content: ['lnb-col-a-p'], parent: 'lnb-cols' },
+            { id: 'lnb-col-a-p', type: 'paragraph', data: { text: 'Column A' }, parent: 'lnb-col-a' },
+            { id: 'lnb-col-b', type: 'column', data: {}, content: ['lnb-col-b-p'], parent: 'lnb-cols' },
+            { id: 'lnb-col-b-p', type: 'paragraph', data: { text: 'Column B' }, parent: 'lnb-col-b' },
+            { id: 'lnb-db', type: 'database', data: {
+              schema: [
+                { id: 'title', name: 'Title', type: 'text' },
+                { id: 'status', name: 'Status', type: 'select', options: [
+                  { id: 'todo', name: 'Todo', color: 'gray' },
+                  { id: 'done', name: 'Done', color: 'green' },
+                ] },
+              ],
+              views: [{ id: 'v1', type: 'list', name: 'All', sorts: [], filters: [], visibleProperties: ['title', 'status'] }],
+              activeViewId: 'v1',
+            }, content: ['lnb-db-r1'], indent: 1 },
+            { id: 'lnb-db-r1', type: 'database-row', data: { properties: { title: 'Nested row', status: 'done' } }, parent: 'lnb-db' },
           ] },
           { label: 'Empty', blocks: [{ id: 'ul-empty', type: 'list', data: { style: 'unordered', text: '' } }] },
         ],
@@ -2497,6 +2552,8 @@
         label: 'Image',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'im-empty', type: 'image', data: {} }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'im-empty-upload', type: 'image', data: {} }] },
+          { label: 'Empty · link only', blocks: [{ id: 'im-empty-link', type: 'image', data: {} }] },
           { label: 'Loaded', blocks: [{ id: 'im-loaded', type: 'image', data: {
             url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
             caption: 'Mountain vista',
@@ -2549,42 +2606,62 @@
         label: 'Video',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'vd-empty', type: 'video', data: {} }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'vd-empty-upload', type: 'video', data: {} }] },
+          { label: 'Empty · link only', blocks: [{ id: 'vd-empty-link', type: 'video', data: {} }] },
           { label: 'Loaded', blocks: [{ id: 'vd-loaded', type: 'video', data: {
-            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            url: '/samples/big-buck-bunny.mp4',
             width: 80,
             alignment: 'center',
-            videoWidth: 640,
-            videoHeight: 360,
           } }] },
           { label: 'With caption', blocks: [{ id: 'vd-caption', type: 'video', data: {
-            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-            caption: 'Elephants Dream — open movie sample',
+            url: '/samples/sintel.mp4',
+            caption: 'Sintel — open movie sample',
             captionVisible: true,
             width: 80,
             alignment: 'center',
-            videoWidth: 640,
-            videoHeight: 360,
           } }] },
           { label: 'Small', blocks: [{ id: 'vd-sm', type: 'video', data: {
-            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            url: '/samples/big-buck-bunny.mp4',
             width: 35,
             alignment: 'center',
-            videoWidth: 640,
-            videoHeight: 360,
           } }] },
           { label: 'Left aligned', blocks: [{ id: 'vd-left', type: 'video', data: {
-            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            url: '/samples/big-buck-bunny.mp4',
             width: 45,
             alignment: 'left',
-            videoWidth: 640,
-            videoHeight: 360,
           } }] },
           { label: 'Upload failed', blocks: [{ id: 'vd-upload-error', type: 'video', data: {
-            url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+            url: '/samples/big-buck-bunny.mp4',
             width: 45,
             alignment: 'center',
-            videoWidth: 640,
-            videoHeight: 360,
+          } }] },
+        ],
+      },
+      {
+        tool: 'audio',
+        label: 'Audio',
+        states: [
+          { label: 'Empty (upload)', blocks: [{ id: 'au-empty', type: 'audio', data: { url: '' } }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'au-empty-upload', type: 'audio', data: { url: '' } }] },
+          { label: 'Empty · link only', blocks: [{ id: 'au-empty-link', type: 'audio', data: { url: '' } }] },
+          { label: 'Loaded', blocks: [{ id: 'au-loaded', type: 'audio', data: {
+            url: '/samples/soundhelix-song-1.mp3',
+            fileName: 'soundhelix-song-1.mp3',
+            mimeType: 'audio/mpeg',
+            title: 'SoundHelix Song 1',
+            artist: 'SoundHelix',
+            coverUrl: '/samples/soundhelix-song-1-cover.png',
+            duration: 90,
+            peaks: [0.17,0.24,0.29,0.34,0.35,0.3,0.27,0.25,0.22,0.2,0.84,0.84,0.83,0.82,0.85,0.83,0.85,0.84,0.87,0.86,0.97,0.96,0.95,0.9,0.96,0.97,0.97,0.97,0.99,0.93,0.96,0.98,0.94,0.96,0.97,0.98,0.9,0.91,0.97,0.96,0.99,0.95,0.95,0.98,0.96,0.96,0.99,0.96,0.95,0.97,0.98,0.96,0.93,0.98,0.97,1,0.96,0.94,0.99,1,0.97,0.96,0.98,0.83],
+          } }] },
+          { label: 'No cover art', blocks: [{ id: 'au-no-cover', type: 'audio', data: {
+            url: '/samples/soundhelix-song-1.mp3',
+            fileName: 'soundhelix-song-2.mp3',
+            mimeType: 'audio/mpeg',
+            title: 'SoundHelix Song 2',
+            artist: 'SoundHelix',
+            duration: 90,
+            peaks: [0.2,0.28,0.33,0.3,0.26,0.22,0.19,0.24,0.31,0.36,0.8,0.82,0.85,0.83,0.86,0.84,0.82,0.85,0.88,0.86,0.93,0.95,0.97,0.92,0.94,0.96,0.98,0.95,0.97,0.91,0.94,0.97,0.93,0.95,0.98,0.96,0.89,0.92,0.96,0.94,0.98,0.93,0.96,0.99,0.95,0.94,0.97,0.95,0.93,0.96,0.98,0.94,0.92,0.97,0.96,0.99,0.95,0.93,0.98,1,0.96,0.95,0.97,0.82],
           } }] },
         ],
       },
@@ -2593,6 +2670,8 @@
         label: 'File',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'fl-empty', type: 'file', data: { url: '' } }] },
+          { label: 'Empty · upload only', blocks: [{ id: 'fl-empty-upload', type: 'file', data: { url: '' } }] },
+          { label: 'Empty · link only', blocks: [{ id: 'fl-empty-link', type: 'file', data: { url: '' } }] },
           { label: 'Uploading', blocks: [{ id: 'fl-uploading', type: 'file', data: { url: '' } }] },
           { label: 'PDF (previewable)', blocks: [{ id: 'fl-pdf', type: 'file', data: {
             url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
@@ -2637,9 +2716,9 @@
             mimeType: 'audio/mpeg',
           } }] },
           { label: 'Video', blocks: [{ id: 'fl-video', type: 'file', data: {
-            url: 'https://example.com/product-demo.mp4',
-            fileName: 'product-demo.mp4',
-            size: 64200000,
+            url: '/samples/big-buck-bunny.mp4',
+            fileName: 'big-buck-bunny.mp4',
+            size: 991017,
             mimeType: 'video/mp4',
           } }] },
           { label: 'Source code', blocks: [{ id: 'fl-code', type: 'file', data: {
@@ -2790,6 +2869,17 @@
               },
             },
           },
+          audio: {
+            class: Audio,
+            config: {
+              uploader: {
+                uploadByFile: async (file) => ({
+                  url: URL.createObjectURL(file),
+                  fileName: file.name,
+                }),
+              },
+            },
+          },
           file: {
             class: FileBlock,
             config: {
@@ -2812,6 +2902,7 @@
           underline: Underline,
           strikethrough: Strikethrough,
           inlineCode: InlineCode,
+          equation: Equation,
           marker: Marker,
           link: Link,
         },
@@ -2874,6 +2965,28 @@
           uploadingEl.setProgress(64);
           fileUploadingRoot.appendChild(uploadingEl);
         }
+
+        // Render the single-source empty states. `sources` is a tool-level
+        // config, so the gallery's shared editor can't vary it per block —
+        // swap each synthetic empty block's tool DOM for a real empty state
+        // rendered with the restricted `sources`.
+        const noop = () => {};
+        const fileEmptyI18n = new LightweightI18n();
+        const swapEmptyState = (blockId, tool, el) => {
+          const root = holder.querySelector(`[data-blok-id="${blockId}"] [data-blok-tool="${tool}"]`);
+          if (root) {
+            root.replaceChildren();
+            root.appendChild(el);
+          }
+        };
+        swapEmptyState('im-empty-upload', 'image', renderImageEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
+        swapEmptyState('im-empty-link', 'image', renderImageEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
+        swapEmptyState('vd-empty-upload', 'video', renderVideoEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
+        swapEmptyState('vd-empty-link', 'video', renderVideoEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
+        swapEmptyState('au-empty-upload', 'audio', renderAudioEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
+        swapEmptyState('au-empty-link', 'audio', renderAudioEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
+        swapEmptyState('fl-empty-upload', 'file', renderFileEmptyState({ sources: 'upload', acceptTypes: [], i18n: fileEmptyI18n, onFile: noop, onUrl: noop }));
+        swapEmptyState('fl-empty-link', 'file', renderFileEmptyState({ sources: 'url', acceptTypes: [], i18n: fileEmptyI18n, onFile: noop, onUrl: noop }));
       });
     }
 

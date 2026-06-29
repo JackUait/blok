@@ -5,12 +5,11 @@
  */
 
 import {
-  Dictionary,
-  DictValue,
   BlokConfig,
   I18nConfig,
   I18nDictionary,
 } from './configs';
+import { InlineToolConstructable, InlineToolConstructorOptions } from './tools';
 
 import {
   Blocks,
@@ -33,6 +32,8 @@ import {
   Theme,
   ThemeMode,
   ResolvedTheme,
+  Width,
+  Placeholder,
 } from './api';
 
 import { OutputData } from './data-formats';
@@ -41,6 +42,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -70,7 +72,7 @@ export {
   FilePasteEvent,
   FilePasteEventDetail,
 } from './tools';
-export {BlockTune, BlockTuneConstructable} from './block-tunes';
+export {BlockTune, BlockTuneConstructable, BlockTuneRenderContext} from './block-tunes';
 export {
   BlokConfig,
   SanitizerConfig,
@@ -80,8 +82,6 @@ export {
   LogLevels,
   ConversionConfig,
   I18nDictionary,
-  Dictionary,
-  DictValue,
   I18nConfig,
   UserInfo,
 } from './configs';
@@ -129,6 +129,9 @@ export {
   Theme,
   ThemeMode,
   ResolvedTheme,
+  Width,
+  EditorWidth,
+  Placeholder,
 } from './api';
 export {
   BlockMutationType,
@@ -142,6 +145,9 @@ export {
   BlockMovedEvent,
   BlockChangedMutationType,
   BlockChangedEvent,
+  BlokEditorEventMap,
+  BlockRenderedPayload,
+  BlocksRenderedPayload,
 }
 
 /**
@@ -168,7 +174,7 @@ export interface API {
   ui: Ui;
   theme: Theme;
   /** Read-only view of selected editor configuration. */
-  config: Readonly<Pick<BlokConfig, 'linkPaste'>>;
+  config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link'>>;
   rectangleSelection: {
     cancelActiveSelection: () => void;
     isRectActivated: () => boolean;
@@ -205,13 +211,42 @@ export function wrapLegacyInlineTool(
 ): InlineToolConstructable;
 
 /**
+ * The surface of a Blok instance that is guaranteed to exist synchronously,
+ * immediately after `new Blok()` and before `isReady` has resolved.
+ *
+ * Blok constructs its module APIs (`blocks`, `caret`, `history`, `readOnly`, …)
+ * asynchronously: they only become available once `isReady` resolves. Accessing
+ * them earlier returns `undefined` at runtime. Type a reference you hold during
+ * that window as `PendingBlok` so the not-yet-available members are unreachable,
+ * then await `isReady` to obtain the fully-initialized {@link Blok}:
+ *
+ * @example
+ * const pending: PendingBlok = new Blok(config);
+ * const editor = await pending.isReady; // editor is a ready Blok
+ * editor.blocks.render(data);
+ */
+export interface PendingBlok {
+  /** Resolves with the fully-initialized Blok instance once core modules are ready. */
+  isReady: Promise<Blok>;
+  /** Destroy the instance. Safe to call before `isReady` resolves. */
+  destroy(): void;
+  /** Theme API, exposed immediately after construction. */
+  theme: Theme;
+  /** Width API, exposed immediately after construction. */
+  width: Width;
+  /** Placeholder API, exposed immediately after construction. */
+  placeholder: Placeholder;
+}
+
+/**
  * Main Blok class
  */
 export class Blok {
-  public isReady: Promise<void>;
+  public isReady: Promise<Blok>;
 
   public blocks: Blocks;
   public caret: Caret;
+  public history: History;
   public sanitizer: Sanitizer;
   public saver: Saver;
   public selection: Selection;
@@ -221,6 +256,8 @@ export class Blok {
   public tooltip: Tooltip;
   public readOnly: ReadOnly;
   public theme: Theme;
+  public width: Width;
+  public placeholder: Placeholder;
   constructor(configuration?: BlokConfig|string);
 
   /**

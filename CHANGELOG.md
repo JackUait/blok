@@ -2,6 +2,179 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.23.5](https://github.com/JackUait/blok/compare/v0.23.4...v0.23.5) (2026-06-25)
+
+### Features
+
+- **Core** — The `link` config (`{ target, rel, transformHref }`) now also applies on the **render** and **paste** paths, not just the interactive link tool. Anchors coming from stored block HTML (rendered via `blocks.render()`) and `<a>` arriving through the clipboard now get the configured `target`/`rel` forced and `transformHref` applied to their href — so consumers no longer need to post-process the rendered or pasted DOM. Because the render path rewrites live anchors whose href round-trips into saved data, `transformHref` must be idempotent.
+- **Core** — New `onBeforeRender(blocks) => blocks` config transforms the blocks array before every render (the initial render and each `blocks.render()`), letting you run app-specific data migrations inside Blok instead of pre-processing the data yourself. It runs on the raw saved blocks before format analysis, so it can also inject blocks into an empty document.
+- **Core** — New `onAfterRender(api)` config fires after a render completes and the blocks are in the DOM (initial render and every `blocks.render()`), for post-render side effects such as scroll restoration — distinct from the once-only `onReady`.
+- **Core** — A stable `data-blok-rendered` attribute (exposed as `DATA_ATTR.rendered`) is now set on the editor wrapper when a render batch finishes inserting blocks, and removed while a re-render is in flight — a DOM-level render-readiness gate that complements the existing `blocks:rendered` event.
+- **Block Tunes** — A custom tune's `render(context)` now receives an optional `BlockTuneRenderContext` whose `getPopoverElement()` returns the host tune popover element (`[data-blok-popover]`), so tunes can anchor sub-menus or portals inside Blok's popover without reaching into the DOM via `closest(...)`. The element resolves once the popover mounts (it is `null` synchronously during `render()`).
+- **React** — `<BlokEditor>`/`useBlok` now accept `onBeforeRender` and `onAfterRender`. Both are attached only when provided and are ref-stable, so updating the callbacks never recreates the editor.
+
+## [0.23.4](https://github.com/JackUait/blok/compare/v0.23.3...v0.23.4) (2026-06-25)
+
+### Features
+
+- **Core** — New `onSave(data, api)` config delivers the full serialized `OutputData` (debounced via the existing change-batch window) whenever content changes — the "output half" of a controlled editor. Pair it with the `data` config to mirror editor state into your own store with a single callback instead of calling `saver.save()` by hand. Only user-driven changes trigger it; programmatic `render()` does not (the change observer is disabled during render), so a controlled round-trip won't recurse. Available to all consumers, not just React.
+- **React** — `<BlokEditor>`/`useBlok` now accept `onSave`, making `<BlokEditor data={data} onSave={setData} />` a true controlled component to pair with the reactive `data` prop from 0.23.3. The callback is ref-stable (never recreates the editor) and attached only when provided. Echoing the payload straight back via `onSave={setData}` is caret-stable: the adapter records the editor's own emitted output as the content baseline, so the round-trip deep-equal–dedupes to a no-op (no re-render, no caret reset) while genuine external `data` changes still render in place.
+
+## [0.23.3](https://github.com/JackUait/blok/compare/v0.23.2...v0.23.3) (2026-06-25)
+
+### Features
+
+- **React** — The `<BlokEditor>`/`useBlok` `data` prop is now reactive: passing new content re-renders the editor in place via `editor.render()` instead of being read only once at creation. Identical content is de-duplicated (deep-equality) so the caret is never clobbered, rapid changes are serialized, and a freshly-seeded editor is not double-rendered.
+- **Core** — New typed render events: `blocks:rendered` (payload `{ count }`) fires when a batch finishes rendering, and `block:rendered` (payload `{ blockId }`) fires per block. The runtime event-name constants `BlocksRendered`/`BlockRendered` are exported, so consumers can react to rendering instead of polling the DOM. The public `Events` API is now typed against an event/payload map while still accepting arbitrary string events.
+- **Core** — New `link` config (`{ target, rel, transformHref }`) lets consumers configure the anchors the link tool creates instead of post-processing the DOM. Defaults (`_blank`/`nofollow`) are preserved, configured values now survive save, and URL validation/allowlisting is unchanged.
+- **Paste** — New `onBeforePaste(html) => string | null` config hook transforms (or drops) raw clipboard HTML before Blok preprocessing; returning `null` falls back to plain-text paste.
+- **API** — New `editor.tools.update(name, config)` shallow-merges a tool's config in place — e.g. swap an uploader — without recreating the editor.
+
+### Maintenance
+
+- **Tests** — Exported stable `TEST_ID` constants (plus button, settings toggler, block wrapper) wired into the editor chrome via `data-blok-testid`, so consumers no longer query internal selectors.
+
+## [0.23.2](https://github.com/JackUait/blok/compare/v0.23.1...v0.23.2) (2026-06-25)
+
+### Maintenance
+
+- **Docs** — Documented two React-adapter caveats. `<BlokEditor>` must not be wrapped in `styled()` or any HOC that reserves the `theme` prop: styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks — render it directly and style the container via `className`. And `deps` values must be referentially stable (each value compared individually, not the array wrapper), otherwise the editor is recreated on every render. Both caveats now appear in the README, the docs site, and the `BlokEditor`/`useBlok` JSDoc and published type declarations.
+
+## [0.23.1](https://github.com/JackUait/blok/compare/v0.23.0...v0.23.1) (2026-06-25)
+
+### Features
+
+- **Core** — A new `editor.placeholder` runtime API (`get`/`set`) lets consumers read and change the empty-paragraph placeholder on a live editor, mirroring the existing `width` API. Updates apply to existing blocks and to blocks created afterwards.
+- **React** — `<BlokEditor>` now accepts a reactive `placeholder` prop (backed by the new core API) that updates the editor in place without recreating it, and forwards all standard `<div>` attributes — `id`, `aria-*`, `data-*`, and the like — to the editor container.
+
+## [0.23.0](https://github.com/JackUait/blok/compare/v0.22.0...v0.23.0) (2026-06-24)
+
+### Features
+
+- **React** — A blessed `<BlokEditor>` component is now the recommended way to embed Blok in React. It forwards a typed ref to the live editor instance, takes an uncontrolled `data` seed, and reactively syncs `readOnly`, `autofocus`, `theme`, and `width` props without recreating the editor. Its `onReady` callback fires after the ref commits, so consumers can safely call `ref.current` from inside it. The lower-level `useBlok` hook plus `BlokContent` remain available as an escape hatch.
+
+### Maintenance
+
+- **React** — `useBlok` now reactively syncs `theme` and `width` prop changes to the editor instance, mirroring the existing `readOnly`/`autofocus` pattern.
+- **Docs** — The demo wrapper now dogfoods `BlokEditor`, and the README React section documents the recommended `BlokEditor` path, the uncontrolled `data` contract, reactive props, and the `useBlok` + `BlokContent` escape hatch.
+- **Tests** — Added e2e coverage for save-via-ref and live prop toggles, a published-vs-source type-drift guard, and `data-blok-testid`-based locators.
+
+## [0.22.0](https://github.com/JackUait/blok/compare/v0.21.1...v0.22.0) (2026-06-24)
+
+### Features
+
+- **Paste** — Content copied from buildin.ai now imports as native Blok blocks at full fidelity. buildin's clipboard carries a lossless `text/next-space-blocks` JSON payload beside a lossy Markdown/HTML twin; Blok previously fell back to the twin, where tables collapsed to literal `|pipes|`, media degraded to links, and callouts, toggles, columns, to-dos, and code language flattened away. A new handler decodes the JSON directly, reconstructing the same native blocks as a Blok→Blok paste — paragraphs, to-dos, H1–H4, tables (grid + parented cells), bulleted/numbered lists, toggles, dividers, quotes, callouts (emoji + colour), code (with language), equations, toggle-headings, column lists, and image/video/audio/file/embed-bookmark media. (Inline marks — bold/italic/link/colour — are a documented follow-up.)
+
+### Bug Fixes
+
+- **Paste** — Callout body and colour now survive import from both Notion and buildin.ai. Blok's callout stores its body in child blocks, so the inline title/body text the parsers emitted as `data.text` was silently discarded — the callout is now emitted (colours only) plus a child paragraph carrying its text. Out-of-palette callout colours (e.g. buildin's British `grey`, or any name outside Blok's 9-colour preset) previously produced an undefined CSS variable that dropped both the background and the border; colours now normalize through Blok's preset palette (`grey`→`gray`; unknown names clamp to null).
+
+## [0.21.1](https://github.com/JackUait/blok/compare/v0.21.0...v0.21.1) (2026-06-24)
+
+### Features
+
+- **Media** — Image, video, audio, and file blocks can now be restricted to upload-only or link-only via configuration, so consumers can offer a single source instead of always exposing both.
+
+### Maintenance
+
+- **Media** — Deduped `MediaSource` into a single shared type across the media tools.
+- **Docs** — Documented the audio block tool, and added upload-only and link-only empty states to the playground gallery.
+
+## [0.21.0](https://github.com/JackUait/blok/compare/v0.20.0...v0.21.0) (2026-06-23)
+
+### Bug Fixes
+
+- **Paste** — Rich clipboards (Notion and similar) ship both a faithful HTML payload and a lossy Markdown twin. Routing now prefers the HTML handler, so pasted images, links, and structure the Markdown twin drops are preserved.
+- **Paste** — Notion content keeps its document order: nested children no longer render above their parents (only table cells stay children-first, since the table tool resolves cell ids on insert). Internal references that previously vanished — sub-pages, linked databases / collection views, and inline page mentions — now paste as Notion bookmarks/links instead of being dropped or leaking the raw "‣" glyph, and uploaded media whose binary isn't on the clipboard becomes a Notion-link bookmark carrying the filename rather than a bare filename paragraph.
+- **Paste** — Pasted external Notion audio now shows its title (the player reads `data.title`, which was left blank), and a malformed inline date annotation no longer leaks the raw "‣" placeholder glyph.
+
+### Maintenance
+
+- **Tests** — Added regression coverage for HTML-over-Markdown routing, document-order preservation, internal-reference rescue, pasted audio titles, and date-glyph handling.
+
+## [0.20.0](https://github.com/JackUait/blok/compare/v0.19.2...v0.20.0) (2026-06-22)
+
+### Features
+
+- **Paste** — Content copied from Notion now migrates as native blocks with full state preserved. When Notion's lossless clipboard JSON is present it is used directly (the high-fidelity path), with an HTML fallback for sources that only expose markup. Inline equations and page mentions are mapped to their Blok equivalents.
+- **Audio** — Custom cover art. A cover picker (file upload or image URL) opens from an editable overlay button on the player; covers can be set, replaced, or removed (via a "Remove cover" block setting), with an animated picker open, a sliding Upload/Link tab transition, a themed surface that matches the player, and i18n across all locales. Audio blocks with no cover now show an inertial spinning-vinyl turntable placeholder instead of an empty panel.
+
+### Bug Fixes
+
+- **Audio** — Repaired the transport controls and the video-style playback-speed menu, which now stays open after picking a preset. The volume bar fill is fixed so a muted track reads differently from a full one, and the playing waveform pulses smoothly without gouging its dots. The caption toggle stays on the compositor, and the cover picker no longer jumps height on tab swap, gets an explicit width so the URL field isn't cramped, and revokes leaked cover blobs on a destroy race.
+- **Table** — Pinned the top toolbar anchor flush to the table edge.
+
+### Maintenance
+
+- **Tests** — Added unit and e2e coverage for custom cover set/remove and for real Notion page-mention arity, and cleared the lint/type violations the cover-art work introduced.
+
+## [0.19.2](https://github.com/JackUait/blok/compare/v0.19.1...v0.19.2) (2026-06-20)
+
+### ⚠ BREAKING CHANGES
+
+- **Types** — `OutputBlockData`'s `data` field is now typed `Record<string, unknown>` instead of `any` (matching `BlockToolData` and `SavedData`). Reading a property off a saved block's `data` — e.g. on `save()` output — now yields `unknown` rather than `any`, so code that indexes into `block.data` may need a cast or type guard. This is a type-only change with no runtime effect.
+
+### Bug Fixes
+
+- **Types** — Published `.d.ts` declarations are now self-contained and no longer re-export raw `src/*.ts`. A bare `import { Blok } from '@jackuait/blok'` previously dragged editor source into the consumer's TypeScript program (through `tooltip` and `popover` → `flipper`), surfacing internal type errors under strict consumer flags such as `noUncheckedIndexedAccess`. The `tooltip` and `popover` declarations now inline their public types, so consuming the package no longer type-checks Blok's internals. (The opt-in `/markdown` subpath is unchanged.)
+- **Types** — The published declarations are now internally consistent under `skipLibCheck: false`. Fixed an incorrect `BlockToolData` import path in the `database`/`header`/`list` tool declarations (which also produced spurious "incorrectly extends `BlockTool`" errors), added a missing `InlineToolConstructable`/`InlineToolConstructorOptions` import in the type entry, and removed phantom `Dictionary`/`DictValue` re-exports.
+
+### Maintenance
+
+- **Dependencies** — Moved `nanoid` to `devDependencies`; it is bundled into every dist artifact and was never a runtime external.
+
+## [0.19.1](https://github.com/JackUait/blok/compare/v0.19.0...v0.19.1) (2026-06-20)
+
+### Features
+
+- **Types** — `isReady` now resolves with the fully-initialized `Blok` instance (was `Promise<void>`), so `const editor = await blok.isReady` yields a ready, fully-typed editor without a cast. New exported `PendingBlok` type describes the surface available synchronously after `new Blok()` and before `isReady` resolves (`isReady`, `destroy`, `theme`, `width`) — type a reference held during that window as `PendingBlok` instead of widening to `Partial<Blok>`, then await `isReady` to narrow it to the full API. `new Blok()` still returns the full `Blok`, so existing usage is unaffected.
+
+## [0.19.0](https://github.com/JackUait/blok/compare/v0.18.0...v0.19.0) (2026-06-20)
+
+### Features
+
+- **Width** — New public `width` API on the editor instance: `instance.width.get()`, `set('full' | 'narrow')`, and `toggle()` switch the content layout between `'narrow'` (the default, constrained to `--max-width-content`) and `'full'` (the content `max-width` is removed so it fills its container). It mirrors the `theme` API, including buffering a `set()` call made before the editor is ready and replaying it once the editor is initialized.
+
+### Bug Fixes
+
+- **Types** — Declare the `history` API on the exported `Blok` instance type. `history` (`clear()`, `undo()`/`redo()`, `canUndo()`/`canRedo()`) was already available at runtime; consumers no longer need to cast the instance to reach it.
+
+## [0.18.0](https://github.com/JackUait/blok/compare/v0.17.0...v0.18.0) (2026-06-19)
+
+### Features
+
+- **Audio** — New native Audio block tool. Now-playing card with cover art (lazy `music-metadata` extraction), a waveform canvas with click/drag seek, transport controls (play/pause, volume, playback speed, loop, keyboard shortcuts, persisted preferences), file and URL upload, paste handling routed away from the File block, read-only support, and i18n across all locales. The player card is a full-bleed redesign — a tall cover panel (music-note placeholder when there is no art), a hero waveform scrubber with rounded bars, a slim transport bar, and motion polish.
+- **Media** — Image, video, and audio blocks now accept any file of their media family (`image/*`, `video/*`, `audio/*`) by default. Restrict the accepted types through the existing `types` config, which now accepts both exact MIME types (`image/png`) and family wildcards (`image/*`).
+
+### Bug Fixes
+
+- **Types** — Export `File`, `Audio`, and `Video` (and their data/config/uploader types) and add the `file`/`audio`/`video` keys to `defaultBlockTools` from the `@jackuait/blok/tools` types entry. The runtime already exported these tools; consumers no longer need a local ambient type shim to import them.
+
+### Maintenance
+
+- **Playground** — Audio block states in the block-states gallery (real ID3-tagged track and a "No cover art" state) plus an e2e harness for insert/upload/play/seek.
+
+## [0.17.0](https://github.com/JackUait/blok/compare/v0.16.1...v0.17.0) (2026-06-19)
+
+### Features
+
+- **Video** — New native Video block with a custom Airbnb-style player, brought to YouTube parity: full keyboard control (`j`/`l`/`k`, `0`–`9`, `Home`/`End`, frame-step, volume, speed), a scrubber with buffered range, hover frame-preview tooltip and mini progress bar, an in-player gear menu (Notion-style playback speed with glide, loop, ambient-glow intensity), and view modes — picture-in-picture, a FLIP-morphed theater/cinema mode, and a fade-in ambient glow. Player polish includes click-to-toggle play/pause, a centre play/pause burst, press-and-hold for 2× playback, arrow-key ±5s seek with side indicators, idle auto-hide, buffer spinner, time-remaining toggle, right-click menu, stats overlay and persisted preferences.
+- **Video** — Custom fullscreen surface with a top caption bar, a "Hide controls" tune for a control-free player, and GIF-style autoplay/loop tunes.
+- **Image** — Auto-convert dropped, pasted and remote-URL GIFs into a looping Video block via WebCodecs + webm-muxer, gated by the `convertGifToVideo` config (default on); the original GIF is kept on CORS failure, with a "Converting…" label shown during conversion.
+- **Media** — 30MB default upload limit with per-type `maxSize` configuration and human-readable too-large errors.
+
+### Bug Fixes
+
+- **Paste** — URL paste always prompts now; the previous auto-embed behaviour has been removed. **Breaking:** consumers relying on silent auto-embed must opt in through the paste menu.
+- **Video** — Reserve the aspect ratio before metadata loads to prevent squeeze-on-load, centre and letterbox the fullscreen player, strip editor chrome in fullscreen, and hide the bottom mini progress bar while fullscreen.
+- **Video** — Exit theater mode reliably on Escape via a capture-phase listener with a smooth deferred dismiss, and drive the scrubber fill with `requestAnimationFrame` for smooth playback tracking.
+
+### Maintenance
+
+- **Build** — Move `webm-muxer` to devDependencies so it is bundled rather than treated as an external runtime dependency.
+- **README** — Replace the logo with the optimized noodle mascot.
+- **Playground** — Use real self-hosted videos in the block-states gallery.
+
 ## [0.16.0](https://github.com/JackUait/blok/compare/v0.15.1...v0.16.0) (2026-06-16)
 
 ### Features

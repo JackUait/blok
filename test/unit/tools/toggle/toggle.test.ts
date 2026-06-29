@@ -57,7 +57,7 @@ const createToggleOptions = (
   config,
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,
-  block: { id: 'test-block-id' } as never,
+  block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
 });
 
 describe('ToggleItem', () => {
@@ -121,6 +121,70 @@ describe('ToggleItem', () => {
       const savedData = toggle.save();
 
       expect(savedData.text).toBe('Saved text');
+    });
+  });
+
+  describe('CRDT sync (dispatchChange on open/close)', () => {
+    /**
+     * Regression: collapsing/expanding a toggle changes the saved `isOpen`
+     * field, but the visual updates all land in mutation-free subtrees
+     * (arrow, children container, body placeholder) and on the
+     * `data-blok-toggle-open` attribute, which the MutationObserver ignores.
+     * Without an explicit dispatchChange, the new open state never reaches Yjs
+     * — so it is not undoable and not propagated to remote collaborators.
+     */
+    it('calls block.dispatchChange when collapsed so isOpen syncs to Yjs', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const dispatchChange = vi.fn();
+      const options = createToggleOptions({ isOpen: true });
+
+      options.block = { id: 'test-block-id', dispatchChange } as never;
+
+      const toggle = new ToggleItem(options);
+
+      toggle.render();
+      dispatchChange.mockClear();
+
+      toggle.collapse();
+
+      expect(toggle.save().isOpen).toBe(false);
+      expect(dispatchChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls block.dispatchChange when expanded so isOpen syncs to Yjs', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const dispatchChange = vi.fn();
+      const options = createToggleOptions({ isOpen: false });
+
+      options.block = { id: 'test-block-id', dispatchChange } as never;
+
+      const toggle = new ToggleItem(options);
+
+      toggle.render();
+      dispatchChange.mockClear();
+
+      toggle.expand();
+
+      expect(toggle.save().isOpen).toBe(true);
+      expect(dispatchChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call block.dispatchChange when state is unchanged', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const dispatchChange = vi.fn();
+      const options = createToggleOptions({ isOpen: true });
+
+      options.block = { id: 'test-block-id', dispatchChange } as never;
+
+      const toggle = new ToggleItem(options);
+
+      toggle.render();
+      dispatchChange.mockClear();
+
+      // Already open — expand() is a no-op and must not create a Yjs entry.
+      toggle.expand();
+
+      expect(dispatchChange).not.toHaveBeenCalled();
     });
   });
 
@@ -883,7 +947,7 @@ describe('ToggleItem', () => {
       config: {},
       api: createMockAPI(),
       readOnly: overrides.readOnly ?? false,
-      block: { id: 'test-block-id' } as never,
+      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
     });
 
     it('normalizes legacy title field to text', async () => {

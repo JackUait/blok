@@ -3,6 +3,7 @@
  * Module UI
  * @type {UI}
  */
+import type { EditorWidth } from '../../../types/api/width';
 import styles from '../../styles/main.css?inline';
 import { Module } from '../__module';
 import {
@@ -23,6 +24,22 @@ import { SelectionController } from './uiControllers/controllers/selection';
 import { createDocumentClickedHandler } from './uiControllers/handlers/click';
 import { createRedactorTouchHandler } from './uiControllers/handlers/touch';
 import { ToggleShortcuts } from '../../tools/toggle/toggle-shortcuts';
+
+/**
+ * Classes that hide an empty, focused block's placeholder while the toolbox is open.
+ *
+ * Each rule is gated on the wrapper carrying `data-blok-toolbox-opened=true`, plus a
+ * focused editable block, and targets the placeholder attribute the tool ACTUALLY renders:
+ *   - paragraph → `data-blok-placeholder-active`
+ *   - header    → `data-placeholder`
+ *
+ * Both attributes must be covered; the historical `[data-blok-placeholder]` selector
+ * matched neither and was inert, leaving the placeholder visible behind the + menu.
+ */
+export const PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES: string[] = [
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder-active]:focus]:before:opacity-0!',
+  '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-placeholder]:focus]:before:opacity-0!',
+];
 
 /**
  * HTML Elements used for UI
@@ -348,6 +365,35 @@ export class UI extends Module<UINodes> {
   }
 
   /**
+   * Current editor content width mode. Defaults to 'narrow'.
+   */
+  private widthMode: EditorWidth = 'narrow';
+
+  /**
+   * Returns the current editor content width mode.
+   */
+  public getWidthMode(): EditorWidth {
+    return this.widthMode;
+  }
+
+  /**
+   * Sets the editor content width mode by writing the width data attribute on
+   * the editor wrapper. 'narrow' (the default) leaves the attribute absent so
+   * the content keeps its `--max-width-content` constraint; 'full' adds it so
+   * the dedicated CSS rule removes the constraint.
+   * @param mode - the width mode to apply
+   */
+  public setWidthMode(mode: EditorWidth): void {
+    this.widthMode = mode;
+
+    if (mode === 'full') {
+      this.nodes.wrapper.setAttribute(DATA_ATTR.width, 'full');
+    } else {
+      this.nodes.wrapper.removeAttribute(DATA_ATTR.width);
+    }
+  }
+
+  /**
    * Check if one of Toolbar is opened
    * Used to prevent global keydowns (for example, Enter) conflicts with Enter-on-toolbar
    * @returns {boolean}
@@ -474,7 +520,7 @@ export class UI extends Module<UINodes> {
       // Native selection color
       '[&_::selection]:bg-selection-inline',
       // Hide placeholder when toolbox is opened
-      '[&[data-blok-toolbox-opened=true]_[contentEditable=true][data-blok-placeholder]:focus]:before:opacity-0!',
+      ...PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES,
       ...(this.isRtl ? [ '[direction:rtl]' ] : []),
     ]);
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, BLOK_INTERFACE_VALUE);

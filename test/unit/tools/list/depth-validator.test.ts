@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ListDepthValidator } from '../../../../src/tools/list/depth-validator';
+import { ListDepthValidator, resolveTargetDepth } from '../../../../src/tools/list/depth-validator';
 import type { BlocksAPI } from '../../../../src/tools/list/marker-calculator';
 
 describe('ListDepthValidator', () => {
@@ -209,6 +209,24 @@ describe('ListDepthValidator', () => {
       expect(result).toBe(1);
     });
 
+    it('matches a deeper previous depth even when a shallower next list item follows (nest from the bottom)', () => {
+      // Video repro: First(0), Second(1), Third(0). Dropping a block in the gap
+      // below the nested Second item (and above the shallower Third) must NEST to
+      // depth 1 — prev(1), dropped(1), next(0) is a valid structure. A shallower
+      // next item must NOT pull the drop back to root. Only a *deeper* next item
+      // (handled by shouldMatchNextDepth) overrides the previous-depth match.
+      const blocks = [
+        createMockBlock({ depth: 0 }), // index 0: First
+        createMockBlock({ depth: 1 }), // index 1: Second (previous)
+        createMockBlock({ depth: 0 }), // index 2: placeholder for the moved block
+        createMockBlock({ depth: 0 }), // index 3: Third (next, shallower)
+      ];
+      const blocksAPI = createMockBlocksAPI(blocks);
+      const validator = new ListDepthValidator(blocksAPI);
+
+      expect(validator.getTargetDepthForMove({ blockIndex: 2, currentDepth: 0 })).toBe(1);
+    });
+
     it('keeps current depth when no adjustments needed', () => {
       const blocks = [
         createMockBlock({ depth: 0 }),
@@ -283,6 +301,89 @@ describe('ListDepthValidator', () => {
         // Depth 2 at index 1: max=1, so capped to 1 even with skipDepthPromotion
         expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 2, skipDepthPromotion: true })).toBe(1);
       });
+    });
+  });
+
+  describe('resolveTargetDepth (single source of truth for indicator + drop)', () => {
+    // Convenience: a context with everything at root, overridable per case.
+    const ctx = (over: Partial<Parameters<typeof resolveTargetDepth>[0]>): Parameters<typeof resolveTargetDepth>[0] => ({
+      currentDepth: 0,
+      previousIsListItem: false,
+      previousDepth: 0,
+      nextIsListItem: false,
+      nextDepth: 0,
+      ...over,
+    });
+
+    it('keeps a root block at root with no nesting context', () => {
+      expect(resolveTargetDepth(ctx({}))).toBe(0);
+    });
+
+    it('nests from the TOP: matches a deeper next list item (becomes its sibling)', () => {
+      // First(0), [drop], Nested(1) → match the deeper next → depth 1.
+      expect(resolveTargetDepth(ctx({
+        previousIsListItem: true, previousDepth: 0, nextIsListItem: true, nextDepth: 1,
+      }))).toBe(1);
+    });
+
+    it('nests from the BOTTOM: appends into a deeper previous sub-list despite a shallower next', () => {
+      // First(0), Second(1), [drop], Third(0) → prev(1) wins, shallower next(0) must not pull to root.
+      expect(resolveTargetDepth(ctx({
+        previousIsListItem: true, previousDepth: 1, nextIsListItem: true, nextDepth: 0,
+      }))).toBe(1);
+    });
+
+    it('matches a deeper previous when there is no next item', () => {
+      expect(resolveTargetDepth(ctx({ previousIsListItem: true, previousDepth: 2 }))).toBe(2);
+    });
+
+    it('caps to maxAllowed = previousDepth + 1 when the source is too deep', () => {
+      expect(resolveTargetDepth(ctx({ currentDepth: 3, previousIsListItem: true, previousDepth: 1 }))).toBe(2);
+    });
+
+    it('allows ONE level after a non-list (or absent) predecessor — first-in-group rule', () => {
+      // This is the rule that used to drift: a non-list predecessor caps at 1, NOT 0.
+      expect(resolveTargetDepth(ctx({ currentDepth: 2, previousIsListItem: false }))).toBe(1);
+      expect(resolveTargetDepth(ctx({ currentDepth: 1, previousIsListItem: false }))).toBe(1);
+      // A root (depth 0) source after a non-list block still resolves to root.
+      expect(resolveTargetDepth(ctx({ currentDepth: 0, previousIsListItem: false }))).toBe(0);
+    });
+
+    it('does not match a next item deeper than maxAllowed', () => {
+      // prev(1) → max 2; next(5) is unreachable, so it is ignored.
+      expect(resolveTargetDepth(ctx({ previousIsListItem: true, previousDepth: 1, nextIsListItem: true, nextDepth: 5 }))).toBe(0);
+    });
+
+    it('skipDepthPromotion keeps the current depth but still caps', () => {
+      // Group moves preserve relative structure: no promotion to neighbours...
+      expect(resolveTargetDepth(ctx({
+        currentDepth: 0, previousIsListItem: true, previousDepth: 1, nextIsListItem: true, nextDepth: 1, skipDepthPromotion: true,
+      }))).toBe(0);
+      // ...but an over-deep source is still capped.
+      expect(resolveTargetDepth(ctx({
+        currentDepth: 3, previousIsListItem: true, previousDepth: 1, skipDepthPromotion: true,
+      }))).toBe(2);
+    });
+
+    it('getTargetDepthForMove and resolveTargetDepth agree for the same DOM neighbours', () => {
+      // The class method is a thin DOM-reading wrapper over the pure function.
+      const blocks = [
+        createMockBlock({ depth: 0 }),
+        createMockBlock({ depth: 1 }),
+        createMockBlock({ depth: 0 }),
+        createMockBlock({ depth: 0 }),
+      ];
+      const validator = new ListDepthValidator(createMockBlocksAPI(blocks));
+
+      expect(validator.getTargetDepthForMove({ blockIndex: 2, currentDepth: 0 })).toBe(
+        resolveTargetDepth({
+          currentDepth: 0,
+          previousIsListItem: true,
+          previousDepth: 1,
+          nextIsListItem: true,
+          nextDepth: 0,
+        })
+      );
     });
   });
 

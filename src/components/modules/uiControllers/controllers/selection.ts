@@ -191,13 +191,30 @@ export class SelectionController extends Controller {
   }
 
   /**
-   * Guard for fake background elements that trigger transient selection changes
+   * Guard for selection changes that must not tear down an open Inline Toolbar.
+   *
+   * Two cases collapse/move the document selection on purpose:
+   *  - inline tools (Convert, Link, Equation with a range) wrap the selection in
+   *    a fake-background highlight while their input is focused;
+   *  - a shortcut-opened direct menu (Link/Equation/Marker) focuses its own
+   *    input, which collapses a caret that had no range to fake-background.
+   *
+   * In both cases the toolbar legitimately owns focus, so the resulting
+   * selectionchange should be ignored (outside-click dismissal still happens via
+   * the click handler). Without the direct-menu guard a menu opened at a
+   * collapsed caret was destroyed ~180ms after opening.
    * @returns true if selection change should be ignored
    */
   private shouldIgnoreSelectionChange(): boolean {
+    const inlineToolbar = this.Blok?.InlineToolbar;
+
+    if (!inlineToolbar?.opened) {
+      return false;
+    }
+
     const hasFakeBackground = document.querySelector('[data-blok-fake-background="true"]') !== null;
 
-    return hasFakeBackground && this.Blok?.InlineToolbar?.opened;
+    return hasFakeBackground || inlineToolbar.hasDirectMenuOpen;
   }
 
   /**

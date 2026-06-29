@@ -7,6 +7,7 @@
  */
 import type {
   API,
+  BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
   BlockToolData,
@@ -16,16 +17,24 @@ import type {
   ToolSanitizerConfig,
   PasteConfig,
 } from '../../../types';
+import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR } from '../../components/constants';
 import { IconText } from '../../components/icons';
+import {
+  applyBlockColor,
+  buildBlockColorTunes,
+  BLOCK_COLOR_SANITIZE,
+  type BlockColorData,
+} from '../../components/shared/block-color';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { stripFakeBackgroundElements } from '../../components/utils';
-import { isContentEmpty, PLACEHOLDER_EMPTY_EDITOR_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { isContentEmpty, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 /**
  * Tool's input and output data format
  */
-export interface ParagraphData extends BlockToolData {
+export interface ParagraphData extends BlockToolData, BlockColorData {
   /** Paragraph's content. Can include HTML tags: <a><b><i> */
   text: string;
 }
@@ -147,6 +156,11 @@ export class Paragraph implements BlockTool {
    */
   private _styles: ParagraphStyleConfig;
 
+  /**
+   * Block instance, used to persist block-level color changes.
+   */
+  private block?: BlockAPI;
+
 
 
   /**
@@ -158,9 +172,10 @@ export class Paragraph implements BlockTool {
    * @param options.api - editor.js api
    * @param options.readOnly - read only mode flag
    */
-  constructor({ data, config, api, readOnly }: BlockToolConstructorOptions<ParagraphData, ParagraphConfig>) {
+  constructor({ data, config, api, readOnly, block }: BlockToolConstructorOptions<ParagraphData, ParagraphConfig>) {
     this.api = api;
     this.readOnly = readOnly;
+    this.block = block;
 
     this.onKeyUp = this.onKeyUp.bind(this);
 
@@ -242,8 +257,7 @@ export class Paragraph implements BlockTool {
     div.className = twMerge(
       this.api.styles.block,
       Paragraph.WRAPPER_CLASSES,
-      PLACEHOLDER_FOCUS_ONLY_CLASSES,
-      PLACEHOLDER_EMPTY_EDITOR_CLASSES
+      PLACEHOLDER_FOCUS_ONLY_CLASSES
     );
     div.setAttribute(DATA_ATTR.tool, 'paragraph');
     div.contentEditable = 'false';
@@ -256,6 +270,11 @@ export class Paragraph implements BlockTool {
     if (Object.keys(inlineStyles).length > 0) {
       Object.assign(div.style, inlineStyles);
     }
+
+    /**
+     * Apply Notion-style block-level text/background color from saved data.
+     */
+    applyBlockColor(div, this._data);
 
     if (this._data.text) {
       div.innerHTML = this._data.text;
@@ -322,6 +341,26 @@ export class Paragraph implements BlockTool {
   }
 
   /**
+   * Update the block's placeholder text in place (reactive editor.placeholder API).
+   * Updates internal state always; writes the live attribute only when editable
+   * and rendered. A read-only block picks up the new text on the next edit toggle.
+   *
+   * @param value - new placeholder text, or false to clear it
+   */
+  public setPlaceholder(value: string | false): void {
+    this._placeholder = value === false ? '' : value;
+
+    if (!this._element || this.readOnly) {
+      return;
+    }
+
+    this._element.setAttribute(
+      'data-blok-placeholder-active',
+      value === false ? '' : this.api.i18n.t(this._placeholder)
+    );
+  }
+
+  /**
    * Method that specified how to merge two Text blocks.
    * Called by Editor by backspace at the beginning of the Block
    *
@@ -362,9 +401,45 @@ export class Paragraph implements BlockTool {
    * @returns saved data
    */
   public save(toolsContent: HTMLDivElement): ParagraphData {
-    return {
+    const data: ParagraphData = {
       text: stripFakeBackgroundElements(toolsContent.innerHTML),
     };
+
+    if (this._data.textColor) {
+      data.textColor = this._data.textColor;
+    }
+
+    if (this._data.backgroundColor) {
+      data.backgroundColor = this._data.backgroundColor;
+    }
+
+    return data;
+  }
+
+  /**
+   * Block-settings menu: Notion-style text/background color submenus.
+   *
+   * @returns MenuConfig with the two block-color tunes
+   */
+  public renderSettings(): MenuConfig {
+    return buildBlockColorTunes({
+      data: this._data,
+      labels: {
+        textColor: this.api.i18n.t('tools.marker.textColor'),
+        background: this.api.i18n.t('tools.marker.background'),
+        default: this.api.i18n.t('tools.marker.default'),
+      },
+      onPick: (field, value): void => {
+        // Assigning undefined clears the field (applyBlockColor + save treat it as unset).
+        this._data[field] = value;
+
+        if (this._element) {
+          applyBlockColor(this._element, this._data);
+        }
+
+        this.block?.dispatchChange();
+      },
+    });
   }
 
   /**
@@ -411,8 +486,9 @@ export class Paragraph implements BlockTool {
    */
   public static get sanitize(): ToolSanitizerConfig {
     return {
+      ...BLOCK_COLOR_SANITIZE,
       text: {
-        br: true,
+        ...INLINE_TEXT_SANITIZE,
         img: {
           src: true,
           style: true,

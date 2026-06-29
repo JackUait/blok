@@ -26,6 +26,18 @@ describe('ListItemDescendants', () => {
     } as Block;
   };
 
+  // Helper to create a non-list block carrying a flat list-nesting indent
+  const createIndentedBlock = (id: string, indent: number): Partial<Block> => {
+    const holder = document.createElement('div');
+    holder.setAttribute('data-blok-element', 'block');
+    holder.setAttribute('data-blok-depth', String(indent));
+
+    return {
+      id,
+      holder,
+    } as Block;
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -162,6 +174,25 @@ describe('ListItemDescendants', () => {
       // list-5 is at depth 0, which is not > parentDepth (0), so it stops
       expect(descendants).toHaveLength(3);
       expect(descendants.map(d => d.id)).toEqual(['list-2', 'list-3', 'list-4']);
+    });
+
+    it('collects flat-indented followers of a non-list block (Notion-style Tab nesting)', () => {
+      // A root paragraph with a paragraph indented under it (flat data-blok-indent),
+      // then a sibling paragraph back at root. Dragging the parent must carry the
+      // indented follower as a unit, matching Notion.
+      const parent = createMockBlock('para-1', null);
+      const indentedChild = createIndentedBlock('para-2', 1);
+      const sibling = createMockBlock('para-3', null);
+
+      mockBlockManager.blocks = [
+        parent as Block,
+        indentedChild as Block,
+        sibling as Block,
+      ];
+
+      const descendants = listItemDescendants.getDescendants(parent as Block);
+
+      expect(descendants.map(d => d.id)).toEqual(['para-2']);
     });
 
     it('should handle non-list items mixed with list items', () => {

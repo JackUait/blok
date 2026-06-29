@@ -97,6 +97,7 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
     getBlock: vi.fn((element: HTMLElement) => blocks.find((block) => block.holder === element) ?? null),
     getBlockById: vi.fn((id: string) => blocks.find((block) => block.id === id) ?? undefined),
+      getBlockDepth: vi.fn(() => 0),
     removeSelectedBlocks: vi.fn(() => 0),
     insertDefaultBlockAtIndex: vi.fn(),
     deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -412,6 +413,10 @@ describe('BlockSelection', () => {
 
       firstBlock.holder.innerHTML = '<p>First</p>';
       secondBlock.holder.innerHTML = '<p>Second</p>';
+      (firstBlock as unknown as { id: string }).id = 'block-first';
+      (secondBlock as unknown as { id: string }).id = 'block-second';
+      (firstBlock as unknown as { preservedData: unknown }).preservedData = { text: 'First' };
+      (secondBlock as unknown as { preservedData: unknown }).preservedData = { text: 'Second' };
       firstBlock.selected = true;
       secondBlock.selected = true;
 
@@ -428,6 +433,58 @@ describe('BlockSelection', () => {
       // This ensures clipboard operations are synchronous for browser compatibility
       expect(firstBlock.save).not.toHaveBeenCalled();
       expect(secondBlock.save).not.toHaveBeenCalled();
+    });
+
+    it('writes stripped plain text (not Markdown) to text/plain on a default copy, matching Notion', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const heading = blocks[0];
+      const paragraph = blocks[1];
+
+      heading.holder.innerHTML = '<h2>Title</h2>';
+      paragraph.holder.innerHTML = '<p>a <b>bold</b> word</p>';
+      (heading as unknown as { id: string }).id = 'block-heading';
+      (paragraph as unknown as { id: string }).id = 'block-paragraph';
+      (heading as unknown as { name: string }).name = 'header';
+      (heading as unknown as { preservedData: unknown }).preservedData = { text: 'Title', level: 2 };
+      (paragraph as unknown as { preservedData: unknown }).preservedData = { text: 'a <b>bold</b> word' };
+      heading.selected = true;
+      paragraph.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      // Notion's default Cmd+C puts rendered text (no #, no **) into text/plain.
+      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', 'Title\n\na bold word');
+    });
+
+    it('copySelectedBlocksAsMarkdown writes Markdown to the clipboard (Notion Cmd+Shift+C)', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+
+      Object.defineProperty(globalThis.navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText },
+      });
+
+      const heading = blocks[0];
+      const paragraph = blocks[1];
+
+      (heading as unknown as { id: string }).id = 'block-heading';
+      (paragraph as unknown as { id: string }).id = 'block-paragraph';
+      (heading as unknown as { name: string }).name = 'header';
+      (heading as unknown as { preservedData: unknown }).preservedData = { text: 'Title', level: 2 };
+      (paragraph as unknown as { preservedData: unknown }).preservedData = { text: 'a <b>bold</b> word' };
+      heading.selected = true;
+      paragraph.selected = true;
+
+      await blockSelection.copySelectedBlocksAsMarkdown();
+
+      expect(writeText).toHaveBeenCalledWith('## Title\n\na **bold** word');
     });
 
     it('includes parentId and contentIds in serialized clipboard data for hierarchical blocks', async () => {
@@ -455,6 +512,7 @@ describe('BlockSelection', () => {
           getBlockByIndex: vi.fn((index: number) => allHierarchyBlocks[index]),
           getBlock: vi.fn(),
           getBlockById: vi.fn((id: string) => allHierarchyBlocks.find(b => b.id === id) ?? undefined),
+      getBlockDepth: vi.fn(() => 0),
           removeSelectedBlocks: vi.fn(),
           insertDefaultBlockAtIndex: vi.fn(),
           deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -542,6 +600,7 @@ describe('BlockSelection', () => {
           getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
           getBlock: vi.fn(),
           getBlockById: vi.fn((id: string) => allBlocks.find(b => b.id === id) ?? undefined),
+      getBlockDepth: vi.fn(() => 0),
           removeSelectedBlocks: vi.fn(),
           insertDefaultBlockAtIndex: vi.fn(),
           deleteSelectedBlocksAndInsertReplacement: vi.fn(),
@@ -676,9 +735,8 @@ describe('BlockSelection', () => {
   });
 
   describe('handleCommandA', () => {
-    it('selects all blocks on second invocation for single-input tools', () => {
+    it('does not jump straight to all-blocks on the second Cmd+A for single-input tools', () => {
       const { blockSelection, blocks } = createBlockSelection();
-      const internal = blockSelection as unknown as { needToSelectAll: boolean };
       const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
       const event = {
         target: blocks[0].holder,
@@ -694,14 +752,114 @@ describe('BlockSelection', () => {
       const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
 
       handler.handleCommandA(event);
-      expect(internal.needToSelectAll).toBe(true);
+      handler.handleCommandA(event);
+
+      // The second press selects the block, not all blocks (Notion's intermediate stage).
       expect(selectAllSpy).not.toHaveBeenCalled();
+    });
+
+    it('selects the current block on second Cmd+A, then all blocks on third, for single-input tools', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+
+      (blockSelection as unknown as { selection: SelectionUtils }).selection = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        clearSaved: vi.fn(),
+      } as unknown as SelectionUtils;
+
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // 1st press: native text selection only — no block-level selection yet.
+      handler.handleCommandA(event);
+      expect(selectBlockSpy).not.toHaveBeenCalled();
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 2nd press: select just this block (the stage Notion has that Blok was skipping).
+      handler.handleCommandA(event);
+      expect(selectBlockSpy).toHaveBeenCalledWith(blocks[0]);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 3rd press: escalate to all blocks.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('reaches all-blocks in two presses for an empty block (no native text to select)', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      (blocks[0] as unknown as { isEmpty: boolean }).isEmpty = true;
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // 1st press on an empty block goes straight to block selection.
+      handler.handleCommandA(event);
+      expect(selectBlockSpy).toHaveBeenCalledWith(blocks[0]);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 2nd press escalates to all blocks.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('is a terminal no-op once all blocks are selected (does not loop back to text selection)', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // block
+      handler.handleCommandA(event); // all blocks
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+
+      const selectBlockCallsAfterAll = selectBlockSpy.mock.calls.length;
+
+      // 4th and 5th presses must NOT re-enter the cycle.
+      handler.handleCommandA(event);
+      handler.handleCommandA(event);
+
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+      expect(selectBlockSpy.mock.calls.length).toBe(selectBlockCallsAfterAll);
+    });
+
+    it('promotes straight to block selection on the first press when the text is already fully selected', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      Object.defineProperty(blocks[0], 'pluginsContent', {
+        configurable: true,
+        get: () => ({ textContent: 'Sample text' }) as unknown as HTMLElement,
+      });
+      const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
+      const getSpy = vi.spyOn(SelectionUtils, 'get').mockReturnValue({
+        isCollapsed: false,
+        rangeCount: 1,
+        toString: () => 'Sample text',
+        removeAllRanges: vi.fn(),
+      } as unknown as Selection);
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
 
       handler.handleCommandA(event);
 
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
-      expect(selectAllSpy).toHaveBeenCalledTimes(1);
-      expect(internal.needToSelectAll).toBe(false);
+      expect(selectBlockSpy).toHaveBeenCalledWith(blocks[0]);
+
+      getSpy.mockRestore();
     });
 
     it('selects current block when tool exposes multiple inputs', () => {
@@ -746,6 +904,78 @@ describe('BlockSelection', () => {
       expect(rectangleSelection.clearSelection).toHaveBeenCalledTimes(1);
       expect(handler.readyToBlockSelection).toBe(true);
       expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('M6: when nested, escalates block → container siblings → all blocks', () => {
+      const container = createBlockStub({ id: 'container', contentIds: ['c1', 'c2'] });
+      const c1 = createBlockStub({ id: 'c1', parentId: 'container' });
+      const c2 = createBlockStub({ id: 'c2', parentId: 'container' });
+      const root = createBlockStub({ id: 'root' });
+      const allBlocks = [container, c1, c2, root];
+
+      const { blockSelection } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: c1,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: c1.holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // 1st press: native text selection only.
+      handler.handleCommandA(event);
+      expect(c1.selected).toBe(false);
+
+      // 2nd press: select just the nested block.
+      handler.handleCommandA(event);
+      expect(c1.selected).toBe(true);
+      expect(c2.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 3rd press: container-scoped intermediate stage — select the container's siblings.
+      handler.handleCommandA(event);
+      expect(c1.selected).toBe(true);
+      expect(c2.selected).toBe(true);
+      expect(root.selected).toBe(false);
+      expect(blockSelection.allBlocksSelected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 4th press: escalate to the whole document.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+
+      // 5th press: terminal no-op once everything is selected.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('M7: a block pre-selected via selectBlock escalates to all-blocks on the next Cmd+A', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // Pre-select the block through a non-Cmd+A path (caret / rectangle / public API).
+      blockSelection.selectBlock(blocks[0]);
+
+      // The next Cmd+A must escalate, not drop back into the text-selection stage.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
     });
   });
 

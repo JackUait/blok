@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { SectionReveal } from "../common/SectionReveal";
+import { HalftoneDots } from "../common/HalftoneDots";
 import { useI18n } from "../../contexts/I18nContext";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +18,10 @@ export const MigrationCard: React.FC = () => {
             className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-primary/[0.07] blur-3xl"
             aria-hidden="true"
           />
+
+          {/* Comic-style halftone dot field — an interactive canvas whose dots
+              the cursor pushes away as a shape-shifting blob (see HalftoneDots) */}
+          <HalftoneDots className="text-foreground/[0.08]" />
 
           <div className="relative px-6 py-10 sm:p-12 lg:p-16">
             {/* Copy + calls to action */}

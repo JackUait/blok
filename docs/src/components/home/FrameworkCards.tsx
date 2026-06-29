@@ -253,7 +253,7 @@ export const FrameworkCards: React.FC = () => {
 
   return (
     <section
-      className="py-20 sm:py-24"
+      className="pb-12 pt-4 sm:pb-14 sm:pt-4"
       aria-label={t("home.frameworks.sectionLabel")}
       data-blok-testid="frameworks-section"
     >

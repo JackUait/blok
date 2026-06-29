@@ -2404,7 +2404,7 @@ export const Features: React.FC = () => {
 
   return (
     <section
-      className="py-20 sm:py-28"
+      className="pb-12 pt-20 sm:pb-14 sm:pt-28"
       id="features"
       aria-label={t('home.features.sectionLabel')}
     >

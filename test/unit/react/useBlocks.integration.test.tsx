@@ -1408,5 +1408,35 @@ describe('useBlocks — real BlockHierarchy integration', () => {
       expect(internalChildren.length).toBeGreaterThan(0);
       expect(internalChildren.every((n) => n.parentId !== 'container')).toBe(true);
     });
+
+    it('forwards config to the REAL converter end-to-end (gfm:false disables table parsing)', async () => {
+      const harness = createRealEditorHarness([{ id: 'seed' }]);
+
+      workingArea = harness.workingArea;
+
+      const { result } = renderHook(() => useBlocks(harness.editor));
+      const table = '| a | b |\n|---|---|\n| c | d |';
+
+      // Uses the REAL markdown converter (not a mock): proves the config bag is
+      // actually wired through to markdownToBlocks AND honored. With GFM on
+      // (default) the pipes parse to a `table` block; with gfm:false they are
+      // plain text, so no table block is produced.
+      let withGfm: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        withGfm = await result.current.insertMarkdown(table);
+      });
+
+      expect(withGfm.some((n) => n.type === 'table')).toBe(true);
+
+      let withoutGfm: Awaited<ReturnType<typeof result.current.insertMarkdown>> = [];
+
+      await act(async () => {
+        withoutGfm = await result.current.insertMarkdown(table, { config: { gfm: false } });
+      });
+
+      expect(withoutGfm.some((n) => n.type === 'table')).toBe(false);
+      expect(withoutGfm.every((n) => n.type === 'paragraph')).toBe(true);
+    });
   });
 });

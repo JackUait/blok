@@ -609,6 +609,12 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     popoverEl.style.width = '';
     popoverEl.style.height = '';
 
+    // The root is `inline-block`; once its height collapses to 0 (the absolute
+    // container carries the size), default baseline alignment drops it ~one
+    // line-height below the wrapper top, placing the menu too low. Align its top
+    // to the wrapper so it sits right under the selection like the toolbar does.
+    popoverEl.style.verticalAlign = 'top';
+
     const container = popoverEl.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
 
     if (container) {

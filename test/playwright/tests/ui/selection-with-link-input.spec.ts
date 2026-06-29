@@ -249,10 +249,15 @@ test.describe('selection with link input', () => {
       const elements = document.querySelectorAll('[data-blok-fake-background="true"]');
       if (elements.length === 0) return null;
       const firstEl = elements[0] as HTMLElement;
+      const wrapper = firstEl.closest('[data-blok-interface]') ?? document.documentElement;
+      const selectionToken = getComputedStyle(wrapper).getPropertyValue('--blok-selection').trim();
+
       return {
         boxDecorationBreak: firstEl.style.boxDecorationBreak,
         whiteSpace: firstEl.style.whiteSpace,
         boxShadow: firstEl.style.boxShadow,
+        computedBoxShadow: getComputedStyle(firstEl).boxShadow,
+        selectionToken,
       };
     });
 
@@ -260,6 +265,29 @@ test.describe('selection with link input', () => {
     expect(styles).not.toBeNull();
     expect(styles?.boxDecorationBreak).toBe('clone');
     expect(styles?.whiteSpace).toBe('pre-wrap');
-    expect(styles?.boxShadow).toContain('rgba(0, 0, 0, 0.08)');
+
+    // The highlight colour must come from the editor's selection token (so it
+    // stays visible and theme-aware), never a faint hardcoded literal that reads
+    // as "no highlight".
+    expect(styles?.boxShadow).toContain('var(--blok-selection');
+    expect(styles?.boxShadow).not.toContain('rgba(0, 0, 0, 0.08)');
+
+    // And it must actually RENDER as the selection colour — proving the
+    // highlight is visible, not transparent — by resolving the token to rgb and
+    // checking the computed box-shadow uses it.
+    expect(styles?.selectionToken).toBeTruthy();
+    const tokenRgb = await page.evaluate((token) => {
+      const probe = document.createElement('span');
+
+      probe.style.color = token;
+      document.body.appendChild(probe);
+      const rgb = getComputedStyle(probe).color;
+
+      probe.remove();
+
+      return rgb;
+    }, styles?.selectionToken ?? '');
+
+    expect(styles?.computedBoxShadow).toContain(tokenRgb);
   });
 });

@@ -4,7 +4,18 @@ import type { LineGroup, LineRect } from './types';
  * Box-shadow calculations for fake background functionality.
  */
 export class FakeBackgroundShadows {
-  private static readonly BG_COLOR = 'rgba(0, 0, 0, 0.08)';
+  /**
+   * Highlight colour for the fake background — the "selection is still here"
+   * indicator shown while focus is in a Link/Equation menu input.
+   *
+   * Sourced from the editor's `--blok-selection` design token (the same colour
+   * the editor uses for selection elsewhere) so it stays visible and tracks the
+   * theme, including dark mode, automatically. The literal fallback keeps it
+   * visible if the token ever fails to resolve. Do NOT hardcode a colour here: a
+   * faint literal (e.g. `rgba(0, 0, 0, 0.08)`) reads as "no highlight" and is
+   * exactly the bug this indirection prevents.
+   */
+  private static readonly BG_COLOR = 'var(--blok-selection, #e1f2ff)';
 
   /**
    * Applies box-shadow to a wrapper to extend the background to fill line-height

@@ -60,6 +60,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
+   * Returns true while a shortcut-opened direct menu (Link/Equation/Marker) is
+   * showing. Such a menu deliberately moves focus into its own input, which
+   * collapses the document selection — the SelectionController uses this to
+   * avoid tearing the menu down on the resulting selectionchange (mirrors the
+   * fake-background guard used when a range is selected).
+   */
+  public get hasDirectMenuOpen(): boolean {
+    return this.directMenuChildren !== null;
+  }
+
+  /**
    * Popover instance reference
    */
   private popover: Popover | null = null;
@@ -513,7 +524,13 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     this.close();
     this.initialize();
 
-    const { allowed } = this.selectionValidator.canShow({ allowCollapsed: true });
+    /**
+     * Only caret-insert tools (Equation) may open with nothing selected; a
+     * selection-wrapping tool (Link, Marker) needs a range to act on, so its
+     * shortcut is a no-op at a collapsed caret.
+     */
+    const allowCollapsed = this.Blok.Tools.inlineTools.get(toolName)?.allowCaretShortcut ?? false;
+    const { allowed } = this.selectionValidator.canShow({ allowCollapsed });
 
     if (!allowed) {
       return;

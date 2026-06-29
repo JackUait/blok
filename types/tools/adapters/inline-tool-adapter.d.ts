@@ -17,4 +17,9 @@ interface InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, InlineTool>
    * Returns the translation key for the tool title
    */
   titleKey: string | undefined;
+
+  /**
+   * Whether the tool's shortcut may open its menu at a collapsed caret.
+   */
+  allowCaretShortcut: boolean;
 }

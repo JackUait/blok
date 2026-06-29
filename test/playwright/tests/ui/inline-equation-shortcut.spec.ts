@@ -196,4 +196,30 @@ test.describe('Inline equation shortcut', () => {
 
     expect(savedText).toContain('data-latex="a^2"');
   });
+
+  test('equation menu opened at a COLLAPSED caret stays open past the selectionchange debounce', async ({ page }) => {
+    // Regression: focusing the menu input collapses the document selection, which
+    // fires the debounced selectionchange handler. With a real range the tool's
+    // fake-background protects the toolbar; a collapsed caret has no fake
+    // background, so the handler used to tear the menu down ~180ms after it
+    // opened (it only "worked" if you typed fast enough to beat the debounce).
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'before after' } },
+    ]);
+
+    await placeCollapsedCaretInFirstEditable(page, 'before'.length);
+
+    await page.keyboard.press(`${MODIFIER_KEY}+Shift+KeyE`);
+
+    const input = page.getByTestId('inline-equation-input');
+
+    await expect(input).toBeFocused();
+
+    // Wait well past the 180ms selectionchange debounce, then confirm the menu
+    // is still there and usable.
+    await page.waitForTimeout(500);
+
+    await expect(input).toBeVisible();
+    await expect(input).toBeFocused();
+  });
 });

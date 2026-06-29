@@ -46,6 +46,13 @@ export class EquationInlineTool implements InlineTool {
   public static shortcut = 'CMD+SHIFT+E';
 
   /**
+   * The equation inserts a fresh formula at the caret, so its shortcut may open
+   * the menu even with nothing selected (Notion's "New equation"). Selection-
+   * wrapping tools (Link, Marker) leave this false and require a range.
+   */
+  public static allowCaretShortcut = true;
+
+  /**
    * Sanitizer Rule — keep equation spans, preserving only the LaTeX source.
    * The rendered KaTeX markup is regenerated on load, so any other attribute
    * (class names, inline styles produced by KaTeX) is dropped at save time.

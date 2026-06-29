@@ -182,6 +182,24 @@ export interface InsertSpec {
   tunes?: { [name: string]: BlockTuneData };
 }
 
+export interface TreeInsertSpec {
+  type?: string;
+  data?: BlockToolData;
+  tunes?: { [name: string]: BlockTuneData };
+  /**
+   * Explicit id for this node (generated when omitted). Unlike `insert`, this is
+   * NOT insert-if-absent: a tree insert always creates fresh blocks, so a
+   * colliding id is the caller's responsibility.
+   */
+  id?: string;
+  /** Direct children, inserted nested under this node, in array order. */
+  children?: TreeInsertSpec[];
+  /** Root-only: where to place the whole subtree. Ignored on nested children. */
+  parentId?: string | null;
+  /** Root-only: slot among siblings of `parentId`. Ignored on nested children. */
+  position?: InsertPosition;
+}
+
 /**
  * Where to move an existing block.
  *
@@ -223,6 +241,51 @@ export interface UseBlocksApi {
    * fresh-snapshot volatile — read them now, don't stash them in dep arrays.
    */
   insertMany(specs: InsertSpec[]): BlockNode[];
+  /**
+   * Insert a pre-built NESTED subtree in ONE atomic operation (one undo step).
+   * Each {@link TreeInsertSpec} node becomes a block; its `children` are inserted
+   * nested under it (recursively, in array order) so the whole hierarchy lands in
+   * a single call — no follow-up `nest` round-trips. Delegates to core's
+   * tree-aware `blocks.insertMany`, which composes the flat DFS pre-order array
+   * honoring each node's `parent`/`content` links.
+   *
+   * Placement is root-only: the root node's `parentId`/`position` position the
+   * whole subtree among existing blocks (default: appended at the document end);
+   * nested children ignore those fields (their parent is their enclosing node). A
+   * dangling root `parentId` is rejected — nothing is inserted and `null` is
+   * returned (mirrors {@link insert}). Returns the root {@link BlockNode}, which
+   * is fresh-snapshot volatile — read it now, don't stash it in a dep array.
+   */
+  insertTree(spec: TreeInsertSpec): BlockNode | null;
+  /**
+   * Convert a Markdown string to blocks and insert them ADDITIVELY at a
+   * position, WITHOUT clearing the document (unlike core's `importMarkdown` /
+   * `renderFromHTML`, which replace the whole document). This is the React
+   * "paste markdown → blocks appear" path.
+   *
+   * Async: the markdown converter is lazy-loaded (kept out of the main bundle),
+   * so this is the ONE async creator in the API — `await` the returned promise.
+   * The whole batch is inserted as a single atomic undo step.
+   *
+   * `position` (default `'end'`) places the converted run among `parentId`'s
+   * children (or root siblings when `parentId` is omitted/null), reusing the
+   * same `start`/`end`/`before`/`after` semantics as {@link insert}.
+   *
+   * `parentId` (default `null` = root) nests the import: every TOP-LEVEL
+   * converted block (one the converter left un-parented) is reparented under
+   * `parentId`, while blocks the markdown nested internally (e.g. table-cell
+   * children) keep their intra-import parent. A dangling `parentId` is a no-op
+   * (returns `[]`, opens no transaction), matching {@link insert}.
+   *
+   * Returns the created {@link BlockNode}s in document order; empty or
+   * whitespace-only markdown (and a dangling `parentId`) returns `[]` and opens
+   * no transaction. The nodes are fresh-snapshot volatile — read them now, don't
+   * stash them in dep arrays.
+   */
+  insertMarkdown(
+    markdown: string,
+    options?: { parentId?: string | null; position?: InsertPosition }
+  ): Promise<BlockNode[]>;
   /**
    * Move `id` to a flat slot, as a single operation. No-op when `id` is unknown.
    * For a relative `{ before|after }` target it is also a no-op when the ref is

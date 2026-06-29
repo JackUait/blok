@@ -1001,17 +1001,18 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     const { result } = renderHook(() => useBlocks(harness.editor));
 
-    let root: ReturnType<typeof result.current.insertTree> = null;
+    let rootType: string | undefined;
+    let rootParent: string | null | undefined;
 
     act(() => {
-      root = result.current.insertTree({ type: 'header', children: [{ type: 'paragraph' }] });
+      const root = result.current.insertTree({ type: 'header', children: [{ type: 'paragraph' }] });
+
+      rootType = root?.type;
+      rootParent = root?.parentId;
     });
 
-    expect(root).not.toBeNull();
-    const returned: NonNullable<typeof root> = root as unknown as NonNullable<typeof root>;
-
-    expect(returned.type).toBe('header');
-    expect(returned.parentId).toBeNull();
+    expect(rootType).toBe('header');
+    expect(rootParent).toBeNull();
   });
 
   it('insertTree with a dangling parentId returns null and inserts nothing', () => {

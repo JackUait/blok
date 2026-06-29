@@ -1116,9 +1116,19 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       // Swallow the rejection so a non-convertible block is a graceful no-op —
       // and on rejection the caret is left untouched.
       void Promise.resolve(editor.blocks.convert(id, newType, dataOverrides))
-        .then(() => {
+        .then((converted) => {
           if (options?.caret !== undefined) {
-            editor.caret.setToBlock(id, options.caret.position ?? 'default', options.caret.offset ?? 0);
+            // Core convert routes through replace(), which regenerates the block
+            // id — the resolved BlockAPI carries the NEW id. Target it (falling
+            // back to the original only if a faithless path resolves nothing) so
+            // the caret lands in the converted block instead of a stale id.
+            const targetId = converted?.id ?? id;
+
+            editor.caret.setToBlock(
+              targetId,
+              options.caret.position ?? 'default',
+              options.caret.offset ?? 0
+            );
           }
         })
         .catch(() => undefined);

@@ -59,6 +59,12 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // update it before the consumer's setState re-runs the data effect.
   const lastRenderedDataRef = useRef(config.data);
   const seededEditorRef = useRef<Blok | null>(null);
+  // The `data` the live editor was actually constructed with. The seed gate in
+  // the reactive-`data` effect compares the current prop against THIS (not mere
+  // editor identity) so a prop that diverged from the construction value —
+  // undefined-at-mount then loaded, or changed before the editor finished
+  // initializing — still renders instead of being mistaken for the seed.
+  const constructedDataRef = useRef(config.data);
   const renderChainRef = useRef<Promise<void>>(Promise.resolve());
 
   // Main lifecycle effect
@@ -148,6 +154,9 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
 
     const blok = new BlokRuntime(blokConfig) as unknown as Blok;
     state.editor = blok;
+    // Remember what this editor was seeded with so the reactive-`data` effect can
+    // tell a genuine post-construction change from the construction value itself.
+    constructedDataRef.current = currentConfig.data;
     setHolder(blok, holder);
 
     void blok.isReady
@@ -236,13 +245,19 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       return;
     }
 
-    // A freshly created editor was already seeded with `data` at construction;
-    // record it without re-rendering.
+    // First time observing this editor: it was seeded at construction with
+    // `constructedDataRef`. When the current prop still matches that seed, just
+    // record the baseline and skip the redundant render. When it has diverged
+    // (undefined-at-mount then loaded, or changed before the editor finished
+    // initializing), fall through and render so the editor reflects the prop.
     if (seededEditorRef.current !== editor) {
       seededEditorRef.current = editor;
-      lastRenderedDataRef.current = data;
 
-      return;
+      if (deepEqual(data, constructedDataRef.current)) {
+        lastRenderedDataRef.current = data;
+
+        return;
+      }
     }
 
     // Unchanged content — skip the redundant render.

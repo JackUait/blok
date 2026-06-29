@@ -339,17 +339,35 @@ const createRealEditorHarness = (
     },
 
     /**
-     * Async like core's Blocks.convert — swaps the block's tool name (the
-     * observable `type` on a BlockNode) and notifies.
+     * Faithful to core's Blocks.convert — routes through replace(), which REMOVES
+     * the old block and inserts a fresh one under a BRAND-NEW id. Returns the new
+     * BlockAPI-like `{ id }` (the resolved id the caret repositioning depends on)
+     * and notifies. Keeping the old id would mask the stale-id caret bug.
      */
-    convert: async (id: string, newType: string, _dataOverrides?: unknown): Promise<void> => {
-      const block = blocksStore.array.find((b) => b.id === id);
+    convert: async (
+      id: string,
+      newType: string,
+      _dataOverrides?: unknown
+    ): Promise<{ id: string; name: string; parentId: string | null } | undefined> => {
+      const idx = blocksStore.array.findIndex((b) => b.id === id);
 
-      if (block !== undefined) {
-        (block as unknown as { name: string }).name = newType;
-        notify();
+      if (idx === -1) {
+        await Promise.resolve();
+
+        return undefined;
       }
+      insertSeq += 1;
+      const newId = `converted-${insertSeq}`;
+      const parentId = blocksStore.array[idx].parentId;
+
+      blocksStore.remove(idx);
+      const stub = createBlockStub({ id: newId, name: newType, parentId });
+
+      blocksStore.insert(idx, stub as unknown as Block);
+      notify();
       await Promise.resolve();
+
+      return { id: newId, name: newType, parentId };
     },
 
     transact: (fn: () => void): void => fn(),
@@ -1244,7 +1262,10 @@ describe('useBlocks — real BlockHierarchy integration', () => {
       result.current.convert('a', 'header');
     });
 
-    expect(result.current.getById('a')?.type).toBe('header');
+    // Convert recreates the block under a fresh id, so the original is gone and
+    // the surviving block at index 0 carries the new type.
+    expect(result.current.getById('a')).toBeNull();
+    expect(result.current.getBlockByIndex(0)?.type).toBe('header');
     expect(renderCount).toBeGreaterThan(before);
     // convert owns its own async history step — it must not open a transact.
     expect(transactSpy).not.toHaveBeenCalled();

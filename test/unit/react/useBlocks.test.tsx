@@ -41,7 +41,22 @@ const makeFakeEditor = (
         }
       }),
       update: vi.fn(() => Promise.resolve({})),
-      convert: vi.fn(() => Promise.resolve({})),
+      // Faithful to core's convert(): it routes through replace(), which
+      // generates a BRAND-NEW block id (the old block is removed). The resolved
+      // BlockAPI carries that new id. Keeping the old id here would mask the
+      // stale-id caret bug, so regenerate the id in place and surface it.
+      convert: vi.fn((id: string, newType: string) => {
+        const idx = list.findIndex((b) => b.id === id);
+
+        if (idx === -1) {
+          return Promise.resolve(undefined);
+        }
+        const newId = `converted-${list.length}`;
+        const parentId = list[idx].parentId;
+
+        list.splice(idx, 1, { id: newId, name: newType, parentId });
+        return Promise.resolve({ id: newId, name: newType, parentId });
+      }),
       transact: vi.fn((fn: () => void) => fn()),
       transactWithoutCapture: vi.fn((fn: () => void) => fn()),
       getCurrentBlockIndex: vi.fn(() => 0),
@@ -1407,7 +1422,7 @@ describe('useBlocks additional read/creation APIs', () => {
     expect(editor.caret.setToBlock).not.toHaveBeenCalled();
   });
 
-  it('convert positions the caret after the conversion when a caret target is given', async () => {
+  it('convert positions the caret in the NEW block (convert recreates it under a fresh id)', async () => {
     const { editor } = makeFakeEditor([{ id: 'a', name: 'paragraph' }]);
     const { result } = renderHook(() => useBlocks(editor));
 
@@ -1417,7 +1432,11 @@ describe('useBlocks additional read/creation APIs', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(editor.blocks.convert).toHaveBeenCalledWith('a', 'header', undefined);
-    expect(editor.caret.setToBlock).toHaveBeenCalledWith('a', 'end', 0);
+    // Core convert regenerates the block id, so the original 'a' is gone and the
+    // caret MUST land on the regenerated id — never the stale 'a'.
+    expect(result.current.getById('a')).toBeNull();
+    expect(editor.caret.setToBlock).toHaveBeenCalledWith('converted-1', 'end', 0);
+    expect(editor.caret.setToBlock).not.toHaveBeenCalledWith('a', 'end', 0);
   });
 
   it('insert forwards a non-default caret position (e.g. "end") to setToBlock', () => {

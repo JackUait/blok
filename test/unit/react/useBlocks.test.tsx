@@ -441,6 +441,22 @@ describe('useBlocks insert', () => {
     expect(editor.blocks.setBlockParent).toHaveBeenCalledWith('new-2', 'p');
   });
 
+  it('replace of a ROOT block must not adopt the caller parentId', () => {
+    const { editor } = makeFakeEditor([
+      { id: 'p', name: 'toggle' },
+      { id: 'root', parentId: null },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+    act(() => {
+      result.current.insert({ type: 'header', parentId: 'p', position: { before: 'root' }, replace: true });
+    });
+    // The replace target 'root' lives at the document root (parentId null). A
+    // replace is a positional type-swap that PRESERVES the overwritten block's
+    // own parent, so the caller's parentId 'p' is irrelevant — the replacement
+    // must stay at root and NOT be nested under 'p'.
+    expect(editor.blocks.setBlockParent).not.toHaveBeenCalled();
+  });
+
   it('replace ignores a non-resolving parentId instead of bailing to null', () => {
     const { editor } = makeFakeEditor([
       { id: 'p', name: 'toggle' },

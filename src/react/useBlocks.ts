@@ -547,7 +547,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       })();
       const replaceRef = replace ? positionRef : null;
       const intendedParentId =
-        replaceRef !== null ? getById(replaceRef)?.parentId ?? parentId : parentId;
+        replaceRef !== null ? getById(replaceRef)?.parentId ?? null : parentId;
 
       const created = ((): { id: string } | null | undefined => {
         try {

@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { Blok } from '../../types';
 import type { BlockToolData } from '../../types/tools';
 import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
-import type { OutputBlockData } from '../../types/data-formats/output-data';
+import type { OutputBlockData, OutputData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from '../markdown/types';
 import { generateBlockId } from '../components/utils/id-generator';
 import { ToolNotFoundError } from '../components/errors/tool-not-found';
@@ -73,6 +73,10 @@ const EMPTY_API: UseBlocksApi = {
   renderFromHTML: async () => undefined,
   insertOutputData: () => [],
   splitBlock: () => null,
+  insertInsideParent: () => null,
+  render: async () => undefined,
+  clear: async () => undefined,
+  isSyncingFromYjs: () => false,
 };
 
 /**
@@ -1231,6 +1235,14 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         return null;
       }
 
+      // A negative insertIndex is malformed — core would forward it to a splice
+      // (which counts from the array end) and silently split at the wrong slot.
+      // Honor the silent-no-op convention instead (consistent with
+      // insertOutputData's negative-index guard): return null without touching core.
+      if (insertIndex < 0) {
+        return null;
+      }
+
       // An unknown newBlockType makes core's compose path throw a typed
       // ToolNotFoundError — honor the null contract (mirroring insert/insertTree);
       // re-throw any other (genuine-bug) error. Keyed on the error TYPE.
@@ -1295,8 +1307,62 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         .filter((node): node is BlockNode => node !== null);
     };
 
+    /**
+     * Insert one child block under `parentId` at flat `insertIndex`, atomically.
+     * Delegates to core's `insertInsideParent`, which groups the block creation
+     * AND the parent assignment into a single undo entry itself — so this is NOT
+     * wrapped in the hook's `transact` (that would be a redundant nested group).
+     * A dangling parentId is a no-op (null), mirroring `insert`'s parent guard;
+     * an unknown child tool throws a typed ToolNotFoundError from core's compose
+     * path — honor the null contract and re-throw anything else (genuine bug).
+     */
+    const insertInsideParent = (
+      parentId: string,
+      insertIndex: number,
+      childData?: BlockToolData
+    ): BlockNode | null => {
+      // Silent existence probe (NOT getBlockIndex, which warns on unknown ids).
+      if (getById(parentId) === null) {
+        return null;
+      }
+
+      const created = ((): { id: string } | null | undefined => {
+        try {
+          return editor.blocks.insertInsideParent(parentId, insertIndex, childData);
+        } catch (error) {
+          if (error instanceof ToolNotFoundError) {
+            return null;
+          }
+          throw error;
+        }
+      })();
+
+      return created === undefined || created === null ? null : getById(created.id);
+    };
+
+    /**
+     * Replace the whole document with saved {@link OutputData} — a document-LOAD
+     * primitive (clears existing content first), the counterpart of the additive
+     * {@link insertOutputData}. Pure delegation to core's async `render`.
+     */
+    const render = (data: OutputData): Promise<void> => editor.blocks.render(data);
+
+    /** Remove every block — document reset. Pure delegation to core's async `clear`. */
+    const clear = (): Promise<void> => editor.blocks.clear();
+
+    /**
+     * The LIVE Yjs-sync flag, read at call time (the api handle is memoized, so a
+     * cached property would go stale). Pure delegation to core's read-only flag.
+     */
+    const isSyncingFromYjs = (): boolean => editor.blocks.isSyncingFromYjs;
+
+    // Every key is listed EXPLICITLY — do NOT spread `...EMPTY_API` here. The
+    // return is typed `UseBlocksApi`, so an explicit list makes a forgotten live
+    // wiring a COMPILE error (missing property). Spreading EMPTY_API would instead
+    // backfill the missing key with its pre-ready no-op stub, silently shipping a
+    // method that does nothing when the editor IS ready — a hole no key-presence
+    // test can catch (the key is present, just wrong). Keep it exhaustive.
     return {
-      ...EMPTY_API,
       getById,
       getChildren,
       insert,
@@ -1321,6 +1387,10 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       renderFromHTML,
       insertOutputData,
       splitBlock,
+      insertInsideParent,
+      render,
+      clear,
+      isSyncingFromYjs,
     };
   }, [editor]);
 }

@@ -9,34 +9,11 @@ import {
 } from 'vue';
 
 import type { Blok } from '../../types';
-import {
-  snapshotNodes,
-  resolveInsertIndex,
-  resolveMoveIndex,
-  type BlockNode,
-  type IndexReader,
-  type InsertSpec,
-  type MoveTarget,
-} from '../components/utils/blocks-tree';
+import { createBlocksApiForEditor, EMPTY_API } from '../components/utils/blocks-api';
 
 import type { UseBlocksApi } from './blocks-snapshot';
 
 const BLOCK_CHANGED_EVENT = 'block changed';
-
-/** Adapt the live editor to the IndexReader the shared resolvers expect. */
-const readerFor = (editor: Blok): IndexReader => {
-  const blocks = editor.blocks;
-
-  return {
-    getBlocksCount: () => blocks.getBlocksCount(),
-    getBlockByIndex: (i: number) => {
-      const b = blocks.getBlockByIndex(i);
-
-      return b === undefined ? undefined : { id: b.id, name: b.name, parentId: b.parentId };
-    },
-    getBlockIndex: (id: string) => blocks.getBlockIndex(id),
-  };
-};
 
 /**
  * Vue composable exposing an id/parentId-relative, reactive view of the block
@@ -44,19 +21,32 @@ const readerFor = (editor: Blok): IndexReader => {
  * through the editor-level `blocks` API (core's chokepoints), so undo/redo and
  * Yjs sync are inherited rather than re-implemented.
  *
- * Reactivity: read methods touch a private version ref that the `block changed`
- * subscription bumps, so calling `getChildren`/`getById` inside a `computed` or
- * template re-runs on every structural mutation — including programmatic
- * nest/unnest, which core surfaces as a structural change.
+ * The block-tree logic itself is framework-agnostic and lives in the shared
+ * {@link createBlocksApiForEditor} core — the SAME implementation behind React's
+ * `useBlocks`, so the two adapters expose the identical 28-method surface and
+ * cannot drift. This composable supplies only Vue's reactivity wrapper:
+ *
+ * - A private `version` ref is bumped on every `block changed`. The shared API
+ *   is built with an `onRead` seam (`() => { void version.value }`) that every
+ *   read method calls, so reading `getChildren`/`getById`/… inside a `computed`
+ *   or template tracks `version` and re-runs on each structural mutation
+ *   (including programmatic nest/unnest, which core surfaces as a change).
+ * - The bound API is rebuilt when the editor IDENTITY changes (held in a
+ *   `shallowRef`), and the returned facade is stable across that swap.
  *
  * The editor is accepted as a value, ref, or getter (so the `shallowRef` that
  * `useBlok` returns can be passed directly) and is `toRaw`-unwrapped before any
  * read or core handoff, never letting a Vue reactive proxy reach core (Risk R0).
  *
+ * Pre-ready: while the editor is null the bound API is the shared
+ * {@link EMPTY_API} — every mutator a no-op, reads empty/null — except
+ * `transact`/`transactWithoutCapture`, which still run their callback.
+ *
  * @param editor - the Blok instance (or ref/getter of it), or null pre-ready
  */
 export function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi {
-  // Bumped on every `block changed`; read methods touch it for reactivity.
+  // Bumped on every `block changed`; the shared API's read methods touch it
+  // (via the onRead seam below) so template/computed reads stay reactive.
   const version = shallowRef(0);
 
   const resolve = (): Blok | null => {
@@ -64,6 +54,17 @@ export function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi {
 
     return ed === null ? null : toRaw(ed);
   };
+
+  // The reactivity seam handed to the shared core: every read method calls it,
+  // so a read inside a Vue effect tracks `version` and re-runs on mutation.
+  const touch = (): void => {
+    void version.value;
+  };
+
+  // The API bound to the CURRENT editor. Rebuilt by the watch below when the
+  // editor identity changes; EMPTY_API while null. A shallowRef so swapping the
+  // bound API (on editor change) is itself a tracked reactive read.
+  const bound = shallowRef<UseBlocksApi>(EMPTY_API);
 
   // Manage the `block changed` subscription, re-binding when the editor changes.
   // Held in one object (no `let` reassignment) — the same pattern useBlok uses.
@@ -84,190 +85,62 @@ export function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi {
       // A changed editor identity is itself a reason to re-read.
       version.value += 1;
 
-      if (ed !== null) {
-        const handler = (): void => {
-          version.value += 1;
-        };
+      if (ed === null) {
+        bound.value = EMPTY_API;
 
-        ed.on(BLOCK_CHANGED_EVENT, handler);
-        sub.editor = ed;
-        sub.handler = handler;
+        return;
       }
+
+      const handler = (): void => {
+        version.value += 1;
+      };
+
+      ed.on(BLOCK_CHANGED_EVENT, handler);
+      sub.editor = ed;
+      sub.handler = handler;
+      bound.value = createBlocksApiForEditor(ed, touch);
     },
     { immediate: true }
   );
 
   onScopeDispose(unsubscribe);
 
-  /**
-   * Run `fn` inside core's transact when available (one undo step), else run it
-   * directly. `transact` is optional on the public Blocks type, so it is guarded.
-   */
-  const runTransact = (ed: Blok, fn: () => void): void => {
-    if (typeof ed.blocks.transact === 'function') {
-      ed.blocks.transact(fn);
-    } else {
-      fn();
-    }
+  // A stable facade whose methods delegate to the currently-bound API. Reading
+  // `bound.value` tracks the editor-identity swap; the shared reads track
+  // `version` via the onRead seam — so both kinds of change re-run a consumer's
+  // computed/template. Every key is listed EXPLICITLY (no spread) so a forgotten
+  // delegation is a COMPILE error against the UseBlocksApi return type rather
+  // than a silently-missing method.
+  return {
+    getById: (id) => bound.value.getById(id),
+    getChildren: (parentId) => bound.value.getChildren(parentId),
+    insert: (spec) => bound.value.insert(spec),
+    insertMany: (specs) => bound.value.insertMany(specs),
+    insertTree: (spec) => bound.value.insertTree(spec),
+    insertMarkdown: (markdown, options) => bound.value.insertMarkdown(markdown, options),
+    move: (id, target) => bound.value.move(id, target),
+    nest: (id, parentId) => bound.value.nest(id, parentId),
+    unnest: (id) => bound.value.unnest(id),
+    remove: (id) => bound.value.remove(id),
+    update: (id, data, tunes) => bound.value.update(id, data, tunes),
+    convert: (id, newType, dataOverrides, options) => bound.value.convert(id, newType, dataOverrides, options),
+    transact: (fn) => bound.value.transact(fn),
+    transactWithoutCapture: (fn) => bound.value.transactWithoutCapture(fn),
+    getBlocksCount: () => bound.value.getBlocksCount(),
+    getCurrentBlockIndex: () => bound.value.getCurrentBlockIndex(),
+    getBlockByIndex: (index) => bound.value.getBlockByIndex(index),
+    getBlockByElement: (element) => bound.value.getBlockByElement(element),
+    getBlockData: (id) => bound.value.getBlockData(id),
+    getBlockIndex: (id) => bound.value.getBlockIndex(id),
+    composeBlockData: (toolName) => bound.value.composeBlockData(toolName),
+    renderFromHTML: (html) => bound.value.renderFromHTML(html),
+    insertOutputData: (blocks, options) => bound.value.insertOutputData(blocks, options),
+    splitBlock: (currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex) =>
+      bound.value.splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex),
+    insertInsideParent: (parentId, insertIndex, childData) =>
+      bound.value.insertInsideParent(parentId, insertIndex, childData),
+    render: (data) => bound.value.render(data),
+    clear: () => bound.value.clear(),
+    isSyncingFromYjs: () => bound.value.isSyncingFromYjs(),
   };
-
-  /** All nodes of the current tree (silent — does not touch `version`). */
-  const allNodes = (ed: Blok): BlockNode[] => snapshotNodes(readerFor(ed));
-
-  const findNode = (ed: Blok, id: string): BlockNode | null =>
-    allNodes(ed).find((n) => n.id === id) ?? null;
-
-  const api: UseBlocksApi = {
-    getById(id: string): BlockNode | null {
-      // Touch the version so reads inside a computed/template are reactive.
-      void version.value;
-      const ed = resolve();
-
-      return ed === null ? null : findNode(ed, id);
-    },
-
-    getChildren(parentId: string | null): BlockNode[] {
-      void version.value;
-      const ed = resolve();
-
-      return ed === null ? [] : allNodes(ed).filter((n) => n.parentId === parentId);
-    },
-
-    getBlocksCount(): number {
-      void version.value;
-      const ed = resolve();
-
-      return ed === null ? 0 : ed.blocks.getBlocksCount();
-    },
-
-    getBlockIndex(id: string): number | null {
-      void version.value;
-      const ed = resolve();
-
-      if (ed === null) {
-        return null;
-      }
-
-      const index = ed.blocks.getBlockIndex(id);
-
-      return index === undefined ? null : index;
-    },
-
-    insert(spec: InsertSpec = {}): BlockNode | null {
-      const ed = resolve();
-
-      if (ed === null) {
-        return null;
-      }
-
-      const parentId = spec.parentId ?? null;
-      const position = spec.position ?? 'end';
-      const data = spec.data ?? {};
-      const reader = readerFor(ed);
-
-      // Snapshot once for the pre-insert guards (the tree can't change until the
-      // insert below runs), mirroring the React adapter's silent probes.
-      const preById = new Map(allNodes(ed).map((n) => [n.id, n]));
-
-      // Dangling parentId: honor the null contract instead of letting core throw
-      // (dev) or silently misplace at the document end (prod).
-      if (parentId !== null && !preById.has(parentId)) {
-        return null;
-      }
-
-      // Object position naming a missing ref must be a no-op, not a surprise
-      // append at the end (resolveInsertIndex's unresolved-ref fallback).
-      if (typeof position === 'object') {
-        const ref = 'before' in position ? position.before : position.after;
-
-        if (!preById.has(ref)) {
-          return null;
-        }
-      }
-
-      const flatIndex = resolveInsertIndex(reader, parentId, position);
-
-      // ONE transact → a single undo step covering both the insert and the
-      // (parented) reparent. insertInsideParent is NOT used: it forces the
-      // default block type and would silently drop a requested `type`. Insert at
-      // the resolved flat slot, then reparent so `type` is honored.
-      const result: { node: BlockNode | null } = { node: null };
-
-      runTransact(ed, () => {
-        const created = ed.blocks.insert(
-          spec.type,
-          data,
-          {},
-          flatIndex,
-          spec.focus ?? false,
-          spec.replace ?? false,
-          spec.id,
-          spec.tunes
-        );
-
-        if (parentId !== null && created.parentId !== parentId) {
-          ed.blocks.setBlockParent(created.id, parentId);
-        }
-
-        result.node = findNode(ed, created.id);
-      });
-
-      return result.node;
-    },
-
-    move(id: string, target: MoveTarget): void {
-      const ed = resolve();
-
-      if (ed === null) {
-        return;
-      }
-
-      const reader = readerFor(ed);
-      const fromIndex = reader.getBlockIndex(id);
-
-      if (fromIndex === undefined) {
-        return;
-      }
-
-      ed.blocks.move(resolveMoveIndex(reader, target), fromIndex);
-    },
-
-    nest(id: string, parentId: string): void {
-      resolve()?.blocks.setBlockParent(id, parentId);
-    },
-
-    unnest(id: string): void {
-      resolve()?.blocks.setBlockParent(id, null);
-    },
-
-    remove(id: string): void {
-      const ed = resolve();
-
-      if (ed === null) {
-        return;
-      }
-
-      const index = ed.blocks.getBlockIndex(id);
-
-      if (index === undefined) {
-        return;
-      }
-
-      void ed.blocks.delete(index);
-    },
-
-    transact(fn: () => void): void {
-      const ed = resolve();
-
-      if (ed === null) {
-        fn();
-
-        return;
-      }
-
-      runTransact(ed, fn);
-    },
-  };
-
-  return api;
 }

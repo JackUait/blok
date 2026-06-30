@@ -225,7 +225,9 @@ describe('useBlocks (Vue)', () => {
     const { api } = mountUseBlocks(editorRef);
 
     api.remove('b');
-    expect(spies.delete).toHaveBeenCalledWith(1);
+    // Subtree-aware remove deletes deepest-first with setCaret=false (a
+    // programmatic delete must not move the caret).
+    expect(spies.delete).toHaveBeenCalledWith(1, false);
   });
 
   it('transact runs the callback through the editor transact', () => {
@@ -266,6 +268,6 @@ describe('useBlocks (Vue)', () => {
     api.remove('a');
 
     // delete still reached the real (raw) blocks API on the unwrapped editor.
-    expect(fake.spies.delete).toHaveBeenCalledWith(0);
+    expect(fake.spies.delete).toHaveBeenCalledWith(0, false);
   });
 });

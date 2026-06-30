@@ -11,6 +11,7 @@ export type {
   CaretTarget,
   InsertPosition,
   InsertSpec,
+  TreeInsertSpec,
   MoveTarget,
 } from './blocks-snapshot';
 export type {

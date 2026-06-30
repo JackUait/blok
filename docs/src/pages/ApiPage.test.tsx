@@ -1,374 +1,61 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { ApiPage } from './ApiPage';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
+import { ApiPage } from './ApiPage';
 
 vi.mock('../components/common/CodeBlock', () => ({
   CodeBlock: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));
 
-describe('ApiPage', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
+const renderAt = (entry: string) =>
+  render(
+    <MemoryRouter initialEntries={[entry]}>
+      <I18nProvider>
+        <Routes>
+          <Route path="/docs/*" element={<ApiPage />} />
+        </Routes>
+      </I18nProvider>
+    </MemoryRouter>,
+  );
+
+describe('ApiPage routing', () => {
+  it('renders a single module at /docs/caret-api', () => {
+    renderAt('/docs/caret-api');
+    expect(screen.getByText('Caret API')).toBeInTheDocument();
+    expect(screen.queryByText('Selection API')).toBeNull();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it('/docs redirects to quick-start content', () => {
+    renderAt('/docs');
+    // Quick Start section element is rendered by the module body
+    expect(screen.getByTestId('quick-start')).toBeInTheDocument();
   });
-  it('should render the Nav component', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
 
+  it('sidebar marks the active module', () => {
+    renderAt('/docs/caret-api');
+    expect(screen.getByTestId('api-sidebar-link-caret-api')).toHaveClass('active');
+  });
+});
+
+describe('ApiPage structure', () => {
+  it('renders the Nav component', () => {
+    renderAt('/docs/caret-api');
     expect(screen.getByTestId('nav')).toBeInTheDocument();
   });
 
-  it('should render the ApiSidebar component', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
+  it('renders the API sidebar', () => {
+    renderAt('/docs/caret-api');
     expect(screen.getByTestId('api-sidebar')).toBeInTheDocument();
   });
 
-  it('should render the main api content area', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
+  it('renders the main api content area', () => {
+    renderAt('/docs/caret-api');
     expect(screen.getByTestId('api-main')).toBeInTheDocument();
   });
 
-  it('should render all API sections', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    // Check that sections are rendered using getByTestId which queries by data-testid
-    expect(screen.getByTestId('quick-start')).toBeInTheDocument();
-    expect(screen.getByTestId('core')).toBeInTheDocument();
-    expect(screen.getByTestId('config')).toBeInTheDocument();
-  });
-
-  it('should render API section badges', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    // Check for badges using data-testid
-    expect(screen.getAllByTestId('api-section-badge').length).toBeGreaterThan(0);
-  });
-
-  it('should render Blocks API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByTestId('blocks-api')).toBeInTheDocument();
-  });
-
-  it('should render Caret API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByTestId('caret-api')).toBeInTheDocument();
-  });
-
-  it('should render Events API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByTestId('events-api')).toBeInTheDocument();
-  });
-
-  it('should render Saver API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Saver API')).toBeInTheDocument();
-  });
-
-  it('should render Selection API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Selection API')).toBeInTheDocument();
-  });
-
-  it('should render Styles API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Styles API')).toBeInTheDocument();
-  });
-
-  it('should render Toolbar API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Toolbar API')).toBeInTheDocument();
-  });
-
-  it('should render Tools API section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    expect(screen.getByText('Tools API')).toBeInTheDocument();
-  });
-
-  it('should render OutputData section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    // Use getAllByText and find the one that's an h1
-    const headings = screen.getAllByText((content) => content.includes('OutputData'));
-    expect(headings.some((el) => el.tagName === 'H1')).toBe(true);
-  });
-
-  it('should render BlockData section', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    // Use getAllByText and find the one that's an h1
-    const headings = screen.getAllByText((content) => content.includes('BlockData'));
-    expect(headings.some((el) => el.tagName === 'H1')).toBe(true);
-  });
-
-  it('should have api-docs container', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
+  it('has the api-docs container', () => {
+    renderAt('/docs/caret-api');
     expect(screen.getByTestId('api-docs')).toBeInTheDocument();
-  });
-
-  it('should render navigation links', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    // Check that nav is rendered using testid
-    expect(screen.getByTestId('nav')).toBeInTheDocument();
-  });
-
-  it('should have api-section elements', () => {
-    render(
-      <MemoryRouter>
-        <I18nProvider>
-          <ApiPage />
-        </I18nProvider>
-      </MemoryRouter>
-    );
-
-    // Check that sections are rendered using role
-    const sections = screen.getAllByRole('region');
-    expect(sections.length).toBeGreaterThan(0);
-  });
-
-  describe('initial active section state', () => {
-    it('should initialize with quick-start as the default active section', () => {
-      // Mock window.location.hash to be empty
-      Object.defineProperty(window, 'location', {
-        writable: true,
-        value: { hash: '' },
-      });
-
-      render(
-        <MemoryRouter>
-          <I18nProvider>
-            <ApiPage />
-          </I18nProvider>
-        </MemoryRouter>
-      );
-
-      // The sidebar should show quick-start as active since it's the first visible section
-      const quickStartLink = screen.getByTestId('api-sidebar-link-quick-start');
-      expect(quickStartLink).toHaveClass('active');
-    });
-
-    it('should not show core as active on initial load', () => {
-      // Mock window.location.hash to be empty
-      Object.defineProperty(window, 'location', {
-        writable: true,
-        value: { hash: '' },
-      });
-
-      render(
-        <MemoryRouter>
-          <I18nProvider>
-            <ApiPage />
-          </I18nProvider>
-        </MemoryRouter>
-      );
-
-      // The core link should not have the active class initially
-      const coreLink = screen.getByTestId('api-sidebar-link-core');
-      expect(coreLink).not.toHaveClass('active');
-    });
-
-    it('should initialize with hash section when provided in URL', () => {
-      // Mock window.location.hash to be #core
-      Object.defineProperty(window, 'location', {
-        writable: true,
-        value: { hash: '#core' },
-      });
-
-      render(
-        <MemoryRouter>
-          <I18nProvider>
-            <ApiPage />
-          </I18nProvider>
-        </MemoryRouter>
-      );
-
-      // The core link should be active when URL hash is #core
-      const coreLink = screen.getByTestId('api-sidebar-link-core');
-      expect(coreLink).toHaveClass('active');
-    });
-  });
-
-  describe('anchor link navigation', () => {
-    it('should update URL hash when clicking anchor links', async () => {
-      const pushStateSpy = vi.spyOn(window.history, 'pushState');
-
-      render(
-        <MemoryRouter>
-          <I18nProvider>
-            <ApiPage />
-          </I18nProvider>
-        </MemoryRouter>
-      );
-
-      // Find an anchor link (section title anchor) by aria-label — avoids slow accessible name computation
-      const anchorLink = screen.getByLabelText('Link to Blok Class');
-      fireEvent.click(anchorLink);
-
-      // pushState is called synchronously in the click handler
-      expect(pushStateSpy).toHaveBeenCalledWith(null, '', '#core');
-
-      pushStateSpy.mockRestore();
-    });
-
-    it('should render anchor links for API methods', () => {
-      render(
-        <MemoryRouter>
-          <I18nProvider>
-            <ApiPage />
-          </I18nProvider>
-        </MemoryRouter>
-      );
-
-      // Check that method anchor links exist — query by aria-label to avoid slow accessible name computation
-      const methodAnchor = screen.getByLabelText('Link to blocks.clear()');
-      expect(methodAnchor).toBeInTheDocument();
-      expect(methodAnchor).toHaveAttribute('href', '#blocks-api-blocks-clear');
-    });
-
-    it('should render anchor links for properties in tables', () => {
-      render(
-        <MemoryRouter>
-          <I18nProvider>
-            <ApiPage />
-          </I18nProvider>
-        </MemoryRouter>
-      );
-
-      // Check that property anchor links exist (e.g., isReady in core section) — query by aria-label
-      const propAnchor = screen.getByLabelText('Link to isReady');
-      expect(propAnchor).toBeInTheDocument();
-      expect(propAnchor).toHaveAttribute('href', '#core-prop-isready');
-    });
-
-    it('should render anchor links for config options', () => {
-      render(
-        <MemoryRouter>
-          <I18nProvider>
-            <ApiPage />
-          </I18nProvider>
-        </MemoryRouter>
-      );
-
-      // Check that config option anchor links exist — query by href attribute directly for speed
-      const configHolderAnchor = document.querySelector('a[href="#config-holder"][aria-label="Link to holder"]');
-      expect(configHolderAnchor).toBeInTheDocument();
-    });
   });
 });

@@ -143,14 +143,16 @@ const App = () => {
     }
   }, []);
 
+  const routeKey = location.pathname.split('/')[1] || 'home';
+
   return (
     <>
       <ScrollHandler />
       <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
+        <Routes location={location} key={routeKey}>
           <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
           <Route path="/demo" element={<PageTransition><DemoPage /></PageTransition>} />
-          <Route path="/docs" element={<PageTransition><ApiPage /></PageTransition>} />
+          <Route path="/docs/*" element={<PageTransition><ApiPage /></PageTransition>} />
           <Route path="/tools" element={<PageTransition><ToolsPage /></PageTransition>} />
           <Route path="/migration" element={<PageTransition><MigrationPage /></PageTransition>} />
           <Route path="/changelog" element={<PageTransition><ChangelogPage /></PageTransition>} />

@@ -125,6 +125,20 @@ describe('App', () => {
     expect(apiSidebar).toBeInTheDocument();
   });
 
+  it('renders a single API module page at /docs/caret-api', () => {
+    render(
+      <MemoryRouter initialEntries={['/docs/caret-api']}>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    // Only the Caret module is rendered — Selection API must not be present
+    expect(screen.getByText('Caret API')).toBeInTheDocument();
+    expect(screen.queryByText('Selection API')).toBeNull();
+  });
+
   it('should render without crashing', () => {
     render(
       <MemoryRouter initialEntries={['/']}>

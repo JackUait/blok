@@ -101,7 +101,7 @@ describe('createAngularBlock — factory contract', () => {
 
   it('save() returns the complete frozen mirror with ONLY schema keys', () => {
     const tool = makeTool({ count: 3, label: 'hi' }, makeRegistry());
-    const saved = tool.save() as CounterData;
+    const saved = tool.save() as unknown as CounterData;
 
     expect(saved).toEqual({ count: 3, label: 'hi' });
     expect(Object.isFrozen(saved)).toBe(true);

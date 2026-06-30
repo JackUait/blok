@@ -59,11 +59,13 @@ describe('ApiPage structure', () => {
     expect(screen.getByTestId('api-sidebar')).toBeInTheDocument();
   });
 
-  it('renders the framework toggle alongside the sidebar', () => {
-    // caret-api has no inline quick-start toggle, so these prove the sidebar /
-    // mobile-nav placements (both render in jsdom regardless of breakpoint).
+  it('renders the framework toggle inside the sidebar', () => {
+    // caret-api has no inline quick-start toggle, so this proves the desktop
+    // placement: the toggle is part of the side menu, not a detached sibling.
     renderAt('/docs/caret-api');
-    expect(screen.getAllByTestId('framework-toggle').length).toBeGreaterThan(0);
+    const sidebar = screen.getByTestId('api-sidebar');
+    const toggles = screen.getAllByTestId('framework-toggle');
+    expect(toggles.some((toggle) => sidebar.contains(toggle))).toBe(true);
   });
 
   it('renders the main api content area', () => {

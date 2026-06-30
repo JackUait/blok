@@ -22,6 +22,8 @@ interface SidebarProps {
   variant: SidebarVariant;
   linkMode?: 'anchor' | 'route';
   buildHref?: (id: string) => string;
+  /** Optional content pinned above the navigation, inside the sidebar column. */
+  header?: ReactNode;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   variant,
   linkMode = 'anchor',
   buildHref,
+  header,
 }) => {
   const asideRef = useRef<HTMLElement>(null);
 
@@ -74,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // shifts content height) and on resize.
   useLayoutEffect(() => {
     updateScrollEdges();
-  }, [updateScrollEdges, sections, openGroups]);
+  }, [updateScrollEdges, sections, openGroups, header]);
 
   useEffect(() => {
     window.addEventListener('resize', updateScrollEdges);
@@ -107,6 +110,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       style={{ maskImage: hazeMask, WebkitMaskImage: hazeMask }}
       data-blok-testid={`${variant}-sidebar`}
     >
+      {header && (
+        <div
+          className="mb-7 border-b border-border/60 pb-6"
+          data-blok-testid={`${variant}-sidebar-header`}
+        >
+          {header}
+        </div>
+      )}
       <nav
         className="flex flex-col gap-7"
         aria-label="Documentation sections"

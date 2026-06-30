@@ -169,6 +169,33 @@ describe('Sidebar', () => {
     });
   });
 
+  describe('header slot', () => {
+    it('renders a provided header inside the aside, above the nav', () => {
+      renderWithI18n(
+        <Sidebar
+          sections={MOCK_SECTIONS}
+          activeSection="core"
+          variant="api"
+          header={<div data-blok-testid="sidebar-header-slot">slot</div>}
+        />,
+      );
+
+      const aside = screen.getByTestId('api-sidebar');
+      const slot = screen.getByTestId('sidebar-header-slot');
+      const nav = screen.getByTestId('api-sidebar-nav');
+
+      // The header lives inside the sidebar, not as a detached sibling.
+      expect(aside).toContainElement(slot);
+      // And it precedes the navigation in document order.
+      expect(slot.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('renders no header wrapper when none is provided', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      expect(screen.queryByTestId('api-sidebar-header')).not.toBeInTheDocument();
+    });
+  });
+
   describe('section icons', () => {
     it('renders a section icon when provided', () => {
       const withIcon: SidebarSection[] = [

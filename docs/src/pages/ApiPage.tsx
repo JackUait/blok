@@ -28,9 +28,6 @@ export const ApiContent: React.FC = () => {
       data-blok-testid="api-docs"
     >
       <div className="hidden lg:block">
-        <div className="mb-6 pl-1">
-          <FrameworkToggle />
-        </div>
         <Sidebar
           key={`sidebar-${locale}`}
           sections={sidebarSections}
@@ -38,6 +35,7 @@ export const ApiContent: React.FC = () => {
           variant="api"
           linkMode="route"
           buildHref={(id) => `/docs/${id}`}
+          header={<FrameworkToggle />}
         />
       </div>
       <div className="min-w-0">

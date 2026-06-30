@@ -131,8 +131,8 @@ describe('Sidebar', () => {
     });
   });
 
-  describe('auto-scroll to active section', () => {
-    it('should scroll sidebar when activeSection changes and link is near edge', () => {
+  describe('no auto-scroll on navigation', () => {
+    it('does not scroll the sidebar when activeSection changes', () => {
       const { rerender } = renderWithI18n(
         <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
       );
@@ -140,83 +140,11 @@ describe('Sidebar', () => {
       const sidebar = screen.getByTestId('api-sidebar');
       const scrollToSpy = vi.spyOn(sidebar, 'scrollTo');
 
-      // Mock getBoundingClientRect to simulate link near bottom edge
-      vi.spyOn(sidebar, 'getBoundingClientRect').mockReturnValue({
-        top: 100,
-        bottom: 500,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 400,
-        x: 0,
-        y: 100,
-        toJSON: () => ({}),
-      });
-      Object.defineProperty(sidebar, 'clientHeight', { value: 400, configurable: true });
-      Object.defineProperty(sidebar, 'scrollTop', { value: 0, configurable: true });
-
-      const eventsLink = screen.getByTestId('api-sidebar-link-events-api');
-      vi.spyOn(eventsLink, 'getBoundingClientRect').mockReturnValue({
-        top: 450,
-        bottom: 480,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 30,
-        x: 0,
-        y: 450,
-        toJSON: () => ({}),
-      });
-
-      // Change activeSection
+      // Navigating to a different module must leave the menu's scroll position
+      // untouched — the user controls it.
       rerender(<Sidebar sections={MOCK_SECTIONS} activeSection="events-api" variant="api" />);
 
-      // Verify scroll was called with auto behavior
-      expect(scrollToSpy).toHaveBeenCalled();
-      const scrollArgs = scrollToSpy.mock.calls[0][0] as ScrollToOptions;
-      expect(scrollArgs.behavior).toBe('auto');
-    });
-
-    it('should use auto scroll behavior', () => {
-      const { rerender } = renderWithI18n(
-        <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
-      );
-
-      const sidebar = screen.getByTestId('api-sidebar');
-      const scrollToSpy = vi.spyOn(sidebar, 'scrollTo');
-
-      // Mock getBoundingClientRect to simulate link near bottom edge
-      vi.spyOn(sidebar, 'getBoundingClientRect').mockReturnValue({
-        top: 100,
-        bottom: 500,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 400,
-        x: 0,
-        y: 100,
-        toJSON: () => ({}),
-      });
-      Object.defineProperty(sidebar, 'clientHeight', { value: 400, configurable: true });
-      Object.defineProperty(sidebar, 'scrollTop', { value: 0, configurable: true });
-
-      const blocksLink = screen.getByTestId('api-sidebar-link-blocks-api');
-      vi.spyOn(blocksLink, 'getBoundingClientRect').mockReturnValue({
-        top: 450,
-        bottom: 480,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 30,
-        x: 0,
-        y: 450,
-        toJSON: () => ({}),
-      });
-
-      rerender(<Sidebar sections={MOCK_SECTIONS} activeSection="blocks-api" variant="api" />);
-
-      // Verify auto scroll was used
-      expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+      expect(scrollToSpy).not.toHaveBeenCalled();
     });
   });
 });

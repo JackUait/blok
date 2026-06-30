@@ -30,8 +30,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   buildHref,
 }) => {
   const navRef = useRef<HTMLElement>(null);
-  const sidebarRef = useRef<HTMLElement>(null);
-  const previousActiveSectionRef = useRef<string | null>(null);
 
   // A single coral marker that glides to the active link instead of a static
   // per-item border — measured from layout so it tracks any item across groups.
@@ -63,76 +61,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => window.removeEventListener('resize', measureMarker);
   }, [measureMarker]);
 
-  // Scroll active link into view when activeSection changes (with 2-item buffer)
-  const scrollActiveIntoView = useCallback(() => {
-    if (!navRef.current || !sidebarRef.current || !activeSection) return;
-
-    // Skip scrolling on first render (when previous section is null)
-    if (previousActiveSectionRef.current === null) {
-      previousActiveSectionRef.current = activeSection;
-      return;
-    }
-
-    // Skip scrolling if the active section hasn't actually changed
-    if (previousActiveSectionRef.current === activeSection) {
-      return;
-    }
-
-    previousActiveSectionRef.current = activeSection;
-
-    const sidebar = sidebarRef.current;
-    const allLinks = Array.from(
-      navRef.current.querySelectorAll(`[data-blok-testid^="${variant}-sidebar-link-"]`)
-    );
-    const activeIndex = allLinks.findIndex(
-      (link) =>
-        link.getAttribute('data-blok-testid') === `${variant}-sidebar-link-${activeSection}`
-    );
-
-    if (activeIndex === -1) return;
-
-    const activeLink = allLinks[activeIndex] as HTMLElement;
-    const bufferSize = 2;
-
-    // Calculate positions relative to the sidebar's scroll container
-    const sidebarRect = sidebar.getBoundingClientRect();
-    const activeLinkRect = activeLink.getBoundingClientRect();
-
-    // Position of active link relative to the sidebar's visible area
-    const linkTopInSidebar = activeLinkRect.top - sidebarRect.top;
-    const linkBottomInSidebar = activeLinkRect.bottom - sidebarRect.top;
-    const sidebarVisibleHeight = sidebar.clientHeight;
-
-    // Buffer zone: roughly 2 items worth of space (each link ~32px)
-    const bufferPixels = 80;
-
-    // Check if active link is near top edge
-    if (linkTopInSidebar < bufferPixels) {
-      // Scroll up to show buffer items above
-      const bufferTopIndex = Math.max(0, activeIndex - bufferSize);
-      const bufferLink = allLinks[bufferTopIndex] as HTMLElement;
-      const bufferLinkRect = bufferLink.getBoundingClientRect();
-      const scrollOffset = bufferLinkRect.top - sidebarRect.top + sidebar.scrollTop - 20;
-      sidebar.scrollTo({ top: Math.max(0, scrollOffset), behavior: 'auto' });
-      return;
-    }
-
-    // Check if active link is near bottom edge
-    if (linkBottomInSidebar > sidebarVisibleHeight - bufferPixels) {
-      // Scroll down to show buffer items below
-      const bufferBottomIndex = Math.min(allLinks.length - 1, activeIndex + bufferSize);
-      const bufferLink = allLinks[bufferBottomIndex] as HTMLElement;
-      const bufferLinkRect = bufferLink.getBoundingClientRect();
-      const scrollOffset =
-        bufferLinkRect.bottom - sidebarRect.top + sidebar.scrollTop - sidebarVisibleHeight + 20;
-      sidebar.scrollTo({ top: scrollOffset, behavior: 'auto' });
-    }
-  }, [activeSection, variant]);
-
-  useEffect(() => {
-    scrollActiveIntoView();
-  }, [scrollActiveIntoView]);
-
   const linkClass = (id: string) =>
     cn(
       'block rounded-md py-1.5 pl-4 pr-3 text-sm text-muted-foreground transition-[color,background-color,transform] duration-200 ease-out',
@@ -145,7 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      ref={sidebarRef}
       className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2"
       data-blok-testid={`${variant}-sidebar`}
     >

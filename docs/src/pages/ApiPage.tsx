@@ -61,7 +61,7 @@ export const ApiContent: React.FC = () => {
 
 export const ApiPage: React.FC = () => (
   <>
-    <Nav links={NAV_LINKS} />
+    <Nav links={NAV_LINKS} keepExpanded />
     <main>
       <ApiContent />
     </main>

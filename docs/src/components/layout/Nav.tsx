@@ -11,9 +11,14 @@ import { cn } from "@/lib/utils";
 
 interface NavProps {
   links: NavLink[];
+  /**
+   * Pin the header to its full edge-to-edge form, suppressing the scroll-driven
+   * morph into the compact frosted island. Used on the docs page.
+   */
+  keepExpanded?: boolean;
 }
 
-export const Nav: React.FC<NavProps> = ({ links }) => {
+export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
   const location = useLocation();
   const { t } = useI18n();
   const [navScrolled, setNavScrolled] = useState(false);
@@ -59,7 +64,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
       // the tuck offset, scrolling up subtracts, clamped so the bar can rest
       // anywhere between fully shown and fully tucked.
       const offset =
-        reduceMotion || menuOpenRef.current || scrollY <= HIDE_THRESHOLD
+        reduceMotion || menuOpenRef.current || keepExpanded || scrollY <= HIDE_THRESHOLD
           ? 0
           : Math.min(
               Math.max(hideOffsetRef.current + delta * HIDE_SPEED, 0),
@@ -85,7 +90,7 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
 
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [keepExpanded]);
 
   // Opening the menu pulls the bar fully back into view (smoothly), so the
   // dropdown never anchors to a half-tucked header.
@@ -176,9 +181,14 @@ export const Nav: React.FC<NavProps> = ({ links }) => {
         <div
           className={cn(
             "relative mx-auto flex w-full items-center justify-between gap-5 border transition-[height,max-width,border-radius,background-color,border-color,box-shadow,padding] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-            navScrolled
+            // Compact frosted island — only when the morph is allowed (not on docs).
+            navScrolled && !keepExpanded
               ? "mt-3.5 h-[4.5rem] max-w-5xl rounded-[1.75rem] border-border/70 bg-background/70 px-4 shadow-[0_14px_40px_-12px_rgba(17,17,17,0.3)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 sm:px-6"
-              : "mt-0 h-16 max-w-6xl rounded-none border-transparent bg-transparent px-6",
+              // Docs: keep the full edge-to-edge bar, but once scrolled give it a
+              // quiet frost + bottom hairline so content never bleeds through.
+              : navScrolled && keepExpanded
+                ? "mt-0 h-16 max-w-6xl rounded-none border-transparent border-b-border/60 bg-background/80 px-6 backdrop-blur-xl supports-[backdrop-filter]:bg-background/65"
+                : "mt-0 h-16 max-w-6xl rounded-none border-transparent bg-transparent px-6",
           )}
         >
           <Link

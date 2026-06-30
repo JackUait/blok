@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState, useCallback, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,8 @@ export interface SidebarLink {
 export interface SidebarSection {
   title: string;
   links: SidebarLink[];
+  /** Optional leading icon shown beside the group title. */
+  icon?: ReactNode;
 }
 
 export type SidebarVariant = 'api' | 'tools';
@@ -171,7 +173,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 pl-4 pr-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                 data-blok-testid={`${variant}-sidebar-section-toggle-${idx}`}
               >
-                <span>{section.title}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  {section.icon && (
+                    <span className="shrink-0 text-muted-foreground/50" aria-hidden="true">
+                      {section.icon}
+                    </span>
+                  )}
+                  <span className="truncate">{section.title}</span>
+                </span>
                 <svg
                   width="12"
                   height="12"

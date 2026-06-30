@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import type { ApiSection, SidebarSection } from '../components/api/api-data';
+import type { ApiSection } from '../components/api/api-data';
 import { API_SECTIONS as BASE_API_SECTIONS } from '../components/api/api-data';
+import type { SidebarSection } from '../components/common/Sidebar';
 import { SIDEBAR_GROUPS } from '../components/api/api-nav';
+import { SECTION_ICONS } from '../components/api/section-icons';
 
 /**
  * Mapping of section IDs to translation keys
@@ -125,6 +127,7 @@ export const useApiTranslations = () => {
   const translatedSidebarSections = useMemo((): SidebarSection[] => {
     return SIDEBAR_GROUPS.map((group) => ({
       title: t(`api.sections.${group.key}`),
+      icon: SECTION_ICONS[group.key],
       links: group.moduleIds.map((id) => ({ id, label: t(SIDEBAR_LINK_KEYS[id]) })),
     }));
   }, [t, locale]);

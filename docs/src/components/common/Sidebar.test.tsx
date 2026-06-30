@@ -169,6 +169,22 @@ describe('Sidebar', () => {
     });
   });
 
+  describe('section icons', () => {
+    it('renders a section icon when provided', () => {
+      const withIcon: SidebarSection[] = [
+        {
+          title: 'Core',
+          icon: <svg data-blok-testid="core-icon" />,
+          links: [{ id: 'core', label: 'Blok Class' }],
+        },
+      ];
+      renderWithI18n(<Sidebar sections={withIcon} activeSection="core" variant="api" />);
+
+      const toggle = screen.getByRole('button', { name: /Core/i });
+      expect(toggle).toContainElement(screen.getByTestId('core-icon'));
+    });
+  });
+
   describe('no auto-scroll on navigation', () => {
     it('does not scroll the sidebar when activeSection changes', () => {
       const { rerender } = renderWithI18n(

@@ -46,6 +46,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
     );
   }, []);
 
+  // Collapsible groups. Collapsed by default, except the group that holds the
+  // current page so the user's location (and the coral marker) stays visible.
+  const activeTitle = sections.find((s) => s.links.some((l) => l.id === activeSection))?.title;
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    () => new Set(activeTitle ? [activeTitle] : []),
+  );
+
+  // Landing on a module (via nav, search, or prev/next) opens its group; groups
+  // the user already opened stay open.
+  useEffect(() => {
+    if (!activeTitle) return;
+    setOpenGroups((prev) => (prev.has(activeTitle) ? prev : new Set(prev).add(activeTitle)));
+  }, [activeTitle]);
+
+  const toggleGroup = useCallback((title: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  }, []);
+
   // A single coral marker that glides to the active link instead of a static
   // per-item border — measured from layout so it tracks any item across groups.
   const [marker, setMarker] = useState<{ top: number; height: number } | null>(null);
@@ -67,10 +90,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [activeSection, variant]);
 
   // Position synchronously after layout so the marker never paints out of place.
+  // Re-runs when groups open/close, since that shifts every item below.
   useLayoutEffect(() => {
     measureMarker();
     updateScrollEdges();
-  }, [measureMarker, updateScrollEdges, sections]);
+  }, [measureMarker, updateScrollEdges, sections, openGroups]);
 
   useEffect(() => {
     const onResize = () => {
@@ -130,42 +154,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }
         />
 
-        {sections.map((section) => (
-          <div
-            key={section.title}
-            className="flex flex-col gap-0.5"
-            data-blok-testid={`${variant}-sidebar-section`}
-          >
-            <h4 className="mb-2 pl-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60">
-              {section.title}
-            </h4>
-            <div className="flex flex-col gap-0.5 border-l border-border/60">
-              {section.links.map((link) =>
-                linkMode === 'route' && buildHref ? (
-                  <Link
-                    key={link.id}
-                    to={buildHref(link.id)}
-                    className={linkClass(link.id)}
-                    aria-current={activeSection === link.id ? 'page' : undefined}
-                    data-blok-testid={`${variant}-sidebar-link-${link.id}`}
-                  >
-                    {link.label}
-                  </Link>
-                ) : (
-                  <a
-                    key={link.id}
-                    href={`#${link.id}`}
-                    className={linkClass(link.id)}
-                    aria-current={activeSection === link.id ? 'page' : undefined}
-                    data-blok-testid={`${variant}-sidebar-link-${link.id}`}
-                  >
-                    {link.label}
-                  </a>
-                )
-              )}
+        {sections.map((section, idx) => {
+          const isOpen = openGroups.has(section.title);
+          const regionId = `${variant}-sidebar-group-${idx}`;
+          return (
+            <div
+              key={section.title}
+              className="flex flex-col gap-0.5"
+              data-blok-testid={`${variant}-sidebar-section`}
+            >
+              <button
+                type="button"
+                onClick={() => toggleGroup(section.title)}
+                aria-expanded={isOpen}
+                aria-controls={regionId}
+                className="mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 pl-4 pr-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                data-blok-testid={`${variant}-sidebar-section-toggle-${idx}`}
+              >
+                <span>{section.title}</span>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                  className={cn(
+                    'shrink-0 transition-transform duration-200 ease-out',
+                    isOpen ? 'rotate-0' : '-rotate-90',
+                  )}
+                >
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <div
+                id={regionId}
+                hidden={!isOpen}
+                className="flex flex-col gap-0.5 border-l border-border/60"
+              >
+                {section.links.map((link) =>
+                  linkMode === 'route' && buildHref ? (
+                    <Link
+                      key={link.id}
+                      to={buildHref(link.id)}
+                      className={linkClass(link.id)}
+                      aria-current={activeSection === link.id ? 'page' : undefined}
+                      data-blok-testid={`${variant}-sidebar-link-${link.id}`}
+                    >
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a
+                      key={link.id}
+                      href={`#${link.id}`}
+                      className={linkClass(link.id)}
+                      aria-current={activeSection === link.id ? 'page' : undefined}
+                      data-blok-testid={`${variant}-sidebar-link-${link.id}`}
+                    >
+                      {link.label}
+                    </a>
+                  )
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
     </aside>
   );

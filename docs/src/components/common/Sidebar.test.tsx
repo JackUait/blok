@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar, type SidebarSection } from './Sidebar';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -128,6 +128,44 @@ describe('Sidebar', () => {
       const link = screen.getByTestId('api-sidebar-link-caret-api');
       expect(link).toHaveAttribute('href', '/docs/caret-api');
       expect(link).toHaveClass('active');
+    });
+  });
+
+  describe('collapsible groups', () => {
+    it('collapses every group by default except the one holding the active page', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      // 'core' lives in the 'Core' group, so it starts open; the rest collapsed.
+      expect(screen.getByRole('button', { name: /Core/i })).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('button', { name: /Guide/i })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByRole('button', { name: /API Modules/i })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+    });
+
+    it('hides the links of a collapsed group', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      const guideToggle = screen.getByRole('button', { name: /Guide/i });
+      const regionId = guideToggle.getAttribute('aria-controls');
+      const region = regionId ? document.getElementById(regionId) : null;
+      expect(region).not.toBeNull();
+      expect(region).toHaveAttribute('hidden');
+    });
+
+    it('expands a collapsed group when its header is clicked', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      const guideToggle = screen.getByRole('button', { name: /Guide/i });
+      expect(guideToggle).toHaveAttribute('aria-expanded', 'false');
+
+      fireEvent.click(guideToggle);
+
+      expect(guideToggle).toHaveAttribute('aria-expanded', 'true');
+      const regionId = guideToggle.getAttribute('aria-controls');
+      const region = regionId ? document.getElementById(regionId) : null;
+      expect(region).not.toHaveAttribute('hidden');
     });
   });
 

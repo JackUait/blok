@@ -60,4 +60,34 @@ test.describe('Angular adapter', () => {
     // live core (no remount), flipping contenteditable.
     await expect(paragraph).toHaveAttribute('contenteditable', 'false');
   });
+
+  test('renders a custom createAngularBlock block with its initial data', async ({ page }) => {
+    await page.goto(ANGULAR_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    await expect(page.getByTestId('counter-value')).toHaveText('0');
+  });
+
+  test('commit() updates the custom block and serializes through dataChange', async ({ page }) => {
+    await page.goto(ANGULAR_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    await page.getByTestId('counter-inc').click();
+
+    await expect(page.getByTestId('counter-value')).toHaveText('1');
+    // The serialized output reflects the committed value (real core save path).
+    await expect(page.getByTestId('output')).toContainText('"count":1');
+  });
+
+  test('read-only toggle hides the custom block button in place', async ({ page }) => {
+    await page.goto(ANGULAR_TEST_URL);
+    await expect(page.getByTestId('status')).toHaveText('ready');
+
+    await expect(page.getByTestId('counter-inc')).toBeVisible();
+    await page.getByTestId('toggle-readonly').click();
+
+    await expect(page.getByTestId('counter-inc')).toBeHidden();
+    // Value still present — toggled in place, not remounted/destroyed.
+    await expect(page.getByTestId('counter-value')).toBeVisible();
+  });
 });

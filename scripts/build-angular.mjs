@@ -61,11 +61,129 @@ await bundle.close();
 // 2. Stage the adapter + its shared dependency under one root. The entry file
 //    sits at the staging root so ng-packagr's rootDir covers both `angular/`
 //    and `shared/`; the `../shared/deep-equal` import resolves unchanged.
+//
+//    Additional staging: adapter files added in createAngularBlock/injectBlocks
+//    import helpers from outside `src/angular/` and `src/shared/` — stage only
+//    the specific modules they need so the relative paths (which mirror the
+//    original `src/` layout) resolve correctly under `rootDir`.
 cpSync(path.resolve(root, 'src/angular'), path.resolve(stagingDir, 'angular'), {
   recursive: true,
   filter: (src) => !src.endsWith('.json'),
 });
 cpSync(path.resolve(root, 'src/shared'), path.resolve(stagingDir, 'shared'), { recursive: true });
+
+// Helpers shared with the core (injectBlocks, createAngularBlock). These files
+// use `../../types/...` or `../../markdown/types` relative imports that resolve
+// to `types/` at the repo root, which contains a mix of `.d.ts` and `.ts` files.
+// The `.ts` files (e.g. `types/data-formats/block-id.ts`) cause ngtsc to crash.
+// After copying, we rewrite all `import type` statements that reference the
+// repo-root `types/` or `markdown/types` to `'@jackuait/blok'` (the staged
+// flat-declaration alias), which is a single clean `.d.ts` with no `.ts` deps.
+// `BlockTuneData` and `MarkdownImportConfig` are not in the standard
+// `@jackuait/blok` exports, so we append them to `blok-core.d.ts` first.
+let coreTypes = readFileSync(coreTypesFile, 'utf8');
+if (!coreTypes.includes('export type BlockTuneData')) {
+  coreTypes += '\nexport type BlockTuneData = unknown;\n';
+}
+coreTypes = coreTypes.replace(
+  /^interface MarkdownImportConfig /m,
+  'export interface MarkdownImportConfig '
+);
+writeFileSync(coreTypesFile, coreTypes, 'utf8');
+
+// Stub `@jackuait/blok/markdown` so the dynamic `await import('../../markdown/index')`
+// in blocks-api.ts can be remapped to a path TypeScript CAN resolve.  The stub
+// only needs the ONE symbol consumed (`markdownToBlocks`); it borrows the types
+// from the already-staged `blok-core.d.ts`.
+writeFileSync(
+  path.resolve(stagingDir, 'blok-markdown.d.ts'),
+  [
+    `import type { OutputBlockData, MarkdownImportConfig } from '@jackuait/blok';`,
+    `export declare function markdownToBlocks(`,
+    `  md: string,`,
+    `  config?: MarkdownImportConfig`,
+    `): Promise<OutputBlockData[]>;`,
+  ].join('\n') + '\n',
+  'utf8'
+);
+
+/** Rewrite imports that resolve to the repo-root `types/` tree (where some
+ *  files are `.ts`, triggering ngtsc crashes) to go through the staged
+ *  `@jackuait/blok` alias (`blok-core.d.ts`) instead.  Also rewrites the
+ *  markdown helpers so they stay resolvable in the staging layout.
+ */
+const rewriteTypeImports = (filePath) => {
+  let src = readFileSync(filePath, 'utf8');
+
+  // 1. `import type { … } from '…/types/…'` or `'…/markdown/types'` → @jackuait/blok
+  const TYPE_PATTERNS = [
+    /^import type \{([^}]+)\} from ['"](?:\.\.\/)*types(?:\/[^'"]+)?['"];?\n?/gm,
+    /^import type \{([^}]+)\} from ['"](?:\.\.\/)*markdown\/types['"];?\n?/gm,
+  ];
+  const symbols = [];
+  for (const re of TYPE_PATTERNS) {
+    src = src.replace(re, (_, captured) => {
+      symbols.push(...captured.split(',').map((s) => s.trim()).filter(Boolean));
+      return '';
+    });
+  }
+  if (symbols.length > 0) {
+    const unique = [...new Set(symbols)];
+    src = `import type { ${unique.join(', ')} } from '@jackuait/blok';\n` + src;
+  }
+
+  // 2. Dynamic `import('…/markdown/index')` → `import('@jackuait/blok/markdown')`
+  //    so the path is resolvable under the staging tsconfig's `paths` aliases.
+  src = src.replace(
+    /import\(['"](?:\.\.\/)*markdown\/index['"]\)/g,
+    `import('@jackuait/blok/markdown')`
+  );
+
+  writeFileSync(filePath, src, 'utf8');
+};
+
+const copyAndRewrite = (relSrc, relDest) => {
+  const dest = path.resolve(stagingDir, relDest);
+  mkdirSync(path.dirname(dest), { recursive: true });
+  cpSync(path.resolve(root, relSrc), dest);
+  rewriteTypeImports(dest);
+};
+
+copyAndRewrite('src/components/utils/blocks-tree.ts',         'components/utils/blocks-tree.ts');
+copyAndRewrite('src/components/utils/blocks-api.ts',          'components/utils/blocks-api.ts');
+// id-generator.ts imports `nanoid` (a bare specifier). ng-packagr/rollup
+// externalizes ALL bare specifiers, so it cannot be bundled. Replace the
+// import with a minimal inline implementation using crypto.getRandomValues(),
+// which produces the same 10-char URL-safe alphabet as nanoid.
+(() => {
+  const dest = path.resolve(stagingDir, 'components/utils/id-generator.ts');
+  mkdirSync(path.dirname(dest), { recursive: true });
+  const original = readFileSync(path.resolve(root, 'src/components/utils/id-generator.ts'), 'utf8');
+  writeFileSync(
+    dest,
+    original.replace(
+      `import { nanoid } from 'nanoid';`,
+      `// nanoid replaced with inline crypto implementation for the Angular adapter bundle.\n` +
+      `const _ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';\n` +
+      `const _nanoid = (n: number): string => {\n` +
+      `  const buf = crypto.getRandomValues(new Uint8Array(n));\n` +
+      `  return Array.from(buf, (b) => _ID_CHARS[b % 64]).join('');\n` +
+      `};\n` +
+      `const nanoid = _nanoid;`,
+    ),
+    'utf8'
+  );
+})();
+copyAndRewrite('src/components/errors/tool-not-found.ts',     'components/errors/tool-not-found.ts');
+copyAndRewrite('src/components/constants/data-attributes.ts', 'components/constants/data-attributes.ts');
+copyAndRewrite('src/tools/nested-blocks.ts',                  'tools/nested-blocks.ts');
+// Also rewrite staged angular/ files that import from '../../types/...'.
+rewriteTypeImports(path.resolve(stagingDir, 'angular/useBlocks.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/block-context.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/createAngularBlock.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-editor.component.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-content.directive.ts'));
+
 writeFileSync(path.resolve(stagingDir, 'index.ts'), `export * from './angular';\n`, 'utf8');
 
 // 3. The published package.json: name + peer ranges from the canonical template
@@ -90,6 +208,9 @@ writeFileSync(
       $schema: '../../node_modules/ng-packagr/ng-package.schema.json',
       dest: '../angular',
       lib: { entryFile: 'index.ts' },
+      // nanoid is a devDependency; ng-packagr externalizes non-peer packages by
+      // default. We bundle it inline so the adapter is self-contained in-browser.
+      allowedNonPeerDependencies: ['.', 'nanoid'],
     },
     null,
     2
@@ -110,7 +231,10 @@ writeFileSync(
         noEmit: false,
         types: ['node'],
         baseUrl: '.',
-        paths: { '@jackuait/blok': ['./blok-core.d.ts'] },
+        paths: {
+          '@jackuait/blok': ['./blok-core.d.ts'],
+          '@jackuait/blok/markdown': ['./blok-markdown.d.ts'],
+        },
       },
       angularCompilerOptions: {
         compilationMode: 'partial',

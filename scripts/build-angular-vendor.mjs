@@ -36,10 +36,31 @@ mkdirSync(outDir, { recursive: true });
  * component and the adapter's partial-Ivy FESM at bootstrap.
  */
 const APP_SOURCE = `
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { BlokEditorComponent } from '@jackuait/blok-angular';
+import { BlokEditorComponent, createAngularBlock, BLOK_BLOCK_CONTEXT } from '@jackuait/blok-angular';
 import { Paragraph, Header } from '@jackuait/blok/tools';
+
+@Component({
+  selector: 'ng-counter-block',
+  standalone: true,
+  template: \`
+    <span data-blok-testid="counter-value">{{ ctx.data().count }}</span>
+    @if (!ctx.readOnly()) {
+      <button data-blok-testid="counter-inc" (click)="ctx.commit({ count: ctx.data().count + 1 })">+1</button>
+    }
+  \`,
+})
+class NgCounterComponent {
+  ctx = inject(BLOK_BLOCK_CONTEXT);
+}
+
+const NgCounter = createAngularBlock({
+  type: 'ng-counter',
+  toolbox: { title: 'Counter', icon: '<svg></svg>' },
+  propSchema: { count: { default: 0 } },
+  component: NgCounterComponent,
+});
 
 @Component({
   selector: 'app-root',
@@ -64,8 +85,11 @@ class AppComponent {
   status = 'loading';
   readOnly = false;
   output = '';
-  tools = { paragraph: { class: Paragraph }, header: { class: Header } };
-  data = { blocks: [{ id: 'block1', type: 'paragraph', data: { text: 'Hello from Angular' } }] };
+  tools = { paragraph: { class: Paragraph }, header: { class: Header }, 'ng-counter': { class: NgCounter } };
+  data = { blocks: [
+    { id: 'block1', type: 'paragraph', data: { text: 'Hello from Angular' } },
+    { id: 'counter1', type: 'ng-counter', data: { count: 0 } },
+  ] };
 
   onReady() { this.status = 'ready'; }
   // (dataChange) fires the serialized content on every change batch (the real

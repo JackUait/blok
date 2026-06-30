@@ -90,8 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const linkClass = (id: string) =>
     cn(
-      'block rounded-lg py-1.5 pl-4 pr-3 text-sm text-muted-foreground transition-[color,background-color,transform] duration-200 ease-out',
-      'hover:translate-x-0.5 hover:text-foreground focus-visible:translate-x-0.5 focus-visible:text-foreground',
+      'block rounded-lg py-1.5 pl-4 pr-3 text-sm text-muted-foreground transition-[color,background-color] duration-200 ease-out',
+      'hover:text-foreground focus-visible:text-foreground',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
       activeSection === id
         ? 'active font-semibold text-foreground bg-primary/[0.07] dark:bg-primary/15'

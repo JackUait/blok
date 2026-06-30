@@ -27,7 +27,7 @@
 
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { rollup } from 'rollup';
 import dtsPlugin from 'rollup-plugin-dts';
@@ -85,10 +85,27 @@ let coreTypes = readFileSync(coreTypesFile, 'utf8');
 if (!coreTypes.includes('export type BlockTuneData')) {
   coreTypes += '\nexport type BlockTuneData = unknown;\n';
 }
+// Promotion-matched guard: the symbol must be present after the append.
+if (!coreTypes.includes('export type BlockTuneData')) {
+  throw new Error(
+    `[build-angular] Promotion guard failed: 'export type BlockTuneData' is missing from ` +
+    `blok-core.d.ts after promotion. The rollup output may have changed.`
+  );
+}
+const beforeMarkdownReplace = coreTypes;
 coreTypes = coreTypes.replace(
   /^interface MarkdownImportConfig /m,
   'export interface MarkdownImportConfig '
 );
+// Promotion-matched guard: the regex must have matched at least once.
+if (coreTypes === beforeMarkdownReplace) {
+  throw new Error(
+    `[build-angular] Promotion guard failed: 'interface MarkdownImportConfig' was not found in ` +
+    `blok-core.d.ts — the regex did not match. The interface may have been renamed, removed, or ` +
+    `is already exported. Expected a bare 'interface MarkdownImportConfig' declaration in the ` +
+    `rollup-flattened types.`
+  );
+}
 writeFileSync(coreTypesFile, coreTypes, 'utf8');
 
 // Stub `@jackuait/blok/markdown` so the dynamic `await import('../../markdown/index')`
@@ -184,6 +201,49 @@ rewriteTypeImports(path.resolve(stagingDir, 'angular/createAngularBlock.ts'));
 rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-editor.component.ts'));
 rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-content.directive.ts'));
 
+// Fail-loud guard: after all rewrites, no staged .ts source file should still contain
+// a relative import whose specifier points into the core types/ or markdown/types tree.
+// rewriteTypeImports() uses single-line `import type { }` regexes and would silently
+// miss multi-line type imports or inline-`type` modifiers in mixed imports.  This scan
+// catches those misses immediately with a clear diagnostic instead of a cryptic ng-packagr
+// compile error downstream.
+const gatherTsSourceFiles = (dir) => {
+  const results = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) results.push(...gatherTsSourceFiles(full));
+    // Skip generated .d.ts files — they are declaration stubs, not source.
+    else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) results.push(full);
+  }
+  return results;
+};
+
+for (const tsFile of gatherTsSourceFiles(stagingDir)) {
+  const src = readFileSync(tsFile, 'utf8');
+  // Match any 'from' clause with a relative specifier that goes UP at least one
+  // directory level (starts with ../).  Specifiers that only descend (./foo) are
+  // intra-staging and are fine (e.g. './types' → angular/types.ts is staged).
+  // No staging directory is named 'types', so any UP-going path containing
+  // '/types' is a leaked reference that should have been rewritten to '@jackuait/blok'.
+  const re = /from\s+['"]((?:\.\.\/)+[^'"]+)['"]/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const spec = m[1];
+    if (
+      spec.includes('/types/') ||
+      spec.endsWith('/types') ||
+      /\/markdown\/types/.test(spec)
+    ) {
+      const rel = path.relative(stagingDir, tsFile);
+      throw new Error(
+        `[build-angular] Leftover core type import in staged file '${rel}': ` +
+        `'${spec}' was not rewritten to '@jackuait/blok'. ` +
+        `Check rewriteTypeImports() — the import may be multi-line or use an inline 'type' modifier.`
+      );
+    }
+  }
+}
+
 writeFileSync(path.resolve(stagingDir, 'index.ts'), `export * from './angular';\n`, 'utf8');
 
 // 3. The published package.json: name + peer ranges from the canonical template
@@ -208,9 +268,7 @@ writeFileSync(
       $schema: '../../node_modules/ng-packagr/ng-package.schema.json',
       dest: '../angular',
       lib: { entryFile: 'index.ts' },
-      // nanoid is a devDependency; ng-packagr externalizes non-peer packages by
-      // default. We bundle it inline so the adapter is self-contained in-browser.
-      allowedNonPeerDependencies: ['.', 'nanoid'],
+      allowedNonPeerDependencies: ['.'],
     },
     null,
     2

@@ -69,7 +69,7 @@ describe('HomePage', () => {
 
     const main = screen.getByRole('main');
     expect(within(main).getByTestId('frameworks-section')).toBeInTheDocument();
-    expect(within(main).getAllByTestId('framework-card')).toHaveLength(3);
+    expect(within(main).getAllByTestId('framework-card')).toHaveLength(5);
   });
 
   it('should render the "Why Blok" comparison table', () => {

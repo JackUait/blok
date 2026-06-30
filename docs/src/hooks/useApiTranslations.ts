@@ -142,6 +142,7 @@ export const useApiTranslations = () => {
     const apiGroups: SidebarSection[] = SIDEBAR_GROUPS.map((group) => ({
       title: t(`api.sections.${group.key}`),
       icon: SECTION_ICONS[group.key],
+      iconAnimation: group.key,
       links: group.moduleIds.map((id) => ({ id, label: t(SIDEBAR_LINK_KEYS[id]) })),
     }));
 
@@ -159,8 +160,18 @@ export const useApiTranslations = () => {
 
     return [
       ...apiGroups,
-      { title: t('tools.sections.blockTools'), icon: SECTION_ICONS.blockTools, links: blockLinks },
-      { title: t('tools.sections.inlineTools'), icon: SECTION_ICONS.inlineTools, links: inlineLinks },
+      {
+        title: t('tools.sections.blockTools'),
+        icon: SECTION_ICONS.blockTools,
+        iconAnimation: 'blockTools',
+        links: blockLinks,
+      },
+      {
+        title: t('tools.sections.inlineTools'),
+        icon: SECTION_ICONS.inlineTools,
+        iconAnimation: 'inlineTools',
+        links: inlineLinks,
+      },
     ];
   }, [t, locale]);
 

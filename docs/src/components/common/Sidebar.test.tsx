@@ -281,6 +281,34 @@ describe('Sidebar', () => {
       expect(inactiveIconWrapper).not.toHaveAttribute('data-blok-animate-token');
     });
 
+    it('applies the context-specific icon animation class to the active group only', () => {
+      const withContextIcons: SidebarSection[] = [
+        {
+          title: 'Getting started',
+          icon: <svg data-blok-testid="rocket-icon" />,
+          iconAnimation: 'gettingStarted',
+          links: [{ id: 'quick-start', label: 'Quick Start' }],
+        },
+        {
+          title: 'Core',
+          icon: <svg data-blok-testid="cube-icon" />,
+          iconAnimation: 'core',
+          links: [{ id: 'core', label: 'Blok Class' }],
+        },
+      ];
+      renderWithI18n(<Sidebar sections={withContextIcons} activeSection="core" variant="api" />);
+
+      // The active group's icon animates with its own contextual keyframes.
+      const activeIcon = screen.getByTestId('cube-icon').parentElement;
+      expect(activeIcon).toHaveClass('sidebar-section-icon-active', 'sidebar-icon-anim-core');
+
+      // Inactive groups carry no animation class at all — not the shared one,
+      // nor any context-specific one.
+      const inactiveIcon = screen.getByTestId('rocket-icon').parentElement;
+      expect(inactiveIcon).not.toHaveClass('sidebar-section-icon-active');
+      expect(inactiveIcon).not.toHaveClass('sidebar-icon-anim-gettingStarted');
+    });
+
     it('fills and brand-colours the active icon glyph itself, with no backing chip', () => {
       renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
 

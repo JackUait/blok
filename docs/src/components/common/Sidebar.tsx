@@ -12,6 +12,12 @@ export interface SidebarSection {
   links: SidebarLink[];
   /** Optional leading icon shown beside the group title. */
   icon?: ReactNode;
+  /**
+   * Token picking the icon's contextual entrance animation (e.g. 'gettingStarted'
+   * launches the rocket, 'extending' plugs the plug in). Maps to a
+   * `sidebar-icon-anim-<token>` CSS class. Falls back to a generic pop.
+   */
+  iconAnimation?: string;
 }
 
 export type SidebarVariant = 'api' | 'tools';
@@ -105,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const linkClass = (id: string) =>
     cn(
-      'block rounded-lg py-1.5 pl-4 pr-3 text-sm text-muted-foreground transition-[color,background-color] duration-200 ease-out',
+      'block rounded-lg py-1.5 pl-2.5 pr-3 text-sm text-muted-foreground transition-[color,background-color] duration-200 ease-out',
       'hover:text-foreground focus-visible:text-foreground',
       // Inset ring so it isn't clipped by the scroll container's left edge.
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
@@ -174,7 +180,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         // the framework marks read as picked. No backing chip.
                         'shrink-0 [&_svg]:transition-[fill,stroke,color] [&_svg]:duration-200',
                         isActive
-                          ? 'sidebar-section-icon-active text-primary [&_svg]:fill-primary/20'
+                          ? cn(
+                              'sidebar-section-icon-active text-primary [&_svg]:fill-primary/20',
+                              // Each icon enters in a way that fits its meaning.
+                              section.iconAnimation &&
+                                `sidebar-icon-anim-${section.iconAnimation}`,
+                            )
                           : 'text-muted-foreground',
                       )}
                       data-blok-animate-token={isActive ? enterToken : undefined}
@@ -183,7 +194,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {section.icon}
                     </span>
                   )}
-                  <span className="truncate">{section.title}</span>
+                  {/* Wrap rather than ellipsize: long titles (esp. other
+                      locales) stay fully readable instead of being cut off. */}
+                  <span className="min-w-0 text-left leading-tight">{section.title}</span>
                 </span>
                 <svg
                   width="14"
@@ -202,7 +215,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 id={regionId}
                 hidden={!isOpen}
-                className="flex flex-col gap-0.5"
+                // Nested links sit on a vertical rail anchored under the group's
+                // icon, and indent past the header title, so it's obvious they
+                // belong to (and sit a level below) the section above them.
+                className="ml-[1.55rem] flex flex-col gap-0.5 border-l border-border/80 pl-2"
               >
                 {section.links.map((link) =>
                   linkMode === 'route' && buildHref ? (

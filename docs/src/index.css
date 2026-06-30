@@ -807,17 +807,29 @@
   }
 }
 
-/* When the reader arrives at a new section, that group's icon plays a quick,
-   springy pop once — it scales up from small with a little overshoot and
-   settles. The wrapper is remounted on each arrival (see Sidebar), which
-   restarts this one-shot animation. */
+/* When the reader arrives at a new section, that group's icon plays a quick
+   one-shot entrance that *fits what the icon means*. Where the glyph has
+   distinct pieces, those pieces are choreographed individually — the checkmark
+   pops in after the list lines wipe, the braces slide in from both sides and
+   meet, the grid blocks bounce in one by one, the plug's prongs poke up into
+   the socket. The wrapper is remounted on each arrival (see Sidebar), which
+   restarts every nested animation. The base class sets up the transform box and
+   a generic pop; per-icon `sidebar-icon-anim-*` classes override it. */
 .sidebar-section-icon-active {
   transform-box: fill-box;
   transform-origin: center;
-  animation: sidebar-section-icon-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: sidebar-icon-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-@keyframes sidebar-section-icon-enter {
+/* Every animated sub-shape pivots around its own centre by default. */
+.sidebar-section-icon-active svg > * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Generic fallback pop (icons without a context token) and shared part motions
+   reused across several icons, for a cohesive feel. */
+@keyframes sidebar-icon-pop {
   0% {
     transform: scale(0.5) rotate(-14deg);
   }
@@ -831,9 +843,311 @@
     transform: scale(1) rotate(0);
   }
 }
+@keyframes sidebar-part-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes sidebar-part-wipe-x {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+@keyframes sidebar-part-grow-y {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+@keyframes sidebar-part-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Getting started — rocket: the whole craft lifts off and steadies while its
+   exhaust flame flares up underneath. */
+.sidebar-icon-anim-gettingStarted {
+  animation: sidebar-icon-launch 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sidebar-icon-anim-gettingStarted svg path:nth-of-type(1) {
+  animation: sidebar-icon-flame 0.55s ease-out 0.1s both;
+}
+@keyframes sidebar-icon-launch {
+  0% {
+    transform: translateY(8px) scale(0.78) rotate(-8deg);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(-3px) scale(1.05) rotate(3deg);
+    opacity: 1;
+  }
+  78% {
+    transform: translateY(1px) scale(0.99) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0);
+  }
+}
+@keyframes sidebar-icon-flame {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* How-to guides — checklist: the three rules wipe in from the left in sequence,
+   then the tick snaps in to mark them done. */
+.sidebar-icon-anim-howTo {
+  animation: sidebar-part-fade 0.3s ease-out both;
+}
+.sidebar-icon-anim-howTo svg path:nth-of-type(1),
+.sidebar-icon-anim-howTo svg path:nth-of-type(2),
+.sidebar-icon-anim-howTo svg path:nth-of-type(3) {
+  transform-origin: left center;
+  animation: sidebar-part-wipe-x 0.32s ease-out both;
+}
+.sidebar-icon-anim-howTo svg path:nth-of-type(2) {
+  animation-delay: 0s;
+}
+.sidebar-icon-anim-howTo svg path:nth-of-type(1) {
+  animation-delay: 0.09s;
+}
+.sidebar-icon-anim-howTo svg path:nth-of-type(3) {
+  animation-delay: 0.18s;
+}
+.sidebar-icon-anim-howTo svg path:nth-of-type(4) {
+  animation: sidebar-icon-tick 0.42s cubic-bezier(0.3, 1.6, 0.5, 1) 0.28s both;
+}
+@keyframes sidebar-icon-tick {
+  0% {
+    transform: scale(0) rotate(-12deg);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.25) rotate(5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+/* Core — cube: tumbles into place as if rotating in 3D, then its inner seams
+   settle in. */
+.sidebar-icon-anim-core {
+  animation: sidebar-icon-tumble 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.sidebar-icon-anim-core svg path:nth-of-type(2),
+.sidebar-icon-anim-core svg path:nth-of-type(3) {
+  animation: sidebar-part-fade 0.4s ease-out 0.24s both;
+}
+@keyframes sidebar-icon-tumble {
+  0% {
+    transform: rotate(-110deg) scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(12deg) scale(1.1);
+    opacity: 1;
+  }
+  82% {
+    transform: rotate(-4deg) scale(0.97);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
+
+/* Editing — pencil: a brief scribble, swinging back and forth around its tip
+   the way a hand sketches, then resting. */
+.sidebar-icon-anim-editing {
+  transform-origin: bottom left;
+  animation: sidebar-icon-scribble 0.6s cubic-bezier(0.5, 0.1, 0.3, 1) both;
+}
+@keyframes sidebar-icon-scribble {
+  0% {
+    transform: rotate(-15deg) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  30% {
+    transform: rotate(8deg);
+  }
+  50% {
+    transform: rotate(-6deg);
+  }
+  68% {
+    transform: rotate(3deg);
+  }
+  84% {
+    transform: rotate(-1.5deg);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
+
+/* Interface — panels: the outer frame springs open, then the dividers sweep in
+   to split it into panes. */
+.sidebar-icon-anim-interface {
+  animation: sidebar-part-fade 0.3s ease-out both;
+}
+.sidebar-icon-anim-interface svg rect {
+  animation: sidebar-part-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.sidebar-icon-anim-interface svg path:nth-of-type(1) {
+  transform-origin: left center;
+  animation: sidebar-part-wipe-x 0.34s ease-out 0.18s both;
+}
+.sidebar-icon-anim-interface svg path:nth-of-type(2) {
+  transform-origin: center top;
+  animation: sidebar-part-grow-y 0.34s ease-out 0.26s both;
+}
+
+/* Extending & system — plug: the body springs in, its prongs poke up into the
+   socket, then the cord drops. */
+.sidebar-icon-anim-extending {
+  animation: sidebar-part-fade 0.3s ease-out both;
+}
+.sidebar-icon-anim-extending svg path:nth-of-type(4) {
+  animation: sidebar-part-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.sidebar-icon-anim-extending svg path:nth-of-type(2),
+.sidebar-icon-anim-extending svg path:nth-of-type(3) {
+  transform-origin: center bottom;
+  animation: sidebar-icon-prong 0.4s cubic-bezier(0.3, 1.5, 0.5, 1) 0.14s both;
+}
+.sidebar-icon-anim-extending svg path:nth-of-type(1) {
+  transform-origin: center top;
+  animation: sidebar-part-grow-y 0.28s ease-out 0.3s both;
+}
+@keyframes sidebar-icon-prong {
+  0% {
+    transform: translateY(5px) scaleY(0.2);
+    opacity: 0;
+  }
+  65% {
+    transform: translateY(-1px) scaleY(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+/* Data types — braces: the two halves slide in from opposite edges and clamp
+   together, the way `{ }` close around a value. */
+.sidebar-icon-anim-dataTypes {
+  animation: sidebar-part-fade 0.3s ease-out both;
+}
+.sidebar-icon-anim-dataTypes svg path:nth-of-type(1) {
+  animation: sidebar-icon-brace-left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.sidebar-icon-anim-dataTypes svg path:nth-of-type(2) {
+  animation: sidebar-icon-brace-right 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes sidebar-icon-brace-left {
+  0% {
+    transform: translateX(-7px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(1.5px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+@keyframes sidebar-icon-brace-right {
+  0% {
+    transform: translateX(7px);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-1.5px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Block tools — grid: the four blocks bounce into place one after another,
+   stacking up the layout. */
+.sidebar-icon-anim-blockTools {
+  animation: sidebar-part-fade 0.3s ease-out both;
+}
+.sidebar-icon-anim-blockTools svg rect {
+  animation: sidebar-part-pop 0.4s cubic-bezier(0.34, 1.7, 0.5, 1) both;
+}
+.sidebar-icon-anim-blockTools svg rect:nth-of-type(1) {
+  animation-delay: 0s;
+}
+.sidebar-icon-anim-blockTools svg rect:nth-of-type(2) {
+  animation-delay: 0.07s;
+}
+.sidebar-icon-anim-blockTools svg rect:nth-of-type(3) {
+  animation-delay: 0.14s;
+}
+.sidebar-icon-anim-blockTools svg rect:nth-of-type(4) {
+  animation-delay: 0.21s;
+}
+
+/* Inline tools — "T": the top bar pops in, the stem draws down from it, then the
+   baseline serif settles — like a character being set. */
+.sidebar-icon-anim-inlineTools {
+  animation: sidebar-part-fade 0.3s ease-out both;
+}
+.sidebar-icon-anim-inlineTools svg polyline {
+  animation: sidebar-part-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.sidebar-icon-anim-inlineTools svg line:nth-of-type(2) {
+  transform-origin: center top;
+  animation: sidebar-part-grow-y 0.36s ease-out 0.12s both;
+}
+.sidebar-icon-anim-inlineTools svg line:nth-of-type(1) {
+  animation: sidebar-part-fade 0.28s ease-out 0.32s both;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .sidebar-section-icon-active {
+  .sidebar-section-icon-active,
+  [class*='sidebar-icon-anim-'],
+  [class*='sidebar-icon-anim-'] svg > * {
     animation: none;
   }
 }

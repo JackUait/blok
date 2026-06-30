@@ -22,6 +22,7 @@ import type {
 } from '../../types/tools';
 import { DATA_ATTR } from '../components/constants/data-attributes';
 import { deepEqual } from '../shared/deep-equal';
+import { fillDefaults, type PropSchema, type PropSchemaEntry } from '../shared/prop-schema';
 import { mountChildBlocks } from '../tools/nested-blocks';
 
 import {
@@ -29,20 +30,7 @@ import {
   type BlockPortalRegistry,
 } from './block-portal-registry';
 
-/** One field of a {@link CreateVueBlockSpec.propSchema}. */
-export interface PropSchemaEntry {
-  /** Default value, used when the incoming data omits this key. */
-  default: unknown;
-  /** Optional allowed values (advisory; not enforced at runtime in v1). */
-  values?: readonly unknown[];
-}
-
-/**
- * Declarative data shape. The keys here are EXACTLY the keys `save()` returns to
- * Yjs — this closes the per-key-sync key-resurrection gap (a cleared field is
- * written as its explicit default, never dropped).
- */
-export type PropSchema = Record<string, PropSchemaEntry>;
+export type { PropSchema, PropSchemaEntry } from '../shared/prop-schema';
 
 /** Context handed to a Vue block's `setup` (the only data write path is `commit`). */
 export interface VueBlockRenderProps<Data> {
@@ -79,22 +67,6 @@ export interface CreateVueBlockSpec<Data = BlockToolData> {
   onMoved?: (block: BlockAPI) => void;
   onRemoved?: (block: BlockAPI) => void;
 }
-
-/**
- * Fill a data object against the schema: every schema key present, incoming
- * value when defined else the schema default, and ONLY schema keys (so `save()`
- * is never partial). Returns a frozen plain object — `toRaw`-clean, never a Vue
- * proxy — safe to hand straight to core's per-key Yjs sync.
- */
-const fillDefaults = <Data>(schema: PropSchema, data: Record<string, unknown>): Readonly<Data> => {
-  const result: Record<string, unknown> = {};
-
-  for (const key of Object.keys(schema)) {
-    result[key] = data[key] !== undefined ? data[key] : schema[key].default;
-  }
-
-  return Object.freeze(result) as Readonly<Data>;
-};
 
 /**
  * Author a first-party Vue block. Returns a `BlockToolConstructable` registered

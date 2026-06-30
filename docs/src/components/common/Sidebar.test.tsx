@@ -243,12 +243,42 @@ describe('Sidebar', () => {
     it('animates the icon of the active group only', () => {
       renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
 
-      // The icon's wrapper carries the looping-wiggle class for the active group.
+      // The icon's wrapper carries the entrance-animation class for the active group.
       const activeIconWrapper = screen.getByTestId('core-icon').parentElement;
       expect(activeIconWrapper).toHaveClass('sidebar-section-icon-active');
 
       const inactiveIconWrapper = screen.getByTestId('guide-icon').parentElement;
       expect(inactiveIconWrapper).not.toHaveClass('sidebar-section-icon-active');
+    });
+
+    it('replays the icon entrance animation each time the reader enters a new section', () => {
+      const { rerender } = renderWithI18n(
+        <Sidebar sections={withIcons} activeSection="quick-start" variant="api" />,
+      );
+
+      // On load the Guide group is active and carries an animation token.
+      const firstToken = screen
+        .getByTestId('guide-icon')
+        .parentElement?.getAttribute('data-blok-animate-token');
+      expect(firstToken).not.toBeNull();
+
+      // Navigate away to Core, then back to Guide — re-arriving must restart the
+      // animation, which we observe as a fresh token on the active icon.
+      rerender(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+      rerender(<Sidebar sections={withIcons} activeSection="quick-start" variant="api" />);
+
+      const secondToken = screen
+        .getByTestId('guide-icon')
+        .parentElement?.getAttribute('data-blok-animate-token');
+      expect(secondToken).not.toBeNull();
+      expect(secondToken).not.toEqual(firstToken);
+    });
+
+    it('does not put an animation token on inactive group icons', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      const inactiveIconWrapper = screen.getByTestId('guide-icon').parentElement;
+      expect(inactiveIconWrapper).not.toHaveAttribute('data-blok-animate-token');
     });
 
     it('fills and brand-colours the active icon glyph itself, with no backing chip', () => {

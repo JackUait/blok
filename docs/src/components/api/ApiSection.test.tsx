@@ -86,10 +86,11 @@ describe('ApiSection', () => {
     expect(title).toHaveTextContent('Test Section');
   });
 
-  it('should render the badge when provided', () => {
+  it('should not render the section badge tag', () => {
     render(<Providers><ApiSection section={mockSection} /></Providers>);
 
-    expect(screen.getByText('Test')).toBeInTheDocument();
+    expect(screen.queryByTestId('api-section-badge')).not.toBeInTheDocument();
+    expect(screen.queryByText('Test')).not.toBeInTheDocument();
   });
 
   it('should render the description', () => {
@@ -197,11 +198,12 @@ describe('ApiSection', () => {
     expect(title).toHaveTextContent('Test Section');
   });
 
-  it('should render section heading with badge', () => {
+  it('should render section heading without a badge tag', () => {
     render(<Providers><ApiSection section={mockSection} /></Providers>);
 
-    const badge = screen.getByText('Test');
-    expect(badge).toBeInTheDocument();
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(title).toHaveTextContent('Test Section');
+    expect(screen.queryByTestId('api-section-badge')).not.toBeInTheDocument();
   });
 
   it('should render methods block with heading level 3', () => {

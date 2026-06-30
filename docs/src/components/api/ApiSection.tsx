@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { CodeBlock } from "../common/CodeBlock";
-import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
 import { ConceptsContent } from "./ConceptsContent";
 import { TutorialContent } from "./TutorialContent";
@@ -121,15 +120,6 @@ const QuickStartContent: React.FC = () => {
 
 const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => (
   <div className="flex flex-col gap-3">
-    {section.badge && (
-      <div
-        className="inline-flex w-fit items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary"
-        data-blok-testid="api-section-badge"
-      >
-        <CategoryIcon category={section.badge} size={14} />
-        {section.badge}
-      </div>
-    )}
     <h1 className="scroll-mt-24 font-display text-3xl font-extrabold tracking-tight text-foreground">
       {section.title}
     </h1>

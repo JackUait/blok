@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 // stroked, rounded style as the rest of the docs chrome. Kept decoupled from
 // the generic Sidebar — attached to sections via useApiTranslations.
 const iconProps = {
-  width: 15,
-  height: 15,
+  width: 17,
+  height: 17,
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',

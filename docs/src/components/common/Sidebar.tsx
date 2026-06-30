@@ -64,6 +64,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setOpenGroups((prev) => (prev.has(activeTitle) ? prev : new Set(prev).add(activeTitle)));
   }, [activeTitle]);
 
+  // Each time the reader arrives at a different section, bump a token so the
+  // newly-active group's icon remounts and replays its little entrance
+  // animation. Keyed off this token, the icon plays the pop once per arrival
+  // rather than looping forever.
+  const [enterToken, setEnterToken] = useState(0);
+  const prevActiveTitle = useRef(activeTitle);
+  useEffect(() => {
+    if (prevActiveTitle.current === activeTitle) return;
+    prevActiveTitle.current = activeTitle;
+    setEnterToken((token) => token + 1);
+  }, [activeTitle]);
+
   const toggleGroup = useCallback((title: string) => {
     setOpenGroups((prev) => {
       const next = new Set(prev);
@@ -119,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
       <nav
-        className="flex flex-col gap-7"
+        className="flex flex-col gap-2"
         aria-label="Documentation sections"
         data-blok-testid={`${variant}-sidebar-nav`}
       >
@@ -139,7 +151,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 aria-expanded={isOpen}
                 aria-controls={regionId}
                 className={cn(
-                  'mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 pl-4 pr-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
+                  'flex w-full items-center justify-between gap-2 rounded-md py-2.5 pl-4 pr-2.5 text-[13px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
+                  // Only space the header off from its links when the group is
+                  // actually open; collapsed, it sits tight against the next one.
+                  isOpen ? 'mb-2' : 'mb-0',
                   isActive
                     ? 'font-bold text-foreground'
                     : 'text-muted-foreground/60 hover:text-muted-foreground',
@@ -149,6 +164,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="flex min-w-0 items-center gap-2">
                   {section.icon && (
                     <span
+                      // Remounting on each arrival (new token) restarts the CSS
+                      // entrance animation; inactive icons share a stable key so
+                      // they don't animate.
+                      key={isActive ? `icon-active-${enterToken}` : 'icon'}
                       className={cn(
                         // The glyph itself changes when selected — its stroke
                         // takes the brand colour and the shape fills in, the way
@@ -158,6 +177,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           ? 'sidebar-section-icon-active text-primary [&_svg]:fill-primary/20'
                           : 'text-muted-foreground',
                       )}
+                      data-blok-animate-token={isActive ? enterToken : undefined}
                       aria-hidden="true"
                     >
                       {section.icon}
@@ -166,8 +186,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className="truncate">{section.title}</span>
                 </span>
                 <svg
-                  width="12"
-                  height="12"
+                  width="14"
+                  height="14"
                   viewBox="0 0 24 24"
                   fill="none"
                   aria-hidden="true"

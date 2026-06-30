@@ -807,32 +807,28 @@
   }
 }
 
-/* The icon of the section the reader is currently in gives a periodic, gentle
-   wiggle so the active group is easy to spot in the menu. Mostly at rest, with
-   a brief bob every few seconds. */
+/* When the reader arrives at a new section, that group's icon plays a quick,
+   springy pop once — it scales up from small with a little overshoot and
+   settles. The wrapper is remounted on each arrival (see Sidebar), which
+   restarts this one-shot animation. */
 .sidebar-section-icon-active {
   transform-box: fill-box;
   transform-origin: center;
-  animation: sidebar-section-icon-active 3.6s ease-in-out infinite;
+  animation: sidebar-section-icon-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-@keyframes sidebar-section-icon-active {
-  0%,
-  62%,
+@keyframes sidebar-section-icon-enter {
+  0% {
+    transform: scale(0.5) rotate(-14deg);
+  }
+  55% {
+    transform: scale(1.18) rotate(8deg);
+  }
+  78% {
+    transform: scale(0.96) rotate(-3deg);
+  }
   100% {
-    transform: rotate(0) scale(1);
-  }
-  68% {
-    transform: rotate(-10deg) scale(1.12);
-  }
-  76% {
-    transform: rotate(7deg) scale(1.08);
-  }
-  84% {
-    transform: rotate(-3deg) scale(1.04);
-  }
-  92% {
-    transform: rotate(0) scale(1);
+    transform: scale(1) rotate(0);
   }
 }
 

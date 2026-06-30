@@ -1,7 +1,8 @@
 // docs/src/components/api/api-nav.ts
 
 export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }> = [
-  { key: 'gettingStarted', moduleIds: ['quick-start', 'concepts'] },
+  { key: 'gettingStarted', moduleIds: ['quick-start', 'tutorial', 'concepts'] },
+  { key: 'howTo', moduleIds: ['custom-block-tool'] },
   { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api'] },
   { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'styles-api', 'history-api'] },
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api'] },
@@ -13,6 +14,7 @@ export const MODULE_ORDER: string[] = SIDEBAR_GROUPS.flatMap((g) => g.moduleIds)
 
 export const GROUP_TITLES_EN: Record<string, string> = {
   gettingStarted: 'Getting started',
+  howTo: 'How-to guides',
   core: 'Core',
   editing: 'Editing',
   interface: 'Interface',
@@ -22,7 +24,9 @@ export const GROUP_TITLES_EN: Record<string, string> = {
 
 export const MODULE_LABELS_EN: Record<string, string> = {
   'quick-start': 'Quick Start',
+  tutorial: 'Build your first editor',
   concepts: 'Everything is a block',
+  'custom-block-tool': 'Create a custom block tool',
   core: 'Blok Class',
   config: 'Configuration',
   'blocks-api': 'Blocks',

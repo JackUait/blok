@@ -3,6 +3,8 @@ import { CodeBlock } from "../common/CodeBlock";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
 import { ConceptsContent } from "./ConceptsContent";
+import { TutorialContent } from "./TutorialContent";
+import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { EditorAccessNote } from "./EditorAccessNote";
 import { FrameworkToggle } from "../common/FrameworkToggle";
 import { useI18n } from "../../contexts/I18nContext";
@@ -162,6 +164,18 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
     );
   }
 
+  // Render the tutorial content specially
+  if (section.customType === "tutorial") {
+    return (
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <div className="mb-10">
+          <SectionHeader section={section} />
+        </div>
+        <TutorialContent />
+      </section>
+    );
+  }
+
   // Render the concepts / explanation content specially
   if (section.customType === "concepts") {
     return (
@@ -170,6 +184,18 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <SectionHeader section={section} />
         </div>
         <ConceptsContent />
+      </section>
+    );
+  }
+
+  // Render the how-to / task recipe content specially
+  if (section.customType === "how-to-custom-tool") {
+    return (
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <div className="mb-10">
+          <SectionHeader section={section} />
+        </div>
+        <HowToCustomToolContent />
       </section>
     );
   }

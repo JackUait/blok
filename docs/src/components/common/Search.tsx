@@ -87,7 +87,16 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
 const groupResultsByModule = (
   searchResults: SearchResult[],
 ): SearchResult[] => {
-  const moduleOrder = ["Guide", "Concepts", "Core", "API Modules", "Data", "Page"];
+  const moduleOrder = [
+    "Getting started",
+    "How-to guides",
+    "Core",
+    "Editing",
+    "Interface",
+    "Extending & system",
+    "Data types",
+    "Page",
+  ];
   const groupedByModule = new Map<string, SearchResult[]>();
 
   for (const result of searchResults) {

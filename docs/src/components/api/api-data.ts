@@ -18,7 +18,7 @@ export interface ApiSection {
     default: string;
     description: string;
   }[];
-  customType?: "quick-start" | "concepts";
+  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool";
   example?: string;
 }
 
@@ -31,12 +31,28 @@ export const API_SECTIONS: ApiSection[] = [
     customType: "quick-start",
   },
   {
+    id: "tutorial",
+    badge: "Tutorial",
+    title: "Build your first editor",
+    description:
+      "Mount Blok, capture some content, and save it as JSON you can store and load back — the full round-trip in five steps.",
+    customType: "tutorial",
+  },
+  {
     id: "concepts",
     badge: "Concepts",
     title: "Everything is a block",
     description:
       "Blok has one core idea. Understand it, and the rest of the API falls into place.",
     customType: "concepts",
+  },
+  {
+    id: "custom-block-tool",
+    badge: "How-to",
+    title: "Create a custom block tool",
+    description:
+      "Build a block tool from scratch — a callout box that renders, edits, and saves like any built-in block.",
+    customType: "how-to-custom-tool",
   },
   {
     id: "core",

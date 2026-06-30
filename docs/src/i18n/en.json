@@ -50,7 +50,8 @@
       "editing": "Editing",
       "interface": "Interface",
       "extending": "Extending & system",
-      "dataTypes": "Data types"
+      "dataTypes": "Data types",
+      "howTo": "How-to guides"
     },
     "links": {
       "quickStart": "Quick Start",
@@ -76,7 +77,9 @@
       "tools": "Tools",
       "outputData": "OutputData",
       "blockData": "BlockData",
-      "everythingIsABlock": "Everything is a block"
+      "everythingIsABlock": "Everything is a block",
+      "tutorial": "Build your first editor",
+      "customBlockTool": "Create a custom block tool"
     },
     "quickStart": {
       "title": "Quick Start",
@@ -392,6 +395,71 @@
         "blocksSuffix": "for inserting and moving blocks, and",
         "blockDataLink": "BlockData",
         "blockDataSuffix": "for the exact shape of a saved block."
+      }
+    },
+    "tutorial": {
+      "title": "Build your first editor",
+      "badge": "Tutorial",
+      "description": "Mount Blok, capture some content, and save it as JSON you can store and load back — the full round-trip in five steps.",
+      "lead": "This is a hands-on walkthrough. By the end you'll have a working editor, you'll have saved its content to JSON, and you'll have loaded that JSON straight back in — the round-trip that everything else in Blok is built on.",
+      "steps": {
+        "mount": {
+          "title": "Mount the editor",
+          "body": "Point Blok at an element on your page and create an instance. Once `isReady` resolves you have a live editor with an empty paragraph waiting for the caret."
+        },
+        "write": {
+          "title": "Write some content",
+          "body": "Click in and type. Press Enter to start a new block, or press `/` to open the tool menu and choose a heading, list, or quote. Every line you create is a separate block."
+        },
+        "save": {
+          "title": "Save it to JSON",
+          "body": "Call `save()` to get your content as a plain object. There's no HTML to parse and no hidden state — just blocks you can store anywhere.",
+          "payoff": "That object is the whole point. It's portable JSON you can drop into a database, a file, or an API — and it's exactly what you'll load back next."
+        },
+        "render": {
+          "title": "Load it back",
+          "body": "Hand the same object to `render()` and Blok rebuilds the content exactly. Save on unload, render on load — that's persistence, done."
+        },
+        "tools": {
+          "title": "Add a tool",
+          "body": "Blok ships lean. Register the tools you want under the `tools` config and they appear in the `/` menu, ready to use."
+        }
+      },
+      "next": {
+        "title": "Where to go next",
+        "howTo": "Build your own block from scratch — render, edit, and save like the built-ins.",
+        "concepts": "Understand the one idea the whole API is built on."
+      }
+    },
+    "howToCustomTool": {
+      "title": "Create a custom block tool",
+      "badge": "How-to",
+      "description": "Build a block tool from scratch — a callout box that renders, edits, and saves like any built-in block.",
+      "lead": "Every built-in block is just a tool that follows the `BlockTool` interface, and you can add your own. Here you'll build a Callout block: an editable box that saves its text and reloads it like any other block.",
+      "steps": {
+        "scaffold": {
+          "title": "Write the tool class",
+          "body": "A block tool needs three things: a static `toolbox` getter so it shows up in the `/` menu, a `render()` that returns the block's element, and a `save()` that returns the data to persist."
+        },
+        "register": {
+          "title": "Register it in the editor",
+          "body": "Pass your class under the `tools` config. The key you give it becomes the block's `type` in saved data."
+        },
+        "use": {
+          "title": "Use it and save",
+          "body": "Open the `/` menu, pick Callout, type into the box, and call `save()`. Your block appears in the output alongside the built-in ones."
+        }
+      },
+      "further": {
+        "title": "Going further",
+        "body": "Add a `validate()` method to drop empty blocks, a settings menu through `renderSettings()`, or paste handling with `onPaste`. The `BlockTool` interface covers the full lifecycle — `rendered()`, `updated()`, `moved()`, and `removed()`."
+      },
+      "next": {
+        "intro": "For the complete tool contract, see the",
+        "toolsLink": "Tools API",
+        "middle": "and check",
+        "blockDataLink": "BlockData",
+        "suffix": "for the exact shape your `save()` feeds into."
       }
     }
   },

@@ -12,7 +12,9 @@ import { TOOL_SECTIONS } from '../components/tools/tools-data';
  */
 const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'quick-start': 'api.quickStart',
+  'tutorial': 'api.tutorial',
   'concepts': 'api.concepts',
+  'custom-block-tool': 'api.howToCustomTool',
   'core': 'api.blokClass',
   'config': 'api.configuration',
   'blocks-api': 'api.blocksApi',
@@ -39,7 +41,9 @@ const SECTION_TRANSLATION_KEYS: Record<string, string> = {
 
 const SIDEBAR_LINK_KEYS: Record<string, string> = {
   'quick-start': 'api.links.quickStart',
+  'tutorial': 'api.links.tutorial',
   'concepts': 'api.links.everythingIsABlock',
+  'custom-block-tool': 'api.links.customBlockTool',
   'core': 'api.links.blokClass',
   'config': 'api.links.configuration',
   'blocks-api': 'api.links.blocks',

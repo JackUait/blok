@@ -25,6 +25,15 @@ export const SECTION_ICONS: Record<string, ReactNode> = {
       <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
     </svg>
   ),
+  // How-to guides — checklist
+  howTo: (
+    <svg {...iconProps}>
+      <path d="M11 12H3" />
+      <path d="M16 6H3" />
+      <path d="M16 18H3" />
+      <path d="m15 12 2 2 4-4" />
+    </svg>
+  ),
   // Core — box
   core: (
     <svg {...iconProps}>

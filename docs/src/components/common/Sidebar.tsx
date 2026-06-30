@@ -92,7 +92,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     cn(
       'block rounded-lg py-1.5 pl-4 pr-3 text-sm text-muted-foreground transition-[color,background-color] duration-200 ease-out',
       'hover:text-foreground focus-visible:text-foreground',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
+      // Inset ring so it isn't clipped by the scroll container's left edge.
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
       activeSection === id
         ? 'active font-semibold text-foreground bg-primary/[0.07] dark:bg-primary/15'
         : 'hover:bg-secondary/70',
@@ -125,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => toggleGroup(section.title)}
                 aria-expanded={isOpen}
                 aria-controls={regionId}
-                className="mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 pl-4 pr-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                className="mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 pl-4 pr-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
                 data-blok-testid={`${variant}-sidebar-section-toggle-${idx}`}
               >
                 <span className="flex min-w-0 items-center gap-2">

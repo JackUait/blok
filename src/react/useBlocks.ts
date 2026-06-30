@@ -24,6 +24,11 @@ import {
 } from './blocks-snapshot';
 
 const BLOCK_CHANGED_EVENT = 'block changed';
+// The document-LOAD lifecycle: render()/renderFromHTML() replace the whole
+// document through Renderer.render, which inserts the new blocks WITHOUT firing
+// 'block changed' (it bypasses the notify wrapper). Subscribing here too is what
+// keeps useBlocks consumers from freezing on the cleared doc after a render().
+const BLOCKS_RENDERED_EVENT = 'blocks:rendered';
 
 /** Adapt the live editor to the IndexReader the snapshot helpers expect. */
 const readerFor = (editor: Blok): IndexReader => {
@@ -58,7 +63,7 @@ const EMPTY_API: UseBlocksApi = {
   unnest: () => undefined,
   remove: () => undefined,
   update: () => undefined,
-  convert: () => undefined,
+  convert: () => Promise.resolve(null),
   // Not a no-op: still runs the callback (see EMPTY_API doc above).
   transact: (fn: () => void) => fn(),
   // Like transact, still runs the callback even pre-ready.
@@ -134,8 +139,12 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       };
 
       editor.on(BLOCK_CHANGED_EVENT, handler);
+      editor.on(BLOCKS_RENDERED_EVENT, handler);
 
-      return () => editor.off(BLOCK_CHANGED_EVENT, handler);
+      return () => {
+        editor.off(BLOCK_CHANGED_EVENT, handler);
+        editor.off(BLOCKS_RENDERED_EVENT, handler);
+      };
     },
     [editor]
   );
@@ -1130,34 +1139,38 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
       newType: string,
       dataOverrides?: BlockToolData,
       options?: { caret?: CaretTarget }
-    ): void => {
+    ): Promise<BlockNode | null> => {
       if (getById(id) === null) {
-        return;
+        return Promise.resolve(null);
       }
 
       // Core convert is async and rejects when a tool lacks a conversionConfig.
       // Like update, it owns its own history step (no transact). Position the
       // caret only AFTER a successful convert (matching the in-editor keyboard
       // turn-into, which preserves the caret) when the caller asked for it.
-      // Swallow the rejection so a non-convertible block is a graceful no-op —
-      // and on rejection the caret is left untouched.
-      void Promise.resolve(editor.blocks.convert(id, newType, dataOverrides))
+      // Resolve with the converted node so callers can chain follow-up work;
+      // swallow the rejection (→ null) so a non-convertible block is a graceful
+      // no-op — and on rejection the caret is left untouched.
+      return Promise.resolve(editor.blocks.convert(id, newType, dataOverrides))
         .then((converted) => {
-          if (options?.caret !== undefined) {
-            // Core convert routes through replace(), which regenerates the block
-            // id — the resolved BlockAPI carries the NEW id. Target it (falling
-            // back to the original only if a faithless path resolves nothing) so
-            // the caret lands in the converted block instead of a stale id.
-            const targetId = converted?.id ?? id;
+          // Core convert routes through replace(), which regenerates the block
+          // id — the resolved BlockAPI carries the NEW id. Target it (falling
+          // back to the original only if a faithless path resolves nothing) so
+          // the caret lands in the converted block instead of a stale id.
+          const targetId = converted?.id ?? id;
 
+          if (options?.caret !== undefined) {
             editor.caret.setToBlock(
               targetId,
               options.caret.position ?? 'default',
               options.caret.offset ?? 0
             );
           }
+
+          // Fresh-snapshot the regenerated block (volatile — read now).
+          return getById(targetId);
         })
-        .catch(() => undefined);
+        .catch(() => null);
     };
 
     const transactWithoutCapture = (fn: () => void): void => {

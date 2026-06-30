@@ -380,14 +380,16 @@ export interface UseBlocksApi {
    * rejects — that rejection (and any other) is swallowed so a non-convertible
    * block is a graceful no-op rather than an unhandled rejection. An unknown id
    * is a silent no-op. Not wrapped in `transact` (core owns its history step).
-   * Returns `void`.
+   * Resolves with the converted {@link BlockNode} (core's replace() regenerates
+   * the block id, so the node carries the NEW id), or `null` when the id is
+   * unknown or the conversion is rejected. Fresh-snapshot volatile.
    */
   convert(
     id: string,
     newType: string,
     dataOverrides?: BlockToolData,
     options?: { caret?: CaretTarget }
-  ): void;
+  ): Promise<BlockNode | null>;
   /**
    * Run `fn` as a single atomic undo step: every mutation it makes is grouped
    * into one history entry, so a single undo reverts the whole batch. Delegates

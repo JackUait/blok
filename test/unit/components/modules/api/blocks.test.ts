@@ -952,6 +952,37 @@ describe('BlocksAPI', () => {
       expect(result[0]).toHaveProperty('wrappedBlock');
     });
 
+    it('appends at the document END when no index is given (not before the last block)', () => {
+      // Three existing blocks → a no-index insertMany must land at flat slot 3
+      // (after the last block), NOT slot 2 (the legacy `length - 1` default, which
+      // silently splices a re-appended fragment BEFORE the last block).
+      const { blocksApi, blockManager } = createBlocksApi({
+        blocks: [ createBlockStub(), createBlockStub(), createBlockStub() ],
+      });
+
+      blocksApi.methods.insertMany([ { id: 'x', type: 'paragraph', data: {} } ]);
+
+      expect(blockManager.insertMany).toHaveBeenCalledWith(
+        expect.arrayContaining([ expect.objectContaining({ id: 'x' }) ]),
+        3,
+        { notify: true }
+      );
+    });
+
+    it('inserts at index 0 when no index is given on an EMPTY document (no negative-index throw)', () => {
+      // Empty doc: the legacy `length - 1` default computes -1, which validateIndex
+      // rejects — so a no-index insert into an empty editor used to THROW. The
+      // end-append default (`length` = 0) makes it a clean first insertion.
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [] });
+
+      expect(() => blocksApi.methods.insertMany([ { id: 'first', type: 'paragraph', data: {} } ])).not.toThrow();
+      expect(blockManager.insertMany).toHaveBeenCalledWith(
+        expect.arrayContaining([ expect.objectContaining({ id: 'first' }) ]),
+        0,
+        { notify: true }
+      );
+    });
+
     it('validates insertMany index type', () => {
       const { blocksApi } = createBlocksApi();
 

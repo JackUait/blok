@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBlocks } from '../../../src/react/useBlocks';
+import type { BlockNode } from '../../../src/react/blocks-snapshot';
 import { ToolNotFoundError } from '../../../src/components/errors/tool-not-found';
 import type { Blok } from '../../../types';
 
@@ -10,7 +11,21 @@ const makeFakeEditor = (
   rows: Array<{ id: string; name?: string; parentId?: string | null }>
 ) => {
   let list = rows.map((r) => ({ id: r.id, name: r.name ?? 'paragraph', parentId: r.parentId ?? null }));
-  const listeners = new Set<() => void>();
+  // Name-aware event bus (the real editor dispatches per event name). Keeping the
+  // 'block changed' and 'blocks:rendered' buses distinct lets a test assert that
+  // the document-load lifecycle ('blocks:rendered') is reacted to independently.
+  const buses = new Map<string, Set<() => void>>();
+  const busFor = (name: string): Set<() => void> => {
+    let bus = buses.get(name);
+
+    if (bus === undefined) {
+      bus = new Set();
+      buses.set(name, bus);
+    }
+
+    return bus;
+  };
+  const emit = (name: string): void => buses.get(name)?.forEach((cb) => cb());
   const editor = {
     blocks: {
       getBlocksCount: () => list.length,
@@ -88,7 +103,19 @@ const makeFakeEditor = (
         list.splice(insertIndex, 0, row);
         return { id, name: row.name, parentId };
       }),
-      render: vi.fn(() => Promise.resolve()),
+      // Faithful to core's document-LOAD render(): clear() empties the list and
+      // fires 'block changed' (so the hook paints the empty doc), THEN Renderer
+      // inserts the new blocks SILENTLY (no 'block changed') and fires only
+      // 'blocks:rendered'. The await between the two steps lets React commit the
+      // cleared state first — so a hook that ignores 'blocks:rendered' stays
+      // frozen on the empty document, exactly the production symptom.
+      render: vi.fn(async (data: { blocks: Array<{ id: string; type?: string; parent?: string | null }> }) => {
+        list = [];
+        emit('block changed');
+        await Promise.resolve();
+        list = data.blocks.map((b) => ({ id: b.id, name: b.type ?? 'paragraph', parentId: b.parent ?? null }));
+        emit('blocks:rendered');
+      }),
       clear: vi.fn(() => Promise.resolve()),
       // Read-only flag on core; the hook's isSyncingFromYjs() reads it LIVE.
       isSyncingFromYjs: false,
@@ -96,17 +123,19 @@ const makeFakeEditor = (
     caret: {
       setToBlock: vi.fn((_idOrIndex: unknown, _position?: string, _offset?: number) => true),
     },
-    on: (_name: string, cb: () => void) => listeners.add(cb),
-    off: (_name: string, cb: () => void) => listeners.delete(cb),
+    on: (name: string, cb: () => void) => busFor(name).add(cb),
+    off: (name: string, cb: () => void) => buses.get(name)?.delete(cb),
   };
   return {
     editor: editor as unknown as Blok,
     /** Live count of 'block changed' subscribers — asserts subscribe/cleanup. */
-    listenerCount: (): number => listeners.size,
+    listenerCount: (): number => buses.get('block changed')?.size ?? 0,
+    /** Live count of 'blocks:rendered' subscribers — asserts the render-lifecycle subscription + its cleanup. */
+    renderedListenerCount: (): number => buses.get('blocks:rendered')?.size ?? 0,
     /** Mutate the underlying list and fire 'block changed'. */
     emitChange: (next: Array<{ id: string; name?: string; parentId?: string | null }>) => {
       list = next.map((r) => ({ id: r.id, name: r.name ?? 'paragraph', parentId: r.parentId ?? null }));
-      listeners.forEach((cb) => cb());
+      emit('block changed');
     },
   };
 };
@@ -1005,7 +1034,9 @@ describe('useBlocks convert', () => {
   it('delegates to editor.blocks.convert with id, newType and dataOverrides', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
-    act(() => result.current.convert('a', 'header', { level: 2 }));
+    // convert is async (returns Promise<BlockNode|null>); don't return the
+    // thenable to a sync act() — let it float (it's internally handled).
+    act(() => { void result.current.convert('a', 'header', { level: 2 }); });
     expect(editor.blocks.convert).toHaveBeenCalledWith('a', 'header', { level: 2 });
   });
 
@@ -1013,7 +1044,7 @@ describe('useBlocks convert', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const getBlockIndexSpy = vi.spyOn(editor.blocks, 'getBlockIndex');
     const { result } = renderHook(() => useBlocks(editor));
-    act(() => result.current.convert('ghost', 'header'));
+    act(() => { void result.current.convert('ghost', 'header'); });
     expect(editor.blocks.convert).not.toHaveBeenCalled();
     expect(getBlockIndexSpy).not.toHaveBeenCalledWith('ghost');
   });
@@ -1263,7 +1294,7 @@ describe('useBlocks pre-ready API (editor is null)', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
 
-  it('mutators are no-ops and read methods return empty/null', () => {
+  it('mutators are no-ops and read methods return empty/null', async () => {
     const { result } = renderHook(() => useBlocks(null));
     expect(result.current.getById('x')).toBeNull();
     expect(result.current.getChildren(null)).toEqual([]);
@@ -1275,7 +1306,7 @@ describe('useBlocks pre-ready API (editor is null)', () => {
     expect(result.current.unnest('a')).toBeUndefined();
     expect(result.current.remove('a')).toBeUndefined();
     expect(result.current.update('a', { text: 'x' })).toBeUndefined();
-    expect(result.current.convert('a', 'header')).toBeUndefined();
+    await expect(result.current.convert('a', 'header')).resolves.toBeNull();
     // Additional surfaced APIs honor the pre-ready contract too.
     expect(result.current.getBlocksCount()).toBe(0);
     expect(result.current.getCurrentBlockIndex()).toBe(-1);
@@ -1433,6 +1464,23 @@ describe('useBlocks additional read/creation APIs', () => {
     expect(created.map((n) => n.id)).toEqual(['r1', 'r2']);
   });
 
+  it('insertOutputData with no index delegates WITHOUT an index, inheriting core end-append', () => {
+    // A no-index batch must NOT pass its own index — it inherits core's
+    // `blocks.insertMany` default (the document end). Passing one here (e.g. a
+    // recomputed `count - 1`) would re-introduce the before-last-block misplace
+    // that the core default fix removed. Lock the delegation: exactly one arg.
+    const { editor } = makeFakeEditor([{ id: 'a' }, { id: 'b' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => {
+      result.current.insertOutputData([{ id: 'x', type: 'paragraph', data: {} }]);
+    });
+
+    const insertManyMock = editor.blocks.insertMany as ReturnType<typeof vi.fn>;
+    expect(insertManyMock).toHaveBeenCalledTimes(1);
+    expect(insertManyMock.mock.calls[0]).toHaveLength(1);
+  });
+
   it('insert positions the caret in the new block when a caret target is given', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
@@ -1465,6 +1513,36 @@ describe('useBlocks additional read/creation APIs', () => {
     expect(result.current.getById('a')).toBeNull();
     expect(editor.caret.setToBlock).toHaveBeenCalledWith('converted-1', 'end', 0);
     expect(editor.caret.setToBlock).not.toHaveBeenCalledWith('a', 'end', 0);
+  });
+
+  it('convert resolves with the converted node carrying the regenerated id', async () => {
+    // Convert is creation-by-transform: core's replace() regenerates the id, so a
+    // consumer needs the new node to do follow-up work (caret, nest, update). The
+    // resolved node must carry the NEW id, not the original.
+    const { editor } = makeFakeEditor([{ id: 'a', name: 'paragraph' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: BlockNode | null = null;
+
+    await act(async () => {
+      node = await result.current.convert('a', 'header');
+    });
+
+    expect(node).not.toBeNull();
+    expect((node as BlockNode | null)?.type).toBe('header');
+    expect((node as BlockNode | null)?.id).not.toBe('a');
+  });
+
+  it('convert resolves with null for an unknown id (no convert attempted)', async () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: BlockNode | null | 'unset' = 'unset';
+
+    await act(async () => {
+      node = await result.current.convert('missing', 'header');
+    });
+
+    expect(node).toBeNull();
+    expect(editor.blocks.convert).not.toHaveBeenCalled();
   });
 
   it('insert forwards a non-default caret position (e.g. "end") to setToBlock', () => {
@@ -1547,6 +1625,47 @@ describe('useBlocks — core-parity additions (insertInsideParent / render / cle
 
     await act(async () => { await result.current.render(data); });
     expect(editor.blocks.render).toHaveBeenCalledWith(data);
+  });
+
+  it('render(doc) re-renders consumers with the new document (not frozen on the cleared doc)', async () => {
+    // render() clears the doc (fires 'block changed' on the now-empty list) and
+    // then loads the new blocks SILENTLY, signalling only via 'blocks:rendered'.
+    // A hook that listens to 'block changed' alone re-renders for the clear and
+    // then freezes on the empty document — the new blocks never paint.
+    const harness = makeFakeEditor([{ id: 'old' }]);
+    const seen: string[][] = [];
+    const { result } = renderHook(() => {
+      const api = useBlocks(harness.editor);
+
+      seen.push(api.getChildren(null).map((n) => n.id));
+
+      return api;
+    });
+
+    // The hook MUST subscribe to the document-load lifecycle, not just mutations.
+    expect(harness.renderedListenerCount()).toBe(1);
+
+    await act(async () => {
+      await result.current.render({
+        blocks: [
+          { id: 'n1', type: 'paragraph', data: {} },
+          { id: 'n2', type: 'header', data: {} },
+        ],
+      });
+    });
+
+    // The LAST committed snapshot must reflect the new document — NOT the empty
+    // doc left by render()'s internal clear().
+    expect(seen[seen.length - 1]).toEqual(['n1', 'n2']);
+  });
+
+  it('detaches the render-lifecycle listener on unmount (no leak)', () => {
+    const harness = makeFakeEditor([{ id: 'a' }]);
+    const { unmount } = renderHook(() => useBlocks(harness.editor));
+
+    expect(harness.renderedListenerCount()).toBe(1);
+    unmount();
+    expect(harness.renderedListenerCount()).toBe(0);
   });
 
   it('clear delegates to core.clear', async () => {

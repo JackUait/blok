@@ -412,7 +412,14 @@ export class BlocksAPI extends Module {
    */
   private insertMany = (
     blocks: OutputBlockData[],
-    index: number = this.Blok.BlockManager.blocks.length - 1
+    // Default to the document END (flat block count). The legacy `length - 1`
+    // default — inherited from EditorJS's "there is always a trailing default
+    // block, insert before it" assumption — silently splices a no-index batch
+    // BEFORE the last block (Blok has no guaranteed trailing block), and on an
+    // empty document computes -1, which validateIndex rejects. End-append is the
+    // least-surprising default and is what every adapter (React/Vue/Angular) and
+    // the public type doc ("inserts several Blocks to specified index") expect.
+    index: number = this.Blok.BlockManager.blocks.length
   ): BlockAPIInterface[] => {
     this.validateIndex(index);
 

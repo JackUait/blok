@@ -114,7 +114,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       'block rounded-lg py-1.5 pl-2.5 pr-3 text-sm text-muted-foreground transition-[color,background-color] duration-200 ease-out',
       'hover:text-foreground focus-visible:text-foreground',
       // Inset ring so it isn't clipped by the scroll container's left edge.
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
+      // Full opacity (not a faded tint) so the indicator clears the 3:1 contrast
+      // minimum for UI focus indicators (WCAG 2.4.11 / 1.4.11).
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
       activeSection === id
         ? 'active font-semibold text-foreground bg-primary/[0.07] dark:bg-primary/15'
         : 'hover:bg-secondary/70',
@@ -157,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 aria-expanded={isOpen}
                 aria-controls={regionId}
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 rounded-md py-2.5 pl-4 pr-2.5 text-[13px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
+                  'flex w-full items-center justify-between gap-2 rounded-md py-2.5 pl-4 pr-2.5 text-[13px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
                   // Only space the header off from its links when the group is
                   // actually open; collapsed, it sits tight against the next one.
                   isOpen ? 'mb-2' : 'mb-0',

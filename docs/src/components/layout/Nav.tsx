@@ -30,6 +30,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
   const menuOpenRef = useRef(false);
   const navRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Determine active link based on current location
   const linksWithActive = useMemo(() => {
@@ -169,6 +170,15 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
 
   return (
     <>
+      {/* Keyboard-only escape hatch past the many nav/sidebar links to the
+          actual page content. Hidden until it receives focus (first Tab
+          stop), then pops into view. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        Skip to content
+      </a>
       <nav
         ref={navRef}
         className="fixed inset-x-0 top-0 z-40 px-3 will-change-transform sm:px-4"
@@ -205,6 +215,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
               panel (no modal); collapses to an icon-only circle on small screens. */}
           <div className="relative flex justify-center sm:max-w-md sm:flex-1">
             <button
+              ref={searchTriggerRef}
               type="button"
               className={cn(
                 "group flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border/50 bg-background/55 backdrop-blur-md transition-colors duration-200 ease-out hover:border-border hover:bg-background/80 sm:h-12 sm:w-full sm:justify-between sm:pl-5 sm:pr-1.5",
@@ -239,6 +250,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
               open={searchOpen}
               onClose={() => setSearchOpen(false)}
               tinted={navScrolled}
+              triggerRef={searchTriggerRef}
             />
           </div>
 

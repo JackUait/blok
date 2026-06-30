@@ -16,6 +16,12 @@ export interface ApiSection {
   badge?: string;
   title: string;
   description?: string;
+  /**
+   * ISO date string (e.g. "2026-06-30") shown as a "Last updated" line near
+   * the page header. Kept as a plain static string per section — no
+   * git-log/build-time automation needed.
+   */
+  lastUpdated?: string;
   methods?: ApiMethod[];
   properties?: { name: string; type: string; description: string }[];
   table?: {
@@ -34,6 +40,7 @@ export const API_SECTIONS: ApiSection[] = [
     badge: "Guide",
     title: "Quick Start",
     description: "Get up and running with Blok in just a few simple steps.",
+    lastUpdated: "2026-06-30",
     customType: "quick-start",
   },
   {
@@ -42,6 +49,7 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Build your first editor",
     description:
       "Mount Blok, capture some content, and save it as JSON you can store and load back — the full round-trip in five steps.",
+    lastUpdated: "2026-06-30",
     customType: "tutorial",
   },
   {
@@ -50,6 +58,7 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Everything is a block",
     description:
       "Blok has one core idea. Understand it, and the rest of the API falls into place.",
+    lastUpdated: "2026-06-30",
     customType: "concepts",
   },
   {
@@ -58,11 +67,13 @@ export const API_SECTIONS: ApiSection[] = [
     title: "Create a custom block tool",
     description:
       "Build a block tool from scratch — a callout box that renders, edits, and saves like any built-in block.",
+    lastUpdated: "2026-06-30",
     customType: "how-to-custom-tool",
   },
   {
     id: "core",
     badge: "Core",
+    lastUpdated: "2026-06-30",
     title: "Blok Class",
     description:
       "The main editor class that initializes and manages the Blok editor instance.",

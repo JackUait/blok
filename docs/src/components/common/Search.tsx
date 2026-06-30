@@ -21,6 +21,12 @@ interface SearchProps {
   /** Dim the page behind the panel. Driven by the same morph as the panel so
       the tint fades in/out in lockstep with the open/close animation. */
   tinted?: boolean;
+  /**
+   * The button that opened the dialog. Focus returns here when the dialog
+   * closes (Escape, outside click, or selecting a result) — required so the
+   * dialog doesn't strand keyboard focus once it unmounts.
+   */
+  triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
 const SEARCH_SHORTCUT = "k";
@@ -129,6 +135,25 @@ const groupResultsByModule = (
   return orderedResults;
 };
 
+type ResultsPluralForm = "one" | "few" | "many";
+
+/**
+ * Russian needs three grammatical plural forms for counts (one/few/many) —
+ * "1 результат", "2 результата", "5 результатов" — unlike English's binary
+ * singular/plural split. Mirrors the i18next `_one`/`_few`/`_many` suffix
+ * convention so the right `search.result_<form>` key gets picked.
+ */
+const getResultsPluralForm = (count: number, locale: string): ResultsPluralForm => {
+  if (locale === "ru") {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return "one";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "few";
+    return "many";
+  }
+  return count === 1 ? "one" : "many";
+};
+
 const MORPH_MS = 420;
 const CLOSE_ANIMATION_MS = MORPH_MS;
 const PANEL_MAX_WIDTH = 560;
@@ -136,9 +161,14 @@ const PANEL_MAX_WIDTH = 560;
 // settles — reads as a soft morph instead of an abrupt pop.
 const MORPH_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
+export const Search: React.FC<SearchProps> = ({
+  open,
+  onClose,
+  tinted,
+  triggerRef,
+}) => {
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -156,12 +186,84 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
   const keyboardNavTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  // Tracks whether the dialog was actually open, so the close-side effect
+  // only returns focus to the trigger on a real close, not on first mount.
+  const wasOpenRef = useRef(false);
 
   // Focus input when opened
   useEffect(() => {
     if (open && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [open]);
+
+  // A11y: while open, hide the rest of the page from assistive tech and
+  // keyboard focus so Tab can't walk out of the dialog into the sidebar/page
+  // content behind it. Walks up from the dialog to <body>, inerting every
+  // sibling along the way (same `inert` mechanism used for FrameworkCards'
+  // accordion panels), and restores them on close.
+  useEffect(() => {
+    if (!open) return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const restoreFns: Array<() => void> = [];
+    let node: HTMLElement | null = dialog;
+
+    while (node && node !== document.body && node.parentElement) {
+      const parent: HTMLElement = node.parentElement;
+      Array.from(parent.children).forEach((sibling) => {
+        if (sibling === node || !(sibling instanceof HTMLElement)) return;
+        if (sibling.hasAttribute("inert")) return;
+        sibling.setAttribute("inert", "");
+        restoreFns.push(() => sibling.removeAttribute("inert"));
+      });
+      node = parent;
+    }
+
+    return () => {
+      restoreFns.forEach((restore) => restore());
+    };
+  }, [open]);
+
+  // A11y: trap Tab/Shift+Tab focus inside the dialog while it's open, so
+  // keyboard users can't tab past it into the (inerted, but defense-in-depth)
+  // page behind it.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleTabTrap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.getAttribute("tabindex") !== "-1");
+
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey) {
+        if (active === first || !dialog.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !dialog.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleTabTrap);
+    return () => window.removeEventListener("keydown", handleTabTrap);
   }, [open]);
 
   // Morph open: paint the surface at the pill's width first, then on the next
@@ -189,7 +291,10 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
 
   // Reset state when closed
   useEffect(() => {
-    if (open) return;
+    if (open) {
+      wasOpenRef.current = true;
+      return;
+    }
 
     setQuery("");
     setDebouncedQuery("");
@@ -201,11 +306,18 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
     setPillWidth(null);
     setTargetWidth(null);
 
+    // Only return focus on an actual close (Escape, outside click, or
+    // selecting a result) — not on first mount while already closed.
+    if (wasOpenRef.current) {
+      wasOpenRef.current = false;
+      triggerRef?.current?.focus();
+    }
+
     if (!keyboardNavTimerRef.current) return;
 
     clearTimeout(keyboardNavTimerRef.current);
     keyboardNavTimerRef.current = null;
-  }, [open]);
+  }, [open, triggerRef]);
 
   // Cleanup keyboard nav timer on unmount
   useEffect(() => {
@@ -497,6 +609,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
         }}
         ref={dialogRef}
         data-blok-testid="search-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("nav.searchAriaLabel")}
       >
         {/* Header mirrors the nav pill so the morph reads as that pill growing:
             neutral semibold prompt on the left, ⌘K hint + coral circular button on
@@ -511,7 +626,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
           <input
             ref={inputRef}
             type="text"
-            className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-foreground placeholder:font-semibold placeholder:text-foreground/55 focus:outline-none"
+            className="min-w-0 flex-1 rounded-md bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-foreground placeholder:font-semibold placeholder:text-foreground/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder={t("search.placeholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -712,9 +827,9 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
                       data-blok-testid="search-results-count"
                     >
                       {results.length}{" "}
-                      {results.length === 1
-                        ? t("search.result")
-                        : t("search.results")}
+                      {t(
+                        `search.result_${getResultsPluralForm(results.length, locale)}`,
+                      )}
                     </span>
                   </div>
                   {results.map((result, index) => {

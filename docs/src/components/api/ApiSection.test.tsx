@@ -367,5 +367,68 @@ describe('ApiSection', () => {
       render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
       expect(screen.queryByTestId('editor-access-note')).toBeNull();
     });
+
+    it('shows the #editor container markup before the vanilla mount snippet', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const joined = codes().join('\n');
+      // The container snippet must appear, and before the `new Blok(...)` call
+      // that depends on it, so a reader who copy-pastes top-to-bottom ends up
+      // with the element on the page before the script that looks it up.
+      expect(joined).toContain('<div id="editor"></div>');
+      expect(joined.indexOf('<div id="editor"></div>')).toBeLessThan(joined.indexOf('new Blok('));
+    });
+
+    it('does not show the #editor container markup for the React adapter', () => {
+      localStorage.setItem('blok-docs-framework', 'react');
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      expect(codes().join('\n')).not.toContain('<div id="editor"></div>');
+    });
+
+    it('does not show the #editor container markup for the Vue adapter', () => {
+      localStorage.setItem('blok-docs-framework', 'vue');
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      expect(codes().join('\n')).not.toContain('<div id="editor"></div>');
+    });
+
+    it('does not show the #editor container markup for the Angular adapter', () => {
+      localStorage.setItem('blok-docs-framework', 'angular');
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      expect(codes().join('\n')).not.toContain('<div id="editor"></div>');
+    });
+  });
+
+  describe('Quick Start guidance', () => {
+    // Typo() swaps the space after short words (a/an/to/...) for a non-breaking
+    // space, so normalize before substring-matching prose copy.
+    const normalize = (text: string | null): string => (text ?? '').replace(/ /g, ' ');
+
+    it('renders a narrative lead-in above the numbered steps', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const target = 'fastest path from an empty project to a working editor';
+      expect(
+        screen.getByText((_, element) => {
+          if (!element) {
+            return false;
+          }
+          const hasText = (el: Element) => normalize(el.textContent).includes(target);
+          return hasText(element) && Array.from(element.children).every((child) => !hasText(child));
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it('renders a closing checkpoint after the last step', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const checkpoint = screen.getByTestId('quick-start-checkpoint');
+      expect(checkpoint).toBeInTheDocument();
+      expect(normalize(checkpoint.textContent)).toContain(
+        'you should now see an empty editor with one paragraph block',
+      );
+    });
+
+    it('includes the exact missing-container error text in the troubleshooting note', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const checkpoint = screen.getByTestId('quick-start-checkpoint');
+      expect(normalize(checkpoint.textContent)).toContain('element with ID «editor» is missing');
+    });
   });
 });

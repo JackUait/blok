@@ -4,7 +4,7 @@ import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
 import { FrameworkToggle } from '../components/common/FrameworkToggle';
 import { MobileSectionNav } from '../components/common/MobileSectionNav';
-import { OnThisPage } from '../components/api/OnThisPage';
+import { OnThisPage, OnThisPageDropdown } from '../components/api/OnThisPage';
 import { ApiModuleBody } from '../components/api/ApiModuleBody';
 import { ApiIndexRedirect } from '../components/api/ApiIndexRedirect';
 import { useApiTranslations } from '../hooks/useApiTranslations';
@@ -50,6 +50,14 @@ export const ApiContent: React.FC = () => {
             onNavigate={(id) => navigate(`/docs/${id}`)}
           />
         </div>
+        {/* Between lg and xl (1024–1279px) there's no room for the persistent
+            sidebar TOC, but it shouldn't just disappear — show a compact
+            dropdown instead, mirroring MobileSectionNav's fallback below lg. */}
+        <div className="hidden lg:block xl:hidden">
+          {activeSection && (
+            <OnThisPageDropdown key={`toc-dropdown-${activeModule}`} section={activeSection} />
+          )}
+        </div>
         <div className="mx-auto max-w-3xl" data-blok-testid="api-main">
           <Routes>
             <Route index element={<ApiIndexRedirect />} />
@@ -67,7 +75,7 @@ export const ApiContent: React.FC = () => {
 export const ApiPage: React.FC = () => (
   <>
     <Nav links={NAV_LINKS} keepExpanded />
-    <main>
+    <main id="main-content" tabIndex={-1}>
       <ApiContent />
     </main>
     <Footer />

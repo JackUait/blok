@@ -33,15 +33,24 @@ describe('HowToCustomToolContent', () => {
     expect(code).toContain('tools:');
   });
 
-  it('links onward to the Tools API and BlockData reference', () => {
-    renderHowTo();
+  it('links onward to the Tools API and BlockData reference via router links', () => {
+    const { container } = renderHowTo();
     expect(screen.getByRole('link', { name: 'Tools API' })).toHaveAttribute(
       'href',
-      '#tools-api',
+      '/docs/tools-api',
     );
     expect(screen.getByRole('link', { name: 'BlockData' })).toHaveAttribute(
       'href',
-      '#block-data',
+      '/docs/block-data',
     );
+    expect(container.querySelector('a[href^="#"]')).toBeNull();
+  });
+
+  it('extends the Going further section with a validate()/tunes example', () => {
+    const { container } = renderHowTo();
+    expect(screen.getByText('Going further')).toBeInTheDocument();
+    const code = container.textContent ?? '';
+    expect(code).toContain('validate(savedData');
+    expect(code).toContain("tunes: ['textColor']");
   });
 });

@@ -57,10 +57,13 @@ describe('useApiTranslations', () => {
 
   it('should return all expected sidebar section categories', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
-    
+
+    // Tutorial and Concepts get their own group labels (distinct from "Getting
+    // started") so the IA reflects that they're different Diátaxis content
+    // types, not all "getting started" steps.
     const sectionTitles = result.current.sidebarSections.map(s => s.title);
     expect(sectionTitles).toEqual([
-      'Getting started', 'How-to guides', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Getting started', 'Tutorials', 'Concepts', 'How-to guides', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
       'Block Tools', 'Inline Tools',
     ]);
   });
@@ -171,14 +174,14 @@ describe('useApiTranslations', () => {
 });
 
 describe('useApiTranslations sidebar groups', () => {
-  it('produces the six API buckets followed by the two tool groups', () => {
+  it('produces the API buckets followed by the two tool groups', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     const titles = result.current.sidebarSections.map((s) => s.title);
     expect(titles).toEqual([
-      'Getting started', 'How-to guides', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Getting started', 'Tutorials', 'Concepts', 'How-to guides', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
       'Block Tools', 'Inline Tools',
     ]);
-    expect(result.current.sidebarSections[3].links.map((l) => l.id))
+    expect(result.current.sidebarSections[5].links.map((l) => l.id))
       .toEqual(['caret-api', 'selection-api', 'styles-api', 'history-api']);
   });
 

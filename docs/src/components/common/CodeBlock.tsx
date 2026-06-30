@@ -139,6 +139,16 @@ const getHighlighter = async (lang: string): Promise<Highlighter> => {
   return initPromise;
 };
 
+// Shiki's codeToHtml emits the theme's calibrated background as an inline
+// style on the <pre> (e.g. style="background-color:#121212;..."). Pull it out
+// so the surrounding card can match it exactly instead of forcing a generic
+// `--card` background behind the tokens (which breaks the contrast ratios the
+// theme was calibrated for).
+const extractBackgroundColor = (html: string): string | undefined => {
+  const match = /background-color:\s*([^;"]+)/i.exec(html);
+  return match?.[1];
+};
+
 // Helper to create plain text HTML fallback (matches Shiki structure)
 const createPlainTextHtml = (text: string): string => {
   const escaped = text
@@ -273,6 +283,10 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const displayLanguage =
     languageDisplayNames[language.toLowerCase()] || language;
 
+  // The theme's own calibrated background — kept (not stripped to transparent)
+  // so token colors retain the contrast ratios the theme was designed for.
+  const codeBg = extractBackgroundColor(highlightedCode);
+
   return (
     <div
       className={cn(
@@ -346,26 +360,37 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           )}
         </button>
       </div>
-      <div className="relative">
+      <div className="relative mx-3 mb-3">
         <div
           ref={scrollRef}
-          className="overflow-x-auto pt-1 pr-8 pb-4 pl-4 font-mono text-sm leading-relaxed [&_pre]:!bg-transparent [&_pre]:!m-0 [&_code]:font-mono"
+          className="overflow-x-auto rounded-xl pt-3 pr-8 pb-3 pl-4 font-mono text-sm leading-relaxed [&_pre]:!m-0 [&_code]:font-mono"
+          style={{ backgroundColor: codeBg }}
         >
           <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
         </div>
         <div
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-card to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-xl transition-opacity duration-200",
             edges.left ? "opacity-100" : "opacity-0",
           )}
+          style={{
+            backgroundImage: codeBg
+              ? `linear-gradient(to right, ${codeBg}, transparent)`
+              : undefined,
+          }}
         />
         <div
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-xl transition-opacity duration-200",
             edges.right ? "opacity-100" : "opacity-0",
           )}
+          style={{
+            backgroundImage: codeBg
+              ? `linear-gradient(to left, ${codeBg}, transparent)`
+              : undefined,
+          }}
         />
       </div>
     </div>

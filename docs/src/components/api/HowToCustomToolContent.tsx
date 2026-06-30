@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { CodeBlock } from "../common/CodeBlock";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
@@ -50,6 +51,28 @@ const OUTPUT_CODE = `const data = await editor.save();
 //   type: 'callout',
 //   data: { text: 'Heads up — this is a callout.' },
 // }`;
+
+const VALIDATE_AND_TUNES_CODE = `// callout-tool.ts (extended)
+export class CalloutTool {
+  // ...constructor, render() unchanged
+
+  save(block: HTMLElement) {
+    return { text: block.textContent ?? '' };
+  }
+
+  // Drop empty callouts when the editor saves.
+  validate(savedData: { text: string }) {
+    return savedData.text.trim().length > 0;
+  }
+}
+
+// Opt the block into built-in tunes at registration time:
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    callout: { class: CalloutTool, tunes: ['textColor'] },
+  },
+});`;
 
 interface HowToStep {
   key: string;
@@ -117,18 +140,22 @@ export const HowToCustomToolContent: React.FC = () => {
         <p className={proseClass}>
           {renderInline(t("api.howToCustomTool.further.body"))}
         </p>
+        <CodeBlock code={VALIDATE_AND_TUNES_CODE} language="typescript" />
+        <p className={proseClass}>
+          {renderInline(t("api.howToCustomTool.further.exampleNote"))}
+        </p>
       </div>
 
       {/* Where to go next */}
       <p className="text-base leading-relaxed text-muted-foreground">
         {t("api.howToCustomTool.next.intro")}{" "}
-        <a href="#tools-api" className="font-medium text-primary hover:underline">
+        <Link to="/docs/tools-api" className="font-medium text-primary hover:underline">
           {t("api.howToCustomTool.next.toolsLink")}
-        </a>{" "}
+        </Link>{" "}
         {t("api.howToCustomTool.next.middle")}{" "}
-        <a href="#block-data" className="font-medium text-primary hover:underline">
+        <Link to="/docs/block-data" className="font-medium text-primary hover:underline">
           {t("api.howToCustomTool.next.blockDataLink")}
-        </a>{" "}
+        </Link>{" "}
         {t("api.howToCustomTool.next.suffix")}
       </p>
     </div>

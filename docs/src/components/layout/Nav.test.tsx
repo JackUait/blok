@@ -209,6 +209,45 @@ describe('Nav', () => {
     expect(screen.getByLabelText('Поиск (⌘K)')).toBeInTheDocument();
   });
 
+  describe('skip to content link', () => {
+    it('renders a skip link pointing at the main content landmark', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const skipLink = screen.getByRole('link', { name: 'Skip to content' });
+      expect(skipLink).toHaveAttribute('href', '#main-content');
+    });
+
+    it('is visually hidden until focused', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const skipLink = screen.getByRole('link', { name: 'Skip to content' });
+      expect(skipLink).toHaveClass('sr-only');
+      expect(skipLink.className).toMatch(/focus:not-sr-only/);
+    });
+
+    it('is the first focusable element in the nav', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const skipLink = screen.getByRole('link', { name: 'Skip to content' });
+      const nav = screen.getByRole('navigation');
+      expect(
+        skipLink.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+  });
+
   describe('scroll-linked hide/reveal', () => {
     const setScrollY = (value: number) => {
       Object.defineProperty(window, 'scrollY', {

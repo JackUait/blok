@@ -8,6 +8,13 @@ export interface Snippet {
 
 /** The two code steps that genuinely differ per framework: mounting and saving. */
 export interface QuickStartSnippet {
+  /**
+   * Markup the page needs *before* `create` runs. Only vanilla sets this:
+   * `new Blok({ holder: 'editor' })` mounts into an element that must already
+   * exist, or the constructor throws. The framework adapters manage their own
+   * mount point (a hook-rendered component), so they have nothing to show here.
+   */
+  container?: Snippet;
   create: Snippet;
   save: Snippet;
 }
@@ -25,6 +32,12 @@ export interface QuickStartSnippet {
  */
 export const QUICK_START_SNIPPETS: Record<Framework, QuickStartSnippet> = {
   vanilla: {
+    // `new Blok({ holder: 'editor' })` looks up this element by id and throws
+    // if it isn't there yet, so it has to exist on the page first.
+    container: {
+      language: 'html',
+      code: `<div id="editor"></div>`,
+    },
     create: {
       language: 'typescript',
       code: `import { Blok } from '@jackuait/blok';

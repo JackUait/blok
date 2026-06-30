@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -5,6 +6,35 @@ import { I18nProvider } from '../../contexts/I18nContext';
 import { Search } from './Search';
 import * as searchUtils from '@/utils/search';
 import type { SearchResult } from '@/types/search';
+
+const buildResults = (count: number, idPrefix = 'r'): SearchResult[] =>
+  Array.from({ length: count }, (_, i) => ({
+    id: `${idPrefix}-${i}`,
+    title: `Result ${i}`,
+    description: 'desc',
+    category: 'api',
+    module: 'Core',
+    kind: 'method',
+    section: 'Section',
+    path: '/docs',
+    hash: `${idPrefix}-${i}`,
+    rank: 1,
+  }));
+
+/** Renders a real trigger button alongside Search, wired via triggerRef, so
+    close-then-restore-focus behavior can be exercised end-to-end. */
+const SearchWithTrigger: React.FC<{ initialOpen?: boolean }> = ({ initialOpen = true }) => {
+  const [open, setOpen] = useState(initialOpen);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <button ref={triggerRef} type="button">
+        Open search
+      </button>
+      <Search open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} />
+    </>
+  );
+};
 
 vi.mock('@/utils/search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/utils/search')>();
@@ -128,6 +158,160 @@ describe('Search', () => {
     expect(input).toHaveFocus();
   });
 
+  describe('accessibility', () => {
+    it('renders the panel as an accessible modal dialog when open', () => {
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      const dialog = screen.getByTestId('search-dialog');
+      expect(dialog).toHaveAttribute('role', 'dialog');
+      expect(dialog).toHaveAttribute('aria-modal', 'true');
+    });
+
+    it('renders a visible focus ring on the search input', () => {
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      expect(input.className).toMatch(/focus-visible:ring-ring/);
+    });
+
+    it('marks sibling content inert while open', () => {
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <div>
+              <div data-blok-testid="page-sibling">sidebar content</div>
+              <div className="relative">
+                <Search open={true} onClose={vi.fn()} />
+              </div>
+            </div>
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      expect(screen.getByTestId('page-sibling')).toHaveAttribute('inert');
+    });
+
+    it('removes inert from sibling content once closed', () => {
+      const { rerender } = render(
+        <I18nProvider>
+          <MemoryRouter>
+            <div>
+              <div data-blok-testid="page-sibling">sidebar content</div>
+              <div className="relative">
+                <Search open={true} onClose={vi.fn()} />
+              </div>
+            </div>
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      expect(screen.getByTestId('page-sibling')).toHaveAttribute('inert');
+
+      rerender(
+        <I18nProvider>
+          <MemoryRouter>
+            <div>
+              <div data-blok-testid="page-sibling">sidebar content</div>
+              <div className="relative">
+                <Search open={false} onClose={vi.fn()} />
+              </div>
+            </div>
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      expect(screen.getByTestId('page-sibling')).not.toHaveAttribute('inert');
+    });
+
+    it('traps Tab focus within the panel while open', async () => {
+      vi.mocked(searchUtils.search).mockReturnValueOnce(buildResults(2));
+
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      fireEvent.change(input, { target: { value: 'result' } });
+
+      const resultButtons = await waitFor(() => {
+        const buttons = screen.getAllByRole('button', { name: /Result \d/ });
+        expect(buttons.length).toBeGreaterThan(0);
+        return buttons;
+      });
+
+      const lastResult = resultButtons[resultButtons.length - 1];
+      lastResult.focus();
+      expect(lastResult).toHaveFocus();
+
+      fireEvent.keyDown(window, { key: 'Tab' });
+
+      expect(input).toHaveFocus();
+    });
+
+    it('returns focus to the trigger element after closing', async () => {
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <SearchWithTrigger />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      fireEvent.keyDown(window, { key: 'Escape' });
+
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: 'Open search' })).toHaveFocus();
+        },
+        { timeout: 1500 }
+      );
+    });
+
+    it('returns focus to the trigger element after selecting a result', async () => {
+      vi.mocked(searchUtils.search).mockReturnValueOnce(buildResults(1));
+
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <SearchWithTrigger />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      fireEvent.change(input, { target: { value: 'result' } });
+
+      const resultButton = await waitFor(() => {
+        const button = screen.getByRole('button', { name: /Result 0/ });
+        return button;
+      });
+      fireEvent.click(resultButton);
+
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: 'Open search' })).toHaveFocus();
+        },
+        { timeout: 1500 }
+      );
+    });
+  });
+
   describe('result count pluralization', () => {
     it('should show singular "result" when there is exactly 1 result', async () => {
       const singleResult: SearchResult = {
@@ -181,6 +365,33 @@ describe('Search', () => {
         const count = parseInt(text, 10);
         expect(count).toBeGreaterThan(1);
         expect(text).toMatch(/results$/);
+      });
+    });
+
+    describe('Russian plural forms', () => {
+      it.each([
+        [1, 'результат'],
+        [2, 'результата'],
+        [5, 'результатов'],
+      ])('shows "%i %s" for the matching count', async (count, expectedWord) => {
+        localStorage.setItem('blok-docs-locale', 'ru');
+        vi.mocked(searchUtils.search).mockReturnValueOnce(buildResults(count));
+
+        render(
+          <I18nProvider>
+            <MemoryRouter>
+              <Search open={true} onClose={vi.fn()} />
+            </MemoryRouter>
+          </I18nProvider>
+        );
+
+        const input = screen.getByPlaceholderText('Поиск по документации...');
+        fireEvent.change(input, { target: { value: 'результат' } });
+
+        await waitFor(() => {
+          const countEl = screen.getByTestId('search-results-count');
+          expect(countEl.textContent).toBe(`${count} ${expectedWord}`);
+        });
       });
     });
   });

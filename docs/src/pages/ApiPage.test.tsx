@@ -77,4 +77,25 @@ describe('ApiPage structure', () => {
     renderAt('/docs/caret-api');
     expect(screen.getByTestId('api-docs')).toBeInTheDocument();
   });
+
+  it('gives <main> the id targeted by the nav skip-link', () => {
+    renderAt('/docs/caret-api');
+    const main = document.querySelector('main');
+    expect(main).toHaveAttribute('id', 'main-content');
+  });
+});
+
+describe('ApiPage on-this-page fallback', () => {
+  it('renders a TOC dropdown affordance for the lg breakpoint range instead of hiding it entirely', () => {
+    renderAt('/docs/caret-api');
+
+    const dropdown = screen.getByTestId('on-this-page-dropdown');
+    expect(dropdown).toBeInTheDocument();
+
+    // Scoped to the lg-only range — visible at lg, hidden again once the
+    // persistent xl+ sidebar TOC takes over.
+    const wrapper = dropdown.parentElement;
+    expect(wrapper?.className).toMatch(/\blg:block\b/);
+    expect(wrapper?.className).toMatch(/\bxl:hidden\b/);
+  });
 });

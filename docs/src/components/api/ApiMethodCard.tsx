@@ -30,7 +30,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       data-blok-testid="api-method-card"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</span>
+        <h3 className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</h3>
         <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">{method.returnType}</span>
       </div>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground"><Typo>{method.description}</Typo></p>

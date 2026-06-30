@@ -30,6 +30,9 @@
     "parameter": "Parameter",
     "name": "Name",
     "onThisPage": "On this page",
+    "breadcrumbsLabel": "Breadcrumb",
+    "lastUpdated": "Last updated",
+    "editOnGithub": "Edit this page on GitHub",
     "quickStartSteps": {
       "install": {
         "title": "Install Blok",
@@ -46,6 +49,8 @@
     },
     "sections": {
       "gettingStarted": "Getting started",
+      "tutorials": "Tutorials",
+      "concepts": "Concepts",
       "core": "Core",
       "editing": "Editing",
       "interface": "Interface",
@@ -84,7 +89,10 @@
     "quickStart": {
       "title": "Quick Start",
       "badge": "Guide",
-      "description": "Get up and running with Blok in just a few simple steps."
+      "description": "Get up and running with Blok in just a few simple steps.",
+      "lead": "This is the fastest path from an empty project to a working editor — install the package, mount it, and save your first block of content.",
+      "checkpoint": "If everything worked, you should now see an empty editor with one paragraph block, ready to type into.",
+      "troubleshooting": "Nothing rendering, or a crash in the console? The most common cause is a missing container: `new Blok({ holder: 'editor' })` needs a `<div id=\"editor\"></div>` already on the page, or it throws `element with ID «editor» is missing`."
     },
     "blokClass": {
       "title": "Blok Class",
@@ -693,6 +701,10 @@
           "body": "Blok ships lean. Register the tools you want under the `tools` config and they appear in the `/` menu, ready to use."
         }
       },
+      "checkpoint": {
+        "title": "Checkpoint: what success looks like",
+        "body": "You should now have a live editor on the page, a `data` object in hand from `editor.save()` with your blocks inside it, and that same object loading cleanly through `editor.render()`. If all three are true, you've got the round-trip — everything else in Blok builds on it."
+      },
       "next": {
         "title": "Where to go next",
         "howTo": "Build your own block from scratch — render, edit, and save like the built-ins.",
@@ -720,7 +732,8 @@
       },
       "further": {
         "title": "Going further",
-        "body": "Add a `validate()` method to drop empty blocks, a settings menu through `renderSettings()`, or paste handling with `onPaste`. The `BlockTool` interface covers the full lifecycle — `rendered()`, `updated()`, `moved()`, and `removed()`."
+        "body": "Add a `validate()` method to drop empty blocks, a settings menu through `renderSettings()`, or paste handling with `onPaste`. The `BlockTool` interface covers the full lifecycle — `rendered()`, `updated()`, `moved()`, and `removed()`.",
+        "exampleNote": "`validate()` runs before `save()` resolves, so an empty callout never makes it into the output. Tunes are opt-in per tool — pass `tunes: ['textColor']` at registration and Blok adds them to the block's settings menu automatically."
       },
       "next": {
         "intro": "For the complete tool contract, see the",
@@ -972,8 +985,9 @@
     "noResultsFor": "No matches for",
     "navigate": "navigate",
     "select": "select",
-    "result": "result",
-    "results": "results",
+    "result_one": "result",
+    "result_few": "results",
+    "result_many": "results",
     "kind": {
       "method": "Method",
       "property": "Property",

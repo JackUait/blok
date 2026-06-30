@@ -5,6 +5,7 @@ import { ConceptsContent } from "./ConceptsContent";
 import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { EditorAccessNote } from "./EditorAccessNote";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { useFramework } from "../../contexts/FrameworkContext";
@@ -14,6 +15,7 @@ import {
 } from "../common/framework-snippets";
 import { adaptExample } from "../common/framework-adapt";
 import { generatePropertyId, generateOptionId } from "./api-anchors";
+import { renderInline } from "./inline-code";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
 
@@ -36,7 +38,7 @@ const QuickStartContent: React.FC = () => {
   const { framework } = useFramework();
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
 
-  const { create, save } = QUICK_START_SNIPPETS[framework];
+  const { container, create, save } = QUICK_START_SNIPPETS[framework];
 
   const getInstallCommand = (manager: PackageManager): string => {
     switch (manager) {
@@ -68,7 +70,17 @@ const QuickStartContent: React.FC = () => {
     {
       title: t('api.quickStartSteps.configure.title'),
       description: t('api.quickStartSteps.configure.description'),
-      code: <CodeBlock code={create.code} language={create.language} />,
+      code: (
+        <div className="flex flex-col gap-3">
+          {/* Vanilla only — `new Blok({ holder: 'editor' })` mounts into this
+              element, so it has to exist on the page before the script below
+              runs. The other frameworks manage their own mount point. */}
+          {container && (
+            <CodeBlock code={container.code} language={container.language} />
+          )}
+          <CodeBlock code={create.code} language={create.language} />
+        </div>
+      ),
     },
     {
       title: t('api.quickStartSteps.save.title'),
@@ -78,32 +90,51 @@ const QuickStartContent: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-10">
-      {steps.map((step, index) => {
-        const isLast = index === steps.length - 1;
-        return (
-          <div key={index} className="relative flex flex-col gap-3 sm:flex-row sm:gap-5">
-            {/* Guided-flow connector — a hairline that threads the numbered
-                markers into one continuous sequence (sm+ only, where the markers
-                share a left column). It runs behind the markers, whose opaque
-                bg-card fills mask it under each circle. */}
-            {!isLast && (
-              <span
-                aria-hidden
-                className="absolute top-10 -bottom-10 left-[1.125rem] hidden w-px -translate-x-1/2 bg-gradient-to-b from-border to-border/30 sm:block"
-              />
-            )}
-            <span className="relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-card font-display text-sm font-bold text-primary shadow-sm">
-              {index + 1}
-            </span>
-            <div className="min-w-0 flex-1 pb-1">
-              <h3 className="font-display text-lg font-bold tracking-tight text-foreground"><Typo>{step.title}</Typo></h3>
-              <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground"><Typo>{step.description}</Typo></p>
-              {step.code}
+    <div className="flex flex-col gap-8">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        <Typo>{t('api.quickStart.lead')}</Typo>
+      </p>
+      <div className="flex flex-col gap-10">
+        {steps.map((step, index) => {
+          const isLast = index === steps.length - 1;
+          return (
+            <div key={index} className="relative flex flex-col gap-3 sm:flex-row sm:gap-5">
+              {/* Guided-flow connector — a hairline that threads the numbered
+                  markers into one continuous sequence (sm+ only, where the markers
+                  share a left column). It runs behind the markers, whose opaque
+                  bg-card fills mask it under each circle. */}
+              {!isLast && (
+                <span
+                  aria-hidden
+                  className="absolute top-10 -bottom-10 left-[1.125rem] hidden w-px -translate-x-1/2 bg-gradient-to-b from-border to-border/30 sm:block"
+                />
+              )}
+              <span className="relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-card font-display text-sm font-bold text-primary shadow-sm">
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1 pb-1">
+                <h3 className="font-display text-lg font-bold tracking-tight text-foreground"><Typo>{step.title}</Typo></h3>
+                <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground"><Typo>{step.description}</Typo></p>
+                {step.code}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      {/* Closing checkpoint — confirms success and covers the most likely
+          failure (the missing #editor container from the configure step
+          above) so a stuck reader isn't left guessing. */}
+      <div
+        className="rounded-xl border border-border bg-secondary/40 px-4 py-3"
+        data-blok-testid="quick-start-checkpoint"
+      >
+        <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
+          <Typo>{t('api.quickStart.checkpoint')}</Typo>
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {renderInline(t('api.quickStart.troubleshooting'))}
+        </p>
+      </div>
     </div>
   );
 };

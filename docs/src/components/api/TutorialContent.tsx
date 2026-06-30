@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { CodeBlock } from "../common/CodeBlock";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
@@ -111,28 +112,38 @@ export const TutorialContent: React.FC = () => {
         })}
       </div>
 
+      {/* Checkpoint */}
+      <div className="flex flex-col gap-2 rounded-2xl border border-border bg-secondary/40 px-6 py-6">
+        <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
+          <Typo>{t("api.tutorial.checkpoint.title")}</Typo>
+        </h2>
+        <p className="text-sm leading-relaxed text-foreground/90">
+          {renderInline(t("api.tutorial.checkpoint.body"))}
+        </p>
+      </div>
+
       {/* Where to go next */}
       <div className="flex flex-col gap-4">
         <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
           <Typo>{t("api.tutorial.next.title")}</Typo>
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <a href="#custom-block-tool" className={nextLinkClass}>
+          <Link to="/docs/custom-block-tool" className={nextLinkClass}>
             <span className="font-display text-sm font-bold tracking-tight text-primary">
               <Typo>{t("api.links.customBlockTool")}</Typo>
             </span>
             <span className="text-sm leading-relaxed text-muted-foreground">
               <Typo>{t("api.tutorial.next.howTo")}</Typo>
             </span>
-          </a>
-          <a href="#concepts" className={nextLinkClass}>
+          </Link>
+          <Link to="/docs/concepts" className={nextLinkClass}>
             <span className="font-display text-sm font-bold tracking-tight text-primary">
               <Typo>{t("api.links.everythingIsABlock")}</Typo>
             </span>
             <span className="text-sm leading-relaxed text-muted-foreground">
               <Typo>{t("api.tutorial.next.concepts")}</Typo>
             </span>
-          </a>
+          </Link>
         </div>
       </div>
     </div>

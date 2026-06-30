@@ -1,13 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ConceptsContent } from './ConceptsContent';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 const renderConcepts = () =>
   render(
-    <I18nProvider>
-      <ConceptsContent />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <ConceptsContent />
+      </I18nProvider>
+    </MemoryRouter>,
   );
 
 describe('ConceptsContent', () => {
@@ -39,15 +42,16 @@ describe('ConceptsContent', () => {
     expect(screen.getByText(/is this a block/i)).toBeInTheDocument();
   });
 
-  it('links onward to the Blocks API and BlockData reference', () => {
-    renderConcepts();
+  it('links onward to the Blocks API and BlockData reference via router links', () => {
+    const { container } = renderConcepts();
     expect(screen.getByRole('link', { name: 'Blocks API' })).toHaveAttribute(
       'href',
-      '#blocks-api',
+      '/docs/blocks-api',
     );
     expect(screen.getByRole('link', { name: 'BlockData' })).toHaveAttribute(
       'href',
-      '#block-data',
+      '/docs/block-data',
     );
+    expect(container.querySelector('a[href^="#"]')).toBeNull();
   });
 });

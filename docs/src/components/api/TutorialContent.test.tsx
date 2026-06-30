@@ -33,14 +33,25 @@ describe('TutorialContent', () => {
     expect(code).toContain('editor.render(');
   });
 
-  it('points onward to the custom-tool how-to and the concepts page', () => {
-    renderTutorial();
+  it('points onward to the custom-tool how-to and the concepts page via router links', () => {
+    const { container } = renderTutorial();
     // \s tolerates the non-breaking spaces Typo glues after short words ("a"/"is").
     expect(
       screen.getByRole('link', { name: /Create\sa\scustom\sblock\stool/ }),
-    ).toHaveAttribute('href', '#custom-block-tool');
+    ).toHaveAttribute('href', '/docs/custom-block-tool');
     expect(
       screen.getByRole('link', { name: /Everything\sis\sa\sblock/ }),
-    ).toHaveAttribute('href', '#concepts');
+    ).toHaveAttribute('href', '/docs/concepts');
+    expect(container.querySelector('a[href^="#"]')).toBeNull();
+  });
+
+  it('shows a closing checkpoint stating what success looks like', () => {
+    const { container } = renderTutorial();
+    expect(
+      screen.getByText('Checkpoint: what success looks like'),
+    ).toBeInTheDocument();
+    const text = container.textContent ?? '';
+    expect(text).toContain('editor.save()');
+    expect(text).toContain('editor.render()');
   });
 });

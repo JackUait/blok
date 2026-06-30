@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { Link } from "react-router-dom";
 import { CodeBlock } from "../common/CodeBlock";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
@@ -164,13 +165,13 @@ export const ConceptsContent: React.FC = () => {
       {/* Where to go next */}
       <p className="text-base leading-relaxed text-muted-foreground">
         {t("api.concepts.next.intro")} {t("api.concepts.next.blocksPrefix")}{" "}
-        <a href="#blocks-api" className="font-medium text-primary hover:underline">
+        <Link to="/docs/blocks-api" className="font-medium text-primary hover:underline">
           {t("api.concepts.next.blocksLink")}
-        </a>{" "}
+        </Link>{" "}
         {t("api.concepts.next.blocksSuffix")}{" "}
-        <a href="#block-data" className="font-medium text-primary hover:underline">
+        <Link to="/docs/block-data" className="font-medium text-primary hover:underline">
           {t("api.concepts.next.blockDataLink")}
-        </a>{" "}
+        </Link>{" "}
         {t("api.concepts.next.blockDataSuffix")}
       </p>
     </div>

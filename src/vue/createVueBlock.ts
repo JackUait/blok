@@ -52,6 +52,14 @@ export interface VueBlockRenderProps<Data> {
   commit: (patch: Partial<Data>) => void;
   /** This block's per-block API (id, connection methods, dispatchChange…). */
   block: BlockAPI;
+  /**
+   * Reactive read-only flag. Read `readOnly.value` in render to disable editing
+   * (e.g. drop `contenteditable`, hide controls). Toggled IN PLACE by core's
+   * read-only switch — the component reacts without a remount, so ephemeral state
+   * survives. Honor it: a block that ignores `readOnly` stays interactive when
+   * the editor is read-only (same contract as a vanilla tool's `setReadOnly`).
+   */
+  readOnly: Readonly<ShallowRef<boolean>>;
   /** Engine-owned child slot — render `h(BlockChildren)` for a container block. */
   BlockChildren: Component;
 }
@@ -111,11 +119,16 @@ export function createVueBlock<Data = BlockToolData>(
   render(): HTMLElement;
   save(): BlockToolData;
   setData(newData: BlockToolData): Promise<boolean>;
+  setReadOnly(state: boolean): void;
   rendered(): void;
   moved(): void;
   removed(): void;
   destroy(): void;
-}) & { readonly __isBlokVueBlock: true; readonly toolbox: ToolboxConfig | undefined } {
+}) & {
+  readonly __isBlokVueBlock: true;
+  readonly toolbox: ToolboxConfig | undefined;
+  readonly isReadOnlySupported: boolean;
+} {
   // One wrapped component definition per TYPE; each block instance gets its own
   // context via the `ctx` prop, so Vue mounts a distinct instance per entry.
   const WrappedComponent = defineComponent({
@@ -138,10 +151,22 @@ export function createVueBlock<Data = BlockToolData>(
       return spec.toolbox;
     }
 
+    /**
+     * Vue blocks support read-only mode: `setReadOnly` flips a reactive flag the
+     * component reads, so the block re-renders read-only IN PLACE. Without this
+     * flag core's ReadOnly module throws a critical error when read-only is
+     * enabled and a Vue block is present.
+     */
+    public static get isReadOnlySupported(): boolean {
+      return true;
+    }
+
     private readonly blockApi: BlockAPI;
     private readonly registry: BlockPortalRegistry | undefined;
     private readonly pointerDrag: () => boolean;
     private readonly dataRef: ShallowRef<Readonly<Data>>;
+    /** Reactive read-only flag handed to setup; flipped in place by setReadOnly. */
+    private readonly readOnlyRef: ShallowRef<boolean>;
     private readonly childrenComponent: Component;
     private mirror: Readonly<Data>;
     /** Dedup baseline (Risk R3/R6): skip a redundant render of identical data. */
@@ -166,6 +191,7 @@ export function createVueBlock<Data = BlockToolData>(
       this.mirror = fillDefaults<Data>(spec.propSchema, toRaw(options.data ?? {}) as Record<string, unknown>);
       this.lastRendered = this.mirror;
       this.dataRef = shallowRef(this.mirror);
+      this.readOnlyRef = shallowRef(options.readOnly);
 
       const blockApi = this.blockApi;
 
@@ -202,6 +228,7 @@ export function createVueBlock<Data = BlockToolData>(
         data: this.dataRef,
         commit: this.commit,
         block: this.blockApi,
+        readOnly: this.readOnlyRef,
         BlockChildren: this.childrenComponent,
       };
 
@@ -243,6 +270,17 @@ export function createVueBlock<Data = BlockToolData>(
       await nextTick();
 
       return true;
+    }
+
+    /**
+     * In-place read-only toggle. Flips the reactive flag the component reads via
+     * `ctx.readOnly`, so the block re-renders read-only WITHOUT a remount
+     * (ephemeral component state survives). A regular prototype method (not an
+     * arrow field) so core's `supportsInPlaceReadOnly` — which probes the
+     * constructable's PROTOTYPE for `setReadOnly` — selects the in-place path.
+     */
+    public setReadOnly(state: boolean): void {
+      this.readOnlyRef.value = state;
     }
 
     public moved(): void {

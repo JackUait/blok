@@ -449,6 +449,13 @@ export interface VueBlockRenderProps<Data> {
   commit: (patch: Partial<Data>) => void;
   /** This block's per-block API. */
   block: BlockAPI;
+  /**
+   * Reactive read-only flag. Read `readOnly.value` in render to disable editing.
+   * Toggled IN PLACE by core's read-only switch (no remount, ephemeral state
+   * survives). Honor it — a block that ignores it stays interactive when the
+   * editor is read-only.
+   */
+  readOnly: Readonly<ShallowRef<boolean>>;
   /** Engine-owned child slot — render `h(BlockChildren)` for a container block. */
   BlockChildren: Component;
 }

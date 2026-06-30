@@ -48,10 +48,13 @@ export const SECTION_ICONS: Record<string, ReactNode> = {
       <path d="M9 21V9" />
     </svg>
   ),
-  // Extending & system — puzzle piece
+  // Extending & system — plug
   extending: (
     <svg {...iconProps}>
-      <path d="M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 19.61a2.414 2.414 0 0 1-3.414 0l-1.683-1.683a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L10.39 4.39a2.414 2.414 0 0 1 3.414 0z" />
+      <path d="M12 22v-5" />
+      <path d="M9 8V2" />
+      <path d="M15 8V2" />
+      <path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" />
     </svg>
   ),
   // Data types — braces

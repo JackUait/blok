@@ -175,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <span className="flex min-w-0 items-center gap-2">
                   {section.icon && (
-                    <span className="shrink-0 text-muted-foreground/50" aria-hidden="true">
+                    <span className="shrink-0 text-muted-foreground" aria-hidden="true">
                       {section.icon}
                     </span>
                   )}

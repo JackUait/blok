@@ -1254,7 +1254,44 @@ export class BlockManager extends Module {
    * Converts passed Block to the new Tool
    */
   public async convert(block: Block, targetToolName: string, blockDataOverrides?: BlockToolData): Promise<Block> {
+    /**
+     * Notion parity: turning a TOGGLE (toggle tool or toggle heading) into a
+     * non-toggle target via the "Turn into" menu must RELEASE its children as
+     * following siblings — exactly what the "Toggle heading" tune switch already
+     * does (setToggleable(false) → releaseChildrenAsSiblings). Without this, the
+     * generic convert() → replace() path RE-NESTS the children under the now-plain
+     * block, so the two UIs disagree.
+     *
+     * Release the children first via `setBlockParent(child, null)` — the same
+     * Yjs-correct path the tune switch uses — which also empties the source's
+     * contentIds so the subsequent replace() reparents nothing. The toggle source
+     * is detected by the `data-blok-toggle-open` marker both the toggle tool and the
+     * toggle heading render (callout/column do not).
+     */
+    const sourceIsToggle = block.holder.querySelector('[data-blok-toggle-open]') !== null;
+    const targetIsToggleHeader = targetToolName === 'header' && blockDataOverrides?.isToggleable === true;
+
+    if (sourceIsToggle && !targetIsToggleHeader) {
+      this.releaseChildrenToRoot(block);
+    }
+
     return this.operations.convert(block, targetToolName, this.blocksStore, blockDataOverrides);
+  }
+
+  /**
+   * Release every child of `block` to the document root (parentId = null) via the
+   * Yjs-correct `setBlockParent`, as following siblings. Snapshot the ids first
+   * since `setBlockParent` mutates the parent's contentIds while iterating.
+   * @param block - the (toggle) container whose children are released
+   */
+  private releaseChildrenToRoot(block: Block): void {
+    for (const childId of [...block.contentIds]) {
+      const child = this.getBlockById(childId);
+
+      if (child !== undefined) {
+        this.setBlockParent(child, null);
+      }
+    }
   }
 
   /**

@@ -11,7 +11,6 @@ import { WhyBlok } from '../components/home/WhyBlok';
 import { MigrationCard } from '../components/home/MigrationCard';
 import { TrustedBy } from '../components/home/TrustedBy';
 import { DocsCtaCard } from '../components/home/DocsCtaCard';
-import { ToolsContent } from './ToolsPage';
 import { DemoContent } from './DemoPage';
 import { MigrationContent } from './MigrationPage';
 import { ChangelogContent } from './ChangelogPage';
@@ -86,8 +85,6 @@ export const HomePage: React.FC = () => {
     switch (activeView) {
       case 'docs':
         return <DocsCtaCard />;
-      case 'tools':
-        return <ToolsContent inline />;
       case 'playground':
         return <DemoContent inline />;
       case 'migration':

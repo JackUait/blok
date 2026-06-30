@@ -30,7 +30,6 @@ describe('CategoryBar', () => {
     const expected = [
       /get started/i,
       /^docs$/i,
-      /^tools$/i,
       /^playground$/i,
       /^migration$/i,
       /^changelog$/i,
@@ -44,21 +43,22 @@ describe('CategoryBar', () => {
     expect(screen.queryByRole('link', { name: /^docs$/i })).not.toBeInTheDocument();
   });
 
-  it('does not render recipes or integrations categories', () => {
+  it('does not render the tools, recipes, or integrations categories', () => {
     renderBar();
+    expect(screen.queryByRole('button', { name: /^tools$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^recipes$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^integrations$/i })).not.toBeInTheDocument();
   });
 
   it('calls onSelect with the view when a pill is clicked', () => {
     const onSelect = renderBar('getStarted');
-    fireEvent.click(screen.getByRole('button', { name: /^tools$/i }));
-    expect(onSelect).toHaveBeenCalledWith('tools');
+    fireEvent.click(screen.getByRole('button', { name: /^playground$/i }));
+    expect(onSelect).toHaveBeenCalledWith('playground');
   });
 
   it('marks the active view as pressed and others as not', () => {
-    renderBar('tools');
-    expect(screen.getByRole('button', { name: /^tools$/i })).toHaveAttribute(
+    renderBar('playground');
+    expect(screen.getByRole('button', { name: /^playground$/i })).toHaveAttribute(
       'aria-pressed',
       'true'
     );

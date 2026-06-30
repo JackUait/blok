@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 export type HomeView =
   | "getStarted"
   | "docs"
-  | "tools"
   | "playground"
   | "migration"
   | "changelog";
@@ -23,7 +22,6 @@ interface Category {
 export const HOME_CATEGORIES: Category[] = [
   { view: "getStarted", icon: "guide" },
   { view: "docs", icon: "page" },
-  { view: "tools", icon: "tools" },
   { view: "playground", icon: "block" },
   { view: "migration", icon: "history" },
   { view: "changelog", icon: "events" },

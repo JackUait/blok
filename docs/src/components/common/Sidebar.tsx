@@ -30,6 +30,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   buildHref,
 }) => {
   const navRef = useRef<HTMLElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
+
+  // Fade the scroll container's content toward the page background at whichever
+  // edge has more menu off-screen — a small "haze" that signals scrollability.
+  const [scrollEdges, setScrollEdges] = useState({ top: false, bottom: false });
+
+  const updateScrollEdges = useCallback(() => {
+    const el = asideRef.current;
+    if (!el) return;
+    const top = el.scrollTop > 1;
+    const bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    setScrollEdges((prev) =>
+      prev.top === top && prev.bottom === bottom ? prev : { top, bottom },
+    );
+  }, []);
 
   // A single coral marker that glides to the active link instead of a static
   // per-item border — measured from layout so it tracks any item across groups.
@@ -54,12 +69,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Position synchronously after layout so the marker never paints out of place.
   useLayoutEffect(() => {
     measureMarker();
-  }, [measureMarker, sections]);
+    updateScrollEdges();
+  }, [measureMarker, updateScrollEdges, sections]);
 
   useEffect(() => {
-    window.addEventListener('resize', measureMarker);
-    return () => window.removeEventListener('resize', measureMarker);
-  }, [measureMarker]);
+    const onResize = () => {
+      measureMarker();
+      updateScrollEdges();
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [measureMarker, updateScrollEdges]);
+
+  const fade = '1.75rem';
+  const hazeMask = `linear-gradient(to bottom, ${
+    scrollEdges.top ? 'transparent' : '#000'
+  } 0, #000 ${fade}, #000 calc(100% - ${fade}), ${
+    scrollEdges.bottom ? 'transparent' : '#000'
+  } 100%)`;
 
   const linkClass = (id: string) =>
     cn(
@@ -73,7 +100,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
+      ref={asideRef}
+      onScroll={updateScrollEdges}
       className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2"
+      style={{ maskImage: hazeMask, WebkitMaskImage: hazeMask }}
       data-blok-testid={`${variant}-sidebar`}
     >
       <nav

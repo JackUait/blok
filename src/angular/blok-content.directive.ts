@@ -6,6 +6,9 @@ import {
   Output,
   PLATFORM_ID,
   Input,
+  ApplicationRef,
+  EnvironmentInjector,
+  ErrorHandler,
   afterNextRender,
   inject,
   signal,
@@ -17,6 +20,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { Blok as BlokRuntime, type Blok } from '@jackuait/blok';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
 import type { BlokAngularConfig } from './types';
+import {
+  BLOK_PORTAL_REGISTRY_CONFIG_KEY,
+  createBlockPortalRegistry,
+  type BlockPortalRegistry,
+} from './block-portal-registry';
+import { removeRegistry, setRegistry } from './registry-map';
 
 /**
  * Escape-hatch directive and lifecycle engine for Blok (mirrors React's
@@ -50,6 +59,12 @@ export class BlokContentDirective implements OnDestroy {
    * merges, idempotently). Mirrors React's `useBlok` merging context defaults.
    */
   private readonly defaults = inject(BLOK_DEFAULT_CONFIG, { optional: true }) ?? {};
+  // Captured in the injection context (field initializers) so the registry can
+  // mount author components via createComponent — core constructs tools outside
+  // Angular DI and cannot inject these itself.
+  private readonly envInjector = inject(EnvironmentInjector);
+  private readonly appRef = inject(ApplicationRef);
+  private readonly errorHandler = inject(ErrorHandler);
 
   /** Construction-time Blok config (everything except `holder`, which the directive owns). */
   @Input() config: Partial<BlokAngularConfig> = {};
@@ -76,6 +91,8 @@ export class BlokContentDirective implements OnDestroy {
   private destroyed = false;
   private built = false;
   private currentKey: unknown;
+  /** The portal registry for the current editor (Angular-block mounting). */
+  private registry: BlockPortalRegistry | undefined;
 
   constructor() {
     // afterNextRender is browser-only (skipped during SSR) and runs after the
@@ -97,6 +114,10 @@ export class BlokContentDirective implements OnDestroy {
     this.destroyed = false;
     this.instance.set(null);
 
+    // Tear down any registry from a superseded editor (recreate path) before
+    // building a new one.
+    this.registry?.destroyAll();
+
     // Merge provideBlok defaults under the bound config (instance wins; tools
     // registries compose across both layers rather than replacing).
     const merged: Partial<BlokAngularConfig> = { ...this.defaults, ...this.config };
@@ -104,6 +125,13 @@ export class BlokContentDirective implements OnDestroy {
     if (this.defaults.tools !== undefined || this.config.tools !== undefined) {
       merged.tools = { ...this.defaults.tools, ...this.config.tools };
     }
+
+    // Create the editor-scoped portal registry and thread it into every
+    // Angular-block tool's config (vanilla tools pass through untouched).
+    const registry = createBlockPortalRegistry(this.envInjector, this.appRef, this.errorHandler);
+
+    this.registry = registry;
+    merged.tools = injectPortalRegistry(merged.tools, registry);
 
     // Construct outside Angular's zone so the editor's internal DOM churn never
     // schedules change detection.
@@ -116,6 +144,7 @@ export class BlokContentDirective implements OnDestroy {
     );
 
     this.current = blok;
+    setRegistry(blok, registry);
 
     void blok.isReady.then(() =>
       this.ngZone.run(() => {
@@ -133,8 +162,52 @@ export class BlokContentDirective implements OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.registry?.destroyAll();
+
+    if (this.current !== null) {
+      removeRegistry(this.current);
+    }
+
     this.current?.destroy();
     this.current = null;
+    this.registry = undefined;
     this.instance.set(null);
   }
+}
+
+/**
+ * Return a NEW tools map (never mutate the consumer's config) where each
+ * Angular-block tool carries the portal registry under
+ * BLOK_PORTAL_REGISTRY_CONFIG_KEY in its `config`. Vanilla tools are returned
+ * unchanged. Handles both entry shapes: a bare constructor and `{ class, config }`.
+ */
+function injectPortalRegistry(
+  tools: BlokAngularConfig['tools'],
+  registry: BlockPortalRegistry
+): BlokAngularConfig['tools'] {
+  if (tools === undefined) {
+    return tools;
+  }
+
+  const result: Record<string, unknown> = {};
+
+  for (const [name, entry] of Object.entries(tools)) {
+    const asObject = entry as { class?: unknown; config?: Record<string, unknown> } | undefined;
+    const toolClass = (typeof entry === 'function' ? entry : asObject?.class) as
+      | { __isBlokAngularBlock?: boolean }
+      | undefined;
+
+    if (toolClass?.__isBlokAngularBlock === true) {
+      const base = typeof entry === 'function' ? { class: entry } : { ...asObject };
+
+      result[name] = {
+        ...base,
+        config: { ...(base.config ?? {}), [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry },
+      };
+    } else {
+      result[name] = entry;
+    }
+  }
+
+  return result as BlokAngularConfig['tools'];
 }

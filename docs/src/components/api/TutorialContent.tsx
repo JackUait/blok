@@ -1,16 +1,10 @@
-import type { ReactNode } from "react";
 import { CodeBlock } from "../common/CodeBlock";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
+import { useFramework } from "../../contexts/FrameworkContext";
+import { adaptExample } from "../common/framework-adapt";
+import { TUTORIAL_MOUNT_SNIPPETS } from "../common/framework-snippets";
 import { renderInline } from "./inline-code";
-
-const MOUNT_CODE = `import { Blok } from '@jackuait/blok';
-
-const editor = new Blok({
-  holder: 'editor', // the id of a <div> on your page
-});
-
-await editor.isReady;`;
 
 const SAVE_CODE = `const data = await editor.save();
 
@@ -39,21 +33,18 @@ const editor = new Blok({
 
 interface TutorialStep {
   key: string;
-  code?: ReactNode;
+  /** Raw vanilla example adapted to the active framework, when the step has code. */
+  code?: string;
   /** Optional payoff callout rendered under the step's code. */
   payoffKey?: string;
 }
 
 const STEPS: TutorialStep[] = [
-  { key: "mount", code: <CodeBlock code={MOUNT_CODE} language="typescript" /> },
+  { key: "mount" },
   { key: "write" },
-  {
-    key: "save",
-    code: <CodeBlock code={SAVE_CODE} language="typescript" />,
-    payoffKey: "api.tutorial.steps.save.payoff",
-  },
-  { key: "render", code: <CodeBlock code={RENDER_CODE} language="typescript" /> },
-  { key: "tools", code: <CodeBlock code={TOOLS_CODE} language="typescript" /> },
+  { key: "save", code: SAVE_CODE, payoffKey: "api.tutorial.steps.save.payoff" },
+  { key: "render", code: RENDER_CODE },
+  { key: "tools", code: TOOLS_CODE },
 ];
 
 const nextLinkClass =
@@ -61,6 +52,14 @@ const nextLinkClass =
 
 export const TutorialContent: React.FC = () => {
   const { t } = useI18n();
+  const { framework } = useFramework();
+
+  const stepSnippet = (step: TutorialStep) => {
+    if (step.key === "mount") {
+      return TUTORIAL_MOUNT_SNIPPETS[framework];
+    }
+    return step.code ? adaptExample(step.code, framework) : null;
+  };
 
   return (
     <div className="flex flex-col gap-12">
@@ -71,6 +70,7 @@ export const TutorialContent: React.FC = () => {
       <div className="flex flex-col gap-10">
         {STEPS.map((step, index) => {
           const isLast = index === STEPS.length - 1;
+          const snippet = stepSnippet(step);
           return (
             <div
               key={step.key}
@@ -95,7 +95,9 @@ export const TutorialContent: React.FC = () => {
                 <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">
                   {renderInline(t(`api.tutorial.steps.${step.key}.body`))}
                 </p>
-                {step.code}
+                {snippet && (
+                  <CodeBlock code={snippet.code} language={snippet.language} />
+                )}
                 {step.payoffKey && (
                   <div className="mt-4 rounded-xl border border-border bg-secondary/40 px-5 py-4">
                     <p className="text-sm leading-relaxed text-foreground/90">

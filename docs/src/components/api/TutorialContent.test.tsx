@@ -1,13 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { TutorialContent } from './TutorialContent';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
 
 const renderTutorial = () =>
   render(
-    <I18nProvider>
-      <TutorialContent />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <FrameworkProvider>
+          <TutorialContent />
+        </FrameworkProvider>
+      </I18nProvider>
+    </MemoryRouter>,
   );
 
 describe('TutorialContent', () => {

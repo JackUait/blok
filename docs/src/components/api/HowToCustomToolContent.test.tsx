@@ -1,13 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { HowToCustomToolContent } from './HowToCustomToolContent';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
 
 const renderHowTo = () =>
   render(
-    <I18nProvider>
-      <HowToCustomToolContent />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <FrameworkProvider>
+          <HowToCustomToolContent />
+        </FrameworkProvider>
+      </I18nProvider>
+    </MemoryRouter>,
   );
 
 describe('HowToCustomToolContent', () => {

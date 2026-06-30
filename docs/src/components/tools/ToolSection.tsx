@@ -4,6 +4,8 @@ import { CategoryIcon } from '../common/CategoryIcon';
 import { Typo } from '../common/Typo';
 import type { ToolSection as ToolSectionType } from './tools-data';
 import { useI18n } from '../../contexts/I18nContext';
+import { useFramework } from '../../contexts/FrameworkContext';
+import { adaptExample } from '../common/framework-adapt';
 
 interface ToolSectionProps {
   section: ToolSectionType;
@@ -11,6 +13,8 @@ interface ToolSectionProps {
 
 export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
   const { t } = useI18n();
+  const { framework } = useFramework();
+  const usage = adaptExample(section.usageExample, framework);
 
   return (
     <section
@@ -88,7 +92,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
         <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
           <Typo>{t('tools.usageExample')}</Typo>
         </h3>
-        <CodeBlock code={section.usageExample} language="typescript" />
+        <CodeBlock code={usage.code} language={usage.language} />
       </div>
     </section>
   );

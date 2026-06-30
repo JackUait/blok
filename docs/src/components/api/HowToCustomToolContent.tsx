@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
 import { CodeBlock } from "../common/CodeBlock";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
+import { useFramework } from "../../contexts/FrameworkContext";
+import { adaptExample } from "../common/framework-adapt";
 import { renderInline } from "./inline-code";
 
 const TOOL_CLASS_CODE = `// callout-tool.ts
@@ -52,19 +53,14 @@ const OUTPUT_CODE = `const data = await editor.save();
 
 interface HowToStep {
   key: string;
-  code: ReactNode;
+  /** Raw vanilla example, adapted to the active framework at render time. */
+  code: string;
 }
 
 const STEPS: HowToStep[] = [
-  {
-    key: "scaffold",
-    code: <CodeBlock code={TOOL_CLASS_CODE} language="typescript" />,
-  },
-  {
-    key: "register",
-    code: <CodeBlock code={REGISTER_CODE} language="typescript" />,
-  },
-  { key: "use", code: <CodeBlock code={OUTPUT_CODE} language="typescript" /> },
+  { key: "scaffold", code: TOOL_CLASS_CODE },
+  { key: "register", code: REGISTER_CODE },
+  { key: "use", code: OUTPUT_CODE },
 ];
 
 const headingClass =
@@ -73,6 +69,7 @@ const proseClass = "text-sm leading-relaxed text-muted-foreground";
 
 export const HowToCustomToolContent: React.FC = () => {
   const { t } = useI18n();
+  const { framework } = useFramework();
 
   return (
     <div className="flex flex-col gap-12">
@@ -83,6 +80,7 @@ export const HowToCustomToolContent: React.FC = () => {
       <div className="flex flex-col gap-10">
         {STEPS.map((step, index) => {
           const isLast = index === STEPS.length - 1;
+          const snippet = adaptExample(step.code, framework);
           return (
             <div
               key={step.key}
@@ -104,7 +102,7 @@ export const HowToCustomToolContent: React.FC = () => {
                 <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">
                   {renderInline(t(`api.howToCustomTool.steps.${step.key}.body`))}
                 </p>
-                {step.code}
+                <CodeBlock code={snippet.code} language={snippet.language} />
               </div>
             </div>
           );

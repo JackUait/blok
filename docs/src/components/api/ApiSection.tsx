@@ -12,6 +12,7 @@ import {
   QUICK_START_SNIPPETS,
   CONFIG_SNIPPETS,
 } from "../common/framework-snippets";
+import { adaptExample } from "../common/framework-adapt";
 import { generatePropertyId, generateOptionId } from "./api-anchors";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
@@ -124,12 +125,16 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
   // The Configuration page's lead example is the one place the core options are
   // shown being passed in, which differs per framework (constructor vs hook vs
-  // component), so it follows the active framework rather than api-data's string.
+  // component), so it uses the curated config snippet. Every other section-level
+  // example is adapted to the active framework on the fly.
   const isConfig = section.id === "config";
-  const exampleCode = isConfig ? CONFIG_SNIPPETS[framework].code : section.example;
-  const exampleLanguage = isConfig
-    ? CONFIG_SNIPPETS[framework].language
-    : "typescript";
+  const sectionExample = isConfig
+    ? CONFIG_SNIPPETS[framework]
+    : section.example
+      ? adaptExample(section.example, framework)
+      : null;
+  const exampleCode = sectionExample?.code;
+  const exampleLanguage = sectionExample?.language ?? "typescript";
 
   // Render quick-start content specially
   if (section.customType === "quick-start") {

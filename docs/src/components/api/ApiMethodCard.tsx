@@ -3,6 +3,8 @@ import type { ApiMethod } from "./api-data";
 import { CodeBlock } from "../common/CodeBlock";
 import { generateMethodId } from "./api-anchors";
 import { useI18n } from "../../contexts/I18nContext";
+import { useFramework } from "../../contexts/FrameworkContext";
+import { adaptExample } from "../common/framework-adapt";
 import { Typo } from "../common/Typo";
 import { renderInline } from "./inline-code";
 
@@ -17,7 +19,9 @@ export interface ApiMethodCardProps {
  */
 export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => {
   const { t } = useI18n();
+  const { framework } = useFramework();
   const methodId = generateMethodId(sectionId, method.name);
+  const example = method.example ? adaptExample(method.example, framework) : null;
 
   return (
     <div
@@ -43,9 +47,9 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
           </p>
         </div>
       )}
-      {method.example && (
+      {example && (
         <div className="mt-4">
-          <CodeBlock code={method.example} language="typescript" />
+          <CodeBlock code={example.code} language={example.language} />
         </div>
       )}
     </div>

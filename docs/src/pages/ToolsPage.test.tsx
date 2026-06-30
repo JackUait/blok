@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
+import { FrameworkProvider } from '../contexts/FrameworkContext';
 import { ToolsPage } from './ToolsPage';
 import { TOOL_SECTIONS } from '../components/tools/tools-data';
 
@@ -10,7 +11,9 @@ const renderPage = () =>
   render(
     <MemoryRouter>
       <I18nProvider>
-        <ToolsPage />
+        <FrameworkProvider>
+          <ToolsPage />
+        </FrameworkProvider>
       </I18nProvider>
     </MemoryRouter>
   );

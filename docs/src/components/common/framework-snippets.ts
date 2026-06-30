@@ -206,6 +206,63 @@ export class EditorComponent {}`,
 };
 
 /**
+ * Per-framework snippet for the tutorial's first "mount" step — the bare editor
+ * with no tools yet. Curated rather than generated because the vanilla version
+ * awaits `editor.isReady`, which each adapter expresses differently (the
+ * adapters surface readiness for you, so the explicit await falls away).
+ */
+export const TUTORIAL_MOUNT_SNIPPETS: Record<Framework, Snippet> = {
+  vanilla: {
+    language: 'typescript',
+    code: `import { Blok } from '@jackuait/blok';
+
+const editor = new Blok({
+  holder: 'editor', // the id of a <div> on your page
+});
+
+await editor.isReady;`,
+  },
+  react: {
+    language: 'tsx',
+    code: `import { useBlok, BlokContent } from '@jackuait/blok/react';
+
+export function Editor() {
+  // useBlok mounts the editor for you — no holder id, and it stays
+  // null until the editor is ready.
+  const editor = useBlok();
+
+  return <BlokContent editor={editor} />;
+}`,
+  },
+  vue: {
+    language: 'vue',
+    code: `<script setup lang="ts">
+import { useBlok, BlokContent } from '@jackuait/blok/vue';
+
+// useBlok mounts the editor for you — no holder id needed.
+const editor = useBlok();
+</script>
+
+<template>
+  <BlokContent :editor="editor" />
+</template>`,
+  },
+  angular: {
+    language: 'typescript',
+    code: `import { Component } from '@angular/core';
+import { BlokEditorComponent } from '@jackuait/blok/angular';
+
+@Component({
+  selector: 'app-editor',
+  standalone: true,
+  imports: [BlokEditorComponent],
+  template: \`<blok-editor />\`,
+})
+export class EditorComponent {}`,
+  },
+};
+
+/**
  * Per-framework snippet showing how to obtain the live `editor` instance that
  * the API method examples operate on. The method calls themselves are identical
  * once you hold a reference — only the way you reach it differs:

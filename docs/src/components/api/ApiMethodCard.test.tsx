@@ -1,23 +1,35 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { ApiMethodCard } from './ApiMethodCard';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import type { ApiMethod } from './api-data';
 
 vi.mock('../common/CodeBlock', () => ({
   CodeBlock: ({ code }: { code: string }) => <div data-blok-testid="code-block">{code}</div>,
 }));
 
+// ApiMethodCard adapts its example to the active framework, which lives in the
+// URL, so a router plus both context providers are required.
+const Providers = ({ children }: { children: ReactNode }) => (
+  <MemoryRouter>
+    <I18nProvider>
+      <FrameworkProvider>{children}</FrameworkProvider>
+    </I18nProvider>
+  </MemoryRouter>
+);
+
 const renderCard = (method: ApiMethod, sectionId: string): ReturnType<typeof render> =>
   render(
-    <I18nProvider>
+    <Providers>
       <ApiMethodCard method={method} sectionId={sectionId} />
-    </I18nProvider>,
+    </Providers>,
   );
 
 const wrap = (children: ReactNode): ReturnType<typeof render> =>
-  render(<I18nProvider>{children}</I18nProvider>);
+  render(<Providers>{children}</Providers>);
 
 describe('ApiMethodCard', () => {
   const mockMethod: ApiMethod = {

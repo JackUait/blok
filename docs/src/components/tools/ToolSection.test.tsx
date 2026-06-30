@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ToolSection } from './ToolSection';
 import type { ToolSection as ToolSectionType } from './tools-data';
 
@@ -26,7 +27,9 @@ const renderSection = (section: ToolSectionType) =>
   render(
     <MemoryRouter>
       <I18nProvider>
-        <ToolSection section={section} />
+        <FrameworkProvider>
+          <ToolSection section={section} />
+        </FrameworkProvider>
       </I18nProvider>
     </MemoryRouter>
   );

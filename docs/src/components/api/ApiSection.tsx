@@ -5,7 +5,6 @@ import { ConceptsContent } from "./ConceptsContent";
 import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { EditorAccessNote } from "./EditorAccessNote";
-import { FrameworkToggle } from "../common/FrameworkToggle";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { useFramework } from "../../contexts/FrameworkContext";
@@ -79,17 +78,6 @@ const QuickStartContent: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-10">
-      <div
-        className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
-        data-blok-testid="quick-start-framework"
-      >
-        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          <Typo>{t('frameworkToggle.note')}</Typo>
-        </p>
-        <div className="shrink-0 sm:w-64">
-          <FrameworkToggle />
-        </div>
-      </div>
       {steps.map((step, index) => {
         const isLast = index === steps.length - 1;
         return (
@@ -251,11 +239,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
       {exampleCode && (
         <div className="mt-8">
-          {isConfig && (
-            <div className="mb-3">
-              <FrameworkToggle />
-            </div>
-          )}
           <CodeBlock code={exampleCode} language={exampleLanguage} />
         </div>
       )}

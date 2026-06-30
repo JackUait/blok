@@ -996,7 +996,6 @@
   "frameworkToggle": {
     "label": "Framework",
     "switchAriaPrefix": "Switch to",
-    "note": "Setup differs per framework. The rest of the API works on the same editor instance everywhere.",
     "editorAccess": {
       "heading": "Reaching the editor instance",
       "vanilla": "The methods below run on the editor you created with new Blok(). They are available once editor.isReady resolves.",

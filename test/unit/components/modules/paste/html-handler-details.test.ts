@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { HtmlHandler } from '../../../../../src/components/modules/paste/handlers/html-handler';
+import { recoverGfmToggles } from '../../../../../src/components/modules/paste/gfm-toggle-recovery';
 import type { ToolRegistry } from '../../../../../src/components/modules/paste/tool-registry';
 import type { SanitizerConfigBuilder } from '../../../../../src/components/modules/paste/sanitizer-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
@@ -148,5 +149,35 @@ describe('HtmlHandler — DETAILS treated as atomic block', () => {
       expect.objectContaining({ id: 'block-3' }),
       'block-1'
     );
+  });
+
+  it('migrates a buildin/Notion GFM toggle (lossy <ul> twin) into a toggle block, not a bullet list', async () => {
+    // Regression: when only the lossy GFM HTML flavour is available, a collapsed
+    // toggle serializes as a single-item <ul> (see the real capture in
+    // test/fixtures/notion/demo-page.clipboard.html). recoverGfmToggles rewrites
+    // that into <details>, which the handler then expands into a toggle block —
+    // closing the "toggle list transfers as bullet list" bug in the HTML path.
+    const toggle = makeToolStub('toggle', ['DETAILS']);
+    const paragraph = makeToolStub('paragraph', ['P']);
+    const list = makeToolStub('list', ['UL', 'OL', 'LI']);
+    const registry = makeRegistry([toggle, paragraph, list]);
+    const blok = makeBlok([toggle, paragraph, list]);
+    const handler = new HtmlHandler(blok, registry, makeSanitizerBuilder());
+
+    const gfmToggle = '<ul><li><p>toggle list</p><p>test</p></li></ul>';
+    const recovered = recoverGfmToggles(gfmToggle);
+    const context = { canReplaceCurrentBlock: false };
+
+    await handler.handle(recovered, context);
+
+    // The toggle arrives as a toggle block (with its body as a child paragraph),
+    // and NOT as a list block.
+    expect(insertedBlocks.some((b) => b.tool === 'list')).toBe(false);
+
+    const toggleBlocks = insertedBlocks.filter((b) => b.tool === 'toggle');
+
+    expect(toggleBlocks).toHaveLength(1);
+    expect(toggleBlocks[0].content.tagName).toBe('DETAILS');
+    expect(toggleBlocks[0].content.textContent).toContain('toggle list');
   });
 });

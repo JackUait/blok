@@ -6,6 +6,7 @@ import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
 import { preprocessNotionHtml } from './notion-preprocessor';
+import { recoverGfmToggles } from './gfm-toggle-recovery';
 import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
 import { NEXT_SPACE_MIMES, parseNextSpaceBlocks } from './next-space-blocks';
 import type { PasteHandler } from './handlers/base';
@@ -301,7 +302,7 @@ export class Paste extends Module {
       { br: {} }
     );
 
-    const preprocessed = preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData));
+    const preprocessed = recoverGfmToggles(preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData)));
     const cleanData = clean(preprocessed, customConfig);
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);

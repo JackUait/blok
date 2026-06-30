@@ -323,20 +323,49 @@ describe('BlockSelectionKeys', () => {
       expect(result).toBe(false);
     });
 
-    it('returns false when selected blocks are not all list items', () => {
-      const mockBlocks = [createBlock({ name: 'paragraph' }), createBlock({ name: 'list' })];
+    it('indents BOTH kinds of a mixed list + non-list selection (Notion parity, no longer a no-op)', async () => {
+      // A selection mixing a paragraph and a list item must indent each by its own
+      // mechanism: the list item's depth increases (data-driven) and the paragraph
+      // nests structurally under its preceding sibling — instead of bailing (the old
+      // no-op divergence).
+      const preceding = createBlock({ id: 'pre', name: 'paragraph' });
+      const paragraph = createBlock({ id: 'para', name: 'paragraph' });
+      const listItem = createBlock({ id: 'li', name: 'list' });
+      const depthAttr = document.createElement('span');
+      depthAttr.setAttribute('data-list-depth', '0');
+      listItem.holder.appendChild(depthAttr);
+
+      const blocks = [preceding, paragraph, listItem];
+      const updatedList = createBlock({ id: 'li-updated', name: 'list' });
+
       const blok = createBlokModules({
         BlockSelection: {
           anyBlockSelected: true,
-          selectedBlocks: mockBlocks,
+          selectedBlocks: [paragraph, listItem],
+          clearCache: vi.fn(),
         } as unknown as BlokModules['BlockSelection'],
+        BlockManager: {
+          blocks,
+          getBlockIndex: vi.fn((b: Block) => blocks.indexOf(b)),
+          getBlockByIndex: vi.fn((i: number) => blocks[i] ?? null),
+          getBlockById: vi.fn((id: string) => blocks.find(b => b.id === id)),
+          update: vi.fn(() => Promise.resolve(updatedList)),
+          setBlockParent: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
       });
       const blockSelectionKeys = new BlockSelectionKeys(blok);
-      const event = createKeyboardEvent({ key: 'Tab' });
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
       const result = blockSelectionKeys.handleIndent(event);
+      await new Promise(resolve => setTimeout(resolve, 10));
 
-      expect(result).toBe(false);
+      // Handled (not a no-op): preventDefault fired and it returned true.
+      expect(result).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      // List item indented one depth level.
+      expect(blok.BlockManager.update).toHaveBeenCalledWith(listItem, expect.objectContaining({ depth: 1 }));
+      // Paragraph nested structurally under its preceding sibling.
+      expect(blok.BlockManager.setBlockParent).toHaveBeenCalledWith(paragraph, 'pre');
     });
 
     it('returns true and prevents default for selected list items', () => {
@@ -636,20 +665,35 @@ describe('BlockSelectionKeys', () => {
         expect(setBlockParent).toHaveBeenCalledWith(p2, 'gp');
       });
 
-      it('leaves mixed list + non-list selections to default (returns false)', () => {
-        const mixed = [createBlock({ name: 'paragraph' }), createBlock({ name: 'list' })];
+      it('handles a mixed list + non-list selection (no longer a no-op)', () => {
+        // Mixed selections are now indented per-kind (Notion parity) instead of
+        // bailing — the detailed dual-mechanism behaviour is covered by the
+        // 'indents BOTH kinds of a mixed list + non-list selection' test above.
+        const paragraph = createBlock({ id: 'mixed-para', name: 'paragraph' });
+        const listItem = createBlock({ id: 'mixed-li', name: 'list' });
+        const blocks = [paragraph, listItem];
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
-            selectedBlocks: mixed,
+            selectedBlocks: blocks,
+            clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            blocks,
+            getBlockIndex: vi.fn((b: Block) => blocks.indexOf(b)),
+            getBlockByIndex: vi.fn((i: number) => blocks[i] ?? null),
+            getBlockById: vi.fn((id: string) => blocks.find(b => b.id === id)),
+            update: vi.fn(() => Promise.resolve(listItem)),
+            setBlockParent: vi.fn(),
+          } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
         const result = blockSelectionKeys.handleIndent(event);
 
-        expect(result).toBe(false);
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
       });
     });
 

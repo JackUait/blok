@@ -27,15 +27,16 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
-   * Check if all selected list items can be indented.
+   * Check if all of the given list items can be indented.
    * Each item must have a previous list item, and its depth must be <= previous item's depth.
-   * @returns true if all selected items can be indented
+   * @param listItems - the list blocks to test
+   * @returns true if all of them can be indented
    */
-  private canIndentSelectedListItems(): boolean {
-    const { BlockSelection, BlockManager } = this.Blok;
-    const selectedSet = new Set(BlockSelection.selectedBlocks);
+  private canIndentListItems(listItems: Block[]): boolean {
+    const { BlockManager } = this.Blok;
+    const selectedSet = new Set(listItems);
 
-    for (const block of BlockSelection.selectedBlocks) {
+    for (const block of listItems) {
       const blockIndex = BlockManager.getBlockIndex(block);
 
       if (blockIndex === undefined) {
@@ -73,21 +74,23 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
-   * Check if all selected list items can be outdented (all have depth > 0).
-   * @returns true if all selected items can be outdented
+   * Check if all of the given list items can be outdented (all have depth > 0).
+   * @param listItems - the list blocks to test
+   * @returns true if all of them can be outdented
    */
-  private canOutdentSelectedListItems(): boolean {
-    return this.Blok.BlockSelection.selectedBlocks.every((block) => this.getListBlockDepth(block) > 0);
+  private canOutdentListItems(listItems: Block[]): boolean {
+    return listItems.every((block) => this.getListBlockDepth(block) > 0);
   }
 
   /**
-   * Update depth of all selected list items.
+   * Update depth of the given list items.
+   * @param listItems - the list blocks to re-depth
    * @param delta - depth change (+1 for indent, -1 for outdent)
    */
-  private async updateSelectedListItemsDepth(delta: number): Promise<void> {
+  private async updateListItemsDepth(listItems: Block[], delta: number): Promise<void> {
     const { BlockSelection, BlockManager } = this.Blok;
 
-    const blockIndices = BlockSelection.selectedBlocks
+    const blockIndices = listItems
       .map((block) => BlockManager.getBlockIndex(block))
       .filter((index): index is number => index >= 0)
       .sort((a, b) => a - b);
@@ -124,44 +127,48 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     const selectedBlocks = BlockSelection.selectedBlocks;
-    const allListItems = selectedBlocks.every((block) => block.name === LIST_TOOL_NAME);
+    const listItems = selectedBlocks.filter((block) => block.name === LIST_TOOL_NAME);
+    const structuralItems = selectedBlocks.filter((block) => block.name !== LIST_TOOL_NAME);
+
+    const allListItems = structuralItems.length === 0;
 
     if (allListItems) {
       event.preventDefault();
 
       const isOutdent = event.shiftKey;
 
-      if (isOutdent && this.canOutdentSelectedListItems()) {
-        void this.updateSelectedListItemsDepth(-1);
+      if (isOutdent && this.canOutdentListItems(listItems)) {
+        void this.updateListItemsDepth(listItems, -1);
 
         return true;
       }
 
-      if (!isOutdent && this.canIndentSelectedListItems()) {
-        void this.updateSelectedListItemsDepth(1);
+      if (!isOutdent && this.canIndentListItems(listItems)) {
+        void this.updateListItemsDepth(listItems, 1);
       }
 
       return true;
     }
 
     /**
-     * Non-list selections of ANY block type indent/outdent structurally, the same
-     * way single-block Tab nesting does — selecting paragraphs/headings and pressing
-     * Tab nests the whole group (Notion parity). Mixed list + non-list selections are
-     * left to the default (lists store depth differently), so return false.
+     * Non-list and MIXED selections indent/outdent each block by its own mechanism,
+     * the same way single-block Tab nesting does (Notion parity): structural blocks
+     * (paragraph/header/…) nest under their preceding sibling, while list items move
+     * by their data-driven depth. A mixed selection is no longer a no-op — each kind
+     * is handled independently and the relative structure of each is preserved.
      */
-    const noListItems = selectedBlocks.every((block) => block.name !== LIST_TOOL_NAME);
-
-    if (!noListItems) {
-      return false;
-    }
-
     event.preventDefault();
 
     if (event.shiftKey) {
-      this.outdentSelectedBlocksStructurally(selectedBlocks);
+      if (listItems.length > 0 && this.canOutdentListItems(listItems)) {
+        void this.updateListItemsDepth(listItems, -1);
+      }
+      this.outdentSelectedBlocksStructurally(structuralItems);
     } else {
-      this.indentSelectedBlocksStructurally(selectedBlocks);
+      if (listItems.length > 0 && this.canIndentListItems(listItems)) {
+        void this.updateListItemsDepth(listItems, 1);
+      }
+      this.indentSelectedBlocksStructurally(structuralItems);
     }
 
     return true;

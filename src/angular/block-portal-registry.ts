@@ -55,7 +55,7 @@ export const createBlockPortalRegistry = (
   appRef: ApplicationRef,
   errorHandler: ErrorHandler
 ): BlockPortalRegistry => {
-  const mounted = new Map<string, ComponentRef<unknown>>();
+  const mounted = new Map<string, { ref: ComponentRef<unknown>; injector: Injector }>();
 
   // Change detection runs outside NgZone here; a throwing author component must
   // degrade to a blank holder, not break core's block insertion.
@@ -68,17 +68,23 @@ export const createBlockPortalRegistry = (
   };
 
   const teardown = (id: string): void => {
-    const ref = mounted.get(id);
+    const entry = mounted.get(id);
 
-    if (ref === undefined) {
+    if (entry === undefined) {
       return;
     }
 
+    const { ref, injector } = entry;
     // Capture host before deletion so we can clear it below.
     const hostEl = ref.location.nativeElement as HTMLElement;
     mounted.delete(id);
     appRef.detachView(ref.hostView);
     ref.destroy();
+    // `Injector.create({ parent })` returns an injector that is NOT torn down by
+    // `ref.destroy()`. We must destroy it explicitly to prevent one small injector
+    // accumulating per block over a long editor session.
+    const destroyable = injector as Injector & { destroy?: () => void };
+    destroyable.destroy?.();
     // createComponent({ hostElement }) renders INTO an external div. Angular's
     // destroy() tears down the component instance and CD but does NOT clear the
     // host's DOM children — we must do it explicitly.
@@ -107,7 +113,7 @@ export const createBlockPortalRegistry = (
         });
 
         appRef.attachView(ref.hostView);
-        mounted.set(id, ref);
+        mounted.set(id, { ref, injector: elementInjector });
         // createComponent does not auto-run CD; render synchronously into the
         // (still-detached) host before core inserts it into the document.
         ref.changeDetectorRef.detectChanges();
@@ -117,13 +123,13 @@ export const createBlockPortalRegistry = (
       teardown(id);
     },
     flush(id: string): void {
-      const ref = mounted.get(id);
+      const entry = mounted.get(id);
 
-      if (ref === undefined) {
+      if (entry === undefined) {
         return;
       }
 
-      safe(() => ref.changeDetectorRef.detectChanges());
+      safe(() => entry.ref.changeDetectorRef.detectChanges());
     },
     destroyAll(): void {
       for (const id of Array.from(mounted.keys())) {

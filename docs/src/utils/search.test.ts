@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getSearchIndex, search } from './search';
+import { buildSearchIndex, getSearchIndex, search } from './search';
 
 describe('search', () => {
   it('should not index any recipe entries', () => {
@@ -71,6 +71,29 @@ describe('search', () => {
       for (const result of results) {
         expect(result.kind).toBeTruthy();
       }
+    });
+  });
+
+  describe('search index routing', () => {
+    it('method results route to the module page with a deep anchor', () => {
+      const index = buildSearchIndex();
+      const focus = index.find((i) => i.kind === 'method' && i.title.startsWith('caret.focus'));
+      expect(focus?.path).toBe('/docs/caret-api');
+      expect(focus?.hash).toBe('caret-api-caret-focus');
+    });
+
+    it('section results route to the module page without a hash', () => {
+      const index = buildSearchIndex();
+      const caret = index.find((i) => i.kind === 'section' && i.id === 'caret-api');
+      expect(caret?.path).toBe('/docs/caret-api');
+      expect(caret?.hash).toBeUndefined();
+    });
+
+    it('config option result deep-links', () => {
+      const index = buildSearchIndex();
+      const holder = index.find((i) => i.kind === 'option' && i.title === 'holder');
+      expect(holder?.path).toBe('/docs/config');
+      expect(holder?.hash).toBe('config-holder');
     });
   });
 });

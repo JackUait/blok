@@ -1,5 +1,6 @@
 import type { SearchIndexItem, SearchResult } from '@/types/search';
 import { API_SECTIONS, SIDEBAR_SECTIONS } from '@/components/api/api-data';
+import { generateMethodId, generatePropertyId, generateOptionId } from '@/components/api/api-anchors';
 
 export type { SearchIndexItem };
 
@@ -114,8 +115,8 @@ const indexMethods = (index: SearchIndexItem[], section: ApiSection): void => {
       module,
       kind: 'method',
       section: section.title,
-      path: '/docs',
-      hash: section.id,
+      path: `/docs/${section.id}`,
+      hash: generateMethodId(section.id, method.name),
       keywords: createKeywords(
         methodName,
         section.title,
@@ -142,8 +143,8 @@ const indexProperties = (index: SearchIndexItem[], section: ApiSection): void =>
       module,
       kind: 'property',
       section: section.title,
-      path: '/docs',
-      hash: section.id,
+      path: `/docs/${section.id}`,
+      hash: generatePropertyId(section.id, prop.name),
       keywords: createKeywords(
         prop.name,
         section.title,
@@ -170,8 +171,8 @@ const indexTableOptions = (index: SearchIndexItem[], section: ApiSection): void 
       module,
       kind: 'option',
       section: section.title,
-      path: '/docs',
-      hash: section.id,
+      path: `/docs/${section.id}`,
+      hash: generateOptionId(section.id, row.option),
       keywords: createKeywords(
         row.option,
         section.title,
@@ -198,8 +199,7 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       category: section.badge ?? 'api',
       module,
       kind: 'section',
-      path: '/docs',
-      hash: section.id,
+      path: `/docs/${section.id}`,
       keywords: createKeywords(
         section.title,
         section.id,
@@ -232,7 +232,7 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       category: 'page',
       module: 'Page',
       kind: 'page',
-      path: '/docs',
+      path: '/docs/quick-start',
       keywords: ['docs', 'documentation', 'api', 'reference', 'guide', 'manual'],
     },
     {

@@ -994,8 +994,18 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Determine navigation type based on key pressed:
      * - Arrow Down: use vertical navigation (Notion-style line-by-line)
      * - Arrow Right: use horizontal navigation (character-by-character)
+     *
+     * Plain (no Cmd/Ctrl/Alt) vertical navigation only — symmetric with isRightKey
+     * below. A modifier+ArrowDown is a native gesture (Cmd = doc/line end, Ctrl/Alt =
+     * paragraph/word) and must fall through to the browser; without this guard Blok
+     * half-intercepts it, crossing blocks at a boundary or leaving the caret stuck
+     * mid-block in a wrapped paragraph.
      */
-    const isDownKey = keyCode === keyCodes.DOWN;
+    const isDownKey =
+      keyCode === keyCodes.DOWN &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
     /**
      * Plain (non-Shift, no Cmd/Ctrl/Alt) horizontal navigation only. Shift+ArrowRight
      * at a boundary is handled above as cross-block selection, and modifier+ArrowRight
@@ -1162,8 +1172,18 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Determine navigation type based on key pressed:
      * - Arrow Up: use vertical navigation (Notion-style line-by-line)
      * - Arrow Left: use horizontal navigation (character-by-character)
+     *
+     * Plain (no Cmd/Ctrl/Alt) vertical navigation only — symmetric with isLeftKey
+     * below. A modifier+ArrowUp is a native gesture (Cmd = doc/line start, Ctrl/Alt =
+     * paragraph/word) and must fall through to the browser; without this guard Blok
+     * half-intercepts it, crossing blocks at a boundary or leaving the caret stuck
+     * mid-block in a wrapped paragraph.
      */
-    const isUpKey = keyCode === keyCodes.UP;
+    const isUpKey =
+      keyCode === keyCodes.UP &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
     /**
      * Plain (non-Shift, no Cmd/Ctrl/Alt) horizontal navigation only. Shift+ArrowLeft
      * at a boundary is handled above as cross-block selection, and modifier+ArrowLeft

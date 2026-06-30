@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleOutdent, handleEnter } from '../../../../src/tools/list/list-keyboard';
+import { handleOutdent, handleEnter, handleIndent } from '../../../../src/tools/list/list-keyboard';
 import { ListDepthValidator } from '../../../../src/tools/list/depth-validator';
 import type { KeyboardContext } from '../../../../src/tools/list/list-keyboard';
 import type { ListItemData } from '../../../../src/tools/list/types';
@@ -31,11 +31,13 @@ const createMockBlock = (options: { id?: string; name?: string; depth?: number }
 };
 
 /**
- * Single-block list-item indentation (Tab) is now STRUCTURAL — it reparents the
- * item under its preceding sibling via the shared KeyboardNavigation handler,
- * identical to text/headers. That behaviour is covered by
+ * Structurally-nested list items (those with a list parentId) indent via the
+ * shared KeyboardNavigation handler, identical to text/headers — covered by
  * test/unit/components/modules/blockEvents/composers/keyboardNavigation.test.ts.
- * The flat `handleIndent` (data.depth mutation) it replaced has been removed.
+ *
+ * FLAT-carrier items (top-level / drag-nested, getStructuralListDepth() === null)
+ * still indent via this `handleIndent` (data.depth mutation). Its Notion-parity
+ * first-in-group guard is covered below.
  */
 
 describe('handleOutdent — child depth cascading', () => {
@@ -415,5 +417,107 @@ describe('handleEnter — cascades outdent on empty nested item', () => {
     // Reparented to the grandparent ('root'), not converted or flat-decremented.
     expect(setBlockParent).toHaveBeenCalledWith('empty-nested', 'root');
     expect(api.blocks.convert).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Notion parity: keyboard Tab on a flat-carrier list item indents it ONLY when
+ * there is a preceding LIST sibling to nest under (mirroring the structural
+ * getPrecedingSibling guard). A FIRST-in-group item — the first block, or a list
+ * item whose previous block is not a list — has nothing to nest under, so Tab is a
+ * strict no-op.
+ *
+ * Regression: the flat `handleIndent` derived its cap from `getMaxAllowedDepth`,
+ * which returns 1 for first-in-group items, so the first bullet of every list
+ * could be wrongly indented to an orphaned depth 1. Notion makes that a no-op.
+ */
+describe('handleIndent — Notion-parity first-in-group guard', () => {
+  let data: ListItemData;
+  let syncContentFromDOM: () => void;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    data = { text: 'item', style: 'unordered', depth: 0 };
+    syncContentFromDOM = vi.fn<() => void>();
+  });
+
+  const buildIndentContext = (overrides: {
+    currentBlockIndex: number;
+    blocks: ReturnType<typeof createMockBlock>[];
+    depth?: number;
+  }): { context: KeyboardContext; depthValidator: ListDepthValidator; update: ReturnType<typeof vi.fn> } => {
+    const { currentBlockIndex, blocks, depth = 0 } = overrides;
+    data.depth = depth;
+
+    const blocksAPI = {
+      getBlockByIndex: (i: number) => blocks[i] ?? undefined,
+      getBlockIndex: (id: string) => {
+        const idx = blocks.findIndex(b => b.id === id);
+        return idx >= 0 ? idx : undefined;
+      },
+      getBlocksCount: () => blocks.length,
+      getCurrentBlockIndex: () => currentBlockIndex,
+    };
+
+    const holder = document.createElement('div');
+    const contentEl = document.createElement('div');
+    contentEl.setAttribute('contenteditable', 'true');
+    holder.appendChild(contentEl);
+    const update = vi.fn().mockResolvedValue({ id: blocks[currentBlockIndex]?.id ?? 'b', holder });
+
+    const api = {
+      blocks: { ...blocksAPI, update },
+      caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+    } as unknown as KeyboardContext['api'];
+
+    const context: KeyboardContext = {
+      api,
+      blockId: blocks[currentBlockIndex]?.id ?? 'test-block',
+      data,
+      element: document.createElement('div'),
+      getContentElement: () => contentEl,
+      syncContentFromDOM,
+      getDepth: () => data.depth ?? 0,
+    };
+
+    return { context, depthValidator: new ListDepthValidator(blocksAPI), update };
+  };
+
+  it('is a no-op for the FIRST block (index 0) — no preceding sibling to nest under', async () => {
+    const { context, depthValidator, update } = buildIndentContext({
+      currentBlockIndex: 0,
+      blocks: [createMockBlock({ id: 'a', depth: 0 }), createMockBlock({ id: 'b', depth: 0 })],
+      depth: 0,
+    });
+
+    await handleIndent(context, depthValidator);
+
+    expect(update).not.toHaveBeenCalled();
+    expect(data.depth).toBe(0);
+  });
+
+  it('is a no-op for a first-in-group item whose previous block is NOT a list', async () => {
+    const { context, depthValidator, update } = buildIndentContext({
+      currentBlockIndex: 1,
+      blocks: [createMockBlock({ id: 'p', name: 'paragraph' }), createMockBlock({ id: 'a', depth: 0 })],
+      depth: 0,
+    });
+
+    await handleIndent(context, depthValidator);
+
+    expect(update).not.toHaveBeenCalled();
+    expect(data.depth).toBe(0);
+  });
+
+  it('indents a SECOND list item one level (preceding list sibling exists)', async () => {
+    const { context, depthValidator, update } = buildIndentContext({
+      currentBlockIndex: 1,
+      blocks: [createMockBlock({ id: 'a', depth: 0 }), createMockBlock({ id: 'b', depth: 0 })],
+      depth: 0,
+    });
+
+    await handleIndent(context, depthValidator);
+
+    expect(update).toHaveBeenCalledWith('b', expect.objectContaining({ depth: 1 }));
   });
 });

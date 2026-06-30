@@ -351,7 +351,7 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
-    test('tab indents first item to depth 1', async ({ page }) => {
+    test('tab is a no-op on the first item (no preceding sibling to nest under)', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -365,16 +365,17 @@ test.describe('list tool (ListItem)', () => {
 
       await firstItem.click();
 
-      // Press Tab - first-in-group items can nest one level
+      // Press Tab — Notion parity: the FIRST item of a list has no preceding sibling
+      // to nest under, so Tab is a strict no-op (it must NOT indent to an orphaned
+      // depth 1). This is the structural-nesting path that text/headers also use.
       await page.keyboard.press('Tab');
 
-      // Save and verify depth is now 1
+      // Save and verify the first item stayed at depth 0 (unchanged).
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
-       
-      expect(savedData?.blocks[0].data.depth).toBe(1);
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
 
     test('shift+tab decreases depth', async ({ page }) => {

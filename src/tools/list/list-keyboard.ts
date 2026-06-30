@@ -337,6 +337,27 @@ export const handleIndent = async(
     ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
     : api.blocks.getCurrentBlockIndex();
   const currentDepth = getDepth();
+
+  /**
+   * Notion parity: a list item can only be indented when there is a preceding
+   * LIST sibling for it to nest under — the same precondition the structural Tab
+   * path enforces (getPrecedingSibling). A FIRST-in-group item (the first block,
+   * or a list item whose previous block is not a list) has nothing to nest under,
+   * so Tab is a strict no-op.
+   *
+   * Without this guard the flat path derives its cap from getMaxAllowedDepth,
+   * which returns 1 for first-in-group items (a deliberate rule for DRAG via
+   * resolveTargetDepth, but wrong for keyboard Tab), so the first bullet of every
+   * list could be wrongly indented to an orphaned depth 1.
+   */
+  const previousBlock = currentBlockIndex > 0
+    ? api.blocks.getBlockByIndex(currentBlockIndex - 1)
+    : undefined;
+
+  if (previousBlock === undefined || previousBlock.name !== TOOL_NAME) {
+    return;
+  }
+
   const maxAllowedDepth = depthValidator.getMaxAllowedDepth(currentBlockIndex);
 
   // Already at the deepest allowed level — nothing to do.

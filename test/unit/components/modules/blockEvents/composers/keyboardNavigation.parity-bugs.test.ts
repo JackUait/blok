@@ -361,6 +361,100 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
     });
   });
 
+  describe('BUG #5c — Cmd/Ctrl/Alt+VERTICAL Arrow does NOT cross-block jump (vertical parity with #5b)', () => {
+    /**
+     * Horizontal modifier+arrow already falls through to native (BUG #5b). Vertical
+     * (Up/Down) lacked the same guard, so Blok intercepted Cmd/Ctrl/Alt+Up/Down and
+     * half-handled it — crossing blocks at a boundary, or leaving the caret stuck
+     * mid-block (observed: Ctrl+ArrowDown in a wrapped paragraph did not move at all).
+     * A modifier+vertical-arrow is a native gesture (Cmd = doc/line ends, Ctrl/Alt =
+     * paragraph/word) and must NEVER trigger Blok's line-by-line cross-block nav.
+     */
+    const modifiers: Array<[string, Partial<KeyboardEvent>]> = [
+      ['Cmd', { metaKey: true }],
+      ['Ctrl', { ctrlKey: true }],
+      ['Alt', { altKey: true }],
+    ];
+
+    for (const [label, mod] of modifiers) {
+      it(`${label}+ArrowDown does NOT call navigateVerticalNext (falls through to native)`, () => {
+        vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+
+        const navigateVerticalNext = vi.fn(() => false);
+        const blok = createBlokModules({
+          Caret: {
+            navigateVerticalNext,
+            navigateNext: vi.fn(() => false),
+            positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          } as unknown as BlokModules['Caret'],
+        });
+        const keyboardNavigation = new KeyboardNavigation(blok);
+        const event = createKeyboardEvent({ key: 'ArrowDown', code: 'ArrowDown', ...mod });
+
+        keyboardNavigation.handleArrowRightAndDown(event);
+
+        expect(navigateVerticalNext).not.toHaveBeenCalled();
+      });
+
+      it(`${label}+ArrowUp does NOT call navigateVerticalPrevious (falls through to native)`, () => {
+        vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+
+        const navigateVerticalPrevious = vi.fn(() => false);
+        const blok = createBlokModules({
+          Caret: {
+            navigateVerticalPrevious,
+            navigatePrevious: vi.fn(() => false),
+            positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          } as unknown as BlokModules['Caret'],
+        });
+        const keyboardNavigation = new KeyboardNavigation(blok);
+        const event = createKeyboardEvent({ key: 'ArrowUp', code: 'ArrowUp', ...mod });
+
+        keyboardNavigation.handleArrowLeftAndUp(event);
+
+        expect(navigateVerticalPrevious).not.toHaveBeenCalled();
+      });
+    }
+
+    it('plain ArrowDown still calls navigateVerticalNext (unchanged line-by-line nav)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+
+      const navigateVerticalNext = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigateVerticalNext,
+          navigateNext: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowDown', code: 'ArrowDown' });
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(navigateVerticalNext).toHaveBeenCalled();
+    });
+
+    it('plain ArrowUp still calls navigateVerticalPrevious (unchanged line-by-line nav)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+
+      const navigateVerticalPrevious = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigateVerticalPrevious,
+          navigatePrevious: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowUp', code: 'ArrowUp' });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      expect(navigateVerticalPrevious).toHaveBeenCalled();
+    });
+  });
+
   describe('BUG #8 — non-indentable Tab is a strict no-op that keeps focus in the editor', () => {
     it('calls preventDefault on the no-op Tab path so native focus never leaves the editor', () => {
       const current = createBlock({ id: 'cur', parentId: null });

@@ -135,6 +135,24 @@ describe('useApiTranslations', () => {
     expect(readOnlyRow?.description).toBe('Включить режим только для чтения');
   });
 
+  it('should attach a translated "when to use" note to methods', () => {
+    const { result: enResult } = renderHook(() => useApiTranslations(), { wrapper });
+    const enSave = enResult.current.apiSections
+      .find((s) => s.id === 'core')
+      ?.methods?.find((m) => m.name === 'save()');
+    expect(enSave?.note).toBeDefined();
+    expect((enSave?.note ?? '').length).toBeGreaterThan(0);
+
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+    const { result: ruResult } = renderHook(() => useApiTranslations(), { wrapper });
+    const ruSave = ruResult.current.apiSections
+      .find((s) => s.id === 'core')
+      ?.methods?.find((m) => m.name === 'save()');
+    expect(ruSave?.note).toBeDefined();
+    expect(ruSave?.note).not.toBe(enSave?.note);
+  });
+
   it('should keep English method descriptions unchanged in English locale', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     const coreSection = result.current.apiSections.find(s => s.id === 'core');

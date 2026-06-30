@@ -3,6 +3,12 @@ export interface ApiMethod {
   returnType: string;
   description: string;
   example?: string;
+  /**
+   * Short "when to use / gotcha" guidance, injected per-locale by
+   * useApiTranslations from `api.<section>.methods.<methodKey>.note`. May
+   * contain `inline code` spans (rendered as chips by ApiMethodCard).
+   */
+  note?: string;
 }
 
 export interface ApiSection {

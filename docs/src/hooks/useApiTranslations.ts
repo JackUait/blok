@@ -101,8 +101,17 @@ export const useApiTranslations = () => {
       const translatedMethods = section.methods?.map((method) => {
         const methodKey = getMethodKey(method.name);
         const descKey = `${translationKey}.methods.${methodKey}.description`;
-        const translated = safeTranslate(t, descKey);
-        return translated !== undefined ? { ...method, description: translated } : method;
+        const noteKey = `${translationKey}.methods.${methodKey}.note`;
+        const translatedDesc = safeTranslate(t, descKey);
+        const translatedNote = safeTranslate(t, noteKey);
+        if (translatedDesc === undefined && translatedNote === undefined) {
+          return method;
+        }
+        return {
+          ...method,
+          ...(translatedDesc !== undefined && { description: translatedDesc }),
+          ...(translatedNote !== undefined && { note: translatedNote }),
+        };
       });
 
       const translatedProperties = section.properties?.map((property) => {

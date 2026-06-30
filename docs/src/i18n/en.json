@@ -94,27 +94,32 @@
         "save": {
           "name": "save()",
           "returnType": "Promise<OutputData>",
-          "description": "Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content."
+          "description": "Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content.",
+          "note": "Call after `await editor.isReady`. The returned JSON is your source of truth — store it and feed it back to `render()`."
         },
         "render": {
           "name": "render(data)",
           "returnType": "Promise<void>",
-          "description": "Renders editor content from previously saved JSON data."
+          "description": "Renders editor content from previously saved JSON data.",
+          "note": "Loads saved content and replaces the current document. To append instead of replace, use `blocks.insertMany()`."
         },
         "focus": {
           "name": "focus(atEnd?)",
           "returnType": "boolean",
-          "description": "Sets focus to the editor. Optionally positions cursor at the end of content."
+          "description": "Sets focus to the editor. Optionally positions cursor at the end of content.",
+          "note": "Pass `true` to place the caret at the very end. For a specific block or offset, use the `caret` API instead."
         },
         "clear": {
           "name": "clear()",
           "returnType": "void",
-          "description": "Removes all blocks from the editor."
+          "description": "Removes all blocks from the editor.",
+          "note": "Wipes all blocks and leaves one empty paragraph. It's undoable — unlike `destroy()`, which tears the instance down."
         },
         "destroy": {
           "name": "destroy()",
           "returnType": "void",
-          "description": "Destroys the editor instance and removes all DOM elements and event listeners."
+          "description": "Destroys the editor instance and removes all DOM elements and event listeners.",
+          "note": "Call from your framework's unmount hook to avoid leaked listeners. The instance is unusable afterwards — create a new `Blok` to start again."
         }
       },
       "properties": {
@@ -217,37 +222,204 @@
     "blocksApi": {
       "title": "Blocks API",
       "badge": "Blocks",
-      "description": "Manage blocks in the editor — create, delete, update, and reorder content."
+      "description": "Manage blocks in the editor — create, delete, update, and reorder content.",
+      "methods": {
+        "blocks": {
+          "clear": {
+            "note": "Same as the top-level `clear()`, exposed on the blocks module. Use when you already hold `editor.blocks`."
+          },
+          "render": {
+            "note": "Replaces the whole document. To add blocks without clearing, use `insert()` or `insertMany()`."
+          },
+          "renderFromHTML": {
+            "note": "Handy for importing legacy HTML, but the result is only as good as the tools' paste handlers. Prefer JSON via `render()` when you control the source."
+          },
+          "delete": {
+            "note": "Without an index it deletes the focused block. Deleting the last block leaves the editor empty, so insert a paragraph if you need a caret target."
+          },
+          "move": {
+            "note": "`toIndex` is in post-removal index space: for a forward move, subtract 1 or the block lands one slot too far."
+          },
+          "getBlockByIndex": {
+            "note": "Returns `undefined` for out-of-range indexes — guard the result before calling methods on it."
+          },
+          "getById": {
+            "note": "The stable way to reference a block across edits, since indexes shift. Returns `null` if the id no longer exists."
+          },
+          "getCurrentBlockIndex": {
+            "note": "Reflects the block holding the caret. Returns `-1` when nothing is focused, so check before using it as an index."
+          },
+          "getBlockIndex": {
+            "note": "Finds where a known block sits right now; pair with `getById()` when you have an id but need a position."
+          },
+          "getBlockByElement": {
+            "note": "Bridges from a raw DOM node (e.g. a click target) back to its block — useful in custom event handlers."
+          },
+          "getChildren": {
+            "note": "Returns the direct children of a container block (a column, toggle, or database). Empty array if it has none."
+          },
+          "getBlocksCount": {
+            "note": "Counts only top-level blocks, not nested children. Use it for bounds before an index-based `insert()` or `move()`."
+          },
+          "insert": {
+            "note": "Every argument is optional — call `insert()` for an empty paragraph, or pass `type`/`data`/`index` for full control. Pass `replace: true` to overwrite the block at `index`."
+          },
+          "insertMany": {
+            "note": "Bulk-insert in one operation (and one undo step) — far cheaper than looping `insert()` for large pastes or imports."
+          },
+          "composeBlockData": {
+            "note": "Builds a tool's default data without inserting anything — useful when you need a valid empty payload for `insert()` or `update()`."
+          },
+          "update": {
+            "note": "Patches data/tunes in place, keeping the block id and type. To change the type, use `convert()` instead."
+          },
+          "convert": {
+            "note": "Both the source and target tools must declare `conversionConfig`, otherwise the call is a no-op. Preserves text where possible."
+          },
+          "splitBlock": {
+            "note": "Use for caret-aware splits (e.g. Enter mid-text); the update + insert land as a single undo entry."
+          },
+          "stopBlockMutationWatching": {
+            "note": "Niche: call before programmatically replacing a block's DOM to suppress spurious `block-changed` events; the next render re-arms it."
+          }
+        }
+      }
     },
     "blockApi": {
       "title": "BlockAPI",
       "badge": "Block",
-      "description": "Interface for working with individual blocks. Returned by blocks.getById(), blocks.getBlockByIndex(), and blocks.insert()."
+      "description": "Interface for working with individual blocks. Returned by blocks.getById(), blocks.getBlockByIndex(), and blocks.insert().",
+      "methods": {
+        "block": {
+          "save": {
+            "note": "Returns just this block's data — handy for inspecting or persisting one block without `editor.save()`'s full walk."
+          },
+          "validate": {
+            "note": "Runs the tool's `validate()` against given data; use it to reject empty or malformed blocks before saving."
+          },
+          "call": {
+            "note": "Escape hatch to invoke a custom method your tool exposes — for behaviour outside the standard BlockTool API."
+          },
+          "dispatchChange": {
+            "note": "Call when you mutate a block outside Blok's knowledge (e.g. an async update) so change events and CRDT sync fire."
+          },
+          "getActiveToolboxEntry": {
+            "note": "Resolves which toolbox variant is active (e.g. Heading 1 vs 2) — useful for reflecting state in custom UI."
+          }
+        }
+      }
     },
     "caretApi": {
       "title": "Caret API",
       "badge": "Caret",
-      "description": "Control cursor position and selection within the editor."
+      "description": "Control cursor position and selection within the editor.",
+      "methods": {
+        "caret": {
+          "setToFirstBlock": {
+            "note": "`position` accepts `'start'`/`'end'`/`'default'`; returns `false` if there's no block to land on."
+          },
+          "setToLastBlock": {
+            "note": "Common after appending content — drop the caret at the end of the new last block with `'end'`."
+          },
+          "setToPreviousBlock": {
+            "note": "Moves relative to the focused block; returns `false` at the top edge, so use the return value to detect boundaries."
+          },
+          "setToNextBlock": {
+            "note": "Mirror of `setToPreviousBlock()`; returns `false` at the bottom edge."
+          },
+          "setToBlock": {
+            "note": "The most flexible setter — target by `BlockAPI`, id, or index. Prefer id/BlockAPI over index, which shifts as blocks move."
+          },
+          "focus": {
+            "note": "Lightweight way to focus the editor without choosing a block; pass `true` for the end. Same as the top-level `focus()`."
+          },
+          "updateLastCaretAfterPosition": {
+            "note": "Call after an async caret move so undo lands the caret where the user ended up, not where the op started."
+          }
+        }
+      }
     },
     "eventsApi": {
       "title": "Events API",
       "badge": "Events",
-      "description": "Subscribe to and manage editor lifecycle events."
+      "description": "Subscribe to and manage editor lifecycle events.",
+      "methods": {
+        "on": {
+          "note": "Subscribe to editor lifecycle/content events. Keep a reference to the same callback so you can `off()` it later."
+        },
+        "off": {
+          "note": "Pass the exact same function reference you subscribed with — anonymous inline callbacks can't be removed."
+        },
+        "emit": {
+          "note": "For tools/plugins to broadcast custom events on the editor bus; app code usually listens with `on()` rather than emits."
+        }
+      }
     },
     "historyApi": {
       "title": "History API",
       "badge": "History",
-      "description": "Control undo/redo functionality for editor operations."
+      "description": "Control undo/redo functionality for editor operations.",
+      "methods": {
+        "history": {
+          "undo": {
+            "note": "Programmatic Ctrl/Cmd+Z. No-op when there's nothing to undo — gate custom buttons on `canUndo()`."
+          },
+          "redo": {
+            "note": "Programmatic Ctrl/Cmd+Shift+Z. Gate custom UI on `canRedo()` so the button disables correctly."
+          },
+          "canUndo": {
+            "note": "Use to enable/disable a custom undo button; pair with `undo()`."
+          },
+          "canRedo": {
+            "note": "Use to enable/disable a custom redo button; pair with `redo()`."
+          },
+          "clear": {
+            "note": "Drops the entire undo stack — call after loading fresh content so users can't undo back into the previous document."
+          }
+        }
+      }
     },
     "saverApi": {
       "title": "Saver API",
       "badge": "Saver",
-      "description": "Save and export editor content."
+      "description": "Save and export editor content.",
+      "methods": {
+        "saver": {
+          "save": {
+            "note": "Identical to `editor.save()`; provided for code that works through the `saver` module. Both await the full block tree."
+          }
+        }
+      }
     },
     "selectionApi": {
       "title": "Selection API",
       "badge": "Selection",
-      "description": "Work with text selection within the editor."
+      "description": "Work with text selection within the editor.",
+      "methods": {
+        "selection": {
+          "findParentTag": {
+            "note": "The standard way for inline tools to detect whether the cursor is already inside their tag (e.g. an `<a>` for a link)."
+          },
+          "expandToTag": {
+            "note": "Grow the selection to wrap a whole element — typically to select an existing mark before replacing or removing it."
+          },
+          "setFakeBackground": {
+            "note": "Keep a visible 'selection' highlight while focus moves to your tool's input. Always pair with a later `removeFakeBackground()`."
+          },
+          "removeFakeBackground": {
+            "note": "Tears down the fake highlight set by `setFakeBackground()`; call when your inline UI closes."
+          },
+          "clearFakeBackground": {
+            "note": "Heavier reset than `removeFakeBackground()` — clears both DOM and internal flags if state got out of sync."
+          },
+          "save": {
+            "note": "Stash the current range before focus leaves the document (e.g. opening a dialog), then bring it back with `restore()`."
+          },
+          "restore": {
+            "note": "Re-applies the range saved by `save()` — the round-trip that lets inline tools survive a focus change."
+          }
+        }
+      }
     },
     "stylesApi": {
       "title": "Styles API",
@@ -257,37 +429,113 @@
     "toolbarApi": {
       "title": "Toolbar API",
       "badge": "Toolbar",
-      "description": "Control the block toolbar and its state."
+      "description": "Control the block toolbar and its state.",
+      "methods": {
+        "toolbar": {
+          "close": {
+            "note": "Programmatically dismiss the block toolbar — e.g. after your custom action runs so the UI doesn't linger."
+          },
+          "open": {
+            "note": "Force the toolbar open for the current block; it normally appears on hover/focus, so use sparingly."
+          },
+          "toggleBlockSettings": {
+            "note": "Open/close the ☰ settings menu in code; pass an explicit boolean to set state rather than flip it."
+          },
+          "toggleToolbox": {
+            "note": "Open/close the + insert (slash) menu programmatically; pass a boolean to force a state."
+          }
+        }
+      }
     },
     "inlineToolbarApi": {
       "title": "InlineToolbar API",
       "badge": "Inline",
-      "description": "Control the inline formatting toolbar (bold, italic, etc.)."
+      "description": "Control the inline formatting toolbar (bold, italic, etc.).",
+      "methods": {
+        "inlineToolbar": {
+          "close": {
+            "note": "Dismiss the formatting popover — useful after a custom inline tool applies its change."
+          },
+          "open": {
+            "note": "Show the formatting popover over the current selection; a no-op without selected text."
+          }
+        }
+      }
     },
     "notifierApi": {
       "title": "Notifier API",
       "badge": "Notifier",
-      "description": "Display notification messages to users."
+      "description": "Display notification messages to users.",
+      "methods": {
+        "notifier": {
+          "show": {
+            "note": "Built-in toast for lightweight feedback. Set `type: 'confirm'` or `'prompt'` to collect a yes/no or text response."
+          }
+        }
+      }
     },
     "sanitizerApi": {
       "title": "Sanitizer API",
       "badge": "Sanitizer",
-      "description": "Clean and sanitize HTML content to prevent XSS attacks."
+      "description": "Clean and sanitize HTML content to prevent XSS attacks.",
+      "methods": {
+        "sanitizer": {
+          "clean": {
+            "note": "Strip unwanted HTML against a rule set before inserting external content — your defence for paste and imported strings."
+          }
+        }
+      }
     },
     "tooltipApi": {
       "title": "Tooltip API",
       "badge": "Tooltip",
-      "description": "Display tooltip hints on UI elements."
+      "description": "Display tooltip hints on UI elements.",
+      "methods": {
+        "tooltip": {
+          "show": {
+            "note": "Imperatively show a tooltip for one-off cases. For hover behaviour prefer `onHover()`, which wires the listeners for you."
+          },
+          "hide": {
+            "note": "Hide whatever tooltip is currently shown; safe to call even if none is visible."
+          },
+          "onHover": {
+            "note": "The ergonomic choice — a tooltip that shows on hover and hides on leave without managing listeners yourself."
+          }
+        }
+      }
     },
     "readOnlyApi": {
       "title": "ReadOnly API",
       "badge": "ReadOnly",
-      "description": "Control the read-only state of the editor."
+      "description": "Control the read-only state of the editor.",
+      "methods": {
+        "readOnly": {
+          "set": {
+            "note": "The preferred way to enter/leave read-only mode. Returns a promise resolving to the new state once applied."
+          },
+          "toggle": {
+            "note": "Deprecated — use `set()`. Kept for compatibility; without an argument it flips the current state."
+          }
+        }
+      }
     },
     "i18nApi": {
       "title": "I18n API",
       "badge": "I18n",
-      "description": "Internationalization support for translating UI strings."
+      "description": "Internationalization support for translating UI strings.",
+      "methods": {
+        "i18n": {
+          "t": {
+            "note": "Look up a UI string from the active dictionary inside a tool, so your tool localises with the editor."
+          },
+          "has": {
+            "note": "Check a key exists before translating, to fall back gracefully when a tool ships partial dictionaries."
+          },
+          "getEnglishTranslation": {
+            "note": "Returns the English value regardless of locale — used to index content for multilingual search."
+          }
+        }
+      }
     },
     "uiApi": {
       "title": "UI API",
@@ -297,12 +545,32 @@
     "listenersApi": {
       "title": "Listeners API",
       "badge": "Listeners",
-      "description": "Manage custom DOM event listeners with automatic cleanup."
+      "description": "Manage custom DOM event listeners with automatic cleanup.",
+      "methods": {
+        "listeners": {
+          "on": {
+            "note": "Managed `addEventListener` — Blok tracks the listener and removes it on `destroy()`, preventing leaks. Keep the returned id to remove it early."
+          },
+          "off": {
+            "note": "Remove a managed listener by element + handler; or use `offById()` if you kept the id from `on()`."
+          },
+          "offById": {
+            "note": "Remove a listener using the id `on()` returned — cleaner than matching element + handler again."
+          }
+        }
+      }
     },
     "toolsApi": {
       "title": "Tools API",
       "badge": "Tools",
-      "description": "Access and manage editor tools."
+      "description": "Access and manage editor tools.",
+      "methods": {
+        "tools": {
+          "getBlockTools": {
+            "note": "Enumerate the registered block tools at runtime — handy for a custom block picker or debugging tool config."
+          }
+        }
+      }
     },
     "outputData": {
       "title": "OutputData",
@@ -461,7 +729,8 @@
         "blockDataLink": "BlockData",
         "suffix": "for the exact shape your `save()` feeds into."
       }
-    }
+    },
+    "whenToUse": "When to use"
   },
   "home": {
     "hero": {

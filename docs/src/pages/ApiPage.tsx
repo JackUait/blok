@@ -23,7 +23,7 @@ export const ApiContent: React.FC = () => {
 
   return (
     <div
-      className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-6 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_14rem] lg:gap-12 pt-24 pb-24"
+      className="mx-auto grid w-full max-w-[110rem] grid-cols-1 gap-10 px-6 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_14rem] lg:gap-12 pt-24 pb-24"
       data-blok-testid="api-docs"
     >
       <div className="hidden lg:block">

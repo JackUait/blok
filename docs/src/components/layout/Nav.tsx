@@ -196,7 +196,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
             className="nav-brand flex shrink-0 items-center gap-1.5 font-display text-xl font-extrabold tracking-tight"
           >
             <Logo size={42} className="nav-brand-mascot" />
-            <img src="/logo-wordmark.png" alt="" className="nav-brand-wordmark h-5 w-auto" />
+            <img src="/logo-wordmark.png" alt="" className="nav-brand-wordmark h-7 w-auto" />
           </Link>
 
           {/* Center search — Airbnb-style pill: dark prompt on the left, a coral

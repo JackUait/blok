@@ -81,6 +81,11 @@ const createMockBlock = (holder: HTMLElement): BlockAPI => ({
   validate: vi.fn().mockResolvedValue(true),
   dispatchChange: vi.fn(),
   getActiveToolboxEntry: vi.fn().mockResolvedValue(undefined),
+  contentIds: [],
+  getChildren: vi.fn().mockReturnValue([]),
+  setParent: vi.fn(),
+  insertChild: vi.fn().mockReturnValue(null),
+  moveChild: vi.fn(),
 });
 
 describe("caret-manager", () => {

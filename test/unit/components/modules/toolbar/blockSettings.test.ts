@@ -771,7 +771,14 @@ describe('BlockSettings', () => {
     if (lastItem && 'name' in lastItem) {
       expect(lastItem.name).toBe('delete');
     }
-    expect(getConvertibleToolsForBlockMock).toHaveBeenCalledWith(block, Array.from(blokMock.Tools.blockTools.values()));
+    // The single-block path now wraps the current block in a BlockAPI (matching
+    // the multi-block path) so it satisfies getConvertibleToolsForBlock's
+    // BlockAPI parameter; assert the wrapper proxies the same underlying block.
+    const [passedBlock, passedTools] = getConvertibleToolsForBlockMock.mock.calls[0];
+
+    expect((passedBlock as { holder: HTMLElement }).holder).toBe(block.holder);
+    expect((passedBlock as { name: string }).name).toBe(block.name);
+    expect(passedTools).toEqual(Array.from(blokMock.Tools.blockTools.values()));
   });
 
   it('returns only common tunes when there are no tool-specific or convertible tunes', async () => {

@@ -15,6 +15,14 @@ export interface Blocks {
   readonly isSyncingFromYjs: boolean;
 
   /**
+   * Returns true while a pointer drag interaction is active.
+   * Framework adapters read this to defer a programmatic `dispatchChange`
+   * mid-drag (such a change is silently dropped by core) and re-dispatch it
+   * once the drag ends.
+   */
+  readonly isPointerDragActive: boolean;
+
+  /**
    * Remove all blocks from Blok zone
    */
   clear(): Promise<void>;

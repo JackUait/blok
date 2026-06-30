@@ -173,6 +173,26 @@ export class DocumentStore {
     const ydata = yblock.get('data') as Y.Map<unknown>;
     const currentValue = ydata.get(key);
 
+    const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
+
+    // Nested OBJECT value backed by a nested Y.Map: deep-merge into the existing
+    // Y.Map instead of replacing it. This (a) compares by ENTRIES so an unchanged
+    // nested key writes nothing — equals(Y.Map, plainObject) was a false-negative
+    // that bumped a spurious first-save undo entry — and (b) keeps the nested
+    // value a Y.Map and touches only changed sub-fields, so concurrent edits to
+    // DIFFERENT sub-fields merge (field-level CRDT) rather than last-writer-wins.
+    if (valueIsPlainObject && currentValue instanceof Y.Map) {
+      if (equals(this.serializer.yMapToObject(currentValue), value)) {
+        return false;
+      }
+
+      this.transact(() => {
+        this.deepAssignYMap(currentValue, value as Record<string, unknown>);
+      }, 'local');
+
+      return true;
+    }
+
     // Skip if value hasn't changed - this prevents creating unnecessary undo entries
     // when block data is synced after mutations that don't actually change data
     // (e.g., marker updates in list items during undo/redo, or table content
@@ -182,10 +202,57 @@ export class DocumentStore {
     }
 
     this.transact(() => {
-      ydata.set(key, value);
+      // Serialize a fresh nested object into a Y.Map so later sub-field edits can
+      // merge; primitives/arrays are stored as-is (arrays are atomic here).
+      ydata.set(key, valueIsPlainObject ? this.serializer.objectToYMap(value as Record<string, unknown>) : value);
     }, 'local');
 
     return true;
+  }
+
+  /**
+   * Recursively assign `source` onto `target` Y.Map, writing ONLY changed leaves
+   * (so untouched sub-fields keep their CRDT identity and merge across peers) and
+   * deleting keys absent from `source`. Nested objects recurse into existing
+   * child Y.Maps; new nested objects are serialized fresh. Must run inside a
+   * transaction (the caller wraps it).
+   */
+  private deepAssignYMap(target: Y.Map<unknown>, source: Record<string, unknown>): void {
+    // Remove keys no longer present.
+    for (const key of Array.from(target.keys())) {
+      if (!Object.prototype.hasOwnProperty.call(source, key)) {
+        target.delete(key);
+      }
+    }
+
+    for (const [key, value] of Object.entries(source)) {
+      this.assignYMapEntry(target, key, value);
+    }
+  }
+
+  /** Assign one key of a nested Y.Map, recursing into child Y.Maps. */
+  private assignYMapEntry(target: Y.Map<unknown>, key: string, value: unknown): void {
+    const isPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
+    const existing = target.get(key);
+
+    if (!isPlainObject) {
+      // Primitive/array leaf: write only when it actually changed.
+      const comparable = existing instanceof Y.Map ? this.serializer.yMapToObject(existing) : existing;
+
+      if (!equals(comparable, value)) {
+        target.set(key, value);
+      }
+
+      return;
+    }
+
+    if (existing instanceof Y.Map) {
+      this.deepAssignYMap(existing, value as Record<string, unknown>);
+
+      return;
+    }
+
+    target.set(key, this.serializer.objectToYMap(value as Record<string, unknown>));
   }
 
   /**

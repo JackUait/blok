@@ -1,7 +1,7 @@
-import type { BlockToolData } from '../../types/tools';
-import type { BlockTuneData } from '../../types/block-tunes/block-tune-data';
-import type { OutputBlockData, OutputData } from '../../types/data-formats/output-data';
-import type { MarkdownImportConfig } from '../markdown/types';
+import type { BlockToolData } from '../../../types/tools';
+import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
+import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
+import type { MarkdownImportConfig } from '../../markdown/types';
 
 /**
  * Where to place the caret within a block. `position` selects the input

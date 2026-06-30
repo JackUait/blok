@@ -208,6 +208,17 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Returns true while a pointer drag interaction is active.
+   * The read-only counterpart of {@link setPointerDragActive}; exposed so
+   * framework adapters can defer a programmatic `dispatchChange` mid-drag
+   * (a change dispatched while this is true is silently dropped by the
+   * `blockDidMutated` gate) and re-dispatch it on drag-end.
+   */
+  public get isPointerDragActive(): boolean {
+    return this._isPointerDragActive;
+  }
+
+  /**
    * Index of current working block
    * @type {number}
    */

@@ -305,6 +305,84 @@ describe('DocumentStore', () => {
 
       undoManager.destroy();
     });
+
+    it('skips update when a NESTED OBJECT value is deeply equal (no spurious first-save undo entry)', () => {
+      // A nested object (e.g. database-row properties) is serialized as a nested
+      // Y.Map. equals(Y.Map, plainObject) was a false-negative, so the FIRST sync
+      // after load always wrote + bumped an undo entry even when nothing changed.
+      store.fromJSON([
+        { id: 'block1', type: 'database-row', data: { properties: { status: 'todo', priority: 1 } } },
+      ]);
+
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Same content, new reference — must be a no-op.
+      store.updateBlockData('block1', 'properties', { status: 'todo', priority: 1 });
+
+      expect(undoManager.undoStack.length).toBe(initialStackLength);
+      expect(store.toJSON()[0].data.properties).toEqual({ status: 'todo', priority: 1 });
+
+      undoManager.destroy();
+    });
+
+    it('updates a changed sub-field IN PLACE, keeping the nested value a merge-capable Y.Map', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'database-row', data: { properties: { status: 'todo', priority: 1 } } },
+      ]);
+
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+      const initialStackLength = undoManager.undoStack.length;
+
+      // Change only `status`; `priority` is unchanged.
+      store.updateBlockData('block1', 'properties', { status: 'done', priority: 1 });
+
+      expect(undoManager.undoStack.length).toBe(initialStackLength + 1);
+      expect(store.toJSON()[0].data.properties).toEqual({ status: 'done', priority: 1 });
+
+      // The nested value stays a Y.Map (not flattened to a plain object), so
+      // concurrent edits to DIFFERENT sub-fields can merge rather than clobber.
+      const yblock = store.getBlockById('block1');
+      const props = (yblock?.get('data') as Y.Map<unknown>).get('properties');
+
+      expect(props instanceof Y.Map).toBe(true);
+    });
+
+    it('merges concurrent edits to different sub-fields of a nested object (field-level CRDT)', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'database-row', data: { properties: { status: 'todo', priority: 1 } } },
+      ]);
+
+      // A second peer started from the same state.
+      const peer = createDocumentStore();
+      const baseUpdate = Y.encodeStateAsUpdate(
+        (store as unknown as { ydoc: Y.Doc }).ydoc
+      );
+
+      Y.applyUpdate((peer as unknown as { ydoc: Y.Doc }).ydoc, baseUpdate);
+
+      // Each peer edits a DIFFERENT sub-field of the same nested object.
+      store.updateBlockData('block1', 'properties', { status: 'done', priority: 1 });
+      peer.updateBlockData('block1', 'properties', { status: 'todo', priority: 5 });
+
+      // Exchange updates both ways.
+      Y.applyUpdate(
+        (store as unknown as { ydoc: Y.Doc }).ydoc,
+        Y.encodeStateAsUpdate((peer as unknown as { ydoc: Y.Doc }).ydoc)
+      );
+      Y.applyUpdate(
+        (peer as unknown as { ydoc: Y.Doc }).ydoc,
+        Y.encodeStateAsUpdate((store as unknown as { ydoc: Y.Doc }).ydoc)
+      );
+
+      // Both sub-field edits survive — not last-writer-wins on the whole object.
+      expect(store.toJSON()[0].data.properties).toEqual({ status: 'done', priority: 5 });
+      expect(peer.toJSON()[0].data.properties).toEqual({ status: 'done', priority: 5 });
+    });
   });
 
   describe('getBlockById', () => {

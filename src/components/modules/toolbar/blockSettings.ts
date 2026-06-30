@@ -417,7 +417,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           selectedBlocks.map((block) => new BlockAPI(block)),
           allBlockTools
         )
-      : await getConvertibleToolsForBlock(currentBlock, allBlockTools);
+      : await getConvertibleToolsForBlock(new BlockAPI(currentBlock), allBlockTools);
 
     const convertToItems = convertibleTools.reduce<PopoverItemParams[]>((result, tool) => {
       if (tool.toolbox === undefined) {

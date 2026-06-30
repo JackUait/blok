@@ -82,6 +82,7 @@ type BlockManagerMock = {
   update: ReturnType<typeof vi.fn>;
   convert: ReturnType<typeof vi.fn>;
   splitBlockWithData: ReturnType<typeof vi.fn>;
+  isPointerDragActive: boolean;
 };
 
 const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub() ]): BlockManagerMock => {
@@ -222,6 +223,7 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
 
       return newBlock;
     }) as ReturnType<typeof vi.fn>,
+    isPointerDragActive: false,
   };
 
   return blockManager;
@@ -385,6 +387,18 @@ describe('BlocksAPI', () => {
       blockManager.currentBlockIndex = 2;
 
       expect(blocksApi.getCurrentBlockIndex()).toBe(2);
+    });
+
+    it('exposes live pointer-drag state via isPointerDragActive getter', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      expect(blocksApi.methods.isPointerDragActive).toBe(false);
+
+      blockManager.isPointerDragActive = true;
+
+      // Reads the LIVE flag each access (getter, not a snapshotted value),
+      // so the Vue commit-debounce can defer a dispatchChange mid-drag.
+      expect(blocksApi.methods.isPointerDragActive).toBe(true);
     });
   });
 

@@ -31,6 +31,10 @@ type Classification =
 
 const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
   isSyncingFromYjs: { kind: 'exposed' },
+  isPointerDragActive: {
+    kind: 'internal',
+    reason: 'read-side of the pointer-drag suppression flag; consumed by adapter commit-debounce, not app code',
+  },
   clear: { kind: 'exposed' },
   render: { kind: 'exposed' },
   renderFromHTML: { kind: 'exposed' },

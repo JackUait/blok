@@ -362,6 +362,24 @@ export class KeyboardNavigation extends BlockEventComposer {
    * their own keydowns).
    * @param block - the nested block where Enter/Backspace was pressed
    */
+  /**
+   * True when `block`'s immediate parent is a toggle container — the toggle tool
+   * or a toggle heading, both of which render the `data-blok-toggle-open` marker on
+   * their wrapper. Column and callout containers do not render it, so they keep
+   * their own empty-child behaviour. Used to decide whether a no-previous-sibling
+   * Backspace should outdent the child out of the toggle (Notion parity).
+   * @param block - the block whose parent is inspected
+   */
+  private hasToggleParent(block: Block): boolean {
+    if (block.parentId === null) {
+      return false;
+    }
+
+    const parent = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    return parent !== undefined && parent.holder.querySelector('[data-blok-toggle-open]') !== null;
+  }
+
   private shouldOutdentNestedBlock(block: Block): boolean {
     if (block.parentId == null || block.name === LIST_TOOL_NAME || this.isCurrentBlockInsideTableCell) {
       return false;
@@ -626,6 +644,22 @@ export class KeyboardNavigation extends BlockEventComposer {
        * shouldOutdentNestedBlock and keep their own empty-child behaviour below.
        */
       if (this.shouldOutdentNestedBlock(currentBlock)) {
+        this.outdentNestedBlockOnBackspace(currentBlock);
+
+        return;
+      }
+
+      /**
+       * Notion parity — a NON-EMPTY first/only child of a toggle outdents OUT of
+       * the toggle to become a following sibling at the toggle's level, preserving
+       * its text. This mirrors the plain-parent "Backspace removes the indent"
+       * behaviour above; it is NOT a cross-container merge (the previous toggle's
+       * content is untouched). Only toggle containers (the toggle tool and toggle
+       * headings, both detected via the `data-blok-toggle-open` marker) take this
+       * path — column/callout keep their own empty-child handling below. Empty
+       * children still fall through to remove-and-focus-next.
+       */
+      if (!currentBlock.isEmpty && this.hasToggleParent(currentBlock)) {
         this.outdentNestedBlockOnBackspace(currentBlock);
 
         return;

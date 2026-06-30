@@ -171,6 +171,17 @@ export class BlockSelection extends Module {
   private containerBlocksSelected = false;
 
   /**
+   * Flag used to define the subtree-scoped intermediate stage (Notion parity).
+   * When the working Block owns nested descendants (its `contentIds` is
+   * non-empty), the escalation after the single-Block stage selects the working
+   * Block PLUS its entire subtree before climbing to the container/all-Blocks
+   * stages. This flag records that the subtree stage has already happened so a
+   * further Cmd+A keeps escalating.
+   * @type {boolean}
+   */
+  private subtreeBlocksSelected = false;
+
+  /**
    * SelectionUtils instance
    * @type {SelectionUtils}
    */
@@ -269,6 +280,7 @@ export class BlockSelection extends Module {
     this.nativeInputSelected = false;
     this.readyToBlockSelection = false;
     this.containerBlocksSelected = false;
+    this.subtreeBlocksSelected = false;
 
     /**
      * Disable navigation mode when selection is cleared
@@ -346,7 +358,6 @@ export class BlockSelection extends Module {
      * so paste can restore the full toggle with its children).
      */
     const savedData = this.serializeBlocksForClipboard(this.selectedBlocks);
-    const textPlainChunks: string[] = [];
 
     this.selectedBlocks.forEach((block) => {
       const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
@@ -355,8 +366,6 @@ export class BlockSelection extends Module {
       wrapper.innerHTML = cleanHTML;
 
       const textContent = wrapper.textContent ?? '';
-
-      textPlainChunks.push(textContent);
 
       const hasElementChildren = Array.from(wrapper.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
       const shouldWrapWithParagraph = !hasElementChildren && textContent.trim().length > 0;
@@ -374,13 +383,15 @@ export class BlockSelection extends Module {
     });
 
     /**
-     * The text/plain flavor carries the rendered text with Markdown syntax
-     * stripped — matching Notion's default Cmd+C, which puts plain rendered text
-     * (no `#`/`**`/`- `) into text/plain. Markdown is produced only by the
-     * explicit "Copy as Markdown" command ({@link copySelectedBlocksAsMarkdown},
-     * bound to Cmd/Ctrl+Shift+C), mirroring Notion.
+     * The text/plain flavor carries Markdown — headings as `#`, bold as `**`,
+     * lists as `- `/`1. `, and to-dos as `- [x]`/`- [ ]` with structural
+     * indentation — matching Notion's default Cmd+C, which puts marker-bearing
+     * Markdown (not stripped text) into text/plain so structure survives in
+     * plain-text-only targets. The explicit "Copy as Markdown" command
+     * ({@link copySelectedBlocksAsMarkdown}, bound to Cmd/Ctrl+Shift+C) emits the
+     * same Markdown but writes it via navigator.clipboard.writeText.
      */
-    const textPlain = textPlainChunks.join('\n\n');
+    const textPlain = blocksToMarkdown(savedData);
     const textHTML = fakeClipboard.innerHTML;
 
     /**
@@ -794,10 +805,26 @@ export class BlockSelection extends Module {
       event.preventDefault();
 
       /**
+       * Subtree-scoped intermediate stage (Notion parity): when the working
+       * Block owns nested descendants (Tab-nested children, etc.), the first
+       * escalation selects the working Block PLUS its entire subtree before
+       * climbing to the container/all-Blocks stages. This is the only stage that
+       * fires for a root-level parent (parentId === null) whose children were
+       * nested via Tab — previously it jumped straight to all-Blocks, never
+       * selecting the subtree it owns.
+       */
+      if (workingBlock.contentIds.length > 0 && !this.subtreeBlocksSelected) {
+        this.selectSubtree(workingBlock);
+        this.subtreeBlocksSelected = true;
+
+        return;
+      }
+
+      /**
        * Container-scoped intermediate stage (Notion parity): when the working
-       * Block is nested inside a container, the first escalation selects the
-       * container's sibling Blocks; only the next press selects every Block in
-       * the document.
+       * Block is nested inside a container, the next escalation selects the
+       * container's sibling Blocks; only the press after that selects every
+       * Block in the document.
        */
       if (workingBlock.parentId !== null && !this.containerBlocksSelected) {
         this.selectContainerBlocks(workingBlock);
@@ -814,6 +841,7 @@ export class BlockSelection extends Module {
       this.needToSelectAll = false;
       this.readyToBlockSelection = false;
       this.containerBlocksSelected = false;
+      this.subtreeBlocksSelected = false;
 
       return;
     }
@@ -860,6 +888,50 @@ export class BlockSelection extends Module {
     const blockText = normalize(block.pluginsContent.textContent ?? '');
 
     return blockText.length > 0 && selectedText === blockText;
+  }
+
+  /**
+   * Select the working Block plus its entire nested subtree (a DFS over
+   * `contentIds`). Used by the Cmd+A escalation as the stage that selects an
+   * item together with the descendants it owns — including a root-level parent
+   * whose children were nested via Tab.
+   * @param block - the Block whose subtree to select
+   */
+  private selectSubtree(block: Block): void {
+    const { BlockManager } = this.Blok;
+
+    /**
+     * Save selection — will be restored when closeSelection fires
+     */
+    this.selection.save();
+
+    const selection = SelectionUtils.get();
+
+    selection?.removeAllRanges();
+
+    const select = (current: Block): void => {
+      current.selected = true;
+
+      for (const childId of current.contentIds) {
+        const child = BlockManager.getBlockById(childId);
+
+        if (child !== undefined) {
+          select(child);
+        }
+      }
+    };
+
+    select(block);
+
+    this.clearCache();
+
+    /** close InlineToolbar when we selected the subtree */
+    this.Blok.InlineToolbar.close();
+
+    /**
+     * Show toolbar for multi-block selection
+     */
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
   }
 
   /**

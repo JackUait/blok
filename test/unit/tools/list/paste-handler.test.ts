@@ -437,6 +437,78 @@ describe('paste-handler', () => {
       expect(result).toBe(3);
     });
 
+    /**
+     * Notion parity (M-18): rendered HTML from generic web pages (copied <ul>/<ol>)
+     * carries no aria-level; depth lives purely in DOM nesting. Count ancestor
+     * <ul>/<ol> elements — the enclosing list is depth 0, deeper items have more
+     * ancestor lists. Mirrors the offline CLI converter.
+     */
+    describe('M-18 — DOM-nesting depth fallback (no aria-level)', () => {
+      it('reads depth from nested <ul> structure (child <ul> inside the parent <li>)', () => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+          <ul>
+            <li id="p">Parent
+              <ul>
+                <li id="c">Child
+                  <ul>
+                    <li id="g">Grandchild</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        `;
+
+        const parent = wrapper.querySelector('#p') as HTMLElement;
+        const child = wrapper.querySelector('#c') as HTMLElement;
+        const grandchild = wrapper.querySelector('#g') as HTMLElement;
+
+        expect(extractDepthFromPastedContent(parent)).toBe(0);
+        expect(extractDepthFromPastedContent(child)).toBe(1);
+        expect(extractDepthFromPastedContent(grandchild)).toBe(2);
+      });
+
+      it('reads depth from nested <ol> structure', () => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+          <ol>
+            <li id="o1">One
+              <ol>
+                <li id="o2">One.One</li>
+              </ol>
+            </li>
+          </ol>
+        `;
+
+        expect(extractDepthFromPastedContent(wrapper.querySelector('#o1') as HTMLElement)).toBe(0);
+        expect(extractDepthFromPastedContent(wrapper.querySelector('#o2') as HTMLElement)).toBe(1);
+      });
+
+      it('returns 0 for a detached item with no list ancestors', () => {
+        const content = document.createElement('li');
+        content.textContent = 'orphan';
+
+        expect(extractDepthFromPastedContent(content)).toBe(0);
+      });
+
+      it('prioritizes aria-level over DOM nesting when both are present', () => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+          <ul>
+            <li>Parent
+              <ul>
+                <li id="c" aria-level="4">Child with explicit level</li>
+              </ul>
+            </li>
+          </ul>
+        `;
+
+        // aria-level=4 → depth 3, even though DOM nesting would say 1.
+        expect(extractDepthFromPastedContent(wrapper.querySelector('#c') as HTMLElement)).toBe(3);
+      });
+    });
+
     it('handles Google Docs nested list HTML structure', () => {
       // Simulate actual Google Docs HTML structure for nested lists
       const wrapper = document.createElement('div');

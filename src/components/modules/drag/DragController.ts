@@ -686,7 +686,7 @@ export class DragController extends Module {
     if (e.altKey) {
       void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
     } else {
-      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge);
+      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, e.clientX);
     }
 
     this.cleanup(false, e.altKey);
@@ -806,7 +806,8 @@ export class DragController extends Module {
     sourceBlock: Block,
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom'
+    edge: 'top' | 'bottom',
+    clientX?: number
   ): void {
     // History integration: wrap the entire drop (array move + every
     // subsequent `setBlockParent`) in a single `YjsManager.transactMoves`
@@ -830,20 +831,21 @@ export class DragController extends Module {
 
     if (yjsManager !== undefined && typeof yjsManager.transactMoves === 'function') {
       yjsManager.transactMoves(() => {
-        this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge);
-      });
+        this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX);
+      }, true);
 
       return;
     }
 
-    this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge);
+    this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX);
   }
 
   private handleDropImpl(
     sourceBlock: Block,
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom'
+    edge: 'top' | 'bottom',
+    clientX?: number
   ): void {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
@@ -866,7 +868,7 @@ export class DragController extends Module {
     // Applied below to non-list blocks; list items derive their own depth via
     // the list tool's moved() hook.
     const dropDepth = this.targetDetector
-      ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock)
+      ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock, clientX)
       : 0;
 
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);

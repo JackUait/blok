@@ -38,6 +38,14 @@ type BlocksStoreProxy = BlocksStore & {
 };
 
 /**
+ * Tool name of the standalone collapsible "toggle list" tool. Used by convert()
+ * to distinguish a toggle LIST source (children stay nested on convert, M-5)
+ * from a toggle HEADING source (children released, like the header tune switch).
+ * Kept as a local literal to avoid a core → tool import dependency.
+ */
+const TOGGLE_TOOL_NAME = 'toggle';
+
+/**
  * @typedef {BlockManager} BlockManager
  * @property {number} currentBlockIndex - Index of current working block
  * @property {Proxy} _blocks - Proxy for Blocks instance {@link Blocks}
@@ -1008,7 +1016,14 @@ export class BlockManager extends Module {
     //     BlockMoved through `move()` already,
     //   - Yjs sync (undo/redo/remote) which drives re-renders via its own path.
     const actualNewParentId = block.parentId;
-    const isDragMove = this.Blok.YjsManager.isInMoveGroup || this._isPointerDragActive;
+    /**
+     * Only a DRAG move group (or an adapter-flagged pointer drag) fires the tool
+     * MOVED hook itself via the drag `move()` pipeline, so skip it here to avoid a
+     * double-fire. A KEYBOARD move group (Tab/Shift+Tab nesting) does NOT fire
+     * MOVED elsewhere, so this path must fire it — otherwise a list item nested via
+     * the keyboard updates its model (parentId) but never re-renders its indent.
+     */
+    const isDragMove = this.Blok.YjsManager.isDragMoveGroupActive || this._isPointerDragActive;
 
     if (actualNewParentId !== oldParentId && !this.yjsSync.isSyncingFromYjs && !isDragMove) {
       const index = this.repository.getBlockIndex(block);
@@ -1255,23 +1270,28 @@ export class BlockManager extends Module {
    */
   public async convert(block: Block, targetToolName: string, blockDataOverrides?: BlockToolData): Promise<Block> {
     /**
-     * Notion parity: turning a TOGGLE (toggle tool or toggle heading) into a
-     * non-toggle target via the "Turn into" menu must RELEASE its children as
-     * following siblings — exactly what the "Toggle heading" tune switch already
-     * does (setToggleable(false) → releaseChildrenAsSiblings). Without this, the
-     * generic convert() → replace() path RE-NESTS the children under the now-plain
-     * block, so the two UIs disagree.
+     * Notion parity: turning a TOGGLE HEADING into a non-toggle target via the
+     * "Turn into" menu must RELEASE its children as following siblings — exactly
+     * what the "Toggle heading" tune switch already does (setToggleable(false) →
+     * releaseChildrenAsSiblings). Without this, the generic convert() → replace()
+     * path RE-NESTS the children under the now-plain heading, so the two UIs
+     * disagree. Notion releases heading children on this conversion.
      *
-     * Release the children first via `setBlockParent(child, null)` — the same
-     * Yjs-correct path the tune switch uses — which also empties the source's
-     * contentIds so the subsequent replace() reparents nothing. The toggle source
-     * is detected by the `data-blok-toggle-open` marker both the toggle tool and the
-     * toggle heading render (callout/column do not).
+     * Notion parity M-5: a TOGGLE LIST (the standalone `toggle` tool) is the
+     * opposite — converting it to a non-toggle type keeps its children NESTED one
+     * level under the new block; only the collapse affordance disappears. So the
+     * toggle-list source must fall through to the generic convert() → replace()
+     * path, which re-nests children (block-mutation.replace → reparentChildren).
+     *
+     * Both sources render the same `data-blok-toggle-open` marker, so the
+     * heading-only release is gated additionally on the source NOT being the
+     * toggle-list tool. (callout/column render no toggle marker at all.)
      */
     const sourceIsToggle = block.holder.querySelector('[data-blok-toggle-open]') !== null;
+    const sourceIsToggleList = block.name === TOGGLE_TOOL_NAME;
     const targetIsToggleHeader = targetToolName === 'header' && blockDataOverrides?.isToggleable === true;
 
-    if (sourceIsToggle && !targetIsToggleHeader) {
+    if (sourceIsToggle && !sourceIsToggleList && !targetIsToggleHeader) {
       this.releaseChildrenToRoot(block);
     }
 

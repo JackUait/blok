@@ -39,7 +39,52 @@ export interface DepthResolutionContext {
   nextDepth: number;
   /** Skip the match-next / match-previous promotions (group moves preserve relative structure). */
   skipDepthPromotion?: boolean;
+  /**
+   * The raw discrete indent step the user's cursor sits at, derived from its
+   * horizontal position at the drop gap (see {@link selectPointerDepth}). It
+   * takes over from the auto-promotion heuristics — clamped to
+   * `[0, previousDepth + 1]` — ONLY when (a) a real nesting-context predecessor
+   * exists and (b) the cursor is inside the indent-selection band near the
+   * content's left edge (no deeper than {@link POINTER_ENGAGE_SLACK} steps past
+   * the deepest legal indent). A cursor far to the right — e.g. released over the
+   * block's text during a plain vertical reorder — is NOT an indent gesture and
+   * falls through to auto-resolution, so ordinary drops keep their existing
+   * depth. `undefined` (no cursor info, e.g. unit tests / the parity guard)
+   * leaves auto-resolution untouched.
+   */
+  pointerDepth?: number;
 }
+
+/**
+ * How many indent steps PAST the deepest legal indent the cursor may sit and
+ * still count as a deliberate indent gesture. Beyond this the cursor is treated
+ * as "released to the right over the content" (a plain vertical reorder), and
+ * the depth falls back to neighbour-based auto-resolution. Keeps the horizontal
+ * indent control scoped to the narrow zone near the content's left edge.
+ */
+export const POINTER_ENGAGE_SLACK = 1;
+
+/**
+ * Maps a cursor X position to a discrete indent step. The drop gap's depth-0
+ * anchor is `baseLeft` (the editor content's left edge); every `indentPerLevel`
+ * pixels to the right is one deeper level. Negative offsets (cursor left of the
+ * anchor, e.g. still over the drag-handle gutter) clamp to 0, so a plain
+ * vertical drag defaults to root and the user must deliberately move right to
+ * nest. The upper bound is applied later by {@link resolveTargetDepth} (it needs
+ * the neighbour context), so this only floors at 0.
+ *
+ * @param clientX - cursor X position (viewport px)
+ * @param baseLeft - X of the depth-0 anchor (editor content left edge)
+ * @param indentPerLevel - px per indent level
+ * @returns the snapped indent step (0 or greater)
+ */
+export const selectPointerDepth = (clientX: number, baseLeft: number, indentPerLevel: number): number => {
+  if (indentPerLevel <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round((clientX - baseLeft) / indentPerLevel));
+};
 
 /**
  * THE single source of truth for "what depth does a block land at when dropped
@@ -53,7 +98,9 @@ export interface DepthResolutionContext {
  * to be hand-mirrored in two functions that silently drifted, which is exactly
  * how "nest from the bottom" and the paragraph-before-list mismatch happened.)
  *
- * Rules:
+ * Rules (the cursor-driven override in {@link DepthResolutionContext.pointerDepth}
+ * takes precedence over 2–4 when engaged; otherwise these neighbour-based rules
+ * apply):
  * 1. Cap at `maxAllowed = previousIsListItem ? previousDepth + 1 : 1`. A non-list
  *    (or absent) predecessor still allows ONE level — a list may begin nested,
  *    matching {@link ListDepthValidator.getMaxAllowedDepth}'s first-in-group rule.
@@ -63,9 +110,30 @@ export interface DepthResolutionContext {
  *    shallower/absent next item must not pull the drop back to root.
  */
 export const resolveTargetDepth = (context: DepthResolutionContext): number => {
-  const { currentDepth, previousIsListItem, previousDepth, nextIsListItem, nextDepth, skipDepthPromotion } = context;
+  const { currentDepth, previousIsListItem, previousDepth, nextIsListItem, nextDepth, skipDepthPromotion, pointerDepth } = context;
 
   const maxAllowedDepth = previousIsListItem ? previousDepth + 1 : 1;
+
+  // Cursor-driven nesting (Notion's horizontal drag-to-indent). The cursor's raw
+  // indent step wins over the auto heuristics — clamped to [0, previousDepth + 1]
+  // — but only when:
+  //   1. there is a real nesting-context predecessor to nest under (without one
+  //      there is no legal parent, so "drag right" must NOT nest a paragraph
+  //      under a plain paragraph), and
+  //   2. the cursor is inside the indent-selection band: no deeper than
+  //      POINTER_ENGAGE_SLACK steps past the deepest legal indent. A cursor far
+  //      to the right (released over the block's text — exactly what a plain
+  //      vertical reorder does) is not an indent gesture and falls through to
+  //      auto-resolution, so ordinary drops keep their existing depth.
+  // `pointerDepth === undefined` leaves every existing path (and the
+  // indicator/drop parity guard) byte-for-byte unchanged.
+  if (
+    pointerDepth !== undefined &&
+    previousIsListItem &&
+    pointerDepth <= maxAllowedDepth + POINTER_ENGAGE_SLACK
+  ) {
+    return Math.max(0, Math.min(pointerDepth, maxAllowedDepth));
+  }
 
   if (currentDepth > maxAllowedDepth) {
     return maxAllowedDepth;

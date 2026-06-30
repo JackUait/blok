@@ -34,7 +34,7 @@ import {
   updateMarkersInRange,
   updateAllOrderedListMarkers,
 } from './list-helpers';
-import { handleEnter, handleBackspace, handleIndent, handleOutdent } from './list-keyboard';
+import { handleEnter, handleBackspace, handleIndent, handleOutdent, toggleChecklistChecked } from './list-keyboard';
 import { renderListItem } from './list-lifecycle';
 import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
@@ -392,6 +392,15 @@ export class ListItem implements BlockTool {
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
+    // Notion parity (m-11): Cmd/Ctrl+Enter toggles a to-do's checkbox IN PLACE,
+    // it does not split or create a new item.
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && this._data.style === 'checklist') {
+      event.preventDefault();
+      void this.toggleChecked();
+
+      return;
+    }
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void this.handleEnter();
@@ -427,15 +436,59 @@ export class ListItem implements BlockTool {
        * carrier — handleIndent caps at the max allowed depth, handleOutdent
        * guards at depth 0. Structurally nested items fall through to the shared
        * handler.
+       *
+       * Notion parity (M-2): an item whose previous block is a NON-list block
+       * (paragraph/heading) must NOT be handled here. The flat handleIndent has
+       * nothing to nest under (its first-in-group guard no-ops), and swallowing
+       * the event with preventDefault would short-circuit the shared structural
+       * handler that DOES indent type-agnostically (nesting the item as the last
+       * child of the preceding paragraph/heading). Leave the event un-prevented
+       * so that handler runs.
+       *
+       * Notion parity (M-9): an un-nested list item (flat depth 0) must nest
+       * STRUCTURALLY under its preceding sibling so the indent survives a
+       * save()/reload — exactly like the multi-select Tab path. Only keep the
+       * flat indent for items already carried by a flat `data.depth` (> 0), where
+       * the cap-based depth bump must be preserved (drag/authored nesting).
        */
+      const previousBlockIsList = this.getPreviousBlock()?.name === TOOL_NAME;
+
       if (event.shiftKey && this.getDepth() > 0) {
         event.preventDefault();
         void this.handleOutdent();
-      } else if (!event.shiftKey) {
+      } else if (!event.shiftKey && previousBlockIsList && this.getDepth() > 0) {
         event.preventDefault();
         void this.handleIndent();
       }
     }
+  }
+
+  /**
+   * The block immediately preceding this list item in the document order, or
+   * undefined when this is the first block.
+   */
+  private getPreviousBlock(): { name: string } | undefined {
+    const currentBlockIndex = this.blockId
+      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
+      : this.api.blocks.getCurrentBlockIndex();
+
+    return currentBlockIndex > 0
+      ? this.api.blocks.getBlockByIndex(currentBlockIndex - 1)
+      : undefined;
+  }
+
+  private async toggleChecked(): Promise<void> {
+    const context = {
+      api: this.api,
+      blockId: this.blockId,
+      data: this._data,
+      element: this._element,
+      getContentElement: this.getContentElement.bind(this),
+      syncContentFromDOM: this.syncContentFromDOM.bind(this),
+      getDepth: this.getDepth.bind(this),
+    };
+
+    await toggleChecklistChecked(context);
   }
 
   private async handleEnter(): Promise<void> {
@@ -463,7 +516,7 @@ export class ListItem implements BlockTool {
       getDepth: this.getDepth.bind(this),
     };
 
-    await handleBackspace(context, event, this.depthValidator);
+    await handleBackspace(context, event);
   }
 
   private async handleIndent(): Promise<void> {

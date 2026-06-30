@@ -386,13 +386,12 @@ describe('BlockSelectionKeys', () => {
     });
 
     describe('indent (Tab)', () => {
-      it('allows indent when first selected block is at index 0 (first-in-group)', async () => {
-        const mockListBlock = createBlock({ name: 'list', id: 'first-list' });
-        const depthAttr = document.createElement('span');
-        depthAttr.setAttribute('data-list-depth', '0');
-        mockListBlock.holder.appendChild(depthAttr);
-
-        const updatedBlock = createBlock({ name: 'list', id: 'first-list-updated' });
+      it('is a no-op when the first selected list item is the first block (nothing to nest under)', () => {
+        // M-9: multi-select Tab reparents STRUCTURALLY. The first block has no
+        // preceding sibling, so there is nothing to nest under — no orphan depth-1.
+        const mockListBlock = createBlock({ name: 'list', id: 'first-list', parentId: null });
+        const blocks = [mockListBlock];
+        const setBlockParent = vi.fn();
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
@@ -400,32 +399,30 @@ describe('BlockSelectionKeys', () => {
             clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
-            getBlockByIndex: vi.fn(() => mockListBlock),
+            blocks,
             getBlockIndex: vi.fn(() => 0),
-            update: vi.fn(() => Promise.resolve(updatedBlock)),
+            getBlockByIndex: vi.fn(() => mockListBlock),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
           } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-        await blockSelectionKeys.handleIndent(event);
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const result = blockSelectionKeys.handleIndent(event);
 
+        expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
-        expect(blok.BlockManager.update).toHaveBeenCalled();
-        expect(blok.BlockManager.update).toHaveBeenCalledWith(mockListBlock, expect.objectContaining({ depth: 1 }));
-        expect(updatedBlock.selected).toBe(true);
-        expect(blok.BlockSelection.clearCache).toHaveBeenCalled();
+        expect(setBlockParent).not.toHaveBeenCalled();
       });
 
-      it('allows indent when previous block is not a list (first-in-group)', async () => {
-        const mockListBlock = createBlock({ name: 'list', id: 'list-block' });
-        const depthAttr = document.createElement('span');
-        depthAttr.setAttribute('data-list-depth', '0');
-        mockListBlock.holder.appendChild(depthAttr);
-
-        const mockPreviousBlock = createBlock({ name: 'paragraph', id: 'prev-block' });
-        const updatedBlock = createBlock({ name: 'list', id: 'list-block-updated' });
+      it('nests a list item structurally under a preceding non-list block (M-2 parity)', () => {
+        // M-9: a first-in-group list item below a paragraph nests under that
+        // paragraph via setBlockParent — not a flat orphaned depth bump.
+        const mockPreviousBlock = createBlock({ name: 'paragraph', id: 'prev-block', parentId: null });
+        const mockListBlock = createBlock({ name: 'list', id: 'list-block', parentId: null });
+        const blocks = [mockPreviousBlock, mockListBlock];
+        const setBlockParent = vi.fn();
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
@@ -433,22 +430,21 @@ describe('BlockSelectionKeys', () => {
             clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
-            getBlockIndex: vi.fn(() => 1),
-            getBlockByIndex: vi.fn((index: number) => index === 0 ? mockPreviousBlock : mockListBlock),
-            update: vi.fn(() => Promise.resolve(updatedBlock)),
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockByIndex: vi.fn((index: number) => blocks[index] ?? null),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
           } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-        await blockSelectionKeys.handleIndent(event);
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const result = blockSelectionKeys.handleIndent(event);
 
+        expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
-        expect(blok.BlockManager.update).toHaveBeenCalled();
-        expect(blok.BlockManager.update).toHaveBeenCalledWith(mockListBlock, expect.objectContaining({ depth: 1 }));
-        expect(updatedBlock.selected).toBe(true);
-        expect(blok.BlockSelection.clearCache).toHaveBeenCalled();
+        expect(setBlockParent).toHaveBeenCalledWith(mockListBlock, 'prev-block');
       });
 
       it('blocks indent when first-in-group item is already at depth 1', () => {
@@ -481,77 +477,48 @@ describe('BlockSelectionKeys', () => {
         expect(blok.BlockSelection.clearCache).not.toHaveBeenCalled();
       });
 
-      it('allows indent when selected items at different depths have a selected predecessor', async () => {
-        const mockParentBlock = createBlock({ name: 'list', id: 'parent-block' });
-        const mockChildBlock = createBlock({ name: 'list', id: 'child-block' });
-
-        // Parent at depth 0, child at depth 1
-        const parentDepth = document.createElement('span');
-        parentDepth.setAttribute('data-list-depth', '0');
-        mockParentBlock.holder.appendChild(parentDepth);
-
-        const childDepth = document.createElement('span');
-        childDepth.setAttribute('data-list-depth', '1');
-        mockChildBlock.holder.appendChild(childDepth);
-
-        mockParentBlock.save = vi.fn(() => Promise.resolve({
-          id: 'parent-block',
-          tool: 'list',
-          data: { text: 'parent', style: 'unordered' },
-          time: 0,
-          tunes: {},
-        }));
-        mockChildBlock.save = vi.fn(() => Promise.resolve({
-          id: 'child-block',
-          tool: 'list',
-          data: { text: 'child', style: 'unordered' },
-          time: 0,
-          tunes: {},
-        }));
-
-        const updatedParent = createBlock({ name: 'list', id: 'parent-updated' });
-        const updatedChild = createBlock({ name: 'list', id: 'child-updated' });
-        let callIndex = 0;
-        const update = vi.fn(() => Promise.resolve(callIndex++ === 0 ? updatedParent : updatedChild));
-        const clearCache = vi.fn();
+      it('reparents only the top-level selected item; a selected descendant follows it', () => {
+        // M-9: a parent + its child are both selected. The parent reparents under
+        // its preceding sibling; the child (a structural descendant) is NOT moved
+        // directly — it travels with the parent, preserving relative nesting.
+        const pre = createBlock({ name: 'list', id: 'pre', parentId: null });
+        const mockParentBlock = createBlock({ name: 'list', id: 'parent-block', parentId: null });
+        const mockChildBlock = createBlock({ name: 'list', id: 'child-block', parentId: 'parent-block' });
+        const blocks = [pre, mockParentBlock, mockChildBlock];
+        const setBlockParent = vi.fn();
 
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
             selectedBlocks: [mockParentBlock, mockChildBlock],
-            clearCache,
+            clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
-            getBlockIndex: vi.fn((block: Block) => block.id === 'parent-block' ? 0 : 1),
-            getBlockByIndex: vi.fn((index: number) => index === 0 ? mockParentBlock : mockChildBlock),
-            update,
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockByIndex: vi.fn((index: number) => blocks[index] ?? null),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
           } as unknown as BlokModules['BlockManager'],
         });
 
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
 
-        await blockSelectionKeys.handleIndent(event);
-        await new Promise(resolve => setTimeout(resolve, 10));
+        const result = blockSelectionKeys.handleIndent(event);
 
-        // Both items should be indented: parent 0->1, child 1->2
-        expect(update).toHaveBeenCalledTimes(2);
-        expect(update).toHaveBeenCalledWith(mockParentBlock, expect.objectContaining({ depth: 1 }));
-        expect(update).toHaveBeenCalledWith(mockChildBlock, expect.objectContaining({ depth: 2 }));
+        expect(result).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).toHaveBeenCalledWith(mockParentBlock, 'pre');
       });
 
-      it('returns false when selected block depth > previous block depth', () => {
-        const mockListBlock = createBlock({ name: 'list', id: 'list-block' });
-        const mockPreviousBlock = createBlock({ name: 'list', id: 'prev-block' });
-
-        // Set depths: previous at 0, selected at 2 (cannot indent past previous)
-        const depthAttr1 = document.createElement('span');
-        depthAttr1.setAttribute('data-list-depth', '0');
-        mockPreviousBlock.holder.appendChild(depthAttr1);
-
-        const depthAttr2 = document.createElement('span');
-        depthAttr2.setAttribute('data-list-depth', '2');
-        mockListBlock.holder.appendChild(depthAttr2);
+      it('nests the selected list item under its preceding list sibling', () => {
+        // M-9: structural reparent under the preceding list sibling (parentId set).
+        const mockPreviousBlock = createBlock({ name: 'list', id: 'prev-block', parentId: null });
+        const mockListBlock = createBlock({ name: 'list', id: 'list-block', parentId: null });
+        const blocks = [mockPreviousBlock, mockListBlock];
+        const setBlockParent = vi.fn();
 
         const blok = createBlokModules({
           BlockSelection: {
@@ -559,8 +526,11 @@ describe('BlockSelectionKeys', () => {
             selectedBlocks: [mockListBlock],
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
-            getBlockIndex: vi.fn(() => 1),
-            getBlockByIndex: vi.fn((index: number) => index === 0 ? mockPreviousBlock : mockListBlock),
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockByIndex: vi.fn((index: number) => blocks[index] ?? null),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
           } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
@@ -570,6 +540,7 @@ describe('BlockSelectionKeys', () => {
 
         expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).toHaveBeenCalledWith(mockListBlock, 'prev-block');
       });
     });
 
@@ -603,7 +574,7 @@ describe('BlockSelectionKeys', () => {
         expect(setBlockParent).toHaveBeenCalledWith(p2, 'pre');
       });
 
-      it('is a no-op when the first selected block has no preceding sibling', () => {
+      it('nests every block but the first under the first when the selection starts at the top', () => {
         const p1 = createBlock({ id: 'p1', name: 'paragraph', parentId: null, selected: true });
         const p2 = createBlock({ id: 'p2', name: 'paragraph', parentId: null, selected: true });
         const blocks = [p1, p2];
@@ -625,10 +596,12 @@ describe('BlockSelectionKeys', () => {
 
         const result = blockSelectionKeys.handleIndent(event);
 
-        // Handled (prevents caret navigation) but performs no reparenting.
+        // The first selected block has no preceding sibling so it cannot indent;
+        // it becomes the anchor and the rest nest under it (Notion parity).
         expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
-        expect(setBlockParent).not.toHaveBeenCalled();
+        expect(setBlockParent).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).toHaveBeenCalledWith(p2, 'p1');
       });
 
       it('outdents a multi-paragraph selection to the grandparent, adopting trailing siblings', () => {
@@ -698,17 +671,22 @@ describe('BlockSelectionKeys', () => {
     });
 
     describe('outdent (Shift+Tab)', () => {
-      it('returns false when selected blocks have depth 0', () => {
-        const mockListBlock = createBlock({ name: 'list', id: 'list-block' });
-        const depthAttr = document.createElement('span');
-        depthAttr.setAttribute('data-list-depth', '0');
-        mockListBlock.holder.appendChild(depthAttr);
+      it('leaves a root (depth-0) list item in place — no structural move (M-8)', () => {
+        const mockListBlock = createBlock({ name: 'list', id: 'list-block', parentId: null });
+        const blocks = [mockListBlock];
+        const setBlockParent = vi.fn();
 
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
             selectedBlocks: [mockListBlock],
           } as unknown as BlokModules['BlockSelection'],
+          BlockManager: {
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
+          } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
@@ -717,13 +695,14 @@ describe('BlockSelectionKeys', () => {
 
         expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).not.toHaveBeenCalled();
       });
 
-      it('allows outdent when selected blocks have depth > 0', () => {
-        const mockListBlock = createBlock({ name: 'list', id: 'list-block' });
-        const depthAttr = document.createElement('span');
-        depthAttr.setAttribute('data-list-depth', '2');
-        mockListBlock.holder.appendChild(depthAttr);
+      it('outdents a nested list item structurally to its grandparent', () => {
+        const parent = createBlock({ name: 'list', id: 'parent-block', parentId: null });
+        const mockListBlock = createBlock({ name: 'list', id: 'list-block', parentId: 'parent-block' });
+        const blocks = [parent, mockListBlock];
+        const setBlockParent = vi.fn();
 
         const blok = createBlokModules({
           BlockSelection: {
@@ -732,8 +711,10 @@ describe('BlockSelectionKeys', () => {
             clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
-            getBlockIndex: vi.fn(() => 0),
-            update: vi.fn(() => Promise.resolve(mockListBlock)),
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+            setBlockParent,
           } as unknown as BlokModules['BlockManager'],
         });
         const blockSelectionKeys = new BlockSelectionKeys(blok);
@@ -743,81 +724,41 @@ describe('BlockSelectionKeys', () => {
 
         expect(result).toBe(true);
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        // Grandparent is the parent's parent (root / null here).
+        expect(setBlockParent).toHaveBeenCalledWith(mockListBlock, null);
       });
-    });
 
-    describe('updateSelectedListItemsDepth', () => {
-      it('updates depth of all selected list items and marks them as selected', async () => {
-        const mockListBlock1 = createBlock({ name: 'list', id: 'list-1' });
-        const mockListBlock2 = createBlock({ name: 'list', id: 'list-2' });
-
-        // Set both blocks to depth 1 so they can be outdented
-        const depthAttr1 = document.createElement('span');
-        depthAttr1.setAttribute('data-list-depth', '1');
-        mockListBlock1.holder.appendChild(depthAttr1);
-
-        const depthAttr2 = document.createElement('span');
-        depthAttr2.setAttribute('data-list-depth', '1');
-        mockListBlock2.holder.appendChild(depthAttr2);
-
-        // Make save return proper data structure
-        mockListBlock1.save = vi.fn(() => Promise.resolve({
-          id: 'list-1',
-          tool: 'list',
-          data: { text: 'item 1', style: 'unordered' },
-          time: 0,
-          tunes: {},
-        }));
-        mockListBlock2.save = vi.fn(() => Promise.resolve({
-          id: 'list-2',
-          tool: 'list',
-          data: { text: 'item 2', style: 'unordered' },
-          time: 0,
-          tunes: {},
-        }));
-
-        const updatedBlock1 = createBlock({ name: 'list', id: 'list-1-updated' });
-        const updatedBlock2 = createBlock({ name: 'list', id: 'list-2-updated' });
-        let callIndex = 0;
-        const update = vi.fn(() => Promise.resolve(callIndex++ === 0 ? updatedBlock1 : updatedBlock2));
-        const clearCache = vi.fn();
+      it('outdents only the eligible items in a mixed-depth selection (M-8)', () => {
+        // a(root) > b(child); c is a separate root item. Both b and c are selected.
+        const a = createBlock({ name: 'list', id: 'a', parentId: null });
+        const b = createBlock({ name: 'list', id: 'b', parentId: 'a' });
+        const c = createBlock({ name: 'list', id: 'c', parentId: null });
+        const blocks = [a, b, c];
+        const setBlockParent = vi.fn();
 
         const blok = createBlokModules({
           BlockSelection: {
             anyBlockSelected: true,
-            selectedBlocks: [mockListBlock1, mockListBlock2],
-            clearCache,
+            selectedBlocks: [b, c],
+            clearCache: vi.fn(),
           } as unknown as BlokModules['BlockSelection'],
           BlockManager: {
-            getBlockIndex: vi.fn((block: Block) => block.id === 'list-1' ? 0 : 1),
-            getBlockByIndex: vi.fn((index: number) => index === 0 ? mockListBlock1 : mockListBlock2),
-            update,
+            blocks,
+            getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+            getBlockById: vi.fn((id: string) => blocks.find((bl) => bl.id === id)),
+            setBlockParent,
           } as unknown as BlokModules['BlockManager'],
         });
 
         const blockSelectionKeys = new BlockSelectionKeys(blok);
         const event = createKeyboardEvent({ key: 'Tab', shiftKey: true });
 
-        await blockSelectionKeys.handleIndent(event);
+        const result = blockSelectionKeys.handleIndent(event);
 
-        // Wait for the async update operation to complete (it's fire-and-forget in the code)
-        await new Promise(resolve => setTimeout(resolve, 10));
-
-        // Verify observable behavior: the update calls include the new depth value
-        expect(update).toHaveBeenCalledTimes(2);
-        expect(update).toHaveBeenCalledWith(mockListBlock1, expect.objectContaining({
-          depth: 0, // Outdent from depth 1 to 0
-        }));
-        expect(update).toHaveBeenCalledWith(mockListBlock2, expect.objectContaining({
-          depth: 0, // Outdent from depth 1 to 0
-        }));
-
-        // Verify observable behavior: the returned blocks have selected set to true
-        expect(updatedBlock1.selected).toBe(true);
-        expect(updatedBlock2.selected).toBe(true);
-
-        // Verify observable behavior: the cache was cleared to reflect changes
-        expect(clearCache).toHaveBeenCalled();
+        expect(result).toBe(true);
+        // b outdents to its grandparent (root/null); c (already root) stays put.
+        expect(setBlockParent).toHaveBeenCalledTimes(1);
+        expect(setBlockParent).toHaveBeenCalledWith(b, null);
       });
     });
   });

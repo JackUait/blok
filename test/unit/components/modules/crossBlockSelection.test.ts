@@ -364,6 +364,98 @@ describe('CrossBlockSelection', () => {
     });
   });
 
+  describe('M7: Shift+Click range selection', () => {
+    let enableCrossBlockSelection: (event: MouseEvent) => void;
+
+    beforeEach(() => {
+      enableCrossBlockSelection = accessPrivate(crossBlockSelection, 'enableCrossBlockSelection');
+      // Start from a clean caret state (no prior block selection).
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', null);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', null);
+      blocks.forEach((block) => {
+        block.selected = false;
+      });
+    });
+
+    it('selects the inclusive range from the caret block to the Shift+clicked block (downward)', () => {
+      const preventDefault = vi.fn();
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[2].holder,
+        preventDefault,
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(blocks[0].selected).toBe(true);
+      expect(blocks[1].selected).toBe(true);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(false);
+      expect(accessPrivate<Block>(crossBlockSelection, 'firstSelectedBlock')).toBe(blocks[0]);
+      expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[2]);
+    });
+
+    it('selects the inclusive range upward when the anchor is below the clicked block', () => {
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+
+      (blokState.BlockManager as unknown as { currentBlock: Block }).currentBlock = blocks[3];
+
+      const preventDefault = vi.fn();
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[1].holder,
+        preventDefault,
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks[1].selected).toBe(true);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(true);
+      expect(blocks[0].selected).toBe(false);
+    });
+
+    it('extends an existing block selection from its anchor to the Shift+clicked block', () => {
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[1]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[1]);
+      blocks[1].selected = true;
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks[0].selected).toBe(false);
+      expect(blocks[1].selected).toBe(true);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(true);
+      expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[3]);
+    });
+
+    it('does not range-select on a plain (no Shift) click', () => {
+      const watchSpy = vi.spyOn(crossBlockSelection, 'watchSelection');
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: false,
+        target: blocks[2].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      // Plain click still goes through the drag-watch path, not range selection.
+      expect(watchSpy).toHaveBeenCalledWith(event);
+      expect(blocks[1].selected).toBe(false);
+    });
+  });
+
   describe('onMouseUp', () => {
     it('removes temporary listeners', () => {
       const listeners = accessPrivate<Listeners>(crossBlockSelection, 'listeners');

@@ -435,7 +435,7 @@ describe('BlockSelection', () => {
       expect(secondBlock.save).not.toHaveBeenCalled();
     });
 
-    it('writes stripped plain text (not Markdown) to text/plain on a default copy, matching Notion', async () => {
+    it('m17: writes Markdown markers to text/plain on a default copy, matching Notion', async () => {
       const { blockSelection, blocks } = createBlockSelection();
       const clipboardData = { setData: vi.fn() };
       const clipboardEvent = {
@@ -458,8 +458,62 @@ describe('BlockSelection', () => {
 
       await blockSelection.copySelectedBlocks(clipboardEvent);
 
-      // Notion's default Cmd+C puts rendered text (no #, no **) into text/plain.
-      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', 'Title\n\na bold word');
+      // Notion's default Cmd+C puts Markdown markers (#, **) into text/plain.
+      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', '## Title\n\na **bold** word');
+    });
+
+    it('m17: default copy of a bulleted/numbered list writes list markers to text/plain', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const bullet = blocks[0];
+      const numbered = blocks[1];
+
+      bullet.holder.innerHTML = '<li>first</li>';
+      numbered.holder.innerHTML = '<li>second</li>';
+      (bullet as unknown as { id: string }).id = 'block-bullet';
+      (numbered as unknown as { id: string }).id = 'block-numbered';
+      (bullet as unknown as { name: string }).name = 'list';
+      (numbered as unknown as { name: string }).name = 'list';
+      (bullet as unknown as { preservedData: unknown }).preservedData = { text: 'first', style: 'unordered' };
+      (numbered as unknown as { preservedData: unknown }).preservedData = { text: 'second', style: 'ordered' };
+      bullet.selected = true;
+      numbered.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', '- first\n1. second');
+    });
+
+    it('m18: default copy of a to-do list writes - [x]/- [ ] markers to text/plain', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const done = blocks[0];
+      const todo = blocks[1];
+
+      done.holder.innerHTML = '<li>done task</li>';
+      todo.holder.innerHTML = '<li>open task</li>';
+      (done as unknown as { id: string }).id = 'block-done';
+      (todo as unknown as { id: string }).id = 'block-todo';
+      (done as unknown as { name: string }).name = 'list';
+      (todo as unknown as { name: string }).name = 'list';
+      (done as unknown as { preservedData: unknown }).preservedData = { text: 'done task', style: 'checklist', checked: true };
+      (todo as unknown as { preservedData: unknown }).preservedData = { text: 'open task', style: 'checklist', checked: false };
+      done.selected = true;
+      todo.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', '- [x] done task\n- [ ] open task');
     });
 
     it('copySelectedBlocksAsMarkdown writes Markdown to the clipboard (Notion Cmd+Shift+C)', async () => {
@@ -957,6 +1011,115 @@ describe('BlockSelection', () => {
       expect(selectAllSpy).toHaveBeenCalledTimes(1);
 
       // 5th press: terminal no-op once everything is selected.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('M6: a root parent with Tab-nested children escalates block → block+subtree → all blocks', () => {
+      // A root-level parent (parentId === null) whose children were nested via Tab.
+      const parent = createBlockStub({ id: 'parent', contentIds: ['child-1', 'child-2'] });
+      const child1 = createBlockStub({ id: 'child-1', parentId: 'parent', contentIds: ['grandchild'] });
+      const grandchild = createBlockStub({ id: 'grandchild', parentId: 'child-1' });
+      const child2 = createBlockStub({ id: 'child-2', parentId: 'parent' });
+      const sibling = createBlockStub({ id: 'sibling' });
+      const allBlocks = [parent, child1, grandchild, child2, sibling];
+
+      const { blockSelection } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: parent,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: parent.holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // 1st press: native text selection only.
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(false);
+
+      // 2nd press: select just the parent block.
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(true);
+      expect(child1.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 3rd press: select the parent PLUS its entire nested subtree (DFS over contentIds).
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(true);
+      expect(child1.selected).toBe(true);
+      expect(grandchild.selected).toBe(true);
+      expect(child2.selected).toBe(true);
+      expect(sibling.selected).toBe(false);
+      expect(blockSelection.allBlocksSelected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 4th press: escalate to the whole document.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('M6: a nested parent escalates block → block+subtree → container siblings → all blocks', () => {
+      // A nested parent (parentId set) that itself owns children: the subtree
+      // stage fires before the container-siblings stage.
+      const container = createBlockStub({ id: 'container', contentIds: ['p', 'uncle'] });
+      const parent = createBlockStub({ id: 'p', parentId: 'container', contentIds: ['kid'] });
+      const kid = createBlockStub({ id: 'kid', parentId: 'p' });
+      const uncle = createBlockStub({ id: 'uncle', parentId: 'container' });
+      const root = createBlockStub({ id: 'root' });
+      const allBlocks = [container, parent, kid, uncle, root];
+
+      const { blockSelection } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: parent,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: parent.holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      expect(parent.selected).toBe(true);
+      expect(kid.selected).toBe(false);
+
+      // subtree stage: parent + its own descendants only.
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(true);
+      expect(kid.selected).toBe(true);
+      expect(uncle.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // container stage: parent's container siblings.
+      handler.handleCommandA(event);
+      expect(uncle.selected).toBe(true);
+      expect(root.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // all blocks.
       handler.handleCommandA(event);
       expect(selectAllSpy).toHaveBeenCalledTimes(1);
     });

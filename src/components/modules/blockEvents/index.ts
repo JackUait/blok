@@ -114,6 +114,14 @@ export class BlockEvents extends Module {
         break;
 
       case keyCodes.ENTER:
+        /**
+         * Cmd/Ctrl+Enter toggles the checkbox of every selected to-do item
+         * (Notion parity). The handler self-guards on the modifier and on the
+         * presence of a block selection, so a plain Enter falls through to split.
+         */
+        if (this.blockSelectionKeys.handleToggleCheckbox(event)) {
+          return;
+        }
         this.keyboardNavigation.handleEnter(event);
         break;
 

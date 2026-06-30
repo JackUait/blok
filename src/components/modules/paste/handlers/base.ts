@@ -181,6 +181,14 @@ export abstract class BasePasteHandler implements PasteHandler {
       const operationsBridge = (BlockManager as unknown as { operations?: { suppressStopCapturing: boolean } }).operations;
       const pasteChainRef: { current: Promise<void> } = { current: Promise.resolve() };
 
+      // Notion parity (M-17): pasting list-style continuation blocks into an
+      // EMPTY list item replaces it with the first inserted block. The global
+      // canReplaceCurrentBlock flag is false for a non-default (list) target,
+      // so allow the replace here when the produced blocks are list items.
+      const firstIsListOverride = this.readListOverride(linesToInsert[0]?.content) !== null;
+      const targetIsEmptyList = currentBlock?.name === 'list' && currentBlock.isEmpty === true;
+      const allowReplaceEmptyList = firstIsListOverride && targetIsEmptyList;
+
       const runPasteLoop = (): void => {
         pasteChainRef.current = (async (): Promise<void> => {
           for (const [index, pasteData] of linesToInsert.entries()) {
@@ -191,10 +199,27 @@ export abstract class BasePasteHandler implements PasteHandler {
               operationsBridge.suppressStopCapturing = true;
             }
 
-            const shouldReplace = index === 0 && canReplaceCurrentBlock && BlockManager.currentBlock?.isEmpty === true;
-            const block = shouldReplace
+            const shouldReplace = index === 0 &&
+              (canReplaceCurrentBlock || allowReplaceEmptyList) &&
+              BlockManager.currentBlock?.isEmpty === true;
+            const pastedBlock = shouldReplace
               ? await BlockManager.paste(pasteData.tool, pasteData.event, true)
               : await BlockManager.paste(pasteData.tool, pasteData.event);
+
+            // Stamp the inherited list style/depth/checked onto the freshly
+            // pasted list block. The list tool's onPaste only sets text + a
+            // default style from the plain-text content, so the override is
+            // applied here via BlockManager.update (carrier read from content).
+            const listOverride = this.readListOverride(pasteData.content);
+            let block = pastedBlock;
+
+            if (listOverride !== null && typeof BlockManager.update === 'function') {
+              if (operationsBridge !== undefined) {
+                operationsBridge.suppressStopCapturing = true;
+              }
+
+              block = await BlockManager.update(pastedBlock, listOverride);
+            }
 
             Caret.setToBlock(block, Caret.positions.END);
             insertedByIndex.push(block);
@@ -229,6 +254,34 @@ export abstract class BasePasteHandler implements PasteHandler {
     }
 
     await this.processInlinePaste(singleItem, canReplaceCurrentBlock);
+  }
+
+  /**
+   * Read the inherited list style/depth carried on a pasted item's content
+   * (set by TextHandler when the paste target is a list item). Returns the
+   * data to merge into the new block, or null when the item is not a list
+   * continuation. New list items are always created unchecked (m-16).
+   */
+  private readListOverride(content: HTMLElement | undefined): { style: string; depth: number; checked: boolean } | null {
+    if (content === undefined) {
+      return null;
+    }
+
+    const style = content.getAttribute('data-blok-paste-list-style');
+
+    if (style !== 'ordered' && style !== 'unordered' && style !== 'checklist') {
+      return null;
+    }
+
+    const depthAttr = content.getAttribute('data-blok-paste-list-depth');
+    const parsedDepth = depthAttr !== null ? Number.parseInt(depthAttr, 10) : 0;
+    const depth = Number.isNaN(parsedDepth) ? 0 : Math.max(0, parsedDepth);
+
+    return {
+      style,
+      depth,
+      checked: false,
+    };
   }
 
   /**

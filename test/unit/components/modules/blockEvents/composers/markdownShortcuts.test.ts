@@ -1995,4 +1995,124 @@ describe('MarkdownShortcuts', () => {
       expect(result).toBe(false);
     });
   });
+
+  // m-8: list markdown triggers should fire in non-paragraph editable text blocks
+  // (heading, quote), converting the block to the list type and preserving text —
+  // matching Notion. They must still NOT fire in code blocks or already-list blocks.
+  describe('list triggers in non-default text blocks (m-8)', () => {
+    const createTextBlock = (toolName: string, text: string): Block => {
+      const block = createBlock({
+        tool: {
+          isDefault: false,
+          isLineBreaksEnabled: false,
+          name: toolName,
+        } as unknown as Block['tool'],
+      });
+
+      if (block.currentInput) {
+        block.currentInput.textContent = text;
+      }
+
+      return block;
+    };
+
+    it('converts "- " inside a HEADING into an unordered list, preserving text', () => {
+      const mockBlock = createTextBlock('header', '- My heading text');
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'unordered' })
+      );
+      expect(replace.mock.calls[0][2].text).toBe('My heading text');
+    });
+
+    it('converts "1. " inside a QUOTE into an ordered list, preserving text', () => {
+      const mockBlock = createTextBlock('quote', '1. Quoted item');
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'ordered' })
+      );
+      expect(replace.mock.calls[0][2].text).toBe('Quoted item');
+    });
+
+    it('converts "[] " inside a HEADING into an unchecked checklist', () => {
+      const mockBlock = createTextBlock('header', '[] Todo heading');
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(true);
+      expect(replace).toHaveBeenCalledWith(
+        mockBlock,
+        'list',
+        expect.objectContaining({ style: 'checklist', checked: false })
+      );
+    });
+
+    it('does NOT convert "- " inside a CODE block', () => {
+      const mockBlock = createTextBlock('code', '- not a list');
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('does NOT convert "- " inside an existing LIST block', () => {
+      const mockBlock = createTextBlock('list', '- already a list');
+      const replace = vi.fn(() => mockBlock);
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+          replace,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent());
+
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
 });

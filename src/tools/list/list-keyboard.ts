@@ -69,7 +69,9 @@ export const handleEnter = async (
     const newBlock = api.blocks.insert(TOOL_NAME, {
       text: afterContent,
       style: data.style,
-      ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
+      // Notion parity (m-9): a new to-do is always UNCHECKED, even when split
+      // from a checked item — only text/depth carry over.
+      ...(data.style === 'checklist' ? { checked: false } : {}),
       depth: data.depth,
     }, undefined, currentBlockIndex + 1, true);
 
@@ -85,7 +87,9 @@ export const handleEnter = async (
     {
       text: afterContent,
       style: data.style,
-      ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
+      // Notion parity (m-9): a new to-do is always UNCHECKED, even when split
+      // from a checked item — only text/depth carry over.
+      ...(data.style === 'checklist' ? { checked: false } : {}),
       depth: data.depth,
     },
     currentBlockIndex + 1
@@ -168,10 +172,9 @@ const exitListOrOutdent = async (
  */
 export const handleBackspace = async(
   context: KeyboardContext,
-  event: KeyboardEvent,
-  depthValidator?: ListDepthValidator
+  event: KeyboardEvent
 ): Promise<void> => {
-  const { api, blockId, data, element, getContentElement, getDepth, syncContentFromDOM } = context;
+  const { blockId, data, element, getContentElement, syncContentFromDOM, api } = context;
 
   const selection = window.getSelection();
   if (!selection || !element) return;
@@ -184,7 +187,6 @@ export const handleBackspace = async(
   syncContentFromDOM();
 
   const currentContent = data.text;
-  const currentDepth = getDepth();
 
   // Check if entire content is selected
   const entireContentSelected = isEntireContentSelected(contentEl, range);
@@ -208,41 +210,27 @@ export const handleBackspace = async(
   // Only handle at start of content for non-selection cases
   if (!isAtStart(contentEl, range)) return;
 
+  // Notion parity (m-10): a modifier-held Backspace is a word/line delete, not a
+  // list operation. At offset 0 native word/line delete is a no-op, so the marker
+  // and content stay intact. preventDefault also stops the shared block handler
+  // from merging this item into the previous block.
+  if (event.metaKey || event.ctrlKey || event.altKey) {
+    event.preventDefault();
+
+    return;
+  }
+
   event.preventDefault();
 
   if (blockId === undefined) {
     return;
   }
 
-  // Notion: Backspace at the START of a NESTED list item outdents it one level
-  // instead of converting it to a paragraph — mirroring the Enter-on-empty path.
-  // Only a top-level item converts to a paragraph.
-  const structuralParentId = getStructuralListParentId(api, blockId);
-
-  if (structuralParentId !== null) {
-    // Structurally nested (keyboard Tab): reparent to the grandparent, keeping
-    // nesting in the block tree rather than a flat depth.
-    const grandparentId = api.blocks.getById(structuralParentId)?.parentId ?? null;
-
-    api.blocks.setBlockParent(blockId, grandparentId);
-
-    const outdentedBlock = api.blocks.getById(blockId);
-
-    if (outdentedBlock !== null) {
-      setCaretToBlockContent(api, outdentedBlock, 'start');
-    }
-
-    return;
-  }
-
-  // Drag-nested (flat depth) items still outdent via the flat carrier.
-  if (currentDepth > 0) {
-    await handleOutdent(context, depthValidator);
-
-    return;
-  }
-
-  // At top level, convert to paragraph using convert API for proper undo/redo support.
+  // Notion parity (M-3): Backspace at the START of a non-empty list item converts
+  // it to a plain PARAGRAPH in place, KEEPING its current indent — a structurally
+  // nested item stays nested under the same parent because convert/replace
+  // preserves parentId. No outdent and no merge; a subsequent Backspace merges
+  // like a paragraph. (Top-level items already converted this way.)
   const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
 
   setCaretToBlockContent(api, newBlock, 'start');
@@ -315,6 +303,45 @@ export const handleOutdent = async(
 
   // Restore focus to the updated block after DOM has been updated
   setCaretToBlockContent(api, updatedBlock);
+};
+
+/**
+ * Toggle a checklist item's `checked` state IN PLACE — Notion's Cmd/Ctrl+Enter on
+ * a to-do. Flips `data.checked`, syncs the checkbox input and the strike-through
+ * styling, and persists via the blocks API. No split / new item is created.
+ *
+ * @param context - keyboard context for the current list item
+ * @returns true when the item is a checklist (and was toggled); false otherwise,
+ *   so the caller can fall back to the normal Enter behaviour.
+ */
+export const toggleChecklistChecked = async (
+  context: KeyboardContext
+): Promise<boolean> => {
+  const { api, blockId, data, element, getContentElement } = context;
+
+  if (data.style !== 'checklist') {
+    return false;
+  }
+
+  const newChecked = !data.checked;
+  data.checked = newChecked;
+
+  const checkbox = element?.querySelector('input[type="checkbox"]');
+  if (checkbox instanceof HTMLInputElement) {
+    checkbox.checked = newChecked;
+  }
+
+  const contentEl = getContentElement();
+  if (contentEl) {
+    contentEl.classList.toggle('line-through', newChecked);
+    contentEl.classList.toggle('opacity-60', newChecked);
+  }
+
+  if (blockId !== undefined) {
+    await api.blocks.update(blockId, { ...data, checked: newChecked });
+  }
+
+  return true;
 };
 
 /**

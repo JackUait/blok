@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ListDepthValidator, resolveTargetDepth } from '../../../../src/tools/list/depth-validator';
+import { ListDepthValidator, resolveTargetDepth, selectPointerDepth } from '../../../../src/tools/list/depth-validator';
 import type { BlocksAPI } from '../../../../src/tools/list/marker-calculator';
 
 describe('ListDepthValidator', () => {
@@ -384,6 +384,78 @@ describe('ListDepthValidator', () => {
           nextDepth: 0,
         })
       );
+    });
+  });
+
+  describe('selectPointerDepth (clientX → discrete indent step)', () => {
+    const INDENT = 27;
+
+    it('returns 0 at the base-left origin', () => {
+      expect(selectPointerDepth(100, 100, INDENT)).toBe(0);
+    });
+
+    it('clamps to 0 when the cursor sits left of the origin', () => {
+      expect(selectPointerDepth(40, 100, INDENT)).toBe(0);
+    });
+
+    it('snaps to one level after a full indent step to the right', () => {
+      expect(selectPointerDepth(100 + INDENT, 100, INDENT)).toBe(1);
+    });
+
+    it('snaps to two levels after two indent steps', () => {
+      expect(selectPointerDepth(100 + 2 * INDENT, 100, INDENT)).toBe(2);
+    });
+
+    it('rounds to the nearest step at the half-way boundary', () => {
+      // 1.5 steps rounds up to 2; 1.4 steps rounds down to 1.
+      expect(selectPointerDepth(100 + Math.round(1.5 * INDENT), 100, INDENT)).toBe(2);
+      expect(selectPointerDepth(100 + Math.round(1.4 * INDENT), 100, INDENT)).toBe(1);
+    });
+  });
+
+  describe('resolveTargetDepth with pointerDepth (cursor controls nesting)', () => {
+    const ctx = (over: Partial<Parameters<typeof resolveTargetDepth>[0]>): Parameters<typeof resolveTargetDepth>[0] => ({
+      currentDepth: 0,
+      previousIsListItem: false,
+      previousDepth: 0,
+      nextIsListItem: false,
+      nextDepth: 0,
+      ...over,
+    });
+
+    it('uses the cursor depth, clamped to previousDepth + 1', () => {
+      // Cursor wants depth 3, but previous is depth 1 → max allowed is 2.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 3, previousIsListItem: true, previousDepth: 1 }))).toBe(2);
+    });
+
+    it('lets the cursor outdent to root even when auto would nest from the bottom', () => {
+      // prev(1), next(0): auto returns 1 ("nest from the bottom"); cursor at 0 overrides → 0.
+      expect(resolveTargetDepth(ctx({
+        pointerDepth: 0, previousIsListItem: true, previousDepth: 1, nextIsListItem: true, nextDepth: 0,
+      }))).toBe(0);
+    });
+
+    it('lets the cursor nest under a same-depth previous item', () => {
+      // prev(0), no next, source(0): auto stays at 0; cursor at 1 nests → 1.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 1, previousIsListItem: true, previousDepth: 0 }))).toBe(1);
+    });
+
+    it('ignores the cursor when there is no nesting-context predecessor', () => {
+      // previousIsListItem false → no valid nesting parent, so the cursor is ignored
+      // and auto-resolution applies (root). Prevents paragraph-under-paragraph nesting.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 2, previousIsListItem: false, currentDepth: 0 }))).toBe(0);
+    });
+
+    it('falls back to auto-resolution when pointerDepth is undefined', () => {
+      // No cursor info → unchanged behaviour (deeper previous pulls the drop in).
+      expect(resolveTargetDepth(ctx({ previousIsListItem: true, previousDepth: 1 }))).toBe(1);
+    });
+
+    it('ignores a cursor released far past the engage band (plain vertical reorder)', () => {
+      // prev(0) → maxAllowed 1, engage band reaches maxAllowed + slack = 2. A raw
+      // step of 22 (cursor over the block text, like a center drop) is not an indent
+      // gesture → auto-resolution keeps the drop at root rather than max-nesting.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 22, previousIsListItem: true, previousDepth: 0 }))).toBe(0);
     });
   });
 

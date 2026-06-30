@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleOutdent, handleEnter, handleIndent } from '../../../../src/tools/list/list-keyboard';
+import { handleOutdent, handleEnter, handleIndent, toggleChecklistChecked } from '../../../../src/tools/list/list-keyboard';
 import { ListDepthValidator } from '../../../../src/tools/list/depth-validator';
 import type { KeyboardContext } from '../../../../src/tools/list/list-keyboard';
 import type { ListItemData } from '../../../../src/tools/list/types';
@@ -496,7 +496,14 @@ describe('handleIndent — Notion-parity first-in-group guard', () => {
     expect(data.depth).toBe(0);
   });
 
-  it('is a no-op for a first-in-group item whose previous block is NOT a list', async () => {
+  /**
+   * Notion parity (M-2): when the previous block is NON-list, this FLAT handleIndent
+   * is a no-op — but the tool no longer swallows the Tab. The handleKeyDown router
+   * leaves the event un-prevented so the shared structural handler nests the item
+   * under the preceding paragraph/heading (covered by the Tab-routing test). So this
+   * function being a no-op is a DEFERRAL to that handler, not a global Tab no-op.
+   */
+  it('defers (no flat depth bump) for a first-in-group item whose previous block is NOT a list', async () => {
     const { context, depthValidator, update } = buildIndentContext({
       currentBlockIndex: 1,
       blocks: [createMockBlock({ id: 'p', name: 'paragraph' }), createMockBlock({ id: 'a', depth: 0 })],
@@ -519,5 +526,152 @@ describe('handleIndent — Notion-parity first-in-group guard', () => {
     await handleIndent(context, depthValidator);
 
     expect(update).toHaveBeenCalledWith('b', expect.objectContaining({ depth: 1 }));
+  });
+});
+
+/**
+ * Notion parity (m-9): Enter at the END of a CHECKED to-do creates a new UNCHECKED
+ * to-do — the checked state must NOT carry over. Text and depth still preserve.
+ */
+describe('handleEnter — new to-do is unchecked even when split from a checked one', () => {
+  it('splits a checked checklist item into a new UNCHECKED item (text/depth preserved)', async () => {
+    const newBlockHolder = document.createElement('div');
+    const inner = document.createElement('div');
+    inner.setAttribute('contenteditable', 'true');
+    newBlockHolder.appendChild(inner);
+    const newBlock = { id: 'new', holder: newBlockHolder };
+
+    const splitBlock = vi.fn().mockReturnValue(newBlock);
+    const api = {
+      blocks: {
+        getBlockIndex: () => 0,
+        getCurrentBlockIndex: () => 0,
+        splitBlock,
+      },
+      caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+    } as unknown as KeyboardContext['api'];
+
+    // Caret at the END of "task" so the item is non-empty and splits.
+    const contentEl = document.createElement('div');
+    contentEl.contentEditable = 'true';
+    contentEl.textContent = 'task';
+    document.body.appendChild(contentEl);
+
+    const range = document.createRange();
+    range.selectNodeContents(contentEl);
+    range.collapse(false);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    const element = document.createElement('div');
+    element.appendChild(contentEl);
+
+    const data: ListItemData = { text: 'task', style: 'checklist', checked: true, depth: 2 };
+
+    const context: KeyboardContext = {
+      api,
+      blockId: 'current',
+      data,
+      element,
+      getContentElement: () => contentEl,
+      syncContentFromDOM: vi.fn(),
+      getDepth: () => 2,
+    };
+
+    await handleEnter(context);
+
+    // The 4th arg is the NEW block's data — it must be unchecked, same style/depth.
+    expect(splitBlock).toHaveBeenCalledWith(
+      'current',
+      expect.anything(),
+      'list',
+      expect.objectContaining({ style: 'checklist', checked: false, depth: 2 }),
+      1
+    );
+  });
+});
+
+/**
+ * Notion parity (m-11): Cmd/Ctrl+Enter toggles a to-do's checkbox IN PLACE — it
+ * flips data.checked, syncs the checkbox + strike-through, persists, and does NOT
+ * create a new item. Non-checklist styles are ignored (caller falls back to Enter).
+ */
+describe('toggleChecklistChecked — Cmd/Ctrl+Enter checkbox toggle', () => {
+  const buildToggleContext = (style: ListItemData['style'], checked: boolean): {
+    context: KeyboardContext;
+    update: ReturnType<typeof vi.fn>;
+    checkbox: HTMLInputElement;
+    contentEl: HTMLElement;
+    data: ListItemData;
+  } => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const api = {
+      blocks: { update },
+      caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+    } as unknown as KeyboardContext['api'];
+
+    const element = document.createElement('div');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = checked;
+    element.appendChild(checkbox);
+
+    const contentEl = document.createElement('div');
+    contentEl.contentEditable = 'true';
+    contentEl.textContent = 'task';
+    if (checked) {
+      contentEl.classList.add('line-through', 'opacity-60');
+    }
+    element.appendChild(contentEl);
+
+    const data: ListItemData = { text: 'task', style, checked };
+
+    const context: KeyboardContext = {
+      api,
+      blockId: 'todo',
+      data,
+      element,
+      getContentElement: () => contentEl,
+      syncContentFromDOM: vi.fn(),
+      getDepth: () => 0,
+    };
+
+    return { context, update, checkbox, contentEl, data };
+  };
+
+  it('checks an unchecked to-do and persists', async () => {
+    const { context, update, checkbox, contentEl, data } = buildToggleContext('checklist', false);
+
+    const handled = await toggleChecklistChecked(context);
+
+    expect(handled).toBe(true);
+    expect(data.checked).toBe(true);
+    expect(checkbox.checked).toBe(true);
+    expect(contentEl.classList.contains('line-through')).toBe(true);
+    expect(contentEl.classList.contains('opacity-60')).toBe(true);
+    expect(update).toHaveBeenCalledWith('todo', expect.objectContaining({ checked: true }));
+  });
+
+  it('unchecks a checked to-do and persists', async () => {
+    const { context, update, checkbox, contentEl, data } = buildToggleContext('checklist', true);
+
+    const handled = await toggleChecklistChecked(context);
+
+    expect(handled).toBe(true);
+    expect(data.checked).toBe(false);
+    expect(checkbox.checked).toBe(false);
+    expect(contentEl.classList.contains('line-through')).toBe(false);
+    expect(update).toHaveBeenCalledWith('todo', expect.objectContaining({ checked: false }));
+  });
+
+  it('is a no-op for non-checklist styles (returns false, no persist)', async () => {
+    const { context, update, data } = buildToggleContext('unordered', false);
+
+    const handled = await toggleChecklistChecked(context);
+
+    expect(handled).toBe(false);
+    expect(data.checked).toBe(false);
+    expect(update).not.toHaveBeenCalled();
   });
 });

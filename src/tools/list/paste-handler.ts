@@ -152,6 +152,40 @@ export const extractDepthFromPastedContent = (content: HTMLElement): number => {
     return Math.max(0, level - 1);
   }
 
-  // Default to root level (depth 0) if no aria-level attribute
+  // Fallback for rendered HTML without aria-level (generic web pages, copied
+  // <ul>/<ol> from a browser). Plain nested lists carry their depth purely in the
+  // DOM structure: a deeper item has more ancestor list elements. The immediate
+  // enclosing list is depth 0, so subtract it from the ancestor count.
+  // Mirrors the offline CLI converter so editor + CLI paste agree.
+  const domNestingDepth = countAncestorListElements(content) - 1;
+
+  if (domNestingDepth > 0) {
+    return domNestingDepth;
+  }
+
+  // Default to root level (depth 0)
   return 0;
+};
+
+/**
+ * Count the number of <ul>/<ol> ancestors above the given list item, walking up
+ * the parent chain. A root-level item enclosed in a single list returns 1; an
+ * item nested one level deeper (its list is itself inside another list) returns 2.
+ *
+ * @param content - the list item element
+ * @returns the number of ancestor list elements (0 when detached / not in a list)
+ */
+const countAncestorListElements = (content: HTMLElement): number => {
+  let count = 0;
+  let ancestor = content.parentElement;
+
+  while (ancestor !== null) {
+    if (ancestor.tagName === 'UL' || ancestor.tagName === 'OL') {
+      count += 1;
+    }
+
+    ancestor = ancestor.parentElement;
+  }
+
+  return count;
 };

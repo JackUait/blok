@@ -932,6 +932,16 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       && blockText.charAt(slashQuerySpan.start) === '/'
       && this.removeSpan(blockText, slashQuerySpan).trim() === '';
 
+    /**
+     * Whether the user actually typed a "/query" span (a leading "/" with at
+     * least one character) somewhere in the block. Distinguishes a real slash
+     * command surrounded by content (→ in-place convert) from a non-empty block
+     * with no slash query, where there is nothing to fold in.
+     */
+    const hasTypedSlashQuery = slashQuerySpan !== null
+      && slashQuerySpan.end > slashQuerySpan.start
+      && blockText.charAt(slashQuerySpan.start) === '/';
+
     const shouldReplaceBlock = currentBlock.isEmpty
       || !this.openedWithSlash
       || blockHasOnlySlashQuery;
@@ -950,6 +960,28 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      */
     if (!shouldReplaceBlock && contentEditable !== null && slashQuerySpan !== null) {
       this.stripSlashQuery(contentEditable, slashQuerySpan);
+
+      /**
+       * Notion parity (M-1): with real content surrounding the "/query", TURN
+       * the current block into the chosen tool in place — folding the leading
+       * text into it — instead of inserting an empty sibling (which left an
+       * orphan paragraph + empty block). The "/query" was just stripped above so
+       * it is not carried into the converted data. Tools that cannot accept the
+       * current text (no conversionConfig) make convert() throw; those fall
+       * through to the insert-sibling path below so the tool is still created.
+       */
+      if (hasTypedSlashQuery) {
+        const convertedBlock = await this.convertCurrentBlockInPlace(
+          currentBlock.id,
+          toolName,
+          blockDataOverrides,
+          slashQuerySpan.start
+        );
+
+        if (convertedBlock !== null && convertedBlock !== undefined) {
+          return;
+        }
+      }
     }
 
     const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides).length > 0;
@@ -997,6 +1029,41 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      * Pass setExplicitlyClosed: false so the toolbar can show again on hover after toolbox insertion
      */
     this.api.toolbar.close({ setExplicitlyClosed: false });
+  }
+
+  /**
+   * Notion-parity in-place "turn into" for a slash command typed after real
+   * content (M-1). Converts the block to the chosen tool, keeping its surrounding
+   * text, restores the caret where the "/query" was, announces the result so the
+   * toolbar clears its cancel context, and closes the toolbar. Returns the
+   * converted block, or null when the conversion is not possible — the caller
+   * then falls back to inserting a sibling.
+   * @param blockId - id of the block to convert
+   * @param toolName - target tool name
+   * @param blockDataOverrides - predefined data for the target tool (from the toolbox entry)
+   * @param caretOffset - plain-text offset to place the caret at after conversion
+   */
+  private async convertCurrentBlockInPlace(
+    blockId: string,
+    toolName: string,
+    blockDataOverrides: BlockToolData | undefined,
+    caretOffset: number
+  ): Promise<BlockAPI | null> {
+    try {
+      const convertedBlock = await this.api.blocks.convert(blockId, toolName, blockDataOverrides);
+
+      this.api.caret.setToBlock(convertedBlock, 'default', caretOffset);
+
+      this.emit(ToolboxEvent.BlockAdded, {
+        block: convertedBlock,
+      });
+
+      this.api.toolbar.close({ setExplicitlyClosed: false });
+
+      return convertedBlock;
+    } catch (_error) {
+      return null;
+    }
   }
 
   /**

@@ -146,7 +146,7 @@ test.describe('slash keydown', () => {
     expect(textContent).toBe('Hello/');
   });
 
-  test('selecting a tool on a non-empty block inserts a NEW block and strips the "/query"', async ({ page }) => {
+  test('selecting a tool on a non-empty block converts it in place and strips the "/query" (Notion parity M-1)', async ({ page }) => {
     await createParagraphBlok(page, [ 'Hello' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
@@ -160,24 +160,25 @@ test.describe('slash keydown', () => {
     // Pick "Heading" from the filtered toolbox
     await page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first().click();
 
-    // A NEW heading block exists alongside the untouched paragraph
+    // The block is CONVERTED in place: the heading now holds "Hello" (the
+    // "/head" slash query removed) — no orphan paragraph, no empty extra block.
     const headingSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"] [contenteditable]`;
 
     await expect(page.locator(headingSelector)).toBeVisible();
+    await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(0);
 
-    // The original paragraph keeps "Hello" with the "/head" slash query removed
-    const paragraphText = await getTextContent(page.locator(PARAGRAPH_SELECTOR).first());
+    const headingText = await getTextContent(page.locator(headingSelector).first());
 
-    expect(paragraphText).toBe('Hello');
+    expect(headingText).toBe('Hello');
 
-    // The serialized output has the paragraph BEFORE the (empty) heading
+    // The serialized output is a SINGLE heading carrying the leading text.
     const types = await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
 
       return (data?.blocks ?? []).map((block) => block.type);
     });
 
-    expect(types).toEqual([ 'paragraph', 'header' ]);
+    expect(types).toEqual([ 'header' ]);
   });
 
   test('slash query is bounded at the caret, not the rest of the block (Notion parity)', async ({ page }) => {
@@ -201,7 +202,7 @@ test.describe('slash keydown', () => {
     await expect(page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first()).toBeVisible();
   });
 
-  test('typing "/" BEFORE existing content inserts a NEW block and keeps the content (Notion parity)', async ({ page }) => {
+  test('typing "/" BEFORE existing content converts the block in place and keeps the content (Notion parity M-1)', async ({ page }) => {
     await createParagraphBlok(page, [ 'Hello' ]);
 
     const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
@@ -215,11 +216,16 @@ test.describe('slash keydown', () => {
 
     await page.locator(TOOLBOX_ITEM_SELECTOR('header-1')).first().click();
 
-    // The original paragraph must NOT be replaced — "Hello" survives with the
-    // "/head" slash query stripped, and a NEW heading is inserted after it.
-    const paragraphText = await getTextContent(page.locator(PARAGRAPH_SELECTOR).first());
+    // The block is CONVERTED in place — "Hello" survives with the "/head" slash
+    // query stripped, folded into the new heading. No leftover paragraph.
+    const headingSelector = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"] [contenteditable]`;
 
-    expect(paragraphText).toBe('Hello');
+    await expect(page.locator(headingSelector)).toBeVisible();
+    await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(0);
+
+    const headingText = await getTextContent(page.locator(headingSelector).first());
+
+    expect(headingText).toBe('Hello');
 
     const types = await page.evaluate(async () => {
       const data = await window.blokInstance?.save();
@@ -227,7 +233,7 @@ test.describe('slash keydown', () => {
       return (data?.blocks ?? []).map((block) => block.type);
     });
 
-    expect(types).toEqual([ 'paragraph', 'header' ]);
+    expect(types).toEqual([ 'header' ]);
   });
 
   test('slash block-color command recolors the CURRENT block in place (does not insert)', async ({ page }) => {

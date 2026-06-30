@@ -6,7 +6,8 @@ import type { Block } from '../../../block';
 import { DATA_ATTR, createSelector } from '../../../constants';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
-import { resolveTargetDepth } from '../../../../tools/list/depth-validator';
+import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
+import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
 
 export interface DropTarget {
   block: Block;
@@ -219,14 +220,14 @@ export class DropTargetDetector {
       previousBlock.parentId === targetBlock.parentId;
 
     if (isTopHalf && targetIndex > 0 && canUsePreviousBlock) {
-      const targetDepth = this.calculateTargetDepth(previousBlock, 'bottom', sourceBlock);
+      const targetDepth = this.calculateTargetDepth(previousBlock, 'bottom', sourceBlock, clientX);
 
       return this.resolveToggleNesting({ block: previousBlock, edge: 'bottom', depth: targetDepth, parentId: null }, elementUnderCursor);
     }
 
     // First block top half, or any block bottom half
     const edge: 'top' | 'bottom' = isTopHalf ? 'top' : 'bottom';
-    const targetDepth = this.calculateTargetDepth(targetBlock, edge, sourceBlock);
+    const targetDepth = this.calculateTargetDepth(targetBlock, edge, sourceBlock, clientX);
 
     return this.resolveToggleNesting({ block: targetBlock, edge, depth: targetDepth, parentId: null }, elementUnderCursor);
   }
@@ -717,12 +718,19 @@ export class DropTargetDetector {
    * list exactly like a list item would. The result drives BOTH the drop
    * indicator and the depth applied on drop, so the preview always matches.
    *
+   * When `clientX` is supplied, the cursor's horizontal position picks the
+   * nesting depth (Notion's drag-to-indent): it snaps to a discrete indent step
+   * relative to the editor content's left edge and is clamped to the legal range
+   * by {@link resolveTargetDepth}. Omitting `clientX` (unit tests, the parity
+   * guard) falls back to the neighbour-based auto-resolution unchanged.
+   *
    * @param targetBlock - Block being dropped onto
    * @param targetEdge - Edge of target ('top' or 'bottom')
    * @param sourceBlock - Optional block being dragged (for accurate depth prediction)
+   * @param clientX - Optional cursor X position to drive cursor-controlled depth
    * @returns The target depth (0 for root level, 1+ for nested)
    */
-  calculateTargetDepth(targetBlock: Block, targetEdge: 'top' | 'bottom', sourceBlock?: Block): number {
+  calculateTargetDepth(targetBlock: Block, targetEdge: 'top' | 'bottom', sourceBlock?: Block, clientX?: number): number {
     const targetIndex = this.blockManager.getBlockIndex(targetBlock);
     const dropIndex = targetEdge === 'top' ? targetIndex : targetIndex + 1;
 
@@ -770,12 +778,20 @@ export class DropTargetDetector {
     // supplies the dragged block), so every path goes through one rule.
     const sourceDepth = sourceBlock ? depthOf(sourceBlock) ?? 0 : 0;
 
+    // The cursor's horizontal position, snapped to a discrete indent step,
+    // overrides the auto-promotion when a nesting predecessor exists. The depth-0
+    // anchor is the editor content's left edge (this.ui.contentRect.left).
+    const pointerDepth = clientX !== undefined
+      ? selectPointerDepth(clientX, this.ui.contentRect.left, INDENT_PER_LEVEL)
+      : undefined;
+
     return resolveTargetDepth({
       currentDepth: sourceDepth,
       previousIsListItem: previousIsNestingContext,
       previousDepth: prevDepthValue,
       nextIsListItem: nextIsNestingContext,
       nextDepth: nextDepthValue,
+      pointerDepth,
     });
   }
 

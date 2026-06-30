@@ -16,6 +16,8 @@ const MARKDOWN_SIGNALS: RegExp[] = [
   /^```/m,                         // Fenced code blocks
   /\|\s*---/,                      // GFM table separator: | --- |
   /^- \[[ x]\]/m,                  // Task list items: - [ ] or - [x]
+  /^[ \t]*[-*+][ \t]+\S/m,         // Unordered list item: - / * / + marker + content
+  /^[ \t]*\d{1,9}[.)][ \t]+\S/m,  // Ordered list item: 1. / 1) marker + content
   /\[.+?\]\(.+?\)/,               // Markdown links: [text](url)
   /\*\*.+?\*\*/,                   // Bold: **text**
   /!\[/,                           // Image: ![

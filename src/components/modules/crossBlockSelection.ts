@@ -52,6 +52,86 @@ export class CrossBlockSelection extends Module {
   }
 
   /**
+   * Handle a Shift+Click: select the inclusive block-level range from the anchor
+   * block to the clicked block. The anchor is the first block of an in-progress
+   * block selection if one exists, otherwise the block holding the caret. Mixed
+   * list types and non-list blocks are all included (the range is purely
+   * index-based, like drag selection).
+   * @param event - the Shift+Click mouse down event
+   * @returns true when a range was selected (caller should stop), false when
+   *   there was nothing to anchor or target so the normal path should run
+   */
+  private handleShiftClick(event: MouseEvent): boolean {
+    const { BlockManager } = this.Blok;
+
+    const clickedBlock = BlockManager.getBlock(event.target as HTMLElement);
+
+    if (!clickedBlock) {
+      return false;
+    }
+
+    const targetBlock = BlockManager.resolveToRootBlock(clickedBlock);
+
+    const anchorCandidate = this.firstSelectedBlock ?? BlockManager.currentBlock ?? null;
+
+    if (!anchorCandidate) {
+      return false;
+    }
+
+    const anchorBlock = BlockManager.resolveToRootBlock(anchorCandidate);
+
+    /**
+     * Prevent the native caret placement / text-selection extend so the gesture
+     * reads as a pure block-range selection.
+     */
+    event.preventDefault();
+
+    this.selectBlockRange(anchorBlock, targetBlock);
+
+    return true;
+  }
+
+  /**
+   * Select the inclusive range of blocks between two blocks (by flat index),
+   * clearing any prior selection. Reuses the same Math.min/max index-range logic
+   * the drag path uses. Records the anchor/target as first/last selected so a
+   * subsequent Shift+Arrow or Shift+Click keeps extending from the same anchor.
+   * @param anchorBlock - the block the range starts from
+   * @param targetBlock - the block the range ends at
+   */
+  private selectBlockRange(anchorBlock: Block, targetBlock: Block): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    const fIndex = BlockManager.blocks.indexOf(anchorBlock);
+    const lIndex = BlockManager.blocks.indexOf(targetBlock);
+
+    if (fIndex === -1 || lIndex === -1) {
+      return;
+    }
+
+    SelectionUtils.get()?.removeAllRanges();
+
+    const start = Math.min(fIndex, lIndex);
+    const end = Math.max(fIndex, lIndex);
+
+    for (const block of BlockManager.blocks) {
+      block.selected = false;
+    }
+
+    for (const i of Array.from({ length: end - start + 1 }, (_unused, idx) => start + idx)) {
+      BlockManager.blocks[i].selected = true;
+    }
+
+    BlockSelection.clearCache();
+
+    this.firstSelectedBlock = anchorBlock;
+    this.lastSelectedBlock = targetBlock;
+
+    this.Blok.InlineToolbar.close();
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+  }
+
+  /**
    * Return boolean is cross block selection started:
    * there should be at least 2 selected blocks
    */
@@ -195,6 +275,21 @@ export class CrossBlockSelection extends Module {
      */
     const toolbarElement = Toolbar.nodes.wrapper;
     if (toolbarElement && toolbarElement.contains(event.target as Node)) {
+      return;
+    }
+
+    /**
+     * Shift+Click selects the inclusive block-level range from the anchor (the
+     * caret's block, or the first block of an in-progress selection) to the
+     * clicked block — Notion parity. Handled before the native-selection clear so
+     * the new range overrides any leftover text selection.
+     */
+    if (
+      event.shiftKey &&
+      event.button === mouseButtons.LEFT &&
+      UI.nodes.redactor.contains(event.target as Node) &&
+      this.handleShiftClick(event)
+    ) {
       return;
     }
 

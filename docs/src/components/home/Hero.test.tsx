@@ -70,7 +70,9 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    const tryItOutLink = screen.getByRole('link', { name: /Try it out/ });
+    // Typo inserts a non-breaking space (U+00A0) into the prose ("it" binds
+    // forward), so the accessible name reads "Try it out". \s matches NBSP.
+    const tryItOutLink = screen.getByRole('link', { name: /Try\s+it\s+out/ });
     expect(tryItOutLink).toBeInTheDocument();
     expect(tryItOutLink).toHaveAttribute('href', '/demo');
   });

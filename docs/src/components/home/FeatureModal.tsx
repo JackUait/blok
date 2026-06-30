@@ -8,6 +8,7 @@ import {
   type Variants,
 } from "framer-motion";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 
 // Backdrop fades; the panel slides in from its edge.
 const backdropVariants: Variants = {
@@ -250,7 +251,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                   id="feature-modal-title"
                   className="min-w-0 truncate text-[17px] font-bold tracking-tight"
                 >
-                  {feature.title}
+                  <Typo>{feature.title}</Typo>
                 </h2>
                 <button
                   ref={closeButtonRef}
@@ -319,12 +320,12 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                 {...itemMotion}
                 className="text-[15px] leading-relaxed text-muted-foreground"
               >
-                {feature.details.summary}
+                <Typo>{feature.details.summary}</Typo>
               </motion.p>
 
               <motion.div {...itemMotion}>
                 <h3 className="text-[13px] font-semibold tracking-tight text-muted-foreground">
-                  {t('home.featureModal.keyBenefits')}
+                  <Typo>{t('home.featureModal.keyBenefits')}</Typo>
                 </h3>
                 {/* Refined spec rows — a thin divided list led by a small primary
                     tick, not the generic pill-checklist look. */}
@@ -346,7 +347,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                       >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
-                      {benefit}
+                      <Typo>{benefit}</Typo>
                     </li>
                   ))}
                 </ul>
@@ -363,7 +364,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                   href={feature.details.apiLink}
                   className="group relative inline-flex w-full items-center justify-center rounded-full bg-primary py-3.5 pl-6 pr-14 text-sm font-semibold text-primary-foreground shadow-[0_10px_28px_-10px_rgba(225,75,110,0.55)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_14px_34px_-10px_rgba(225,75,110,0.65)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {t('home.featureModal.viewApiDocs')}
+                  <Typo>{t('home.featureModal.viewApiDocs')}</Typo>
                   <span
                     aria-hidden="true"
                     className="absolute inset-y-0 right-1.5 my-auto flex size-9 items-center justify-center rounded-full bg-white/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:scale-105"

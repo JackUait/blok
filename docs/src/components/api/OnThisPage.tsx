@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Typo } from '../common/Typo';
 import { useI18n } from '../../contexts/I18nContext';
 import type { ApiSection } from './api-data';
 import { generateMethodId, generatePropertyId, generateOptionId } from './api-anchors';
@@ -47,7 +48,7 @@ export const OnThisPage: React.FC<{ section: ApiSection }> = ({ section }) => {
       aria-label={t('api.onThisPage')}
       data-blok-testid="on-this-page"
     >
-      <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('api.onThisPage')}</h4>
+      <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground"><Typo>{t('api.onThisPage')}</Typo></h4>
       <ul className="flex flex-col gap-1 border-l border-border">
         {items.map((it) => (
           <li key={it.id}>

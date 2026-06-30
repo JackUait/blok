@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 import { cn } from "@/lib/utils";
 
 interface OutputPanelProps {
@@ -62,7 +63,7 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
               strokeLinejoin="round"
             />
           </svg>
-          <span>{t("demo.outputPanel.title")}</span>
+          <span><Typo>{t("demo.outputPanel.title")}</Typo></span>
         </div>
         <button
           className={cn(

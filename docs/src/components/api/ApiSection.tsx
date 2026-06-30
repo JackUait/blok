@@ -6,6 +6,7 @@ import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { EditorAccessNote } from "./EditorAccessNote";
 import { FrameworkToggle } from "../common/FrameworkToggle";
+import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { useFramework } from "../../contexts/FrameworkContext";
 import {
@@ -83,7 +84,7 @@ const QuickStartContent: React.FC = () => {
         data-blok-testid="quick-start-framework"
       >
         <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          {t('frameworkToggle.note')}
+          <Typo>{t('frameworkToggle.note')}</Typo>
         </p>
         <div className="shrink-0 sm:w-64">
           <FrameworkToggle />
@@ -107,8 +108,8 @@ const QuickStartContent: React.FC = () => {
               {index + 1}
             </span>
             <div className="min-w-0 flex-1 pb-1">
-              <h3 className="font-display text-lg font-bold tracking-tight text-foreground">{step.title}</h3>
-              <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+              <h3 className="font-display text-lg font-bold tracking-tight text-foreground"><Typo>{step.title}</Typo></h3>
+              <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground"><Typo>{step.description}</Typo></p>
               {step.code}
             </div>
           </div>
@@ -121,10 +122,10 @@ const QuickStartContent: React.FC = () => {
 const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => (
   <div className="flex flex-col gap-3">
     <h1 className="scroll-mt-24 font-display text-3xl font-extrabold tracking-tight text-foreground">
-      {section.title}
+      <Typo>{section.title}</Typo>
     </h1>
     {section.description && (
-      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">{section.description}</p>
+      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground"><Typo>{section.description}</Typo></p>
     )}
   </div>
 );
@@ -238,7 +239,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
                       <td className={tdClass}>
                         <code className={codeClass}>{prop.type}</code>
                       </td>
-                      <td className={tdClass}>{prop.description}</td>
+                      <td className={tdClass}><Typo>{prop.description}</Typo></td>
                     </tr>
                   );
                 })}
@@ -261,7 +262,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
       {section.table && section.table.length > 0 && (
         <div className="mt-10">
-          <h3 className={blockTitleClass}>{section.title}</h3>
+          <h3 className={blockTitleClass}><Typo>{section.title}</Typo></h3>
           <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -293,7 +294,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
                           <code className={codeClass}>{row.default}</code>
                         </td>
                       )}
-                      <td className={tdClass}>{row.description}</td>
+                      <td className={tdClass}><Typo>{row.description}</Typo></td>
                     </tr>
                   );
                 })}

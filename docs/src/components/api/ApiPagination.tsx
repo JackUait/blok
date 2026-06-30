@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../contexts/I18nContext';
+import { Typo } from '../common/Typo';
 import { MODULE_ORDER } from './api-nav';
 
 interface ApiPaginationProps {
@@ -31,7 +32,7 @@ export const ApiPagination: React.FC<ApiPaginationProps> = ({ currentId, labels,
           data-blok-testid="api-pagination-prev"
         >
           <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('api.pagination.previous')}</span>
-          <span className="mt-1 font-display text-sm font-bold text-foreground">{labels[prev]}</span>
+          <span className="mt-1 font-display text-sm font-bold text-foreground"><Typo>{labels[prev]}</Typo></span>
         </Link>
       ) : <span className="flex-1" aria-hidden />}
       {next ? (
@@ -41,7 +42,7 @@ export const ApiPagination: React.FC<ApiPaginationProps> = ({ currentId, labels,
           data-blok-testid="api-pagination-next"
         >
           <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('api.pagination.next')}</span>
-          <span className="mt-1 font-display text-sm font-bold text-foreground">{labels[next]}</span>
+          <span className="mt-1 font-display text-sm font-bold text-foreground"><Typo>{labels[next]}</Typo></span>
         </Link>
       ) : <span className="flex-1" aria-hidden />}
     </nav>

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { SectionReveal } from "../common/SectionReveal";
 import { HalftoneDots } from "../common/HalftoneDots";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 import { Button } from "@/components/ui/button";
 
 export const MigrationCard: React.FC = () => {
@@ -33,20 +34,20 @@ export const MigrationCard: React.FC = () => {
                 className="text-3xl font-bold tracking-tight sm:text-4xl"
                 data-blok-testid="migration-title"
               >
-                {t('home.migrationCard.title')}
+                <Typo>{t('home.migrationCard.title')}</Typo>
               </h2>
 
               <p
                 className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground"
                 data-blok-testid="migration-description"
               >
-                {t('home.migrationCard.description')}
+                <Typo>{t('home.migrationCard.description')}</Typo>
               </p>
 
               <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
                 <Button variant="brand" size="lg" asChild className="group/guide w-full sm:w-auto">
                   <Link to="/migration">
-                    {t('home.migrationCard.viewGuide')}
+                    <Typo>{t('home.migrationCard.viewGuide')}</Typo>
                     {/* Arrow slides forward on hover — mirrors the primary CTA. */}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="transition-transform duration-300 ease-out group-hover/guide:translate-x-1">
                       <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -63,7 +64,7 @@ export const MigrationCard: React.FC = () => {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="transition-transform duration-300 ease-out group-hover/codemod:scale-110">
                       <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" fill="currentColor" />
                     </svg>
-                    {t('home.migrationCard.viewCodemod')}
+                    <Typo>{t('home.migrationCard.viewCodemod')}</Typo>
                   </a>
                 </Button>
               </div>

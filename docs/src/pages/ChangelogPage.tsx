@@ -6,6 +6,7 @@ import { parseChangelog } from "../utils/changelog-parser";
 import type { Release } from "@/types/changelog";
 import { NAV_LINKS } from "../utils/constants";
 import { useI18n } from "../contexts/I18nContext";
+import { Typo } from "../components/common/Typo";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -274,7 +275,7 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
           <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
             <Icons.clock />
           </span>
-          {t('changelog.badge')}
+          <Typo>{t('changelog.badge')}</Typo>
         </span>
         <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
           {t('changelog.title')}
@@ -291,7 +292,7 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
           {t('changelog.title')}
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          {t('changelog.errorLoading')} {error}
+          <Typo>{t('changelog.errorLoading')}</Typo> {error}
         </p>
       </div>
     );
@@ -325,13 +326,13 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
           <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
             <Icons.clock />
           </span>
-          {t('changelog.badge')}
+          <Typo>{t('changelog.badge')}</Typo>
         </span>
         <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
           {t('changelog.title')}
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-          {t('changelog.description')}
+          <Typo>{t('changelog.description')}</Typo>
         </p>
       </div>
 
@@ -410,7 +411,7 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                                   to={change.link}
                                   className="ml-1.5 inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
                                 >
-                                  {t('changelog.viewDocs')}
+                                  <Typo>{t('changelog.viewDocs')}</Typo>
                                   <span className="size-3 [&>svg]:size-full" aria-hidden="true">
                                     <Icons.external />
                                   </span>

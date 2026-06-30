@@ -6,6 +6,7 @@ import { OutputPanel } from '../components/demo/OutputPanel';
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
 import { ShortcutKeys } from '../components/common/KeyIcon';
+import { Typo } from '../components/common/Typo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -78,15 +79,15 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
-              {t('demo.badge')}
+              <Typo>{t('demo.badge')}</Typo>
             </span>
             <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              {t('demo.title')} <span className="text-brand-gradient">{t('demo.titleGradient')}</span>
+              <Typo>{t('demo.title')}</Typo> <span className="text-brand-gradient">{t('demo.titleGradient')}</span>
             </h1>
             <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-              {t('demo.subtitle')}
+              <Typo>{t('demo.subtitle')}</Typo>
               <code className="mx-1 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">{t('demo.subtitleCommand')}</code>
-              {t('demo.subtitleRest')}
+              <Typo>{t('demo.subtitleRest')}</Typo>
             </p>
           </div>
 
@@ -105,7 +106,7 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
                     <rect x="3" y="14" width="7" height="7" rx="1" />
                     <rect x="14" y="14" width="7" height="7" rx="1" />
                   </svg>
-                  {t('demo.editorTitle')}
+                  <Typo>{t('demo.editorTitle')}</Typo>
                 </div>
                 <div className="ml-auto flex items-center gap-1.5">
                   <Button
@@ -146,7 +147,7 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
                       <line x1="16" y1="17" x2="8" y2="17" />
                       <polyline points="10 9 9 9 8 9" />
                     </svg>
-                    <span>{t('demo.getJsonLabel')}</span>
+                    <span><Typo>{t('demo.getJsonLabel')}</Typo></span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -175,7 +176,7 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
-                    {t('demo.jsonOutputTitle')}
+                    <Typo>{t('demo.jsonOutputTitle')}</Typo>
                   </div>
                   <Button
                     variant="ghost"
@@ -198,11 +199,11 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['/']} />
-              <span>{t('demo.tipOpenMenu')}</span>
+              <span><Typo>{t('demo.tipOpenMenu')}</Typo></span>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['Tab']} />
-              <span>{t('demo.tipIndentList')}</span>
+              <span><Typo>{t('demo.tipIndentList')}</Typo></span>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['Ctrl', 'Z']} />
@@ -210,7 +211,7 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
             </div>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['Ctrl', 'B']} />
-              <span>{t('demo.tipBoldText')}</span>
+              <span><Typo>{t('demo.tipBoldText')}</Typo></span>
             </div>
           </div>
 
@@ -222,8 +223,8 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
                 </svg>
               </div>
               <div>
-                <strong className="block text-base font-bold text-foreground">{t('demo.hintInstantFeedbackTitle')}</strong>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t('demo.hintInstantFeedbackDesc')}</p>
+                <strong className="block text-base font-bold text-foreground"><Typo>{t('demo.hintInstantFeedbackTitle')}</Typo></strong>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground"><Typo>{t('demo.hintInstantFeedbackDesc')}</Typo></p>
               </div>
             </div>
 
@@ -235,8 +236,8 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
                 </svg>
               </div>
               <div>
-                <strong className="block text-base font-bold text-foreground">{t('demo.hintCleanJsonTitle')}</strong>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t('demo.hintCleanJsonDesc')}</p>
+                <strong className="block text-base font-bold text-foreground"><Typo>{t('demo.hintCleanJsonTitle')}</Typo></strong>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground"><Typo>{t('demo.hintCleanJsonDesc')}</Typo></p>
               </div>
             </div>
 
@@ -250,8 +251,8 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
                 </svg>
               </div>
               <div>
-                <strong className="block text-base font-bold text-foreground">{t('demo.hintBlockArchTitle')}</strong>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t('demo.hintBlockArchDesc')}</p>
+                <strong className="block text-base font-bold text-foreground"><Typo>{t('demo.hintBlockArchTitle')}</Typo></strong>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground"><Typo>{t('demo.hintBlockArchDesc')}</Typo></p>
               </div>
             </div>
           </div>

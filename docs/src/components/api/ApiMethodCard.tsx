@@ -3,6 +3,7 @@ import type { ApiMethod } from "./api-data";
 import { CodeBlock } from "../common/CodeBlock";
 import { generateMethodId } from "./api-anchors";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 import { renderInline } from "./inline-code";
 
 export interface ApiMethodCardProps {
@@ -28,14 +29,14 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
         <span className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</span>
         <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">{method.returnType}</span>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{method.description}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground"><Typo>{method.description}</Typo></p>
       {method.note && (
         <div
           className="mt-4 rounded-xl border-l-2 border-primary/40 bg-secondary/40 px-4 py-3"
           data-blok-testid="api-method-note"
         >
           <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-primary/80">
-            {t("api.whenToUse")}
+            <Typo>{t("api.whenToUse")}</Typo>
           </p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             {renderInline(method.note)}

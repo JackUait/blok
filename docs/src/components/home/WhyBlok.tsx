@@ -1,4 +1,5 @@
 import { SectionReveal } from "../common/SectionReveal";
+import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { cn } from "@/lib/utils";
 
@@ -125,11 +126,11 @@ export const WhyBlok: React.FC = () => {
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionReveal className="max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            <span className="block">{t("home.whyBlok.title1")}</span>
-            <span className="block">{t("home.whyBlok.title2")}</span>
+            <span className="block"><Typo>{t("home.whyBlok.title1")}</Typo></span>
+            <span className="block"><Typo>{t("home.whyBlok.title2")}</Typo></span>
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            {t("home.whyBlok.description")}
+            <Typo>{t("home.whyBlok.description")}</Typo>
           </p>
         </SectionReveal>
 
@@ -171,7 +172,7 @@ export const WhyBlok: React.FC = () => {
                       scope="row"
                       className="sticky left-0 z-10 bg-card px-5 py-4 font-medium text-foreground"
                     >
-                      {t(`home.whyBlok.${row.labelKey}`)}
+                      <Typo>{t(`home.whyBlok.${row.labelKey}`)}</Typo>
                     </th>
                     <td className="bg-primary/[0.06] px-5 py-4 text-center">
                       <Cell value={row.blok} emphasize />

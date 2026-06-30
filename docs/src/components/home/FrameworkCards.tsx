@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SectionReveal } from "../common/SectionReveal";
 import { CodeBlock } from "../common/CodeBlock";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 import { cn } from "@/lib/utils";
 // Official brand artwork (devicon), used verbatim as image assets.
 import typescriptLogo from "../../assets/logos/typescript.svg";
@@ -260,11 +261,11 @@ export const FrameworkCards: React.FC = () => {
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionReveal className="max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            <span className="block">{t("home.frameworks.title1")}</span>
-            <span className="block">{t("home.frameworks.title2")}</span>
+            <span className="block"><Typo>{t("home.frameworks.title1")}</Typo></span>
+            <span className="block"><Typo>{t("home.frameworks.title2")}</Typo></span>
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            {t("home.frameworks.description")}
+            <Typo>{t("home.frameworks.description")}</Typo>
           </p>
         </SectionReveal>
 
@@ -332,10 +333,10 @@ export const FrameworkCards: React.FC = () => {
 
                       <span className="min-w-0 flex-1">
                         <span className="block text-base font-bold tracking-tight text-foreground">
-                          {t(`home.frameworks.${framework.key}Name`)}
+                          <Typo>{t(`home.frameworks.${framework.key}Name`)}</Typo>
                         </span>
                         <span className="block text-xs font-medium text-muted-foreground">
-                          {t(`home.frameworks.${framework.key}Tagline`)}
+                          <Typo>{t(`home.frameworks.${framework.key}Tagline`)}</Typo>
                         </span>
                       </span>
 
@@ -365,7 +366,7 @@ export const FrameworkCards: React.FC = () => {
                     <div className="overflow-hidden">
                       <div className="px-5 pb-5 sm:px-6">
                         <p className="text-sm leading-relaxed text-muted-foreground">
-                          {t(`home.frameworks.${framework.key}Description`)}
+                          <Typo>{t(`home.frameworks.${framework.key}Description`)}</Typo>
                         </p>
                         <div className="mt-4">
                           <CodeBlock code={framework.code} language={framework.language} />

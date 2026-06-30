@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CodeBlock } from "../common/CodeBlock";
+import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { renderInline } from "./inline-code";
 
@@ -98,7 +99,7 @@ export const HowToCustomToolContent: React.FC = () => {
               </span>
               <div className="min-w-0 flex-1 pb-1">
                 <h2 className={headingClass}>
-                  {t(`api.howToCustomTool.steps.${step.key}.title`)}
+                  <Typo>{t(`api.howToCustomTool.steps.${step.key}.title`)}</Typo>
                 </h2>
                 <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">
                   {renderInline(t(`api.howToCustomTool.steps.${step.key}.body`))}
@@ -113,7 +114,7 @@ export const HowToCustomToolContent: React.FC = () => {
       {/* Going further */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card px-6 py-6">
         <h2 className={headingClass}>
-          {t("api.howToCustomTool.further.title")}
+          <Typo>{t("api.howToCustomTool.further.title")}</Typo>
         </h2>
         <p className={proseClass}>
           {renderInline(t("api.howToCustomTool.further.body"))}

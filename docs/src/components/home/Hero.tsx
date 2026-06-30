@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../contexts/I18nContext';
+import { Typo } from '../common/Typo';
 import { Button } from '@/components/ui/button';
 import {
   CARD_KEYS,
@@ -747,16 +748,16 @@ export const Hero: React.FC = () => {
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="text-center lg:text-left" data-blok-testid="hero-content">
           <h1 className="animate-in fade-in slide-in-from-bottom-3 fill-mode-both text-4xl font-extrabold leading-[1.05] tracking-tight duration-700 sm:text-5xl lg:text-6xl">
-            {t('home.hero.title')}
+            <Typo>{t('home.hero.title')}</Typo>
             <br />
-            <span className="text-brand-gradient">{t('home.hero.titleGradient')}</span>
+            <span className="text-brand-gradient"><Typo>{t('home.hero.titleGradient')}</Typo></span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-100 lg:mx-0">
-            {t('home.hero.description')}
+            <Typo>{t('home.hero.description')}</Typo>
           </p>
           <div className="mt-9 hidden flex-col items-center justify-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-3 fill-mode-both delay-200 sm:flex sm:flex-row lg:justify-start">
             <Button variant="brand" size="lg" asChild>
-              <Link to="/docs">{t('home.hero.ctaGetStarted')}</Link>
+              <Link to="/docs"><Typo>{t('home.hero.ctaGetStarted')}</Typo></Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
               <Link to="/demo">
@@ -771,7 +772,7 @@ export const Hero: React.FC = () => {
                 >
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                {t('home.hero.ctaTryItOut')}
+                <Typo>{t('home.hero.ctaTryItOut')}</Typo>
               </Link>
             </Button>
           </div>

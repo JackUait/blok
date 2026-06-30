@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { CSS_MAPPINGS, VERSION_COMPATIBILITY } from "./migration-data";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 
 export const MigrationSteps: React.FC = () => {
   const { t } = useI18n();
@@ -52,11 +53,11 @@ export const MigrationSteps: React.FC = () => {
       >
         <div className="mb-8 text-center">
           <span className="mb-3 inline-block rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
-            {t('migration.step2Badge')}
+            <Typo>{t('migration.step2Badge')}</Typo>
           </span>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">{t('migration.step2Title')}</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl"><Typo>{t('migration.step2Title')}</Typo></h2>
           <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            {t('migration.step2Description')}
+            <Typo>{t('migration.step2Description')}</Typo>
           </p>
         </div>
 
@@ -64,9 +65,9 @@ export const MigrationSteps: React.FC = () => {
           className="mb-8 rounded-2xl border border-border bg-secondary/50 p-6"
           data-blok-testid="alias-note"
         >
-          <h3 className="text-base font-bold tracking-tight text-foreground">{t('migration.aliasNoteTitle')}</h3>
+          <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.aliasNoteTitle')}</Typo></h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t('migration.aliasNoteDescription')}
+            <Typo>{t('migration.aliasNoteDescription')}</Typo>
           </p>
           <code className="mt-3 inline-block rounded-lg bg-card px-3 py-2 font-mono text-sm text-primary shadow-sm">{t('migration.aliasNoteCode')}</code>
         </div>
@@ -83,7 +84,7 @@ export const MigrationSteps: React.FC = () => {
             >
               <div className="mb-4 flex items-center gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">{item.icon}</span>
-                <h3 className="text-base font-bold tracking-tight text-foreground">{item.title}</h3>
+                <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{item.title}</Typo></h3>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
@@ -106,11 +107,11 @@ export const MigrationSteps: React.FC = () => {
       >
         <div className="mb-8 text-center">
           <span className="mb-3 inline-block rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
-            {t('migration.step3Badge')}
+            <Typo>{t('migration.step3Badge')}</Typo>
           </span>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">{t('migration.step3Title')}</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl"><Typo>{t('migration.step3Title')}</Typo></h2>
           <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            {t('migration.step3Description')}
+            <Typo>{t('migration.step3Description')}</Typo>
           </p>
         </div>
 
@@ -122,7 +123,7 @@ export const MigrationSteps: React.FC = () => {
             <div className="flex items-center gap-3 text-sm font-semibold">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span className="size-2 rounded-full bg-muted-foreground" />
-                <span>{t('migration.heroFromEditorJS')}</span>
+                <span><Typo>{t('migration.heroFromEditorJS')}</Typo></span>
               </div>
               <svg className="text-muted-foreground" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" />
@@ -132,7 +133,7 @@ export const MigrationSteps: React.FC = () => {
                 <span>{t('migration.heroBlok')}</span>
               </div>
             </div>
-            <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-muted-foreground">{t('migration.selectorsCount').replace('{count}', String(CSS_MAPPINGS.length))}</span>
+            <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-muted-foreground"><Typo>{t('migration.selectorsCount').replace('{count}', String(CSS_MAPPINGS.length))}</Typo></span>
           </div>
           <div className="divide-y divide-border">
             {CSS_MAPPINGS.map((mapping, index) => (
@@ -161,11 +162,11 @@ export const MigrationSteps: React.FC = () => {
       >
         <div className="mb-8 text-center">
           <span className="mb-3 inline-block rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
-            {t('migration.step4Badge')}
+            <Typo>{t('migration.step4Badge')}</Typo>
           </span>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">{t('migration.step4Title')}</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl"><Typo>{t('migration.step4Title')}</Typo></h2>
           <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            {t('migration.step4Description')}
+            <Typo>{t('migration.step4Description')}</Typo>
           </p>
         </div>
 
@@ -173,7 +174,7 @@ export const MigrationSteps: React.FC = () => {
           <article className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-blok-testid="custom-tool-card">
             <div className="mb-4 flex items-center gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">@</span>
-              <h3 className="text-base font-bold tracking-tight text-foreground">{t('migration.customInlineToolTitle')}</h3>
+              <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.customInlineToolTitle')}</Typo></h3>
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
@@ -190,10 +191,10 @@ export const MigrationSteps: React.FC = () => {
           <article className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-blok-testid="custom-tool-card">
             <div className="mb-4 flex items-center gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">⚡</span>
-              <h3 className="text-base font-bold tracking-tight text-foreground">{t('migration.customInlineToolFastPathTitle')}</h3>
+              <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.customInlineToolFastPathTitle')}</Typo></h3>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {t('migration.customInlineToolFastPathNote')}
+              <Typo>{t('migration.customInlineToolFastPathNote')}</Typo>
             </p>
             <code className="mt-3 inline-block rounded-lg bg-secondary px-3 py-2 font-mono text-xs text-primary">{t('migration.customInlineToolFastPathCode')}</code>
           </article>
@@ -201,18 +202,18 @@ export const MigrationSteps: React.FC = () => {
           <article className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-blok-testid="custom-tool-card">
             <div className="mb-4 flex items-center gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">✓</span>
-              <h3 className="text-base font-bold tracking-tight text-foreground">{t('migration.customBlockToolTitle')}</h3>
+              <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.customBlockToolTitle')}</Typo></h3>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {t('migration.customBlockToolNote')}
+              <Typo>{t('migration.customBlockToolNote')}</Typo>
             </p>
           </article>
         </div>
 
         <div className="mt-8 rounded-2xl border border-border bg-secondary/50 p-6" data-blok-testid="dropped-fields-note">
-          <h3 className="text-base font-bold tracking-tight text-foreground">{t('migration.droppedFieldsTitle')}</h3>
+          <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.droppedFieldsTitle')}</Typo></h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t('migration.droppedFieldsWarning')}
+            <Typo>{t('migration.droppedFieldsWarning')}</Typo>
           </p>
           <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
             <div className="divide-y divide-border">
@@ -249,16 +250,16 @@ export const MigrationSteps: React.FC = () => {
           <span className="mb-3 inline-block rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
             {t('migration.supportedVersionsBadge')}
           </span>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">{t('migration.supportedVersionsTitle')}</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl"><Typo>{t('migration.supportedVersionsTitle')}</Typo></h2>
           <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            {t('migration.supportedVersionsDescription')}
+            <Typo>{t('migration.supportedVersionsDescription')}</Typo>
           </p>
         </div>
 
         <div className="mb-8 rounded-2xl border border-border bg-secondary/50 p-6" data-blok-testid="supported-versions-target">
-          <h3 className="text-base font-bold tracking-tight text-foreground">{t('migration.supportedVersionsTargetTitle')}</h3>
+          <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.supportedVersionsTargetTitle')}</Typo></h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t('migration.supportedVersionsTarget')}
+            <Typo>{t('migration.supportedVersionsTarget')}</Typo>
           </p>
         </div>
 
@@ -277,7 +278,7 @@ export const MigrationSteps: React.FC = () => {
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
                 <div className="min-w-0">
-                  <span className="text-sm font-medium text-foreground">{t(row.statusKey)}</span>
+                  <span className="text-sm font-medium text-foreground"><Typo>{t(row.statusKey)}</Typo></span>
                 </div>
               </div>
             ))}
@@ -285,7 +286,7 @@ export const MigrationSteps: React.FC = () => {
         </div>
 
         <p className="mt-4 text-center text-sm leading-relaxed text-muted-foreground" data-blok-testid="compatibility-stub-note">
-          {t('migration.supportedVersionsStubNote')}
+          <Typo>{t('migration.supportedVersionsStubNote')}</Typo>
         </p>
       </section>
     </>

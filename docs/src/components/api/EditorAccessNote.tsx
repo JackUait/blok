@@ -1,4 +1,5 @@
 import { CodeBlock } from '../common/CodeBlock';
+import { Typo } from '../common/Typo';
 import { useI18n } from '../../contexts/I18nContext';
 import { useFramework } from '../../contexts/FrameworkContext';
 import { EDITOR_ACCESS_SNIPPETS } from '../common/framework-snippets';
@@ -21,10 +22,10 @@ export const EditorAccessNote: React.FC = () => {
       data-blok-testid="editor-access-note"
     >
       <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
-        {t('frameworkToggle.editorAccess.heading')}
+        <Typo>{t('frameworkToggle.editorAccess.heading')}</Typo>
       </h3>
       <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">
-        {t(`frameworkToggle.editorAccess.${framework}`)}
+        <Typo>{t(`frameworkToggle.editorAccess.${framework}`)}</Typo>
       </p>
       <CodeBlock code={snippet.code} language={snippet.language} />
     </div>

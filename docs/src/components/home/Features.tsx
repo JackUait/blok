@@ -10,6 +10,7 @@ import { SectionReveal } from "../common/SectionReveal";
 import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { EMBED_SERVICES, type EmbedService } from "./embed-services";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 // Repo root = the @jackuait/blok package; its version is the build-time fallback
 // for the live npm lookup below (vite's server.fs.allow includes "..").
 import rootPkg from "../../../../package.json";
@@ -2066,7 +2067,7 @@ const PillarTile: React.FC<TileProps> = ({ feature, onOpen }) => {
 
       <div className={`relative z-10 flex w-full items-center gap-3.5 ${isHero ? "" : "lg:w-[42%] lg:shrink-0 lg:flex-col lg:items-start lg:justify-center lg:gap-3"}`}>
         <h3 className={`text-balance font-extrabold leading-[1.1] tracking-tight lg:leading-[1.05] ${isHero ? "text-[1.4rem] lg:text-[2.35rem]" : "text-[1.35rem] lg:text-[1.75rem]"}`}>
-          {feature.title}
+          <Typo>{feature.title}</Typo>
         </h3>
       </div>
 
@@ -2411,11 +2412,11 @@ export const Features: React.FC = () => {
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionReveal className="max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            <span className="block">{t('home.features.title1')}</span>
-            <span className="block">{t('home.features.title2')}</span>
+            <span className="block"><Typo>{t('home.features.title1')}</Typo></span>
+            <span className="block"><Typo>{t('home.features.title2')}</Typo></span>
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            {t('home.features.description')}
+            <Typo>{t('home.features.description')}</Typo>
           </p>
         </SectionReveal>
 

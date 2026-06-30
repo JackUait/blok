@@ -5,6 +5,7 @@ import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { GitHubLink } from "../common/GitHubLink";
 import { LanguageSelector } from "../common/LanguageSelector";
+import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import type { NavLink } from "@/types/navigation";
 import { cn } from "@/lib/utils";
@@ -220,7 +221,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
 
               {/* Desktop: dark prompt text */}
               <span className="hidden truncate text-[15px] font-semibold tracking-[-0.01em] text-foreground/75 transition-colors group-hover:text-foreground sm:inline">
-                {t("search.placeholder")}
+                <Typo>{t("search.placeholder")}</Typo>
               </span>
 
               {/* Desktop: ⌘K hint + coral search button */}

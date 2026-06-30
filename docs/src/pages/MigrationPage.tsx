@@ -3,6 +3,7 @@ import { Footer } from '../components/layout/Footer';
 import { CodemodCard } from '../components/migration/CodemodCard';
 import { MigrationSteps } from '../components/migration/MigrationSteps';
 import { useI18n } from '../contexts/I18nContext';
+import { Typo } from '../components/common/Typo';
 import { NAV_LINKS } from '../utils/constants';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +21,7 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
         <section className={cn('mx-auto w-full max-w-6xl px-6 pb-12 text-center', inline ? 'pt-10' : 'pt-16 sm:pt-24')}>
           <h1 className="flex flex-col items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wide text-primary sm:text-sm">
-              {t('migration.heroFromEditorJS')}
+              <Typo>{t('migration.heroFromEditorJS')}</Typo>
             </span>
             <span className="text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl">
               {t('migration.heroToBlok')}{' '}
@@ -29,23 +30,23 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            {t('migration.heroDescription')}
+            <Typo>{t('migration.heroDescription')}</Typo>
           </p>
 
           <div className="mx-auto mt-10 flex max-w-2xl flex-wrap items-center justify-center gap-6 rounded-2xl border border-border bg-card px-8 py-6 shadow-card sm:gap-10">
             <div className="flex flex-col items-center">
               <span className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{t('migration.statAverageMigrationValue')}</span>
-              <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('migration.statAverageMigrationLabel')}</span>
+              <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"><Typo>{t('migration.statAverageMigrationLabel')}</Typo></span>
             </div>
             <div className="hidden h-10 w-px bg-border sm:block" />
             <div className="flex flex-col items-center">
               <span className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{t('migration.statApiCompatibleValue')}</span>
-              <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('migration.statApiCompatibleLabel')}</span>
+              <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"><Typo>{t('migration.statApiCompatibleLabel')}</Typo></span>
             </div>
             <div className="hidden h-10 w-px bg-border sm:block" />
             <div className="flex flex-col items-center">
               <span className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{t('migration.statBreakingChangesValue')}</span>
-              <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t('migration.statBreakingChangesLabel')}</span>
+              <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"><Typo>{t('migration.statBreakingChangesLabel')}</Typo></span>
             </div>
           </div>
         </section>
@@ -53,11 +54,11 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
         <section className="mx-auto w-full max-w-4xl px-6 py-12">
           <div className="mb-8 text-center">
             <span className="mb-3 inline-block rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
-              {t('migration.step1Badge')}
+              <Typo>{t('migration.step1Badge')}</Typo>
             </span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">{t('migration.step1Title')}</h2>
+            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl"><Typo>{t('migration.step1Title')}</Typo></h2>
             <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              {t('migration.step1Description')}
+              <Typo>{t('migration.step1Description')}</Typo>
             </p>
           </div>
           <CodemodCard />
@@ -68,9 +69,9 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
         <section className="mx-auto w-full max-w-4xl px-6 py-16">
           <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-10 text-center shadow-card sm:p-14">
             <div className="absolute inset-x-0 top-0 h-1.5 bg-brand-gradient" />
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">{t('migration.ctaTitle')}</h2>
+            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl"><Typo>{t('migration.ctaTitle')}</Typo></h2>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
-              {t('migration.ctaDescription')}
+              <Typo>{t('migration.ctaDescription')}</Typo>
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <a
@@ -80,7 +81,7 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                {t('migration.ctaTryDemo')}
+                <Typo>{t('migration.ctaTryDemo')}</Typo>
               </a>
               <a
                 href="/docs"
@@ -92,7 +93,7 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
                   <line x1="16" y1="13" x2="8" y2="13" />
                   <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
-                {t('migration.ctaViewDocs')}
+                <Typo>{t('migration.ctaViewDocs')}</Typo>
               </a>
             </div>
           </div>

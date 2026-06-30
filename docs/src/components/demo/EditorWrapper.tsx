@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../contexts/I18nContext";
 import { useTheme } from "../../hooks/useTheme";
+import { Typo } from "../common/Typo";
 
 interface BlokEditorInstance {
   save: () => Promise<unknown>;
@@ -64,10 +65,10 @@ export const EditorWrapper: React.FC<{
       <div className="blok-editor">
         <div className="px-8 py-12 text-center text-muted-foreground">
           <p className="mb-2 font-semibold text-foreground">
-            {t("demo.editorWrapper.failedToLoad")}
+            <Typo>{t("demo.editorWrapper.failedToLoad")}</Typo>
           </p>
           <p className="text-sm">
-            {t("demo.editorWrapper.buildHint")}{" "}
+            <Typo>{t("demo.editorWrapper.buildHint")}</Typo>{" "}
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">npm run build</code>
           </p>
           <p className="mt-4 text-xs text-muted-foreground/80">{t("demo.editorWrapper.errorPrefix")} {error}</p>
@@ -114,7 +115,7 @@ export const EditorWrapper: React.FC<{
                 </linearGradient>
               </defs>
             </svg>
-            <p className="text-sm font-medium">{t("demo.editorWrapper.loading")}</p>
+            <p className="text-sm font-medium"><Typo>{t("demo.editorWrapper.loading")}</Typo></p>
           </div>
         </div>
       </div>

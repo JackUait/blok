@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CodeBlock } from "../common/CodeBlock";
+import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { renderInline } from "./inline-code";
 
@@ -89,7 +90,7 @@ export const TutorialContent: React.FC = () => {
               </span>
               <div className="min-w-0 flex-1 pb-1">
                 <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
-                  {t(`api.tutorial.steps.${step.key}.title`)}
+                  <Typo>{t(`api.tutorial.steps.${step.key}.title`)}</Typo>
                 </h2>
                 <p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">
                   {renderInline(t(`api.tutorial.steps.${step.key}.body`))}
@@ -111,23 +112,23 @@ export const TutorialContent: React.FC = () => {
       {/* Where to go next */}
       <div className="flex flex-col gap-4">
         <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
-          {t("api.tutorial.next.title")}
+          <Typo>{t("api.tutorial.next.title")}</Typo>
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <a href="#custom-block-tool" className={nextLinkClass}>
             <span className="font-display text-sm font-bold tracking-tight text-primary">
-              {t("api.links.customBlockTool")}
+              <Typo>{t("api.links.customBlockTool")}</Typo>
             </span>
             <span className="text-sm leading-relaxed text-muted-foreground">
-              {t("api.tutorial.next.howTo")}
+              <Typo>{t("api.tutorial.next.howTo")}</Typo>
             </span>
           </a>
           <a href="#concepts" className={nextLinkClass}>
             <span className="font-display text-sm font-bold tracking-tight text-primary">
-              {t("api.links.everythingIsABlock")}
+              <Typo>{t("api.links.everythingIsABlock")}</Typo>
             </span>
             <span className="text-sm leading-relaxed text-muted-foreground">
-              {t("api.tutorial.next.concepts")}
+              <Typo>{t("api.tutorial.next.concepts")}</Typo>
             </span>
           </a>
         </div>

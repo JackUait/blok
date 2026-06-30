@@ -12,6 +12,7 @@ import {
 } from "framer-motion";
 import { Mail, Send } from "lucide-react";
 import { SectionReveal } from "../common/SectionReveal";
+import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 
 // These cards stay completely static — no 3D tilt, no pink glow, and no hover
@@ -264,7 +265,7 @@ export const TrustedBy: React.FC = () => {
       <div className="mx-auto w-full max-w-6xl px-6">
         <SectionReveal className="max-w-2xl">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {t("home.trusted.title")}
+            <Typo>{t("home.trusted.title")}</Typo>
           </h2>
         </SectionReveal>
 
@@ -283,7 +284,7 @@ export const TrustedBy: React.FC = () => {
                 <div className="flex flex-col gap-3">
                   <DodoLogo className="h-9 w-auto self-start text-foreground" />
                   <span className="text-[15px] text-muted-foreground">
-                    {t("home.trusted.tagline")}
+                    <Typo>{t("home.trusted.tagline")}</Typo>
                   </span>
                 </div>
 
@@ -291,9 +292,9 @@ export const TrustedBy: React.FC = () => {
 
                 <blockquote className="flex flex-1 items-center">
                   <p className="max-w-xl text-balance font-display text-[21px] font-medium leading-[1.42] tracking-tight text-foreground/75 sm:text-[26px]">
-                    {claim}{" "}
+                    <Typo>{claim}</Typo>{" "}
                     {kicker && (
-                      <span className="font-bold text-foreground">{kicker}</span>
+                      <span className="font-bold text-foreground"><Typo>{kicker}</Typo></span>
                     )}
                   </p>
                 </blockquote>
@@ -303,7 +304,7 @@ export const TrustedBy: React.FC = () => {
                     to="/demo"
                     className="group/cta inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3.5 text-[15px] font-semibold text-white shadow-card transition-[transform,box-shadow,filter] duration-300 hover:shadow-card-hover hover:brightness-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
                   >
-                    {t("home.trusted.cta")}
+                    <Typo>{t("home.trusted.cta")}</Typo>
                     <svg
                       width="17"
                       height="17"
@@ -339,7 +340,7 @@ export const TrustedBy: React.FC = () => {
                       <span className="font-display text-[34px] font-extrabold leading-none tracking-tight text-foreground sm:text-[40px]">
                         <CountUp value={stat.value} />
                       </span>
-                      <span className="text-[14px] text-muted-foreground">{stat.label}</span>
+                      <span className="text-[14px] text-muted-foreground"><Typo>{stat.label}</Typo></span>
                     </li>
                   ))}
                 </ul>
@@ -352,10 +353,10 @@ export const TrustedBy: React.FC = () => {
                 >
                   <div className="flex flex-col gap-2">
                     <h3 className="text-pretty text-[19px] font-bold leading-tight tracking-tight text-foreground">
-                      {t("home.trusted.contactTitle")}
+                      <Typo>{t("home.trusted.contactTitle")}</Typo>
                     </h3>
                     <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
-                      {t("home.trusted.contactLead")}
+                      <Typo>{t("home.trusted.contactLead")}</Typo>
                     </p>
                   </div>
 
@@ -369,7 +370,7 @@ export const TrustedBy: React.FC = () => {
                     >
                       {/* The paper plane lifts off — up and to the right — as you hover. */}
                       <Send className="size-4 -translate-x-[0.5px] transition-transform duration-300 ease-out group-hover/tg:translate-x-[3px] group-hover/tg:-translate-y-[3px]" strokeWidth={2.2} aria-hidden="true" />
-                      {t("home.trusted.contactTelegram")}
+                      <Typo>{t("home.trusted.contactTelegram")}</Typo>
                     </a>
 
                     {/* Secondary channel — a quiet bordered pill for email. */}
@@ -379,7 +380,7 @@ export const TrustedBy: React.FC = () => {
                     >
                       {/* The envelope lifts a touch and darkens to full ink on hover. */}
                       <Mail className="size-4 text-muted-foreground transition-[transform,color] duration-300 ease-out group-hover/mail:-translate-y-[1.5px] group-hover/mail:text-foreground" strokeWidth={2.2} aria-hidden="true" />
-                      {t("home.trusted.contactEmail")}
+                      <Typo>{t("home.trusted.contactEmail")}</Typo>
                     </a>
                   </div>
                 </div>

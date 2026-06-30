@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { CodeBlock } from "../common/CodeBlock";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 import { cn } from "@/lib/utils";
 
 type Tab = "dry-run" | "apply";
@@ -103,7 +104,7 @@ export const CodemodCard: React.FC = () => {
             <div className="mb-2 flex items-center gap-2">
               <span className="size-2 rounded-full bg-primary" />
               <p className="text-sm font-medium text-foreground">
-                {t('migration.codemodPreviewLabel')} <span className="text-muted-foreground">{t('migration.codemodPreviewHint')}</span>
+                <Typo>{t('migration.codemodPreviewLabel')}</Typo> <span className="text-muted-foreground"><Typo>{t('migration.codemodPreviewHint')}</Typo></span>
               </p>
             </div>
             <CodeBlock code={DRY_RUN_CODE} language="bash" />
@@ -116,7 +117,7 @@ export const CodemodCard: React.FC = () => {
           >
             <div className="mb-2 flex items-center gap-2">
               <span className="size-2 rounded-full bg-foreground" />
-              <p className="text-sm font-medium text-foreground">{t('migration.codemodApplyLabel')}</p>
+              <p className="text-sm font-medium text-foreground"><Typo>{t('migration.codemodApplyLabel')}</Typo></p>
             </div>
             <CodeBlock code={APPLY_CODE} language="bash" />
           </div>
@@ -149,7 +150,7 @@ export const CodemodCard: React.FC = () => {
                 className="flex flex-col gap-1.5 rounded-xl border border-border bg-secondary/40 px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
               >
                 <code className="w-fit shrink-0 rounded-md bg-card px-2 py-0.5 font-mono text-xs font-semibold text-primary shadow-sm">{option.flag}</code>
-                <span className="text-sm text-muted-foreground">{option.description}</span>
+                <span className="text-sm text-muted-foreground"><Typo>{option.description}</Typo></span>
               </div>
             ))}
           </div>

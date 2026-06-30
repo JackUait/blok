@@ -59,7 +59,9 @@ describe('DocsCtaCard', () => {
       </I18nProvider>
     );
 
-    const link = screen.getByRole('link', { name: /open the docs/i });
+    // Typo inserts a non-breaking space (U+00A0) into the prose ("the" binds
+    // forward), so the accessible name reads "Open the docs". \s matches NBSP.
+    const link = screen.getByRole('link', { name: /open\s+the\s+docs/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/docs');
   });

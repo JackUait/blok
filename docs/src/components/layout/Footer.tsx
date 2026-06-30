@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Globe } from "lucide-react";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 
 const GitHubIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -39,7 +40,7 @@ export const Footer: React.FC = () => {
               <span className="font-display text-xl font-extrabold tracking-tight">Blok</span>
             </div>
             <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-muted-foreground">
-              {t("footer.tagline")}
+              <Typo>{t("footer.tagline")}</Typo>
             </p>
           </div>
 
@@ -137,7 +138,7 @@ export const Footer: React.FC = () => {
             </span>
             <span aria-hidden="true" className="text-muted-foreground/50">·</span>
             <span>
-              {t("footer.licensedUnder")}{" "}
+              <Typo>{t("footer.licensedUnder")}</Typo>{" "}
               <a
                 href="https://www.apache.org/licenses/LICENSE-2.0"
                 target="_blank"

@@ -11,6 +11,7 @@ import { search, getSearchIndex } from "@/utils/search";
 import type { SearchResult } from "@/types/search";
 import { ModuleIcon } from "./ModuleIcon";
 import { KindIcon } from "./KindIcon";
+import { Typo } from "./Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { cn } from "@/lib/utils";
 
@@ -619,13 +620,13 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
                         </svg>
                       </div>
                       <p className="text-base font-semibold text-foreground">
-                        {t("search.noResultsFor")}{" "}
+                        <Typo>{t("search.noResultsFor")}</Typo>{" "}
                         <span className="text-primary">
                           &ldquo;{query.trim()}&rdquo;
                         </span>
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {t("search.noResultsDescription")}
+                        <Typo>{t("search.noResultsDescription")}</Typo>
                       </p>
                     </>
                   ) : (
@@ -695,10 +696,10 @@ export const Search: React.FC<SearchProps> = ({ open, onClose, tinted }) => {
                         </svg>
                       </div>
                       <p className="text-base font-semibold text-foreground">
-                        {t("search.emptyTitle")}
+                        <Typo>{t("search.emptyTitle")}</Typo>
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {t("search.emptyDescription")}
+                        <Typo>{t("search.emptyDescription")}</Typo>
                       </p>
                     </>
                   )}

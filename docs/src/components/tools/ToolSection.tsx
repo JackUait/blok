@@ -1,6 +1,7 @@
 // docs/src/components/tools/ToolSection.tsx
 import { CodeBlock } from '../common/CodeBlock';
 import { CategoryIcon } from '../common/CategoryIcon';
+import { Typo } from '../common/Typo';
 import type { ToolSection as ToolSectionType } from './tools-data';
 import { useI18n } from '../../contexts/I18nContext';
 
@@ -24,13 +25,13 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
           data-blok-testid="tools-section-badge"
         >
           <CategoryIcon category={section.type} size={14} />
-          {section.badge}
+          <Typo>{section.badge}</Typo>
         </div>
         <h1 className="scroll-mt-24 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           {section.title}
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          {section.description}
+          <Typo>{section.description}</Typo>
         </p>
       </div>
 
@@ -66,7 +67,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
                     <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-primary">{opt.option}</code></td>
                     <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-foreground">{opt.type}</code></td>
                     <td className="px-4 py-3 align-top"><code className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{opt.default}</code></td>
-                    <td className="px-4 py-3 align-top text-muted-foreground">{opt.description}</td>
+                    <td className="px-4 py-3 align-top text-muted-foreground"><Typo>{opt.description}</Typo></td>
                   </tr>
                 ))}
               </tbody>
@@ -77,7 +78,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
 
       <div className="mt-8 flex flex-col gap-3">
         <h3 className="mb-0 text-sm font-bold uppercase tracking-wide text-foreground">
-          {t('tools.saveData')}
+          <Typo>{t('tools.saveData')}</Typo>
         </h3>
         <CodeBlock code={section.saveDataShape} language="typescript" />
         <CodeBlock code={section.saveDataExample} language="json" />
@@ -85,7 +86,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
 
       <div className="mt-8">
         <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
-          {t('tools.usageExample')}
+          <Typo>{t('tools.usageExample')}</Typo>
         </h3>
         <CodeBlock code={section.usageExample} language="typescript" />
       </div>

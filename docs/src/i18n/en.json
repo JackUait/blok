@@ -28,11 +28,23 @@
     "option": "Option",
     "default": "Default",
     "parameter": "Parameter",
+    "parameters": "Parameters",
+    "required": "Required",
+    "errors": "Errors",
+    "deprecated": "Deprecated",
+    "deprecatedSince": "Deprecated since",
+    "useInstead": "Use instead:",
     "name": "Name",
     "onThisPage": "On this page",
     "breadcrumbsLabel": "Breadcrumb",
     "lastUpdated": "Last updated",
     "editOnGithub": "Edit this page on GitHub",
+    "feedback": {
+      "question": "Was this page helpful?",
+      "yes": "Yes",
+      "no": "No",
+      "thanks": "Thanks for the feedback!"
+    },
     "quickStartSteps": {
       "install": {
         "title": "Install Blok",
@@ -49,14 +61,11 @@
     },
     "sections": {
       "gettingStarted": "Getting started",
-      "tutorials": "Tutorials",
-      "concepts": "Concepts",
       "core": "Core",
       "editing": "Editing",
       "interface": "Interface",
       "extending": "Extending & system",
-      "dataTypes": "Data types",
-      "howTo": "How-to guides"
+      "dataTypes": "Data types"
     },
     "links": {
       "quickStart": "Quick Start",
@@ -240,7 +249,7 @@
             "note": "Replaces the whole document. To add blocks without clearing, use `insert()` or `insertMany()`."
           },
           "renderFromHTML": {
-            "note": "Handy for importing legacy HTML, but the result is only as good as the tools' paste handlers. Prefer JSON via `render()` when you control the source."
+            "note": "Handy for importing legacy HTML, but the result is only as good as the tools' paste handlers — JSON via `render()` preserves more fidelity when you control the source."
           },
           "delete": {
             "note": "Without an index it deletes the focused block. Deleting the last block leaves the editor empty, so insert a paragraph if you need a caret target."
@@ -249,7 +258,7 @@
             "note": "`toIndex` is in post-removal index space: for a forward move, subtract 1 or the block lands one slot too far."
           },
           "getBlockByIndex": {
-            "note": "Returns `undefined` for out-of-range indexes — guard the result before calling methods on it."
+            "note": "Returns `undefined` for out-of-range indexes — calling a method on an `undefined` result throws, so check the return value first."
           },
           "getById": {
             "note": "The stable way to reference a block across edits, since indexes shift. Returns `null` if the id no longer exists."
@@ -270,7 +279,30 @@
             "note": "Counts only top-level blocks, not nested children. Use it for bounds before an index-based `insert()` or `move()`."
           },
           "insert": {
-            "note": "Every argument is optional — call `insert()` for an empty paragraph, or pass `type`/`data`/`index` for full control. Pass `replace: true` to overwrite the block at `index`."
+            "note": "Every parameter is optional — call `insert()` for an empty paragraph, or pass `type`/`data`/`index` for full control. Pass `replace: true` to overwrite the block at `index`.",
+            "params": {
+              "type": { "description": "Tool name to instantiate." },
+              "data": { "description": "Initial tool data for the new block." },
+              "config": { "description": "Tool config for this block instance." },
+              "index": { "description": "Position to insert the block at." },
+              "needToFocus": { "description": "Whether to move focus to the inserted block." },
+              "replace": { "description": "Replace the existing block at index instead of inserting around it." },
+              "id": { "description": "Custom id for the new block." }
+            },
+            "errors": {
+              "0": {
+                "condition": "No `type` is given and no `defaultBlock` is configured.",
+                "resolution": "Pass an explicit `type`, or set `defaultBlock` in the editor config."
+              },
+              "1": {
+                "condition": "The resolved tool name is not registered in the editor.",
+                "resolution": "Register the tool in the editor's `tools` config before inserting a block of that type."
+              },
+              "2": {
+                "condition": "`replace: true` is passed but no block exists at `index`.",
+                "resolution": "Check `index` against `blocks.getBlocksCount()` before calling with `replace: true`."
+              }
+            }
           },
           "insertMany": {
             "note": "Bulk-insert in one operation (and one undo step) — far cheaper than looping `insert()` for large pastes or imports."
@@ -279,10 +311,40 @@
             "note": "Builds a tool's default data without inserting anything — useful when you need a valid empty payload for `insert()` or `update()`."
           },
           "update": {
-            "note": "Patches data/tunes in place, keeping the block id and type. To change the type, use `convert()` instead."
+            "note": "Patches data/tunes in place, keeping the block id and type. To change the type, use `convert()` instead.",
+            "params": {
+              "id": { "description": "Id of the block to update." },
+              "data": { "description": "Partial data merged into the block's existing data." },
+              "tunes": { "description": "Tune data merged into the block's existing tunes." }
+            },
+            "errors": {
+              "0": {
+                "condition": "No block exists with the given `id`.",
+                "resolution": "Confirm the id with `blocks.getById()` before calling `update()`."
+              }
+            }
           },
           "convert": {
-            "note": "Both the source and target tools must declare `conversionConfig`, otherwise the call is a no-op. Preserves text where possible."
+            "note": "Both the source and target tools must declare `conversionConfig`, otherwise the call throws. Preserves text where possible.",
+            "params": {
+              "id": { "description": "Id of the block to convert. Its tool must declare `conversionConfig.export`." },
+              "newType": { "description": "Name of the registered tool to convert to. Its tool must declare `conversionConfig.import`." },
+              "dataOverrides": { "description": "Data fields to overwrite on the resulting block after conversion." }
+            },
+            "errors": {
+              "0": {
+                "condition": "No block exists with the given `id`.",
+                "resolution": "Confirm the id with `blocks.getById()` before calling `convert()`."
+              },
+              "1": {
+                "condition": "`newType` is not a registered tool.",
+                "resolution": "Register the target tool in the editor's `tools` config."
+              },
+              "2": {
+                "condition": "The source tool has no `conversionConfig.export`, the target tool has no `conversionConfig.import`, or neither does.",
+                "resolution": "Add a `conversionConfig` to whichever tool is missing one, or convert through an intermediate tool that supports both directions."
+              }
+            }
           },
           "splitBlock": {
             "note": "Use for caret-aware splits (e.g. Enter mid-text); the update + insert land as a single undo entry."
@@ -336,7 +398,18 @@
             "note": "Mirror of `setToPreviousBlock()`; returns `false` at the bottom edge."
           },
           "setToBlock": {
-            "note": "The most flexible setter — target by `BlockAPI`, id, or index. Prefer id/BlockAPI over index, which shifts as blocks move."
+            "note": "The most flexible setter — target by `BlockAPI`, id, or index. Prefer id/BlockAPI over index, which shifts as blocks move.",
+            "params": {
+              "blockOrIdOrIndex": { "description": "Target block, given as a `BlockAPI` instance, block id, or numeric index." },
+              "position": { "description": "Where within the block to place the caret." },
+              "offset": { "description": "Character offset from `position` within the target input." }
+            },
+            "errors": {
+              "0": {
+                "condition": "`blockOrIdOrIndex` does not resolve to an existing block (unknown id or out-of-range index).",
+                "resolution": "Check the boolean return value; `setToBlock()` never throws, so a falsy result is the only signal the target wasn't found."
+              }
+            }
           },
           "focus": {
             "note": "Lightweight way to focus the editor without choosing a block; pass `true` for the end. Same as the top-level `focus()`."
@@ -477,7 +550,29 @@
       "methods": {
         "notifier": {
           "show": {
-            "note": "Built-in toast for lightweight feedback. Set `type: 'confirm'` or `'prompt'` to collect a yes/no or text response."
+            "note": "Built-in toast for lightweight feedback. Set `type: 'confirm'` or `'prompt'` to collect a yes/no or text response.",
+            "params": {
+              "options": {
+                "description": "Notification configuration. Shape depends on `type`.",
+                "message": { "description": "Notification text. May contain HTML." },
+                "type": { "description": "Notification type. `confirm` and `prompt` add action buttons." },
+                "style": { "description": "Built-in visual style for alert notifications." },
+                "time": { "description": "Auto-dismiss delay in ms. Applies to alert notifications only." },
+                "okText": { "description": "Label for the confirm/submit button (`confirm`/`prompt` types only)." },
+                "okHandler": { "description": "Confirm/submit callback. Receives the click event for `confirm`, or the input value for `prompt`. Required for prompt notifications." },
+                "cancelText": { "description": "Label for the cancel button (`confirm`/`prompt` types only)." },
+                "cancelHandler": { "description": "Cancel/close callback (`confirm`/`prompt` types only)." },
+                "inputType": { "description": "HTML input type for the prompt's text field (`prompt` type only)." },
+                "placeholder": { "description": "Placeholder text for the prompt's input field (`prompt` type only)." },
+                "default": { "description": "Default value pre-filled in the prompt's input field (`prompt` type only)." }
+              }
+            },
+            "errors": {
+              "0": {
+                "condition": "The notifier module fails to load (e.g. blocked by CSP, dynamic import failure).",
+                "resolution": "`show()` never throws or rejects — check the browser console, since the failure is logged rather than propagated to your call site."
+              }
+            }
           }
         }
       }
@@ -522,7 +617,7 @@
             "note": "The preferred way to enter/leave read-only mode. Returns a promise resolving to the new state once applied."
           },
           "toggle": {
-            "note": "Deprecated — use `set()`. Kept for compatibility; without an argument it flips the current state."
+            "note": "Kept for compatibility; without a parameter it flips the current state."
           }
         }
       }
@@ -784,7 +879,7 @@
       },
       "blockLibrary": {
         "title": "Every block, built in",
-        "description": "Notion-style blocks, ready in the box.",
+        "description": "Notion-like blocks, ready in the box.",
         "learnMore": "Learn more about the block library",
         "details": {
           "summary": "Blok includes the blocks most documents need, so you can put together rich content without building each one yourself.",
@@ -808,11 +903,11 @@
       },
       "slashCommands": {
         "title": "Type / to add anything",
-        "description": "Type / to search and insert any block, or use Markdown shortcuts like #, -, 1., [] and >.",
-        "learnMore": "Learn more about the slash menu and Markdown",
+        "description": "Press / or click + to open the toolbox, then search and insert any block — or use Markdown shortcuts like #, -, 1., [] and >.",
+        "learnMore": "Learn more about the toolbox and Markdown",
         "details": {
-          "summary": "Type / to open a menu of everything you can add: headings, lists, images, tables and more. Pick one without reaching for the mouse.",
-          "benefit1": "Start typing to filter the menu to what you want",
+          "summary": "Press / to open the toolbox — everything you can add: headings, lists, images, tables and more. Pick one without reaching for the mouse.",
+          "benefit1": "Start typing to filter the toolbox to what you want",
           "benefit2": "Markdown shortcuts: # for a heading, - for a list, > for a quote",
           "benefit3": "Or click the + button on any empty line",
           "benefit4": "Everything works from the keyboard"
@@ -839,7 +934,7 @@
           "benefit1": "100+ embed providers, matched client-side",
           "benefit2": "Video, audio, social, code and design sources",
           "benefit3": "OpenGraph bookmark cards as a fallback",
-          "benefit4": "Notion-style paste menu: link, bookmark or embed"
+          "benefit4": "Notion-like paste menu: link, bookmark or embed"
         }
       },
       "undoRedo": {
@@ -1155,7 +1250,13 @@
     "compatStatusCodemod": "Handled by codemod",
     "compatStatusNotBundled": "Not bundled — register your own",
     "removed": "Removed",
-    "added": "Added"
+    "added": "Added",
+    "blokUpgradeBadge": "Blok → Blok",
+    "blokUpgradeTitle": "Upgrading within Blok",
+    "blokUpgradeDescription": "Already on Blok? These are the breaking changes between 0.x releases, grounded in the changelog — most upgrades need no changes at all.",
+    "blokUpgradeViewChangelog": "View changelog",
+    "blokBreaking0192": "OutputBlockData's data field changed from any to Record<string, unknown> — reading a saved block's data now yields unknown, so code that indexes into it may need a type guard or cast. Type-only change; no runtime effect.",
+    "blokBreaking0170": "URL paste now always opens the paste menu instead of silently auto-embedding — code relying on the old auto-embed behaviour must opt in explicitly through the menu."
   },
   "changelog": {
     "badge": "Version History",

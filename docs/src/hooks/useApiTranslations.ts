@@ -104,13 +104,42 @@ export const useApiTranslations = () => {
         const noteKey = `${translationKey}.methods.${methodKey}.note`;
         const translatedDesc = safeTranslate(t, descKey);
         const translatedNote = safeTranslate(t, noteKey);
-        if (translatedDesc === undefined && translatedNote === undefined) {
+
+        const translatedParams = method.params?.map((param) => {
+          const paramDescKey = `${translationKey}.methods.${methodKey}.params.${param.name}.description`;
+          const translated = safeTranslate(t, paramDescKey);
+          return translated !== undefined ? { ...param, description: translated } : param;
+        });
+
+        const translatedErrors = method.errors?.map((error, index) => {
+          const conditionKey = `${translationKey}.methods.${methodKey}.errors.${index}.condition`;
+          const resolutionKey = `${translationKey}.methods.${methodKey}.errors.${index}.resolution`;
+          const translatedCondition = safeTranslate(t, conditionKey);
+          const translatedResolution = safeTranslate(t, resolutionKey);
+          if (translatedCondition === undefined && translatedResolution === undefined) {
+            return error;
+          }
+          return {
+            ...error,
+            ...(translatedCondition !== undefined && { condition: translatedCondition }),
+            ...(translatedResolution !== undefined && { resolution: translatedResolution }),
+          };
+        });
+
+        if (
+          translatedDesc === undefined &&
+          translatedNote === undefined &&
+          translatedParams === undefined &&
+          translatedErrors === undefined
+        ) {
           return method;
         }
         return {
           ...method,
           ...(translatedDesc !== undefined && { description: translatedDesc }),
           ...(translatedNote !== undefined && { note: translatedNote }),
+          ...(translatedParams !== undefined && { params: translatedParams }),
+          ...(translatedErrors !== undefined && { errors: translatedErrors }),
         };
       });
 

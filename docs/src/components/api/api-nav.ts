@@ -1,15 +1,7 @@
 // docs/src/components/api/api-nav.ts
 
-// "Getting started", tutorials, and concepts are split into their own groups
-// (rather than one shared "Getting started" bucket) so the sidebar — and the
-// Prev/Next pagination, which is scoped per-group — reflects that Quick Start,
-// the step-by-step Tutorial, and the explanatory Concepts page are different
-// Diátaxis content types, not all the same kind of "getting started" step.
 export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }> = [
-  { key: 'gettingStarted', moduleIds: ['quick-start'] },
-  { key: 'tutorials', moduleIds: ['tutorial'] },
-  { key: 'concepts', moduleIds: ['concepts'] },
-  { key: 'howTo', moduleIds: ['custom-block-tool'] },
+  { key: 'gettingStarted', moduleIds: ['quick-start', 'tutorial', 'concepts', 'custom-block-tool'] },
   { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api'] },
   { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'styles-api', 'history-api'] },
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api'] },
@@ -21,9 +13,6 @@ export const MODULE_ORDER: string[] = SIDEBAR_GROUPS.flatMap((g) => g.moduleIds)
 
 export const GROUP_TITLES_EN: Record<string, string> = {
   gettingStarted: 'Getting started',
-  tutorials: 'Tutorials',
-  concepts: 'Concepts',
-  howTo: 'How-to guides',
   core: 'Core',
   editing: 'Editing',
   interface: 'Interface',

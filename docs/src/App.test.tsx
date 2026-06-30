@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { I18nProvider } from './contexts/I18nContext';
@@ -141,8 +142,10 @@ describe('App', () => {
       </MemoryRouter>
     );
 
-    // Only the Caret module is rendered — Selection API must not be present
-    expect(screen.getByText('Caret API')).toBeInTheDocument();
+    // Only the Caret module is rendered — Selection API must not be present.
+    // "Caret API" also now appears in the breadcrumb trail, so scope to the
+    // page's h1 rather than asserting on the bare text.
+    expect(screen.getByRole('heading', { level: 1, name: 'Caret API' })).toBeInTheDocument();
     expect(screen.queryByText('Selection API')).toBeNull();
   });
 
@@ -224,6 +227,26 @@ describe('App', () => {
 
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 700, left: 0, behavior: 'instant' });
     expect(window.scrollTo).not.toHaveBeenCalledWith({ top: 100, left: 0, behavior: 'instant' });
+  });
+
+  it('jumps to the top instantly (no scroll animation) when navigating to a different page', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/docs/caret-api']}>
+        <I18nProvider>
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    (window.scrollTo as ReturnType<typeof vi.fn>).mockClear();
+
+    await user.click(screen.getByTestId('api-sidebar-link-selection-api'));
+
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
   });
 
   it('should not restore when there is no saved position (stay at top)', () => {

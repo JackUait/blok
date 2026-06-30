@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { CSS_MAPPINGS, VERSION_COMPATIBILITY } from "./migration-data";
+import { Link } from "react-router-dom";
+import { BLOK_VERSION_BREAKING_CHANGES, CSS_MAPPINGS, VERSION_COMPATIBILITY } from "./migration-data";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
 
@@ -288,6 +289,46 @@ export const MigrationSteps: React.FC = () => {
         <p className="mt-4 text-center text-sm leading-relaxed text-muted-foreground" data-blok-testid="compatibility-stub-note">
           <Typo>{t('migration.supportedVersionsStubNote')}</Typo>
         </p>
+      </section>
+
+      <section
+        className="mx-auto w-full max-w-4xl px-6 py-12"
+        data-blok-testid="blok-upgrade-section"
+      >
+        <div className="mb-8 text-center">
+          <span className="mb-3 inline-block rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
+            <Typo>{t('migration.blokUpgradeBadge')}</Typo>
+          </span>
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl"><Typo>{t('migration.blokUpgradeTitle')}</Typo></h2>
+          <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+            <Typo>{t('migration.blokUpgradeDescription')}</Typo>
+          </p>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card" data-blok-testid="blok-upgrade-table">
+          <div className="divide-y divide-border">
+            {BLOK_VERSION_BREAKING_CHANGES.map((change) => (
+              <div
+                key={change.version}
+                className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-start sm:gap-4"
+                data-blok-testid="blok-upgrade-row"
+              >
+                <code className="shrink-0 rounded-lg bg-secondary px-2.5 py-1 font-mono text-xs font-semibold text-primary">
+                  v{change.version}
+                </code>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  <Typo>{t(change.descriptionKey)}</Typo>{' '}
+                  <Link
+                    to={change.link}
+                    className="font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    <Typo>{t('migration.blokUpgradeViewChangelog')}</Typo>
+                  </Link>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
     </>
   );

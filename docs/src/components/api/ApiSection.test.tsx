@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiSection } from './ApiSection';
@@ -206,14 +207,14 @@ describe('ApiSection', () => {
     expect(screen.queryByTestId('api-section-badge')).not.toBeInTheDocument();
   });
 
-  it('should render methods block with heading level 3', () => {
+  it('should render methods block with heading level 2 (no h1->h3 skip)', () => {
     render(<Providers><ApiSection section={mockSection} /></Providers>);
 
-    const methodsHeading = screen.getByRole('heading', { level: 3, name: 'Methods' });
+    const methodsHeading = screen.getByRole('heading', { level: 2, name: 'Methods' });
     expect(methodsHeading).toBeInTheDocument();
   });
 
-  it('should render properties block with heading level 3', () => {
+  it('should render properties block with heading level 2 (no h1->h3 skip)', () => {
     const propsOnlySection: ApiSectionType = {
       id: 'props-only',
       title: 'Props Only',
@@ -222,8 +223,17 @@ describe('ApiSection', () => {
 
     render(<Providers><ApiSection section={propsOnlySection} /></Providers>);
 
-    const propertiesHeading = screen.getByRole('heading', { level: 3, name: 'Properties' });
+    const propertiesHeading = screen.getByRole('heading', { level: 2, name: 'Properties' });
     expect(propertiesHeading).toBeInTheDocument();
+  });
+
+  it('should render exactly one h1, methods/properties as h2, and method names as h3', () => {
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
+
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 2, name: 'Methods' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Properties' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'testMethod()' })).toBeInTheDocument();
   });
 
   it('should render method name and return type together', () => {
@@ -429,6 +439,87 @@ describe('ApiSection', () => {
       render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
       const checkpoint = screen.getByTestId('quick-start-checkpoint');
       expect(normalize(checkpoint.textContent)).toContain('element with ID «editor» is missing');
+    });
+  });
+
+  describe('page-type badge', () => {
+    it('renders the badge for a quick-start/tutorial/concepts-style section', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+
+      const badge = screen.getByTestId('api-section-badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('Guide');
+    });
+
+    it('does not render a badge for a generic reference section, even with a badge value set', () => {
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+
+      expect(screen.queryByTestId('api-section-badge')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('breadcrumbs', () => {
+    it('renders a breadcrumb trail above the section header', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+
+      expect(screen.getByTestId('api-breadcrumbs')).toBeInTheDocument();
+    });
+  });
+
+  describe('last updated', () => {
+    it('renders the last-updated date when present', () => {
+      const sectionWithDate: ApiSectionType = { ...mockSection, lastUpdated: '2026-06-30' };
+      render(<Providers><ApiSection section={sectionWithDate} /></Providers>);
+
+      const lastUpdated = screen.getByTestId('api-last-updated');
+      expect(lastUpdated).toBeInTheDocument();
+      expect(lastUpdated.textContent).toContain('2026');
+    });
+
+    it('does not render a last-updated line when absent', () => {
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+
+      expect(screen.queryByTestId('api-last-updated')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('edit on GitHub', () => {
+    it('renders a link to the GitHub source for the page', () => {
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+
+      const link = screen.getByTestId('api-edit-on-github');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', expect.stringContaining('github.com'));
+    });
+  });
+
+  describe('"was this helpful" feedback widget', () => {
+    it('asks whether the page was helpful, with Yes/No controls', () => {
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+
+      expect(screen.getByText('Was this page helpful?')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Yes' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'No' })).toBeInTheDocument();
+    });
+
+    it('thanks the reader after they vote, and the vote buttons disappear', async () => {
+      const user = userEvent.setup();
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+
+      await user.click(screen.getByRole('button', { name: 'Yes' }));
+
+      expect(screen.getByText('Thanks for the feedback!')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Yes' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'No' })).not.toBeInTheDocument();
+    });
+
+    it('resets per section, so navigating to a new page asks again', () => {
+      const { rerender } = render(<Providers><ApiSection section={mockSection} /></Providers>);
+      const otherSection: ApiSectionType = { ...mockSection, id: 'other-section', title: 'Other' };
+
+      rerender(<Providers><ApiSection section={otherSection} /></Providers>);
+
+      expect(screen.getByRole('button', { name: 'Yes' })).toBeInTheDocument();
     });
   });
 });

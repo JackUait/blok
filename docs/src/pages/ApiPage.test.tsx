@@ -25,7 +25,9 @@ const renderAt = (entry: string) =>
 describe('ApiPage routing', () => {
   it('renders a single module at /docs/caret-api', () => {
     renderAt('/docs/caret-api');
-    expect(screen.getByText('Caret API')).toBeInTheDocument();
+    // "Caret API" also appears in the breadcrumb trail, so scope to the
+    // page's h1 rather than asserting on the bare text.
+    expect(screen.getByRole('heading', { level: 1, name: 'Caret API' })).toBeInTheDocument();
     expect(screen.queryByText('Selection API')).toBeNull();
   });
 

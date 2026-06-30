@@ -58,12 +58,13 @@ describe('useApiTranslations', () => {
   it('should return all expected sidebar section categories', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
 
-    // Tutorial and Concepts get their own group labels (distinct from "Getting
-    // started") so the IA reflects that they're different Diátaxis content
-    // types, not all "getting started" steps.
+    // Quick Start, Tutorial, Concepts, and the custom-block-tool how-to are
+    // each one-page sections, so they collapse under a single "Getting
+    // started" group rather than each getting their own (mostly empty)
+    // sidebar group.
     const sectionTitles = result.current.sidebarSections.map(s => s.title);
     expect(sectionTitles).toEqual([
-      'Getting started', 'Tutorials', 'Concepts', 'How-to guides', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
       'Block Tools', 'Inline Tools',
     ]);
   });
@@ -171,6 +172,64 @@ describe('useApiTranslations', () => {
     const holderRow = configSection?.table?.find(r => r.option === 'holder');
     expect(holderRow?.description).toBe('Container element ID or reference');
   });
+
+  it('should translate method param descriptions in Russian, keeping name/type/required structural', () => {
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const insertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.insert('));
+
+    const typeParam = insertMethod?.params?.find(p => p.name === 'type');
+    expect(typeParam?.description).toBe('Имя инструмента для создания блока.');
+    // Structural fields stay language-agnostic.
+    expect(typeParam?.type).toBe('string');
+    expect(typeParam?.required).toBe(false);
+  });
+
+  it('should keep English method param descriptions unchanged in English locale', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const insertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.insert('));
+
+    const typeParam = insertMethod?.params?.find(p => p.name === 'type');
+    expect(typeParam?.description).toBe('Tool name to instantiate.');
+  });
+
+  it('should translate method error condition/resolution in Russian, keeping the literal message untranslated', () => {
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const convertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.convert('));
+
+    const notFoundError = convertMethod?.errors?.[0];
+    expect(notFoundError?.condition).toBe('Блок с указанным `id` не существует.');
+    expect(notFoundError?.resolution).toBe('Проверьте id через `blocks.getById()` перед вызовом `convert()`.');
+    // The thrown error text is language-agnostic.
+    expect(notFoundError?.message).toBe('Block with id "<id>" not found');
+  });
+
+  it('should keep English method error condition/resolution unchanged in English locale', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const convertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.convert('));
+
+    const notFoundError = convertMethod?.errors?.[0];
+    expect(notFoundError?.condition).toBe('No block exists with the given `id`.');
+    expect(notFoundError?.resolution).toBe("Confirm the id with `blocks.getById()` before calling `convert()`.");
+  });
+
+  it('should expose deprecation fields unchanged across locales', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const readOnlySection = result.current.apiSections.find(s => s.id === 'readonly-api');
+    const toggleMethod = readOnlySection?.methods?.find(m => m.name.startsWith('readOnly.toggle('));
+
+    expect(toggleMethod?.deprecatedSince).toBe('0.23.5');
+    expect(toggleMethod?.replacedBy).toBe('readOnly.set');
+  });
 });
 
 describe('useApiTranslations sidebar groups', () => {
@@ -178,10 +237,10 @@ describe('useApiTranslations sidebar groups', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     const titles = result.current.sidebarSections.map((s) => s.title);
     expect(titles).toEqual([
-      'Getting started', 'Tutorials', 'Concepts', 'How-to guides', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
       'Block Tools', 'Inline Tools',
     ]);
-    expect(result.current.sidebarSections[5].links.map((l) => l.id))
+    expect(result.current.sidebarSections[2].links.map((l) => l.id))
       .toEqual(['caret-api', 'selection-api', 'styles-api', 'history-api']);
   });
 

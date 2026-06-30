@@ -96,7 +96,6 @@ const groupResultsByModule = (
 ): SearchResult[] => {
   const moduleOrder = [
     "Getting started",
-    "How-to guides",
     "Core",
     "Editing",
     "Interface",

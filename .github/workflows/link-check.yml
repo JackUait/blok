@@ -1,0 +1,46 @@
+name: Link Check
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  link-check:
+    name: Markdown Link Check
+    runs-on: ubuntu-latest
+    # A dead external link shouldn't block the rest of CI — this job reports but
+    # never gates merges. See the job summary / logs for any rot it finds.
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check links in Markdown docs
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Scoped to the docs site's markdown and the repo's top-level docs —
+          # not a crawl of the rendered/live site, so this stays fast.
+          # CHANGELOG.md's per-commit/compare links are excluded below: there are
+          # hundreds of them, and re-checking each one on every run is both slow
+          # and the single biggest source of GitHub-rate-limit flakiness.
+          args: >-
+            --no-progress
+            --timeout 20
+            --max-retries 2
+            --accept 100..=103,200..=299,403,429
+            --exclude 'github\.com/JackUait/blok/(commit|compare)/'
+            --exclude '^http://localhost'
+            README.md
+            CHANGELOG.md
+            CONTRIBUTING.md
+            MIGRATION.md
+            'docs/**/*.md'
+          fail: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

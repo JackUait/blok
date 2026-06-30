@@ -612,7 +612,7 @@ const editor = new Blok({
     badge: 'Block Tool',
     title: 'Columns',
     description:
-      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Create columns from the toolbox, by dragging a block beside another, or by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
+      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
     importExample: `import { ColumnList } from '@jackuait/blok/tools';`,
     configOptions: [],
     saveDataShape: `interface ColumnListData {

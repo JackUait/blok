@@ -114,7 +114,9 @@ const ScrollHandler = () => {
     previousPathname.current = pathname;
 
     if (isNewRoute && !hash) {
-      window.scrollTo(0, 0);
+      // Explicit "instant" bypasses the root's CSS scroll-behavior: smooth so
+      // navigating to a new page jumps to the top instead of animating there.
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
       return;
     }
 

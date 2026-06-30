@@ -215,8 +215,11 @@ export class EditorComponent {
     id: "cdn",
     key: "cdn",
     language: "html",
+    // Pinned to the published version (matches root package.json) rather than
+    // the unpinned default, so a future release can't silently change what
+    // this copy-pasted snippet loads.
     code: `<div id="editor"></div>
-<script src="https://unpkg.com/@jackuait/blok/dist/blok.iife.js"></script>
+<script src="https://unpkg.com/@jackuait/blok@0.23.5/dist/blok.iife.js"></script>
 <script>
   new BlokEditor.Blok({ holder: 'editor' });
 </script>`,

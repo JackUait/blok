@@ -352,4 +352,46 @@ describe("API_SECTIONS", () => {
       expect(section!.methods || section!.properties).toBeDefined();
     });
   });
+
+  describe("high-traffic examples document expected output and failure handling", () => {
+    // These 5 methods carry structured `errors` (so the failure modes are
+    // covered there); the example itself should still show what success
+    // looks like, and — where a call can fail in normal usage — show the
+    // reader how to guard for it, not just the happy path.
+    const findMethod = (sectionId: string, name: string) => {
+      const section = API_SECTIONS.find((s) => s.id === sectionId);
+      return section?.methods?.find((m) => m.name === name);
+    };
+
+    it("blocks.insert example shows the inserted block's id as output", () => {
+      const method = findMethod(
+        "blocks-api",
+        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?)",
+      );
+      expect(method?.example).toMatch(/\/\/\s*→/);
+    });
+
+    it("blocks.update example shows a try/catch around the unknown-id failure mode", () => {
+      const method = findMethod("blocks-api", "blocks.update(id, data?, tunes?)");
+      expect(method?.example).toMatch(/try\s*{[\s\S]*catch/);
+    });
+
+    it("blocks.convert example shows a try/catch around the unsupported-conversion failure mode", () => {
+      const method = findMethod("blocks-api", "blocks.convert(id, newType, dataOverrides?)");
+      expect(method?.example).toMatch(/try\s*{[\s\S]*catch/);
+    });
+
+    it("notifier.show example shows expected output for the simple notification", () => {
+      const method = findMethod("notifier-api", "notifier.show(options)");
+      expect(method?.example).toMatch(/\/\/\s*→/);
+    });
+
+    it("caret.setToBlock example shows the boolean return value as output", () => {
+      const method = findMethod(
+        "caret-api",
+        "caret.setToBlock(blockOrIdOrIndex, position?, offset?)",
+      );
+      expect(method?.example).toMatch(/\/\/\s*→/);
+    });
+  });
 });

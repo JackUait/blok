@@ -33,6 +33,48 @@ const codeClass =
 
 const PACKAGE_NAME = "@jackuait/blok";
 
+// Same repo the Footer's GitHub link points at — reused here rather than a
+// new constant so both links always agree on where the source lives.
+const REPO_URL = "https://github.com/JackUait/blok";
+
+// One sensible source-file link per page type: customType pages each have a
+// dedicated content component, everything else (the generic method/property/
+// table reference pages) is authored in api-data.ts.
+const EDIT_PATH_BY_CUSTOM_TYPE: Record<NonNullable<ApiSectionType["customType"]>, string> = {
+  "quick-start": "docs/src/components/api/ApiSection.tsx",
+  tutorial: "docs/src/components/api/TutorialContent.tsx",
+  concepts: "docs/src/components/api/ConceptsContent.tsx",
+  "how-to-custom-tool": "docs/src/components/api/HowToCustomToolContent.tsx",
+};
+
+const getEditPath = (section: ApiSectionType): string =>
+  section.customType
+    ? EDIT_PATH_BY_CUSTOM_TYPE[section.customType]
+    : "docs/src/components/api/api-data.ts";
+
+// Locale → toLocaleDateString locale tag, mirroring ChangelogPage.tsx's date
+// formatting convention so "Last updated" dates read the same way site-wide.
+const DATE_LOCALE_MAP: Record<string, string> = {
+  en: "en-US",
+  ru: "ru-RU",
+};
+
+const formatLastUpdated = (dateString: string, locale: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString(DATE_LOCALE_MAP[locale] ?? "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+// Same glyph as the Footer's GitHub link, sized down for an inline text link.
+const GitHubIcon: React.FC = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+  </svg>
+);
+
 const QuickStartContent: React.FC = () => {
   const { t } = useI18n();
   const { framework } = useFramework();
@@ -139,16 +181,88 @@ const QuickStartContent: React.FC = () => {
   );
 };
 
-const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => (
-  <div className="flex flex-col gap-3">
-    <h1 className="scroll-mt-24 font-display text-3xl font-extrabold tracking-tight text-foreground">
-      <Typo>{section.title}</Typo>
-    </h1>
-    {section.description && (
-      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground"><Typo>{section.description}</Typo></p>
-    )}
-  </div>
-);
+// Client-only "was this helpful?" widget — no backend to send votes to, so
+// it just acknowledges the click. Keyed by section.id from the caller so it
+// resets when the reader navigates to a different page.
+const FeedbackWidget: React.FC = () => {
+  const { t } = useI18n();
+  const [voted, setVoted] = useState(false);
+
+  if (voted) {
+    return (
+      <p className="text-xs text-muted-foreground" data-blok-testid="api-feedback-thanks">
+        <Typo>{t('api.feedback.thanks')}</Typo>
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground" data-blok-testid="api-feedback">
+      <span><Typo>{t('api.feedback.question')}</Typo></span>
+      <button
+        type="button"
+        onClick={() => setVoted(true)}
+        className="rounded-md border border-border px-2 py-0.5 font-semibold transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        {t('api.feedback.yes')}
+      </button>
+      <button
+        type="button"
+        onClick={() => setVoted(true)}
+        className="rounded-md border border-border px-2 py-0.5 font-semibold transition-colors hover:bg-secondary hover:text-foreground"
+      >
+        {t('api.feedback.no')}
+      </button>
+    </div>
+  );
+};
+
+const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
+  const { t, locale } = useI18n();
+
+  // The badge marks the page's Diátaxis content type (Tutorial, Concepts,
+  // How-to, Guide); the generic reference sections (methods/properties/table)
+  // intentionally stay unbadged, matching how ToolSection badges its own
+  // category pages but not every catalog entry.
+  const showBadge = Boolean(section.customType && section.badge);
+
+  return (
+    <div className="flex flex-col gap-3">
+      {showBadge && (
+        <div
+          className="inline-flex w-fit items-center rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary"
+          data-blok-testid="api-section-badge"
+        >
+          <Typo>{section.badge}</Typo>
+        </div>
+      )}
+      <h1 className="scroll-mt-24 font-display text-3xl font-extrabold tracking-tight text-foreground">
+        <Typo>{section.title}</Typo>
+      </h1>
+      {section.description && (
+        <p className="max-w-2xl text-base leading-relaxed text-muted-foreground"><Typo>{section.description}</Typo></p>
+      )}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        {section.lastUpdated && (
+          <span data-blok-testid="api-last-updated">
+            <Typo>{t('api.lastUpdated')}</Typo> {formatLastUpdated(section.lastUpdated, locale)}
+          </span>
+        )}
+        <a
+          href={`${REPO_URL}/blob/master/${getEditPath(section)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+          data-blok-testid="api-edit-on-github"
+        >
+          <GitHubIcon />
+          <Typo>{t('api.editOnGithub')}</Typo>
+        </a>
+      </div>
+      <FeedbackWidget key={section.id} />
+    </div>
+  );
+};
 
 export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   const { t } = useI18n();
@@ -171,6 +285,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "quick-start") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -183,6 +298,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "tutorial") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -195,6 +311,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "concepts") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -207,6 +324,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "how-to-custom-tool") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -217,6 +335,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
   return (
     <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+      <Breadcrumbs currentId={section.id} pageTitle={section.title} />
       <SectionHeader section={section} />
 
       {section.methods && section.methods.length > 0 && (
@@ -226,7 +345,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <div className="mb-6">
             <EditorAccessNote />
           </div>
-          <h3 className={blockTitleClass}>{t('api.methods')}</h3>
+          <h2 className={blockTitleClass}>{t('api.methods')}</h2>
           <div className="flex flex-col gap-4">
             {section.methods.map((method, index) => (
               <ApiMethodCard key={index} method={method} sectionId={section.id} />
@@ -237,7 +356,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
       {section.properties && section.properties.length > 0 && (
         <div className="mt-10">
-          <h3 className={blockTitleClass}>{t('api.properties')}</h3>
+          <h2 className={blockTitleClass}>{t('api.properties')}</h2>
           <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -281,7 +400,7 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
       {section.table && section.table.length > 0 && (
         <div className="mt-10">
-          <h3 className={blockTitleClass}><Typo>{section.title}</Typo></h3>
+          <h2 className={blockTitleClass}><Typo>{section.title}</Typo></h2>
           <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
             <table className="w-full border-collapse text-sm">
               <thead>

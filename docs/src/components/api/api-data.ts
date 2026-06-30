@@ -9,6 +9,42 @@ export interface ApiMethod {
    * contain `inline code` spans (rendered as chips by ApiMethodCard).
    */
   note?: string;
+  /**
+   * Structured parameter documentation, rendered as a table by
+   * ApiMethodCard. `name`/`type`/`required`/`default` are language-agnostic
+   * and live here; `description` is overlaid per-locale by
+   * useApiTranslations from
+   * `api.<section>.methods.<methodKey>.params.<paramName>.description`.
+   */
+  params?: {
+    name: string;
+    type: string;
+    required: boolean;
+    default?: string;
+    description: string;
+  }[];
+  /**
+   * Structured failure-mode documentation, rendered as a list by
+   * ApiMethodCard. `message` is the literal thrown error text
+   * (language-agnostic) and lives here; `condition`/`resolution` prose is
+   * overlaid per-locale by useApiTranslations from
+   * `api.<section>.methods.<methodKey>.errors.<index>.*`.
+   */
+  errors?: {
+    condition: string;
+    message: string;
+    resolution: string;
+  }[];
+  /**
+   * Editor version this method was deprecated in (e.g. "0.23.5"). When set,
+   * ApiMethodCard renders a visible "Deprecated" badge.
+   */
+  deprecatedSince?: string;
+  /**
+   * Method key (e.g. "readOnly.set") that replaces this deprecated method.
+   * Rendered by ApiMethodCard as an in-page anchor link.
+   */
+  replacedBy?: string;
 }
 
 export interface ApiSection {
@@ -355,12 +391,81 @@ console.log('Total blocks:', count);`,
           "Insert a new block with full control over its properties and position.",
         example: `// Insert at end with default type
 const block = editor.blocks.insert();
+// → BlockAPI { id: 'kP3xQ...', name: 'paragraph', ... }
 
 // Insert paragraph with data at index 0
 const block = editor.blocks.insert('paragraph', { text: 'Hello' }, undefined, 0);
 
 // Insert with custom ID
 const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undefined, undefined, undefined, 'custom-id');`,
+        params: [
+          {
+            name: "type",
+            type: "string",
+            required: false,
+            default: "config.defaultBlock",
+            description: "Tool name to instantiate.",
+          },
+          {
+            name: "data",
+            type: "BlockToolData",
+            required: false,
+            default: "{}",
+            description: "Initial tool data for the new block.",
+          },
+          {
+            name: "config",
+            type: "ToolConfig",
+            required: false,
+            default: "{}",
+            description: "Tool config for this block instance.",
+          },
+          {
+            name: "index",
+            type: "number",
+            required: false,
+            default: "current block index + 1",
+            description: "Position to insert the block at.",
+          },
+          {
+            name: "needToFocus",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description: "Whether to move focus to the inserted block.",
+          },
+          {
+            name: "replace",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description: "Replace the existing block at index instead of inserting around it.",
+          },
+          {
+            name: "id",
+            type: "string",
+            required: false,
+            default: "auto-generated",
+            description: "Custom id for the new block.",
+          },
+        ],
+        errors: [
+          {
+            condition: "No `type` is given and no `defaultBlock` is configured.",
+            message: "Could not insert Block. Tool name is not specified.",
+            resolution: "Pass an explicit `type`, or set `defaultBlock` in the editor config.",
+          },
+          {
+            condition: "The resolved tool name is not registered in the editor.",
+            message: 'Could not compose Block. Tool «<type>» not found.',
+            resolution: "Register the tool in the editor's `tools` config before inserting a block of that type.",
+          },
+          {
+            condition: "`replace: true` is passed but no block exists at `index`.",
+            message: 'Could not replace Block at index <index>. Block not found.',
+            resolution: "Check `index` against `blocks.getBlocksCount()` before calling with `replace: true`.",
+          },
+        ],
       },
       {
         name: "blocks.insertMany(blocks, index?)",
@@ -388,7 +493,44 @@ console.log('Inserted:', inserted.length, 'blocks');`,
 const block = await editor.blocks.update('block-123', { text: 'New text' });
 
 // Update with tunes
-const block = await editor.blocks.update('block-123', undefined, { alignment: 'center' });`,
+const block = await editor.blocks.update('block-123', undefined, { alignment: 'center' });
+
+// Guard against an id that no longer exists (e.g. the block was deleted
+// concurrently) instead of letting the rejection surface unhandled
+try {
+  await editor.blocks.update(staleId, { text: 'New text' });
+} catch {
+  console.warn('Block was already removed, skipping update');
+}`,
+        params: [
+          {
+            name: "id",
+            type: "string",
+            required: true,
+            description: "Id of the block to update.",
+          },
+          {
+            name: "data",
+            type: "Partial<BlockToolData>",
+            required: false,
+            default: "undefined",
+            description: "Partial data merged into the block's existing data.",
+          },
+          {
+            name: "tunes",
+            type: "Record<string, BlockTuneData>",
+            required: false,
+            default: "undefined",
+            description: "Tune data merged into the block's existing tunes.",
+          },
+        ],
+        errors: [
+          {
+            condition: "No block exists with the given `id`.",
+            message: 'Block with id "<id>" not found',
+            resolution: "Confirm the id with `blocks.getById()` before calling `update()`.",
+          },
+        ],
       },
       {
         name: "blocks.convert(id, newType, dataOverrides?)",
@@ -399,7 +541,53 @@ const block = await editor.blocks.update('block-123', undefined, { alignment: 'c
 const headerBlock = await editor.blocks.convert('block-123', 'header', { level: 2 });
 
 // Convert with data overrides
-const headerBlock = await editor.blocks.convert('block-123', 'header', { text: 'New Title', level: 1 });`,
+const headerBlock = await editor.blocks.convert('block-123', 'header', { text: 'New Title', level: 1 });
+
+// Not every pair of tools supports conversion — guard it rather than
+// assuming the target type is always convertible
+try {
+  await editor.blocks.convert('block-123', 'table');
+} catch (error) {
+  console.warn('Conversion not supported between these tools:', error);
+}`,
+        params: [
+          {
+            name: "id",
+            type: "string",
+            required: true,
+            description: "Id of the block to convert. Its tool must declare conversionConfig.export.",
+          },
+          {
+            name: "newType",
+            type: "string",
+            required: true,
+            description: "Name of the registered tool to convert to. Its tool must declare conversionConfig.import.",
+          },
+          {
+            name: "dataOverrides",
+            type: "BlockToolData",
+            required: false,
+            default: "undefined",
+            description: "Data fields to overwrite on the resulting block after conversion.",
+          },
+        ],
+        errors: [
+          {
+            condition: "No block exists with the given `id`.",
+            message: 'Block with id "<id>" not found',
+            resolution: "Confirm the id with `blocks.getById()` before calling `convert()`.",
+          },
+          {
+            condition: "`newType` is not a registered tool.",
+            message: 'Block Tool with type "<newType>" not found',
+            resolution: "Register the target tool in the editor's `tools` config.",
+          },
+          {
+            condition: "The source tool has no conversionConfig.export, the target tool has no conversionConfig.import, or neither does.",
+            message: 'Conversion from "<sourceType>" to "<newType>" is not possible. <Tool>(s) should provide a "conversionConfig"',
+            resolution: "Add a conversionConfig to whichever tool is missing one, or convert through an intermediate tool that supports both directions.",
+          },
+        ],
       },
       {
         name: "blocks.splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex)",
@@ -567,6 +755,7 @@ editor.caret.setToLastBlock('start');`,
         description: "Set caret to a specific block by BlockAPI, ID, or index.",
         example: `// By index
 editor.caret.setToBlock(0, 'end');
+// → true if the caret moved, false if the target block doesn't exist
 
 // By ID
 editor.caret.setToBlock('block-123', 'start');
@@ -574,6 +763,35 @@ editor.caret.setToBlock('block-123', 'start');
 // By BlockAPI
 const block = editor.blocks.getById('block-123');
 editor.caret.setToBlock(block);`,
+        params: [
+          {
+            name: "blockOrIdOrIndex",
+            type: "BlockAPI | string | number",
+            required: true,
+            description: "Target block, given as a BlockAPI instance, block id, or numeric index.",
+          },
+          {
+            name: "position",
+            type: "'start' | 'end' | 'default'",
+            required: false,
+            default: "'default'",
+            description: "Where within the block to place the caret.",
+          },
+          {
+            name: "offset",
+            type: "number",
+            required: false,
+            default: "0",
+            description: "Character offset from position within the target input.",
+          },
+        ],
+        errors: [
+          {
+            condition: "blockOrIdOrIndex does not resolve to an existing block (unknown id or out-of-range index).",
+            message: "(no error thrown — the call returns false)",
+            resolution: "Check the boolean return value; setToBlock() never throws, so a falsy result is the only signal the target wasn't found.",
+          },
+        ],
       },
       {
         name: "caret.focus(atEnd?)",
@@ -959,21 +1177,113 @@ editor.notifier.show({
   message: 'Changes saved',
   style: 'success'
 });
+// → renders a toast in the corner of the editor; returns nothing to await
 
 // Confirm notification
 editor.notifier.show({
   message: 'Delete this block?',
-  style: 'confirm',
-  onConfirm: () => console.log('Confirmed'),
-  onCancel: () => console.log('Cancelled')
+  type: 'confirm',
+  okHandler: () => console.log('Confirmed'),
+  cancelHandler: () => console.log('Cancelled')
 });
 
 // Prompt notification
 editor.notifier.show({
   message: 'Enter a title',
-  style: 'prompt',
-  onConfirm: (value) => console.log('Entered:', value)
+  type: 'prompt',
+  okHandler: (value) => console.log('Entered:', value)
 });`,
+        params: [
+          {
+            name: "options",
+            type: "NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions",
+            required: true,
+            description: "Notification configuration. Shape depends on type.",
+          },
+          {
+            name: "options.message",
+            type: "string",
+            required: true,
+            description: "Notification text. May contain HTML.",
+          },
+          {
+            name: "options.type",
+            type: "'alert' | 'confirm' | 'prompt'",
+            required: false,
+            default: "'alert'",
+            description: "Notification type. confirm and prompt add action buttons.",
+          },
+          {
+            name: "options.style",
+            type: "'success' | 'error'",
+            required: false,
+            default: "undefined",
+            description: "Built-in visual style for alert notifications.",
+          },
+          {
+            name: "options.time",
+            type: "number",
+            required: false,
+            default: "8000",
+            description: "Auto-dismiss delay in ms. Applies to alert notifications only.",
+          },
+          {
+            name: "options.okText",
+            type: "string",
+            required: false,
+            default: "'Confirm' / 'Ok'",
+            description: "Label for the confirm/submit button (confirm/prompt types only).",
+          },
+          {
+            name: "options.okHandler",
+            type: "(event: Event) => void | (value: string) => void",
+            required: false,
+            default: "undefined",
+            description: "Confirm/submit callback. Receives the click event for confirm, or the input value for prompt. Required for prompt notifications.",
+          },
+          {
+            name: "options.cancelText",
+            type: "string",
+            required: false,
+            default: "'Cancel'",
+            description: "Label for the cancel button (confirm/prompt types only).",
+          },
+          {
+            name: "options.cancelHandler",
+            type: "(event: Event) => void",
+            required: false,
+            default: "undefined",
+            description: "Cancel/close callback (confirm/prompt types only).",
+          },
+          {
+            name: "options.inputType",
+            type: "string",
+            required: false,
+            default: "'text'",
+            description: "HTML input type for the prompt's text field (prompt type only).",
+          },
+          {
+            name: "options.placeholder",
+            type: "string",
+            required: false,
+            default: "undefined",
+            description: "Placeholder text for the prompt's input field (prompt type only).",
+          },
+          {
+            name: "options.default",
+            type: "string",
+            required: false,
+            default: "undefined",
+            description: "Default value pre-filled in the prompt's input field (prompt type only).",
+          },
+        ],
+        errors: [
+          {
+            condition: "The notifier module fails to load (e.g. blocked by CSP, dynamic import failure).",
+            message: "[Blok] Failed to display notification. Reason: <error>",
+            resolution: "show() never throws or rejects — check the browser console, since the failure is logged rather than propagated to your call site.",
+          },
+        ],
       },
     ],
   },
@@ -1052,7 +1362,9 @@ console.log(editor.readOnly.isEnabled); // true or false`,
       {
         name: "readOnly.toggle(state?)",
         returnType: "Promise<boolean>",
-        description: "Toggle read-only state. Without parameter, toggles current state. With parameter, sets to specified state. (Deprecated - use set() instead)",
+        description: "Toggle read-only state. Without parameter, toggles current state. With parameter, sets to specified state.",
+        deprecatedSince: "0.23.5",
+        replacedBy: "readOnly.set",
         example: `// Toggle current state
 const isReadOnly = await editor.readOnly.toggle();
 

@@ -39,14 +39,21 @@ export const ApiModuleBody: React.FC = () => {
     return <Navigate to="/docs/quick-start" replace />;
   }
 
-  // Translated labels + linear order for pagination, derived from the sidebar
-  // so prev/next flows across the API modules and the tool pages alike.
+  // Translated labels, keyed by id across every group, so the pagination
+  // component can look up a neighbor's label regardless of which group it's in.
   const labels: Record<string, string> = {};
   for (const group of sidebarSections) {
     for (const link of group.links) labels[link.id] = link.label;
   }
-  const order = sidebarSections.flatMap((group) => group.links.map((link) => link.id));
   const currentId = (section ?? tool)!.id;
+
+  // Prev/Next is scoped to the current sidebar GROUP, not the full flattened
+  // list — otherwise the chain silently threads Tutorial -> Concepts -> How-to
+  // -> all ~20 reference modules -> all tools into one global sequence. At the
+  // last item of a group, Next is simply absent rather than jumping into the
+  // next group; that's the deliberate, tested boundary (see ApiModuleBody.test.tsx).
+  const currentGroup = sidebarSections.find((group) => group.links.some((link) => link.id === currentId));
+  const order = currentGroup ? currentGroup.links.map((link) => link.id) : [currentId];
 
   return (
     <div data-blok-testid="api-module-body">

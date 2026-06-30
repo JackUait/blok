@@ -167,7 +167,7 @@ describe('Features', () => {
 
     expect(screen.getByText('Every block, built in')).toBeInTheDocument();
     expect(
-      screen.queryByText((content) => content.includes('Notion-style blocks'))
+      screen.queryByText((content) => content.includes('Notion-like blocks'))
     ).not.toBeInTheDocument();
   });
 
@@ -209,7 +209,7 @@ describe('Features', () => {
       'Learn more about Clean JSON output',
       'Learn more about the block library',
       'Learn more about extending Blok',
-      'Learn more about the slash menu and Markdown',
+      'Learn more about the toolbox and Markdown',
       'Learn more about tables',
       'Learn more about embeds',
       'Learn more about undo and redo',
@@ -337,7 +337,7 @@ describe('Features', () => {
   it('top-aligns the slash diorama so a tall menu never rides over the tile title', () => {
     renderFeatures();
     const slash = screen.getByRole('button', {
-      name: 'Learn more about the slash menu and Markdown',
+      name: 'Learn more about the toolbox and Markdown',
     });
     const wrap = findSlashWindow(slash);
     expect(wrap).toBeDefined();
@@ -355,7 +355,7 @@ describe('Features', () => {
   it('caps the slash menu width and clips it to a fixed teaser on mobile', () => {
     renderFeatures();
     const slash = screen.getByRole('button', {
-      name: 'Learn more about the slash menu and Markdown',
+      name: 'Learn more about the toolbox and Markdown',
     });
     const wrap = findSlashWindow(slash);
     // a fixed teaser clip on mobile, not the grow-to-fit full-menu floor
@@ -379,7 +379,7 @@ describe('Features', () => {
   it('omits the raw glow blob on the slash tile but keeps it on the others', () => {
     renderFeatures();
     const slash = screen.getByRole('button', {
-      name: 'Learn more about the slash menu and Markdown',
+      name: 'Learn more about the toolbox and Markdown',
     });
     expect(slash.querySelector('.bento-spot')).toBeNull();
 

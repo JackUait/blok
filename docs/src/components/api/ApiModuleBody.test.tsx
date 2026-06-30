@@ -31,7 +31,9 @@ describe('ApiModuleBody', () => {
 
   it('renders the matching section only', () => {
     renderAt('/docs/caret-api');
-    expect(screen.getByText('Caret API')).toBeInTheDocument();
+    // "Caret API" also appears in the breadcrumb trail now, so scope to the
+    // page's h1 rather than asserting on the bare text.
+    expect(screen.getByRole('heading', { level: 1, name: 'Caret API' })).toBeInTheDocument();
     expect(screen.queryByText('Selection API')).toBeNull();
     expect(screen.getByTestId('api-pagination')).toBeInTheDocument();
   });
@@ -39,6 +41,27 @@ describe('ApiModuleBody', () => {
   it('redirects unknown module to quick-start', () => {
     renderAt('/docs/not-a-module');
     expect(screen.getByTestId('qs')).toBeInTheDocument();
+  });
+
+  it('keeps Prev/Next within the current sidebar group, not the full flattened list', () => {
+    // "history-api" is the last module in the "editing" group
+    // (caret-api, selection-api, styles-api, history-api). Globally the next
+    // module would be "toolbar-api" (start of the "interface" group), but
+    // pagination is scoped per-group, so Next must be absent here.
+    renderAt('/docs/history-api');
+
+    expect(screen.getByTestId('api-pagination-prev')).toHaveAttribute('href', '/docs/styles-api');
+    expect(screen.queryByTestId('api-pagination-next')).toBeNull();
+  });
+
+  it('does not show Prev for the first module of a group, even though earlier groups exist', () => {
+    // "core" is the first module of the "core" group. Globally the previous
+    // module would be "custom-block-tool" (end of the "gettingStarted" group), but
+    // pagination is scoped per-group, so Prev must be absent here.
+    renderAt('/docs/core');
+
+    expect(screen.queryByTestId('api-pagination-prev')).toBeNull();
+    expect(screen.getByTestId('api-pagination-next')).toHaveAttribute('href', '/docs/config');
   });
 
   it('scrolls to the hash anchor on cold load', async () => {

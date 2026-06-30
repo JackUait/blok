@@ -1,10 +1,14 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DocsCtaCard } from './DocsCtaCard';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 describe('DocsCtaCard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     localStorage.removeItem('blok-docs-locale');
   });
@@ -70,6 +74,7 @@ describe('DocsCtaCard', () => {
     );
 
     expect(screen.getByTestId('docs-cta-description')).toBeInTheDocument();
+    expect(screen.getByText('Browse every module, method, and option — each with copy-paste examples and a guided sidebar.')).toBeInTheDocument();
   });
 
   it('should render Russian strings when locale is ru', () => {

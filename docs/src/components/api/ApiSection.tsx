@@ -17,8 +17,6 @@ const blockTitleClass =
 const thClass =
   "border-b border-border px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground";
 const tdClass = "px-4 py-3 align-top text-sm text-muted-foreground";
-const anchorCellClass =
-  "api-anchor-link api-anchor-link--table mr-1.5 inline-block w-3 text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100";
 const codeClass =
   "rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[0.8125rem] text-foreground";
 
@@ -126,14 +124,7 @@ const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => (
         {section.badge}
       </div>
     )}
-    <h1 className="group flex scroll-mt-24 items-center gap-2 font-display text-3xl font-extrabold tracking-tight text-foreground">
-      <a
-        href={`#${section.id}`}
-        className="api-anchor-link -ml-7 w-5 shrink-0 text-center text-2xl font-normal text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
-        aria-label={`Link to ${section.title}`}
-      >
-        #
-      </a>
+    <h1 className="scroll-mt-24 font-display text-3xl font-extrabold tracking-tight text-foreground">
       {section.title}
     </h1>
     {section.description && (
@@ -207,7 +198,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
                       data-blok-testid={propId}
                     >
                       <td className={tdClass}>
-                        <a href={`#${propId}`} className={anchorCellClass} aria-label={`Link to ${prop.name}`}>#</a>
                         <code className={codeClass}>{prop.name}</code>
                       </td>
                       <td className={tdClass}>
@@ -253,7 +243,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
                       data-blok-testid={optionId}
                     >
                       <td className={tdClass}>
-                        <a href={`#${optionId}`} className={anchorCellClass} aria-label={`Link to ${row.option}`}>#</a>
                         <code className={codeClass}>{row.option}</code>
                       </td>
                       <td className={tdClass}>

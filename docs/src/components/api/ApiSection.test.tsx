@@ -247,50 +247,12 @@ describe('ApiSection', () => {
     expect(codeBlock).toBeInTheDocument();
   });
 
-  it('should render anchor link for the section title', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
-
-    const anchorLink = screen.getByRole('link', { name: /Link to Test Section/ });
-    expect(anchorLink).toBeInTheDocument();
-    expect(anchorLink).toHaveAttribute('href', '#test-section');
-    expect(anchorLink).toHaveClass('api-anchor-link');
-  });
-
-  it('should render anchor link for methods', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
-
-    const methodAnchor = screen.getByRole('link', { name: /Link to testMethod/ });
-    expect(methodAnchor).toBeInTheDocument();
-    expect(methodAnchor).toHaveAttribute('href', '#test-section-testmethod');
-  });
-
-  it('should render anchor links for properties', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
-
-    const propAnchor = screen.getByRole('link', { name: /Link to testProperty/ });
-    expect(propAnchor).toBeInTheDocument();
-    expect(propAnchor).toHaveAttribute('href', '#test-section-prop-testproperty');
-    expect(propAnchor).toHaveClass('api-anchor-link--table');
-  });
-
   it('should render property rows with id for anchor navigation', () => {
     render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
 
     const propRow = screen.getByTestId('test-section-prop-testproperty');
     expect(propRow).toBeInTheDocument();
     expect(propRow.tagName.toLowerCase()).toBe('tr');
-  });
-
-  it('should render anchor links for config options', () => {
-    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
-
-    const holderAnchor = screen.getByRole('link', { name: /Link to holder/ });
-    expect(holderAnchor).toBeInTheDocument();
-    expect(holderAnchor).toHaveAttribute('href', '#config-holder');
-
-    const toolsAnchor = screen.getByRole('link', { name: /Link to tools/ });
-    expect(toolsAnchor).toBeInTheDocument();
-    expect(toolsAnchor).toHaveAttribute('href', '#config-tools');
   });
 
   it('should render config option rows with id for anchor navigation', () => {

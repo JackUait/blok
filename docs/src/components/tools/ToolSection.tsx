@@ -26,14 +26,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
           <CategoryIcon category={section.type} size={14} />
           {section.badge}
         </div>
-        <h1 className="group flex scroll-mt-24 items-center gap-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-          <a
-            href={`#${section.id}`}
-            className="text-2xl font-bold text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
-            aria-label={`Link to ${section.title}`}
-          >
-            #
-          </a>
+        <h1 className="scroll-mt-24 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           {section.title}
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">

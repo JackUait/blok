@@ -54,14 +54,6 @@ describe('ApiMethodCard', () => {
     expect(screen.getByTestId('api-method-card')).toBeInTheDocument();
   });
 
-  it('should render anchor link for the method', () => {
-    render(<ApiMethodCard method={mockMethod} sectionId="blocks-api" />);
-
-    const anchorLink = screen.getByRole('link', { name: /Link to blocks.move/ });
-    expect(anchorLink).toBeInTheDocument();
-    expect(anchorLink).toHaveAttribute('href', '#blocks-api-blocks-move');
-  });
-
   it('should assign correct id to the method card', () => {
     render(<ApiMethodCard method={mockMethod} sectionId="blocks-api" />);
 

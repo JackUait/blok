@@ -22,13 +22,6 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       data-blok-testid="api-method-card"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <a
-          href={`#${methodId}`}
-          className="api-anchor-link api-anchor-link--method -ml-5 w-5 shrink-0 text-center text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
-          aria-label={`Link to ${method.name}`}
-        >
-          #
-        </a>
         <span className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</span>
         <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">{method.returnType}</span>
       </div>

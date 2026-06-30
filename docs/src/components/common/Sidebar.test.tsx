@@ -212,6 +212,60 @@ describe('Sidebar', () => {
     });
   });
 
+  describe('active section header', () => {
+    const withIcons: SidebarSection[] = [
+      {
+        title: 'Guide',
+        icon: <svg data-blok-testid="guide-icon" />,
+        links: [{ id: 'quick-start', label: 'Quick Start' }],
+      },
+      {
+        title: 'Core',
+        icon: <svg data-blok-testid="core-icon" />,
+        links: [{ id: 'core', label: 'Blok Class' }],
+      },
+    ];
+
+    it('makes the header of the group holding the active page bold and dark', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      const coreToggle = screen.getByRole('button', { name: /Core/i });
+      expect(coreToggle).toHaveClass('font-bold', 'text-foreground');
+    });
+
+    it('does not bold the headers of inactive groups', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      const guideToggle = screen.getByRole('button', { name: /Guide/i });
+      expect(guideToggle).not.toHaveClass('font-bold');
+    });
+
+    it('animates the icon of the active group only', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      // The icon's wrapper carries the looping-wiggle class for the active group.
+      const activeIconWrapper = screen.getByTestId('core-icon').parentElement;
+      expect(activeIconWrapper).toHaveClass('sidebar-section-icon-active');
+
+      const inactiveIconWrapper = screen.getByTestId('guide-icon').parentElement;
+      expect(inactiveIconWrapper).not.toHaveClass('sidebar-section-icon-active');
+    });
+
+    it('fills and brand-colours the active icon glyph itself, with no backing chip', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      // The icon's own wrapper recolours and fills the glyph — there is no
+      // separate container element styled as a chip.
+      const activeIcon = screen.getByTestId('core-icon').parentElement;
+      expect(activeIcon).toHaveClass('text-primary', '[&_svg]:fill-primary/20');
+      expect(activeIcon).not.toHaveClass('bg-primary/10');
+
+      const inactiveIcon = screen.getByTestId('guide-icon').parentElement;
+      expect(inactiveIcon).toHaveClass('text-muted-foreground');
+      expect(inactiveIcon).not.toHaveClass('[&_svg]:fill-primary/20');
+    });
+  });
+
   describe('no auto-scroll on navigation', () => {
     it('does not scroll the sidebar when activeSection changes', () => {
       const { rerender } = renderWithI18n(

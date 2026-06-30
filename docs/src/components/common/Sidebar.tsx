@@ -125,6 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {sections.map((section, idx) => {
           const isOpen = openGroups.has(section.title);
+          const isActive = section.title === activeTitle;
           const regionId = `${variant}-sidebar-group-${idx}`;
           return (
             <div
@@ -137,12 +138,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => toggleGroup(section.title)}
                 aria-expanded={isOpen}
                 aria-controls={regionId}
-                className="mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 pl-4 pr-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
+                className={cn(
+                  'mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 pl-4 pr-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
+                  isActive
+                    ? 'font-bold text-foreground'
+                    : 'text-muted-foreground/60 hover:text-muted-foreground',
+                )}
                 data-blok-testid={`${variant}-sidebar-section-toggle-${idx}`}
               >
                 <span className="flex min-w-0 items-center gap-2">
                   {section.icon && (
-                    <span className="shrink-0 text-muted-foreground" aria-hidden="true">
+                    <span
+                      className={cn(
+                        // The glyph itself changes when selected — its stroke
+                        // takes the brand colour and the shape fills in, the way
+                        // the framework marks read as picked. No backing chip.
+                        'shrink-0 [&_svg]:transition-[fill,stroke,color] [&_svg]:duration-200',
+                        isActive
+                          ? 'sidebar-section-icon-active text-primary [&_svg]:fill-primary/20'
+                          : 'text-muted-foreground',
+                      )}
+                      aria-hidden="true"
+                    >
                       {section.icon}
                     </span>
                   )}

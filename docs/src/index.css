@@ -807,6 +807,41 @@
   }
 }
 
+/* The icon of the section the reader is currently in gives a periodic, gentle
+   wiggle so the active group is easy to spot in the menu. Mostly at rest, with
+   a brief bob every few seconds. */
+.sidebar-section-icon-active {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sidebar-section-icon-active 3.6s ease-in-out infinite;
+}
+
+@keyframes sidebar-section-icon-active {
+  0%,
+  62%,
+  100% {
+    transform: rotate(0) scale(1);
+  }
+  68% {
+    transform: rotate(-10deg) scale(1.12);
+  }
+  76% {
+    transform: rotate(7deg) scale(1.08);
+  }
+  84% {
+    transform: rotate(-3deg) scale(1.04);
+  }
+  92% {
+    transform: rotate(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-section-icon-active {
+    animation: none;
+  }
+}
+
 /* Search empty-state glyph — the doc page's corner folds and unfolds from time
    to time. The flap pivots around the diagonal crease (axis 1,1,0). Resting
    state is the folded dog-ear (rotate 180° reflects the corner onto the page);

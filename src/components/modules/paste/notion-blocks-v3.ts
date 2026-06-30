@@ -714,7 +714,11 @@ function segmentContent(raw: string, annotations: unknown[], byId?: Map<string, 
     return '';
   }
 
-  return escapeHtml(raw);
+  // Soft line breaks (Shift+Enter) live as literal `\n` in the segment text; a
+  // raw newline collapses to a space as innerHTML, so each becomes a `<br>` to
+  // keep multi-line text from flattening onto one line. (Code blocks keep real
+  // newlines: they read text via `plainText`, never this rich-text path.)
+  return newlinesToBr(escapeHtml(raw));
 }
 
 /** The string argument of the first `[flag, arg, …]` annotation, or `null`. */
@@ -948,6 +952,14 @@ function safeHref(raw: unknown): string | null {
 /** Escape `&`, `<`, `>` for HTML text content. */
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Replace literal line breaks (`\n`, `\r\n`, `\r`) with `<br>`. Run AFTER HTML
+ * escaping so the inserted tags are not themselves escaped.
+ */
+function newlinesToBr(html: string): string {
+  return html.replace(/\r\n?|\n/g, '<br>');
 }
 
 /** Escape a string for use inside a double-quoted HTML attribute. */

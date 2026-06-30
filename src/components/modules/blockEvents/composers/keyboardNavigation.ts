@@ -1028,16 +1028,22 @@ export class KeyboardNavigation extends BlockEventComposer {
       !event.ctrlKey &&
       !event.altKey;
     /**
-     * Plain (non-Shift, no Cmd/Ctrl/Alt) horizontal navigation only. Shift+ArrowRight
-     * at a boundary is handled above as cross-block selection, and modifier+ArrowRight
-     * (Cmd = line end, Ctrl/Alt = word) must fall through to the native behaviour
-     * staying in-block — neither may collapse the caret into the next block.
+     * Horizontal navigation flag for ArrowRight. Plain ArrowRight and Cmd+ArrowRight
+     * both qualify; Ctrl/Alt (word nav) and Shift (handled above as cross-block
+     * selection) do not.
+     *
+     * Cmd+ArrowRight is the macOS line-end gesture: within a multi-line block it must
+     * stay native (move to the line edge), but once the caret is already at the
+     * block's absolute end it should cross into the next block. navigateNext enforces
+     * exactly that — it only crosses (and the handler only preventDefaults) when the
+     * caret is at the boundary, otherwise it returns false and the native line-end
+     * gesture runs. So the user navigates BOTH between strings inside a block AND
+     * between blocks with the same key.
      */
     const isRightKey =
       keyCode === keyCodes.RIGHT &&
       !this.isRtl &&
       !event.shiftKey &&
-      !event.metaKey &&
       !event.ctrlKey &&
       !event.altKey;
 
@@ -1206,16 +1212,22 @@ export class KeyboardNavigation extends BlockEventComposer {
       !event.ctrlKey &&
       !event.altKey;
     /**
-     * Plain (non-Shift, no Cmd/Ctrl/Alt) horizontal navigation only. Shift+ArrowLeft
-     * at a boundary is handled above as cross-block selection, and modifier+ArrowLeft
-     * (Cmd = line start, Ctrl/Alt = word) must fall through to the native behaviour
-     * staying in-block — neither may collapse the caret into the previous block.
+     * Horizontal navigation flag for ArrowLeft. Plain ArrowLeft and Cmd+ArrowLeft
+     * both qualify; Ctrl/Alt (word nav) and Shift (handled above as cross-block
+     * selection) do not.
+     *
+     * Cmd+ArrowLeft is the macOS line-start gesture: within a multi-line block it
+     * must stay native (move to the line edge), but once the caret is already at the
+     * block's absolute start it should cross into the previous block. navigatePrevious
+     * enforces exactly that — it only crosses (and the handler only preventDefaults)
+     * when the caret is at the boundary, otherwise it returns false and the native
+     * line-start gesture runs. So the user navigates BOTH between strings inside a
+     * block AND between blocks with the same key.
      */
     const isLeftKey =
       keyCode === keyCodes.LEFT &&
       !this.isRtl &&
       !event.shiftKey &&
-      !event.metaKey &&
       !event.ctrlKey &&
       !event.altKey;
 

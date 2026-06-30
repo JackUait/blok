@@ -257,11 +257,48 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
     });
   });
 
-  describe('BUG #5b — Cmd/Ctrl/Alt+Arrow at a block boundary does NOT cross-block jump', () => {
-    it('Cmd+ArrowRight at the END of a block falls through to native (no navigateNext)', () => {
+  describe('BUG #5b — Cmd+Horizontal Arrow crosses blocks at the boundary; Ctrl/Alt stay native', () => {
+    /**
+     * Cmd+Left/Right is the macOS line-start/line-end gesture. Within a block it
+     * must stay native (move to the line edge); but once the caret is already at
+     * the block's absolute start/end, Cmd+Left/Right should cross into the
+     * adjacent block — so the user can navigate BOTH between strings inside a
+     * block AND between blocks with the same key.
+     *
+     * The handler delegates to Caret.navigateNext / navigatePrevious, which only
+     * cross when the caret is at the boundary (and return false otherwise). So at
+     * the handler level: Cmd+Arrow ALWAYS calls the navigator, but only
+     * preventDefaults (suppressing the native gesture) when the navigator actually
+     * crossed — leaving native line-nav intact mid-block. Ctrl/Alt (word nav) are
+     * NOT the line gesture and must never cross, so they never call the navigator.
+     */
+    it('Cmd+ArrowRight at the block END crosses into the next block (navigateNext + preventDefault)', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
 
+      // navigator returns true → it crossed (caret was at the boundary).
+      const navigateNext = vi.fn(() => true);
+      const blok = createBlokModules({
+        Caret: {
+          navigateNext,
+          navigateVerticalNext: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowRight', code: 'ArrowRight', metaKey: true });
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(navigateNext).toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalled();
+    });
+
+    it('Cmd+ArrowRight MID-line falls through to native line-end (navigateNext returns false → no preventDefault)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
+
+      // navigator returns false → caret was not at the boundary, native handles it.
       const navigateNext = vi.fn(() => false);
       const blok = createBlokModules({
         Caret: {
@@ -275,11 +312,12 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
 
       keyboardNavigation.handleArrowRightAndDown(event);
 
-      // Cmd+Right is line-end (native), it must NOT jump into the next block.
-      expect(navigateNext).not.toHaveBeenCalled();
+      expect(navigateNext).toHaveBeenCalled();
+      // Native Cmd+Right (line-end) must run — the handler must NOT preventDefault.
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('Alt+ArrowRight at the END of a block falls through to native word-nav (no navigateNext)', () => {
+    it('Alt+ArrowRight stays native word-nav (no navigateNext)', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
 
@@ -293,6 +331,26 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       });
       const keyboardNavigation = new KeyboardNavigation(blok);
       const event = createKeyboardEvent({ key: 'ArrowRight', code: 'ArrowRight', altKey: true });
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      expect(navigateNext).not.toHaveBeenCalled();
+    });
+
+    it('Ctrl+ArrowRight stays native word-nav (no navigateNext)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const navigateNext = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigateNext,
+          navigateVerticalNext: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowRight', code: 'ArrowRight', ctrlKey: true });
 
       keyboardNavigation.handleArrowRightAndDown(event);
 
@@ -319,9 +377,30 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       expect(navigateNext).toHaveBeenCalled();
     });
 
-    it('Cmd+ArrowLeft at the START of a block falls through to native (no navigatePrevious)', () => {
+    it('Cmd+ArrowLeft at the block START crosses into the previous block (navigatePrevious + preventDefault)', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      const navigatePrevious = vi.fn(() => true);
+      const blok = createBlokModules({
+        Caret: {
+          navigatePrevious,
+          navigateVerticalPrevious: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowLeft', code: 'ArrowLeft', metaKey: true });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      expect(navigatePrevious).toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalled();
+    });
+
+    it('Cmd+ArrowLeft MID-line falls through to native line-start (navigatePrevious returns false → no preventDefault)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
 
       const navigatePrevious = vi.fn(() => false);
       const blok = createBlokModules({
@@ -336,7 +415,27 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
 
       keyboardNavigation.handleArrowLeftAndUp(event);
 
-      // Cmd+Left is line-start (native), it must NOT jump into the previous block.
+      expect(navigatePrevious).toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('Ctrl+ArrowLeft stays native word-nav (no navigatePrevious)', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+      const navigatePrevious = vi.fn(() => false);
+      const blok = createBlokModules({
+        Caret: {
+          navigatePrevious,
+          navigateVerticalPrevious: vi.fn(() => false),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'ArrowLeft', code: 'ArrowLeft', ctrlKey: true });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
       expect(navigatePrevious).not.toHaveBeenCalled();
     });
 

@@ -193,6 +193,24 @@ const placeCaretAtEnd = async (locator: Locator): Promise<void> => {
   });
 };
 
+const placeCaretAtStart = async (locator: Locator): Promise<void> => {
+  await locator.evaluate((element) => {
+    const selection = window.getSelection();
+
+    if (!selection) {
+      return;
+    }
+
+    const range = document.createRange();
+
+    range.selectNodeContents(element);
+    range.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+};
+
 test.describe('arrowLeft keydown', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -384,6 +402,52 @@ test.describe('arrowLeft keydown', () => {
     const caretInfo = await ensureCaretInfo(firstParagraph);
 
     expect(caretInfo.inside).toBe(true);
+  });
+
+  test.describe('Cmd+ArrowLeft (line-start within a block, cross-block at the start)', () => {
+    test('Cmd+ArrowLeft at the start of a block jumps to the previous block', async ({ page }) => {
+      await createParagraphBlok(page, [ 'First', 'Second' ]);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const secondParagraph = getParagraphByIndex(page, 1);
+
+      await secondParagraph.click();
+      await placeCaretAtStart(secondParagraph);
+
+      // Caret is at the block's start → Cmd+ArrowLeft crosses into the previous block.
+      await page.keyboard.press('Meta+ArrowLeft');
+
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
+      const caretInfo = await ensureCaretInfo(firstParagraph);
+
+      expect(caretInfo.inside).toBe(true);
+    });
+
+    test('Cmd+ArrowLeft in a multi-line block moves to the line start and stays in the block', async ({ page }) => {
+      await page.addStyleTag({ content: '[data-blok-tool="paragraph"] { white-space: pre-wrap !important; }' });
+
+      const longText = 'The quick brown fox jumps over the lazy dog and keeps going so that this paragraph wraps onto more than one visual line within its single block';
+
+      await createParagraphBlok(page, [ 'Prev', longText ]);
+
+      const wrapped = getParagraphByIndex(page, 1);
+
+      await wrapped.click();
+      await placeCaretAtEnd(wrapped);
+
+      // Cmd+ArrowLeft from the end of the last visual line is a native line-start
+      // gesture INSIDE the block — Blok must not hijack it to cross into the previous
+      // block. (The native within-line movement itself is the browser's job; the
+      // Blok-owned contract verified here is that the caret stays in this block.)
+      await page.keyboard.press('Meta+ArrowLeft');
+
+      await waitForCaretInBlock(page, wrapped, 1);
+
+      const after = await ensureCaretInfo(wrapped);
+
+      expect(after.inside).toBe(true);
+    });
   });
 });
 

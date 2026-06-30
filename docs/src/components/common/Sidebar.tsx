@@ -31,7 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   linkMode = 'anchor',
   buildHref,
 }) => {
-  const navRef = useRef<HTMLElement>(null);
   const asideRef = useRef<HTMLElement>(null);
 
   // Fade the scroll container's content toward the page background at whichever
@@ -49,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   // Collapsible groups. Collapsed by default, except the group that holds the
-  // current page so the user's location (and the coral marker) stays visible.
+  // current page so the user's location stays visible.
   const activeTitle = sections.find((s) => s.links.some((l) => l.id === activeSection))?.title;
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     () => new Set(activeTitle ? [activeTitle] : []),
@@ -71,41 +70,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   }, []);
 
-  // A single coral marker that glides to the active link instead of a static
-  // per-item border — measured from layout so it tracks any item across groups.
-  const [marker, setMarker] = useState<{ top: number; height: number } | null>(null);
-
-  const measureMarker = useCallback(() => {
-    const nav = navRef.current;
-    if (!nav || !activeSection) {
-      setMarker(null);
-      return;
-    }
-    const active = nav.querySelector<HTMLElement>(
-      `[data-blok-testid="${variant}-sidebar-link-${activeSection}"]`,
-    );
-    if (!active || active.offsetHeight === 0) {
-      setMarker(null);
-      return;
-    }
-    setMarker({ top: active.offsetTop, height: active.offsetHeight });
-  }, [activeSection, variant]);
-
-  // Position synchronously after layout so the marker never paints out of place.
-  // Re-runs when groups open/close, since that shifts every item below.
+  // Keep the scroll haze in sync after layout and on group open/close (which
+  // shifts content height) and on resize.
   useLayoutEffect(() => {
-    measureMarker();
     updateScrollEdges();
-  }, [measureMarker, updateScrollEdges, sections, openGroups]);
+  }, [updateScrollEdges, sections, openGroups]);
 
   useEffect(() => {
-    const onResize = () => {
-      measureMarker();
-      updateScrollEdges();
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [measureMarker, updateScrollEdges]);
+    window.addEventListener('resize', updateScrollEdges);
+    return () => window.removeEventListener('resize', updateScrollEdges);
+  }, [updateScrollEdges]);
 
   const fade = '1.75rem';
   const hazeMask = `linear-gradient(to bottom, ${
@@ -133,29 +107,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       data-blok-testid={`${variant}-sidebar`}
     >
       <nav
-        ref={navRef}
-        className="relative flex flex-col gap-7"
+        className="flex flex-col gap-7"
         aria-label="Documentation sections"
         data-blok-testid={`${variant}-sidebar-nav`}
       >
-        {/* Coral locator that glides to the active link, riding the group rails. */}
-        <span
-          aria-hidden="true"
-          className={cn(
-            'pointer-events-none absolute left-0 top-0 w-0.5 rounded-full bg-primary',
-            'transition-[transform,height,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-          )}
-          style={
-            marker
-              ? {
-                  transform: `translateY(${marker.top + 4}px)`,
-                  height: `${Math.max(marker.height - 8, 4)}px`,
-                  opacity: 1,
-                }
-              : { opacity: 0 }
-          }
-        />
-
         {sections.map((section, idx) => {
           const isOpen = openGroups.has(section.title);
           const regionId = `${variant}-sidebar-group-${idx}`;
@@ -198,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 id={regionId}
                 hidden={!isOpen}
-                className="flex flex-col gap-0.5 border-l border-border/60"
+                className="flex flex-col gap-0.5"
               >
                 {section.links.map((link) =>
                   linkMode === 'route' && buildHref ? (

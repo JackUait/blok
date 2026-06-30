@@ -10,7 +10,7 @@ import { FrameworkCards } from '../components/home/FrameworkCards';
 import { WhyBlok } from '../components/home/WhyBlok';
 import { MigrationCard } from '../components/home/MigrationCard';
 import { TrustedBy } from '../components/home/TrustedBy';
-import { ApiContent } from './ApiPage';
+import { DocsCtaCard } from '../components/home/DocsCtaCard';
 import { ToolsContent } from './ToolsPage';
 import { DemoContent } from './DemoPage';
 import { MigrationContent } from './MigrationPage';
@@ -85,7 +85,7 @@ export const HomePage: React.FC = () => {
   const renderPanel = (): React.ReactNode => {
     switch (activeView) {
       case 'docs':
-        return <ApiContent inline />;
+        return <DocsCtaCard />;
       case 'tools':
         return <ToolsContent inline />;
       case 'playground':

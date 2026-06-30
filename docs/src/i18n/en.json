@@ -536,6 +536,11 @@
       "viewGuide": "View Migration Guide",
       "viewCodemod": "View Codemod"
     },
+    "docsCta": {
+      "title": "Explore the API reference",
+      "description": "Browse every module, method, and option — each with copy-paste examples and a guided sidebar.",
+      "cta": "Open the docs"
+    },
     "frameworks": {
       "sectionLabel": "Integrations",
       "title1": "Drop Blok into",

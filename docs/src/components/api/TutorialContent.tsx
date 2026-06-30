@@ -57,7 +57,7 @@ const STEPS: TutorialStep[] = [
 ];
 
 const nextLinkClass =
-  "flex flex-col gap-1 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-secondary/40";
+  "flex flex-col gap-1 rounded-2xl border border-border bg-card px-5 py-4 shadow-sm transition-colors hover:border-foreground/20 hover:bg-secondary/40";
 
 export const TutorialContent: React.FC = () => {
   const { t } = useI18n();
@@ -97,7 +97,7 @@ export const TutorialContent: React.FC = () => {
                 </p>
                 {step.code}
                 {step.payoffKey && (
-                  <div className="mt-4 rounded-xl border border-primary/20 bg-primary/[0.04] px-5 py-4">
+                  <div className="mt-4 rounded-xl border border-border bg-secondary/40 px-5 py-4">
                     <p className="text-sm leading-relaxed text-foreground/90">
                       {renderInline(t(step.payoffKey))}
                     </p>

@@ -143,7 +143,7 @@ export const ConceptsContent: React.FC = () => {
       </div>
 
       {/* Extending Blok? Ask one question */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/[0.04] px-6 py-6">
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-secondary/40 px-6 py-6">
         <h2 className={headingClass}><Typo>{t("api.concepts.decision.title")}</Typo></h2>
         <p className={proseClass}>
           {renderInline(t("api.concepts.decision.body"))}

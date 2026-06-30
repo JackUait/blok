@@ -22,7 +22,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
   return (
     <div
       id={methodId}
-      className="group scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-card-hover"
+      className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-sm"
       data-blok-testid="api-method-card"
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -32,10 +32,10 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground"><Typo>{method.description}</Typo></p>
       {method.note && (
         <div
-          className="mt-4 rounded-xl border-l-2 border-primary/40 bg-secondary/40 px-4 py-3"
+          className="mt-4 rounded-xl border border-border bg-secondary/40 px-4 py-3"
           data-blok-testid="api-method-note"
         >
-          <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-primary/80">
+          <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
             <Typo>{t("api.whenToUse")}</Typo>
           </p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">

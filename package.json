@@ -30,6 +30,9 @@
       ],
       "markdown": [
         "./types/markdown.d.ts"
+      ],
+      "icons": [
+        "./types/icons.d.ts"
       ]
     }
   },
@@ -71,6 +74,11 @@
       "types": "./types/markdown.d.ts",
       "import": "./dist/markdown.mjs",
       "require": "./dist/markdown.cjs"
+    },
+    "./icons": {
+      "types": "./types/icons.d.ts",
+      "import": "./dist/icons.mjs",
+      "require": "./dist/icons.cjs"
     },
     "./umd": {
       "default": "./dist/blok.umd.js"

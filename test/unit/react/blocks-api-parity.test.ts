@@ -34,6 +34,10 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
   clear: { kind: 'exposed' },
   render: { kind: 'exposed' },
   renderFromHTML: { kind: 'exposed' },
+  // Core's importMarkdown REPLACES the whole document; React models markdown
+  // import as the ADDITIVE, position-aware insertMarkdown (replace is composed
+  // from clear() + insertMarkdown or the controlled `data` prop).
+  importMarkdown: { kind: 'renamed', reactNames: ['insertMarkdown'] },
   // React exposes id-relative removal; core's index-based delete is the engine.
   delete: { kind: 'renamed', reactNames: ['remove'] },
   move: { kind: 'exposed' },

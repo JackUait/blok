@@ -2,6 +2,7 @@ import {OutputBlockData, OutputData} from '../data-formats/output-data';
 import {BlockToolData, ToolConfig} from '../tools';
 import {BlockAPI} from './block';
 import {BlockTuneData} from '../block-tunes/block-tune-data';
+import {MarkdownImportConfig} from '../data-formats/markdown-import-config';
 
 /**
  * Describes methods to manipulate with Blok`s blocks
@@ -33,6 +34,15 @@ export interface Blocks {
    * @return {Promise<void>}
    */
   renderFromHTML(data: string): Promise<void>;
+
+  /**
+   * Convert a Markdown string into blocks and render them, replacing the
+   * current document. Lazy-loads the markdown converter on first call.
+   * @param md - Markdown source string
+   * @param options - Optional tool mapping, GFM toggle, and micromark/mdast extensions
+   * @returns The rendered OutputData
+   */
+  importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData>;
 
   /**
    * Removes current Block

@@ -45,7 +45,20 @@ export class API extends Module {
           return apiConfig.link;
         },
       },
-      rectangleSelection: this.Blok.RectangleSelection,
+      /**
+       * Curated facade exposing exactly the publicly-typed RectangleSelection
+       * methods. Assigning the whole module would leak untyped internals
+       * (prepare(), isMouseDownWithinBounds, the Module base) that third
+       * parties could come to rely on.
+       */
+      rectangleSelection: {
+        cancelActiveSelection: (): void => this.Blok.RectangleSelection.cancelActiveSelection(),
+        isRectActivated: (): boolean => this.Blok.RectangleSelection.isRectActivated(),
+        clearSelection: (): void => this.Blok.RectangleSelection.clearSelection(),
+        startSelection: (pageX: number, pageY: number, shiftKey?: boolean): void =>
+          this.Blok.RectangleSelection.startSelection(pageX, pageY, shiftKey),
+        endSelection: (): void => this.Blok.RectangleSelection.endSelection(),
+      },
     };
   }
 }

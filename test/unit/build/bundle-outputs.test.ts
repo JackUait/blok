@@ -233,6 +233,10 @@ describe('CJS bundle outputs', () => {
   it('produces markdown.cjs', () => {
     expect(existsSync(resolve(dist, 'markdown.cjs'))).toBe(true)
   })
+
+  it('produces icons.cjs', () => {
+    expect(existsSync(resolve(dist, 'icons.cjs'))).toBe(true)
+  })
 })
 
 describe('IIFE bundle output', () => {
@@ -299,6 +303,13 @@ describe('package.json exports include require conditions', () => {
 
   it('"./markdown" export has "require" condition', () => {
     expect((packageJson.exports['./markdown'] as Record<string, string>)['require']).toBe('./dist/markdown.cjs')
+  })
+
+  it('"./icons" export has "import", "require", and "types" conditions', () => {
+    const iconsExport = packageJson.exports['./icons'] as Record<string, string>
+    expect(iconsExport['import']).toBe('./dist/icons.mjs')
+    expect(iconsExport['require']).toBe('./dist/icons.cjs')
+    expect(iconsExport['types']).toBe('./types/icons.d.ts')
   })
 
   it('"./umd" export points at the drop-in global bundle', () => {

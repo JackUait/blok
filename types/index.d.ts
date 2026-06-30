@@ -71,6 +71,8 @@ export {
   HTMLPasteEventDetail,
   FilePasteEvent,
   FilePasteEventDetail,
+  MenuConfig,
+  MoveEvent,
 } from './tools';
 export {BlockTune, BlockTuneConstructable, BlockTuneRenderContext} from './block-tunes';
 export {

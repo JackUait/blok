@@ -173,6 +173,21 @@
     @apply font-display tracking-tight;
   }
 
+  /* Interactive elements get a pointer cursor (Tailwind v4 no longer adds it to
+     buttons). Disabled controls keep the default arrow. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: default;
+  }
+
   ::selection {
     background-color: color-mix(in srgb, var(--primary) 22%, transparent);
   }

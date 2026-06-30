@@ -353,14 +353,16 @@ export class KeyboardNavigation extends BlockEventComposer {
    * Returns the promoted block, or null if no promotion occurred.
    */
   /**
-   * Whether an empty nested block should stepwise-outdent on Enter. True only for
-   * blocks structurally nested under a PLAIN parent (e.g. a paragraph indented under
-   * another paragraph via Tab). Special containers — toggles, columns and callouts —
-   * manage their own empty-child Enter behaviour and are excluded, as are table cells
-   * and lists (lists handle their own Enter).
-   * @param block - the empty block where Enter was pressed
+   * Whether a nested block should stepwise-outdent — used both for Enter on an
+   * empty nested block and for Backspace at the start of a nested block (the
+   * "remove one indent level" gesture). True only for blocks structurally nested
+   * under a PLAIN parent (e.g. a paragraph indented under another paragraph via
+   * Tab). Special containers — toggles, columns and callouts — manage their own
+   * child behaviour and are excluded, as are table cells and lists (lists handle
+   * their own keydowns).
+   * @param block - the nested block where Enter/Backspace was pressed
    */
-  private shouldOutdentEmptyNestedBlock(block: Block): boolean {
+  private shouldOutdentNestedBlock(block: Block): boolean {
     if (block.parentId == null || block.name === LIST_TOOL_NAME || this.isCurrentBlockInsideTableCell) {
       return false;
     }
@@ -472,7 +474,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Case 2 path then creates a new block. Special containers (toggle, column,
      * callout) are excluded — they keep their own empty-child Enter behaviour below.
      */
-    if (currentBlock.isEmpty && this.shouldOutdentEmptyNestedBlock(currentBlock)) {
+    if (currentBlock.isEmpty && this.shouldOutdentNestedBlock(currentBlock)) {
       this.outdentCurrentBlock();
 
       return currentBlock;
@@ -610,6 +612,25 @@ export class KeyboardNavigation extends BlockEventComposer {
       previousBlock.parentId !== currentBlock.parentId;
 
     if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell && hasNoPreviousSiblingInParent) {
+      /**
+       * Notion parity — "remove the indent with Backspace". When the block is
+       * nested under a PLAIN structural parent (a paragraph/header indented under
+       * another block via Tab) and the block immediately above is that parent,
+       * Backspace at the start removes ONE indent level: the block outdents to a
+       * sibling of its former parent (adopting its following siblings, like
+       * Shift+Tab) while keeping its content — instead of doing nothing or merging
+       * into the parent. Repeated Backspace steps it out until it reaches root,
+       * where the normal merge/remove logic below takes over.
+       *
+       * Container parents (toggle, column, callout) are excluded by
+       * shouldOutdentNestedBlock and keep their own empty-child behaviour below.
+       */
+      if (this.shouldOutdentNestedBlock(currentBlock)) {
+        this.outdentNestedBlockOnBackspace(currentBlock);
+
+        return;
+      }
+
       // A column's sole empty child collapses the column itself; otherwise
       // fall back to the toggle-child behaviour (remove + focus next sibling).
       if (!this.removeSoleEmptyColumnChild(currentBlock)) {
@@ -1305,6 +1326,31 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     return true;
+  }
+
+  /**
+   * Backspace "remove one indent level": outdent a block nested under a plain
+   * structural parent by one level, preserving its content and keeping the caret
+   * at its start. Mirrors the Tab handler — the reparent runs inside a single
+   * `transactMoves` group so one Cmd+Z reverses it, and the toolbar is
+   * repositioned against the new (shallower) geometry.
+   * @param block - the current block being outdented (BlockManager.currentBlock)
+   */
+  private outdentNestedBlockOnBackspace(block: Block): void {
+    const { YjsManager, Caret, Toolbar } = this.Blok;
+
+    const reparent = (): void => {
+      this.outdentCurrentBlock();
+    };
+
+    if (typeof YjsManager.transactMoves === 'function') {
+      YjsManager.transactMoves(reparent);
+    } else {
+      reparent();
+    }
+
+    Caret.setToBlock(block, Caret.positions.START);
+    Toolbar.moveAndOpen(block);
   }
 
 }

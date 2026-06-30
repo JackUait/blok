@@ -1145,6 +1145,67 @@ test.describe('backspace keydown', () => {
       await expect(onlyParagraph).toHaveText('The only block. Not empty');
     });
   });
+
+  test.describe('removing indent (Notion parity)', () => {
+    test('Backspace at the start of an indented block removes one indent level and keeps its text', async ({ page }) => {
+      await createParagraphBlok(page, [ 'Alpha', 'Bravo' ]);
+
+      const bravo = await getParagraphLocator(page, 'last');
+
+      // Nest Bravo under Alpha via Tab (structural indent).
+      await bravo.click();
+      await bravo.press('Tab');
+
+      const nested = await saveBlok(page);
+      const alphaId = nested.blocks[0].id;
+
+      expect(nested.blocks[1].parent).toBe(alphaId);
+
+      // Caret at the very start, then Backspace removes the indent.
+      await setCaret(bravo, 0, 0);
+      await bravo.press('Backspace');
+
+      const outdented = await saveBlok(page);
+
+      // The block is back at root (indent removed) with its content preserved.
+      expect(outdented.blocks[1].parent ?? null).toBeNull();
+      expect(outdented.blocks[1].data.text).toBe('Bravo');
+      // No merge happened — both blocks still exist.
+      await expect(page.locator(PARAGRAPH_SELECTOR)).toHaveCount(2);
+    });
+
+    test('Backspace merges (does NOT outdent) when an indented block has a same-level sibling above it', async ({ page }) => {
+      await createParagraphBlok(page, [ 'Alpha', 'Bravo', 'Charlie' ]);
+
+      // Nest Bravo under Alpha, then Charlie under Alpha (a same-level sibling after Bravo).
+      const bravoInput = page.locator(PARAGRAPH_SELECTOR).nth(1);
+      const charlieInput = page.locator(PARAGRAPH_SELECTOR).nth(2);
+
+      await bravoInput.click();
+      await bravoInput.press('Tab');
+      await charlieInput.click();
+      await charlieInput.press('Tab');
+
+      const nested = await saveBlok(page);
+      const alphaId = nested.blocks[0].id;
+
+      // Both Bravo and Charlie are children of Alpha.
+      expect(nested.blocks[1].parent).toBe(alphaId);
+      expect(nested.blocks[2].parent).toBe(alphaId);
+
+      // Backspace at the start of Charlie merges it into its sibling Bravo
+      // instead of removing the indent (there IS a block above at the same level).
+      await setCaret(charlieInput, 0, 0);
+      await charlieInput.press('Backspace');
+
+      const merged = await saveBlok(page);
+
+      expect(merged.blocks).toHaveLength(2);
+      // The merged block stays nested under Alpha and keeps both texts.
+      expect(merged.blocks[1].parent).toBe(alphaId);
+      expect(merged.blocks[1].data.text).toBe('BravoCharlie');
+    });
+  });
 });
 
 declare global {

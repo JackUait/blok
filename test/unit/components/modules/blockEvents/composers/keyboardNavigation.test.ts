@@ -1604,9 +1604,17 @@ describe('KeyboardNavigation', () => {
       const toggleParentId = 'toggle-parent';
       const childBlockId = 'child-block';
 
+      const toggleHolder = document.createElement('div');
+      const toggleChildren = document.createElement('div');
+      // Real toggles render a [data-blok-toggle-children] container; this marker
+      // tags the parent as a container (not a plain nested parent).
+      toggleChildren.setAttribute('data-blok-toggle-children', '');
+      toggleHolder.appendChild(toggleChildren);
+
       const toggleParent = createBlock({
         id: toggleParentId,
         contentIds: [childBlockId],
+        holder: toggleHolder,
       });
 
       const childBlock = createBlock({
@@ -1677,9 +1685,15 @@ describe('KeyboardNavigation', () => {
       const childBlockId = 'child-block';
       const nextChildId = 'next-child';
 
+      const toggleHolder = document.createElement('div');
+      const toggleChildren = document.createElement('div');
+      toggleChildren.setAttribute('data-blok-toggle-children', '');
+      toggleHolder.appendChild(toggleChildren);
+
       const toggleParent = createBlock({
         id: toggleParentId,
         contentIds: [childBlockId, nextChildId],
+        holder: toggleHolder,
       });
 
       const childBlock = createBlock({
@@ -1874,10 +1888,18 @@ describe('KeyboardNavigation', () => {
         const calloutParentId = 'callout-parent';
         const childBlockId = 'callout-child';
 
+        const calloutHolder = document.createElement('div');
+        const calloutNested = document.createElement('div');
+        // Real callouts render a [data-blok-nested-blocks] child container; this
+        // marker is what tags the parent as a container (not a plain nested parent).
+        calloutNested.setAttribute('data-blok-nested-blocks', '');
+        calloutHolder.appendChild(calloutNested);
+
         const calloutParent = createBlock({
           id: calloutParentId,
           name: 'callout',
           contentIds: [childBlockId],
+          holder: calloutHolder,
         });
 
         const childBlock = createBlock({
@@ -1941,16 +1963,27 @@ describe('KeyboardNavigation', () => {
         const firstCalloutChildId = 'first-callout-child';
         const secondCalloutChildId = 'second-callout-child';
 
+        const makeCalloutHolder = (): HTMLDivElement => {
+          const holder = document.createElement('div');
+          const nested = document.createElement('div');
+          nested.setAttribute('data-blok-nested-blocks', '');
+          holder.appendChild(nested);
+
+          return holder;
+        };
+
         const firstCallout = createBlock({
           id: firstCalloutId,
           name: 'callout',
           contentIds: [firstCalloutChildId],
+          holder: makeCalloutHolder(),
         });
 
         const secondCallout = createBlock({
           id: secondCalloutId,
           name: 'callout',
           contentIds: [secondCalloutChildId],
+          holder: makeCalloutHolder(),
         });
 
         // previousBlock belongs to a DIFFERENT callout container — this is the
@@ -2016,6 +2049,167 @@ describe('KeyboardNavigation', () => {
         // Observable state: both children remain inside their respective callouts.
         expect(currentChild.parentId).toBe(secondCalloutId);
         expect(previousChild.parentId).toBe(firstCalloutId);
+
+        isCaretAtStartOfInputSpy.mockRestore();
+      });
+    });
+
+    describe('handleBackspace - indent removal (plain nested parent)', () => {
+      it('removes one indent level (outdents to grandparent) on Backspace at start of a non-empty block nested under a plain parent', () => {
+        vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+        const grandparentId = 'gp';
+        const parentId = 'p';
+
+        const grandparent = createBlock({ id: grandparentId, parentId: null, contentIds: [parentId] });
+        const parentBlock = createBlock({ id: parentId, parentId: grandparentId, contentIds: ['cur'] });
+        const childBlock = createBlock({
+          id: 'cur',
+          name: 'paragraph',
+          parentId,
+          isEmpty: false,
+        });
+
+        const setBlockParent = vi.fn();
+        const setToBlock = vi.fn();
+        const moveAndOpen = vi.fn();
+        const getBlockById = vi.fn((id: string) => {
+          if (id === parentId) return parentBlock;
+          if (id === grandparentId) return grandparent;
+
+          return undefined;
+        });
+
+        const blok = createBlokModules({
+          BlockManager: {
+            currentBlock: childBlock,
+            // The block immediately above is the PARENT (not a same-level sibling).
+            previousBlock: parentBlock,
+            currentBlockIndex: 1,
+            setBlockParent,
+            getBlockById,
+            removeBlock: vi.fn(),
+            mergeBlocks: vi.fn(() => Promise.resolve()),
+          } as unknown as BlokModules['BlockManager'],
+          Caret: {
+            setToBlock,
+            positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          } as unknown as BlokModules['Caret'],
+          Toolbar: {
+            close: vi.fn(),
+            moveAndOpen,
+          } as unknown as BlokModules['Toolbar'],
+          YjsManager: {
+            transactMoves: vi.fn((fn: () => void) => fn()),
+          } as unknown as BlokModules['YjsManager'],
+        });
+
+        const keyboardNavigation = new KeyboardNavigation(blok);
+        const event = createKeyboardEvent({ key: 'Backspace' });
+        const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+        keyboardNavigation.handleBackspace(event);
+
+        // The block is re-parented to its grandparent (one indent level removed),
+        // its content preserved, and the caret stays at its start.
+        expect(setBlockParent).toHaveBeenCalledWith(childBlock, grandparentId);
+        expect(setToBlock).toHaveBeenCalledWith(childBlock, 'start');
+        expect(event.preventDefault).toHaveBeenCalled();
+
+        isCaretAtStartOfInputSpy.mockRestore();
+      });
+
+      it('outdents a non-empty block to ROOT (null grandparent) when its plain parent is top-level', () => {
+        vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+        const parentId = 'p';
+        const parentBlock = createBlock({ id: parentId, parentId: null, contentIds: ['cur'] });
+        const childBlock = createBlock({
+          id: 'cur',
+          name: 'paragraph',
+          parentId,
+          isEmpty: false,
+        });
+
+        const setBlockParent = vi.fn();
+        const setToBlock = vi.fn();
+        const getBlockById = vi.fn((id: string) => (id === parentId ? parentBlock : undefined));
+
+        const blok = createBlokModules({
+          BlockManager: {
+            currentBlock: childBlock,
+            previousBlock: parentBlock,
+            currentBlockIndex: 1,
+            setBlockParent,
+            getBlockById,
+            removeBlock: vi.fn(),
+            mergeBlocks: vi.fn(() => Promise.resolve()),
+          } as unknown as BlokModules['BlockManager'],
+          Caret: {
+            setToBlock,
+            positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          } as unknown as BlokModules['Caret'],
+          Toolbar: { close: vi.fn(), moveAndOpen: vi.fn() } as unknown as BlokModules['Toolbar'],
+          YjsManager: {
+            transactMoves: vi.fn((fn: () => void) => fn()),
+          } as unknown as BlokModules['YjsManager'],
+        });
+
+        const keyboardNavigation = new KeyboardNavigation(blok);
+        const event = createKeyboardEvent({ key: 'Backspace' });
+        const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+        keyboardNavigation.handleBackspace(event);
+
+        expect(setBlockParent).toHaveBeenCalledWith(childBlock, null);
+
+        isCaretAtStartOfInputSpy.mockRestore();
+      });
+
+      it('does NOT outdent when the block has a same-level sibling above it (falls through to merge)', () => {
+        vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+        const parentId = 'p';
+        const parentBlock = createBlock({ id: parentId, parentId: null, contentIds: ['a', 'cur'] });
+        const siblingAbove = createBlock({ id: 'a', name: 'paragraph', parentId, isEmpty: false });
+        const childBlock = createBlock({ id: 'cur', name: 'paragraph', parentId, isEmpty: false });
+
+        const setBlockParent = vi.fn();
+        const mergeBlocks = vi.fn(() => Promise.resolve());
+        const getBlockById = vi.fn((id: string) => {
+          if (id === parentId) return parentBlock;
+          if (id === 'a') return siblingAbove;
+
+          return undefined;
+        });
+
+        const blok = createBlokModules({
+          BlockManager: {
+            currentBlock: childBlock,
+            // Same-parent sibling sits directly above — this is a merge, not an outdent.
+            previousBlock: siblingAbove,
+            currentBlockIndex: 2,
+            setBlockParent,
+            getBlockById,
+            mergeBlocks,
+            removeBlock: vi.fn(),
+          } as unknown as BlokModules['BlockManager'],
+          Caret: {
+            setToBlock: vi.fn(),
+            positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+          } as unknown as BlokModules['Caret'],
+          Toolbar: { close: vi.fn(), moveAndOpen: vi.fn() } as unknown as BlokModules['Toolbar'],
+        });
+
+        const keyboardNavigation = new KeyboardNavigation(blok);
+        const event = createKeyboardEvent({ key: 'Backspace' });
+        const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
+
+        keyboardNavigation.handleBackspace(event);
+
+        // Not an indent removal — it merges into the same-level block above.
+        expect(setBlockParent).not.toHaveBeenCalled();
+        expect(mergeBlocks).toHaveBeenCalledWith(siblingAbove, childBlock);
 
         isCaretAtStartOfInputSpy.mockRestore();
       });

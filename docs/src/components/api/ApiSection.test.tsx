@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { ApiSection } from './ApiSection';
 import type { ApiSection as ApiSectionType } from './api-data';
@@ -104,8 +104,11 @@ describe('ApiSection', () => {
   it('should render method example when provided', () => {
     render(<Providers><ApiSection section={mockSection} /></Providers>);
 
-    // CodeBlock renders with a copy button that can be queried by testid
-    const copyButton = screen.getByTestId('code-copy-button');
+    // The method card's CodeBlock exposes a copy button carrying its example.
+    // (Method sections also render the framework-aware editor-access note, which
+    // has its own code block, so scope the query to the method card.)
+    const methodCard = screen.getByTestId('api-method-card');
+    const copyButton = within(methodCard).getByTestId('code-copy-button');
     expect(copyButton).toBeInTheDocument();
     expect(copyButton).toHaveAttribute('data-code', 'const result = editor.testMethod();');
   });
@@ -251,8 +254,10 @@ describe('ApiSection', () => {
   it('should render code block for method examples', () => {
     render(<Providers><ApiSection section={mockSection} /></Providers>);
 
-    // Check for the CodeBlock wrapper using testid
-    const codeBlock = screen.getByTestId('code-block');
+    // Check for the method card's CodeBlock wrapper (scoped past the
+    // editor-access note's own code block).
+    const methodCard = screen.getByTestId('api-method-card');
+    const codeBlock = within(methodCard).getByTestId('code-block');
     expect(codeBlock).toBeInTheDocument();
   });
 
@@ -336,6 +341,23 @@ describe('ApiSection', () => {
       localStorage.setItem('blok-docs-framework', 'angular');
       render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
       expect(codes().join('\n')).toContain('@jackuait/blok/angular');
+    });
+
+    it('shows the editor-access note on sections that document instance methods', () => {
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+      expect(screen.getByTestId('editor-access-note')).toBeInTheDocument();
+    });
+
+    it('adapts the editor-access note to the selected framework', () => {
+      localStorage.setItem('blok-docs-framework', 'vue');
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+      const note = screen.getByTestId('editor-access-note');
+      expect(note.textContent).toContain('editor.value');
+    });
+
+    it('omits the editor-access note on sections without methods', () => {
+      render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
+      expect(screen.queryByTestId('editor-access-note')).toBeNull();
     });
   });
 });

@@ -204,3 +204,49 @@ import { BlokEditorComponent } from '@jackuait/blok/angular';
 export class EditorComponent {}`,
   },
 };
+
+/**
+ * Per-framework snippet showing how to obtain the live `editor` instance that
+ * the API method examples operate on. The method calls themselves are identical
+ * once you hold a reference — only the way you reach it differs:
+ * - vanilla — the instance you constructed with `new Blok(...)`
+ * - react   — `useBlok()` returns `Blok | null`, so guard with optional chaining
+ * - vue     — `useBlok()` returns a `Ref<Blok | null>`, unwrapped via `.value`
+ * - angular — the component hands the instance over through its `(ready)` output
+ */
+export const EDITOR_ACCESS_SNIPPETS: Record<Framework, Snippet> = {
+  vanilla: {
+    language: 'typescript',
+    code: `// You already hold the instance returned by the constructor.
+const editor = new Blok({ holder: 'editor' });
+await editor.isReady;
+
+// Call any API method on it.
+editor.caret.setToLastBlock('end');`,
+  },
+  react: {
+    language: 'tsx',
+    code: `// useBlok returns \`Blok | null\` — null until the editor is ready.
+const editor = useBlok({ /* config */ });
+
+// Guard the value, then call any API method on it.
+editor?.caret.setToLastBlock('end');`,
+  },
+  vue: {
+    language: 'typescript',
+    code: `// useBlok returns a \`Ref<Blok | null>\` — null until the editor is ready.
+const editor = useBlok({ /* config */ });
+
+// Unwrap with .value, then call any API method on it.
+editor.value?.caret.setToLastBlock('end');`,
+  },
+  angular: {
+    language: 'typescript',
+    code: `// The component emits the live instance through its (ready) output.
+// template: <blok-editor [tools]="tools" (ready)="onReady($event)" />
+onReady(editor: Blok) {
+  // Call any API method on it.
+  editor.caret.setToLastBlock('end');
+}`,
+  },
+};

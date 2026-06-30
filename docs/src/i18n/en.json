@@ -659,7 +659,14 @@
   "frameworkToggle": {
     "label": "Framework",
     "switchAriaPrefix": "Switch to",
-    "note": "Setup differs per framework. The rest of the API works on the same editor instance everywhere."
+    "note": "Setup differs per framework. The rest of the API works on the same editor instance everywhere.",
+    "editorAccess": {
+      "heading": "Reaching the editor instance",
+      "vanilla": "The methods below run on the editor you created with new Blok(). They are available once editor.isReady resolves.",
+      "react": "The methods below run on the editor returned by useBlok(). It is null until the editor mounts, so guard the value with optional chaining before calling in.",
+      "vue": "The methods below run on the editor returned by useBlok(). It is a ref that stays null until the editor mounts, so unwrap it with .value before calling in.",
+      "angular": "The methods below run on the live editor. Grab it from the component's (ready) output, then call any method shown below."
+    }
   },
   "demo": {
     "badge": "Interactive Demo",

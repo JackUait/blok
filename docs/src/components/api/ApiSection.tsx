@@ -3,6 +3,7 @@ import { CodeBlock } from "../common/CodeBlock";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
 import { ConceptsContent } from "./ConceptsContent";
+import { EditorAccessNote } from "./EditorAccessNote";
 import { FrameworkToggle } from "../common/FrameworkToggle";
 import { useI18n } from "../../contexts/I18nContext";
 import { useFramework } from "../../contexts/FrameworkContext";
@@ -179,6 +180,11 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
       {section.methods && section.methods.length > 0 && (
         <div className="mt-10">
+          {/* The method examples below call into a live editor instance; show
+              how the active framework hands you that reference. */}
+          <div className="mb-6">
+            <EditorAccessNote />
+          </div>
           <h3 className={blockTitleClass}>{t('api.methods')}</h3>
           <div className="flex flex-col gap-4">
             {section.methods.map((method, index) => (

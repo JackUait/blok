@@ -822,14 +822,16 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
-     * Notion parity — symmetric to the Backspace "empty styled previous wins"
-     * exception. When the current block is an EMPTY STYLED block (heading/quote —
-     * anything that isn't the plain default paragraph) and the next block has
-     * text, the next block's text is pulled UP into the current block and adopts
-     * its type — the styled block wins. Only when the empty block is a plain
-     * default paragraph does it fall through to the line-break removal below.
+     * Notion parity — the UPPER block's type always wins on a forward-Delete
+     * merge, symmetric with Backspace (which already demotes a heading into a
+     * preceding paragraph). When the current (upper) block is EMPTY and the next
+     * block has mergeable text, the next block's text is pulled UP into the current
+     * block, adopting the current block's type. This holds even when the empty
+     * upper block is the plain default paragraph (the next styled block is demoted
+     * to text) — previously default paragraphs fell through to line-break removal,
+     * which let the LOWER block's type win (the m2 divergence).
      */
-    if (currentBlock.isEmpty && !currentBlock.tool.isDefault && areBlocksMergeable(currentBlock, nextBlock)) {
+    if (currentBlock.isEmpty && areBlocksMergeable(currentBlock, nextBlock)) {
       this.mergeBlocks(currentBlock, nextBlock);
 
       return;

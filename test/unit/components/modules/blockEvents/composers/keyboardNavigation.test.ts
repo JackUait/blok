@@ -2400,8 +2400,12 @@ describe('KeyboardNavigation', () => {
       isCaretAtEndOfInputSpy.mockRestore();
     });
 
-    it('removes current empty block and sets caret to start of next block', () => {
-      const nextBlock = createBlock({ id: 'next-block', isEmpty: false });
+    it('removes current empty block and sets caret to start of a non-mergeable next block', () => {
+      // A non-mergeable next block (e.g. an image — a different, non-convertible
+      // type) can't absorb the empty block, so forward-Delete falls through to the
+      // line-break removal path. (When the next block IS mergeable, the upper block
+      // wins via a merge — covered in the parity suite.)
+      const nextBlock = createBlock({ id: 'next-block', name: 'image', isEmpty: false, mergeable: false });
       const emptyCurrentBlock = createBlock({ id: 'empty-current', isEmpty: true });
       const close = vi.fn();
       const setToBlock = vi.fn();

@@ -795,7 +795,7 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       endSpy.mockRestore();
     });
 
-    it('still just removes an empty DEFAULT paragraph on forward-Delete (does not absorb the next block)', () => {
+    it('merges a same-type next paragraph UP into an empty DEFAULT paragraph (upper wins)', () => {
       vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
 
       const emptyParagraph = createBlock({ id: 'empty-paragraph', isEmpty: true, mergeable: true });
@@ -824,10 +824,65 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
 
       keyboardNavigation.handleDelete(event);
 
-      // A plain default paragraph is NOT a styled block, so it falls through to
-      // the line-break removal path — it must NOT absorb the next block's text.
-      expect(mergeBlocks).not.toHaveBeenCalled();
-      expect(removeBlock).toHaveBeenCalledWith(emptyParagraph);
+      // The upper block wins universally: the next block is pulled UP into the empty
+      // paragraph (which survives), rather than the empty paragraph being removed.
+      expect(mergeBlocks).toHaveBeenCalledWith(emptyParagraph, nextParagraph);
+      expect(removeBlock).not.toHaveBeenCalledWith(emptyParagraph);
+
+      endSpy.mockRestore();
+    });
+
+    /**
+     * Notion-parity bug m2: forward-Delete must keep the UPPER block's type even
+     * when the upper block is the plain default paragraph — symmetric with the
+     * Backspace merge (which already demotes a heading into a preceding paragraph).
+     *
+     * An empty DEFAULT paragraph followed by a styled heading: pressing Delete must
+     * pull the heading's text UP into the paragraph (which wins, demoting the
+     * heading to text) — NOT remove the paragraph and leave the heading as a heading
+     * (next-type-wins, the old divergence).
+     */
+    it('pulls a styled next block UP into an empty DEFAULT paragraph, which wins (upper-type-wins parity)', () => {
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      const convertible = { export: 'text', import: 'text' };
+      const emptyParagraph = createBlock({
+        id: 'empty-paragraph',
+        name: 'paragraph',
+        isEmpty: true,
+        mergeable: true,
+        tool: { isDefault: true, isLineBreaksEnabled: false, name: 'paragraph', conversionConfig: convertible } as unknown as Block['tool'],
+      });
+      const nextHeading = createBlock({
+        id: 'next-heading',
+        name: 'header',
+        isEmpty: false,
+        mergeable: true,
+        tool: { isDefault: false, isLineBreaksEnabled: false, name: 'header', conversionConfig: convertible } as unknown as Block['tool'],
+      });
+
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const removeBlock = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyParagraph,
+          nextBlock: nextHeading,
+          mergeBlocks,
+          removeBlock,
+          currentBlockIndex: 0,
+        } as unknown as BlokModules['BlockManager'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const endSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      // Upper (paragraph) wins: the heading text merges UP into the empty paragraph,
+      // which is NOT removed.
+      expect(mergeBlocks).toHaveBeenCalledWith(emptyParagraph, nextHeading);
+      expect(removeBlock).not.toHaveBeenCalledWith(emptyParagraph);
 
       endSpy.mockRestore();
     });

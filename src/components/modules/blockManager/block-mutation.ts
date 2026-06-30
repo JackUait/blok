@@ -493,6 +493,21 @@ export class BlockMutation {
       // The entire operation is wrapped in withAtomicOperation to suppress stopCapturing
       // when currentBlockIndexValue is set at the end
       this.yjsSync.withAtomicOperation(() => {
+        /**
+         * Re-parent the merged block's nested children onto the survivor BEFORE
+         * removing it. `removeBlock(blockToMerge)` runs `promoteChildrenToRoot`,
+         * which would otherwise orphan Tab-indented children to the document root
+         * (parentId=null) — silent data loss, since the user perceives them as
+         * belonging to the now-merged content. Notion re-parents them onto the
+         * surviving block. Reparenting first empties `blockToMerge.contentIds`, so
+         * the subsequent promote step is a no-op.
+         */
+        const childIdsToReparent = [...blockToMerge.contentIds];
+
+        if (childIdsToReparent.length > 0) {
+          this.reparentChildren(childIdsToReparent, targetBlock.id);
+        }
+
         void targetBlock.mergeWith(mergeData).then(() => {
           return this.ctx.removeBlock(blockToMerge, true, true, blocksStore);
         });

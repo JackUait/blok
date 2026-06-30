@@ -1895,6 +1895,68 @@ describe('BlockOperations', () => {
       expect(dependencies.YjsManager.transact).not.toHaveBeenCalled();
     });
 
+    /**
+     * Data-loss regression (Notion parity bug #1): Backspace-merging a block that
+     * owns Tab-indented children must NOT drop those children.
+     *
+     * The scenario: a survivor paragraph A and a paragraph B are root siblings; B
+     * has its own nested child C (parentId=B). Pressing Backspace at the start of B
+     * merges B into A. Before the fix, `mergeBlocks` copied only B's text into A and
+     * then `removeBlock(B)` → `promoteChildrenToRoot` re-parented C to ROOT
+     * (parentId=null), silently severing C from the merged content. Notion re-parents
+     * the merged block's children onto the survivor.
+     *
+     * After the fix, C must belong to A (A.contentIds includes C, C.parentId === A),
+     * and the hierarchy invariant must hold.
+     */
+    it('re-parents the merged block\'s nested children onto the survivor (no data loss)', async () => {
+      const survivor = createMockBlock({
+        id: 'survivor',
+        name: 'paragraph',
+        mergeable: true,
+        data: { text: 'A' },
+      });
+      (survivor.mergeWith as Mock).mockResolvedValue(undefined);
+      const merged = createMockBlock({
+        id: 'merged',
+        name: 'paragraph',
+        mergeable: true,
+        contentIds: ['kid'],
+        data: { text: 'B' },
+      });
+      const kid = createMockBlock({
+        id: 'kid',
+        name: 'paragraph',
+        parentId: 'merged',
+        data: { text: 'C' },
+      });
+
+      const testStore = createBlocksStore([survivor, merged, kid]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        1
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Baseline: the constructed hierarchy is valid before we touch it.
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+
+      await testOps.mergeBlocks(survivor, merged, testStore);
+
+      // The merged block's child survived and now belongs to the survivor —
+      // NOT promoted to root (parentId=null), which would be data loss.
+      expect(kid.parentId).toBe('survivor');
+      expect(survivor.contentIds).toContain('kid');
+      // No orphans, no dangling contentIds.
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+    });
+
     it('still merges blocks that share the same parentId (within-container merge)', async () => {
       const targetInCell = createMockBlock({
         id: 'target-same-cell',

@@ -1,4 +1,4 @@
-import { Component, EnvironmentInjector, runInInjectionContext, signal, type Signal } from '@angular/core';
+import { EnvironmentInjector, runInInjectionContext, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 

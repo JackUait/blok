@@ -656,6 +656,11 @@
   "packageManagerToggle": {
     "switchAriaPrefix": "Switch to"
   },
+  "frameworkToggle": {
+    "label": "Framework",
+    "switchAriaPrefix": "Switch to",
+    "note": "Setup differs per framework. The rest of the API works on the same editor instance everywhere."
+  },
   "demo": {
     "badge": "Interactive Demo",
     "title": "Try the",

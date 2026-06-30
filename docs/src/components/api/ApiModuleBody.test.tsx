@@ -3,16 +3,19 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ApiModuleBody } from './ApiModuleBody';
 
 const renderAt = (entry: string) =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <I18nProvider>
-        <Routes>
-          <Route path="/docs/:moduleId" element={<ApiModuleBody />} />
-          <Route path="/docs/quick-start" element={<div data-blok-testid="qs">qs</div>} />
-        </Routes>
+        <FrameworkProvider>
+          <Routes>
+            <Route path="/docs/:moduleId" element={<ApiModuleBody />} />
+            <Route path="/docs/quick-start" element={<div data-blok-testid="qs">qs</div>} />
+          </Routes>
+        </FrameworkProvider>
       </I18nProvider>
     </MemoryRouter>,
   );

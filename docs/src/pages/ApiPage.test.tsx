@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
+import { FrameworkProvider } from '../contexts/FrameworkContext';
 import { ApiPage } from './ApiPage';
 
 vi.mock('../components/common/CodeBlock', () => ({
@@ -12,9 +13,11 @@ const renderAt = (entry: string) =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <I18nProvider>
-        <Routes>
-          <Route path="/docs/*" element={<ApiPage />} />
-        </Routes>
+        <FrameworkProvider>
+          <Routes>
+            <Route path="/docs/*" element={<ApiPage />} />
+          </Routes>
+        </FrameworkProvider>
       </I18nProvider>
     </MemoryRouter>,
   );
@@ -54,6 +57,13 @@ describe('ApiPage structure', () => {
   it('renders the API sidebar', () => {
     renderAt('/docs/caret-api');
     expect(screen.getByTestId('api-sidebar')).toBeInTheDocument();
+  });
+
+  it('renders the framework toggle alongside the sidebar', () => {
+    // caret-api has no inline quick-start toggle, so these prove the sidebar /
+    // mobile-nav placements (both render in jsdom regardless of breakpoint).
+    renderAt('/docs/caret-api');
+    expect(screen.getAllByTestId('framework-toggle').length).toBeGreaterThan(0);
   });
 
   it('renders the main api content area', () => {

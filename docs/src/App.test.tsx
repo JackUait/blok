@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { I18nProvider } from './contexts/I18nContext';
+import { FrameworkProvider } from './contexts/FrameworkContext';
 
 vi.mock('framer-motion', () => {
   // Strip motion-only props so they don't leak onto the DOM element.
@@ -101,7 +102,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -115,7 +118,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/docs']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -129,7 +134,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/docs/caret-api']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -143,7 +150,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -170,7 +179,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -187,7 +198,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -202,7 +215,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/docs']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -215,7 +230,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -227,7 +244,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -246,7 +265,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );
@@ -268,7 +289,9 @@ describe('App', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <I18nProvider>
-          <App />
+          <FrameworkProvider>
+            <App />
+          </FrameworkProvider>
         </I18nProvider>
       </MemoryRouter>
     );

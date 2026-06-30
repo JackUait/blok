@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { I18nProvider } from './contexts/I18nContext';
+import { FrameworkProvider } from './contexts/FrameworkContext';
 import App from './App';
 import './index.css';
 
@@ -13,7 +14,9 @@ createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
       <I18nProvider>
-        <App />
+        <FrameworkProvider>
+          <App />
+        </FrameworkProvider>
       </I18nProvider>
     </BrowserRouter>
   </StrictMode>,

@@ -1,8 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { ApiSection } from './ApiSection';
 import type { ApiSection as ApiSectionType } from './api-data';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
+
+/** ApiSection now reads the active framework, so both providers are required. */
+const Providers = ({ children }: { children: ReactNode }) => (
+  <I18nProvider>
+    <FrameworkProvider>{children}</FrameworkProvider>
+  </I18nProvider>
+);
 
 const mockSection: ApiSectionType = {
   id: 'test-section',
@@ -64,7 +73,7 @@ const mockQuickStartSection: ApiSectionType = {
 
 describe('ApiSection', () => {
   it('should render the title', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     // Title includes anchor link, check the heading contains the section title text
     const title = screen.getByRole('heading', { level: 1 });
@@ -72,19 +81,19 @@ describe('ApiSection', () => {
   });
 
   it('should render the badge when provided', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     expect(screen.getByText('Test')).toBeInTheDocument();
   });
 
   it('should render the description', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     expect(screen.getByText('This is a test section')).toBeInTheDocument();
   });
 
   it('should render methods when provided', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     expect(screen.getByText('Methods')).toBeInTheDocument();
     expect(screen.getByText('testMethod()')).toBeInTheDocument();
@@ -93,7 +102,7 @@ describe('ApiSection', () => {
   });
 
   it('should render method example when provided', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     // CodeBlock renders with a copy button that can be queried by testid
     const copyButton = screen.getByTestId('code-copy-button');
@@ -102,7 +111,7 @@ describe('ApiSection', () => {
   });
 
   it('should render properties when provided', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     expect(screen.getByText('Properties')).toBeInTheDocument();
     expect(screen.getByText('testProperty')).toBeInTheDocument();
@@ -111,14 +120,14 @@ describe('ApiSection', () => {
   });
 
   it('should render table for config sections', () => {
-    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
 
     expect(screen.getByText('holder')).toBeInTheDocument();
     expect(screen.getByText('tools')).toBeInTheDocument();
   });
 
   it('should render table with Option column for config sections', () => {
-    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
 
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
@@ -142,7 +151,7 @@ describe('ApiSection', () => {
       ],
     };
 
-    render(<I18nProvider><ApiSection section={nonConfigSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={nonConfigSection} /></Providers>);
 
     // Check that Option header does not exist for non-config sections
     const optionHeader = screen.queryByRole('columnheader', { name: 'Option' });
@@ -154,7 +163,7 @@ describe('ApiSection', () => {
   });
 
   it('should render quick-start content for customType quick-start', () => {
-    render(<I18nProvider><ApiSection section={mockQuickStartSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
 
     expect(screen.getByText('Install Blok')).toBeInTheDocument();
     expect(screen.getByText('Import and configure')).toBeInTheDocument();
@@ -162,7 +171,7 @@ describe('ApiSection', () => {
   });
 
   it('should render 3 steps for quick-start section', () => {
-    render(<I18nProvider><ApiSection section={mockQuickStartSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
 
     // Quick start has 3 h3 headings for the steps
     const headings = screen.getAllByRole('heading', { level: 3 });
@@ -173,21 +182,21 @@ describe('ApiSection', () => {
   });
 
   it('should render section with heading level 1 for title', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     const title = screen.getByRole('heading', { level: 1 });
     expect(title).toHaveTextContent('Test Section');
   });
 
   it('should render section heading with badge', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     const badge = screen.getByText('Test');
     expect(badge).toBeInTheDocument();
   });
 
   it('should render methods block with heading level 3', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     const methodsHeading = screen.getByRole('heading', { level: 3, name: 'Methods' });
     expect(methodsHeading).toBeInTheDocument();
@@ -200,27 +209,27 @@ describe('ApiSection', () => {
       properties: mockSection.properties,
     };
 
-    render(<I18nProvider><ApiSection section={propsOnlySection} /></I18nProvider>);
+    render(<Providers><ApiSection section={propsOnlySection} /></Providers>);
 
     const propertiesHeading = screen.getByRole('heading', { level: 3, name: 'Properties' });
     expect(propertiesHeading).toBeInTheDocument();
   });
 
   it('should render method name and return type together', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     expect(screen.getByText('testMethod()')).toBeInTheDocument();
     expect(screen.getByText('string')).toBeInTheDocument();
   });
 
   it('should render method description', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     expect(screen.getByText('A test method')).toBeInTheDocument();
   });
 
   it('should render property table with proper columns', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
@@ -231,7 +240,7 @@ describe('ApiSection', () => {
   });
 
   it('should render config table with proper columns', () => {
-    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
 
     expect(screen.getByRole('columnheader', { name: 'Option' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Type' })).toBeInTheDocument();
@@ -240,7 +249,7 @@ describe('ApiSection', () => {
   });
 
   it('should render code block for method examples', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     // Check for the CodeBlock wrapper using testid
     const codeBlock = screen.getByTestId('code-block');
@@ -248,7 +257,7 @@ describe('ApiSection', () => {
   });
 
   it('should render property rows with id for anchor navigation', () => {
-    render(<I18nProvider><ApiSection section={mockSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockSection} /></Providers>);
 
     const propRow = screen.getByTestId('test-section-prop-testproperty');
     expect(propRow).toBeInTheDocument();
@@ -256,7 +265,7 @@ describe('ApiSection', () => {
   });
 
   it('should render config option rows with id for anchor navigation', () => {
-    render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
+    render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
 
     const holderRow = screen.getByTestId('config-holder');
     expect(holderRow).toBeInTheDocument();
@@ -269,7 +278,7 @@ describe('ApiSection', () => {
   describe('Configuration section clarity', () => {
     it('should display an example showing the BlokConfig interface', () => {
       // Use mockConfigSection which now has an example
-      render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
+      render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
 
       // Should show a code example demonstrating that these properties
       // are passed to the Blok constructor
@@ -287,11 +296,46 @@ describe('ApiSection', () => {
 
     it('should show the TypeScript interface for configuration', () => {
       // Use mockConfigSection which has BlokConfig in the example
-      render(<I18nProvider><ApiSection section={mockConfigSection} /></I18nProvider>);
+      render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
 
       // Should show BlokConfig interface to clarify what object
       // these properties belong to
       expect(screen.getByText(/BlokConfig/)).toBeInTheDocument();
+    });
+  });
+
+  describe('framework-aware examples', () => {
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    const codes = () =>
+      screen
+        .getAllByTestId('code-copy-button')
+        .map((b) => b.getAttribute('data-code') ?? '');
+
+    it('shows vanilla setup snippets by default', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const joined = codes().join('\n');
+      expect(joined).toContain('new Blok(');
+      expect(joined).not.toContain('@jackuait/blok/react');
+    });
+
+    it('shows the React adapter setup when React is selected', () => {
+      localStorage.setItem('blok-docs-framework', 'react');
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      expect(codes().join('\n')).toContain('@jackuait/blok/react');
+    });
+
+    it('shows the Vue adapter setup when Vue is selected', () => {
+      localStorage.setItem('blok-docs-framework', 'vue');
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      expect(codes().join('\n')).toContain('@jackuait/blok/vue');
+    });
+
+    it('switches the configuration example to the selected framework', () => {
+      localStorage.setItem('blok-docs-framework', 'angular');
+      render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
+      expect(codes().join('\n')).toContain('@jackuait/blok/angular');
     });
   });
 });

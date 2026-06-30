@@ -3,7 +3,13 @@ import { CodeBlock } from "../common/CodeBlock";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { ApiMethodCard } from "./ApiMethodCard";
 import { ConceptsContent } from "./ConceptsContent";
+import { FrameworkToggle } from "../common/FrameworkToggle";
 import { useI18n } from "../../contexts/I18nContext";
+import { useFramework } from "../../contexts/FrameworkContext";
+import {
+  QUICK_START_SNIPPETS,
+  CONFIG_SNIPPETS,
+} from "../common/framework-snippets";
 import { generatePropertyId, generateOptionId } from "./api-anchors";
 import type { ApiSection as ApiSectionType } from "./api-data";
 import type { PackageManager } from "../common/PackageManagerToggle";
@@ -22,26 +28,12 @@ const codeClass =
 
 const PACKAGE_NAME = "@jackuait/blok";
 
-const CONFIG_CODE = `import { Blok } from '@jackuait/blok';
-import { Header, Paragraph, List, Bold, Italic, Link } from '@jackuait/blok/tools';
-
-const editor = new Blok({
-  holder: 'editor',
-  tools: {
-    paragraph: Paragraph,
-    header: { class: Header, placeholder: 'Enter a heading' },
-    list: List,
-    bold: Bold,
-    italic: Italic,
-    link: Link,
-  },
-});`;
-
-const SAVE_CODE = `const data = await editor.save();`;
-
 const QuickStartContent: React.FC = () => {
   const { t } = useI18n();
+  const { framework } = useFramework();
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
+
+  const { create, save } = QUICK_START_SNIPPETS[framework];
 
   const getInstallCommand = (manager: PackageManager): string => {
     switch (manager) {
@@ -73,17 +65,28 @@ const QuickStartContent: React.FC = () => {
     {
       title: t('api.quickStartSteps.configure.title'),
       description: t('api.quickStartSteps.configure.description'),
-      code: <CodeBlock code={CONFIG_CODE} language="typescript" />,
+      code: <CodeBlock code={create.code} language={create.language} />,
     },
     {
       title: t('api.quickStartSteps.save.title'),
       description: t('api.quickStartSteps.save.description'),
-      code: <CodeBlock code={SAVE_CODE} language="typescript" />,
+      code: <CodeBlock code={save.code} language={save.language} />,
     },
   ];
 
   return (
     <div className="flex flex-col gap-10">
+      <div
+        className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+        data-blok-testid="quick-start-framework"
+      >
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          {t('frameworkToggle.note')}
+        </p>
+        <div className="shrink-0 sm:w-64">
+          <FrameworkToggle />
+        </div>
+      </div>
       {steps.map((step, index) => {
         const isLast = index === steps.length - 1;
         return (
@@ -135,6 +138,16 @@ const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => (
 
 export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   const { t } = useI18n();
+  const { framework } = useFramework();
+
+  // The Configuration page's lead example is the one place the core options are
+  // shown being passed in, which differs per framework (constructor vs hook vs
+  // component), so it follows the active framework rather than api-data's string.
+  const isConfig = section.id === "config";
+  const exampleCode = isConfig ? CONFIG_SNIPPETS[framework].code : section.example;
+  const exampleLanguage = isConfig
+    ? CONFIG_SNIPPETS[framework].language
+    : "typescript";
 
   // Render quick-start content specially
   if (section.customType === "quick-start") {
@@ -213,9 +226,14 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
         </div>
       )}
 
-      {section.example && (
+      {exampleCode && (
         <div className="mt-8">
-          <CodeBlock code={section.example} language="typescript" />
+          {isConfig && (
+            <div className="mb-3">
+              <FrameworkToggle />
+            </div>
+          )}
+          <CodeBlock code={exampleCode} language={exampleLanguage} />
         </div>
       )}
 

@@ -2,6 +2,7 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
+import { FrameworkToggle } from '../components/common/FrameworkToggle';
 import { MobileSectionNav } from '../components/common/MobileSectionNav';
 import { OnThisPage } from '../components/api/OnThisPage';
 import { ApiModuleBody } from '../components/api/ApiModuleBody';
@@ -27,6 +28,9 @@ export const ApiContent: React.FC = () => {
       data-blok-testid="api-docs"
     >
       <div className="hidden lg:block">
+        <div className="mb-6 pl-1">
+          <FrameworkToggle />
+        </div>
         <Sidebar
           key={`sidebar-${locale}`}
           sections={sidebarSections}
@@ -38,6 +42,9 @@ export const ApiContent: React.FC = () => {
       </div>
       <div className="min-w-0">
         <div className="lg:hidden">
+          <div className="mb-4">
+            <FrameworkToggle />
+          </div>
           <MobileSectionNav
             key={`mobile-nav-${locale}`}
             sections={sidebarSections}

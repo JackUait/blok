@@ -2,14 +2,17 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider, useFramework } from '../../contexts/FrameworkContext';
 import { FrameworkToggle } from './FrameworkToggle';
 
 const Providers = ({ children }: { children: ReactNode }) => (
-  <I18nProvider>
-    <FrameworkProvider>{children}</FrameworkProvider>
-  </I18nProvider>
+  <MemoryRouter>
+    <I18nProvider>
+      <FrameworkProvider>{children}</FrameworkProvider>
+    </I18nProvider>
+  </MemoryRouter>
 );
 
 /** Surfaces the active framework so a click can be asserted through context. */

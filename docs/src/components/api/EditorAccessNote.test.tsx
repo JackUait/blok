@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { FrameworkToggle } from '../common/FrameworkToggle';
@@ -14,9 +15,11 @@ vi.mock('../common/CodeBlock', () => ({
 }));
 
 const Providers = ({ children }: { children: ReactNode }) => (
-  <I18nProvider>
-    <FrameworkProvider>{children}</FrameworkProvider>
-  </I18nProvider>
+  <MemoryRouter>
+    <I18nProvider>
+      <FrameworkProvider>{children}</FrameworkProvider>
+    </I18nProvider>
+  </MemoryRouter>
 );
 
 describe('EditorAccessNote', () => {

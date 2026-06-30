@@ -1,16 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { ApiSection } from './ApiSection';
 import type { ApiSection as ApiSectionType } from './api-data';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 
-/** ApiSection now reads the active framework, so both providers are required. */
+/**
+ * ApiSection reads the active framework, which now lives in the URL, so a router
+ * plus both context providers are required.
+ */
 const Providers = ({ children }: { children: ReactNode }) => (
-  <I18nProvider>
-    <FrameworkProvider>{children}</FrameworkProvider>
-  </I18nProvider>
+  <MemoryRouter>
+    <I18nProvider>
+      <FrameworkProvider>{children}</FrameworkProvider>
+    </I18nProvider>
+  </MemoryRouter>
 );
 
 const mockSection: ApiSectionType = {

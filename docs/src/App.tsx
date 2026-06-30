@@ -1,13 +1,19 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { HomePage } from "./pages/HomePage";
 import { DemoPage } from "./pages/DemoPage";
 import { ApiPage } from "./pages/ApiPage";
 import { MigrationPage } from "./pages/MigrationPage";
 import ChangelogPage from "./pages/ChangelogPage";
-import { ToolsPage } from "./pages/ToolsPage";
 import { PageTransition } from "./components/common/PageTransition";
+
+// Tools moved into the general docs page; keep old /tools links working.
+const ToolsRedirect = () => {
+  const { hash } = useLocation();
+  const id = hash.replace(/^#/, "");
+  return <Navigate to={id ? `/docs/${id}` : "/docs/paragraph"} replace />;
+};
 
 const SCROLL_STORAGE_PREFIX = "blok-docs:scroll:";
 
@@ -153,7 +159,7 @@ const App = () => {
           <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
           <Route path="/demo" element={<PageTransition><DemoPage /></PageTransition>} />
           <Route path="/docs/*" element={<PageTransition><ApiPage /></PageTransition>} />
-          <Route path="/tools" element={<PageTransition><ToolsPage /></PageTransition>} />
+          <Route path="/tools" element={<ToolsRedirect />} />
           <Route path="/migration" element={<PageTransition><MigrationPage /></PageTransition>} />
           <Route path="/changelog" element={<PageTransition><ChangelogPage /></PageTransition>} />
         </Routes>

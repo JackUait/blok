@@ -2220,7 +2220,7 @@ export const Features: React.FC = () => {
           t('home.features.blockLibrary.details.benefit3'),
           t('home.features.blockLibrary.details.benefit4'),
         ],
-        apiLink: "/tools",
+        apiLink: "/docs/paragraph",
       },
     },
     {

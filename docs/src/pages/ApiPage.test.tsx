@@ -36,6 +36,13 @@ describe('ApiPage routing', () => {
     renderAt('/docs/caret-api');
     expect(screen.getByTestId('api-sidebar-link-caret-api')).toHaveClass('active');
   });
+
+  it('renders a built-in tool page at /docs/paragraph', () => {
+    renderAt('/docs/paragraph');
+    expect(screen.getByTestId('tools-section-paragraph')).toBeInTheDocument();
+    // The tool appears in the docs sidebar too.
+    expect(screen.getByTestId('api-sidebar-link-paragraph')).toBeInTheDocument();
+  });
 });
 
 describe('ApiPage structure', () => {

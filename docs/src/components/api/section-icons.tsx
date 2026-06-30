@@ -64,4 +64,21 @@ export const SECTION_ICONS: Record<string, ReactNode> = {
       <path d="M16 21h1a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
     </svg>
   ),
+  // Block tools — grid of blocks
+  blockTools: (
+    <svg {...iconProps}>
+      <rect width="7" height="7" x="3" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="14" rx="1" />
+      <rect width="7" height="7" x="3" y="14" rx="1" />
+    </svg>
+  ),
+  // Inline tools — type
+  inlineTools: (
+    <svg {...iconProps}>
+      <polyline points="4 7 4 4 20 4 20 7" />
+      <line x1="9" x2="15" y1="20" y2="20" />
+      <line x1="12" x2="12" y1="4" y2="20" />
+    </svg>
+  ),
 };

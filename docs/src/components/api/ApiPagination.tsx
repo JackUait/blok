@@ -7,14 +7,16 @@ import { MODULE_ORDER } from './api-nav';
 interface ApiPaginationProps {
   currentId: string;
   labels: Record<string, string>;
+  /** Linear page order; defaults to the API module order. */
+  order?: string[];
 }
 
-export const ApiPagination: React.FC<ApiPaginationProps> = ({ currentId, labels }) => {
+export const ApiPagination: React.FC<ApiPaginationProps> = ({ currentId, labels, order = MODULE_ORDER }) => {
   const { t } = useI18n();
-  const idx = MODULE_ORDER.indexOf(currentId);
+  const idx = order.indexOf(currentId);
   if (idx === -1) return null;
-  const prev = idx > 0 ? MODULE_ORDER[idx - 1] : null;
-  const next = idx < MODULE_ORDER.length - 1 ? MODULE_ORDER[idx + 1] : null;
+  const prev = idx > 0 ? order[idx - 1] : null;
+  const next = idx < order.length - 1 ? order[idx + 1] : null;
 
   return (
     <nav

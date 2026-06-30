@@ -5,6 +5,7 @@ import { API_SECTIONS as BASE_API_SECTIONS } from '../components/api/api-data';
 import type { SidebarSection } from '../components/common/Sidebar';
 import { SIDEBAR_GROUPS } from '../components/api/api-nav';
 import { SECTION_ICONS } from '../components/api/section-icons';
+import { TOOL_SECTIONS } from '../components/tools/tools-data';
 
 /**
  * Mapping of section IDs to translation keys
@@ -125,11 +126,29 @@ export const useApiTranslations = () => {
   }, [t, locale]);
 
   const translatedSidebarSections = useMemo((): SidebarSection[] => {
-    return SIDEBAR_GROUPS.map((group) => ({
+    const apiGroups: SidebarSection[] = SIDEBAR_GROUPS.map((group) => ({
       title: t(`api.sections.${group.key}`),
       icon: SECTION_ICONS[group.key],
       links: group.moduleIds.map((id) => ({ id, label: t(SIDEBAR_LINK_KEYS[id]) })),
     }));
+
+    // Built-in tools now live in the general docs nav. Split by tool type and
+    // dedupe by id (tools-data has a stray duplicate) so each routes to a page.
+    const seen = new Set<string>();
+    const blockLinks: { id: string; label: string }[] = [];
+    const inlineLinks: { id: string; label: string }[] = [];
+    for (const tool of TOOL_SECTIONS) {
+      if (seen.has(tool.id)) continue;
+      seen.add(tool.id);
+      const link = { id: tool.id, label: safeTranslate(t, `tools.links.${tool.id}`) ?? tool.title };
+      (tool.type === 'block' ? blockLinks : inlineLinks).push(link);
+    }
+
+    return [
+      ...apiGroups,
+      { title: t('tools.sections.blockTools'), icon: SECTION_ICONS.blockTools, links: blockLinks },
+      { title: t('tools.sections.inlineTools'), icon: SECTION_ICONS.inlineTools, links: inlineLinks },
+    ];
   }, [t, locale]);
 
   const filterLabel = useMemo(() => t('api.filterLabel'), [t, locale]);

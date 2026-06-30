@@ -59,7 +59,10 @@ describe('useApiTranslations', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     
     const sectionTitles = result.current.sidebarSections.map(s => s.title);
-    expect(sectionTitles).toEqual(['Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types']);
+    expect(sectionTitles).toEqual([
+      'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Block Tools', 'Inline Tools',
+    ]);
   });
 
   it('should return the correct number of API sections', () => {
@@ -148,13 +151,27 @@ describe('useApiTranslations', () => {
 });
 
 describe('useApiTranslations sidebar groups', () => {
-  it('produces the six redesigned buckets in order', () => {
+  it('produces the six API buckets followed by the two tool groups', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     const titles = result.current.sidebarSections.map((s) => s.title);
     expect(titles).toEqual([
       'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Block Tools', 'Inline Tools',
     ]);
     expect(result.current.sidebarSections[2].links.map((l) => l.id))
       .toEqual(['caret-api', 'selection-api', 'styles-api', 'history-api']);
+  });
+
+  it('lists built-in tools under the tool groups (deduped, routable)', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blockGroup = result.current.sidebarSections.find((s) => s.title === 'Block Tools');
+    const inlineGroup = result.current.sidebarSections.find((s) => s.title === 'Inline Tools');
+
+    // Block tools include core blocks; ids are unique despite tools-data dupes.
+    const blockIds = blockGroup?.links.map((l) => l.id) ?? [];
+    expect(blockIds).toContain('paragraph');
+    expect(blockIds.filter((id) => id === 'video')).toHaveLength(1);
+    // Inline tools include formatting marks.
+    expect(inlineGroup?.links.map((l) => l.id)).toContain('bold');
   });
 });

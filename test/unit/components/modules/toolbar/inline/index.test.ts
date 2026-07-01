@@ -210,6 +210,16 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     vi.restoreAllMocks();
   });
 
+  it('exposes the wrapper as a horizontal ARIA toolbar with a label', () => {
+    (inlineToolbar as unknown as { make: () => void }).make();
+
+    const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+    expect(wrapper.getAttribute('role')).toBe('toolbar');
+    expect(wrapper.getAttribute('aria-orientation')).toBe('horizontal');
+    expect(wrapper.getAttribute('aria-label')).toBe('a11y.textFormatting');
+  });
+
   it('resets opened and openingPromise when open() throws', async () => {
     // Make PopoverInline constructor throw to simulate open() failing
     popoverHolder.factory = () => {

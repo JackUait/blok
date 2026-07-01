@@ -220,6 +220,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private leftAlignElement?: HTMLElement;
 
   /**
+   * Stable id applied to the popover's listbox (items) container so the block's
+   * combobox contentEditable can reference it via `aria-controls`.
+   */
+  private listboxId?: string;
+
+  /**
    * The block element currently being listened to for inline slash search
    */
   private currentBlockForSearch: HTMLElement | null = null;
@@ -269,13 +275,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param options.triggerElement - Element relative to which the popover should be positioned
    * @param options.leftAlignElement - Element whose left edge is used for horizontal popover alignment
    */
-  constructor({ api, tools, i18nLabels, i18n, triggerElement, leftAlignElement }: {
+  constructor({ api, tools, i18nLabels, i18n, triggerElement, leftAlignElement, listboxId }: {
     api: API;
     tools: ToolsCollection<BlockToolAdapter>;
     i18nLabels: Record<ToolboxTextLabelsKeys, string>;
     i18n: I18nInstance;
     triggerElement?: HTMLElement;
     leftAlignElement?: HTMLElement;
+    listboxId?: string;
   }) {
     super();
 
@@ -285,6 +292,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.i18n = i18n;
     this.triggerElement = triggerElement;
     this.leftAlignElement = leftAlignElement;
+    this.listboxId = listboxId;
 
     this.enableShortcuts();
 
@@ -548,10 +556,16 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       messages: {
         nothingFound: this.i18nLabels.nothingFound,
         search: this.i18nLabels.filter,
+        searchResults: this.i18n.t('a11y.searchResults'),
       },
       items: this.toolboxItemsToBeDisplayed,
       handleContentEditableNavigation: true,
       minWidth: '220px',
+      // The Toolbox is a searchable combobox surface: render the items as an
+      // ARIA listbox (options), not a menu, and give it a stable id so the
+      // block's combobox contentEditable can point aria-controls at it.
+      listbox: true,
+      listboxId: this.listboxId,
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
@@ -1111,8 +1125,52 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
+      this.applyComboboxRoles(this.currentContentEditable);
+      this.setPopoverActiveDescendantHost(this.currentContentEditable);
     }
     this.listeners.on(this.currentBlockForSearch, 'input', this.handleBlockInput);
+  }
+
+  /**
+   * Exposes the block's focused contentEditable as the ARIA combobox that owns
+   * the open Toolbox listbox. The contentEditable keeps DOM focus in both slash
+   * and plus-button modes, so aria-activedescendant on it lets screen readers
+   * track the highlighted option while the caret stays in the editor.
+   * @param host - the block's contentEditable element
+   */
+  private applyComboboxRoles(host: HTMLElement): void {
+    host.setAttribute('role', 'combobox');
+    host.setAttribute('aria-expanded', 'true');
+    host.setAttribute('aria-autocomplete', 'list');
+    host.setAttribute('aria-haspopup', 'listbox');
+
+    if (this.listboxId !== undefined) {
+      host.setAttribute('aria-controls', this.listboxId);
+    }
+  }
+
+  /**
+   * Removes the combobox ARIA attributes previously applied to the block's
+   * contentEditable so it returns to a plain editor element once the Toolbox closes.
+   * @param host - the block's contentEditable element
+   */
+  private removeComboboxRoles(host: HTMLElement): void {
+    host.removeAttribute('role');
+    host.removeAttribute('aria-expanded');
+    host.removeAttribute('aria-autocomplete');
+    host.removeAttribute('aria-haspopup');
+    host.removeAttribute('aria-controls');
+  }
+
+  /**
+   * Forwards the active-descendant host to the popover's flipper when supported
+   * (desktop). Mobile popovers do not expose this and are skipped.
+   * @param host - focus-owning element, or null to clear
+   */
+  private setPopoverActiveDescendantHost(host: HTMLElement | null): void {
+    if (this.popover !== null && 'setActiveDescendantHost' in this.popover) {
+      (this.popover as { setActiveDescendantHost: (h: HTMLElement | null) => void }).setActiveDescendantHost(host);
+    }
   }
 
   /**
@@ -1123,7 +1181,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.listeners.off(this.currentBlockForSearch, 'input', this.handleBlockInput);
       if (this.currentContentEditable instanceof HTMLElement) {
         this.currentContentEditable.removeAttribute(DATA_ATTR.slashSearch);
+        this.removeComboboxRoles(this.currentContentEditable);
       }
+      this.setPopoverActiveDescendantHost(null);
       this.currentBlockForSearch = null;
       this.currentContentEditable = null;
     }

@@ -18,7 +18,8 @@ import { hide } from '../../utils/tooltip';
  */
 import { ClickDragHandler } from './click-handler';
 import { computeVisualContentOffset, resolveVisualContentWidth } from './content-alignment';
-import { PlusButtonHandler } from './plus-button';
+import { SETTINGS_POPOVER_ID } from './blockSettings';
+import { PlusButtonHandler, TOOLBOX_POPOVER_ID } from './plus-button';
 import { ToolbarPositioner } from './positioning';
 import { SettingsTogglerHandler } from './settings-toggler';
 import { getToolbarStyles } from './styles';
@@ -1064,6 +1065,13 @@ export class Toolbar extends Module<ToolbarNodes> {
     wrapper.setAttribute('data-blok-testid', 'toolbar');
 
     /**
+     * Accessibility: expose the block toolbar (plus button + settings toggler)
+     * as an ARIA toolbar with a descriptive label.
+     */
+    wrapper.setAttribute('role', 'toolbar');
+    wrapper.setAttribute('aria-label', this.Blok.I18n.t('a11y.blockToolbar'));
+
+    /**
      * Make Content Zone and Actions Zone
      */
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- CSS getter now returns Tailwind classes
@@ -1106,12 +1114,31 @@ export class Toolbar extends Module<ToolbarNodes> {
      *  - Settings Panel
      */
     const settingsToggler = this.settingsTogglerHandler.make(this.nodes);
+
+    /**
+     * Accessibility: expose the settings toggler as a menu button.
+     * The toggler element itself is built by SettingsTogglerHandler (role/label/
+     * tabindex live there); here we add the menu-button contract wiring —
+     * aria-haspopup + the collapsed initial state + a link to the settings
+     * popover that BlockSettings creates on open.
+     */
+    settingsToggler.setAttribute('aria-haspopup', 'menu');
+    settingsToggler.setAttribute('aria-expanded', 'false');
+    settingsToggler.setAttribute('aria-controls', SETTINGS_POPOVER_ID);
+
     $.append(actions, settingsToggler);
 
     /**
      * Appending Toolbar components to itself
      */
-    $.append(actions, this.makeToolbox());
+    const toolboxElement = this.makeToolbox();
+
+    /**
+     * The stable `TOOLBOX_POPOVER_ID` is applied to the popover's listbox
+     * (items) container by the Toolbox (via `listboxId`), so the plus button's
+     * `aria-controls` resolves to the actual `role="listbox"` element it opens.
+     */
+    $.append(actions, toolboxElement);
 
     const blockSettingsElement = this.Blok.BlockSettings.getElement();
 
@@ -1144,12 +1171,18 @@ export class Toolbar extends Module<ToolbarNodes> {
       },
       i18n: this.Blok.I18n,
       triggerElement: this.nodes.plusButton,
+      listboxId: TOOLBOX_POPOVER_ID,
     });
 
     this.toolboxInstance.on(ToolboxEvent.Opened, () => {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.add(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.toolboxOpened, 'true');
+
+      /**
+       * Reflect the expanded state on the plus button (menu-button contract).
+       */
+      this.nodes.plusButton?.setAttribute('aria-expanded', 'true');
 
       /**
        * Adapt search input colors when toolbox opens inside a colored callout.
@@ -1165,6 +1198,11 @@ export class Toolbar extends Module<ToolbarNodes> {
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       this.Blok.UI.nodes.wrapper.classList.remove(this.CSS.openedToolboxHolderModifier);
       this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.toolboxOpened);
+
+      /**
+       * Reflect the collapsed state on the plus button (menu-button contract).
+       */
+      this.nodes.plusButton?.setAttribute('aria-expanded', 'false');
 
       /**
        * If the toolbox was opened via the plus button and the user dismissed
@@ -1425,6 +1463,7 @@ export class Toolbar extends Module<ToolbarNodes> {
    */
   private onBlockSettingsOpen = (): void => {
     this.Blok.UI.nodes.wrapper.setAttribute(DATA_ATTR.blockSettingsOpened, 'true');
+    this.nodes.settingsToggler?.setAttribute('aria-expanded', 'true');
   };
 
   /**
@@ -1432,6 +1471,7 @@ export class Toolbar extends Module<ToolbarNodes> {
    */
   private onBlockSettingsClose = (): void => {
     this.Blok.UI.nodes.wrapper.removeAttribute(DATA_ATTR.blockSettingsOpened);
+    this.nodes.settingsToggler?.setAttribute('aria-expanded', 'false');
   };
 
   /**

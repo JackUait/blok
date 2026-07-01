@@ -359,6 +359,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * @param items - list of items params
    */
   protected buildItems(items: PopoverItemParams[]): Array<PopoverItem> {
+    const menuItemRole = this.params.listbox === true ? 'option' : 'menuitem';
+
     return items.map(item => {
       switch (item.type) {
         case PopoverItemType.Separator:
@@ -367,7 +369,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
           return new PopoverItemHtml(item, this.itemsRenderParams[PopoverItemType.Html]);
         case PopoverItemType.Default:
         case undefined:
-          return new PopoverItemDefault(item, this.itemsRenderParams[PopoverItemType.Default]);
+          return new PopoverItemDefault(item, {
+            ...this.itemsRenderParams[PopoverItemType.Default],
+            menuItemRole,
+          });
       }
     });
   }
@@ -639,6 +644,28 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     items.className = css.items;
     items.setAttribute(DATA_ATTR.popoverItems, '');
     items.setAttribute('data-blok-testid', 'popover-items');
+    // Expose the container as a listbox (search/combobox surfaces) or a menu.
+    items.setAttribute('role', this.params.listbox === true ? 'listbox' : 'menu');
+    if (this.params.listboxId !== undefined) {
+      items.id = this.params.listboxId;
+    }
+
+    // Visually-hidden polite live region: announces search result counts / the
+    // empty state to screen readers as items are filtered.
+    const resultsAnnouncer = document.createElement('div');
+
+    resultsAnnouncer.setAttribute('aria-live', 'polite');
+    resultsAnnouncer.setAttribute('role', 'status');
+    resultsAnnouncer.setAttribute('data-blok-testid', 'popover-results-announcer');
+    resultsAnnouncer.style.position = 'absolute';
+    resultsAnnouncer.style.width = '1px';
+    resultsAnnouncer.style.height = '1px';
+    resultsAnnouncer.style.padding = '0';
+    resultsAnnouncer.style.margin = '-1px';
+    resultsAnnouncer.style.overflow = 'hidden';
+    resultsAnnouncer.style.clip = 'rect(0, 0, 0, 0)';
+    resultsAnnouncer.style.whiteSpace = 'nowrap';
+    resultsAnnouncer.style.border = '0';
 
     // Create scroll haze overlays
     const scrollHazeTop = document.createElement('div');
@@ -672,6 +699,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       popoverContainer.appendChild(contextLabel);
     }
     popoverContainer.appendChild(items);
+    popoverContainer.appendChild(resultsAnnouncer);
     popoverContainer.appendChild(scrollHazeTop);
     popoverContainer.appendChild(scrollHazeBottom);
     popover.appendChild(popoverContainer);
@@ -680,6 +708,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       popover,
       popoverContainer,
       nothingFoundMessage,
+      resultsAnnouncer,
       contextLabel,
       items,
       scrollHazeTop,

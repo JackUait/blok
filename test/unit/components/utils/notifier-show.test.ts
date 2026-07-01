@@ -112,6 +112,32 @@ describe('Notifier show (index.ts)', () => {
     expect(notification.className).toContain('animate-notify-slide-out');
   });
 
+  it('does not auto-dismiss confirm notifications', () => {
+    show({ message: 'confirm?', type: 'confirm', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    expect(notification).not.toBeNull();
+
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+  });
+
+  it('does not auto-dismiss prompt notifications', () => {
+    show({ message: 'prompt?', type: 'prompt', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    expect(notification).not.toBeNull();
+
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+  });
+
   it('ignores show calls with empty message', () => {
     show({ message: '' });
 

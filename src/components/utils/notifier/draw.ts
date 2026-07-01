@@ -46,6 +46,86 @@ export const getPositionClasses = (position: NotifierPosition = DEFAULT_NOTIFIER
 };
 
 /**
+ * Incrementing counter used to mint unique ids for the message element so that
+ * modal dialogs can reference it via aria-labelledby.
+ */
+let messageIdCounter = 0;
+
+const MESSAGE_TEXT_TESTID = 'notification-message-text';
+
+/**
+ * Collects the focusable descendants of a container in DOM order.
+ * @param {HTMLElement} container - dialog element
+ * @returns {HTMLElement[]} focusable elements
+ */
+const getFocusables = (container: HTMLElement): HTMLElement[] =>
+  Array.from(container.querySelectorAll<HTMLElement>('button, input, [tabindex]'));
+
+/**
+ * Turns a notification into an accessible modal dialog: sets the dialog roles,
+ * links the message as its label, installs a focus trap, moves focus inside on
+ * mount and returns a callback that restores focus to the previously-focused
+ * element when the dialog closes.
+ * @param {HTMLElement} notify - notification element
+ * @param {HTMLElement} messageText - element holding the message text
+ * @param {() => HTMLElement | null} getFocusTarget - resolves the element that should receive initial focus
+ * @returns {() => void} restoreFocus callback
+ */
+const makeModal = (
+  notify: HTMLElement,
+  messageText: HTMLElement,
+  getFocusTarget: () => HTMLElement | null
+): (() => void) => {
+  notify.setAttribute('role', 'alertdialog');
+  notify.setAttribute('aria-modal', 'true');
+  notify.setAttribute('aria-labelledby', messageText.id);
+
+  // The message is now a dialog label, not a standalone announcement.
+  messageText.removeAttribute('aria-live');
+  messageText.removeAttribute('aria-atomic');
+
+  const previouslyFocused = document.activeElement as HTMLElement | null;
+
+  notify.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const focusables = getFocusables(notify);
+
+    if (focusables.length === 0) {
+      return;
+    }
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  // Move focus inside once the caller has connected the element to the DOM.
+  queueMicrotask(() => {
+    const target = getFocusTarget();
+
+    if (target !== null && target.isConnected) {
+      target.focus();
+    }
+  });
+
+  return () => {
+    if (previouslyFocused !== null && typeof previouslyFocused.focus === 'function') {
+      previouslyFocused.focus();
+    }
+  };
+};
+
+/**
  * @param {NotifierOptions} options - options for the notification
  * @returns {HTMLElement} - the notification element
  */
@@ -54,6 +134,7 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   const style = options.style;
 
   notify.className = CSS.notification;
+  notify.setAttribute('role', 'region');
 
   if (style) {
     notify.setAttribute('data-blok-testid', `notification-${style}`);
@@ -66,7 +147,18 @@ export const alert = (options: NotifierOptions): HTMLElement => {
 
   messageWrapper.className = CSS.messageWrapper;
   messageWrapper.setAttribute('data-blok-testid', 'notification-message');
-  messageWrapper.innerHTML = options.message;
+
+  // Live region so assistive tech announces the message text.
+  const messageText = document.createElement('div');
+
+  messageIdCounter += 1;
+  messageText.id = `blok-notification-message-${messageIdCounter}`;
+  messageText.setAttribute('data-blok-testid', MESSAGE_TEXT_TESTID);
+  messageText.setAttribute('aria-live', style === 'error' ? 'assertive' : 'polite');
+  messageText.setAttribute('aria-atomic', 'true');
+  messageText.innerHTML = options.message;
+
+  messageWrapper.appendChild(messageText);
   notify.appendChild(messageWrapper);
 
   return notify;
@@ -79,6 +171,7 @@ export const alert = (options: NotifierOptions): HTMLElement => {
 export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
   const notify = alert(options);
   const messageWrapper = notify.querySelector('[data-blok-testid="notification-message"]') as HTMLElement;
+  const messageText = notify.querySelector(`[data-blok-testid="${MESSAGE_TEXT_TESTID}"]`) as HTMLElement;
   const btnsWrapper = document.createElement('div');
   const okBtn = document.createElement('button');
   const cancelBtn = document.createElement('button');
@@ -97,17 +190,6 @@ export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
   okBtn.setAttribute('data-blok-testid', 'notification-confirm-button');
   cancelBtn.setAttribute('data-blok-testid', 'notification-cancel-button');
 
-  if (cancelHandler && typeof cancelHandler === 'function') {
-    cancelBtn.addEventListener('click', cancelHandler);
-  }
-
-  if (okHandler && typeof okHandler === 'function') {
-    okBtn.addEventListener('click', okHandler);
-  }
-
-  okBtn.addEventListener('click', () => notify.remove());
-  cancelBtn.addEventListener('click', () => notify.remove());
-
   btnsWrapper.appendChild(okBtn);
   btnsWrapper.appendChild(cancelBtn);
 
@@ -116,6 +198,34 @@ export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
   } else {
     notify.appendChild(btnsWrapper);
   }
+
+  const restoreFocus = makeModal(notify, messageText, () => okBtn);
+
+  const cancel = (event: Event): void => {
+    if (typeof cancelHandler === 'function') {
+      cancelHandler(event);
+    }
+    notify.remove();
+    restoreFocus();
+  };
+
+  const confirmOk = (event: Event): void => {
+    if (typeof okHandler === 'function') {
+      okHandler(event);
+    }
+    notify.remove();
+    restoreFocus();
+  };
+
+  okBtn.addEventListener('click', confirmOk);
+  cancelBtn.addEventListener('click', cancel);
+
+  notify.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancel(event);
+    }
+  });
 
   return notify;
 };
@@ -127,8 +237,10 @@ export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
 export const prompt = (options: PromptNotifierOptions): HTMLElement => {
   const notify = alert(options);
   const messageWrapper = notify.querySelector('[data-blok-testid="notification-message"]') as HTMLElement;
+  const messageText = notify.querySelector(`[data-blok-testid="${MESSAGE_TEXT_TESTID}"]`) as HTMLElement;
   const btnsWrapper = document.createElement('div');
   const okBtn = document.createElement('button');
+  const cancelBtn = document.createElement('button');
   const input = document.createElement('input');
   const cancelHandler = options.cancelHandler;
   const okHandler = options.okHandler;
@@ -137,9 +249,15 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
 
   okBtn.innerHTML = options.okText || 'Ok';
   okBtn.className = twJoin(CSS.btn, CSS.okBtn);
+  okBtn.setAttribute('data-blok-testid', 'notification-confirm-button');
+
+  cancelBtn.innerHTML = 'Cancel';
+  cancelBtn.className = twJoin(CSS.btn, CSS.cancelBtn);
+  cancelBtn.setAttribute('data-blok-testid', 'notification-cancel-button');
 
   input.className = CSS.input;
   input.setAttribute('data-blok-testid', 'notification-input');
+  input.setAttribute('aria-labelledby', messageText.id);
 
   if (options.placeholder) {
     input.setAttribute('placeholder', options.placeholder);
@@ -153,30 +271,50 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
     input.type = options.inputType;
   }
 
-  if (cancelHandler && typeof cancelHandler === 'function') {
-    const crossBtn = notify.querySelector('[data-blok-testid="notification-cross"]');
-
-    if (crossBtn) {
-      crossBtn.addEventListener('click', cancelHandler);
-    }
-  }
-
-  if (okHandler && typeof okHandler === 'function') {
-    okBtn.addEventListener('click', () => {
-      okHandler(input.value);
-    });
-  }
-
-  okBtn.addEventListener('click', () => notify.remove());
-
   btnsWrapper.appendChild(input);
   btnsWrapper.appendChild(okBtn);
+  btnsWrapper.appendChild(cancelBtn);
 
   if (messageWrapper) {
     messageWrapper.appendChild(btnsWrapper);
   } else {
     notify.appendChild(btnsWrapper);
   }
+
+  const restoreFocus = makeModal(notify, messageText, () => input);
+
+  const submit = (): void => {
+    if (typeof okHandler === 'function') {
+      okHandler(input.value);
+    }
+    notify.remove();
+    restoreFocus();
+  };
+
+  const cancel = (event: Event): void => {
+    if (typeof cancelHandler === 'function') {
+      cancelHandler(event);
+    }
+    notify.remove();
+    restoreFocus();
+  };
+
+  okBtn.addEventListener('click', submit);
+  cancelBtn.addEventListener('click', cancel);
+
+  input.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submit();
+    }
+  });
+
+  notify.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancel(event);
+    }
+  });
 
   return notify;
 };

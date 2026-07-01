@@ -23,6 +23,13 @@ import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 
 /**
+ * Stable id applied to the block-settings popover element on open.
+ * Referenced by the settings toggler's `aria-controls` (wired in Toolbar.make())
+ * so assistive tech knows which menu the toggler expands.
+ */
+export const SETTINGS_POPOVER_ID = 'blok-block-settings-popover';
+
+/**
  * HTML Elements that used for BlockSettings
  */
 interface BlockSettingsNodes {
@@ -120,6 +127,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Handler for Delete key shortcut, stored for cleanup
    */
   private deleteKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+
+  /**
+   * The element (settings toggler) the popover was opened from. Used to return
+   * focus to it when the popover is dismissed and focus would otherwise be lost.
+   */
+  private settingsTrigger: HTMLElement | null = null;
 
   /**
    * Panel with block settings with 2 sections:
@@ -257,6 +270,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.popover = new PopoverClass(popoverParams);
       popoverRef.current = this.popover.getElement();
       popoverRef.current.setAttribute('data-blok-testid', 'block-tunes-popover');
+      popoverRef.current.id = SETTINGS_POPOVER_ID;
+
+      /**
+       * Remember the trigger (settings toggler) so focus can be returned to it
+       * when the popover is dismissed via Escape — keyboard users land back on
+       * the control they opened, not on document.body.
+       */
+      this.settingsTrigger = trigger ?? null;
 
       this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 
@@ -689,7 +710,19 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Handles popover close event
    */
   private onPopoverClose = (): void => {
+    const trigger = this.settingsTrigger;
+
     this.close();
+
+    /**
+     * On dismissal (Escape / click-outside) focus can fall to document.body,
+     * stranding keyboard users. Return focus to the settings toggler that
+     * opened the menu — but only when focus was actually lost, so we never
+     * steal it from a caret an activated item just placed inside a block.
+     */
+    if (trigger !== null && document.activeElement === document.body) {
+      trigger.focus();
+    }
   };
 
   /**

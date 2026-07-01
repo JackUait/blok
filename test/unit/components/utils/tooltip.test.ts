@@ -738,4 +738,78 @@ describe('Tooltip utility', () => {
     expect(wrapper.style.top).toBe('266px');
     expect(wrapper.getAttribute('data-blok-placement')).toBe('top');
   });
+
+  it('shows the tooltip when the registered element receives focus and hides on blur (WCAG 1.4.13)', () => {
+    const target = createTargetElement();
+
+    onHover(target, 'focus text');
+
+    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    target.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('links the target to the tooltip via aria-describedby on show and clears it on hide', () => {
+    const target = createTargetElement();
+
+    show(target, 'described', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.id).toBe('blok-tooltip');
+    expect(target.getAttribute('aria-describedby')).toBe('blok-tooltip');
+
+    hide();
+
+    expect(target.hasAttribute('aria-describedby')).toBe(false);
+  });
+
+  it('hides the tooltip on a capture-phase Escape keydown without preventing default', () => {
+    const target = createTargetElement();
+
+    show(target, 'escape me', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('data-blok-shown')).toBe('true');
+
+    const event = new KeyboardEvent('keydown', { key: 'Escape',
+      bubbles: true,
+      cancelable: true });
+
+    document.dispatchEvent(event);
+
+    expect(wrapper?.getAttribute('data-blok-shown')).toBe('false');
+    // Escape must NOT be swallowed — menus/popovers still need to receive it.
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('promotes the wrapper to the Top Layer even on the delayed show path', () => {
+    vi.useFakeTimers();
+    popoverPolyfill = installPopoverPolyfill();
+
+    const { showPopover: showPopoverSpy } = popoverPolyfill;
+
+    const target = createTargetElement();
+
+    show(target, 'delayed promote', { delay: 100 });
+
+    // Nothing promoted yet — the reveal is still pending behind the delay.
+    expect(showPopoverSpy).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(100);
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('popover')).toBe('manual');
+    expect(showPopoverSpy).toHaveBeenCalled();
+
+    hide();
+  });
 });

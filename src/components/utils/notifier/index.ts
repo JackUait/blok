@@ -70,10 +70,15 @@ const prepare_ = (position: NotifierPosition = DEFAULT_NOTIFIER_POSITION): HTMLE
 /**
  * Appends the notification to the wrapper and starts its auto-dismiss timer.
  */
-const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number): void => {
+const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean): void => {
   wrapper.appendChild(notify);
   notify.classList.add(getSlideInClass(position));
   notify.setAttribute('data-blok-bounce-in', 'true');
+
+  // Modal dialogs (confirm/prompt) stay until the user resolves them.
+  if (!autoDismiss) {
+    return;
+  }
 
   window.setTimeout(() => {
     // Guard: element may have already been replaced
@@ -95,6 +100,7 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
 
   const wrapper = prepare_(position);
   const time = options.time || DEFAULT_TIME;
+  const autoDismiss = options.type !== 'confirm' && options.type !== 'prompt';
 
   const buildNotify = (): HTMLElement => {
     const type = options.type;
@@ -119,12 +125,12 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
     swapOut(existing, () => {
       const notify = buildNotify();
 
-      appendNotify(wrapper, notify, position, time);
+      appendNotify(wrapper, notify, position, time, autoDismiss);
     });
   } else {
     const notify = buildNotify();
 
-    appendNotify(wrapper, notify, position, time);
+    appendNotify(wrapper, notify, position, time, autoDismiss);
   }
 };
 

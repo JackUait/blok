@@ -350,4 +350,108 @@ describe('PopoverItemDefault', () => {
 
     expect(anyCallHasSecondaryArg).toBe(false);
   });
+
+  describe('ARIA roles', () => {
+    it('exposes a plain actionable item as role="menuitem"', () => {
+      const { element } = createItem({ title: 'Copy' });
+
+      expect(element.getAttribute('role')).toBe('menuitem');
+    });
+
+    it('exposes a toggleable item as role="menuitemcheckbox" with aria-checked reflecting state', () => {
+      const item = new PopoverItemDefault({
+        title: 'Bold',
+        name: 'bold',
+        toggle: true,
+        isActive: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('menuitemcheckbox');
+      expect(element.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('defaults aria-checked to false for an inactive toggleable item', () => {
+      const item = new PopoverItemDefault({
+        title: 'Bold',
+        name: 'bold',
+        toggle: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('menuitemcheckbox');
+      expect(element.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('updates aria-checked when the active state toggles', () => {
+      const item = new PopoverItemDefault({
+        title: 'Bold',
+        name: 'bold',
+        toggle: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      item.toggleActive(true);
+      expect(element.getAttribute('aria-checked')).toBe('true');
+
+      item.toggleActive(false);
+      expect(element.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('exposes a listbox option via the menuItemRole render param', () => {
+      const item = new PopoverItemDefault(
+        { title: 'Heading', name: 'header', onActivate: vi.fn() },
+        { menuItemRole: 'option' }
+      );
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('option');
+      expect(element).not.toHaveAttribute('aria-checked');
+    });
+
+    it('marks a disabled item with aria-disabled', () => {
+      const { element } = createItem({ title: 'Copy', isDisabled: true });
+
+      expect(element.getAttribute('aria-disabled')).toBe('true');
+    });
+
+    it('hides decorative icon and chevron from assistive tech', () => {
+      const item = new PopoverItemDefault({
+        title: 'Convert',
+        name: 'convert',
+        icon: '<svg data-blok-testid="custom-icon"></svg>',
+        children: { items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }] },
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+      const chevron = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-chevron-right"]');
+
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(chevron?.getAttribute('aria-hidden')).toBe('true');
+    });
+  });
 });

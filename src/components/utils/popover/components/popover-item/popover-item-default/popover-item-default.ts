@@ -207,6 +207,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
     if (params.isDisabled) {
       root.setAttribute(DATA_ATTR.disabled, 'true');
+      root.setAttribute('aria-disabled', 'true');
     }
     if ('isDestructive' in params && params.isDestructive) {
       root.setAttribute(DATA_ATTR.popoverItemDestructive, 'true');
@@ -217,6 +218,12 @@ export class PopoverItemDefault extends PopoverItem {
     if (this.hasChildren) {
       root.setAttribute(DATA_ATTR.hasChildren, 'true');
     }
+
+    // Expose the item's ARIA role. In a listbox context (e.g. the Toolbox) the
+    // item is an "option"; in a menu context it is a "menuitem" — or a
+    // "menuitemcheckbox" when it represents a toggleable/checked state, in which
+    // case aria-checked mirrors the active flag (kept in sync by setActive()).
+    this.applyAriaRole(root, renderParams?.menuItemRole ?? 'menuitem');
 
     // Create content elements
     this.createContentElements(root, params, renderParams);
@@ -298,6 +305,7 @@ export class PopoverItemDefault extends PopoverItem {
 
       trailingEl.className = 'ml-auto shrink-0 flex items-center justify-center [&_svg]:w-icon [&_svg]:h-icon';
       trailingEl.setAttribute('data-blok-testid', 'popover-item-trailing-icon');
+      trailingEl.setAttribute('aria-hidden', 'true');
       trailingEl.innerHTML = params.trailingIcon;
 
       root.appendChild(trailingEl);
@@ -313,6 +321,7 @@ export class PopoverItemDefault extends PopoverItem {
       chevronEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
       chevronEl.setAttribute(DATA_ATTR.popoverItemIconChevronRight, '');
       chevronEl.setAttribute('data-blok-testid', 'popover-item-chevron-right');
+      chevronEl.setAttribute('aria-hidden', 'true');
       chevronEl.innerHTML = IconChevronRight;
 
       root.appendChild(chevronEl);
@@ -330,6 +339,7 @@ export class PopoverItemDefault extends PopoverItem {
     iconEl.className = this.getIconClass(iconWithGap, isInline, isNestedInline);
     iconEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
     iconEl.setAttribute('data-blok-testid', 'popover-item-icon');
+    iconEl.setAttribute('aria-hidden', 'true');
     iconEl.innerHTML = icon;
 
     if (iconWithGap) {
@@ -383,6 +393,37 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * True when the item represents a toggleable/checked state — i.e. it declares
+   * a `toggle` behaviour or an `isActive` flag. Such items are exposed as
+   * `menuitemcheckbox` (in a menu) with an `aria-checked` attribute.
+   */
+  private get isCheckable(): boolean {
+    return this.params.toggle !== undefined || 'isActive' in this.params;
+  }
+
+  /**
+   * Sets the item's ARIA role on the root element.
+   * @param root - item root element
+   * @param menuItemRole - 'menuitem' for menus, 'option' for listboxes
+   */
+  private applyAriaRole(root: HTMLElement, menuItemRole: 'menuitem' | 'option'): void {
+    if (menuItemRole === 'option') {
+      root.setAttribute('role', 'option');
+
+      return;
+    }
+
+    if (this.isCheckable) {
+      root.setAttribute('role', 'menuitemcheckbox');
+      root.setAttribute('aria-checked', this.isActive ? 'true' : 'false');
+
+      return;
+    }
+
+    root.setAttribute('role', 'menuitem');
+  }
+
+  /**
    * Sets the active state of the item
    */
   private setActive(isActive: boolean): void {
@@ -394,6 +435,12 @@ export class PopoverItemDefault extends PopoverItem {
       this.nodes.root.setAttribute(DATA_ATTR.popoverItemActive, 'true');
     } else {
       this.nodes.root.removeAttribute(DATA_ATTR.popoverItemActive);
+    }
+
+    // Keep aria-checked in sync for menuitemcheckbox items so screen readers
+    // announce the current toggle state.
+    if (this.nodes.root.getAttribute('role') === 'menuitemcheckbox') {
+      this.nodes.root.setAttribute('aria-checked', isActive ? 'true' : 'false');
     }
   }
 

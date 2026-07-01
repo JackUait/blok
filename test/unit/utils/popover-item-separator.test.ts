@@ -21,6 +21,13 @@ describe('PopoverItemSeparator', () => {
     expect(line).toBeInstanceOf(HTMLElement);
   });
 
+  it('exposes the separator with role="separator"', () => {
+    const separator = new PopoverItemSeparator();
+    const element = separator.getElement();
+
+    expect(element.getAttribute('role')).toBe('separator');
+  });
+
   it('toggles hidden state on the root element', () => {
     const separator = new PopoverItemSeparator();
     const element = separator.getElement();

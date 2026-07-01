@@ -49,6 +49,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   toggleItemHiddenByName: vi.fn(),
   updatePosition: vi.fn(),
   setLeftAlignElement: vi.fn(),
+  setActiveDescendantHost: vi.fn(),
 }));
 
 /**
@@ -91,6 +92,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
+      public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
     PopoverMobile: class MockPopoverMobile {
       public show = mockPopoverInstance.show;
@@ -104,6 +106,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
+      public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
   };
 });
@@ -2660,6 +2663,78 @@ describe('Toolbox', () => {
       toolbox.open();
 
       expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('block-color-bg-red', true);
+    });
+  });
+
+  describe('accessibility (combobox + listbox)', () => {
+    it('constructs the popover as a listbox with the provided listboxId', () => {
+      // eslint-disable-next-line no-new -- constructing for its side effect (captures params)
+      new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        listboxId: 'blok-toolbox-popover',
+      });
+
+      expect(lastPopoverParams.value.listbox).toBe(true);
+      expect(lastPopoverParams.value.listboxId).toBe('blok-toolbox-popover');
+    });
+
+    it('passes a searchResults announcement template (from i18n) to the popover', () => {
+      // eslint-disable-next-line no-new -- constructing for its side effect (captures params)
+      new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      const messages = lastPopoverParams.value.messages as { searchResults?: string } | undefined;
+
+      // mockI18n.t echoes the key back
+      expect(messages?.searchResults).toBe('a11y.searchResults');
+    });
+
+    it('marks the block contentEditable as a combobox and wires activeDescendant on open', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        listboxId: 'blok-toolbox-popover',
+      });
+
+      toolbox.open();
+
+      const ce = mocks.blockAPI.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      expect(ce?.getAttribute('role')).toBe('combobox');
+      expect(ce?.getAttribute('aria-expanded')).toBe('true');
+      expect(ce?.getAttribute('aria-autocomplete')).toBe('list');
+      expect(ce?.getAttribute('aria-haspopup')).toBe('listbox');
+      expect(ce?.getAttribute('aria-controls')).toBe('blok-toolbox-popover');
+      expect(mockPopoverInstance.setActiveDescendantHost).toHaveBeenCalledWith(ce);
+    });
+
+    it('clears combobox roles and activeDescendant host on close', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        listboxId: 'blok-toolbox-popover',
+      });
+
+      toolbox.open();
+
+      const ce = mocks.blockAPI.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      toolbox.close();
+
+      expect(ce?.hasAttribute('role')).toBe(false);
+      expect(ce?.hasAttribute('aria-expanded')).toBe(false);
+      expect(mockPopoverInstance.setActiveDescendantHost).toHaveBeenLastCalledWith(null);
     });
   });
 

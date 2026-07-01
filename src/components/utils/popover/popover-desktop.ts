@@ -272,6 +272,16 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Sets the element that owns DOM focus while this popover is open (e.g. the
+   * combobox contentEditable that drives the Toolbox). The flipper reflects the
+   * currently-highlighted item on it via `aria-activedescendant`.
+   * @param host - focus-owning element, or null to clear
+   */
+  public setActiveDescendantHost(host: HTMLElement | null): void {
+    this.flipper?.setActiveDescendantHost(host);
+  }
+
+  /**
    * Returns true if some item inside popover is focused
    */
   public hasFocus(): boolean {
@@ -1079,7 +1089,9 @@ export class PopoverDesktop extends PopoverAbstract {
         continue;
       }
 
-      const childInstance = new PopoverItemDefault(childParam);
+      const childInstance = new PopoverItemDefault(childParam, {
+        menuItemRole: this.params.listbox === true ? 'option' : 'menuitem',
+      });
 
       if (childInstance.name !== undefined && this.isNamePermanentlyHidden(childInstance.name)) {
         childInstance.destroy();
@@ -1306,6 +1318,8 @@ export class PopoverDesktop extends PopoverAbstract {
 
     const isNothingFound = matchingTopLevel.length === 0 && data.promotedItems.length === 0;
 
+    this.announceResults(data.query, isNothingFound, matchingTopLevel.length + data.promotedItems.length);
+
     this.items
       .forEach((item) => {
         const isDefaultItem = item instanceof PopoverItemDefault;
@@ -1426,6 +1440,43 @@ export class PopoverDesktop extends PopoverAbstract {
       this.flipper.focusItem(0, { skipNextTab: true });
     }
   };
+
+  /**
+   * Writes the current filter result count (or the empty-state message) into
+   * the visually-hidden live region so screen readers announce it. The
+   * announcer is cleared for an empty query so the full unfiltered list is not
+   * announced as a "result count".
+   * @param query - the current search query
+   * @param isNothingFound - true when no items matched
+   * @param count - number of matching items (top-level + promoted)
+   */
+  private announceResults(query: string, isNothingFound: boolean, count: number): void {
+    const announcer = this.nodes.resultsAnnouncer;
+
+    if (announcer === undefined) {
+      return;
+    }
+
+    if (query === '') {
+      announcer.textContent = '';
+
+      return;
+    }
+
+    if (isNothingFound) {
+      announcer.textContent = this.messages.nothingFound ?? 'Nothing found';
+
+      return;
+    }
+
+    const template = this.messages.searchResults;
+
+    // Only announce a running count when a template is supplied (the Toolbox).
+    // Other popovers keep the region silent for non-empty results.
+    announcer.textContent = template !== undefined
+      ? template.replace('{count}', String(count))
+      : '';
+  }
 
   /**
    * Reorders DOM children of the items container to match the ranked order.

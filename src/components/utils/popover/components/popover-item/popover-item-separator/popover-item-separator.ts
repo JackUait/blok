@@ -105,6 +105,7 @@ export class PopoverItemSeparator extends PopoverItem {
     container.className = this.getContainerClass(false);
     container.setAttribute(DATA_ATTR.popoverItemSeparator, '');
     container.setAttribute('data-blok-testid', 'popover-item-separator');
+    container.setAttribute('role', 'separator');
 
     const line = document.createElement('div');
 

@@ -354,6 +354,14 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, INLINE_TOOLBAR_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');
 
+    /**
+     * Accessibility: expose the inline toolbar as a horizontal ARIA toolbar
+     * with a descriptive label for the text-formatting controls it hosts.
+     */
+    this.nodes.wrapper.setAttribute('role', 'toolbar');
+    this.nodes.wrapper.setAttribute('aria-label', this.Blok.I18n.t('a11y.textFormatting'));
+    this.nodes.wrapper.setAttribute('aria-orientation', 'horizontal');
+
     $.append(this.Blok.UI.nodes.wrapper, this.nodes.wrapper);
   }
 

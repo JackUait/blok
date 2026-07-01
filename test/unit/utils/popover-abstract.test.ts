@@ -176,6 +176,52 @@ describe('PopoverAbstract', () => {
     });
   });
 
+  describe('ARIA container semantics', () => {
+    it('exposes the items container as role="menu" by default', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.items.getAttribute('role')).toBe('menu');
+    });
+
+    it('exposes the items container as role="listbox" when listbox is set', () => {
+      const popover = createPopover({ listbox: true });
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.items.getAttribute('role')).toBe('listbox');
+    });
+
+    it('applies listboxId to the items container id', () => {
+      const popover = createPopover({ listbox: true, listboxId: 'my-listbox' });
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.items.id).toBe('my-listbox');
+    });
+
+    it('renders default items as role="option" in a listbox popover', () => {
+      const popover = createPopover({ listbox: true });
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('option');
+    });
+
+    it('renders default items as role="menuitem" in a menu popover', () => {
+      const popover = createPopover();
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('menuitem');
+    });
+
+    it('creates a visually-hidden polite live region for result announcements', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.resultsAnnouncer).toBeInstanceOf(HTMLElement);
+      expect(nodes.resultsAnnouncer.getAttribute('aria-live')).toBe('polite');
+      expect(nodes.popoverContainer.contains(nodes.resultsAnnouncer)).toBe(true);
+    });
+  });
+
   describe('buildItems()', () => {
     it('returns appropriate instances for different item types', () => {
       const popover = createPopover();

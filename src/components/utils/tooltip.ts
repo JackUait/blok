@@ -14,6 +14,8 @@ import type { TooltipContent, TooltipOptions } from '@/types/api/tooltip';
 export type { TooltipContent, TooltipOptions };
 
 const DEFAULT_OFFSET = 10;
+const TOOLTIP_ID = 'blok-tooltip';
+const ARIA_DESCRIBEDBY_ATTRIBUTE = 'aria-describedby';
 const TOOLTIP_ROLE = 'tooltip';
 const ARIA_HIDDEN_ATTRIBUTE = 'aria-hidden';
 const ARIA_HIDDEN_FALSE = 'false';
@@ -108,6 +110,19 @@ class Tooltip {
   private ariaObserver: MutationObserver | null = null;
 
   /**
+   * The element the singleton tooltip currently describes. Tracked so
+   * {@link hide} clears `aria-describedby` from exactly that element (the
+   * singleton describes only one target at a time).
+   */
+  private currentTarget: HTMLElement | null = null;
+
+  /**
+   * Per-target cleanup functions for {@link onHover} listeners, so repeated
+   * `onHover` calls on the same element replace (never stack) their bindings.
+   */
+  private hoverBindings: WeakMap<HTMLElement, () => void> = new WeakMap();
+
+  /**
    * Static singleton instance
    */
   private static instance: Tooltip | null = null;
@@ -193,25 +208,30 @@ class Tooltip {
         break;
     }
 
+    this.setDescribedBy(element);
+
     if (showingOptions && showingOptions.delay) {
       this.showingTimeout = setTimeout(() => {
         /**
          * Clear the timeout reference after execution to maintain correct state.
          */
         this.showingTimeout = null;
-
-        if (this.nodes.wrapper) {
-          const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
-
-          this.nodes.wrapper.classList.add(...classes);
-          this.updateTooltipVisibility();
-        }
-        this.showed = true;
+        this.reveal();
       }, showingOptions.delay);
 
       return;
     }
 
+    this.reveal();
+  }
+
+  /**
+   * Single internal reveal step both the immediate and delayed show paths
+   * funnel through. Always promotes the wrapper to the Top Layer — previously
+   * only the immediate path did, so delayed tooltips rendered BELOW open
+   * popovers. Also arms the one-shot Escape dismissal listener.
+   */
+  private reveal(): void {
     if (this.nodes.wrapper) {
       const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
 
@@ -220,6 +240,42 @@ class Tooltip {
       this.promoteToTopLayer();
     }
     this.showed = true;
+    this.registerEscapeListener();
+  }
+
+  /**
+   * Point the target's `aria-describedby` at the singleton tooltip. Clears the
+   * attribute from any previously-described element first, since the singleton
+   * can describe only one target at a time.
+   * @param {HTMLElement} element - the element the tooltip now describes
+   */
+  private setDescribedBy(element: HTMLElement): void {
+    if (this.currentTarget && this.currentTarget !== element) {
+      this.currentTarget.removeAttribute(ARIA_DESCRIBEDBY_ATTRIBUTE);
+    }
+
+    this.currentTarget = element;
+    element.setAttribute(ARIA_DESCRIBEDBY_ATTRIBUTE, TOOLTIP_ID);
+  }
+
+  /**
+   * Capture-phase, one-shot `keydown` listener that dismisses the tooltip on
+   * Escape. Does NOT stopPropagation/preventDefault, so menus and popovers
+   * still receive the same Escape.
+   */
+  private handleDocumentKeydown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      this.hide();
+    }
+  };
+
+  /**
+   * Arm the Escape dismissal listener (idempotent — removes any prior binding
+   * before re-adding so racing shows never stack listeners).
+   */
+  private registerEscapeListener(): void {
+    document.removeEventListener('keydown', this.handleDocumentKeydown, { capture: true });
+    document.addEventListener('keydown', this.handleDocumentKeydown, { capture: true });
   }
 
   /**
@@ -265,6 +321,13 @@ class Tooltip {
       this.showingTimeout = null;
     }
 
+    document.removeEventListener('keydown', this.handleDocumentKeydown, { capture: true });
+
+    if (this.currentTarget) {
+      this.currentTarget.removeAttribute(ARIA_DESCRIBEDBY_ATTRIBUTE);
+      this.currentTarget = null;
+    }
+
     if (this.nodes.wrapper) {
       const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
 
@@ -295,7 +358,13 @@ class Tooltip {
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
    */
   public onHover(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
-    element.addEventListener('mouseenter', () => {
+    /**
+     * Replace any prior binding on this element so repeated `onHover` calls
+     * never stack duplicate listeners.
+     */
+    this.hoverBindings.get(element)?.();
+
+    const revealFor = (revealOptions: TooltipOptions): void => {
       /**
        * Don't show tooltip if any Popover is currently open,
        * unless the element is inside the open popover (e.g., inline toolbar items)
@@ -308,10 +377,30 @@ class Tooltip {
         return;
       }
 
-      this.show(element, content, options);
-    });
-    element.addEventListener('mouseleave', () => {
-      this.hide();
+      this.show(element, content, revealOptions);
+    };
+
+    const handleMouseEnter = (): void => revealFor(options);
+    const handleMouseLeave = (): void => this.hide();
+    /**
+     * Keyboard focus must also surface the tooltip (WCAG 1.4.13). Focus-driven
+     * reveals are immediate — the hover `delay` is a pointer affordance and
+     * would make keyboard users wait.
+     */
+    const handleFocusIn = (): void => revealFor({ ...options,
+      delay: 0 });
+    const handleFocusOut = (): void => this.hide();
+
+    element.addEventListener('mouseenter', handleMouseEnter);
+    element.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('focusin', handleFocusIn);
+    element.addEventListener('focusout', handleFocusOut);
+
+    this.hoverBindings.set(element, () => {
+      element.removeEventListener('mouseenter', handleMouseEnter);
+      element.removeEventListener('mouseleave', handleMouseLeave);
+      element.removeEventListener('focusin', handleFocusIn);
+      element.removeEventListener('focusout', handleFocusOut);
     });
   }
 
@@ -319,6 +408,13 @@ class Tooltip {
    * Release DOM and event listeners
    */
   public destroy(): void {
+    document.removeEventListener('keydown', this.handleDocumentKeydown, { capture: true });
+
+    if (this.currentTarget) {
+      this.currentTarget.removeAttribute(ARIA_DESCRIBEDBY_ATTRIBUTE);
+      this.currentTarget = null;
+    }
+
     this.ariaObserver?.disconnect();
     this.ariaObserver = null;
 
@@ -345,6 +441,7 @@ class Tooltip {
    */
   private prepare(): void {
     this.nodes.wrapper = this.make('div', this.CSS.tooltip);
+    this.nodes.wrapper.id = TOOLTIP_ID;
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, TOOLTIP_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'tooltip');
     this.nodes.content = this.make('div', this.CSS.tooltipContent);

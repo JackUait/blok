@@ -69,6 +69,41 @@ vi.mock('../../../../../src/components/i18n', () => ({
   },
 }));
 
+/**
+ * Lightweight Toolbox mock: records handlers registered via on() so tests can
+ * emit Opened/Closed and assert the Toolbar's reaction (e.g. plus button
+ * aria-expanded toggling).
+ */
+vi.mock('../../../../../src/components/ui/toolbox', () => {
+  const ToolboxEvent = {
+    Opened: 'toolbox-opened',
+    Closed: 'toolbox-closed',
+    BlockAdded: 'toolbox-block-added',
+  };
+
+  class Toolbox {
+    private handlers = new Map<string, () => void>();
+
+    public on(event: string, cb: () => void): void {
+      this.handlers.set(event, cb);
+    }
+
+    public emit(event: string): void {
+      this.handlers.get(event)?.();
+    }
+
+    public getElement(): HTMLElement {
+      return document.createElement('div');
+    }
+
+    public setCalloutBackground(): void {}
+    public close(): void {}
+    public open(): void {}
+  }
+
+  return { Toolbox, ToolboxEvent };
+});
+
 describe('Toolbar module interactions', () => {
   let toolbar: Toolbar;
   let blockHoveredHandler: ((data: { block: unknown }) => void) | undefined;
@@ -1363,6 +1398,66 @@ describe('Plus button interactions', () => {
       expect(() => toolbar.discardPlusContext()).not.toThrow();
       expect(internal.preToolboxBlock).toBeNull();
       expect(internal.plusInsertedBlock).toBeNull();
+    });
+  });
+
+  describe('block toolbar ARIA wrapper', () => {
+    it('exposes the toolbar wrapper as an ARIA toolbar with a label', async () => {
+      const blok = getBlok() as unknown as {
+        API: { methods: unknown };
+        Tools: { blockTools: Map<string, unknown> };
+        I18n: { t: (key: string) => string };
+      };
+
+      blok.API = { methods: {} };
+      blok.Tools = { blockTools: new Map() };
+      blok.I18n = { t: (key: string): string => key };
+
+      await (toolbar as unknown as { make: () => Promise<void> }).make();
+
+      const wrapper = (toolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+      expect(wrapper.getAttribute('role')).toBe('toolbar');
+      expect(wrapper.getAttribute('aria-label')).toBe('a11y.blockToolbar');
+    });
+  });
+
+  describe('menu-button aria-expanded wiring', () => {
+    it('toggles the plus button aria-expanded when the toolbox opens and closes', () => {
+      const blok = getBlok() as unknown as {
+        API: { methods: unknown };
+        Tools: { blockTools: Map<string, unknown> };
+        I18n: { t: (key: string) => string };
+      };
+
+      blok.API = { methods: {} };
+      blok.Tools = { blockTools: new Map() };
+      blok.I18n = { t: (key: string): string => key };
+
+      (toolbar as unknown as { makeToolbox: () => Element }).makeToolbox();
+
+      const toolboxInstance = (toolbar as unknown as {
+        toolboxInstance: { emit: (event: string) => void };
+      }).toolboxInstance;
+      const plusButton = (toolbar as unknown as { nodes: { plusButton: HTMLElement } }).nodes.plusButton;
+
+      toolboxInstance.emit('toolbox-opened');
+      expect(plusButton.getAttribute('aria-expanded')).toBe('true');
+
+      toolboxInstance.emit('toolbox-closed');
+      expect(plusButton.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('toggles the settings toggler aria-expanded when block settings open and close', () => {
+      const settingsToggler = (toolbar as unknown as {
+        nodes: { settingsToggler: HTMLElement };
+      }).nodes.settingsToggler;
+
+      (toolbar as unknown as { onBlockSettingsOpen: () => void }).onBlockSettingsOpen();
+      expect(settingsToggler.getAttribute('aria-expanded')).toBe('true');
+
+      (toolbar as unknown as { onBlockSettingsClose: () => void }).onBlockSettingsClose();
+      expect(settingsToggler.getAttribute('aria-expanded')).toBe('false');
     });
   });
 });

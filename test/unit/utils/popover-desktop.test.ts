@@ -12,6 +12,7 @@ type MockFlipperShape = {
   onFlip: Mock<(callback: () => void) => void>;
   removeOnFlip: Mock<(callback: () => void) => void>;
   getHandleContentEditableTargets: Mock<() => boolean>;
+  setActiveDescendantHost: Mock<(host: HTMLElement | null) => void>;
   triggerFlip: () => void;
   lastActivatedWith: HTMLElement[] | undefined;
   readonly isActivated: boolean;
@@ -63,6 +64,8 @@ vi.mock('../../../src/components/flipper', () => {
     public readonly hasFocus = vi.fn(() => this.activated);
 
     public readonly getHandleContentEditableTargets = vi.fn(() => false);
+
+    public readonly setActiveDescendantHost = vi.fn((_host: HTMLElement | null) => {});
 
     public lastActivatedWith: HTMLElement[] | undefined;
 
@@ -1835,6 +1838,68 @@ describe('PopoverDesktop', () => {
       swatchBtn.click();
 
       expect(triggerItem.getElement()?.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(false);
+    });
+  });
+
+  describe('results announcer', () => {
+    it('announces the result count via the searchResults template when filtering', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Alpine', name: 'alpine', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+        ],
+        messages: { searchResults: '{count} results', nothingFound: 'Nothing found' },
+      });
+
+      const announcer = popover.getElement().querySelector<HTMLElement>('[data-blok-testid="popover-results-announcer"]');
+
+      popover.filterItems('alp');
+
+      expect(announcer?.textContent).toBe('2 results');
+    });
+
+    it('announces the nothing-found message when no items match', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+        messages: { searchResults: '{count} results', nothingFound: 'Nothing found' },
+      });
+
+      const announcer = popover.getElement().querySelector<HTMLElement>('[data-blok-testid="popover-results-announcer"]');
+
+      popover.filterItems('zzz');
+
+      expect(announcer?.textContent).toBe('Nothing found');
+    });
+
+    it('clears the announcer when the query is emptied', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+        messages: { searchResults: '{count} results', nothingFound: 'Nothing found' },
+      });
+
+      const announcer = popover.getElement().querySelector<HTMLElement>('[data-blok-testid="popover-results-announcer"]');
+
+      popover.filterItems('alp');
+      popover.filterItems('');
+
+      expect(announcer?.textContent).toBe('');
+    });
+  });
+
+  describe('setActiveDescendantHost', () => {
+    it('forwards the host to the flipper', () => {
+      const popover = createPopover();
+      const flipper = getMockFlipper();
+      const host = document.createElement('div');
+
+      popover.setActiveDescendantHost(host);
+
+      expect(flipper.setActiveDescendantHost).toHaveBeenCalledWith(host);
     });
   });
 });

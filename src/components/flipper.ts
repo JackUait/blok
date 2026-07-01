@@ -1,3 +1,4 @@
+import { DATA_ATTR } from './constants';
 import { DomIterator } from './domIterator';
 import { isFunction, keyCodes } from './utils';
 
@@ -45,6 +46,18 @@ export interface FlipperOptions {
    * Used by nested popovers to close and return focus to parent.
    */
   onArrowLeft?: () => void;
+
+  /**
+   * Optional host element that receives aria-activedescendant so the virtual
+   * focus is perceivable to screen readers without moving real DOM focus.
+   */
+  activeDescendantHost?: HTMLElement;
+
+  /**
+   * When enabled, printable single-character keydowns accumulate into a short
+   * buffer and focus moves to the first item whose accessible label matches.
+   */
+  typeAhead?: boolean;
 }
 
 /**
@@ -52,6 +65,18 @@ export interface FlipperOptions {
  * @internal
  */
 export class Flipper {
+  /**
+   * Time window (ms) during which consecutive printable keystrokes accumulate
+   * into a single typeahead buffer before it resets.
+   */
+  private static readonly TYPEAHEAD_TIMEOUT = 500;
+
+  /**
+   * Attribute holding an item's accessible label used for typeahead matching.
+   * Falls back to the item's textContent when absent.
+   */
+  private static readonly LABEL_ATTR = 'data-blok-flipper-label';
+
   /**
    * True if flipper is currently activated
    */
@@ -101,14 +126,30 @@ export class Flipper {
   private readonly onArrowLeftCallback?: () => void;
 
   /**
+   * True when opt-in typeahead navigation is enabled
+   */
+  private readonly typeAhead: boolean;
+
+  /**
+   * Accumulated printable characters for the current typeahead window
+   */
+  private typeAheadBuffer = '';
+
+  /**
+   * Timer that resets the typeahead buffer once the window elapses
+   */
+  private typeAheadTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
    * @param options - different constructing settings
    */
   constructor(options: FlipperOptions) {
-    this.iterator = new DomIterator(options.items || [], options.focusedItemClass ?? '');
+    this.iterator = new DomIterator(options.items || [], options.focusedItemClass ?? '', options.activeDescendantHost ?? null);
     this.activateCallback = options.activateCallback;
     this.allowedKeys = options.allowedKeys || Flipper.usedKeys;
     this.handleContentEditableTargets = options.handleContentEditableTargets ?? false;
     this.onArrowLeftCallback = options.onArrowLeft;
+    this.typeAhead = options.typeAhead ?? false;
   }
 
   /**
@@ -125,6 +166,8 @@ export class Flipper {
       keyCodes.ENTER,
       keyCodes.UP,
       keyCodes.DOWN,
+      keyCodes.HOME,
+      keyCodes.END,
     ];
   }
 
@@ -166,6 +209,14 @@ export class Flipper {
 
     document.removeEventListener('keydown', this.onKeyDown, true);
     window.removeEventListener('keydown', this.onKeyDown, true);
+  }
+
+  /**
+   * Sets (or clears) the aria-activedescendant host element
+   * @param host - element that should receive aria-activedescendant, or null to disable
+   */
+  public setActiveDescendantHost(host: HTMLElement | null): void {
+    this.iterator?.setActiveDescendantHost(host);
   }
 
   /**
@@ -221,6 +272,22 @@ export class Flipper {
    */
   public flipRight(): void {
     this.iterator?.next();
+    this.flipCallback();
+  }
+
+  /**
+   * Focuses the first (non-disabled) flipper iterator item (Home key)
+   */
+  public flipToFirst(): void {
+    this.iterator?.setCursorToFirst();
+    this.flipCallback();
+  }
+
+  /**
+   * Focuses the last (non-disabled) flipper iterator item (End key)
+   */
+  public flipToLast(): void {
+    this.iterator?.setCursorToLast();
     this.flipCallback();
   }
 
@@ -282,6 +349,8 @@ export class Flipper {
       'ArrowRight': keyCodes.RIGHT,
       'ArrowUp': keyCodes.UP,
       'ArrowDown': keyCodes.DOWN,
+      'Home': keyCodes.HOME,
+      'End': keyCodes.END,
     };
 
     return keyToCodeMap[event.key] ?? null;
@@ -309,6 +378,14 @@ export class Flipper {
      * Other Shift-based combinations (for example Shift+Tab) are still handled by Flipper.
      */
     if (event.shiftKey && isDirectionalArrow) {
+      return;
+    }
+
+    /**
+     * Opt-in typeahead: printable single-character keys (that are not Flipper
+     * navigation keys) move focus to the first matching item.
+     */
+    if (this.typeAhead && this.handleTypeAhead(event)) {
       return;
     }
 
@@ -364,6 +441,12 @@ export class Flipper {
         break;
       case keyCodes.DOWN:
         this.flipRight();
+        break;
+      case keyCodes.HOME:
+        this.flipToFirst();
+        break;
+      case keyCodes.END:
+        this.flipToLast();
         break;
       case keyCodes.ENTER:
         this.handleEnterPress(event);
@@ -471,6 +554,72 @@ export class Flipper {
     }
 
     el.scrollIntoView({ block: 'nearest' });
+  }
+
+  /**
+   * Handles printable keydowns for typeahead navigation.
+   * @param event - keydown event
+   * @returns true when the event was consumed as a typeahead keystroke
+   */
+  private handleTypeAhead(event: KeyboardEvent): boolean {
+    if (!this.activated) {
+      return false;
+    }
+
+    /**
+     * Ignore modifier combinations and non-printable keys. Single-character
+     * `event.key` values are printable; navigation keys ('Tab', 'ArrowDown',
+     * 'Home', …) all have multi-character names and are therefore excluded.
+     */
+    if (event.ctrlKey || event.metaKey || event.altKey || event.key.length !== 1) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    this.typeAheadBuffer += event.key.toLowerCase();
+
+    if (this.typeAheadTimer) {
+      clearTimeout(this.typeAheadTimer);
+    }
+
+    this.typeAheadTimer = setTimeout(() => {
+      this.typeAheadBuffer = '';
+      this.typeAheadTimer = null;
+    }, Flipper.TYPEAHEAD_TIMEOUT);
+
+    const matchIndex = this.findTypeAheadMatch(this.typeAheadBuffer);
+
+    if (matchIndex !== -1) {
+      this.iterator?.setCursor(matchIndex);
+      this.flipCallback();
+    }
+
+    return true;
+  }
+
+  /**
+   * Finds the first non-disabled item whose accessible label starts with the
+   * given buffer (case-insensitive).
+   * @param buffer - accumulated lowercase typeahead buffer
+   * @returns index of the matching item, or -1 when none match
+   */
+  private findTypeAheadMatch(buffer: string): number {
+    const items = this.iterator?.getItems() ?? [];
+
+    return items.findIndex((item) => {
+      if (item.hasAttribute(DATA_ATTR.disabled)) {
+        return false;
+      }
+
+      const label = (item.getAttribute(Flipper.LABEL_ATTR) ?? item.textContent ?? '')
+        .trim()
+        .toLowerCase();
+
+      return label.startsWith(buffer);
+    });
   }
 
   /**

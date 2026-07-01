@@ -301,10 +301,10 @@ test.describe('Link paste', () => {
     await expect(link).toHaveCount(1);
   });
 
-  test('pasting a URL into a block with existing text keeps the text (inline link, no menu)', async ({ page }) => {
-    // Regression: a URL pasted into a non-empty block used to replace the whole
-    // block, erasing everything but the link. It must now insert inline and keep
-    // the surrounding text, without opening the bookmark/embed menu.
+  test('pasting a URL into a block with existing text opens the menu and keeps the text', async ({ page }) => {
+    // The bookmark/embed menu must appear even when the block already has content
+    // (not only on an empty line), and the existing text must survive: the link
+    // is inserted inline at the caret, never by replacing the whole block.
     await createBlok(page, {
       blocks: [{ type: 'paragraph', data: { text: 'Check this out ' } }],
     } as OutputData);
@@ -312,7 +312,6 @@ test.describe('Link paste', () => {
     const editable = firstEditable(page);
 
     await editable.click();
-    // Put the caret at the very end of the existing text.
     await page.keyboard.press('End');
     await pasteText(editable, 'https://example.com/article');
 
@@ -322,8 +321,11 @@ test.describe('Link paste', () => {
 
     await expect(link).toHaveCount(1);
 
-    // No menu, no bookmark/embed, no extra block — just the enriched paragraph.
-    await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toHaveCount(0);
+    // The menu now appears just like on an empty line.
+    await expect(page.locator('[data-blok-item-name="paste-menu-bookmark"]')).toBeVisible();
+
+    // Choosing Plain keeps everything as an enriched single paragraph.
+    await pickMenu(page, 'plain');
     await expect(page.locator('[data-blok-testid="bookmark-card"]')).toHaveCount(0);
     await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(1);
 
@@ -333,6 +335,37 @@ test.describe('Link paste', () => {
     expect(saved.blocks[0].type).toBe('paragraph');
     expect((saved.blocks[0].data as { text: string }).text).toContain('Check this out');
     expect((saved.blocks[0].data as { text: string }).text).toContain('https://example.com/article');
+  });
+
+  test('choosing Bookmark from a block with text keeps the text and adds the card as a new block', async ({ page }) => {
+    // Non-destructive bookmark: the surrounding text stays in its paragraph and
+    // the bookmark card is appended as a NEW block, with the inline link dropped.
+    await createBlok(page, {
+      blocks: [{ type: 'paragraph', data: { text: 'Read this ' } }],
+    } as OutputData);
+
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await page.keyboard.press('End');
+    await pasteText(editable, 'https://example.com/article');
+
+    await pickMenu(page, 'bookmark');
+
+    const card = page.locator('[data-blok-testid="bookmark-card"]');
+
+    await expect(card).toBeVisible();
+
+    const saved = await saveBlok(page);
+    const paragraph = saved.blocks.find((block) => block.type === 'paragraph');
+    const bookmark = saved.blocks.find((block) => block.type === 'bookmark');
+
+    // The original text survives; the bookmark is a separate block; no duplicate
+    // inline copy of the URL is left behind in the paragraph.
+    expect((paragraph?.data as { text: string }).text).toContain('Read this');
+    expect((paragraph?.data as { text: string }).text).not.toContain('href=');
+    expect(bookmark).toBeDefined();
+    expect((bookmark?.data as { url?: string }).url).toBe('https://example.com/article');
   });
 
   test('Escape dismisses the menu and keeps the URL as a link', async ({ page }) => {

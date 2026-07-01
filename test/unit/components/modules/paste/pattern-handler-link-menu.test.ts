@@ -150,9 +150,9 @@ describe('PatternHandler — link paste menu gating', () => {
   });
 
   describe('block already has content (not replaceable)', () => {
-    // A URL pasted with a collapsed caret inside existing text must NOT wipe the
-    // block. Regression: insertPlainLink used replace:true unconditionally, so the
-    // whole block (and its text) was overwritten by the link alone.
+    // A URL pasted with a collapsed caret inside existing text must show the menu
+    // (like an empty block) AND keep the existing content: the link is inserted
+    // inline at the caret, never by replacing the whole block.
     const nonEmptyContext: HandlerContext = {
       canReplaceCurrentBlock: false,
       currentBlock: undefined,
@@ -166,17 +166,32 @@ describe('PatternHandler — link paste menu gating', () => {
       expect(handled).toBe(true);
       expect(insertAtCaretMock).toHaveBeenCalledTimes(1);
       expect(insertAtCaretMock.mock.calls[0][0]).toContain('href="https://example.com/article"');
+      // Never a whole-block replace when content is present.
+      expect(insertMock).not.toHaveBeenCalled();
     });
 
-    it('does not replace the block or open the menu when content is present', async () => {
+    it('still opens the bookmark/embed menu when content is present', async () => {
       const handler = makeHandler({});
 
       await handler.handle('https://example.com/article', nonEmptyContext);
 
-      // No block-replacing insert, no bookmark/embed menu — the text survives.
-      expect(insertMock).not.toHaveBeenCalled();
-      expect(fakeMenu.open).not.toHaveBeenCalled();
+      expect(fakeMenu.open).toHaveBeenCalledTimes(1);
+      expect(menuOpen?.url).toBe('https://example.com/article');
+      // Nothing is bookmarked/embedded until the user picks.
       expect(pasteMock).not.toHaveBeenCalled();
+    });
+
+    it('inserts the bookmark as a NEW block (no replace) so content is kept', async () => {
+      const handler = makeHandler({});
+
+      await handler.handle('https://example.com/article', nonEmptyContext);
+      menuOpen?.onSelect('bookmark');
+      await Promise.resolve();
+
+      expect(pasteMock).toHaveBeenCalledTimes(1);
+      expect(pasteMock.mock.calls[0][0]).toBe('bookmark');
+      // canReplace === false → append a new block, never overwrite the text block.
+      expect(pasteMock.mock.calls[0][2]).toBe(false);
     });
   });
 });

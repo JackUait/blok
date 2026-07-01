@@ -62,19 +62,11 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    // Notion-style menu: a URL paste offers the view choice (Plain / Bookmark /
-    // Embed) instead of auto-claiming. Requires a collapsed caret; a selection
-    // keeps the native "hyperlink the selection" behavior.
+    // Notion-style menu: a URL paste always offers the view choice (Plain /
+    // Bookmark / Embed) instead of auto-claiming. Requires a collapsed caret; a
+    // selection keeps the native "hyperlink the selection" behavior.
     if (isHttpUrl(data) && !this.hasSelection()) {
-      // Only an empty, replaceable default block is converted to a link + menu.
-      // If the block already has content (or is a non-default tool), insert the
-      // link INLINE at the caret so surrounding text is preserved — replacing the
-      // whole block here would erase everything else in it.
-      if (context.canReplaceCurrentBlock) {
-        this.openLinkPasteMenu(data);
-      } else {
-        this.insertInlineLink(data);
-      }
+      this.openLinkPasteMenu(data, context.canReplaceCurrentBlock);
 
       return true;
     }
@@ -130,23 +122,29 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     return holder ? holder.getBoundingClientRect() : null;
   }
 
-  private openLinkPasteMenu(url: string): void {
+  private openLinkPasteMenu(url: string, canReplace: boolean): void {
     // Capture the paste target now: opening the popover moves focus out of the
     // block, so currentBlock may drift before the user picks (notably in WebKit).
     const targetBlock = this.Blok.BlockManager.currentBlock ?? null;
 
     // Show the link straight away and anchor the menu at its end, like Notion:
     // the pasted link stays visible while the user chooses bookmark/embed/plain.
-    const linkBlock = this.insertPlainLink(url, targetBlock);
+    // An empty, replaceable block BECOMES the link; a block with content instead
+    // gets the link inserted inline at the caret so its other content survives.
+    const linkBlock = canReplace ? this.insertPlainLink(url, targetBlock) : targetBlock;
+
+    if (!canReplace) {
+      this.insertInlineLink(url);
+    }
 
     this.menu.open({
       url,
       hasSelection: this.hasSelection(),
       allowGenericEmbed: this.config?.linkPaste?.allowGenericEmbed === true,
-      position: this.getLinkEndRect(linkBlock) ?? this.getCaretRect(),
+      position: this.getLinkEndRect(linkBlock, url) ?? this.getCaretRect(),
       ...(linkBlock?.holder ? { trigger: linkBlock.holder } : {}),
       onSelect: (type: PasteMenuActionType): void => {
-        void this.applyMenuAction(type, url, linkBlock);
+        void this.applyMenuAction(type, url, linkBlock, canReplace);
       },
       onDismiss: (): void => {
         // The link is already inserted; dismissing simply keeps it as-is.
@@ -158,8 +156,8 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
    * The end of the just-inserted link, used to anchor the menu right after it.
    * Prefers the last client rect so a wrapped link anchors at its visual end.
    */
-  private getLinkEndRect(block: TargetBlock): DOMRect | null {
-    const anchor = block?.holder?.querySelector('a');
+  private getLinkEndRect(block: TargetBlock, url: string): DOMRect | null {
+    const anchor = this.findInsertedAnchor(block, url);
 
     if (!anchor) {
       return null;
@@ -175,6 +173,33 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     return new DOMRect(rect.right, rect.top, 0, rect.height);
   }
 
+  /**
+   * The anchor just inserted for `url` (matched by exact href), or the first
+   * anchor as a fallback. Lets us anchor the menu at — and later remove — the
+   * pasted link even when the block already held other links.
+   */
+  private findInsertedAnchor(block: TargetBlock, url: string): HTMLAnchorElement | null {
+    const holder: HTMLElement | undefined = block?.holder;
+
+    if (!holder) {
+      return null;
+    }
+
+    const anchors = holder.querySelectorAll<HTMLAnchorElement>('a');
+
+    if (anchors.length === 0) {
+      return null;
+    }
+
+    for (const anchor of Array.from(anchors)) {
+      if (anchor.getAttribute('href') === url) {
+        return anchor;
+      }
+    }
+
+    return anchors[0];
+  }
+
   private restoreTarget(targetBlock: TargetBlock): void {
     if (targetBlock?.holder) {
       this.Blok.BlockManager.setCurrentBlockByChildNode(targetBlock.holder);
@@ -184,14 +209,23 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
   private async applyMenuAction(
     type: PasteMenuActionType,
     url: string,
-    linkBlock: TargetBlock
+    linkBlock: TargetBlock,
+    canReplace: boolean
   ): Promise<void> {
     switch (type) {
       case 'bookmark':
       case 'embed':
-        // Replace the visible link block in place with the chosen rich view.
         this.restoreTarget(linkBlock);
-        await this.insertForcedPatternBlock(type, url, true);
+
+        if (canReplace) {
+          // Empty block: the link IS the block — swap it for the rich view.
+          await this.insertForcedPatternBlock(type, url, true);
+        } else {
+          // Block has other content: drop the inline link and append the rich
+          // view as a NEW block, leaving the surrounding text untouched.
+          this.removeInlineLink(linkBlock, url);
+          await this.insertForcedPatternBlock(type, url, false);
+        }
         break;
       case 'plain':
         // The link is already shown; nothing more to do.
@@ -200,6 +234,14 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
         // Built + unit-tested, but not yet served live (see PasteMenuController).
         break;
     }
+  }
+
+  /**
+   * Remove the inline link inserted for the menu so a chosen bookmark/embed does
+   * not leave a duplicate of the URL behind in the block's text.
+   */
+  private removeInlineLink(block: TargetBlock, url: string): void {
+    this.findInsertedAnchor(block, url)?.remove();
   }
 
   private async insertForcedPatternBlock(tool: string, url: string, canReplace: boolean): Promise<void> {

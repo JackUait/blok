@@ -135,13 +135,14 @@ describe('FrameworkCards', () => {
     expect(cdnRow).toHaveTextContent('BlokEditor.Blok');
   });
 
-  it('does not draw its own bordered/card box around the accordion shell (rows are separated by their own dividers instead)', () => {
+  it('draws a single bordered/card shell around the whole accordion (rows are separated by inner dividers, unlike per-item cards elsewhere)', () => {
     renderCards();
     const rows = screen.getAllByTestId('framework-card');
     const shell = rows[0].parentElement;
     expect(shell).not.toBeNull();
-    expect(shell?.className).not.toMatch(/bg-card/);
-    expect(shell?.className).not.toMatch(/shadow/);
+    expect(shell?.className).toMatch(/bg-card/);
+    expect(shell?.className).toMatch(/shadow-card/);
+    expect(shell?.className).toMatch(/rounded-3xl/);
   });
 
   it('renders Russian copy when locale is ru', () => {

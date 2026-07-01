@@ -272,7 +272,10 @@ export const FrameworkCards: React.FC = () => {
           </p>
         </SectionReveal>
 
-        <SectionReveal delay={0.05} className="mt-12">
+        <SectionReveal
+          delay={0.05}
+          className="mt-12 overflow-hidden rounded-3xl border border-black/[0.06] bg-card shadow-card dark:border-white/[0.08]"
+        >
           {FRAMEWORKS.map((framework, index) => {
             const open = openIds.has(framework.id);
             const isFirst = index === 0;

@@ -798,20 +798,20 @@
   scrollbar-color: initial !important;
 }
 
-:where([data-blok-interface], [data-blok-popover]) *, :where([data-blok-interface], [data-blok-popover]) ::after, :where([data-blok-interface], [data-blok-popover]) ::before, :where([data-blok-interface], [data-blok-popover]) ::backdrop, :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) *, :where([data-blok-interface], [data-blok-popover]) ::after, :where([data-blok-interface], [data-blok-popover]) ::before, :where([data-blok-interface], [data-blok-popover]) ::backdrop, :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   border: 0 solid;
 }
 
-:where([data-blok-interface], [data-blok-popover]) hr {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) hr {
   height: 0;
   color: inherit;
   border-top-width: var(--blok-border-width-hairline);
 }
 
-:where([data-blok-interface], [data-blok-popover]) abbr:where([title]) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) abbr:where([title]) {
   -webkit-text-decoration: underline dotted;
   text-decoration: underline dotted;
 }
@@ -821,28 +821,28 @@
   letter-spacing: inherit !important;
 }
 
-:where([data-blok-interface], [data-blok-popover]) a {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) a {
   color: inherit;
   -webkit-text-decoration: inherit;
   text-decoration: inherit;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(b, strong) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(b, strong) {
   font-weight: bolder;
 }
 
-:where([data-blok-interface], [data-blok-popover]) mark {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) mark {
   color: inherit;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
   font-family: var(--blok-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
   font-feature-settings: --theme(--default-mono-font-feature-settings, normal);
   font-variation-settings: --theme(--default-mono-font-variation-settings, normal);
   font-size: 1em;
 }
 
-:where([data-blok-interface], [data-blok-popover]) code:not(pre code) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) code:not(pre code) {
   background-color: var(--blok-inline-code-bg);
   color: var(--blok-color-red-text);
   padding: var(--blok-space-0-5) var(--blok-space-1);
@@ -850,58 +850,58 @@
   font-size: 0.875em;
 }
 
-:where([data-blok-interface], [data-blok-popover]) small {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) small {
   font-size: 80%;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(sub, sup) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(sub, sup) {
   font-size: 75%;
   line-height: 0;
   position: relative;
   vertical-align: baseline;
 }
 
-:where([data-blok-interface], [data-blok-popover]) sub {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) sub {
   bottom: -0.25em;
 }
 
-:where([data-blok-interface], [data-blok-popover]) sup {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) sup {
   top: -0.5em;
 }
 
-:where([data-blok-interface], [data-blok-popover]) table {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) table {
   text-indent: 0;
   border-color: inherit;
   border-collapse: collapse;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :-moz-focusring {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :-moz-focusring {
   outline: auto;
 }
 
-:where([data-blok-interface], [data-blok-popover]) progress {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) progress {
   vertical-align: baseline;
 }
 
-:where([data-blok-interface], [data-blok-popover]) summary {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) summary {
   display: list-item;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(ol, ul, menu) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(ol, ul, menu) {
   list-style: none;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(img, svg, video, canvas, audio, iframe, embed, object) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(img, svg, video, canvas, audio, iframe, embed, object) {
   display: block;
   vertical-align: middle;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(img, video) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(img, video) {
   max-width: 100%;
   height: auto;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(button, input, select, optgroup, textarea, ::file-selector-button) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(button, input, select, optgroup, textarea, ::file-selector-button) {
   font: inherit;
   font-feature-settings: inherit;
   font-variation-settings: inherit;
@@ -911,64 +911,64 @@
   opacity: 1;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup {
   font-weight: bolder;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup option {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup option {
   padding-inline-start: var(--blok-space-5);
 }
 
-:where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
   margin-inline-end: var(--blok-space-1);
 }
 
-:where([data-blok-interface], [data-blok-popover]) ::placeholder {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) ::placeholder {
   opacity: 1;
 }
 
-[@supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px)] :where([data-blok-interface], [data-blok-popover]) ::placeholder {
+[@layer base > @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px)] :where([data-blok-interface], [data-blok-popover]) ::placeholder {
   color: color-mix(in oklab, currentcolor 50%, transparent);
 }
 
-:where([data-blok-interface], [data-blok-popover]) textarea {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) textarea {
   resize: vertical;
 }
 
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-search-decoration, :where([data-blok-interface], [data-blok-popover]) ::-webkit-search-cancel-button {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) ::-webkit-search-decoration, :where([data-blok-interface], [data-blok-popover]) ::-webkit-search-cancel-button {
   -webkit-appearance: none;
 }
 
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-date-and-time-value {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) ::-webkit-date-and-time-value {
   min-height: 1lh;
   text-align: inherit;
 }
 
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit {
   display: inline-flex;
 }
 
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit-fields-wrapper {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit-fields-wrapper {
   padding: 0;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is( ::-webkit-datetime-edit, ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field, ::-webkit-datetime-edit-day-field, ::-webkit-datetime-edit-hour-field, ::-webkit-datetime-edit-minute-field, ::-webkit-datetime-edit-second-field, ::-webkit-datetime-edit-millisecond-field, ::-webkit-datetime-edit-meridiem-field ) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is( ::-webkit-datetime-edit, ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field, ::-webkit-datetime-edit-day-field, ::-webkit-datetime-edit-hour-field, ::-webkit-datetime-edit-minute-field, ::-webkit-datetime-edit-second-field, ::-webkit-datetime-edit-millisecond-field, ::-webkit-datetime-edit-meridiem-field ) {
   padding-block: 0;
 }
 
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-calendar-picker-indicator {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) ::-webkit-calendar-picker-indicator {
   line-height: 1;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :-moz-ui-invalid {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :-moz-ui-invalid {
   box-shadow: none;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(button, input:where([type='button'], [type='reset'], [type='submit']), ::file-selector-button) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(button, input:where([type='button'], [type='reset'], [type='submit']), ::file-selector-button) {
   appearance: button;
 }
 
-:where([data-blok-interface], [data-blok-popover]) :is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
+[@layer base] :where([data-blok-interface], [data-blok-popover]) :is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
   height: auto;
 }
 
@@ -976,21 +976,21 @@
   display: none !important;
 }
 
-[data-blok-interface] :focus:not(:focus-visible), [data-blok-popover] :focus:not(:focus-visible) {
+[@layer base] [data-blok-interface] :focus:not(:focus-visible), [data-blok-popover] :focus:not(:focus-visible) {
   outline: none;
 }
 
-[data-blok-interface] :is([contenteditable], input, textarea):focus-visible, [data-blok-popover] :is([contenteditable], input, textarea):focus-visible {
+[@layer base] [data-blok-interface] :is([contenteditable], input, textarea):focus-visible, [data-blok-popover] :is([contenteditable], input, textarea):focus-visible {
   outline: none;
 }
 
-[data-blok-interface] :focus-visible, [data-blok-popover] :focus-visible {
+[@layer base] [data-blok-interface] :focus-visible, [data-blok-popover] :focus-visible {
   outline: revert;
   outline-offset: revert;
   border-radius: revert;
 }
 
-[data-blok-interface] ::selection, [data-blok-popover] ::selection {
+[@layer base] [data-blok-interface] ::selection, [data-blok-popover] ::selection {
   background-color: var(--blok-selection-inline);
   color: revert;
 }

@@ -44,16 +44,6 @@ export const HEADER_TOOL_NAME = 'header';
 export const CHECKLIST_PATTERN = /^\[(x|X| )?\]\s([\s\S]*)$/;
 
 /**
- * Regex pattern for the bracket-CLOSE to-do trigger — Notion's exception to the
- * "trailing space" rule. Typing the closing "]" of a line-start "[]" or "[ ]"
- * converts the block to an empty UNCHECKED to-do immediately (no space needed).
- * Group 1 is the optional inner space ("[ ]" vs "[]"); group 2 is any remaining
- * content after the "]" (usually empty). Checked "[x]" is deliberately NOT here:
- * it stays on the space-triggered {@link CHECKLIST_PATTERN} path.
- */
-export const CHECKLIST_BRACKET_PATTERN = /^\[( )?\]([\s\S]*)$/;
-
-/**
  * Regex pattern for detecting bulleted list shortcuts.
  * Matches patterns like "- ", "* " or "+ " at the start of text
  * Captures remaining content after the shortcut in group 1

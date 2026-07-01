@@ -263,16 +263,15 @@
 
   /* Small UI surfaces that can't reach a var via Tailwind arbitrary syntax. */
   --blok-button-focus-bg-hover: #fbfcfe;
-  /* Notion's drop line: a thin, saturated blue rule. Reuses the accent link
-     token rather than a pale wash. */
-  --blok-dnd-drop-indicator-bg: var(--blok-link);
-  /* Lead-in that runs from the editor's left edge to where the drop line starts,
-     so an indented line reads as one continuous rule. It shares the saturated
-     accent (no separate gray segment) so the whole line reads as one blue rule. */
-  --blok-dnd-drop-indicator-lead-bg: var(--blok-link);
-  /* Drop-line geometry: a thin rule for both orientations, matching Notion. */
-  --blok-dnd-drop-indicator-thickness: 2px;
-  --blok-dnd-drop-indicator-thickness-vertical: 2px;
+  --blok-dnd-drop-indicator-bg: #d4e3fc;
+  /* Grayish lead-in that runs from the editor's left edge to where the blue
+     list drop line starts, so an indented line reads as a full-width rule. */
+  --blok-dnd-drop-indicator-lead-bg: #dcdcda;
+  /* Drop-line geometry. The horizontal (top/bottom) rule spans the content
+     width, so 6px reads as a thin line; the vertical (left/right) bar is short,
+     so it gets a slimmer width to read the same. */
+  --blok-dnd-drop-indicator-thickness: 6px;
+  --blok-dnd-drop-indicator-thickness-vertical: 5px;
 
   /* Direct-usage surface tokens extracted in B1.6. Light-theme values match
      the dark overrides below; they are rarely applied outside the dark theme. */
@@ -614,8 +613,8 @@
     --blok-database-card-actions-bg: #0f1420;
 
     --blok-button-focus-bg-hover: #2d2d2c;
-    --blok-dnd-drop-indicator-bg: var(--blok-link);
-    --blok-dnd-drop-indicator-lead-bg: var(--blok-link);
+    --blok-dnd-drop-indicator-bg: #1f3a5c;
+    --blok-dnd-drop-indicator-lead-bg: #3a3d42;
 
     --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
     --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
@@ -787,8 +786,8 @@
   --blok-database-card-actions-bg: #0f1420;
 
   --blok-button-focus-bg-hover: #2d2d2c;
-  --blok-dnd-drop-indicator-bg: var(--blok-link);
-  --blok-dnd-drop-indicator-lead-bg: var(--blok-link);
+  --blok-dnd-drop-indicator-bg: #1f3a5c;
+  --blok-dnd-drop-indicator-lead-bg: #3a3d42;
 
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);

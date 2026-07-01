@@ -31,7 +31,7 @@ export const CodemodCard: React.FC = () => {
 
   return (
     <div
-      className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+      className="overflow-hidden"
       data-blok-testid="codemod-card"
     >
       <div className="p-6 sm:p-8">

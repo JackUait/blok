@@ -153,6 +153,26 @@ describe('MigrationSteps', () => {
     expect(addMarkers.length).toBeGreaterThanOrEqual(6);
   });
 
+  it('should not draw its own bordered/card box around each change card (the grid gap separates items instead)', () => {
+    renderMigrationSteps();
+
+    const cards = screen.getAllByTestId('change-card');
+    cards.forEach((card) => {
+      expect(card.className).not.toMatch(/bg-card/);
+      expect(card.className).not.toMatch(/shadow/);
+    });
+  });
+
+  it('should keep the bordered box around each removed/added diff row', () => {
+    renderMigrationSteps();
+
+    const removedRow = screen.getAllByText('−')[0].closest('div');
+    const addedRow = screen.getAllByText('+')[0].closest('div');
+
+    expect(removedRow?.className).toMatch(/\bborder\b/);
+    expect(addedRow?.className).toMatch(/\bborder\b/);
+  });
+
   it('should render code elements for each change', () => {
     renderMigrationSteps();
 
@@ -247,6 +267,22 @@ describe('MigrationSteps', () => {
     const note = screen.getByTestId('dropped-fields-note');
     expect(within(note).getByText('linkTool')).toBeInTheDocument();
     expect(within(note).getByText('meta.site_name')).toBeInTheDocument();
+  });
+
+  it('should not draw its own bordered/card box around the dropped-fields note (a divider inside it still separates the table)', () => {
+    renderMigrationSteps();
+
+    const note = screen.getByTestId('dropped-fields-note');
+    expect(note.className).not.toMatch(/\bborder\b/);
+    expect(note.className).not.toMatch(/bg-secondary/);
+  });
+
+  it('should keep the bordered box around the nested dropped-fields table', () => {
+    renderMigrationSteps();
+
+    const note = screen.getByTestId('dropped-fields-note');
+    const nestedBox = within(note).getByText('linkTool').closest('.divide-y')?.parentElement;
+    expect(nestedBox?.className).toMatch(/\bborder\b/);
   });
 
   it('should render the supported Editor.js versions section', () => {

@@ -53,4 +53,12 @@ describe('HowToCustomToolContent', () => {
     expect(code).toContain('validate(savedData');
     expect(code).toContain("tunes: ['textColor']");
   });
+
+  it('does not draw its own bordered/card box around the Going further panel (a divider separates it instead)', () => {
+    renderHowTo();
+    const heading = screen.getByText('Going further');
+    const panel = heading.closest('div');
+    expect(panel).not.toBeNull();
+    expect(panel?.className).not.toMatch(/bg-card/);
+  });
 });

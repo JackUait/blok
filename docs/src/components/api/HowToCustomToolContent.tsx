@@ -133,7 +133,7 @@ export const HowToCustomToolContent: React.FC = () => {
       </div>
 
       {/* Going further */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card px-6 py-6">
+      <div className="flex flex-col gap-4 border-t border-border pt-8">
         <h2 className={headingClass}>
           <Typo>{t("api.howToCustomTool.further.title")}</Typo>
         </h2>

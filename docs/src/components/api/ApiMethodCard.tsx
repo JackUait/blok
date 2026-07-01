@@ -34,7 +34,7 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
   return (
     <div
       id={methodId}
-      className="scroll-mt-24 rounded-2xl border border-border bg-card p-5 shadow-sm"
+      className="scroll-mt-24 border-t border-border pt-8"
       data-blok-testid="api-method-card"
     >
       <div className="flex flex-wrap items-center gap-2">

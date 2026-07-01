@@ -143,6 +143,18 @@ describe('CodemodCard', () => {
     expect(screen.getByText(m.codemodI18nDescription)).toBeInTheDocument();
   });
 
+  it('should not draw its own bordered/card box around the whole codemod card', () => {
+    render(
+      <I18nProvider>
+        <CodemodCard />
+      </I18nProvider>
+    );
+
+    const card = screen.getByTestId('codemod-card');
+    expect(card.className).not.toMatch(/bg-card/);
+    expect(card.className).not.toMatch(/shadow/);
+  });
+
   it('should have codemod-tabs div', () => {
     render(
       <I18nProvider>

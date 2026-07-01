@@ -17,10 +17,7 @@ export const EditorAccessNote: React.FC = () => {
   const snippet = EDITOR_ACCESS_SNIPPETS[framework];
 
   return (
-    <div
-      className="rounded-2xl border border-border bg-secondary/30 p-5"
-      data-blok-testid="editor-access-note"
-    >
+    <div data-blok-testid="editor-access-note">
       <h3 className="font-display text-sm font-bold tracking-tight text-foreground">
         <Typo>{t('frameworkToggle.editorAccess.heading')}</Typo>
       </h3>

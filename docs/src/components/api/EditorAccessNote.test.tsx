@@ -9,9 +9,7 @@ import { FrameworkToggle } from '../common/FrameworkToggle';
 import { EditorAccessNote } from './EditorAccessNote';
 
 vi.mock('../common/CodeBlock', () => ({
-  CodeBlock: ({ code }: { code: string }) => (
-    <pre data-blok-testid="code">{code}</pre>
-  ),
+  CodeBlock: ({ code }: { code: string }) => <pre data-blok-testid="code">{code}</pre>,
 }));
 
 const Providers = ({ children }: { children: ReactNode }) => (
@@ -42,6 +40,18 @@ describe('EditorAccessNote', () => {
 
     const note = screen.getByTestId('editor-access-note');
     expect(within(note).getByTestId('code')).toHaveTextContent('new Blok(');
+  });
+
+  it('does not draw its own bordered/card box around the note (it already sits inside the page layout)', () => {
+    render(
+      <Providers>
+        <EditorAccessNote />
+      </Providers>,
+    );
+
+    const note = screen.getByTestId('editor-access-note');
+    expect(note.className).not.toMatch(/\bborder\b/);
+    expect(note.className).not.toMatch(/bg-secondary/);
   });
 
   it('swaps the snippet when the framework changes', async () => {

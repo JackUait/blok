@@ -78,11 +78,7 @@ export const MigrationSteps: React.FC = () => {
           data-blok-testid="changes-grid"
         >
           {changeItems.map((item) => (
-            <article
-              key={item.icon}
-              className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover"
-              data-blok-testid="change-card"
-            >
+            <article key={item.icon} data-blok-testid="change-card">
               <div className="mb-4 flex items-center gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">{item.icon}</span>
                 <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{item.title}</Typo></h3>
@@ -172,7 +168,7 @@ export const MigrationSteps: React.FC = () => {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-blok-testid="custom-tools-grid">
-          <article className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-blok-testid="custom-tool-card">
+          <article data-blok-testid="custom-tool-card">
             <div className="mb-4 flex items-center gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">@</span>
               <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.customInlineToolTitle')}</Typo></h3>
@@ -189,7 +185,7 @@ export const MigrationSteps: React.FC = () => {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-blok-testid="custom-tool-card">
+          <article data-blok-testid="custom-tool-card">
             <div className="mb-4 flex items-center gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">⚡</span>
               <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.customInlineToolFastPathTitle')}</Typo></h3>
@@ -200,7 +196,7 @@ export const MigrationSteps: React.FC = () => {
             <code className="mt-3 inline-block rounded-lg bg-secondary px-3 py-2 font-mono text-xs text-primary">{t('migration.customInlineToolFastPathCode')}</code>
           </article>
 
-          <article className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-blok-testid="custom-tool-card">
+          <article data-blok-testid="custom-tool-card">
             <div className="mb-4 flex items-center gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-bold text-primary-foreground">✓</span>
               <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.customBlockToolTitle')}</Typo></h3>
@@ -211,7 +207,7 @@ export const MigrationSteps: React.FC = () => {
           </article>
         </div>
 
-        <div className="mt-8 rounded-2xl border border-border bg-secondary/50 p-6" data-blok-testid="dropped-fields-note">
+        <div className="mt-8" data-blok-testid="dropped-fields-note">
           <h3 className="text-base font-bold tracking-tight text-foreground"><Typo>{t('migration.droppedFieldsTitle')}</Typo></h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             <Typo>{t('migration.droppedFieldsWarning')}</Typo>

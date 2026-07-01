@@ -118,6 +118,14 @@ describe('ApiMethodCard', () => {
     expect(screen.getByTestId('api-method-card')).toBeInTheDocument();
   });
 
+  it('should not draw its own bordered/card box around the whole method (a divider separates methods instead)', () => {
+    wrap(<ApiMethodCard method={mockMethod} sectionId="blocks-api" />);
+
+    const card = screen.getByTestId('api-method-card');
+    expect(card.className).not.toMatch(/bg-card/);
+    expect(card.className).not.toMatch(/shadow/);
+  });
+
   it('should assign correct id to the method card', () => {
     renderCard(mockMethod, 'blocks-api');
 

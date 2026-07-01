@@ -290,7 +290,9 @@ export const DemoPage: React.FC = () => {
             className="min-h-0 w-full flex-1 overflow-auto px-6 pb-8 pt-10 sm:px-16"
             data-blok-testid="demo-editor-container"
           >
-            <EditorWrapper contentAlign="center" />
+            <div className="mx-auto w-full max-w-[1000px]">
+              <EditorWrapper />
+            </div>
           </div>
         </main>
       </div>

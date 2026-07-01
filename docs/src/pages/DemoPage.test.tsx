@@ -72,16 +72,23 @@ describe('DemoPage', () => {
       expect(container.querySelector('.blok-editor')).toBeInTheDocument();
     });
 
-    it('does not add an outer max-width that would squeeze the block toolbar gutter', () => {
+    it('does not put a max-width directly on the overflow-auto container', () => {
       renderDemoPage();
 
-      // Each block self-centers its own 720px content column (mx-auto +
-      // max-w-blok-content, set by the editor itself) and its +/drag-handle
-      // toolbar bleeds ~60px to the left of that column. An outer max-width
-      // here narrower than content+gutter (e.g. max-w-3xl/768px) leaves no
-      // room for that bleed and the overflow-auto container clips it.
+      // A block's +/drag-handle toolbar bleeds ~60px to the left of its content
+      // column. A max-width applied to THIS element would also shrink its own
+      // overflow-auto box, clipping that bleed. The centering max-width instead
+      // lives on an inner div (see next test) with plenty of room to spare.
       const editorContainer = screen.getByTestId('demo-editor-container');
       expect(editorContainer.className).not.toMatch(/\bmax-w-\S+/);
+    });
+
+    it('centers the editor on the page via an inner max-width wrapper', () => {
+      const { container } = renderDemoPage();
+
+      const editor = container.querySelector('.blok-editor');
+      const centeringWrapper = editor?.closest('.mx-auto[class*="max-w-"]');
+      expect(centeringWrapper).toBeInTheDocument();
     });
 
     it('reserves generous horizontal padding so the block toolbar gutter is not clipped', () => {

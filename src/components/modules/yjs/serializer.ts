@@ -183,8 +183,12 @@ export class YBlockSerializer {
    * Normalize block data for consistent undo/redo behavior.
    * Empty paragraph data {} is normalized to { text: '' } so undo reverts to
    * a state with an explicit text property rather than an empty object.
+   *
+   * Public so `DocumentStore.replaceBlockContent` can apply the SAME
+   * normalization when rebuilding a block's `data` in place (turn-into /
+   * markdown conversion), matching the `outputDataToYBlock` add path.
    */
-  private normalizeBlockData(type: string, data: Record<string, unknown>): Record<string, unknown> {
+  public normalizeBlockData(type: string, data: Record<string, unknown>): Record<string, unknown> {
     // Only normalize paragraph blocks with empty data
     if (type === 'paragraph' && Object.keys(data).length === 0) {
       return { text: '' };

@@ -98,6 +98,39 @@ export class DocumentStore {
   }
 
   /**
+   * Replace a block's tool TYPE and DATA in place, keeping the SAME Y.Map entry
+   * — and therefore the same block id, Yjs item identity, position, parentId,
+   * contentIds and tunes.
+   *
+   * Backs `BlockMutation.replace()` (turn-into + markdown conversion). The prior
+   * approach removed the yblock and inserted a NEW one that REUSED the same
+   * logical id; `BlockObserver` saw the id in both the added and removed sets and
+   * classified it as a no-op MOVE, so undoing a conversion never re-rendered the
+   * block back to its prior tool. Mutating the existing Y.Map instead emits an
+   * `update` event carrying the id, which the reconciler resolves against the
+   * yblock's `type` and re-renders the correct tool. The single transaction keeps
+   * it one undo entry.
+   * @param id - Block id whose content to replace
+   * @param type - New tool name
+   * @param data - New tool data
+   * @returns true if the block existed and was mutated
+   */
+  public replaceBlockContent(id: string, type: string, data: Record<string, unknown>): boolean {
+    const yblock = this.getBlockById(id);
+
+    if (yblock === undefined) {
+      return false;
+    }
+
+    this.transact(() => {
+      yblock.set('type', type);
+      yblock.set('data', this.serializer.objectToYMap(this.serializer.normalizeBlockData(type, data)));
+    }, 'local');
+
+    return true;
+  }
+
+  /**
    * Move a block to a new index.
    * @param id - Block id to move
    * @param toIndex - Target index (the final position where the block should end up)

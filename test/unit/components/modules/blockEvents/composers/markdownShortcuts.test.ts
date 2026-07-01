@@ -2227,7 +2227,8 @@ describe('MarkdownShortcuts', () => {
         'list',
         expect.objectContaining({ style: 'unordered' })
       );
-      expect(replace.mock.calls[0][2].text).toBe('My heading text');
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
+      expect(replaceCall[2].text).toBe('My heading text');
     });
 
     it('converts "1. " inside a QUOTE into an ordered list, preserving text', () => {
@@ -2249,7 +2250,8 @@ describe('MarkdownShortcuts', () => {
         'list',
         expect.objectContaining({ style: 'ordered' })
       );
-      expect(replace.mock.calls[0][2].text).toBe('Quoted item');
+      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
+      expect(replaceCall[2].text).toBe('Quoted item');
     });
 
     it('converts "[] " inside a HEADING into an unchecked checklist', () => {

@@ -186,7 +186,7 @@ export abstract class BasePasteHandler implements PasteHandler {
       // canReplaceCurrentBlock flag is false for a non-default (list) target,
       // so allow the replace here when the produced blocks are list items.
       const firstIsListOverride = this.readListOverride(linesToInsert[0]?.content) !== null;
-      const targetIsEmptyList = currentBlock?.name === 'list' && currentBlock.isEmpty === true;
+      const targetIsEmptyList = currentBlock?.name === 'list' && currentBlock.isEmpty;
       const allowReplaceEmptyList = firstIsListOverride && targetIsEmptyList;
 
       const runPasteLoop = (): void => {
@@ -210,16 +210,7 @@ export abstract class BasePasteHandler implements PasteHandler {
             // pasted list block. The list tool's onPaste only sets text + a
             // default style from the plain-text content, so the override is
             // applied here via BlockManager.update (carrier read from content).
-            const listOverride = this.readListOverride(pasteData.content);
-            let block = pastedBlock;
-
-            if (listOverride !== null && typeof BlockManager.update === 'function') {
-              if (operationsBridge !== undefined) {
-                operationsBridge.suppressStopCapturing = true;
-              }
-
-              block = await BlockManager.update(pastedBlock, listOverride);
-            }
+            const block = await this.applyListStyleOverride(pastedBlock, pasteData.content, operationsBridge);
 
             Caret.setToBlock(block, Caret.positions.END);
             insertedByIndex.push(block);
@@ -254,6 +245,35 @@ export abstract class BasePasteHandler implements PasteHandler {
     }
 
     await this.processInlinePaste(singleItem, canReplaceCurrentBlock);
+  }
+
+  /**
+   * Stamp the inherited list style/depth/checked onto a freshly pasted list
+   * block. Returns the (possibly re-created) block, or the original block when
+   * no override applies.
+   * @param pastedBlock - the block produced by the paste
+   * @param content - the pasted item's content carrying the list override
+   * @param operationsBridge - undo-suppression bridge, re-asserted before update
+   */
+  private async applyListStyleOverride(
+    pastedBlock: Awaited<ReturnType<BlokModules['BlockManager']['paste']>>,
+    content: HTMLElement | undefined,
+    operationsBridge: { suppressStopCapturing: boolean } | undefined
+  ): Promise<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>> {
+    const { BlockManager } = this.Blok;
+    const listOverride = this.readListOverride(content);
+
+    if (listOverride === null || typeof BlockManager.update !== 'function') {
+      return pastedBlock;
+    }
+
+    if (operationsBridge !== undefined) {
+      const bridge = operationsBridge;
+
+      bridge.suppressStopCapturing = true;
+    }
+
+    return BlockManager.update(pastedBlock, listOverride);
   }
 
   /**

@@ -2,6 +2,7 @@ import type { BlokConfig } from '../../../../../types/configs/blok-config';
 import type { SanitizerConfig } from '../../../../../types/configs/sanitizer-config';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { Dom as dom$ } from '../../../dom';
+import { ensureStrongElement } from '../../../inline-tools/utils/bold-dom-utils';
 import type { BlockToolAdapter } from '../../../tools/block';
 import { isObject } from '../../../utils';
 import { applyLinkConfig } from '../../../utils/apply-link-config';
@@ -69,6 +70,17 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const wrapper = dom$.make('DIV');
 
     wrapper.innerHTML = innerHTML;
+
+    // Normalize legacy <b> → <strong> on the DETACHED wrapper, before the block
+    // is rendered and the caret lands inside the pasted content. The live bold
+    // MutationObserver deliberately skips any <b> that contains the caret (to
+    // avoid scrambling actively-typed collapsed-bold), and on paste the caret is
+    // moved to the block END — landing inside a freshly pasted <b> — so that
+    // observer would leave it as <b> forever. Converting here (no caret present)
+    // is race-free and mirrors the preprocessNestedLists pre-splitter pass. Note
+    // the wrapper is detached, so BoldNormalizationPass (which only converts
+    // CONNECTED nodes) is a no-op here — ensureStrongElement swaps in place.
+    wrapper.querySelectorAll('b').forEach(bold => ensureStrongElement(bold));
 
     // Preserve nested-list depth and ordered/unordered context BEFORE the splitter
     // detaches each <li> from its ancestor <ul>/<ol> during sanitization.
@@ -235,21 +247,9 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     const listItems = Array.from(wrapper.querySelectorAll('li'));
 
     for (const li of listItems) {
-      let ancestorListCount = 0;
-      let nearestList: HTMLElement | null = null;
-      let ancestor = li.parentElement;
-
-      while (ancestor !== null) {
-        if (ancestor.tagName === 'UL' || ancestor.tagName === 'OL') {
-          ancestorListCount += 1;
-
-          if (nearestList === null) {
-            nearestList = ancestor;
-          }
-        }
-
-        ancestor = ancestor.parentElement;
-      }
+      const listAncestors = this.listAncestors(li);
+      const ancestorListCount = listAncestors.length;
+      const nearestList = listAncestors[0] ?? null;
 
       if (ancestorListCount > 0 && !li.hasAttribute('aria-level')) {
         li.setAttribute('aria-level', String(ancestorListCount));
@@ -270,20 +270,48 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     // item's next sibling, so each `<li>` is a leaf the splitter emits on its
     // own. Depth is preserved by the stamped `aria-level`. Repeat until stable;
     // each hoist strictly reduces the count of `<li>`-parented lists.
-    let hoisted = true;
-
-    while (hoisted) {
-      hoisted = false;
-
-      for (const nestedList of Array.from(wrapper.querySelectorAll('ul, ol'))) {
-        const parent = nestedList.parentElement;
-
-        if (parent !== null && parent.tagName === 'LI') {
-          parent.after(nestedList);
-          hoisted = true;
-        }
-      }
+    while (this.hoistNestedListsOnce(wrapper)) {
+      // Repeat until no list remains directly parented by an `<li>`.
     }
+  }
+
+  /**
+   * Collect a list item's ancestor `<ul>`/`<ol>` elements, nearest-first.
+   * @param element - the element whose list ancestors to collect
+   * @returns the ancestor list elements ordered from nearest to farthest
+   */
+  private listAncestors(element: HTMLElement): HTMLElement[] {
+    const parent = element.parentElement;
+
+    if (parent === null) {
+      return [];
+    }
+
+    const higher = this.listAncestors(parent);
+
+    return parent.tagName === 'UL' || parent.tagName === 'OL'
+      ? [parent, ...higher]
+      : higher;
+  }
+
+  /**
+   * Hoist every list directly parented by an `<li>` out to become the item's
+   * next sibling in a single pass.
+   * @param wrapper - the container being normalized
+   * @returns true if at least one list was hoisted (loop again), false when stable
+   */
+  private hoistNestedListsOnce(wrapper: HTMLElement): boolean {
+    return Array.from(wrapper.querySelectorAll('ul, ol')).reduce((moved, nestedList) => {
+      const parent = nestedList.parentElement;
+
+      if (parent !== null && parent.tagName === 'LI') {
+        parent.after(nestedList);
+
+        return true;
+      }
+
+      return moved;
+    }, false);
   }
 
   /**

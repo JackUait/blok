@@ -370,22 +370,24 @@ test.describe('arrow right keydown', () => {
     expect(caretInfo.inside).toBe(true);
   });
 
-  test.describe('Cmd+ArrowRight (line-end within a block, cross-block at the end)', () => {
-    test('Cmd+ArrowRight at the end of a block jumps to the next block', async ({ page }) => {
+  test.describe('Cmd+ArrowRight (line-end within a block, boundary no-op at the end)', () => {
+    test('Cmd+ArrowRight at the end of a block stays in the block (boundary no-op)', async ({ page }) => {
       await createParagraphBlok(page, [ 'First', 'Second' ]);
 
       const firstParagraph = getParagraphByIndex(page, 0);
-      const secondParagraph = getParagraphByIndex(page, 1);
 
       await firstParagraph.click();
       await firstParagraph.press('End');
 
-      // Caret is at the block's end → Cmd+ArrowRight crosses into the next block.
+      // Caret is at the block's end → Cmd+ArrowRight is a native line-end gesture
+      // (macOS) and a boundary no-op: the caret stays in THIS block and must NOT
+      // cross into the next block (Notion parity — Cmd+→ is a within-line move,
+      // not a cross-block arrow).
       await page.keyboard.press('Meta+ArrowRight');
 
-      await waitForCaretInBlock(page, secondParagraph, 1);
+      await waitForCaretInBlock(page, firstParagraph, 0);
 
-      const caretInfo = await getCaretInfoOrThrow(secondParagraph);
+      const caretInfo = await getCaretInfoOrThrow(firstParagraph);
 
       expect(caretInfo.inside).toBe(true);
     });

@@ -176,16 +176,13 @@ export const extractDepthFromPastedContent = (content: HTMLElement): number => {
  * @returns the number of ancestor list elements (0 when detached / not in a list)
  */
 const countAncestorListElements = (content: HTMLElement): number => {
-  let count = 0;
-  let ancestor = content.parentElement;
+  const parent = content.parentElement;
 
-  while (ancestor !== null) {
-    if (ancestor.tagName === 'UL' || ancestor.tagName === 'OL') {
-      count += 1;
-    }
-
-    ancestor = ancestor.parentElement;
+  if (parent === null) {
+    return 0;
   }
 
-  return count;
+  const isList = parent.tagName === 'UL' || parent.tagName === 'OL';
+
+  return (isList ? 1 : 0) + countAncestorListElements(parent);
 };

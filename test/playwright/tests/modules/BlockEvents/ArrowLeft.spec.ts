@@ -404,22 +404,24 @@ test.describe('arrowLeft keydown', () => {
     expect(caretInfo.inside).toBe(true);
   });
 
-  test.describe('Cmd+ArrowLeft (line-start within a block, cross-block at the start)', () => {
-    test('Cmd+ArrowLeft at the start of a block jumps to the previous block', async ({ page }) => {
+  test.describe('Cmd+ArrowLeft (line-start within a block, boundary no-op at the start)', () => {
+    test('Cmd+ArrowLeft at the start of a block stays in the block (boundary no-op)', async ({ page }) => {
       await createParagraphBlok(page, [ 'First', 'Second' ]);
 
-      const firstParagraph = getParagraphByIndex(page, 0);
       const secondParagraph = getParagraphByIndex(page, 1);
 
       await secondParagraph.click();
       await placeCaretAtStart(secondParagraph);
 
-      // Caret is at the block's start → Cmd+ArrowLeft crosses into the previous block.
+      // Caret is at the block's start → Cmd+ArrowLeft is a native line-start gesture
+      // (macOS) and a boundary no-op: the caret stays in THIS block and must NOT
+      // cross into the previous block (Notion parity — Cmd+← is a within-line move,
+      // not a cross-block arrow).
       await page.keyboard.press('Meta+ArrowLeft');
 
-      await waitForCaretInBlock(page, firstParagraph, 0);
+      await waitForCaretInBlock(page, secondParagraph, 1);
 
-      const caretInfo = await ensureCaretInfo(firstParagraph);
+      const caretInfo = await ensureCaretInfo(secondParagraph);
 
       expect(caretInfo.inside).toBe(true);
     });

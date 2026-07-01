@@ -190,6 +190,22 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Replace a block's tool TYPE and DATA in place (turn-into / markdown
+   * conversion), preserving its id, position, parentId, contentIds and tunes.
+   * Emits an `update` event so undo/redo re-renders the correct tool — unlike a
+   * remove+add of the same id, which the observer misreads as a no-op move.
+   * @param id - Block id whose content to replace
+   * @param type - New tool name
+   * @param data - New tool data
+   * @returns true if the block existed and was mutated
+   */
+  public replaceBlockContent(id: string, type: string, data: Record<string, unknown>): boolean {
+    this.undoHistory.markCaretBeforeChange();
+
+    return this.documentStore.replaceBlockContent(id, type, data);
+  }
+
+  /**
    * Move a block to a new index.
    * @param id - Block id to move
    * @param toIndex - Target index (the final position where the block should end up)

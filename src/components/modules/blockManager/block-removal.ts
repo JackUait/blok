@@ -63,10 +63,11 @@ export class BlockRemoval {
         ? this.repository.getBlockById(block.parentId)
         : undefined;
 
-      let indexInParent = -1;
+      const indexInParent = parentBlock !== undefined
+        ? parentBlock.contentIds.indexOf(block.id)
+        : -1;
 
       if (parentBlock !== undefined) {
-        indexInParent = parentBlock.contentIds.indexOf(block.id);
         parentBlock.contentIds = parentBlock.contentIds.filter(id => id !== block.id);
       }
 

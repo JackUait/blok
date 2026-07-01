@@ -970,17 +970,17 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
        * current text (no conversionConfig) make convert() throw; those fall
        * through to the insert-sibling path below so the tool is still created.
        */
-      if (hasTypedSlashQuery) {
-        const convertedBlock = await this.convertCurrentBlockInPlace(
+      const convertedBlock = hasTypedSlashQuery
+        ? await this.convertCurrentBlockInPlace(
           currentBlock.id,
           toolName,
           blockDataOverrides,
           slashQuerySpan.start
-        );
+        )
+        : null;
 
-        if (convertedBlock !== null && convertedBlock !== undefined) {
-          return;
-        }
+      if (convertedBlock !== null && convertedBlock !== undefined) {
+        return;
       }
     }
 

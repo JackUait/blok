@@ -107,6 +107,65 @@ describe('DocumentStore', () => {
     });
   });
 
+  describe('replaceBlockContent', () => {
+    it('changes type and data in place, preserving id, position and hierarchy', () => {
+      store.fromJSON([
+        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
+        { id: 'block2', type: 'paragraph', data: { text: 'Second' }, parent: 'block1', content: ['c1'] },
+      ]);
+
+      const before = store.getBlockById('block2');
+
+      const result = store.replaceBlockContent('block2', 'list', { text: 'Second', style: 'unordered' });
+
+      expect(result).toBe(true);
+
+      const json = store.toJSON();
+
+      // Same position, same id, other keys untouched.
+      expect(json[1].id).toBe('block2');
+      expect(json[1].type).toBe('list');
+      expect(json[1].data).toEqual({ text: 'Second', style: 'unordered' });
+      expect(json[1].parent).toBe('block1');
+      expect(json[1].content).toEqual(['c1']);
+
+      // The SAME Y.Map instance is mutated — NOT a remove+add of a new entry.
+      // (A remove+add of the same id was misread by BlockObserver as a no-op
+      // move and broke undo of conversions.)
+      expect(store.getBlockById('block2')).toBe(before);
+    });
+
+    it('returns false when the block id does not exist', () => {
+      store.fromJSON([{ id: 'block1', type: 'paragraph', data: { text: 'First' } }]);
+
+      expect(store.replaceBlockContent('nonexistent', 'list', { text: '' })).toBe(false);
+      expect(store.toJSON()).toHaveLength(1);
+    });
+
+    it('is a single undo entry that restores the original type and data', () => {
+      store.fromJSON([{ id: 'block1', type: 'list', data: { text: 'Item', style: 'unordered' } }]);
+
+      const undoManager = new Y.UndoManager(store.yblocks, {
+        trackedOrigins: new Set(['local']),
+      });
+
+      store.replaceBlockContent('block1', 'paragraph', { text: 'Item' });
+
+      // Exactly one undo entry for the whole conversion.
+      expect(undoManager.undoStack.length).toBe(1);
+      expect(store.toJSON()[0]).toMatchObject({ type: 'paragraph', data: { text: 'Item' } });
+
+      // Undo restores the list; redo re-applies the paragraph.
+      undoManager.undo();
+      expect(store.toJSON()[0]).toMatchObject({ type: 'list', data: { text: 'Item', style: 'unordered' } });
+
+      undoManager.redo();
+      expect(store.toJSON()[0]).toMatchObject({ type: 'paragraph', data: { text: 'Item' } });
+
+      undoManager.destroy();
+    });
+  });
+
   describe('moveBlock', () => {
     it('moves block to new index', () => {
       store.fromJSON([

@@ -18,6 +18,26 @@ export class CrossBlockSelection extends Module {
   private lastSelectedBlock: Block | null = null;
 
   /**
+   * Ids of the blocks that were already selected when a Shift+pointer gesture
+   * began. A Shift+DRAG must EXTEND this base set (Notion-additive), not replace
+   * it, so we snapshot it on mousedown and re-apply it on every drag move.
+   */
+  private shiftDragBaseSelected: Set<string> | null = null;
+
+  /**
+   * The block the Shift+pointer gesture started on — the pivot the drag range
+   * extends from.
+   */
+  private shiftDragClickedBlock: Block | null = null;
+
+  /**
+   * Whether the current Shift+pointer gesture became a drag (a mouseover reached
+   * a different block before mouseup). A pure Shift+CLICK leaves this false and
+   * the synchronous range-select from mousedown stands.
+   */
+  private shiftDragActive = false;
+
+  /**
    * Module preparation
    * @returns {Promise}
    */
@@ -90,6 +110,92 @@ export class CrossBlockSelection extends Module {
 
     return true;
   }
+
+  /**
+   * Start watching a Shift+pointer gesture for a drag after the synchronous
+   * range-click has been applied. Snapshots the base selection and the clicked
+   * pivot block so a subsequent drag can extend the selection additively.
+   * @param baseSelected - ids of blocks selected before this gesture began
+   */
+  private beginShiftDragWatch(baseSelected: Set<string>): void {
+    this.shiftDragBaseSelected = baseSelected;
+    // selectBlockRange (via handleShiftClick) sets lastSelectedBlock to the clicked block.
+    this.shiftDragClickedBlock = this.lastSelectedBlock;
+    this.shiftDragActive = false;
+
+    this.listeners.on(document, 'mouseover', this.onShiftDragOver);
+    this.listeners.on(document, 'mouseup', this.onShiftDragUp);
+  }
+
+  /**
+   * Mouse over handler for a Shift+DRAG. Re-selects the union of the pre-gesture
+   * base selection and the inclusive range from the clicked pivot to the hovered
+   * block, so dragging EXTENDS the existing selection rather than replacing it.
+   * @param event - mouseover event
+   */
+  private onShiftDragOver = (event: Event): void => {
+    const mouseEvent = event as MouseEvent;
+    const { BlockManager, BlockSelection, DragManager } = this.Blok;
+
+    if (!this.shiftDragClickedBlock || !this.shiftDragBaseSelected || DragManager.isDragging) {
+      return;
+    }
+
+    const rawHover = BlockManager.getBlockByChildNode(mouseEvent.target as Node);
+
+    if (!rawHover) {
+      return;
+    }
+
+    const hoverBlock = BlockManager.resolveToRootBlock(rawHover);
+    const anchorIndex = BlockManager.blocks.indexOf(this.shiftDragClickedBlock);
+    const hoverIndex = BlockManager.blocks.indexOf(hoverBlock);
+
+    if (anchorIndex === -1 || hoverIndex === -1 || anchorIndex === hoverIndex) {
+      return;
+    }
+
+    const start = Math.min(anchorIndex, hoverIndex);
+    const end = Math.max(anchorIndex, hoverIndex);
+
+    this.shiftDragActive = true;
+    SelectionUtils.get()?.removeAllRanges();
+
+    BlockManager.blocks.forEach((block, index) => {
+      const inDraggedRange = index >= start && index <= end;
+      const inBaseSelection = this.shiftDragBaseSelected?.has(block.id) ?? false;
+
+      BlockManager.blocks[index].selected = inDraggedRange || inBaseSelection;
+    });
+
+    BlockSelection.clearCache();
+
+    this.firstSelectedBlock = this.shiftDragClickedBlock;
+    this.lastSelectedBlock = hoverBlock;
+
+    this.Blok.Toolbar.close();
+  };
+
+  /**
+   * Mouse up handler ending a Shift+pointer gesture. Tears down the drag-watch
+   * listeners and, when the gesture was a drag, re-opens the multi-block toolbar.
+   */
+  private onShiftDragUp = (): void => {
+    this.listeners.off(document, 'mouseover', this.onShiftDragOver);
+    this.listeners.off(document, 'mouseup', this.onShiftDragUp);
+
+    const wasDrag = this.shiftDragActive;
+
+    this.shiftDragBaseSelected = null;
+    this.shiftDragClickedBlock = null;
+    this.shiftDragActive = false;
+
+    if (wasDrag && this.Blok.BlockSelection.anyBlockSelected) {
+      this.Blok.UI.disableHoverForCooldown();
+      this.Blok.UI.resetBlockHoverState();
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    }
+  };
 
   /**
    * Handle a Cmd/Ctrl+Shift+Click or Alt+Shift+Click: TOGGLE the clicked block
@@ -353,14 +459,26 @@ export class CrossBlockSelection extends Module {
      * caret's block, or the first block of an in-progress selection) to the
      * clicked block — Notion parity. Handled before the native-selection clear so
      * the new range overrides any leftover text selection.
+     *
+     * A Shift+mousedown is ambiguous: it may be a Shift+CLICK (range-select,
+     * handled synchronously here) or the start of a Shift+DRAG (which must EXTEND
+     * the existing selection additively). We resolve the range-click immediately
+     * so pure clicks keep working, but also snapshot the pre-gesture selection and
+     * start watching for a drag; if the pointer then reaches another block, the
+     * drag re-applies `base ∪ dragged-range` instead of the replaced range.
      */
     if (
       event.shiftKey &&
       event.button === mouseButtons.LEFT &&
-      UI.nodes.redactor.contains(event.target as Node) &&
-      this.handleShiftClick(event)
+      UI.nodes.redactor.contains(event.target as Node)
     ) {
-      return;
+      const baseSelected = new Set(this.Blok.BlockSelection.selectedBlocks.map((block) => block.id));
+
+      if (this.handleShiftClick(event)) {
+        this.beginShiftDragWatch(baseSelected);
+
+        return;
+      }
     }
 
     /**

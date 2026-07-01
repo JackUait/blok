@@ -141,6 +141,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
     YjsManager: {
       addBlock: vi.fn(),
       removeBlock: vi.fn(),
+      replaceBlockContent: vi.fn(() => true),
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
@@ -1296,8 +1297,12 @@ describe('BlockOperations', () => {
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
       expect(newBlock).toBeDefined();
-      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith(block.id);
-      expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+      // Mutates the type + data on the SAME Yjs entry (keeps the id) rather than
+      // remove+add — a remove+add of the same id is misread as a no-op move and
+      // breaks undo of conversions.
+      expect(dependencies.YjsManager.replaceBlockContent).toHaveBeenCalledWith(block.id, 'paragraph', { text: 'New' });
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
     });
 
     it('BUG 3: preserves the original block id across replace/turn-into (id-keyed refs survive)', () => {
@@ -1318,7 +1323,7 @@ describe('BlockOperations', () => {
      * If `block` has been removed between the caller obtaining its reference
      * and `replace()` executing (e.g., Yjs remote delete while
      * `await block.save()` resolves during `convert()`), `getBlockIndex`
-     * returns -1, then `YjsManager.addBlock({...}, -1)` and
+     * returns -1, then `YjsManager.replaceBlockContent(id, ...)` and
      * `insert({ index: -1, replace: true })` corrupt downstream state.
      *
      * Abort cleanly when the source is stale: return the original block and
@@ -1330,11 +1335,10 @@ describe('BlockOperations', () => {
       const result = operations.replace(staleBlock, 'paragraph', { text: 'New' }, blocksStore);
 
       expect(result).toBe(staleBlock);
-      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
-      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.replaceBlockContent).not.toHaveBeenCalled();
     });
 
-    it('uses Yjs transaction for atomic undo', () => {
+    it('replaces block content atomically for a single undo entry', () => {
       const block = repository.getBlockById('block-1');
       if (!block) {
         throw new Error('Test setup failed: block-1 not found');
@@ -1342,22 +1346,25 @@ describe('BlockOperations', () => {
 
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
-      expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+      // The whole conversion is one Yjs call (which transacts internally), so it
+      // undoes/redoes as a single step.
+      expect(dependencies.YjsManager.replaceBlockContent).toHaveBeenCalledTimes(1);
       expect(newBlock).toBeDefined();
     });
 
-    it('inserts with skipYjsSync since transaction handles sync', () => {
+    it('writes to Yjs only through replaceBlockContent (DOM insert is skipYjsSync)', () => {
       const block = repository.getBlockById('block-1');
       if (!block) {
         throw new Error('Test setup failed: block-1 not found');
       }
-      const transactSpy = vi.fn((fn: () => void) => fn());
-
-      (dependencies.YjsManager.transact as ReturnType<typeof vi.fn>).mockImplementation(transactSpy);
 
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
-      expect(transactSpy).toHaveBeenCalled();
+      // The DOM re-render uses skipYjsSync, so the atomic replaceBlockContent is
+      // the ONLY Yjs write — no secondary updateBlockData/addBlock sync that
+      // would split the conversion into extra undo entries.
+      expect(dependencies.YjsManager.replaceBlockContent).toHaveBeenCalledTimes(1);
+      expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
       expect(newBlock).toBeDefined();
     });
 

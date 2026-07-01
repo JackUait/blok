@@ -1009,9 +1009,17 @@ export class DragController extends Module {
 
   /**
    * Maps a drop-slot depth (what the indicator showed) to a STRUCTURAL parent:
-   * the nearest preceding block (not part of the moving group) whose depth is one
-   * less than the target depth. Returns null for a root-level drop (depth 0) or
-   * when there is no suitable ancestor at this position.
+   * the nearest preceding block (not part of the moving group) that is a LEGAL
+   * nesting parent for the moved block. Returns null for a root-level drop
+   * (depth 0) or when there is no suitable ancestor at this position.
+   *
+   * Legal-parent rule (Notion parity): a list item may nest under ANY preceding
+   * block (a bullet nests under a preceding paragraph too); every OTHER block may
+   * nest only under a preceding LIST item — never under a plain paragraph or a
+   * (closed) toggle. Open containers are re-homed earlier by resolveParentForDrop,
+   * so they never reach here. This keeps cursor-authoritative (cap-and-hold) depth
+   * for list drags while stopping a paragraph/other block from silently nesting
+   * under a non-list predecessor it dropped beside.
    * @param movedBlock - the block that was dropped
    * @param dropDepth - the visual depth the drop indicator showed
    * @param movingIds - ids of every block in the moving group (skipped as anchors)
@@ -1025,6 +1033,7 @@ export class DragController extends Module {
       return null;
     }
 
+    const movedIsList = movedBlock.name === 'list';
     const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
     const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
 
@@ -1033,16 +1042,27 @@ export class DragController extends Module {
         continue;
       }
 
+      // A list item may nest under any block; any other block may nest only under
+      // a list item (paragraphs / closed toggles are not valid nesting parents).
+      const candidateIsList = candidate.name === 'list';
+      const isValidParent = movedIsList || candidateIsList;
+
       const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
 
       if (candidateDepth === dropDepth - 1) {
-        return candidate.id;
+        // Candidate sits exactly at the target parent depth: nest under it only
+        // when it is a legal parent, otherwise bail to root (never nest a
+        // non-list block under a plain paragraph or a closed toggle).
+        return isValidParent ? candidate.id : null;
       }
 
-      // A shallower block than the target parent depth means there is no valid
-      // ancestor at this slot — fall back to root rather than over-nesting.
+      // No ancestor at the exact target depth. A non-list block clamps onto the
+      // nearest shallower LIST item — flat list carriers are all structural
+      // depth 0, so this is the deepest reachable parent and matches the
+      // "nest from the bottom" preview. A list block (or a non-list block whose
+      // nearest predecessor is not a list) bails to root rather than over-nesting.
       if (candidateDepth < dropDepth - 1) {
-        return null;
+        return !movedIsList && candidateIsList ? candidate.id : null;
       }
     }
 
@@ -1050,11 +1070,14 @@ export class DragController extends Module {
   }
 
   /**
-   * Re-homes each dropped root block under the preceding block at dropDepth-1 so
-   * a block dropped at a visual depth becomes a real structural child. Every block
-   * — list item or otherwise — nests under any preceding block at dropDepth-1
-   * (resolveStructuralParentForDepth), matching Notion (a bullet can nest under a
-   * preceding paragraph). No-ops when the parent is already correct.
+   * Re-homes dropped root blocks so a block dropped at a visual depth becomes a
+   * real structural child. A single block (or a group's SHALLOWEST member — the
+   * dragged primary) nests under the external anchor at dropDepth-1 via
+   * {@link resolveStructuralParentForDepth}. Deeper members of a moved subtree nest
+   * under their WITHIN-GROUP parent instead, so the subtree keeps its relative
+   * structure and shifts by the same depth delta as its root — rather than every
+   * member flattening onto the anchor at the same depth. No-ops when the parent is
+   * already correct.
    * @param reparentedBlocks - the dropped blocks that landed at root level
    * @param dropDepth - the visual depth the drop indicator showed
    * @param movingIds - ids of the moving group (skipped as anchors)
@@ -1067,12 +1090,43 @@ export class DragController extends Module {
     affectedParentIds: Set<string>,
     reparentedListIds: Set<string>
   ): void {
-    for (const movedBlock of reparentedBlocks) {
-      // Every block — list item or otherwise — nests under the nearest preceding
-      // block at dropDepth-1, matching Notion (a bullet can nest under a preceding
-      // paragraph, not only under another bullet). The list-only restriction that
-      // used to bail to root when the predecessor wasn't a list is gone.
-      const structuralParentId = this.resolveStructuralParentForDepth(movedBlock, dropDepth, movingIds);
+    // Process in document order so a subtree's shallower members are seen before
+    // their descendants (needed to link each descendant to its within-group parent).
+    const ordered = [...reparentedBlocks].sort(
+      (a, b) => this.Blok.BlockManager.getBlockIndex(a) - this.Blok.BlockManager.getBlockIndex(b)
+    );
+
+    // Snapshot each block's flat (pre-reparent) list depth up front, before any
+    // setBlockParent mutates the tree, so the relative structure can be preserved.
+    const flatDepthOf = new Map<string, number>();
+
+    for (const block of ordered) {
+      flatDepthOf.set(block.id, getListItemDepth(block) ?? 0);
+    }
+
+    // parentByFlatDepth[d] = id of the most recent processed group member at flat
+    // depth d — the structural parent for the next member at flat depth d + 1.
+    const parentByFlatDepth = new Map<number, string>();
+
+    for (const movedBlock of ordered) {
+      const flatDepth = flatDepthOf.get(movedBlock.id) ?? 0;
+      const inGroupParentId = flatDepth > 0 ? parentByFlatDepth.get(flatDepth - 1) : undefined;
+
+      // A within-group ancestor exists → this is a deeper member of the moved
+      // subtree; nest under it to preserve relative depth. Otherwise this is the
+      // group's root (or a single block) → re-home under the external anchor at
+      // the pointer-resolved drop depth.
+      const structuralParentId = inGroupParentId !== undefined
+        ? inGroupParentId
+        : this.resolveStructuralParentForDepth(movedBlock, dropDepth, movingIds);
+
+      // Record this member as a candidate parent for deeper members, and drop any
+      // stale deeper entries (a shallower member closes deeper sub-lists).
+      parentByFlatDepth.set(flatDepth, movedBlock.id);
+
+      [...parentByFlatDepth.keys()]
+        .filter(depth => depth > flatDepth)
+        .forEach(depth => parentByFlatDepth.delete(depth));
 
       if (structuralParentId === movedBlock.parentId) {
         continue;

@@ -444,7 +444,7 @@ test.describe('inline tool marker', () => {
     await expect(picker).not.toBeVisible();
   });
 
-  test('opens color picker with CMD+SHIFT+H keyboard shortcut', async ({ page }) => {
+  test('applies the highlight directly with CMD+SHIFT+H (never opens the picker)', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -468,13 +468,24 @@ test.describe('inline tool marker', () => {
 
     const modifierKey = await getModifierKey(page);
 
-    // Press CMD+SHIFT+H to open marker color picker
+    // Press CMD+SHIFT+H. Unlike clicking the toolbar button, the shortcut applies
+    // the last-used (default on first use) marker highlight DIRECTLY and never
+    // opens the picker (Notion parity — see InlineToolMarker.applyShortcut).
     await page.keyboard.press(`${modifierKey}+Shift+h`);
 
-    // Verify the color picker popover is visible
+    // The selection is highlighted in place …
+    await expect
+      .poll(async () => paragraph.evaluate(el => Boolean(el.querySelector('mark'))))
+      .toBe(true);
+
+    const html = await paragraph.innerHTML();
+
+    expect(html).toMatch(/<mark[^>]*>Shortcut<\/mark>/);
+
+    // … and the color picker never appears.
     const picker = page.locator('[data-blok-testid="marker-picker"]');
 
-    await expect(picker).toBeVisible();
+    await expect(picker).not.toBeVisible();
   });
 
   test('keeps color picker open after clicking Default swatch', async ({ page }) => {

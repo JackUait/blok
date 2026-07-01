@@ -22,7 +22,7 @@ import type {
 } from '../../types/tools';
 import { DATA_ATTR } from '../components/constants/data-attributes';
 import { deepEqual } from '../shared/deep-equal';
-import { fillDefaults, type PropSchema, type PropSchemaEntry } from '../shared/prop-schema';
+import { fillDefaults, type PropSchema } from '../shared/prop-schema';
 import { mountChildBlocks } from '../tools/nested-blocks';
 
 import {

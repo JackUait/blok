@@ -1200,9 +1200,9 @@ test.describe('drag and drop', () => {
       //     - Deep A1 (depth 2) <- must keep depth 2, not collapse to 1
       // - Second (depth 0)
       //
-      // Bug: moveBlocksDown processes in reverse order (DeepA1 → NestedA → First).
-      // When DeepA1 fires its `moved()` hook, Second is still the previous block (depth 0),
-      // so maxAllowedDepth=1 and depth 2 is incorrectly capped to 1.
+      // Cap-and-hold (cursor-authoritative nesting) is the intended model: releasing
+      // over the drop target's body nests the dragged primary (First) one level under
+      // Second, and the subtree children keep their relative structure.
       const blocks = createListBlocks([
         { text: 'First' },
         { text: 'Nested A', depth: 1 },
@@ -1234,10 +1234,12 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[2])).toBe('Nested A');
       expect(getBlockText(savedData?.blocks[3])).toBe('Deep A1');
 
-      // Depths must be preserved — the subtree structure must survive drag & drop
-      expect(getBlockDepth(savedData?.blocks[1])).toBeUndefined(); // First: depth 0 (omitted)
-      expect(getBlockDepth(savedData?.blocks[2])).toBe(1);         // Nested A: depth 1
-      expect(getBlockDepth(savedData?.blocks[3])).toBe(2);         // Deep A1: depth 2 ← this fails without the fix
+      // Cap-and-hold (cursor-authoritative nesting): releasing over the target's
+      // body nests the dragged primary (First) one level under Second, and the whole
+      // subtree shifts by the SAME delta so its relative structure is preserved.
+      expect(getBlockDepth(savedData?.blocks[1])).toBe(1);         // First: 0 → 1 (nested under Second)
+      expect(getBlockDepth(savedData?.blocks[2])).toBe(2);         // Nested A: 1 → 2 (+1 delta)
+      expect(getBlockDepth(savedData?.blocks[3])).toBe(3);         // Deep A1: 2 → 3 (+1 delta)
     });
 
     // Previously skipped due to toolbar content offset (translateX) interfering with drag
@@ -1367,7 +1369,8 @@ test.describe('drag and drop', () => {
       //   - Third (depth 1)
       // - Fourth (depth 0) <- drag this between Second and Third
       //
-      // After: Fourth should become depth 1 to not break the list structure
+      // Cap-and-hold: the drop honors the cursor's horizontal position and caps at
+      // the deepest legal depth (previous depth 1 → max 2), so Fourth lands at depth 2.
       const blocks = createListBlocks([
         { text: 'First' },
         { text: 'Second', depth: 1 },
@@ -1401,8 +1404,9 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[2])).toBe('Fourth');
       expect(getBlockText(savedData?.blocks[3])).toBe('Third');
 
-      // Fourth should have been adjusted to depth 1
-      expect(getBlockDepth(savedData?.blocks[2])).toBe(1);
+      // Cap-and-hold (cursor-authoritative nesting): releasing over the target's
+      // body caps at the deepest legal depth (previous Second is depth 1 → max 2).
+      expect(getBlockDepth(savedData?.blocks[2])).toBe(2);
     });
 
     test('should preserve ordering when dragging list subtree', async ({ page }) => {
@@ -1580,12 +1584,14 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[1])).toBe('Nested A');
       expect(getBlockText(savedData?.blocks[2])).toBe('Deep A1');
       expect(getBlockText(savedData?.blocks[3])).toBe('Second');
-      expect(getBlockDepth(savedData?.blocks[3])).toBe(2); // ← no-op without the fix
+      // Cap-and-hold (cursor-authoritative): releasing over the target's body caps
+      // at the deepest legal depth (previous Deep A1 is depth 2 → max 3).
+      expect(getBlockDepth(savedData?.blocks[3])).toBe(3);
 
-      // The bullet glyph must reflect the new depth (depth 2 → "▪"), not the stale "•".
+      // The bullet glyph must reflect the new depth (visual depth 3 cycles back to "•").
       const droppedMarker = secondBlock.locator('[data-list-marker]');
 
-      await expect(droppedMarker).toHaveText('▪');
+      await expect(droppedMarker).toHaveText('•');
     });
 
     test('nests a top-level ORDERED item dropped at the end of a nested sub-list and renumbers it', async ({ page }) => {
@@ -1620,12 +1626,15 @@ test.describe('drag and drop', () => {
       expect(getBlockText(savedData?.blocks[0])).toBe('First');
       expect(getBlockText(savedData?.blocks[1])).toBe('Second');
       expect(getBlockText(savedData?.blocks[2])).toBe('Third');
-      expect(getBlockDepth(savedData?.blocks[2])).toBe(1); // ← no-op without the fix
+      // Cap-and-hold (cursor-authoritative): releasing over the target's body caps
+      // at the deepest legal depth (previous Second is depth 1 → max 2).
+      expect(getBlockDepth(savedData?.blocks[2])).toBe(2);
 
-      // Nested ordered item renumbers from "2." to the second sibling "b.".
+      // Ordered numbering formats by visual depth: depth 2 → roman → the first
+      // (and only) roman sibling at this level renders "i.".
       const droppedMarker = thirdBlock.locator('[data-list-marker]');
 
-      await expect(droppedMarker).toHaveText('b.');
+      await expect(droppedMarker).toHaveText('i.');
     });
 
     test('nests a non-list block dropped at the bottom edge of a nested item (nest from the bottom)', async ({ page }) => {

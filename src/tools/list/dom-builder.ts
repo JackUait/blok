@@ -306,6 +306,35 @@ export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement =>
     return li;
   };
 
+  // Return the open list level for `depth`, opening (and anchoring) a fresh
+  // list element when none is open or the open one has a different style.
+  const ensureLevel = (item: SemanticListItem, depth: number): Level => {
+    const existing = stack[depth];
+
+    if (existing !== undefined && existing.style === item.style) {
+      return existing;
+    }
+
+    const listEl = makeListElement(item.style);
+
+    if (depth === 0) {
+      container.appendChild(listEl);
+    } else {
+      const parent = stack[depth - 1];
+      const anchor = parent.lastItem ?? parent.listEl.appendChild(document.createElement('li'));
+
+      parent.lastItem = anchor;
+      anchor.appendChild(listEl);
+    }
+
+    const level: Level = { style: item.style, listEl, lastItem: null };
+
+    stack[depth] = level;
+    stack.length = depth + 1;
+
+    return level;
+  };
+
   for (const item of items) {
     // Clamp so an item can be at most one level deeper than the deepest open
     // list — a jump from depth 0 to 2 would otherwise leave an orphan level.
@@ -316,26 +345,7 @@ export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement =>
       stack.pop();
     }
 
-    let level = stack[depth];
-
-    if (level === undefined || level.style !== item.style) {
-      const listEl = makeListElement(item.style);
-
-      if (depth === 0) {
-        container.appendChild(listEl);
-      } else {
-        const parent = stack[depth - 1];
-        const anchor = parent.lastItem ?? parent.listEl.appendChild(document.createElement('li'));
-
-        parent.lastItem = anchor;
-        anchor.appendChild(listEl);
-      }
-
-      level = { style: item.style, listEl, lastItem: null };
-      stack[depth] = level;
-      stack.length = depth + 1;
-    }
-
+    const level = ensureLevel(item, depth);
     const li = buildItemElement(item);
 
     level.listEl.appendChild(li);

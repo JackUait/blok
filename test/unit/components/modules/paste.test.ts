@@ -1621,7 +1621,10 @@ describe('Paste module', () => {
       const [, event] = mocks.BlockManager.paste.mock.calls[0];
       const detail = event.detail as { data: HTMLElement };
 
-      expect(detail.data.innerHTML).toContain('<b>');
+      // Bold is normalized to <strong> at paste time (the html handler runs the
+      // same legacy <b> → <strong> conversion the live editor applies), so Google
+      // Docs bold survives as <strong>; italic is preserved as <i>.
+      expect(detail.data.innerHTML).toContain('<strong>');
       expect(detail.data.innerHTML).toContain('<i>');
     });
 

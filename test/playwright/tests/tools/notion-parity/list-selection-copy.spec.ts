@@ -53,7 +53,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
     window.blokInstance = blok;
   }, { holder: HOLDER_ID, blokData: data });
 
-  await page.waitForSelector(BLOCK_SELECTOR);
+  await page.locator(BLOCK_SELECTOR).first().waitFor();
 };
 
 /**

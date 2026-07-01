@@ -163,9 +163,7 @@ export class BlockMutation {
      * conversion (typing `- ` on a paragraph). External references — comments,
      * backlinks, block-mentions — anchor to the block id, so regenerating it
      * here silently broke every id-keyed reference the moment a block changed
-     * type. Reusing the id keeps those anchors intact; the Yjs remove+add below
-     * runs in a single transaction, so the id is momentarily absent only inside
-     * that atomic step (never observable to Yjs peers or undo).
+     * type. Keeping the id keeps those anchors intact.
      */
     const newBlockId = block.id;
 
@@ -173,15 +171,19 @@ export class BlockMutation {
     const oldParentId = block.parentId;
     const oldContentIds = [...block.contentIds];
 
-    // Atomic transaction: remove old block + add new block as single undo entry
-    this.dependencies.YjsManager.transact(() => {
-      this.dependencies.YjsManager.removeBlock(block.id);
-      this.dependencies.YjsManager.addBlock({
-        id: newBlockId,
-        type: newTool,
-        data,
-      }, blockIndex);
-    });
+    /**
+     * Mutate the block's TYPE and DATA in place on the SAME Yjs entry (one
+     * transaction = one undo entry).
+     *
+     * The previous implementation removed the yblock and re-added a NEW one that
+     * REUSED the same id. `BlockObserver` saw the id in both the added and
+     * removed sets and emitted a no-op MOVE, so undoing a conversion never
+     * re-rendered the block back to its prior tool (the undo/redo regression in
+     * the list convert/delete specs). An in-place mutation emits an `update`
+     * event instead, which the Yjs→DOM reconciler resolves against the yblock's
+     * `type` and re-renders the correct tool.
+     */
+    this.dependencies.YjsManager.replaceBlockContent(newBlockId, newTool, data);
 
     // DOM update (skip Yjs sync — already done above)
     const newBlock = this.ctx.insert({

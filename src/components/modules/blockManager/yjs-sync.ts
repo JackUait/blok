@@ -465,6 +465,42 @@ export class BlockYjsSync {
       }
     }
 
+    // Tool TYPE changed (a turn-into / markdown conversion being undone, redone,
+    // or applied by a remote peer). The in-memory block is still the OLD tool
+    // instance, so `setData` below can't accept the new tool's data — recreate
+    // the block with the tool the Yjs record now names. This mirrors the tunes
+    // recreate path and is the counterpart to `replaceBlockContent`, which
+    // mutates a block's type in place rather than remove+add (the old approach
+    // the observer misclassified as a no-op move, so undo never re-rendered).
+    const yjsType = yblock.get('type') as string;
+
+    if (yjsType !== block.name) {
+      const blockIndex = this.handlers.getBlockIndex(block);
+      const newBlock = this.factory.composeBlock({
+        id: block.id,
+        tool: yjsType,
+        data,
+        tunes,
+        contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
+        parentId: block.parentId ?? undefined,
+        bindEventsImmediately: true,
+        lastEditedAt,
+        lastEditedBy,
+      });
+
+      this.withAtomicOperation(() => {
+        this.handlers.replaceBlock(blockIndex, newBlock);
+
+        const hadOrphanedChildren = this.reconcileOrphanedChildren(blockId);
+
+        if (hadOrphanedChildren) {
+          newBlock.call(BlockToolAPI.RENDERED);
+        }
+      }, { extendThroughRAF: true });
+
+      return;
+    }
+
     // Check if tunes have changed - if so, we need to recreate the block
     // because tunes are instantiated during block construction
     const currentTunes = block.preservedTunes;

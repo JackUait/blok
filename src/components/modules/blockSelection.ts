@@ -18,6 +18,15 @@ import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/d
 import type { ListItemStyle } from '../../tools/list/types';
 
 /**
+ * A run of consecutive selected blocks for clipboard serialization: either a
+ * group of adjacent list blocks (emitted as a single semantic list) or a single
+ * non-list block (emitted via the sanitize path).
+ */
+type ClipboardSegment =
+  | { type: 'list'; items: Block[] }
+  | { type: 'other'; block: Block };
+
+/**
  *
  */
 export class BlockSelection extends Module {
@@ -379,52 +388,15 @@ export class BlockSelection extends Module {
      * SEMANTIC `<ul>`/`<ol>` instead, grouping consecutive selected list blocks into
      * a single nested list per depth. Non-list blocks keep the sanitize path.
      */
-    const blocks = this.selectedBlocks;
-    let cursor = 0;
+    const segments = this.groupBlocksForClipboard(this.selectedBlocks);
 
-    while (cursor < blocks.length) {
-      const block = blocks[cursor];
-
-      if (block.name === LIST_TOOL_NAME) {
-        const group: SemanticListItem[] = [];
-
-        while (cursor < blocks.length && blocks[cursor].name === LIST_TOOL_NAME) {
-          group.push(this.toSemanticListItem(blocks[cursor].preservedData));
-          cursor += 1;
-        }
-
-        const listContainer = buildSemanticListHtml(group);
-
-        while (listContainer.firstChild) {
-          fakeClipboard.appendChild(listContainer.firstChild);
-        }
-
-        continue;
-      }
-
-      const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
-      const wrapper = $.make('div');
-
-      wrapper.innerHTML = cleanHTML;
-
-      const textContent = wrapper.textContent ?? '';
-
-      const hasElementChildren = Array.from(wrapper.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
-      const shouldWrapWithParagraph = !hasElementChildren && textContent.trim().length > 0;
-
-      if (shouldWrapWithParagraph) {
-        const paragraph = $.make('p');
-
-        paragraph.innerHTML = wrapper.innerHTML;
-        fakeClipboard.appendChild(paragraph);
+    segments.forEach((segment) => {
+      if (segment.type === 'list') {
+        this.appendSemanticList(segment.items, fakeClipboard);
       } else {
-        while (wrapper.firstChild) {
-          fakeClipboard.appendChild(wrapper.firstChild);
-        }
+        this.appendNonListBlock(segment.block, fakeClipboard);
       }
-
-      cursor += 1;
-    }
+    });
 
     /**
      * The text/plain flavor carries Markdown — headings as `#`, bold as `**`,
@@ -481,6 +453,74 @@ export class BlockSelection extends Module {
 
     if (clipboard !== undefined && typeof clipboard.writeText === 'function') {
       await clipboard.writeText(markdown);
+    }
+  }
+
+  /**
+   * Partition selected blocks into runs of consecutive list blocks (grouped into
+   * a single semantic list) and standalone non-list blocks.
+   * @param blocks - the selected blocks in document order
+   * @returns the ordered clipboard segments
+   */
+  private groupBlocksForClipboard(blocks: Block[]): ClipboardSegment[] {
+    return blocks.reduce<ClipboardSegment[]>((segments, block) => {
+      const last = segments[segments.length - 1];
+      const isList = block.name === LIST_TOOL_NAME;
+
+      if (isList && last?.type === 'list') {
+        last.items.push(block);
+      } else if (isList) {
+        segments.push({ type: 'list', items: [block] });
+      } else {
+        segments.push({ type: 'other', block });
+      }
+
+      return segments;
+    }, []);
+  }
+
+  /**
+   * Append a group of consecutive list blocks to the fake clipboard as a single
+   * semantic `<ul>`/`<ol>` structure.
+   * @param items - the consecutive list blocks
+   * @param fakeClipboard - the container receiving the semantic list
+   */
+  private appendSemanticList(items: Block[], fakeClipboard: HTMLElement): void {
+    const group: SemanticListItem[] = items.map((block) => this.toSemanticListItem(block.preservedData));
+    const listContainer = buildSemanticListHtml(group);
+
+    while (listContainer.firstChild) {
+      fakeClipboard.appendChild(listContainer.firstChild);
+    }
+  }
+
+  /**
+   * Append a single non-list block to the fake clipboard via the sanitize path,
+   * wrapping bare text in a paragraph so structure survives in HTML targets.
+   * @param block - the non-list block
+   * @param fakeClipboard - the container receiving the sanitized content
+   */
+  private appendNonListBlock(block: Block, fakeClipboard: HTMLElement): void {
+    const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
+    const wrapper = $.make('div');
+
+    wrapper.innerHTML = cleanHTML;
+
+    const textContent = wrapper.textContent ?? '';
+    const hasElementChildren = Array.from(wrapper.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
+    const shouldWrapWithParagraph = !hasElementChildren && textContent.trim().length > 0;
+
+    if (shouldWrapWithParagraph) {
+      const paragraph = $.make('p');
+
+      paragraph.innerHTML = wrapper.innerHTML;
+      fakeClipboard.appendChild(paragraph);
+
+      return;
+    }
+
+    while (wrapper.firstChild) {
+      fakeClipboard.appendChild(wrapper.firstChild);
     }
   }
 
@@ -641,8 +681,12 @@ export class BlockSelection extends Module {
    * API — and without this a plain arrow would collapse the selection to a caret
    * instead of moving it (Notion parity).
    *
-   * Only a selection of EXACTLY one block is adopted; a multi-block selection is
-   * left untouched so its arrow behaviour is unchanged.
+   * Only a selection of EXACTLY one FOCUSABLE block is adopted; a multi-block
+   * selection is left untouched so its arrow behaviour is unchanged. A single
+   * NON-focusable block selection (e.g. the transient caret-navigation highlight
+   * placed on a contentless/image/embed block while arrowing past it) is also
+   * left untouched, so the arrow falls through to caret navigation and lands a
+   * real caret in the adjacent focusable block instead of dragging the highlight.
    * @returns true when navigation mode is now active on a single-block selection
    */
   public adoptSelectionIntoNavigationMode(): boolean {
@@ -652,7 +696,7 @@ export class BlockSelection extends Module {
 
     const selected = this.selectedBlocks;
 
-    if (selected.length !== 1) {
+    if (selected.length !== 1 || !selected[0].focusable) {
       return false;
     }
 
@@ -1007,7 +1051,9 @@ export class BlockSelection extends Module {
     selection?.removeAllRanges();
 
     const select = (current: Block): void => {
-      current.selected = true;
+      const target = current;
+
+      target.selected = true;
 
       for (const childId of current.contentIds) {
         const child = BlockManager.getBlockById(childId);

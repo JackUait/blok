@@ -866,7 +866,10 @@ export class KeyboardNavigation extends BlockEventComposer {
      * which let the LOWER block's type win (the m2 divergence).
      */
     if (currentBlock.isEmpty && areBlocksMergeable(currentBlock, nextBlock)) {
-      this.mergeBlocks(currentBlock, nextBlock);
+      // The empty upper block absorbs the next block's text, so the caret belongs
+      // at the START of the merged content (the empty input the pre-merge focus()
+      // anchored to is replaced when the merge re-renders — re-anchor after it).
+      this.mergeBlocks(currentBlock, nextBlock, true);
 
       return;
     }
@@ -927,8 +930,8 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @param targetBlock - to which Block we want to merge
    * @param blockToMerge - what Block we want to merge
    */
-  private mergeBlocks(targetBlock: Block, blockToMerge: Block): void {
-    const { BlockManager } = this.Blok;
+  private mergeBlocks(targetBlock: Block, blockToMerge: Block, restoreCaretToStart = false): void {
+    const { BlockManager, Caret } = this.Blok;
 
     if (targetBlock.lastInput === undefined) {
       return;
@@ -939,6 +942,13 @@ export class KeyboardNavigation extends BlockEventComposer {
     BlockManager
       .mergeBlocks(targetBlock, blockToMerge)
       .then(() => {
+        // For a merge INTO an empty target (forward-Delete "upper wins"), the
+        // pre-merge focus() anchored the caret on the empty input that the merge
+        // then replaced, so re-anchor it on the merged block's fresh DOM.
+        if (restoreCaretToStart) {
+          Caret.setToBlock(targetBlock, Caret.positions.START);
+        }
+
         this.closeToolbarIfNotInTableCell();
       })
       .catch(() => {

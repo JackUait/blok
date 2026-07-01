@@ -565,7 +565,7 @@ test.describe('modules/blockManager', () => {
     expect(updatedIndex).toBe(1);
   });
 
-  test('updates currentBlockIndex when navigating blocks with Tab key', async ({ page }) => {
+  test('keeps currentBlockIndex on the first block when Tab has no preceding sibling to indent under', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         id: 'tab-block-0',
@@ -594,10 +594,11 @@ test.describe('modules/blockManager', () => {
 
     expect(initialIndex).toBe(0);
 
-    // Press Tab to move to next block
+    // Notion parity: Tab indents the current block under its preceding sibling and never
+    // relocates focus. The first block has no preceding sibling, so Tab is a strict no-op —
+    // currentBlockIndex must stay on block 0 (it must NOT jump to the next block).
     await page.keyboard.press('Tab');
 
-    // Wait for focus change to propagate by polling the index
     await expect(async () => {
       const updatedIndex = await page.evaluate(() => {
         if (!window.blokInstance) {
@@ -609,7 +610,7 @@ test.describe('modules/blockManager', () => {
         return blok.module.blockManager.currentBlockIndex;
       });
 
-      expect(updatedIndex).toBe(1);
+      expect(updatedIndex).toBe(0);
     }).toPass();
   });
 });

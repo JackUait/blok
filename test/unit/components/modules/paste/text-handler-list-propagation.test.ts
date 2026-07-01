@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { TextHandler } from '../../../../../src/components/modules/paste/handlers/text-handler';
-import type { BlokConfig } from '../../../../../../types/configs/blok-config';
+import type { BlokConfig } from '../../../../../types/configs/blok-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { ToolRegistry } from '../../../../../src/components/modules/paste/tool-registry';
 import type { SanitizerConfigBuilder } from '../../../../../src/components/modules/paste/sanitizer-config';

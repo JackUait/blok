@@ -733,9 +733,18 @@ export class BlockManager extends Module {
 
   /**
    * Delete all selected blocks and insert a replacement block at their position.
-   * Only inserts a replacement block if all blocks were deleted.
+   *
+   * A replacement block is inserted when the whole document was selected (so the
+   * editor is never left empty) or when {@link forceReplacement} is set. Typing
+   * over a cross-block selection passes `forceReplacement` so the typed character
+   * always lands in ONE clean block at the seam of the deleted span, instead of
+   * merging into whichever adjacent block still holds the caret (Notion parity).
+   * Backspace/Delete leaves it `false` so a partial multi-block delete does not
+   * spawn a stray empty paragraph.
+   * @param forceReplacement - always insert a replacement block, even for a
+   *   partial (non-whole-document) selection
    */
-  public deleteSelectedBlocksAndInsertReplacement(): Block | undefined {
+  public deleteSelectedBlocksAndInsertReplacement(forceReplacement = false): Block | undefined {
     // Collect selected blocks, expanded to include each one's flat-indent
     // followers (Notion deletes a Tab-nested parent together with its children),
     // then attach indices sorted descending for safe removal.
@@ -748,8 +757,10 @@ export class BlockManager extends Module {
       return undefined;
     }
 
-    // Check if all blocks are being deleted
+    // Insert a replacement when the whole document is being cleared (never leave
+    // an empty editor) or when the caller demands one (typing over the selection).
     const allBlocksDeleted = selectedBlockEntries.length === this.blocks.length;
+    const shouldInsertReplacement = allBlocksDeleted || forceReplacement;
 
     // Get insertion index (minimum index among selected blocks)
     const insertionIndex = selectedBlockEntries[selectedBlockEntries.length - 1].index;
@@ -762,7 +773,7 @@ export class BlockManager extends Module {
     }
 
     // Generate new block ID upfront for the transaction (only if needed)
-    const newBlockId = allBlocksDeleted ? generateBlockId() : undefined;
+    const newBlockId = shouldInsertReplacement ? generateBlockId() : undefined;
 
     // Single Yjs transaction for all removals + insertion (single undo entry)
     this.Blok.YjsManager.transact(() => {
@@ -770,8 +781,7 @@ export class BlockManager extends Module {
         this.Blok.YjsManager.removeBlock(id);
       }
 
-      // Only insert replacement block if all blocks were deleted
-      if (allBlocksDeleted && newBlockId !== undefined) {
+      if (newBlockId !== undefined) {
         this.Blok.YjsManager.addBlock({
           id: newBlockId,
           type: defaultToolName,
@@ -786,8 +796,8 @@ export class BlockManager extends Module {
       void this.removeBlock(block, false, true);
     }
 
-    // Insert replacement block only if all blocks were deleted (skip Yjs sync since we handled it above)
-    if (allBlocksDeleted && newBlockId !== undefined) {
+    // Insert replacement block (skip Yjs sync since we handled it above)
+    if (newBlockId !== undefined) {
       return this.insert({
         id: newBlockId,
         tool: defaultToolName,

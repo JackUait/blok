@@ -117,6 +117,13 @@ const seedThreeRootItems = (): OutputData => ({
   ],
 }) as OutputData;
 
+const seedParagraphThenBullet = (): OutputData => ({
+  blocks: [
+    { id: 'para', type: 'paragraph', data: { text: 'Heading para' } },
+    { id: 'bullet', type: 'list', data: { text: 'Bullet', style: 'unordered' } },
+  ],
+}) as OutputData;
+
 test.describe('Notion parity: list drag-to-indent (horizontal motion picks nesting depth)', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -190,5 +197,66 @@ test.describe('Notion parity: list drag-to-indent (horizontal motion picks nesti
     // Root level: no parent, depth 0 (the depth key is omitted at root).
     expect(third1?.parent ?? null).toBeNull();
     expect((third1?.data as { depth?: number }).depth ?? 0).toBe(0);
+  });
+
+  test('BUG 3: dragging far to the right caps at the deepest legal depth and holds there', async ({ page }) => {
+    await createBlok(page, seedThreeRootItems());
+
+    const third = page.getByTestId('block-wrapper').filter({ hasText: 'Third' });
+
+    await third.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    const first = page.getByTestId('block-wrapper').filter({ hasText: 'First' });
+    const contentLeft = await getContentLeft(page);
+
+    // Cursor dragged FAR right (5 indents). Max legal depth after First(0) is 1, so
+    // the drop must CAP at 1 and HOLD there — not fall through to auto-resolution.
+    await dragToBottomEdgeAtX(page, settingsButton, first, contentLeft + 5 * INDENT_PER_LEVEL);
+
+    const saved = await page.evaluate(() => window.blokInstance?.save());
+    const blocks = saved?.blocks ?? [];
+
+    expect(blocks[0]?.id).toBe('first');
+    expect(blocks[1]?.id).toBe('third');
+
+    const third1 = blocks[1];
+
+    expect((third1?.data as { depth?: number }).depth).toBe(1);
+    expect(third1?.parent).toBe('first');
+  });
+
+  test('BUG 2: dragging a bullet right nests it under a preceding PARAGRAPH', async ({ page }) => {
+    await createBlok(page, seedParagraphThenBullet());
+
+    const bullet = page.getByTestId('block-wrapper').filter({ hasText: 'Bullet' });
+
+    await bullet.hover();
+
+    const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+    await expect(settingsButton).toBeVisible();
+
+    const para = page.getByTestId('block-wrapper').filter({ hasText: 'Heading para' });
+    const contentLeft = await getContentLeft(page);
+
+    // Drag the bullet onto the paragraph's bottom edge, cursor ~1.3 indents right →
+    // nests one level UNDER the paragraph (Notion nests under any preceding block).
+    await dragToBottomEdgeAtX(page, settingsButton, para, contentLeft + Math.round(1.3 * INDENT_PER_LEVEL));
+
+    const saved = await page.evaluate(() => window.blokInstance?.save());
+    const blocks = saved?.blocks ?? [];
+
+    expect(blocks[0]?.id).toBe('para');
+    expect(blocks[1]?.id).toBe('bullet');
+
+    const bullet1 = blocks[1];
+
+    // Structurally nested under the paragraph, not fallen back to root.
+    expect(bullet1?.parent).toBe('para');
+    expect((bullet1?.data as { depth?: number }).depth).toBe(1);
   });
 });

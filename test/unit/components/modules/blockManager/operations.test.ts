@@ -994,6 +994,56 @@ describe('BlockOperations', () => {
     });
 
     /**
+     * Notion parity: deleting a nested parent promotes its children EXACTLY one
+     * level — to the removed block's own parent (the grandparent) — not to root.
+     * Build A (toggle) -> B (toggle, child of A) -> C (paragraph, child of B).
+     * Deleting B must leave C a child of A, not stranded at the document root.
+     */
+    it('promotes children of a nested parent to the grandparent (one level), not root', async () => {
+      const a = createMockBlock({ id: 'a', name: 'toggle', contentIds: ['b'] });
+      const b = createMockBlock({ id: 'b', name: 'toggle', parentId: 'a', contentIds: ['c'] });
+      const c = createMockBlock({ id: 'c', name: 'paragraph', parentId: 'b' });
+
+      const store = createBlocksStore([a, b, c]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(b, false, false, store);
+
+      expect(c.parentId).toBe('a');
+      expect(a.contentIds).toEqual(['c']);
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'c']);
+    });
+
+    /**
+     * Ordering + deeper nesting: A -> [B(child), C(child)]; C owns D. Deleting A
+     * promotes B and C to root (A had no parent) preserving order, while D stays
+     * nested under C (only DIRECT children move one level).
+     */
+    it('promotes only direct children one level and preserves order + sub-nesting', async () => {
+      const a = createMockBlock({ id: 'a', name: 'toggle', contentIds: ['b', 'c'] });
+      const b = createMockBlock({ id: 'b', name: 'paragraph', parentId: 'a' });
+      const c = createMockBlock({ id: 'c', name: 'toggle', parentId: 'a', contentIds: ['d'] });
+      const d = createMockBlock({ id: 'd', name: 'paragraph', parentId: 'c' });
+
+      const store = createBlocksStore([a, b, c, d]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(a, false, false, store);
+
+      expect(b.parentId).toBeNull();
+      expect(c.parentId).toBeNull();
+      expect(d.parentId).toBe('c');
+      expect(c.contentIds).toEqual(['d']);
+      expect(repo.blocks.map((block) => block.id)).toEqual(['b', 'c', 'd']);
+    });
+
+    /**
      * Regression: a self-managing container (table/database) nested inside a
      * toggle/callout/toggleable-header must NOT have its own cell/row children
      * DOM-lifted out when it is removed. The table tears down its own cell
@@ -1248,6 +1298,18 @@ describe('BlockOperations', () => {
       expect(newBlock).toBeDefined();
       expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith(block.id);
       expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+    });
+
+    it('BUG 3: preserves the original block id across replace/turn-into (id-keyed refs survive)', () => {
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+
+      const originalId = block.id;
+      const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
+
+      expect(newBlock.id).toBe(originalId);
     });
 
     /**

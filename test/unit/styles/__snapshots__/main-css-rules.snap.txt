@@ -1201,10 +1201,10 @@
   --blok-text-on-dark: #ffffff;
   --blok-database-card-actions-bg: #1e2533;
   --blok-button-focus-bg-hover: #fbfcfe;
-  --blok-dnd-drop-indicator-bg: #d4e3fc;
-  --blok-dnd-drop-indicator-lead-bg: #dcdcda;
-  --blok-dnd-drop-indicator-thickness: 6px;
-  --blok-dnd-drop-indicator-thickness-vertical: 5px;
+  --blok-dnd-drop-indicator-bg: var(--blok-link);
+  --blok-dnd-drop-indicator-lead-bg: var(--blok-link);
+  --blok-dnd-drop-indicator-thickness: 2px;
+  --blok-dnd-drop-indicator-thickness-vertical: 2px;
   --blok-table-add-pill-border: rgba(55, 53, 47, 0.17);
   --blok-database-card-menu-hover-bg: rgba(0, 0, 0, 0.04);
   --blok-database-column-pill-text: rgba(55, 53, 47, 0.9);
@@ -1469,8 +1469,8 @@
   --blok-text-on-dark: #ffffff;
   --blok-database-card-actions-bg: #0f1420;
   --blok-button-focus-bg-hover: #2d2d2c;
-  --blok-dnd-drop-indicator-bg: #1f3a5c;
-  --blok-dnd-drop-indicator-lead-bg: #3a3d42;
+  --blok-dnd-drop-indicator-bg: var(--blok-link);
+  --blok-dnd-drop-indicator-lead-bg: var(--blok-link);
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
   --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);
@@ -1613,8 +1613,8 @@
   --blok-text-on-dark: #ffffff;
   --blok-database-card-actions-bg: #0f1420;
   --blok-button-focus-bg-hover: #2d2d2c;
-  --blok-dnd-drop-indicator-bg: #1f3a5c;
-  --blok-dnd-drop-indicator-lead-bg: #3a3d42;
+  --blok-dnd-drop-indicator-bg: var(--blok-link);
+  --blok-dnd-drop-indicator-lead-bg: var(--blok-link);
   --blok-table-add-pill-border: rgba(255, 255, 255, 0.17);
   --blok-database-card-menu-hover-bg: rgba(255, 255, 255, 0.12);
   --blok-database-column-pill-text: rgba(255, 255, 255, 0.9);

@@ -92,6 +92,60 @@ export class CrossBlockSelection extends Module {
   }
 
   /**
+   * Handle a Cmd/Ctrl+Shift+Click or Alt+Shift+Click: TOGGLE the clicked block
+   * in or out of the current selection without collapsing any existing
+   * (possibly non-adjacent) selection — Notion parity for non-contiguous
+   * multi-block selection. The selection model stores a per-block `selected`
+   * flag (BlockSelection.selectedBlocks is a filter over those flags), so gaps
+   * are represented natively; no contiguous-range assumption is involved here.
+   * @param event - the modifier+Shift+Click mouse down event
+   * @returns true when a block was toggled (caller should stop), false when
+   *   there was nothing to toggle so the normal path should run
+   */
+  private handleToggleClick(event: MouseEvent): boolean {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    const clickedBlock = BlockManager.getBlock(event.target as HTMLElement);
+
+    if (!clickedBlock) {
+      return false;
+    }
+
+    const targetBlock = BlockManager.resolveToRootBlock(clickedBlock);
+
+    /**
+     * Prevent native caret placement / text-selection extend so the gesture
+     * reads as a pure block-level toggle.
+     */
+    event.preventDefault();
+
+    SelectionUtils.get()?.removeAllRanges();
+
+    targetBlock.selected = !targetBlock.selected;
+
+    BlockSelection.clearCache();
+
+    /**
+     * Track the clicked block as the anchor so a subsequent Shift+Arrow /
+     * Shift+Click extends from here. Seed firstSelectedBlock when this is the
+     * first block being selected.
+     */
+    this.firstSelectedBlock = this.firstSelectedBlock ?? targetBlock;
+    this.lastSelectedBlock = targetBlock;
+
+    this.Blok.InlineToolbar.close();
+
+    if (BlockSelection.anyBlockSelected) {
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    } else {
+      this.firstSelectedBlock = this.lastSelectedBlock = null;
+      this.Blok.Toolbar.close();
+    }
+
+    return true;
+  }
+
+  /**
    * Select the inclusive range of blocks between two blocks (by flat index),
    * clearing any prior selection. Reuses the same Math.min/max index-range logic
    * the drag path uses. Records the anchor/target as first/last selected so a
@@ -275,6 +329,22 @@ export class CrossBlockSelection extends Module {
      */
     const toolbarElement = Toolbar.nodes.wrapper;
     if (toolbarElement && toolbarElement.contains(event.target as Node)) {
+      return;
+    }
+
+    /**
+     * Cmd/Ctrl+Shift+Click (or Alt+Shift+Click) TOGGLES the clicked block in/out
+     * of the current selection, allowing a non-contiguous set — Notion parity.
+     * Must be checked before the plain Shift+Click range path (which also sees
+     * shiftKey) so the modifier gesture is not swallowed as a contiguous range.
+     */
+    if (
+      event.shiftKey &&
+      (event.metaKey || event.ctrlKey || event.altKey) &&
+      event.button === mouseButtons.LEFT &&
+      UI.nodes.redactor.contains(event.target as Node) &&
+      this.handleToggleClick(event)
+    ) {
       return;
     }
 

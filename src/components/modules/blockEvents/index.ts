@@ -309,6 +309,8 @@ export class BlockEvents extends Module {
    */
   private commandSlashPressed(): void {
     if (this.Blok.BlockSelection.selectedBlocks.length > 1) {
+      this.activateBlockSettingsForMultipleBlocks();
+
       return;
     }
 
@@ -422,6 +424,29 @@ export class BlockEvents extends Module {
   /**
    * Open Toolbar and show BlockSettings before flipping Tools
    */
+  /**
+   * Open the Block Settings / turn-into menu for a multi-block selection.
+   *
+   * Notion parity: Cmd/Ctrl+/ with 2+ blocks selected opens the block actions
+   * menu for the whole selection (turn-into, delete, etc.). We anchor the
+   * toolbar to the first selected block via the multi-block path (mirrors the
+   * settings-toggler click flow) and then open BlockSettings, which already
+   * builds a multi-selection menu when several blocks are selected.
+   */
+  private activateBlockSettingsForMultipleBlocks(): void {
+    if (!this.Blok.Toolbar.opened) {
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    }
+
+    if (!this.Blok.BlockSettings.opened) {
+      Promise
+        .resolve(this.Blok.BlockSettings.open())
+        .catch(() => {
+          // Error handling for BlockSettings.open
+        });
+    }
+  }
+
   private activateBlockSettings(): void {
     if (!this.Blok.Toolbar.opened) {
       this.Blok.Toolbar.moveAndOpen();

@@ -375,6 +375,52 @@ describe('BlockSelection', () => {
       expect(replaceSpy).toHaveBeenCalledWith(event);
     });
 
+    it('replaces selected blocks when a collapsed caret lingers (cross-block mouse drag)', () => {
+      // A cross-block mouse drag removes the native range but leaves a collapsed
+      // caret inside the last selected block, so isSelectionExists stays true.
+      const { blockSelection, blocks } = createBlockSelection();
+      const replacerHost = blockSelection as unknown as {
+        replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
+      };
+      const replaceSpy = vi.spyOn(replacerHost, 'replaceSelectedBlocksWithPrintableKey').mockImplementation(() => undefined);
+
+      blocks[0].selected = true;
+
+      vi.spyOn(utils, 'isPrintableKey').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isSelectionExists', 'get').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      const event = new KeyboardEvent('keydown', { key: 'x' });
+
+      Object.defineProperty(event, 'keyCode', { value: 88 });
+
+      blockSelection.clearSelection(event);
+
+      expect(replaceSpy).toHaveBeenCalledWith(event);
+    });
+
+    it('does NOT replace selected blocks when a real (non-collapsed) text selection exists', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const replacerHost = blockSelection as unknown as {
+        replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
+      };
+      const replaceSpy = vi.spyOn(replacerHost, 'replaceSelectedBlocksWithPrintableKey').mockImplementation(() => undefined);
+
+      blocks[0].selected = true;
+
+      vi.spyOn(utils, 'isPrintableKey').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isSelectionExists', 'get').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(false);
+
+      const event = new KeyboardEvent('keydown', { key: 'x' });
+
+      Object.defineProperty(event, 'keyCode', { value: 88 });
+
+      blockSelection.clearSelection(event);
+
+      expect(replaceSpy).not.toHaveBeenCalled();
+    });
+
     it('clears selected blocks even when rectangle selection is active', () => {
       const isRectActivatedMock = vi.fn(() => true);
       const rectangleClearSelectionMock = vi.fn();
@@ -514,6 +560,44 @@ describe('BlockSelection', () => {
       await blockSelection.copySelectedBlocks(clipboardEvent);
 
       expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', '- [x] done task\n- [ ] open task');
+    });
+
+    it('bug1: default copy of a list writes SEMANTIC list HTML (not paragraphs) to text/html', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const bullet = blocks[0];
+      const nested = blocks[1];
+
+      // The rendered DOM is the non-semantic div/marker structure that used to
+      // collapse into <p> with a leaked bullet glyph.
+      bullet.holder.innerHTML = '<div role="listitem"><span data-list-marker>•</span><div>Buy milk</div></div>';
+      nested.holder.innerHTML = '<div role="listitem"><span data-list-marker>◦</span><div>Buy oat milk</div></div>';
+      (bullet as unknown as { id: string }).id = 'block-bullet';
+      (nested as unknown as { id: string }).id = 'block-nested';
+      (bullet as unknown as { name: string }).name = 'list';
+      (nested as unknown as { name: string }).name = 'list';
+      (bullet as unknown as { preservedData: unknown }).preservedData = { text: 'Buy milk', style: 'unordered', depth: 0 };
+      (nested as unknown as { preservedData: unknown }).preservedData = { text: 'Buy oat milk', style: 'unordered', depth: 1 };
+      bullet.selected = true;
+      nested.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      const htmlCall = clipboardData.setData.mock.calls.find(([format]) => format === 'text/html');
+      const html = htmlCall?.[1] as string;
+
+      expect(html).toContain('<ul>');
+      expect(html).toContain('<li>Buy milk');
+      expect(html).toContain('<li>Buy oat milk');
+      // No <p> collapse and no leaked marker glyph.
+      expect(html).not.toContain('<p>');
+      expect(html).not.toContain('•');
+      expect(html).not.toContain('◦');
     });
 
     it('copySelectedBlocksAsMarkdown writes Markdown to the clipboard (Notion Cmd+Shift+C)', async () => {
@@ -1163,9 +1247,14 @@ describe('BlockSelection', () => {
         replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
       };
 
-      host.replaceSelectedBlocksWithPrintableKey({ key: 'x' } as KeyboardEvent);
+      const preventDefault = vi.fn();
 
-      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+      host.replaceSelectedBlocksWithPrintableKey({ key: 'x', preventDefault } as unknown as KeyboardEvent);
+
+      // Native char insertion is prevented so the char is not typed twice.
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      // A replacement block is forced so the char always lands in a clean block.
+      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledWith(true);
       expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
       expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('x');
       expect(delaySpy).toHaveBeenCalledTimes(1);
@@ -1192,9 +1281,9 @@ describe('BlockSelection', () => {
         replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
       };
 
-      host.replaceSelectedBlocksWithPrintableKey({ key: 'Enter' } as KeyboardEvent);
+      host.replaceSelectedBlocksWithPrintableKey({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
 
-      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledWith(true);
       expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
       expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('');
     });

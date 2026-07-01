@@ -833,9 +833,10 @@ describe('DropTargetDetector', () => {
         expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 154)).toBe(1);
       });
 
-      it('falls back to auto-resolution when the cursor is released far to the right (beyond the engage band)', () => {
-        // Preserves plain vertical reorders: existing helpers drop at block
-        // center (far right), which must keep the auto depth, not max-nest.
+      it('BUG 3: holds at the deepest legal depth for a far-right over-drag', () => {
+        // A cursor dragged far to the right must CAP at the deepest legal depth
+        // (previousDepth + 1) and HOLD there — the pointer is authoritative, so an
+        // over-drag never falls through to neighbour auto-resolution.
         const previousBlock = createMockListBlock('prev', 0);
         const targetBlock = createMockListBlock('target', 0);
         const sourceBlock = createMockListBlock('source', 0);
@@ -843,8 +844,8 @@ describe('DropTargetDetector', () => {
         mockBlockManager.getBlockIndex = vi.fn(() => 0);
         mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
 
-        // clientX 700 → ~22 steps, far past maxAllowed(1) + slack → auto-resolution (0).
-        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 700)).toBe(0);
+        // clientX 700 → ~22 steps, far past maxAllowed(1) → clamped and held at 1.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 700)).toBe(1);
       });
 
       it('falls back to auto-resolution when clientX is omitted', () => {

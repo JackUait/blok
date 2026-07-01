@@ -1064,22 +1064,22 @@ export class KeyboardNavigation extends BlockEventComposer {
       !event.ctrlKey &&
       !event.altKey;
     /**
-     * Horizontal navigation flag for ArrowRight. Plain ArrowRight and Cmd+ArrowRight
-     * both qualify; Ctrl/Alt (word nav) and Shift (handled above as cross-block
-     * selection) do not.
+     * Horizontal navigation flag for ArrowRight. Only plain ArrowRight qualifies;
+     * Ctrl/Alt (word nav), Shift (handled above as cross-block selection) and Cmd
+     * (line-end) do not.
      *
-     * Cmd+ArrowRight is the macOS line-end gesture: within a multi-line block it must
-     * stay native (move to the line edge), but once the caret is already at the
-     * block's absolute end it should cross into the next block. navigateNext enforces
-     * exactly that — it only crosses (and the handler only preventDefaults) when the
-     * caret is at the boundary, otherwise it returns false and the native line-end
-     * gesture runs. So the user navigates BOTH between strings inside a block AND
-     * between blocks with the same key.
+     * Cmd+ArrowRight is the macOS line-end gesture and must stay fully native
+     * (symmetric with isDownKey above, which also excludes metaKey): within a
+     * multi-line block it moves to the visual line end, and at the block's absolute
+     * end the native gesture keeps the caret inside the block — it never crosses into
+     * the next block (Notion parity: Cmd+Right is a within-line move / boundary
+     * no-op, not a cross-block arrow).
      */
     const isRightKey =
       keyCode === keyCodes.RIGHT &&
       !this.isRtl &&
       !event.shiftKey &&
+      !event.metaKey &&
       !event.ctrlKey &&
       !event.altKey;
 
@@ -1248,22 +1248,22 @@ export class KeyboardNavigation extends BlockEventComposer {
       !event.ctrlKey &&
       !event.altKey;
     /**
-     * Horizontal navigation flag for ArrowLeft. Plain ArrowLeft and Cmd+ArrowLeft
-     * both qualify; Ctrl/Alt (word nav) and Shift (handled above as cross-block
-     * selection) do not.
+     * Horizontal navigation flag for ArrowLeft. Only plain ArrowLeft qualifies;
+     * Ctrl/Alt (word nav), Shift (handled above as cross-block selection) and Cmd
+     * (line-start) do not.
      *
-     * Cmd+ArrowLeft is the macOS line-start gesture: within a multi-line block it
-     * must stay native (move to the line edge), but once the caret is already at the
-     * block's absolute start it should cross into the previous block. navigatePrevious
-     * enforces exactly that — it only crosses (and the handler only preventDefaults)
-     * when the caret is at the boundary, otherwise it returns false and the native
-     * line-start gesture runs. So the user navigates BOTH between strings inside a
-     * block AND between blocks with the same key.
+     * Cmd+ArrowLeft is the macOS line-start gesture and must stay fully native
+     * (symmetric with isUpKey above, which also excludes metaKey): within a
+     * multi-line block it moves to the visual line start, and at the block's absolute
+     * start the native gesture keeps the caret inside the block — it never crosses
+     * into the previous block (Notion parity: Cmd+Left is a within-line move /
+     * boundary no-op, not a cross-block arrow).
      */
     const isLeftKey =
       keyCode === keyCodes.LEFT &&
       !this.isRtl &&
       !event.shiftKey &&
+      !event.metaKey &&
       !event.ctrlKey &&
       !event.altKey;
 

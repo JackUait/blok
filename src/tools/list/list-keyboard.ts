@@ -6,7 +6,7 @@
 
 import type { API } from '../../../types';
 
-import { setCaretToBlockContent } from './caret-manager';
+import { setCaretToBlockContent, setCaretToBlockContentOffset, getCaretOffsetWithin } from './caret-manager';
 import { TOOL_NAME } from './constants';
 import {
   splitContentAtCursor,
@@ -207,6 +207,13 @@ export const handleBackspace = async(
     return;
   }
 
+  // A non-collapsed PARTIAL selection (e.g. "hello" out of "hello world",
+  // anchored at offset 0) must delete natively — never convert. The isAtStart
+  // check below is true for any selection anchored at 0, so without this guard
+  // the convert-to-paragraph path fired on the FULL text and swallowed the
+  // delete. Only a COLLAPSED caret at offset 0 converts.
+  if (!selection.isCollapsed) return;
+
   // Only handle at start of content for non-selection cases
   if (!isAtStart(contentEl, range)) return;
 
@@ -270,18 +277,58 @@ const cascadeDepthReduction = async (
 };
 
 /**
+ * Increase depth by 1 for all descendant list items following the given block.
+ * Symmetric to {@link cascadeDepthReduction}: stops at non-list blocks or blocks
+ * whose depth is <= the parent's original depth (siblings, not descendants). Used
+ * so a flat-carrier indent carries its nested descendants' depth/glyph along.
+ */
+const cascadeDepthIncrease = async (
+  api: API,
+  blockId: string | undefined,
+  parentOriginalDepth: number,
+  depthValidator: ListDepthValidator
+): Promise<void> => {
+  const startIndex = blockId
+    ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
+    : api.blocks.getCurrentBlockIndex();
+  const blocksCount = api.blocks.getBlocksCount();
+
+  const processDescendant = async (index: number): Promise<void> => {
+    if (index >= blocksCount) return;
+
+    const block = api.blocks.getBlockByIndex(index);
+
+    if (!block || block.name !== TOOL_NAME) return;
+
+    const blockDepth = depthValidator.getBlockDepth(block);
+
+    if (blockDepth <= parentOriginalDepth) return;
+
+    await api.blocks.update(block.id, { depth: blockDepth + 1 });
+    await processDescendant(index + 1);
+  };
+
+  await processDescendant(startIndex + 1);
+};
+
+/**
  * Handle Shift+Tab key - outdent the list item and cascade to descendants
  */
 export const handleOutdent = async(
   context: KeyboardContext,
   depthValidator?: ListDepthValidator
 ): Promise<void> => {
-  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
+  const { api, blockId, data, syncContentFromDOM, getDepth, getContentElement } = context;
 
   const currentDepth = getDepth();
 
   // Can't outdent if already at root level
   if (currentDepth === 0) return;
+
+  // Snapshot the caret offset BEFORE the re-render so it can be restored — the
+  // flat path re-renders via api.blocks.update, and the default 'end' caret would
+  // otherwise jump the caret to the end of the item.
+  const caretOffset = getCaretOffsetWithin(getContentElement());
 
   // Sync current content before updating
   syncContentFromDOM();
@@ -301,8 +348,12 @@ export const handleOutdent = async(
     await cascadeDepthReduction(api, blockId, currentDepth, depthValidator);
   }
 
-  // Restore focus to the updated block after DOM has been updated
-  setCaretToBlockContent(api, updatedBlock);
+  // Restore focus + caret to the updated block after DOM has been updated
+  if (caretOffset !== null) {
+    setCaretToBlockContentOffset(api, updatedBlock, caretOffset);
+  } else {
+    setCaretToBlockContent(api, updatedBlock);
+  }
 };
 
 /**
@@ -358,7 +409,7 @@ export const handleIndent = async(
   context: KeyboardContext,
   depthValidator: ListDepthValidator
 ): Promise<void> => {
-  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
+  const { api, blockId, data, syncContentFromDOM, getDepth, getContentElement } = context;
 
   const currentBlockIndex = blockId !== undefined
     ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
@@ -392,6 +443,10 @@ export const handleIndent = async(
     return;
   }
 
+  // Snapshot the caret offset BEFORE the re-render so it can be restored (the
+  // default 'end' caret would otherwise jump the caret to the end of the item).
+  const caretOffset = getCaretOffsetWithin(getContentElement());
+
   // Sync current content before updating
   syncContentFromDOM();
 
@@ -403,6 +458,14 @@ export const handleIndent = async(
     depth: newDepth,
   });
 
-  // Restore focus to the updated block after DOM has been updated
-  setCaretToBlockContent(api, updatedBlock);
+  // Cascade the depth INCREASE to descendant list items so their depth/glyph
+  // stays in sync — symmetric with handleOutdent's cascadeDepthReduction.
+  await cascadeDepthIncrease(api, blockId, currentDepth, depthValidator);
+
+  // Restore focus + caret to the updated block after DOM has been updated
+  if (caretOffset !== null) {
+    setCaretToBlockContentOffset(api, updatedBlock, caretOffset);
+  } else {
+    setCaretToBlockContent(api, updatedBlock);
+  }
 };

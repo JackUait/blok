@@ -201,6 +201,119 @@ describe('handleBackspace — non-empty item converts to a paragraph in place', 
   });
 });
 
+/**
+ * BUG 2: a PARTIAL text selection that starts at offset 0 (e.g. selecting just
+ * "hello" from "hello world") + Backspace must delete the selected text
+ * natively — it must NOT convert the whole item to a paragraph. The old code
+ * only checked isAtStart (true for any selection anchored at 0) without first
+ * ruling out a non-collapsed selection, so it swallowed the delete and converted
+ * using the FULL text.
+ */
+describe('handleBackspace — partial selection at offset 0 deletes normally (BUG 2)', () => {
+  /**
+   * Build the item's `element` wrapper with an inner content element carrying a
+   * NON-collapsed selection over the first `selectedLength` chars (anchored at
+   * offset 0). The selection is applied AFTER the node is in its final DOM
+   * position — reparenting a selected node collapses the selection in jsdom.
+   */
+  const buildElementWithLeadingSelection = (
+    text: string,
+    selectedLength: number
+  ): { element: HTMLElement; contentEl: HTMLElement } => {
+    const element = document.createElement('div');
+    const contentEl = document.createElement('div');
+    contentEl.contentEditable = 'true';
+    contentEl.textContent = text;
+    element.appendChild(contentEl);
+    document.body.appendChild(element);
+
+    const textNode = contentEl.firstChild ?? contentEl;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, selectedLength);
+
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    return { element, contentEl };
+  };
+
+  it('does NOT convert to a paragraph and does NOT preventDefault when a partial leading selection exists', async () => {
+    const convert = vi.fn();
+    const update = vi.fn();
+    const api = {
+      blocks: {
+        getById: (id: string) => ({ id, name: 'list', parentId: null }),
+        setBlockParent: vi.fn(),
+        convert,
+        update,
+      },
+      caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+    } as unknown as KeyboardContext['api'];
+
+    // Select just "hello" out of "hello world" (offsets 0..5).
+    const { element, contentEl } = buildElementWithLeadingSelection('hello world', 5);
+
+    const data: ListItemData = { text: 'hello world', style: 'unordered', depth: 0 };
+
+    const context: KeyboardContext = {
+      api,
+      blockId: 'item',
+      data,
+      element,
+      getContentElement: () => contentEl,
+      syncContentFromDOM: vi.fn(),
+      getDepth: () => 0,
+    };
+
+    const event = createKeyboardEvent();
+
+    await handleBackspace(context, event);
+
+    // Native deletion proceeds: no convert, no preventDefault.
+    expect(convert).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('still converts to a paragraph on a COLLAPSED caret at offset 0', async () => {
+    const convert = vi.fn().mockResolvedValue(createConvertedBlock('item'));
+    const api = {
+      blocks: {
+        getById: (id: string) => ({ id, name: 'list', parentId: null }),
+        setBlockParent: vi.fn(),
+        convert,
+        update: vi.fn(),
+      },
+      caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+    } as unknown as KeyboardContext['api'];
+
+    const contentEl = buildContentWithCaretAtStart('hello world');
+    const element = document.createElement('div');
+    element.appendChild(contentEl);
+
+    const data: ListItemData = { text: 'hello world', style: 'unordered', depth: 0 };
+
+    const context: KeyboardContext = {
+      api,
+      blockId: 'item',
+      data,
+      element,
+      getContentElement: () => contentEl,
+      syncContentFromDOM: vi.fn(),
+      getDepth: () => 0,
+    };
+
+    const event = createKeyboardEvent();
+
+    await handleBackspace(context, event);
+
+    expect(convert).toHaveBeenCalledWith('item', 'paragraph', { text: 'hello world' });
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+});
+
 describe('handleBackspace — m-10 modifier-held Backspace bails (marker intact)', () => {
   const buildModifierContext = (): { context: KeyboardContext; convert: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> } => {
     const convert = vi.fn();

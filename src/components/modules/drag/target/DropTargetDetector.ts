@@ -792,6 +792,10 @@ export class DropTargetDetector {
       nextIsListItem: nextIsNestingContext,
       nextDepth: nextDepthValue,
       pointerDepth,
+      // A predecessor block always exists here (dropIndex > 0 was guarded above),
+      // so the cursor may nest under it even when it is not a list — Notion nests
+      // under any preceding block.
+      previousExists: true,
     });
   }
 

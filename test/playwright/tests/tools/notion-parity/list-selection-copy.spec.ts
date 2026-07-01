@@ -186,6 +186,52 @@ test.describe('Notion parity: list selection & copy', () => {
     expect(clipboard['text/plain']).toContain('- [x] Done task\n- [ ] Open task');
   });
 
+  test('bug1: default Cmd+C of a bulleted list writes a semantic <ul> to text/html', async ({ page }) => {
+    await createBlok(page, listData([{ text: 'Buy milk' }, { text: 'Buy eggs' }], 'unordered'));
+
+    await selectAllBlocks(page, 2);
+
+    const clipboard = await copyFromElement(getEditableByIndex(page, 0));
+    const html = clipboard['text/html'];
+
+    // Real list semantics survive — not paragraphs, and no bullet-glyph leakage.
+    expect(html).toContain('<ul>');
+    expect(html).toContain('<li>Buy milk</li>');
+    expect(html).toContain('<li>Buy eggs</li>');
+    expect(html).not.toContain('•');
+    expect(html).not.toContain('<p>Buy milk');
+  });
+
+  test('bug1: default Cmd+C of a numbered list writes a semantic <ol> to text/html', async ({ page }) => {
+    await createBlok(page, listData([{ text: 'First' }, { text: 'Second' }], 'ordered'));
+
+    await selectAllBlocks(page, 2);
+
+    const clipboard = await copyFromElement(getEditableByIndex(page, 0));
+    const html = clipboard['text/html'];
+
+    expect(html).toContain('<ol>');
+    expect(html).toContain('<li>First</li>');
+    expect(html).toContain('<li>Second</li>');
+  });
+
+  test('bug1: default Cmd+C of a to-do list writes checkbox <li>s to text/html', async ({ page }) => {
+    await createBlok(page, listData([
+      { text: 'Done task', checked: true },
+      { text: 'Open task', checked: false },
+    ], 'checklist'));
+
+    await selectAllBlocks(page, 2);
+
+    const clipboard = await copyFromElement(getEditableByIndex(page, 0));
+    const html = clipboard['text/html'];
+
+    expect(html).toContain('<ul>');
+    expect(html).toContain('type="checkbox"');
+    expect(html).toContain('Done task');
+    expect(html).toContain('Open task');
+  });
+
   test('M7: Shift+Click selects the inclusive contiguous block range', async ({ page }) => {
     await createBlok(page, paragraphData(['Alpha', 'Bravo', 'Charlie', 'Delta']));
 

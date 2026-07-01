@@ -4,6 +4,7 @@ import {
   buildWrapper,
   buildStandardContent,
   buildChecklistContent,
+  buildSemanticListHtml,
   createMarker,
   getBulletCharacter,
   LIST_TEST_IDS,
@@ -429,6 +430,89 @@ describe('dom-builder', () => {
       const event = new KeyboardEvent('keydown', { key: 'Enter' });
       result.wrapper.dispatchEvent(event);
       expect(keydownHandler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('buildSemanticListHtml (BUG 1 — text/html clipboard export)', () => {
+    it('emits a real <ul> with <li> items for a flat unordered list', () => {
+      const container = buildSemanticListHtml([
+        { text: 'Buy milk', style: 'unordered' },
+        { text: 'Buy eggs', style: 'unordered' },
+      ]);
+
+      const ul = container.querySelector('ul');
+
+      expect(ul).not.toBeNull();
+      expect(container.querySelector('ol')).toBeNull();
+      const items = ul?.querySelectorAll(':scope > li') ?? [];
+      expect(items).toHaveLength(2);
+      expect(items[0].textContent).toBe('Buy milk');
+      expect(items[1].textContent).toBe('Buy eggs');
+    });
+
+    it('emits an <ol> for an ordered list', () => {
+      const container = buildSemanticListHtml([
+        { text: 'First', style: 'ordered' },
+        { text: 'Second', style: 'ordered' },
+      ]);
+
+      const ol = container.querySelector('ol');
+
+      expect(ol).not.toBeNull();
+      expect(ol?.querySelectorAll(':scope > li')).toHaveLength(2);
+    });
+
+    it('does NOT leak the bullet marker glyph as literal text', () => {
+      const container = buildSemanticListHtml([
+        { text: 'Item', style: 'unordered' },
+      ]);
+
+      expect(container.textContent).toBe('Item');
+      expect(container.textContent).not.toContain('•');
+    });
+
+    it('emits checkbox <li>s for a checklist, reflecting checked state', () => {
+      const container = buildSemanticListHtml([
+        { text: 'Done', style: 'checklist', checked: true },
+        { text: 'Open', style: 'checklist', checked: false },
+      ]);
+
+      const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+
+      expect(checkboxes).toHaveLength(2);
+      expect((checkboxes[0] as HTMLInputElement).checked).toBe(true);
+      expect((checkboxes[1] as HTMLInputElement).checked).toBe(false);
+    });
+
+    it('nests deeper items inside the parent <li> as a child list', () => {
+      const container = buildSemanticListHtml([
+        { text: 'a', style: 'unordered', depth: 0 },
+        { text: 'b', style: 'unordered', depth: 1 },
+        { text: 'c', style: 'unordered', depth: 2 },
+      ]);
+
+      const rootUl = container.querySelector(':scope > ul');
+      const rootItems = rootUl?.querySelectorAll(':scope > li') ?? [];
+
+      expect(rootItems).toHaveLength(1);
+
+      const nestedUl = rootItems[0].querySelector(':scope > ul');
+      const nestedItems = nestedUl?.querySelectorAll(':scope > li') ?? [];
+
+      expect(nestedItems).toHaveLength(1);
+      expect(nestedItems[0].textContent).toContain('b');
+
+      const deepUl = nestedItems[0].querySelector(':scope > ul');
+
+      expect(deepUl?.querySelector(':scope > li')?.textContent).toBe('c');
+    });
+
+    it('preserves inline HTML markup in item text', () => {
+      const container = buildSemanticListHtml([
+        { text: 'Text with <b>bold</b>', style: 'unordered' },
+      ]);
+
+      expect(container.querySelector('li b')?.textContent).toBe('bold');
     });
   });
 });

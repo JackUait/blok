@@ -2,7 +2,7 @@ import type { Block } from '../../../block';
 import { SelectionUtils as Selection } from '../../../selection/index';
 import { getCaretOffset } from '../../../utils/caret/selection';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
-import { HEADER_TOOL_NAME } from '../../blockEvents/constants';
+import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
 
 import { Controller } from './_base';
@@ -21,6 +21,20 @@ const TURN_INTO_LEVEL_BY_CODE: Record<string, number> = {
   Digit4: 4,
   Digit5: 5,
   Digit6: 6,
+};
+
+/**
+ * Maps the list-creation shortcut digit (event.code) to the target list style.
+ * These are the combos advertised by the list toolbox (see
+ * `src/tools/list/style-config.ts`): Cmd/Ctrl+Shift+5 → bulleted, +6 → numbered,
+ * +7 → to-do. On Win/Linux Ctrl+Shift+5/6 would otherwise map to Heading 5/6,
+ * so `handleListShortcut` runs BEFORE `handleTurnInto` to let the list win for
+ * these exact combos.
+ */
+const LIST_STYLE_BY_CODE: Record<string, string> = {
+  Digit5: 'unordered',
+  Digit6: 'ordered',
+  Digit7: 'checklist',
 };
 
 /**
@@ -230,6 +244,15 @@ export class KeyboardController extends Controller {
      * (Shift+1 = "!", Opt+1 = "¡"). Handled before the switch so the digit is
      * never inserted as text.
      */
+    /**
+     * List-creation shortcuts (Cmd/Ctrl+Shift+5/6/7). Checked BEFORE the heading
+     * "Turn into" handler so the list combo wins the Win/Linux Ctrl+Shift+5/6
+     * collision with Heading 5/6 (the combo advertised in the list toolbox).
+     */
+    if (this.handleListShortcut(event)) {
+      return;
+    }
+
     if (this.handleTurnInto(event)) {
       return;
     }
@@ -344,6 +367,83 @@ export class KeyboardController extends Controller {
     YjsManager.stopCapturing();
 
     const newBlock = await BlockManager.convert(block, targetToolName, dataOverrides);
+
+    Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
+
+    YjsManager.stopCapturing();
+  }
+
+  /**
+   * Handle the list-creation shortcut (Cmd+Shift / Ctrl+Shift + digit 5/6/7).
+   * Converts the focused block to a bulleted (5), numbered (6) or to-do (7) list,
+   * matching the combos advertised by the list toolbox. Runs before the heading
+   * "Turn into" handler so the list wins the Win/Linux Ctrl+Shift+5/6 collision.
+   * @param event - keyboard event
+   * @returns true when the shortcut was recognized and handled
+   */
+  private handleListShortcut(event: KeyboardEvent): boolean {
+    // Mac = Cmd+Shift+digit, Win/Linux = Ctrl+Shift+digit. `!altKey` keeps this
+    // distinct from the Mac heading combo (Cmd+Opt+digit) and from AltGr chords.
+    const matchesModifiers = (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey;
+
+    if (!matchesModifiers) {
+      return false;
+    }
+
+    const style = LIST_STYLE_BY_CODE[event.code];
+
+    if (style === undefined) {
+      return false;
+    }
+
+    const block = this.Blok.BlockManager.currentBlock;
+
+    if (block === undefined) {
+      return false;
+    }
+
+    // Don't replay the conversion while a drag is in progress (mirrors handleTurnInto).
+    if (this.Blok.DragManager.isDragging) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return true;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Dedupe a single physical keypress that emits duplicate keydown events
+    // (shares the turn-into guard state; codes never overlap within one press).
+    const now = Date.now();
+
+    if (event.code === this.lastTurnIntoCode && now - this.lastTurnIntoTime < 50) {
+      return true;
+    }
+    this.lastTurnIntoTime = now;
+    this.lastTurnIntoCode = event.code;
+
+    void this.turnBlockIntoList(block, style);
+
+    return true;
+  }
+
+  /**
+   * Convert the given block to a list of the target style and restore the caret.
+   * Wrapped in stopCapturing() so the conversion is its own undo step, mirroring
+   * {@link turnBlockInto}.
+   * @param block - block to convert
+   * @param style - list style: 'unordered', 'ordered' or 'checklist'
+   */
+  private async turnBlockIntoList(block: Block, style: string): Promise<void> {
+    const { BlockManager, Caret, YjsManager } = this.Blok;
+
+    // Preserve the caret position across the conversion (Notion parity).
+    const caretOffset = getCaretOffset();
+
+    YjsManager.stopCapturing();
+
+    const newBlock = await BlockManager.convert(block, LIST_TOOL_NAME, { style });
 
     Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
 

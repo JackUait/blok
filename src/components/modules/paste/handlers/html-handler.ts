@@ -70,6 +70,10 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
 
     wrapper.innerHTML = innerHTML;
 
+    // Preserve nested-list depth and ordered/unordered context BEFORE the splitter
+    // detaches each <li> from its ancestor <ul>/<ol> during sanitization.
+    this.preprocessNestedLists(wrapper);
+
     // Apply the editor's `link` config to pasted anchors before they are split
     // into blocks, mirroring the interactive Link inline tool. Pasted `<a>`
     // would otherwise keep their original (foreign) target/rel/href.
@@ -208,6 +212,78 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     }
 
     return filtered;
+  }
+
+  /**
+   * Stamp each pasted `<li>` with the context the list tool needs AFTER the
+   * splitter clones/detaches it from its ancestor `<ul>`/`<ol>`, then flatten
+   * nested lists so every `<li>` becomes a separate emittable block.
+   *
+   * Generic web pages carry nested-list depth purely in DOM structure (no
+   * `aria-level`), and the list style purely in the ancestor `<ul>`/`<ol>` tag.
+   * Both are lost once a single `<li>` is cloned in isolation, so we record them
+   * as attributes while the ancestor chain is intact:
+   *   - `aria-level` = 1-based nesting depth (read by extractDepthFromPastedContent)
+   *   - `data-list-style="ordered"` for items inside an `<ol>` (read by
+   *     detectStyleFromPastedContent). We only stamp the ordered case so that
+   *     unordered/checklist items keep flowing through the existing checkbox
+   *     detection path.
+   * Existing `aria-level`/`data-list-style` (e.g. from Google Docs) win and are
+   * never overwritten.
+   */
+  private preprocessNestedLists(wrapper: HTMLElement): void {
+    const listItems = Array.from(wrapper.querySelectorAll('li'));
+
+    for (const li of listItems) {
+      let ancestorListCount = 0;
+      let nearestList: HTMLElement | null = null;
+      let ancestor = li.parentElement;
+
+      while (ancestor !== null) {
+        if (ancestor.tagName === 'UL' || ancestor.tagName === 'OL') {
+          ancestorListCount += 1;
+
+          if (nearestList === null) {
+            nearestList = ancestor;
+          }
+        }
+
+        ancestor = ancestor.parentElement;
+      }
+
+      if (ancestorListCount > 0 && !li.hasAttribute('aria-level')) {
+        li.setAttribute('aria-level', String(ancestorListCount));
+      }
+
+      // Only stamp for generic ordered lists that carry NO explicit per-item
+      // `list-style-type` — Google-Docs/Word items already encode their own style
+      // there and must keep driving detection (an item's own style-type wins over
+      // its ancestor tag).
+      const hasExplicitListStyleType = /list-style-type\s*:/i.test(li.getAttribute('style') ?? '');
+
+      if (nearestList?.tagName === 'OL' && !li.hasAttribute('data-list-style') && !hasExplicitListStyleType) {
+        li.setAttribute('data-list-style', 'ordered');
+      }
+    }
+
+    // Hoist every list that is a direct child of an `<li>` out to become the
+    // item's next sibling, so each `<li>` is a leaf the splitter emits on its
+    // own. Depth is preserved by the stamped `aria-level`. Repeat until stable;
+    // each hoist strictly reduces the count of `<li>`-parented lists.
+    let hoisted = true;
+
+    while (hoisted) {
+      hoisted = false;
+
+      for (const nestedList of Array.from(wrapper.querySelectorAll('ul, ol'))) {
+        const parent = nestedList.parentElement;
+
+        if (parent !== null && parent.tagName === 'LI') {
+          parent.after(nestedList);
+          hoisted = true;
+        }
+      }
+    }
   }
 
   /**

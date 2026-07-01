@@ -155,6 +155,20 @@ describe('static-configs', () => {
         }
       }
     });
+
+    it('allows LI tags with aria-level and data-list-style attributes for detached paste context', () => {
+      const config = getListPasteConfig();
+
+      if (config !== false && config.tags) {
+        const firstTag = config.tags[0];
+        if (isSanitizerConfig(firstTag)) {
+          expect(firstTag.li).toHaveProperty('aria-level', true);
+          expect(firstTag.li).toHaveProperty('data-list-style', true);
+        } else {
+          throw new Error('Expected first tag to be a SanitizerConfig object');
+        }
+      }
+    });
   });
 
   describe('getListConversionConfig', () => {

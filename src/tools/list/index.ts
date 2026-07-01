@@ -139,6 +139,11 @@ export class ListItem implements BlockTool {
       return this._element;
     }
 
+    // Reconcile the flat carrier to the tree BEFORE the DOM builder reads
+    // data.depth for the indent/marker, so a stale value can never render a
+    // depth that disagrees with the block's structural nesting.
+    this.reconcileDepthFromStructure();
+
     const blockIndex = this.blockId
       ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
       : this.api.blocks.getCurrentBlockIndex();
@@ -215,11 +220,35 @@ export class ListItem implements BlockTool {
   public rendered(): void {
     // Seed the structural-nesting flag from the loaded tree so the first move
     // after render can distinguish a structural outdent from a flat drag.
-    this.wasStructurallyNested = this.getStructuralListDepth() !== null;
+    const structuralDepth = this.getStructuralListDepth();
+    this.wasStructurallyNested = structuralDepth !== null;
+
+    // The parentId chain may only be assembled AFTER the initial render() (the
+    // block is parented once the tree is built). If it turned out to be
+    // structurally nested at a depth the flat carrier didn't match, reconcile
+    // the rendered indent + marker now so structure stays the source of truth.
+    if (structuralDepth !== null && structuralDepth !== (this._data.depth ?? 0)) {
+      this.adjustDepthTo(structuralDepth);
+      this.updateMarkerForDepth(structuralDepth, this._data.style);
+    }
+
     this.updateMarkersAfterPositionChange();
   }
 
   public moved(event: MoveEvent): void {
+    // A horizontal drag-to-indent supplies the pointer-resolved drop depth. It is
+    // authoritative — the drop must land at the depth the indicator previewed, not
+    // the neighbour auto-resolution — so honor it directly (still clamped to the
+    // legal range by the validator's pointer path) and skip the auto heuristics.
+    if (event.targetDepth !== undefined) {
+      this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove, event.targetDepth);
+      this.wasStructurallyNested = this.getStructuralListDepth() !== null;
+      this.updateMarkersAfterPositionChange();
+      this.markerManager?.scheduleUpdateAll();
+
+      return;
+    }
+
     const structuralDepth = this.getStructuralListDepth();
     const isStructural = structuralDepth !== null || this.wasStructurallyNested;
 
@@ -281,6 +310,22 @@ export class ListItem implements BlockTool {
     return depth > 0 ? depth : null;
   }
 
+  /**
+   * Collapse the flat `data.depth` carrier onto the STRUCTURAL depth whenever
+   * this item has a list parent, so the persisted value can never drift from the
+   * block tree (which is the single source of truth for a nested item). No-op for
+   * flat/unparented items (structural depth null): they legitimately rely on the
+   * flat carrier for drag/paste until they gain a structural parent, and
+   * {@link getDepth} keeps reading it as the fallback in that case.
+   */
+  private reconcileDepthFromStructure(): void {
+    const structuralDepth = this.getStructuralListDepth();
+
+    if (structuralDepth !== null && structuralDepth !== (this._data.depth ?? 0)) {
+      this._data.depth = structuralDepth;
+    }
+  }
+
   private updateMarkersAfterPositionChange(): void {
     if (this._data.style !== 'ordered' || !this._element) {
       return;
@@ -290,12 +335,13 @@ export class ListItem implements BlockTool {
     this.updateSiblingListMarkers();
   }
 
-  private validateAndAdjustDepthAfterMove(newIndex: number, skipDepthPromotion?: boolean): void {
+  private validateAndAdjustDepthAfterMove(newIndex: number, skipDepthPromotion?: boolean, pointerDepth?: number): void {
     const currentDepth = this.getDepth();
     const targetDepth = this.depthValidator.getTargetDepthForMove({
       blockIndex: newIndex,
       currentDepth,
       skipDepthPromotion,
+      pointerDepth,
     });
 
     if (currentDepth !== targetDepth) {
@@ -582,6 +628,10 @@ export class ListItem implements BlockTool {
   }
 
   private rerender(): void {
+    // Same drift guard as render(): keep the rebuilt indent/marker aligned with
+    // the structural tree rather than a possibly-stale flat depth carrier.
+    this.reconcileDepthFromStructure();
+
     const blockIndex = this.blockId
       ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
       : this.api.blocks.getCurrentBlockIndex();

@@ -744,6 +744,11 @@ describe("DragManager - Component Integration", () => {
       document.body.appendChild(wrapper);
       blocks.forEach((block) => wrapper.appendChild(block.holder));
 
+      // Shift the content origin far to the right so the central drop X (50, chosen
+      // to clear the side-drop zones) reads as the content's LEFT edge — i.e. the
+      // cursor selects depth 0 (a plain root reorder), not a horizontal nest.
+      (modules.UI.contentRect as { left: number }).left = 1000;
+
       // Drag the list item at index 1 down past block-4 (index 3) — a real
       // reorder, not a same-slot drop.
       const sourceBlock = blocks[1];

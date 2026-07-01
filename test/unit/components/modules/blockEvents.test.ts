@@ -41,6 +41,8 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     } as unknown as BlokModules['Toolbar'],
     BlockSelection: {
       anyBlockSelected: false,
+      navigationModeEnabled: false,
+      adoptSelectionIntoNavigationMode: vi.fn(() => false),
       clearSelection: vi.fn(),
       copySelectedBlocks: vi.fn(() => Promise.resolve()),
       selectedBlocks: [],
@@ -456,6 +458,36 @@ describe('BlockEvents', () => {
 
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpen).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpened).toBe(true);
+    });
+
+    it('opens BlockSettings for Ctrl+Slash when multiple blocks are selected', () => {
+      let blockSettingsOpened = false;
+      const blockSettingsOpen = vi.fn().mockImplementation(async function(this: BlokModules['BlockSettings']) {
+        this.opened = true;
+        blockSettingsOpened = true;
+      });
+      const moveAndOpenForMultipleBlocks = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockSelection: {
+          selectedBlocks: [{}, {}] as unknown as Block[],
+        } as unknown as BlokModules['BlockSelection'],
+        BlockSettings: {
+          opened: false,
+          open: blockSettingsOpen,
+        } as unknown as BlokModules['BlockSettings'],
+        Toolbar: {
+          opened: false,
+          moveAndOpenForMultipleBlocks,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const event = createKeyboardEvent({ code: 'Slash', metaKey: true });
+
+      blockEvents.keydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(moveAndOpenForMultipleBlocks).toHaveBeenCalledTimes(1);
       expect(blockSettingsOpen).toHaveBeenCalledTimes(1);
       expect(blockSettingsOpened).toBe(true);
     });

@@ -13,6 +13,9 @@ import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 import { Shortcuts } from '../utils/shortcuts';
+import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
+import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
+import type { ListItemStyle } from '../../tools/list/types';
 
 /**
  *
@@ -295,9 +298,18 @@ export class BlockSelection extends Module {
 
     /**
      * If reason caused clear of the selection was printable key and any block is selected,
-     * remove selected blocks and insert pressed key
+     * remove selected blocks and insert pressed key.
+     *
+     * A collapsed caret counts as "no selection" here (mirroring Backspace/Enter,
+     * which use `!selectionExists || isCollapsed`). A cross-block mouse drag ends
+     * with the native range removed but a collapsed caret lingering inside the
+     * last selected block, so `isSelectionExists` stays true; without the collapse
+     * check the replacement was skipped and the character was typed natively into
+     * that block while the selected blocks were never deleted.
      */
-    if (this.anyBlockSelected && isKeyboard && isPrintableKey && !SelectionUtils.isSelectionExists) {
+    const nativeSelectionBlocksReplace = SelectionUtils.isSelectionExists && SelectionUtils.isCollapsed === false;
+
+    if (this.anyBlockSelected && isKeyboard && isPrintableKey && !nativeSelectionBlocksReplace) {
       this.replaceSelectedBlocksWithPrintableKey(reason);
     }
 
@@ -359,7 +371,37 @@ export class BlockSelection extends Module {
      */
     const savedData = this.serializeBlocksForClipboard(this.selectedBlocks);
 
-    this.selectedBlocks.forEach((block) => {
+    /**
+     * List blocks render as non-semantic `<div role="listitem">` with a marker
+     * `<span>`, so sanitizing their rendered `holder.innerHTML` would strip them to
+     * bare text and wrap each in a `<p>` — collapsing the list into paragraphs (and
+     * leaking the bullet glyph) in Word / Google-Docs / other HTML editors. Emit
+     * SEMANTIC `<ul>`/`<ol>` instead, grouping consecutive selected list blocks into
+     * a single nested list per depth. Non-list blocks keep the sanitize path.
+     */
+    const blocks = this.selectedBlocks;
+    let cursor = 0;
+
+    while (cursor < blocks.length) {
+      const block = blocks[cursor];
+
+      if (block.name === LIST_TOOL_NAME) {
+        const group: SemanticListItem[] = [];
+
+        while (cursor < blocks.length && blocks[cursor].name === LIST_TOOL_NAME) {
+          group.push(this.toSemanticListItem(blocks[cursor].preservedData));
+          cursor += 1;
+        }
+
+        const listContainer = buildSemanticListHtml(group);
+
+        while (listContainer.firstChild) {
+          fakeClipboard.appendChild(listContainer.firstChild);
+        }
+
+        continue;
+      }
+
       const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
       const wrapper = $.make('div');
 
@@ -380,7 +422,9 @@ export class BlockSelection extends Module {
           fakeClipboard.appendChild(wrapper.firstChild);
         }
       }
-    });
+
+      cursor += 1;
+    }
 
     /**
      * The text/plain flavor carries Markdown — headings as `#`, bold as `**`,
@@ -438,6 +482,24 @@ export class BlockSelection extends Module {
     if (clipboard !== undefined && typeof clipboard.writeText === 'function') {
       await clipboard.writeText(markdown);
     }
+  }
+
+  /**
+   * Narrow a list block's preserved data into the minimal shape the semantic HTML
+   * builder needs, defaulting unknown/missing fields safely.
+   * @param data - the list block's preserved data
+   * @returns the semantic list item descriptor
+   */
+  private toSemanticListItem(data: Record<string, unknown>): SemanticListItem {
+    const rawStyle = data.style;
+    const style: ListItemStyle = rawStyle === 'ordered' || rawStyle === 'checklist' ? rawStyle : 'unordered';
+
+    return {
+      text: typeof data.text === 'string' ? data.text : '',
+      style,
+      checked: Boolean(data.checked),
+      depth: typeof data.depth === 'number' ? data.depth : 0,
+    };
   }
 
   /**
@@ -569,6 +631,41 @@ export class BlockSelection extends Module {
       : 0;
 
     this.setNavigationFocus(startIndex);
+  }
+
+  /**
+   * Adopt an existing single-block selection into navigation mode so plain
+   * Up/Down moves it to the adjacent block, exactly like an Escape-initiated
+   * navigation. A single-block selection can be entered by several paths that do
+   * NOT set navigation mode — Cmd+A stage 2, Shift+Click, or the public select
+   * API — and without this a plain arrow would collapse the selection to a caret
+   * instead of moving it (Notion parity).
+   *
+   * Only a selection of EXACTLY one block is adopted; a multi-block selection is
+   * left untouched so its arrow behaviour is unchanged.
+   * @returns true when navigation mode is now active on a single-block selection
+   */
+  public adoptSelectionIntoNavigationMode(): boolean {
+    if (this._navigationModeEnabled) {
+      return true;
+    }
+
+    const selected = this.selectedBlocks;
+
+    if (selected.length !== 1) {
+      return false;
+    }
+
+    const index = this.Blok.BlockManager.blocks.indexOf(selected[0]);
+
+    if (index < 0) {
+      return false;
+    }
+
+    this._navigationModeEnabled = true;
+    this.setNavigationFocus(index);
+
+    return true;
   }
 
   /**
@@ -1014,7 +1111,27 @@ export class BlockSelection extends Module {
   private replaceSelectedBlocksWithPrintableKey(event: KeyboardEvent): void {
     const { BlockManager, Caret } = this.Blok;
 
-    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+    /**
+     * Prevent the browser from ALSO inserting this character natively. A
+     * cross-block mouse drag can leave a collapsed caret inside a still-focused
+     * block, so without preventing the default the character would be typed
+     * twice: once natively into that block and once by the deferred
+     * `insertContentAtCaretPosition` below into the fresh replacement block.
+     */
+    event.preventDefault();
+
+    /**
+     * Drop any lingering collapsed caret/native range so the character can only
+     * arrive through the replacement block created below.
+     */
+    SelectionUtils.get()?.removeAllRanges();
+
+    /**
+     * Force a replacement block so the typed character lands in ONE clean block
+     * at the seam of the deleted span — even for a partial (subset) selection
+     * where the whole document was not selected.
+     */
+    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement(true);
 
     if (insertedBlock) {
       Caret.setToBlock(insertedBlock);

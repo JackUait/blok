@@ -675,3 +675,180 @@ describe('toggleChecklistChecked — Cmd/Ctrl+Enter checkbox toggle', () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * BUG 4: the flat-carrier `handleIndent` must cascade a depth INCREASE to
+ * descendant list items — symmetric with `handleOutdent`'s `cascadeDepthReduction`.
+ * Without it, indenting a flat item bumps only its own depth and leaves nested
+ * descendants with a stale depth/glyph.
+ */
+describe('handleIndent — cascades depth increase to descendants (BUG 4)', () => {
+  let data: ListItemData;
+  let syncContentFromDOM: () => void;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    data = { text: 'item', style: 'unordered', depth: 1 };
+    syncContentFromDOM = vi.fn<() => void>();
+  });
+
+  it('increases descendant depths by 1 and stops at siblings / non-list blocks', async () => {
+    // prev(depth 1) precedes item so indent is allowed; cap = prev depth + 1 = 2.
+    const blocks = [
+      createMockBlock({ id: 'prev', depth: 1 }),
+      createMockBlock({ id: 'item', depth: 1 }),
+      createMockBlock({ id: 'child', depth: 2 }),
+      createMockBlock({ id: 'grandchild', depth: 3 }),
+      createMockBlock({ id: 'sibling', depth: 1 }),
+    ];
+
+    const blocksAPI = {
+      getBlockByIndex: (i: number) => blocks[i] ?? undefined,
+      getBlockIndex: (id: string) => {
+        const idx = blocks.findIndex(b => b.id === id);
+        return idx >= 0 ? idx : undefined;
+      },
+      getBlocksCount: () => blocks.length,
+      getCurrentBlockIndex: () => 1,
+    };
+
+    const holder = document.createElement('div');
+    const contentEl = document.createElement('div');
+    contentEl.setAttribute('contenteditable', 'true');
+    holder.appendChild(contentEl);
+    const update = vi.fn().mockResolvedValue({ id: 'item', holder });
+
+    const api = {
+      blocks: { ...blocksAPI, update },
+      caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+    } as unknown as KeyboardContext['api'];
+
+    const context: KeyboardContext = {
+      api,
+      blockId: 'item',
+      data,
+      element: document.createElement('div'),
+      getContentElement: () => contentEl,
+      syncContentFromDOM,
+      getDepth: () => data.depth ?? 0,
+    };
+
+    await handleIndent(context, new ListDepthValidator(blocksAPI));
+
+    // The item itself indents 1 → 2.
+    expect(update).toHaveBeenCalledWith('item', expect.objectContaining({ depth: 2 }));
+    // Descendants deeper than the item cascade +1.
+    expect(update).toHaveBeenCalledWith('child', expect.objectContaining({ depth: 3 }));
+    expect(update).toHaveBeenCalledWith('grandchild', expect.objectContaining({ depth: 4 }));
+    // A following item at the item's ORIGINAL depth is a sibling — not cascaded.
+    expect(update).not.toHaveBeenCalledWith('sibling', expect.anything());
+  });
+});
+
+/**
+ * BUG 3: on a flat-carrier list item, Tab / Shift+Tab must PRESERVE the caret's
+ * mid-text offset. The flat path re-renders via api.blocks.update and used to set
+ * the caret with the default 'end' position, jumping the caret to the end.
+ */
+describe('flat-carrier indent/outdent preserves caret offset (BUG 3)', () => {
+  const readCaretOffset = (el: HTMLElement): number => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      return -1;
+    }
+    const range = sel.getRangeAt(0);
+    const pre = document.createRange();
+    pre.selectNodeContents(el);
+    pre.setEnd(range.endContainer, range.endOffset);
+
+    return pre.toString().length;
+  };
+
+  const buildContext = (opts: { depth: number; caretOffset: number }): {
+    context: KeyboardContext;
+    depthValidator: ListDepthValidator;
+    updatedContent: HTMLElement;
+  } => {
+    const text = 'hello world';
+
+    // Original content element carrying the mid-text collapsed caret.
+    const originalContent = document.createElement('div');
+    originalContent.contentEditable = 'true';
+    originalContent.textContent = text;
+    document.body.appendChild(originalContent);
+    const tn = originalContent.firstChild ?? originalContent;
+    const range = document.createRange();
+    range.setStart(tn, opts.caretOffset);
+    range.collapse(true);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+
+    // The re-rendered block returned by update(): its own holder + content el.
+    const updatedHolder = document.createElement('div');
+    const updatedContent = document.createElement('div');
+    updatedContent.setAttribute('contenteditable', 'true');
+    updatedContent.textContent = text;
+    updatedHolder.appendChild(updatedContent);
+    document.body.appendChild(updatedHolder);
+
+    const blocks = [
+      createMockBlock({ id: 'prev', depth: opts.depth }),
+      createMockBlock({ id: 'item', depth: opts.depth }),
+    ];
+
+    const blocksAPI = {
+      getBlockByIndex: (i: number) => blocks[i] ?? undefined,
+      getBlockIndex: (id: string) => {
+        const idx = blocks.findIndex(b => b.id === id);
+        return idx >= 0 ? idx : undefined;
+      },
+      getBlocksCount: () => blocks.length,
+      getCurrentBlockIndex: () => 1,
+    };
+
+    const data: ListItemData = { text, style: 'unordered', depth: opts.depth };
+
+    const api = {
+      blocks: {
+        ...blocksAPI,
+        update: vi.fn().mockResolvedValue({ id: 'item', holder: updatedHolder }),
+      },
+      caret: { setToBlock: vi.fn(), updateLastCaretAfterPosition: vi.fn() },
+    } as unknown as KeyboardContext['api'];
+
+    const context: KeyboardContext = {
+      api,
+      blockId: 'item',
+      data,
+      element: document.createElement('div'),
+      getContentElement: () => originalContent,
+      syncContentFromDOM: vi.fn(),
+      getDepth: () => data.depth ?? 0,
+    };
+
+    return { context, depthValidator: new ListDepthValidator(blocksAPI), updatedContent };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('restores the caret offset after flat indent (Tab)', async () => {
+    const { context, depthValidator, updatedContent } = buildContext({ depth: 1, caretOffset: 5 });
+
+    await handleIndent(context, depthValidator);
+
+    // Caret stays after "hello" (offset 5), not jumped to end (11).
+    expect(readCaretOffset(updatedContent)).toBe(5);
+  });
+
+  it('restores the caret offset after flat outdent (Shift+Tab)', async () => {
+    const { context, depthValidator, updatedContent } = buildContext({ depth: 1, caretOffset: 5 });
+
+    await handleOutdent(context, depthValidator);
+
+    expect(readCaretOffset(updatedContent)).toBe(5);
+  });
+});

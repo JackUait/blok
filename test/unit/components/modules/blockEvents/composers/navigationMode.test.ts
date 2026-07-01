@@ -27,6 +27,7 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       disableNavigationMode: vi.fn(),
       navigateNext: vi.fn(),
       navigatePrevious: vi.fn(),
+      adoptSelectionIntoNavigationMode: vi.fn(() => false),
       selectedBlocks: [],
     } as unknown as BlokModules['BlockSelection'],
     BlockSettings: {
@@ -189,6 +190,86 @@ describe('NavigationMode', () => {
       const result = navigationMode.handleKey(event);
 
       expect(result).toBe(false);
+    });
+
+    describe('adopting a single-block selection entered outside navigation mode', () => {
+      it('adopts the selection and moves down on plain ArrowDown', () => {
+        const navigateNext = vi.fn();
+        const adoptSelectionIntoNavigationMode = vi.fn(() => true);
+        const blok = createBlokModules({
+          BlockSelection: {
+            // Not yet in navigation mode, but a single block is selected.
+            navigationModeEnabled: false,
+            navigateNext,
+            adoptSelectionIntoNavigationMode,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent({ key: 'ArrowDown' });
+
+        const result = navigationMode.handleKey(event);
+
+        expect(adoptSelectionIntoNavigationMode).toHaveBeenCalledTimes(1);
+        expect(result).toBe(true);
+        expect(navigateNext).toHaveBeenCalledTimes(1);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      });
+
+      it('adopts the selection and moves up on plain ArrowUp', () => {
+        const navigatePrevious = vi.fn();
+        const adoptSelectionIntoNavigationMode = vi.fn(() => true);
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: false,
+            navigatePrevious,
+            adoptSelectionIntoNavigationMode,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent({ key: 'ArrowUp' });
+
+        const result = navigationMode.handleKey(event);
+
+        expect(adoptSelectionIntoNavigationMode).toHaveBeenCalledTimes(1);
+        expect(result).toBe(true);
+        expect(navigatePrevious).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not adopt when there is no single-block selection (adopt returns false)', () => {
+        const navigateNext = vi.fn();
+        const adoptSelectionIntoNavigationMode = vi.fn(() => false);
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: false,
+            navigateNext,
+            adoptSelectionIntoNavigationMode,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent({ key: 'ArrowDown' });
+
+        const result = navigationMode.handleKey(event);
+
+        expect(result).toBe(false);
+        expect(navigateNext).not.toHaveBeenCalled();
+      });
+
+      it('does not adopt for a modified arrow (e.g. Shift) so multi-block selection is untouched', () => {
+        const adoptSelectionIntoNavigationMode = vi.fn(() => true);
+        const blok = createBlokModules({
+          BlockSelection: {
+            navigationModeEnabled: false,
+            adoptSelectionIntoNavigationMode,
+          } as unknown as BlokModules['BlockSelection'],
+        });
+        const navigationMode = new NavigationMode(blok);
+        const event = createKeyboardEvent({ key: 'ArrowDown', shiftKey: true });
+
+        const result = navigationMode.handleKey(event);
+
+        expect(result).toBe(false);
+        expect(adoptSelectionIntoNavigationMode).not.toHaveBeenCalled();
+      });
     });
 
     describe('ArrowDown in navigation mode', () => {

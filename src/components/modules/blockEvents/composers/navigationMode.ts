@@ -58,7 +58,23 @@ export class NavigationMode extends BlockEventComposer {
     const { BlockSelection } = this.Blok;
 
     if (!BlockSelection.navigationModeEnabled) {
-      return false;
+      /**
+       * A single-block selection entered WITHOUT navigation mode (Cmd+A stage 2,
+       * Shift+Click, public select API) should still move to the adjacent block
+       * on a plain Up/Down — adopt it into navigation mode so the switch below
+       * drives it. Everything else (multi-block selections, modified arrows, any
+       * other key) falls through untouched.
+       */
+      const isPlainVerticalArrow =
+        !event.shiftKey &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        (event.key === 'ArrowUp' || event.key === 'ArrowDown');
+
+      if (!isPlainVerticalArrow || !BlockSelection.adoptSelectionIntoNavigationMode()) {
+        return false;
+      }
     }
 
     const key = event.key;

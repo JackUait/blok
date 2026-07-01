@@ -21,6 +21,14 @@ export interface DepthValidationOptions {
    * Used during group drag-drops where the group's relative structure is preserved.
    */
   skipDepthPromotion?: boolean;
+  /**
+   * The pointer-resolved drop depth the drag indicator showed (see
+   * {@link DepthResolutionContext.pointerDepth}). Threaded through by the drag
+   * controller when it re-fires the moved() hook, so the applied drop lands at
+   * the depth the cursor indicated instead of neighbour auto-resolution — the
+   * "indicator == drop" invariant. Undefined for keyboard/programmatic moves.
+   */
+  pointerDepth?: number;
 }
 
 /**
@@ -40,29 +48,28 @@ export interface DepthResolutionContext {
   /** Skip the match-next / match-previous promotions (group moves preserve relative structure). */
   skipDepthPromotion?: boolean;
   /**
+   * Whether ANY block precedes the drop slot — a list item OR any other block
+   * (paragraph, heading, …). Gates cursor-driven nesting: Notion lets a block
+   * nest one level under any preceding block, not only under a list item, so the
+   * cursor engages whenever a predecessor exists. When omitted it defaults to
+   * {@link previousIsListItem}, preserving the list-only behaviour for callers
+   * (and the pure-function unit tests) that don't supply it — only the drag
+   * indicator / drop path opts into the broader "nest under any block" rule.
+   */
+  previousExists?: boolean;
+  /**
    * The raw discrete indent step the user's cursor sits at, derived from its
-   * horizontal position at the drop gap (see {@link selectPointerDepth}). It
-   * takes over from the auto-promotion heuristics — clamped to
-   * `[0, previousDepth + 1]` — ONLY when (a) a real nesting-context predecessor
-   * exists and (b) the cursor is inside the indent-selection band near the
-   * content's left edge (no deeper than {@link POINTER_ENGAGE_SLACK} steps past
-   * the deepest legal indent). A cursor far to the right — e.g. released over the
-   * block's text during a plain vertical reorder — is NOT an indent gesture and
-   * falls through to auto-resolution, so ordinary drops keep their existing
-   * depth. `undefined` (no cursor info, e.g. unit tests / the parity guard)
-   * leaves auto-resolution untouched.
+   * horizontal position at the drop gap (see {@link selectPointerDepth}). When a
+   * real nesting-context predecessor exists it is authoritative and
+   * deterministic: the cursor's discrete indent step, clamped to
+   * `[0, previousDepth + 1]`, wins over the auto-promotion heuristics. A cursor
+   * left of the content edge maps to root (0); a far-right over-drag CAPS at the
+   * deepest legal depth and HOLDS there (it does not fall through to
+   * auto-resolution). `undefined` (no cursor info, e.g. unit tests / the parity
+   * guard) leaves auto-resolution untouched.
    */
   pointerDepth?: number;
 }
-
-/**
- * How many indent steps PAST the deepest legal indent the cursor may sit and
- * still count as a deliberate indent gesture. Beyond this the cursor is treated
- * as "released to the right over the content" (a plain vertical reorder), and
- * the depth falls back to neighbour-based auto-resolution. Keeps the horizontal
- * indent control scoped to the narrow zone near the content's left edge.
- */
-export const POINTER_ENGAGE_SLACK = 1;
 
 /**
  * Maps a cursor X position to a discrete indent step. The drop gap's depth-0
@@ -110,28 +117,25 @@ export const selectPointerDepth = (clientX: number, baseLeft: number, indentPerL
  *    shallower/absent next item must not pull the drop back to root.
  */
 export const resolveTargetDepth = (context: DepthResolutionContext): number => {
-  const { currentDepth, previousIsListItem, previousDepth, nextIsListItem, nextDepth, skipDepthPromotion, pointerDepth } = context;
+  const { currentDepth, previousIsListItem, previousDepth, nextIsListItem, nextDepth, skipDepthPromotion, pointerDepth, previousExists } = context;
 
   const maxAllowedDepth = previousIsListItem ? previousDepth + 1 : 1;
 
-  // Cursor-driven nesting (Notion's horizontal drag-to-indent). The cursor's raw
-  // indent step wins over the auto heuristics — clamped to [0, previousDepth + 1]
-  // — but only when:
-  //   1. there is a real nesting-context predecessor to nest under (without one
-  //      there is no legal parent, so "drag right" must NOT nest a paragraph
-  //      under a plain paragraph), and
-  //   2. the cursor is inside the indent-selection band: no deeper than
-  //      POINTER_ENGAGE_SLACK steps past the deepest legal indent. A cursor far
-  //      to the right (released over the block's text — exactly what a plain
-  //      vertical reorder does) is not an indent gesture and falls through to
-  //      auto-resolution, so ordinary drops keep their existing depth.
-  // `pointerDepth === undefined` leaves every existing path (and the
+  // A predecessor the cursor can nest under: any preceding block when the caller
+  // opts in via `previousExists` (drag indicator / drop), else the legacy
+  // list-only rule (`previousIsListItem`).
+  const hasNestingPredecessor = previousExists ?? previousIsListItem;
+
+  // Cursor-driven nesting (Notion's horizontal drag-to-indent). When a real
+  // nesting-context predecessor exists the cursor is authoritative and
+  // deterministic: its raw indent step, clamped to [0, previousDepth + 1], wins
+  // over the auto heuristics. A cursor left of the content edge maps to root; a
+  // far-right over-drag CAPS at the deepest legal depth and HOLDS there (no
+  // fall-through to auto-resolution). The predecessor gate stays because without
+  // a legal parent "drag right" must NOT nest a paragraph under a plain
+  // paragraph. `pointerDepth === undefined` leaves every existing path (and the
   // indicator/drop parity guard) byte-for-byte unchanged.
-  if (
-    pointerDepth !== undefined &&
-    previousIsListItem &&
-    pointerDepth <= maxAllowedDepth + POINTER_ENGAGE_SLACK
-  ) {
+  if (pointerDepth !== undefined && hasNestingPredecessor) {
     return Math.max(0, Math.min(pointerDepth, maxAllowedDepth));
   }
 
@@ -202,7 +206,7 @@ export class ListDepthValidator {
    * @returns The target depth for the dropped item
    */
   getTargetDepthForMove(options: DepthValidationOptions): number {
-    const { blockIndex, currentDepth, skipDepthPromotion } = options;
+    const { blockIndex, currentDepth, skipDepthPromotion, pointerDepth } = options;
 
     // Read the neighbour context from the DOM, then defer the actual decision to
     // the shared resolveTargetDepth — the SAME function the drag indicator uses,
@@ -210,6 +214,9 @@ export class ListDepthValidator {
     const previousBlock = blockIndex > 0 ? this.blocks.getBlockByIndex(blockIndex - 1) : undefined;
     const previousIsListItem = !!previousBlock && previousBlock.name === TOOL_NAME;
     const previousDepth = previousIsListItem ? this.getBlockDepth(previousBlock) : 0;
+    // Any predecessor (list OR other block) counts for cursor-driven nesting, so a
+    // pointer-resolved drop can nest under a preceding paragraph, not only a list.
+    const previousExists = previousBlock !== undefined;
 
     const nextBlock = this.blocks.getBlockByIndex(blockIndex + 1);
     const nextIsListItem = !!nextBlock && nextBlock.name === TOOL_NAME;
@@ -222,6 +229,8 @@ export class ListDepthValidator {
       nextIsListItem,
       nextDepth,
       skipDepthPromotion,
+      pointerDepth,
+      previousExists,
     });
   }
 

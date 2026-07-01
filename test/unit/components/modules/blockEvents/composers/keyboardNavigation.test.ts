@@ -2564,6 +2564,34 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
+    it('does not cross the block boundary on Cmd+ArrowRight (native line-end, no-op at edge)', () => {
+      const navigateNext = vi.fn(() => true);
+      const blok = createBlokModules({
+        Caret: {
+          navigateNext,
+          navigatePrevious: vi.fn(() => false),
+          navigateVerticalNext: vi.fn(() => false),
+          navigateVerticalPrevious: vi.fn(() => false),
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        key: 'ArrowRight',
+        keyCode: keyCodes.RIGHT,
+        metaKey: true,
+      });
+
+      const endSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleArrowRightAndDown(event);
+
+      // Cmd+ArrowRight is macOS line-end; it must stay native (never cross blocks).
+      expect(navigateNext).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+
+      endSpy.mockRestore();
+    });
+
     it('hides the block-action gutter instead of popping it when arrow navigation crosses a block', () => {
       const moveAndOpen = vi.fn();
       const hideBlockActions = vi.fn();
@@ -2619,6 +2647,30 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleArrowLeftAndUp(event);
 
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('does not cross the block boundary on Cmd+ArrowLeft (native line-start, no-op at edge)', () => {
+      const navigatePrevious = vi.fn(() => true);
+      const blok = createBlokModules({
+        Caret: {
+          navigatePrevious,
+          navigateNext: vi.fn(() => false),
+          navigateVerticalNext: vi.fn(() => false),
+          navigateVerticalPrevious: vi.fn(() => false),
+        } as unknown as BlokModules['Caret'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({
+        key: 'ArrowLeft',
+        keyCode: keyCodes.LEFT,
+        metaKey: true,
+      });
+
+      keyboardNavigation.handleArrowLeftAndUp(event);
+
+      // Cmd+ArrowLeft is macOS line-start; it must stay native (never cross blocks).
+      expect(navigatePrevious).not.toHaveBeenCalled();
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
   });

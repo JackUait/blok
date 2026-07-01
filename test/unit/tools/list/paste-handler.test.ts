@@ -120,11 +120,20 @@ describe('paste-handler', () => {
       expect(result).toBe('unordered');
     });
 
-    it('returns current style when content has no parent', () => {
+    /**
+     * Corrected contract (BUG 3): a DETACHED <li> resolves its ordered/unordered
+     * style from the `data-list-style` the HTML paste pre-pass stamps while the
+     * ancestor <ol>/<ul> chain is still intact — NOT from a blind fall back to the
+     * current block's style. This is the seam that keeps a pasted <ol> ordered
+     * even though the current block is an unordered list. (The pure no-attribute
+     * fallback is still covered by the Google-Docs describe block below.)
+     */
+    it('resolves the stamped data-list-style on a detached <li> over the current style', () => {
       const content = document.createElement('li');
       content.textContent = 'Orphan item';
+      content.setAttribute('data-list-style', 'ordered');
 
-      const result = detectStyleFromPastedContent(content, 'ordered');
+      const result = detectStyleFromPastedContent(content, 'unordered');
 
       expect(result).toBe('ordered');
     });

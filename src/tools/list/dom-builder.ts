@@ -249,6 +249,103 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
 };
 
 /**
+ * Minimal shape of a list item needed to serialize semantic clipboard HTML.
+ */
+export interface SemanticListItem {
+  /** Item text content (may include inline HTML) */
+  text: string;
+  /** List style: unordered, ordered, or checklist */
+  style: ListItemStyle;
+  /** Checked state for checklist items */
+  checked?: boolean;
+  /** Nesting depth level (0 = root, 1 = first indent, …) */
+  depth?: number;
+}
+
+/**
+ * Build SEMANTIC list HTML (`<ul>`/`<ol>` with `<li>` items) from a flat,
+ * depth-carrying list of items — the `text/html` clipboard flavor for a copied
+ * Blok list.
+ *
+ * Blok renders list items as non-semantic `<div role="listitem">` with a marker
+ * `<span>`, so copying the rendered DOM into Word/Google-Docs/another HTML editor
+ * would otherwise collapse the list into paragraphs (and leak the bullet glyph as
+ * literal text). Emitting real nested `<ul>`/`<ol>` keeps the structure and the
+ * ordered-vs-unordered-vs-checklist distinction, with NO marker-glyph text.
+ *
+ * @param items - list items in document order, each carrying its depth
+ * @returns a container element whose children are the top-level list element(s)
+ */
+export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement => {
+  const container = document.createElement('div');
+
+  type Level = { style: ListItemStyle; listEl: HTMLElement; lastItem: HTMLElement | null };
+  const stack: Level[] = [];
+
+  const makeListElement = (style: ListItemStyle): HTMLElement =>
+    document.createElement(style === 'ordered' ? 'ol' : 'ul');
+
+  const buildItemElement = (item: SemanticListItem): HTMLElement => {
+    const li = document.createElement('li');
+
+    if (item.style === 'checklist') {
+      const checkbox = document.createElement('input');
+
+      checkbox.type = 'checkbox';
+      checkbox.checked = Boolean(item.checked);
+      li.appendChild(checkbox);
+
+      const label = document.createElement('span');
+
+      label.innerHTML = item.text;
+      li.appendChild(label);
+    } else {
+      li.innerHTML = item.text;
+    }
+
+    return li;
+  };
+
+  for (const item of items) {
+    // Clamp so an item can be at most one level deeper than the deepest open
+    // list — a jump from depth 0 to 2 would otherwise leave an orphan level.
+    const depth = Math.min(Math.max(0, item.depth ?? 0), stack.length);
+
+    // Close any levels deeper than this item's depth.
+    while (stack.length > depth + 1) {
+      stack.pop();
+    }
+
+    let level = stack[depth];
+
+    if (level === undefined || level.style !== item.style) {
+      const listEl = makeListElement(item.style);
+
+      if (depth === 0) {
+        container.appendChild(listEl);
+      } else {
+        const parent = stack[depth - 1];
+        const anchor = parent.lastItem ?? parent.listEl.appendChild(document.createElement('li'));
+
+        parent.lastItem = anchor;
+        anchor.appendChild(listEl);
+      }
+
+      level = { style: item.style, listEl, lastItem: null };
+      stack[depth] = level;
+      stack.length = depth + 1;
+    }
+
+    const li = buildItemElement(item);
+
+    level.listEl.appendChild(li);
+    level.lastItem = li;
+  }
+
+  return container;
+};
+
+/**
  * Create the marker element (bullet or number) for a list item.
  *
  * @param style - The list item style

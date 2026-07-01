@@ -257,26 +257,23 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
     });
   });
 
-  describe('BUG #5b — Cmd+Horizontal Arrow crosses blocks at the boundary; Ctrl/Alt stay native', () => {
+  describe('BUG #5b — Cmd+Horizontal Arrow is a within-line move / boundary no-op; Ctrl/Alt stay native', () => {
     /**
-     * Cmd+Left/Right is the macOS line-start/line-end gesture. Within a block it
-     * must stay native (move to the line edge); but once the caret is already at
-     * the block's absolute start/end, Cmd+Left/Right should cross into the
-     * adjacent block — so the user can navigate BOTH between strings inside a
-     * block AND between blocks with the same key.
+     * Cmd+Left/Right is the macOS line-start/line-end gesture (like Home/End). Per
+     * Notion parity it stays a WITHIN-BLOCK move: within a multi-line block it goes
+     * to the visual line edge, and at the block's absolute start/end it is a no-op —
+     * it must NOT cross into the adjacent block.
      *
-     * The handler delegates to Caret.navigateNext / navigatePrevious, which only
-     * cross when the caret is at the boundary (and return false otherwise). So at
-     * the handler level: Cmd+Arrow ALWAYS calls the navigator, but only
-     * preventDefaults (suppressing the native gesture) when the navigator actually
-     * crossed — leaving native line-nav intact mid-block. Ctrl/Alt (word nav) are
-     * NOT the line gesture and must never cross, so they never call the navigator.
+     * At the handler level this means Cmd+Arrow is treated exactly like Ctrl/Alt
+     * (word nav): the navigator (Caret.navigateNext / navigatePrevious) is never
+     * called and the native gesture is never suppressed (no preventDefault), so the
+     * browser's contenteditable line-nav — confined to the current block — runs.
      */
-    it('Cmd+ArrowRight at the block END crosses into the next block (navigateNext + preventDefault)', () => {
+    it('Cmd+ArrowRight at the block END does NOT cross into the next block (stays native, no navigateNext)', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
 
-      // navigator returns true → it crossed (caret was at the boundary).
+      // Even if the navigator would cross, it must never be called for Cmd+Arrow.
       const navigateNext = vi.fn(() => true);
       const blok = createBlokModules({
         Caret: {
@@ -290,15 +287,14 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
 
       keyboardNavigation.handleArrowRightAndDown(event);
 
-      expect(navigateNext).toHaveBeenCalled();
-      expect(event.preventDefault).toHaveBeenCalled();
+      expect(navigateNext).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('Cmd+ArrowRight MID-line falls through to native line-end (navigateNext returns false → no preventDefault)', () => {
+    it('Cmd+ArrowRight MID-line stays native line-end (no navigateNext, no preventDefault)', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
 
-      // navigator returns false → caret was not at the boundary, native handles it.
       const navigateNext = vi.fn(() => false);
       const blok = createBlokModules({
         Caret: {
@@ -312,7 +308,7 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
 
       keyboardNavigation.handleArrowRightAndDown(event);
 
-      expect(navigateNext).toHaveBeenCalled();
+      expect(navigateNext).not.toHaveBeenCalled();
       // Native Cmd+Right (line-end) must run — the handler must NOT preventDefault.
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
@@ -377,10 +373,11 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       expect(navigateNext).toHaveBeenCalled();
     });
 
-    it('Cmd+ArrowLeft at the block START crosses into the previous block (navigatePrevious + preventDefault)', () => {
+    it('Cmd+ArrowLeft at the block START does NOT cross into the previous block (stays native, no navigatePrevious)', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(true);
 
+      // Even if the navigator would cross, it must never be called for Cmd+Arrow.
       const navigatePrevious = vi.fn(() => true);
       const blok = createBlokModules({
         Caret: {
@@ -394,11 +391,11 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
 
       keyboardNavigation.handleArrowLeftAndUp(event);
 
-      expect(navigatePrevious).toHaveBeenCalled();
-      expect(event.preventDefault).toHaveBeenCalled();
+      expect(navigatePrevious).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
     });
 
-    it('Cmd+ArrowLeft MID-line falls through to native line-start (navigatePrevious returns false → no preventDefault)', () => {
+    it('Cmd+ArrowLeft MID-line stays native line-start (no navigatePrevious, no preventDefault)', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
 
@@ -415,7 +412,7 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
 
       keyboardNavigation.handleArrowLeftAndUp(event);
 
-      expect(navigatePrevious).toHaveBeenCalled();
+      expect(navigatePrevious).not.toHaveBeenCalled();
       expect(event.preventDefault).not.toHaveBeenCalled();
     });
 

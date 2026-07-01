@@ -81,6 +81,18 @@ describe('EditorWrapper', () => {
       expect(typeof editor.undo).toBe('function');
       expect(typeof editor.redo).toBe('function');
     });
+
+    it('centers block content instead of leaving it flush against the left edge', async () => {
+      const { container } = renderEditor();
+
+      // Blok defaults contentAlign to 'left' (data-blok-content-align="left"),
+      // which zeroes out the content column's auto margin — the block then
+      // hugs the left edge of whatever width the holder happens to be, instead
+      // of self-centering. The demo must opt into 'center' explicitly.
+      await waitFor(() => {
+        expect(container.querySelector('.blok-editor')).toHaveAttribute('data-blok-content-align', 'center');
+      });
+    });
   });
 
   describe('error state', () => {

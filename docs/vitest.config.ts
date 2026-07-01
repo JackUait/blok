@@ -53,7 +53,11 @@ export default defineConfig({
                   redo: () => Promise.resolve(),
                 }));
 
-                return React.createElement('div', { className: props.className, 'data-testid': 'mock-blok-editor' });
+                return React.createElement('div', {
+                  className: props.className,
+                  'data-testid': 'mock-blok-editor',
+                  'data-blok-content-align': (props.style && props.style.contentAlign) || 'left',
+                });
               });
             `,
           };

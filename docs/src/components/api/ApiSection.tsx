@@ -75,6 +75,25 @@ const GitHubIcon: React.FC = () => (
   </svg>
 );
 
+// Same stroked, rounded line style as section-icons.tsx / Toast.tsx, sized to
+// sit inline with the checkpoint copy below.
+const InfoIcon: React.FC = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className="mt-0.5 size-5 shrink-0 text-primary"
+  >
+    <circle cx="12" cy="12" r="9" />
+    <line x1="12" y1="11" x2="12" y2="16" />
+    <circle cx="12" cy="7.5" r="0.9" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 const QuickStartContent: React.FC = () => {
   const { t } = useI18n();
   const { framework } = useFramework();
@@ -167,17 +186,20 @@ const QuickStartContent: React.FC = () => {
           failure (the missing #editor container from the configure step
           above) so a stuck reader isn't left guessing. */}
       <div
-        className="rounded-xl border border-border bg-secondary/40 px-4 py-3"
+        className="flex items-start gap-2.5 rounded-xl border border-border bg-secondary/40 px-4 py-3"
         data-blok-testid="quick-start-checkpoint"
       >
-        <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
-          <Typo>{t('api.quickStart.checkpoint')}</Typo>
-        </p>
-        {framework === 'vanilla' && (
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {renderInline(t('api.quickStart.troubleshooting'))}
+        <InfoIcon />
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm leading-relaxed text-foreground">
+            <Typo>{t('api.quickStart.checkpoint')}</Typo>
           </p>
-        )}
+          {framework === 'vanilla' && (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {renderInline(t('api.quickStart.troubleshooting'))}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

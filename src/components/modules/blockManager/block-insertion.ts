@@ -365,9 +365,15 @@ export class BlockInsertion {
 
       const extractedText = $.isEmpty(wrapper) ? '' : wrapper.innerHTML;
 
-      // Get truncated text (what remains in original block after extraction)
+      // Get truncated text (what remains in original block after extraction).
+      // Exclude mutation-free decorations (e.g. a list item's bullet/number
+      // marker, which should be non-editable): if one is ever flipped
+      // contenteditable="true", a bare [contenteditable="true"] selector would
+      // read/overwrite the marker instead of the real content — duplicating the
+      // item text into the bullet and rendering a large ghost. See
+      // updateBlocksContentEditable for the source-side guard.
       const truncatedText = currentBlock.holder
-        .querySelector('[contenteditable="true"]')?.innerHTML ?? '';
+        .querySelector('[contenteditable="true"]:not([data-blok-mutation-free])')?.innerHTML ?? '';
 
       // New block carries the source block's full data with only `text` replaced
       // by the extracted content, so it is complete in a single transaction.
@@ -458,8 +464,10 @@ export class BlockInsertion {
         }, insertIndex);
       });
 
-      // Update DOM for the current block (auto-sync is suppressed by yjsSyncCount)
-      const currentContentEl = currentBlock.holder.querySelector('[contenteditable="true"]');
+      // Update DOM for the current block (auto-sync is suppressed by yjsSyncCount).
+      // Scope past mutation-free decorations (e.g. a list marker) so the truncated
+      // text is written into the real content element, never a bullet/number span.
+      const currentContentEl = currentBlock.holder.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
 
       if (currentContentEl !== null && typeof currentBlockData.text === 'string') {
         currentContentEl.innerHTML = currentBlockData.text;

@@ -39,12 +39,6 @@
     "breadcrumbsLabel": "Breadcrumb",
     "lastUpdated": "Last updated",
     "editOnGithub": "Edit this page on GitHub",
-    "feedback": {
-      "question": "Was this page helpful?",
-      "yes": "Yes",
-      "no": "No",
-      "thanks": "Thanks for the feedback!"
-    },
     "quickStartSteps": {
       "install": {
         "title": "Install Blok",

@@ -340,4 +340,75 @@ describe('Sidebar', () => {
       expect(scrollToSpy).not.toHaveBeenCalled();
     });
   });
+
+  describe('scroll containment', () => {
+    it('contains scroll within the sidebar so it does not chain to the page', () => {
+      renderWithI18n(
+        <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
+      );
+
+      // Without this, scrolling past the sidebar's own top/bottom bounces the
+      // scroll onto the page behind it instead of just stopping.
+      expect(screen.getByTestId('api-sidebar')).toHaveClass('overscroll-contain');
+    });
+  });
+
+  describe('scroll haze (soft fade, not a hard cut)', () => {
+    // Simulate a menu that overflows: scrollHeight > clientHeight, and put the
+    // scroll position wherever the test needs.
+    const mockOverflow = (aside: HTMLElement, { scrollTop, clientHeight = 200, scrollHeight = 400 }: { scrollTop: number; clientHeight?: number; scrollHeight?: number }) => {
+      Object.defineProperty(aside, 'clientHeight', { value: clientHeight, configurable: true });
+      Object.defineProperty(aside, 'scrollHeight', { value: scrollHeight, configurable: true });
+      Object.defineProperty(aside, 'scrollTop', { value: scrollTop, configurable: true, writable: true });
+    };
+
+    // Implemented as a mask-image on the scroll container itself, not extra
+    // overlay elements: a sticky-positioned overlay was tried first and it
+    // shrank this component's CSS Grid column's intrinsic height by about a
+    // line, producing a phantom scrollbar with dead space below the last
+    // link — see "does not add extra DOM nodes" below, which guards against
+    // reintroducing that class of bug.
+    //
+    // The mask itself is asserted via data-blok-haze-* mirror attributes,
+    // not by parsing style.maskImage: jsdom's CSS parser can't handle a
+    // multi-stop gradient with calc() in it (silently drops the whole
+    // value), even though real browsers render it fine — verified live.
+
+    it('hides the top haze and shows the bottom haze at the very top of an overflowing menu', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      const aside = screen.getByTestId('api-sidebar');
+      mockOverflow(aside, { scrollTop: 0 });
+      fireEvent.scroll(aside);
+
+      expect(aside).toHaveAttribute('data-blok-haze-top', 'false');
+      expect(aside).toHaveAttribute('data-blok-haze-bottom', 'true');
+    });
+
+    it('shows the top haze once scrolled past the boundary, instead of a hard cut', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      const aside = screen.getByTestId('api-sidebar');
+      mockOverflow(aside, { scrollTop: 150, scrollHeight: 400, clientHeight: 200 });
+      fireEvent.scroll(aside);
+
+      expect(aside).toHaveAttribute('data-blok-haze-top', 'true');
+      expect(aside).toHaveAttribute('data-blok-haze-bottom', 'true');
+    });
+
+    it('hides both hazes when the menu does not overflow at all', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      const aside = screen.getByTestId('api-sidebar');
+      mockOverflow(aside, { scrollTop: 0, clientHeight: 400, scrollHeight: 400 });
+      fireEvent.scroll(aside);
+
+      expect(aside).toHaveAttribute('data-blok-haze-top', 'false');
+      expect(aside).toHaveAttribute('data-blok-haze-bottom', 'false');
+    });
+
+    it('does not add extra DOM nodes for the haze — it must not affect this column\'s CSS Grid intrinsic sizing', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      expect(screen.queryByTestId('api-sidebar-haze-top')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('api-sidebar-haze-bottom')).not.toBeInTheDocument();
+    });
+  });
 });

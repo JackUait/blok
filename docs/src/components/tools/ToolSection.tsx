@@ -1,6 +1,5 @@
 // docs/src/components/tools/ToolSection.tsx
 import { CodeBlock } from '../common/CodeBlock';
-import { CategoryIcon } from '../common/CategoryIcon';
 import { Typo } from '../common/Typo';
 import type { ToolSection as ToolSectionType } from './tools-data';
 import { useI18n } from '../../contexts/I18nContext';
@@ -24,13 +23,6 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
       aria-label={section.title}
     >
       <div className="mb-8">
-        <div
-          className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary"
-          data-blok-testid="tools-section-badge"
-        >
-          <CategoryIcon category={section.type} size={14} />
-          <Typo>{section.badge}</Typo>
-        </div>
         <h1 className="scroll-mt-24 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           {section.title}
         </h1>

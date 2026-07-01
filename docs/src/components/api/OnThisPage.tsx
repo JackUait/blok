@@ -52,7 +52,7 @@ export const OnThisPage: React.FC<{ section: ApiSection }> = ({ section }) => {
 
   return (
     <nav
-      className="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto"
+      className="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain"
       aria-label={t('api.onThisPage')}
       data-blok-testid="on-this-page"
     >

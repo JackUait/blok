@@ -102,7 +102,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => window.removeEventListener('resize', updateScrollEdges);
   }, [updateScrollEdges]);
 
-  const fade = '1.75rem';
+  // Fade the scroll container's content toward the page background at
+  // whichever edge has more menu off-screen — a "haze" that signals
+  // scrollability instead of a hard cut. A content mask (not an extra
+  // overlay element) so it can't add DOM nodes that mess with this
+  // component's CSS Grid column sizing — an earlier sticky-positioned
+  // overlay attempt shrank the grid row's intrinsic height by ~1 line,
+  // producing a phantom scrollbar with dead space below the last link. The
+  // fade distance has to be generous (not the ~1.75rem you'd guess): against
+  // solid text, a mask-image needs real distance before it's perceptible —
+  // under ~4rem it doesn't visibly soften the boundary at all.
+  const fade = '5rem';
   const hazeMask = `linear-gradient(to bottom, ${
     scrollEdges.top ? 'transparent' : '#000'
   } 0, #000 ${fade}, #000 calc(100% - ${fade}), ${
@@ -126,9 +136,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside
       ref={asideRef}
       onScroll={updateScrollEdges}
-      className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2"
+      className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain pr-2"
       style={{ maskImage: hazeMask, WebkitMaskImage: hazeMask }}
       data-blok-testid={`${variant}-sidebar`}
+      data-blok-haze-top={scrollEdges.top}
+      data-blok-haze-bottom={scrollEdges.bottom}
     >
       {header && (
         <div

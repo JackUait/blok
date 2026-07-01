@@ -181,61 +181,11 @@ const QuickStartContent: React.FC = () => {
   );
 };
 
-// Client-only "was this helpful?" widget — no backend to send votes to, so
-// it just acknowledges the click. Keyed by section.id from the caller so it
-// resets when the reader navigates to a different page.
-const FeedbackWidget: React.FC = () => {
-  const { t } = useI18n();
-  const [voted, setVoted] = useState(false);
-
-  if (voted) {
-    return (
-      <p className="text-xs text-muted-foreground" data-blok-testid="api-feedback-thanks">
-        <Typo>{t('api.feedback.thanks')}</Typo>
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2 text-xs text-muted-foreground" data-blok-testid="api-feedback">
-      <span><Typo>{t('api.feedback.question')}</Typo></span>
-      <button
-        type="button"
-        onClick={() => setVoted(true)}
-        className="rounded-md border border-border px-2 py-0.5 font-semibold transition-colors hover:bg-secondary hover:text-foreground"
-      >
-        {t('api.feedback.yes')}
-      </button>
-      <button
-        type="button"
-        onClick={() => setVoted(true)}
-        className="rounded-md border border-border px-2 py-0.5 font-semibold transition-colors hover:bg-secondary hover:text-foreground"
-      >
-        {t('api.feedback.no')}
-      </button>
-    </div>
-  );
-};
-
 const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
   const { t, locale } = useI18n();
 
-  // The badge marks the page's Diátaxis content type (Tutorial, Concepts,
-  // How-to, Guide); the generic reference sections (methods/properties/table)
-  // intentionally stay unbadged, matching how ToolSection badges its own
-  // category pages but not every catalog entry.
-  const showBadge = Boolean(section.customType && section.badge);
-
   return (
     <div className="flex flex-col gap-3">
-      {showBadge && (
-        <div
-          className="inline-flex w-fit items-center rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary"
-          data-blok-testid="api-section-badge"
-        >
-          <Typo>{section.badge}</Typo>
-        </div>
-      )}
       <h1 className="scroll-mt-24 font-display text-3xl font-extrabold tracking-tight text-foreground">
         <Typo>{section.title}</Typo>
       </h1>
@@ -259,7 +209,6 @@ const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
           <Typo>{t('api.editOnGithub')}</Typo>
         </a>
       </div>
-      <FeedbackWidget key={section.id} />
     </div>
   );
 };

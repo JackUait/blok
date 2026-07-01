@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiSection } from './ApiSection';
@@ -443,12 +442,10 @@ describe('ApiSection', () => {
   });
 
   describe('page-type badge', () => {
-    it('renders the badge for a quick-start/tutorial/concepts-style section', () => {
+    it('never renders a badge tag, even for a quick-start/tutorial/concepts-style section', () => {
       render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
 
-      const badge = screen.getByTestId('api-section-badge');
-      expect(badge).toBeInTheDocument();
-      expect(badge).toHaveTextContent('Guide');
+      expect(screen.queryByTestId('api-section-badge')).not.toBeInTheDocument();
     });
 
     it('does not render a badge for a generic reference section, even with a badge value set', () => {
@@ -493,33 +490,12 @@ describe('ApiSection', () => {
     });
   });
 
-  describe('"was this helpful" feedback widget', () => {
-    it('asks whether the page was helpful, with Yes/No controls', () => {
+  describe('feedback widget removal', () => {
+    it('does not render a "was this helpful" prompt', () => {
       render(<Providers><ApiSection section={mockSection} /></Providers>);
 
-      expect(screen.getByText('Was this page helpful?')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Yes' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'No' })).toBeInTheDocument();
-    });
-
-    it('thanks the reader after they vote, and the vote buttons disappear', async () => {
-      const user = userEvent.setup();
-      render(<Providers><ApiSection section={mockSection} /></Providers>);
-
-      await user.click(screen.getByRole('button', { name: 'Yes' }));
-
-      expect(screen.getByText('Thanks for the feedback!')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Yes' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'No' })).not.toBeInTheDocument();
-    });
-
-    it('resets per section, so navigating to a new page asks again', () => {
-      const { rerender } = render(<Providers><ApiSection section={mockSection} /></Providers>);
-      const otherSection: ApiSectionType = { ...mockSection, id: 'other-section', title: 'Other' };
-
-      rerender(<Providers><ApiSection section={otherSection} /></Providers>);
-
-      expect(screen.getByRole('button', { name: 'Yes' })).toBeInTheDocument();
+      expect(screen.queryByText('Was this page helpful?')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('api-feedback')).not.toBeInTheDocument();
     });
   });
 });

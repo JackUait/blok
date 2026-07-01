@@ -11,7 +11,6 @@ const mockSection: ToolSectionType = {
   id: 'test-tool',
   exportName: 'TestTool',
   type: 'block',
-  badge: 'Block Tool',
   title: 'Test Tool',
   description: 'A test tool description.',
   importExample: `import { TestTool } from '@jackuait/blok/tools';`,
@@ -45,9 +44,9 @@ describe('ToolSection', () => {
     expect(screen.getByRole('heading', { name: /Test Tool/i })).toBeInTheDocument();
   });
 
-  it('renders the badge', () => {
+  it('does not render a type badge tag', () => {
     renderSection(mockSection);
-    expect(screen.getByText('Block Tool')).toBeInTheDocument();
+    expect(screen.queryByTestId('tools-section-badge')).not.toBeInTheDocument();
   });
 
   it('renders the description', () => {

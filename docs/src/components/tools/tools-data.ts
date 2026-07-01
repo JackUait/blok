@@ -13,7 +13,6 @@ export interface ToolSection {
   id: string;          // e.g. 'paragraph' — used as anchor and testid
   exportName: string;  // exact export name in src/tools/index.ts
   type: ToolType;
-  badge: string;       // 'Block Tool' | 'Inline Tool'
   title: string;
   description: string;
   importExample: string;
@@ -29,7 +28,6 @@ export const TOOL_SECTIONS: ToolSection[] = [
     id: 'paragraph',
     exportName: 'Paragraph',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Paragraph',
     description:
       'The default text block. Supports rich inline formatting (bold, italic, links, colour). Empty paragraphs are excluded from saved output unless `preserveBlank` is enabled.',
@@ -100,7 +98,6 @@ const editor = new Blok({
     id: 'header',
     exportName: 'Header',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Header',
     description:
       'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) for H1–H3.',
@@ -170,7 +167,6 @@ const editor = new Blok({
     id: 'list',
     exportName: 'List',
     type: 'block',
-    badge: 'Block Tool',
     title: 'List',
     description:
       'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default — one for each style — and items can be converted between styles via the block settings menu.',
@@ -240,7 +236,6 @@ const editor = new Blok({
     id: 'table',
     exportName: 'Table',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Table',
     description:
       'A full-featured table block. Each cell contains its own block editor (supporting any block type). Supports heading rows, heading columns, column resizing, cell background/text colours, row/column add and delete controls, and copy/paste.',
@@ -322,7 +317,6 @@ const editor = new Blok({
     id: 'toggle',
     exportName: 'Toggle',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Toggle',
     description:
       'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when collapsed. Toggling is controlled by clicking the arrow icon. In read-only mode, toggles start collapsed.',
@@ -363,7 +357,6 @@ const editor = new Blok({
     id: 'callout',
     exportName: 'Callout',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Callout',
     description:
       'A container block for highlighted content with an emoji icon. Supports customisable text and background colours via a colour picker. Child blocks are nested inside the callout. Useful for tips, warnings, notes, and other call-to-action content.',
@@ -400,7 +393,6 @@ const editor = new Blok({
     id: 'database',
     exportName: 'Database',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Database',
     description:
       'A multi-view database block supporting board (Kanban), list, table, and gallery views. Stores a schema of typed properties (text, select, status, date, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, sorting, filtering, drag-and-drop reordering, inline editing, and an optional backend sync adapter.',
@@ -452,7 +444,6 @@ const editor = new Blok({
     id: 'database-row',
     exportName: 'DatabaseRow',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Database Row',
     description:
       'An internal block tool that stores a single database row. Not user-insertable — rows are created and managed by the parent Database block. Each row stores property values conforming to the parent database schema and a position string for ordering.',
@@ -491,7 +482,6 @@ const editor = new Blok({
     id: 'divider',
     exportName: 'Divider',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Divider',
     description:
       'A horizontal line separator. Renders a semantic `<hr>` element. Has no editable content or settings. Can be inserted via the toolbox or by typing `---` in an empty paragraph.',
@@ -522,7 +512,6 @@ const editor = new Blok({
     id: 'quote',
     exportName: 'Quote',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Quote',
     description:
       'A blockquote with a left border accent. Supports two sizes (default and large) switchable via the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block.',
@@ -557,7 +546,6 @@ const editor = new Blok({
     id: 'code',
     exportName: 'Code',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Code',
     description:
       'A syntax-highlighted code block with a language picker, line numbers, line wrapping toggle, and copy-to-clipboard button. Supports 30+ languages via Shiki. LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block.',
@@ -595,7 +583,6 @@ const editor = new Blok({
     id: 'image',
     exportName: 'Image',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Image',
     description: 'Embed an image via URL upload or file paste.',
     importExample: "import { Image } from '@jackuait/blok/tools';",
@@ -609,7 +596,6 @@ const editor = new Blok({
     id: 'column_list',
     exportName: 'ColumnList',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Columns',
     description:
       'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
@@ -645,7 +631,6 @@ const editor = new Blok({
     id: 'column',
     exportName: 'Column',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Column',
     description:
       'A single column inside a column list. Not user-insertable on its own — columns are created and managed by the parent `column_list` block. Child blocks are nested inside the column via `contentIds`. The optional `widthRatio` controls the column’s width relative to its siblings (applied as flex-grow); omit it for equal width.',
@@ -679,7 +664,6 @@ const editor = new Blok({
     id: 'embed',
     exportName: 'Embed',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Embed',
     description:
       'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s "Create embed". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL — only registry-matched URLs are ever embedded. Supports resizing, alignment (left/center/right), and an optional caption.',
@@ -725,7 +709,6 @@ const editor = new Blok({
     id: 'bookmark',
     exportName: 'Bookmark',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Bookmark',
     description:
       'A static OpenGraph card for a pasted link, like Notion’s "Create bookmark". Shows the page title, description, preview image, favicon, and domain. Metadata is fetched from a consumer-supplied unfurl endpoint (CORS makes a backend mandatory) — Blok ships only the contract.',
@@ -784,7 +767,6 @@ const editor = new Blok({
     id: 'file',
     exportName: 'File',
     type: 'block',
-    badge: 'Block Tool',
     title: 'File',
     description:
       'An attachment card for any uploaded file. Shows a type icon, filename, human-readable size, a download action, and an optional caption. Files are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.',
@@ -859,7 +841,6 @@ const editor = new Blok({
     id: 'audio',
     exportName: 'Audio',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Audio',
     description:
       'A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and a caption. Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
@@ -945,7 +926,6 @@ const editor = new Blok({
     id: 'video',
     exportName: 'Video',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Video',
     description:
       'A full-featured video player block. Renders an uploaded or linked video with a custom control bar (play/pause, scrubber with buffered range and hover preview, volume, playback speed, loop, picture-in-picture, theater and fullscreen modes), an optional caption, and an ambient glow behind the player. Videos are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
@@ -1033,7 +1013,6 @@ const editor = new Blok({
     id: 'bold',
     exportName: 'Bold',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Bold',
     description:
       'Wraps selected text in `<strong>`. Activated with Cmd/Ctrl+B or by clicking the B button in the inline toolbar. Supports nested bold ranges and normalises overlapping markup on paste.',
@@ -1064,7 +1043,6 @@ const editor = new Blok({
     id: 'italic',
     exportName: 'Italic',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Italic',
     description:
       'Wraps selected text in `<em>`. Activated with Cmd/Ctrl+I or by clicking the I button in the inline toolbar.',
@@ -1090,7 +1068,6 @@ const editor = new Blok({
     id: 'link',
     exportName: 'Link',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Link',
     description:
       'Wraps selected text in `<a href="...">`. Activated with Cmd/Ctrl+K. Clicking the button on existing linked text opens the URL input allowing the link to be edited or removed.',
@@ -1118,7 +1095,6 @@ const editor = new Blok({
     id: 'marker',
     exportName: 'Marker',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Marker',
     description:
       'Applies text colour or background colour to selected text using `<mark style="color:...">` or `<mark style="background-color:...">`. Opens a colour picker with preset colours and a custom hex input. Activated with Cmd/Ctrl+Shift+H.',
@@ -1147,7 +1123,6 @@ const editor = new Blok({
     id: 'underline',
     exportName: 'Underline',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Underline',
     description:
       'Wraps selected text in `<u>`. Activated with Cmd/Ctrl+U or by clicking the U button in the inline toolbar.',
@@ -1173,7 +1148,6 @@ const editor = new Blok({
     id: 'strikethrough',
     exportName: 'Strikethrough',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Strikethrough',
     description:
       'Wraps selected text in `<s>`. Activated with Cmd/Ctrl+Shift+S or by clicking the S button in the inline toolbar.',
@@ -1199,7 +1173,6 @@ const editor = new Blok({
     id: 'inlineCode',
     exportName: 'InlineCode',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Inline Code',
     description:
       'Wraps selected text in `<code>`. Activated with Cmd/Ctrl+E or by clicking the code button in the inline toolbar. Useful for marking up variable names, function calls, and short code snippets within text.',
@@ -1225,7 +1198,6 @@ const editor = new Blok({
     id: 'equation',
     exportName: 'Equation',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Equation',
     description:
       'Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The LaTeX source is kept in the `data-latex` attribute so the formula round-trips through save/load, while the rendered KaTeX markup is regenerated on load.',

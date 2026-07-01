@@ -51,10 +51,9 @@ describe('ToolsPage', () => {
     }
   });
 
-  it('renders a section badge for each tool', () => {
+  it('does not render a type badge tag for tool sections', () => {
     renderPage();
-    const badges = screen.getAllByTestId('tools-section-badge');
-    expect(badges.length).toBe(TOOL_SECTIONS.length);
+    expect(screen.queryAllByTestId('tools-section-badge')).toHaveLength(0);
   });
 
   it('renders sidebar links for all tools', () => {

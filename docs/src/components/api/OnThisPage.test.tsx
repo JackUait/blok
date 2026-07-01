@@ -40,6 +40,11 @@ describe('OnThisPage', () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('contains scroll within the panel so it does not chain to the page', () => {
+    render(<I18nProvider><OnThisPage section={section} /></I18nProvider>);
+    expect(screen.getByTestId('on-this-page')).toHaveClass('overscroll-contain');
+  });
 });
 
 describe('OnThisPageDropdown', () => {

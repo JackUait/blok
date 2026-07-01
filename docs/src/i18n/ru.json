@@ -39,12 +39,6 @@
     "breadcrumbsLabel": "Навигационная цепочка",
     "lastUpdated": "Обновлено",
     "editOnGithub": "Редактировать на GitHub",
-    "feedback": {
-      "question": "Эта страница была полезной?",
-      "yes": "Да",
-      "no": "Нет",
-      "thanks": "Спасибо за отзыв!"
-    },
     "quickStartSteps": {
       "install": {
         "title": "Установка Blok",

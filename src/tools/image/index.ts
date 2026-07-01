@@ -722,7 +722,7 @@ export class ImageTool implements BlockTool {
       onTryAgain: isBroken
         ? () => this.retryBrokenImage()
         : () => this.retryLastSource(),
-      onSwap: () => this.transitionToEmpty(),
+      onSwap: this.readOnly ? undefined : () => this.transitionToEmpty(),
       i18n: this.api.i18n,
     });
     this.root.appendChild(el);

@@ -1231,6 +1231,20 @@ describe('ImageTool — auto-retry on img load failure', () => {
     const title = root.querySelector('[data-role="error-state"] .blok-image-error__title');
     expect(title?.textContent).toBe('tools.image.errorImageFailedToLoad');
   });
+
+  it('does not render the replace button on a broken image in readOnly mode', () => {
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png' }), readOnly: true });
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+
+    img.dispatchEvent(new Event('error'));
+    img.dispatchEvent(new Event('error'));
+
+    expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="replace"]')).toBeNull();
+    expect(root.querySelector('[data-action="retry"]')).not.toBeNull();
+  });
 });
 
 describe('updateOverlayCompact', () => {

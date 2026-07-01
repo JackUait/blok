@@ -141,7 +141,9 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
   public destroy(): void {
     super.destroy();
 
-    this.scrollLocker.unlock();
+    if (this.scrollLocker.isLocked) {
+      this.scrollLocker.unlock();
+    }
   }
 
   /**

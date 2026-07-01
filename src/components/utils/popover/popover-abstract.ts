@@ -144,6 +144,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // Update DOM state
     this.nodes.popover.setAttribute(DATA_ATTR.popoverOpened, 'true');
+    this.nodes.popover.dataset.state = 'open';
     this.nodes.popoverContainer.className = twMerge(
       this.nodes.popoverContainer.className,
       css.popoverContainerOpened
@@ -176,6 +177,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (isRootWithTrigger) {
       PopoverRegistry.instance.register(this, trigger);
     }
+
+    this.onShow();
+  }
+
+  /**
+   * Subclass hook invoked at the end of {@link show}. Base implementation is a
+   * no-op; subclasses override to run show-time setup while inheriting the base
+   * open sequence (template-method pattern).
+   */
+  protected onShow(): void {
+    // No-op in base class.
   }
 
   /**
@@ -196,6 +208,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpened);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
+    this.nodes.popover.dataset.state = 'closed';
     this.nodes.popoverContainer.className = css.popoverContainer;
 
     this.itemsDefault.forEach(item => item.reset());
@@ -207,96 +220,93 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.search.clear();
     }
 
+    this.onHide();
+
     PopoverRegistry.instance.unregister(this);
 
     this.emit(PopoverEvent.Closed);
   }
 
   /**
-   * Clears memory
+   * Subclass hook invoked by {@link hide} after the base close sequence and
+   * before the registry unregister + Closed emit. Base implementation is a
+   * no-op. Subclasses override this instead of re-implementing hide(), so the
+   * base cleanup (removing the opened attribute, resetting hazes, clearing
+   * search) is never forgotten (template-method pattern).
    */
-  public destroy(): void {
-    const ghost = this.createCloseGhost();
-
-    this.items.forEach(item => item.destroy());
-    this.nodes.popover?.remove();
-    this.listeners.removeAll();
-    this.search?.destroy();
-
-    this.playCloseGhost(ghost);
+  protected onHide(): void {
+    // No-op in base class.
   }
 
   /**
-   * Snapshots the popover so its exit transition can play after the real
-   * element is torn down. Returns null when there is nothing visible to
-   * animate (e.g. popover never opened).
+   * Timeout fallback (ms) for removing the popover element if no
+   * transitionend/animationend fires (e.g. reduced-motion, no transition).
    */
-  private createCloseGhost(): HTMLElement | null {
+  private static readonly EXIT_ANIMATION_TIMEOUT_MS = 400;
+
+  /**
+   * Clears memory.
+   *
+   * Instead of cloning the popover into a throwaway "ghost" (which duplicated
+   * the element's `aria-live` announcer region — a second live region in the
+   * AT tree), the real element is kept in the DOM, stamped `data-state="closed"`
+   * with the open attribute removed so `popover-animation.css` plays the exit
+   * transition, and removed once that transition ends (with a timeout fallback).
+   */
+  public destroy(): void {
+    this.items.forEach(item => item.destroy());
+    this.listeners.removeAll();
+    this.search?.destroy();
+
     const popover = this.nodes.popover;
 
-    if (!popover?.isConnected) {
-      return null;
+    if (popover === null) {
+      return;
+    }
+
+    popover.dataset.state = 'closed';
+    popover.removeAttribute(DATA_ATTR.popoverOpened);
+
+    if (!this.hasVisibleExitBox(popover)) {
+      popover.remove();
+
+      return;
+    }
+
+    // Drop the opened container styling so the exit transform plays.
+    this.nodes.popoverContainer.className = css.popoverContainer;
+
+    const container = this.nodes.popoverContainer;
+    let removed = false;
+    const remove = (): void => {
+      if (removed) {
+        return;
+      }
+      removed = true;
+      popover.remove();
+    };
+
+    // Raw listeners (not via this.listeners, which was just torn down) so they
+    // survive the destroy and fire once the exit transition completes.
+    container.addEventListener('transitionend', remove, { once: true });
+    container.addEventListener('animationend', remove, { once: true });
+    window.setTimeout(remove, PopoverAbstract.EXIT_ANIMATION_TIMEOUT_MS);
+  }
+
+  /**
+   * Returns true when the popover has a visible box worth animating out. When
+   * detached or zero-sized (e.g. never opened, or under jsdom), the element is
+   * removed immediately with no exit transition.
+   * @param popover - the popover root element
+   */
+  private hasVisibleExitBox(popover: HTMLElement): boolean {
+    if (!popover.isConnected) {
+      return false;
     }
 
     const rect = popover.getBoundingClientRect();
 
-    if (rect.width === 0 && rect.height === 0) {
-      return null;
-    }
-
-    const ghost = popover.cloneNode(true) as HTMLElement;
-
-    ghost.removeAttribute('id');
-    ghost.removeAttribute('data-blok-testid');
-    ghost.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-    ghost.querySelectorAll('[data-blok-testid]').forEach(el => el.removeAttribute('data-blok-testid'));
-
-    ghost.setAttribute(DATA_ATTR.popoverOpened, 'true');
-
-    const ghostContainer = ghost.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
-
-    if (ghostContainer) {
-      ghostContainer.className = twMerge(css.popoverContainer, css.popoverContainerOpened);
-    }
-
-    ghost.style.position = 'absolute';
-    ghost.style.top = `${rect.top + window.scrollY}px`;
-    ghost.style.left = `${rect.left + window.scrollX}px`;
-    ghost.style.pointerEvents = 'none';
-
-    ghost.querySelectorAll<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`).forEach((container) => {
-      container.style.setProperty('pointer-events', 'none');
-    });
-
-    return ghost;
-  }
-
-  /**
-   * Mounts the ghost and triggers the exit transition, then cleans it up
-   * when the transition completes.
-   * @param ghost - element produced by createCloseGhost
-   */
-  private playCloseGhost(ghost: HTMLElement | null): void {
-    if (!ghost) {
-      return;
-    }
-
-    document.body.appendChild(ghost);
-
-    void ghost.offsetHeight;
-
-    ghost.removeAttribute(DATA_ATTR.popoverOpened);
-
-    const ghostContainer = ghost.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
-
-    if (ghostContainer) {
-      ghostContainer.className = css.popoverContainer;
-    }
-
-    const cleanup = (): void => ghost.remove();
-
-    ghostContainer?.addEventListener('transitionend', cleanup, { once: true });
-    window.setTimeout(cleanup, 400);
+    return rect.width > 0 || rect.height > 0;
   }
 
   /**
@@ -588,6 +598,18 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public hasNode(node: Node): boolean {
     return this.nodes.popover.contains(node);
+  }
+
+  /**
+   * Returns the element that owns DOM focus while this popover is open, when
+   * focus is intentionally kept outside the popover subtree (e.g. the combobox
+   * contentEditable that drives the Toolbox via aria-activedescendant). The
+   * registry treats focus landing on this host as "inside" so its focus-out
+   * dismissal does not close a popover that is working as designed. Base
+   * popovers keep focus inside themselves and return null.
+   */
+  public getFocusHost(): HTMLElement | null {
+    return null;
   }
 
   /**

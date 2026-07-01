@@ -6,6 +6,7 @@ import { PopoverDesktop } from '../../../src/components/utils/popover/popover-de
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import type { PopoverParams } from '@/types/utils/popover/popover';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 // Mock dependencies that are not directly under test
 vi.mock('../../../src/components/utils', async () => {
@@ -268,6 +269,31 @@ describe('PopoverInline', () => {
 
       // Hide should work even if no nested popover exists
       expect(() => popover.hide()).not.toThrow();
+    });
+
+    it('removes the opened attribute so isShown becomes false (base cleanup not forgotten)', () => {
+      const popover = createPopoverInline();
+
+      popover.show();
+
+      expect(popover.getElement()).toHaveAttribute(DATA_ATTR.popoverOpened, 'true');
+      expect(popover.isShown).toBe(true);
+
+      popover.hide();
+
+      expect(popover.getElement()).not.toHaveAttribute(DATA_ATTR.popoverOpened);
+      expect(popover.isShown).toBe(false);
+    });
+
+    it('emits the Closed event through the base hide path', () => {
+      const popover = createPopoverInline();
+      const closedHandler = vi.fn();
+
+      popover.on(PopoverEvent.Closed, closedHandler);
+      popover.show();
+      popover.hide();
+
+      expect(closedHandler).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -111,4 +111,94 @@ describe('ScrollLocker', () => {
 
     expect(scrollTo).not.toHaveBeenCalled();
   });
+
+  it('reference-counts the lock across instances', () => {
+    setIsIosDeviceValue(false);
+    const first = new ScrollLocker();
+    const second = new ScrollLocker();
+
+    first.lock();
+    second.lock();
+
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked', 'true');
+
+    // Unlocking one instance must not release the shared lock
+    first.unlock();
+
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked', 'true');
+
+    // Only the final unlock releases it
+    second.unlock();
+
+    expect(document.body).not.toHaveAttribute('data-blok-scroll-locked');
+  });
+
+  it('reports whether an instance holds a lock', () => {
+    setIsIosDeviceValue(false);
+    const locker = new ScrollLocker();
+
+    expect(locker.isLocked).toBe(false);
+
+    locker.lock();
+    expect(locker.isLocked).toBe(true);
+
+    locker.unlock();
+    expect(locker.isLocked).toBe(false);
+  });
+
+  it('treats repeated lock/unlock on the same instance as idempotent', () => {
+    setIsIosDeviceValue(false);
+    const first = new ScrollLocker();
+    const second = new ScrollLocker();
+
+    first.lock();
+    // Locking twice must not bump the shared count twice
+    first.lock();
+    second.lock();
+
+    // A single unlock from the second instance should still leave the lock held by first
+    second.unlock();
+    expect(document.body).toHaveAttribute('data-blok-scroll-locked', 'true');
+
+    first.unlock();
+    // Extra unlock is a no-op and must not underflow the count
+    first.unlock();
+    expect(document.body).not.toHaveAttribute('data-blok-scroll-locked');
+  });
+
+  it('compensates for the scrollbar gap while locked', () => {
+    setIsIosDeviceValue(false);
+    const originalInnerWidth = window.innerWidth;
+    const originalClientWidthDescriptor = Object.getOwnPropertyDescriptor(
+      document.documentElement,
+      'clientWidth'
+    );
+
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1024,
+    });
+    Object.defineProperty(document.documentElement, 'clientWidth', {
+      configurable: true,
+      value: 1009,
+    });
+
+    const locker = new ScrollLocker();
+
+    locker.lock();
+
+    expect(document.body.style.paddingRight).toBe('15px');
+
+    locker.unlock();
+
+    expect(document.body.style.paddingRight).toBe('');
+
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: originalInnerWidth,
+    });
+    if (originalClientWidthDescriptor) {
+      Object.defineProperty(document.documentElement, 'clientWidth', originalClientWidthDescriptor);
+    }
+  });
 });

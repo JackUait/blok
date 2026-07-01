@@ -343,6 +343,89 @@ describe('PopoverAbstract', () => {
       expect(document.body.contains(nodes.popover)).toBe(false);
     });
 
+    it('show() stamps data-state="open" and hide() stamps data-state="closed"', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+      expect(nodes.popover.dataset.state).toBe('open');
+
+      popover.hide();
+      expect(nodes.popover.dataset.state).toBe('closed');
+    });
+
+    it('destroy() animates the real element instead of cloning a ghost live region', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+
+      // Give the popover a measurable box so destroy() takes the animated path
+      // (in jsdom getBoundingClientRect is 0×0 by default).
+      vi.spyOn(nodes.popover, 'getBoundingClientRect').mockReturnValue({
+        width: 200,
+        height: 120,
+        top: 10,
+        left: 10,
+        right: 210,
+        bottom: 130,
+        x: 10,
+        y: 10,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      const announcersBefore = document.body.querySelectorAll('[aria-live]').length;
+
+      popover.destroy();
+
+      // The real element is retained (still connected) so its exit transition
+      // can play — it is NOT removed synchronously and NOT replaced by a clone.
+      expect(document.body.contains(nodes.popover)).toBe(true);
+      expect(nodes.popover.dataset.state).toBe('closed');
+
+      // No cloned live region: the announcer count must not have grown.
+      expect(document.body.querySelectorAll('[aria-live]').length).toBe(announcersBefore);
+    });
+
+    it('destroy() removes the real element once the exit transition ends', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+
+      vi.spyOn(nodes.popover, 'getBoundingClientRect').mockReturnValue({
+        width: 200,
+        height: 120,
+        top: 10,
+        left: 10,
+        right: 210,
+        bottom: 130,
+        x: 10,
+        y: 10,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      popover.destroy();
+
+      expect(document.body.contains(nodes.popover)).toBe(true);
+
+      nodes.popoverContainer.dispatchEvent(new Event('transitionend'));
+
+      expect(document.body.contains(nodes.popover)).toBe(false);
+    });
+
+    it('destroy() removes the element synchronously when it has no visible box', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+
+      // jsdom default rect is 0×0 → no animation → immediate removal.
+      popover.destroy();
+
+      expect(document.body.contains(nodes.popover)).toBe(false);
+    });
+
     it('activateItemByName() triggers handleItemClick only for existing items', () => {
       const popover = createPopover();
       const handleItemClickSpy = vi.spyOn(

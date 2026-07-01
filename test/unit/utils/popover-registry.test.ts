@@ -4,10 +4,12 @@ import type { PopoverAbstract } from '../../../src/components/utils/popover/popo
 
 /**
  * Creates a mock popover for testing
+ * @param options - optional focus host returned by getFocusHost
  */
-const createMockPopover = (): {
+const createMockPopover = (options: { focusHost?: HTMLElement | null } = {}): {
   popover: PopoverAbstract;
   trigger: HTMLElement;
+  popoverEl: HTMLElement;
 } => {
   const popoverEl = document.createElement('div');
 
@@ -15,11 +17,12 @@ const createMockPopover = (): {
     hide: vi.fn(),
     hasNode: vi.fn((node: Node) => popoverEl.contains(node)),
     getElement: vi.fn(() => popoverEl),
+    getFocusHost: vi.fn(() => options.focusHost ?? null),
   } as unknown as PopoverAbstract;
 
   const trigger = document.createElement('button');
 
-  return { popover, trigger };
+  return { popover, trigger, popoverEl };
 };
 
 describe('PopoverRegistry', () => {
@@ -219,6 +222,170 @@ describe('PopoverRegistry', () => {
 
       // No register call — no listener should be added
       expect(addSpy).not.toHaveBeenCalledWith('pointerdown', expect.any(Function));
+    });
+  });
+
+  describe('capture-phase Escape backstop', () => {
+    it('closes the topmost popover on Escape keydown', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      expect(popover.hide).toHaveBeenCalledOnce();
+    });
+
+    it('ignores Escape when no popovers are open', () => {
+      // Register then unregister so listeners were installed at least once.
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+      registry.unregister(popover);
+      vi.mocked(popover.hide).mockClear();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      expect(popover.hide).not.toHaveBeenCalled();
+    });
+
+    it('ignores non-Escape keys', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+
+      expect(popover.hide).not.toHaveBeenCalled();
+    });
+
+    it('removes the keydown listener when the stack empties', () => {
+      const removeSpy = vi.spyOn(document, 'removeEventListener');
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+      registry.unregister(popover);
+
+      expect(removeSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
+    });
+  });
+
+  describe('focus restore on closeTopmost', () => {
+    it('restores focus to the trigger element after closing', () => {
+      const { popover, trigger } = createMockPopover();
+
+      document.body.appendChild(trigger);
+      const focusSpy = vi.spyOn(trigger, 'focus');
+
+      registry.register(popover, trigger);
+      registry.closeTopmost();
+
+      expect(focusSpy).toHaveBeenCalledOnce();
+
+      trigger.remove();
+    });
+
+    it('does not throw when the trigger has been detached', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      // trigger never attached → isConnected false
+      expect(() => registry.closeTopmost()).not.toThrow();
+    });
+  });
+
+  describe('focusin outside-walk', () => {
+    it('closes the topmost popover when focus leaves its subtree', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      const outside = document.createElement('input');
+
+      document.body.appendChild(outside);
+
+      const event = new FocusEvent('focusin', { bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: outside });
+      document.dispatchEvent(event);
+
+      expect(popover.hide).toHaveBeenCalledOnce();
+
+      outside.remove();
+    });
+
+    it('does NOT close when focus moves inside the popover', () => {
+      const { popover, trigger, popoverEl } = createMockPopover();
+
+      const inner = document.createElement('button');
+
+      popoverEl.appendChild(inner);
+      registry.register(popover, trigger);
+
+      const event = new FocusEvent('focusin', { bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: inner });
+      document.dispatchEvent(event);
+
+      expect(popover.hide).not.toHaveBeenCalled();
+    });
+
+    it('does NOT close when focus moves to the trigger', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      const event = new FocusEvent('focusin', { bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: trigger });
+      document.dispatchEvent(event);
+
+      expect(popover.hide).not.toHaveBeenCalled();
+    });
+
+    it('does NOT close when focus moves to the active-descendant host (combobox pattern)', () => {
+      const host = document.createElement('div');
+
+      document.body.appendChild(host);
+
+      const { popover, trigger } = createMockPopover({ focusHost: host });
+
+      registry.register(popover, trigger);
+
+      const event = new FocusEvent('focusin', { bubbles: true });
+
+      Object.defineProperty(event, 'target', { value: host });
+      document.dispatchEvent(event);
+
+      expect(popover.hide).not.toHaveBeenCalled();
+
+      host.remove();
+    });
+  });
+
+  describe('nested (contained) popover registration', () => {
+    it('does NOT close an ancestor popover when a contained child registers', () => {
+      const parent = createMockPopover();
+      const childEl = document.createElement('div');
+
+      // Child popover element is a descendant of the parent's element (as with
+      // desktop nested popovers appended inside the parent's root).
+      parent.popoverEl.appendChild(childEl);
+
+      const child = {
+        hide: vi.fn(),
+        hasNode: vi.fn((node: Node) => childEl.contains(node)),
+        getElement: vi.fn(() => childEl),
+        getFocusHost: vi.fn(() => null),
+      } as unknown as PopoverAbstract;
+      const childTrigger = document.createElement('button');
+
+      registry.register(parent.popover, parent.trigger);
+      registry.register(child, childTrigger);
+
+      expect(parent.popover.hide).not.toHaveBeenCalled();
+      expect(registry.hasOpenPopovers()).toBe(true);
     });
   });
 });

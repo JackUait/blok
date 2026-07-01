@@ -4,7 +4,15 @@
  * Following WAI-ARIA best practices for dynamic content updates
  */
 
-const ARIA_LIVE_REGION_ID = 'blok-announcer';
+const POLITE_REGION_ID = 'blok-announcer';
+const ASSERTIVE_REGION_ID = 'blok-announcer-assertive';
+
+/**
+ * How long (ms) a message is left in place before the queue advances to the
+ * next one. Gives assistive technology time to pick the message up while
+ * keeping rapid successive announcements flowing in order.
+ */
+const MESSAGE_SETTLE_MS = 150;
 
 /**
  * Tailwind sr-only pattern for visually hiding content while keeping it accessible
@@ -21,16 +29,30 @@ const SR_ONLY_CLASSES = [
   'border-0',
 ].join(' ');
 
+type Politeness = 'polite' | 'assertive';
+
 interface AnnouncerConfig {
   /** Politeness level: 'polite' for non-critical, 'assertive' for important */
-  politeness?: 'polite' | 'assertive';
+  politeness?: Politeness;
   /** Clear announcement after this many milliseconds (default: 1000) */
   clearAfter?: number;
 }
 
+interface QueuedAnnouncement {
+  message: string;
+  politeness: Politeness;
+  clearAfter: number;
+}
+
 /**
- * Singleton class that manages an ARIA live region for screen reader announcements
- * Supports multiple Blok instances on the same page via reference counting
+ * Singleton class that manages ARIA live regions for screen reader announcements.
+ *
+ * Uses two dedicated regions — a polite `role=status` region and an assertive
+ * `role=alert` region — instead of flipping `aria-live` on a single region.
+ * Announcements are serialized through a FIFO queue so rapid successive
+ * (and mixed-politeness) messages don't clobber each other.
+ *
+ * Supports multiple Blok instances on the same page via reference counting.
  */
 class Announcer {
   /**
@@ -39,30 +61,46 @@ class Announcer {
   private static instance: Announcer | null = null;
 
   /**
-   * Reference count for multi-instance support
-   * Tracks how many Blok instances are using this announcer
+   * Reference count for multi-instance support.
+   * Tracks how many Blok instances are using this announcer.
    */
   private static referenceCount = 0;
 
   /**
-   * The ARIA live region element
+   * The polite ARIA live region (role=status)
    */
-  private liveRegion: HTMLElement | null = null;
+  private politeRegion: HTMLElement | null = null;
 
   /**
-   * Timeout for clearing announcement
+   * The assertive ARIA live region (role=alert)
    */
-  private clearTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private assertiveRegion: HTMLElement | null = null;
+
+  /**
+   * FIFO queue of pending announcements
+   */
+  private queue: QueuedAnnouncement[] = [];
+
+  /**
+   * Whether the queue is currently being drained
+   */
+  private isProcessing = false;
+
+  /**
+   * Pending timeouts, tracked so they can be cleared on destroy
+   */
+  private timeoutIds: Set<ReturnType<typeof setTimeout>> = new Set();
 
   /**
    * Private constructor for singleton
    */
   private constructor() {
-    this.createLiveRegion();
+    this.politeRegion = this.createLiveRegion(POLITE_REGION_ID, 'status', 'polite');
+    this.assertiveRegion = this.createLiveRegion(ASSERTIVE_REGION_ID, 'alert', 'assertive');
   }
 
   /**
-   * Get singleton instance and increment reference count
+   * Get singleton instance
    */
   public static getInstance(): Announcer {
     if (!Announcer.instance) {
@@ -80,31 +118,48 @@ class Announcer {
   }
 
   /**
-   * Creates the ARIA live region element
-   * Uses sr-only pattern to hide from sighted users while remaining accessible
+   * Release a reference. Clamped so it can never underflow below zero, then
+   * tears down the shared instance once the last reference is released.
    */
-  private createLiveRegion(): void {
-    // Check if already exists (multiple Blok instances on same page)
-    const existingRegion = document.getElementById(ARIA_LIVE_REGION_ID);
+  public static release(): void {
+    if (!Announcer.instance) {
+      return;
+    }
+
+    Announcer.referenceCount = Math.max(0, Announcer.referenceCount - 1);
+
+    if (Announcer.referenceCount > 0) {
+      return;
+    }
+
+    Announcer.instance.destroy();
+    Announcer.instance = null;
+  }
+
+  /**
+   * Creates an ARIA live region element, reusing an existing one if present
+   * (multiple Blok instances on the same page).
+   * Uses sr-only pattern to hide from sighted users while remaining accessible.
+   */
+  private createLiveRegion(id: string, role: string, politeness: Politeness): HTMLElement {
+    const existingRegion = document.getElementById(id);
 
     if (existingRegion) {
-      this.liveRegion = existingRegion;
-
-      return;
+      return existingRegion;
     }
 
     const region = document.createElement('div');
 
-    region.id = ARIA_LIVE_REGION_ID;
+    region.id = id;
     region.className = SR_ONLY_CLASSES;
-    region.setAttribute('role', 'status');
-    region.setAttribute('aria-live', 'polite');
+    region.setAttribute('role', role);
+    region.setAttribute('aria-live', politeness);
     region.setAttribute('aria-atomic', 'true');
     region.setAttribute('data-blok-announcer', '');
 
     document.body.appendChild(region);
 
-    this.liveRegion = region;
+    return region;
   }
 
   /**
@@ -115,65 +170,89 @@ class Announcer {
   public announce(message: string, config: AnnouncerConfig = {}): void {
     const { politeness = 'polite', clearAfter = 1000 } = config;
 
-    // Ensure live region exists (defensive, should always exist after constructor)
-    if (!this.liveRegion) {
-      this.createLiveRegion();
-    }
-
-    // Guard against edge case where createLiveRegion fails
-    if (!this.liveRegion) {
-      return;
-    }
-
-    // Clear any pending timeout
-    if (this.clearTimeoutId !== null) {
-      clearTimeout(this.clearTimeoutId);
-    }
-
-    // Update politeness level
-    this.liveRegion.setAttribute('aria-live', politeness);
-
-    // Clear then set to ensure announcement triggers even if same message
-    this.liveRegion.textContent = '';
-
-    // Use requestAnimationFrame to ensure DOM update before setting new content
-    requestAnimationFrame(() => {
-      if (this.liveRegion) {
-        this.liveRegion.textContent = message;
-      }
+    this.queue.push({
+      message,
+      politeness,
+      clearAfter,
     });
 
-    // Clear after delay to prepare for next announcement
-    this.clearTimeoutId = setTimeout(() => {
-      if (this.liveRegion) {
-        this.liveRegion.textContent = '';
-      }
-    }, clearAfter);
+    this.processQueue();
   }
 
   /**
-   * Clean up the live region
-   * Only removes the DOM element when all references are released
+   * Drains the queue one message at a time. Each message clears its target
+   * region, writes the message on the next frame, then advances to the next
+   * queued message after a short settle delay so nothing gets clobbered.
    */
-  public destroy(): void {
-    Announcer.referenceCount--;
-
-    // Only clean up when last reference is released
-    if (Announcer.referenceCount > 0) {
+  private processQueue(): void {
+    if (this.isProcessing) {
       return;
     }
 
-    if (this.clearTimeoutId !== null) {
-      clearTimeout(this.clearTimeoutId);
-      this.clearTimeoutId = null;
+    const item = this.queue.shift();
+
+    if (!item) {
+      return;
     }
 
-    if (this.liveRegion) {
-      this.liveRegion.remove();
-      this.liveRegion = null;
+    const region = item.politeness === 'assertive' ? this.assertiveRegion : this.politeRegion;
+
+    if (!region) {
+      return;
     }
 
-    Announcer.instance = null;
+    this.isProcessing = true;
+
+    // Clear then set (on the next frame) so re-announcing the same text still fires.
+    region.textContent = '';
+
+    requestAnimationFrame(() => {
+      region.textContent = item.message;
+
+      // Blank the region after the caller-specified delay.
+      this.schedule(() => {
+        region.textContent = '';
+      }, item.clearAfter);
+
+      // Advance to the next queued message once this one has settled.
+      this.schedule(() => {
+        this.isProcessing = false;
+        this.processQueue();
+      }, MESSAGE_SETTLE_MS);
+    });
+  }
+
+  /**
+   * Schedules a tracked timeout so it can be cleaned up on destroy.
+   */
+  private schedule(callback: () => void, delay: number): void {
+    const id = setTimeout(() => {
+      this.timeoutIds.delete(id);
+      callback();
+    }, delay);
+
+    this.timeoutIds.add(id);
+  }
+
+  /**
+   * Clean up the live regions and pending work.
+   */
+  public destroy(): void {
+    this.timeoutIds.forEach((id) => clearTimeout(id));
+    this.timeoutIds.clear();
+
+    this.queue = [];
+    this.isProcessing = false;
+
+    if (this.politeRegion) {
+      this.politeRegion.remove();
+      this.politeRegion = null;
+    }
+
+    if (this.assertiveRegion) {
+      this.assertiveRegion.remove();
+      this.assertiveRegion = null;
+    }
   }
 }
 
@@ -192,14 +271,15 @@ export const announce = (message: string, config?: AnnouncerConfig): void => {
  */
 export const registerAnnouncer = (): void => {
   Announcer.addReference();
-  // Ensure instance is created
+  // Ensure instance (and its live regions) exist
   Announcer.getInstance();
 };
 
 /**
- * Clean up the announcer and remove the live region
- * Only removes the DOM element when all Blok instances have been destroyed
+ * Clean up the announcer and remove the live regions.
+ * Only removes the DOM elements when all Blok instances have been destroyed.
+ * Does nothing when no instance exists (never lazily creates one just to destroy it).
  */
 export const destroyAnnouncer = (): void => {
-  Announcer.getInstance().destroy();
+  Announcer.release();
 };

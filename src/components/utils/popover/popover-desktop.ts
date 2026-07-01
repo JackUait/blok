@@ -278,7 +278,23 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param host - focus-owning element, or null to clear
    */
   public setActiveDescendantHost(host: HTMLElement | null): void {
+    this.activeDescendantHost = host;
     this.flipper?.setActiveDescendantHost(host);
+  }
+
+  /**
+   * Element that owns DOM focus while this popover is open when focus is kept
+   * outside the popover subtree (combobox contentEditable). Null when focus
+   * lives inside the popover.
+   */
+  private activeDescendantHost: HTMLElement | null = null;
+
+  /**
+   * Exposes the active-descendant focus host so the registry's focus-out
+   * dismissal treats focus on it as "inside" the popover.
+   */
+  public override getFocusHost(): HTMLElement | null {
+    return this.activeDescendantHost;
   }
 
   /**
@@ -479,11 +495,13 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
-   * Closes popover
+   * Desktop close cleanup, run by the base {@link PopoverAbstract.hide} through
+   * the template-method `onHide` hook (converted from an arrow-function `hide`
+   * override so `PopoverInline` can extend the base close path instead of
+   * re-implementing it and forgetting base steps).
    */
-  public hide = (): void => {
+  protected override onHide(): void {
     this.cleanupPromotedItems();
-    super.hide();
 
     this.destroyNestedPopoverIfExists();
 
@@ -503,6 +521,15 @@ export class PopoverDesktop extends PopoverAbstract {
     this.params.position = undefined;
     this.nodes.popover.style.top = '';
     this.nodes.popover.style.left = '';
+  }
+
+  /**
+   * Bound wrapper used as the `ClosedOnActivate` event-handler reference for a
+   * nested popover — `hide` is a regular method now, so on/off need a stable
+   * bound reference to add and remove the same listener.
+   */
+  private readonly closeOnNestedActivate = (): void => {
+    this.hide();
   };
 
   /**
@@ -752,7 +779,7 @@ export class PopoverDesktop extends PopoverAbstract {
     const triggerItemElement = this.nestedPopoverTriggerItem?.getElement();
     const elementToRemove = this.nestedPopover.getElement();
 
-    this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.hide);
+    this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
     elementToRemove.remove();
@@ -820,7 +847,7 @@ export class PopoverDesktop extends PopoverAbstract {
      * Close nested popover when item with 'closeOnActivate' property set was clicked
      * parent popover should also be closed
      */
-    this.nestedPopover.on(PopoverEvent.ClosedOnActivate, this.hide);
+    this.nestedPopover.on(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
 
     const nestedPopoverEl = this.nestedPopover.getMountElement();
     const actualNestedPopoverEl = this.nestedPopover.getElement();

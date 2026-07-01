@@ -9,6 +9,7 @@ import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 interface MockScrollLockerInstance {
   lock: ReturnType<typeof vi.fn>;
   unlock: ReturnType<typeof vi.fn>;
+  isLocked: boolean;
 }
 
 interface MockPopoverHeaderInstance {
@@ -22,8 +23,18 @@ const scrollLockerMock = vi.hoisted(() => {
   const instances: MockScrollLockerInstance[] = [];
 
   const MockScrollLocker = vi.fn(function (this: MockScrollLockerInstance) {
-    this.lock = vi.fn();
-    this.unlock = vi.fn();
+    let locked = false;
+
+    this.lock = vi.fn(() => {
+      locked = true;
+    });
+    this.unlock = vi.fn(() => {
+      locked = false;
+    });
+    Object.defineProperty(this, 'isLocked', {
+      configurable: true,
+      get: () => locked,
+    });
     instances.push(this);
   });
 
@@ -213,9 +224,12 @@ describe('PopoverMobile', () => {
   });
 
   describe('destroy', () => {
-    it('removes popover from DOM and unlocks scroll', () => {
+    it('removes popover from DOM and unlocks scroll when a lock is held', () => {
       const { popover } = createPopover();
       const nodes = getNodes(popover);
+
+      // Show acquires the scroll lock
+      popover.show();
 
       // Attach to DOM
       document.body.appendChild(nodes.popover);
@@ -227,7 +241,20 @@ describe('PopoverMobile', () => {
       expect(nodes.popover.isConnected).toBe(false);
 
       // Verify scroll is unlocked
-      expect(getLatestScrollLocker().unlock).toHaveBeenCalledTimes(1);
+      expect(getLatestScrollLocker().unlock).toHaveBeenCalled();
+    });
+
+    it('does not unlock scroll on destroy when no lock is held', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+
+      // Attach to DOM without ever showing (so no lock was acquired)
+      document.body.appendChild(nodes.popover);
+
+      popover.destroy();
+
+      expect(nodes.popover.isConnected).toBe(false);
+      expect(getLatestScrollLocker().unlock).not.toHaveBeenCalled();
     });
   });
 

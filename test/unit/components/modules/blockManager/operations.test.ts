@@ -2386,6 +2386,38 @@ describe('BlockOperations', () => {
       expect(operations.currentBlockIndexValue).toBe(1);
     });
 
+    it('writes truncated text to the real content element, never a mutation-free decoration (list marker ghost)', () => {
+      // Regression: a list item's holder has a bullet/number MARKER span before
+      // the content div. The marker is a mutation-free decoration and is meant to
+      // stay non-editable, but if anything flips it contenteditable="true" (e.g. a
+      // read-only toggle running a greedy [contenteditable] loop), the split must
+      // STILL write the item text into the real content element — not the marker.
+      // Otherwise the text is duplicated into the bullet, rendering a large ghost.
+      operations.currentBlockIndexValue = 0;
+      const block = repository.getBlockById('block-1');
+
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+
+      const marker = document.createElement('span');
+
+      marker.setAttribute('contenteditable', 'true');
+      marker.setAttribute('data-blok-mutation-free', 'true');
+      marker.setAttribute('data-list-marker', 'true');
+      marker.textContent = '•';
+      block.holder.insertBefore(marker, block.holder.firstChild);
+
+      operations.splitBlockWithData('block-1', { text: 'Clean JSON output' }, 'paragraph', {}, 1, blocksStore);
+
+      const content = block.holder.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
+
+      // The bullet marker must be left untouched (no ghost duplicate of the text).
+      expect(marker.innerHTML).toBe('•');
+      // The real content element must carry the truncated text.
+      expect(content?.innerHTML).toBe('Clean JSON output');
+    });
+
     it('defers currentBlockIndex update so blockDidMutated sees original block as current', () => {
       operations.currentBlockIndexValue = 0; // block-1
 

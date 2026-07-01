@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../contexts/I18nContext";
 import { useTheme } from "../../hooks/useTheme";
 import { Typo } from "../common/Typo";
+import { assertEditorModulesComplete } from "./assertEditorModules";
 
 interface BlokEditorInstance {
   save: () => Promise<unknown>;
@@ -50,6 +51,7 @@ export const EditorWrapper: React.FC<{
           // @ts-expect-error - /dist/full.mjs is served by Vite, not resolvable at compile time
           import("/dist/full.mjs") as Promise<BlokToolsModule>,
         ]);
+        assertEditorModulesComplete(react, tools);
         if (active) setMods({ react, tools });
       } catch (err) {
         if (active) {

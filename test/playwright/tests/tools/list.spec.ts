@@ -264,6 +264,44 @@ test.describe('list tool (ListItem)', () => {
 
       await expect(items).toHaveCount(2);
     });
+
+    test('Enter split after a read-only toggle keeps the bullet marker intact (no ghost duplicate)', async ({ page }) => {
+      // Regression: the React adapter re-applies editability on mount via
+      // readOnly.set(false). That used to flip the list bullet marker (a
+      // deliberately non-editable span that sits before the content) to
+      // contenteditable="true", after which the Enter-split wrote the item's
+      // own text INTO the marker span — rendering a large ghost duplicate of
+      // the text overlapping the real list item.
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([{ text: 'Alpha' }, { text: 'Clean JSON output' }]),
+      });
+
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.set(false);
+      });
+
+      const target = page
+        .locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`)
+        .filter({ hasText: 'Clean JSON output' });
+
+      await target.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // Three items now: Alpha, Clean JSON output, and the new empty item.
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+
+      await expect(markers).toHaveCount(3);
+
+      // Every marker still shows the bullet glyph — none was overwritten with text.
+      await expect(markers.nth(0)).toHaveText('•');
+      await expect(markers.nth(1)).toHaveText('•');
+      await expect(markers.nth(2)).toHaveText('•');
+
+      // The item text appears exactly once — no ghost duplicate in a marker span.
+      await expect(page.getByText('Clean JSON output', { exact: true })).toHaveCount(1);
+    });
   });
 
   test.describe('enter on empty item exits list', () => {

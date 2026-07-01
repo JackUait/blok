@@ -347,7 +347,14 @@ export class UI extends Module<UINodes> {
     const { BlockManager } = this.Blok;
 
     for (const block of BlockManager.blocks) {
-      const contentEditable = block.holder.querySelector<HTMLElement>('[contenteditable]');
+      // Exclude mutation-free decorations (e.g. a list item's bullet/number
+      // marker, which is deliberately contenteditable="false"). Without this,
+      // querySelector('[contenteditable]') would grab the marker — the first
+      // `[contenteditable]` in the holder — and flip it editable, later letting
+      // a block split overwrite the bullet glyph with the item's own text.
+      const contentEditable = block.holder.querySelector<HTMLElement>(
+        '[contenteditable]:not([data-blok-mutation-free])'
+      );
 
       if (contentEditable) {
         contentEditable.contentEditable = editable ? 'true' : 'false';

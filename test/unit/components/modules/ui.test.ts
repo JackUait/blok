@@ -400,6 +400,39 @@ describe("UI module", () => {
       ui.toggleReadOnly(false);
       expect(bottomZone.style.minHeight).toBe("120px");
     });
+
+    it("does not make a block's non-editable marker element editable when toggling to read-write", () => {
+      // Regression: a list item's holder has a bullet/marker element that is
+      // explicitly contenteditable="false" and sits BEFORE the real content
+      // element in the DOM. updateBlocksContentEditable used to grab the first
+      // `[contenteditable]` (the marker) and flip it to "true", which later let
+      // splitBlockWithData overwrite the bullet with the item's text on Enter.
+      const { ui, blok } = createUI();
+
+      const holder = document.createElement("div");
+      // Mirror the rendered DOM: attributes (not just IDL props) so the
+      // `[contenteditable]` attribute selector matches, as it does in a browser.
+      const marker = document.createElement("span");
+      marker.setAttribute("data-list-marker", "true");
+      marker.setAttribute("data-blok-mutation-free", "true");
+      marker.setAttribute("contenteditable", "false");
+      marker.textContent = "•";
+      const content = document.createElement("div");
+      content.setAttribute("contenteditable", "false");
+      content.textContent = "Clean JSON output";
+      holder.appendChild(marker);
+      holder.appendChild(content);
+
+      (blok.BlockManager as unknown as { blocks: Array<{ holder: HTMLElement }> }).blocks = [
+        { holder },
+      ];
+
+      ui.toggleReadOnly(false);
+
+      // The marker (bullet) must stay non-editable; only real content becomes editable.
+      expect(marker.contentEditable).not.toBe("true");
+      expect(content.contentEditable).toBe("true");
+    });
   });
 
   describe("state updates and getters", () => {

@@ -4,11 +4,9 @@ import { DATA_ATTR, createSelector } from '../constants';
 import { IconBold } from '../icons';
 
 import { BoldNormalizationPass } from './services/bold-normalization-pass';
-import { CollapsedBoldManager } from './services/collapsed-bold-manager';
 import { InlineToolEventManager } from './services/inline-tool-event-manager';
 import {
   isBoldTag,
-  isBoldElement,
   isElementEmpty,
   findBoldElement,
   ensureStrongElement,
@@ -32,6 +30,13 @@ export class BoldInlineTool implements InlineTool {
    * @returns {boolean}
    */
   public static isInline = true;
+
+  /**
+   * At a collapsed caret, defer Cmd/Ctrl+B to the browser's native pending-bold
+   * handler instead of intercepting it (see InlineShortcutManager). This is the
+   * only race-free, cross-engine way to get "toggle bold then type".
+   */
+  public static nativeCaretShortcut = true;
 
   /**
    * Title for the Inline Tool
@@ -73,8 +78,6 @@ export class BoldInlineTool implements InlineTool {
     BoldInlineTool.initializeGlobalListeners();
   }
 
-  private static guardKeydownListenerRegistered = false;
-
   /**
    * Ensure global event listeners are registered once per document
    */
@@ -91,6 +94,13 @@ export class BoldInlineTool implements InlineTool {
 
     manager.register('bold', {
       shortcut: { key: 'b', meta: true },
+      // Only intercept Cmd/Ctrl+B when there is a selection to wrap/unwrap. On a
+      // collapsed caret we let the keystroke fall through to the browser, whose
+      // native handler applies pending inline bold to the next typed characters
+      // synchronously — race-free and consistent across engines (WebKit only
+      // applies pending format via its own default handler, never via scripted
+      // execCommand).
+      shouldHandleShortcut: (selection) => selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed,
       onShortcut: (_event, _selection) => {
         const instance = BoldInlineTool.instances.values().next().value;
 
@@ -99,31 +109,15 @@ export class BoldInlineTool implements InlineTool {
         }
       },
       onSelectionChange: (_selection) => {
-        BoldInlineTool.refreshSelectionState('selectionchange');
+        BoldInlineTool.refreshSelectionState();
       },
       onInput: (_event, _selection) => {
-        BoldInlineTool.refreshSelectionState('input');
-      },
-      onBeforeInput: (event) => {
-        if (event.inputType !== 'formatBold') {
-          return false;
-        }
-
-        BoldNormalizationPass.normalizeAroundSelection(window.getSelection());
-
-        return true;
+        BoldInlineTool.refreshSelectionState();
       },
       isRelevant: (selection) => BoldInlineTool.isSelectionInsideBlok(selection),
     });
 
-    // Register a dedicated keydown listener for boundary guard (runs on all printable keys)
-    if (!BoldInlineTool.guardKeydownListenerRegistered) {
-      document.addEventListener('keydown', (event) => {
-        CollapsedBoldManager.getInstance().guardBoundaryKeydown(event);
-      }, true);
-      BoldInlineTool.guardKeydownListenerRegistered = true;
-    }
-
+    BoldInlineTool.ensureStyleWithCssDisabled();
     BoldInlineTool.ensureMutationObserver();
 
     return true;
@@ -178,8 +172,11 @@ export class BoldInlineTool implements InlineTool {
     const range = selection.getRangeAt(0);
 
     if (range.collapsed) {
-      this.toggleCollapsedSelection();
-
+      // Collapsed-caret bold is handled by the browser's native pending-format
+      // state (the Cmd/Ctrl+B shortcut deliberately falls through to it — see
+      // shouldHandleShortcut in initializeGlobalListeners). There is nothing to
+      // wrap/unwrap here, so this is a no-op. (The inline toolbar's bold button
+      // is only ever shown for a non-collapsed selection.)
       return;
     }
 
@@ -520,69 +517,9 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Toggle bold formatting for a collapsed selection (caret position)
-   * Exits bold if caret is inside a bold element, otherwise starts a new bold element
-   */
-  private toggleCollapsedSelection(): void {
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const insideBold = findBoldElement(range.startContainer);
-
-    const updatedRange = (() => {
-      if (insideBold && insideBold.getAttribute(CollapsedBoldManager.ATTR.COLLAPSED_ACTIVE) !== 'true') {
-        return CollapsedBoldManager.getInstance().exit(selection, insideBold);
-      }
-
-      const boundaryBold = insideBold ?? BoldInlineTool.getBoundaryBold(range);
-
-      return boundaryBold
-        ? CollapsedBoldManager.getInstance().exit(selection, boundaryBold)
-        : this.startCollapsedBold(range);
-    })();
-
-    document.dispatchEvent(new Event('selectionchange'));
-
-    if (updatedRange) {
-      selection.removeAllRanges();
-      selection.addRange(updatedRange);
-    }
-
-    BoldNormalizationPass.normalizeAroundSelection(selection);
-    this.notifySelectionChange();
-  }
-
-  /**
-   * Insert a bold wrapper at the caret so newly typed text becomes bold
-   * @param range - Current collapsed range
-   */
-  private startCollapsedBold(range: Range): Range | undefined {
-    const manager = CollapsedBoldManager.getInstance();
-    const resultRange = manager.enter(range, (strong) => this.mergeAdjacentBold(strong));
-
-    const selection = window.getSelection();
-
-    BoldNormalizationPass.normalizeAroundSelection(selection);
-
-    if (selection && resultRange) {
-      selection.removeAllRanges();
-      selection.addRange(resultRange);
-    }
-
-    this.notifySelectionChange();
-
-    return resultRange;
-  }
-
-  /**
    * Notify listeners that the selection state has changed
    */
   private notifySelectionChange(): void {
-    CollapsedBoldManager.getInstance().enforceLengths(window.getSelection());
     document.dispatchEvent(new Event('selectionchange'));
     this.updateToolbarButtonState();
   }
@@ -626,20 +563,45 @@ export class BoldInlineTool implements InlineTool {
   }
 
   /**
-   * Normalize selection state after blok input or selection updates
-   * @param source - The event source triggering the refresh
+   * Normalize bold markup after blok input or selection updates.
+   *
+   * Converts any legacy <b> emitted by the browser's native bold command to
+   * <strong> (and merges adjacent / drops empty) so the serialized data model
+   * stays consistent. Deliberately performs NO caret repositioning: the browser
+   * owns caret placement while typing, and re-positioning it here asynchronously
+   * is exactly what used to race with fast input.
    */
-  private static refreshSelectionState(source: 'selectionchange' | 'input'): void {
+  private static refreshSelectionState(): void {
     const selection = window.getSelection();
 
-    CollapsedBoldManager.getInstance().enforceLengths(selection);
-    CollapsedBoldManager.getInstance().maintain();
-    CollapsedBoldManager.getInstance().synchronize(selection);
-    BoldNormalizationPass.normalizeAroundSelection(selection, { normalizeWhitespace: false });
+    BoldNormalizationPass.normalizeAroundSelection(selection, {
+      normalizeWhitespace: false,
+      preserveNode: selection?.anchorNode ?? null,
+    });
+  }
 
-    if (source === 'input' && selection) {
-      CollapsedBoldManager.getInstance().moveCaretAfterBoundaryBold(selection);
+  private static styleWithCssDisabled = false;
+
+  /**
+   * Ask the browser to emit tag-based markup (<b>) rather than inline
+   * `style="font-weight"` spans for its native bold command, so the output
+   * normalizes cleanly to <strong>. Safe to call repeatedly; only runs once.
+   */
+  private static ensureStyleWithCssDisabled(): void {
+    if (BoldInlineTool.styleWithCssDisabled || typeof document === 'undefined') {
+      return;
     }
+
+    try {
+      // execCommand is deprecated but remains the only way to steer the
+      // browser's native bold command toward <b> (rather than styled spans).
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- no non-deprecated equivalent exists
+      document.execCommand('styleWithCSS', false, 'false');
+    } catch {
+      // Some environments (e.g. jsdom) do not implement execCommand; ignore.
+    }
+
+    BoldInlineTool.styleWithCssDisabled = true;
   }
 
   /**
@@ -664,7 +626,12 @@ export class BoldInlineTool implements InlineTool {
       try {
         const processScope = (scope: Element | null): void => {
           if (scope) {
-            new BoldNormalizationPass({ mergeAdjacent: false, removeEmpty: false, normalizeWhitespace: false }).run(scope);
+            // Never convert the <b> holding the caret (see BoldNormalizationPass):
+            // reparenting it mid-typing displaces the caret. It converts once the
+            // caret moves out.
+            const preserveNode = window.getSelection()?.anchorNode ?? null;
+
+            new BoldNormalizationPass({ mergeAdjacent: false, removeEmpty: false, normalizeWhitespace: false, preserveNode }).run(scope);
           }
         };
 
@@ -706,60 +673,6 @@ export class BoldInlineTool implements InlineTool {
     }
 
     return element.closest(`${createSelector(DATA_ATTR.interface)}, ${createSelector(DATA_ATTR.editor)}`);
-  }
-
-  /**
-   * Get a bold element at the boundary of a collapsed range
-   * @param range - The collapsed range to check
-   */
-  private static getBoundaryBold(range: Range): HTMLElement | null {
-    const container = range.startContainer;
-
-    if (container.nodeType === Node.TEXT_NODE) {
-      return BoldInlineTool.getBoundaryBoldForText(range, container as Text);
-    }
-
-    if (container.nodeType === Node.ELEMENT_NODE) {
-      return BoldInlineTool.getBoundaryBoldForElement(range, container as Element);
-    }
-
-    return null;
-  }
-
-  /**
-   * Get boundary bold when caret resides inside a text node
-   * @param range - Collapsed range
-   * @param textNode - Text container
-   */
-  private static getBoundaryBoldForText(range: Range, textNode: Text): HTMLElement | null {
-    const length = textNode.textContent.length;
-
-    if (range.startOffset === length) {
-      return findBoldElement(textNode);
-    }
-
-    if (range.startOffset !== 0) {
-      return null;
-    }
-
-    const previous = textNode.previousSibling;
-
-    return isBoldElement(previous) ? previous as HTMLElement : null;
-  }
-
-  /**
-   * Get boundary bold when caret container is an element
-   * @param range - Collapsed range
-   * @param element - Element container
-   */
-  private static getBoundaryBoldForElement(range: Range, element: Element): HTMLElement | null {
-    if (range.startOffset <= 0) {
-      return null;
-    }
-
-    const previous = element.childNodes[range.startOffset - 1];
-
-    return isBoldElement(previous) ? previous as HTMLElement : null;
   }
 
   /**

@@ -109,6 +109,96 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
   return mergedState as BlokModules;
 };
 
+const setupInline = (rawText: string, closingChar: string): {
+  input: HTMLElement;
+  result: boolean;
+  dispatchChange: ReturnType<typeof vi.fn>;
+} => {
+  const input = document.createElement('div');
+  input.contentEditable = 'true';
+  document.body.appendChild(input);
+  const textNode = document.createTextNode(rawText);
+  input.appendChild(textNode);
+
+  const range = document.createRange();
+  range.setStart(textNode, rawText.length);
+  range.collapse(true);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+
+  const dispatchChange = vi.fn();
+  const mockBlock = createBlock({
+    currentInput: input,
+    firstInput: input,
+    lastInput: input,
+    inputs: [input],
+    dispatchChange,
+  } as unknown as Partial<Block>);
+  const blok = createBlokModules({
+    BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
+  });
+  const markdownShortcuts = new MarkdownShortcuts(blok);
+
+  const result = markdownShortcuts.handleInput(createInputEvent({ data: closingChar }));
+
+  return { input, result, dispatchChange };
+};
+
+/**
+ * Same as {@link setupInline}, but splits `textChunks` across SEPARATE sibling
+ * text nodes instead of one contiguous text node. Real browsers fragment typed
+ * text into multiple text nodes around characters with dedicated keydown
+ * handling (e.g. "/" opens the slash-command toolbox via a non-native insertion
+ * path) — this reproduces that DOM shape so markdown detection is verified
+ * against what the editor actually produces, not an idealized single node.
+ */
+const setupInlineFragmented = (textChunks: string[], closingChar: string): {
+  input: HTMLElement;
+  result: boolean;
+  dispatchChange: ReturnType<typeof vi.fn>;
+} => {
+  const input = document.createElement('div');
+
+  input.contentEditable = 'true';
+  document.body.appendChild(input);
+
+  const textNodes = textChunks.map((chunk) => {
+    const node = document.createTextNode(chunk);
+
+    input.appendChild(node);
+
+    return node;
+  });
+
+  const lastNode = textNodes[textNodes.length - 1];
+  const range = document.createRange();
+
+  range.setStart(lastNode, lastNode.textContent?.length ?? 0);
+  range.collapse(true);
+  const selection = window.getSelection();
+
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+
+  const dispatchChange = vi.fn();
+  const mockBlock = createBlock({
+    currentInput: input,
+    firstInput: input,
+    lastInput: input,
+    inputs: [input],
+    dispatchChange,
+  } as unknown as Partial<Block>);
+  const blok = createBlokModules({
+    BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
+  });
+  const markdownShortcuts = new MarkdownShortcuts(blok);
+
+  const result = markdownShortcuts.handleInput(createInputEvent({ data: closingChar }));
+
+  return { input, result, dispatchChange };
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -590,42 +680,6 @@ describe('MarkdownShortcuts', () => {
   });
 
   describe('inline markdown auto-format', () => {
-    const setupInline = (rawText: string, closingChar: string): {
-      input: HTMLElement;
-      result: boolean;
-      dispatchChange: ReturnType<typeof vi.fn>;
-    } => {
-      const input = document.createElement('div');
-      input.contentEditable = 'true';
-      document.body.appendChild(input);
-      const textNode = document.createTextNode(rawText);
-      input.appendChild(textNode);
-
-      const range = document.createRange();
-      range.setStart(textNode, rawText.length);
-      range.collapse(true);
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-
-      const dispatchChange = vi.fn();
-      const mockBlock = createBlock({
-        currentInput: input,
-        firstInput: input,
-        lastInput: input,
-        inputs: [input],
-        dispatchChange,
-      } as unknown as Partial<Block>);
-      const blok = createBlokModules({
-        BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
-      });
-      const markdownShortcuts = new MarkdownShortcuts(blok);
-
-      const result = markdownShortcuts.handleInput(createInputEvent({ data: closingChar }));
-
-      return { input, result, dispatchChange };
-    };
-
     afterEach(() => {
       document.body.innerHTML = '';
     });
@@ -697,6 +751,144 @@ describe('MarkdownShortcuts', () => {
       expect(result).toBe(false);
       expect(input.querySelector('i')).toBeNull();
       expect(input.textContent).toBe('* x *');
+    });
+  });
+
+  describe('link markdown auto-format', () => {
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('converts [text](url) into an <a> when the closing ) is typed', () => {
+      const { input, result, dispatchChange } = setupInline('[Blok](https://blok.dev)', ')');
+
+      expect(result).toBe(true);
+
+      const anchor = input.querySelector('a');
+
+      expect(anchor).not.toBeNull();
+      expect(anchor?.getAttribute('href')).toBe('https://blok.dev');
+      expect(anchor?.textContent).toBe('Blok');
+      expect(input.textContent).toBe('Blok');
+      expect(dispatchChange).toHaveBeenCalled();
+
+      // Matches the defaults used when a link is created via the Link inline tool's button.
+      expect(anchor?.getAttribute('target')).toBe('_blank');
+      expect(anchor?.getAttribute('rel')).toBe('nofollow');
+    });
+
+    it('preserves leading text before the formatted link', () => {
+      const { input } = setupInline('see [Blok](https://blok.dev)', ')');
+
+      expect(input.querySelector('a')?.textContent).toBe('Blok');
+      expect(input.textContent).toBe('see Blok');
+    });
+
+    it('places the caret right after the inserted link', () => {
+      const { input } = setupInline('[Blok](https://blok.dev)', ')');
+      const anchor = input.querySelector('a');
+      const selection = window.getSelection();
+      const range = selection?.getRangeAt(0);
+
+      expect(anchor).not.toBeNull();
+      expect(range?.collapsed).toBe(true);
+      expect(range?.startContainer.nodeType === Node.ELEMENT_NODE ? range?.startContainer : range?.startContainer.parentNode).not.toBe(anchor);
+    });
+
+    it('does NOT format when there is no opening [', () => {
+      const { input, result } = setupInline('just text(url)', ')');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('a')).toBeNull();
+    });
+
+    it('does NOT format with an empty link label []()', () => {
+      const { input, result } = setupInline('[](https://blok.dev)', ')');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('a')).toBeNull();
+    });
+
+    it('does NOT format with an empty url [text]()', () => {
+      const { input, result } = setupInline('[text]()', ')');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('a')).toBeNull();
+    });
+
+    it('does NOT format a url containing a javascript: scheme (XSS guard)', () => {
+      const { input, result } = setupInline('[click me](javascript:alert(1))', ')');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('a')).toBeNull();
+    });
+
+    it('does NOT format inside an existing code span', () => {
+      const input = document.createElement('div');
+
+      input.contentEditable = 'true';
+      document.body.appendChild(input);
+
+      const code = document.createElement('code');
+
+      code.textContent = '[Blok](https://blok.dev)';
+      input.appendChild(code);
+
+      const textNode = code.firstChild as Text;
+      const range = document.createRange();
+
+      range.setStart(textNode, textNode.textContent?.length ?? 0);
+      range.collapse(true);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
+
+      const mockBlock = createBlock({
+        currentInput: input,
+        firstInput: input,
+        lastInput: input,
+        inputs: [input],
+      } as unknown as Partial<Block>);
+      const blok = createBlokModules({
+        BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
+      });
+      const markdownShortcuts = new MarkdownShortcuts(blok);
+
+      const result = markdownShortcuts.handleInput(createInputEvent({ data: ')' }));
+
+      expect(result).toBe(false);
+      expect(input.querySelector('a')).toBeNull();
+
+      document.body.innerHTML = '';
+    });
+
+    it('converts [text](url) into an <a> when the url is fragmented across multiple text nodes (real-browser "/" typing)', () => {
+      // Reproduces the actual DOM shape produced by a real browser: typing "/"
+      // goes through the slash-command keydown handler (preventDefault +
+      // Caret.insertContentAtCaretPosition), which inserts each "/" as its own
+      // text node instead of extending the node the browser would otherwise
+      // type into. A real "https://blok.dev" URL therefore lands as
+      // ["See [Blok](https:", "/", "/blok.dev)"] by the time ")" is typed.
+      const { input, result, dispatchChange } = setupInlineFragmented(
+        ['See [Blok](https:', '/', '/blok.dev)'],
+        ')'
+      );
+
+      expect(result).toBe(true);
+
+      const anchor = input.querySelector('a');
+
+      expect(anchor).not.toBeNull();
+      expect(anchor?.getAttribute('href')).toBe('https://blok.dev');
+      expect(anchor?.textContent).toBe('Blok');
+      expect(input.textContent).toBe('See Blok');
+      expect(dispatchChange).toHaveBeenCalled();
+    });
+
+    it('does NOT format a fragmented run when there is no opening [ (fragmentation must not over-match)', () => {
+      const { input, result } = setupInlineFragmented(['just text(https:', '/', '/blok.dev)'], ')');
+
+      expect(result).toBe(false);
+      expect(input.querySelector('a')).toBeNull();
     });
   });
 

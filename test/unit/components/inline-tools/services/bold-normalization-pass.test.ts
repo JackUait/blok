@@ -162,26 +162,6 @@ describe('BoldNormalizationPass', () => {
       expect(container.querySelector('strong')).not.toBeNull();
     });
 
-    it('should preserve empty <strong> with data-blok-bold-collapsed-active attribute', () => {
-      container.innerHTML = '<p>Text <strong data-blok-bold-collapsed-active="true"></strong> more</p>';
-
-      const pass = new BoldNormalizationPass();
-
-      pass.run(container);
-
-      expect(container.querySelector('strong')).not.toBeNull();
-    });
-
-    it('should preserve empty <strong> with data-blok-bold-collapsed-length attribute', () => {
-      container.innerHTML = '<p>Text <strong data-blok-bold-collapsed-length="0"></strong> more</p>';
-
-      const pass = new BoldNormalizationPass();
-
-      pass.run(container);
-
-      expect(container.querySelector('strong')).not.toBeNull();
-    });
-
     it('should skip empty removal when removeEmpty is false', () => {
       container.innerHTML = '<p>Text <strong></strong> more</p>';
 

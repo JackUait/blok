@@ -429,6 +429,85 @@ test.describe('inline tool bold', () => {
     expect(html).toBe('Keyboard shortcut');
   });
 
+  test('stops typing bold text after toggling bold off mid-typing with the shortcut', async ({ page }) => {
+    // Reproduces: press Ctrl/Cmd+B with no selection to start bold, type some text,
+    // press Ctrl/Cmd+B again (no selection) to turn bold off, then keep typing.
+    // The text typed after the second shortcut press must NOT be bold.
+    await resetBlok(page);
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({
+        holder: holder,
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await paragraph.click();
+
+    const modifierKey = await getModifierKey(page);
+
+    await page.keyboard.press(`${modifierKey}+b`);
+    await page.keyboard.type('BOLD');
+    await page.keyboard.press(`${modifierKey}+b`);
+    await page.keyboard.type('plain');
+
+    await expect(paragraph).toHaveText('BOLDplain');
+
+    // Bold content must stay confined to "BOLD" — internal bookkeeping data
+    // attributes on the <strong> (stripped by the sanitizer on save) are expected.
+    const strong = paragraph.getByRole('strong');
+
+    await expect(strong).toHaveCount(1);
+    await expect(strong).toHaveText('BOLD');
+  });
+
+  test('keeps boldness and order correct under rapid alternating collapsed toggling', async ({ page }) => {
+    // Regression for the collapsed-bold caret race: rapidly typing alternating
+    // plain/bold segments (with no artificial delay) used to scramble characters
+    // and leak bold into the plain segments, because the previous implementation
+    // repositioned the caret asynchronously after each keystroke. Delegating to
+    // the browser's native pending-format state must keep every "bold" segment
+    // bold and every "plain" segment plain, in the exact typed order.
+    await resetBlok(page);
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({
+        holder: holder,
+      });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await paragraph.click();
+
+    const modifierKey = await getModifierKey(page);
+
+    const cycles = 6;
+
+    for (let i = 0; i < cycles; i++) {
+      await page.keyboard.type('plain', { delay: 0 });
+      await page.keyboard.press(`${modifierKey}+b`);
+      await page.keyboard.type('bold', { delay: 0 });
+      await page.keyboard.press(`${modifierKey}+b`);
+    }
+
+    const expectedText = 'plainbold'.repeat(cycles);
+
+    await expect(paragraph).toHaveText(expectedText);
+
+    // Every <strong> must contain exactly "bold"; no plain text may be bold.
+    const strongTexts = await paragraph.evaluate((el) =>
+      Array.from(el.querySelectorAll('strong, b')).map((s) => s.textContent)
+    );
+
+    expect(strongTexts).toEqual(Array.from({ length: cycles }, () => 'bold'));
+  });
+
   test('persists bold in saved output', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {

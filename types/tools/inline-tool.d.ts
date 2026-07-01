@@ -41,4 +41,13 @@ export interface InlineToolConstructable extends BaseToolConstructable {
    * Equation) rather than wrap an existing selection (Link, Marker).
    */
   allowCaretShortcut?: boolean;
+
+  /**
+   * When true, the tool's keyboard shortcut defers to the browser's native
+   * handling at a collapsed caret instead of being intercepted — for format
+   * tools with a native browser equivalent (Bold, Italic), so the browser
+   * applies its pending inline-format to the next typed characters (the only
+   * race-free, cross-engine "toggle then type" behaviour).
+   */
+  nativeCaretShortcut?: boolean;
 }

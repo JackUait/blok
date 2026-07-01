@@ -1,8 +1,6 @@
 import { DATA_ATTR, createSelector } from '../../constants';
 import { isBoldElement, ensureStrongElement, isNodeWithin } from '../utils/bold-dom-utils';
 
-import { CollapsedBoldManager } from './collapsed-bold-manager';
-
 /**
  * Configuration options for bold normalization pass
  */
@@ -167,10 +165,17 @@ export class BoldNormalizationPass {
     bElements: HTMLElement[],
     strongElements: HTMLElement[]
   ): void {
-    // Convert <b> to <strong> first
+    // Convert <b> to <strong> first.
+    //
+    // A <b> that currently contains the caret is deliberately left untouched:
+    // converting it (via replaceWith, which reparents its children) resets the
+    // caret to the element's start when the bold is the block's sole/leading
+    // content, scrambling text as the user types. The element converts on the
+    // next pass once the caret has moved out of it, so nothing is left as <b>
+    // in the final saved output.
     if (this.options.convertLegacyTags) {
       bElements.forEach((b) => {
-        if (b.isConnected) {
+        if (b.isConnected && !this.containsPreservedNode(b)) {
           const strong = ensureStrongElement(b);
 
           // Add converted element to strongElements for subsequent processing
@@ -186,6 +191,12 @@ export class BoldNormalizationPass {
         return;
       }
 
+      // Never restructure the element holding the caret — merging reparents
+      // children the same way conversion does and would displace the caret.
+      if (this.containsPreservedNode(strong)) {
+        return;
+      }
+
       // Remove empty elements (unless it contains the preserved node)
       if (this.options.removeEmpty && this.isEmptyAndSafe(strong)) {
         strong.remove();
@@ -198,6 +209,15 @@ export class BoldNormalizationPass {
         this.mergeWithAdjacent(strong);
       }
     });
+  }
+
+  /**
+   * Whether an element contains the caret/preserved node and must not be
+   * structurally mutated (converted, merged, or removed) during this pass.
+   * @param element - The bold element to check
+   */
+  private containsPreservedNode(element: HTMLElement): boolean {
+    return Boolean(this.options.preserveNode && isNodeWithin(this.options.preserveNode, element));
   }
 
   /**
@@ -227,15 +247,8 @@ export class BoldNormalizationPass {
       return false;
     }
 
-    // Don't remove collapsed bold placeholders (used for typing new bold text)
-    if (CollapsedBoldManager.getInstance().isActivePlaceholder(strong)) {
-      return false;
-    }
-
     // Don't remove if it contains the preserved node (e.g., caret position)
-    const containsPreservedNode = this.options.preserveNode && isNodeWithin(this.options.preserveNode, strong);
-
-    return !containsPreservedNode;
+    return !this.containsPreservedNode(strong);
   }
 
   /**
@@ -246,7 +259,7 @@ export class BoldNormalizationPass {
     // Try to merge with previous sibling
     const previous = strong.previousSibling;
 
-    if (previous && isBoldElement(previous)) {
+    if (previous && isBoldElement(previous) && !this.containsPreservedNode(previous as HTMLElement)) {
       this.mergeStrongNodes(previous as HTMLElement, strong);
 
       // strong is now merged into previous, no need to check next
@@ -256,7 +269,7 @@ export class BoldNormalizationPass {
     // Try to merge with next sibling
     const next = strong.nextSibling;
 
-    if (next && isBoldElement(next)) {
+    if (next && isBoldElement(next) && !this.containsPreservedNode(next as HTMLElement)) {
       this.mergeStrongNodes(strong, next as HTMLElement);
     }
   }

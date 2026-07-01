@@ -39,6 +39,7 @@ const setupBlok = (html: string): { block: HTMLElement } => {
   const wrapper = document.createElement('div');
 
   wrapper.setAttribute('data-blok-testid', 'blok-wrapper');
+  wrapper.setAttribute('data-blok-editor', '');
 
   const block = document.createElement('div');
 
@@ -138,24 +139,12 @@ describe('BoldInlineTool', () => {
     expect(typeof menu.isActive === 'function' ? menu.isActive() : menu.isActive).toBe(false);
   });
 
-  it('starts a collapsed bold segment when caret is not inside bold', () => {
-    const { block } = setupBlok('Hello');
-    const textNode = block.firstChild as Text;
-
-    setRange(textNode, 0);
-
-    const tool = new BoldInlineTool();
-    const menu = tool.render() as PopoverItemDefaultBaseParams;
-
-    menu.onActivate(menu);
-
-    const strong = block.querySelector('strong');
-
-    expect(strong).not.toBeNull();
-    expect(strong?.getAttribute('data-blok-bold-collapsed-active')).toBe('true');
-    expect(typeof menu.isActive === 'function' ? menu.isActive() : menu.isActive).toBe(true);
-    expect(window.getSelection()?.anchorNode).toBe(strong?.firstChild ?? null);
-  });
+  // NOTE: Collapsed-caret bold (Cmd/Ctrl+B with no selection to start "pending"
+  // bold, then typing) is now delegated to the browser's native pending
+  // inline-format handler rather than emulated with placeholder <strong>
+  // elements. That behavior cannot be exercised in jsdom (no native bold /
+  // execCommand support), so it is covered by the real-browser e2e suite
+  // (test/playwright/tests/inline-tools/bold.spec.ts) instead of here.
 
   it('preserves trailing space when wrapping selected text that ends with a space', () => {
     const { block } = setupBlok('text ');
@@ -264,27 +253,4 @@ describe('BoldInlineTool', () => {
     expect(block.textContent).toBe('hello world ');
   });
 
-  it('exits collapsed bold when caret is inside bold content', () => {
-    const { block } = setupBlok('<strong>BOLD</strong> text');
-    const strong = block.querySelector('strong');
-
-    expect(strong).not.toBeNull();
-
-    const textNode = strong?.firstChild as Text;
-    const length = textNode.textContent?.length ?? 0;
-
-    setRange(textNode, length);
-
-    const tool = new BoldInlineTool();
-    const menu = tool.render() as PopoverItemDefaultBaseParams;
-
-    menu.onActivate(menu);
-
-    const strongAfter = block.querySelector('strong');
-
-    expect(strongAfter?.getAttribute('data-blok-bold-collapsed-length')).toBe(length.toString());
-    expect(strongAfter?.getAttribute('data-blok-bold-collapsed-active')).toBeNull();
-    expect(typeof menu.isActive === 'function' ? menu.isActive() : menu.isActive).toBe(false);
-    expect(window.getSelection()?.anchorNode?.parentNode).toBe(block);
-  });
 });

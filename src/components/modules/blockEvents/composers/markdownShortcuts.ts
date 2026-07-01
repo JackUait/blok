@@ -1,7 +1,58 @@
 import type { Block } from '../../../block';
 import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, ALPHA_ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN, QUOTE_TOOL_NAME, QUOTE_PATTERN, CODE_TOOL_NAME, CODE_PATTERN } from '../constants';
+import { hasUnsafeScheme } from '../../../utils/sanitize-url';
 
 import { BlockEventComposer } from './__base';
+
+/**
+ * Matches a completed `[label](url)` span ending at the caret, captured when the
+ * closing `)` is typed. The label excludes `[`/`]` (no nested brackets) and the
+ * url excludes whitespace and parens (so a stray `(`/`)` inside the url simply
+ * stops the match rather than being misinterpreted).
+ */
+const LINK_MARKDOWN_PATTERN = /\[([^[\]]+)\]\(([^()\s]+)\)$/;
+
+/**
+ * Read the plain text of `container` from its start up to (node, offset),
+ * across however many text nodes / inline elements the content is split into.
+ * Mirrors the technique {@link MarkdownShortcuts.getCaretOffset} uses to
+ * measure caret position, but returns the text itself rather than its length.
+ */
+const getTextBeforeCaret = (container: HTMLElement, node: Node, offset: number): string => {
+  const preCaretRange = document.createRange();
+
+  preCaretRange.selectNodeContents(container);
+  preCaretRange.setEnd(node, offset);
+
+  return preCaretRange.toString();
+};
+
+/**
+ * Resolve a character offset (measured from the start of `container`'s text,
+ * as returned by {@link getTextBeforeCaret}) to the concrete text node and
+ * local offset it falls in. Returns null if the offset is out of range.
+ */
+const resolveTextOffset = (container: HTMLElement, targetOffset: number): { node: Text; offset: number } | null => {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+
+  const walk = (consumed: number): { node: Text; offset: number } | null => {
+    const node = walker.nextNode() as Text | null;
+
+    if (node === null) {
+      return null;
+    }
+
+    const length = node.textContent?.length ?? 0;
+
+    if (consumed + length >= targetOffset) {
+      return { node, offset: targetOffset - consumed };
+    }
+
+    return walk(consumed + length);
+  };
+
+  return walk(0);
+};
 
 /**
  * Per-marker inline-markdown rules. `literal` is the regex-escaped marker,
@@ -120,6 +171,15 @@ export class MarkdownShortcuts extends BlockEventComposer {
      * "```" the backtick falls through to inline `code` auto-formatting below.
      */
     if (event.data === '`' && this.handleCodeShortcut()) {
+      return true;
+    }
+
+    /**
+     * Link shortcut triggers on the closing ")" of `[label](url)` — mirrors
+     * the inline-markdown auto-format below but produces an <a> instead of a
+     * single wrapper tag, so it is handled as its own case.
+     */
+    if (event.data === ')' && this.handleLinkMarkdown()) {
       return true;
     }
 
@@ -369,6 +429,106 @@ export class MarkdownShortcuts extends BlockEventComposer {
     } else {
       caretRange.setStartAfter(wrapper);
     }
+    caretRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(caretRange);
+
+    // The DOM was mutated directly (not via a Tool re-render), so notify the
+    // block to flush the change to Yjs — see the CRDT sync contract.
+    currentBlock.dispatchChange();
+
+    this.Blok.YjsManager.stopCapturing();
+
+    return true;
+  }
+
+  /**
+   * Link markdown auto-format. Triggered when the user types the closing `)` of
+   * a `[label](url)` span. Detects a completed span ending at the caret — within
+   * the single text node the caret sits in — and replaces it with an `<a>` tag,
+   * keeping the caret after the new link. Mirrors {@link handleInlineMarkdown}'s
+   * DOM-replacement approach, but builds an anchor instead of a wrapper tag.
+   * @returns true if a link was auto-formatted
+   */
+  private handleLinkMarkdown(): boolean {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const currentInput = currentBlock?.currentInput;
+
+    if (!currentBlock || !currentInput) {
+      return false;
+    }
+
+    const selection = window.getSelection();
+
+    if (selection === null || !selection.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+
+    const range = selection.getRangeAt(0);
+    const caretNode = range.startContainer;
+    const caretOffset = range.startOffset;
+
+    if (caretNode.nodeType !== Node.TEXT_NODE || !currentInput.contains(caretNode)) {
+      return false;
+    }
+
+    // Never auto-format inside an existing code span — its content is literal.
+    if (caretNode.parentElement?.closest('code')) {
+      return false;
+    }
+
+    // Read the text preceding the caret across the WHOLE input, not just the
+    // caret's own text node. "/" is intercepted by the slash-command keydown
+    // handler and inserted via a separate DOM-mutation path (see
+    // blockEvents/index.ts `slashPressed`), which splits a typed URL like
+    // "https://blok.dev" into several sibling text nodes by the time ")" is
+    // typed. Matching only the caret's node would miss the opening "[".
+    const textBeforeCaret = getTextBeforeCaret(currentInput, caretNode, caretOffset);
+    const match = LINK_MARKDOWN_PATTERN.exec(textBeforeCaret);
+
+    if (match === null) {
+      return false;
+    }
+
+    const [fullMatch, label, url] = match;
+
+    // Reject script-capable schemes (javascript:, data:, etc.) — same allowlist
+    // the Link inline tool uses for manually-entered URLs.
+    if (hasUnsafeScheme(url)) {
+      return false;
+    }
+
+    const matchStartOffset = textBeforeCaret.length - fullMatch.length;
+    const matchStart = resolveTextOffset(currentInput, matchStartOffset);
+
+    if (matchStart === null) {
+      return false;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    // Delete the matched markdown span — which may cross several text nodes —
+    // and insert the anchor in its place via the Range API, so the replacement
+    // is correct regardless of how many nodes the span is fragmented across.
+    const matchRange = document.createRange();
+
+    matchRange.setStart(matchStart.node, matchStart.offset);
+    matchRange.setEnd(caretNode, caretOffset);
+    matchRange.deleteContents();
+
+    const anchor = document.createElement('a');
+
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'nofollow';
+    anchor.textContent = label;
+
+    matchRange.insertNode(anchor);
+
+    // Place the caret right after the new link so typing continues unformatted.
+    const caretRange = document.createRange();
+
+    caretRange.setStartAfter(anchor);
     caretRange.collapse(true);
     selection.removeAllRanges();
     selection.addRange(caretRange);

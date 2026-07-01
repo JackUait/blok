@@ -62,11 +62,19 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    // Notion-style menu: a URL paste always offers the view choice (Plain /
-    // Bookmark / Embed) instead of auto-claiming. Requires a collapsed caret;
-    // a selection keeps the native "hyperlink the selection" behavior.
+    // Notion-style menu: a URL paste offers the view choice (Plain / Bookmark /
+    // Embed) instead of auto-claiming. Requires a collapsed caret; a selection
+    // keeps the native "hyperlink the selection" behavior.
     if (isHttpUrl(data) && !this.hasSelection()) {
-      this.openLinkPasteMenu(data);
+      // Only an empty, replaceable default block is converted to a link + menu.
+      // If the block already has content (or is a non-default tool), insert the
+      // link INLINE at the caret so surrounding text is preserved — replacing the
+      // whole block here would erase everything else in it.
+      if (context.canReplaceCurrentBlock) {
+        this.openLinkPasteMenu(data);
+      } else {
+        this.insertInlineLink(data);
+      }
 
       return true;
     }
@@ -203,6 +211,25 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
   private insertPlainLink(url: string, targetBlock: TargetBlock): TargetBlock {
     this.restoreTarget(targetBlock);
 
+    // Replace the empty paste target with a default block holding the link.
+    // Caret-independent so it survives the popover's focus changes (Escape).
+    return this.Blok.BlockManager.insert({
+      data: { text: this.buildAnchor(url).outerHTML },
+      replace: true,
+      needToFocus: true,
+    });
+  }
+
+  /**
+   * Insert the URL as a link at the current caret position, keeping the rest of
+   * the block's content intact. Used when the paste target is not an empty
+   * replaceable block, so a whole-block replace would destroy existing content.
+   */
+  private insertInlineLink(url: string): void {
+    this.Blok.Caret.insertContentAtCaretPosition(this.buildAnchor(url).outerHTML);
+  }
+
+  private buildAnchor(url: string): HTMLAnchorElement {
     const anchor = document.createElement('a');
 
     anchor.href = url;
@@ -210,12 +237,6 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     anchor.rel = 'nofollow';
     anchor.textContent = url;
 
-    // Replace the empty paste target with a default block holding the link.
-    // Caret-independent so it survives the popover's focus changes (Escape).
-    return this.Blok.BlockManager.insert({
-      data: { text: anchor.outerHTML },
-      replace: true,
-      needToFocus: true,
-    });
+    return anchor;
   }
 }

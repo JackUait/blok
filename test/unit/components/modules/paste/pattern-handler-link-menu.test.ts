@@ -15,6 +15,7 @@ import type { HandlerContext } from '../../../../../src/components/modules/paste
 describe('PatternHandler — link paste menu gating', () => {
   const pasteMock = vi.fn();
   const insertMock = vi.fn();
+  const insertAtCaretMock = vi.fn();
   let menuOpen: PasteMenuOpenParams | null = null;
 
   const makeLinkHolder = (): HTMLElement => {
@@ -39,7 +40,7 @@ describe('PatternHandler — link paste menu gating', () => {
       Caret: {
         setToBlock: vi.fn(),
         positions: { END: 'end' },
-        insertContentAtCaretPosition: vi.fn(),
+        insertContentAtCaretPosition: insertAtCaretMock,
       },
       I18n: { t: (key: string): string => key },
     }) as unknown as BlokModules;
@@ -146,5 +147,36 @@ describe('PatternHandler — link paste menu gating', () => {
 
     expect(pasteMock).toHaveBeenCalledTimes(1);
     expect(pasteMock.mock.calls[0][0]).toBe('bookmark');
+  });
+
+  describe('block already has content (not replaceable)', () => {
+    // A URL pasted with a collapsed caret inside existing text must NOT wipe the
+    // block. Regression: insertPlainLink used replace:true unconditionally, so the
+    // whole block (and its text) was overwritten by the link alone.
+    const nonEmptyContext: HandlerContext = {
+      canReplaceCurrentBlock: false,
+      currentBlock: undefined,
+    };
+
+    it('inserts the link inline at the caret instead of replacing the block', async () => {
+      const handler = makeHandler({});
+
+      const handled = await handler.handle('https://example.com/article', nonEmptyContext);
+
+      expect(handled).toBe(true);
+      expect(insertAtCaretMock).toHaveBeenCalledTimes(1);
+      expect(insertAtCaretMock.mock.calls[0][0]).toContain('href="https://example.com/article"');
+    });
+
+    it('does not replace the block or open the menu when content is present', async () => {
+      const handler = makeHandler({});
+
+      await handler.handle('https://example.com/article', nonEmptyContext);
+
+      // No block-replacing insert, no bookmark/embed menu — the text survives.
+      expect(insertMock).not.toHaveBeenCalled();
+      expect(fakeMenu.open).not.toHaveBeenCalled();
+      expect(pasteMock).not.toHaveBeenCalled();
+    });
   });
 });

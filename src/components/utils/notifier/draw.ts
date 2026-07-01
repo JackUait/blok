@@ -1,3 +1,4 @@
+import { openModalDialog, type ModalDialogHandle } from '../modal-dialog';
 import { twJoin } from '../tw';
 
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
@@ -54,93 +55,45 @@ let messageIdCounter = 0;
 const MESSAGE_TEXT_TESTID = 'notification-message-text';
 
 /**
- * Collects the focusable descendants of a container in DOM order.
- * @param {HTMLElement} container - dialog element
- * @returns {HTMLElement[]} focusable elements
- */
-const getFocusables = (container: HTMLElement): HTMLElement[] =>
-  Array.from(container.querySelectorAll<HTMLElement>('button, input, [tabindex]')).filter((el) => {
-    // Attribute/property checks only — jsdom has no layout, so offsetParent/
-    // computed visibility would wrongly reject every element here.
-    const isDisabled = 'disabled' in el && (el as HTMLButtonElement | HTMLInputElement).disabled === true;
-
-    if (isDisabled || el.hasAttribute('disabled')) {
-      return false;
-    }
-
-    if (el.getAttribute('tabindex') === '-1') {
-      return false;
-    }
-
-    if (el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true') {
-      return false;
-    }
-
-    return true;
-  });
-
-/**
- * Turns a notification into an accessible modal dialog: sets the dialog roles,
- * links the message as its label, installs a focus trap, moves focus inside on
- * mount and returns a callback that restores focus to the previously-focused
- * element when the dialog closes.
- * @param {HTMLElement} notify - notification element
+ * Turns a notification into an accessible modal alertdialog via the shared
+ * {@link openModalDialog} primitive: sets the dialog roles, links the message
+ * as its label, installs the focus trap + background `inert`, moves focus
+ * inside on mount, and wires Escape dismissal through the shared dismissal
+ * layer. Returns the dialog handle so callers can close it.
+ *
+ * The notification is kept out of the CSS Top Layer (`topLayer: false`) so the
+ * toast wrapper's corner positioning is preserved; the background is still made
+ * non-interactive by the primitive's `inert` pass. Outside-pointer dismissal is
+ * disabled — confirm/prompt resolve only via their buttons or Escape.
+ * @param {HTMLElement} notify - notification element (appended by index.ts)
  * @param {HTMLElement} messageText - element holding the message text
  * @param {() => HTMLElement | null} getFocusTarget - resolves the element that should receive initial focus
- * @returns {() => void} restoreFocus callback
+ * @param {() => void} onDismiss - invoked when the dialog is dismissed via Escape
+ * @returns {ModalDialogHandle} the dialog handle
  */
 const makeModal = (
   notify: HTMLElement,
   messageText: HTMLElement,
-  getFocusTarget: () => HTMLElement | null
-): (() => void) => {
-  notify.setAttribute('role', 'alertdialog');
-  notify.setAttribute('aria-modal', 'true');
-  notify.setAttribute('aria-labelledby', messageText.id);
-
+  getFocusTarget: () => HTMLElement | null,
+  onDismiss: () => void
+): ModalDialogHandle => {
   // The message is now a dialog label, not a standalone announcement.
   messageText.removeAttribute('aria-live');
   messageText.removeAttribute('aria-atomic');
 
-  const previouslyFocused = document.activeElement as HTMLElement | null;
-
-  notify.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key !== 'Tab') {
-      return;
-    }
-
-    const focusables = getFocusables(notify);
-
-    if (focusables.length === 0) {
-      return;
-    }
-
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
+  return openModalDialog({
+    content: notify,
+    role: 'alertdialog',
+    labelledBy: messageText.id,
+    initialFocus: getFocusTarget,
+    onDismiss,
+    // index.ts appends the notification into the positioned toast wrapper.
+    container: null,
+    // Keep the toast's corner positioning; `inert` still blocks the background.
+    topLayer: false,
+    // confirm/prompt dismiss only via their buttons or Escape.
+    outside: false,
   });
-
-  // Move focus inside once the caller has connected the element to the DOM.
-  queueMicrotask(() => {
-    const target = getFocusTarget();
-
-    if (target !== null && target.isConnected) {
-      target.focus();
-    }
-  });
-
-  return () => {
-    if (previouslyFocused !== null && typeof previouslyFocused.focus === 'function') {
-      previouslyFocused.focus();
-    }
-  };
 };
 
 /**
@@ -232,33 +185,24 @@ export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
     notify.appendChild(btnsWrapper);
   }
 
-  const restoreFocus = makeModal(notify, messageText, () => okBtn);
-
   const cancel = (event: Event): void => {
     if (typeof cancelHandler === 'function') {
       cancelHandler(event);
     }
-    notify.remove();
-    restoreFocus();
+    handle.close();
   };
 
   const confirmOk = (event: Event): void => {
     if (typeof okHandler === 'function') {
       okHandler(event);
     }
-    notify.remove();
-    restoreFocus();
+    handle.close();
   };
+
+  const handle = makeModal(notify, messageText, () => okBtn, () => cancel(new Event('dismiss')));
 
   okBtn.addEventListener('click', confirmOk);
   cancelBtn.addEventListener('click', cancel);
-
-  notify.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      cancel(event);
-    }
-  });
 
   return notify;
 };
@@ -318,23 +262,21 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
     notify.appendChild(btnsWrapper);
   }
 
-  const restoreFocus = makeModal(notify, messageText, () => input);
-
   const submit = (): void => {
     if (typeof okHandler === 'function') {
       okHandler(input.value);
     }
-    notify.remove();
-    restoreFocus();
+    handle.close();
   };
 
   const cancel = (event: Event): void => {
     if (typeof cancelHandler === 'function') {
       cancelHandler(event);
     }
-    notify.remove();
-    restoreFocus();
+    handle.close();
   };
+
+  const handle = makeModal(notify, messageText, () => input, () => cancel(new Event('dismiss')));
 
   okBtn.addEventListener('click', submit);
   cancelBtn.addEventListener('click', cancel);
@@ -343,13 +285,6 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
     if (event.key === 'Enter') {
       event.preventDefault();
       submit();
-    }
-  });
-
-  notify.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      cancel(event);
     }
   });
 

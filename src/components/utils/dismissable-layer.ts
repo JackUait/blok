@@ -22,6 +22,14 @@
  */
 
 /**
+ * Why a layer is being dismissed. Escape and outside-pointer can map to
+ * different actions (e.g. commit on click-away, cancel on Escape), so the
+ * reason is forwarded to {@link DismissableLayerOptions.onDismiss}. It is
+ * optional so pre-existing callers with a zero-arg `onDismiss` stay valid.
+ */
+export type DismissReason = 'escape' | 'outside';
+
+/**
  * Options accepted when registering a dismissable layer.
  */
 export interface DismissableLayerOptions {
@@ -40,9 +48,11 @@ export interface DismissableLayerOptions {
   anchor?: HTMLElement;
 
   /**
-   * Called when the layer should be dismissed (Escape or outside pointerdown).
+   * Called when the layer should be dismissed. Receives the dismissal reason
+   * (`'escape'` or `'outside'`); the argument is optional so zero-arg handlers
+   * remain valid.
    */
-  onDismiss: () => void;
+  onDismiss: (reason?: DismissReason) => void;
 
   /**
    * Whether Escape dismisses this layer. Defaults to `true`.
@@ -61,7 +71,7 @@ export interface DismissableLayerOptions {
 interface LayerEntry {
   element: HTMLElement;
   anchor: HTMLElement | undefined;
-  onDismiss: () => void;
+  onDismiss: (reason?: DismissReason) => void;
   escape: boolean;
   outside: boolean;
 }
@@ -111,7 +121,7 @@ const handleKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
-  topmost.onDismiss();
+  topmost.onDismiss('escape');
 };
 
 /**
@@ -136,7 +146,7 @@ const handlePointerDown = (event: PointerEvent): void => {
     return;
   }
 
-  topmost.onDismiss();
+  topmost.onDismiss('outside');
 };
 
 /**

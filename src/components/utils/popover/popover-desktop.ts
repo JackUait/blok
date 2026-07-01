@@ -12,6 +12,7 @@ import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, resolveNestedPopoverSide } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
+import { createPositionTracker, type PositionTracker } from './anchored-position';
 import { stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
 
@@ -159,6 +160,14 @@ export class PopoverDesktop extends PopoverAbstract {
   public setLeftAlignElement(element: HTMLElement | undefined): void {
     this.leftAlignElement = element;
   }
+
+  /**
+   * Keeps the popover anchored to its trigger while it is open by re-running
+   * {@link reposition} on scroll / resize / content-resize. Created on show()
+   * for trigger-based (root) popovers and torn down on hide()/destroy().
+   * Undefined while the popover is closed.
+   */
+  private positionTracker: PositionTracker | undefined;
 
   /**
    * Popover size cache
@@ -359,8 +368,7 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nodes.popover.style.left = `${left}px`;
       this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, '0px');
       this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, '0px');
-      this.setOpenTop(openTop);
-      this.setOpenLeft(openLeft);
+      this.applyResolvedSide(openTop, openLeft);
     }
 
     const measuredSize = this.size;
@@ -375,26 +383,18 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (!this.trigger) {
-      const containerRect = this.nodes.popoverContainer.getBoundingClientRect();
-      // offset: 0 because the visual gap is handled by CSS calc (0.5rem), not pixel positioning
-      const { openTop, openLeft } = resolvePosition({
-        anchor: containerRect,
-        popoverSize: measuredSize,
-        scopeBounds: this.scopeElement.getBoundingClientRect(),
-        viewportSize: { width: window.innerWidth, height: window.innerHeight },
-        scrollOffset: { x: window.scrollX, y: window.scrollY },
-        offset: 0,
-      });
+      this.applyNonTriggerPosition(measuredSize);
+    }
 
-      if (openTop) {
-        this.setOpenTop(true);
-        this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
-      }
-
-      if (openLeft) {
-        this.setOpenLeft(true);
-        this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
-      }
+    // Keep the popover anchored to its trigger while it is open: a page scroll,
+    // a viewport resize, or the popover's own size changing would otherwise
+    // strand it away from the trigger. Only trigger-based (root, body-mounted)
+    // popovers track — nested submenus follow their parent, and non-trigger
+    // inline popovers scroll with their owning wrapper.
+    if (this.trigger) {
+      this.positionTracker?.detach();
+      this.positionTracker = createPositionTracker(this.nodes.popover, () => this.reposition());
+      this.positionTracker.attach();
     }
 
     // Set flag BEFORE super.show() so handleHover can suppress the
@@ -447,9 +447,70 @@ export class PopoverDesktop extends PopoverAbstract {
 
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
-      this.setOpenTop(openTop);
-      this.setOpenLeft(openLeft);
+      this.applyResolvedSide(openTop, openLeft);
     }
+  }
+
+  /**
+   * Applies the resolved vertical/horizontal placement flags: keeps the legacy
+   * `data-blok-popover-open-top`/`-open-left` attributes (which
+   * `popover-animation.css` keys off for transform-origin) in sync AND stamps
+   * the Radix-style `data-side`/`data-align` attributes so newer CSS/animation
+   * can key off the resolved side.
+   * @param openTop - true when the popover opened above the anchor
+   * @param openLeft - true when the popover opened to the left of the anchor
+   */
+  private applyResolvedSide(openTop: boolean, openLeft: boolean): void {
+    this.setOpenTop(openTop);
+    this.setOpenLeft(openLeft);
+
+    this.nodes.popover.dataset.side = openTop ? 'top' : 'bottom';
+    this.nodes.popover.dataset.align = openLeft ? 'end' : 'start';
+  }
+
+  /**
+   * Positions a non-trigger (inline-mounted) popover via CSS variables so the
+   * visual gap stays handled by CSS `calc` rather than pixel math.
+   * @param measuredSize - measured popover size
+   */
+  private applyNonTriggerPosition(measuredSize: { height: number; width: number }): void {
+    const containerRect = this.nodes.popoverContainer.getBoundingClientRect();
+    // offset: 0 because the visual gap is handled by CSS calc (0.5rem), not pixel positioning
+    const { openTop, openLeft } = resolvePosition({
+      anchor: containerRect,
+      popoverSize: measuredSize,
+      scopeBounds: this.scopeElement.getBoundingClientRect(),
+      viewportSize: { width: window.innerWidth, height: window.innerHeight },
+      scrollOffset: { x: window.scrollX, y: window.scrollY },
+      offset: 0,
+    });
+
+    this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, openTop
+      ? 'calc(-1 * (0.5rem + var(--popover-height)))'
+      : '0px');
+    this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, openLeft
+      ? 'calc(-1 * var(--width) + 100%)'
+      : '0px');
+
+    this.setOpenTop(openTop);
+    this.setOpenLeft(openLeft);
+  }
+
+  /**
+   * Re-computes and re-applies the trigger-based popover position. Invoked by
+   * the {@link positionTracker} on scroll / resize / content-resize while the
+   * popover is open, so it stays anchored to a trigger that moved.
+   */
+  private reposition(): void {
+    if (this.trigger === undefined || !this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
+      return;
+    }
+
+    const { top, left, openTop, openLeft } = this.calculatePosition();
+
+    this.nodes.popover.style.top = `${top}px`;
+    this.nodes.popover.style.left = `${left}px`;
+    this.applyResolvedSide(openTop, openLeft);
   }
 
   /**
@@ -501,6 +562,9 @@ export class PopoverDesktop extends PopoverAbstract {
    * re-implementing it and forgetting base steps).
    */
   protected override onHide(): void {
+    this.positionTracker?.detach();
+    this.positionTracker = undefined;
+
     this.cleanupPromotedItems();
 
     this.destroyNestedPopoverIfExists();
@@ -850,17 +914,13 @@ export class PopoverDesktop extends PopoverAbstract {
     this.nestedPopover.on(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
 
     const nestedPopoverEl = this.nestedPopover.getMountElement();
-    const actualNestedPopoverEl = this.nestedPopover.getElement();
 
     this.nodes.popover.appendChild(nestedPopoverEl);
 
     this.setTriggerItemPosition(nestedPopoverEl, item);
 
-    /* We need nesting level value in CSS to calculate offset left for nested popover */
-    /* Set on the actual popover element so it's available for --popover-left calculation */
-    actualNestedPopoverEl.style.setProperty(CSSVariables.NestingLevel, this.nestedPopover.nestingLevel.toString());
-
-    // Apply nested popover positioning (moved from popover.css)
+    // Apply nested popover positioning (horizontal offset resolved to explicit
+    // pixels; the former nesting-level CSS-var calc has been removed).
     this.applyNestedPopoverPositioning(nestedPopoverEl, item);
 
     /**
@@ -896,26 +956,31 @@ export class PopoverDesktop extends PopoverAbstract {
     const queriedPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`);
     const actualPopoverEl: HTMLElement = queriedPopoverEl instanceof HTMLElement ? queriedPopoverEl : nestedPopoverEl;
 
-    // Check if parent popover has openTop or openLeft state
-    const _isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);
     const parentPrefersLeft = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenLeft);
 
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
-    // Get parent width - use computed width if --width resolves to 'auto'
-    const parentContainerWidth = this.nodes.popoverContainer.offsetWidth;
-    const parentWidth = this.params.width === undefined || this.params.width === 'auto'
-      ? `${parentContainerWidth}px`
-      : 'var(--width)';
+    // Overlap (px) the nested submenu is allowed to share with the parent's
+    // trailing edge — matches the `--nested-popover-overlap` CSS variable
+    // (0.25rem = 4px).
+    const overlap = 4;
 
     // Decide the side based on measured space, not just the parent's flag.
     // The flag can be truthy for very different reasons (open-left after a
     // right-edge flip vs. placeLeftOfAnchor) — mirroring it blindly used to
     // push the nested popover off-screen when the parent itself hugged the
     // viewport's left edge (e.g. BlockSettings on the leftmost block).
+    //
+    // Uses the same pure geometry primitives as the shared `positionAnchored`
+    // engine (resolveNestedPopoverSide + clampNestedPopoverTop); the resulting
+    // offset is resolved to explicit pixels — the former nesting-level CSS-var
+    // `calc()` branch has been removed. The nested container stays positioned
+    // relative to its parent popover root (its offset parent), so the resolved
+    // viewport coordinates are converted into that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
-    const nestedMeasuredWidth = this.nestedPopover?.size.width ?? parentContainerWidth;
+    const parentRootRect = this.nodes.popover.getBoundingClientRect();
+    const nestedMeasuredWidth = this.nestedPopover?.size.width ?? this.nodes.popoverContainer.offsetWidth;
     const { openLeft: openNestedLeft } = resolveNestedPopoverSide({
       parentRect: {
         left: parentRect.left,
@@ -925,17 +990,21 @@ export class PopoverDesktop extends PopoverAbstract {
       nestedWidth: nestedMeasuredWidth,
       viewportWidth: window.innerWidth,
       parentPrefersLeft,
+      overlap,
     });
 
-    // Calculate --popover-left based on nesting level and chosen side.
-    // Set on the actual popover element to override its default value.
-    if (openNestedLeft) {
-      // Position to the left
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(-1 * (var(--nesting-level) + 1) * ${parentWidth} + 100%)`);
-    } else {
-      // Position to the right
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(var(--nesting-level) * (${parentWidth} - var(--nested-popover-overlap)))`);
-    }
+    // Horizontal: place the submenu beside the parent, overlapping its trailing
+    // edge by `overlap` px, then convert to parent-root-relative pixels.
+    const viewportLeft = openNestedLeft
+      ? parentRect.left - nestedMeasuredWidth + overlap
+      : parentRect.right - overlap;
+
+    nestedContainer.style.left = `${viewportLeft - parentRootRect.left}px`;
+
+    // Stamp the resolved side/align so CSS/animation can key off it, mirroring
+    // the root popover's data-side/data-align contract.
+    actualPopoverEl.dataset.side = openNestedLeft ? 'left' : 'right';
+    actualPopoverEl.dataset.align = 'center';
 
     // Center nested popover vertically on the trigger item, then clamp
     // so the submenu never overflows the viewport top or bottom.
@@ -952,9 +1021,7 @@ export class PopoverDesktop extends PopoverAbstract {
         viewportHeight: window.innerHeight,
       });
 
-      const parentRootTop = this.nodes.popover.getBoundingClientRect().top;
-
-      nestedContainer.style.top = `${clampedTop - parentRootTop}px`;
+      nestedContainer.style.top = `${clampedTop - parentRootRect.top}px`;
     } else {
       nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
     }
@@ -1440,8 +1507,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
-      this.setOpenTop(openTop);
-      this.setOpenLeft(openLeft);
+      this.applyResolvedSide(openTop, openLeft);
     }
 
     // Build flippable elements list: top-level matches + promoted items

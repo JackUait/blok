@@ -1,6 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openCropModal } from '../../../src/tools/image/crop-modal';
-import { simulateMousedown, simulateMouseup, simulateClick } from '../../helpers/simulate';
+
+/**
+ * Dispatch a capture-phase pointerdown whose target is the given element.
+ * The shared dismissal layer keys outside-dismiss off pointerdown (which, in a
+ * real browser, precedes click), so tests must exercise the same event.
+ */
+const pressPointerDown = (target: HTMLElement): void => {
+  const event = new PointerEvent('pointerdown', { bubbles: true });
+
+  Object.defineProperty(event, 'target', { value: target });
+  document.dispatchEvent(event);
+};
 
 // jsdom lacks HTML Popover API implementations; stub minimal shape for promoteToTopLayer.
 beforeEach(() => {
@@ -61,39 +72,34 @@ describe('openCropModal', () => {
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('backdrop click triggers onCancel and detaches', () => {
+  it('backdrop press triggers onCancel and detaches', () => {
     const onCancel = vi.fn();
     const detach = open({ onCancel });
     const backdrop = document.body.querySelector<HTMLElement>(
       '.blok-image-crop-modal-backdrop'
     )!;
-    simulateMousedown(backdrop);
-    simulateClick(backdrop);
+    pressPointerDown(backdrop);
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(document.body.querySelector('.blok-image-crop-modal-backdrop')).toBeNull();
     detach();
   });
 
-  it('click inside dialog does not cancel', () => {
+  it('press inside dialog does not cancel', () => {
     const onCancel = vi.fn();
     const detach = open({ onCancel });
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')!;
-    simulateMousedown(dialog);
-    simulateClick(dialog);
+    pressPointerDown(dialog);
     expect(onCancel).not.toHaveBeenCalled();
     detach();
   });
 
-  it('drag starting on handle and released on backdrop does not cancel', () => {
+  it('drag starting on a handle (inside the surface) does not cancel', () => {
     const onCancel = vi.fn();
     const detach = open({ onCancel });
     const handle = document.body.querySelector<HTMLElement>('[data-handle="se"]')!;
-    const backdrop = document.body.querySelector<HTMLElement>(
-      '.blok-image-crop-modal-backdrop'
-    )!;
-    simulateMousedown(handle);
-    simulateMouseup(backdrop);
-    simulateClick(backdrop);
+    // A press that starts inside the dialog surface never dismisses, even if the
+    // pointer later releases over the backdrop.
+    pressPointerDown(handle);
     expect(onCancel).not.toHaveBeenCalled();
     expect(document.body.querySelector('.blok-image-crop-modal-backdrop')).not.toBeNull();
     detach();

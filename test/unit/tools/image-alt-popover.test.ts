@@ -1,6 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openAltPopover } from '../../../src/tools/image/alt-popover';
-import { simulateKeydown, simulateMousedown } from '../../helpers/simulate';
+import { simulateKeydown } from '../../helpers/simulate';
+
+/**
+ * Dispatch a capture-phase pointerdown whose target is the given element.
+ * The shared dismissal layer keys outside-dismiss off pointerdown.
+ */
+const pressPointerDown = (target: EventTarget): void => {
+  const event = new PointerEvent('pointerdown', { bubbles: true });
+
+  Object.defineProperty(event, 'target', { value: target });
+  document.dispatchEvent(event);
+};
 
 beforeEach(() => {
   if (!('popover' in HTMLElement.prototype)) {
@@ -116,17 +127,47 @@ describe('openAltPopover', () => {
     detach();
   });
 
-  it('clicking outside commits onSave and detaches', () => {
+  it('links the description via aria-describedby', () => {
+    const detach = open();
+    const popover = document.body.querySelector<HTMLElement>(
+      '[data-role="image-alt-popover"]'
+    )!;
+    const describedBy = popover.getAttribute('aria-describedby');
+
+    expect(describedBy).toBeTruthy();
+    const description = popover.querySelector('.blok-image-alt-popover__description');
+    expect(description?.id).toBe(describedBy);
+    detach();
+  });
+
+  it('pressing outside commits onSave and detaches', () => {
     const onSave = vi.fn();
     const detach = open({ onSave });
     const textarea = document.body.querySelector<HTMLTextAreaElement>(
       '[data-role="image-alt-popover"] textarea'
     )!;
     textarea.value = 'committed';
-    simulateMousedown(document.body);
+    pressPointerDown(document.body);
     expect(onSave).toHaveBeenCalledWith('committed');
     expect(document.body.querySelector('[data-role="image-alt-popover"]')).toBeNull();
     detach();
+  });
+
+  it('removes its dismissal listeners on detach (H12 symmetry)', () => {
+    const onCancel = vi.fn();
+    const onSave = vi.fn();
+    const detach = open({ onCancel, onSave });
+
+    detach();
+
+    // After teardown, neither Escape nor an outside press may fire callbacks —
+    // the old code added the keydown to the textarea but tried to remove it from
+    // document, leaking the listener.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    pressPointerDown(document.body);
+
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('detach removes popover and is idempotent', () => {

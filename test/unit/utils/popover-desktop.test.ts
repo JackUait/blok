@@ -1902,4 +1902,172 @@ describe('PopoverDesktop', () => {
       expect(flipper.setActiveDescendantHost).toHaveBeenCalledWith(host);
     });
   });
+
+  describe('resolved side/align stamping (H2)', () => {
+    it('stamps data-side and data-align on the popover element when shown with a trigger', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+
+      popover.show();
+
+      // Space below → side bottom, left-aligned → align start
+      expect(popover.getElement().dataset.side).toBe('bottom');
+      expect(popover.getElement().dataset.align).toBe('start');
+
+      trigger.remove();
+    });
+
+    it('stamps data-side=top when the popover flips above the trigger', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 500, bottom: 540, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300, width: 200 });
+
+      const originalInnerHeight = window.innerHeight;
+
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600, writable: true });
+
+      try {
+        popover.show();
+        expect(popover.getElement().dataset.side).toBe('top');
+      } finally {
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+        trigger.remove();
+      }
+    });
+  });
+
+  describe('position tracking (H2)', () => {
+    it('re-positions the popover when the page scrolls while it is open', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+
+      popover.show();
+
+      expect(popover.getElement().style.top).toBe(`${148 + window.scrollY}px`);
+
+      // Trigger moves (as it would when the page scrolls under a fixed anchor)
+      rectSpy.mockReturnValue(
+        createRect({ top: 300, bottom: 340, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      window.dispatchEvent(new Event('scroll'));
+
+      expect(popover.getElement().style.top).toBe(`${348 + window.scrollY}px`);
+
+      trigger.remove();
+    });
+
+    it('stops re-positioning after the popover is hidden', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+
+      popover.show();
+      popover.hide();
+
+      const topAfterHide = popover.getElement().style.top;
+
+      rectSpy.mockReturnValue(
+        createRect({ top: 300, bottom: 340, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      window.dispatchEvent(new Event('scroll'));
+
+      // hide() cleared inline top; a stray scroll must not re-apply a position
+      expect(popover.getElement().style.top).toBe(topAfterHide);
+
+      trigger.remove();
+    });
+  });
+
+  describe('nested popover pixel positioning (H2)', () => {
+    it('positions the nested submenu with explicit pixel left (no nesting-level CSS calc)', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [
+                { title: 'Child', name: 'child', onActivate: vi.fn() },
+              ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.hasChildren
+      );
+
+      expect(parentItem).toBeDefined();
+
+      if (!parentItem) {
+        return;
+      }
+
+      instance.nestedPopoverTriggerItem = parentItem;
+      instance.showNestedPopoverForItem(parentItem);
+
+      const nested = instance.nestedPopover;
+
+      expect(nested).toBeInstanceOf(PopoverDesktop);
+
+      const actualPopoverEl = nested?.getElement();
+      const nestedContainer = nested
+        ?.getMountElement()
+        .querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
+
+      expect(nestedContainer).not.toBeNull();
+
+      // Left is an explicit pixel value, not a nesting-level CSS-var calc string
+      const leftValue = nestedContainer?.style.left ?? '';
+
+      expect(leftValue).toMatch(/px$/);
+      expect(leftValue).not.toContain('calc');
+      expect(actualPopoverEl?.style.getPropertyValue(CSSVariables.PopoverLeft)).not.toContain('nesting-level');
+
+      // resolved side is stamped for CSS/animation
+      expect(actualPopoverEl?.dataset.side === 'left' || actualPopoverEl?.dataset.side === 'right').toBe(true);
+    });
+  });
 });

@@ -2730,10 +2730,14 @@ describe('Toolbox', () => {
 
       const ce = mocks.blockAPI.holder.querySelector<HTMLElement>('[contenteditable="true"]');
 
+      // Simulate a stale aria-activedescendant left by the flipper's virtual focus
+      ce?.setAttribute('aria-activedescendant', 'blok-flipper-item-stale');
+
       toolbox.close();
 
       expect(ce?.hasAttribute('role')).toBe(false);
       expect(ce?.hasAttribute('aria-expanded')).toBe(false);
+      expect(ce?.hasAttribute('aria-activedescendant')).toBe(false);
       expect(mockPopoverInstance.setActiveDescendantHost).toHaveBeenLastCalledWith(null);
     });
   });

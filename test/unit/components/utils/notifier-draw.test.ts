@@ -59,7 +59,7 @@ describe('Notifier draw', () => {
   });
 
   describe('alert accessibility', () => {
-    it('renders a live region announcing the message politely', () => {
+    it('renders a live region announcing the message politely', async () => {
       const el = alert({ message: 'hi' });
 
       expect(el.getAttribute('role')).toBe('region');
@@ -67,7 +67,13 @@ describe('Notifier draw', () => {
       const live = el.querySelector('[aria-live]');
 
       expect(live?.getAttribute('aria-live')).toBe('polite');
+
+      // The live region text lands a microtask after the node is connected.
+      document.body.appendChild(el);
+      await Promise.resolve();
+
       expect(live?.textContent).toBe('hi');
+      el.remove();
     });
 
     it('announces error-style alerts assertively', () => {
@@ -75,6 +81,40 @@ describe('Notifier draw', () => {
       const live = el.querySelector('[aria-live]');
 
       expect(live?.getAttribute('aria-live')).toBe('assertive');
+    });
+
+    it('inserts the live region empty and populates it only after insertion + a microtask', async () => {
+      const el = alert({ message: 'deferred hi' });
+      const live = el.querySelector('[aria-live]');
+
+      expect(live).not.toBeNull();
+
+      // Connect the node the way index.ts appendNotify would.
+      document.body.appendChild(el);
+
+      // Present but still empty at insertion time so screen readers announce the mutation.
+      expect(live?.textContent).toBe('');
+      expect(live?.getAttribute('aria-live')).toBe('polite');
+
+      await Promise.resolve();
+
+      expect(live?.textContent).toBe('deferred hi');
+      el.remove();
+    });
+
+    it('populates an error alert live region assertively after a microtask', async () => {
+      const el = alert({ message: 'bad', style: 'error' });
+      const live = el.querySelector('[aria-live]');
+
+      expect(live?.getAttribute('aria-live')).toBe('assertive');
+
+      document.body.appendChild(el);
+      expect(live?.textContent).toBe('');
+
+      await Promise.resolve();
+
+      expect(live?.textContent).toBe('bad');
+      el.remove();
     });
   });
 
@@ -154,6 +194,50 @@ describe('Notifier draw', () => {
       first.focus();
       first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
       expect(document.activeElement).toBe(last);
+    });
+
+    it('excludes disabled and tabindex="-1" nodes from the focus-trap wrap targets', () => {
+      const el = confirm({ message: 'Sure?', okHandler: vi.fn(), cancelHandler: vi.fn() });
+
+      document.body.appendChild(el);
+
+      const okBtn = el.querySelector<HTMLElement>('[data-blok-testid="notification-confirm-button"]');
+      const cancelBtn = el.querySelector<HTMLElement>('[data-blok-testid="notification-cancel-button"]');
+
+      if (okBtn === null || cancelBtn === null) {
+        throw new Error('confirm buttons not found');
+      }
+
+      // Inject non-focusable candidates AFTER the real buttons so a naive
+      // "last matching element" trap would wrongly wrap onto them.
+      const disabledBtn = document.createElement('button');
+
+      disabledBtn.disabled = true;
+      disabledBtn.textContent = 'nope';
+
+      const negTabNode = document.createElement('div');
+
+      negTabNode.setAttribute('tabindex', '-1');
+
+      const hiddenBtn = document.createElement('button');
+
+      hiddenBtn.setAttribute('aria-hidden', 'true');
+
+      el.appendChild(disabledBtn);
+      el.appendChild(negTabNode);
+      el.appendChild(hiddenBtn);
+
+      // Tab from the last REAL focusable (cancelBtn) wraps to the first REAL focusable (okBtn).
+      cancelBtn.focus();
+      cancelBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      expect(document.activeElement).toBe(okBtn);
+
+      // Shift+Tab from the first REAL focusable wraps to the last REAL focusable (cancelBtn).
+      okBtn.focus();
+      okBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
+      expect(document.activeElement).toBe(cancelBtn);
+
+      el.remove();
     });
   });
 

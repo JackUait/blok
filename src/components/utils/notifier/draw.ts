@@ -59,7 +59,25 @@ const MESSAGE_TEXT_TESTID = 'notification-message-text';
  * @returns {HTMLElement[]} focusable elements
  */
 const getFocusables = (container: HTMLElement): HTMLElement[] =>
-  Array.from(container.querySelectorAll<HTMLElement>('button, input, [tabindex]'));
+  Array.from(container.querySelectorAll<HTMLElement>('button, input, [tabindex]')).filter((el) => {
+    // Attribute/property checks only — jsdom has no layout, so offsetParent/
+    // computed visibility would wrongly reject every element here.
+    const isDisabled = 'disabled' in el && (el as HTMLButtonElement | HTMLInputElement).disabled === true;
+
+    if (isDisabled || el.hasAttribute('disabled')) {
+      return false;
+    }
+
+    if (el.getAttribute('tabindex') === '-1') {
+      return false;
+    }
+
+    if (el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true') {
+      return false;
+    }
+
+    return true;
+  });
 
 /**
  * Turns a notification into an accessible modal dialog: sets the dialog roles,
@@ -156,7 +174,18 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   messageText.setAttribute('data-blok-testid', MESSAGE_TEXT_TESTID);
   messageText.setAttribute('aria-live', style === 'error' ? 'assertive' : 'polite');
   messageText.setAttribute('aria-atomic', 'true');
-  messageText.innerHTML = options.message;
+
+  // Screen readers reliably announce a live region only when its content is
+  // mutated *after* the region is already connected to the DOM. Insert the node
+  // empty and write the text on the next microtask, by which point index.ts's
+  // appendNotify has connected it. confirm()/prompt() overwrite this text
+  // synchronously (they need it for aria-labelledby), so this deferral only
+  // affects the standalone alert toast.
+  queueMicrotask(() => {
+    if (messageText.isConnected) {
+      messageText.innerHTML = options.message;
+    }
+  });
 
   messageWrapper.appendChild(messageText);
   notify.appendChild(messageWrapper);
@@ -177,6 +206,10 @@ export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
   const cancelBtn = document.createElement('button');
   const cancelHandler = options.cancelHandler;
   const okHandler = options.okHandler;
+
+  // alert() defers its live-region text; a modal dialog uses this node as its
+  // aria-labelledby target, so it must carry the text synchronously.
+  messageText.innerHTML = options.message;
 
   btnsWrapper.className = CSS.btnsWrapper;
   btnsWrapper.setAttribute('data-blok-testid', 'notification-buttons-wrapper');
@@ -244,6 +277,10 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
   const input = document.createElement('input');
   const cancelHandler = options.cancelHandler;
   const okHandler = options.okHandler;
+
+  // alert() defers its live-region text; a modal dialog uses this node as its
+  // aria-labelledby target, so it must carry the text synchronously.
+  messageText.innerHTML = options.message;
 
   btnsWrapper.className = CSS.btnsWrapper;
 

@@ -62,7 +62,48 @@ export class DomIterator {
    * @param host - element that should receive aria-activedescendant, or null to disable
    */
   public setActiveDescendantHost(host: HTMLElement | null): void {
+    if (host === this.activeDescendantHost) {
+      return;
+    }
+
+    const previousHost = this.activeDescendantHost;
+    const currentItem = this.currentItem;
+
+    /**
+     * Detach the stale aria-activedescendant from the previous host so it never
+     * points at an option that no longer belongs to an open combobox.
+     */
+    if (previousHost !== null) {
+      previousHost.removeAttribute('aria-activedescendant');
+    }
+
     this.activeDescendantHost = host;
+
+    if (host === null) {
+      /**
+       * With no combobox referencing the virtual focus, the aria-selected marker
+       * is meaningless. Drop it, but leave the focus class / data attribute / id
+       * intact (id reuse is intended, styling is owned by dropCursor).
+       */
+      if (currentItem !== null) {
+        currentItem.removeAttribute('aria-selected');
+      }
+
+      return;
+    }
+
+    /**
+     * Mirror the existing virtual focus onto the new host so swapping hosts keeps
+     * a valid aria-activedescendant → option relationship.
+     */
+    if (currentItem !== null) {
+      if (!currentItem.id) {
+        currentItem.id = generateId('blok-flipper-item-');
+      }
+
+      currentItem.setAttribute('aria-selected', 'true');
+      host.setAttribute('aria-activedescendant', currentItem.id);
+    }
   }
 
   /**

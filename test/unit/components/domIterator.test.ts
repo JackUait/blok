@@ -214,6 +214,41 @@ describe('DomIterator', () => {
       expect(host).not.toHaveAttribute('aria-activedescendant');
     });
 
+    it('clears aria-activedescendant on host and aria-selected on the focused item when host is set to null', () => {
+      const items = createItems();
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+      expect(items[0]).toHaveAttribute('aria-selected', 'true');
+
+      iterator.setActiveDescendantHost(null);
+
+      expect(host).not.toHaveAttribute('aria-activedescendant');
+      expect(items[0]).not.toHaveAttribute('aria-selected');
+    });
+
+    it('moves aria-activedescendant off the old host onto the new host when swapped while focused', () => {
+      const items = createItems();
+      const hostA = document.createElement('div');
+      const hostB = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, hostA);
+
+      iterator.setCursor(1);
+
+      const id = items[1].getAttribute('id');
+
+      expect(hostA).toHaveAttribute('aria-activedescendant', id as string);
+
+      iterator.setActiveDescendantHost(hostB);
+
+      expect(hostA).not.toHaveAttribute('aria-activedescendant');
+      expect(hostB).toHaveAttribute('aria-activedescendant', id as string);
+      expect(items[1]).toHaveAttribute('aria-selected', 'true');
+    });
+
     it('reuses an existing id instead of regenerating it', () => {
       const items = createItems();
 

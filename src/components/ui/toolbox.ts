@@ -1160,6 +1160,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     host.removeAttribute('aria-autocomplete');
     host.removeAttribute('aria-haspopup');
     host.removeAttribute('aria-controls');
+    host.removeAttribute('aria-activedescendant');
   }
 
   /**

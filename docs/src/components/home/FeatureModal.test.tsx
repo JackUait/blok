@@ -17,10 +17,16 @@ const mockFeature: FeatureDetail = {
   },
 };
 
-const renderModal = (feature: FeatureDetail | null = mockFeature, onClose = vi.fn()) =>
+const visualNode = <div data-blok-testid="mock-viz">live diorama</div>;
+
+const renderModal = (
+  feature: FeatureDetail | null = mockFeature,
+  onClose = vi.fn(),
+  visual: React.ReactNode = visualNode,
+) =>
   render(
     <I18nProvider>
-      <FeatureModal feature={feature} onClose={onClose} />
+      <FeatureModal feature={feature} visual={visual} onClose={onClose} />
     </I18nProvider>
   );
 
@@ -34,7 +40,7 @@ describe('FeatureModal', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('should render the modal backdrop when feature is provided', () => {
+  it('should render the dialog when feature is provided', () => {
     renderModal();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -49,9 +55,70 @@ describe('FeatureModal', () => {
     expect(screen.getByText('Output is clean JSON, not HTML.')).toBeInTheDocument();
   });
 
-  it('should render the Key Benefits heading', () => {
+  it('should render the tile visual as the panel hero', () => {
     renderModal();
-    expect(screen.getByText('Key Benefits')).toBeInTheDocument();
+    // The clicked tile's own live diorama is carried into the panel so it stays
+    // on-brand instead of dropping the user onto a plain dialog.
+    expect(screen.getByTestId('mock-viz')).toBeInTheDocument();
+  });
+
+  it('gives the Clean JSON hero a taller plate so its editor preview fits', () => {
+    // The coral viz flips to a full editor canvas whose back face is the tallest
+    // diorama; at the default hero height it overflowed and the trailing line
+    // clipped. Coral gets a taller plate; the others keep the compact one.
+    const { container } = renderModal({ ...mockFeature, accent: 'coral' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('h-[21rem]');
+  });
+
+  it('keeps the compact hero plate for non-coral features', () => {
+    const { container } = renderModal({ ...mockFeature, accent: 'cyan' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('h-[17rem]');
+    expect(plate?.className).not.toContain('h-[21rem]');
+  });
+
+  it('sizes the slash hero to the same clipped teaser the bento cell shows', () => {
+    // The slash menu must render identically on the main page, in the drawer, and on
+    // mobile. The bento cell shows it as a 108px clipped teaser, so the drawer plate
+    // is sized to that window (h-[8.75rem] = the 108px menu window + the p-4 frame)
+    // and the menu overflows the bottom, clipped flush — not the full 3-row menu.
+    const { container } = renderModal({ ...mockFeature, accent: 'pink' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('h-[8.75rem]');
+    expect(plate?.className).not.toContain('h-[17rem]');
+  });
+
+  it('skips the glow blob on the slash hero (its floating card would bleed it)', () => {
+    // The slash menu is a floating card with a padding ring; the raw .bento-spot
+    // blob bled through it. Pink relies on the menu's own edge-light, so the hero
+    // omits the blob — while other accents keep it.
+    const { container: pink } = renderModal({ ...mockFeature, accent: 'pink' });
+    expect(pink.querySelector('.bento-tile .bento-spot')).toBeNull();
+
+    const { container: other } = renderModal({ ...mockFeature, accent: 'cyan' });
+    expect(other.querySelector('.bento-tile .bento-spot')).not.toBeNull();
+  });
+
+  it('runs the Embeds river edge to edge (no plate padding)', () => {
+    // The embeds viz is a full-bleed marquee; padding would leave an empty frame
+    // around it. Blue gets p-0 so the river fills the plate to its rounded edges.
+    const { container } = renderModal({ ...mockFeature, accent: 'blue' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('p-0');
+    expect(plate?.className).not.toContain('p-4');
+  });
+
+  it('keeps plate padding for non-embeds features', () => {
+    const { container } = renderModal({ ...mockFeature, accent: 'cyan' });
+    const plate = container.querySelector('.bento-tile');
+    expect(plate?.className).toContain('p-4');
+    expect(plate?.className).not.toContain('p-0');
+  });
+
+  it('should render the benefits heading in sentence case', () => {
+    renderModal();
+    expect(screen.getByText('Key benefits')).toBeInTheDocument();
   });
 
   it('should render each benefit', () => {
@@ -61,23 +128,19 @@ describe('FeatureModal', () => {
     expect(screen.getByText('Version control friendly')).toBeInTheDocument();
   });
 
-  it('should render the Example heading when codeExample is provided', () => {
+  it('should not render a code snippet even when codeExample is present', () => {
+    // The drawer leads with the live diorama; the code dump was redundant.
     renderModal();
-    expect(screen.getByText('Example')).toBeInTheDocument();
+    expect(
+      screen.queryByText((content) => content.includes('editor.save()'))
+    ).not.toBeInTheDocument();
   });
 
-  it('should not render the Example heading when codeExample is absent', () => {
-    const featureWithoutCode: FeatureDetail = {
-      ...mockFeature,
-      details: { summary: 'Summary', benefits: ['Benefit'] },
-    };
-    renderModal(featureWithoutCode);
-    expect(screen.queryByText('Example')).not.toBeInTheDocument();
-  });
-
-  it('should render the API docs link when apiLink is provided', () => {
+  it('should render the docs link when apiLink is provided', () => {
     renderModal();
-    const link = screen.getByText('View API Documentation →');
+    // The arrow is a nested, aria-hidden icon, so the accessible name is just
+    // the label.
+    const link = screen.getByRole('link', { name: 'View documentation' });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute('href', '/docs#core-save');
   });
@@ -101,7 +164,7 @@ describe('FeatureModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('should NOT call onClose when clicking inside modal content', () => {
+  it('should NOT call onClose when clicking inside panel content', () => {
     const onClose = vi.fn();
     renderModal(mockFeature, onClose);
     fireEvent.click(screen.getByText('Output is clean JSON, not HTML.'));
@@ -113,11 +176,28 @@ describe('FeatureModal', () => {
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
   });
 
+  it('should focus the close button without scrolling the page on open', () => {
+    // The panel mounts transformed off-screen; an unscoped focus() would scroll
+    // the overlay to reveal the button, causing a visible jump on open.
+    const focusSpy = vi.spyOn(HTMLButtonElement.prototype, 'focus');
+    renderModal();
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    focusSpy.mockRestore();
+  });
+
+  it('should render a drag handle for the mobile bottom-sheet drawer', () => {
+    renderModal();
+    const grabber = screen.getByTestId('sheet-grabber');
+    expect(grabber).toBeInTheDocument();
+    // Purely decorative affordance — must not be announced to screen readers.
+    expect(grabber).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('should render Russian strings when locale is ru', () => {
     localStorage.setItem('blok-docs-locale', 'ru');
     render(
       <I18nProvider>
-        <FeatureModal feature={mockFeature} onClose={vi.fn()} />
+        <FeatureModal feature={mockFeature} visual={visualNode} onClose={vi.fn()} />
       </I18nProvider>
     );
     expect(screen.getByRole('button', { name: 'Закрыть' })).toBeInTheDocument();

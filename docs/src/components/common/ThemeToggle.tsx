@@ -1,6 +1,7 @@
+import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import styles from "./ThemeToggle.module.css";
-import { useI18n } from '../../contexts/I18nContext';
+import { useI18n } from "../../contexts/I18nContext";
+import { Button } from "@/components/ui/button";
 
 /**
  * Theme toggle button that cycles between light and dark modes.
@@ -10,72 +11,35 @@ export const ThemeToggle: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { t } = useI18n();
 
-  // Icon based on current theme
-  const getIcon = () => {
-    if (theme === "dark") {
-      return <MoonIcon />;
-    }
-    return <SunIcon />;
-  };
-
-  const getLabel = () => {
-    switch (theme) {
-      case "light":
-        return t('theme.light');
-      case "dark":
-        return t('theme.dark');
-    }
-  };
+  const label = theme === "dark" ? t("theme.dark") : t("theme.light");
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-sm"
       onClick={toggleTheme}
-      className={styles.toggle}
-      aria-label={`Toggle theme (current: ${getLabel()})`}
-      title={getLabel()}
+      className="rounded-full text-foreground/80 hover:text-foreground"
+      aria-label={`Toggle theme (current: ${label})`}
+      title={label}
     >
-      <span className={styles.iconWrapper}>{getIcon()}</span>
-    </button>
+      <span className="relative flex size-[18px] items-center justify-center">
+        {/* `key` remounts the glyph on theme change so the enter animation
+            replays — a soft rotate-and-fade swap rather than a hard cut. */}
+        {theme === "dark" ? (
+          <MoonIcon
+            key="moon"
+            className="size-[18px] animate-in fade-in zoom-in-95 spin-in-45 fill-mode-both duration-300 ease-out motion-reduce:animate-none"
+            strokeWidth={2}
+          />
+        ) : (
+          <SunIcon
+            key="sun"
+            className="size-[18px] animate-in fade-in zoom-in-95 spin-in-45 fill-mode-both duration-300 ease-out motion-reduce:animate-none"
+            strokeWidth={2}
+          />
+        )}
+      </span>
+    </Button>
   );
 };
-
-const SunIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <circle cx="12" cy="12" r="5" />
-    <line x1="12" y1="1" x2="12" y2="3" />
-    <line x1="12" y1="21" x2="12" y2="23" />
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-    <line x1="1" y1="12" x2="3" y2="12" />
-    <line x1="21" y1="12" x2="23" y2="12" />
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
-);

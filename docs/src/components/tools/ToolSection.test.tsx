@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ToolSection } from './ToolSection';
 import type { ToolSection as ToolSectionType } from './tools-data';
 
@@ -10,7 +11,6 @@ const mockSection: ToolSectionType = {
   id: 'test-tool',
   exportName: 'TestTool',
   type: 'block',
-  badge: 'Block Tool',
   title: 'Test Tool',
   description: 'A test tool description.',
   importExample: `import { TestTool } from '@jackuait/blok/tools';`,
@@ -26,7 +26,9 @@ const renderSection = (section: ToolSectionType) =>
   render(
     <MemoryRouter>
       <I18nProvider>
-        <ToolSection section={section} />
+        <FrameworkProvider>
+          <ToolSection section={section} />
+        </FrameworkProvider>
       </I18nProvider>
     </MemoryRouter>
   );
@@ -42,9 +44,9 @@ describe('ToolSection', () => {
     expect(screen.getByRole('heading', { name: /Test Tool/i })).toBeInTheDocument();
   });
 
-  it('renders the badge', () => {
+  it('does not render a type badge tag', () => {
     renderSection(mockSection);
-    expect(screen.getByText('Block Tool')).toBeInTheDocument();
+    expect(screen.queryByTestId('tools-section-badge')).not.toBeInTheDocument();
   });
 
   it('renders the description', () => {

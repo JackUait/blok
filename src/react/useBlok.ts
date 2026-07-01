@@ -11,6 +11,8 @@ interface EditorInstanceState {
   holder: HTMLDivElement | null;
   destroyTimeout: ReturnType<typeof setTimeout> | null;
   isDestroyed: boolean;
+  /** True once `editor.isReady` has resolved and its API surface is attached. */
+  isEditorReady: boolean;
   /** Opaque token identifying which deps cycle created this editor */
   depsToken: Record<string, unknown> | null;
 }
@@ -42,6 +44,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     holder: null,
     destroyTimeout: null,
     isDestroyed: false,
+    isEditorReady: false,
     depsToken: null,
   });
 
@@ -87,9 +90,21 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       state.destroyTimeout = null;
     }
 
-    // Reuse editor on StrictMode remount (same deps cycle)
+    // Reuse editor on StrictMode remount (same deps cycle). The construction
+    // effect below only calls setEditor(blok) once `blok.isReady` resolves and
+    // exportAPI() has attached the full instance API (readOnly, focus, etc.).
+    // StrictMode's synchronous cleanup+remount cycle happens well before that
+    // promise can settle, so publishing `state.editor` here unconditionally
+    // exposed a half-constructed instance to every reactive effect (e.g. the
+    // readOnly sync effect calling `.readOnly.set(...)` on an instance whose
+    // API surface wasn't attached yet, throwing). Only reuse it into state
+    // once it's actually known-ready — otherwise leave `editor` as-is and let
+    // the still-pending `isReady.then()` from the original construction (never
+    // torn down, since only its destroy was deferred) publish it for real.
     if (state.editor !== null && !state.isDestroyed && state.depsToken === depsToken) {
-      setEditor(state.editor);
+      if (state.isEditorReady) {
+        setEditor(state.editor);
+      }
 
       return (): void => {
         deferDestroy(state, setEditor);
@@ -107,6 +122,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       state.editor = null;
       state.holder = null;
       state.isDestroyed = true;
+      state.isEditorReady = false;
       setEditor(null);
     }
 
@@ -114,6 +130,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     const holder = document.createElement('div');
     state.holder = holder;
     state.isDestroyed = false;
+    state.isEditorReady = false;
     state.depsToken = depsToken;
 
     // Wrap callbacks via ref so they never go stale
@@ -168,6 +185,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     void blok.isReady
       .then(() => {
         if (state.editor === blok && !state.isDestroyed) {
+          state.isEditorReady = true;
           setEditor(blok);
         }
       })
@@ -182,6 +200,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
           state.editor = null;
           state.holder = null;
           state.isDestroyed = true;
+          state.isEditorReady = false;
           setEditor(null);
         }
       });
@@ -336,6 +355,7 @@ function deferDestroy(
       state.editor = null;
       state.holder = null;
       state.isDestroyed = true;
+      state.isEditorReady = false;
       state.destroyTimeout = null;
       setEditorState(null);
     }

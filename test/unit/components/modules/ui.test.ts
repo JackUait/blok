@@ -335,6 +335,27 @@ describe("UI module", () => {
 
       expect(document.querySelectorAll("#blok-styles")).toHaveLength(1);
     });
+
+    it("leads injected styles with the canonical Tailwind layer order so a host app's utilities layer is not demoted below base", () => {
+      const { ui } = createUI();
+
+      (ui as unknown as { loadStyles: () => void }).loadStyles();
+
+      const styleTag = document.getElementById("blok-styles");
+
+      expect(styleTag).toBeTruthy();
+      // blok-styles is PREPENDED as the first <style> in <head>. Tailwind's
+      // `utilities.css` still emits a bare `@layer utilities{}` block, so unless
+      // the canonical order is declared up front, registering `utilities` here
+      // (before a host's later `@layer ... base ... utilities;`) demotes the
+      // host's `utilities` below `base` — making preflight resets win over every
+      // utility class and wrecking the host page the instant the editor mounts.
+      const css = styleTag?.textContent ?? "";
+      expect(css.startsWith("@layer properties;")).toBe(true);
+      expect(css.indexOf("@layer theme, base, components, utilities;")).toBe(
+        "@layer properties;\n".length,
+      );
+    });
   });
 
   describe("read-only state management", () => {

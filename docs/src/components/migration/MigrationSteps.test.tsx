@@ -1,16 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { MigrationSteps } from './MigrationSteps';
+import { BLOK_VERSION_BREAKING_CHANGES } from './migration-data';
 import enJson from '../../i18n/en.json';
 
 const m = enJson.migration;
 
 const renderMigrationSteps = () =>
   render(
-    <I18nProvider>
-      <MigrationSteps />
-    </I18nProvider>
+    <MemoryRouter>
+      <I18nProvider>
+        <MigrationSteps />
+      </I18nProvider>
+    </MemoryRouter>
   );
 
 describe('MigrationSteps', () => {
@@ -149,6 +153,26 @@ describe('MigrationSteps', () => {
     expect(addMarkers.length).toBeGreaterThanOrEqual(6);
   });
 
+  it('should not draw its own bordered/card box around each change card (the grid gap separates items instead)', () => {
+    renderMigrationSteps();
+
+    const cards = screen.getAllByTestId('change-card');
+    cards.forEach((card) => {
+      expect(card.className).not.toMatch(/bg-card/);
+      expect(card.className).not.toMatch(/shadow/);
+    });
+  });
+
+  it('should keep the bordered box around each removed/added diff row', () => {
+    renderMigrationSteps();
+
+    const removedRow = screen.getAllByText('−')[0].closest('div');
+    const addedRow = screen.getAllByText('+')[0].closest('div');
+
+    expect(removedRow?.className).toMatch(/\bborder\b/);
+    expect(addedRow?.className).toMatch(/\bborder\b/);
+  });
+
   it('should render code elements for each change', () => {
     renderMigrationSteps();
 
@@ -245,6 +269,22 @@ describe('MigrationSteps', () => {
     expect(within(note).getByText('meta.site_name')).toBeInTheDocument();
   });
 
+  it('should not draw its own bordered/card box around the dropped-fields note (a divider inside it still separates the table)', () => {
+    renderMigrationSteps();
+
+    const note = screen.getByTestId('dropped-fields-note');
+    expect(note.className).not.toMatch(/\bborder\b/);
+    expect(note.className).not.toMatch(/bg-secondary/);
+  });
+
+  it('should keep the bordered box around the nested dropped-fields table', () => {
+    renderMigrationSteps();
+
+    const note = screen.getByTestId('dropped-fields-note');
+    const nestedBox = within(note).getByText('linkTool').closest('.divide-y')?.parentElement;
+    expect(nestedBox?.className).toMatch(/\bborder\b/);
+  });
+
   it('should render the supported Editor.js versions section', () => {
     renderMigrationSteps();
 
@@ -265,5 +305,38 @@ describe('MigrationSteps', () => {
     expect(within(matrix).getByText('paragraph')).toBeInTheDocument();
     expect(within(matrix).getByText('linkTool')).toBeInTheDocument();
     expect(within(matrix).getByText('checklist')).toBeInTheDocument();
+  });
+
+  it('should render the Blok upgrade (Blok -> Blok) section heading and description', () => {
+    renderMigrationSteps();
+
+    const section = screen.getByTestId('blok-upgrade-section');
+    expect(within(section).getByText(m.blokUpgradeTitle)).toBeInTheDocument();
+    expect(within(section).getByText(m.blokUpgradeDescription)).toBeInTheDocument();
+  });
+
+  it('should render one row per grounded Blok breaking change', () => {
+    renderMigrationSteps();
+
+    const table = screen.getByTestId('blok-upgrade-table');
+    const rows = within(table).getAllByTestId('blok-upgrade-row');
+    expect(rows).toHaveLength(BLOK_VERSION_BREAKING_CHANGES.length);
+
+    BLOK_VERSION_BREAKING_CHANGES.forEach((change) => {
+      expect(within(table).getByText(`v${change.version}`)).toBeInTheDocument();
+      const description = m[change.descriptionKey.replace('migration.', '') as keyof typeof m];
+      expect(within(table).getByText(description as string)).toBeInTheDocument();
+    });
+  });
+
+  it('should link each Blok breaking-change row back to the changelog', () => {
+    renderMigrationSteps();
+
+    const table = screen.getByTestId('blok-upgrade-table');
+    const links = within(table).getAllByRole('link', { name: m.blokUpgradeViewChangelog });
+    expect(links).toHaveLength(BLOK_VERSION_BREAKING_CHANGES.length);
+    links.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/changelog');
+    });
   });
 });

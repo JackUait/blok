@@ -577,11 +577,30 @@ export class UI extends Module<UINodes> {
     }
 
     /**
+     * Declare the canonical Tailwind cascade-layer order up front.
+     *
+     * This stylesheet imports Tailwind utilities into `@layer utilities` (see
+     * src/styles/main.css) and is PREPENDED as the first <style> in <head>, so
+     * it is what first REGISTERS the `utilities` layer. CSS fixes layer order by
+     * first declaration, so without this statement a host Tailwind app's own
+     * `@layer theme, base, components, utilities;` (running later) would append
+     * `base` AFTER the already-registered `utilities` — inverting the order and
+     * letting the host's preflight `base` resets (h1{font-size:inherit}, list
+     * resets, …) beat every utility class the moment the editor mounts.
+     *
+     * Declaring the full canonical order here, before any `@layer` block, pins
+     * `base` before `utilities` so a host Tailwind app keeps its intended
+     * cascade. Inert for non-Tailwind hosts and for Blok used standalone.
+     */
+    const layerOrder =
+      '@layer properties;\n@layer theme, base, components, utilities;\n';
+
+    /**
      * Make tag
      */
     const tag = $.make('style', null, {
       id: styleTagId,
-      textContent: styles.toString(),
+      textContent: layerOrder + styles.toString(),
     });
 
     /**

@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 type WaveVariant = 'soft' | 'layered' | 'zigzag' | 'curved' | 'asymmetric';
 type WavePosition = 'top' | 'bottom';
@@ -34,7 +35,7 @@ const WAVE_PATHS_LAYER2: Partial<Record<WaveVariant, string>> = {
 
 export const WaveDivider: React.FC<WaveDividerProps> = ({
   variant = 'soft',
-  fillColor = 'var(--color-surface)',
+  fillColor = 'var(--background)',
   height = 80,
   flip = false,
   position = 'bottom',
@@ -64,7 +65,7 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
 
   return (
     <div
-      className={`wave-divider wave-divider--${variant} ${className}`}
+      className={cn('pointer-events-none select-none', className)}
       style={style}
       aria-hidden="true"
       data-blok-testid={mainTestId}
@@ -85,7 +86,6 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
             d={layer2Path}
             fill={fillColor}
             opacity="0.5"
-            className="wave-path wave-path--layer2"
             data-blok-testid={layer2PathTestId}
           />
         )}
@@ -93,7 +93,6 @@ export const WaveDivider: React.FC<WaveDividerProps> = ({
         <path
           d={path}
           fill={fillColor}
-          className="wave-path wave-path--main"
           data-blok-testid={mainPathTestId}
         />
       </svg>

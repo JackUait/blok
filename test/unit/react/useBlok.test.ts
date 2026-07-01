@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { render, renderHook, act } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import type { UseBlokConfig } from '../../../src/react/types';
 
@@ -819,5 +819,47 @@ describe('useBlok', () => {
     expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
     expect(mockBlokInstances).toHaveLength(1);
     expect(result.current).not.toBeNull();
+  });
+
+  it('does not expose the editor before isReady resolves, even through the StrictMode remount', async () => {
+    // Regression test for the /demo page crash: StrictMode's synchronous
+    // cleanup+remount cycle used to call setEditor(state.editor) directly in
+    // the "reuse" branch, publishing the freshly-constructed (not yet
+    // exportAPI'd) instance into React state before its isReady promise had a
+    // chance to resolve. Consumers (e.g. the reactive readOnly effect) would
+    // then call methods like `editor.readOnly.set(...)` on an instance whose
+    // API surface hadn't been attached yet, throwing "Cannot read properties
+    // of undefined". Real isReady resolution always requires at least one
+    // microtask, so the editor must still be null synchronously right after
+    // the StrictMode double-invoke, regardless of how many constructor calls
+    // happened, until isReady is actually awaited.
+    //
+    // Note: @testing-library/react's `renderHook` does not reproduce
+    // StrictMode's synchronous mount→cleanup→mount effect replay (verified
+    // empirically — it stays at a single mount). A full `render()` of a real
+    // component tree does trigger it, so this test uses `render()` directly.
+    const config: UseBlokConfig = {};
+
+    let resolveIsReady = (): void => {};
+    nextIsReadyOverride = new Promise<void>((resolve) => {
+      resolveIsReady = resolve;
+    });
+
+    let latestEditor: unknown = 'never-rendered';
+    const Probe = (): null => {
+      latestEditor = useBlok(config);
+
+      return null;
+    };
+
+    render(React.createElement(React.StrictMode, null, React.createElement(Probe)));
+
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(latestEditor).toBeNull();
+
+    resolveIsReady();
+    await flushAll();
+
+    expect(latestEditor).not.toBeNull();
   });
 });

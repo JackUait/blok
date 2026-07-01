@@ -9,14 +9,13 @@ const mockLinks: NavLink[] = [
   { href: '/docs', label: 'Docs' },
   { href: '/demo', label: 'Demo' },
   { href: '/migration', label: 'Migration' },
-  { href: 'https://github.com/JackUait/blok', label: 'GitHub', external: true },
+  { href: 'https://example.com/external', label: 'External', external: true },
 ];
 
 const mockLinksWithI18nKeys: NavLink[] = [
   { href: '/docs', label: 'Docs', i18nKey: 'nav.docs' },
   { href: '/demo', label: 'Demo', i18nKey: 'nav.demo' },
   { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },
-  { href: 'https://github.com/JackUait/blok', label: 'GitHub', i18nKey: 'nav.github', external: true },
 ];
 
 const TestWrapper: React.FC<{ children: React.ReactNode; initialPath?: string }> = ({
@@ -54,7 +53,7 @@ describe('Nav', () => {
     expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Demo')).toBeInTheDocument();
     expect(screen.getByText('Migration')).toBeInTheDocument();
-    expect(screen.getByText('GitHub')).toBeInTheDocument();
+    expect(screen.getByText('External')).toBeInTheDocument();
   });
 
   it('should render the Logo component', () => {
@@ -87,10 +86,13 @@ describe('Nav', () => {
       </TestWrapper>
     );
 
-    const githubLink = screen.getByRole('link', { name: 'GitHub' });
-    expect(githubLink).toHaveAttribute('href', 'https://github.com/JackUait/blok');
-    expect(githubLink).toHaveAttribute('target', '_blank');
-    expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
+    // External links live in the account menu dropdown — open it first
+    fireEvent.click(screen.getByLabelText('Toggle menu'));
+
+    const externalLink = screen.getByRole('link', { name: 'External' });
+    expect(externalLink).toHaveAttribute('href', 'https://example.com/external');
+    expect(externalLink).toHaveAttribute('target', '_blank');
+    expect(externalLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('should render a mobile menu toggle button', () => {
@@ -162,7 +164,6 @@ describe('Nav', () => {
     expect(screen.getByText('Документация')).toBeInTheDocument();
     expect(screen.getByText('Демо')).toBeInTheDocument();
     expect(screen.getByText('Миграция')).toBeInTheDocument();
-    expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
 
   it('should render English labels when locale is English and i18nKey is provided', () => {
@@ -177,7 +178,6 @@ describe('Nav', () => {
     expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Demo')).toBeInTheDocument();
     expect(screen.getByText('Migration')).toBeInTheDocument();
-    expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
 
   it('should render search button with translated aria-label', () => {
@@ -209,13 +209,107 @@ describe('Nav', () => {
     expect(screen.getByLabelText('Поиск (⌘K)')).toBeInTheDocument();
   });
 
-  describe('hide on scroll', () => {
+  describe('skip to content link', () => {
+    it('renders a skip link pointing at the main content landmark', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const skipLink = screen.getByRole('link', { name: 'Skip to content' });
+      expect(skipLink).toHaveAttribute('href', '#main-content');
+    });
+
+    it('is visually hidden until focused', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const skipLink = screen.getByRole('link', { name: 'Skip to content' });
+      expect(skipLink).toHaveClass('sr-only');
+      expect(skipLink.className).toMatch(/focus:not-sr-only/);
+    });
+
+    it('is the first focusable element in the nav', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const skipLink = screen.getByRole('link', { name: 'Skip to content' });
+      const nav = screen.getByRole('navigation');
+      expect(
+        skipLink.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+  });
+
+  describe('staticPosition', () => {
+    it('is fixed to the viewport by default', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const nav = screen.getByRole('navigation');
+      expect(nav.className).toMatch(/\bfixed\b/);
+      expect(nav.className).not.toMatch(/\bstatic\b/);
+    });
+
+    it('renders in normal document flow when staticPosition is set', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} staticPosition />
+        </TestWrapper>
+      );
+
+      const nav = screen.getByRole('navigation');
+      expect(nav.className).toMatch(/\bstatic\b/);
+      expect(nav.className).not.toMatch(/\bfixed\b/);
+    });
+
+    it('never tucks away on scroll when staticPosition is set', () => {
+      Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} staticPosition />
+        </TestWrapper>
+      );
+
+      const nav = screen.getByRole('navigation');
+      act(() => {
+        Object.defineProperty(window, 'scrollY', { value: 600, writable: true, configurable: true });
+        fireEvent.scroll(window);
+      });
+
+      expect(nav.style.transform).toBe('');
+    });
+  });
+
+  describe('scroll-linked hide/reveal', () => {
     const setScrollY = (value: number) => {
       Object.defineProperty(window, 'scrollY', {
         value,
         writable: true,
         configurable: true,
       });
+    };
+
+    // The header transform is driven continuously by the scroll gesture:
+    // translateY(0px) = fully visible, translateY(-120px) = fully tucked away.
+    const offsetOf = (nav: HTMLElement): number => {
+      const match = /translateY\((-?\d+(?:\.\d+)?)px\)/.exec(nav.style.transform);
+      return match ? Math.abs(parseFloat(match[1])) : 0;
     };
 
     beforeEach(() => {
@@ -226,7 +320,7 @@ describe('Nav', () => {
       });
     });
 
-    it('is visible at the top of the page', () => {
+    it('is fully visible at the top of the page', () => {
       render(
         <TestWrapper>
           <Nav links={mockLinks} />
@@ -237,10 +331,33 @@ describe('Nav', () => {
         setScrollY(40);
         fireEvent.scroll(window);
       });
-      expect(nav.className).not.toContain('hidden');
+      expect(offsetOf(nav)).toBe(0);
     });
 
-    it('hides when scrolling down past the threshold', () => {
+    it('tucks away progressively — partially hidden for a partial scroll', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+      const nav = screen.getByRole('navigation');
+      // Anchor just past the hide threshold (80px), then scroll down 30px more.
+      act(() => {
+        setScrollY(80);
+        fireEvent.scroll(window);
+      });
+      act(() => {
+        setScrollY(110);
+        fireEvent.scroll(window);
+      });
+      // Tucks ~2x the scrolled distance (a short scroll hides it): ~60px tucked,
+      // still partial — proving continuous tracking, not a snap.
+      expect(offsetOf(nav)).toBeGreaterThan(0);
+      expect(offsetOf(nav)).toBeLessThan(120);
+      expect(offsetOf(nav)).toBeCloseTo(60, 0);
+    });
+
+    it('is fully hidden once scrolled far enough down', () => {
       render(
         <TestWrapper>
           <Nav links={mockLinks} />
@@ -248,17 +365,17 @@ describe('Nav', () => {
       );
       const nav = screen.getByRole('navigation');
       act(() => {
-        setScrollY(50);
+        setScrollY(80);
         fireEvent.scroll(window);
       });
       act(() => {
-        setScrollY(200);
+        setScrollY(600);
         fireEvent.scroll(window);
       });
-      expect(nav.className).toContain('hidden');
+      expect(offsetOf(nav)).toBe(120);
     });
 
-    it('shows again when scrolling up', () => {
+    it('reveals progressively when scrolling back up', () => {
       render(
         <TestWrapper>
           <Nav links={mockLinks} />
@@ -266,15 +383,44 @@ describe('Nav', () => {
       );
       const nav = screen.getByRole('navigation');
       act(() => {
-        setScrollY(300);
+        setScrollY(80);
         fireEvent.scroll(window);
       });
-      expect(nav.className).toContain('hidden');
       act(() => {
-        setScrollY(200);
+        setScrollY(600);
         fireEvent.scroll(window);
       });
-      expect(nav.className).not.toContain('hidden');
+      expect(offsetOf(nav)).toBe(120);
+      // Scroll up 20px — header peeks back ~2x (40px), still partly tucked.
+      act(() => {
+        setScrollY(580);
+        fireEvent.scroll(window);
+      });
+      expect(offsetOf(nav)).toBeCloseTo(80, 0);
+      expect(offsetOf(nav)).toBeGreaterThan(0);
+    });
+
+    it('snaps back to fully visible when returning to the top', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+      const nav = screen.getByRole('navigation');
+      act(() => {
+        setScrollY(80);
+        fireEvent.scroll(window);
+      });
+      act(() => {
+        setScrollY(600);
+        fireEvent.scroll(window);
+      });
+      expect(offsetOf(nav)).toBe(120);
+      act(() => {
+        setScrollY(40);
+        fireEvent.scroll(window);
+      });
+      expect(offsetOf(nav)).toBe(0);
     });
   });
 });

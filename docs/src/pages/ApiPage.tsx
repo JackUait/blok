@@ -1,145 +1,83 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
+import { FrameworkToggle } from '../components/common/FrameworkToggle';
 import { MobileSectionNav } from '../components/common/MobileSectionNav';
-import { ApiSection } from '../components/api/ApiSection';
+import { OnThisPage, OnThisPageDropdown } from '../components/api/OnThisPage';
+import { ApiModuleBody } from '../components/api/ApiModuleBody';
+import { ApiIndexRedirect } from '../components/api/ApiIndexRedirect';
 import { useApiTranslations } from '../hooks/useApiTranslations';
 import { useI18n } from '../contexts/I18nContext';
 import { NAV_LINKS } from '../utils/constants';
-import '../../assets/api.css';
 
-export const ApiPage: React.FC = () => {
+/** The API documentation body — sidebar + per-module content — without page chrome. */
+export const ApiContent: React.FC = () => {
   const { locale } = useI18n();
-  const { apiSections, sidebarSections, filterLabel } = useApiTranslations();
-  
-  // Initialize active section from URL hash, defaulting to 'quick-start' (first visible section)
-  const [activeSection, setActiveSection] = useState<string>(() => {
-    const hash = window.location.hash.slice(1);
-    return hash || 'quick-start';
-  });
-  const scrollTargetRef = useRef<string | null>(null);
+  const { apiSections, sidebarSections } = useApiTranslations();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // Handle initial URL hash on page load and hash changes
-  const scrollToHash = useCallback(() => {
-    const hash = window.location.hash.slice(1);
-    if (!hash) return;
-
-    // Small delay to ensure DOM is fully rendered
-    requestAnimationFrame(() => {
-      const targetElement = document.getElementById(hash);
-      if (targetElement) {
-        scrollTargetRef.current = hash;
-        setActiveSection(hash);
-        targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
-      }
-    });
-  }, []);
-
-  // Handle initial hash on mount
-  useEffect(() => {
-    scrollToHash();
-
-    // Listen for hash changes (back/forward navigation)
-    const handleHashChange = (): void => {
-      scrollToHash();
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [scrollToHash]);
-
-  useEffect(() => {
-    // Intersection Observer for active section tracking
-    const observerOptions = {
-      root: null,
-      rootMargin: '-100px 0px -100px 0px',
-      threshold: 0.1,
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.filter((entry) => entry.isIntersecting).forEach((entry) => {
-        if (scrollTargetRef.current && entry.target.id === scrollTargetRef.current) {
-          scrollTargetRef.current = null;
-          return;
-        }
-        if (scrollTargetRef.current) {
-          return;
-        }
-        setActiveSection(entry.target.id);
-      });
-    }, observerOptions);
-
-    // Observe all sections
-    apiSections.forEach((section) => {
-      const element = document.getElementById(section.id);
-      if (element) {
-        observer.observe(element);
-      }
-    });
-
-    // Handle anchor link clicks - update URL hash and scroll
-    const handleAnchorClick = (e: Event) => {
-      const target = e.target as HTMLAnchorElement;
-      const href = target.getAttribute('href');
-      if (!href || !href.startsWith('#')) return;
-
-      const sectionId = href.slice(1);
-      const targetElement = document.querySelector(href);
-      if (targetElement) {
-        e.preventDefault();
-        
-        // Update URL hash (enables sharing/bookmarking)
-        window.history.pushState(null, '', href);
-        
-        // Track target and update active section immediately
-        scrollTargetRef.current = sectionId;
-        setActiveSection(sectionId);
-        
-        targetElement.scrollIntoView({
-          behavior: 'auto',
-          block: 'start',
-        });
-      }
-    };
-
-    document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-      anchor.addEventListener('click', handleAnchorClick);
-    });
-
-    return () => {
-      observer.disconnect();
-      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-        anchor.removeEventListener('click', handleAnchorClick);
-      });
-    };
-  }, [apiSections]);
+  // Active module id from the path: /docs/<id> -> <id>; /docs -> quick-start
+  const activeModule = location.pathname.split('/')[2] || 'quick-start';
+  const activeSection = apiSections.find((s) => s.id === activeModule);
 
   return (
-    <>
-      <Nav links={NAV_LINKS} />
-      <div className="api-docs" data-blok-testid="api-docs">
+    <div
+      className="mx-auto grid w-full max-w-[110rem] grid-cols-1 gap-10 px-6 lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[17rem_minmax(0,1fr)_14rem] lg:gap-12 pt-24 pb-24"
+      data-blok-testid="api-docs"
+    >
+      <div className="hidden lg:block">
         <Sidebar
           key={`sidebar-${locale}`}
           sections={sidebarSections}
-          activeSection={activeSection}
+          activeSection={activeModule}
           variant="api"
-          filterLabel={filterLabel}
+          linkMode="route"
+          buildHref={(id) => `/docs/${id}`}
+          header={<FrameworkToggle />}
         />
-        <div className="api-content-wrapper">
+      </div>
+      <div className="min-w-0">
+        <div className="lg:hidden">
+          <div className="mb-4">
+            <FrameworkToggle />
+          </div>
           <MobileSectionNav
             key={`mobile-nav-${locale}`}
             sections={sidebarSections}
-            activeSection={activeSection}
+            activeSection={activeModule}
+            onNavigate={(id) => navigate(`/docs/${id}`)}
           />
-          <main className="api-main" data-blok-testid="api-main">
-            {apiSections.map((section) => (
-              <ApiSection key={`${locale}-${section.id}`} section={section} />
-            ))}
-          </main>
+        </div>
+        {/* Between lg and xl (1024–1279px) there's no room for the persistent
+            sidebar TOC, but it shouldn't just disappear — show a compact
+            dropdown instead, mirroring MobileSectionNav's fallback below lg. */}
+        <div className="hidden lg:block xl:hidden">
+          {activeSection && (
+            <OnThisPageDropdown key={`toc-dropdown-${activeModule}`} section={activeSection} />
+          )}
+        </div>
+        <div className="mx-auto max-w-3xl" data-blok-testid="api-main">
+          <Routes>
+            <Route index element={<ApiIndexRedirect />} />
+            <Route path=":moduleId" element={<ApiModuleBody />} />
+          </Routes>
         </div>
       </div>
-      <Footer />
-    </>
+      <div className="hidden xl:block">
+        {activeSection && <OnThisPage key={activeModule} section={activeSection} />}
+      </div>
+    </div>
   );
 };
+
+export const ApiPage: React.FC = () => (
+  <>
+    <Nav links={NAV_LINKS} keepExpanded />
+    <main id="main-content" tabIndex={-1}>
+      <ApiContent />
+    </main>
+    <Footer />
+  </>
+);

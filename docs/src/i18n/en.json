@@ -3,12 +3,9 @@
     "search": "Search",
     "demo": "Demo",
     "docs": "Docs",
-    "recipes": "Recipes",
-    "integrations": "Integrations",
     "tools": "Tools",
     "migration": "Migration",
     "changelog": "Changelog",
-    "integrations": "Integrations",
     "github": "GitHub",
     "searchAriaLabel": "Search (⌘K)",
     "toggleMenu": "Toggle menu"
@@ -31,7 +28,17 @@
     "option": "Option",
     "default": "Default",
     "parameter": "Parameter",
+    "parameters": "Parameters",
+    "required": "Required",
+    "errors": "Errors",
+    "deprecated": "Deprecated",
+    "deprecatedSince": "Deprecated since",
+    "useInstead": "Use instead:",
     "name": "Name",
+    "onThisPage": "On this page",
+    "breadcrumbsLabel": "Breadcrumb",
+    "lastUpdated": "Last updated",
+    "editOnGithub": "Edit this page on GitHub",
     "quickStartSteps": {
       "install": {
         "title": "Install Blok",
@@ -47,10 +54,12 @@
       }
     },
     "sections": {
-      "guide": "Guide",
+      "gettingStarted": "Getting started",
       "core": "Core",
-      "apiModules": "API Modules",
-      "data": "Data"
+      "editing": "Editing",
+      "interface": "Interface",
+      "extending": "Extending & system",
+      "dataTypes": "Data types"
     },
     "links": {
       "quickStart": "Quick Start",
@@ -75,12 +84,18 @@
       "listeners": "Listeners",
       "tools": "Tools",
       "outputData": "OutputData",
-      "blockData": "BlockData"
+      "blockData": "BlockData",
+      "everythingIsABlock": "Everything is a block",
+      "tutorial": "Build your first editor",
+      "customBlockTool": "Create a custom block tool"
     },
     "quickStart": {
       "title": "Quick Start",
       "badge": "Guide",
-      "description": "Get up and running with Blok in just a few simple steps."
+      "description": "Get up and running with Blok in just a few simple steps.",
+      "lead": "This is the fastest path from an empty project to a working editor — install the package, mount it, and save your first block of content.",
+      "checkpoint": "If everything worked, you should now see an empty editor with one paragraph block, ready to type into.",
+      "troubleshooting": "Nothing rendering, or a crash in the console? The most common cause is a missing container: `new Blok({ holder: 'editor' })` needs a `<div id=\"editor\"></div>` already on the page, or it throws `element with ID «editor» is missing`."
     },
     "blokClass": {
       "title": "Blok Class",
@@ -90,27 +105,32 @@
         "save": {
           "name": "save()",
           "returnType": "Promise<OutputData>",
-          "description": "Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content."
+          "description": "Extracts the current editor content as structured JSON data. This is the primary method for persisting editor content.",
+          "note": "Call after `await editor.isReady`. The returned JSON is your source of truth — store it and feed it back to `render()`."
         },
         "render": {
           "name": "render(data)",
           "returnType": "Promise<void>",
-          "description": "Renders editor content from previously saved JSON data."
+          "description": "Renders editor content from previously saved JSON data.",
+          "note": "Loads saved content and replaces the current document. To append instead of replace, use `blocks.insertMany()`."
         },
         "focus": {
           "name": "focus(atEnd?)",
           "returnType": "boolean",
-          "description": "Sets focus to the editor. Optionally positions cursor at the end of content."
+          "description": "Sets focus to the editor. Optionally positions cursor at the end of content.",
+          "note": "Pass `true` to place the caret at the very end. For a specific block or offset, use the `caret` API instead."
         },
         "clear": {
           "name": "clear()",
           "returnType": "void",
-          "description": "Removes all blocks from the editor."
+          "description": "Removes all blocks from the editor.",
+          "note": "Wipes all blocks and leaves one empty paragraph. It's undoable — unlike `destroy()`, which tears the instance down."
         },
         "destroy": {
           "name": "destroy()",
           "returnType": "void",
-          "description": "Destroys the editor instance and removes all DOM elements and event listeners."
+          "description": "Destroys the editor instance and removes all DOM elements and event listeners.",
+          "note": "Call from your framework's unmount hook to avoid leaked listeners. The instance is unusable afterwards — create a new `Blok` to start again."
         }
       },
       "properties": {
@@ -213,37 +233,268 @@
     "blocksApi": {
       "title": "Blocks API",
       "badge": "Blocks",
-      "description": "Manage blocks in the editor — create, delete, update, and reorder content."
+      "description": "Manage blocks in the editor — create, delete, update, and reorder content.",
+      "methods": {
+        "blocks": {
+          "clear": {
+            "note": "Same as the top-level `clear()`, exposed on the blocks module. Use when you already hold `editor.blocks`."
+          },
+          "render": {
+            "note": "Replaces the whole document. To add blocks without clearing, use `insert()` or `insertMany()`."
+          },
+          "renderFromHTML": {
+            "note": "Handy for importing legacy HTML, but the result is only as good as the tools' paste handlers — JSON via `render()` preserves more fidelity when you control the source."
+          },
+          "delete": {
+            "note": "Without an index it deletes the focused block. Deleting the last block leaves the editor empty, so insert a paragraph if you need a caret target."
+          },
+          "move": {
+            "note": "`toIndex` is in post-removal index space: for a forward move, subtract 1 or the block lands one slot too far."
+          },
+          "getBlockByIndex": {
+            "note": "Returns `undefined` for out-of-range indexes — calling a method on an `undefined` result throws, so check the return value first."
+          },
+          "getById": {
+            "note": "The stable way to reference a block across edits, since indexes shift. Returns `null` if the id no longer exists."
+          },
+          "getCurrentBlockIndex": {
+            "note": "Reflects the block holding the caret. Returns `-1` when nothing is focused, so check before using it as an index."
+          },
+          "getBlockIndex": {
+            "note": "Finds where a known block sits right now; pair with `getById()` when you have an id but need a position."
+          },
+          "getBlockByElement": {
+            "note": "Bridges from a raw DOM node (e.g. a click target) back to its block — useful in custom event handlers."
+          },
+          "getChildren": {
+            "note": "Returns the direct children of a container block (a column, toggle, or database). Empty array if it has none."
+          },
+          "getBlocksCount": {
+            "note": "Counts only top-level blocks, not nested children. Use it for bounds before an index-based `insert()` or `move()`."
+          },
+          "insert": {
+            "note": "Every parameter is optional — call `insert()` for an empty paragraph, or pass `type`/`data`/`index` for full control. Pass `replace: true` to overwrite the block at `index`.",
+            "params": {
+              "type": { "description": "Tool name to instantiate." },
+              "data": { "description": "Initial tool data for the new block." },
+              "config": { "description": "Tool config for this block instance." },
+              "index": { "description": "Position to insert the block at." },
+              "needToFocus": { "description": "Whether to move focus to the inserted block." },
+              "replace": { "description": "Replace the existing block at index instead of inserting around it." },
+              "id": { "description": "Custom id for the new block." }
+            },
+            "errors": {
+              "0": {
+                "condition": "No `type` is given and no `defaultBlock` is configured.",
+                "resolution": "Pass an explicit `type`, or set `defaultBlock` in the editor config."
+              },
+              "1": {
+                "condition": "The resolved tool name is not registered in the editor.",
+                "resolution": "Register the tool in the editor's `tools` config before inserting a block of that type."
+              },
+              "2": {
+                "condition": "`replace: true` is passed but no block exists at `index`.",
+                "resolution": "Check `index` against `blocks.getBlocksCount()` before calling with `replace: true`."
+              }
+            }
+          },
+          "insertMany": {
+            "note": "Bulk-insert in one operation (and one undo step) — far cheaper than looping `insert()` for large pastes or imports."
+          },
+          "composeBlockData": {
+            "note": "Builds a tool's default data without inserting anything — useful when you need a valid empty payload for `insert()` or `update()`."
+          },
+          "update": {
+            "note": "Patches data/tunes in place, keeping the block id and type. To change the type, use `convert()` instead.",
+            "params": {
+              "id": { "description": "Id of the block to update." },
+              "data": { "description": "Partial data merged into the block's existing data." },
+              "tunes": { "description": "Tune data merged into the block's existing tunes." }
+            },
+            "errors": {
+              "0": {
+                "condition": "No block exists with the given `id`.",
+                "resolution": "Confirm the id with `blocks.getById()` before calling `update()`."
+              }
+            }
+          },
+          "convert": {
+            "note": "Both the source and target tools must declare `conversionConfig`, otherwise the call throws. Preserves text where possible.",
+            "params": {
+              "id": { "description": "Id of the block to convert. Its tool must declare `conversionConfig.export`." },
+              "newType": { "description": "Name of the registered tool to convert to. Its tool must declare `conversionConfig.import`." },
+              "dataOverrides": { "description": "Data fields to overwrite on the resulting block after conversion." }
+            },
+            "errors": {
+              "0": {
+                "condition": "No block exists with the given `id`.",
+                "resolution": "Confirm the id with `blocks.getById()` before calling `convert()`."
+              },
+              "1": {
+                "condition": "`newType` is not a registered tool.",
+                "resolution": "Register the target tool in the editor's `tools` config."
+              },
+              "2": {
+                "condition": "The source tool has no `conversionConfig.export`, the target tool has no `conversionConfig.import`, or neither does.",
+                "resolution": "Add a `conversionConfig` to whichever tool is missing one, or convert through an intermediate tool that supports both directions."
+              }
+            }
+          },
+          "splitBlock": {
+            "note": "Use for caret-aware splits (e.g. Enter mid-text); the update + insert land as a single undo entry."
+          },
+          "stopBlockMutationWatching": {
+            "note": "Niche: call before programmatically replacing a block's DOM to suppress spurious `block-changed` events; the next render re-arms it."
+          }
+        }
+      }
     },
     "blockApi": {
       "title": "BlockAPI",
       "badge": "Block",
-      "description": "Interface for working with individual blocks. Returned by blocks.getById(), blocks.getBlockByIndex(), and blocks.insert()."
+      "description": "Interface for working with individual blocks. Returned by blocks.getById(), blocks.getBlockByIndex(), and blocks.insert().",
+      "methods": {
+        "block": {
+          "save": {
+            "note": "Returns just this block's data — handy for inspecting or persisting one block without `editor.save()`'s full walk."
+          },
+          "validate": {
+            "note": "Runs the tool's `validate()` against given data; use it to reject empty or malformed blocks before saving."
+          },
+          "call": {
+            "note": "Escape hatch to invoke a custom method your tool exposes — for behaviour outside the standard BlockTool API."
+          },
+          "dispatchChange": {
+            "note": "Call when you mutate a block outside Blok's knowledge (e.g. an async update) so change events and CRDT sync fire."
+          },
+          "getActiveToolboxEntry": {
+            "note": "Resolves which toolbox variant is active (e.g. Heading 1 vs 2) — useful for reflecting state in custom UI."
+          }
+        }
+      }
     },
     "caretApi": {
       "title": "Caret API",
       "badge": "Caret",
-      "description": "Control cursor position and selection within the editor."
+      "description": "Control cursor position and selection within the editor.",
+      "methods": {
+        "caret": {
+          "setToFirstBlock": {
+            "note": "`position` accepts `'start'`/`'end'`/`'default'`; returns `false` if there's no block to land on."
+          },
+          "setToLastBlock": {
+            "note": "Common after appending content — drop the caret at the end of the new last block with `'end'`."
+          },
+          "setToPreviousBlock": {
+            "note": "Moves relative to the focused block; returns `false` at the top edge, so use the return value to detect boundaries."
+          },
+          "setToNextBlock": {
+            "note": "Mirror of `setToPreviousBlock()`; returns `false` at the bottom edge."
+          },
+          "setToBlock": {
+            "note": "The most flexible setter — target by `BlockAPI`, id, or index. Prefer id/BlockAPI over index, which shifts as blocks move.",
+            "params": {
+              "blockOrIdOrIndex": { "description": "Target block, given as a `BlockAPI` instance, block id, or numeric index." },
+              "position": { "description": "Where within the block to place the caret." },
+              "offset": { "description": "Character offset from `position` within the target input." }
+            },
+            "errors": {
+              "0": {
+                "condition": "`blockOrIdOrIndex` does not resolve to an existing block (unknown id or out-of-range index).",
+                "resolution": "Check the boolean return value; `setToBlock()` never throws, so a falsy result is the only signal the target wasn't found."
+              }
+            }
+          },
+          "focus": {
+            "note": "Lightweight way to focus the editor without choosing a block; pass `true` for the end. Same as the top-level `focus()`."
+          },
+          "updateLastCaretAfterPosition": {
+            "note": "Call after an async caret move so undo lands the caret where the user ended up, not where the op started."
+          }
+        }
+      }
     },
     "eventsApi": {
       "title": "Events API",
       "badge": "Events",
-      "description": "Subscribe to and manage editor lifecycle events."
+      "description": "Subscribe to and manage editor lifecycle events.",
+      "methods": {
+        "on": {
+          "note": "Subscribe to editor lifecycle/content events. Keep a reference to the same callback so you can `off()` it later."
+        },
+        "off": {
+          "note": "Pass the exact same function reference you subscribed with — anonymous inline callbacks can't be removed."
+        },
+        "emit": {
+          "note": "For tools/plugins to broadcast custom events on the editor bus; app code usually listens with `on()` rather than emits."
+        }
+      }
     },
     "historyApi": {
       "title": "History API",
       "badge": "History",
-      "description": "Control undo/redo functionality for editor operations."
+      "description": "Control undo/redo functionality for editor operations.",
+      "methods": {
+        "history": {
+          "undo": {
+            "note": "Programmatic Ctrl/Cmd+Z. No-op when there's nothing to undo — gate custom buttons on `canUndo()`."
+          },
+          "redo": {
+            "note": "Programmatic Ctrl/Cmd+Shift+Z. Gate custom UI on `canRedo()` so the button disables correctly."
+          },
+          "canUndo": {
+            "note": "Use to enable/disable a custom undo button; pair with `undo()`."
+          },
+          "canRedo": {
+            "note": "Use to enable/disable a custom redo button; pair with `redo()`."
+          },
+          "clear": {
+            "note": "Drops the entire undo stack — call after loading fresh content so users can't undo back into the previous document."
+          }
+        }
+      }
     },
     "saverApi": {
       "title": "Saver API",
       "badge": "Saver",
-      "description": "Save and export editor content."
+      "description": "Save and export editor content.",
+      "methods": {
+        "saver": {
+          "save": {
+            "note": "Identical to `editor.save()`; provided for code that works through the `saver` module. Both await the full block tree."
+          }
+        }
+      }
     },
     "selectionApi": {
       "title": "Selection API",
       "badge": "Selection",
-      "description": "Work with text selection within the editor."
+      "description": "Work with text selection within the editor.",
+      "methods": {
+        "selection": {
+          "findParentTag": {
+            "note": "The standard way for inline tools to detect whether the cursor is already inside their tag (e.g. an `<a>` for a link)."
+          },
+          "expandToTag": {
+            "note": "Grow the selection to wrap a whole element — typically to select an existing mark before replacing or removing it."
+          },
+          "setFakeBackground": {
+            "note": "Keep a visible 'selection' highlight while focus moves to your tool's input. Always pair with a later `removeFakeBackground()`."
+          },
+          "removeFakeBackground": {
+            "note": "Tears down the fake highlight set by `setFakeBackground()`; call when your inline UI closes."
+          },
+          "clearFakeBackground": {
+            "note": "Heavier reset than `removeFakeBackground()` — clears both DOM and internal flags if state got out of sync."
+          },
+          "save": {
+            "note": "Stash the current range before focus leaves the document (e.g. opening a dialog), then bring it back with `restore()`."
+          },
+          "restore": {
+            "note": "Re-applies the range saved by `save()` — the round-trip that lets inline tools survive a focus change."
+          }
+        }
+      }
     },
     "stylesApi": {
       "title": "Styles API",
@@ -253,37 +504,135 @@
     "toolbarApi": {
       "title": "Toolbar API",
       "badge": "Toolbar",
-      "description": "Control the block toolbar and its state."
+      "description": "Control the block toolbar and its state.",
+      "methods": {
+        "toolbar": {
+          "close": {
+            "note": "Programmatically dismiss the block toolbar — e.g. after your custom action runs so the UI doesn't linger."
+          },
+          "open": {
+            "note": "Force the toolbar open for the current block; it normally appears on hover/focus, so use sparingly."
+          },
+          "toggleBlockSettings": {
+            "note": "Open/close the ☰ settings menu in code; pass an explicit boolean to set state rather than flip it."
+          },
+          "toggleToolbox": {
+            "note": "Open/close the + insert (slash) menu programmatically; pass a boolean to force a state."
+          }
+        }
+      }
     },
     "inlineToolbarApi": {
       "title": "InlineToolbar API",
       "badge": "Inline",
-      "description": "Control the inline formatting toolbar (bold, italic, etc.)."
+      "description": "Control the inline formatting toolbar (bold, italic, etc.).",
+      "methods": {
+        "inlineToolbar": {
+          "close": {
+            "note": "Dismiss the formatting popover — useful after a custom inline tool applies its change."
+          },
+          "open": {
+            "note": "Show the formatting popover over the current selection; a no-op without selected text."
+          }
+        }
+      }
     },
     "notifierApi": {
       "title": "Notifier API",
       "badge": "Notifier",
-      "description": "Display notification messages to users."
+      "description": "Display notification messages to users.",
+      "methods": {
+        "notifier": {
+          "show": {
+            "note": "Built-in toast for lightweight feedback. Set `type: 'confirm'` or `'prompt'` to collect a yes/no or text response.",
+            "params": {
+              "options": {
+                "description": "Notification configuration. Shape depends on `type`.",
+                "message": { "description": "Notification text. May contain HTML." },
+                "type": { "description": "Notification type. `confirm` and `prompt` add action buttons." },
+                "style": { "description": "Built-in visual style for alert notifications." },
+                "time": { "description": "Auto-dismiss delay in ms. Applies to alert notifications only." },
+                "okText": { "description": "Label for the confirm/submit button (`confirm`/`prompt` types only)." },
+                "okHandler": { "description": "Confirm/submit callback. Receives the click event for `confirm`, or the input value for `prompt`. Required for prompt notifications." },
+                "cancelText": { "description": "Label for the cancel button (`confirm`/`prompt` types only)." },
+                "cancelHandler": { "description": "Cancel/close callback (`confirm`/`prompt` types only)." },
+                "inputType": { "description": "HTML input type for the prompt's text field (`prompt` type only)." },
+                "placeholder": { "description": "Placeholder text for the prompt's input field (`prompt` type only)." },
+                "default": { "description": "Default value pre-filled in the prompt's input field (`prompt` type only)." }
+              }
+            },
+            "errors": {
+              "0": {
+                "condition": "The notifier module fails to load (e.g. blocked by CSP, dynamic import failure).",
+                "resolution": "`show()` never throws or rejects — check the browser console, since the failure is logged rather than propagated to your call site."
+              }
+            }
+          }
+        }
+      }
     },
     "sanitizerApi": {
       "title": "Sanitizer API",
       "badge": "Sanitizer",
-      "description": "Clean and sanitize HTML content to prevent XSS attacks."
+      "description": "Clean and sanitize HTML content to prevent XSS attacks.",
+      "methods": {
+        "sanitizer": {
+          "clean": {
+            "note": "Strip unwanted HTML against a rule set before inserting external content — your defence for paste and imported strings."
+          }
+        }
+      }
     },
     "tooltipApi": {
       "title": "Tooltip API",
       "badge": "Tooltip",
-      "description": "Display tooltip hints on UI elements."
+      "description": "Display tooltip hints on UI elements.",
+      "methods": {
+        "tooltip": {
+          "show": {
+            "note": "Imperatively show a tooltip for one-off cases. For hover behaviour prefer `onHover()`, which wires the listeners for you."
+          },
+          "hide": {
+            "note": "Hide whatever tooltip is currently shown; safe to call even if none is visible."
+          },
+          "onHover": {
+            "note": "The ergonomic choice — a tooltip that shows on hover and hides on leave without managing listeners yourself."
+          }
+        }
+      }
     },
     "readOnlyApi": {
       "title": "ReadOnly API",
       "badge": "ReadOnly",
-      "description": "Control the read-only state of the editor."
+      "description": "Control the read-only state of the editor.",
+      "methods": {
+        "readOnly": {
+          "set": {
+            "note": "The preferred way to enter/leave read-only mode. Returns a promise resolving to the new state once applied."
+          },
+          "toggle": {
+            "note": "Kept for compatibility; without a parameter it flips the current state."
+          }
+        }
+      }
     },
     "i18nApi": {
       "title": "I18n API",
       "badge": "I18n",
-      "description": "Internationalization support for translating UI strings."
+      "description": "Internationalization support for translating UI strings.",
+      "methods": {
+        "i18n": {
+          "t": {
+            "note": "Look up a UI string from the active dictionary inside a tool, so your tool localises with the editor."
+          },
+          "has": {
+            "note": "Check a key exists before translating, to fall back gracefully when a tool ships partial dictionaries."
+          },
+          "getEnglishTranslation": {
+            "note": "Returns the English value regardless of locale — used to index content for multilingual search."
+          }
+        }
+      }
     },
     "uiApi": {
       "title": "UI API",
@@ -293,12 +642,32 @@
     "listenersApi": {
       "title": "Listeners API",
       "badge": "Listeners",
-      "description": "Manage custom DOM event listeners with automatic cleanup."
+      "description": "Manage custom DOM event listeners with automatic cleanup.",
+      "methods": {
+        "listeners": {
+          "on": {
+            "note": "Managed `addEventListener` — Blok tracks the listener and removes it on `destroy()`, preventing leaks. Keep the returned id to remove it early."
+          },
+          "off": {
+            "note": "Remove a managed listener by element + handler; or use `offById()` if you kept the id from `on()`."
+          },
+          "offById": {
+            "note": "Remove a listener using the id `on()` returned — cleaner than matching element + handler again."
+          }
+        }
+      }
     },
     "toolsApi": {
       "title": "Tools API",
       "badge": "Tools",
-      "description": "Access and manage editor tools."
+      "description": "Access and manage editor tools.",
+      "methods": {
+        "tools": {
+          "getBlockTools": {
+            "note": "Enumerate the registered block tools at runtime — handy for a custom block picker or debugging tool config."
+          }
+        }
+      }
     },
     "outputData": {
       "title": "OutputData",
@@ -309,164 +678,294 @@
       "title": "BlockData",
       "badge": "Data",
       "description": "The structure of each block in the blocks array."
-    }
+    },
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "concepts": {
+      "title": "Everything is a block",
+      "badge": "Concepts",
+      "description": "Blok has one core idea. Understand it, and the rest of the API falls into place.",
+      "lead": "In Blok, every piece of content is a block. There is no separate document model running alongside them — blocks are the universal primitive. A paragraph is a block. A heading is a block. A whole database, and every row inside it, is a block. Once this clicks, the API stops reading like a list of features and starts reading like one consistent tree.",
+      "shape": {
+        "title": "The shape of a block",
+        "body": "Every block — whatever its type — is the same small object. `type` names the tool that renders it, `data` holds that tool's content, and `tunes` holds optional block-level settings."
+      },
+      "tree": {
+        "title": "Blocks form a tree",
+        "body": "Blocks aren't a flat list. Any block can contain other blocks through `contentIds`, and each child points back through `parentId`. A block that holds children is, in effect, a page — opening it means navigating into its children."
+      },
+      "everywhere": {
+        "title": "The same idea, all the way up",
+        "body": "Features that look like separate systems are really just blocks arranged in the tree:",
+        "thingHeader": "This…",
+        "whyHeader": "…is a block because",
+        "rows": {
+          "paragraph": {
+            "thing": "A paragraph",
+            "why": "Its `data` holds the text and inline formatting."
+          },
+          "database": {
+            "thing": "A database",
+            "why": "Its `data` holds the schema and view configs — not a side table."
+          },
+          "row": {
+            "thing": "A database row",
+            "why": "It's a child of the database block; its values live in `data.properties`."
+          },
+          "page": {
+            "thing": "A page",
+            "why": "Any block with children. Opening it navigates into its `contentIds`."
+          }
+        }
+      },
+      "notBlocks": {
+        "title": "What is not a block",
+        "body": "Structured property values — a status, a priority, a due date on a row — are not blocks. They're metadata stored in the owning block's `data`. The rule of thumb: if it has an identity, stores content, and can be nested, it's a block; if it's a typed value that belongs to a block, it lives in that block's `data`."
+      },
+      "why": {
+        "title": "Why this matters to you",
+        "body": "Because everything is a block, you learn one set of moves and they work everywhere:",
+        "items": {
+          "operations": {
+            "label": "One API for everything",
+            "text": "`insert`, `move`, and `delete` operate on any block — a paragraph, a row, or a whole database — with the same calls."
+          },
+          "serialization": {
+            "label": "One save format",
+            "text": "`editor.save()` walks the same tree for every kind of content, so persistence and rendering never need special cases."
+          },
+          "nesting": {
+            "label": "One nesting model",
+            "text": "`parentId` and `contentIds` describe containment everywhere, so a row inside a database and a paragraph inside a toggle behave the same way."
+          }
+        }
+      },
+      "decision": {
+        "title": "Extending Blok? Ask one question",
+        "body": "Before designing a new feature, ask: “Is this a block?” If it represents content, data, or a container, the answer is almost always yes — build it as a block instead of inventing a parallel data model.",
+        "examples": {
+          "calendar": "A calendar view → a view config on a database block; the rows stay row blocks.",
+          "comments": "A comment thread → a block.",
+          "toc": "A table of contents → a block that reads its sibling blocks.",
+          "embed": "An embed → a block."
+        }
+      },
+      "next": {
+        "intro": "Ready to work with the tree directly?",
+        "blocksPrefix": "See the",
+        "blocksLink": "Blocks API",
+        "blocksSuffix": "for inserting and moving blocks, and",
+        "blockDataLink": "BlockData",
+        "blockDataSuffix": "for the exact shape of a saved block."
+      }
+    },
+    "tutorial": {
+      "title": "Build your first editor",
+      "badge": "Tutorial",
+      "description": "Mount Blok, capture some content, and save it as JSON you can store and load back — the full round-trip in five steps.",
+      "lead": "This is a hands-on walkthrough. By the end you'll have a working editor, you'll have saved its content to JSON, and you'll have loaded that JSON straight back in — the round-trip that everything else in Blok is built on.",
+      "steps": {
+        "mount": {
+          "title": "Mount the editor",
+          "body": "Point Blok at an element on your page and create an instance. Once `isReady` resolves you have a live editor with an empty paragraph waiting for the caret."
+        },
+        "write": {
+          "title": "Write some content",
+          "body": "Click in and type. Press Enter to start a new block, or press `/` to open the tool menu and choose a heading, list, or quote. Every line you create is a separate block."
+        },
+        "save": {
+          "title": "Save it to JSON",
+          "body": "Call `save()` to get your content as a plain object. There's no HTML to parse and no hidden state — just blocks you can store anywhere.",
+          "payoff": "That object is the whole point. It's portable JSON you can drop into a database, a file, or an API — and it's exactly what you'll load back next."
+        },
+        "render": {
+          "title": "Load it back",
+          "body": "Hand the same object to `render()` and Blok rebuilds the content exactly. Save on unload, render on load — that's persistence, done."
+        },
+        "tools": {
+          "title": "Add a tool",
+          "body": "Blok ships lean. Register the tools you want under the `tools` config and they appear in the `/` menu, ready to use."
+        }
+      },
+      "checkpoint": {
+        "title": "Checkpoint: what success looks like",
+        "body": "You should now have a live editor on the page, a `data` object in hand from `editor.save()` with your blocks inside it, and that same object loading cleanly through `editor.render()`. If all three are true, you've got the round-trip — everything else in Blok builds on it."
+      },
+      "next": {
+        "title": "Where to go next",
+        "howTo": "Build your own block from scratch — render, edit, and save like the built-ins.",
+        "concepts": "Understand the one idea the whole API is built on."
+      }
+    },
+    "howToCustomTool": {
+      "title": "Create a custom block tool",
+      "badge": "How-to",
+      "description": "Build a block tool from scratch — a callout box that renders, edits, and saves like any built-in block.",
+      "lead": "Every built-in block is just a tool that follows the `BlockTool` interface, and you can add your own. Here you'll build a Callout block: an editable box that saves its text and reloads it like any other block.",
+      "steps": {
+        "scaffold": {
+          "title": "Write the tool class",
+          "body": "A block tool needs three things: a static `toolbox` getter so it shows up in the `/` menu, a `render()` that returns the block's element, and a `save()` that returns the data to persist."
+        },
+        "register": {
+          "title": "Register it in the editor",
+          "body": "Pass your class under the `tools` config. The key you give it becomes the block's `type` in saved data."
+        },
+        "use": {
+          "title": "Use it and save",
+          "body": "Open the `/` menu, pick Callout, type into the box, and call `save()`. Your block appears in the output alongside the built-in ones."
+        }
+      },
+      "further": {
+        "title": "Going further",
+        "body": "Add a `validate()` method to drop empty blocks, a settings menu through `renderSettings()`, or paste handling with `onPaste`. The `BlockTool` interface covers the full lifecycle — `rendered()`, `updated()`, `moved()`, and `removed()`.",
+        "exampleNote": "`validate()` runs before `save()` resolves, so an empty callout never makes it into the output. Tunes are opt-in per tool — pass `tunes: ['textColor']` at registration and Blok adds them to the block's settings menu automatically."
+      },
+      "next": {
+        "intro": "For the complete tool contract, see the",
+        "toolsLink": "Tools API",
+        "middle": "and check",
+        "blockDataLink": "BlockData",
+        "suffix": "for the exact shape your `save()` feeds into."
+      }
+    },
+    "whenToUse": "When to use"
   },
   "home": {
     "hero": {
       "eyebrow": "Open-Source Editor",
       "title": "Build beautiful",
       "titleGradient": "block-based editors",
-      "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app — customizable, themeable, and battle-tested.",
+      "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app. Customizable, themeable, and battle-tested.",
       "ctaGetStarted": "Get Started",
       "ctaTryItOut": "Try it out",
-      "mascotAlt": "Blok mascot - a friendly orange character with pink yarn",
       "mascotAriaLabel": "Try the demo"
     },
+    "categories": {
+      "label": "Browse the documentation",
+      "getStarted": "Get started",
+      "docs": "Docs",
+      "tools": "Tools",
+      "playground": "Playground",
+      "migration": "Migration",
+      "changelog": "Changelog"
+    },
     "features": {
-      "eyebrow": "Why Blok",
       "title1": "Built for developers,",
       "title2": "designed for users",
-      "description": "Everything you need to create powerful editing experiences in your applications.",
+      "description": "Everything you need to ship a modern block editor: clean JSON, a full block library, and a deep, typed API.",
       "sectionLabel": "Features",
+      "learnMoreLabel": "Learn more",
       "cleanJson": {
-        "title": "Clean JSON Output",
-        "description": "Content is structured as typed JSON blocks, not raw HTML. Parse, store, and render anywhere.",
-        "learnMore": "Learn more about Clean JSON Output",
+        "title": "Typed JSON, never HTML",
+        "description": "Just typed JSON blocks, never an HTML blob.",
+        "learnMore": "Learn more about Clean JSON output",
         "details": {
-          "summary": "Blok outputs clean, typed JSON data that's easy to store, transform, and render in any environment.",
-          "benefit1": "Store content in any database without HTML parsing",
-          "benefit2": "Render on server, client, or native apps",
-          "benefit3": "Full TypeScript types for all block data",
-          "benefit4": "Easy content migration and transformation"
+          "summary": "Blok is a headless editor built around a structured document model. Your app owns that data and decides how to store and display it.",
+          "benefit1": "Typed JSON output, no HTML parsing",
+          "benefit2": "Stable block IDs for diffing and version control",
+          "benefit3": "Render on the server or the client",
+          "benefit4": "Framework-agnostic core with full TypeScript types"
         }
       },
-      "slashCommands": {
-        "title": "Toolbox & Slash Commands",
-        "description": "Press / or click + to open the block menu. Insert paragraphs, headers, lists, and custom blocks instantly.",
-        "learnMore": "Learn more about Toolbox & Slash Commands",
+      "blockLibrary": {
+        "title": "Every block, built in",
+        "description": "Notion-like blocks, ready in the box.",
+        "learnMore": "Learn more about the block library",
         "details": {
-          "summary": "A powerful command palette for quick block insertion. Users can type \"/\" to search and insert any block type.",
-          "benefit1": "Keyboard-first workflow with \"/\" commands",
-          "benefit2": "Searchable block menu with fuzzy matching",
-          "benefit3": "Custom shortcuts for frequently used blocks",
-          "benefit4": "Accessible with full keyboard navigation"
-        }
-      },
-      "inlineToolbar": {
-        "title": "Inline Toolbar",
-        "description": "Select text to format with bold, italic, and links. Extensible with custom inline tools.",
-        "learnMore": "Learn more about Inline Toolbar",
-        "details": {
-          "summary": "A floating toolbar appears when text is selected, providing quick access to inline formatting options.",
-          "benefit1": "Context-aware formatting options",
-          "benefit2": "Built-in bold, italic, and link tools",
-          "benefit3": "Extensible with custom inline tools",
-          "benefit4": "Smart positioning that stays in viewport"
-        }
-      },
-      "dragDrop": {
-        "title": "Drag & Drop",
-        "description": "Rearrange blocks with drag handles. Pointer-based system for desktop devices.",
-        "learnMore": "Learn more about Drag & Drop",
-        "details": {
-          "summary": "Intuitive drag and drop reordering using a pointer-based system. Currently available on desktop devices.",
-          "benefit1": "Works on desktop devices",
-          "benefit2": "Visual drop indicators",
-          "benefit3": "Smooth animations during drag",
-          "benefit4": "Accessible keyboard alternatives"
+          "summary": "Blok includes the blocks most documents need, so you can put together rich content without building each one yourself.",
+          "benefit1": "Tables with merged cells, resizing and cell colors",
+          "benefit2": "Lists: bulleted, numbered and checklists",
+          "benefit3": "Columns, callouts, toggles and dividers",
+          "benefit4": "Code, image, video, file and 100+ embeds"
         }
       },
       "customBlocks": {
-        "title": "Custom Block Tools",
-        "description": "Extend the editor with custom blocks. Built-in paragraph, header, list tools included.",
-        "learnMore": "Learn more about Custom Block Tools",
+        "title": "Bring your own blocks",
+        "description": "Your own block tools, inline tools and block tunes.",
+        "learnMore": "Learn more about extending Blok",
         "details": {
-          "summary": "Create any block type you need. From simple text blocks to complex interactive components.",
-          "benefit1": "Simple API for creating custom blocks",
-          "benefit2": "Built-in paragraph, header, and list tools",
-          "benefit3": "Full lifecycle hooks (render, save, validate)",
-          "benefit4": "Block tunes for additional settings"
+          "summary": "Built-in blocks cover most cases. When you need something specific, you can add your own without forking the editor.",
+          "benefit1": "Custom block tools with a render/save API",
+          "benefit2": "Custom inline tools and block tunes",
+          "benefit3": "Lifecycle hooks: rendered, updated, moved, removed",
+          "benefit4": "Public API for blocks, caret, history and selection"
         }
       },
-      "readOnly": {
-        "title": "Read-Only Mode",
-        "description": "Toggle read-only mode at runtime. Perfect for view-only contexts or permission-based editing.",
-        "learnMore": "Learn more about Read-Only Mode",
+      "slashCommands": {
+        "title": "Type / to add anything",
+        "description": "Press / or click + to open the toolbox, then search and insert any block — or use Markdown shortcuts like #, -, 1., [] and >.",
+        "learnMore": "Learn more about the toolbox and Markdown",
         "details": {
-          "summary": "Switch between edit and read-only modes at runtime without reinitializing the editor.",
-          "benefit1": "Toggle at runtime via API",
-          "benefit2": "Perfect for permission-based editing",
-          "benefit3": "Preserves content and scroll position",
-          "benefit4": "Disables all editing interactions"
+          "summary": "Press / to open the toolbox — everything you can add: headings, lists, images, tables and more. Pick one without reaching for the mouse.",
+          "benefit1": "Start typing to filter the toolbox to what you want",
+          "benefit2": "Markdown shortcuts: # for a heading, - for a list, > for a quote",
+          "benefit3": "Or click the + button on any empty line",
+          "benefit4": "Everything works from the keyboard"
+        }
+      },
+      "tables": {
+        "title": "Spreadsheet-grade tables",
+        "description": "Merged cells, column resizing, cell colors, heading rows and full keyboard navigation.",
+        "learnMore": "Learn more about tables",
+        "details": {
+          "summary": "The table block stores its layout as data, so merged cells and column widths survive a save and reload.",
+          "benefit1": "Merge and split cells (colspan / rowspan)",
+          "benefit2": "Resize columns and color cells",
+          "benefit3": "Heading row and column",
+          "benefit4": "Keyboard navigation between cells"
+        }
+      },
+      "embeds": {
+        "title": "Embed 100+ services",
+        "description": "Paste a link to embed 100+ services like YouTube, Figma, Spotify and Gist, or get an OpenGraph bookmark card.",
+        "learnMore": "Learn more about embeds",
+        "details": {
+          "summary": "Paste a link and Blok works out how best to display it.",
+          "benefit1": "100+ embed providers, matched client-side",
+          "benefit2": "Video, audio, social, code and design sources",
+          "benefit3": "OpenGraph bookmark cards as a fallback",
+          "benefit4": "Notion-like paste menu: link, bookmark or embed"
         }
       },
       "undoRedo": {
-        "title": "Undo & Redo",
-        "description": "CRDT-based history with ⌘Z / ⌘⇧Z. Conflict-free state tracking for reliable undo/redo.",
-        "learnMore": "Learn more about Undo & Redo",
+        "title": "Conflict-free undo & redo",
+        "description": "Yjs-backed history with ⌘Z / ⌘⇧Z. Conflict-free, grouped at word boundaries, and it restores your caret.",
+        "learnMore": "Learn more about undo and redo",
         "details": {
-          "summary": "CRDT-powered undo/redo ensures conflict-free history tracking. Keyboard shortcuts and API access included.",
-          "benefit1": "CRDT-based change tracking",
-          "benefit2": "Conflict-free state management",
-          "benefit3": "Keyboard shortcuts (⌘Z / ⌘⇧Z)",
-          "benefit4": "Programmatic undo/redo via API"
+          "summary": "History is built on the same CRDT that powers live collaboration, so undo behaves predictably even when several people edit at once.",
+          "benefit1": "CRDT-based, conflict-free history",
+          "benefit2": "Grouped at word boundaries",
+          "benefit3": "Caret restored after undo",
+          "benefit4": "⌘Z / ⌘⇧Z and a programmatic API"
         }
       },
       "languages": {
-        "title": "68 Languages",
-        "description": "Lazy-loaded i18n with RTL support. Only English bundled by default ~3KB.",
-        "learnMore": "Learn more about 68 Languages",
+        "title": "68 languages, RTL-ready",
+        "description": "Lazy-loaded translations for 68 locales with right-to-left support. Only your language ships to the browser.",
+        "learnMore": "Learn more about internationalization",
         "details": {
-          "summary": "Full internationalization with 68 languages, RTL support, and lazy loading for optimal bundle size.",
-          "benefit1": "68 supported languages",
-          "benefit2": "Full RTL layout support",
-          "benefit3": "Lazy-loaded translations (~3KB base)",
-          "benefit4": "Custom translation overrides"
+          "summary": "The editor's own interface is translated, so your users see Blok in their language.",
+          "benefit1": "68 bundled locales",
+          "benefit2": "Right-to-left layout (Arabic, Hebrew, Farsi…)",
+          "benefit3": "Lazy-loaded for a minimal base bundle",
+          "benefit4": "Override any string"
         }
       },
-      "smartPaste": {
-        "title": "Smart Paste",
-        "description": "Paste from Google Docs or plain text. HTML is sanitized and converted to blocks.",
-        "learnMore": "Learn more about Smart Paste",
+      "media": {
+        "title": "Image, video & audio",
+        "description": "Drop in images, a YouTube-grade video player and audio with live waveforms. Every one a first-class block.",
+        "learnMore": "Learn more about media blocks",
         "details": {
-          "summary": "Paste content from Google Docs and watch it transform into clean, structured blocks automatically.",
-          "benefit1": "Works with Google Docs and plain text",
-          "benefit2": "Automatic XSS-safe HTML sanitization",
-          "benefit3": "Preserves headings, lists, and formatting",
-          "benefit4": "Extensible paste handlers for custom tools"
+          "summary": "Each kind of media gets its own block, with controls suited to how people use it.",
+          "benefit1": "Resizable images with captions",
+          "benefit2": "Video player with scrubber, speed, PiP & theater",
+          "benefit3": "Audio blocks with cached waveform peaks",
+          "benefit4": "Paste or drag a file to upload"
         }
-      }
-    },
-    "quickStart": {
-      "eyebrow": "Get Started",
-      "title": "Up and running in minutes",
-      "description": "Three simple steps to integrate Blok into your project"
-    },
-    "apiPreview": {
-      "eyebrow": "Developer Experience",
-      "title1": "Powerful APIs",
-      "title2": "for every use case",
-      "description": "Access every aspect of the editor through our comprehensive API surface.",
-      "viewFullDocs": "View Full API Reference",
-      "coreMethods": {
-        "title": "Core Methods",
-        "save": "Extract content as JSON",
-        "render": "Render from JSON data",
-        "focus": "Set cursor focus",
-        "clear": "Clear all blocks"
-      },
-      "blocksApi": {
-        "title": "Blocks API",
-        "delete": "Remove specified block",
-        "insert": "Insert new block",
-        "move": "Move block to new index",
-        "update": "Update block data"
-      },
-      "events": {
-        "title": "Events",
-        "on": "Subscribe to events",
-        "off": "Unsubscribe from events",
-        "emit": "Emit custom events"
       }
     },
     "migrationCard": {
@@ -476,11 +975,67 @@
       "viewGuide": "View Migration Guide",
       "viewCodemod": "View Codemod"
     },
+    "docsCta": {
+      "title": "Explore the API reference",
+      "description": "Browse every module, method, and option — each with copy-paste examples and a guided sidebar.",
+      "cta": "Open the docs"
+    },
+    "frameworks": {
+      "sectionLabel": "Integrations",
+      "title1": "Drop Blok into",
+      "title2": "your stack",
+      "description": "A framework-agnostic core with a fully typed API, first-class React, Vue, and Angular adapters, and a zero-build CDN script. Pick whichever fits your project.",
+      "vanillaName": "Vanilla JS / TypeScript",
+      "vanillaTagline": "Framework-agnostic core",
+      "vanillaDescription": "Point Blok at any DOM node and go. Fully typed, no framework needed.",
+      "reactName": "React",
+      "reactTagline": "A hook and a component",
+      "reactDescription": "The useBlok hook owns the editor lifecycle; <BlokContent> mounts it. React 18 and 19.",
+      "vueName": "Vue",
+      "vueTagline": "A composable and a component",
+      "vueDescription": "Same shape as React: useBlok drives the editor, <BlokContent> mounts it. Vue 3.",
+      "angularName": "Angular",
+      "angularTagline": "A standalone component",
+      "angularDescription": "Add <blok-editor> and bind your tools. Standalone component, Angular 16+.",
+      "cdnName": "CDN",
+      "cdnTagline": "No bundler required",
+      "cdnDescription": "Add one script tag and use the BlokEditor global. Good for prototypes and no-build pages.",
+      "docsLink": "Read the integration guide"
+    },
+    "whyBlok": {
+      "sectionLabel": "Comparison",
+      "title1": "Why Blok",
+      "title2": "over the alternatives",
+      "description": "Most editors hand you a bare core and a long plugin shopping list. Blok comes with the batteries included: typed JSON output, a full block library, and a deep API, all working out of the box.",
+      "colCapability": "Capability",
+      "rowOutput": "Output format",
+      "rowEverythingBlock": "Everything is a block",
+      "rowBlocks": "Built-in blocks",
+      "rowTypeScript": "TypeScript-first",
+      "rowI18n": "i18n & RTL",
+      "rowMarkdown": "Markdown support",
+      "rowBindings": "Framework adapters",
+      "rowA11y": "Accessibility",
+      "disclaimer": "Comparison reflects each library's out-of-the-box defaults; all are extensible via plugins."
+    },
+    "trusted": {
+      "title": "Companies that trust us",
+      "tagline": "Global QSR leader",
+      "summary": "Blok powers the internal knowledge base behind one of the world's largest pizza chains. Thousands of authors, one block model.",
+      "statCountriesValue": "25+",
+      "statCountriesLabel": "Countries served",
+      "statStoresValue": "1,800+",
+      "statStoresLabel": "Stores worldwide",
+      "cta": "Build with Blok",
+      "contactTitle": "Bringing Blok to your team?",
+      "contactLead": "We'll help you set it up and adapt it to exactly what you need.",
+      "contactTelegram": "Chat on Telegram",
+      "contactEmail": "Email us"
+    },
     "featureModal": {
       "close": "Close modal",
-      "keyBenefits": "Key Benefits",
-      "example": "Example",
-      "viewApiDocs": "View API Documentation →"
+      "keyBenefits": "Key benefits",
+      "viewApiDocs": "View documentation"
     }
   },
   "footer": {
@@ -500,7 +1055,8 @@
     "contributing": "Contributing",
     "githubAriaLabel": "GitHub",
     "telegramAriaLabel": "Telegram",
-    "copyrightText": "© 2026 JackUait",
+    "copyrightYear": "© 2026",
+    "author": "JackUait",
     "licensedUnder": "Licensed under"
   },
   "languageSelector": {
@@ -515,10 +1071,19 @@
     "noResultsDescription": "Try different keywords or browse the documentation sections",
     "emptyTitle": "Search Blok docs",
     "emptyDescription": "Find API methods, configuration options, tools, and more",
+    "noResultsFor": "No matches for",
     "navigate": "navigate",
     "select": "select",
-    "result": "result",
-    "results": "results"
+    "result_one": "result",
+    "result_few": "results",
+    "result_many": "results",
+    "kind": {
+      "method": "Method",
+      "property": "Property",
+      "option": "Option",
+      "section": "Section",
+      "page": "Page"
+    }
   },
   "theme": {
     "light": "Light theme",
@@ -530,6 +1095,17 @@
   },
   "packageManagerToggle": {
     "switchAriaPrefix": "Switch to"
+  },
+  "frameworkToggle": {
+    "label": "Framework",
+    "switchAriaPrefix": "Switch to",
+    "editorAccess": {
+      "heading": "Reaching the editor instance",
+      "vanilla": "The methods below run on the editor you created with new Blok(). They are available once editor.isReady resolves.",
+      "react": "The methods below run on the editor returned by useBlok(). It is null until the editor mounts, so guard the value with optional chaining before calling in.",
+      "vue": "The methods below run on the editor returned by useBlok(). It is a ref that stays null until the editor mounts, so unwrap it with .value before calling in.",
+      "angular": "The methods below run on the live editor. Grab it from the component's (ready) output, then call any method shown below."
+    }
   },
   "demo": {
     "badge": "Interactive Demo",
@@ -588,64 +1164,6 @@
     "welcomeListItem2": "Slash commands for quick formatting",
     "welcomeListItem3": "Drag and drop to reorder blocks",
     "welcomeListItem4": "Clean JSON output"
-  },
-  "recipes": {
-    "heroBadge": "Recipes",
-    "heroTitle": "Recipes",
-    "heroDescription": "Practical tips, patterns, and code snippets to help you get the most out of Blok. From basic setup to advanced customization.",
-    "keyboardShortcutsTitle": "Keyboard Shortcuts",
-    "communityBadge": "Community",
-    "ctaTitle": "Have a recipe to share?",
-    "ctaDescription": "Your patterns and techniques could help thousands of developers build better editors.",
-    "ctaButton": "Contribute a Recipe",
-    "sidebarQuickReference": "Quick Reference",
-    "sidebarCodeRecipes": "Code Recipes",
-    "sidebarKeyboardShortcuts": "Keyboard Shortcuts",
-    "sidebarAutosave": "Autosave with Debouncing",
-    "sidebarEvents": "Working with Events",
-    "sidebarCustomTool": "Creating a Custom Tool",
-    "sidebarStyling": "Styling with Data Attributes",
-    "sidebarReadOnly": "Read-Only Mode",
-    "sidebarLocalization": "Localization",
-    "proTip": "Pro tip",
-    "shortcuts": {
-      "title": "Keyboard Reference",
-      "subtitle": "Master Blok with these essential shortcuts",
-      "platformHint": "⌘ = Cmd (Mac) / Ctrl (Win)",
-      "moreShortcuts": "More shortcuts available in the toolbox menu",
-      "navigation": "Navigation",
-      "formatting": "Formatting",
-      "history": "History",
-      "lists": "Lists",
-      "openToolbox": "Open block toolbox",
-      "createBlock": "Create new block",
-      "deleteBlock": "Delete / merge block",
-      "bold": "Bold",
-      "italic": "Italic",
-      "underline": "Underline",
-      "link": "Link",
-      "undo": "Undo",
-      "redo": "Redo",
-      "indent": "Indent",
-      "outdent": "Outdent"
-    },
-    "autosaveTitle": "Autosave with Debouncing",
-    "autosaveDescription": "Automatically save content as users type, with debouncing to prevent excessive server requests.",
-    "autosaveTip": "A 1-second debounce is usually a good balance between responsiveness and server load.",
-    "eventsTitle": "Working with Events",
-    "eventsDescription": "Listen to editor events to integrate with your application's state management or analytics.",
-    "customToolTitle": "Creating a Custom Tool",
-    "customToolDescription": "Build your own block type to extend Blok's functionality. This example creates a simple alert/callout block.",
-    "customToolTip": "Keep tools focused on a single purpose. For complex needs, compose multiple simple tools.",
-    "stylingTitle": "Styling with Data Attributes",
-    "stylingDescription": "Customize Blok's appearance using CSS and data attributes. No need to fight with specificity.",
-    "readOnlyTitle": "Read-Only Mode",
-    "readOnlyDescription": "Display saved content without editing capabilities, or toggle between edit and preview modes.",
-    "readOnlyTip": "Read-only mode is perfect for previewing content before publishing or displaying user-generated content.",
-    "localizationTitle": "Localization with Preloading",
-    "localizationDescription": "Configure Blok for multiple languages with optional preloading for offline support or instant initialization.",
-    "localizationTip": "Most apps can use on-demand loading with buildRegistry() directly—the ~50-100ms delay is usually imperceptible.",
-    "filterLabel": "Filter recipes"
   },
   "migration": {
     "heroFromEditorJS": "From EditorJS",
@@ -726,7 +1244,13 @@
     "compatStatusCodemod": "Handled by codemod",
     "compatStatusNotBundled": "Not bundled — register your own",
     "removed": "Removed",
-    "added": "Added"
+    "added": "Added",
+    "blokUpgradeBadge": "Blok → Blok",
+    "blokUpgradeTitle": "Upgrading within Blok",
+    "blokUpgradeDescription": "Already on Blok? These are the breaking changes between 0.x releases, grounded in the changelog — most upgrades need no changes at all.",
+    "blokUpgradeViewChangelog": "View changelog",
+    "blokBreaking0192": "OutputBlockData's data field changed from any to Record<string, unknown> — reading a saved block's data now yields unknown, so code that indexes into it may need a type guard or cast. Type-only change; no runtime effect.",
+    "blokBreaking0170": "URL paste now always opens the paste menu instead of silently auto-embedding — code relying on the old auto-embed behaviour must opt in explicitly through the menu."
   },
   "changelog": {
     "badge": "Version History",
@@ -774,66 +1298,6 @@
       "italic": "Italic",
       "link": "Link",
       "marker": "Marker"
-    }
-  },
-  "integrations": {
-    "badge": "Integrations",
-    "heroTitle": "Use Blok with React",
-    "heroDescription1": "The official React adapter ships as",
-    "heroDescription2": ". It provides a",
-    "heroDescription3": "hook and a",
-    "heroDescription4": "component that manage the full editor lifecycle — including StrictMode, SSR-safe rendering, and clean teardown.",
-    "installNote": "React 18+ is a peer dependency — it is not bundled with Blok. If you already have React in your project, no extra install is needed.",
-    "parametersTitle": "Parameters",
-    "propsTitle": "Props",
-    "returnsTitle": "Returns",
-    "filterLabel": "Filter integrations",
-    "sections": {
-      "setup": {
-        "badge": "Setup",
-        "title": "Installation",
-        "description": "Install Blok and its React adapter. React 18 or higher is required as a peer dependency."
-      },
-      "quickstart": {
-        "badge": "Guide",
-        "title": "Quick Start",
-        "description": "Import useBlok and BlokContent from @jackuait/blok/react. The hook manages the editor lifecycle; the component mounts the editor DOM into your layout."
-      },
-      "useBlok": {
-        "badge": "Hook",
-        "title": "useBlok",
-        "description": "A React hook that creates and manages a Blok editor instance. Returns the editor once it is ready, or null during initialization."
-      },
-      "blokContent": {
-        "badge": "Component",
-        "title": "BlokContent",
-        "description": "A component that mounts the editor's DOM tree into your layout. Renders an empty div when editor is null, maintaining layout stability while the editor initializes."
-      },
-      "readOnly": {
-        "badge": "Guide",
-        "title": "Read-Only Mode",
-        "description": "Toggle read-only mode reactively by passing readOnly to useBlok. The editor updates via editor.readOnly.set() without recreation."
-      },
-      "switchingDocs": {
-        "badge": "Guide",
-        "title": "Switching Documents",
-        "description": "Pass a deps array as the second argument to useBlok to recreate the editor when your document changes. The old instance is destroyed cleanly before the new one is created."
-      },
-      "fullExample": {
-        "badge": "Example",
-        "title": "Complete Example",
-        "description": "A full blog editor component using useBlok and BlokContent together."
-      }
-    },
-    "sidebar": {
-      "react": "React",
-      "installation": "Installation",
-      "quickStart": "Quick Start",
-      "useBlok": "useBlok",
-      "blokContent": "BlokContent",
-      "readOnlyMode": "Read-Only Mode",
-      "switchingDocuments": "Switching Documents",
-      "completeExample": "Complete Example"
     }
   }
 }

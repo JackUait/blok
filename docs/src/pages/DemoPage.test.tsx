@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
 import { DemoPage } from './DemoPage';
@@ -32,6 +31,14 @@ describe('DemoPage', () => {
       expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
+    it('renders the header statically (not pinned to the viewport)', () => {
+      renderDemoPage();
+
+      const nav = screen.getByRole('navigation');
+      expect(nav.className).toMatch(/\bstatic\b/);
+      expect(nav.className).not.toMatch(/\bfixed\b/);
+    });
+
     it('renders a main element', () => {
       renderDemoPage();
 
@@ -44,16 +51,18 @@ describe('DemoPage', () => {
       expect(screen.getByTestId('footer-brand')).toBeInTheDocument();
     });
 
-    it('renders the "Interactive Demo" badge', () => {
-      renderDemoPage();
-
-      expect(screen.getByText('Interactive Demo')).toBeInTheDocument();
-    });
-
-    it('renders the demo page heading', () => {
+    it('renders an sr-only heading for the page (a11y, not shown visually)', () => {
       renderDemoPage();
 
       expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    });
+
+    it('does not render the marketing badge/subtitle/hint content', () => {
+      renderDemoPage();
+
+      expect(screen.queryByText('Interactive Demo')).not.toBeInTheDocument();
+      expect(screen.queryByText('Instant Feedback')).not.toBeInTheDocument();
+      expect(screen.queryByText('Open command menu')).not.toBeInTheDocument();
     });
 
     it('renders the editor component', () => {
@@ -62,226 +71,83 @@ describe('DemoPage', () => {
       // EditorWrapper renders a .blok-editor container
       expect(container.querySelector('.blok-editor')).toBeInTheDocument();
     });
+
+    it('does not put a max-width directly on the overflow-auto container', () => {
+      renderDemoPage();
+
+      // A block's +/drag-handle toolbar bleeds ~60px to the left of its content
+      // column. A max-width applied to THIS element would also shrink its own
+      // overflow-auto box, clipping that bleed. The centering max-width instead
+      // lives on an inner div (see next test) with plenty of room to spare.
+      const editorContainer = screen.getByTestId('demo-editor-container');
+      expect(editorContainer.className).not.toMatch(/\bmax-w-\S+/);
+    });
+
+    it('centers the editor on the page via an inner max-width wrapper', () => {
+      const { container } = renderDemoPage();
+
+      const editor = container.querySelector('.blok-editor');
+      const centeringWrapper = editor?.closest('.mx-auto[class*="max-w-"]');
+      expect(centeringWrapper).toBeInTheDocument();
+    });
+
+    it('reserves generous horizontal padding so the block toolbar gutter is not clipped', () => {
+      renderDemoPage();
+
+      const editorContainer = screen.getByTestId('demo-editor-container');
+      expect(editorContainer.className).toMatch(/\bsm:px-16\b/);
+    });
+
+    it('adds a gap between the header and the editor', () => {
+      renderDemoPage();
+
+      const editorContainer = screen.getByTestId('demo-editor-container');
+      // A visible top gap below the static header — plain py-* (no explicit
+      // top spacing) would read as flush against the header.
+      expect(editorContainer.className).toMatch(/\bpt-(8|10|12)\b/);
+    });
   });
 
-  describe('toolbar actions', () => {
-    it('renders the Get JSON button', () => {
+  describe('no editor chrome', () => {
+    it('does not render the editor toolbar card title', () => {
       renderDemoPage();
 
-      expect(screen.getByTitle('Get JSON output')).toBeInTheDocument();
+      expect(screen.queryByText('Blok Editor')).not.toBeInTheDocument();
     });
 
-    it('renders the Undo button', () => {
+    it('does not render a Get JSON button', () => {
       renderDemoPage();
 
-      expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+      expect(screen.queryByTitle('Get JSON output')).not.toBeInTheDocument();
     });
 
-    it('renders the Redo button', () => {
+    it('does not render Undo/Redo buttons', () => {
       renderDemoPage();
 
-      expect(screen.getByRole('button', { name: 'Redo' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Redo' })).not.toBeInTheDocument();
     });
 
-    it('renders the Clear (delete) button', () => {
+    it('does not render a Clear (delete) button', () => {
       renderDemoPage();
 
-      expect(screen.getByTitle('Clear editor')).toBeInTheDocument();
+      expect(screen.queryByTitle('Clear editor')).not.toBeInTheDocument();
     });
-  });
 
-  describe('output panel', () => {
-    it('does not show the output panel on initial render', () => {
+    it('does not render the JSON output panel', () => {
       renderDemoPage();
 
-      // OutputPanel is only shown when showOutput is true
       expect(screen.queryByTestId('output-panel')).not.toBeInTheDocument();
     });
-
-    it('shows the output panel after clicking Get JSON', async () => {
-      const user = userEvent.setup();
-
-      renderDemoPage();
-
-      // Wait for editor to initialize via the mock
-      await waitFor(() => {
-        expect(screen.queryByText('Loading editor...')).not.toBeInTheDocument();
-      });
-
-      const getJsonBtn = screen.getByTitle('Get JSON output');
-      await user.click(getJsonBtn);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('output-panel')).toBeInTheDocument();
-      });
-    });
-
-    it('displays JSON output after clicking Get JSON', async () => {
-      const user = userEvent.setup();
-
-      renderDemoPage();
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading editor...')).not.toBeInTheDocument();
-      });
-
-      const getJsonBtn = screen.getByTitle('Get JSON output');
-      await user.click(getJsonBtn);
-
-      await waitFor(() => {
-        // The mock save() returns { blocks: [] }, serialized as JSON
-        const outputContent = screen.getByTestId('output-content');
-        expect(outputContent).toHaveTextContent('blocks');
-      });
-    });
-
-    it('closes the output panel when the close button is clicked', async () => {
-      const user = userEvent.setup();
-
-      renderDemoPage();
-
-      await waitFor(() => {
-        expect(screen.queryByText('Loading editor...')).not.toBeInTheDocument();
-      });
-
-      // Open the panel
-      await user.click(screen.getByTitle('Get JSON output'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('output-panel')).toBeInTheDocument();
-      });
-
-      // Close it
-      await user.click(screen.getByRole('button', { name: 'Close output panel' }));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('output-panel')).not.toBeInTheDocument();
-      });
-    });
   });
 
   describe('locale switching', () => {
-    it('shows Russian placeholder when locale is set to RU', () => {
+    it('renders without crashing when locale is set to RU', () => {
       localStorage.setItem('blok-docs-locale', 'ru');
       renderDemoPage();
 
-      // DemoPage renders with Russian locale; the badge text should be in Russian
-      expect(screen.getByText('Интерактивное демо')).toBeInTheDocument();
-    });
-
-    it('copy button is a no-op when output is the Russian placeholder', async () => {
-      localStorage.setItem('blok-docs-locale', 'ru');
-      const user = userEvent.setup();
-
-      renderDemoPage();
-
-      await waitFor(() => {
-        expect(screen.queryByText('Загрузка редактора...')).not.toBeInTheDocument();
-      });
-
-      // Open the output panel via the Russian-labelled button
-      const getJsonBtn = screen.getByTitle('Получить JSON');
-      await user.click(getJsonBtn);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('output-panel')).toBeInTheDocument();
-      });
-
-      // The output is the mock save() result (real JSON), not the placeholder.
-      // Clicking copy on real JSON should not show "Скопировано!" either because
-      // useCopyToClipboard is not mocked here — we just verify the button is present
-      // and the panel shows the Russian title.
-      const outputPanel = screen.getByTestId('output-panel');
-      expect(within(outputPanel).getByTestId('output-copy')).toBeInTheDocument();
-      expect(within(outputPanel).getByText('Вывод JSON')).toBeInTheDocument();
-
-      // The copy button label should be in Russian
-      expect(screen.getByText('Копировать')).toBeInTheDocument();
-    });
-
-    it('output placeholder updates to Russian when locale switches to RU', async () => {
-      localStorage.setItem('blok-docs-locale', 'ru');
-      renderDemoPage();
-
-      // The initial output state is initialised with the Russian placeholder message
-      // (set via useState(() => t('demo.outputInitialMessage')) at render time with RU locale)
-      // We verify this by opening the output panel and checking the content
-      const user = userEvent.setup();
-
-      await waitFor(() => {
-        expect(screen.queryByText('Загрузка редактора...')).not.toBeInTheDocument();
-      });
-
-      const getJsonBtn = screen.getByTitle('Получить JSON');
-      await user.click(getJsonBtn);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('output-panel')).toBeInTheDocument();
-      });
-
-      // The mock editor returns real JSON ({ blocks: [] }), so we see JSON content
-      await waitFor(() => {
-        const outputContent = screen.getByTestId('output-content');
-        expect(outputContent).toHaveTextContent('blocks');
-      });
-    });
-  });
-
-  describe('keyboard shortcut tips', () => {
-    it('shows the slash command tip', () => {
-      renderDemoPage();
-
-      expect(screen.getByText('Open command menu')).toBeInTheDocument();
-    });
-
-    it('shows the Tab key tip', () => {
-      renderDemoPage();
-
-      expect(screen.getByText('Indent list item')).toBeInTheDocument();
-    });
-
-    it('shows the Ctrl+Z undo tip', () => {
-      renderDemoPage();
-
-      expect(screen.getByText('Undo')).toBeInTheDocument();
-    });
-  });
-
-  describe('feature hint cards', () => {
-    it('shows the Instant Feedback hint', () => {
-      renderDemoPage();
-
-      expect(screen.getByText('Instant Feedback')).toBeInTheDocument();
-    });
-
-    it('shows the Clean JSON Output hint', () => {
-      renderDemoPage();
-
-      expect(screen.getByText('Clean JSON Output')).toBeInTheDocument();
-    });
-
-    it('shows the Block-Based Architecture hint', () => {
-      renderDemoPage();
-
-      expect(screen.getByText('Block-Based Architecture')).toBeInTheDocument();
-    });
-  });
-
-  describe('locale switching', () => {
-    it('renders the Russian badge when locale is ru', () => {
-      localStorage.setItem('blok-docs-locale', 'ru');
-
-      renderDemoPage();
-
-      expect(screen.getByText('Интерактивное демо')).toBeInTheDocument();
-    });
-
-    it('renders Russian undo button title when locale is ru', () => {
-      localStorage.setItem('blok-docs-locale', 'ru');
-
-      renderDemoPage();
-
-      expect(screen.getByTitle('Отмена (Ctrl+Z)')).toBeInTheDocument();
+      expect(screen.getByRole('main')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     });
   });
 });

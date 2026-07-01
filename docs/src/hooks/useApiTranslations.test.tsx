@@ -45,7 +45,7 @@ describe('useApiTranslations', () => {
   it('should return translated sidebar sections', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     
-    expect(result.current.sidebarSections[0].title).toBe('Guide');
+    expect(result.current.sidebarSections[0].title).toBe('Getting started');
     expect(result.current.sidebarSections[0].links[0].label).toBe('Quick Start');
   });
 
@@ -57,9 +57,16 @@ describe('useApiTranslations', () => {
 
   it('should return all expected sidebar section categories', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
-    
+
+    // Quick Start, Tutorial, Concepts, and the custom-block-tool how-to are
+    // each one-page sections, so they collapse under a single "Getting
+    // started" group rather than each getting their own (mostly empty)
+    // sidebar group.
     const sectionTitles = result.current.sidebarSections.map(s => s.title);
-    expect(sectionTitles).toEqual(['Guide', 'Core', 'API Modules', 'Data']);
+    expect(sectionTitles).toEqual([
+      'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Block Tools', 'Inline Tools',
+    ]);
   });
 
   it('should return the correct number of API sections', () => {
@@ -71,6 +78,9 @@ describe('useApiTranslations', () => {
     // Check specific sections exist
     const sectionIds = result.current.apiSections.map(s => s.id);
     expect(sectionIds).toContain('quick-start');
+    expect(sectionIds).toContain('tutorial');
+    expect(sectionIds).toContain('concepts');
+    expect(sectionIds).toContain('custom-block-tool');
     expect(sectionIds).toContain('core');
     expect(sectionIds).toContain('blocks-api');
   });
@@ -129,6 +139,24 @@ describe('useApiTranslations', () => {
     expect(readOnlyRow?.description).toBe('Включить режим только для чтения');
   });
 
+  it('should attach a translated "when to use" note to methods', () => {
+    const { result: enResult } = renderHook(() => useApiTranslations(), { wrapper });
+    const enSave = enResult.current.apiSections
+      .find((s) => s.id === 'core')
+      ?.methods?.find((m) => m.name === 'save()');
+    expect(enSave?.note).toBeDefined();
+    expect((enSave?.note ?? '').length).toBeGreaterThan(0);
+
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+    const { result: ruResult } = renderHook(() => useApiTranslations(), { wrapper });
+    const ruSave = ruResult.current.apiSections
+      .find((s) => s.id === 'core')
+      ?.methods?.find((m) => m.name === 'save()');
+    expect(ruSave?.note).toBeDefined();
+    expect(ruSave?.note).not.toBe(enSave?.note);
+  });
+
   it('should keep English method descriptions unchanged in English locale', () => {
     const { result } = renderHook(() => useApiTranslations(), { wrapper });
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
@@ -143,5 +171,89 @@ describe('useApiTranslations', () => {
 
     const holderRow = configSection?.table?.find(r => r.option === 'holder');
     expect(holderRow?.description).toBe('Container element ID or reference');
+  });
+
+  it('should translate method param descriptions in Russian, keeping name/type/required structural', () => {
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const insertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.insert('));
+
+    const typeParam = insertMethod?.params?.find(p => p.name === 'type');
+    expect(typeParam?.description).toBe('Имя инструмента для создания блока.');
+    // Structural fields stay language-agnostic.
+    expect(typeParam?.type).toBe('string');
+    expect(typeParam?.required).toBe(false);
+  });
+
+  it('should keep English method param descriptions unchanged in English locale', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const insertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.insert('));
+
+    const typeParam = insertMethod?.params?.find(p => p.name === 'type');
+    expect(typeParam?.description).toBe('Tool name to instantiate.');
+  });
+
+  it('should translate method error condition/resolution in Russian, keeping the literal message untranslated', () => {
+    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
+    act(() => { i18nResult.current.setLocale('ru'); });
+
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const convertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.convert('));
+
+    const notFoundError = convertMethod?.errors?.[0];
+    expect(notFoundError?.condition).toBe('Блок с указанным `id` не существует.');
+    expect(notFoundError?.resolution).toBe('Проверьте id через `blocks.getById()` перед вызовом `convert()`.');
+    // The thrown error text is language-agnostic.
+    expect(notFoundError?.message).toBe('Block with id "<id>" not found');
+  });
+
+  it('should keep English method error condition/resolution unchanged in English locale', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
+    const convertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.convert('));
+
+    const notFoundError = convertMethod?.errors?.[0];
+    expect(notFoundError?.condition).toBe('No block exists with the given `id`.');
+    expect(notFoundError?.resolution).toBe("Confirm the id with `blocks.getById()` before calling `convert()`.");
+  });
+
+  it('should expose deprecation fields unchanged across locales', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const readOnlySection = result.current.apiSections.find(s => s.id === 'readonly-api');
+    const toggleMethod = readOnlySection?.methods?.find(m => m.name.startsWith('readOnly.toggle('));
+
+    expect(toggleMethod?.deprecatedSince).toBe('0.23.5');
+    expect(toggleMethod?.replacedBy).toBe('readOnly.set');
+  });
+});
+
+describe('useApiTranslations sidebar groups', () => {
+  it('produces the API buckets followed by the two tool groups', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const titles = result.current.sidebarSections.map((s) => s.title);
+    expect(titles).toEqual([
+      'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
+      'Block Tools', 'Inline Tools',
+    ]);
+    expect(result.current.sidebarSections[2].links.map((l) => l.id))
+      .toEqual(['caret-api', 'selection-api', 'styles-api', 'history-api']);
+  });
+
+  it('lists built-in tools under the tool groups (deduped, routable)', () => {
+    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const blockGroup = result.current.sidebarSections.find((s) => s.title === 'Block Tools');
+    const inlineGroup = result.current.sidebarSections.find((s) => s.title === 'Inline Tools');
+
+    // Block tools include core blocks; ids are unique despite tools-data dupes.
+    const blockIds = blockGroup?.links.map((l) => l.id) ?? [];
+    expect(blockIds).toContain('paragraph');
+    expect(blockIds.filter((id) => id === 'video')).toHaveLength(1);
+    // Inline tools include formatting marks.
+    expect(inlineGroup?.links.map((l) => l.id)).toContain('bold');
   });
 });

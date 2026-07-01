@@ -45,4 +45,10 @@ describe('tools documentation coverage', () => {
       expect(section.usageExample.length).toBeGreaterThan(0);
     }
   });
+
+  it('has no duplicate section ids', () => {
+    const ids = TOOL_SECTIONS.map((section) => section.id);
+    const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+    expect(duplicates).toEqual([]);
+  });
 });

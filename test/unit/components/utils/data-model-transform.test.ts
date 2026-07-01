@@ -1188,6 +1188,73 @@ describe('data-model-transform', () => {
     });
   });
 
+  describe('collapseToLegacy - table blocks (self-managing container)', () => {
+    it('preserves a table subtree when no flat container blocks are present', () => {
+      // A Blok-native table stores its cells as child blocks referenced by id
+      // (data.content[row][col].blocks). Collapsing it must NOT strip the
+      // table's content nor the cells' parent — that would eject the cell
+      // paragraphs to the document root and lose the cell↔table linkage.
+      const blocks: OutputBlockData[] = [
+        {
+          id: 't1',
+          type: 'table',
+          data: { withHeadings: false, content: [[{ blocks: ['c1'] }, { blocks: ['c2'] }]] },
+          content: ['c1', 'c2'],
+        },
+        { id: 'c1', type: 'paragraph', data: { text: 'Cell A' }, parent: 't1' },
+        { id: 'c2', type: 'paragraph', data: { text: 'Cell B' }, parent: 't1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      const table = result.find(b => b.id === 't1');
+      const cellA = result.find(b => b.id === 'c1');
+      const cellB = result.find(b => b.id === 'c2');
+
+      expect(table?.content).toEqual(['c1', 'c2']);
+      expect(cellA?.parent).toBe('t1');
+      expect(cellB?.parent).toBe('t1');
+    });
+
+    it('preserves a table subtree even when other blocks force the collapse path', () => {
+      // A legacy toggle in the document makes collapseToLegacy run its full
+      // per-block loop instead of the early strip-all return. The table subtree
+      // must still survive intact.
+      const blocks: OutputBlockData[] = [
+        { id: 'tog', type: 'toggle', data: { text: 'Toggle' }, content: ['tc'] },
+        { id: 'tc', type: 'paragraph', data: { text: 'toggle child' }, parent: 'tog' },
+        {
+          id: 't1',
+          type: 'table',
+          data: { withHeadings: false, content: [[{ blocks: ['c1'] }]] },
+          content: ['c1'],
+        },
+        { id: 'c1', type: 'paragraph', data: { text: 'Cell A' }, parent: 't1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      const table = result.find(b => b.id === 't1');
+      const cellA = result.find(b => b.id === 'c1');
+
+      expect(table?.content).toEqual(['c1']);
+      expect(cellA?.parent).toBe('t1');
+    });
+
+    it('still strips a legacy string-cell table that has no child block refs', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 't1', type: 'table', data: { withHeadings: false, content: [['A', 'B']] } },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      const table = result.find(b => b.id === 't1');
+
+      expect(table?.parent).toBeUndefined();
+      expect(table?.content).toBeUndefined();
+    });
+  });
+
   describe('collapseToLegacy - toggle blocks', () => {
     it('collapses toggle + child blocks back to toggleList format', () => {
       const blocks: OutputBlockData[] = [

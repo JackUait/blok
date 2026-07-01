@@ -2520,6 +2520,104 @@ describe('KeyboardNavigation', () => {
 
       isCaretAtEndOfInputSpy.mockRestore();
     });
+
+    it('removes the empty container child instead of absorbing the next sibling (m2 is top-level only)', () => {
+      // A forward-Delete on an EMPTY child of a container (toggle/callout/column)
+      // that HAS a previous sibling must remove THAT child and keep focus in the
+      // container — never pull the next sibling's text up (the m2 root-paragraph
+      // merge branch must not hijack container children).
+      const nextBlock = createBlock({ id: 'child-next', parentId: 'p', isEmpty: false, mergeable: true });
+      const emptyCurrentBlock = createBlock({ id: 'child-current', parentId: 'p', isEmpty: true, mergeable: true });
+      const prevSibling = createBlock({ id: 'child-prev', parentId: 'p', isEmpty: false });
+      const close = vi.fn();
+      const setToBlock = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      let currentBlockValue = emptyCurrentBlock;
+      const removeBlock = vi.fn((block: Block) => {
+        if (block === emptyCurrentBlock) {
+          currentBlockValue = nextBlock;
+        }
+      });
+      const blok = createBlokModules({
+        BlockManager: {
+          nextBlock,
+          previousBlock: prevSibling,
+          removeBlock,
+          mergeBlocks,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+
+      Object.defineProperty(blok.BlockManager, 'currentBlock', {
+        get() {
+          return currentBlockValue;
+        },
+        configurable: true,
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      // The empty child is removed; the next sibling is NOT absorbed.
+      expect(removeBlock).toHaveBeenCalledWith(emptyCurrentBlock);
+      expect(mergeBlocks).not.toHaveBeenCalledWith(emptyCurrentBlock, nextBlock);
+      expect(setToBlock).toHaveBeenCalledWith(nextBlock, 'start');
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    it('does nothing when the empty container child is the FIRST child (no previous sibling)', () => {
+      // A forward-Delete on the empty FIRST child of a non-column container must
+      // be a no-op — the m2 merge branch must not absorb the next sibling here.
+      const nextBlock = createBlock({ id: 'child-next', parentId: 'toggle', isEmpty: false, mergeable: true });
+      const emptyCurrentBlock = createBlock({ id: 'child-current', parentId: 'toggle', isEmpty: true, mergeable: true });
+      const toggleBlock = createBlock({ id: 'toggle', name: 'toggle', parentId: null, contentIds: ['child-current', 'child-next'] });
+      const close = vi.fn();
+      const setToBlock = vi.fn();
+      const mergeBlocks = vi.fn(() => Promise.resolve());
+      const removeBlock = vi.fn();
+      const getBlockById = vi.fn((id: string) => (id === 'toggle' ? toggleBlock : undefined));
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyCurrentBlock,
+          nextBlock,
+          previousBlock: null,
+          removeBlock,
+          mergeBlocks,
+          getBlockById,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          close,
+        } as unknown as BlokModules['Toolbar'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Delete' });
+
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleDelete(event);
+
+      // No block is merged or removed — the caret stays put inside the toggle.
+      expect(mergeBlocks).not.toHaveBeenCalled();
+      expect(removeBlock).not.toHaveBeenCalled();
+
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
   });
 
   describe('handleArrowRightAndDown', () => {

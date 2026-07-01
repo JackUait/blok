@@ -147,18 +147,37 @@ export abstract class BasePasteHandler implements PasteHandler {
       // middle lines become new blocks, and the current block's post-caret
       // remainder rides with the LAST pasted segment.
       const isInlineMultiline = data.every((item) => !item.isBlock);
-      const canCaretSplit = isInlineMultiline &&
-        currentBlock !== undefined &&
-        !currentBlock.isEmpty &&
-        currentBlock.currentInput != null;
 
-      const linesToInsert = canCaretSplit
-        ? await this.caretSplitFirstLine(data)
-        : data;
-
+      // Container context: the caret is either in a container's title (the block
+      // owns the [data-blok-toggle-children] region but the caret is outside it)
+      // or inside a container child (the block's holder lives within that region).
+      // A caret-split would wrongly merge the first line into the title/child, so
+      // it must be suppressed — the pasted lines belong in the container's children.
       const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
       const isInContainerTitle = childContainer !== null &&
         !childContainer.contains(currentBlock?.currentInput ?? null);
+      const isInContainerChild = currentBlock?.holder?.closest('[data-blok-toggle-children]') != null;
+      const isContainerContext = isInContainerTitle || isInContainerChild;
+
+      // A newline-prefixed paste has an empty first segment: there is no real
+      // inline first line to merge, so suppress the caret-split and drop the
+      // empty lead — the remaining lines become new blocks.
+      const firstSegmentIsEmpty = isInlineMultiline &&
+        (data[0]?.content?.textContent ?? '').trim() === '';
+
+      const canCaretSplit = isInlineMultiline &&
+        currentBlock !== undefined &&
+        !currentBlock.isEmpty &&
+        currentBlock.currentInput != null &&
+        !isContainerContext &&
+        !firstSegmentIsEmpty;
+
+      const linesToInsert = canCaretSplit
+        ? await this.caretSplitFirstLine(data)
+        : firstSegmentIsEmpty
+          ? data.slice(1)
+          : data;
+
       const contextParentId = isInContainerTitle
         ? (currentBlock?.id ?? null)
         : (currentBlock?.parentId ?? null);

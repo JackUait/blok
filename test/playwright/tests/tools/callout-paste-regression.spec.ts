@@ -108,23 +108,28 @@ test.describe('Callout paste regression: children never ejected on save', () => 
 
     expect(saved).toBeDefined();
 
-    // No root-level paragraphs — everything must be nested under the callout
-    const rootParagraphs = saved?.blocks.filter(b => b.type === 'paragraph' && b.parent === undefined);
+    // Nothing may be ejected to the root — every non-callout block stays nested.
+    // ("1. …\n2. …" is markdown-detected and rendered as list items; the point of
+    // this regression is that the pasted content is never pushed out of the callout,
+    // regardless of the block type it converts to.)
+    const rootPasted = saved?.blocks.filter(
+      b => b.id !== 'cal1' && b.parent === undefined && (b.type === 'paragraph' || b.type === 'list')
+    );
 
-    expect(rootParagraphs).toHaveLength(0);
+    expect(rootPasted).toHaveLength(0);
 
-    // Callout must reference both the original header and every pasted paragraph
+    // Callout must reference the original header and every pasted (nested) block.
     const callout = saved?.blocks.find(b => b.id === 'cal1');
 
     expect(callout?.content).toBeDefined();
     expect(callout?.content).toContain('hdr1');
 
-    const childParagraphIds = saved?.blocks
-      .filter(b => b.type === 'paragraph' && b.parent === 'cal1')
+    const pastedChildIds = saved?.blocks
+      .filter(b => b.parent === 'cal1' && b.id !== 'hdr1')
       .map(b => b.id);
 
-    expect(childParagraphIds?.length ?? 0).toBeGreaterThanOrEqual(1);
-    for (const childId of childParagraphIds ?? []) {
+    expect(pastedChildIds?.length ?? 0).toBeGreaterThanOrEqual(1);
+    for (const childId of pastedChildIds ?? []) {
       expect(callout?.content).toContain(childId);
     }
   });

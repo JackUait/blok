@@ -1521,6 +1521,63 @@ const mergeContentIds = (
   return merged;
 };
 
+/**
+ * Ids that must keep their flat parent/content hierarchy through a legacy
+ * collapse: every `table` block that references its cell content by block id
+ * (`data.content[row][col].blocks`) plus each referenced child.
+ *
+ * A Blok-native table always stores its cells as child blocks — even inside a
+ * document whose top-level shape is otherwise legacy. Unlike list/toggle/callout
+ * (whose bodies fold inline into legacy fields), a table has NO inline legacy
+ * body to fold cell blocks into, so the collapse's strip paths would eject the
+ * cell paragraphs to the document root (dropping the table's `content` and each
+ * cell's `parent`) — silent data loss. Preserving the subtree as-is keeps the
+ * table in its Blok-native block-ref shape, which round-trips correctly.
+ * @param blocks - flat block array being collapsed
+ */
+const collectPreservedContainerSubtreeIds = (blocks: OutputBlockData[]): Set<BlockId> => {
+  const preserved = new Set<BlockId>();
+
+  for (const block of blocks) {
+    if (block.type !== 'table' || block.id === undefined || block.id === null) {
+      continue;
+    }
+
+    const content = (block.data as { content?: unknown }).content;
+
+    if (!Array.isArray(content)) {
+      continue;
+    }
+
+    let tableHasRefCells = false;
+
+    for (const row of content) {
+      if (!Array.isArray(row)) {
+        continue;
+      }
+      for (const cell of row) {
+        const cellBlocks = (cell as { blocks?: unknown }).blocks;
+
+        if (!Array.isArray(cellBlocks)) {
+          continue;
+        }
+        for (const childId of cellBlocks) {
+          if (typeof childId === 'string') {
+            preserved.add(childId);
+            tableHasRefCells = true;
+          }
+        }
+      }
+    }
+
+    if (tableHasRefCells) {
+      preserved.add(block.id);
+    }
+  }
+
+  return preserved;
+};
+
 export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] => {
   // Defense-in-depth: reconcile each parent's content[] from children's parent
   // fields before processing. Saver is the primary source of truth for content[]
@@ -1562,6 +1619,12 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
   }
 
+  // Self-managing containers (tables) keep their child-block subtree flat
+  // instead of being stripped — see collectPreservedContainerSubtreeIds.
+  const preservedIds = collectPreservedContainerSubtreeIds(reconciledBlocks);
+  const isPreserved = (block: OutputBlockData): boolean =>
+    block.id !== undefined && block.id !== null && preservedIds.has(block.id);
+
   // If no flat-model list, toggle, or callout blocks, just strip hierarchy fields and return
   const hasFlatListBlocks = reconciledBlocks.some(isFlatModelListBlock);
   const hasFlatToggleBlocks = reconciledBlocks.some(isFlatModelToggleBlock);
@@ -1569,7 +1632,7 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
   const hasFlatCalloutBlocks = reconciledBlocks.some(isFlatModelCalloutBlock);
 
   if (!hasFlatListBlocks && !hasFlatToggleBlocks && !hasFlatToggleableHeaders && !hasFlatCalloutBlocks) {
-    return reconciledBlocks.map(stripHierarchyFields);
+    return reconciledBlocks.map(block => (isPreserved(block) ? block : stripHierarchyFields(block)));
   }
 
   // Process blocks, converting root flat-model list blocks to legacy List blocks
@@ -1618,7 +1681,7 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
 
     if (isNonListItem) {
-      result.push(collapseNonListBlock(block, blockMap));
+      result.push(isPreserved(block) ? block : collapseNonListBlock(block, blockMap));
       markBlockAsProcessed(block.id, processedIds);
     }
   }

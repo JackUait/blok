@@ -462,8 +462,13 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
 
     priv.hierarchy = hierarchy;
     priv.repository = repository;
-    priv.yjsSync = { isSyncingFromYjs: false };
-     
+    priv.yjsSync = {
+      isSyncingFromYjs: false,
+      withAtomicOperation: (fn: () => void): void => {
+        fn();
+      },
+    };
+
     priv._blocks = blocksStore;
     priv.operations = { suppressStopCapturing: false };
 
@@ -525,6 +530,31 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     }
 
     harness.blockManager.setBlockParent(child, 'parent-a');
+
+    expect(child.call).toHaveBeenCalledWith('moved', expect.objectContaining({
+      fromIndex: expect.any(Number),
+      toIndex: expect.any(Number),
+    }));
+  });
+
+  it('fires the block tool MOVED hook on reparentFromHistoryReplay (undo/redo restores structural depth)', () => {
+    // Regression (undo-redo.spec "nested list indentation"): Tab-indent on a flat
+    // list item performs a structural reparent whose MOVED hook makes the list tool
+    // recompute _data.depth. Undo replays that reparent through
+    // reparentFromHistoryReplay, which called hierarchy.setBlockParent directly and
+    // never fired MOVED — so parentId was restored but the list tool's flat depth
+    // carrier stayed stale and save() returned the wrong depth.
+    const harness = createHarness([
+      { id: 'parent-a', parentId: null, contentIds: [] },
+      { id: 'child', parentId: 'parent-a', contentIds: [] },
+    ]);
+    const child = harness.repository.getBlockById('child');
+
+    if (child === undefined) {
+      throw new Error('child block missing');
+    }
+
+    harness.blockManager.reparentFromHistoryReplay(child, null);
 
     expect(child.call).toHaveBeenCalledWith('moved', expect.objectContaining({
       fromIndex: expect.any(Number),

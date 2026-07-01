@@ -90,8 +90,18 @@ export class TextHandler extends BasePasteHandler implements PasteHandler {
       return [];
     }
 
-    const lines = plain.split(/\r?\n/).filter((text) => text.trim());
-    const applyListStyle = listTarget != null && lines.length > 1;
+    const rawLines = plain.split(/\r?\n/);
+    const contentLines = rawLines.filter((text) => text.trim());
+
+    // Preserve a single leading blank segment when a multi-line paste begins
+    // with blank line(s). It signals "there is no real inline first line", so
+    // the caret-split is suppressed downstream (base.ts firstSegmentIsEmpty)
+    // and the current block's content is never merged into — the pasted lines
+    // become their own blocks. Only applied for 2+ content lines so a single
+    // blank-prefixed line keeps its inline paste behavior.
+    const startsBlank = rawLines[0]?.trim() === '' && contentLines.length > 1;
+    const lines = startsBlank ? ['', ...contentLines] : contentLines;
+    const applyListStyle = listTarget != null && contentLines.length > 1;
 
     return lines.map((text) => {
       const content = Dom.make('div');

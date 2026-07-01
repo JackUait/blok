@@ -102,6 +102,21 @@ export class BlockEvents extends Module {
     const keyCode = keyCodeFromEvent(event);
 
     /**
+     * Eagerly resolve currentBlock from the event target for keys that mutate
+     * block structure (Enter split, Backspace/Delete merge). The debounced
+     * selectionchange handler (180ms) may not have fired yet when the caret was
+     * set programmatically (e.g. inside a column), leaving currentBlock
+     * undefined — the handlers would then bail before preventDefault and the
+     * browser would perform a destructive native edit. Mirrors slashPressed.
+     */
+    if (
+      (keyCode === keyCodes.ENTER || keyCode === keyCodes.BACKSPACE || keyCode === keyCodes.DELETE) &&
+      event.target instanceof Node
+    ) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
+    /**
      * Fire keydown processor by normalized keyboard code
      */
     switch (keyCode) {

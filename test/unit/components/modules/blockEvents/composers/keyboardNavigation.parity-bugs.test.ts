@@ -749,6 +749,7 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       const emptyHeading = createBlock({
         id: 'empty-heading',
         name: 'header',
+        parentId: null,
         isEmpty: true,
         mergeable: true,
         holder: headingHolder,
@@ -762,6 +763,7 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       const nextParagraph = createBlock({
         id: 'next-paragraph',
         name: 'paragraph',
+        parentId: null,
         isEmpty: false,
         mergeable: true,
         tool: { isDefault: true, isLineBreaksEnabled: false, name: 'paragraph', conversionConfig: convertible } as unknown as Block['tool'],
@@ -795,8 +797,8 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
     it('merges a same-type next paragraph UP into an empty DEFAULT paragraph (upper wins)', () => {
       vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
 
-      const emptyParagraph = createBlock({ id: 'empty-paragraph', isEmpty: true, mergeable: true });
-      const nextParagraph = createBlock({ id: 'next-paragraph', isEmpty: false, mergeable: true });
+      const emptyParagraph = createBlock({ id: 'empty-paragraph', parentId: null, isEmpty: true, mergeable: true });
+      const nextParagraph = createBlock({ id: 'next-paragraph', parentId: null, isEmpty: false, mergeable: true });
 
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const removeBlock = vi.fn();
@@ -846,6 +848,7 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       const emptyParagraph = createBlock({
         id: 'empty-paragraph',
         name: 'paragraph',
+        parentId: null,
         isEmpty: true,
         mergeable: true,
         tool: { isDefault: true, isLineBreaksEnabled: false, name: 'paragraph', conversionConfig: convertible } as unknown as Block['tool'],
@@ -853,6 +856,7 @@ describe('KeyboardNavigation — Notion parity bugs', () => {
       const nextHeading = createBlock({
         id: 'next-heading',
         name: 'header',
+        parentId: null,
         isEmpty: false,
         mergeable: true,
         tool: { isDefault: false, isLineBreaksEnabled: false, name: 'header', conversionConfig: convertible } as unknown as Block['tool'],

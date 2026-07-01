@@ -864,8 +864,14 @@ export class KeyboardNavigation extends BlockEventComposer {
      * upper block is the plain default paragraph (the next styled block is demoted
      * to text) — previously default paragraphs fell through to line-break removal,
      * which let the LOWER block's type win (the m2 divergence).
+     *
+     * Restricted to TOP-LEVEL blocks: an empty CONTAINER child (toggle/callout/
+     * column row) shares its parentId with the next sibling, so this branch would
+     * otherwise absorb the sibling's text and delete it. Container children must
+     * fall through to the container-aware empty-block handling below (remove self
+     * when a previous sibling exists, no-op for a lone first child).
      */
-    if (currentBlock.isEmpty && areBlocksMergeable(currentBlock, nextBlock)) {
+    if (currentBlock.parentId === null && currentBlock.isEmpty && areBlocksMergeable(currentBlock, nextBlock)) {
       // The empty upper block absorbs the next block's text, so the caret belongs
       // at the START of the merged content (the empty input the pre-merge focus()
       // anchored to is replaced when the merge re-renders — re-anchor after it).

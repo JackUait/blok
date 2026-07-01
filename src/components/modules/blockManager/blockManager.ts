@@ -1128,6 +1128,27 @@ export class BlockManager extends Module {
     //   - any DOM mutation observer write-back into Yjs
     this.yjsSync.withAtomicOperation(() => {
       this.hierarchy.setBlockParent(block, newParentId);
+
+      // Fire the tool's MOVED lifecycle hook, mirroring the public
+      // setBlockParent path (~1053). The public path recomputes nesting-dependent
+      // UI here (e.g. the list tool re-derives its structural depth in moved()).
+      // Undo/redo replays a keyboard reparent through THIS method, so without
+      // firing MOVED the block's parentId is restored but the tool's cached
+      // structural state (list _data.depth) stays stale and save() returns the
+      // wrong depth. Runs inside withAtomicOperation (isSyncingFromYjs === true),
+      // so the handler only mutates tool-local _data/DOM and never emits an extra
+      // Yjs write.
+      const index = this.repository.getBlockIndex(block);
+
+      block.call(BlockToolAPI.MOVED, {
+        fromIndex: index,
+        toIndex: index,
+        // Mark this a STRUCTURAL move so a depth-carrying tool (list) recomputes
+        // its depth from the restored tree position instead of a stale in-memory
+        // carrier — essential on undo, where the block may be a freshly-rendered
+        // instance that lost its "was nested" flag.
+        structural: true,
+      });
     });
   }
 

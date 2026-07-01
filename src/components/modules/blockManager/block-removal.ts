@@ -276,7 +276,13 @@ export class BlockRemoval {
     indexInParent: number
   ): void {
     const containerInDom = container.holder.parentElement !== null;
-    const grandParentId = parentBlock?.id ?? null;
+    // A pure-layout `column`/`column_list` grandparent is treated like "no
+    // parent": promote children to root instead of reparenting them INTO the
+    // column. Reparenting would keep the column non-empty, so its
+    // collapse-when-childless check never fires and the column_list never
+    // unwraps. Real containers (toggle-in-toggle etc.) still promote one level.
+    const grandIsColumn = parentBlock?.name === 'column' || parentBlock?.name === 'column_list';
+    const grandParentId = (parentBlock !== undefined && !grandIsColumn) ? parentBlock.id : null;
     const promotedChildIds: string[] = [];
 
     for (const childId of childIds) {
@@ -297,7 +303,7 @@ export class BlockRemoval {
 
     // Slot the promoted children into the grandparent's contentIds where the
     // removed container used to sit, keeping sibling document order intact.
-    if (parentBlock !== undefined && indexInParent >= 0 && promotedChildIds.length > 0) {
+    if (parentBlock !== undefined && !grandIsColumn && indexInParent >= 0 && promotedChildIds.length > 0) {
       parentBlock.contentIds.splice(indexInParent, 0, ...promotedChildIds);
     }
   }

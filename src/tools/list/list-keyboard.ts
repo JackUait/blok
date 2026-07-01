@@ -168,13 +168,14 @@ const exitListOrOutdent = async (
 };
 
 /**
- * Handle Backspace key - convert to paragraph or clear content
+ * Handle Backspace key - outdent a nested item, or convert to paragraph
  */
 export const handleBackspace = async(
   context: KeyboardContext,
-  event: KeyboardEvent
+  event: KeyboardEvent,
+  depthValidator?: ListDepthValidator
 ): Promise<void> => {
-  const { blockId, data, element, getContentElement, syncContentFromDOM, api } = context;
+  const { blockId, data, element, getContentElement, syncContentFromDOM, getDepth, api } = context;
 
   const selection = window.getSelection();
   if (!selection || !element) return;
@@ -233,11 +234,34 @@ export const handleBackspace = async(
     return;
   }
 
-  // Notion parity (M-3): Backspace at the START of a non-empty list item converts
-  // it to a plain PARAGRAPH in place, KEEPING its current indent — a structurally
-  // nested item stays nested under the same parent because convert/replace
-  // preserves parentId. No outdent and no merge; a subsequent Backspace merges
-  // like a paragraph. (Top-level items already converted this way.)
+  // Notion parity (BUG #11): Backspace at the START of a NESTED list item OUTDENTS
+  // it one level while keeping its list type — mirroring the empty-item Enter path
+  // (exitListOrOutdent). A structurally nested (keyboard-Tab) item reparents to its
+  // grandparent; a flat drag-nested item drops one flat depth. Only a truly
+  // top-level item (no structural parent AND depth 0) converts to a paragraph.
+  const structuralParentId = getStructuralListParentId(api, blockId);
+
+  if (structuralParentId !== null) {
+    const grandparentId = api.blocks.getById(structuralParentId)?.parentId ?? null;
+
+    api.blocks.setBlockParent(blockId, grandparentId);
+
+    const outdentedBlock = api.blocks.getById(blockId);
+
+    if (outdentedBlock !== null) {
+      setCaretToBlockContent(api, outdentedBlock, 'start');
+    }
+
+    return;
+  }
+
+  if (getDepth() > 0) {
+    await handleOutdent(context, depthValidator);
+
+    return;
+  }
+
+  // Top-level item: convert to a plain PARAGRAPH in place, preserving content.
   const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
 
   setCaretToBlockContent(api, newBlock, 'start');

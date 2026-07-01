@@ -165,6 +165,149 @@ describe('BasePasteHandler — multi-line plain-text paste into a non-empty bloc
   });
 });
 
+describe('BasePasteHandler — caret split is suppressed in container / newline-prefixed contexts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildHandler = (currentBlock: Record<string, unknown>): {
+    handler: TestHandler;
+    pasteMock: ReturnType<typeof vi.fn>;
+    caret: {
+      insertContentAtCaretPosition: ReturnType<typeof vi.fn>;
+      extractFragmentFromCaretPosition: ReturnType<typeof vi.fn>;
+    };
+  } => {
+    const { blok, pasteMock } = createBlok();
+
+    const blokModules = blok as unknown as {
+      BlockManager: { currentBlock: Record<string, unknown> };
+      Caret: {
+        insertContentAtCaretPosition: ReturnType<typeof vi.fn>;
+        extractFragmentFromCaretPosition: ReturnType<typeof vi.fn>;
+      };
+    };
+
+    blokModules.BlockManager.currentBlock = currentBlock;
+    blokModules.Caret.extractFragmentFromCaretPosition = vi.fn(() => document.createDocumentFragment());
+
+    const handler = new TestHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+
+    return { handler, pasteMock, caret: blokModules.Caret };
+  };
+
+  it('does NOT caret-merge the first line when the caret is inside a container child (toggle child)', async () => {
+    // currentBlock.holder lives inside a [data-blok-toggle-children] region, so the
+    // pasted lines must land in the container, not merge into the clicked child.
+    const childrenContainer = document.createElement('div');
+
+    childrenContainer.setAttribute('data-blok-toggle-children', '');
+
+    const childHolder = document.createElement('div');
+
+    childrenContainer.append(childHolder);
+
+    const currentInput = document.createElement('div');
+
+    childHolder.append(currentInput);
+
+    const { handler, pasteMock, caret } = buildHandler({
+      id: 'child',
+      name: 'paragraph',
+      parentId: 'toggle-1',
+      isEmpty: false,
+      currentInput,
+      holder: childHolder,
+      tool: { baseSanitizeConfig: {} },
+    });
+
+    const data: PasteData[] = [
+      createInlinePasteItem('paragraph', 'First'),
+      createInlinePasteItem('paragraph', 'Second'),
+      createInlinePasteItem('paragraph', 'Third'),
+    ];
+
+    await handler.callInsertPasteData(data, false);
+
+    // No inline merge — all three lines become separate blocks.
+    expect(caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
+    expect(caret.extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+    expect(pasteMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('does NOT caret-merge the first line when the caret is in a container title', async () => {
+    // The toggle title block itself owns the [data-blok-toggle-children] region;
+    // the caret (currentInput) is in the title, outside that region.
+    const holder = document.createElement('div');
+    const currentInput = document.createElement('div');
+
+    holder.append(currentInput);
+
+    const childrenContainer = document.createElement('div');
+
+    childrenContainer.setAttribute('data-blok-toggle-children', '');
+    holder.append(childrenContainer);
+
+    const { handler, pasteMock, caret } = buildHandler({
+      id: 'toggle-1',
+      name: 'toggle',
+      parentId: null,
+      isEmpty: false,
+      currentInput,
+      holder,
+      tool: { baseSanitizeConfig: {} },
+    });
+
+    const data: PasteData[] = [
+      createInlinePasteItem('paragraph', 'First'),
+      createInlinePasteItem('paragraph', 'Second'),
+      createInlinePasteItem('paragraph', 'Third'),
+    ];
+
+    await handler.callInsertPasteData(data, false);
+
+    expect(caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
+    expect(caret.extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+    expect(pasteMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('does NOT caret-merge and drops the empty lead when the paste is newline-prefixed (empty first segment)', async () => {
+    const holder = document.createElement('div');
+    const currentInput = document.createElement('div');
+
+    holder.append(currentInput);
+
+    const { handler, pasteMock, caret } = buildHandler({
+      id: 'existing',
+      name: 'paragraph',
+      parentId: null,
+      isEmpty: false,
+      currentInput,
+      holder,
+      tool: { baseSanitizeConfig: {} },
+    });
+
+    // Leading empty segment models a paste that began with a newline.
+    const data: PasteData[] = [
+      createInlinePasteItem('paragraph', ''),
+      createInlinePasteItem('paragraph', 'Second block'),
+      createInlinePasteItem('paragraph', 'Third block'),
+    ];
+
+    await handler.callInsertPasteData(data, false);
+
+    // No inline merge, and the empty lead is dropped: only the two real lines
+    // become new blocks.
+    expect(caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
+    expect(caret.extractFragmentFromCaretPosition).not.toHaveBeenCalled();
+    expect(pasteMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('BasePasteHandler — multi-item paste undo grouping', () => {
   beforeEach(() => {
     vi.clearAllMocks();

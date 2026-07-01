@@ -25,4 +25,12 @@ export interface MoveEvent {
    * invariant. Undefined for keyboard/programmatic moves and group drags.
    */
   targetDepth?: number;
+  /**
+   * True when the move is a STRUCTURAL reparent (parentId/contentIds) whose depth
+   * must be derived from the block tree, not the tool's cached carrier — e.g. an
+   * undo/redo history replay. A depth-carrying tool (list) MUST recompute its
+   * depth from its structural position (0 when it now has no list parent), even
+   * on a freshly-rendered instance that has lost its in-memory "was nested" flag.
+   */
+  structural?: boolean;
 }

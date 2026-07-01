@@ -1,12 +1,11 @@
 /**
  * Regression tests for Backspace at the START of a list item.
  *
- * Notion parity (M-3): Backspace at offset 0 of a NON-EMPTY list item converts it
- * to a plain PARAGRAPH in place, KEEPING its current indent — a structurally
- * nested item stays nested under the same parent (convert/replace preserves
- * parentId). It does NOT outdent and does NOT merge; a later Backspace then merges
- * like a paragraph. This supersedes the earlier "nested item outdents" lock — top
- * AND nested items now converge on the same convert-to-paragraph behavior.
+ * Notion parity (BUG #11): Backspace at offset 0 of a NESTED list item OUTDENTS it
+ * one level while KEEPING its list type — mirroring the empty-item Enter path
+ * (exitListOrOutdent). A structurally nested item reparents to its grandparent; a
+ * flat drag-nested item (data.depth > 0) drops one depth. Only a truly TOP-LEVEL
+ * item (no structural parent AND depth 0) converts to a plain PARAGRAPH in place.
  *
  * Notion parity (m-10): a modifier-held Backspace (Cmd/Ctrl/Alt) is a word/line
  * delete, not a list op. At offset 0 native delete is a no-op, so the marker stays
@@ -69,11 +68,11 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-describe('handleBackspace — non-empty item converts to a paragraph in place', () => {
-  it('converts a STRUCTURALLY nested item to a paragraph (no outdent, keeps parentId via convert)', async () => {
+describe('handleBackspace — nested item outdents, top-level converts to a paragraph', () => {
+  it('OUTDENTS a STRUCTURALLY nested item by reparenting to its grandparent (stays a list, no convert)', async () => {
     // Tree: root(list) > parent(list) > nested(list). Backspace at the start of
-    // `nested` converts it to a paragraph that STAYS nested under `parent` —
-    // convert()/replace() preserves parentId. It must NOT reparent to grandparent.
+    // `nested` outdents it one level: it reparents to `root` (parent's parent) and
+    // stays a list item. It must NOT convert to a paragraph.
     const tree: Record<string, { id: string; name: string; parentId: string | null }> = {
       root: { id: 'root', name: 'list', parentId: null },
       parent: { id: 'parent', name: 'list', parentId: 'root' },
@@ -81,7 +80,7 @@ describe('handleBackspace — non-empty item converts to a paragraph in place', 
     };
 
     const setBlockParent = vi.fn();
-    const convert = vi.fn().mockResolvedValue(createConvertedBlock('nested'));
+    const convert = vi.fn();
     const api = {
       blocks: {
         getById: (id: string) => tree[id] ?? null,
@@ -113,14 +112,14 @@ describe('handleBackspace — non-empty item converts to a paragraph in place', 
 
     await handleBackspace(context, createKeyboardEvent());
 
-    // Converted to a paragraph in place; NOT reparented/outdented.
-    expect(convert).toHaveBeenCalledWith('nested', 'paragraph', { text: 'nested item' });
-    expect(setBlockParent).not.toHaveBeenCalled();
+    // Reparented to the grandparent (`root`); NOT converted to a paragraph.
+    expect(setBlockParent).toHaveBeenCalledWith('nested', 'root');
+    expect(convert).not.toHaveBeenCalled();
   });
 
-  it('converts a FLAT (drag-nested) item to a paragraph (no flat-depth outdent)', async () => {
-    const convert = vi.fn().mockResolvedValue(createConvertedBlock('flat'));
-    const update = vi.fn();
+  it('OUTDENTS a FLAT (drag-nested) item by dropping one depth (stays a list, no convert)', async () => {
+    const convert = vi.fn();
+    const update = vi.fn().mockResolvedValue(createConvertedBlock('flat'));
     const api = {
       blocks: {
         // A FLAT item: depth lives on data.depth, parentId is null.
@@ -157,9 +156,9 @@ describe('handleBackspace — non-empty item converts to a paragraph in place', 
 
     await handleBackspace(context, createKeyboardEvent());
 
-    // Converts to a paragraph; the old flat-depth outdent (update depth-1) is gone.
-    expect(convert).toHaveBeenCalledWith('flat', 'paragraph', { text: 'flat item' });
-    expect(update).not.toHaveBeenCalled();
+    // Flat-depth outdent (update to depth 0); NOT converted to a paragraph.
+    expect(convert).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith('flat', expect.objectContaining({ depth: 0 }));
   });
 
   it('converts a TOP-LEVEL item to a paragraph (preserving content)', async () => {

@@ -78,6 +78,55 @@ describe('MarkdownHandler', () => {
     }
   });
 
+  it('reparents list-shaped markdown under the container when pasted into a container child', async () => {
+    const setBlockParent = vi.fn();
+    const holder = document.createElement('div');
+    const currentInput = document.createElement('div');
+
+    holder.appendChild(currentInput);
+
+    const composedById = new Map<string, { id: string; parentId?: string }>();
+    const compose = vi.fn().mockImplementation((options: { id: string; parentId?: string }) => {
+      const block = { id: options.id, parentId: options.parentId };
+
+      composedById.set(options.id, block);
+
+      return block;
+    });
+
+    const containerBlok = {
+      BlockManager: {
+        composeBlock: compose,
+        insertMany: vi.fn(),
+        removeBlock: vi.fn().mockResolvedValue(undefined),
+        setBlockParent,
+        currentBlock: {
+          id: 'body1',
+          parentId: 'cal1',
+          isEmpty: true,
+          currentInput,
+          holder,
+        },
+        currentBlockIndex: 1,
+      },
+      Caret: { setToBlock: vi.fn(), positions: { END: 'end' } },
+    } as unknown as BlokModules;
+
+    const containerHandler = new MarkdownHandler(containerBlok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+
+    const handled = await containerHandler.handle('1. First line\n2. Second line\n3. Third line', {
+      canReplaceCurrentBlock: false,
+    });
+
+    expect(handled).toBe(true);
+    // Every top-level produced block (all three list items) must be reparented
+    // under the callout so they stay inside the container instead of ejecting.
+    expect(setBlockParent).toHaveBeenCalledTimes(3);
+    for (const call of setBlockParent.mock.calls) {
+      expect(call[1]).toBe('cal1');
+    }
+  });
+
   it('normalizes flat-array table children even if markdownToBlocks emits children without parent', async () => {
     // Defense-in-depth: if mdast-to-blocks ever regresses to emitting the
     // dodopizza shape (table cells reference children by id but the children

@@ -170,6 +170,32 @@ describe('TextHandler — list-style propagation on multi-line plain paste', () 
     expect(updateCalls.every((c) => c.data.style === 'unordered')).toBe(true);
   });
 
+  it('newline-prefixed multi-line paste into a NON-EMPTY block keeps all lines as new blocks (no first-line merge)', async () => {
+    // Regression (undo-redo :1816): pasting "\n\nSecond\n\nThird" into a
+    // non-empty block must NOT caret-merge the first line into the current
+    // block. The leading blank is preserved as an empty segment so base.ts
+    // suppresses the caret-split and both content lines become new blocks.
+    const paragraph = {
+      id: 'p',
+      name: 'paragraph',
+      parentId: null,
+      isEmpty: false,
+      currentInput: document.createElement('div'),
+      holder: document.createElement('div'),
+      tool: { baseSanitizeConfig: {} },
+      data: Promise.resolve({ text: 'Existing' }),
+    };
+    const { blok, pasteCalls } = createBlok(paragraph);
+    const handler = new TextHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder, config);
+
+    await handler.handle('\n\nSecond block\n\nThird block', { canReplaceCurrentBlock: false });
+
+    // Both content lines insert as new blocks; the current block is untouched.
+    expect(pasteCalls).toHaveLength(2);
+    expect(pasteCalls.map((c) => c.content.textContent)).toEqual(['Second block', 'Third block']);
+    expect(blok.Caret.insertContentAtCaretPosition).not.toHaveBeenCalled();
+  });
+
   it('does not alter normal paragraph paste (no list target)', async () => {
     const paragraph = {
       id: 'p',

@@ -250,7 +250,12 @@ export class ListItem implements BlockTool {
     }
 
     const structuralDepth = this.getStructuralListDepth();
-    const isStructural = structuralDepth !== null || this.wasStructurallyNested;
+    // A history-replay reparent (undo/redo) is definitionally structural: derive
+    // depth from the tree even on a freshly-rendered instance whose in-memory
+    // `wasStructurallyNested` flag was reset. Without this, undoing a keyboard Tab
+    // leaves the flat `data.depth` carrier stale (still 1) so save() reports the
+    // wrong depth.
+    const isStructural = event.structural === true || structuralDepth !== null || this.wasStructurallyNested;
 
     if (isStructural) {
       // Keyboard Tab/Shift+Tab nests/outdents list items STRUCTURALLY
@@ -562,7 +567,7 @@ export class ListItem implements BlockTool {
       getDepth: this.getDepth.bind(this),
     };
 
-    await handleBackspace(context, event);
+    await handleBackspace(context, event, this.depthValidator);
   }
 
   private async handleIndent(): Promise<void> {

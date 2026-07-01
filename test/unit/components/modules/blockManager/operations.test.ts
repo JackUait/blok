@@ -1184,6 +1184,45 @@ describe('BlockOperations', () => {
       expect(repo.getBlockById('c1')).toBeDefined();
       expect(repo.getBlockById('p1b')).toBeDefined();
     });
+
+    /**
+     * Regression: removing a CONTAINER block (callout/toggle/table/database)
+     * whose parent is a pure-layout `column` must promote its children to ROOT,
+     * not reparent them INTO the column. Reparenting into the column keeps the
+     * column non-empty, so the collapse-when-childless check never fires and the
+     * column_list never unwraps (7 failing e2e tests).
+     */
+    it('promotes a container\'s children to root (not into the column) when the container sits in a column', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['callout'] });
+      const callout = createMockBlock({ id: 'callout', name: 'callout', parentId: 'c1', contentIds: ['x1', 'x2'] });
+      const x1 = createMockBlock({ id: 'x1', name: 'paragraph', parentId: 'callout' });
+      const x2 = createMockBlock({ id: 'x2', name: 'paragraph', parentId: 'callout' });
+      const column2 = createMockBlock({ id: 'c2', name: 'column', parentId: 'cl1', contentIds: ['p2'] });
+      const para2 = createMockBlock({ id: 'p2', name: 'paragraph', parentId: 'c2' });
+
+      const store = createBlocksStore([columnList, column1, callout, x1, x2, column2, para2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      const target = repo.getBlockById('callout');
+      if (!target) {
+        throw new Error('Test setup failed: callout not found');
+      }
+
+      await ops.removeBlock(target, false, false, store);
+
+      // Promoted children survive at ROOT, never parked in the column.
+      expect(x1.parentId).toBeNull();
+      expect(x2.parentId).toBeNull();
+      expect(column1.contentIds).not.toContain('x1');
+      expect(column1.contentIds).not.toContain('x2');
+      // With no children left, the column (and hence its unwrap) can collapse.
+      expect(column1.contentIds).toEqual([]);
+    });
   });
 
   describe('update', () => {

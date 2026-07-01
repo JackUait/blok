@@ -120,17 +120,43 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
       ? BlockManager.currentBlockIndex
       : BlockManager.currentBlockIndex + 1;
 
+    // Container membership: when the caret sits inside a container child (e.g. a
+    // callout/toggle body) the converted top-level blocks must stay inside that
+    // container instead of ejecting to the root. Mirrors BasePasteHandler's
+    // contextParentId capture. The container itself is NOT part of the inserted
+    // set, so we reparent AFTER insertMany via setBlockParent (insertMany would
+    // otherwise clear a parentId that points outside its input).
+    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
+    const isInContainerTitle = childContainer !== null &&
+      !childContainer.contains(currentBlock?.currentInput ?? null);
+    const contextParentId = isInContainerTitle
+      ? (currentBlock?.id ?? null)
+      : (currentBlock?.parentId ?? null);
+
     // Compose Block instances from OutputBlockData
-    const blocksToInsert = outputBlocks.map(({ id, type, data: blockData, parent }) =>
-      BlockManager.composeBlock({
+    const composed = outputBlocks.map(({ id, type, data: blockData, parent }) => ({
+      block: BlockManager.composeBlock({
         id,
         tool: type,
         data: blockData,
         parentId: parent,
-      })
-    );
+      }),
+      hasParent: parent !== undefined && parent !== null,
+    }));
+    const blocksToInsert = composed.map(({ block }) => block);
 
     BlockManager.insertMany(blocksToInsert, insertIndex);
+
+    // Reparent every top-level produced block into the surrounding container so
+    // the paste stays nested (hierarchical children like table cells already
+    // carry their own parent and are left untouched).
+    if (contextParentId !== null) {
+      for (const { block, hasParent } of composed) {
+        if (!hasParent) {
+          BlockManager.setBlockParent(block, contextParentId);
+        }
+      }
+    }
 
     // Remove the replaced empty block
     if (shouldReplace && currentBlock !== undefined) {

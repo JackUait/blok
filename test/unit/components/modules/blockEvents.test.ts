@@ -58,6 +58,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
       previousBlock: null,
       nextBlock: null,
       getBlockByChildNode: vi.fn(),
+      setCurrentBlockByChildNode: vi.fn(),
       insertDefaultBlockAtIndex: vi.fn(),
       removeBlock: vi.fn(),
       removeSelectedBlocks: vi.fn(),
@@ -321,6 +322,26 @@ describe('BlockEvents', () => {
       const event = createKeyboardEvent({ keyCode: keyCodes.TAB });
 
       expect(() => blockEvents.keydown(event)).not.toThrow();
+    });
+
+    it.each([
+      ['Enter', keyCodes.ENTER],
+      ['Backspace', keyCodes.BACKSPACE],
+      ['Delete', keyCodes.DELETE],
+    ])('eagerly resolves currentBlock from the event target on %s keydown', (_label, keyCode) => {
+      const setCurrentBlockByChildNode = vi.fn();
+      const target = document.createElement('div');
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          setCurrentBlockByChildNode,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createKeyboardEvent({ keyCode, target });
+
+      blockEvents.keydown(event);
+
+      expect(setCurrentBlockByChildNode).toHaveBeenCalledWith(target);
     });
 
     it('activates toolbox and inserts slash when "/" key is pressed in empty block', () => {

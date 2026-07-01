@@ -261,6 +261,13 @@ const editor = new Blok(config);`,
         default: "undefined",
         description: "Change callback function",
       },
+      {
+        option: "onSave",
+        type: "(data: OutputData, api: API) => void",
+        default: "undefined",
+        description:
+          "Reactive save callback — fires automatically with the full serialized content on every debounced content change, so you don't have to call save() by hand.",
+      },
     ],
   },
   {

@@ -78,8 +78,17 @@ export function Editor() {
     },
     save: {
       language: 'tsx',
-      // useBlok is null until the editor is ready, so guard the call.
-      code: `const data = await editor?.save();
+      // onSave is the idiomatic React path: it fires with the latest content
+      // on every change, so `data` always mirrors the editor — no manual
+      // save() polling needed.
+      code: `import { useState } from 'react';
+import type { OutputData } from '@jackuait/blok';
+
+const [data, setData] = useState<OutputData>();
+
+// Add onSave to the useBlok config below — no manual save() call needed.
+const editor = useBlok({ /* config */, onSave: setData });
+
 console.log(data?.blocks);`,
     },
   },
@@ -105,9 +114,18 @@ const editor = useBlok({
     },
     save: {
       language: 'typescript',
-      // useBlok returns a ref; unwrap it with .value before calling save().
-      code: `const data = await editor.value?.save();
-console.log(data?.blocks);`,
+      // onSave is the idiomatic Vue path: it fires with the latest content
+      // on every change, so `data` always mirrors the editor — no manual
+      // save() polling needed.
+      code: `import { ref } from 'vue';
+import type { OutputData } from '@jackuait/blok';
+
+const data = ref<OutputData>();
+
+// Add onSave to the useBlok config below — no manual save() call needed.
+const editor = useBlok({ /* config */, onSave: (d) => (data.value = d) });
+
+console.log(data.value?.blocks);`,
     },
   },
   angular: {

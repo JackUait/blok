@@ -439,6 +439,18 @@ describe('ApiSection', () => {
       const checkpoint = screen.getByTestId('quick-start-checkpoint');
       expect(normalize(checkpoint.textContent)).toContain('element with ID «editor» is missing');
     });
+
+    it('omits the missing-container troubleshooting note for non-vanilla frameworks', () => {
+      localStorage.setItem('blok-docs-framework', 'react');
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const checkpoint = screen.getByTestId('quick-start-checkpoint');
+      expect(normalize(checkpoint.textContent)).not.toContain('element with ID «editor» is missing');
+      // The framework-agnostic success line should still be there.
+      expect(normalize(checkpoint.textContent)).toContain(
+        'you should now see an empty editor with one paragraph block',
+      );
+      localStorage.clear();
+    });
   });
 
   describe('page-type badge', () => {

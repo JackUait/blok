@@ -173,9 +173,11 @@ const QuickStartContent: React.FC = () => {
         <p className="font-display text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
           <Typo>{t('api.quickStart.checkpoint')}</Typo>
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {renderInline(t('api.quickStart.troubleshooting'))}
-        </p>
+        {framework === 'vanilla' && (
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {renderInline(t('api.quickStart.troubleshooting'))}
+          </p>
+        )}
       </div>
     </div>
   );

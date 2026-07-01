@@ -119,6 +119,71 @@ describe('crop-editor', () => {
     expect(active[0].getAttribute('aria-checked')).toBe('true');
   });
 
+  it('ratio radiogroup has a single tab stop on the active chip', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const chips = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="radio"][data-ratio]')
+    );
+    const tabIndexes = chips.map((c) => c.tabIndex);
+    // Only the active (Free) chip is a tab stop; the rest are removed from the tab order.
+    expect(tabIndexes).toEqual([0, -1, -1, -1, -1, -1]);
+  });
+
+  it('ArrowRight in the radiogroup moves selection to the next ratio (selection follows focus)', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const chips = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="radio"][data-ratio]')
+    );
+    chips[0].focus();
+    chips[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+
+    expect(chips[1].getAttribute('aria-checked')).toBe('true');
+    expect(chips[1].getAttribute('data-active')).toBe('true');
+    expect(chips[0].getAttribute('aria-checked')).toBe('false');
+    expect(document.activeElement).toBe(chips[1]);
+    expect(chips.map((c) => c.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
+  });
+
+  it('Home/End jump to the first/last ratio chip', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const chips = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="radio"][data-ratio]')
+    );
+    chips[0].focus();
+    chips[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    expect(chips[chips.length - 1].getAttribute('aria-checked')).toBe('true');
+    expect(document.activeElement).toBe(chips[chips.length - 1]);
+
+    chips[chips.length - 1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    expect(chips[0].getAttribute('aria-checked')).toBe('true');
+    expect(document.activeElement).toBe(chips[0]);
+  });
+
+  it('clicking a chip keeps the tab stop in sync (roving refresh)', () => {
+    detach = mountCropEditor(container, {
+      url: 'x.png',
+      onApply: () => {},
+      onCancel: () => {},
+    });
+    const chips = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="radio"][data-ratio]')
+    );
+    chips[3].click();
+    expect(chips.map((c) => c.tabIndex)).toEqual([-1, -1, -1, 0, -1, -1]);
+  });
+
   it('does not render apply/cancel kbd hint', () => {
     detach = mountCropEditor(container, {
       url: 'x.png',

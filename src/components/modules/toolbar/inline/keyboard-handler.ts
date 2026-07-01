@@ -1,3 +1,5 @@
+import { Flipper } from '../../../flipper';
+
 import type { PopoverInline } from '../../../utils/popover/popover-inline';
 
 /**
@@ -7,7 +9,8 @@ import type { PopoverInline } from '../../../utils/popover/popover-inline';
  * - Check if flipper has focus (user is navigating with keyboard)
  * - Check if nested popover is open
  * - Close nested popover if open
- * - Handle keydown events (close toolbar on arrow keys, prevent horizontal navigation)
+ * - Handle keydown events (close toolbar on vertical arrows, flip between
+ *   items on horizontal arrows to honor the WAI-ARIA horizontal toolbar)
  */
 export class InlineKeyboardHandler {
   /**
@@ -39,10 +42,8 @@ export class InlineKeyboardHandler {
     }
 
     const mainFlipperHasFocus = popoverInline.flipper?.hasFocus() ?? false;
-    const nestedPopover = (popoverInline as unknown as { nestedPopover?: { flipper?: { hasFocus(): boolean } } | null }).nestedPopover;
-    const nestedFlipperHasFocus = nestedPopover?.flipper?.hasFocus() ?? false;
 
-    return mainFlipperHasFocus || nestedFlipperHasFocus;
+    return mainFlipperHasFocus || popoverInline.hasNestedPopoverOpen;
   }
 
   /**
@@ -84,27 +85,21 @@ export class InlineKeyboardHandler {
     const isVerticalArrowKey = event.key === 'ArrowDown' || event.key === 'ArrowUp';
     const isHorizontalArrowKey = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
 
-    const popoverWithFlipper = this.getPopover();
-    const mainFlipperHasFocus = popoverWithFlipper?.flipper?.hasFocus() ?? false;
-    const nestedPopover = popoverWithFlipper !== null
-      ? (popoverWithFlipper as unknown as { nestedPopover?: { flipper?: { hasFocus(): boolean } } | null }).nestedPopover
-      : null;
-    const hasNestedPopover = nestedPopover !== null && nestedPopover !== undefined;
-    const nestedFlipperHasFocus = nestedPopover?.flipper?.hasFocus() ?? false;
+    const popover = this.getPopover();
+    const flipper = popover?.flipper;
+    const mainFlipperHasFocus = flipper?.hasFocus() ?? false;
+    const hasNestedPopover = popover?.hasNestedPopoverOpen ?? false;
 
     /**
      * Close inline toolbar when Up/Down arrow key is pressed without Shift
      * This allows the user to move the cursor and collapse the selection
      *
      * However, if the user has already started keyboard navigation within the toolbar
-     * (by pressing Tab to focus on a toolbar item), we should allow arrow key navigation
-     * within the toolbar instead of closing it.
-     *
-     * Left/Right arrow keys should have no effect within the inline toolbar,
-     * so we don't close the toolbar when they are pressed.
+     * (by pressing Tab to focus on a toolbar item) or has opened a nested submenu,
+     * we should keep the toolbar open and let the flipper handle navigation.
      */
     const shouldCheckForClose = isVerticalArrowKey && !event.shiftKey && opened;
-    const shouldKeepOpen = mainFlipperHasFocus || hasNestedPopover || nestedFlipperHasFocus;
+    const shouldKeepOpen = mainFlipperHasFocus || hasNestedPopover;
 
     if (shouldCheckForClose && !shouldKeepOpen) {
       this.closeToolbar();
@@ -113,12 +108,23 @@ export class InlineKeyboardHandler {
     }
 
     /**
-     * When the inline toolbar is open and the flipper has focus,
-     * prevent horizontal arrow keys from doing anything (no navigation, no closing)
+     * Honor the horizontal ARIA toolbar orientation: when the flipper has focus
+     * and no nested popover is open, Left/Right move focus between toolbar
+     * items instead of being swallowed. When a nested popover IS open, defer to
+     * it (its own flipper opens the submenu on Right and closes it on Left), so
+     * we neither flip nor swallow the event here.
      */
-    if (isHorizontalArrowKey && opened && mainFlipperHasFocus) {
+    if (isHorizontalArrowKey && opened && mainFlipperHasFocus && !hasNestedPopover) {
       event.preventDefault();
       event.stopPropagation();
+
+      if (flipper instanceof Flipper) {
+        if (event.key === 'ArrowRight') {
+          flipper.flipRight();
+        } else {
+          flipper.flipLeft();
+        }
+      }
 
       return;
     }

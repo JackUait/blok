@@ -172,7 +172,8 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
      * Handle arrow key events for inline toolbar
      * - Close toolbar when Up/Down arrow key is pressed without Shift (allows cursor movement)
      *   but only if no toolbar item is focused (user hasn't started keyboard navigation via Tab)
-     * - Left/Right arrow keys have no effect within the inline toolbar (per accessibility requirements)
+     * - Left/Right arrow keys move focus between toolbar items (WAI-ARIA horizontal
+     *   toolbar) when the flipper has focus and no nested submenu is open
      * - Show toolbar when Shift+Arrow is pressed (extends selection)
      *
      * Note: We listen on window with capture=true to ensure this runs before

@@ -479,6 +479,52 @@ export class UI extends Module<UINodes> {
   };
 
   /**
+   * Right-click inside block content opens the block context menu (Block
+   * Settings) anchored at the cursor, mirroring a desktop application. This is
+   * a hover-independent path to the block menu that avoids the "wrong block"
+   * race in the hover-driven settings toggler.
+   *
+   * The native context menu is left intact on interactive and media elements
+   * (links, form fields, images, media) where it carries real value — only
+   * plain block content is hijacked.
+   * @param event - contextmenu event
+   */
+  private redactorContextMenu = (event: Event): void => {
+    if (!(event instanceof MouseEvent)) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target.closest('a, input, textarea, select, img, video, audio')) {
+      return;
+    }
+
+    const block = this.Blok.BlockManager.setCurrentBlockByChildNode(target);
+
+    if (block === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const { BlockSettings, Toolbar } = this.Blok;
+
+    /**
+     * Anchor the toolbar to the right-clicked block (moveAndOpen also closes any
+     * already-open settings menu, so a second right-click repositions cleanly),
+     * then open Block Settings at the cursor via a zero-size virtual rect.
+     */
+    Toolbar.moveAndOpen(block);
+
+    void BlockSettings.open(block, new DOMRect(event.clientX, event.clientY, 0, 0));
+  };
+
+  /**
    * Check for mobile mode and save the result
    */
   private setIsMobile(): void {
@@ -673,6 +719,7 @@ export class UI extends Module<UINodes> {
       passive: true,
     });
 
+    this.listeners.on(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
   }
 
   /**
@@ -682,6 +729,7 @@ export class UI extends Module<UINodes> {
     this.listeners.off(window, 'resize', this.resizeDebouncer);
     this.listeners.off(this.nodes.redactor, 'mousedown', this.documentTouchedListener);
     this.listeners.off(this.nodes.redactor, 'touchstart', this.documentTouchedListener);
+    this.listeners.off(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
 
     /**
      * Disable selection controller

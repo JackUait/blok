@@ -11,6 +11,7 @@ import { BlockSettingsClosed } from '../../events/BlockSettingsClosed';
 import { BlockSettingsOpened } from '../../events/BlockSettingsOpened';
 import { Toolbox, ToolboxEvent } from '../../ui/toolbox';
 import { getUserOS, isMobileScreen, log } from '../../utils';
+import { RovingTabindexController } from '../../utils/roving-tabindex';
 import { hide } from '../../utils/tooltip';
 
 /**
@@ -119,6 +120,20 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Settings toggler handler instance
    */
   private settingsTogglerHandler: SettingsTogglerHandler;
+
+  /**
+   * Roving tabindex controller for the block toolbar's action buttons
+   * (plus button + settings toggler). Focus is moved into the group via the
+   * Alt+F10 shortcut (the buttons are deliberately kept out of the tab order),
+   * then Arrow keys navigate between them.
+   */
+  private rovingController: RovingTabindexController | null = null;
+
+  /**
+   * The block that held focus when the user pressed Alt+F10 to focus the
+   * toolbar. Escape restores focus (caret) to it.
+   */
+  private blockBeforeToolbarFocus: Block | null = null;
 
   /**
    * The block that had focus immediately before the plus button opened the toolbox.
@@ -1070,6 +1085,12 @@ export class Toolbar extends Module<ToolbarNodes> {
      */
     wrapper.setAttribute('role', 'toolbar');
     wrapper.setAttribute('aria-label', this.Blok.I18n.t('a11y.blockToolbar'));
+    /**
+     * The action buttons are laid out horizontally; mirror the inline
+     * toolbar's convention so the roving group's arrow navigation matches the
+     * declared orientation.
+     */
+    wrapper.setAttribute('aria-orientation', 'horizontal');
 
     /**
      * Make Content Zone and Actions Zone
@@ -1127,6 +1148,17 @@ export class Toolbar extends Module<ToolbarNodes> {
     settingsToggler.setAttribute('aria-controls', SETTINGS_POPOVER_ID);
 
     $.append(actions, settingsToggler);
+
+    /**
+     * Wire the plus button + settings toggler into a roving tabindex group.
+     * `tabbable: false` keeps both buttons out of the tab order (the deliberate
+     * `tabindex="-1"` decision lives in their handlers) — focus is moved in via
+     * the Alt+F10 shortcut, after which Arrow keys roll focus between them.
+     */
+    this.rovingController = new RovingTabindexController([plusButton, settingsToggler], {
+      orientation: 'horizontal',
+      tabbable: false,
+    });
 
     /**
      * Appending Toolbar components to itself
@@ -1353,6 +1385,35 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Focus-the-toolbar shortcut (WAI-ARIA APG style). Alt+F10 pressed while
+     * editing a block moves focus into the toolbar's roving group. The buttons
+     * are intentionally not Tab-reachable, so this is the keyboard entry point.
+     */
+    this.readOnlyMutableListeners.on(this.Blok.UI.nodes.wrapper, 'keydown', (e) => {
+      const event = e as KeyboardEvent;
+
+      if (event.key === 'F10' && event.altKey) {
+        this.focusToolbar(event);
+      }
+    });
+
+    /**
+     * Escape while focus is inside the toolbar returns focus (caret) to the
+     * block the user came from.
+     */
+    if (this.nodes.wrapper) {
+      this.readOnlyMutableListeners.on(this.nodes.wrapper, 'keydown', (e) => {
+        const event = e as KeyboardEvent;
+
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          this.returnFocusToBlock();
+        }
+      });
+    }
+
+    /**
      * Listen for focus changes inside the editor so callout first-child
      * button state refreshes immediately on click/tab — no 300ms delay.
      * Drag handle visibility must NOT depend on focus position inside
@@ -1507,6 +1568,48 @@ export class Toolbar extends Module<ToolbarNodes> {
   };
 
   /**
+   * Moves keyboard focus into the toolbar's roving group, opening/positioning
+   * the toolbar on the current block first if needed. Called from the Alt+F10
+   * shortcut. Remembers the origin block so Escape can restore focus to it.
+   * @param event - the Alt+F10 keyboard event
+   */
+  private focusToolbar(event: KeyboardEvent): void {
+    const targetBlock = this.hoveredBlock ?? this.Blok.BlockManager.currentBlock ?? null;
+
+    if (!targetBlock) {
+      return;
+    }
+
+    event.preventDefault();
+
+    this.blockBeforeToolbarFocus = targetBlock;
+
+    /**
+     * Ensure the toolbar is positioned and open on the target block before
+     * moving focus into it.
+     */
+    if (!this.opened || this.hoveredBlock !== targetBlock) {
+      this.moveAndOpen(targetBlock);
+    }
+
+    this.rovingController?.focusFirst();
+  }
+
+  /**
+   * Returns focus (caret) to the block the user came from before entering the
+   * toolbar via Alt+F10. Called on Escape from inside the toolbar.
+   */
+  private returnFocusToBlock(): void {
+    const block = this.blockBeforeToolbarFocus;
+
+    this.blockBeforeToolbarFocus = null;
+
+    if (block && block.inputs.length > 0) {
+      this.Blok.Caret.setToBlock(block, this.Blok.Caret.positions.END);
+    }
+  }
+
+  /**
    * Repositions the toolbar to stay centered on the first line of the current block
    * without closing/opening toolbox or block settings
    */
@@ -1564,5 +1667,11 @@ export class Toolbar extends Module<ToolbarNodes> {
      * Clean up any pending click-drag handlers
      */
     this.clickDragHandler.destroy();
+
+    /**
+     * Detach the roving tabindex listeners from the action buttons.
+     */
+    this.rovingController?.destroy();
+    this.rovingController = null;
   }
 }

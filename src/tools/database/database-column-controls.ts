@@ -1,3 +1,4 @@
+import { startInlineRename } from '../../components/utils/inline-rename';
 import type { I18n } from '../../../types';
 
 export interface ColumnControlsOptions {
@@ -71,23 +72,6 @@ export class DatabaseColumnControls {
 
       const originalLabel = titleEl.textContent ?? '';
 
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = originalLabel;
-      input.setAttribute('data-blok-database-column-title-input', '');
-      input.setAttribute('aria-label', this.i18n.t('tools.database.renameColumn'));
-
-      // Size sync for Firefox (no field-sizing: content)
-      const syncSize = (): void => { input.size = Math.max(input.value.length, 1); };
-      syncSize();
-      input.addEventListener('input', syncSize);
-
-      input.addEventListener('input', () => {
-        this.options.onRenameInput?.(optionId, input.value);
-      });
-
-      const guard = { done: false };
-
       const restoreDiv = (label: string): HTMLElement => {
         const div = document.createElement('div');
         div.setAttribute('data-blok-database-column-title', '');
@@ -96,44 +80,34 @@ export class DatabaseColumnControls {
         return div;
       };
 
-      const commit = (): void => {
-        if (guard.done) return;
-        guard.done = true;
-        const rawValue = input.value;
-        const newLabel = rawValue.trim() || originalLabel;
-        const restoredDiv = restoreDiv(newLabel);
-        input.replaceWith(restoredDiv);
-        // re-attach click listener on restored div
-        this.makePillTitleEditable(headerEl, optionId);
-        // Fire commit only when the final resolved label actually changed
-        if (newLabel !== originalLabel) {
-          this.options.onRenameCommit?.(optionId, newLabel);
-          this.options.onRename(optionId, newLabel);
-        }
-      };
-
-      const cancel = (): void => {
-        if (guard.done) return;
-        guard.done = true;
-        const restoredDiv = restoreDiv(originalLabel);
-        input.replaceWith(restoredDiv);
-        this.makePillTitleEditable(headerEl, optionId);
-      };
-
-      input.addEventListener('blur', commit);
-      input.addEventListener('keydown', (ke: KeyboardEvent) => {
-        ke.stopPropagation();
-        if (ke.key === 'Enter') {
-          commit();
-        } else if (ke.key === 'Escape') {
-          input.removeEventListener('blur', commit);
-          cancel();
-        }
+      startInlineRename({
+        target: titleEl,
+        currentValue: originalLabel,
+        label: this.i18n.t('tools.database.renameColumn'),
+        configureInput: (input) => {
+          input.setAttribute('data-blok-database-column-title-input', '');
+          // Size sync for Firefox (no field-sizing: content)
+          const syncSize = (): void => { input.size = Math.max(input.value.length, 1); };
+          syncSize();
+          input.addEventListener('input', syncSize);
+        },
+        onInput: (value) => {
+          this.options.onRenameInput?.(optionId, value);
+        },
+        buildRestored: restoreDiv,
+        onCommit: (newLabel) => {
+          // re-attach click listener on restored div
+          this.makePillTitleEditable(headerEl, optionId);
+          // Fire commit only when the final resolved label actually changed
+          if (newLabel !== originalLabel) {
+            this.options.onRenameCommit?.(optionId, newLabel);
+            this.options.onRename(optionId, newLabel);
+          }
+        },
+        onCancel: () => {
+          this.makePillTitleEditable(headerEl, optionId);
+        },
       });
-
-      titleEl.replaceWith(input);
-      input.focus();
-      input.select();
     });
   }
 

@@ -187,6 +187,17 @@ export class BlockEvents extends Module {
       event.preventDefault();
       this.commandSlashPressed();
     }
+
+    /**
+     * Shift+F10 opens the block context menu (Block Settings) for the current
+     * block — the standard keyboard equivalent of a right-click. A keyboard-only
+     * path to the block menu that never depends on the hover-driven settings
+     * toggler.
+     */
+    if (event.key === 'F10' && event.shiftKey) {
+      event.preventDefault();
+      this.contextMenuKeyPressed(event);
+    }
   }
 
   /**
@@ -330,6 +341,52 @@ export class BlockEvents extends Module {
     }
 
     this.activateBlockSettings();
+  }
+
+  /**
+   * Shift+F10 keydown inside a Block — opens the block context menu.
+   *
+   * A multi-block selection routes to the multi-block Block Settings path
+   * (turn-into, delete, etc.). A single block anchors the menu to the block's
+   * holder rect (mirrors the right-click context menu), so it appears next to
+   * the block even without the hover-driven settings toggler being visible.
+   * @param event - keydown
+   */
+  private contextMenuKeyPressed(event: KeyboardEvent): void {
+    if (this.Blok.BlockSelection.selectedBlocks.length > 1) {
+      this.activateBlockSettingsForMultipleBlocks();
+
+      return;
+    }
+
+    /**
+     * Eagerly resolve the current block from the event target: the debounced
+     * selectionchange handler may not have fired yet after a programmatic caret
+     * move (e.g. inside a column), which would leave currentBlock stale.
+     */
+    if (event.target instanceof Node) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
+    const block = this.Blok.BlockManager.currentBlock;
+
+    if (block === undefined) {
+      return;
+    }
+
+    if (!this.Blok.Toolbar.opened) {
+      this.Blok.Toolbar.moveAndOpen();
+    }
+
+    if (!this.Blok.BlockSettings.opened) {
+      const anchor = block.holder.getBoundingClientRect();
+
+      Promise
+        .resolve(this.Blok.BlockSettings.open(block, anchor))
+        .catch(() => {
+          // Error handling for BlockSettings.open
+        });
+    }
   }
 
   /**

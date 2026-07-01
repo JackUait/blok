@@ -159,14 +159,30 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /**
    * Open Block Settings pane
    * @param targetBlock - near which Block we should open BlockSettings
-   * @param trigger - element to position the popover relative to
+   * @param anchor - element to position the popover relative to, OR a virtual
+   *   DOMRect (e.g. the cursor position for a right-click context menu, or the
+   *   block holder rect for the Shift+F10 keyboard shortcut). A rect is
+   *   forwarded to the popover as an explicit `position`, which
+   *   {@link PopoverDesktop.calculatePosition} prefers over the trigger.
    * @param options - popover placement overrides
    */
   public async open(
     targetBlock?: Block,
-    trigger?: HTMLElement,
+    anchor?: HTMLElement | DOMRect,
     options?: { placeLeftOfAnchor?: boolean }
   ): Promise<void> {
+    /**
+     * Split the anchor: an element is used as the trigger (and, on dismissal,
+     * the focus return target); anything else is a virtual DOMRect that
+     * positions the popover at an explicit point. We branch on `HTMLElement`
+     * rather than `DOMRect` because a rect from `getBoundingClientRect()` is
+     * not always a `DOMRect` instance across environments. When a rect is given
+     * there is no trigger element, so the popover falls back to the settings
+     * wrapper for mounting.
+     */
+    const trigger = anchor instanceof HTMLElement ? anchor : undefined;
+    const anchorRect = anchor instanceof HTMLElement ? undefined : anchor;
+
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
 
@@ -258,7 +274,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         },
         autoFocusFirstItem: false,
         minWidth: '220px',
-        placeLeftOfAnchor: options?.placeLeftOfAnchor ?? true,
+        position: anchorRect,
+        /**
+         * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
+         * anchor going down/right; the dots-button menu opens to the LEFT of
+         * the toggler. Default accordingly when the caller doesn't override.
+         */
+        placeLeftOfAnchor: options?.placeLeftOfAnchor ?? (anchorRect === undefined),
         viewportMargin: 50,
         contextLabel,
       };

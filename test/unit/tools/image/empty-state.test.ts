@@ -23,6 +23,43 @@ describe('renderEmptyState', () => {
     expect(url).not.toBeNull();
   });
 
+  it('tablist keeps a single tab stop on the selected tab', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    expect(tabs).toHaveLength(2);
+    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1]);
+  });
+
+  it('ArrowRight moves to the next tab and follows focus', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    document.body.appendChild(el);
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    tabs[0].focus();
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
+    expect(document.activeElement).toBe(tabs[1]);
+    expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0]);
+    expect(el.querySelector('input[type="url"]')).not.toBeNull();
+    el.remove();
+  });
+
+  it('Home/End jump to the first/last tab', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    document.body.appendChild(el);
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    tabs[0].focus();
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(tabs[1]);
+
+    tabs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(tabs[0]);
+    el.remove();
+  });
+
   it('calls onFile with the picked file', () => {
     const onFile = vi.fn();
     const el = renderEmptyState({ onFile, onUrl: vi.fn() });

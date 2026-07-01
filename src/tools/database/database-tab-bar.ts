@@ -4,6 +4,7 @@ import { DatabaseViewPopover } from './database-view-popover';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { startInlineRename } from '../../components/utils/inline-rename';
 import type { API } from '../../../types';
 import type { DatabaseViewConfig, ViewType } from './types';
 
@@ -215,7 +216,7 @@ export class DatabaseTabBar {
         title: t('tools.database.renameView', 'Rename'),
         closeOnActivate: true,
         onActivate: () => {
-          this.startInlineRename(tab, viewId);
+          this.startTabRename(tab, viewId);
         },
       },
       {
@@ -270,7 +271,7 @@ export class DatabaseTabBar {
     }
   }
 
-  private startInlineRename(tab: HTMLElement, viewId: string): void {
+  private startTabRename(tab: HTMLElement, viewId: string): void {
     const nameSpan = tab.querySelector('[data-blok-database-tab-name]');
     if (!(nameSpan instanceof HTMLElement)) {
       return;
@@ -278,36 +279,26 @@ export class DatabaseTabBar {
 
     const originalName = nameSpan.textContent ?? '';
 
-    const input = document.createElement('input');
-    input.setAttribute('data-blok-database-tab-rename-input', '');
-    input.value = originalName;
-    nameSpan.replaceWith(input);
-    input.focus();
-    input.select();
-
-    const commit = (): void => {
-      const newName = input.value.trim() || originalName;
-      const newSpan = document.createElement('span');
-      newSpan.setAttribute('data-blok-database-tab-name', '');
-      newSpan.textContent = newName;
-      input.replaceWith(newSpan);
-      if (newName !== originalName) {
-        this.options.onRename(viewId, newName);
-      }
+    const buildNameSpan = (name: string): HTMLElement => {
+      const span = document.createElement('span');
+      span.setAttribute('data-blok-database-tab-name', '');
+      span.textContent = name;
+      return span;
     };
 
-    input.addEventListener('blur', commit);
-    input.addEventListener('keydown', (e: KeyboardEvent) => {
-      e.stopPropagation();
-      if (e.key === 'Enter') {
-        input.blur();
-      } else if (e.key === 'Escape') {
-        input.removeEventListener('blur', commit);
-        const cancelSpan = document.createElement('span');
-        cancelSpan.setAttribute('data-blok-database-tab-name', '');
-        cancelSpan.textContent = originalName;
-        input.replaceWith(cancelSpan);
-      }
+    startInlineRename({
+      target: nameSpan,
+      currentValue: originalName,
+      label: this.options.api?.i18n.t('tools.database.renameView') ?? 'Rename',
+      configureInput: (input) => {
+        input.setAttribute('data-blok-database-tab-rename-input', '');
+      },
+      buildRestored: buildNameSpan,
+      onCommit: (newName) => {
+        if (newName !== originalName) {
+          this.options.onRename(viewId, newName);
+        }
+      },
     });
   }
 

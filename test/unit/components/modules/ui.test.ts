@@ -337,6 +337,99 @@ describe("UI module", () => {
     });
   });
 
+  describe("block context menu (right-click)", () => {
+    interface ContextMenuHarness {
+      redactor: HTMLDivElement;
+      open: ReturnType<typeof vi.fn>;
+      moveAndOpen: ReturnType<typeof vi.fn>;
+      block: { holder: HTMLElement };
+    }
+
+    const setupContextMenu = (): ContextMenuHarness => {
+      const open = vi.fn(() => Promise.resolve());
+      const moveAndOpen = vi.fn();
+      const block = { holder: document.createElement("div") };
+      const { ui, redactor } = createUI({
+        blokOverrides: {
+          BlockManager: {
+            currentBlock: block,
+            setCurrentBlockByChildNode: vi.fn(() => block),
+          },
+          BlockSettings: {
+            opened: false,
+            open,
+            close: vi.fn(),
+            contains: vi.fn(() => false),
+            nodes: { wrapper: document.createElement("div") },
+          },
+          Toolbar: {
+            opened: false,
+            moveAndOpen,
+            close: vi.fn(),
+            toolbox: { opened: false, close: vi.fn(), hasFocus: vi.fn(() => false) },
+            contains: vi.fn(() => false),
+            nodes: {
+              wrapper: document.createElement("div"),
+              settingsToggler: document.createElement("button"),
+              plusButton: document.createElement("button"),
+            },
+          },
+        } as unknown as Partial<ReturnType<typeof createUI>["blok"]>,
+      });
+
+      (ui as unknown as { bindReadOnlyInsensitiveListeners: () => void }).bindReadOnlyInsensitiveListeners();
+
+      return { redactor, open, moveAndOpen, block };
+    };
+
+    it("opens Block Settings anchored at the cursor and suppresses the native menu", () => {
+      const { redactor, open, moveAndOpen, block } = setupContextMenu();
+
+      const content = document.createElement("div");
+
+      content.setAttribute("contenteditable", "true");
+      redactor.appendChild(content);
+
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 120,
+        clientY: 240,
+      });
+
+      content.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(moveAndOpen).toHaveBeenCalledWith(block);
+      expect(open).toHaveBeenCalledTimes(1);
+
+      const [passedBlock, passedAnchor] = open.mock.calls[0];
+
+      expect(passedBlock).toBe(block);
+      expect(passedAnchor).toMatchObject({ left: 120, top: 240 });
+    });
+
+    it("leaves the native context menu untouched on links", () => {
+      const { redactor, open, moveAndOpen } = setupContextMenu();
+
+      const link = document.createElement("a");
+
+      link.href = "https://example.com";
+      redactor.appendChild(link);
+
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+      });
+
+      link.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(moveAndOpen).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+    });
+  });
+
   describe("read-only state management", () => {
     it("unbinds sensitive listeners when read-only mode enabled", () => {
       const { ui } = createUI();

@@ -156,6 +156,99 @@ describe('SettingsTogglerHandler', () => {
     });
   });
 
+  describe('make - keyboard activation', () => {
+    it('activates handleClick on Enter', () => {
+      const settingsToggler = settingsTogglerHandler.make({
+        wrapper: undefined,
+        content: undefined,
+        actions: undefined,
+        plusButton: undefined,
+        settingsToggler: undefined,
+      });
+
+      settingsTogglerHandler.setHoveredBlock(mockBlock);
+      const handleClickSpy = vi.spyOn(exposeHandleClick(settingsTogglerHandler), 'handleClick');
+
+      settingsToggler.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(handleClickSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('activates handleClick on Space and prevents default scroll', () => {
+      const settingsToggler = settingsTogglerHandler.make({
+        wrapper: undefined,
+        content: undefined,
+        actions: undefined,
+        plusButton: undefined,
+        settingsToggler: undefined,
+      });
+
+      settingsTogglerHandler.setHoveredBlock(mockBlock);
+      const handleClickSpy = vi.spyOn(exposeHandleClick(settingsTogglerHandler), 'handleClick');
+
+      const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+
+      settingsToggler.dispatchEvent(event);
+
+      expect(handleClickSpy).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('ignores other keys', () => {
+      const settingsToggler = settingsTogglerHandler.make({
+        wrapper: undefined,
+        content: undefined,
+        actions: undefined,
+        plusButton: undefined,
+        settingsToggler: undefined,
+      });
+
+      const handleClickSpy = vi.spyOn(exposeHandleClick(settingsTogglerHandler), 'handleClick');
+
+      settingsToggler.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+
+      expect(handleClickSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('make - aria-keyshortcuts', () => {
+    it('surfaces the Meta-based move shortcut on Mac', async () => {
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
+
+      const settingsToggler = settingsTogglerHandler.make({
+        wrapper: undefined,
+        content: undefined,
+        actions: undefined,
+        plusButton: undefined,
+        settingsToggler: undefined,
+      });
+
+      expect(settingsToggler.getAttribute('aria-keyshortcuts')).toBe(
+        'Meta+Shift+ArrowUp Meta+Shift+ArrowDown'
+      );
+    });
+
+    it('surfaces the Control-based move shortcut on Windows', async () => {
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: false, win: true, other: false });
+
+      const settingsToggler = settingsTogglerHandler.make({
+        wrapper: undefined,
+        content: undefined,
+        actions: undefined,
+        plusButton: undefined,
+        settingsToggler: undefined,
+      });
+
+      expect(settingsToggler.getAttribute('aria-keyshortcuts')).toBe(
+        'Control+Shift+ArrowUp Control+Shift+ArrowDown'
+      );
+    });
+  });
+
   describe('handleClick', () => {
     beforeEach(() => {
       // Call make() to set the settingsTogglerElement

@@ -23,8 +23,7 @@ interface DemoContentProps {
   inline?: boolean;
 }
 
-/** The interactive playground body — editor + JSON output, no page chrome. */
-export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
+function useDemoEditor() {
   const { t, locale } = useI18n();
   const [showOutput, setShowOutput] = useState(false);
   const [output, setOutput] = useState<string>(() => t('demo.outputInitialMessage'));
@@ -74,23 +73,14 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
     }
   }, []);
 
-  return (
-    <div className={cn('mx-auto w-full max-w-6xl px-6', inline ? 'pt-8 pb-12 sm:pt-10' : 'py-12 sm:py-16')}>
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
-              <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
-              <Typo>{t('demo.badge')}</Typo>
-            </span>
-            <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              <Typo>{t('demo.title')}</Typo> <span className="text-brand-gradient">{t('demo.titleGradient')}</span>
-            </h1>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-              <Typo>{t('demo.subtitle')}</Typo>
-              <code className="mx-1 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">{t('demo.subtitleCommand')}</code>
-              <Typo>{t('demo.subtitleRest')}</Typo>
-            </p>
-          </div>
+  return { t, showOutput, setShowOutput, output, handleEditorReady, handleSave, handleClear, handleUndo, handleRedo };
+}
 
+/** Traffic-light toolbar + Blok editor canvas + optional JSON output panel. */
+const EditorCard: React.FC = () => {
+  const { t, showOutput, setShowOutput, output, handleEditorReady, handleSave, handleClear, handleUndo, handleRedo } = useDemoEditor();
+
+  return (
           <div className={cn('grid gap-6', showOutput ? 'lg:grid-cols-2' : 'grid-cols-1')}>
             <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card">
               <div className="flex items-center gap-3 border-b border-border bg-muted/40 px-4 py-3">
@@ -195,6 +185,31 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
               </div>
             )}
           </div>
+  );
+};
+
+/** The interactive playground body — editor + JSON output, no page chrome. */
+export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
+  const { t } = useI18n();
+
+  return (
+    <div className={cn('mx-auto w-full max-w-6xl px-6', inline ? 'pt-8 pb-12 sm:pt-10' : 'py-12 sm:py-16')}>
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
+              <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+              <Typo>{t('demo.badge')}</Typo>
+            </span>
+            <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              <Typo>{t('demo.title')}</Typo> <span className="text-brand-gradient">{t('demo.titleGradient')}</span>
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+              <Typo>{t('demo.subtitle')}</Typo>
+              <code className="mx-1 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">{t('demo.subtitleCommand')}</code>
+              <Typo>{t('demo.subtitleRest')}</Typo>
+            </p>
+          </div>
+
+          <EditorCard />
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
@@ -260,12 +275,26 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
   );
 };
 
-export const DemoPage: React.FC = () => (
-  <>
-    <Nav links={NAV_LINKS} />
-    <main className="min-h-screen bg-background pt-16">
-      <DemoContent />
-    </main>
-    <Footer />
-  </>
-);
+export const DemoPage: React.FC = () => {
+  const { t } = useI18n();
+
+  return (
+    <>
+      <div className="flex min-h-screen flex-col bg-background">
+        <Nav links={NAV_LINKS} keepExpanded staticPosition />
+        <main className="flex min-h-0 flex-1 flex-col">
+          <h1 className="sr-only">
+            <Typo>{t('demo.title')}</Typo> <Typo>{t('demo.titleGradient')}</Typo>
+          </h1>
+          <div
+            className="min-h-0 w-full flex-1 overflow-auto px-6 pb-8 pt-10 sm:px-16"
+            data-blok-testid="demo-editor-container"
+          >
+            <EditorWrapper contentAlign="center" />
+          </div>
+        </main>
+      </div>
+      <Footer />
+    </>
+  );
+};

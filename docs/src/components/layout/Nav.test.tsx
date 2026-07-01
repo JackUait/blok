@@ -248,6 +248,54 @@ describe('Nav', () => {
     });
   });
 
+  describe('staticPosition', () => {
+    it('is fixed to the viewport by default', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      const nav = screen.getByRole('navigation');
+      expect(nav.className).toMatch(/\bfixed\b/);
+      expect(nav.className).not.toMatch(/\bstatic\b/);
+    });
+
+    it('renders in normal document flow when staticPosition is set', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} staticPosition />
+        </TestWrapper>
+      );
+
+      const nav = screen.getByRole('navigation');
+      expect(nav.className).toMatch(/\bstatic\b/);
+      expect(nav.className).not.toMatch(/\bfixed\b/);
+    });
+
+    it('never tucks away on scroll when staticPosition is set', () => {
+      Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} staticPosition />
+        </TestWrapper>
+      );
+
+      const nav = screen.getByRole('navigation');
+      act(() => {
+        Object.defineProperty(window, 'scrollY', { value: 600, writable: true, configurable: true });
+        fireEvent.scroll(window);
+      });
+
+      expect(nav.style.transform).toBe('');
+    });
+  });
+
   describe('scroll-linked hide/reveal', () => {
     const setScrollY = (value: number) => {
       Object.defineProperty(window, 'scrollY', {

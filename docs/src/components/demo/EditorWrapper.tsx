@@ -23,7 +23,9 @@ type BlokToolsModule = {
 
 export const EditorWrapper: React.FC<{
   onEditorReady?: (editor: BlokEditorInstance) => void;
-}> = ({ onEditorReady }) => {
+  /** Global content alignment within the editor. @default 'left' */
+  contentAlign?: 'left' | 'center' | 'right';
+}> = ({ onEditorReady, contentAlign }) => {
   const { t } = useI18n();
   const { resolvedTheme } = useTheme();
   const [mods, setMods] = useState<{ react: BlokReactModule; tools: BlokToolsModule } | null>(null);
@@ -132,6 +134,7 @@ export const EditorWrapper: React.FC<{
       ref={handleEditorRef}
       className="blok-editor"
       theme={resolvedTheme}
+      style={contentAlign ? { contentAlign } : undefined}
       tools={{
         header: { class: Header, config: { placeholder: t("demo.headerPlaceholder"), levels: [1, 2, 3, 4], defaultLevel: 2 }, inlineToolbar: ["bold", "italic", "link"] },
         paragraph: { class: Paragraph, inlineToolbar: ["bold", "italic", "link"], config: { preserveBlank: true, placeholder: t("demo.paragraphPlaceholder") } },

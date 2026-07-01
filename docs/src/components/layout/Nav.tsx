@@ -17,9 +17,15 @@ interface NavProps {
    * morph into the compact frosted island. Used on the docs page.
    */
   keepExpanded?: boolean;
+  /**
+   * Render the header in normal document flow (position: static) instead of
+   * pinned to the viewport, and skip the scroll-linked tuck-away animation.
+   * Used on pages, like /demo, where the header shouldn't float over content.
+   */
+  staticPosition?: boolean;
 }
 
-export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
+export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPosition = false }) => {
   const location = useLocation();
   const { t } = useI18n();
   const [navScrolled, setNavScrolled] = useState(false);
@@ -49,6 +55,9 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
   // scroll-linked motion rather than a binary snap. translateY(0) = fully shown,
   // translateY(-MAX_HIDE) = fully tucked above the viewport.
   useEffect(() => {
+    // A static header sits in normal document flow and never tucks away.
+    if (staticPosition) return;
+
     const HIDE_THRESHOLD = 80; // keep the bar pinned near the very top
     const MAX_HIDE = 120; // px of travel to fully clear the island + its shadow
     const HIDE_SPEED = 2; // bar travels Nx the scroll delta → hides over ~60px
@@ -92,7 +101,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
 
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
-  }, [keepExpanded]);
+  }, [keepExpanded, staticPosition]);
 
   // Opening the menu pulls the bar fully back into view (smoothly), so the
   // dropdown never anchors to a half-tucked header.
@@ -181,7 +190,10 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false }) => {
       </a>
       <nav
         ref={navRef}
-        className="fixed inset-x-0 top-0 z-40 px-3 will-change-transform sm:px-4"
+        className={cn(
+          "inset-x-0 top-0 z-40 px-3 sm:px-4",
+          staticPosition ? "static" : "fixed will-change-transform",
+        )}
         data-nav
         data-blok-testid="nav"
       >

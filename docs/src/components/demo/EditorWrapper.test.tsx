@@ -82,15 +82,15 @@ describe('EditorWrapper', () => {
       expect(typeof editor.redo).toBe('function');
     });
 
-    it('centers block content instead of leaving it flush against the left edge', async () => {
+    it('left-aligns block content so it starts under the Nav logo', async () => {
       const { container } = renderEditor();
 
-      // Blok defaults contentAlign to 'left' (data-blok-content-align="left"),
-      // which zeroes out the content column's auto margin — the block then
-      // hugs the left edge of whatever width the holder happens to be, instead
-      // of self-centering. The demo must opt into 'center' explicitly.
+      // The demo page's wrapper mirrors Nav's own max-w-6xl centering math, so
+      // the block content's left edge lines up with the Blok logo. That only
+      // holds if the content hugs the left edge of its holder (contentAlign:
+      // 'left') rather than self-centering within it.
       await waitFor(() => {
-        expect(container.querySelector('.blok-editor')).toHaveAttribute('data-blok-content-align', 'center');
+        expect(container.querySelector('.blok-editor')).toHaveAttribute('data-blok-content-align', 'left');
       });
     });
   });

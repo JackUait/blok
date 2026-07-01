@@ -286,11 +286,16 @@ export const DemoPage: React.FC = () => {
           <h1 className="sr-only">
             <Typo>{t('demo.title')}</Typo> <Typo>{t('demo.titleGradient')}</Typo>
           </h1>
+          {/* Below xl, keep the generous flat padding so the block toolbar's
+              ~60px left gutter always has room. From xl up, the max-w-6xl box
+              is wide enough that these padding values put the block content's
+              left edge exactly under the Nav's logo (same px-4 outer / px-6
+              inner / max-w-6xl centering math as Nav.tsx). */}
           <div
-            className="min-h-0 w-full flex-1 overflow-auto px-6 pb-8 pt-10 sm:px-16"
+            className="min-h-0 w-full flex-1 overflow-auto px-6 pb-8 pt-10 sm:px-16 xl:px-4"
             data-blok-testid="demo-editor-container"
           >
-            <div className="mx-auto w-full max-w-[1000px]">
+            <div className="mx-auto w-full max-w-6xl px-6">
               <EditorWrapper />
             </div>
           </div>

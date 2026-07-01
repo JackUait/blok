@@ -132,7 +132,7 @@ export const EditorWrapper: React.FC<{
       ref={handleEditorRef}
       className="blok-editor"
       theme={resolvedTheme}
-      style={{ contentAlign: "center" }}
+      style={{ contentAlign: "left" }}
       tools={{
         header: { class: Header, config: { placeholder: t("demo.headerPlaceholder"), levels: [1, 2, 3, 4], defaultLevel: 2 }, inlineToolbar: ["bold", "italic", "link"] },
         paragraph: { class: Paragraph, inlineToolbar: ["bold", "italic", "link"], config: { preserveBlank: true, placeholder: t("demo.paragraphPlaceholder") } },

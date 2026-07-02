@@ -203,10 +203,12 @@ class Announcer {
 
     this.isProcessing = true;
 
-    // Clear then set (on the next frame) so re-announcing the same text still fires.
+    // Clear then set on a tracked macrotask (not requestAnimationFrame, which is
+    // absent in non-DOM/torn-down environments and cannot be cancelled on destroy)
+    // so re-announcing the same text still fires.
     region.textContent = '';
 
-    requestAnimationFrame(() => {
+    this.schedule(() => {
       region.textContent = item.message;
 
       // Blank the region after the caller-specified delay.
@@ -219,7 +221,7 @@ class Announcer {
         this.isProcessing = false;
         this.processQueue();
       }, MESSAGE_SETTLE_MS);
-    });
+    }, 0);
   }
 
   /**

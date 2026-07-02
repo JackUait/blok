@@ -82,6 +82,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Append item elements to the items container
     this.appendItemElements();
 
+    // Promote members of exclusive (string-key) toggle groups to
+    // role="menuitemradio" now that every sibling is known.
+    this.assignExclusiveToggleRoles();
+
     // Set up click listener on the container
     if (this.nodes.popoverContainer) {
       this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
@@ -362,6 +366,39 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     this.handleItemClick(foundItem);
+  }
+
+  /**
+   * Promotes items belonging to an exclusive toggle group to `menuitemradio`.
+   *
+   * A string `toggle` value declares group membership; when two or more items
+   * share a key, selecting one deselects the rest (radiogroup semantics — see
+   * {@link toggleItemActivenessIfNeeded}). Such items are the accessible
+   * equivalent of radio buttons, not independent checkboxes. Single-member
+   * groups (and boolean toggles) behave like a lone checkbox and are left as
+   * `menuitemcheckbox`.
+   */
+  private assignExclusiveToggleRoles(): void {
+    const groups = new Map<string, PopoverItemDefault[]>();
+
+    for (const item of this.itemsDefault) {
+      if (typeof item.toggle !== 'string') {
+        continue;
+      }
+
+      const members = groups.get(item.toggle) ?? [];
+
+      members.push(item);
+      groups.set(item.toggle, members);
+    }
+
+    for (const members of groups.values()) {
+      if (members.length < 2) {
+        continue;
+      }
+
+      members.forEach(member => member.useRadioRole());
+    }
   }
 
   /**

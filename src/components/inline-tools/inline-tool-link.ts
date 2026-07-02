@@ -11,6 +11,7 @@ import { IconLink, IconGlobe, IconMail, IconHash } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
+import { setFieldValidity } from '../utils/field-validity';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 
@@ -80,13 +81,20 @@ export class LinkInlineTool implements InlineTool {
     input: HTMLInputElement | null;
     inputWrapper: HTMLElement | null;
     suggestion: HTMLElement | null;
+    error: HTMLElement | null;
     button: HTMLButtonElement | null;
   } = {
       input: null,
       inputWrapper: null,
       suggestion: null,
+      error: null,
       button: null,
     };
+
+  /**
+   * Stable id linking the input to its inline error via aria-describedby.
+   */
+  private readonly errorId = `blok-link-tool-error-${Math.random().toString(36).slice(2, 9)}`;
 
   /**
    * SelectionUtils instance
@@ -140,8 +148,9 @@ export class LinkInlineTool implements InlineTool {
     this.selection = new SelectionUtils();
     this.nodes.input = this.createInput();
     this.nodes.suggestion = this.createSuggestion();
+    this.nodes.error = this.createError();
     this.nodes.inputWrapper = document.createElement('div');
-    this.nodes.inputWrapper.append(this.nodes.input, this.nodes.suggestion);
+    this.nodes.inputWrapper.append(this.nodes.input, this.nodes.error, this.nodes.suggestion);
   }
 
   /**
@@ -193,10 +202,55 @@ export class LinkInlineTool implements InlineTool {
       });
     });
     input.addEventListener('input', () => {
+      this.clearValidationError();
       this.updateSuggestion(input.value);
     });
 
     return input;
+  }
+
+  /**
+   * Inline error region for URL validation failures. Linked to the input via
+   * aria-describedby (see {@link setFieldValidity}) so the message is exposed
+   * to assistive tech alongside the existing toast.
+   */
+  private createError(): HTMLElement {
+    const error = document.createElement('div');
+
+    error.id = this.errorId;
+    error.className = 'mt-1 px-1.5 text-xs text-red-500';
+    error.setAttribute('data-blok-link-tool-error', '');
+    error.setAttribute('role', 'alert');
+    error.hidden = true;
+
+    return error;
+  }
+
+  /**
+   * Surface a URL validation failure: fill and reveal the inline error and
+   * mark the input aria-invalid, describing it by the error region.
+   */
+  private showValidationError(): void {
+    if (!this.nodes.input || !this.nodes.error) {
+      return;
+    }
+
+    this.nodes.error.textContent = this.i18n.t('tools.link.invalidLink');
+    this.nodes.error.hidden = false;
+    setFieldValidity(this.nodes.input, false, this.errorId);
+  }
+
+  /**
+   * Reset the inline error and the input's invalid state.
+   */
+  private clearValidationError(): void {
+    if (!this.nodes.input || !this.nodes.error) {
+      return;
+    }
+
+    this.nodes.error.textContent = '';
+    this.nodes.error.hidden = true;
+    setFieldValidity(this.nodes.input, true, this.errorId);
   }
 
   /**
@@ -359,6 +413,7 @@ export class LinkInlineTool implements InlineTool {
     }
 
     if (!this.validateURL(value)) {
+      this.showValidationError();
       this.notifier.show({
         message: this.i18n.t('tools.link.invalidLink'),
         style: 'error',
@@ -366,6 +421,8 @@ export class LinkInlineTool implements InlineTool {
 
       return;
     }
+
+    this.clearValidationError();
 
     const preparedValue = this.prepareLink(value);
 
@@ -517,6 +574,7 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.input.className = this.INPUT_BASE_CLASSES;
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.value = '';
+    this.clearValidationError();
     this.nodes.suggestion?.classList.add('hidden');
     this.updateButtonStateAttributes(false);
     this.unlinkAvailable = false;
@@ -588,6 +646,7 @@ export class LinkInlineTool implements InlineTool {
     }
 
     if (!this.validateURL(value)) {
+      this.showValidationError();
       this.notifier.show({
         message: this.i18n.t('tools.link.invalidLink'),
         style: 'error',
@@ -597,6 +656,8 @@ export class LinkInlineTool implements InlineTool {
 
       return;
     }
+
+    this.clearValidationError();
 
     const preparedValue = this.prepareLink(value);
 

@@ -65,7 +65,7 @@ export const renderToggleItem = (context: ToggleRenderContext): ToggleRenderResu
   const result = buildToggleItem(context);
 
   if (result.contentElement) {
-    setupPlaceholder(result.contentElement, context.placeholder, 'data-blok-placeholder-active');
+    setupPlaceholder(result.contentElement, context.placeholder, 'data-blok-placeholder-active', 'empty-editor');
   }
 
   return result;

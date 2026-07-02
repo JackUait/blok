@@ -439,6 +439,32 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * Promotes a `menuitemcheckbox` item to `menuitemradio`.
+   *
+   * Called by the popover when the item belongs to an *exclusive* toggle group
+   * — i.e. two or more items share the same string `toggle` key, so selecting
+   * one deselects the others (the popover already enforces that exclusivity).
+   * Such a group is a radiogroup, not a set of independent checkboxes. A
+   * degenerate single-item toggle group (or a boolean `toggle`) stays a
+   * checkbox, so this is only invoked for genuine multi-member groups.
+   *
+   * No-op unless the item is currently a `menuitemcheckbox`, so listbox
+   * `option`s are left untouched.
+   */
+  public useRadioRole(): void {
+    if (this.nodes.root === null) {
+      return;
+    }
+
+    if (this.nodes.root.getAttribute('role') !== 'menuitemcheckbox') {
+      return;
+    }
+
+    this.nodes.root.setAttribute('role', 'menuitemradio');
+    this.nodes.root.setAttribute('aria-checked', this.isActive ? 'true' : 'false');
+  }
+
+  /**
    * Sets the active state of the item
    */
   private setActive(isActive: boolean): void {
@@ -452,9 +478,11 @@ export class PopoverItemDefault extends PopoverItem {
       this.nodes.root.removeAttribute(DATA_ATTR.popoverItemActive);
     }
 
-    // Keep aria-checked in sync for menuitemcheckbox items so screen readers
-    // announce the current toggle state.
-    if (this.nodes.root.getAttribute('role') === 'menuitemcheckbox') {
+    // Keep aria-checked in sync for menuitemcheckbox / menuitemradio items so
+    // screen readers announce the current toggle state.
+    const role = this.nodes.root.getAttribute('role');
+
+    if (role === 'menuitemcheckbox' || role === 'menuitemradio') {
       this.nodes.root.setAttribute('aria-checked', isActive ? 'true' : 'false');
     }
   }

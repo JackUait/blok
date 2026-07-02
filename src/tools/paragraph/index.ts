@@ -285,7 +285,7 @@ export class Paragraph implements BlockTool {
     if (!this.readOnly) {
       div.contentEditable = 'true';
       div.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active', 'focus');
     }
 
     return div;
@@ -332,7 +332,7 @@ export class Paragraph implements BlockTool {
     } else {
       this._element.contentEditable = 'true';
       this._element.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active', 'focus');
 
       if (this._element.innerHTML === '<br>') {
         this._element.innerHTML = '';

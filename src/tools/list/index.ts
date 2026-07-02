@@ -21,6 +21,7 @@ import {
 } from './block-operations';
 import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { getContentOffset } from './content-offset';
+import { applyCheckboxState } from './dom-builder';
 import { parseHTML } from './content-operations';
 import { normalizeListItemData } from './data-normalizer';
 import { ListDepthValidator } from './depth-validator';
@@ -430,7 +431,7 @@ export class ListItem implements BlockTool {
   private updateCheckboxState(checked: boolean): void {
     const checkbox = this._element?.querySelector('input[type="checkbox"]');
     if (checkbox instanceof HTMLInputElement) {
-      checkbox.checked = checked;
+      applyCheckboxState(checkbox, checked);
     }
   }
 

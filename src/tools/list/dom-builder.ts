@@ -28,6 +28,22 @@ export const LIST_TEST_IDS = {
   checklistContent: 'list-checklist-content',
 } as const;
 
+/** Monotonic sequence backing stable content-div ids for checkbox labelling. */
+let checklistItemIdSeq = 0;
+
+/**
+ * Sync a checklist checkbox control's checked state and its `data-state`
+ * (`checked` | `unchecked`) attribute — the single seam every toggle path uses
+ * so the accessible control state never drifts from the visible tick.
+ *
+ * @param checkbox - the checklist `<input type="checkbox">`
+ * @param checked - whether the item is checked
+ */
+export const applyCheckboxState = (checkbox: HTMLInputElement, checked: boolean): void => {
+  checkbox.checked = checked;
+  checkbox.setAttribute('data-state', checked ? 'checked' : 'unchecked');
+};
+
 /**
  * Interface for elements that can store placeholder text before setup
  */
@@ -225,7 +241,6 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.className = CHECKBOX_STYLES;
-  checkbox.checked = Boolean(data.checked);
   checkbox.disabled = readOnly;
 
   const content = document.createElement('div');
@@ -236,8 +251,14 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   );
   content.setAttribute('data-blok-testid', LIST_TEST_IDS.checklistContent);
   content.setAttribute('data-checked', String(data.checked));
+  // Stable id so the nameless checkbox can borrow the item's text as its label.
+  content.id = `blok-checklist-item-${(checklistItemIdSeq += 1)}`;
   content.contentEditable = readOnly ? 'false' : 'true';
   content.innerHTML = data.text;
+
+  // The checkbox has no visible label of its own — point it at the text.
+  checkbox.setAttribute('aria-labelledby', content.id);
+  applyCheckboxState(checkbox, Boolean(data.checked));
 
   // Store placeholder for setup by caller
   setPlaceholder(content, placeholder);

@@ -271,6 +271,45 @@ describe('LinkInlineTool', () => {
     expect(insertLinkSpy).not.toHaveBeenCalled();
   });
 
+  it('marks the input aria-invalid and shows an inline error when validation fails', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    input.value = 'https://google .com';
+
+    (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+    const error = wrapper.querySelector<HTMLElement>('[data-blok-link-tool-error]');
+
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(error).not.toBeNull();
+    expect(error?.hidden).toBe(false);
+    expect(error?.textContent).toBe('tools.link.invalidLink');
+    expect(error?.id).toBeTruthy();
+    expect(input.getAttribute('aria-describedby')).toContain(error?.id ?? '');
+  });
+
+  it('clears the aria-invalid error once the user edits the input', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    input.value = 'https://google .com';
+    (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+
+    input.value = 'https://google.com';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const error = wrapper.querySelector<HTMLElement>('[data-blok-link-tool-error]');
+
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+    expect(error?.hidden).toBe(true);
+  });
+
   it.each([
     'javascript:alert(1)',
     'JavaScript:alert(1)',

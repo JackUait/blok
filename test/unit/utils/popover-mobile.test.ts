@@ -5,6 +5,7 @@ import type { PopoverHeaderParams } from '../../../src/components/utils/popover/
 import { PopoverItemDefault } from '../../../src/components/utils/popover/components/popover-item';
 import { PopoverMobile } from '../../../src/components/utils/popover/popover-mobile';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
+import { LightweightI18n } from '../../../src/components/i18n/lightweight-i18n';
 
 interface MockScrollLockerInstance {
   lock: ReturnType<typeof vi.fn>;
@@ -15,6 +16,8 @@ interface MockScrollLockerInstance {
 interface MockPopoverHeaderInstance {
   destroy: ReturnType<typeof vi.fn>;
   getElement: ReturnType<typeof vi.fn>;
+  getTitleId: ReturnType<typeof vi.fn>;
+  titleId: string;
   element: HTMLElement;
   params: PopoverHeaderParams;
 }
@@ -49,11 +52,15 @@ vi.mock('../../../src/components/utils/scroll-locker', () => ({
 const popoverHeaderMock = vi.hoisted(() => {
   const instances: MockPopoverHeaderInstance[] = [];
 
+  let headerCounter = 0;
+
   const MockPopoverHeader = vi.fn(function (this: MockPopoverHeaderInstance, params: PopoverHeaderParams) {
     this.element = document.createElement('div');
     this.params = params;
+    this.titleId = `mock-header-title-${headerCounter++}`;
     this.destroy = vi.fn();
     this.getElement = vi.fn(() => this.element);
+    this.getTitleId = vi.fn(() => this.titleId);
     instances.push(this);
   });
 
@@ -327,6 +334,126 @@ describe('PopoverMobile', () => {
       const history = getHistory(popover);
       expect(history.currentItems).toEqual(params.items);
       expect(history.currentTitle).toBe(undefined);
+    });
+  });
+
+  describe('keyboard navigation', () => {
+    it('activates keyboard navigation and moves focus onto the first item on show', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+
+      popover.show();
+
+      const firstItem = nodes.items.children[0] as HTMLElement;
+
+      expect(firstItem.getAttribute('data-blok-focused')).toBe('true');
+    });
+
+    it('deactivates keyboard navigation on hide', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+
+      popover.show();
+      popover.hide();
+
+      const firstItem = nodes.items.children[0] as HTMLElement;
+
+      // Focus markers are cleared when the flipper deactivates (drops its cursor).
+      expect(firstItem.hasAttribute('data-blok-focused')).toBe(false);
+    });
+
+    it('re-activates keyboard navigation and focuses the first item when swapping to a nested page', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+      const popoverPrivate = getPrivateApi(popover);
+
+      popover.show();
+
+      const nestedItems: PopoverItemParams[] = [
+        { title: 'Nested child',
+          onActivate: vi.fn() },
+      ];
+      const parentItem = new PopoverItemDefault({
+        title: 'Parent',
+        children: { items: nestedItems },
+      } as PopoverItemDefaultParams);
+
+      popoverPrivate.showNestedItems(parentItem);
+
+      const nestedFirstItem = nodes.items.children[0] as HTMLElement;
+
+      expect(nodes.items.childElementCount).toBe(nestedItems.length);
+      expect(nestedFirstItem.getAttribute('data-blok-focused')).toBe('true');
+    });
+  });
+
+  describe('accessibility labelling', () => {
+    it('passes a localized back-button label to the header', () => {
+      const { popover } = createPopover();
+      const popoverPrivate = getPrivateApi(popover);
+      const parentItem = new PopoverItemDefault({
+        title: 'Parent',
+        children: { items: [ { title: 'Child',
+          onActivate: vi.fn() } ] },
+      } as PopoverItemDefaultParams);
+
+      popoverPrivate.showNestedItems(parentItem);
+
+      const expectedLabel = new LightweightI18n().t('a11y.back');
+
+      expect(popoverHeaderMock.instances[0].params.backButtonLabel).toBe(expectedLabel);
+    });
+
+    it('points the items menu aria-labelledby at the header title id on a nested page', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+      const popoverPrivate = getPrivateApi(popover);
+      const parentItem = new PopoverItemDefault({
+        title: 'Parent',
+        children: { items: [ { title: 'Child',
+          onActivate: vi.fn() } ] },
+      } as PopoverItemDefaultParams);
+
+      popoverPrivate.showNestedItems(parentItem);
+
+      const header = popoverHeaderMock.instances[0];
+
+      expect(nodes.items.getAttribute('aria-labelledby')).toBe(header.titleId);
+    });
+
+    it('removes the items menu aria-labelledby when returning to the header-less root', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+      const popoverPrivate = getPrivateApi(popover);
+      const parentItem = new PopoverItemDefault({
+        title: 'Parent',
+        children: { items: [ { title: 'Child',
+          onActivate: vi.fn() } ] },
+      } as PopoverItemDefaultParams);
+
+      popoverPrivate.showNestedItems(parentItem);
+      expect(nodes.items.hasAttribute('aria-labelledby')).toBe(true);
+
+      const header = popoverHeaderMock.instances[popoverHeaderMock.instances.length - 1];
+
+      header.params.onBackButtonClick();
+
+      expect(nodes.items.hasAttribute('aria-labelledby')).toBe(false);
+    });
+
+    it('announces the page title via the results announcer on nested navigation', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+      const popoverPrivate = getPrivateApi(popover);
+      const parentItem = new PopoverItemDefault({
+        title: 'Parent',
+        children: { items: [ { title: 'Child',
+          onActivate: vi.fn() } ] },
+      } as PopoverItemDefaultParams);
+
+      popoverPrivate.showNestedItems(parentItem);
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('Parent');
     });
   });
 

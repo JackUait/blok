@@ -73,6 +73,42 @@ export const PLACEHOLDER_EMPTY_EDITOR_CLASSES: string[] = [
 ];
 
 /**
+ * Placeholder visibility policy — the single vocabulary that selects which
+ * class array (and CSS `::before` visibility rule) a consumer wants:
+ *
+ * - `always`        — visible whenever empty (uses `data-placeholder`)
+ * - `always-active` — visible whenever empty (uses `data-blok-placeholder-active`)
+ * - `focus`         — visible only when empty AND focused
+ * - `empty-editor`  — visible only when empty AND the editor itself is empty
+ */
+export type PlaceholderVisibility = 'always' | 'always-active' | 'focus' | 'empty-editor';
+
+/**
+ * Resolve the placeholder class array for a given visibility policy.
+ *
+ * Consolidates the four near-duplicate class-array variants behind one
+ * vocabulary keyed on {@link PlaceholderVisibility}. The class strings remain
+ * literal (Tailwind scans the source for them) — this is the single lookup
+ * seam callers use instead of importing the individual constants.
+ *
+ * @param visibility - when the placeholder should be shown
+ * @returns the matching class array
+ */
+export const getPlaceholderClasses = (visibility: PlaceholderVisibility): string[] => {
+  switch (visibility) {
+    case 'always-active':
+      return PLACEHOLDER_ACTIVE_CLASSES;
+    case 'focus':
+      return PLACEHOLDER_FOCUS_ONLY_CLASSES;
+    case 'empty-editor':
+      return PLACEHOLDER_EMPTY_EDITOR_CLASSES;
+    case 'always':
+    default:
+      return PLACEHOLDER_CLASSES;
+  }
+};
+
+/**
  * Check if an element's content is empty
  *
  * @param element - The element to check
@@ -127,14 +163,24 @@ const handleEmptyElement = (element: HTMLElement): void => {
  * @param element - The contenteditable element
  * @param placeholder - Optional placeholder text to set
  * @param attributeName - The attribute name for placeholder text (default: 'data-placeholder')
+ * @param visibility - When the placeholder is visible (drives the unified
+ *   `data-blok-placeholder-visible` state vocabulary; default: 'always')
  */
 export const setupPlaceholder = (
   element: HTMLElement,
   placeholder?: string,
-  attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder'
+  attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder',
+  visibility: PlaceholderVisibility = 'always'
 ): (() => void) => {
+  const text = placeholder ?? '';
+
   // Always set the attribute, even if empty (for consistency and testing)
-  element.setAttribute(attributeName, placeholder ?? '');
+  element.setAttribute(attributeName, text);
+  // Expose the placeholder to assistive tech — the CSS `::before` text is
+  // invisible to screen readers, so mirror it onto `aria-placeholder`.
+  element.setAttribute('aria-placeholder', text);
+  // Single visibility-policy vocabulary shared across every placeholder host.
+  element.setAttribute('data-blok-placeholder-visible', visibility);
 
   const handler = (): void => handleEmptyElement(element);
 
@@ -143,5 +189,7 @@ export const setupPlaceholder = (
   return () => {
     element.removeEventListener('focus', handler);
     element.removeAttribute(attributeName);
+    element.removeAttribute('aria-placeholder');
+    element.removeAttribute('data-blok-placeholder-visible');
   };
 };

@@ -1,5 +1,6 @@
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../constants';
 
+import { shouldFlip } from './popover/popover-position';
 import {
   promoteToTopLayer,
   removeFromTopLayer,
@@ -14,6 +15,19 @@ import type { TooltipContent, TooltipOptions } from '@/types/api/tooltip';
 export type { TooltipContent, TooltipOptions };
 
 const DEFAULT_OFFSET = 10;
+/**
+ * If a new tooltip is requested within this window (ms) of the last hide, it
+ * opens instantly regardless of the requested `delay` — the "skip-delay warm
+ * window" (Radix Tooltip). Sweeping across adjacent triggers should feel
+ * continuous, not re-incur the open delay on each one.
+ */
+const SKIP_DELAY_DURATION = 300;
+/**
+ * Grace period (ms) between the pointer leaving the trigger and the tooltip
+ * hiding. It gives the pointer time to travel onto the (now hoverable) bubble
+ * without the tooltip vanishing — the "hoverable" half of WCAG 1.4.13.
+ */
+const GRACE_HIDE_DURATION = 100;
 const TOOLTIP_ID = 'blok-tooltip';
 const ARIA_DESCRIBEDBY_ATTRIBUTE = 'aria-describedby';
 const TOOLTIP_ROLE = 'tooltip';
@@ -55,7 +69,13 @@ class Tooltip {
          */
         'fixed z-overlay top-0 left-0',
         'bg-tooltip-bg opacity-0',
-        'select-none pointer-events-none',
+        /**
+         * `pointer-events-none` is deliberately omitted: the bubble must be
+         * hoverable so the pointer can travel onto it without dismissing the
+         * tooltip (WCAG 1.4.13 "hoverable"). While hidden the wrapper carries
+         * `visibility: hidden`, which already blocks pointer interaction.
+         */
+        'select-none',
         'rounded-lg shadow-tooltip',
         'mobile:hidden'
       ).split(' '),
@@ -103,6 +123,28 @@ class Tooltip {
    * Store timeout before showing to clear it on hide
    */
   private showingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Deferred-hide timer armed when the pointer leaves the trigger. Cleared if
+   * the pointer reaches the bubble within {@link GRACE_HIDE_DURATION} so the
+   * bubble stays hoverable (WCAG 1.4.13).
+   */
+  private graceHideTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Timestamp (ms, `Date.now()`) of the last hide. Drives the skip-delay warm
+   * window: a show requested within {@link SKIP_DELAY_DURATION} of this opens
+   * instantly. Starts at -Infinity so the first show always honors its delay.
+   */
+  private lastHideTimestamp: number = Number.NEGATIVE_INFINITY;
+
+  /**
+   * The `pointerType` of the most recent pointer interaction on a hover
+   * target. Used to suppress hover tooltips for touch input (Radix touch
+   * guard) — touch users get no hover affordance and a tooltip would just
+   * cover the content they tapped.
+   */
+  private lastPointerType: string | null = null;
 
   /**
    * MutationObserver for watching tooltip visibility changes
@@ -189,7 +231,9 @@ class Tooltip {
       return;
     }
 
-    switch (showingOptions.placement) {
+    const resolvedPlacement = this.resolvePlacement(element, showingOptions.placement ?? 'bottom');
+
+    switch (resolvedPlacement) {
       case 'top':
         this.placeTop(element, showingOptions);
         break;
@@ -210,7 +254,14 @@ class Tooltip {
 
     this.setDescribedBy(element);
 
-    if (showingOptions && showingOptions.delay) {
+    /**
+     * Skip-delay warm window: if the previous tooltip hid within
+     * {@link SKIP_DELAY_DURATION}, open instantly and ignore the requested
+     * delay so sweeping across adjacent triggers stays continuous.
+     */
+    const withinWarmWindow = Date.now() - this.lastHideTimestamp < SKIP_DELAY_DURATION;
+
+    if (showingOptions && showingOptions.delay && !withinWarmWindow) {
       this.showingTimeout = setTimeout(() => {
         /**
          * Clear the timeout reference after execution to maintain correct state.
@@ -232,10 +283,14 @@ class Tooltip {
    * popovers. Also arms the one-shot Escape dismissal listener.
    */
   private reveal(): void {
+    // A fresh reveal supersedes any pending grace hide from an earlier exit.
+    this.cancelGraceHide();
+
     if (this.nodes.wrapper) {
       const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
 
       this.nodes.wrapper.classList.add(...classes);
+      this.nodes.wrapper.setAttribute('data-state', 'open');
       this.updateTooltipVisibility();
       this.promoteToTopLayer();
     }
@@ -321,6 +376,8 @@ class Tooltip {
       this.showingTimeout = null;
     }
 
+    this.cancelGraceHide();
+
     document.removeEventListener('keydown', this.handleDocumentKeydown, { capture: true });
 
     if (this.currentTarget) {
@@ -332,10 +389,37 @@ class Tooltip {
       const classes = Array.isArray(this.CSS.tooltipShown) ? this.CSS.tooltipShown : [this.CSS.tooltipShown];
 
       this.nodes.wrapper.classList.remove(...classes);
+      this.nodes.wrapper.setAttribute('data-state', 'closed');
       this.updateTooltipVisibility();
       this.removeFromTopLayer();
     }
     this.showed = false;
+    // Stamp the hide time so an imminent re-show can skip its open delay.
+    this.lastHideTimestamp = Date.now();
+  }
+
+  /**
+   * Arm the grace timer that hides the tooltip after {@link GRACE_HIDE_DURATION}.
+   * Called when the pointer leaves either the trigger or the bubble, so the
+   * pointer has time to travel between them without the tooltip vanishing.
+   */
+  private scheduleGraceHide(): void {
+    this.cancelGraceHide();
+
+    this.graceHideTimeout = setTimeout(() => {
+      this.graceHideTimeout = null;
+      this.hide();
+    }, GRACE_HIDE_DURATION);
+  }
+
+  /**
+   * Cancel a pending grace hide (e.g. the pointer reached the bubble in time).
+   */
+  private cancelGraceHide(): void {
+    if (this.graceHideTimeout) {
+      clearTimeout(this.graceHideTimeout);
+      this.graceHideTimeout = null;
+    }
   }
 
   /**
@@ -380,8 +464,24 @@ class Tooltip {
       this.show(element, content, revealOptions);
     };
 
-    const handleMouseEnter = (): void => revealFor(options);
-    const handleMouseLeave = (): void => this.hide();
+    /**
+     * Record the pointer type so {@link handleMouseEnter} can suppress the
+     * hover tooltip for touch input (touch guard) — `pointerenter` fires
+     * before the synthesized `mouseenter`.
+     */
+    const handlePointerEnter = (event: PointerEvent): void => {
+      this.lastPointerType = event.pointerType;
+    };
+    const handleMouseEnter = (): void => {
+      // Touch users don't hover; a hover tooltip would just cover the tap target.
+      if (this.lastPointerType === 'touch') {
+        return;
+      }
+
+      revealFor(options);
+    };
+    // Defer the hide so the pointer can travel onto the hoverable bubble.
+    const handleMouseLeave = (): void => this.scheduleGraceHide();
     /**
      * Keyboard focus must also surface the tooltip (WCAG 1.4.13). Focus-driven
      * reveals are immediate — the hover `delay` is a pointer affordance and
@@ -391,12 +491,14 @@ class Tooltip {
       delay: 0 });
     const handleFocusOut = (): void => this.hide();
 
+    element.addEventListener('pointerenter', handlePointerEnter);
     element.addEventListener('mouseenter', handleMouseEnter);
     element.addEventListener('mouseleave', handleMouseLeave);
     element.addEventListener('focusin', handleFocusIn);
     element.addEventListener('focusout', handleFocusOut);
 
     this.hoverBindings.set(element, () => {
+      element.removeEventListener('pointerenter', handlePointerEnter);
       element.removeEventListener('mouseenter', handleMouseEnter);
       element.removeEventListener('mouseleave', handleMouseLeave);
       element.removeEventListener('focusin', handleFocusIn);
@@ -408,6 +510,13 @@ class Tooltip {
    * Release DOM and event listeners
    */
   public destroy(): void {
+    this.cancelGraceHide();
+
+    if (this.showingTimeout) {
+      clearTimeout(this.showingTimeout);
+      this.showingTimeout = null;
+    }
+
     document.removeEventListener('keydown', this.handleDocumentKeydown, { capture: true });
 
     if (this.currentTarget) {
@@ -448,11 +557,33 @@ class Tooltip {
     this.nodes.content.setAttribute('data-blok-testid', 'tooltip-content');
 
     if (this.nodes.wrapper && this.nodes.content) {
+      this.nodes.wrapper.setAttribute('data-state', 'closed');
+      /**
+       * Hoverable bubble (WCAG 1.4.13): moving the pointer onto the tooltip
+       * itself keeps it open (cancels the pending grace hide); leaving the
+       * bubble re-arms the grace hide.
+       */
+      this.nodes.wrapper.addEventListener('mouseenter', this.handleBubbleEnter);
+      this.nodes.wrapper.addEventListener('mouseleave', this.handleBubbleLeave);
       this.append(this.nodes.wrapper, this.nodes.content);
       this.append(document.body, this.nodes.wrapper);
       this.ensureTooltipAttributes();
     }
   }
+
+  /**
+   * Pointer entered the bubble — keep it open by cancelling the grace hide.
+   */
+  private handleBubbleEnter = (): void => {
+    this.cancelGraceHide();
+  };
+
+  /**
+   * Pointer left the bubble — arm the grace hide.
+   */
+  private handleBubbleLeave = (): void => {
+    this.scheduleGraceHide();
+  };
 
   /**
    * Update tooltip visibility based on shown state
@@ -519,6 +650,50 @@ class Tooltip {
   }
 
 
+
+  /**
+   * Collision detection: flips the requested placement to its opposite side
+   * when the tooltip would overflow the viewport on the preferred side but
+   * fits on the alternate one. Reuses the popover module's {@link shouldFlip}
+   * predicate so there is a single source of flip math across the editor
+   * rather than a tooltip-specific reimplementation.
+   * @param {HTMLElement} element - target element the tooltip anchors to
+   * @param {string} placement - requested placement
+   * @returns {string} the resolved placement
+   */
+  private resolvePlacement(element: HTMLElement, placement: string): string {
+    if (!this.nodes.wrapper) {
+      return placement;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    if (placement === 'top' || placement === 'bottom') {
+      const spaceBelow = viewportHeight - rect.bottom - this.offsetTop;
+      const spaceAbove = rect.top - this.offsetTop;
+      const preferred = placement === 'bottom' ? spaceBelow : spaceAbove;
+      const alternate = placement === 'bottom' ? spaceAbove : spaceBelow;
+
+      if (shouldFlip(this.nodes.wrapper.offsetHeight, preferred, alternate)) {
+        return placement === 'bottom' ? 'top' : 'bottom';
+      }
+
+      return placement;
+    }
+
+    const spaceRight = viewportWidth - rect.right - this.offsetRight;
+    const spaceLeft = rect.left - this.offsetLeft;
+    const preferred = placement === 'right' ? spaceRight : spaceLeft;
+    const alternate = placement === 'right' ? spaceLeft : spaceRight;
+
+    if (shouldFlip(this.nodes.wrapper.offsetWidth, preferred, alternate)) {
+      return placement === 'right' ? 'left' : 'right';
+    }
+
+    return placement;
+  }
 
   /**
    * Calculates element coords and moves tooltip bottom of the element
@@ -600,9 +775,21 @@ class Tooltip {
     }
 
     this.nodes.wrapper.setAttribute('data-blok-placement', place);
+    // `data-side` mirrors the resolved side for CSS animation/arrow styling,
+    // matching the Radix convention.
+    this.nodes.wrapper.setAttribute('data-side', place);
 
-    this.nodes.wrapper.style.left = `${left}px`;
-    this.nodes.wrapper.style.top = `${top}px`;
+    /**
+     * Clamp both axes to the viewport so the bubble never spills off-screen
+     * near an edge. Uses the same viewport-edge clamp philosophy as the
+     * popover positioner; `fixed` positioning keeps these coords
+     * viewport-relative.
+     */
+    const clampedLeft = Math.max(0, Math.min(left, window.innerWidth - this.nodes.wrapper.offsetWidth));
+    const clampedTop = Math.max(0, Math.min(top, window.innerHeight - this.nodes.wrapper.offsetHeight));
+
+    this.nodes.wrapper.style.left = `${clampedLeft}px`;
+    this.nodes.wrapper.style.top = `${clampedTop}px`;
   }
 
   /**

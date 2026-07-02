@@ -227,6 +227,9 @@ export class EquationInlineTool implements InlineTool {
 
     preview.className = 'min-h-[22px] px-2 text-sm text-text-primary';
     preview.setAttribute('data-blok-equation-preview', '');
+    // Announce the rendered formula and, crucially, KaTeX parse errors as the
+    // user types, so screen-reader users learn the equation is malformed.
+    preview.setAttribute('aria-live', 'polite');
 
     input.addEventListener('input', () => {
       void this.updatePreview(input.value);

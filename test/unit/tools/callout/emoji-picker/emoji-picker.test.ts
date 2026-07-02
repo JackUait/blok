@@ -184,7 +184,117 @@ describe('EmojiPicker', () => {
     expect(picker.isOpen()).toBe(false);
   });
 
+  describe('input hygiene (M9)', () => {
+    it('labels the filter input as a searchbox', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      const input = picker.getElement().querySelector('input[type="text"]') as HTMLInputElement;
+
+      expect(input.getAttribute('role')).toBe('searchbox');
+      expect(input.getAttribute('aria-label')).toBe('tools.callout.filterEmojis');
+    });
+
+    it('exposes a polite results live region', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      const region = picker.getElement().querySelector('[data-emoji-picker-announcer]') as HTMLElement;
+
+      expect(region).not.toBeNull();
+      expect(region.getAttribute('role')).toBe('status');
+      expect(region.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('announces the result count when filtering', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const input = container.querySelector('input[type="text"]') as HTMLInputElement;
+      input.value = 'light';
+      simulateInput(input);
+
+      const region = picker.getElement().querySelector('[data-emoji-picker-announcer]') as HTMLElement;
+      expect(region.textContent).toBe('tools.callout.emojiSearchResults');
+    });
+
+    it('announces empty results with the no-emojis-found message', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const input = container.querySelector('input[type="text"]') as HTMLInputElement;
+      input.value = 'zzznomatch';
+      simulateInput(input);
+
+      const region = picker.getElement().querySelector('[data-emoji-picker-announcer]') as HTMLElement;
+      expect(region.textContent).toBe('tools.callout.noEmojisFound');
+    });
+
+    it('clears the live region when the query is emptied', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const input = container.querySelector('input[type="text"]') as HTMLInputElement;
+      input.value = 'light';
+      simulateInput(input);
+      input.value = '';
+      simulateInput(input);
+
+      const region = picker.getElement().querySelector('[data-emoji-picker-announcer]') as HTMLElement;
+      expect(region.textContent).toBe('');
+    });
+
+    it('closes on a document-level (capture-phase) Escape', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      expect(picker.isOpen()).toBe(true);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(picker.isOpen()).toBe(false);
+    });
+
+    it('removes the document Escape listener after closing', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+      picker.close();
+
+      // A stray Escape after close must not throw or reopen anything
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(picker.isOpen()).toBe(false);
+    });
+  });
+
   describe('skin tone selector', () => {
+    it('reflects the selected tone via aria-pressed on skin-tone buttons', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      container.appendChild(picker.getElement());
+      await picker.open(container);
+
+      const toggle = picker.getElement().querySelector('[data-emoji-picker-skin-toggle]') as HTMLButtonElement;
+      toggle.click();
+
+      const popover = picker.getElement().querySelector('[data-emoji-picker-skin-tone]') as HTMLElement;
+      const options = Array.from(popover.querySelectorAll('button'));
+
+      expect(options[0].getAttribute('aria-pressed')).toBe('true');
+      expect(options[1].getAttribute('aria-pressed')).toBe('false');
+
+      options[1].click();
+      toggle.click();
+
+      expect(options[0].getAttribute('aria-pressed')).toBe('false');
+      expect(options[1].getAttribute('aria-pressed')).toBe('true');
+    });
+
     it('renders the toggle outside the search wrapper, showing the default hand', async () => {
       const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
       const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });

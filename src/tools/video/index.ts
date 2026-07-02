@@ -388,6 +388,7 @@ export class VideoTool implements BlockTool {
           figure,
           glow: this.config.glow ?? 'minimal',
           loop: this.data.loop === true,
+          i18n: this.api.i18n,
         });
         media.appendChild(this.controlsHandle.element);
       }

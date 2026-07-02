@@ -5,6 +5,7 @@
  */
 
 import { INDENT_PER_LEVEL, TOOL_NAME } from './constants';
+import { applyCheckboxState } from './dom-builder';
 import type { ListDepthValidator } from './depth-validator';
 import type { BlocksAPI , ListMarkerCalculator } from './marker-calculator';
 import type { ListItemStyle } from './types';
@@ -40,7 +41,7 @@ export const updateCheckboxState = (
     return;
   }
 
-  checkbox.checked = checked;
+  applyCheckboxState(checkbox, checked);
 }
 
 /**

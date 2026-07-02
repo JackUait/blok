@@ -4,7 +4,7 @@ import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMO
 import { loadEmojiLocale, type EmojiLocaleData } from './emoji-locale';
 import { onHover } from '../../../components/utils/tooltip';
 import {
-  REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
+  REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, EMOJI_SEARCH_RESULTS_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
   EMOJI_CATEGORY_PEOPLE_KEY, EMOJI_CATEGORY_NATURE_KEY, EMOJI_CATEGORY_FOOD_KEY, EMOJI_CATEGORY_ACTIVITY_KEY,
   EMOJI_CATEGORY_TRAVEL_KEY, EMOJI_CATEGORY_OBJECTS_KEY, EMOJI_CATEGORY_SYMBOLS_KEY, EMOJI_CATEGORY_FLAGS_KEY,
 } from '../constants';
@@ -105,6 +105,7 @@ export class EmojiPicker {
   private _body: HTMLElement;
   private _nav: HTMLElement;
   private _filterInput: HTMLInputElement;
+  private _announcer: HTMLElement;
   private _open = false;
   private _allEmojis: ProcessedEmoji[] = [];
   private _skinTone = 0;
@@ -122,6 +123,8 @@ export class EmojiPicker {
   private _activeNavId = '';
   /** rAF handle for scroll-based nav updates. */
   private _navRafId = 0;
+  /** Bound capture-phase Escape handler, registered on `document` while open. */
+  private _onDocumentKeydown: (e: KeyboardEvent) => void;
   /** Skin tone selector buttons for visual updates. */
   private _skinToneButtons: HTMLButtonElement[] = [];
   private _skinToneToggle!: HTMLButtonElement;
@@ -137,14 +140,29 @@ export class EmojiPicker {
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
     const nav = this._element.querySelector<HTMLElement>('[data-emoji-picker-nav]');
     const filterInput = this._element.querySelector<HTMLInputElement>('input[type="text"]');
+    const announcer = this._element.querySelector<HTMLElement>('[data-emoji-picker-announcer]');
 
-    if (body === null || nav === null || filterInput === null) {
+    if (body === null || nav === null || filterInput === null || announcer === null) {
       throw new Error('EmojiPicker: failed to build required elements');
     }
 
     this._body = body;
     this._nav = nav;
     this._filterInput = filterInput;
+    this._announcer = announcer;
+
+    this._onDocumentKeydown = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape' || !this._open) {
+        return;
+      }
+
+      // Skin-tone popover intercepts Escape first, keeping the picker open.
+      if (!this._skinTonePopover.hidden) {
+        this.closeSkinTonePopover();
+      } else {
+        this.close();
+      }
+    };
 
     this._body.addEventListener('scroll', () => {
       cancelAnimationFrame(this._navRafId);
@@ -201,14 +219,19 @@ export class EmojiPicker {
     void this._element.offsetHeight;
     this._element.style.animation = '';
 
+    // Capture-phase Escape so it closes the picker before any bubbling handler.
+    document.addEventListener('keydown', this._onDocumentKeydown, true);
+
     this._filterInput.focus();
   }
 
   public close(): void {
     this._open = false;
     this._element.hidden = true;
+    document.removeEventListener('keydown', this._onDocumentKeydown, true);
     this.closeSkinTonePopover();
     this.removeBackdrop();
+    this._announcer.textContent = '';
     this._anchorEl?.focus();
   }
 
@@ -241,6 +264,8 @@ export class EmojiPicker {
 
     const input = document.createElement('input');
     input.type = 'text';
+    input.setAttribute('role', 'searchbox');
+    input.setAttribute('aria-label', this.i18n.t(FILTER_EMOJIS_KEY));
     input.placeholder = this.i18n.t(FILTER_EMOJIS_KEY);
     input.className = [
       'w-full text-[13px] rounded-lg py-[7px] pl-8 pr-3 outline-hidden',
@@ -338,6 +363,23 @@ export class EmojiPicker {
     ].join(' ');
     el.appendChild(nav);
 
+    // Visually-hidden results live region (mirrors the popover announcer shape).
+    const announcer = document.createElement('div');
+    announcer.setAttribute('data-emoji-picker-announcer', '');
+    announcer.setAttribute('role', 'status');
+    announcer.setAttribute('aria-live', 'polite');
+    // Visually hidden, same shape as the popover results announcer.
+    announcer.style.position = 'absolute';
+    announcer.style.width = '1px';
+    announcer.style.height = '1px';
+    announcer.style.padding = '0';
+    announcer.style.margin = '-1px';
+    announcer.style.overflow = 'hidden';
+    announcer.style.clip = 'rect(0, 0, 0, 0)';
+    announcer.style.whiteSpace = 'nowrap';
+    announcer.style.border = '0';
+    el.appendChild(announcer);
+
     // Close skin tone popover on click outside toggle/popover
     el.addEventListener('mousedown', (e: MouseEvent) => {
       const target = e.target as Node;
@@ -349,18 +391,8 @@ export class EmojiPicker {
       }
     });
 
-    // Keyboard handler
-    el.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (!this._skinTonePopover.hidden) {
-          this.closeSkinTonePopover();
-
-          return;
-        }
-
-        this.close();
-      }
-    });
+    // Escape is handled document-wide in the capture phase (see open()/close())
+    // so it wins over other listeners even when focus is inside the picker.
 
     return el;
   }
@@ -407,6 +439,8 @@ export class EmojiPicker {
 
   private applySkinToneActiveStyle(btn: HTMLButtonElement, active: boolean): void {
     const classes = ['bg-neutral-100', 'theme-dark:bg-neutral-700', 'ring-2', 'ring-neutral-300/60', 'theme-dark:ring-neutral-600/60'];
+
+    btn.setAttribute('aria-pressed', String(active));
 
     if (active) {
       btn.classList.add(...classes);
@@ -565,6 +599,7 @@ export class EmojiPicker {
 
   private handleFilterChange(query: string): void {
     if (query.trim() === '') {
+      this._announcer.textContent = '';
       this._nav.hidden = false;
       this.renderEmojiGrid(this._allEmojis);
 
@@ -573,6 +608,8 @@ export class EmojiPicker {
 
     this._nav.hidden = true;
     const results = searchEmojis(this._allEmojis, query, this._localeData);
+
+    this.announceResults(results.length);
 
     if (results.length === 0) {
       if (!this._showingEmptyState) {
@@ -593,6 +630,13 @@ export class EmojiPicker {
         this._body.appendChild(section);
       }
     }
+  }
+
+  /** Writes the current result count (or the empty message) to the live region. */
+  private announceResults(count: number): void {
+    this._announcer.textContent = count === 0
+      ? this.i18n.t(NO_EMOJIS_FOUND_KEY)
+      : this.i18n.t(EMOJI_SEARCH_RESULTS_KEY).replace('{count}', String(count));
   }
 
   private renderEmojiGrid(emojis: ProcessedEmoji[]): void {

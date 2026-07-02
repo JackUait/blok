@@ -91,6 +91,58 @@ describe('openCoverPicker', () => {
     }
   });
 
+  it('marks the anchor aria-expanded while open and clears it on close', () => {
+    const anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+    expect(anchor.getAttribute('aria-expanded')).toBe('true');
+    handle.close();
+    expect(anchor.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('moves focus into the dialog on open', () => {
+    const anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    anchor.focus();
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+    const dialog = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]')!;
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    handle.close();
+  });
+
+  it('restores focus to the previously focused element on close', () => {
+    const anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    anchor.focus();
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+    handle.close();
+    expect(document.activeElement).toBe(anchor);
+  });
+
+  it('does not throw when the previously focused element was detached before close', () => {
+    const anchor = document.createElement('button');
+    const transient = document.createElement('button');
+    document.body.append(anchor, transient);
+    transient.focus();
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+    transient.remove(); // no longer connected
+    expect(() => handle.close()).not.toThrow();
+  });
+
+  it('traps Tab focus within the dialog', () => {
+    const anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
+    const dialog = document.querySelector<HTMLElement>('[data-role="audio-cover-picker"]')!;
+    const focusables = dialog.querySelectorAll<HTMLElement>('button, input, [tabindex]:not([tabindex="-1"])');
+    const last = focusables[focusables.length - 1];
+    last.focus();
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    // Wrapped back to a focusable inside the dialog.
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    handle.close();
+  });
+
   it('invokes onClose when the user presses Escape', () => {
     const anchor = document.createElement('div');
     document.body.appendChild(anchor);

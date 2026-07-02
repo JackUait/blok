@@ -462,6 +462,18 @@
 }
 .blok-media-empty__error[hidden] { display: none; }
 
+/* ----- Shared invalid-field convention (H11): destructive ring keyed on
+   aria-invalid, applied wherever setFieldValidity() marks a control. Shipped
+   globally via main.css so link/equation/embed inputs share one look. ----- */
+[aria-invalid="true"] {
+  border-color: var(--blok-color-danger);
+}
+[aria-invalid="true"]:focus,
+[aria-invalid="true"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-danger) 25%, transparent);
+}
+
 @container (max-width: 460px) {
   .blok-media-empty__panel { flex-wrap: wrap; }
   .blok-media-empty__content--row { flex-wrap: wrap; }

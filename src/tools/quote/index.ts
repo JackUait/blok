@@ -90,7 +90,7 @@ export class Quote implements BlockTool {
     if (!this.readOnly) {
       el.contentEditable = 'true';
       el.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(el, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(el, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active', 'focus');
     }
 
     return el;
@@ -126,7 +126,7 @@ export class Quote implements BlockTool {
     } else {
       this._element.contentEditable = 'true';
       this._element.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active', 'focus');
 
       if (this._element.innerHTML === '<br>') {
         this._element.innerHTML = '';

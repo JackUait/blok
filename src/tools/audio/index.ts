@@ -425,6 +425,7 @@ export class AudioTool implements BlockTool {
       media: audio,
       figure,
       data: this.data,
+      i18n: this.api.i18n,
       onLoopChange: (loop) => {
         this.data.loop = loop || undefined;
         this.block.dispatchChange();

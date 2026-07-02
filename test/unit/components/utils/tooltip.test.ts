@@ -790,6 +790,232 @@ describe('Tooltip utility', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  it('flips a bottom-placed tooltip to top when it would overflow the viewport bottom (collision flip)', () => {
+    const target = createTargetElement({
+      top: 730,
+      bottom: 760,
+      height: 30,
+      left: 100,
+      width: 80,
+    });
+
+    show(target, 'flip', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    // A tall tooltip cannot fit in the ~8px below the near-bottom trigger,
+    // but fits comfortably above → it must flip to `top`.
+    setWrapperSize(wrapper, 80, 100);
+
+    show(target, 'flip', { placement: 'bottom',
+      delay: 0 });
+
+    expect(wrapper.getAttribute('data-blok-placement')).toBe('top');
+    expect(wrapper.getAttribute('data-side')).toBe('top');
+    // top = triggerTop(730) − offset(10) − wrapperHeight(100) = 620
+    expect(wrapper.style.top).toBe('620px');
+  });
+
+  it('clamps a bottom-placed tooltip horizontally so it stays within the viewport', () => {
+    const target = createTargetElement({
+      left: 1000,
+      right: 1100,
+      width: 100,
+      top: 20,
+      bottom: 60,
+      height: 40,
+    });
+
+    show(target, 'clamp', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    if (wrapper === null) {
+      throw new Error('Tooltip wrapper should exist');
+    }
+
+    setWrapperSize(wrapper, 200, 30);
+
+    show(target, 'clamp', { placement: 'bottom',
+      delay: 0 });
+
+    // Raw left = triggerLeft(1000) + clientWidth/2(50) − wrapperWidth/2(100) = 950;
+    // right edge 950 + 200 = 1150 > viewport width 1024 → clamp to 1024 − 200 = 824.
+    expect(wrapper.style.left).toBe('824px');
+    // Placement is unchanged (fits vertically) so data-side mirrors the request.
+    expect(wrapper.getAttribute('data-side')).toBe('bottom');
+  });
+
+  it('stamps data-side reflecting the resolved placement', () => {
+    const target = createTargetElement();
+
+    show(target, 'side', { placement: 'right',
+      delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('data-side')).toBe('right');
+  });
+
+  it('toggles data-state between open (shown) and closed (hidden)', () => {
+    const target = createTargetElement();
+
+    show(target, 'state', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('data-state')).toBe('open');
+
+    hide();
+
+    expect(wrapper?.getAttribute('data-state')).toBe('closed');
+  });
+
+  it('opens instantly when re-triggered within the skip-delay warm window after a recent hide', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const target = createTargetElement();
+
+    show(target, 'first', { delay: 0 });
+    hide();
+
+    // 50ms after the hide — well inside the ~300ms warm window.
+    vi.setSystemTime(50);
+
+    show(target, 'warm', { delay: 200 });
+
+    const wrapper = getTooltipWrapper();
+
+    // Despite the 200ms delay, the warm window forces an instant reveal:
+    // aria-hidden is already false without advancing any timer.
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    hide();
+  });
+
+  it('respects the configured delay when the last hide is older than the warm window', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const target = createTargetElement();
+
+    show(target, 'first', { delay: 0 });
+    hide();
+
+    // 400ms after the hide — outside the ~300ms warm window.
+    vi.setSystemTime(400);
+
+    show(target, 'cold', { delay: 200 });
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+
+    vi.advanceTimersByTime(200);
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    hide();
+  });
+
+  it('does not reveal on hover when the pointer type is touch (touch guard)', () => {
+    const target = createTargetElement();
+
+    onHover(target, 'touchy', { delay: 0 });
+
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'touch',
+      bubbles: true }));
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).not.toBe('false');
+  });
+
+  it('reveals on hover when the pointer type is mouse', () => {
+    const target = createTargetElement();
+
+    onHover(target, 'mousey', { delay: 0 });
+
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    hide();
+  });
+
+  it('does not apply pointer-events-none so the bubble itself is hoverable (WCAG 1.4.13)', () => {
+    const target = createTargetElement();
+
+    show(target, 'hoverable', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+    const classes = Array.from(wrapper?.classList ?? []);
+
+    expect(classes).not.toContain('pointer-events-none');
+  });
+
+  it('keeps the tooltip open when the pointer moves from the target onto the bubble within the grace window', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'grace', { delay: 0 });
+
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    // Leaving the target schedules a grace hide instead of hiding immediately.
+    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    // Moving onto the bubble before the grace window elapses cancels the hide.
+    wrapper?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+    vi.advanceTimersByTime(300);
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    hide();
+  });
+
+  it('hides the tooltip after the grace window when the pointer leaves the target without entering the bubble', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'grace-out', { delay: 0 });
+
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+    // Still shown immediately after leaving — the hide is deferred by the grace timer.
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    vi.advanceTimersByTime(150);
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('promotes the wrapper to the Top Layer even on the delayed show path', () => {
     vi.useFakeTimers();
     popoverPolyfill = installPopoverPolyfill();

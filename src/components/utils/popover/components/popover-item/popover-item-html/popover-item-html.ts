@@ -114,6 +114,12 @@ export class PopoverItemHtml extends PopoverItem {
       this.isInline && cssInline.root
     );
 
+    // The wrapper is a layout container, not a menu item. Marking it
+    // role="presentation" keeps it from being an invalid owned child of the
+    // role=menu items container; its interactive controls (surfaced via
+    // getControls()) are the real focus stops.
+    root.setAttribute('role', 'presentation');
+
     // Set data attributes
     root.setAttribute(DATA_ATTR.popoverItemHtml, '');
     root.setAttribute('data-blok-testid', 'popover-item-html');

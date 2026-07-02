@@ -106,6 +106,45 @@ describe('renderEmptyState', () => {
     expect(err.textContent).toBe('boom');
   });
 
+  it('setError marks the URL input aria-invalid and links the error region', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+
+    el.setError('bad url');
+
+    const err = el.querySelector<HTMLElement>('[data-role="error"]');
+    if (!err) throw new Error('error region missing');
+    expect(err.id).toBeTruthy();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toContain(err.id);
+  });
+
+  it('setError(null) clears the URL input invalid state', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+
+    el.setError('bad url');
+    el.setError(null);
+
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('editing the URL after an error clears the invalid state', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+
+    el.setError('bad url');
+    input.value = 'https://example.com/a.png';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+    const err = el.querySelector<HTMLElement>('[data-role="error"]');
+    expect(err?.hidden).toBe(true);
+  });
+
   it('with sources "upload" renders only the Upload source (no Link tab)', () => {
     const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'upload' });
     expect(el.querySelector('[data-tab="embed"]')).toBeNull();

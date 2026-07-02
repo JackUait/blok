@@ -3640,6 +3640,15 @@
   display: none;
 }
 
+[aria-invalid="true"] {
+  border-color: var(--blok-color-danger);
+}
+
+[aria-invalid="true"]:focus, [aria-invalid="true"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-danger) 25%, transparent);
+}
+
 [@container (max-width: 460px)] .blok-media-empty__panel {
   flex-wrap: wrap;
 }

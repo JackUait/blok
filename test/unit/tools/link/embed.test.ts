@@ -357,6 +357,48 @@ describe('Embed tool — replace source', () => {
 
     expect(root.querySelector('[data-role="embed-url-error"]')?.getAttribute('role')).toBe('alert');
   });
+
+  it('marks the URL input aria-invalid and links the error on a rejected submit', () => {
+    const tool = new Embed(createOptions(iframeData(), { allowGenericEmbed: false }));
+    const root = mount(tool);
+
+    openReplace(tool);
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    if (input) {
+      input.value = 'https://example.com/page';
+    }
+    root.querySelector<HTMLFormElement>('[data-role="embed-url-form"]')
+      ?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+    const error = root.querySelector<HTMLElement>('[data-role="embed-url-error"]');
+
+    expect(error?.id).toBeTruthy();
+    expect(input?.getAttribute('aria-invalid')).toBe('true');
+    expect(input?.getAttribute('aria-describedby')).toContain(error?.id ?? '');
+  });
+
+  it('clears the aria-invalid state once the user edits the URL', () => {
+    const tool = new Embed(createOptions(iframeData(), { allowGenericEmbed: false }));
+    const root = mount(tool);
+
+    openReplace(tool);
+    const input = root.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    if (input) {
+      input.value = 'https://example.com/page';
+    }
+    root.querySelector<HTMLFormElement>('[data-role="embed-url-form"]')
+      ?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    expect(input?.getAttribute('aria-invalid')).toBe('true');
+
+    if (input) {
+      input.value = 'https://vimeo.com/123';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    expect(input?.hasAttribute('aria-invalid')).toBe(false);
+  });
 });
 
 describe('Embed tool — empty state', () => {

@@ -228,6 +228,32 @@ describe('dom-builder', () => {
       expect(textContent?.getAttribute('data-checked')).toBe('true');
     });
 
+    it('gives the checkbox an accessible name via aria-labelledby pointing at the content', () => {
+      const context = createContext({
+        data: { text: 'Buy milk', style: 'checklist', checked: false, depth: 0 },
+      });
+
+      const content = buildChecklistContent(context);
+      const checkbox = content.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      const textContent = content.querySelector(`[data-blok-testid="${LIST_TEST_IDS.checklistContent}"]`) as HTMLElement;
+
+      const labelledBy = checkbox.getAttribute('aria-labelledby');
+      expect(labelledBy).toBeTruthy();
+      expect(textContent.id).toBe(labelledBy);
+    });
+
+    it('stamps data-state on the checkbox control reflecting checked state', () => {
+      const unchecked = buildChecklistContent(createContext({
+        data: { text: '', style: 'checklist', checked: false, depth: 0 },
+      }));
+      const checked = buildChecklistContent(createContext({
+        data: { text: '', style: 'checklist', checked: true, depth: 0 },
+      }));
+
+      expect((unchecked.querySelector('input[type="checkbox"]') as HTMLInputElement).getAttribute('data-state')).toBe('unchecked');
+      expect((checked.querySelector('input[type="checkbox"]') as HTMLInputElement).getAttribute('data-state')).toBe('checked');
+    });
+
     it('disables checkbox in read-only mode', () => {
       const context = createContext({
         data: { text: '', style: 'checklist', checked: false, depth: 0 },

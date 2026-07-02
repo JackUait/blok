@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { alert, confirm, prompt, getWrapper, CSS } from '../../../../src/components/utils/notifier/draw';
+import { alert, confirm, prompt, getWrapper, CSS, createDismissButton, NOTIFIER_DISMISS_KEY } from '../../../../src/components/utils/notifier/draw';
+import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
 
 describe('Notifier draw', () => {
   beforeEach(() => {
@@ -62,7 +63,7 @@ describe('Notifier draw', () => {
     it('renders a live region announcing the message politely', async () => {
       const el = alert({ message: 'hi' });
 
-      expect(el.getAttribute('role')).toBe('region');
+      expect(el.getAttribute('role')).toBe('status');
 
       const live = el.querySelector('[aria-live]');
 
@@ -115,6 +116,33 @@ describe('Notifier draw', () => {
 
       expect(live?.textContent).toBe('bad');
       el.remove();
+    });
+  });
+
+  describe('createDismissButton', () => {
+    it('exposes the namespaced i18n key for the dismiss label', () => {
+      expect(NOTIFIER_DISMISS_KEY).toBe('notifier.dismiss');
+    });
+
+    it('renders a real <button> with a testid and accessible label', () => {
+      const btn = createDismissButton(vi.fn());
+
+      expect(btn.tagName).toBe('BUTTON');
+      expect(btn.getAttribute('type')).toBe('button');
+      expect(btn.getAttribute('data-blok-testid')).toBe('notification-dismiss');
+
+      const expectedLabel = (englishDictionary as Record<string, string>)[NOTIFIER_DISMISS_KEY] ?? 'Dismiss';
+
+      expect(btn.getAttribute('aria-label')).toBe(expectedLabel);
+    });
+
+    it('invokes the dismiss callback on click', () => {
+      const onDismiss = vi.fn();
+      const btn = createDismissButton(onDismiss);
+
+      btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(onDismiss).toHaveBeenCalledTimes(1);
     });
   });
 

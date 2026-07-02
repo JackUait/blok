@@ -137,6 +137,73 @@ describe('video controls — structure', () => {
   });
 });
 
+describe('video controls — M12 slider a11y + i18n', () => {
+  let h: Harness;
+  beforeEach(() => { vi.clearAllMocks(); h = mount(); });
+  afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
+
+  const fakeI18n = (map: Record<string, string>) => ({
+    has: (k: string): boolean => k in map,
+    t: (k: string, vars?: Record<string, string | number>): string => {
+      const raw = map[k] ?? k;
+      return vars ? raw.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? '')) : raw;
+    },
+  });
+
+  it('announces the seek slider as a human-readable "M:SS of M:SS" via aria-valuetext', () => {
+    setProp(h.video, 'duration', 125);
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+    const seek = q<HTMLInputElement>(h.controls, '[data-role="seek"]');
+    expect(seek.getAttribute('aria-valuetext')).toBe('0:00 of 2:05');
+
+    setProp(h.video, 'currentTime', 65);
+    h.video.dispatchEvent(new Event('timeupdate'));
+    expect(seek.getAttribute('aria-valuetext')).toBe('1:05 of 2:05');
+  });
+
+  it('renders the time display as a real <button>, not a span with role=button', () => {
+    const time = q(h.controls, '[data-role="time"]');
+    expect(time.tagName).toBe('BUTTON');
+    expect((time as HTMLButtonElement).type).toBe('button');
+    expect(time.getAttribute('role')).toBeNull();
+    expect(time.getAttribute('tabindex')).toBeNull();
+  });
+
+  it('the real time button still toggles elapsed/remaining on click', () => {
+    setProp(h.video, 'duration', 240);
+    h.video.dispatchEvent(new Event('loadedmetadata'));
+    setProp(h.video, 'currentTime', 60);
+    h.video.dispatchEvent(new Event('timeupdate'));
+    const time = q(h.controls, '[data-role="time"]');
+    expect(time.textContent).toContain('1:00 / 4:00');
+    time.click();
+    expect(time.textContent).toContain('-3:00');
+  });
+
+  it('i18n-translates the control labels when an I18n instance is provided', () => {
+    const other = mount({
+      i18n: fakeI18n({
+        'tools.video.seek': 'Chercher',
+        'tools.video.volume': 'Volume FR',
+        'tools.video.mute': 'Muet',
+      }),
+    });
+    expect(q(other.controls, '[data-role="seek"]').getAttribute('aria-label')).toBe('Chercher');
+    expect(q(other.controls, '[data-role="volume"]').getAttribute('aria-label')).toBe('Volume FR');
+    expect(q(other.controls, '[data-action="mute-toggle"]').getAttribute('aria-label')).toBe('Muet');
+    other.destroy();
+  });
+
+  it('i18n-translates the seek valuetext connector via a template key', () => {
+    const other = mount({ i18n: fakeI18n({ 'tools.video.seekValueText': '{current} sur {total}' }) });
+    setProp(other.video, 'duration', 60);
+    other.video.dispatchEvent(new Event('loadedmetadata'));
+    expect(q<HTMLInputElement>(other.controls, '[data-role="seek"]').getAttribute('aria-valuetext'))
+      .toBe('0:00 sur 1:00');
+    other.destroy();
+  });
+});
+
 describe('video controls — click-to-toggle', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });

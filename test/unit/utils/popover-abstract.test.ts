@@ -583,6 +583,61 @@ describe('PopoverAbstract', () => {
       expect(firstEl?.getAttribute(DATA_ATTR.popoverItemActive)).toBeNull();
     });
 
+    it('exposes members of an exclusive string-key toggle group as role="menuitemradio"', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Left', name: 'left', toggle: 'align', onActivate: vi.fn() },
+          { title: 'Center', name: 'center', toggle: 'align', onActivate: vi.fn() },
+          { title: 'Right', name: 'right', toggle: 'align', onActivate: vi.fn() },
+        ],
+      });
+      const items = popover.getItemsForTests() as PopoverItemDefault[];
+
+      items.forEach(item => {
+        expect(item.getElement()?.getAttribute('role')).toBe('menuitemradio');
+      });
+    });
+
+    it('keeps a degenerate single-member string-key toggle group as role="menuitemcheckbox"', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Solo', name: 'solo', toggle: 'align', onActivate: vi.fn() },
+        ],
+      });
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('menuitemcheckbox');
+    });
+
+    it('keeps a boolean toggle item as role="menuitemcheckbox"', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Bold', name: 'bold', toggle: true, onActivate: vi.fn() },
+        ],
+      });
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('menuitemcheckbox');
+    });
+
+    it('syncs aria-checked across a menuitemradio toggle group on click', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Left', name: 'left', toggle: 'align', onActivate: vi.fn() },
+          { title: 'Right', name: 'right', toggle: 'align', onActivate: vi.fn() },
+        ],
+      });
+      const [first, second] = popover.getItemsForTests() as PopoverItemDefault[];
+
+      popover.invokeHandleItemClick(first);
+      expect(first.getElement()?.getAttribute('aria-checked')).toBe('true');
+      expect(second.getElement()?.getAttribute('aria-checked')).toBe('false');
+
+      popover.invokeHandleItemClick(second);
+      expect(second.getElement()?.getAttribute('aria-checked')).toBe('true');
+      expect(first.getElement()?.getAttribute('aria-checked')).toBe('false');
+    });
+
     it('hides popover and emits ClosedOnActivate when item requires closing', () => {
       const popover = createPopover({
         items: [

@@ -1,3 +1,4 @@
+import { englishDictionary } from '../../i18n/lightweight-i18n';
 import { openModalDialog, type ModalDialogHandle } from '../modal-dialog';
 import { twJoin } from '../tw';
 
@@ -28,6 +29,61 @@ export const CSS = {
     'text-[13px] text-[#e4e4e7] outline-hidden',
     'placeholder:text-white/30 focus:border-white/20'
   ),
+  dismissBtn: twJoin(
+    'shrink-0 ml-3 -mr-2 grid place-items-center w-6 h-6 rounded-full',
+    'border-none bg-transparent text-[#a1a1aa] text-[16px] leading-none cursor-pointer',
+    'outline-hidden hover:bg-white/10 hover:text-[#f5f5f5]',
+    'focus-visible:ring-2 focus-visible:ring-white/40'
+  ),
+};
+
+/**
+ * Namespaced i18n key for the toast's dismiss-button accessible label. The
+ * built-in notifier util has no access to a live I18n module instance, so it
+ * resolves the label from the shared English dictionary and falls back to a
+ * literal when the key is absent (see {@link createDismissButton}).
+ */
+export const NOTIFIER_DISMISS_KEY = 'notifier.dismiss';
+
+/**
+ * English fallback used when the {@link NOTIFIER_DISMISS_KEY} translation is not
+ * present in the bundled dictionary.
+ */
+const NOTIFIER_DISMISS_FALLBACK = 'Dismiss';
+
+/**
+ * Resolves the dismiss-button label from the bundled English dictionary,
+ * falling back to {@link NOTIFIER_DISMISS_FALLBACK} when the key is absent.
+ */
+const resolveDismissLabel = (): string => {
+  return (englishDictionary as Record<string, string>)[NOTIFIER_DISMISS_KEY] ?? NOTIFIER_DISMISS_FALLBACK;
+};
+
+/**
+ * Builds the transient toast's dismiss button. Radix Toast / Sonner give every
+ * toast an explicit, keyboard-reachable close affordance; the built-in toast
+ * previously had none. The glyph is decorative (`aria-hidden`); the button is
+ * named via `aria-label` so assistive tech announces its purpose.
+ * @param {() => void} onDismiss - invoked when the button is activated
+ * @returns {HTMLButtonElement} the dismiss button
+ */
+export const createDismissButton = (onDismiss: () => void): HTMLButtonElement => {
+  const button = document.createElement('button');
+
+  button.type = 'button';
+  button.className = CSS.dismissBtn;
+  button.setAttribute('data-blok-testid', 'notification-dismiss');
+  button.setAttribute('aria-label', resolveDismissLabel());
+
+  const glyph = document.createElement('span');
+
+  glyph.setAttribute('aria-hidden', 'true');
+  glyph.textContent = '×';
+  button.appendChild(glyph);
+
+  button.addEventListener('click', () => onDismiss());
+
+  return button;
 };
 
 /**
@@ -105,7 +161,10 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   const style = options.style;
 
   notify.className = CSS.notification;
-  notify.setAttribute('role', 'region');
+  // `status` is the correct role for a transient, non-critical live message;
+  // `region` implies a persistent landmark. confirm()/prompt() upgrade this to
+  // `alertdialog` via openModalDialog().
+  notify.setAttribute('role', 'status');
 
   if (style) {
     notify.setAttribute('data-blok-testid', `notification-${style}`);

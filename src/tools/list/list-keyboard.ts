@@ -13,6 +13,7 @@ import {
   isAtStart,
   isEntireContentSelected,
 } from './content-operations';
+import { applyCheckboxState } from './dom-builder';
 import type { ListDepthValidator } from './depth-validator';
 import type { ListItemData } from './types';
 
@@ -403,7 +404,7 @@ export const toggleChecklistChecked = async (
 
   const checkbox = element?.querySelector('input[type="checkbox"]');
   if (checkbox instanceof HTMLInputElement) {
-    checkbox.checked = newChecked;
+    applyCheckboxState(checkbox, newChecked);
   }
 
   const contentEl = getContentElement();

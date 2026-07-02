@@ -1,8 +1,83 @@
-import { alert, confirm, getWrapper, prompt } from './draw';
+import { registerLayer } from '../dismissable-layer';
+import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
+
+import { alert, confirm, createDismissButton, getWrapper, prompt } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
 
 const DEFAULT_TIME = 8000;
+
+/**
+ * Selector matching any rendered notification inside the toast wrapper.
+ */
+const NOTIFICATION_SELECTOR = '[data-blok-testid^="notification"]';
+
+/**
+ * Per-toast teardown handlers, keyed by the toast element. Lets the
+ * replacement path (swap-out) tear down a superseded toast's timer and
+ * dismissal layer before it is animated away.
+ */
+const toastCleanups = new WeakMap<HTMLElement, () => void>();
+
+/**
+ * A pausable auto-dismiss timer. Instead of a fixed `setTimeout` (which keeps
+ * counting while the user reads or interacts — a WCAG 2.2.1 failure), it tracks
+ * the wall-clock `deadline` and the `remaining` time so it can be paused on
+ * hover/focus and resumed on leave/blur (Radix Toast / Sonner behavior).
+ */
+interface PausableTimer {
+  /** Freeze the countdown, banking the remaining time. */
+  pause(): void;
+  /** Resume counting down from the banked remaining time. */
+  resume(): void;
+  /** Cancel the timer permanently. */
+  clear(): void;
+}
+
+/**
+ * Creates a {@link PausableTimer}. The timer does not start until `resume()` is
+ * called for the first time.
+ * @param {number} durationMs - total time before expiry
+ * @param {() => void} onExpire - invoked once when the countdown reaches zero
+ * @returns {PausableTimer}
+ */
+const createPausableTimer = (durationMs: number, onExpire: () => void): PausableTimer => {
+  const state = { remaining: durationMs, deadline: 0 };
+  let handle: number | null = null;
+
+  const resume = (): void => {
+    if (handle !== null || state.remaining <= 0) {
+      return;
+    }
+
+    state.deadline = Date.now() + state.remaining;
+    handle = window.setTimeout(() => {
+      handle = null;
+      state.remaining = 0;
+      onExpire();
+    }, state.remaining);
+  };
+
+  const pause = (): void => {
+    if (handle === null) {
+      return;
+    }
+
+    window.clearTimeout(handle);
+    handle = null;
+    state.remaining = Math.max(0, state.deadline - Date.now());
+  };
+
+  const clear = (): void => {
+    if (handle !== null) {
+      window.clearTimeout(handle);
+      handle = null;
+    }
+    state.remaining = 0;
+  };
+
+  return { pause, resume, clear };
+};
 
 /**
  * Returns the slide-in animation class based on position.
@@ -68,7 +143,80 @@ const prepare_ = (position: NotifierPosition = DEFAULT_NOTIFIER_POSITION): HTMLE
 };
 
 /**
- * Appends the notification to the wrapper and starts its auto-dismiss timer.
+ * Wires the transient toast's full lifecycle (Radix Toast / Sonner parity):
+ * a pause-on-hover/focus auto-dismiss timer, a labeled dismiss button,
+ * Escape-to-dismiss via the shared dismissal layer, `data-state` animation
+ * hooks, and Top-Layer promotion of the wrapper.
+ */
+const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number): void => {
+  notify.setAttribute('data-state', 'open');
+
+  // Promote the toast wrapper into the CSS Top Layer so it renders above host
+  // page content. The wrapper keeps its corner positioning via the top-layer
+  // CSS reset (see top-layer.ts).
+  promoteToTopLayer(wrapper);
+
+  let disposed = false;
+
+  const dispose = (): void => {
+    if (disposed) {
+      return;
+    }
+    disposed = true;
+    timer.clear();
+    unregisterLayer();
+    toastCleanups.delete(notify);
+  };
+
+  const dismiss = (): void => {
+    const wasConnected = notify.isConnected;
+
+    dispose();
+
+    if (!wasConnected) {
+      return;
+    }
+
+    notify.setAttribute('data-state', 'closed');
+    dismissWithAnimation(notify, position);
+
+    // Release the Top Layer once the toast has finished animating out and no
+    // other notification remains in the wrapper. Registered after
+    // dismissWithAnimation so it runs *after* that handler removes the node.
+    notify.addEventListener('animationend', () => {
+      if (wrapper.querySelector(NOTIFICATION_SELECTOR) === null) {
+        removeFromTopLayer(wrapper);
+      }
+    }, { once: true });
+  };
+
+  const timer = createPausableTimer(time, dismiss);
+
+  const unregisterLayer = registerLayer({
+    element: notify,
+    onDismiss: dismiss,
+    escape: true,
+    // Toasts are non-interruptive: an outside click should not dismiss them.
+    outside: false,
+  });
+
+  // Pause the countdown while the user hovers or keyboard-focus is inside the
+  // toast (WCAG 2.2.1), resuming when they leave.
+  notify.addEventListener('pointerenter', timer.pause);
+  notify.addEventListener('pointerleave', timer.resume);
+  notify.addEventListener('focusin', timer.pause);
+  notify.addEventListener('focusout', timer.resume);
+
+  notify.appendChild(createDismissButton(dismiss));
+
+  toastCleanups.set(notify, dispose);
+
+  timer.resume();
+};
+
+/**
+ * Appends the notification to the wrapper and, for transient toasts, starts
+ * their auto-dismiss lifecycle.
  */
 const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: NotifierPosition, time: number, autoDismiss: boolean): void => {
   wrapper.appendChild(notify);
@@ -80,12 +228,7 @@ const appendNotify = (wrapper: HTMLElement, notify: HTMLElement, position: Notif
     return;
   }
 
-  window.setTimeout(() => {
-    // Guard: element may have already been replaced
-    if (notify.isConnected) {
-      dismissWithAnimation(notify, position);
-    }
-  }, time);
+  startToastLifecycle(wrapper, notify, position, time);
 };
 
 /**
@@ -121,6 +264,10 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
   if (existing) {
     // Cancel any in-progress swap-out on the existing element so we don't double-fire
     existing.classList.remove('animate-notify-swap-out');
+
+    // Tear down the superseded toast's timer + dismissal layer before it is
+    // animated away, so it can't fire after being replaced.
+    toastCleanups.get(existing)?.();
 
     swapOut(existing, () => {
       const notify = buildNotify();

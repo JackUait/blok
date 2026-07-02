@@ -318,8 +318,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Drag drop-indicator: list-item drop lines gained a grayish lead-in
     // (::after rule + lead-bg tokens) drawn from the editor's left edge to the
     // coloured line. ~1KB intentional growth.
+    // H11 shared invalid-field convention: a global `[aria-invalid="true"]`
+    // destructive-ring rule (border-color + focus box-shadow) in media-empty.css
+    // so link/equation/embed inputs share one look. ~0.3KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.34);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.35);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

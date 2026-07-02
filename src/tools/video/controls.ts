@@ -18,6 +18,8 @@ import {
   IconPlus,
 } from '../../components/icons';
 import { promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../../components/utils/top-layer';
+import { tr } from './i18n';
+import type { I18nInstance } from '../../components/utils/tools';
 import type { VideoGlow } from '../../../types/tools/video';
 
 /** Minimal storage seam (localStorage-shaped) for volume + position persistence. */
@@ -36,6 +38,8 @@ export interface ControlsOptions {
   glow?: VideoGlow;
   /** Initial loop state (persisted via the block's Loop tune). Default false. */
   loop?: boolean;
+  /** Editor i18n instance used to translate control labels. */
+  i18n?: I18nInstance;
 }
 
 export interface ControlsHandle {
@@ -105,7 +109,11 @@ function button(action: string, label: string, icon: string, extraClass = ''): H
  * fullscreen). Returns the control element plus a teardown that detaches every
  * media listener.
  */
-export function attachControls({ video, figure, storage, glow = 'minimal', loop = false }: ControlsOptions): ControlsHandle {
+export function attachControls({ video, figure, storage, glow = 'minimal', loop = false, i18n }: ControlsOptions): ControlsHandle {
+  // Resolve a control label through i18n with an English fallback (mirrors the
+  // block's tunes). Named `i18nLabel` to avoid shadowing the local `t`/`label`
+  // loop variables used by the speed glide + seek-flash helpers below.
+  const i18nLabel = (key: string, fallback: string): string => tr(i18n, `tools.video.${key}`, fallback);
   const root = document.createElement('div');
   root.className = 'blok-video-controls';
   root.setAttribute('data-role', 'video-controls');
@@ -141,7 +149,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   centerPlay.type = 'button';
   centerPlay.className = 'blok-video-controls__center';
   centerPlay.setAttribute('data-role', 'center-play');
-  centerPlay.setAttribute('aria-label', 'Play');
+  centerPlay.setAttribute('aria-label', i18nLabel('play', 'Play'));
   centerPlay.innerHTML = IconPlayerPlay;
   root.appendChild(centerPlay);
 
@@ -157,7 +165,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const bar = document.createElement('div');
   bar.className = 'blok-video-controls__bar';
 
-  const playToggle = button('play-toggle', 'Play', IconPlayerPlay);
+  const playToggle = button('play-toggle', i18nLabel('play', 'Play'), IconPlayerPlay);
 
   const seek = document.createElement('input');
   seek.type = 'range';
@@ -167,7 +175,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   seek.value = '0';
   seek.className = 'blok-video-controls__seek';
   seek.setAttribute('data-role', 'seek');
-  seek.setAttribute('aria-label', 'Seek');
+  seek.setAttribute('aria-label', i18nLabel('seek', 'Seek'));
 
   // The range input can't host a child fill, so wrap it: a buffered (loaded)
   // layer sits behind the input's transparent track, and a hover tooltip floats
@@ -200,14 +208,16 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   seekTooltip.append(seekThumb, seekTime);
   seekWrap.append(seekBuffered, seek, seekTooltip);
 
-  const time = document.createElement('span');
+  // A real <button> (not a span+role) so it is natively focusable and
+  // keyboard-operable; toggles elapsed ↔ remaining on click/Enter/Space.
+  const time = document.createElement('button');
+  time.type = 'button';
   time.className = 'blok-video-controls__time';
   time.setAttribute('data-role', 'time');
-  time.setAttribute('role', 'button');
-  time.setAttribute('tabindex', '0');
+  time.setAttribute('aria-label', i18nLabel('toggleTimeDisplay', 'Toggle time display'));
   time.textContent = '0:00 / 0:00';
 
-  const muteToggle = button('mute-toggle', 'Mute', IconPlayerVolume);
+  const muteToggle = button('mute-toggle', i18nLabel('mute', 'Mute'), IconPlayerVolume);
   muteToggle.setAttribute('aria-pressed', 'false');
 
   const volume = document.createElement('input');
@@ -218,9 +228,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   volume.value = '1';
   volume.className = 'blok-video-controls__volume';
   volume.setAttribute('data-role', 'volume');
-  volume.setAttribute('aria-label', 'Volume');
+  volume.setAttribute('aria-label', i18nLabel('volume', 'Volume'));
 
-  const fullscreen = button('fullscreen', 'Fullscreen', IconExpandFullscreen);
+  const fullscreen = button('fullscreen', i18nLabel('fullscreen', 'Fullscreen'), IconExpandFullscreen);
 
   const volumeWrap = document.createElement('div');
   volumeWrap.className = 'blok-video-controls__volume-wrap';
@@ -266,11 +276,26 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     figure.setAttribute('data-playing', String(next));
     const icon = next ? IconPlayerPause : IconPlayerPlay;
     playToggle.innerHTML = icon;
-    playToggle.setAttribute('aria-label', next ? 'Pause' : 'Play');
+    playToggle.setAttribute('aria-label', next ? i18nLabel('pause', 'Pause') : i18nLabel('play', 'Play'));
   };
   setPlaying(false);
 
+  // Announce the scrubber as a human-readable "M:SS of M:SS" (it otherwise reads
+  // raw seconds). Reads the slider's own value/max so arrow-key seeks announce
+  // the target position, and honours a `{current}/{total}` i18n template.
+  const setSeekValueText = (): void => {
+    const current = formatTime(Number(seek.value));
+    const total = formatTime(Number(seek.max));
+    const key = 'tools.video.seekValueText';
+    seek.setAttribute(
+      'aria-valuetext',
+      i18n?.has(key) ? i18n.t(key, { current, total }) : `${current} of ${total}`,
+    );
+  };
+  setSeekValueText();
+
   const renderTime = (): void => {
+    setSeekValueText();
     if (state.timeMode === 'remaining') {
       const dur = Number.isFinite(video.duration) ? video.duration : 0;
       time.textContent = `-${formatTime(Math.max(0, dur - video.currentTime))}`;
@@ -436,7 +461,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     const muted = isMuted();
     muteToggle.setAttribute('aria-pressed', String(muted));
     muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
-    muteToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    muteToggle.setAttribute('aria-label', muted ? i18nLabel('unmute', 'Unmute') : i18nLabel('mute', 'Mute'));
     // muting parks the slider at the very beginning; unmuted tracks the real volume
     volume.value = muted ? '0' : String(video.volume);
     // paint the filled (already-set) portion to the left of the thumb
@@ -457,7 +482,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     const isFull = document.fullscreenElement === figure;
     figure.setAttribute('data-fullscreen', String(isFull));
     fullscreen.innerHTML = isFull ? IconPlayerFullscreenExit : IconExpandFullscreen;
-    fullscreen.setAttribute('aria-label', isFull ? 'Exit fullscreen' : 'Fullscreen');
+    fullscreen.setAttribute('aria-label', isFull ? i18nLabel('fullscreenExit', 'Exit fullscreen') : i18nLabel('fullscreen', 'Fullscreen'));
     // Lift the live caption into the top title bar on entry; clear it on exit so
     // it can pick up later edits next time. Empty caption → no bar.
     if (isFull) {
@@ -540,6 +565,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const onSeekInput = (): void => {
     media.currentTime = Number(seek.value);
     paintSeek();
+    setSeekValueText();
   };
 
   // ----- keyboard seeking + control -----
@@ -687,7 +713,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     return { row, value };
   };
 
-  const gear = button('gear', 'Settings', IconPlayerSettings);
+  const gear = button('gear', i18nLabel('settings', 'Settings'), IconPlayerSettings);
   gear.setAttribute('aria-haspopup', 'menu');
   gear.setAttribute('aria-expanded', 'false');
 
@@ -746,7 +772,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   };
 
   // --- main pane: "Playback speed ›" and the Loop toggle ---
-  const { row: speedNav, value: speedValue } = navRow('open-speed', 'Playback speed', 'menu-value-speed', IconPlayerSpeed);
+  const { row: speedNav, value: speedValue } = navRow('open-speed', i18nLabel('playbackSpeed', 'Playback speed'), 'menu-value-speed', IconPlayerSpeed);
   speedValue.textContent = SPEED_LABEL(state.selectedRate);
   speedNav.addEventListener('click', () => showView('speed'));
 
@@ -758,11 +784,11 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   loopRow.setAttribute('aria-checked', String(loop));
   const loopLabel = document.createElement('span');
   loopLabel.className = 'blok-video-controls__menu-label';
-  loopLabel.textContent = 'Loop';
+  loopLabel.textContent = i18nLabel('loop', 'Loop');
   const loopValue = document.createElement('span');
   loopValue.className = 'blok-video-controls__menu-value';
   loopValue.setAttribute('data-role', 'menu-value-loop');
-  loopValue.textContent = loop ? 'On' : 'Off';
+  loopValue.textContent = loop ? i18nLabel('on', 'On') : i18nLabel('off', 'Off');
   // Empty chevron slot keeps "Off" aligned under the speed row's value.
   const loopSpacer = document.createElement('span');
   loopSpacer.className = 'blok-video-controls__menu-chevron';
@@ -771,7 +797,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   loopRow.addEventListener('click', () => {
     media.loop = !media.loop;
     loopRow.setAttribute('aria-checked', String(media.loop));
-    loopValue.textContent = media.loop ? 'On' : 'Off';
+    loopValue.textContent = media.loop ? i18nLabel('on', 'On') : i18nLabel('off', 'Off');
   });
 
   mainPane.append(speedNav, loopRow);
@@ -788,20 +814,20 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(rate * 100) / 100));
 
   speedPane.setAttribute('role', 'group');
-  speedPane.setAttribute('aria-label', 'Playback speed');
+  speedPane.setAttribute('aria-label', i18nLabel('playbackSpeed', 'Playback speed'));
 
   const speedBack = document.createElement('button');
   speedBack.type = 'button';
   speedBack.className = 'blok-video-controls__menu-row blok-video-controls__menu-back';
   speedBack.setAttribute('data-action', 'speed-back');
-  speedBack.setAttribute('aria-label', 'Back');
+  speedBack.setAttribute('aria-label', i18nLabel('back', 'Back'));
   const backChevron = document.createElement('span');
   backChevron.className = 'blok-video-controls__menu-chevron';
   backChevron.setAttribute('aria-hidden', 'true');
   backChevron.innerHTML = IconChevronLeft;
   const backLabel = document.createElement('span');
   backLabel.className = 'blok-video-controls__menu-label';
-  backLabel.textContent = 'Playback speed';
+  backLabel.textContent = i18nLabel('playbackSpeed', 'Playback speed');
   speedBack.append(backChevron, backLabel);
   speedBack.addEventListener('click', () => showView('main'));
 
@@ -821,8 +847,8 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     btn.innerHTML = icon;
     return btn;
   };
-  const speedDec = speedStepper('speed-dec', IconMinus, 'Decrease playback speed');
-  const speedInc = speedStepper('speed-inc', IconPlus, 'Increase playback speed');
+  const speedDec = speedStepper('speed-dec', IconMinus, i18nLabel('speedDecrease', 'Decrease playback speed'));
+  const speedInc = speedStepper('speed-inc', IconPlus, i18nLabel('speedIncrease', 'Increase playback speed'));
 
   const speedSlider = document.createElement('input');
   speedSlider.type = 'range';
@@ -832,7 +858,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   speedSlider.max = String(SPEED_MAX);
   speedSlider.step = String(SPEED_SLIDER_STEP);
   speedSlider.value = String(state.selectedRate);
-  speedSlider.setAttribute('aria-label', 'Playback speed');
+  speedSlider.setAttribute('aria-label', i18nLabel('playbackSpeed', 'Playback speed'));
   speedSlider.setAttribute('aria-valuetext', SPEED_LABEL(state.selectedRate));
   speedSlider.addEventListener('input', () => setRate(Number(speedSlider.value)));
   // Drive the elapsed-fill gradient from JS, exactly like the volume slider.
@@ -860,7 +886,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   });
   const speedChipRow = document.createElement('div');
   speedChipRow.className = 'blok-video-controls__speed-chips';
-  speedChipRow.setAttribute('aria-label', 'Speed presets');
+  speedChipRow.setAttribute('aria-label', i18nLabel('speedPresets', 'Speed presets'));
   speedChipRow.append(...speedChips);
 
   speedPane.append(speedBack, speedReadout, speedSliderRow, speedChipRow);
@@ -1012,7 +1038,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   // same with or without the Popover API and never races browser light-dismiss.
   // It never touches the inline width, so the saved resize width is preserved.
   const canPopover = supportsPopoverAPI();
-  const theaterBtn = button('theater', 'Theater mode', IconPlayerTheater);
+  const theaterBtn = button('theater', i18nLabel('theater', 'Theater mode'), IconPlayerTheater);
   theaterBtn.setAttribute('aria-pressed', 'false');
   // `inlineRect` is the VIDEO's grid-slot rect, captured on enter (before
   // data-theater promotes it to fixed/centre) and reused to land the exit morph.
@@ -1158,7 +1184,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     if (on === theater.on) return;
     theater.on = on;
     theaterBtn.setAttribute('aria-pressed', String(on));
-    theaterBtn.setAttribute('aria-label', on ? 'Exit theater mode' : 'Theater mode');
+    theaterBtn.setAttribute('aria-label', on ? i18nLabel('theaterExit', 'Exit theater mode') : i18nLabel('theater', 'Theater mode'));
     if (on) {
       enterTheater();
       // window + capture: fire before the browser's popover close-watcher claims
@@ -1178,7 +1204,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   // Picture-in-picture — only mounted when the browser supports it.
   const pipSupported = Boolean(document.pictureInPictureEnabled);
-  const pipBtn = pipSupported ? button('picture-in-picture', 'Picture-in-Picture', IconPlayerPip) : null;
+  const pipBtn = pipSupported ? button('picture-in-picture', i18nLabel('pip', 'Picture-in-Picture'), IconPlayerPip) : null;
   const onEnterPip = (): void => pipBtn?.setAttribute('aria-pressed', 'true');
   const onLeavePip = (): void => pipBtn?.setAttribute('aria-pressed', 'false');
   if (pipBtn) {
@@ -1225,11 +1251,11 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     item.textContent = label;
     return item;
   };
-  const ctxLoop = ctxItem('ctx-loop', 'Loop');
+  const ctxLoop = ctxItem('ctx-loop', i18nLabel('loop', 'Loop'));
   ctxLoop.setAttribute('role', 'menuitemcheckbox');
-  const ctxCopy = ctxItem('copy-url', 'Copy video URL');
-  const ctxCopyAt = ctxItem('copy-url-at-time', 'Copy video URL at current time');
-  const ctxStats = ctxItem('stats', 'Stats for nerds');
+  const ctxCopy = ctxItem('copy-url', i18nLabel('ctxCopyUrl', 'Copy video URL'));
+  const ctxCopyAt = ctxItem('copy-url-at-time', i18nLabel('ctxCopyUrlAtTime', 'Copy video URL at current time'));
+  const ctxStats = ctxItem('stats', i18nLabel('ctxStats', 'Stats for nerds'));
   ctxMenu.append(ctxLoop, ctxCopy, ctxCopyAt, ctxStats);
   root.appendChild(ctxMenu);
 
@@ -1316,14 +1342,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
 
   playToggle.addEventListener('click', togglePlay);
   centerPlay.addEventListener('click', () => { void media.play(); });
+  // A native <button> already activates on Enter/Space (firing click), so a
+  // dedicated keydown handler would double-toggle — the click listener covers all.
   time.addEventListener('click', (event) => { event.stopPropagation(); toggleTimeMode(); });
-  time.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      event.stopPropagation();
-      toggleTimeMode();
-    }
-  });
   // Click anywhere on the video to play/pause (the control bar sits above with
   // its own pointer-events, so its hits never reach the media). A click after a
   // press-and-hold is swallowed by onVideoClick.

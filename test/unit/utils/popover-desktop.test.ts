@@ -203,6 +203,7 @@ type PopoverDesktopInternal = PopoverDesktop & {
   destroyNestedPopoverIfExists: () => void;
   handleHover: (event: Event) => void;
   handleMouseLeave: (event: Event) => void;
+  showNestedItems: (item: PopoverItemDefault) => void;
   readonly itemsDefault: PopoverItemDefault[];
   readonly items: Array<PopoverItemDefault | PopoverItemSeparator>;
   nodes: {
@@ -289,6 +290,7 @@ beforeEach(() => {
 afterEach(() => {
   rafSpy?.mockRestore();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('PopoverDesktop', () => {
@@ -722,6 +724,7 @@ describe('PopoverDesktop', () => {
 
   describe('handleHover', () => {
     it('opens nested popover for hovered item with children and avoids reopening for the same item', () => {
+      vi.useFakeTimers();
       const popover = createPopover({
         items: [
           ...createDefaultItems(),
@@ -758,11 +761,17 @@ describe('PopoverDesktop', () => {
 
       instance.handleHover(hoverEvent);
 
+      // Pointer hover defers the open by the intent delay (Radix SubTrigger).
+      expect(instance.nestedPopover).toBeFalsy();
+
+      vi.advanceTimersByTime(100);
+
       expect(destroyNestedSpy).toHaveBeenCalledTimes(1);
       expect(showNestedSpy).toHaveBeenCalledWith(parentItem);
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
 
       instance.handleHover(hoverEvent);
+      vi.advanceTimersByTime(100);
 
       expect(destroyNestedSpy).toHaveBeenCalledTimes(1);
       expect(showNestedSpy).toHaveBeenCalledTimes(1);
@@ -1614,6 +1623,7 @@ describe('PopoverDesktop', () => {
 
   describe('handleMouseLeave', () => {
     it('destroys nested popover and resets hover state when mouse leaves popover container', () => {
+      vi.useFakeTimers();
       const popover = createPopover({
         items: [
           ...createDefaultItems(),
@@ -1647,6 +1657,7 @@ describe('PopoverDesktop', () => {
       } as unknown as Event;
 
       instance.handleHover(hoverEvent);
+      vi.advanceTimersByTime(100);
 
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
 
@@ -1662,6 +1673,11 @@ describe('PopoverDesktop', () => {
 
       instance.handleMouseLeave(mouseLeaveEvent);
 
+      // Close is deferred by the grace window, then fires.
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      vi.advanceTimersByTime(300);
+
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
 
@@ -1669,6 +1685,7 @@ describe('PopoverDesktop', () => {
     });
 
     it('preserves nested popover when mouse moves into the nested popover', () => {
+      vi.useFakeTimers();
       const popover = createPopover({
         items: [
           {
@@ -1701,20 +1718,157 @@ describe('PopoverDesktop', () => {
       } as unknown as Event;
 
       instance.handleHover(hoverEvent);
+      vi.advanceTimersByTime(100);
 
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
 
       // Mouse moves into the nested popover element
-      const nestedPopoverElement = instance.nestedPopover!.getElement();
+      const openNested = instance.nestedPopover;
+
+      if (openNested === null || openNested === undefined) {
+        throw new Error('Expected nested popover to be open');
+      }
+
+      const nestedPopoverElement = openNested.getElement();
       const mouseLeaveEvent = new MouseEvent('mouseleave', {
         relatedTarget: nestedPopoverElement,
         bubbles: false,
       });
 
       instance.handleMouseLeave(mouseLeaveEvent);
+      vi.advanceTimersByTime(300);
 
       // Nested popover should still be open
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+  });
+
+  describe('nested hover intent (M4)', () => {
+    const createPopoverWithParentAndSibling = (): {
+      instance: PopoverDesktopInternal;
+      parentItem: PopoverItemDefault;
+      siblingItem: PopoverItemDefault;
+    } => {
+      const popover = createPopover({
+        items: [
+          { title: 'Plain', name: 'plain', onActivate: vi.fn() },
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }],
+            },
+          },
+          {
+            title: 'Sibling',
+            name: 'sibling',
+            children: {
+              items: [{ title: 'Other', name: 'other', onActivate: vi.fn() }],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.itemsDefault.find(item => item.name === 'parent');
+      const siblingItem = instance.itemsDefault.find(item => item.name === 'sibling');
+
+      if (parentItem === undefined || siblingItem === undefined) {
+        throw new Error('Expected parent and sibling items to exist');
+      }
+
+      return { instance,
+        parentItem,
+        siblingItem };
+    };
+
+    const hoverEventFor = (item: PopoverItemDefault): Event => {
+      const element = item.getElement();
+
+      return {
+        target: element,
+        composedPath: () => (element ? [element] : []),
+      } as unknown as Event;
+    };
+
+    it('defers opening the submenu until the open-intent delay elapses', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem } = createPopoverWithParentAndSibling();
+
+      instance.handleHover(hoverEventFor(parentItem));
+
+      expect(instance.nestedPopover).toBeFalsy();
+
+      vi.advanceTimersByTime(99);
+      expect(instance.nestedPopover).toBeFalsy();
+
+      vi.advanceTimersByTime(1);
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+
+    it('cancels a pending open when the pointer clips a sibling trigger on the way elsewhere', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem, siblingItem } = createPopoverWithParentAndSibling();
+
+      // Pointer briefly clips the sibling trigger-with-children...
+      instance.handleHover(hoverEventFor(siblingItem));
+      // ...then continues onto the parent trigger before the intent delay.
+      vi.advanceTimersByTime(50);
+      instance.handleHover(hoverEventFor(parentItem));
+
+      // Advancing past the original sibling timer must not open the sibling.
+      vi.advanceTimersByTime(60);
+      expect(instance.nestedPopover).toBeFalsy();
+
+      // The parent's own intent then completes and opens the parent submenu.
+      vi.advanceTimersByTime(50);
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+      expect(instance.nestedPopoverTriggerItem).toBe(parentItem);
+    });
+
+    it('opens synchronously via the keyboard path (showNestedItems)', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem } = createPopoverWithParentAndSibling();
+
+      instance.showNestedItems(parentItem);
+
+      // No timer advance: the keyboard path must not be delayed.
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+
+    it('cancels the close-grace when the pointer re-enters the nested popover', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem } = createPopoverWithParentAndSibling();
+
+      instance.handleHover(hoverEventFor(parentItem));
+      vi.advanceTimersByTime(100);
+
+      const openNested = instance.nestedPopover;
+
+      if (openNested === null || openNested === undefined) {
+        throw new Error('Expected nested popover to be open');
+      }
+
+      // Pointer leaves toward an unrelated element -> close grace scheduled.
+      const outside = document.createElement('div');
+
+      document.body.appendChild(outside);
+      instance.handleMouseLeave(new MouseEvent('mouseleave', {
+        relatedTarget: outside,
+        bubbles: false,
+      }));
+
+      // Pointer re-enters the nested popover before the grace elapses.
+      vi.advanceTimersByTime(150);
+      openNested.getElement().dispatchEvent(new Event('pointerenter'));
+
+      vi.advanceTimersByTime(300);
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      outside.remove();
     });
   });
 

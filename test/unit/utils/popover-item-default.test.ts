@@ -456,6 +456,67 @@ describe('PopoverItemDefault', () => {
       expect(element).not.toHaveAttribute('aria-checked');
     });
 
+    it('promotes a checkbox item to role="menuitemradio" via useRadioRole() and keeps aria-checked', () => {
+      const item = new PopoverItemDefault({
+        title: 'Left',
+        name: 'left',
+        toggle: 'align',
+        isActive: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('menuitemcheckbox');
+
+      item.useRadioRole();
+
+      expect(element.getAttribute('role')).toBe('menuitemradio');
+      expect(element.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('keeps aria-checked in sync on a menuitemradio item when toggling active', () => {
+      const item = new PopoverItemDefault({
+        title: 'Left',
+        name: 'left',
+        toggle: 'align',
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      item.useRadioRole();
+      expect(element.getAttribute('aria-checked')).toBe('false');
+
+      item.toggleActive(true);
+      expect(element.getAttribute('aria-checked')).toBe('true');
+
+      item.toggleActive(false);
+      expect(element.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('leaves a listbox option untouched when useRadioRole() is called', () => {
+      const item = new PopoverItemDefault(
+        { title: 'Heading', name: 'header', toggle: 'align', onActivate: vi.fn() },
+        { menuItemRole: 'option' }
+      );
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      item.useRadioRole();
+
+      expect(element.getAttribute('role')).toBe('option');
+    });
+
     it('marks a disabled item with aria-disabled', () => {
       const { element } = createItem({ title: 'Copy', isDisabled: true });
 

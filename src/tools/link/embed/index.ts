@@ -11,6 +11,7 @@ import type {
 } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 import { IconCopy, IconGlobe, IconLinkCopy, IconReplace } from '../../../components/icons';
+import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
 import { EMBED_SERVICES, matchEmbedService, isHttpUrl, type EmbedKind } from '../registry';
@@ -55,6 +56,8 @@ export class Embed implements BlockTool {
   private data: Partial<EmbedData>;
   private root: HTMLElement | null = null;
   private resizeDetach: (() => void)[] = [];
+  /** Stable id linking the URL input to its inline error via aria-describedby. */
+  private readonly urlErrorId = `blok-embed-url-error-${Math.random().toString(36).slice(2, 9)}`;
 
   constructor(options: BlockToolConstructorOptions<EmbedData>) {
     this.api = options.api;
@@ -418,6 +421,8 @@ export class Embed implements BlockTool {
 
     input.addEventListener('input', () => {
       bar.setAttribute('data-valid', this.looksLikeUrl(input.value) ? 'true' : 'false');
+      // Editing after a rejected submit clears the shared invalid state.
+      setFieldValidity(input, true, this.urlErrorId);
     });
 
     bar.append(fieldIcon, input, submit);
@@ -457,10 +462,18 @@ export class Embed implements BlockTool {
 
     const error = document.createElement('div');
 
+    error.id = this.urlErrorId;
     error.setAttribute('data-role', 'embed-url-error');
     error.setAttribute('role', 'alert');
     error.textContent = this.api.i18n.t('tools.embed.invalidUrl');
     container.appendChild(error);
+
+    // Surface the rejection through the shared invalid-field convention.
+    const input = container.querySelector<HTMLInputElement>('[data-role="embed-url-input"]');
+
+    if (input) {
+      setFieldValidity(input, false, this.urlErrorId);
+    }
   }
 
   /**

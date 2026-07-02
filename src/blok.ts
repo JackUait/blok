@@ -10,6 +10,7 @@ import type { BlokConfig, API, EditorWidth, Blok as PublicBlok } from '../types'
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
+import { announce } from './components/utils/announcer';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
@@ -317,6 +318,12 @@ class Blok {
 
           Blok.selectBlockById(blok, hash);
           highlightBlockArrival(el);
+
+          const i18n = (blok.moduleInstances as Partial<BlokModules>).I18n;
+
+          if (i18n !== undefined) {
+            announce(i18n.t('a11y.navigatedToBlock'));
+          }
         } else if (blok.moduleInstances.Renderer !== undefined) {
           blok.moduleInstances.Renderer.pendingHashScroll = hash;
         }

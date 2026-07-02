@@ -11,6 +11,11 @@ import * as utils from '../../../../src/components/utils';
 import type { SanitizerConfig } from '../../../../types/configs';
 import type { Block } from '../../../../src/components/block';
 import { clean } from '../../../../src/components/utils/sanitizer';
+import { announce } from '../../../../src/components/utils/announcer';
+
+vi.mock('../../../../src/components/utils/announcer', () => ({
+  announce: vi.fn(),
+}));
 
 type ModuleOverrides = Partial<BlokModules>;
 
@@ -134,6 +139,9 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     Paste: {
       MIME_TYPE: 'application/x-blok',
     } as unknown as BlokModules['Paste'],
+    I18n: {
+      t: vi.fn((key: string) => key),
+    } as unknown as BlokModules['I18n'],
   };
 
   const mergedState = { ...defaults,
@@ -1625,6 +1633,69 @@ describe('BlockSelection', () => {
 
         expect(blockSelection.navigationModeEnabled).toBe(false);
       });
+    });
+  });
+
+  describe('screen-reader announcements (H9)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('announces an assertive entry hint when navigation mode is enabled', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.navigationModeEntered');
+      expect(announce).toHaveBeenCalledWith('a11y.navigationModeEntered', { politeness: 'assertive' });
+    });
+
+    it('announces the focused block position after the throttle window', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+
+      vi.advanceTimersByTime(300);
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.navigationPosition', {
+        tool: 'paragraph',
+        position: 1,
+        total: 3,
+      });
+      expect(announce).toHaveBeenCalledWith('a11y.navigationPosition', { politeness: 'polite' });
+    });
+
+    it('coalesces rapid navigation into a single throttled position announcement', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      blockSelection.navigateNext();
+      blockSelection.navigateNext();
+
+      vi.advanceTimersByTime(300);
+
+      const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call) => call[0] === 'a11y.navigationPosition'
+      );
+
+      expect(positionCalls).toHaveLength(1);
+      expect(positionCalls[0][1]).toEqual({ tool: 'paragraph', position: 3, total: 3 });
+    });
+
+    it('announces a polite exit hint when navigation mode is disabled', () => {
+      const { blockSelection } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      blockSelection.disableNavigationMode();
+
+      expect(announce).toHaveBeenCalledWith('a11y.navigationModeExited', { politeness: 'polite' });
     });
   });
 });

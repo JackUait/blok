@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { IconChevronRight } from '../../../../../icons';
 import { makeShortcutHtml, shortcutToReadable } from '../../../../key-icon';
+import { log } from '../../../../logger';
 import { onHover } from '../../../../tooltip';
 import { twMerge } from '../../../../tw';
 import { PopoverItem } from '../popover-item';
@@ -60,6 +61,15 @@ export class PopoverItemDefault extends PopoverItem {
    */
   public get isConfirmationStateEnabled(): boolean {
     return this.confirmationState !== null;
+  }
+
+  /**
+   * Title shown while the item is in confirmation mode ("click again to
+   * confirm" prompt). Undefined when the item is not awaiting confirmation.
+   * Used by the popover to announce the mode change to screen readers.
+   */
+  public get confirmationTitle(): string | undefined {
+    return this.confirmationState?.title;
   }
 
   /**
@@ -285,6 +295,11 @@ export class PopoverItemDefault extends PopoverItem {
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.innerHTML = makeShortcutHtml(params.secondaryLabel);
+
+      // Expose the shortcut to assistive tech. The glyphs themselves are
+      // aria-hidden inline SVGs, so without this the binding is invisible to
+      // screen readers.
+      root.setAttribute('aria-keyshortcuts', shortcutToReadable(params.secondaryLabel));
 
       root.appendChild(secondaryEl);
       this.nodes.secondaryLabelEl = secondaryEl;
@@ -710,8 +725,8 @@ export class PopoverItemDefault extends PopoverItem {
       try {
         item.onActivate?.(item);
         this.disableConfirmationMode();
-      } catch {
-        // onActivate threw an error
+      } catch (error) {
+        log('Popover item onActivate handler threw an error', 'error', error);
       }
     } else {
       this.enableConfirmationMode(item.confirmation);

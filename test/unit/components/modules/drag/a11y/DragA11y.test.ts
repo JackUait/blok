@@ -173,6 +173,57 @@ describe('DragA11y', () => {
     });
   });
 
+  describe('announceDropPosition - column drops', () => {
+    it('should announce creating a column to the left, throttled', () => {
+      const targetBlock = createMockBlock('target');
+      mockBlockManager.getBlockIndex = vi.fn(() => 1);
+      mockBlockManager.blocks = [targetBlock as Block];
+
+      a11y.announceDropPosition(targetBlock as Block, 'left');
+
+      // Throttled: nothing announced before the timeout
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(300);
+
+      expect(mockI18n.t).toHaveBeenCalledWith('a11y.dropCreateColumnLeft');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropCreateColumnLeft:{}',
+        { politeness: 'polite' }
+      );
+    });
+
+    it('should announce creating a column to the right, throttled', () => {
+      const targetBlock = createMockBlock('target');
+      mockBlockManager.getBlockIndex = vi.fn(() => 1);
+      mockBlockManager.blocks = [targetBlock as Block];
+
+      a11y.announceDropPosition(targetBlock as Block, 'right');
+      vi.advanceTimersByTime(300);
+
+      expect(mockI18n.t).toHaveBeenCalledWith('a11y.dropCreateColumnRight');
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropCreateColumnRight:{}',
+        { politeness: 'polite' }
+      );
+    });
+
+    it('should not announce the same column edge twice', () => {
+      const targetBlock = createMockBlock('target');
+      mockBlockManager.getBlockIndex = vi.fn(() => 1);
+      mockBlockManager.blocks = [targetBlock as Block];
+
+      a11y.announceDropPosition(targetBlock as Block, 'left');
+      vi.advanceTimersByTime(300);
+      vi.clearAllMocks();
+
+      a11y.announceDropPosition(targetBlock as Block, 'left');
+      vi.advanceTimersByTime(300);
+
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+    });
+  });
+
   describe('announceDropComplete', () => {
     it('should announce single block moved', () => {
       const sourceBlock = createMockBlock('source');

@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "داخل کریں",
   "tools.audio.coverUrlPlaceholder": "تصویر کا URL پیسٹ کریں…",
   "tools.audio.coverUrlAria": "تصویر کا URL",
-  "tools.audio.coverSourceAria": "تصویر کا ذریعہ"
+  "tools.audio.coverSourceAria": "تصویر کا ذریعہ",
+  "a11y.blocksSelected": "{count} بلاکس منتخب ہوئے",
+  "a11y.navigationModeEntered": "نیویگیشن موڈ۔ بلاکس کے درمیان جانے کے لیے تیر کی کلیدیں، ترمیم کے لیے Enter، باہر نکلنے کے لیے Escape استعمال کریں۔",
+  "a11y.navigationModeExited": "نیویگیشن موڈ سے باہر نکل گئے",
+  "a11y.navigationPosition": "{tool}، {total} میں سے {position}",
+  "a11y.navigatedToBlock": "بلاک پر منتقل ہوئے",
+  "a11y.dropCreateColumnLeft": "بائیں جانب ایک کالم بنائے گا",
+  "a11y.dropCreateColumnRight": "دائیں جانب ایک کالم بنائے گا",
+  "blockSettings.clickAction": "کلک کریں",
+  "blockSettings.orConjunction": " یا ",
+  "blockSettings.openMenuAction": " مینو کھولنے کے لیے"
 }

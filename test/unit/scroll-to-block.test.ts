@@ -15,6 +15,17 @@ declare global {
 const mockGetBlockById = vi.fn().mockReturnValue(undefined);
 const mockSelectBlock = vi.fn();
 const mockRenderer = { pendingHashScroll: null as string | null };
+const mockI18nT = vi.fn((key: string) => key);
+
+// Spy on the announcer so tests can assert screen-reader announcements without
+// touching the real ARIA live regions.
+const { mockAnnounce } = vi.hoisted(() => ({ mockAnnounce: vi.fn() }));
+
+vi.mock('../../src/components/utils/announcer', () => ({
+  announce: mockAnnounce,
+  registerAnnouncer: vi.fn(),
+  destroyAnnouncer: vi.fn(),
+}));
 
 // Mock dependencies — must come before static import of Blok
 vi.mock('../../src/components/utils/tooltip', () => ({
@@ -72,6 +83,9 @@ vi.mock('../../src/components/core', () => {
       BlockSelection: {
         selectBlock: mockSelectBlock,
       } as unknown as BlokModules['BlockSelection'],
+      I18n: {
+        t: mockI18nT,
+      } as unknown as BlokModules['I18n'],
       Renderer: mockRenderer as unknown as BlokModules['Renderer'],
     };
 
@@ -132,6 +146,9 @@ describe('scroll-to-block', () => {
     mockGetBlockById.mockReset();
     mockGetBlockById.mockReturnValue(undefined);
     mockSelectBlock.mockReset();
+    mockI18nT.mockReset();
+    mockI18nT.mockImplementation((key: string) => key);
+    mockAnnounce.mockReset();
     mockRenderer.pendingHashScroll = null;
 
     originalScrollTo = window.scrollTo;
@@ -536,6 +553,39 @@ describe('scroll-to-block', () => {
 
       // No element was found — nothing to assert a class on, but verify no crash
       expect(editor).toBeDefined();
+    });
+
+    it('announces navigation arrival to screen readers via the I18n key', async () => {
+      setHash('#abc123XYZ0');
+
+      const el = fakeEl(200);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="abc123XYZ0"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const editor = new Blok({} as BlokConfig);
+
+      await editor.isReady;
+
+      expect(mockI18nT).toHaveBeenCalledWith('a11y.navigatedToBlock');
+      expect(mockAnnounce).toHaveBeenCalledWith('a11y.navigatedToBlock');
+    });
+
+    it('does not announce navigation when hash does not match any block', async () => {
+      setHash('#nonExistentId');
+
+      // querySelector returns null by default
+
+      const editor = new Blok({} as BlokConfig);
+
+      await editor.isReady;
+
+      expect(mockAnnounce).not.toHaveBeenCalled();
     });
 
     it('does not throw on malformed percent-encoded hash', async () => {

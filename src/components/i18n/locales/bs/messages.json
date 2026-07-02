@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Umetni",
   "tools.audio.coverUrlPlaceholder": "Zalijepite URL slike…",
   "tools.audio.coverUrlAria": "URL slike",
-  "tools.audio.coverSourceAria": "Izvor slike"
+  "tools.audio.coverSourceAria": "Izvor slike",
+  "a11y.blocksSelected": "Odabrano {count} blokova",
+  "a11y.navigationModeEntered": "Način navigacije. Koristite strelice za kretanje između blokova, Enter za uređivanje i Escape za izlaz.",
+  "a11y.navigationModeExited": "Izlaz iz načina navigacije",
+  "a11y.navigationPosition": "{tool}, {position} od {total}",
+  "a11y.navigatedToBlock": "Pomjereno na blok",
+  "a11y.dropCreateColumnLeft": "Kreirat će se kolona lijevo",
+  "a11y.dropCreateColumnRight": "Kreirat će se kolona desno",
+  "blockSettings.clickAction": "Kliknite",
+  "blockSettings.orConjunction": " ili ",
+  "blockSettings.openMenuAction": " za otvaranje menija"
 }

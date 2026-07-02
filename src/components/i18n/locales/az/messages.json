@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Daxil et",
   "tools.audio.coverUrlPlaceholder": "Şəkil URL-ini yapışdırın…",
   "tools.audio.coverUrlAria": "Şəkil URL-i",
-  "tools.audio.coverSourceAria": "Şəkil mənbəyi"
+  "tools.audio.coverSourceAria": "Şəkil mənbəyi",
+  "a11y.blocksSelected": "{count} blok seçildi",
+  "a11y.navigationModeEntered": "Naviqasiya rejimi. Bloklar arasında hərəkət etmək üçün ox düymələrindən, redaktə üçün Enter, çıxmaq üçün Escape düyməsindən istifadə edin.",
+  "a11y.navigationModeExited": "Naviqasiya rejimindən çıxıldı",
+  "a11y.navigationPosition": "{tool}, {total} içindən {position}",
+  "a11y.navigatedToBlock": "Bloka keçildi",
+  "a11y.dropCreateColumnLeft": "Solda sütun yaradılacaq",
+  "a11y.dropCreateColumnRight": "Sağda sütun yaradılacaq",
+  "blockSettings.clickAction": "Klikləyin",
+  "blockSettings.orConjunction": " və ya ",
+  "blockSettings.openMenuAction": " menyunu açmaq üçün"
 }

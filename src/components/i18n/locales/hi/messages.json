@@ -464,5 +464,15 @@
   "tools.audio.coverUrlAria": "छवि URL",
   "tools.audio.coverSourceAria": "छवि स्रोत",
   "toolNames.video": "वीडियो",
-  "toolNames.audio": "ऑडियो"
+  "toolNames.audio": "ऑडियो",
+  "a11y.blocksSelected": "{count} ब्लॉक चयनित",
+  "a11y.navigationModeEntered": "नेविगेशन मोड। ब्लॉक के बीच जाने के लिए ऐरो कुंजियाँ, संपादित करने के लिए Enter, बाहर निकलने के लिए Escape का उपयोग करें।",
+  "a11y.navigationModeExited": "नेविगेशन मोड से बाहर निकले",
+  "a11y.navigationPosition": "{tool}, {total} में से {position}",
+  "a11y.navigatedToBlock": "ब्लॉक पर पहुँचे",
+  "a11y.dropCreateColumnLeft": "बाईं ओर कॉलम बनाएगा",
+  "a11y.dropCreateColumnRight": "दाईं ओर कॉलम बनाएगा",
+  "blockSettings.clickAction": "क्लिक करें",
+  "blockSettings.orConjunction": " या ",
+  "blockSettings.openMenuAction": " मेनू खोलने के लिए"
 }

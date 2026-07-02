@@ -283,6 +283,40 @@ describe('PopoverAbstract', () => {
     });
   });
 
+  describe('confirmation-mode announcement', () => {
+    it('announces the confirmation prompt via the results announcer when an item enters confirmation mode', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Delete',
+            name: 'delete',
+            isDestructive: true,
+            confirmation: {
+              title: 'Click to confirm',
+              onActivate: vi.fn(),
+            },
+          },
+        ],
+      });
+      const nodes = popover.getNodesForTests();
+      const [deleteItem] = popover.getItemsForTests();
+
+      popover.invokeHandleItemClick(deleteItem);
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('Click to confirm');
+    });
+
+    it('does not announce for a plain (non-confirmation) item click', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+      const [firstItem] = popover.getItemsForTests();
+
+      popover.invokeHandleItemClick(firstItem);
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('');
+    });
+  });
+
   describe('public API', () => {
     it('show() marks popover as opened and focuses search when available', () => {
       const popover = createPopover();

@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "挿入",
   "tools.audio.coverUrlPlaceholder": "画像 URL を貼り付け…",
   "tools.audio.coverUrlAria": "画像 URL",
-  "tools.audio.coverSourceAria": "画像ソース"
+  "tools.audio.coverSourceAria": "画像ソース",
+  "a11y.blocksSelected": "{count}個のブロックを選択",
+  "a11y.navigationModeEntered": "ナビゲーションモード。矢印キーでブロック間を移動、Enterで編集、Escapeで終了します。",
+  "a11y.navigationModeExited": "ナビゲーションモードを終了しました",
+  "a11y.navigationPosition": "{tool}、{total}個中{position}番目",
+  "a11y.navigatedToBlock": "ブロックに移動しました",
+  "a11y.dropCreateColumnLeft": "左に列を作成します",
+  "a11y.dropCreateColumnRight": "右に列を作成します",
+  "blockSettings.clickAction": "クリック",
+  "blockSettings.orConjunction": " または ",
+  "blockSettings.openMenuAction": " でメニューを開く"
 }

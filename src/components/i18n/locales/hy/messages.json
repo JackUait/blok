@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Տեղադրել",
   "tools.audio.coverUrlPlaceholder": "Տեղադրեք պատկերի URL…",
   "tools.audio.coverUrlAria": "Պատկերի URL",
-  "tools.audio.coverSourceAria": "Պատկերի աղբյուր"
+  "tools.audio.coverSourceAria": "Պատկերի աղբյուր",
+  "a11y.blocksSelected": "Ընտրված է {count} բլոկ",
+  "a11y.navigationModeEntered": "Նավիգացիայի ռեժիմ։ Օգտագործեք սլաքի ստեղները բլոկների միջև տեղաշարժվելու, Enter-ը՝ խմբագրելու, Escape-ը՝ դուրս գալու համար։",
+  "a11y.navigationModeExited": "Դուրս եկաք նավիգացիայի ռեժիմից",
+  "a11y.navigationPosition": "{tool}, {position} {total}-ից",
+  "a11y.navigatedToBlock": "Անցում բլոկին",
+  "a11y.dropCreateColumnLeft": "Կստեղծի սյունակ ձախից",
+  "a11y.dropCreateColumnRight": "Կստեղծի սյունակ աջից",
+  "blockSettings.clickAction": "Սեղմեք",
+  "blockSettings.orConjunction": " կամ ",
+  "blockSettings.openMenuAction": " մենյուն բացելու համար"
 }

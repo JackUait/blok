@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Fut",
   "tools.audio.coverUrlPlaceholder": "Ngjit një URL imazhi…",
   "tools.audio.coverUrlAria": "URL e imazhit",
-  "tools.audio.coverSourceAria": "Burimi i imazhit"
+  "tools.audio.coverSourceAria": "Burimi i imazhit",
+  "a11y.blocksSelected": "{count} blloqe të zgjedhur",
+  "a11y.navigationModeEntered": "Modaliteti i navigimit. Përdorni tastet me shigjeta për të lëvizur mes blloqeve, Enter për të redaktuar, Escape për të dalë.",
+  "a11y.navigationModeExited": "Dolët nga modaliteti i navigimit",
+  "a11y.navigationPosition": "{tool}, {position} nga {total}",
+  "a11y.navigatedToBlock": "U kalua te blloku",
+  "a11y.dropCreateColumnLeft": "Do të krijojë një kolonë majtas",
+  "a11y.dropCreateColumnRight": "Do të krijojë një kolonë djathtas",
+  "blockSettings.clickAction": "Kliko",
+  "blockSettings.orConjunction": " ose ",
+  "blockSettings.openMenuAction": " për të hapur menynë"
 }

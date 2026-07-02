@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "แทรก",
   "tools.audio.coverUrlPlaceholder": "วาง URL รูปภาพ…",
   "tools.audio.coverUrlAria": "URL รูปภาพ",
-  "tools.audio.coverSourceAria": "แหล่งที่มาของรูปภาพ"
+  "tools.audio.coverSourceAria": "แหล่งที่มาของรูปภาพ",
+  "a11y.blocksSelected": "เลือก {count} บล็อกแล้ว",
+  "a11y.navigationModeEntered": "โหมดนำทาง ใช้ปุ่มลูกศรเพื่อย้ายระหว่างบล็อก Enter เพื่อแก้ไข Escape เพื่อออก",
+  "a11y.navigationModeExited": "ออกจากโหมดนำทางแล้ว",
+  "a11y.navigationPosition": "{tool}, {position} จาก {total}",
+  "a11y.navigatedToBlock": "นำทางไปยังบล็อก",
+  "a11y.dropCreateColumnLeft": "จะสร้างคอลัมน์ทางซ้าย",
+  "a11y.dropCreateColumnRight": "จะสร้างคอลัมน์ทางขวา",
+  "blockSettings.clickAction": "คลิก",
+  "blockSettings.orConjunction": " หรือ ",
+  "blockSettings.openMenuAction": " เพื่อเปิดเมนู"
 }

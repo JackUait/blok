@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "បញ្ចូល",
   "tools.audio.coverUrlPlaceholder": "បិទភ្ជាប់ URL រូបភាព…",
   "tools.audio.coverUrlAria": "URL រូបភាព",
-  "tools.audio.coverSourceAria": "ប្រភពរូបភាព"
+  "tools.audio.coverSourceAria": "ប្រភពរូបភាព",
+  "a11y.blocksSelected": "បានជ្រើសរើសប្លុក {count}",
+  "a11y.navigationModeEntered": "របៀបរុករក។ ប្រើគ្រាប់ចុចព្រួញដើម្បីផ្លាស់ទីរវាងប្លុក, Enter ដើម្បីកែសម្រួល, Escape ដើម្បីចាកចេញ។",
+  "a11y.navigationModeExited": "បានចាកចេញពីរបៀបរុករក",
+  "a11y.navigationPosition": "{tool}, {position} នៃ {total}",
+  "a11y.navigatedToBlock": "បានផ្លាស់ទីទៅប្លុក",
+  "a11y.dropCreateColumnLeft": "នឹងបង្កើតជួរឈរនៅខាងឆ្វេង",
+  "a11y.dropCreateColumnRight": "នឹងបង្កើតជួរឈរនៅខាងស្តាំ",
+  "blockSettings.clickAction": "ចុច",
+  "blockSettings.orConjunction": " ឬ ",
+  "blockSettings.openMenuAction": " ដើម្បីបើកម៉ឺនុយ"
 }

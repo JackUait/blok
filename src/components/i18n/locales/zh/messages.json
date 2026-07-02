@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "插入",
   "tools.audio.coverUrlPlaceholder": "粘贴图片 URL…",
   "tools.audio.coverUrlAria": "图片 URL",
-  "tools.audio.coverSourceAria": "图片来源"
+  "tools.audio.coverSourceAria": "图片来源",
+  "a11y.blocksSelected": "已选择 {count} 个内容块",
+  "a11y.navigationModeEntered": "导航模式。使用方向键在内容块之间移动，Enter 编辑，Escape 退出。",
+  "a11y.navigationModeExited": "已退出导航模式",
+  "a11y.navigationPosition": "{tool}，第 {position} 个，共 {total} 个",
+  "a11y.navigatedToBlock": "已导航到内容块",
+  "a11y.dropCreateColumnLeft": "将在左侧创建一列",
+  "a11y.dropCreateColumnRight": "将在右侧创建一列",
+  "blockSettings.clickAction": "点击",
+  "blockSettings.orConjunction": " 或 ",
+  "blockSettings.openMenuAction": " 打开菜单"
 }

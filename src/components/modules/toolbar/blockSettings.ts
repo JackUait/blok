@@ -11,6 +11,7 @@ import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
+import { beautifyShortcut } from '../../utils/string';
 import { getCaretOffset } from '../../utils/caret/selection';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
@@ -271,6 +272,9 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         messages: {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
           search: this.Blok.I18n.t('popover.search'),
+          // Plumb the result-count announcement template so the search field
+          // announces matches to screen readers (parity with the Toolbox).
+          searchResults: this.Blok.I18n.t('a11y.searchResults'),
         },
         autoFocusFirstItem: false,
         minWidth: '220px',
@@ -593,7 +597,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       icon: IconCopy,
       title: this.Blok.I18n.t('blockSettings.duplicate'),
       name: 'duplicate',
-      secondaryLabel: '⌘D',
+      secondaryLabel: beautifyShortcut('CMD+D'),
       closeOnActivate: true,
       onActivate: () => {
         const { BlockSelection, DragManager, Toolbar } = this.Blok;
@@ -633,7 +637,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         title: this.Blok.I18n.t('blockSettings.delete'),
         name: 'delete',
         isDestructive: true,
-        secondaryLabel: 'Del',
+        secondaryLabel: beautifyShortcut('DELETE'),
         closeOnActivate: true,
         onActivate: () => {
           const { BlockManager, Caret, Toolbar } = this.Blok;

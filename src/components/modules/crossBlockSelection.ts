@@ -1,6 +1,7 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { SelectionUtils } from '../selection/index';
+import { announce } from '../utils/announcer';
 import { mouseButtons } from '../utils';
 
 /**
@@ -194,6 +195,7 @@ export class CrossBlockSelection extends Module {
       this.Blok.UI.disableHoverForCooldown();
       this.Blok.UI.resetBlockHoverState();
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+      this.announceSelectionCount();
     }
   };
 
@@ -367,6 +369,28 @@ export class CrossBlockSelection extends Module {
     if (this.isCrossBlockSelectionStarted) {
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
     }
+
+    /**
+     * Announce the selection size as it grows via Shift+Arrow.
+     */
+    this.announceSelectionCount();
+  }
+
+  /**
+   * Announce how many blocks are currently selected as the selection grows.
+   * A single-block selection is not announced (nothing multi-block to convey).
+   */
+  private announceSelectionCount(): void {
+    const count = this.Blok.BlockSelection.selectedBlocks.length;
+
+    if (count <= 1) {
+      return;
+    }
+
+    announce(
+      this.Blok.I18n.t('a11y.blocksSelected', { count }),
+      { politeness: 'polite' }
+    );
   }
 
   /**
@@ -523,6 +547,7 @@ export class CrossBlockSelection extends Module {
       this.Blok.UI.resetBlockHoverState();
 
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+      this.announceSelectionCount();
     }
   };
 

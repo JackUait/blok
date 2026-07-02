@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "إدراج",
   "tools.audio.coverUrlPlaceholder": "الصق رابط صورة…",
   "tools.audio.coverUrlAria": "رابط الصورة",
-  "tools.audio.coverSourceAria": "مصدر الصورة"
+  "tools.audio.coverSourceAria": "مصدر الصورة",
+  "a11y.blocksSelected": "تم تحديد {count} كتلة",
+  "a11y.navigationModeEntered": "وضع التنقل. استخدم مفاتيح الأسهم للتنقل بين الكتل، وEnter للتحرير، وEscape للخروج.",
+  "a11y.navigationModeExited": "تم الخروج من وضع التنقل",
+  "a11y.navigationPosition": "{tool}، {position} من {total}",
+  "a11y.navigatedToBlock": "تم الانتقال إلى الكتلة",
+  "a11y.dropCreateColumnLeft": "سيتم إنشاء عمود على اليسار",
+  "a11y.dropCreateColumnRight": "سيتم إنشاء عمود على اليمين",
+  "blockSettings.clickAction": "انقر",
+  "blockSettings.orConjunction": " أو ",
+  "blockSettings.openMenuAction": " لفتح القائمة"
 }

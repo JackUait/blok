@@ -464,5 +464,15 @@
   "tools.audio.coverUrlAria": "URL تصویر",
   "tools.audio.coverSourceAria": "منبع تصویر",
   "toolNames.video": "ویدیو",
-  "toolNames.audio": "صدا"
+  "toolNames.audio": "صدا",
+  "a11y.blocksSelected": "{count} بلوک انتخاب شد",
+  "a11y.navigationModeEntered": "حالت پیمایش. برای جابجایی بین بلوک‌ها از کلیدهای جهت‌نما، برای ویرایش از Enter و برای خروج از Escape استفاده کنید.",
+  "a11y.navigationModeExited": "از حالت پیمایش خارج شد",
+  "a11y.navigationPosition": "{tool}، {position} از {total}",
+  "a11y.navigatedToBlock": "به بلوک منتقل شد",
+  "a11y.dropCreateColumnLeft": "یک ستون در سمت چپ ایجاد می‌شود",
+  "a11y.dropCreateColumnRight": "یک ستون در سمت راست ایجاد می‌شود",
+  "blockSettings.clickAction": "کلیک کنید",
+  "blockSettings.orConjunction": " یا ",
+  "blockSettings.openMenuAction": " برای باز کردن منو"
 }

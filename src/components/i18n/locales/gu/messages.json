@@ -464,5 +464,15 @@
   "tools.audio.coverUrlAria": "છબી URL",
   "tools.audio.coverSourceAria": "છબી સ્રોત",
   "toolNames.video": "વિડિઓ",
-  "toolNames.audio": "ઓડિઓ"
+  "toolNames.audio": "ઓડિઓ",
+  "a11y.blocksSelected": "{count} બ્લોક પસંદ કર્યા",
+  "a11y.navigationModeEntered": "નેવિગેશન મોડ. બ્લોક વચ્ચે ખસવા માટે એરો કી, સંપાદિત કરવા માટે Enter, બહાર નીકળવા માટે Escape વાપરો.",
+  "a11y.navigationModeExited": "નેવિગેશન મોડમાંથી બહાર નીકળ્યા",
+  "a11y.navigationPosition": "{tool}, {total} માંથી {position}",
+  "a11y.navigatedToBlock": "બ્લોક પર ગયા",
+  "a11y.dropCreateColumnLeft": "ડાબી બાજુ કૉલમ બનાવશે",
+  "a11y.dropCreateColumnRight": "જમણી બાજુ કૉલમ બનાવશે",
+  "blockSettings.clickAction": "ક્લિક કરો",
+  "blockSettings.orConjunction": " અથવા ",
+  "blockSettings.openMenuAction": " મેનૂ ખોલવા માટે"
 }

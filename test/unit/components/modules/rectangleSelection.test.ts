@@ -7,6 +7,11 @@ import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { BlokConfig } from '../../../../types';
 import type { Block as BlockType } from '../../../../src/components/block';
+import { announce } from '../../../../src/components/utils/announcer';
+
+vi.mock('../../../../src/components/utils/announcer', () => ({
+  announce: vi.fn(),
+}));
 
 type PartialModules = Partial<BlokModules>;
 
@@ -117,6 +122,9 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     InlineToolbar: inlineToolbarMock as unknown as BlokModules['InlineToolbar'],
     BlockSelection: blockSelectionMock as unknown as BlokModules['BlockSelection'],
     BlockManager: blockManagerMock as unknown as BlokModules['BlockManager'],
+    I18n: {
+      t: vi.fn((key: string) => key),
+    } as unknown as BlokModules['I18n'],
   };
 
   const mergedState: PartialModules = { ...defaults };
@@ -192,6 +200,53 @@ describe('RectangleSelection', () => {
 
     expect(overlay).not.toBeNull();
     expect(rectangle).not.toBeNull();
+  });
+
+  describe('screen-reader announcements (H9)', () => {
+    it('marks the decorative lasso overlay aria-hidden', () => {
+      const { rectangleSelection, blokWrapper } = createRectangleSelection();
+
+      rectangleSelection.prepare();
+
+      const overlay = blokWrapper.querySelector('[data-blok-testid="overlay"]');
+
+      expect(overlay?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('announces the selected block count on lasso mouseup when more than one is selected', () => {
+      const { rectangleSelection, modules } = createRectangleSelection({
+        BlockSelection: {
+          selectedBlocks: [
+            {} as BlockType,
+            {} as BlockType,
+            {} as BlockType,
+          ],
+        } as unknown as BlokModules['BlockSelection'],
+      });
+
+      rectangleSelection.prepare();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      (rectangleSelection as unknown as { processMouseUp: () => void }).processMouseUp();
+
+      expect(modules.I18n?.t).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('does not announce a count when a single block is selected', () => {
+      const { rectangleSelection } = createRectangleSelection({
+        BlockSelection: {
+          selectedBlocks: [ {} as BlockType ],
+        } as unknown as BlokModules['BlockSelection'],
+      });
+
+      rectangleSelection.prepare();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      (rectangleSelection as unknown as { processMouseUp: () => void }).processMouseUp();
+
+      expect(announce).not.toHaveBeenCalled();
+    });
   });
 
   it('starts selection inside the blok and resets selection state', () => {

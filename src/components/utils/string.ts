@@ -31,7 +31,7 @@ export const beautifyShortcut = (shortcut: string): string => {
     .replace(/right/gi, '←')
     .replace(/escape/gi, '⎋')
     .replace(/insert/gi, 'Ins')
-    .replace(/delete/gi, '␡')
+    .replace(/delete/gi, 'Del')
     .replace(/\+/gi, ' + ');
 
   if (OS.mac) {

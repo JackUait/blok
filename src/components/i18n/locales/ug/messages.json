@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "قىستۇرۇش",
   "tools.audio.coverUrlPlaceholder": "رەسىم URL سىنى چاپلاڭ…",
   "tools.audio.coverUrlAria": "رەسىم URL",
-  "tools.audio.coverSourceAria": "رەسىم مەنبەسى"
+  "tools.audio.coverSourceAria": "رەسىم مەنبەسى",
+  "a11y.blocksSelected": "{count} بۆلەك تاللاندى",
+  "a11y.navigationModeEntered": "يول باشلاش ھالىتى. بۆلەكلەر ئارىسىدا يۆتكىلىش ئۈچۈن يا ئوق كۇنۇپكىلىرىنى، تەھرىرلەش ئۈچۈن Enter، چېكىنىش ئۈچۈن Escape نى ئىشلىتىڭ.",
+  "a11y.navigationModeExited": "يول باشلاش ھالىتىدىن چېكىندى",
+  "a11y.navigationPosition": "{tool}، {total} نىڭ {position}",
+  "a11y.navigatedToBlock": "بۆلەككە يۆتكەلدى",
+  "a11y.dropCreateColumnLeft": "سول تەرەپكە بىر ئىستون قۇرىدۇ",
+  "a11y.dropCreateColumnRight": "ئوڭ تەرەپكە بىر ئىستون قۇرىدۇ",
+  "blockSettings.clickAction": "چېكىڭ",
+  "blockSettings.orConjunction": " ياكى ",
+  "blockSettings.openMenuAction": " تىزىملىكنى ئېچىش ئۈچۈن"
 }

@@ -9,12 +9,17 @@ vi.mock('../../../src/components/utils/tooltip', () => ({
   hide: vi.fn(),
 }));
 
+vi.mock('../../../src/components/utils/logger', () => ({
+  log: vi.fn(),
+}));
+
 import {
   PopoverItemDefault,
   type PopoverItemDefaultParams
 } from '../../../src/components/utils/popover/components/popover-item';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import * as tooltip from '../../../src/components/utils/tooltip';
+import { log } from '../../../src/components/utils/logger';
 
 type ItemSetupResult = {
   item: PopoverItemDefault;
@@ -133,6 +138,29 @@ describe('PopoverItemDefault', () => {
     expect(onActivate).toHaveBeenCalledTimes(1);
     expect(onActivate).toHaveBeenCalledWith(params);
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemConfirmation);
+  });
+
+  it('exposes a keyboard shortcut via aria-keyshortcuts', () => {
+    const { element } = createItem({ title: 'Copy', secondaryLabel: '⌘C' });
+
+    expect(element).toHaveAttribute('aria-keyshortcuts', 'Command+C');
+  });
+
+  it('does not set aria-keyshortcuts when the item has no shortcut', () => {
+    const { element } = createItem();
+
+    expect(element).not.toHaveAttribute('aria-keyshortcuts');
+  });
+
+  it('logs rather than swallows an error thrown by onActivate', () => {
+    const failure = new Error('activation failed');
+    const onActivate = vi.fn(() => {
+      throw failure;
+    });
+    const { item } = createItem({ onActivate });
+
+    expect(() => item.handleClick()).not.toThrow();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('onActivate'), 'error', failure);
   });
 
 

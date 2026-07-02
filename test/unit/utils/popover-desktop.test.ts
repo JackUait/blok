@@ -22,13 +22,18 @@ type MockFlipperShape = {
 type MockSearchInputShape = {
   on: Mock<(event: string, handler: (payload: SearchPayload) => void) => void>;
   getElement: Mock<() => HTMLElement>;
+  getInput: Mock<() => HTMLInputElement>;
+  setValue: Mock<(value: string) => void>;
   focus: Mock<() => void>;
   clear: Mock<() => void>;
   destroy: Mock<() => void>;
   emitSearch: (payload: SearchPayload) => void;
   element: HTMLElement;
+  input: HTMLInputElement;
   items: unknown[];
   placeholder: string | undefined;
+  label: string | undefined;
+  controlsId: string | undefined;
 };
 
 const flipperRegistry = vi.hoisted(() => ({
@@ -121,6 +126,12 @@ vi.mock('../../../src/components/utils/popover/components/search-input', async (
 
     public readonly getElement = vi.fn(() => this.element);
 
+    public readonly getInput = vi.fn(() => this.input);
+
+    public readonly setValue = vi.fn((value: string) => {
+      this.input.value = value;
+    });
+
     public readonly focus = vi.fn(() => {});
 
     public readonly clear = vi.fn(() => {});
@@ -129,17 +140,26 @@ vi.mock('../../../src/components/utils/popover/components/search-input', async (
 
     public readonly element: HTMLElement;
 
+    public readonly input: HTMLInputElement;
+
     public readonly items: unknown[];
 
     public readonly placeholder: string | undefined;
 
+    public readonly label: string | undefined;
+
+    public readonly controlsId: string | undefined;
+
     private readonly handlers = new Map<string, Array<(payload: SearchPayload) => void>>();
 
-    constructor({ items, placeholder }: { items: unknown[]; placeholder?: string }) {
+    constructor({ items, placeholder, label, controlsId }: { items: unknown[]; placeholder?: string; label?: string; controlsId?: string }) {
       this.items = items;
       this.placeholder = placeholder;
+      this.label = label;
+      this.controlsId = controlsId;
       this.element = document.createElement('div');
       this.element.setAttribute('data-blok-testid', 'mock-search-input');
+      this.input = document.createElement('input');
 
       searchInputRegistry.instances.push(this);
     }
@@ -1720,6 +1740,35 @@ describe('PopoverDesktop', () => {
       // so it is only visible when user scrolls to the bottom of the list.
       // Top padding (pt-1.5) is on the outer popover container and is always visible.
       expect(instance.nodes.items.className).toContain('pb-1.5');
+    });
+
+    it('wires the search input as a combobox controlling the results container', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      const searchInput = getMockSearchInput();
+
+      // The items container gets a stable id...
+      expect(instance.nodes.items.id).not.toBe('');
+      // ...that the search input's aria-controls points at (via controlsId).
+      expect(searchInput.controlsId).toBe(instance.nodes.items.id);
+      // ...and an accessible label is plumbed through.
+      expect(searchInput.label).toBe('Search');
+    });
+
+    it('registers the search input as the flipper active-descendant host', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+
+      const searchInput = getMockSearchInput();
+      const flipper = getMockFlipper();
+
+      expect(flipper.setActiveDescendantHost).toHaveBeenCalledWith(searchInput.input);
     });
 
     it('hides items-container bottom padding while "nothing found" is displayed', () => {

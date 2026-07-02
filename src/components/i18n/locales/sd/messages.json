@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "داخل ڪريو",
   "tools.audio.coverUrlPlaceholder": "تصوير جو URL پيسٽ ڪريو…",
   "tools.audio.coverUrlAria": "تصوير URL",
-  "tools.audio.coverSourceAria": "تصوير جو ذريعو"
+  "tools.audio.coverSourceAria": "تصوير جو ذريعو",
+  "a11y.blocksSelected": "{count} بلاڪ چونڊيا ويا",
+  "a11y.navigationModeEntered": "نيويگيشن موڊ. بلاڪن جي وچ ۾ هلڻ لاءِ تير جا بٽڻ استعمال ڪريو، تبديلي لاءِ Enter، ٻاهر نڪرڻ لاءِ Escape.",
+  "a11y.navigationModeExited": "نيويگيشن موڊ مان نڪري ويا",
+  "a11y.navigationPosition": "{tool}، {total} مان {position}",
+  "a11y.navigatedToBlock": "بلاڪ ڏانھن ويا",
+  "a11y.dropCreateColumnLeft": "کاٻي پاسي ھڪ ڪالم ٺاھيو ويندو",
+  "a11y.dropCreateColumnRight": "ساڄي پاسي ھڪ ڪالم ٺاھيو ويندو",
+  "blockSettings.clickAction": "ڪلڪ ڪريو",
+  "blockSettings.orConjunction": " يا ",
+  "blockSettings.openMenuAction": " مينيو کولڻ لاءِ"
 }

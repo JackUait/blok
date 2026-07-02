@@ -12,6 +12,7 @@ import {
 } from '../constants';
 import { Dom as $ } from '../dom';
 import { SelectionUtils } from '../selection/index';
+import { announce } from '../utils/announcer';
 import { throttle } from '../utils';
 
 /**
@@ -411,6 +412,14 @@ export class RectangleSelection extends Module {
 
     if (selectedBlocks.length > 1) {
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+      /**
+       * Announce the resulting selection size once the lasso is released.
+       */
+      announce(
+        this.Blok.I18n.t('a11y.blocksSelected', { count: selectedBlocks.length }),
+        { politeness: 'polite' }
+      );
     }
 
     this.clearSelection();
@@ -471,6 +480,12 @@ export class RectangleSelection extends Module {
     ], {});
 
     overlay.setAttribute(DATA_ATTR.overlay, '');
+    /**
+     * The lasso overlay is purely decorative — its selection outcome is conveyed
+     * to assistive technology via the block-count announcement on mouseup, so
+     * hide the whole overlay subtree from the AT tree.
+     */
+    overlay.setAttribute('aria-hidden', 'true');
     overlayContainer.setAttribute(DATA_ATTR.overlayContainer, '');
     overlayRectangle.setAttribute(DATA_ATTR.overlayRectangle, '');
     overlay.setAttribute('data-blok-testid', 'overlay');

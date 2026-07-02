@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "אריינלייגן",
   "tools.audio.coverUrlPlaceholder": "לייג צו בילד URL…",
   "tools.audio.coverUrlAria": "בילד URL",
-  "tools.audio.coverSourceAria": "בילד מקור"
+  "tools.audio.coverSourceAria": "בילד מקור",
+  "a11y.blocksSelected": "{count} בלאָקן אויסגעקליבן",
+  "a11y.navigationModeEntered": "נאַוויגאַציע מאָדע. ניצט די פֿייל־קנעפּלעך צו באַוועגן צווישן בלאָקן, Enter צו רעדאַקטירן, Escape צו אַרויסגיין.",
+  "a11y.navigationModeExited": "אַרויס פֿון נאַוויגאַציע מאָדע",
+  "a11y.navigationPosition": "{tool}, {position} פֿון {total}",
+  "a11y.navigatedToBlock": "נאַוויגירט צום בלאָק",
+  "a11y.dropCreateColumnLeft": "וועט שאַפֿן אַ זייַל לינקס",
+  "a11y.dropCreateColumnRight": "וועט שאַפֿן אַ זייַל רעכטס",
+  "blockSettings.clickAction": "קליק",
+  "blockSettings.orConjunction": " אָדער ",
+  "blockSettings.openMenuAction": " צו עפֿענען דעם מעניו"
 }

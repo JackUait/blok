@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "ਸ਼ਾਮਲ ਕਰੋ",
   "tools.audio.coverUrlPlaceholder": "ਤਸਵੀਰ URL ਪੇਸਟ ਕਰੋ…",
   "tools.audio.coverUrlAria": "ਤਸਵੀਰ URL",
-  "tools.audio.coverSourceAria": "ਤਸਵੀਰ ਸਰੋਤ"
+  "tools.audio.coverSourceAria": "ਤਸਵੀਰ ਸਰੋਤ",
+  "a11y.blocksSelected": "{count} ਬਲਾਕ ਚੁਣੇ ਗਏ",
+  "a11y.navigationModeEntered": "ਨੈਵੀਗੇਸ਼ਨ ਮੋਡ। ਬਲਾਕਾਂ ਵਿਚਕਾਰ ਜਾਣ ਲਈ ਤੀਰ ਬਟਨ ਵਰਤੋ, ਸੋਧਣ ਲਈ Enter, ਬਾਹਰ ਨਿਕਲਣ ਲਈ Escape।",
+  "a11y.navigationModeExited": "ਨੈਵੀਗੇਸ਼ਨ ਮੋਡ ਤੋਂ ਬਾਹਰ ਨਿਕਲੇ",
+  "a11y.navigationPosition": "{tool}, {total} ਵਿੱਚੋਂ {position}",
+  "a11y.navigatedToBlock": "ਬਲਾਕ 'ਤੇ ਗਏ",
+  "a11y.dropCreateColumnLeft": "ਖੱਬੇ ਪਾਸੇ ਇੱਕ ਕਾਲਮ ਬਣੇਗਾ",
+  "a11y.dropCreateColumnRight": "ਸੱਜੇ ਪਾਸੇ ਇੱਕ ਕਾਲਮ ਬਣੇਗਾ",
+  "blockSettings.clickAction": "ਕਲਿੱਕ ਕਰੋ",
+  "blockSettings.orConjunction": " ਜਾਂ ",
+  "blockSettings.openMenuAction": " ਮੀਨੂ ਖੋਲ੍ਹਣ ਲਈ"
 }

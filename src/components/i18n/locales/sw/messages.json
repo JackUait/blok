@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Ingiza",
   "tools.audio.coverUrlPlaceholder": "Bandika URL ya picha…",
   "tools.audio.coverUrlAria": "URL ya picha",
-  "tools.audio.coverSourceAria": "Chanzo cha picha"
+  "tools.audio.coverSourceAria": "Chanzo cha picha",
+  "a11y.blocksSelected": "Vizuizi {count} vimechaguliwa",
+  "a11y.navigationModeEntered": "Hali ya kusogeza. Tumia vitufe vya mishale kusogea kati ya vizuizi, Enter kuhariri, Escape kutoka.",
+  "a11y.navigationModeExited": "Umetoka kwenye hali ya kusogeza",
+  "a11y.navigationPosition": "{tool}, {position} kati ya {total}",
+  "a11y.navigatedToBlock": "Umesogea hadi kizuizi",
+  "a11y.dropCreateColumnLeft": "Itaunda safu upande wa kushoto",
+  "a11y.dropCreateColumnRight": "Itaunda safu upande wa kulia",
+  "blockSettings.clickAction": "Bofya",
+  "blockSettings.orConjunction": " au ",
+  "blockSettings.openMenuAction": " ili kufungua menyu"
 }

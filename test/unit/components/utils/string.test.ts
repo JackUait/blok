@@ -61,8 +61,9 @@ describe('string', () => {
       expect(beautifyShortcut('escape')).toContain('⎋');
     });
 
-    it('should replace delete with symbol', () => {
-      expect(beautifyShortcut('DELETE')).toContain('␡');
+    it('should replace delete with a display-friendly label', () => {
+      expect(beautifyShortcut('DELETE')).toContain('Del');
+      expect(beautifyShortcut('DELETE')).not.toContain('␡');
     });
 
     it('should replace insert with text', () => {

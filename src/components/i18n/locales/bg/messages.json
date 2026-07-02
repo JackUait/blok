@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Вмъкни",
   "tools.audio.coverUrlPlaceholder": "Поставете URL на изображение…",
   "tools.audio.coverUrlAria": "URL на изображение",
-  "tools.audio.coverSourceAria": "Източник на изображение"
+  "tools.audio.coverSourceAria": "Източник на изображение",
+  "a11y.blocksSelected": "{count} избрани блока",
+  "a11y.navigationModeEntered": "Режим на навигация. Използвайте клавишите със стрелки, за да се придвижвате между блоковете, Enter за редактиране и Escape за изход.",
+  "a11y.navigationModeExited": "Излизане от режима на навигация",
+  "a11y.navigationPosition": "{tool}, {position} от {total}",
+  "a11y.navigatedToBlock": "Придвижване до блок",
+  "a11y.dropCreateColumnLeft": "Ще се създаде колона вляво",
+  "a11y.dropCreateColumnRight": "Ще се създаде колона вдясно",
+  "blockSettings.clickAction": "Щракнете",
+  "blockSettings.orConjunction": " или ",
+  "blockSettings.openMenuAction": " за отваряне на менюто"
 }

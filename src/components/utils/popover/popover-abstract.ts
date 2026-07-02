@@ -434,11 +434,35 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
      */
     this.refreshItemActiveState(item);
 
+    // A destructive item swaps its content to a "click again to confirm" prompt
+    // silently; announce that mode change so screen readers learn the click did
+    // not act immediately. Reuses the existing results-announcer live region.
+    if (item instanceof PopoverItemDefault && item.isConfirmationStateEnabled) {
+      this.announceConfirmationMode(item);
+    }
+
     if (item.closeOnActivate === true) {
       this.hide();
 
       this.emit(PopoverEvent.ClosedOnActivate);
     }
+  }
+
+  /**
+   * Writes the confirmation prompt into the visually-hidden live region so
+   * screen readers announce that the destructive item is now awaiting a second
+   * click to confirm.
+   * @param item - the item that just entered confirmation mode
+   */
+  private announceConfirmationMode(item: PopoverItemDefault): void {
+    const announcer = this.nodes.resultsAnnouncer;
+    const title = item.confirmationTitle;
+
+    if (announcer === undefined || title === undefined) {
+      return;
+    }
+
+    announcer.textContent = title;
   }
 
   /**

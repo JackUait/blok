@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Infoga",
   "tools.audio.coverUrlPlaceholder": "Klistra in en bild-URL…",
   "tools.audio.coverUrlAria": "Bild-URL",
-  "tools.audio.coverSourceAria": "Bildkälla"
+  "tools.audio.coverSourceAria": "Bildkälla",
+  "a11y.blocksSelected": "{count} block markerade",
+  "a11y.navigationModeEntered": "Navigeringsläge. Använd piltangenterna för att flytta mellan block, Enter för att redigera, Escape för att avsluta.",
+  "a11y.navigationModeExited": "Avslutade navigeringsläge",
+  "a11y.navigationPosition": "{tool}, {position} av {total}",
+  "a11y.navigatedToBlock": "Navigerade till block",
+  "a11y.dropCreateColumnLeft": "Skapar en kolumn till vänster",
+  "a11y.dropCreateColumnRight": "Skapar en kolumn till höger",
+  "blockSettings.clickAction": "Klicka",
+  "blockSettings.orConjunction": " eller ",
+  "blockSettings.openMenuAction": " för att öppna menyn"
 }

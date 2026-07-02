@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Ekle",
   "tools.audio.coverUrlPlaceholder": "Görsel URL'si yapıştırın…",
   "tools.audio.coverUrlAria": "Görsel URL'si",
-  "tools.audio.coverSourceAria": "Görsel kaynağı"
+  "tools.audio.coverSourceAria": "Görsel kaynağı",
+  "a11y.blocksSelected": "{count} blok seçildi",
+  "a11y.navigationModeEntered": "Gezinme modu. Bloklar arasında hareket etmek için ok tuşlarını, düzenlemek için Enter, çıkmak için Escape kullanın.",
+  "a11y.navigationModeExited": "Gezinme modundan çıkıldı",
+  "a11y.navigationPosition": "{tool}, {total} içinde {position}",
+  "a11y.navigatedToBlock": "Bloka gidildi",
+  "a11y.dropCreateColumnLeft": "Sola bir sütun oluşturulacak",
+  "a11y.dropCreateColumnRight": "Sağa bir sütun oluşturulacak",
+  "blockSettings.clickAction": "Tıkla",
+  "blockSettings.orConjunction": " veya ",
+  "blockSettings.openMenuAction": " menüyü açmak için"
 }

@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Sisipkan",
   "tools.audio.coverUrlPlaceholder": "Tempel URL gambar…",
   "tools.audio.coverUrlAria": "URL gambar",
-  "tools.audio.coverSourceAria": "Sumber gambar"
+  "tools.audio.coverSourceAria": "Sumber gambar",
+  "a11y.blocksSelected": "{count} blok dipilih",
+  "a11y.navigationModeEntered": "Mode navigasi. Gunakan tombol panah untuk berpindah antar blok, Enter untuk mengedit, Escape untuk keluar.",
+  "a11y.navigationModeExited": "Keluar dari mode navigasi",
+  "a11y.navigationPosition": "{tool}, {position} dari {total}",
+  "a11y.navigatedToBlock": "Berpindah ke blok",
+  "a11y.dropCreateColumnLeft": "Akan membuat kolom di kiri",
+  "a11y.dropCreateColumnRight": "Akan membuat kolom di kanan",
+  "blockSettings.clickAction": "Klik",
+  "blockSettings.orConjunction": " atau ",
+  "blockSettings.openMenuAction": " untuk membuka menu"
 }

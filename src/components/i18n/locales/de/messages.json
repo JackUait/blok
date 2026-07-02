@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Einfügen",
   "tools.audio.coverUrlPlaceholder": "Bild-URL einfügen…",
   "tools.audio.coverUrlAria": "Bild-URL",
-  "tools.audio.coverSourceAria": "Bildquelle"
+  "tools.audio.coverSourceAria": "Bildquelle",
+  "a11y.blocksSelected": "{count} Blöcke ausgewählt",
+  "a11y.navigationModeEntered": "Navigationsmodus. Verwenden Sie die Pfeiltasten, um zwischen Blöcken zu wechseln, Enter zum Bearbeiten und Escape zum Beenden.",
+  "a11y.navigationModeExited": "Navigationsmodus beendet",
+  "a11y.navigationPosition": "{tool}, {position} von {total}",
+  "a11y.navigatedToBlock": "Zu Block gewechselt",
+  "a11y.dropCreateColumnLeft": "Erstellt eine Spalte links",
+  "a11y.dropCreateColumnRight": "Erstellt eine Spalte rechts",
+  "blockSettings.clickAction": "Klicken",
+  "blockSettings.orConjunction": " oder ",
+  "blockSettings.openMenuAction": " zum Öffnen des Menüs"
 }

@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Εισαγωγή",
   "tools.audio.coverUrlPlaceholder": "Επικολλήστε URL εικόνας…",
   "tools.audio.coverUrlAria": "URL εικόνας",
-  "tools.audio.coverSourceAria": "Πηγή εικόνας"
+  "tools.audio.coverSourceAria": "Πηγή εικόνας",
+  "a11y.blocksSelected": "Επιλέχθηκαν {count} μπλοκ",
+  "a11y.navigationModeEntered": "Λειτουργία πλοήγησης. Χρησιμοποιήστε τα βέλη για μετακίνηση μεταξύ των μπλοκ, το Enter για επεξεργασία και το Escape για έξοδο.",
+  "a11y.navigationModeExited": "Έξοδος από τη λειτουργία πλοήγησης",
+  "a11y.navigationPosition": "{tool}, {position} από {total}",
+  "a11y.navigatedToBlock": "Μετάβαση στο μπλοκ",
+  "a11y.dropCreateColumnLeft": "Θα δημιουργηθεί στήλη στα αριστερά",
+  "a11y.dropCreateColumnRight": "Θα δημιουργηθεί στήλη στα δεξιά",
+  "blockSettings.clickAction": "Κλικ",
+  "blockSettings.orConjunction": " ή ",
+  "blockSettings.openMenuAction": " για άνοιγμα του μενού"
 }

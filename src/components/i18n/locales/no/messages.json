@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Sett inn",
   "tools.audio.coverUrlPlaceholder": "Lim inn en bilde-URL…",
   "tools.audio.coverUrlAria": "Bilde-URL",
-  "tools.audio.coverSourceAria": "Bildekilde"
+  "tools.audio.coverSourceAria": "Bildekilde",
+  "a11y.blocksSelected": "{count} blokker valgt",
+  "a11y.navigationModeEntered": "Navigasjonsmodus. Bruk piltastene til å flytte mellom blokker, Enter for å redigere, Escape for å avslutte.",
+  "a11y.navigationModeExited": "Avsluttet navigasjonsmodus",
+  "a11y.navigationPosition": "{tool}, {position} av {total}",
+  "a11y.navigatedToBlock": "Navigerte til blokk",
+  "a11y.dropCreateColumnLeft": "Oppretter en kolonne til venstre",
+  "a11y.dropCreateColumnRight": "Oppretter en kolonne til høyre",
+  "blockSettings.clickAction": "Klikk",
+  "blockSettings.orConjunction": " eller ",
+  "blockSettings.openMenuAction": " for å åpne menyen"
 }

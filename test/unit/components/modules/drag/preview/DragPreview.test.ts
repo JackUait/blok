@@ -123,6 +123,18 @@ describe('DragPreview', () => {
       expect(preview.querySelector('[data-blok-toggle-children]')).toBeNull();
     });
 
+    it('should hide the preview clone from assistive tech via aria-hidden and inert', () => {
+      const contentElement = document.createElement('div');
+      contentElement.innerHTML = '<p>Test content</p>';
+
+      const preview = dragPreview.createSingle(contentElement, false);
+
+      // The clone duplicates block content already present in the DOM, so the
+      // preview root must be removed from the accessibility tree.
+      expect(preview.getAttribute('aria-hidden')).toBe('true');
+      expect(preview.hasAttribute('inert')).toBe(true);
+    });
+
     it('should set explicit width on clone to preserve percentage-based layouts', () => {
       const contentElement = document.createElement('div');
 
@@ -266,6 +278,19 @@ describe('DragPreview', () => {
       const preview = dragPreview.createMulti([block]);
 
       expect(preview.querySelector('[data-blok-toggle-children]')).toBeNull();
+    });
+
+    it('should hide the multi-block preview from assistive tech via aria-hidden and inert', () => {
+      const block = createMockBlock('block-1', 100, 50, false);
+
+      mockBlockRects(block, {
+        left: 0, top: 0, width: 100, height: 60, right: 100, bottom: 60, x: 0, y: 0, toJSON: () => ({}) },
+        { left: 0, top: 0, width: 100, height: 50, right: 100, bottom: 50, x: 0, y: 0, toJSON: () => ({}) });
+
+      const preview = dragPreview.createMulti([block]);
+
+      expect(preview.getAttribute('aria-hidden')).toBe('true');
+      expect(preview.hasAttribute('inert')).toBe(true);
     });
 
     it('should skip blocks without content element', () => {

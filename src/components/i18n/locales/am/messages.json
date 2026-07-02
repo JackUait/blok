@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "አስገባ",
   "tools.audio.coverUrlPlaceholder": "የምስል URL ለጥፍ…",
   "tools.audio.coverUrlAria": "የምስል URL",
-  "tools.audio.coverSourceAria": "የምስል ምንጭ"
+  "tools.audio.coverSourceAria": "የምስል ምንጭ",
+  "a11y.blocksSelected": "{count} ብሎኮች ተመርጠዋል",
+  "a11y.navigationModeEntered": "የአሰሳ ሁነታ። በብሎኮች መካከል ለመንቀሳቀስ የቀስት ቁልፎችን፣ ለማረም Enter፣ ለመውጣት Escape ይጠቀሙ።",
+  "a11y.navigationModeExited": "ከአሰሳ ሁነታ ወጥቷል",
+  "a11y.navigationPosition": "{tool}፣ {position} ከ{total}",
+  "a11y.navigatedToBlock": "ወደ ብሎክ ተሸጋገረ",
+  "a11y.dropCreateColumnLeft": "በግራ በኩል ዓምድ ይፈጠራል",
+  "a11y.dropCreateColumnRight": "በቀኝ በኩል ዓምድ ይፈጠራል",
+  "blockSettings.clickAction": "ጠቅ ያድርጉ",
+  "blockSettings.orConjunction": " ወይም ",
+  "blockSettings.openMenuAction": " ምናሌውን ለመክፈት"
 }

@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Inserează",
   "tools.audio.coverUrlPlaceholder": "Lipește URL-ul unei imagini…",
   "tools.audio.coverUrlAria": "URL-ul imaginii",
-  "tools.audio.coverSourceAria": "Sursa imaginii"
+  "tools.audio.coverSourceAria": "Sursa imaginii",
+  "a11y.blocksSelected": "{count} blocuri selectate",
+  "a11y.navigationModeEntered": "Mod de navigare. Folosiți tastele săgeți pentru a vă deplasa între blocuri, Enter pentru a edita, Escape pentru a ieși.",
+  "a11y.navigationModeExited": "Ați ieșit din modul de navigare",
+  "a11y.navigationPosition": "{tool}, {position} din {total}",
+  "a11y.navigatedToBlock": "Navigat la bloc",
+  "a11y.dropCreateColumnLeft": "Va crea o coloană în stânga",
+  "a11y.dropCreateColumnRight": "Va crea o coloană în dreapta",
+  "blockSettings.clickAction": "Clic",
+  "blockSettings.orConjunction": " sau ",
+  "blockSettings.openMenuAction": " pentru a deschide meniul"
 }

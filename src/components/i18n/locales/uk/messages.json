@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Вставити",
   "tools.audio.coverUrlPlaceholder": "Вставте URL зображення…",
   "tools.audio.coverUrlAria": "URL зображення",
-  "tools.audio.coverSourceAria": "Джерело зображення"
+  "tools.audio.coverSourceAria": "Джерело зображення",
+  "a11y.blocksSelected": "Вибрано {count} блоків",
+  "a11y.navigationModeEntered": "Режим навігації. Використовуйте стрілки для переміщення між блоками, Enter для редагування, Escape для виходу.",
+  "a11y.navigationModeExited": "Вихід із режиму навігації",
+  "a11y.navigationPosition": "{tool}, {position} з {total}",
+  "a11y.navigatedToBlock": "Перейдено до блоку",
+  "a11y.dropCreateColumnLeft": "Буде створено стовпець ліворуч",
+  "a11y.dropCreateColumnRight": "Буде створено стовпець праворуч",
+  "blockSettings.clickAction": "Натисніть",
+  "blockSettings.orConjunction": " або ",
+  "blockSettings.openMenuAction": " щоб відкрити меню"
 }

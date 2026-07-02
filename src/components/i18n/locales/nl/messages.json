@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Invoegen",
   "tools.audio.coverUrlPlaceholder": "Plak een afbeeldings-URL…",
   "tools.audio.coverUrlAria": "Afbeeldings-URL",
-  "tools.audio.coverSourceAria": "Afbeeldingsbron"
+  "tools.audio.coverSourceAria": "Afbeeldingsbron",
+  "a11y.blocksSelected": "{count} blokken geselecteerd",
+  "a11y.navigationModeEntered": "Navigatiemodus. Gebruik de pijltjestoetsen om tussen blokken te navigeren, Enter om te bewerken, Escape om af te sluiten.",
+  "a11y.navigationModeExited": "Navigatiemodus verlaten",
+  "a11y.navigationPosition": "{tool}, {position} van {total}",
+  "a11y.navigatedToBlock": "Naar blok genavigeerd",
+  "a11y.dropCreateColumnLeft": "Maakt een kolom aan de linkerkant",
+  "a11y.dropCreateColumnRight": "Maakt een kolom aan de rechterkant",
+  "blockSettings.clickAction": "Klik",
+  "blockSettings.orConjunction": " of ",
+  "blockSettings.openMenuAction": " om menu te openen"
 }

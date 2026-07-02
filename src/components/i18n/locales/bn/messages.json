@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "ঢোকান",
   "tools.audio.coverUrlPlaceholder": "ছবির URL পেস্ট করুন…",
   "tools.audio.coverUrlAria": "ছবির URL",
-  "tools.audio.coverSourceAria": "ছবির উৎস"
+  "tools.audio.coverSourceAria": "ছবির উৎস",
+  "a11y.blocksSelected": "{count}টি ব্লক নির্বাচিত হয়েছে",
+  "a11y.navigationModeEntered": "নেভিগেশন মোড। ব্লকগুলোর মধ্যে যেতে অ্যারো কী, সম্পাদনা করতে Enter এবং বেরিয়ে যেতে Escape ব্যবহার করুন।",
+  "a11y.navigationModeExited": "নেভিগেশন মোড থেকে বেরিয়ে আসা হয়েছে",
+  "a11y.navigationPosition": "{tool}, {total}টির মধ্যে {position}",
+  "a11y.navigatedToBlock": "ব্লকে নেভিগেট করা হয়েছে",
+  "a11y.dropCreateColumnLeft": "বামে একটি কলাম তৈরি হবে",
+  "a11y.dropCreateColumnRight": "ডানে একটি কলাম তৈরি হবে",
+  "blockSettings.clickAction": "ক্লিক করুন",
+  "blockSettings.orConjunction": " অথবা ",
+  "blockSettings.openMenuAction": " মেনু খুলতে"
 }

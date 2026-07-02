@@ -464,5 +464,15 @@
   "tools.audio.coverUrlAria": "Kép URL",
   "tools.audio.coverSourceAria": "Kép forrása",
   "toolNames.video": "Videó",
-  "toolNames.audio": "Hang"
+  "toolNames.audio": "Hang",
+  "a11y.blocksSelected": "{count} blokk kijelölve",
+  "a11y.navigationModeEntered": "Navigációs mód. A nyílbillentyűkkel válthat a blokkok között, az Enterrel szerkeszthet, az Escape billentyűvel kiléphet.",
+  "a11y.navigationModeExited": "Kilépett a navigációs módból",
+  "a11y.navigationPosition": "{tool}, {position}/{total}",
+  "a11y.navigatedToBlock": "Ugrás a blokkra",
+  "a11y.dropCreateColumnLeft": "Oszlopot hoz létre balra",
+  "a11y.dropCreateColumnRight": "Oszlopot hoz létre jobbra",
+  "blockSettings.clickAction": "Kattintson",
+  "blockSettings.orConjunction": " vagy ",
+  "blockSettings.openMenuAction": " a menü megnyitásához"
 }

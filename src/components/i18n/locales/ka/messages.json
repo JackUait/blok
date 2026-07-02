@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "ჩასმა",
   "tools.audio.coverUrlPlaceholder": "ჩასვით სურათის URL…",
   "tools.audio.coverUrlAria": "სურათის URL",
-  "tools.audio.coverSourceAria": "სურათის წყარო"
+  "tools.audio.coverSourceAria": "სურათის წყარო",
+  "a11y.blocksSelected": "არჩეულია {count} ბლოკი",
+  "a11y.navigationModeEntered": "ნავიგაციის რეჟიმი. გამოიყენეთ ისრები ბლოკებს შორის გადასაადგილებლად, Enter რედაქტირებისთვის, Escape გამოსასვლელად.",
+  "a11y.navigationModeExited": "ნავიგაციის რეჟიმიდან გამოსვლა",
+  "a11y.navigationPosition": "{tool}, {position} {total}-დან",
+  "a11y.navigatedToBlock": "გადავიდა ბლოკზე",
+  "a11y.dropCreateColumnLeft": "შექმნის სვეტს მარცხნივ",
+  "a11y.dropCreateColumnRight": "შექმნის სვეტს მარჯვნივ",
+  "blockSettings.clickAction": "დააწკაპუნეთ",
+  "blockSettings.orConjunction": " ან ",
+  "blockSettings.openMenuAction": " მენიუს გასახსნელად"
 }

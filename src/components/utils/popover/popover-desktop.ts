@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
+import { generateId } from '../id-generator';
 
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemSeparator, css as popoverItemCls, PopoverItemDefault, PopoverItemType } from './components/popover-item';
@@ -278,6 +279,12 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     this.flipper?.onFlip(this.onFlip);
+
+    // The flipper is created after addSearch(), so a search-field host recorded
+    // there must be re-applied to the freshly-built flipper.
+    if (this.activeDescendantHost !== null) {
+      this.flipper?.setActiveDescendantHost(this.activeDescendantHost);
+    }
   }
 
   /**
@@ -1288,10 +1295,25 @@ export class PopoverDesktop extends PopoverAbstract {
    * Adds search to the popover
    */
   private addSearch(): void {
+    // The combobox input needs a results container to point aria-controls at.
+    // The listbox surfaces (e.g. Toolbox) supply a stable id via listboxId; for
+    // menu surfaces (e.g. BlockSettings) generate one so the link still holds.
+    if (this.nodes.items !== null && this.nodes.items.id === '') {
+      this.nodes.items.id = generateId('blok-popover-items-');
+    }
+
     this.search = new SearchInput({
       items: this.itemsDefault,
       placeholder: this.messages.search,
+      label: this.messages.search,
+      controlsId: this.nodes.items?.id,
     });
+
+    // Wire the search input as the aria-activedescendant host so the flipper
+    // mirrors the virtually-focused result onto it while the caret stays in the
+    // field. The Toolbox drives its own contentEditable host instead (it has no
+    // search field), so this only applies to search-field popovers.
+    this.setActiveDescendantHost(this.search.getInput());
 
     this.search.on(SearchInputEvent.Search, (searchData: { query: string; items: SearchableItem[] }) => {
       const isEmptyQuery = searchData.query === '';

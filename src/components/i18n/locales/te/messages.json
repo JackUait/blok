@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "చొప్పించు",
   "tools.audio.coverUrlPlaceholder": "చిత్రం URL అతికించండి…",
   "tools.audio.coverUrlAria": "చిత్రం URL",
-  "tools.audio.coverSourceAria": "చిత్ర మూలం"
+  "tools.audio.coverSourceAria": "చిత్ర మూలం",
+  "a11y.blocksSelected": "{count} విభాగాలు ఎంపిక చేయబడ్డాయి",
+  "a11y.navigationModeEntered": "నావిగేషన్ మోడ్. విభాగాల మధ్య తరలడానికి బాణం కీలను, సవరించడానికి Enter, నిష్క్రమించడానికి Escape ఉపయోగించండి.",
+  "a11y.navigationModeExited": "నావిగేషన్ మోడ్ నుండి నిష్క్రమించారు",
+  "a11y.navigationPosition": "{tool}, {total}లో {position}",
+  "a11y.navigatedToBlock": "విభాగానికి తరలింది",
+  "a11y.dropCreateColumnLeft": "ఎడమవైపు నిలువు వరుసను సృష్టిస్తుంది",
+  "a11y.dropCreateColumnRight": "కుడివైపు నిలువు వరుసను సృష్టిస్తుంది",
+  "blockSettings.clickAction": "నొక్కండి",
+  "blockSettings.orConjunction": " లేదా ",
+  "blockSettings.openMenuAction": " మెనూ తెరవడానికి"
 }

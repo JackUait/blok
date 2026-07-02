@@ -8,6 +8,7 @@ import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
+import { announce } from '../../utils/announcer';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 
@@ -619,5 +620,7 @@ export class BlocksAPI extends Module {
     }
 
     highlightBlockArrival(el);
+
+    announce(this.Blok.I18n.t('a11y.navigatedToBlock'));
   }
 }

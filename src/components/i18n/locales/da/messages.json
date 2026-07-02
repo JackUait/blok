@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Indsæt",
   "tools.audio.coverUrlPlaceholder": "Indsæt en billed-URL…",
   "tools.audio.coverUrlAria": "Billed-URL",
-  "tools.audio.coverSourceAria": "Billedkilde"
+  "tools.audio.coverSourceAria": "Billedkilde",
+  "a11y.blocksSelected": "{count} blokke valgt",
+  "a11y.navigationModeEntered": "Navigationstilstand. Brug piletasterne til at flytte mellem blokke, Enter for at redigere og Escape for at afslutte.",
+  "a11y.navigationModeExited": "Afsluttede navigationstilstand",
+  "a11y.navigationPosition": "{tool}, {position} af {total}",
+  "a11y.navigatedToBlock": "Navigeret til blok",
+  "a11y.dropCreateColumnLeft": "Opretter en kolonne til venstre",
+  "a11y.dropCreateColumnRight": "Opretter en kolonne til højre",
+  "blockSettings.clickAction": "Klik",
+  "blockSettings.orConjunction": " eller ",
+  "blockSettings.openMenuAction": " for at åbne menuen"
 }

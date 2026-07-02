@@ -12,6 +12,7 @@ import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
 import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
+import { announce } from '../utils/announcer';
 import { Shortcuts } from '../utils/shortcuts';
 import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
@@ -25,6 +26,14 @@ import type { ListItemStyle } from '../../tools/list/types';
 type ClipboardSegment =
   | { type: 'list'; items: Block[] }
   | { type: 'other'; block: Block };
+
+/**
+ * Throttle window (ms) for per-step navigation-mode position announcements.
+ * Mirrors the drag announcer's throttle so a rapid run of arrow presses
+ * collapses to a single "{tool}, {position} of {total}" announcement instead
+ * of flooding assistive technology.
+ */
+const NAVIGATION_ANNOUNCE_THROTTLE_MS = 300;
 
 /**
  *
@@ -49,6 +58,21 @@ export class BlockSelection extends Module {
    * Index of the currently focused block in navigation mode
    */
   private navigationFocusIndex = -1;
+
+  /**
+   * Pending timeout for the throttled navigation-mode position announcement.
+   */
+  private navigationAnnounceTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * The most recent block index awaiting a throttled position announcement.
+   */
+  private pendingNavigationAnnounceIndex: number | null = null;
+
+  /**
+   * The block index last announced, so an unchanged position is not re-announced.
+   */
+  private lastAnnouncedNavigationIndex: number | null = null;
 
   /**
    * Sanitizer Config
@@ -664,6 +688,12 @@ export class BlockSelection extends Module {
     this._navigationModeEnabled = true;
 
     /**
+     * Announce the mode change and how to use it. Assertive because entering
+     * navigation mode changes what every keypress does, so it should interrupt.
+     */
+    announce(this.Blok.I18n.t('a11y.navigationModeEntered'), { politeness: 'assertive' });
+
+    /**
      * Start navigation from current block or first block
      */
     const startIndex = BlockManager.currentBlockIndex >= 0
@@ -720,6 +750,13 @@ export class BlockSelection extends Module {
     if (!this._navigationModeEnabled) {
       return;
     }
+
+    /**
+     * Cancel any pending position announcement and clear the throttle memory so
+     * a future navigation session starts fresh, then announce the mode exit.
+     */
+    this.resetNavigationAnnounce();
+    announce(this.Blok.I18n.t('a11y.navigationModeExited'), { politeness: 'polite' });
 
     const focusedBlock = this.navigationFocusedBlock;
 
@@ -862,12 +899,84 @@ export class BlockSelection extends Module {
     this.needToSelectAll = true;
 
     /**
+     * Announce the newly focused block's tool and position (throttled).
+     */
+    this.announceNavigationPosition(index);
+
+    /**
      * Scroll block into view if needed
      */
     block.holder.scrollIntoView({
       behavior: 'smooth',
       block: 'nearest',
     });
+  }
+
+  /**
+   * Announce the focused block's tool and its position in the document while in
+   * navigation mode. Throttled (and de-duplicated) like the drag announcer so a
+   * rapid run of arrow presses collapses to a single announcement of the final
+   * resting position.
+   * @param index - the block index that just received navigation focus
+   */
+  private announceNavigationPosition(index: number): void {
+    if (this.lastAnnouncedNavigationIndex === index) {
+      return;
+    }
+
+    this.pendingNavigationAnnounceIndex = index;
+
+    /**
+     * A timeout is already scheduled — let it announce whatever the latest
+     * pending index is when it fires.
+     */
+    if (this.navigationAnnounceTimeoutId !== null) {
+      return;
+    }
+
+    this.navigationAnnounceTimeoutId = setTimeout(() => {
+      const pendingIndex = this.pendingNavigationAnnounceIndex;
+
+      this.navigationAnnounceTimeoutId = null;
+      this.pendingNavigationAnnounceIndex = null;
+
+      if (pendingIndex === null || this.lastAnnouncedNavigationIndex === pendingIndex) {
+        return;
+      }
+
+      const block = this.Blok.BlockManager.getBlockByIndex(pendingIndex);
+
+      if (!block) {
+        return;
+      }
+
+      this.lastAnnouncedNavigationIndex = pendingIndex;
+
+      const total = this.Blok.BlockManager.blocks.length;
+
+      announce(
+        this.Blok.I18n.t('a11y.navigationPosition', {
+          tool: block.name,
+          position: pendingIndex + 1,
+          total,
+        }),
+        { politeness: 'polite' }
+      );
+    }, NAVIGATION_ANNOUNCE_THROTTLE_MS);
+  }
+
+  /**
+   * Cancel any pending navigation position announcement and forget the last
+   * announced index. Called when navigation mode ends.
+   */
+  private resetNavigationAnnounce(): void {
+    if (this.navigationAnnounceTimeoutId !== null) {
+      clearTimeout(this.navigationAnnounceTimeoutId);
+      this.navigationAnnounceTimeoutId = null;
+    }
+
+    this.pendingNavigationAnnounceIndex = null;
+    this.lastAnnouncedNavigationIndex = null;
   }
 
   /**

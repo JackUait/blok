@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Inserisci",
   "tools.audio.coverUrlPlaceholder": "Incolla l’URL di un’immagine…",
   "tools.audio.coverUrlAria": "URL dell’immagine",
-  "tools.audio.coverSourceAria": "Origine dell’immagine"
+  "tools.audio.coverSourceAria": "Origine dell’immagine",
+  "a11y.blocksSelected": "{count} blocchi selezionati",
+  "a11y.navigationModeEntered": "Modalità di navigazione. Usa i tasti freccia per spostarti tra i blocchi, Invio per modificare, Esc per uscire.",
+  "a11y.navigationModeExited": "Uscita dalla modalità di navigazione",
+  "a11y.navigationPosition": "{tool}, {position} di {total}",
+  "a11y.navigatedToBlock": "Spostato sul blocco",
+  "a11y.dropCreateColumnLeft": "Creerà una colonna a sinistra",
+  "a11y.dropCreateColumnRight": "Creerà una colonna a destra",
+  "blockSettings.clickAction": "Clicca",
+  "blockSettings.orConjunction": " o ",
+  "blockSettings.openMenuAction": " per aprire il menu"
 }

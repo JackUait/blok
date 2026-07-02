@@ -3,6 +3,11 @@ import { CrossBlockSelection } from '../../../../src/components/modules/crossBlo
 import * as _ from '../../../../src/components/utils';
 import type { Block } from '../../../../src/components/block';
 import type { Listeners } from '../../../../src/components/utils/listeners';
+import { announce } from '../../../../src/components/utils/announcer';
+
+vi.mock('../../../../src/components/utils/announcer', () => ({
+  announce: vi.fn(),
+}));
 
 type MutableSelection = Selection & {
   isCollapsed: boolean;
@@ -56,8 +61,10 @@ describe('CrossBlockSelection', () => {
   let caretSetToBlock: ReturnType<typeof vi.fn>;
   let selectionMock: MutableSelection;
   let redactor: HTMLElement;
+  let i18nT: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    i18nT = vi.fn((key: string) => key);
     toolbarClose = vi.fn();
     inlineToolbarClose = vi.fn();
     blockSelectionClearCache = vi.fn();
@@ -132,6 +139,9 @@ describe('CrossBlockSelection', () => {
         nodes: {
           redactor,
         },
+        disableHoverForCooldown: vi.fn(),
+        resetBlockHoverState: vi.fn(),
+        someToolbarOpened: false,
       },
       DragManager: {
         isDragging: false,
@@ -141,6 +151,9 @@ describe('CrossBlockSelection', () => {
       },
       BlockSettings: {
         opened: false,
+      },
+      I18n: {
+        t: i18nT,
       },
     } as unknown as CrossBlockSelection['Blok'];
 
@@ -277,6 +290,14 @@ describe('CrossBlockSelection', () => {
       expect(blocks[2].selected).toBe(true);
       expect(blockSelectionClearCache).toHaveBeenCalled();
       expect(toolbarClose).toHaveBeenCalled();
+    });
+
+    it('announces the selected block count as the keyboard selection grows (H9)', () => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      crossBlockSelection.toggleBlockSelectedState(true);
+
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
     });
   });
 
@@ -568,6 +589,21 @@ describe('CrossBlockSelection', () => {
 
       expect(offSpy).toHaveBeenCalledWith(document, 'mouseover', accessPrivate(crossBlockSelection, 'onMouseOver'));
       expect(offSpy).toHaveBeenCalledWith(document, 'mouseup', accessPrivate(crossBlockSelection, 'onMouseUp'));
+    });
+
+    it('announces the selected block count after a drag mouseup (H9)', () => {
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
+      blocks[0].selected = true;
+      blocks[1].selected = true;
+      blocks[2].selected = true;
+
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      accessPrivate<() => void>(crossBlockSelection, 'onMouseUp')();
+
+      expect(i18nT).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
     });
   });
 

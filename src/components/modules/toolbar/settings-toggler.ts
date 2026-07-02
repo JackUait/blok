@@ -194,10 +194,10 @@ export class SettingsTogglerHandler {
     const blockTunesTooltip = createTooltipContent([
       blok.I18n.t('blockSettings.dragToMove'),
       [
-        { text: 'Click', highlight: true },
-        { text: ' or ', highlight: false },
+        { text: blok.I18n.t('blockSettings.clickAction'), highlight: true },
+        { text: blok.I18n.t('blockSettings.orConjunction'), highlight: false },
         { text: shortcut, highlight: true },
-        { text: ' to open menu', highlight: false },
+        { text: blok.I18n.t('blockSettings.openMenuAction'), highlight: false },
       ],
     ]);
 

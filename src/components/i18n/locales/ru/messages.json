@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Вставить",
   "tools.audio.coverUrlPlaceholder": "Вставьте URL изображения…",
   "tools.audio.coverUrlAria": "URL изображения",
-  "tools.audio.coverSourceAria": "Источник изображения"
+  "tools.audio.coverSourceAria": "Источник изображения",
+  "a11y.blocksSelected": "Выбрано блоков: {count}",
+  "a11y.navigationModeEntered": "Режим навигации. Используйте стрелки для перемещения между блоками, Enter — для редактирования, Escape — для выхода.",
+  "a11y.navigationModeExited": "Выход из режима навигации",
+  "a11y.navigationPosition": "{tool}, {position} из {total}",
+  "a11y.navigatedToBlock": "Переход к блоку",
+  "a11y.dropCreateColumnLeft": "Будет создана колонка слева",
+  "a11y.dropCreateColumnRight": "Будет создана колонка справа",
+  "blockSettings.clickAction": "Нажмите",
+  "blockSettings.orConjunction": " или ",
+  "blockSettings.openMenuAction": " чтобы открыть меню"
 }

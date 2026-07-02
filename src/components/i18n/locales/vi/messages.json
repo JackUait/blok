@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Chèn",
   "tools.audio.coverUrlPlaceholder": "Dán URL ảnh…",
   "tools.audio.coverUrlAria": "URL hình ảnh",
-  "tools.audio.coverSourceAria": "Nguồn hình ảnh"
+  "tools.audio.coverSourceAria": "Nguồn hình ảnh",
+  "a11y.blocksSelected": "Đã chọn {count} khối",
+  "a11y.navigationModeEntered": "Chế độ điều hướng. Dùng các phím mũi tên để di chuyển giữa các khối, Enter để chỉnh sửa, Escape để thoát.",
+  "a11y.navigationModeExited": "Đã thoát chế độ điều hướng",
+  "a11y.navigationPosition": "{tool}, {position} trong {total}",
+  "a11y.navigatedToBlock": "Đã điều hướng đến khối",
+  "a11y.dropCreateColumnLeft": "Sẽ tạo một cột bên trái",
+  "a11y.dropCreateColumnRight": "Sẽ tạo một cột bên phải",
+  "blockSettings.clickAction": "Nhấp",
+  "blockSettings.orConjunction": " hoặc ",
+  "blockSettings.openMenuAction": " để mở menu"
 }

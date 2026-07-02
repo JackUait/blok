@@ -464,5 +464,15 @@
   "tools.audio.coverUrlAria": "Kuvan URL",
   "tools.audio.coverSourceAria": "Kuvan lähde",
   "toolNames.video": "Video",
-  "toolNames.audio": "Ääni"
+  "toolNames.audio": "Ääni",
+  "a11y.blocksSelected": "{count} lohkoa valittu",
+  "a11y.navigationModeEntered": "Navigointitila. Siirry lohkojen välillä nuolinäppäimillä, muokkaa Enterillä ja poistu Escillä.",
+  "a11y.navigationModeExited": "Navigointitila suljettu",
+  "a11y.navigationPosition": "{tool}, {position}/{total}",
+  "a11y.navigatedToBlock": "Siirryttiin lohkoon",
+  "a11y.dropCreateColumnLeft": "Luo sarakkeen vasemmalle",
+  "a11y.dropCreateColumnRight": "Luo sarakkeen oikealle",
+  "blockSettings.clickAction": "Napsauta",
+  "blockSettings.orConjunction": " tai ",
+  "blockSettings.openMenuAction": " avataksesi valikon"
 }

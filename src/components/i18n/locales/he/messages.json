@@ -464,5 +464,15 @@
   "tools.audio.coverUrlAria": "כתובת תמונה",
   "tools.audio.coverSourceAria": "מקור תמונה",
   "toolNames.video": "וידאו",
-  "toolNames.audio": "שמע"
+  "toolNames.audio": "שמע",
+  "a11y.blocksSelected": "{count} בלוקים נבחרו",
+  "a11y.navigationModeEntered": "מצב ניווט. השתמש במקשי החצים למעבר בין הבלוקים, Enter לעריכה, Escape ליציאה.",
+  "a11y.navigationModeExited": "יצאת ממצב ניווט",
+  "a11y.navigationPosition": "{tool}, {position} מתוך {total}",
+  "a11y.navigatedToBlock": "מעבר לבלוק",
+  "a11y.dropCreateColumnLeft": "ייצור עמודה משמאל",
+  "a11y.dropCreateColumnRight": "ייצור עמודה מימין",
+  "blockSettings.clickAction": "לחץ",
+  "blockSettings.orConjunction": " או ",
+  "blockSettings.openMenuAction": " לפתיחת התפריט"
 }

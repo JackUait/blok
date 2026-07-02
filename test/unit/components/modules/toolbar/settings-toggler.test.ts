@@ -122,10 +122,10 @@ describe('SettingsTogglerHandler', () => {
       expect(createTooltipContent).toHaveBeenCalledWith([
         'blockSettings.dragToMove',
         [
-          { text: 'Click', highlight: true },
-          { text: ' or ', highlight: false },
+          { text: 'blockSettings.clickAction', highlight: true },
+          { text: 'blockSettings.orConjunction', highlight: false },
           { text: 'blockSettings.menuShortcutMac', highlight: true },
-          { text: ' to open menu', highlight: false },
+          { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);
     });
@@ -147,10 +147,10 @@ describe('SettingsTogglerHandler', () => {
       expect(createTooltipContent).toHaveBeenCalledWith([
         'blockSettings.dragToMove',
         [
-          { text: 'Click', highlight: true },
-          { text: ' or ', highlight: false },
+          { text: 'blockSettings.clickAction', highlight: true },
+          { text: 'blockSettings.orConjunction', highlight: false },
           { text: 'blockSettings.menuShortcutWin', highlight: true },
-          { text: ' to open menu', highlight: false },
+          { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);
     });

@@ -21,6 +21,10 @@ export class DragPreview {
     const preview = $.make('div', PREVIEW_STYLES.base);
 
     preview.setAttribute('data-blok-testid', 'drag-preview');
+    // The clone duplicates block content that already exists in the DOM, which
+    // would otherwise enter the accessibility tree twice. Hide the ghost.
+    preview.setAttribute('aria-hidden', 'true');
+    preview.setAttribute('inert', '');
     const clone = contentElement.cloneNode(true) as HTMLElement;
 
     // Remove toggle children container — it causes visual duplication in the ghost
@@ -71,6 +75,10 @@ export class DragPreview {
     const preview = $.make('div', PREVIEW_STYLES.base);
 
     preview.setAttribute('data-blok-testid', 'drag-preview');
+    // The clones duplicate block content that already exists in the DOM, which
+    // would otherwise enter the accessibility tree twice. Hide the ghost.
+    preview.setAttribute('aria-hidden', 'true');
+    preview.setAttribute('inert', '');
 
     // Get block holder dimensions to capture actual spacing
     const blockInfo = blocks.map((block) => {

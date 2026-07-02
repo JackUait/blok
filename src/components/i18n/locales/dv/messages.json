@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "އެތެރެކުރޭ",
   "tools.audio.coverUrlPlaceholder": "ފޮޓޯ URL ޕޭސްޓް ކުރޭ…",
   "tools.audio.coverUrlAria": "ފޮޓޯ URL",
-  "tools.audio.coverSourceAria": "ފޮޓޯގެ މަޞްދަރު"
+  "tools.audio.coverSourceAria": "ފޮޓޯގެ މަޞްދަރު",
+  "a11y.blocksSelected": "{count} ބްލޮކް ހޮވިއްޖެ",
+  "a11y.navigationModeEntered": "ނެވިގޭޝަން މޯޑް. ބްލޮކްތަކުގެ މެދުގައި ހަރަކާތްކުރަން އެރޯ ކީތައް، އެޑިޓް ކުރަން Enter، އަދި ނުކުތުމަށް Escape ބޭނުންކުރޭ.",
+  "a11y.navigationModeExited": "ނެވިގޭޝަން މޯޑުން ނުކުމެއްޖެ",
+  "a11y.navigationPosition": "{tool}، {position} އިން {total}",
+  "a11y.navigatedToBlock": "ބްލޮކަށް ދެވިއްޖެ",
+  "a11y.dropCreateColumnLeft": "ވާތުގައި ކޮލަމެއް އުފެދޭނެ",
+  "a11y.dropCreateColumnRight": "ކަނާތުގައި ކޮލަމެއް އުފެދޭނެ",
+  "blockSettings.clickAction": "ކްލިކް ކުރޭ",
+  "blockSettings.orConjunction": " ނުވަތަ ",
+  "blockSettings.openMenuAction": " މެނޫ ހުޅުވަން"
 }

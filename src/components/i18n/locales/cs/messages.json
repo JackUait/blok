@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "Vložit",
   "tools.audio.coverUrlPlaceholder": "Vložte URL obrázku…",
   "tools.audio.coverUrlAria": "URL obrázku",
-  "tools.audio.coverSourceAria": "Zdroj obrázku"
+  "tools.audio.coverSourceAria": "Zdroj obrázku",
+  "a11y.blocksSelected": "Vybráno {count} bloků",
+  "a11y.navigationModeEntered": "Režim navigace. Pomocí šipek se pohybujte mezi bloky, klávesou Enter upravujte a klávesou Escape režim ukončíte.",
+  "a11y.navigationModeExited": "Režim navigace ukončen",
+  "a11y.navigationPosition": "{tool}, {position} z {total}",
+  "a11y.navigatedToBlock": "Přesunuto na blok",
+  "a11y.dropCreateColumnLeft": "Vytvoří se sloupec vlevo",
+  "a11y.dropCreateColumnRight": "Vytvoří se sloupec vpravo",
+  "blockSettings.clickAction": "Klikněte",
+  "blockSettings.orConjunction": " nebo ",
+  "blockSettings.openMenuAction": " pro otevření nabídky"
 }

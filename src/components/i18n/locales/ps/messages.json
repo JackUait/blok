@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "داخلول",
   "tools.audio.coverUrlPlaceholder": "د انځور URL پیسټ کړئ…",
   "tools.audio.coverUrlAria": "انځور URL",
-  "tools.audio.coverSourceAria": "د انځور سرچینه"
+  "tools.audio.coverSourceAria": "د انځور سرچینه",
+  "a11y.blocksSelected": "{count} بلاکونه غوره شول",
+  "a11y.navigationModeEntered": "د نیویګیشن حالت. د بلاکونو ترمنځ د حرکت لپاره د غشي تڼۍ وکاروئ، د سمون لپاره Enter، د وتلو لپاره Escape.",
+  "a11y.navigationModeExited": "د نیویګیشن حالت پریښودل شو",
+  "a11y.navigationPosition": "{tool}، {position} د {total} څخه",
+  "a11y.navigatedToBlock": "بلاک ته لاړ",
+  "a11y.dropCreateColumnLeft": "کیڼ خوا ته به یو کالم جوړ شي",
+  "a11y.dropCreateColumnRight": "ښي خوا ته به یو کالم جوړ شي",
+  "blockSettings.clickAction": "کلیک",
+  "blockSettings.orConjunction": " یا ",
+  "blockSettings.openMenuAction": " مینو خلاصولو لپاره"
 }

@@ -464,5 +464,15 @@
   "tools.audio.coverUrlAria": "URL ng larawan",
   "tools.audio.coverSourceAria": "Pinagmulan ng larawan",
   "toolNames.video": "Video",
-  "toolNames.audio": "Audio"
+  "toolNames.audio": "Audio",
+  "a11y.blocksSelected": "{count} block ang napili",
+  "a11y.navigationModeEntered": "Navigation mode. Gamitin ang mga arrow key para lumipat sa pagitan ng mga block, Enter para mag-edit, Escape para lumabas.",
+  "a11y.navigationModeExited": "Lumabas sa navigation mode",
+  "a11y.navigationPosition": "{tool}, {position} ng {total}",
+  "a11y.navigatedToBlock": "Napunta sa block",
+  "a11y.dropCreateColumnLeft": "Gagawa ng kolum sa kaliwa",
+  "a11y.dropCreateColumnRight": "Gagawa ng kolum sa kanan",
+  "blockSettings.clickAction": "I-click",
+  "blockSettings.orConjunction": " o ",
+  "blockSettings.openMenuAction": " para buksan ang menu"
 }

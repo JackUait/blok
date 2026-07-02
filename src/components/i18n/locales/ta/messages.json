@@ -464,5 +464,15 @@
   "tools.audio.coverInsert": "செருகு",
   "tools.audio.coverUrlPlaceholder": "பட URL ஐ ஒட்டவும்…",
   "tools.audio.coverUrlAria": "பட URL",
-  "tools.audio.coverSourceAria": "பட மூலம்"
+  "tools.audio.coverSourceAria": "பட மூலம்",
+  "a11y.blocksSelected": "{count} தொகுதிகள் தேர்ந்தெடுக்கப்பட்டன",
+  "a11y.navigationModeEntered": "வழிசெலுத்தல் பயன்முறை. தொகுதிகளுக்கிடையே நகர அம்புக்குறி விசைகளையும், திருத்த Enter, வெளியேற Escape ஐயும் பயன்படுத்தவும்.",
+  "a11y.navigationModeExited": "வழிசெலுத்தல் பயன்முறையிலிருந்து வெளியேறியது",
+  "a11y.navigationPosition": "{tool}, {total} இல் {position}",
+  "a11y.navigatedToBlock": "தொகுதிக்கு நகர்ந்தது",
+  "a11y.dropCreateColumnLeft": "இடதுபுறம் ஒரு நெடுவரிசையை உருவாக்கும்",
+  "a11y.dropCreateColumnRight": "வலதுபுறம் ஒரு நெடுவரிசையை உருவாக்கும்",
+  "blockSettings.clickAction": "தட்டவும்",
+  "blockSettings.orConjunction": " அல்லது ",
+  "blockSettings.openMenuAction": " பட்டியலைத் திறக்க"
 }

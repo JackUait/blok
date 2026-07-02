@@ -31,7 +31,7 @@ import {
   IconImage,
   IconReplace,
 } from '../../components/icons';
-import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_RELOAD_ATTEMPTS, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
@@ -390,8 +390,15 @@ export class ImageTool implements BlockTool {
     imgEl.style.setProperty('min-height', '0px');
   }
 
+  private get maxReloadAttempts(): number {
+    const configured = this.config.reloadAttempts;
+    return typeof configured === 'number' && configured >= 0
+      ? Math.floor(configured)
+      : DEFAULT_RELOAD_ATTEMPTS;
+  }
+
   private handleImgLoadFailure(imgEl: HTMLImageElement, figure: HTMLElement): void {
-    if (this.reloadAttempts >= 1) {
+    if (this.reloadAttempts >= this.maxReloadAttempts) {
       figure.removeAttribute('data-loading');
       this.applyBrokenImage();
       return;

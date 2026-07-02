@@ -599,7 +599,15 @@ const editor = new Blok({
     title: 'Image',
     description: 'Embed an image via URL upload or file paste.',
     importExample: "import { Image } from '@jackuait/blok/tools';",
-    configOptions: [],
+    configOptions: [
+      {
+        option: 'reloadAttempts',
+        type: 'number',
+        default: '5',
+        description:
+          'How many times a rendered image silently re-fetches its `src` after a load error before showing the broken-image state. Set 0 to disable auto-retry.',
+      },
+    ],
     saveDataShape: '{ url: string; caption?: string; alt?: string; withBorder?: boolean; stretched?: boolean; withBackground?: boolean }',
     saveDataExample: "{ url: 'https://example.com/image.png', caption: 'Cat', alt: 'A cat' }",
     usageExample: "tools: { image: { class: Image, config: { endpoints: { byFile: '/upload', byUrl: '/fetch' } } } }",

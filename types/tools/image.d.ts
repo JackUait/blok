@@ -101,4 +101,10 @@ export interface ImageConfig {
   convertGifToVideo?: boolean;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
+  /**
+   * How many times a rendered image silently re-fetches its `src` after a load
+   * error before showing the broken-image state. Default 5. Set 0 to disable
+   * auto-retry (fail on the first error).
+   */
+  reloadAttempts?: number;
 }

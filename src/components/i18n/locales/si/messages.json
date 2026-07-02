@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ගෙනයාමට අදින්න",
   "blockSettings.clickToOpenMenu": "මෙනුව විවෘත කිරීමට ක්ලික් කරන්න",
-  "blockSettings.clickOrShortcutToOpenMenu": "මෙනුව විවෘත කිරීමට ක්ලික් කරන්න හෝ {shortcut} භාවිතා කරන්න",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "පහළින් එක් කිරීමට ක්ලික් කරන්න",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "රූප URL අලවන්න…",
   "tools.audio.coverUrlAria": "රූප URL",
   "tools.audio.coverSourceAria": "රූපයේ මූලාශ්‍රය",
+  "a11y.allBlocksSelected": "සියලු බ්ලොක් තෝරා ඇත, බ්ලොක් {count}ක්",
   "a11y.blocksSelected": "බ්ලොක් {count}ක් තෝරා ඇත",
   "a11y.navigationModeEntered": "සංචලන ප්‍රකාරය. බ්ලොක් අතර ගමන් කිරීමට ඊතල යතුරු, සංස්කරණයට Enter, ඉවත් වීමට Escape භාවිත කරන්න.",
   "a11y.navigationModeExited": "සංචලන ප්‍රකාරයෙන් ඉවත් විය",

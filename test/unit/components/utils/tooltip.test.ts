@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../src/components/constants';
 import { destroy, hide, onHover, show } from '../../../../src/components/utils/tooltip';
 import type { TooltipContent } from '../../../../src/components/utils/tooltip';
@@ -167,6 +167,10 @@ const hasTopLayerPopoverReset = (cssSource: string): boolean => {
 
 describe('Tooltip utility', () => {
   let popoverPolyfill: PopoverPolyfill | null = null;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   afterEach(() => {
     const wrapper = getTooltipWrapper();
@@ -1011,6 +1015,149 @@ describe('Tooltip utility', () => {
     // Still shown immediately after leaving — the hide is deferred by the grace timer.
     expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
 
+    vi.advanceTimersByTime(150);
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('cancels a pending grace hide when a new delayed show starts (stale grace timer must not kill the delayed show)', () => {
+    vi.useFakeTimers();
+
+    const triggerA = createTargetElement();
+    const triggerB = createTargetElement();
+
+    onHover(triggerA, 'tooltip A', { delay: 0 });
+
+    triggerA.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    triggerA.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    // Leaving A arms its grace-hide timer.
+    triggerA.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+    // Immediately request B with a delay — this must cancel A's pending
+    // grace hide, otherwise the grace hide fires mid-delay and clears B's
+    // showing timeout so B never appears.
+    show(triggerB, 'tooltip B', { delay: 200 });
+
+    vi.advanceTimersByTime(200);
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+    expect(wrapper?.textContent).toBe('tooltip B');
+
+    hide();
+  });
+
+  it('does not arm the skip-delay warm window when the hide funnel runs while the tooltip was never shown', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const sweptTrigger = createTargetElement();
+    const target = createTargetElement();
+
+    onHover(sweptTrigger, 'swept', { delay: 500 });
+
+    // Sweep over the delayed trigger: enter then leave before its delay elapses.
+    sweptTrigger.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    sweptTrigger.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    sweptTrigger.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+    // The grace timer routes into hide() at 100ms with nothing visible.
+    vi.advanceTimersByTime(100);
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+
+    // Well inside what would be the warm window if it had (wrongly) been armed.
+    show(target, 'cold open', { delay: 200 });
+
+    // The delay must be honored — no tooltip was actually visible, so no warm window.
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+
+    vi.advanceTimersByTime(200);
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    hide();
+  });
+
+  it('suppresses the focus-triggered open right after a touch interaction, while keyboard focus still opens', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const target = createTargetElement();
+
+    onHover(target, 'tap focus', { delay: 0 });
+
+    // Tap-focus on a touch device: pointerdown(touch) then focus.
+    target.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch',
+      bubbles: true }));
+    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).not.toBe('false');
+
+    // Keyboard focus with no recent touch interaction must still open (WCAG 1.4.13).
+    vi.setSystemTime(1000);
+    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    hide();
+  });
+
+  it('destroy() disables trigger handlers so they cannot re-open the tooltip or re-register the document keydown listener', () => {
+    const target = createTargetElement();
+
+    onHover(target, 'destroyed', { delay: 0 });
+
+    destroy();
+
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    target.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+    expect(getTooltipWrapper()).toBeNull();
+
+    const keydownRegistered = addEventListenerSpy.mock.calls.some(([ type ]) => type === 'keydown');
+
+    expect(keydownRegistered).toBe(false);
+  });
+
+  it('hides after the grace period when the pointer leaves the tooltip bubble itself', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'bubble leave', { delay: 0 });
+
+    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
+      bubbles: true }));
+    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    // Travel: leave the trigger, land on the bubble — it stays open.
+    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    wrapper?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    vi.advanceTimersByTime(300);
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    // Leaving the bubble itself arms the grace hide, which then elapses.
+    wrapper?.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     vi.advanceTimersByTime(150);
 
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');

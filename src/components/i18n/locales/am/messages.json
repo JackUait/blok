@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ለማንቀሳቀስ ይጎትቱ",
   "blockSettings.clickToOpenMenu": "ምናሌውን ለመክፈት ጠቅ ያድርጉ",
-  "blockSettings.clickOrShortcutToOpenMenu": "ምናሌውን ለመክፈት ጠቅ ያድርጉ ወይም {shortcut} ይጫኑ",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ከታች ለመጨመር ጠቅ ያድርጉ",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "የምስል URL ለጥፍ…",
   "tools.audio.coverUrlAria": "የምስል URL",
   "tools.audio.coverSourceAria": "የምስል ምንጭ",
+  "a11y.allBlocksSelected": "ሁሉም ብሎኮች ተመርጠዋል፣ {count} ብሎኮች",
   "a11y.blocksSelected": "{count} ብሎኮች ተመርጠዋል",
   "a11y.navigationModeEntered": "የአሰሳ ሁነታ። በብሎኮች መካከል ለመንቀሳቀስ የቀስት ቁልፎችን፣ ለማረም Enter፣ ለመውጣት Escape ይጠቀሙ።",
   "a11y.navigationModeExited": "ከአሰሳ ሁነታ ወጥቷል",

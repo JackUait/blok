@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Dra for å flytte",
   "blockSettings.clickToOpenMenu": "Klikk for å åpne menyen",
-  "blockSettings.clickOrShortcutToOpenMenu": "Klikk eller {shortcut} for å åpne menyen",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Klikk for å legge til nedenfor",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Lim inn en bilde-URL…",
   "tools.audio.coverUrlAria": "Bilde-URL",
   "tools.audio.coverSourceAria": "Bildekilde",
+  "a11y.allBlocksSelected": "Alle blokker valgt, {count} blokker",
   "a11y.blocksSelected": "{count} blokker valgt",
   "a11y.navigationModeEntered": "Navigasjonsmodus. Bruk piltastene til å flytte mellom blokker, Enter for å redigere, Escape for å avslutte.",
   "a11y.navigationModeExited": "Avsluttet navigasjonsmodus",

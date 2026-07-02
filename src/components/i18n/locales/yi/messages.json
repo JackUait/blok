@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "שלעפּ צו באַוועגן",
   "blockSettings.clickToOpenMenu": "קליק צו עפֿענען דעם מעניו",
-  "blockSettings.clickOrShortcutToOpenMenu": "קליק אָדער {shortcut} צו עפֿענען דעם מעניו",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "קליק צו צולייגן אונטן",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "לייג צו בילד URL…",
   "tools.audio.coverUrlAria": "בילד URL",
   "tools.audio.coverSourceAria": "בילד מקור",
+  "a11y.allBlocksSelected": "אַלע בלאָקן אויסגעקליבן, {count} בלאָקן",
   "a11y.blocksSelected": "{count} בלאָקן אויסגעקליבן",
   "a11y.navigationModeEntered": "נאַוויגאַציע מאָדע. ניצט די פֿייל־קנעפּלעך צו באַוועגן צווישן בלאָקן, Enter צו רעדאַקטירן, Escape צו אַרויסגיין.",
   "a11y.navigationModeExited": "אַרויס פֿון נאַוויגאַציע מאָדע",

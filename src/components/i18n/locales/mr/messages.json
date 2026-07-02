@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "हलवण्यासाठी ओढा",
   "blockSettings.clickToOpenMenu": "मेनू उघडण्यासाठी क्लिक करा",
-  "blockSettings.clickOrShortcutToOpenMenu": "मेनू उघडण्यासाठी क्लिक करा किंवा {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "खाली जोडण्यासाठी क्लिक करा",
@@ -73,6 +72,7 @@
   "a11y.searchResults": "{count} परिणाम",
   "a11y.blockToolbar": "ब्लॉक टूलबार",
   "a11y.textFormatting": "मजकूर स्वरूपण",
+  "a11y.allBlocksSelected": "सर्व ब्लॉक निवडले, {count} ब्लॉक",
   "a11y.blocksSelected": "{count} ब्लॉक निवडले",
   "a11y.navigationModeEntered": "नेव्हिगेशन मोड. ब्लॉकदरम्यान हलण्यासाठी बाण की, संपादित करण्यासाठी Enter, बाहेर पडण्यासाठी Escape वापरा.",
   "a11y.navigationModeExited": "नेव्हिगेशन मोडमधून बाहेर पडलात",

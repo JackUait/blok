@@ -143,6 +143,7 @@ function positionVertical(
  * @param anchorRect - anchor rect (viewport-relative) whose side content sits beside
  * @param alignRect - cross-axis alignment reference rect
  * @param size - measured content size
+ * @param boundaryRect - constraining rect (viewport-relative)
  * @param preferLeft - true when the preferred side is `left`
  * @param align - cross-axis alignment
  * @param overlap - permitted overlap in px
@@ -151,14 +152,29 @@ function positionHorizontal(
   anchorRect: DOMRect,
   alignRect: DOMRect,
   size: { width: number; height: number },
+  boundaryRect: DOMRect,
   preferLeft: boolean,
   align: AnchoredAlign,
   overlap: number
 ): ResolvedAnchoredPosition {
+  // Intersect the boundary with the viewport, mirroring the vertical path
+  // (`resolvePosition` clamps its scope bounds the same way).
+  const boundaryLeft = Math.max(0, boundaryRect.left);
+  const boundaryRight = Math.min(window.innerWidth, boundaryRect.right);
+  const boundaryTop = Math.max(0, boundaryRect.top);
+  const boundaryBottom = Math.min(window.innerHeight, boundaryRect.bottom);
+
+  // The pure side-resolver reasons in a 0..viewportWidth space; shift the
+  // anchor into boundary-local coordinates so its space checks respect the
+  // boundary edges instead of the window edges.
   const { openLeft } = resolveNestedPopoverSide({
-    parentRect: { left: anchorRect.left, right: anchorRect.right, width: anchorRect.width },
+    parentRect: {
+      left: anchorRect.left - boundaryLeft,
+      right: anchorRect.right - boundaryLeft,
+      width: anchorRect.width,
+    },
     nestedWidth: size.width,
-    viewportWidth: window.innerWidth,
+    viewportWidth: boundaryRight - boundaryLeft,
     parentPrefersLeft: preferLeft,
     overlap,
   });
@@ -169,11 +185,14 @@ function positionHorizontal(
       ? alignRect.bottom - size.height
       : alignRect.top + alignRect.height / 2 - size.height / 2;
 
-  const { top: clampedViewportTop } = clampNestedPopoverTop({
-    desiredTop,
+  // Same shift for the cross-axis clamp: run it in boundary-local space and
+  // translate the result back to viewport coordinates.
+  const { top: clampedBoundaryTop } = clampNestedPopoverTop({
+    desiredTop: desiredTop - boundaryTop,
     nestedHeight: size.height,
-    viewportHeight: window.innerHeight,
+    viewportHeight: boundaryBottom - boundaryTop,
   });
+  const clampedViewportTop = clampedBoundaryTop + boundaryTop;
 
   const viewportLeft = openLeft
     ? anchorRect.left - size.width + overlap
@@ -218,6 +237,7 @@ export function positionAnchored(
       anchorRect,
       alignTo !== undefined ? toRect(alignTo) : anchorRect,
       size,
+      boundaryRect,
       side === 'left',
       align,
       overlap

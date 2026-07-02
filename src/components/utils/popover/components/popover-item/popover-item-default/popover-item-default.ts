@@ -1,6 +1,6 @@
 import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { IconChevronRight } from '../../../../../icons';
-import { makeShortcutHtml, shortcutToReadable } from '../../../../key-icon';
+import { makeShortcutHtml, shortcutToAriaKeyshortcuts, shortcutToReadable } from '../../../../key-icon';
 import { log } from '../../../../logger';
 import { onHover } from '../../../../tooltip';
 import { twMerge } from '../../../../tw';
@@ -298,8 +298,9 @@ export class PopoverItemDefault extends PopoverItem {
 
       // Expose the shortcut to assistive tech. The glyphs themselves are
       // aria-hidden inline SVGs, so without this the binding is invisible to
-      // screen readers.
-      root.setAttribute('aria-keyshortcuts', shortcutToReadable(params.secondaryLabel));
+      // screen readers. aria-keyshortcuts requires spec-valid UI-Events key
+      // values ("Meta+D"), not the pretty display names ("Command+D").
+      root.setAttribute('aria-keyshortcuts', shortcutToAriaKeyshortcuts(params.secondaryLabel));
 
       root.appendChild(secondaryEl);
       this.nodes.secondaryLabelEl = secondaryEl;

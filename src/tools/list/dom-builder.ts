@@ -6,7 +6,7 @@
  */
 
 import { DATA_ATTR } from '../../components/constants';
-import { PLACEHOLDER_CLASSES } from '../../components/utils/placeholder';
+import { getPlaceholderClasses } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 import {
@@ -42,6 +42,34 @@ let checklistItemIdSeq = 0;
 export const applyCheckboxState = (checkbox: HTMLInputElement, checked: boolean): void => {
   checkbox.checked = checked;
   checkbox.setAttribute('data-state', checked ? 'checked' : 'unchecked');
+};
+
+/**
+ * The single seam every checked-state change goes through — pointer click,
+ * Cmd/Ctrl+Enter keyboard toggle, and programmatic in-place `setData({checked})`.
+ * Keeps the checkbox control (`checked` + `data-state`) AND the text element
+ * (`data-checked` attribute + strike-through classes) in sync, so the dark-mode
+ * CSS keyed off `[data-checked="true"]` (src/styles/checklist.css) never drifts
+ * from the visible tick.
+ *
+ * @param checkbox - the checklist `<input type="checkbox">`, if present
+ * @param content - the item's text element, if present
+ * @param checked - whether the item is checked
+ */
+export const applyChecklistCheckedState = (
+  checkbox: HTMLInputElement | null,
+  content: HTMLElement | null,
+  checked: boolean
+): void => {
+  if (checkbox) {
+    applyCheckboxState(checkbox, checked);
+  }
+
+  if (content) {
+    content.classList.toggle('line-through', checked);
+    content.classList.toggle('opacity-60', checked);
+    content.setAttribute('data-checked', String(checked));
+  }
 };
 
 /**
@@ -173,7 +201,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
 
   const item = document.createElement('div');
   item.setAttribute('role', 'listitem');
-  item.className = twMerge(ITEM_STYLES, 'flex', ...PLACEHOLDER_CLASSES);
+  item.className = twMerge(ITEM_STYLES, 'flex', ...getPlaceholderClasses('always'));
 
   // Apply custom styles if configured
   if (itemColor) {
@@ -198,7 +226,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
 
   // Create content container
   const contentContainer = document.createElement('div');
-  contentContainer.className = twMerge('flex-1 min-w-0 outline-hidden', ...PLACEHOLDER_CLASSES);
+  contentContainer.className = twMerge('flex-1 min-w-0 outline-hidden', ...getPlaceholderClasses('always'));
   contentContainer.setAttribute('data-blok-testid', LIST_TEST_IDS.contentContainer);
   contentContainer.contentEditable = context.readOnly ? 'false' : 'true';
   contentContainer.innerHTML = data.text;
@@ -247,7 +275,7 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   content.className = twMerge(
     'flex-1 outline-hidden leading-[1.5]',
     data.checked ? 'line-through opacity-60' : '',
-    ...PLACEHOLDER_CLASSES
+    ...getPlaceholderClasses('always')
   );
   content.setAttribute('data-blok-testid', LIST_TEST_IDS.checklistContent);
   content.setAttribute('data-checked', String(data.checked));

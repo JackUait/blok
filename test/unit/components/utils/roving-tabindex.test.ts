@@ -154,6 +154,35 @@ describe('RovingTabindexController', () => {
       expect(document.activeElement).toBe(items[2]);
     });
 
+    it('skips items hidden via a stylesheet class (display:none from CSS rules)', () => {
+      const style = document.createElement('style');
+
+      style.textContent = '.rt-test-hidden { display: none; }';
+      document.head.appendChild(style);
+
+      try {
+        items[1].classList.add('rt-test-hidden');
+        controller = new RovingTabindexController(items);
+        items[0].focus();
+
+        items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+
+        expect(document.activeElement).toBe(items[2]);
+      } finally {
+        style.remove();
+      }
+    });
+
+    it('skips items hidden via visibility:hidden when navigating', () => {
+      items[1].style.visibility = 'hidden';
+      controller = new RovingTabindexController(items);
+      items[0].focus();
+
+      items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+
+      expect(document.activeElement).toBe(items[2]);
+    });
+
     it('focusFirst lands on the first visible item', () => {
       items[0].style.display = 'none';
       controller = new RovingTabindexController(items, { tabbable: false });

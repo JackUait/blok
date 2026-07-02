@@ -174,3 +174,76 @@ export function shortcutToReadable(shortcut: string): string {
     })
     .join('+');
 }
+
+/**
+ * Maps display glyphs and key names to the UI-Events key values required by
+ * the aria-keyshortcuts attribute (e.g. "Meta", "Control", "ArrowUp").
+ * Unlike READABLE_KEY_MAP (pretty tooltip names like "Command"), these tokens
+ * are the only spec-valid values assistive technology understands.
+ */
+const ARIA_KEY_MAP: Record<string, string> = {
+  '⌘': 'Meta',
+  'cmd': 'Meta',
+  'command': 'Meta',
+  'win': 'Meta',
+  '⊞': 'Meta',
+  '⌃': 'Control',
+  'ctrl': 'Control',
+  'control': 'Control',
+  '⌥': 'Alt',
+  'alt': 'Alt',
+  'option': 'Alt',
+  '⇧': 'Shift',
+  'shift': 'Shift',
+  '⌫': 'Backspace',
+  'backspace': 'Backspace',
+  '⌦': 'Delete',
+  'del': 'Delete',
+  'delete': 'Delete',
+  '⏎': 'Enter',
+  '↵': 'Enter',
+  'enter': 'Enter',
+  'return': 'Enter',
+  '⎋': 'Escape',
+  'esc': 'Escape',
+  'escape': 'Escape',
+  '⇥': 'Tab',
+  'tab': 'Tab',
+  '↑': 'ArrowUp',
+  '↓': 'ArrowDown',
+  '←': 'ArrowLeft',
+  '→': 'ArrowRight',
+  'ins': 'Insert',
+  'insert': 'Insert',
+};
+
+/**
+ * Converts a shortcut string (e.g. "⌃⌘L" or "⌘ + C") into a spec-valid
+ * aria-keyshortcuts value like "Control+Meta+L" (ARIA requires UI-Events key
+ * values — "Meta"/"Control" — not pretty names like "Command"/"CTRL").
+ *
+ * Use this ONLY for the aria-keyshortcuts attribute; visible labels and
+ * tooltips should keep the pretty `shortcutToReadable()` version.
+ */
+export function shortcutToAriaKeyshortcuts(shortcut: string): string {
+  const tokens = shortcut
+    .split(' + ')
+    .flatMap(tokenizeSegment);
+
+  if (tokens.length === 0) {
+    return shortcut;
+  }
+
+  return tokens
+    .map((token) => {
+      const trimmed = token.trim();
+      const mapped = ARIA_KEY_MAP[trimmed] ?? ARIA_KEY_MAP[trimmed.toLowerCase()];
+
+      if (mapped !== undefined) {
+        return mapped;
+      }
+
+      return trimmed.length === 1 ? trimmed.toUpperCase() : trimmed;
+    })
+    .join('+');
+}

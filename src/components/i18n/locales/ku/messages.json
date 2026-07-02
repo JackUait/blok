@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ڕاکێشە بۆ گواستنەوە",
   "blockSettings.clickToOpenMenu": "کلیک بکە بۆ کردنەوەی مێنیو",
-  "blockSettings.clickOrShortcutToOpenMenu": "کلیک بکە یان {shortcut} بۆ کردنەوەی مێنیو",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "کلیک بکە بۆ زیادکردن لە خوارەوە",
@@ -98,6 +97,7 @@
   "a11y.searchResults": "{count} encam",
   "a11y.blockToolbar": "Darikê amûrên blokê",
   "a11y.textFormatting": "Formatkirina nivîsê",
+  "a11y.allBlocksSelected": "Hemû blok hatin hilbijartin, {count} blok",
   "a11y.blocksSelected": "{count} blok hatin hilbijartin",
   "a11y.navigationModeEntered": "Moda navîgasyonê. Ji bo tevgerê di navbera blokan de bişkojkên tîran, ji bo sererastkirinê Enter, ji bo derketinê Escape bikar bînin.",
   "a11y.navigationModeExited": "Ji moda navîgasyonê hate derketin",

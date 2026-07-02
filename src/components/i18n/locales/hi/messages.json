@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "खींचकर ले जाएं",
   "blockSettings.clickToOpenMenu": "मेनू खोलने के लिए क्लिक करें",
-  "blockSettings.clickOrShortcutToOpenMenu": "मेनू खोलने के लिए क्लिक करें या {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "नीचे जोड़ें",
@@ -465,6 +464,7 @@
   "tools.audio.coverSourceAria": "छवि स्रोत",
   "toolNames.video": "वीडियो",
   "toolNames.audio": "ऑडियो",
+  "a11y.allBlocksSelected": "सभी ब्लॉक चयनित, {count} ब्लॉक",
   "a11y.blocksSelected": "{count} ब्लॉक चयनित",
   "a11y.navigationModeEntered": "नेविगेशन मोड। ब्लॉक के बीच जाने के लिए ऐरो कुंजियाँ, संपादित करने के लिए Enter, बाहर निकलने के लिए Escape का उपयोग करें।",
   "a11y.navigationModeExited": "नेविगेशन मोड से बाहर निकले",

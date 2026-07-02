@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Зөөхийн тулд чирнэ үү",
   "blockSettings.clickToOpenMenu": "Цэс нээхийн тулд дарна уу",
-  "blockSettings.clickOrShortcutToOpenMenu": "Цэс нээхийн тулд дарна уу эсвэл {shortcut} товч дарна уу",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Доор нэмэхийн тулд дарна уу",
@@ -98,6 +97,7 @@
   "a11y.searchResults": "{count} үр дүн",
   "a11y.blockToolbar": "Блокийн хэрэгслийн самбар",
   "a11y.textFormatting": "Текст форматлах",
+  "a11y.allBlocksSelected": "Бүх блок сонгогдсон, {count} блок",
   "a11y.blocksSelected": "{count} блок сонгогдсон",
   "a11y.navigationModeEntered": "Навигацийн горим. Блокуудын хооронд шилжихийн тулд сумтай товчлууруудыг, засварлахын тулд Enter, гарахын тулд Escape дарна уу.",
   "a11y.navigationModeExited": "Навигацийн горимоос гарлаа",

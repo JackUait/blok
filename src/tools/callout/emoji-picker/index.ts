@@ -3,8 +3,10 @@
 import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
 import { loadEmojiLocale, type EmojiLocaleData } from './emoji-locale';
 import { onHover } from '../../../components/utils/tooltip';
+import { getTabbables } from '../../../components/utils/modal-dialog';
 import {
   REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, EMOJI_SEARCH_RESULTS_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
+  EDIT_ICON_KEY,
   EMOJI_CATEGORY_PEOPLE_KEY, EMOJI_CATEGORY_NATURE_KEY, EMOJI_CATEGORY_FOOD_KEY, EMOJI_CATEGORY_ACTIVITY_KEY,
   EMOJI_CATEGORY_TRAVEL_KEY, EMOJI_CATEGORY_OBJECTS_KEY, EMOJI_CATEGORY_SYMBOLS_KEY, EMOJI_CATEGORY_FLAGS_KEY,
 } from '../constants';
@@ -112,6 +114,7 @@ export class EmojiPicker {
   private _showingEmptyState = false;
 
   private _anchorEl: HTMLElement | null = null;
+  private _previouslyFocused: HTMLElement | null = null;
   private _backdrop: HTMLElement | null = null;
   private _savedOverflow = '';
 
@@ -179,6 +182,9 @@ export class EmojiPicker {
   }
 
   public async open(anchor: HTMLElement): Promise<void> {
+    const active = document.activeElement;
+
+    this._previouslyFocused = active instanceof HTMLElement && active !== document.body ? active : null;
     this._anchorEl = anchor;
     this._open = true;
     this._filterInput.value = '';
@@ -232,7 +238,15 @@ export class EmojiPicker {
     this.closeSkinTonePopover();
     this.removeBackdrop();
     this._announcer.textContent = '';
-    this._anchorEl?.focus();
+
+    // Restore focus to whatever was focused before opening; fall back to the
+    // anchor when that element has since left the document.
+    const restoreTarget = this._previouslyFocused?.isConnected === true
+      ? this._previouslyFocused
+      : this._anchorEl;
+
+    this._previouslyFocused = null;
+    restoreTarget?.focus();
   }
 
   // ─── DOM Construction ─────────────────────────────────────
@@ -241,6 +255,9 @@ export class EmojiPicker {
     const el = document.createElement('div');
 
     el.setAttribute('data-blok-emoji-picker', '');
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-label', this.i18n.t(EDIT_ICON_KEY));
     el.className = [
       'fixed z-50 w-[400px] overflow-hidden rounded-xl',
       'border border-neutral-200/70 bg-white shadow-2xl',
@@ -393,6 +410,36 @@ export class EmojiPicker {
 
     // Escape is handled document-wide in the capture phase (see open()/close())
     // so it wins over other listeners even when focus is inside the picker.
+
+    // Tab containment: the backdrop only blocks pointers, so cycle Tab /
+    // Shift+Tab within the picker's tabbables while it is open.
+    el.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !this._open) {
+        return;
+      }
+
+      const tabbables = getTabbables(el);
+      const first = tabbables.at(0);
+      const last = tabbables.at(-1);
+
+      if (first === undefined || last === undefined) {
+        e.preventDefault();
+
+        return;
+      }
+
+      const active = document.activeElement;
+
+      if (e.shiftKey) {
+        if (active === first || !el.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !el.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
 
     return el;
   }

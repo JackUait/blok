@@ -1,4 +1,5 @@
 import { openModalDialog } from '../../components/utils/modal-dialog';
+import { positionAnchored, createPositionTracker } from '../../components/utils/popover/anchored-position';
 import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 
@@ -16,7 +17,30 @@ export interface OpenAltPopoverOptions {
  */
 let descriptionIdCounter = 0;
 
+/**
+ * How long (ms) after an outside-pointer dismissal a re-open on the same
+ * anchor is ignored. The modal primitive marks the editor subtree `inert`
+ * while the popover is open, so in real browsers a pointerdown on the trigger
+ * retargets to `body` and dismisses the popover; by the time the paired
+ * `click` fires the inert marker is gone, the trigger's handler runs, and the
+ * popover would instantly re-open. The guard swallows that bounce.
+ */
+const REOPEN_GUARD_MS = 200;
+
+/**
+ * Timestamps of the last outside-pointer dismissal, keyed by the anchor whose
+ * popover was dismissed, so only the dismiss→click bounce on the same trigger
+ * is suppressed.
+ */
+const lastOutsideDismissal = new WeakMap<HTMLElement, number>();
+
 export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
+  const dismissedAt = lastOutsideDismissal.get(opts.anchor);
+
+  if (dismissedAt !== undefined && Date.now() - dismissedAt < REOPEN_GUARD_MS) {
+    return () => {};
+  }
+
   const popover = document.createElement('div');
   popover.className = 'blok-image-alt-popover';
   popover.setAttribute('data-role', 'image-alt-popover');
@@ -53,16 +77,23 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
       if (reason === 'escape') {
         cancel();
       } else {
+        lastOutsideDismissal.set(opts.anchor, Date.now());
         commit();
       }
     },
     onClose: () => {
-      window.removeEventListener('resize', reposition);
-      window.removeEventListener('scroll', reposition, true);
+      tracker.detach();
     },
   });
 
-  positionPopover(popover, opts.anchor);
+  // Shared anchored-positioning engine: preferred side below the anchor,
+  // flipping above when there is not enough room, stamping `data-side` for
+  // the connector styling. The tracker re-runs it on scroll / resize / own
+  // size changes while the dialog is open.
+  const tracker = createPositionTracker(popover, reposition);
+
+  reposition();
+  tracker.attach();
 
   // The primitive focuses the textarea synchronously; place the caret at the end.
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
@@ -96,7 +127,17 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
     if (state.detached) {
       return;
     }
-    positionPopover(popover, opts.anchor);
+
+    // The popover is `position: fixed`, so translate the engine's document
+    // coordinates back into viewport coordinates.
+    const resolved = positionAnchored(popover, opts.anchor, {
+      side: 'bottom',
+      offset: 8,
+      apply: false,
+    });
+
+    popover.style.top = `${resolved.top - window.scrollY}px`;
+    popover.style.left = `${resolved.left - window.scrollX}px`;
   }
 
   textarea.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -107,43 +148,5 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
     }
   });
 
-  window.addEventListener('resize', reposition);
-  window.addEventListener('scroll', reposition, true);
-
   return detach;
-}
-
-/**
- * Positions the popover under its anchor, flipping above when it would overflow
- * the viewport's bottom edge. The chosen side is exposed via `data-side` for
- * styling hooks (e.g. flipping the connector direction).
- * @param {HTMLElement} popover - the popover element
- * @param {HTMLElement} anchor - the element the popover is attached to
- */
-function positionPopover(popover: HTMLElement, anchor: HTMLElement): void {
-  const rect = anchor.getBoundingClientRect();
-  const gap = 8;
-  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-  const { style } = popover;
-
-  style.position = 'fixed';
-  style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
-  style.left = 'auto';
-
-  // Flip above the anchor when the popover's own height would push it past the
-  // bottom edge and there is more room above than below.
-  const popoverHeight = popover.offsetHeight;
-  const spaceBelow = viewportHeight - rect.bottom;
-  const spaceAbove = rect.top;
-  const flipsAbove = popoverHeight > 0 && spaceBelow < popoverHeight + gap && spaceAbove > spaceBelow;
-
-  if (flipsAbove) {
-    style.top = 'auto';
-    style.bottom = `${Math.max(8, viewportHeight - rect.top + gap)}px`;
-    popover.setAttribute('data-side', 'top');
-  } else {
-    style.bottom = 'auto';
-    style.top = `${rect.bottom + gap}px`;
-    popover.setAttribute('data-side', 'bottom');
-  }
 }

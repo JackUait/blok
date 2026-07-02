@@ -1697,5 +1697,140 @@ describe('BlockSelection', () => {
 
       expect(announce).toHaveBeenCalledWith('a11y.navigationModeExited', { politeness: 'polite' });
     });
+
+    it('does not announce a stale position when returning to the last-announced block within the throttle window', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+
+      // First announcement fires for index 0 (position 1).
+      vi.advanceTimersByTime(300);
+
+      (modules.I18n.t as ReturnType<typeof vi.fn>).mockClear();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      // Move away and back within the throttle window: the pending index 1
+      // must NOT fire — the user is back on the already-announced index 0.
+      blockSelection.navigateNext();
+      blockSelection.navigatePrevious();
+
+      vi.advanceTimersByTime(300);
+
+      const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call) => call[0] === 'a11y.navigationPosition'
+      );
+
+      expect(positionCalls).toHaveLength(0);
+    });
+
+    it('still announces a new position reached within the throttle window after returning and moving again', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      vi.advanceTimersByTime(300);
+
+      (modules.I18n.t as ReturnType<typeof vi.fn>).mockClear();
+
+      // 0 → 1 → 0 → 1 → 2 within the window: only the final index 2 fires.
+      blockSelection.navigateNext();
+      blockSelection.navigatePrevious();
+      blockSelection.navigateNext();
+      blockSelection.navigateNext();
+
+      vi.advanceTimersByTime(300);
+
+      const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call) => call[0] === 'a11y.navigationPosition'
+      );
+
+      expect(positionCalls).toHaveLength(1);
+      expect(positionCalls[0][1]).toEqual({ tool: 'paragraph', position: 3, total: 3 });
+    });
+  });
+
+  describe('Cmd+A escalation announcements', () => {
+    beforeEach(() => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+    });
+
+    const createNestedSetup = (): ReturnType<typeof createBlockSelection> & { allBlocks: Block[] } => {
+      const container = createBlockStub({ id: 'container', contentIds: ['c1', 'c2'] });
+      const c1 = createBlockStub({ id: 'c1', parentId: 'container', contentIds: ['kid'] });
+      const kid = createBlockStub({ id: 'kid', parentId: 'c1' });
+      const c2 = createBlockStub({ id: 'c2', parentId: 'container' });
+      const root = createBlockStub({ id: 'root' });
+      const allBlocks = [container, c1, kid, c2, root];
+
+      const setup = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: c1,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      return { ...setup, allBlocks };
+    };
+
+    it('announces the selected block count when the subtree stage fires', () => {
+      const { blockSelection, modules, allBlocks } = createNestedSetup();
+      const event = {
+        target: allBlocks[1].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      handler.handleCommandA(event); // subtree: c1 + kid
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.blocksSelected', { count: 2 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('announces the selected block count when the container stage fires', () => {
+      const { blockSelection, modules, allBlocks } = createNestedSetup();
+      const event = {
+        target: allBlocks[1].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      handler.handleCommandA(event); // subtree
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      handler.handleCommandA(event); // container siblings: c1, kid (still selected), c2
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('announces the all-blocks stage with a distinct message and the total block count', () => {
+      const { blockSelection, blocks, modules } = createBlockSelection();
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      handler.handleCommandA(event); // all blocks
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.allBlocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.allBlocksSelected', { politeness: 'polite' });
+    });
   });
 });

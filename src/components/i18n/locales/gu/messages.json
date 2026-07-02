@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ખસેડવા માટે ખેંચો",
   "blockSettings.clickToOpenMenu": "મેનૂ ખોલવા માટે ક્લિક કરો",
-  "blockSettings.clickOrShortcutToOpenMenu": "મેનૂ ખોલવા માટે ક્લિક કરો અથવા {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "નીચે ઉમેરવા માટે ક્લિક કરો",
@@ -465,6 +464,7 @@
   "tools.audio.coverSourceAria": "છબી સ્રોત",
   "toolNames.video": "વિડિઓ",
   "toolNames.audio": "ઓડિઓ",
+  "a11y.allBlocksSelected": "બધા બ્લોક પસંદ કર્યા, {count} બ્લોક",
   "a11y.blocksSelected": "{count} બ્લોક પસંદ કર્યા",
   "a11y.navigationModeEntered": "નેવિગેશન મોડ. બ્લોક વચ્ચે ખસવા માટે એરો કી, સંપાદિત કરવા માટે Enter, બહાર નીકળવા માટે Escape વાપરો.",
   "a11y.navigationModeExited": "નેવિગેશન મોડમાંથી બહાર નીકળ્યા",

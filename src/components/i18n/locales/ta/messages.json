@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "நகர்த்த இழுக்கவும்",
   "blockSettings.clickToOpenMenu": "பட்டியலைத் திறக்க தட்டவும்",
-  "blockSettings.clickOrShortcutToOpenMenu": "பட்டியலைத் திறக்க தட்டவும் அல்லது {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "கீழே சேர்க்க தட்டவும்",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "பட URL ஐ ஒட்டவும்…",
   "tools.audio.coverUrlAria": "பட URL",
   "tools.audio.coverSourceAria": "பட மூலம்",
+  "a11y.allBlocksSelected": "அனைத்து தொகுதிகளும் தேர்ந்தெடுக்கப்பட்டன, {count} தொகுதிகள்",
   "a11y.blocksSelected": "{count} தொகுதிகள் தேர்ந்தெடுக்கப்பட்டன",
   "a11y.navigationModeEntered": "வழிசெலுத்தல் பயன்முறை. தொகுதிகளுக்கிடையே நகர அம்புக்குறி விசைகளையும், திருத்த Enter, வெளியேற Escape ஐயும் பயன்படுத்தவும்.",
   "a11y.navigationModeExited": "வழிசெலுத்தல் பயன்முறையிலிருந்து வெளியேறியது",

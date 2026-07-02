@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Trageți pentru a muta",
   "blockSettings.clickToOpenMenu": "Clic pentru meniu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Clic sau {shortcut} pentru a deschide meniul",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Clic pentru a adăuga dedesubt",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Lipește URL-ul unei imagini…",
   "tools.audio.coverUrlAria": "URL-ul imaginii",
   "tools.audio.coverSourceAria": "Sursa imaginii",
+  "a11y.allBlocksSelected": "Toate blocurile selectate, {count} blocuri",
   "a11y.blocksSelected": "{count} blocuri selectate",
   "a11y.navigationModeEntered": "Mod de navigare. Folosiți tastele săgeți pentru a vă deplasa între blocuri, Enter pentru a edita, Escape pentru a ieși.",
   "a11y.navigationModeExited": "Ați ieșit din modul de navigare",

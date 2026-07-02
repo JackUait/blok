@@ -46,6 +46,15 @@ export const CSS = {
 export const NOTIFIER_DISMISS_KEY = 'notifier.dismiss';
 
 /**
+ * Close handlers for open confirm/prompt modal dialogs, keyed by the
+ * notification element. The notifier's replacement path (index.ts) must close
+ * a superseded modal's dialog handle before swapping in the new notification —
+ * otherwise the handle's `finalize` never runs, the page-wide `inert` it
+ * applied is never removed, and its dismissal layer leaks.
+ */
+export const modalCleanups = new WeakMap<HTMLElement, () => void>();
+
+/**
  * English fallback used when the {@link NOTIFIER_DISMISS_KEY} translation is not
  * present in the bundled dictionary.
  */
@@ -260,6 +269,8 @@ export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
 
   const handle = makeModal(notify, messageText, () => okBtn, () => cancel(new Event('dismiss')));
 
+  modalCleanups.set(notify, () => handle.close());
+
   okBtn.addEventListener('click', confirmOk);
   cancelBtn.addEventListener('click', cancel);
 
@@ -336,6 +347,8 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
   };
 
   const handle = makeModal(notify, messageText, () => input, () => cancel(new Event('dismiss')));
+
+  modalCleanups.set(notify, () => handle.close());
 
   okBtn.addEventListener('click', submit);
   cancelBtn.addEventListener('click', cancel);

@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ಸರಿಸಲು ಎಳೆಯಿರಿ",
   "blockSettings.clickToOpenMenu": "ಮೆನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
-  "blockSettings.clickOrShortcutToOpenMenu": "ಮೆನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ ಅಥವಾ {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ಕೆಳಗೆ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
@@ -96,6 +95,7 @@
   "a11y.searchResults": "{count} ಫಲಿತಾಂಶಗಳು",
   "a11y.blockToolbar": "ಬ್ಲಾಕ್ ಟೂಲ್‌ಬಾರ್",
   "a11y.textFormatting": "ಪಠ್ಯ ಫಾರ್ಮ್ಯಾಟಿಂಗ್",
+  "a11y.allBlocksSelected": "ಎಲ್ಲಾ ಬ್ಲಾಕ್‌ಗಳು ಆಯ್ಕೆಯಾಗಿವೆ, {count} ಬ್ಲಾಕ್‌ಗಳು",
   "a11y.blocksSelected": "{count} ಬ್ಲಾಕ್‌ಗಳು ಆಯ್ಕೆಯಾಗಿವೆ",
   "a11y.navigationModeEntered": "ನ್ಯಾವಿಗೇಶನ್ ಮೋಡ್. ಬ್ಲಾಕ್‌ಗಳ ನಡುವೆ ಚಲಿಸಲು ಬಾಣದ ಕೀಗಳನ್ನು, ಸಂಪಾದಿಸಲು Enter, ನಿರ್ಗಮಿಸಲು Escape ಬಳಸಿ.",
   "a11y.navigationModeExited": "ನ್ಯಾವಿಗೇಶನ್ ಮೋಡ್‌ನಿಂದ ನಿರ್ಗಮಿಸಲಾಗಿದೆ",

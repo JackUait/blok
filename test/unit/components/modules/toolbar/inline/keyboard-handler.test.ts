@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Flipper } from "../../../../../../src/components/flipper";
 import { InlineKeyboardHandler } from "../../../../../../src/components/modules/toolbar/inline/keyboard-handler";
 
@@ -19,6 +19,7 @@ const createMockKeyboardEvent = (options: {
       this.defaultPrevented = true;
     }),
     stopPropagation: vi.fn(),
+    stopImmediatePropagation: vi.fn(),
   };
 
   return mockEvent as unknown as KeyboardEvent;
@@ -412,6 +413,95 @@ describe("InlineKeyboardHandler", () => {
 
       expect(flipRightSpy).not.toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe("handle - integration with a real activated Flipper (window capture double-handling)", () => {
+    /**
+     * Reproduces the real wiring: the inline toolbar registers a window
+     * capture keydown listener (at module init) and the Flipper registers its
+     * own listeners on document AND window capture (at activation). Both live
+     * on the same node (window), so stopPropagation() alone does NOT prevent
+     * the flipper's window listener from re-processing the same ArrowRight
+     * after the handler already flipped — auto-opening the newly-focused
+     * item's submenu.
+     */
+    let flipper: Flipper | null = null;
+    let inlineListener: ((event: Event) => void) | null = null;
+
+    afterEach(() => {
+      flipper?.deactivate();
+      flipper = null;
+
+      if (inlineListener !== null) {
+        window.removeEventListener("keydown", inlineListener, true);
+        inlineListener = null;
+      }
+
+      document.body.innerHTML = "";
+    });
+
+    it("one ArrowRight moves focus exactly one item and does not auto-open the next item's submenu", () => {
+      const makeItem = (label: string): HTMLButtonElement => {
+        const button = document.createElement("button");
+
+        button.textContent = label;
+        button.scrollIntoView = vi.fn();
+        document.body.appendChild(button);
+
+        return button;
+      };
+
+      const first = makeItem("bold");
+      const submenuOwner = makeItem("convert-to");
+
+      // The second item owns a nested submenu; the flipper's own ArrowRight
+      // handling would click it open via handleEnterPress.
+      submenuOwner.setAttribute("data-blok-has-children", "true");
+
+      const submenuOpenSpy = vi.fn();
+
+      submenuOwner.addEventListener("click", submenuOpenSpy);
+
+      flipper = new Flipper({
+        focusedItemClass: "is-focused",
+        items: [first, submenuOwner],
+      });
+
+      const popover: MockPopoverInline = {
+        flipper,
+        hasNestedPopoverOpen: false,
+        closeNestedPopover: createMockFn<() => void>(),
+      };
+      const handler = new InlineKeyboardHandler(
+        () =>
+          popover as unknown as ReturnType<
+            NonNullable<InlineKeyboardHandler["getPopover"]>
+          >,
+        closeToolbarSpy,
+      );
+
+      // Inline toolbar listener registers first (module init) ...
+      inlineListener = (event: Event): void => {
+        handler.handle(event as KeyboardEvent, true);
+      };
+      window.addEventListener("keydown", inlineListener, true);
+
+      // ... then the flipper activates when the toolbar opens, focusing item 0.
+      flipper.activate(undefined, 0);
+
+      const event = new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        bubbles: true,
+        cancelable: true,
+      });
+
+      first.dispatchEvent(event);
+
+      // Focus moved exactly one item forward ...
+      expect(submenuOwner.getAttribute("data-blok-focused")).toBe("true");
+      // ... and the flipper did NOT re-process the event and auto-open the submenu.
+      expect(submenuOpenSpy).not.toHaveBeenCalled();
     });
   });
 

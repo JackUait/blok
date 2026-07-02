@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "منتقل کرنے کے لیے گھسیٹیں",
   "blockSettings.clickToOpenMenu": "مینو کھولنے کے لیے کلک کریں",
-  "blockSettings.clickOrShortcutToOpenMenu": "مینو کھولنے کے لیے کلک کریں یا {shortcut} دبائیں",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "نیچے شامل کرنے کے لیے کلک کریں",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "تصویر کا URL پیسٹ کریں…",
   "tools.audio.coverUrlAria": "تصویر کا URL",
   "tools.audio.coverSourceAria": "تصویر کا ذریعہ",
+  "a11y.allBlocksSelected": "تمام بلاکس منتخب ہوئے، {count} بلاکس",
   "a11y.blocksSelected": "{count} بلاکس منتخب ہوئے",
   "a11y.navigationModeEntered": "نیویگیشن موڈ۔ بلاکس کے درمیان جانے کے لیے تیر کی کلیدیں، ترمیم کے لیے Enter، باہر نکلنے کے لیے Escape استعمال کریں۔",
   "a11y.navigationModeExited": "نیویگیشن موڈ سے باہر نکل گئے",

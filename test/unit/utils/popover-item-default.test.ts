@@ -140,10 +140,18 @@ describe('PopoverItemDefault', () => {
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemConfirmation);
   });
 
-  it('exposes a keyboard shortcut via aria-keyshortcuts', () => {
+  it('exposes a spec-valid keyboard shortcut via aria-keyshortcuts', () => {
     const { element } = createItem({ title: 'Copy', secondaryLabel: '⌘C' });
 
-    expect(element).toHaveAttribute('aria-keyshortcuts', 'Command+C');
+    // aria-keyshortcuts requires UI-Events key values ("Meta"), not the
+    // pretty display names ("Command").
+    expect(element).toHaveAttribute('aria-keyshortcuts', 'Meta+C');
+  });
+
+  it('formats multi-modifier shortcuts with spec-valid aria-keyshortcuts tokens', () => {
+    const { element } = createItem({ title: 'Copy link', secondaryLabel: '⌃⌘L' });
+
+    expect(element).toHaveAttribute('aria-keyshortcuts', 'Control+Meta+L');
   });
 
   it('does not set aria-keyshortcuts when the item has no shortcut', () => {

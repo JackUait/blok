@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ドラッグして移動",
   "blockSettings.clickToOpenMenu": "クリックでメニューを開く",
-  "blockSettings.clickOrShortcutToOpenMenu": "クリックまたは {shortcut} でメニューを開く",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "クリックして下に追加",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "画像 URL を貼り付け…",
   "tools.audio.coverUrlAria": "画像 URL",
   "tools.audio.coverSourceAria": "画像ソース",
+  "a11y.allBlocksSelected": "すべてのブロックを選択、{count}個のブロック",
   "a11y.blocksSelected": "{count}個のブロックを選択",
   "a11y.navigationModeEntered": "ナビゲーションモード。矢印キーでブロック間を移動、Enterで編集、Escapeで終了します。",
   "a11y.navigationModeExited": "ナビゲーションモードを終了しました",

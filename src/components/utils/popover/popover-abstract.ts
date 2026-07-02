@@ -499,7 +499,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       return;
     }
 
-    announcer.textContent = title;
+    /**
+     * Clear-then-set: re-arming an item with the same confirmation text must
+     * still be announced. Setting identical textContent is a no-op for live
+     * regions, so clear synchronously and set on the next macrotask.
+     */
+    announcer.textContent = '';
+    window.setTimeout(() => {
+      announcer.textContent = title;
+    }, 0);
   }
 
   /**

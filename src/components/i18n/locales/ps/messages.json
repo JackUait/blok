@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "د لیږدولو لپاره کش کړئ",
   "blockSettings.clickToOpenMenu": "د مینو خلاصولو لپاره کلیک وکړئ",
-  "blockSettings.clickOrShortcutToOpenMenu": "د مینو خلاصولو لپاره کلیک وکړئ یا {shortcut} کېکاږئ",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "لاندې اضافه کولو لپاره کلیک وکړئ",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "د انځور URL پیسټ کړئ…",
   "tools.audio.coverUrlAria": "انځور URL",
   "tools.audio.coverSourceAria": "د انځور سرچینه",
+  "a11y.allBlocksSelected": "ټول بلاکونه غوره شول، {count} بلاکونه",
   "a11y.blocksSelected": "{count} بلاکونه غوره شول",
   "a11y.navigationModeEntered": "د نیویګیشن حالت. د بلاکونو ترمنځ د حرکت لپاره د غشي تڼۍ وکاروئ، د سمون لپاره Enter، د وتلو لپاره Escape.",
   "a11y.navigationModeExited": "د نیویګیشن حالت پریښودل شو",

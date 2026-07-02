@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "I-drag para ilipat",
   "blockSettings.clickToOpenMenu": "I-click para buksan ang menu",
-  "blockSettings.clickOrShortcutToOpenMenu": "I-click o pindutin ang {shortcut} para buksan ang menu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "I-click para magdagdag sa ibaba",
@@ -465,6 +464,7 @@
   "tools.audio.coverSourceAria": "Pinagmulan ng larawan",
   "toolNames.video": "Video",
   "toolNames.audio": "Audio",
+  "a11y.allBlocksSelected": "Napili ang lahat ng block, {count} block",
   "a11y.blocksSelected": "{count} block ang napili",
   "a11y.navigationModeEntered": "Navigation mode. Gamitin ang mga arrow key para lumipat sa pagitan ng mga block, Enter para mag-edit, Escape para lumabas.",
   "a11y.navigationModeExited": "Lumabas sa navigation mode",

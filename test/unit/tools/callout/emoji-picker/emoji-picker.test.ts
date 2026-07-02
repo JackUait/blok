@@ -870,6 +870,129 @@ describe('EmojiPicker', () => {
     document.body.removeChild(picker.getElement());
   });
 
+  describe('focus containment (modal dialog semantics)', () => {
+    it('exposes role="dialog", aria-modal="true" and an accessible name', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      const el = picker.getElement();
+
+      expect(el.getAttribute('role')).toBe('dialog');
+      expect(el.getAttribute('aria-modal')).toBe('true');
+      expect(el.getAttribute('aria-label')).toBe('tools.callout.editIcon');
+    });
+
+    it('moves focus to the search input on open', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const anchor = document.createElement('button');
+      document.body.appendChild(anchor);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      document.body.appendChild(picker.getElement());
+      await picker.open(anchor);
+
+      const input = picker.getElement().querySelector('input[type="text"]') as HTMLInputElement;
+
+      expect(document.activeElement).toBe(input);
+
+      picker.close();
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+
+    it('wraps Tab from the last tabbable back to the first', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const { getTabbables } = await import('../../../../../src/components/utils/modal-dialog');
+      const anchor = document.createElement('button');
+      document.body.appendChild(anchor);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      document.body.appendChild(picker.getElement());
+      await picker.open(anchor);
+
+      const tabbables = getTabbables(picker.getElement());
+
+      expect(tabbables.length).toBeGreaterThan(1);
+
+      const first = tabbables[0];
+      const last = tabbables[tabbables.length - 1];
+
+      last.focus();
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+      last.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(first);
+
+      picker.close();
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+
+    it('wraps Shift+Tab from the first tabbable back to the last', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const { getTabbables } = await import('../../../../../src/components/utils/modal-dialog');
+      const anchor = document.createElement('button');
+      document.body.appendChild(anchor);
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      document.body.appendChild(picker.getElement());
+      await picker.open(anchor);
+
+      const tabbables = getTabbables(picker.getElement());
+      const first = tabbables[0];
+      const last = tabbables[tabbables.length - 1];
+
+      first.focus();
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+      first.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(document.activeElement).toBe(last);
+
+      picker.close();
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+
+    it('restores focus to the element focused before opening on close', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      document.body.appendChild(picker.getElement());
+      await picker.open(opener);
+
+      expect(document.activeElement).not.toBe(opener);
+
+      picker.close();
+
+      expect(document.activeElement).toBe(opener);
+
+      document.body.removeChild(opener);
+      document.body.removeChild(picker.getElement());
+    });
+
+    it('falls back to the anchor when the previously focused element is disconnected', async () => {
+      const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+      const opener = document.createElement('button');
+      const anchor = document.createElement('button');
+      document.body.appendChild(opener);
+      document.body.appendChild(anchor);
+      opener.focus();
+
+      const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+      document.body.appendChild(picker.getElement());
+      await picker.open(anchor);
+
+      document.body.removeChild(opener);
+      picker.close();
+
+      expect(document.activeElement).toBe(anchor);
+
+      document.body.removeChild(anchor);
+      document.body.removeChild(picker.getElement());
+    });
+  });
+
   describe('emoji name translations', () => {
     it('shows translated emoji names in tooltips when locale data is available', async () => {
       mockLoadEmojiLocale.mockResolvedValue({

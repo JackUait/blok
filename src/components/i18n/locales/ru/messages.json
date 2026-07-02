@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Тяните, чтобы переместить",
   "blockSettings.clickToOpenMenu": "Нажмите для меню",
-  "blockSettings.clickOrShortcutToOpenMenu": "Нажмите или {shortcut} для меню",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Нажмите, чтобы добавить ниже",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Вставьте URL изображения…",
   "tools.audio.coverUrlAria": "URL изображения",
   "tools.audio.coverSourceAria": "Источник изображения",
+  "a11y.allBlocksSelected": "Выбраны все блоки, блоков: {count}",
   "a11y.blocksSelected": "Выбрано блоков: {count}",
   "a11y.navigationModeEntered": "Режим навигации. Используйте стрелки для перемещения между блоками, Enter — для редактирования, Escape — для выхода.",
   "a11y.navigationModeExited": "Выход из режима навигации",

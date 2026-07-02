@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Húzza az áthelyezéshez",
   "blockSettings.clickToOpenMenu": "Kattintson a menü megnyitásához",
-  "blockSettings.clickOrShortcutToOpenMenu": "Kattintson vagy {shortcut} a menü megnyitásához",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Kattintson az alá szúráshoz",
@@ -465,6 +464,7 @@
   "tools.audio.coverSourceAria": "Kép forrása",
   "toolNames.video": "Videó",
   "toolNames.audio": "Hang",
+  "a11y.allBlocksSelected": "Minden blokk kijelölve, {count} blokk",
   "a11y.blocksSelected": "{count} blokk kijelölve",
   "a11y.navigationModeEntered": "Navigációs mód. A nyílbillentyűkkel válthat a blokkok között, az Enterrel szerkeszthet, az Escape billentyűvel kiléphet.",
   "a11y.navigationModeExited": "Kilépett a navigációs módból",

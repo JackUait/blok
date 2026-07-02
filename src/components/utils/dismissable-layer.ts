@@ -94,6 +94,15 @@ let boundKeyDown: ((event: KeyboardEvent) => void) | null = null;
 let boundPointerDown: ((event: PointerEvent) => void) | null = null;
 
 /**
+ * Whether any registered layer participates in Escape dismissal. The popover
+ * registry's capture-phase Escape backstop consults this to defer to the layer
+ * stack, so one Escape press peels exactly one surface regardless of which
+ * document listener was attached first.
+ * @returns true when an escape-participating layer is registered
+ */
+export const hasEscapeLayer = (): boolean => stack.some((entry) => entry.escape);
+
+/**
  * Returns true when the event target sits inside the layer's element or anchor.
  * @param entry - layer entry to test against
  * @param target - event target node
@@ -107,7 +116,10 @@ const isInsideLayer = (entry: LayerEntry, target: Node): boolean => {
 };
 
 /**
- * Handles Escape: dismisses the topmost layer that opted into escape dismissal.
+ * Handles Escape: dismisses the topmost layer that opted into escape
+ * dismissal, walking DOWN the stack past layers that opted out (a toast with
+ * `escape: false` must not shield a modal beneath it). Only one layer is
+ * dismissed per press, mirroring Radix DismissableLayer branch semantics.
  * @param event - keydown event
  */
 const handleKeyDown = (event: KeyboardEvent): void => {
@@ -115,18 +127,33 @@ const handleKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
-  const topmost = stack[stack.length - 1];
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const entry = stack[i];
 
-  if (topmost === undefined || !topmost.escape) {
+    if (!entry.escape) {
+      continue;
+    }
+
+    /**
+     * Consume the event: without this, a single Escape would also reach the
+     * popover registry's capture backstop and the editor's bubble-phase
+     * keyboard controller, peeling a second surface on the same press.
+     */
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    entry.onDismiss('escape');
+
     return;
   }
-
-  topmost.onDismiss('escape');
 };
 
 /**
- * Handles outside pointerdown: dismisses the topmost layer when the press
- * lands outside its element (and anchor).
+ * Handles outside pointerdown, walking DOWN the stack (topmost first):
+ * a press inside ANY layer's surface dismisses nothing; otherwise the topmost
+ * layer that opted into outside dismissal is dismissed. Layers that opted out
+ * (`outside: false`, e.g. toasts) are skipped so they do not shield the layers
+ * beneath them. Only one layer is dismissed per press.
  * @param event - pointerdown event
  */
 const handlePointerDown = (event: PointerEvent): void => {
@@ -136,17 +163,21 @@ const handlePointerDown = (event: PointerEvent): void => {
     return;
   }
 
-  const topmost = stack[stack.length - 1];
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const entry = stack[i];
 
-  if (topmost === undefined || !topmost.outside) {
+    if (isInsideLayer(entry, target)) {
+      return;
+    }
+
+    if (!entry.outside) {
+      continue;
+    }
+
+    entry.onDismiss('outside');
+
     return;
   }
-
-  if (isInsideLayer(topmost, target)) {
-    return;
-  }
-
-  topmost.onDismiss('outside');
 };
 
 /**

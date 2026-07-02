@@ -284,7 +284,7 @@ describe('PopoverAbstract', () => {
   });
 
   describe('confirmation-mode announcement', () => {
-    it('announces the confirmation prompt via the results announcer when an item enters confirmation mode', () => {
+    it('announces the confirmation prompt via the results announcer when an item enters confirmation mode', async () => {
       const popover = createPopover({
         items: [
           {
@@ -302,6 +302,39 @@ describe('PopoverAbstract', () => {
       const [deleteItem] = popover.getItemsForTests();
 
       popover.invokeHandleItemClick(deleteItem);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('Click to confirm');
+    });
+
+    it('clears the announcer before re-setting so identical text is re-announced', async () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Delete',
+            name: 'delete',
+            isDestructive: true,
+            confirmation: {
+              title: 'Click to confirm',
+              onActivate: vi.fn(),
+            },
+          },
+        ],
+      });
+      const nodes = popover.getNodesForTests();
+      const [deleteItem] = popover.getItemsForTests();
+
+      // Simulate a previous identical announcement lingering in the live
+      // region — without a clear-then-set the same text produces no
+      // announcement in screen readers.
+      nodes.resultsAnnouncer.textContent = 'Click to confirm';
+
+      popover.invokeHandleItemClick(deleteItem);
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('');
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(nodes.resultsAnnouncer.textContent).toBe('Click to confirm');
     });

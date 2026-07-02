@@ -107,7 +107,17 @@ export class CrossBlockSelection extends Module {
      */
     event.preventDefault();
 
+    const countBefore = this.Blok.BlockSelection.selectedBlocks.length;
+
     this.selectBlockRange(anchorBlock, targetBlock);
+
+    /**
+     * Announce the new selection size — but only when the click actually
+     * changed it, so re-clicking the same target stays silent.
+     */
+    if (this.Blok.BlockSelection.selectedBlocks.length !== countBefore) {
+      this.announceSelectionCount();
+    }
 
     return true;
   }
@@ -249,6 +259,12 @@ export class CrossBlockSelection extends Module {
       this.firstSelectedBlock = this.lastSelectedBlock = null;
       this.Blok.Toolbar.close();
     }
+
+    /**
+     * Announce the updated selection size (a toggle always changes the count;
+     * announceSelectionCount itself skips single-block/empty selections).
+     */
+    this.announceSelectionCount();
 
     return true;
   }

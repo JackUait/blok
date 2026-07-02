@@ -79,17 +79,23 @@ export class DragA11y {
    * @param buildMessage - Lazily builds the message when the throttle fires
    */
   private scheduleAnnouncement(dedupeKey: string, buildMessage: () => string): void {
-    // Don't announce if it hasn't changed since the last announcement
-    if (this.lastAnnouncedKey === dedupeKey) {
-      return;
-    }
-
-    // Store the pending announcement (last one wins)
+    // Always record the CURRENT position first (last one wins): an
+    // already-scheduled timeout reads this at fire time, so returning to the
+    // last-announced position within the throttle window overwrites a stale
+    // pending position instead of letting it fire.
     this.pendingKey = dedupeKey;
     this.pendingMessage = buildMessage;
 
     // If there's already a pending timeout, let it handle the announcement
     if (this.announcementTimeoutId !== null) {
+      return;
+    }
+
+    // Nothing new to announce and no timeout in flight — don't schedule one
+    if (this.lastAnnouncedKey === dedupeKey) {
+      this.pendingKey = null;
+      this.pendingMessage = null;
+
       return;
     }
 

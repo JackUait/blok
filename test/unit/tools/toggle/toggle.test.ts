@@ -584,6 +584,27 @@ describe('ToggleItem', () => {
       }
     });
 
+    it('stamps data-blok-placeholder-visible="always-active" to match its always-when-empty rendering policy', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
+
+      expect(contentEl?.getAttribute('data-blok-placeholder-visible')).toBe('always-active');
+    });
+
+    it('does not carry empty-editor-gated placeholder classes (the placeholder shows whenever empty)', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
+
+      // The empty-editor variant is the only class source gated on a
+      // [data-blok-empty=true] ancestor; the toggle's real policy is
+      // "visible whenever empty", so no such hook may remain.
+      expect(contentEl.getAttribute('class') ?? '').not.toContain('data-blok-empty');
+    });
+
     it('sets placeholder text to "Toggle" by default', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions());

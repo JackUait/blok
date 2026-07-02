@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ลากเพื่อย้าย",
   "blockSettings.clickToOpenMenu": "คลิกเพื่อเปิดเมนู",
-  "blockSettings.clickOrShortcutToOpenMenu": "คลิกหรือกด {shortcut} เพื่อเปิดเมนู",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "คลิกเพื่อเพิ่มด้านล่าง",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "วาง URL รูปภาพ…",
   "tools.audio.coverUrlAria": "URL รูปภาพ",
   "tools.audio.coverSourceAria": "แหล่งที่มาของรูปภาพ",
+  "a11y.allBlocksSelected": "เลือกทุกบล็อกแล้ว, {count} บล็อก",
   "a11y.blocksSelected": "เลือก {count} บล็อกแล้ว",
   "a11y.navigationModeEntered": "โหมดนำทาง ใช้ปุ่มลูกศรเพื่อย้ายระหว่างบล็อก Enter เพื่อแก้ไข Escape เพื่อออก",
   "a11y.navigationModeExited": "ออกจากโหมดนำทางแล้ว",

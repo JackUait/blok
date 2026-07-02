@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ބަދަލުކުރަން ދަމާލާ",
   "blockSettings.clickToOpenMenu": "މެނޫ ހުޅުވަން ކްލިކް ކުރޭ",
-  "blockSettings.clickOrShortcutToOpenMenu": "މެނޫ ހުޅުވަން ކްލިކް ކުރޭ ނުވަތަ {shortcut} ފިތާލާ",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ތިރީގައި އިތުރުކުރަން ކްލިކް ކުރޭ",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "ފޮޓޯ URL ޕޭސްޓް ކުރޭ…",
   "tools.audio.coverUrlAria": "ފޮޓޯ URL",
   "tools.audio.coverSourceAria": "ފޮޓޯގެ މަޞްދަރު",
+  "a11y.allBlocksSelected": "ހުރިހާ ބްލޮކެއް ހޮވިއްޖެ، {count} ބްލޮކް",
   "a11y.blocksSelected": "{count} ބްލޮކް ހޮވިއްޖެ",
   "a11y.navigationModeEntered": "ނެވިގޭޝަން މޯޑް. ބްލޮކްތަކުގެ މެދުގައި ހަރަކާތްކުރަން އެރޯ ކީތައް، އެޑިޓް ކުރަން Enter، އަދި ނުކުތުމަށް Escape ބޭނުންކުރޭ.",
   "a11y.navigationModeExited": "ނެވިގޭޝަން މޯޑުން ނުކުމެއްޖެ",

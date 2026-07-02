@@ -142,6 +142,64 @@ describe('DragA11y', () => {
       );
     });
 
+    it('should not fire a stale pending announcement after returning to the last-announced position within the throttle window', () => {
+      const targetBlock1 = createMockBlock('target1');
+      const targetBlock2 = createMockBlock('target2');
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === targetBlock1) return 0;
+        if (block === targetBlock2) return 1;
+        return -1;
+      });
+      mockBlockManager.blocks = [targetBlock1 as Block, targetBlock2 as Block];
+
+      // Announce position over block 1 and let it fire.
+      a11y.announceDropPosition(targetBlock1 as Block, 'top');
+      vi.advanceTimersByTime(300);
+      vi.clearAllMocks();
+
+      // Within the next throttle window: move to block 2, then BACK to block 1
+      // (the last-announced position). The pending block-2 announcement is now
+      // stale and must not fire.
+      a11y.announceDropPosition(targetBlock2 as Block, 'top');
+      a11y.announceDropPosition(targetBlock1 as Block, 'top');
+
+      vi.advanceTimersByTime(300);
+
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+    });
+
+    it('should announce the latest position when moving away, back, and away again within the throttle window', () => {
+      const targetBlock1 = createMockBlock('target1');
+      const targetBlock2 = createMockBlock('target2');
+      const targetBlock3 = createMockBlock('target3');
+
+      mockBlockManager.getBlockIndex = vi.fn((block) => {
+        if (block === targetBlock1) return 0;
+        if (block === targetBlock2) return 1;
+        if (block === targetBlock3) return 2;
+        return -1;
+      });
+      mockBlockManager.blocks = [targetBlock1 as Block, targetBlock2 as Block, targetBlock3 as Block];
+
+      a11y.announceDropPosition(targetBlock1 as Block, 'top');
+      vi.advanceTimersByTime(300);
+      vi.clearAllMocks();
+
+      // 1 → 2 → 1 → 3 within the window: only the final position (block 3) fires.
+      a11y.announceDropPosition(targetBlock2 as Block, 'top');
+      a11y.announceDropPosition(targetBlock1 as Block, 'top');
+      a11y.announceDropPosition(targetBlock3 as Block, 'top');
+
+      vi.advanceTimersByTime(300);
+
+      expect(mockAnnouncer.announce).toHaveBeenCalledTimes(1);
+      expect(mockAnnouncer.announce).toHaveBeenCalledWith(
+        'a11y.dropPosition:{"position":3,"total":3}',
+        { politeness: 'polite' }
+      );
+    });
+
     it('should handle position changes after timeout', () => {
       const targetBlock1 = createMockBlock('target1');
       const targetBlock2 = createMockBlock('target2');

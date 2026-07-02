@@ -462,6 +462,41 @@ describe('CrossBlockSelection', () => {
       expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[3]);
     });
 
+    it('announces the selected block count after a Shift+Click range selection (H9)', () => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+      i18nT.mockClear();
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[2].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(i18nT).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('does not re-announce when a Shift+Click leaves the selected count unchanged (H9)', () => {
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[2].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      // Same click again: same range, same count — no repeat announcement.
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
     it('does not range-select on a plain (no Shift) click', () => {
       const watchSpy = vi.spyOn(crossBlockSelection, 'watchSelection');
       const event = {
@@ -563,6 +598,44 @@ describe('CrossBlockSelection', () => {
 
       expect(blocks[0].selected).toBe(true);
       expect(blocks[3].selected).toBe(false);
+    });
+
+    it('announces the updated selected block count after a toggle-click (H9)', () => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+      i18nT.mockClear();
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        metaKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(i18nT).toHaveBeenCalledWith('a11y.blocksSelected', { count: 2 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('does not announce when a toggle-click collapses the selection to a single block (H9)', () => {
+      blocks[3].selected = true;
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[3]);
+
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        metaKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      // Toggling block 3 OUT leaves only block 0 selected — nothing multi-block to convey.
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(announce).not.toHaveBeenCalled();
     });
 
     it('records the toggled block as the new anchor for subsequent extension', () => {

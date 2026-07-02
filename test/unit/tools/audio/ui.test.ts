@@ -101,6 +101,12 @@ describe('renderNowPlaying cover button', () => {
     expect(els.coverButton!.getAttribute('aria-label')).toBe('Change cover');
   });
 
+  it('advertises the cover picker on the button via aria-haspopup/aria-expanded', () => {
+    const els = renderNowPlaying({ url: 'https://cdn/a.mp3' }, { editable: true });
+    expect(els.coverButton?.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(els.coverButton?.getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('omits the change-cover button in read-only mode', () => {
     const els = renderNowPlaying({ url: 'https://cdn/a.mp3' }, { editable: false });
     expect(els.coverButton).toBeUndefined();

@@ -1235,6 +1235,14 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
     if (item instanceof PopoverItemHtml) {
+      // The wrapper is role="presentation" and non-focusable, so keyboard
+      // navigation must target the inner interactive controls instead.
+      const controls = item.getControls();
+
+      if (controls.length > 0) {
+        return controls;
+      }
+
       const element = item.getElement();
 
       return element ? [element] : [];

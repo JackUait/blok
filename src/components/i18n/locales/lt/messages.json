@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Vilkite norėdami perkelti",
   "blockSettings.clickToOpenMenu": "Spustelėkite norėdami atidaryti meniu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Spustelėkite arba {shortcut}, kad atidarytumėte meniu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Spustelėkite norėdami pridėti apačioje",
@@ -75,6 +74,7 @@
   "a11y.searchResults": "{count} rezultatai",
   "a11y.blockToolbar": "Bloko įrankių juosta",
   "a11y.textFormatting": "Teksto formatavimas",
+  "a11y.allBlocksSelected": "Pasirinkti visi blokai, blokų: {count}",
   "a11y.blocksSelected": "Pasirinkta blokų: {count}",
   "a11y.navigationModeEntered": "Naršymo režimas. Naudokite rodyklių klavišus judėti tarp blokų, Enter – redaguoti, Escape – išeiti.",
   "a11y.navigationModeExited": "Išėjote iš naršymo režimo",

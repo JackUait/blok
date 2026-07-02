@@ -520,7 +520,7 @@ describe('PopoverDesktop', () => {
 
 
   describe('flippableElements', () => {
-    it('includes only enabled default items and wrapper element from HTML items', () => {
+    it('includes enabled default items and inner controls of HTML items', () => {
       const htmlElement = document.createElement('div');
       const htmlButton = document.createElement('button');
       const htmlInput = document.createElement('input');
@@ -557,16 +557,35 @@ describe('PopoverDesktop', () => {
 
       const elements = instance.flippableElements;
 
-      // HTML items return their wrapper element (not inner controls) for keyboard navigation
+      // HTML items expose their inner interactive controls (not the
+      // role="presentation" wrapper) for keyboard navigation, so the flipper
+      // lands on real focusable/Enter-activatable elements.
+      if (defaultElement) {
+        expect(elements).toEqual([defaultElement, htmlButton, htmlInput]);
+      }
+    });
+
+    it('falls back to the wrapper element for HTML items without inner controls', () => {
+      const htmlElement = document.createElement('div');
+
+      htmlElement.textContent = 'static content';
+
+      const popover = createPopover({
+        items: [
+          {
+            type: PopoverItemType.Html,
+            name: 'static-html',
+            element: htmlElement,
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
       const htmlItemWrapper = instance.items.find(
-        item => item.name === 'custom-html'
+        item => item.name === 'static-html'
       )?.getElement();
 
       expect(htmlItemWrapper).not.toBeNull();
-
-      if (defaultElement && htmlItemWrapper) {
-        expect(elements).toEqual([defaultElement, htmlItemWrapper]);
-      }
+      expect(instance.flippableElements).toEqual([ htmlItemWrapper ]);
     });
   });
 

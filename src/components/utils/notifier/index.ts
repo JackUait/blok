@@ -1,7 +1,7 @@
 import { registerLayer } from '../dismissable-layer';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
-import { alert, confirm, createDismissButton, getWrapper, prompt } from './draw';
+import { alert, confirm, createDismissButton, getWrapper, modalCleanups, prompt } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
 
@@ -201,11 +201,33 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
   });
 
   // Pause the countdown while the user hovers or keyboard-focus is inside the
-  // toast (WCAG 2.2.1), resuming when they leave.
-  notify.addEventListener('pointerenter', timer.pause);
-  notify.addEventListener('pointerleave', timer.resume);
-  notify.addEventListener('focusin', timer.pause);
-  notify.addEventListener('focusout', timer.resume);
+  // toast (WCAG 2.2.1). Hover and focus are a union: the timer resumes only
+  // when BOTH are gone, so leaving with the pointer while focus is still
+  // inside (or vice versa) keeps it paused.
+  const interaction = { hovered: false, focused: false };
+
+  const resumeIfIdle = (): void => {
+    if (!interaction.hovered && !interaction.focused) {
+      timer.resume();
+    }
+  };
+
+  notify.addEventListener('pointerenter', () => {
+    interaction.hovered = true;
+    timer.pause();
+  });
+  notify.addEventListener('pointerleave', () => {
+    interaction.hovered = false;
+    resumeIfIdle();
+  });
+  notify.addEventListener('focusin', () => {
+    interaction.focused = true;
+    timer.pause();
+  });
+  notify.addEventListener('focusout', () => {
+    interaction.focused = false;
+    resumeIfIdle();
+  });
 
   notify.appendChild(createDismissButton(dismiss));
 
@@ -268,6 +290,18 @@ export const show = (options: NotifierOptions | ConfirmNotifierOptions | PromptN
     // Tear down the superseded toast's timer + dismissal layer before it is
     // animated away, so it can't fire after being replaced.
     toastCleanups.get(existing)?.();
+
+    // A superseded confirm/prompt is a modal dialog: close its handle so the
+    // page-wide `inert` and its dismissal layer are released.
+    modalCleanups.get(existing)?.();
+
+    // Closing a modal handle removes its element synchronously; with nothing
+    // left to swap-animate (animationend would never fire), mount immediately.
+    if (!existing.isConnected) {
+      appendNotify(wrapper, buildNotify(), position, time, autoDismiss);
+
+      return;
+    }
 
     swapOut(existing, () => {
       const notify = buildNotify();

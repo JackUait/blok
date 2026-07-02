@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Перетягніть для переміщення",
   "blockSettings.clickToOpenMenu": "Натисніть для меню",
-  "blockSettings.clickOrShortcutToOpenMenu": "Натисніть або {shortcut} для меню",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Натиснути, щоб додати нижче",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Вставте URL зображення…",
   "tools.audio.coverUrlAria": "URL зображення",
   "tools.audio.coverSourceAria": "Джерело зображення",
+  "a11y.allBlocksSelected": "Вибрано всі блоки, блоків: {count}",
   "a11y.blocksSelected": "Вибрано {count} блоків",
   "a11y.navigationModeEntered": "Режим навігації. Використовуйте стрілки для переміщення між блоками, Enter для редагування, Escape для виходу.",
   "a11y.navigationModeExited": "Вихід із режиму навігації",

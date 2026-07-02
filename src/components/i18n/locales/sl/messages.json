@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Povlecite za premik",
   "blockSettings.clickToOpenMenu": "Kliknite za odprtje menija",
-  "blockSettings.clickOrShortcutToOpenMenu": "Kliknite ali {shortcut} za odprtje menija",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Kliknite za dodajanje spodaj",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Prilepite URL slike…",
   "tools.audio.coverUrlAria": "URL slike",
   "tools.audio.coverSourceAria": "Vir slike",
+  "a11y.allBlocksSelected": "Izbrani vsi bloki, blokov: {count}",
   "a11y.blocksSelected": "Izbranih blokov: {count}",
   "a11y.navigationModeEntered": "Način krmarjenja. Za pomikanje med bloki uporabite puščične tipke, Enter za urejanje, Escape za izhod.",
   "a11y.navigationModeExited": "Izhod iz načina krmarjenja",

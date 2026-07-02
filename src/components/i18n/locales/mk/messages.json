@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Повлечете за преместување",
   "blockSettings.clickToOpenMenu": "Кликнете за отворање на менито",
-  "blockSettings.clickOrShortcutToOpenMenu": "Кликнете или {shortcut} за да го отворите менито",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Кликнете за додавање подолу",
@@ -98,6 +97,7 @@
   "a11y.searchResults": "{count} резултати",
   "a11y.blockToolbar": "Лента со алатки за блок",
   "a11y.textFormatting": "Форматирање на текст",
+  "a11y.allBlocksSelected": "Избрани се сите блокови, {count} блокови",
   "a11y.blocksSelected": "Избрани се {count} блокови",
   "a11y.navigationModeEntered": "Режим на навигација. Користете ги стрелките за движење меѓу блоковите, Enter за уредување, Escape за излез.",
   "a11y.navigationModeExited": "Излеговте од режимот на навигација",

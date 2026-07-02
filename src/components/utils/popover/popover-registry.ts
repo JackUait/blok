@@ -1,3 +1,5 @@
+import { hasEscapeLayer } from '../dismissable-layer';
+
 import type { PopoverAbstract } from './popover-abstract';
 
 /**
@@ -93,6 +95,17 @@ export class PopoverRegistry {
       this.removeFromStack(entry.popover);
     }
 
+    /**
+     * Dedupe guard: a second show() without an intervening hide() must refresh
+     * the existing entry instead of pushing a duplicate — otherwise a single
+     * unregister leaves a stale entry and hasOpenPopovers() sticks true.
+     */
+    const existingIndex = this.stack.findIndex(entry => entry.popover === popover);
+
+    if (existingIndex !== -1) {
+      this.stack.splice(existingIndex, 1);
+    }
+
     this.stack.push({ popover, triggerElement });
     this.ensureDocumentListener();
   }
@@ -178,6 +191,24 @@ export class PopoverRegistry {
    */
   private handleDocumentKeyDown(event: KeyboardEvent): void {
     if (event.key !== 'Escape') {
+      return;
+    }
+
+    /**
+     * Another dismissal path already consumed this press (the dismissable-layer
+     * stack preventDefaults when it dismisses). One Escape = one dismissal.
+     */
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    /**
+     * Defer to the dismissable-layer stack when it has an escape-participating
+     * layer (toast/modal). Both registries attach capture-phase listeners on
+     * document in unknowable order; this check makes the layer stack win in
+     * both orderings, so a single Escape never peels a popover AND a layer.
+     */
+    if (hasEscapeLayer()) {
       return;
     }
 

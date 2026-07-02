@@ -28,6 +28,14 @@ const SKIP_DELAY_DURATION = 300;
  * without the tooltip vanishing — the "hoverable" half of WCAG 1.4.13.
  */
 const GRACE_HIDE_DURATION = 100;
+/**
+ * Window (ms) after a touch interaction during which a focus-triggered open is
+ * suppressed. Tap-focus on touch devices fires `focusin` right after the touch
+ * `pointerdown`, and the tooltip must not open there (same touch guard as the
+ * hover path) — while genuine keyboard focus, which has no recent touch,
+ * still opens the tooltip (WCAG 1.4.13).
+ */
+const TOUCH_FOCUS_SUPPRESS_DURATION = 500;
 const TOOLTIP_ID = 'blok-tooltip';
 const ARIA_DESCRIBEDBY_ATTRIBUTE = 'aria-describedby';
 const TOOLTIP_ROLE = 'tooltip';
@@ -147,6 +155,22 @@ class Tooltip {
   private lastPointerType: string | null = null;
 
   /**
+   * Timestamp (ms, `Date.now()`) of the most recent touch interaction on a
+   * hover target. Drives the focus-path touch guard: a `focusin` arriving
+   * within {@link TOUCH_FOCUS_SUPPRESS_DURATION} of a touch is a tap-focus,
+   * not keyboard focus, and must not open the tooltip.
+   */
+  private lastTouchTimestamp: number = Number.NEGATIVE_INFINITY;
+
+  /**
+   * Set once {@link destroy} has run. Orphaned per-trigger handlers (bound
+   * closures in elements that were never untracked) check this flag so they
+   * can never re-open the tooltip or re-register the document-level Escape
+   * listener after the instance is gone.
+   */
+  private destroyed: boolean = false;
+
+  /**
    * MutationObserver for watching tooltip visibility changes
    */
   private ariaObserver: MutationObserver | null = null;
@@ -196,9 +220,21 @@ class Tooltip {
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
    */
   public show(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
+    if (this.destroyed) {
+      return;
+    }
+
     if (!this.nodes.wrapper) {
       this.prepare();
     }
+
+    /**
+     * A new show supersedes any pending grace hide from a previous trigger's
+     * exit. Without this, the stale grace timer fires during a delayed show
+     * and hide() clears the pending showing timeout — the new tooltip never
+     * appears.
+     */
+    this.cancelGraceHide();
 
     /**
      * Clear any existing show timeout to prevent orphaned timeouts from firing.
@@ -367,6 +403,16 @@ class Tooltip {
    * Hide toolbox tooltip and clean content
    */
   public hide(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    /**
+     * Remember whether the tooltip was actually visible when hide ran: only a
+     * real open→close transition may arm the skip-delay warm window below.
+     */
+    const wasVisible = this.showed;
+
     /**
      * Cancel any pending show timeout when hiding.
      * This prevents the tooltip from appearing after the user has already left the element.
@@ -394,8 +440,16 @@ class Tooltip {
       this.removeFromTopLayer();
     }
     this.showed = false;
-    // Stamp the hide time so an imminent re-show can skip its open delay.
-    this.lastHideTimestamp = Date.now();
+
+    /**
+     * Stamp the hide time so an imminent re-show can skip its open delay —
+     * but only when the tooltip was actually visible. A hide funnelled from a
+     * suppressed touch tap or a sweep over a delayed trigger (never shown)
+     * must NOT arm the instant-open warm window.
+     */
+    if (wasVisible) {
+      this.lastHideTimestamp = Date.now();
+    }
   }
 
   /**
@@ -442,6 +496,10 @@ class Tooltip {
    * @param {TooltipOptions} options — Available options {@link TooltipOptions}
    */
   public onHover(element: HTMLElement, content: TooltipContent, options: TooltipOptions = {}): void {
+    if (this.destroyed) {
+      return;
+    }
+
     /**
      * Replace any prior binding on this element so repeated `onHover` calls
      * never stack duplicate listeners.
@@ -469,9 +527,13 @@ class Tooltip {
      * hover tooltip for touch input (touch guard) — `pointerenter` fires
      * before the synthesized `mouseenter`.
      */
-    const handlePointerEnter = (event: PointerEvent): void => {
-      this.lastPointerType = event.pointerType;
-    };
+    const handlePointerEnter = (event: PointerEvent): void => this.recordPointer(event);
+    /**
+     * Tap-focus on touch devices fires `pointerdown` before `focusin`; record
+     * it so the focus handler can apply the same touch guard as the hover
+     * path.
+     */
+    const handlePointerDown = (event: PointerEvent): void => this.recordPointer(event);
     const handleMouseEnter = (): void => {
       // Touch users don't hover; a hover tooltip would just cover the tap target.
       if (this.lastPointerType === 'touch') {
@@ -485,13 +547,22 @@ class Tooltip {
     /**
      * Keyboard focus must also surface the tooltip (WCAG 1.4.13). Focus-driven
      * reveals are immediate — the hover `delay` is a pointer affordance and
-     * would make keyboard users wait.
+     * would make keyboard users wait. A focus arriving right after a touch
+     * interaction is a tap-focus, not keyboard focus, and stays suppressed
+     * (touch guard).
      */
-    const handleFocusIn = (): void => revealFor({ ...options,
-      delay: 0 });
+    const handleFocusIn = (): void => {
+      if (Date.now() - this.lastTouchTimestamp < TOUCH_FOCUS_SUPPRESS_DURATION) {
+        return;
+      }
+
+      revealFor({ ...options,
+        delay: 0 });
+    };
     const handleFocusOut = (): void => this.hide();
 
     element.addEventListener('pointerenter', handlePointerEnter);
+    element.addEventListener('pointerdown', handlePointerDown);
     element.addEventListener('mouseenter', handleMouseEnter);
     element.addEventListener('mouseleave', handleMouseLeave);
     element.addEventListener('focusin', handleFocusIn);
@@ -499,6 +570,7 @@ class Tooltip {
 
     this.hoverBindings.set(element, () => {
       element.removeEventListener('pointerenter', handlePointerEnter);
+      element.removeEventListener('pointerdown', handlePointerDown);
       element.removeEventListener('mouseenter', handleMouseEnter);
       element.removeEventListener('mouseleave', handleMouseLeave);
       element.removeEventListener('focusin', handleFocusIn);
@@ -507,9 +579,27 @@ class Tooltip {
   }
 
   /**
+   * Record a pointer interaction on a hover target: remembers the pointer
+   * type for the hover touch guard and stamps the touch timestamp for the
+   * focus-path touch guard.
+   * @param {PointerEvent} event - the pointer event to record
+   */
+  private recordPointer(event: PointerEvent): void {
+    this.lastPointerType = event.pointerType;
+
+    if (event.pointerType === 'touch') {
+      this.lastTouchTimestamp = Date.now();
+    }
+  }
+
+  /**
    * Release DOM and event listeners
    */
   public destroy(): void {
+    // Orphaned per-trigger handlers check this flag and become no-ops, so
+    // they can never re-register the document keydown listener post-destroy.
+    this.destroyed = true;
+
     this.cancelGraceHide();
 
     if (this.showingTimeout) {

@@ -3,6 +3,19 @@ import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CopyLinkTune } from '../../../../src/components/block-tunes/block-tune-copy-link';
+
+const osState = vi.hoisted(() => ({
+  os: { win: false, mac: true, x11: false, linux: false } as Record<string, boolean>,
+}));
+
+vi.mock('../../../../src/components/utils/browser', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../src/components/utils/browser')>();
+
+  return {
+    ...actual,
+    getUserOS: (): Record<string, boolean> => osState.os,
+  };
+});
 import type { API, BlockAPI } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 
@@ -34,6 +47,7 @@ const createMocks = (): { api: API; block: BlockAPI; notifier: NotifierMocks; i1
 describe('CopyLinkTune', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    osState.os = { win: false, mac: true, x11: false, linux: false };
   });
 
   afterEach(() => {
@@ -57,13 +71,29 @@ describe('CopyLinkTune', () => {
     expect(config.isDestructive).toBeUndefined();
   });
 
-  it('renders block tune config with ⌃⌘L shortcut hint in secondaryLabel', () => {
+  it('renders the ⌃ + ⌘ + L shortcut hint on mac via beautifyShortcut', () => {
+    osState.os = { win: false, mac: true, x11: false, linux: false };
+
     const { api, block } = createMocks();
     const tune = new CopyLinkTune({ api, block });
 
     const config = tune.render() as MenuConfigItem;
 
-    expect((config as { secondaryLabel?: string }).secondaryLabel).toBe('⌃⌘L');
+    expect((config as { secondaryLabel?: string }).secondaryLabel).toBe('⌃ + ⌘ + L');
+  });
+
+  it('does not show mac-only glyphs in the shortcut hint on Windows', () => {
+    osState.os = { win: true, mac: false, x11: false, linux: false };
+
+    const { api, block } = createMocks();
+    const tune = new CopyLinkTune({ api, block });
+
+    const config = tune.render() as MenuConfigItem;
+    const label = (config as { secondaryLabel?: string }).secondaryLabel ?? '';
+
+    expect(label).not.toContain('⌃');
+    expect(label).not.toContain('⌘');
+    expect(label).toBe('Ctrl + Win + L');
   });
 
   it('copies the correct URL to clipboard and shows success notification when activated', async () => {

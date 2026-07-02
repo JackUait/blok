@@ -13,7 +13,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconQuote } from '../../components/icons';
 import { stripFakeBackgroundElements } from '../../components/utils';
-import { isContentEmpty, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 export interface QuoteData extends BlockToolData {
@@ -75,7 +75,7 @@ export class Quote implements BlockTool {
     el.className = twMerge(
       this.api.styles.block,
       BASE_CLASSES,
-      PLACEHOLDER_FOCUS_ONLY_CLASSES,
+      getPlaceholderClasses('focus'),
       this._data.size === 'large' ? LARGE_CLASS : ''
     );
     el.setAttribute(DATA_ATTR.tool, 'quote');
@@ -196,7 +196,7 @@ export class Quote implements BlockTool {
       this._element.className = twMerge(
         this.api.styles.block,
         BASE_CLASSES,
-        PLACEHOLDER_FOCUS_ONLY_CLASSES,
+        getPlaceholderClasses('focus'),
         size === 'large' ? LARGE_CLASS : ''
       );
     }

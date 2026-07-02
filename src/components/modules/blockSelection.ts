@@ -920,10 +920,12 @@ export class BlockSelection extends Module {
    * @param index - the block index that just received navigation focus
    */
   private announceNavigationPosition(index: number): void {
-    if (this.lastAnnouncedNavigationIndex === index) {
-      return;
-    }
-
+    /**
+     * Always record the CURRENT index first: an already-scheduled timeout reads
+     * this at fire time, so returning to the last-announced index within the
+     * throttle window overwrites (and thereby cancels, via the fire-time
+     * dedupe check) a stale pending index instead of letting it fire.
+     */
     this.pendingNavigationAnnounceIndex = index;
 
     /**
@@ -931,6 +933,15 @@ export class BlockSelection extends Module {
      * pending index is when it fires.
      */
     if (this.navigationAnnounceTimeoutId !== null) {
+      return;
+    }
+
+    /**
+     * Nothing new to announce and no timeout in flight — don't schedule one.
+     */
+    if (this.lastAnnouncedNavigationIndex === index) {
+      this.pendingNavigationAnnounceIndex = null;
+
       return;
     }
 
@@ -1184,6 +1195,8 @@ export class BlockSelection extends Module {
      * Show toolbar for multi-block selection
      */
     this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+    this.announceSelectedCount();
   }
 
   /**
@@ -1232,6 +1245,22 @@ export class BlockSelection extends Module {
      * Show toolbar for multi-block selection
      */
     this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+    this.announceSelectedCount();
+  }
+
+  /**
+   * Announce how many Blocks the Cmd+A escalation just selected, so a
+   * screen-reader user gets feedback as each stage widens the selection.
+   */
+  private announceSelectedCount(): void {
+    const count = this.selectedBlocks.length;
+
+    if (count <= 1) {
+      return;
+    }
+
+    announce(this.Blok.I18n.t('a11y.blocksSelected', { count }), { politeness: 'polite' });
   }
 
   private selectAllBlocks(): void {
@@ -1257,6 +1286,15 @@ export class BlockSelection extends Module {
      * Show toolbar for multi-block selection
      */
     this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+    /**
+     * Announce the terminal escalation stage distinctly from the count-based
+     * stages so a screen-reader user knows the WHOLE document is now selected.
+     */
+    announce(
+      this.Blok.I18n.t('a11y.allBlocksSelected', { count: this.Blok.BlockManager.blocks.length }),
+      { politeness: 'polite' }
+    );
   }
 
   /**

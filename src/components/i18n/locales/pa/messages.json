@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ਹਿਲਾਉਣ ਲਈ ਖਿੱਚੋ",
   "blockSettings.clickToOpenMenu": "ਮੀਨੂ ਖੋਲ੍ਹਣ ਲਈ ਕਲਿੱਕ ਕਰੋ",
-  "blockSettings.clickOrShortcutToOpenMenu": "ਮੀਨੂ ਖੋਲ੍ਹਣ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ਹੇਠਾਂ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "ਤਸਵੀਰ URL ਪੇਸਟ ਕਰੋ…",
   "tools.audio.coverUrlAria": "ਤਸਵੀਰ URL",
   "tools.audio.coverSourceAria": "ਤਸਵੀਰ ਸਰੋਤ",
+  "a11y.allBlocksSelected": "ਸਾਰੇ ਬਲਾਕ ਚੁਣੇ ਗਏ, {count} ਬਲਾਕ",
   "a11y.blocksSelected": "{count} ਬਲਾਕ ਚੁਣੇ ਗਏ",
   "a11y.navigationModeEntered": "ਨੈਵੀਗੇਸ਼ਨ ਮੋਡ। ਬਲਾਕਾਂ ਵਿਚਕਾਰ ਜਾਣ ਲਈ ਤੀਰ ਬਟਨ ਵਰਤੋ, ਸੋਧਣ ਲਈ Enter, ਬਾਹਰ ਨਿਕਲਣ ਲਈ Escape।",
   "a11y.navigationModeExited": "ਨੈਵੀਗੇਸ਼ਨ ਮੋਡ ਤੋਂ ਬਾਹਰ ਨਿਕਲੇ",

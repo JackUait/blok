@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ລາກເພື່ອຍ້າຍ",
   "blockSettings.clickToOpenMenu": "ຄລິກເພື່ອເປີດເມນູ",
-  "blockSettings.clickOrShortcutToOpenMenu": "ຄລິກ ຫຼື ກົດ {shortcut} ເພື່ອເປີດເມນູ",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ຄລິກເພື່ອເພີ່ມຂ້າງລຸ່ມ",
@@ -73,6 +72,7 @@
   "a11y.searchResults": "{count} ຜົນລັບ",
   "a11y.blockToolbar": "ແຖບເຄື່ອງມືບລັອກ",
   "a11y.textFormatting": "ການຈັດຮູບແບບຂໍ້ຄວາມ",
+  "a11y.allBlocksSelected": "ເລືອກທຸກບລັອກແລ້ວ, {count} ບລັອກ",
   "a11y.blocksSelected": "ເລືອກ {count} ບລັອກແລ້ວ",
   "a11y.navigationModeEntered": "ໂໝດການນຳທາງ. ໃຊ້ປຸ່ມລູກສອນເພື່ອຍ້າຍລະຫວ່າງບລັອກ, Enter ເພື່ອແກ້ໄຂ, Escape ເພື່ອອອກ.",
   "a11y.navigationModeExited": "ອອກຈາກໂໝດການນຳທາງແລ້ວ",

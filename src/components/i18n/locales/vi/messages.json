@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Kéo để di chuyển",
   "blockSettings.clickToOpenMenu": "Nhấp để mở menu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Nhấp hoặc nhấn {shortcut} để mở menu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Nhấp để thêm bên dưới",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Dán URL ảnh…",
   "tools.audio.coverUrlAria": "URL hình ảnh",
   "tools.audio.coverSourceAria": "Nguồn hình ảnh",
+  "a11y.allBlocksSelected": "Đã chọn tất cả các khối, {count} khối",
   "a11y.blocksSelected": "Đã chọn {count} khối",
   "a11y.navigationModeEntered": "Chế độ điều hướng. Dùng các phím mũi tên để di chuyển giữa các khối, Enter để chỉnh sửa, Escape để thoát.",
   "a11y.navigationModeExited": "Đã thoát chế độ điều hướng",

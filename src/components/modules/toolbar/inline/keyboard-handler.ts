@@ -115,8 +115,17 @@ export class InlineKeyboardHandler {
      * we neither flip nor swallow the event here.
      */
     if (isHorizontalArrowKey && opened && mainFlipperHasFocus && !hasNestedPopover) {
+      /**
+       * The Flipper listens on BOTH document and window in capture mode.
+       * stopPropagation() alone would not stop the Flipper's window listener
+       * (same node as ours), letting it re-process this ArrowLeft/ArrowRight
+       * after the flip and auto-open the newly-focused item's submenu — so we
+       * must stop same-node listeners too. preventDefault() additionally lets
+       * the Flipper's own defaultPrevented guard skip the event defensively.
+       */
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
 
       if (flipper instanceof Flipper) {
         if (event.key === 'ArrowRight') {

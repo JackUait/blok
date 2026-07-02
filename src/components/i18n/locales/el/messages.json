@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Σύρετε για μετακίνηση",
   "blockSettings.clickToOpenMenu": "Κλικ για το μενού",
-  "blockSettings.clickOrShortcutToOpenMenu": "Κλικ ή {shortcut} για το μενού",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Κλικ για προσθήκη κάτω",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Επικολλήστε URL εικόνας…",
   "tools.audio.coverUrlAria": "URL εικόνας",
   "tools.audio.coverSourceAria": "Πηγή εικόνας",
+  "a11y.allBlocksSelected": "Επιλέχθηκαν όλα τα μπλοκ, {count} μπλοκ",
   "a11y.blocksSelected": "Επιλέχθηκαν {count} μπλοκ",
   "a11y.navigationModeEntered": "Λειτουργία πλοήγησης. Χρησιμοποιήστε τα βέλη για μετακίνηση μεταξύ των μπλοκ, το Enter για επεξεργασία και το Escape για έξοδο.",
   "a11y.navigationModeExited": "Έξοδος από τη λειτουργία πλοήγησης",

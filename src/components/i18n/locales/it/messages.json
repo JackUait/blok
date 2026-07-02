@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Trascina per spostare",
   "blockSettings.clickToOpenMenu": "Clicca per aprire il menu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Clicca o {shortcut} per aprire il menu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Clicca per aggiungere sotto",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Incolla l’URL di un’immagine…",
   "tools.audio.coverUrlAria": "URL dell’immagine",
   "tools.audio.coverSourceAria": "Origine dell’immagine",
+  "a11y.allBlocksSelected": "Tutti i blocchi selezionati, {count} blocchi",
   "a11y.blocksSelected": "{count} blocchi selezionati",
   "a11y.navigationModeEntered": "Modalità di navigazione. Usa i tasti freccia per spostarti tra i blocchi, Invio per modificare, Esc per uscire.",
   "a11y.navigationModeExited": "Uscita dalla modalità di navigazione",

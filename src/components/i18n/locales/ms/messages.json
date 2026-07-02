@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Seret untuk alih",
   "blockSettings.clickToOpenMenu": "Klik untuk buka menu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Klik atau tekan {shortcut} untuk buka menu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Klik untuk tambah di bawah",
@@ -98,6 +97,7 @@
   "a11y.searchResults": "{count} hasil",
   "a11y.blockToolbar": "Bar alat blok",
   "a11y.textFormatting": "Pemformatan teks",
+  "a11y.allBlocksSelected": "Semua blok dipilih, {count} blok",
   "a11y.blocksSelected": "{count} blok dipilih",
   "a11y.navigationModeEntered": "Mod navigasi. Gunakan kekunci anak panah untuk bergerak antara blok, Enter untuk mengedit, Escape untuk keluar.",
   "a11y.navigationModeExited": "Keluar dari mod navigasi",

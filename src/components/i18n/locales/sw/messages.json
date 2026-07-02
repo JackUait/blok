@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Buruta ili kusogeza",
   "blockSettings.clickToOpenMenu": "Bofya ili kufungua menyu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Bofya au {shortcut} kufungua menyu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Bofya ili kuongeza chini",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Bandika URL ya picha…",
   "tools.audio.coverUrlAria": "URL ya picha",
   "tools.audio.coverSourceAria": "Chanzo cha picha",
+  "a11y.allBlocksSelected": "Vizuizi vyote vimechaguliwa, vizuizi {count}",
   "a11y.blocksSelected": "Vizuizi {count} vimechaguliwa",
   "a11y.navigationModeEntered": "Hali ya kusogeza. Tumia vitufe vya mishale kusogea kati ya vizuizi, Enter kuhariri, Escape kutoka.",
   "a11y.navigationModeExited": "Umetoka kwenye hali ya kusogeza",

@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Tërhiq për të lëvizur",
   "blockSettings.clickToOpenMenu": "Kliko për të hapur menynë",
-  "blockSettings.clickOrShortcutToOpenMenu": "Kliko ose {shortcut} për të hapur menynë",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Kliko për të shtuar poshtë",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Ngjit një URL imazhi…",
   "tools.audio.coverUrlAria": "URL e imazhit",
   "tools.audio.coverSourceAria": "Burimi i imazhit",
+  "a11y.allBlocksSelected": "Të gjitha blloqet të zgjedhura, {count} blloqe",
   "a11y.blocksSelected": "{count} blloqe të zgjedhur",
   "a11y.navigationModeEntered": "Modaliteti i navigimit. Përdorni tastet me shigjeta për të lëvizur mes blloqeve, Enter për të redaktuar, Escape për të dalë.",
   "a11y.navigationModeExited": "Dolët nga modaliteti i navigimit",

@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "드래그하여 이동",
   "blockSettings.clickToOpenMenu": "클릭하여 메뉴 열기",
-  "blockSettings.clickOrShortcutToOpenMenu": "클릭하거나 {shortcut}로 메뉴 열기",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "클릭하여 아래에 추가",
@@ -98,6 +97,7 @@
   "a11y.searchResults": "결과 {count}개",
   "a11y.blockToolbar": "블록 도구 모음",
   "a11y.textFormatting": "텍스트 서식",
+  "a11y.allBlocksSelected": "모든 블록 선택됨, {count}개 블록",
   "a11y.blocksSelected": "{count}개 블록 선택됨",
   "a11y.navigationModeEntered": "탐색 모드. 화살표 키로 블록 간 이동, Enter로 편집, Escape로 종료합니다.",
   "a11y.navigationModeExited": "탐색 모드 종료됨",

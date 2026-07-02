@@ -421,8 +421,10 @@ export class Embed implements BlockTool {
 
     input.addEventListener('input', () => {
       bar.setAttribute('data-valid', this.looksLikeUrl(input.value) ? 'true' : 'false');
-      // Editing after a rejected submit clears the shared invalid state.
+      // Editing after a rejected submit clears the shared invalid state —
+      // both the a11y attributes and the visible alert, so they never diverge.
       setFieldValidity(input, true, this.urlErrorId);
+      el.querySelector('[data-role="embed-url-error"]')?.remove();
     });
 
     bar.append(fieldIcon, input, submit);

@@ -44,9 +44,20 @@ export interface RovingTabindexOptions {
  * @param element - candidate group item
  */
 const isHidden = (element: HTMLElement): boolean => {
-  return element.style.display === 'none'
-    || element.hidden
-    || element.getAttribute('aria-hidden') === 'true';
+  if (element.hidden || element.getAttribute('aria-hidden') === 'true') {
+    return true;
+  }
+
+  /**
+   * Computed style catches hiding applied via stylesheet rules (e.g. utility
+   * classes), not just inline `style.display`. Note: `offsetParent === null`
+   * would be a cheaper display:none check, but it is unreliable for
+   * position:fixed elements and always null in jsdom, so we rely on
+   * getComputedStyle, which resolves both inline and stylesheet-injected styles.
+   */
+  const computed = getComputedStyle(element);
+
+  return computed.display === 'none' || computed.visibility === 'hidden';
 };
 
 /**

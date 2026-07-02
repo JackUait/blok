@@ -6,6 +6,7 @@
 import type { API, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { IconTrash } from '../icons';
+import { beautifyShortcut } from '../utils/string';
 
 /**
  *
@@ -39,7 +40,7 @@ export class DeleteTune implements BlockTune {
       title: this.api.i18n.t('blockSettings.delete'),
       name: 'delete',
       isDestructive: true,
-      secondaryLabel: 'Del',
+      secondaryLabel: beautifyShortcut('DELETE'),
       onActivate: (): void => this.handleClick(),
     };
   }

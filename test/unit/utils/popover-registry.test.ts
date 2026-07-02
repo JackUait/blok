@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { registerLayer } from '../../../src/components/utils/dismissable-layer';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
 import type { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
 
@@ -63,6 +64,37 @@ describe('PopoverRegistry', () => {
       registry.register(popover, trigger);
 
       expect(popover.hide).not.toHaveBeenCalled();
+    });
+
+    it('does not push a duplicate entry when the same popover registers twice (double show without hide)', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+      registry.register(popover, trigger);
+
+      registry.unregister(popover);
+
+      // A duplicate stack entry would leave hasOpenPopovers() stuck true.
+      expect(registry.hasOpenPopovers()).toBe(false);
+    });
+
+    it('refreshes the trigger element when the same popover re-registers', () => {
+      const { popover, trigger } = createMockPopover();
+      const newTrigger = document.createElement('button');
+
+      document.body.appendChild(newTrigger);
+      const focusSpy = vi.spyOn(newTrigger, 'focus');
+
+      registry.register(popover, trigger);
+      registry.register(popover, newTrigger);
+
+      registry.closeTopmost();
+
+      // Focus restore proves the refreshed trigger replaced the stale one.
+      expect(focusSpy).toHaveBeenCalled();
+      expect(registry.hasOpenPopovers()).toBe(false);
+
+      newTrigger.remove();
     });
   });
 
@@ -267,6 +299,79 @@ describe('PopoverRegistry', () => {
       registry.unregister(popover);
 
       expect(removeSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
+    });
+
+    it('ignores an Escape whose default was already prevented (already consumed elsewhere)', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+
+      event.preventDefault();
+      document.dispatchEvent(event);
+
+      expect(popover.hide).not.toHaveBeenCalled();
+    });
+
+    it('defers to the dismissable-layer stack: one Escape peels only the layer, not the popover (popover registered first)', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      const layerEl = document.createElement('div');
+
+      document.body.appendChild(layerEl);
+      const layerDismiss = vi.fn();
+      const unregisterLayer = registerLayer({ element: layerEl, onDismiss: layerDismiss });
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+
+      expect(layerDismiss).toHaveBeenCalledTimes(1);
+      expect(popover.hide).not.toHaveBeenCalled();
+
+      unregisterLayer();
+      layerEl.remove();
+    });
+
+    it('defers to the dismissable-layer stack: one Escape peels only the layer, not the popover (layer registered first)', () => {
+      const layerEl = document.createElement('div');
+
+      document.body.appendChild(layerEl);
+      const layerDismiss = vi.fn();
+      const unregisterLayer = registerLayer({ element: layerEl, onDismiss: layerDismiss });
+
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+
+      expect(layerDismiss).toHaveBeenCalledTimes(1);
+      expect(popover.hide).not.toHaveBeenCalled();
+
+      unregisterLayer();
+      layerEl.remove();
+    });
+
+    it('still closes the popover when the only registered layers opted out of Escape', () => {
+      const { popover, trigger } = createMockPopover();
+
+      registry.register(popover, trigger);
+
+      const layerEl = document.createElement('div');
+
+      document.body.appendChild(layerEl);
+      const layerDismiss = vi.fn();
+      const unregisterLayer = registerLayer({ element: layerEl, onDismiss: layerDismiss, escape: false });
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+
+      expect(popover.hide).toHaveBeenCalledOnce();
+      expect(layerDismiss).not.toHaveBeenCalled();
+
+      unregisterLayer();
+      layerEl.remove();
     });
   });
 

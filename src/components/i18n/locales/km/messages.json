@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "អូសដើម្បីផ្លាស់ទី",
   "blockSettings.clickToOpenMenu": "ចុចដើម្បីបើកម៉ឺនុយ",
-  "blockSettings.clickOrShortcutToOpenMenu": "ចុច ឬចុច {shortcut} ដើម្បីបើកម៉ឺនុយ",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ចុចដើម្បីបន្ថែមខាងក្រោម",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "បិទភ្ជាប់ URL រូបភាព…",
   "tools.audio.coverUrlAria": "URL រូបភាព",
   "tools.audio.coverSourceAria": "ប្រភពរូបភាព",
+  "a11y.allBlocksSelected": "បានជ្រើសរើសប្លុកទាំងអស់ ប្លុក {count}",
   "a11y.blocksSelected": "បានជ្រើសរើសប្លុក {count}",
   "a11y.navigationModeEntered": "របៀបរុករក។ ប្រើគ្រាប់ចុចព្រួញដើម្បីផ្លាស់ទីរវាងប្លុក, Enter ដើម្បីកែសម្រួល, Escape ដើម្បីចាកចេញ។",
   "a11y.navigationModeExited": "បានចាកចេញពីរបៀបរុករក",

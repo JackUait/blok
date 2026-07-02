@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "সরাতে টেনে আনুন",
   "blockSettings.clickToOpenMenu": "মেনু খুলতে ক্লিক করুন",
-  "blockSettings.clickOrShortcutToOpenMenu": "মেনু খুলতে ক্লিক করুন বা {shortcut} চাপুন",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "নিচে যোগ করতে ক্লিক করুন",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "ছবির URL পেস্ট করুন…",
   "tools.audio.coverUrlAria": "ছবির URL",
   "tools.audio.coverSourceAria": "ছবির উৎস",
+  "a11y.allBlocksSelected": "সব ব্লক নির্বাচিত হয়েছে, {count}টি ব্লক",
   "a11y.blocksSelected": "{count}টি ব্লক নির্বাচিত হয়েছে",
   "a11y.navigationModeEntered": "নেভিগেশন মোড। ব্লকগুলোর মধ্যে যেতে অ্যারো কী, সম্পাদনা করতে Enter এবং বেরিয়ে যেতে Escape ব্যবহার করুন।",
   "a11y.navigationModeExited": "নেভিগেশন মোড থেকে বেরিয়ে আসা হয়েছে",

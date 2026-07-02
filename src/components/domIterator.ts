@@ -247,7 +247,20 @@ export class DomIterator {
         item.id = generateId('blok-flipper-item-');
       }
 
-      item.setAttribute('aria-selected', 'true');
+      /**
+       * aria-selected is not allowed on menuitem roles (axe: aria-allowed-attr);
+       * for those, aria-activedescendant alone conveys the highlight. Keep
+       * aria-selected for option-like items (listbox popovers).
+       */
+      const role = item.getAttribute('role');
+      const isMenuItemRole = role === 'menuitem' || role === 'menuitemradio' || role === 'menuitemcheckbox';
+
+      if (isMenuItemRole) {
+        item.removeAttribute('aria-selected');
+      } else {
+        item.setAttribute('aria-selected', 'true');
+      }
+
       this.activeDescendantHost.setAttribute('aria-activedescendant', item.id);
     }
   }

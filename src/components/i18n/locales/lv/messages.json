@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Velciet, lai pārvietotu",
   "blockSettings.clickToOpenMenu": "Noklikšķiniet, lai atvērtu izvēlni",
-  "blockSettings.clickOrShortcutToOpenMenu": "Noklikšķiniet vai {shortcut}, lai atvērtu izvēlni",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Noklikšķiniet, lai pievienotu zemāk",
@@ -75,6 +74,7 @@
   "a11y.searchResults": "{count} rezultāti",
   "a11y.blockToolbar": "Bloka rīkjosla",
   "a11y.textFormatting": "Teksta formatēšana",
+  "a11y.allBlocksSelected": "Atlasīti visi bloki, {count} bloki",
   "a11y.blocksSelected": "Atlasīti {count} bloki",
   "a11y.navigationModeEntered": "Navigācijas režīms. Izmantojiet bulttaustiņus, lai pārvietotos starp blokiem, Enter, lai rediģētu, Escape, lai izietu.",
   "a11y.navigationModeExited": "Iziets no navigācijas režīma",

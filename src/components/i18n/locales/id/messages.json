@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Seret untuk memindahkan",
   "blockSettings.clickToOpenMenu": "Klik untuk membuka menu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Klik atau tekan {shortcut} untuk membuka menu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Klik untuk tambah di bawah",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Tempel URL gambar…",
   "tools.audio.coverUrlAria": "URL gambar",
   "tools.audio.coverSourceAria": "Sumber gambar",
+  "a11y.allBlocksSelected": "Semua blok dipilih, {count} blok",
   "a11y.blocksSelected": "{count} blok dipilih",
   "a11y.navigationModeEntered": "Mode navigasi. Gunakan tombol panah untuk berpindah antar blok, Enter untuk mengedit, Escape untuk keluar.",
   "a11y.navigationModeExited": "Keluar dari mode navigasi",

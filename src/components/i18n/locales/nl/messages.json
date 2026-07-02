@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Sleep om te verplaatsen",
   "blockSettings.clickToOpenMenu": "Klik om menu te openen",
-  "blockSettings.clickOrShortcutToOpenMenu": "Klik of {shortcut} om menu te openen",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Klik om eronder in te voegen",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Plak een afbeeldings-URL…",
   "tools.audio.coverUrlAria": "Afbeeldings-URL",
   "tools.audio.coverSourceAria": "Afbeeldingsbron",
+  "a11y.allBlocksSelected": "Alle blokken geselecteerd, {count} blokken",
   "a11y.blocksSelected": "{count} blokken geselecteerd",
   "a11y.navigationModeEntered": "Navigatiemodus. Gebruik de pijltjestoetsen om tussen blokken te navigeren, Enter om te bewerken, Escape om af te sluiten.",
   "a11y.navigationModeExited": "Navigatiemodus verlaten",

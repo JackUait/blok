@@ -21,7 +21,7 @@ import {
 } from './block-operations';
 import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { getContentOffset } from './content-offset';
-import { applyCheckboxState } from './dom-builder';
+import { applyChecklistCheckedState } from './dom-builder';
 import { parseHTML } from './content-operations';
 import { normalizeListItemData } from './data-normalizer';
 import { ListDepthValidator } from './depth-validator';
@@ -163,12 +163,10 @@ export class ListItem implements BlockTool {
       itemSize: this.itemSize,
       markerDepth,
       setupItemPlaceholder: this.setupItemPlaceholder.bind(this),
-      onCheckboxChange: (checked, content) => {
+      // DOM sync (checkbox state, data-checked, strike-through) is handled by
+      // applyChecklistCheckedState in the change listener — only track the data.
+      onCheckboxChange: (checked) => {
         this._data.checked = checked;
-        if (content instanceof HTMLElement) {
-          content.classList.toggle('line-through', checked);
-          content.classList.toggle('opacity-60', checked);
-        }
       },
       keydownHandler: this.readOnly ? undefined : this.boundHandleKeyDown,
     });
@@ -430,9 +428,12 @@ export class ListItem implements BlockTool {
 
   private updateCheckboxState(checked: boolean): void {
     const checkbox = this._element?.querySelector('input[type="checkbox"]');
-    if (checkbox instanceof HTMLInputElement) {
-      applyCheckboxState(checkbox, checked);
-    }
+
+    applyChecklistCheckedState(
+      checkbox instanceof HTMLInputElement ? checkbox : null,
+      this.getContentElement(),
+      checked
+    );
   }
 
   private getDepth(): number {
@@ -652,12 +653,10 @@ export class ListItem implements BlockTool {
       markerDepth: this.markerCalculator.getVisualDepth(blockIndex, depth),
       element: this._element,
       setupItemPlaceholder: this.setupItemPlaceholder.bind(this),
-      onCheckboxChange: (checked, content) => {
+      // DOM sync (checkbox state, data-checked, strike-through) is handled by
+      // applyChecklistCheckedState in the change listener — only track the data.
+      onCheckboxChange: (checked) => {
         this._data.checked = checked;
-        if (content instanceof HTMLElement) {
-          content.classList.toggle('line-through', checked);
-          content.classList.toggle('opacity-60', checked);
-        }
       },
       keydownHandler: this.readOnly ? undefined : this.boundHandleKeyDown ?? undefined,
     });

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { shortcutToReadable } from '../../../src/components/utils/key-icon';
+import { shortcutToAriaKeyshortcuts, shortcutToReadable } from '../../../src/components/utils/key-icon';
 
 describe('shortcutToReadable', () => {
   it('expands ⌘ to Command', () => {
@@ -65,5 +65,50 @@ describe('shortcutToReadable', () => {
 
   it('handles a plain letter alone', () => {
     expect(shortcutToReadable('A')).toBe('A');
+  });
+});
+
+describe('shortcutToAriaKeyshortcuts', () => {
+  it('maps ⌘ to Meta', () => {
+    expect(shortcutToAriaKeyshortcuts('⌘C')).toBe('Meta+C');
+  });
+
+  it('maps ⌃ to Control', () => {
+    expect(shortcutToAriaKeyshortcuts('⌃⌘L')).toBe('Control+Meta+L');
+  });
+
+  it('maps ⌥ to Alt and ⇧ to Shift', () => {
+    expect(shortcutToAriaKeyshortcuts('⌥⇧P')).toBe('Alt+Shift+P');
+  });
+
+  it('maps Ctrl text token to Control', () => {
+    expect(shortcutToAriaKeyshortcuts('Ctrl + D')).toBe('Control+D');
+  });
+
+  it('maps Win token to Meta', () => {
+    expect(shortcutToAriaKeyshortcuts('Ctrl + Win + L')).toBe('Control+Meta+L');
+  });
+
+  it('maps Del to Delete and Ins to Insert', () => {
+    expect(shortcutToAriaKeyshortcuts('Del')).toBe('Delete');
+    expect(shortcutToAriaKeyshortcuts('Ins')).toBe('Insert');
+  });
+
+  it('maps arrow glyphs to UI-Events arrow key names', () => {
+    expect(shortcutToAriaKeyshortcuts('⌘↑')).toBe('Meta+ArrowUp');
+    expect(shortcutToAriaKeyshortcuts('⌘↓')).toBe('Meta+ArrowDown');
+    expect(shortcutToAriaKeyshortcuts('⌘←')).toBe('Meta+ArrowLeft');
+    expect(shortcutToAriaKeyshortcuts('⌘→')).toBe('Meta+ArrowRight');
+  });
+
+  it('maps special key glyphs to UI-Events key names', () => {
+    expect(shortcutToAriaKeyshortcuts('⌫')).toBe('Backspace');
+    expect(shortcutToAriaKeyshortcuts('⎋')).toBe('Escape');
+    expect(shortcutToAriaKeyshortcuts('⇥')).toBe('Tab');
+    expect(shortcutToAriaKeyshortcuts('⏎')).toBe('Enter');
+  });
+
+  it('uppercases plain letter keys', () => {
+    expect(shortcutToAriaKeyshortcuts('⌘b')).toBe('Meta+B');
   });
 });

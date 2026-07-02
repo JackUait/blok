@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "सार्न तान्नुहोस्",
   "blockSettings.clickToOpenMenu": "मेनु खोल्न क्लिक गर्नुहोस्",
-  "blockSettings.clickOrShortcutToOpenMenu": "मेनु खोल्न क्लिक गर्नुहोस् वा {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "तल थप्न क्लिक गर्नुहोस्",
@@ -73,6 +72,7 @@
   "a11y.searchResults": "{count} परिणामहरू",
   "a11y.blockToolbar": "ब्लक टूलबार",
   "a11y.textFormatting": "पाठ ढाँचा",
+  "a11y.allBlocksSelected": "सबै ब्लक चयन गरियो, {count} ब्लक",
   "a11y.blocksSelected": "{count} ब्लक चयन गरियो",
   "a11y.navigationModeEntered": "नेभिगेसन मोड। ब्लकहरू बीच सार्न एरो कुञ्जीहरू, सम्पादन गर्न Enter, बाहिर निस्कन Escape प्रयोग गर्नुहोस्।",
   "a11y.navigationModeExited": "नेभिगेसन मोडबाट बाहिरियो",

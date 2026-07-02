@@ -57,39 +57,22 @@ export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
 ];
 
 /**
- * Placeholder classes that show when the editor is empty (ancestor has data-blok-empty="true").
- * Shows placeholder without requiring focus — used for initial empty-state hint.
- * Uses data-blok-placeholder-active attribute for the placeholder text.
- */
-export const PLACEHOLDER_EMPTY_EDITOR_CLASSES: string[] = [
-  'empty:in-data-[blok-empty=true]:before:pointer-events-none',
-  'empty:in-data-[blok-empty=true]:before:text-gray-text',
-  'empty:in-data-[blok-empty=true]:before:cursor-text',
-  'empty:in-data-[blok-empty=true]:before:content-[attr(data-blok-placeholder-active)]',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:pointer-events-none',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:text-gray-text',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:cursor-text',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:content-[attr(data-blok-placeholder-active)]',
-];
-
-/**
  * Placeholder visibility policy — the single vocabulary that selects which
  * class array (and CSS `::before` visibility rule) a consumer wants:
  *
  * - `always`        — visible whenever empty (uses `data-placeholder`)
  * - `always-active` — visible whenever empty (uses `data-blok-placeholder-active`)
  * - `focus`         — visible only when empty AND focused
- * - `empty-editor`  — visible only when empty AND the editor itself is empty
  */
-export type PlaceholderVisibility = 'always' | 'always-active' | 'focus' | 'empty-editor';
+export type PlaceholderVisibility = 'always' | 'always-active' | 'focus';
 
 /**
  * Resolve the placeholder class array for a given visibility policy.
  *
- * Consolidates the four near-duplicate class-array variants behind one
- * vocabulary keyed on {@link PlaceholderVisibility}. The class strings remain
- * literal (Tailwind scans the source for them) — this is the single lookup
- * seam callers use instead of importing the individual constants.
+ * Consolidates the near-duplicate class-array variants behind one vocabulary
+ * keyed on {@link PlaceholderVisibility}. The class strings remain literal
+ * (Tailwind scans the source for them) — this is the single lookup seam
+ * callers use instead of importing the individual constants.
  *
  * @param visibility - when the placeholder should be shown
  * @returns the matching class array
@@ -100,8 +83,6 @@ export const getPlaceholderClasses = (visibility: PlaceholderVisibility): string
       return PLACEHOLDER_ACTIVE_CLASSES;
     case 'focus':
       return PLACEHOLDER_FOCUS_ONLY_CLASSES;
-    case 'empty-editor':
-      return PLACEHOLDER_EMPTY_EDITOR_CLASSES;
     case 'always':
     default:
       return PLACEHOLDER_CLASSES;

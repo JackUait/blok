@@ -20,7 +20,7 @@ import type {
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3 } from '../../components/icons';
-import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
@@ -506,7 +506,7 @@ export class Header implements BlockTool {
     this._data.isOpen = true;
 
     this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-8');
+    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'pl-8');
 
     if (!this.readOnly) {
       this._element.addEventListener('keydown', this.handleKeyDown);
@@ -539,7 +539,7 @@ export class Header implements BlockTool {
     this.api.events.off('block changed', this.handleBlockChanged);
 
     this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
-    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'));
 
     if (this._wrapper) {
       const parent = this._wrapper.parentNode;
@@ -810,7 +810,7 @@ export class Header implements BlockTool {
      */
     if (this._data.isToggleable) {
       this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-8');
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'pl-8');
 
       if (!this._wrapper) {
         /**
@@ -828,7 +828,7 @@ export class Header implements BlockTool {
       }
     } else {
       this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'));
       this._arrowElement = null;
 
       if (this._wrapper) {
@@ -888,7 +888,7 @@ export class Header implements BlockTool {
      * When isToggleable, add left padding to leave room for the arrow (which lives
      * in the wrapper div as a sibling, not inside this element).
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, this._data.isToggleable ? 'pl-8' : '');
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'pl-8' : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)

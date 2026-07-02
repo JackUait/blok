@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { alert, confirm, prompt, getWrapper, CSS, createDismissButton, NOTIFIER_DISMISS_KEY } from '../../../../src/components/utils/notifier/draw';
+import { show } from '../../../../src/components/utils/notifier/index';
 import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
 
 describe('Notifier draw', () => {
@@ -350,6 +351,52 @@ describe('Notifier draw', () => {
 
       expect(cancelHandler).toHaveBeenCalledTimes(1);
       expect(el.isConnected).toBe(false);
+    });
+  });
+
+  describe('modal replacement cleanup (via show)', () => {
+    afterEach(() => {
+      // Dismiss any surviving toast so its dismissal layer/timer do not leak
+      // into other tests, then drop the wrapper.
+      document
+        .querySelectorAll<HTMLElement>('[data-blok-testid="notification-dismiss"]')
+        .forEach((btn) => btn.click());
+      document
+        .querySelectorAll('[data-blok-testid="notifier-container"]')
+        .forEach((el) => el.remove());
+    });
+
+    it('closing an open confirm via toast replacement removes the background inert and mounts the toast', async () => {
+      const sibling = document.createElement('div');
+
+      document.body.appendChild(sibling);
+
+      show({ message: 'Delete block?', type: 'confirm', okHandler: vi.fn(), cancelHandler: vi.fn() });
+
+      // openModalDialog defers inert to a microtask when the surface is not yet
+      // connected at open time (the notifier appends after building).
+      await Promise.resolve();
+
+      expect(sibling.hasAttribute('inert')).toBe(true);
+
+      const confirmEl = document.querySelector<HTMLElement>('[data-blok-testid^="notification"]');
+
+      expect(confirmEl).not.toBeNull();
+
+      // Any toast fired while the confirm is open replaces it. The confirm's
+      // modal handle must be closed, or the page-wide inert leaks forever.
+      show({ message: 'saved' });
+
+      expect(sibling.hasAttribute('inert')).toBe(false);
+      expect(confirmEl?.isConnected).toBe(false);
+
+      // The replacement toast still mounts even though the modal removed
+      // itself synchronously (there is nothing left to swap-animate).
+      const toast = document.querySelector('[data-blok-testid="notification"]');
+
+      expect(toast).not.toBeNull();
+
+      sibling.remove();
     });
   });
 

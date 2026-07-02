@@ -45,6 +45,7 @@ vi.mock('../../../../src/components/utils/notifier/draw', () => {
     prompt: vi.fn((options: { message: string; style?: string }) => createMockAlert(options)),
     createProgressBar: vi.fn(createProgressBar),
     createDismissButton: vi.fn((onDismiss: () => void) => createDismissButton(onDismiss)),
+    modalCleanups: new WeakMap<HTMLElement, () => void>(),
     getWrapper: vi.fn(() => {
       const wrapper = document.createElement('div');
 
@@ -221,6 +222,49 @@ describe('Notifier show (index.ts)', () => {
     expect(notification.isConnected).toBe(true);
 
     // Leaving resumes the remaining time.
+    notification.dispatchEvent(new Event('pointerleave'));
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).toContain('animate-notify-slide-out');
+  });
+
+  it('keeps the timer paused when the pointer leaves while focus is still inside the toast', () => {
+    show({ message: 'union me', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    notification.dispatchEvent(new Event('focusin'));
+    notification.dispatchEvent(new Event('pointerenter'));
+    notification.dispatchEvent(new Event('pointerleave'));
+
+    // Focus is still inside: pointerleave must NOT resume the countdown.
+    vi.advanceTimersByTime(10000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+
+    // Only once both hover AND focus are gone does the timer resume.
+    notification.dispatchEvent(new Event('focusout'));
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).toContain('animate-notify-slide-out');
+  });
+
+  it('keeps the timer paused when focus leaves while the pointer is still hovering the toast', () => {
+    show({ message: 'union me too', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    notification.dispatchEvent(new Event('pointerenter'));
+    notification.dispatchEvent(new Event('focusin'));
+    notification.dispatchEvent(new Event('focusout'));
+
+    // Pointer is still hovering: focusout must NOT resume the countdown.
+    vi.advanceTimersByTime(10000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+
     notification.dispatchEvent(new Event('pointerleave'));
     vi.advanceTimersByTime(5000);
 

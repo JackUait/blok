@@ -1,6 +1,7 @@
 import type { API, BlockAPI, BlockTune } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { IconLink } from '../icons';
+import { beautifyShortcut } from '../utils/string';
 
 /**
  * @class CopyLinkTune
@@ -53,7 +54,7 @@ export class CopyLinkTune implements BlockTune {
       icon: IconLink,
       title: this.api.i18n.t('blockSettings.copyLink'),
       name: 'copy-link',
-      secondaryLabel: '⌃⌘L',
+      secondaryLabel: beautifyShortcut('CTRL+CMD+L'),
       onActivate: (): Promise<void> => this.handleClick(),
     };
   }

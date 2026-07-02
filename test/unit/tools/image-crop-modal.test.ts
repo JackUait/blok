@@ -125,6 +125,19 @@ describe('openCropModal', () => {
     detach();
   });
 
+  it('Escape calls onCancel exactly once and detaches', () => {
+    const onCancel = vi.fn();
+    const detach = open({ onCancel });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    // The modal's dismissal layer owns Escape; the crop editor must not run a
+    // second Escape path (that would double-invoke onCancel per press).
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(document.body.querySelector('.blok-image-crop-modal-backdrop')).toBeNull();
+    detach();
+  });
+
   it('detach is idempotent', () => {
     const detach = open();
     detach();

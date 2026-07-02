@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Glisser pour déplacer",
   "blockSettings.clickToOpenMenu": "Cliquer pour ouvrir le menu",
-  "blockSettings.clickOrShortcutToOpenMenu": "Cliquer ou {shortcut} pour ouvrir le menu",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Cliquer pour ajouter en dessous",
@@ -465,6 +464,7 @@
   "tools.audio.coverSourceAria": "Source de l’image",
   "toolNames.video": "Vidéo",
   "toolNames.audio": "Audio",
+  "a11y.allBlocksSelected": "Tous les blocs sélectionnés, {count} blocs",
   "a11y.blocksSelected": "{count} blocs sélectionnés",
   "a11y.navigationModeEntered": "Mode navigation. Utilisez les touches fléchées pour vous déplacer entre les blocs, Entrée pour modifier, Échap pour quitter.",
   "a11y.navigationModeExited": "Sortie du mode navigation",

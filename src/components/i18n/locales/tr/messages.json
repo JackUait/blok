@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Taşımak için sürükle",
   "blockSettings.clickToOpenMenu": "Menüyü açmak için tıkla",
-  "blockSettings.clickOrShortcutToOpenMenu": "Menüyü açmak için tıkla veya {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Altına eklemek için tıkla",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Görsel URL'si yapıştırın…",
   "tools.audio.coverUrlAria": "Görsel URL'si",
   "tools.audio.coverSourceAria": "Görsel kaynağı",
+  "a11y.allBlocksSelected": "Tüm bloklar seçildi, {count} blok",
   "a11y.blocksSelected": "{count} blok seçildi",
   "a11y.navigationModeEntered": "Gezinme modu. Bloklar arasında hareket etmek için ok tuşlarını, düzenlemek için Enter, çıkmak için Escape kullanın.",
   "a11y.navigationModeExited": "Gezinme modundan çıkıldı",

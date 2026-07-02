@@ -361,6 +361,17 @@ export class Flipper {
    * @param event - keydown event
    */
   private onKeyDown = (event: KeyboardEvent): void => {
+    /**
+     * Another handler (e.g. the inline toolbar's window-capture keydown
+     * listener) has already consumed this event. Since Flipper listens on both
+     * document and window in capture mode, stopPropagation() from a same-node
+     * listener does not shield us — honor preventDefault() to avoid processing
+     * the same keystroke twice.
+     */
+    if (event.defaultPrevented) {
+      return;
+    }
+
     const target = event.target as HTMLElement | null;
 
     if (this.shouldSkipTarget(target, event)) {

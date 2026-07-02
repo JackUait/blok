@@ -330,9 +330,11 @@ export function mountCropEditor(
   const resetBtn = assertEl(actions.querySelector<HTMLButtonElement>('[data-action="reset"]'), 'reset button');
   resetBtn.addEventListener('click', () => setRect({ ...FULL_RECT }));
 
+  // Escape is deliberately NOT handled here: the crop modal (crop-modal.ts)
+  // registers Escape dismissal through the shared dismissable-layer stack, and
+  // a second Escape path would invoke onCancel twice per press.
   const onKey = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape') { e.preventDefault(); opts.onCancel(); }
-    else if (e.key === 'Enter') { e.preventDefault(); applyDone(); }
+    if (e.key === 'Enter') { e.preventDefault(); applyDone(); }
   };
   document.addEventListener('keydown', onKey);
 

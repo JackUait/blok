@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Քաշեք տեղափոխելու",
   "blockSettings.clickToOpenMenu": "Սեղմեք մենյու համար",
-  "blockSettings.clickOrShortcutToOpenMenu": "Սեղմեք կամ {shortcut} մենյու բացելու համար",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Սեղմեք՝ ներքևում ավելացնելու համար",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Տեղադրեք պատկերի URL…",
   "tools.audio.coverUrlAria": "Պատկերի URL",
   "tools.audio.coverSourceAria": "Պատկերի աղբյուր",
+  "a11y.allBlocksSelected": "Ընտրված են բոլոր բլոկները, {count} բլոկ",
   "a11y.blocksSelected": "Ընտրված է {count} բլոկ",
   "a11y.navigationModeEntered": "Նավիգացիայի ռեժիմ։ Օգտագործեք սլաքի ստեղները բլոկների միջև տեղաշարժվելու, Enter-ը՝ խմբագրելու, Escape-ը՝ դուրս գալու համար։",
   "a11y.navigationModeExited": "Դուրս եկաք նավիգացիայի ռեժիմից",

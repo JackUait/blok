@@ -582,6 +582,10 @@ export class AudioTool implements BlockTool {
     if (this.readOnly) return;
     const anchor = this.root?.querySelector<HTMLElement>('[data-role="audio-cover"]');
     if (!anchor) return;
+    // The "Change cover" button is the semantic trigger: it carries the
+    // aria-haspopup/aria-expanded state and regains focus when the picker
+    // closes. The cover div stays the visual positioning anchor.
+    const trigger = this.root?.querySelector<HTMLElement>('[data-role="audio-cover-change"]') ?? undefined;
     this.coverPicker?.close();
     // Keep the cover's hover affordance (scrim + change icon) lit while the
     // picker is open — the pointer has left the cover for the popup, so :hover
@@ -589,6 +593,7 @@ export class AudioTool implements BlockTool {
     anchor.classList.add('is-picker-open');
     this.coverPicker = openCoverPicker({
       anchor,
+      trigger,
       i18n: this.api.i18n,
       onFile: (file) => this.applyCoverFile(file),
       onUrl: (url) => this.applyCoverUrl(url),

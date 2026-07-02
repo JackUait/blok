@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Плъзнете за преместване",
   "blockSettings.clickToOpenMenu": "Щракнете за отваряне на менюто",
-  "blockSettings.clickOrShortcutToOpenMenu": "Щракнете или {shortcut} за да отворите менюто",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Щракнете за добавяне отдолу",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Поставете URL на изображение…",
   "tools.audio.coverUrlAria": "URL на изображение",
   "tools.audio.coverSourceAria": "Източник на изображение",
+  "a11y.allBlocksSelected": "Всички блокове са избрани, {count} блока",
   "a11y.blocksSelected": "{count} избрани блока",
   "a11y.navigationModeEntered": "Режим на навигация. Използвайте клавишите със стрелки, за да се придвижвате между блоковете, Enter за редактиране и Escape за изход.",
   "a11y.navigationModeExited": "Излизане от режима на навигация",

@@ -4,6 +4,7 @@ import type { PopoverItemDefaultParams, PopoverItemParams } from '@/types/utils/
 import type { PopoverHeaderParams } from '../../../src/components/utils/popover/components/popover-header';
 import { PopoverItemDefault } from '../../../src/components/utils/popover/components/popover-item';
 import { PopoverMobile } from '../../../src/components/utils/popover/popover-mobile';
+import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { LightweightI18n } from '../../../src/components/i18n/lightweight-i18n';
 
@@ -119,11 +120,16 @@ const createPopoverParams = (overrides: Partial<PopoverParams> = {}): PopoverPar
   ...overrides,
 });
 
+const createdPopovers: PopoverMobile[] = [];
+
 const createPopover = (overrides?: Partial<PopoverParams>): { popover: PopoverMobile; params: PopoverParams } => {
   const params = createPopoverParams(overrides);
+  const popover = new PopoverMobile(params);
+
+  createdPopovers.push(popover);
 
   return {
-    popover: new PopoverMobile(params),
+    popover,
     params,
   };
 };
@@ -137,6 +143,12 @@ describe('PopoverMobile', () => {
   });
 
   afterEach(() => {
+    // Destroy every popover created during the test: an un-destroyed popover
+    // leaves its flipper's document-level capture keydown listener attached,
+    // which would stopImmediatePropagation events meant for later tests.
+    createdPopovers.forEach(popover => popover.destroy());
+    createdPopovers.length = 0;
+
     vi.restoreAllMocks();
   });
 
@@ -158,6 +170,56 @@ describe('PopoverMobile', () => {
 
       expect(getIsHidden(popover)).toBe(true);
       expect(getLatestScrollLocker().unlock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('flippableElements', () => {
+    it('includes inner controls of HTML items so they stay keyboard-reachable', () => {
+      const htmlElement = document.createElement('div');
+      const firstButton = document.createElement('button');
+      const secondButton = document.createElement('button');
+
+      htmlElement.append(firstButton, secondButton);
+
+      const { popover } = createPopover({
+        items: [
+          {
+            title: 'Default item',
+            onActivate: vi.fn(),
+          },
+          {
+            type: PopoverItemType.Html,
+            name: 'custom-html',
+            element: htmlElement,
+          },
+        ],
+      });
+
+      const flippable = (popover as unknown as { flippableElements: HTMLElement[] }).flippableElements;
+
+      expect(flippable).toContain(firstButton);
+      expect(flippable).toContain(secondButton);
+    });
+
+    it('falls back to the wrapper element for HTML items without inner controls', () => {
+      const htmlElement = document.createElement('div');
+
+      htmlElement.textContent = 'static content';
+
+      const { popover } = createPopover({
+        items: [
+          {
+            type: PopoverItemType.Html,
+            name: 'static-html',
+            element: htmlElement,
+          },
+        ],
+      });
+
+      const flippable = (popover as unknown as { flippableElements: HTMLElement[] }).flippableElements;
+
+      expect(flippable).toHaveLength(1);
+      expect(flippable[0].contains(htmlElement)).toBe(true);
     });
   });
 
@@ -384,6 +446,118 @@ describe('PopoverMobile', () => {
 
       expect(nodes.items.childElementCount).toBe(nestedItems.length);
       expect(nestedFirstItem.getAttribute('data-blok-focused')).toBe('true');
+    });
+  });
+
+  describe('DOM focus management', () => {
+    beforeEach(() => {
+      // jsdom does not implement scrollIntoView, which the flipper calls after
+      // each flip to keep the focused item visible.
+      Element.prototype.scrollIntoView = vi.fn();
+    });
+
+    /**
+     * Simulates the normal mobile flow: the caret sits in a contenteditable
+     * block when the sheet opens. jsdom needs tabindex for programmatic focus
+     * and does not reflect the contenteditable attribute into the
+     * isContentEditable IDL property, so both are stubbed explicitly.
+     */
+    const createFocusedContentEditable = (): HTMLElement => {
+      const editable = document.createElement('div');
+
+      editable.setAttribute('contenteditable', 'true');
+      editable.tabIndex = -1;
+      Object.defineProperty(editable, 'isContentEditable', {
+        configurable: true,
+        value: true,
+      });
+      document.body.appendChild(editable);
+      editable.focus();
+
+      return editable;
+    };
+
+    it('moves real DOM focus into the sheet on show', () => {
+      const editable = createFocusedContentEditable();
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+
+      expect(document.activeElement).toBe(editable);
+
+      popover.show();
+
+      expect(document.activeElement).not.toBe(editable);
+      expect(
+        document.activeElement instanceof HTMLElement && nodes.popover.contains(document.activeElement)
+      ).toBe(true);
+    });
+
+    it('handles ArrowDown at the focused sheet instead of skipping because of the contenteditable', () => {
+      createFocusedContentEditable();
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+
+      popover.show();
+
+      const target = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+      expect(target).not.toBeNull();
+
+      target?.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      const secondItem = nodes.items.children[1] as HTMLElement;
+
+      expect(secondItem.getAttribute('data-blok-focused')).toBe('true');
+    });
+
+    it('exposes the virtually focused item via aria-activedescendant on the focused sheet element', () => {
+      createFocusedContentEditable();
+      const { popover } = createPopover();
+
+      popover.show();
+
+      const target = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+      expect(target).not.toBeNull();
+      expect(target?.getAttribute('aria-activedescendant')).toBeTruthy();
+    });
+
+    it('restores focus to the previously focused element on hide', () => {
+      const editable = createFocusedContentEditable();
+      const { popover } = createPopover();
+
+      popover.show();
+
+      expect(document.activeElement).not.toBe(editable);
+
+      popover.hide();
+
+      expect(document.activeElement).toBe(editable);
+    });
+
+    it('restores focus to the previously focused element on destroy', () => {
+      const editable = createFocusedContentEditable();
+      const { popover } = createPopover();
+
+      popover.show();
+      popover.destroy();
+
+      expect(document.activeElement).toBe(editable);
+    });
+
+    it('does not restore focus to an element that left the DOM', () => {
+      const editable = createFocusedContentEditable();
+      const { popover } = createPopover();
+
+      popover.show();
+      editable.remove();
+
+      expect(() => popover.hide()).not.toThrow();
+      expect(document.activeElement).not.toBe(editable);
     });
   });
 

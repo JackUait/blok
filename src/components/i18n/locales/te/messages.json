@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "తరలించడానికి లాగండి",
   "blockSettings.clickToOpenMenu": "మెనూ తెరవడానికి నొక్కండి",
-  "blockSettings.clickOrShortcutToOpenMenu": "మెనూ తెరవడానికి నొక్కండి లేదా {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "క్రింద జోడించడానికి నొక్కండి",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "చిత్రం URL అతికించండి…",
   "tools.audio.coverUrlAria": "చిత్రం URL",
   "tools.audio.coverSourceAria": "చిత్ర మూలం",
+  "a11y.allBlocksSelected": "అన్ని విభాగాలు ఎంపిక చేయబడ్డాయి, {count} విభాగాలు",
   "a11y.blocksSelected": "{count} విభాగాలు ఎంపిక చేయబడ్డాయి",
   "a11y.navigationModeEntered": "నావిగేషన్ మోడ్. విభాగాల మధ్య తరలడానికి బాణం కీలను, సవరించడానికి Enter, నిష్క్రమించడానికి Escape ఉపయోగించండి.",
   "a11y.navigationModeExited": "నావిగేషన్ మోడ్ నుండి నిష్క్రమించారు",

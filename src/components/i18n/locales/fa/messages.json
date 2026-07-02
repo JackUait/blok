@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "برای جابجایی بکشید",
   "blockSettings.clickToOpenMenu": "برای باز کردن منو کلیک کنید",
-  "blockSettings.clickOrShortcutToOpenMenu": "برای باز کردن منو کلیک کنید یا {shortcut} را بزنید",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "برای افزودن در پایین کلیک کنید",
@@ -465,6 +464,7 @@
   "tools.audio.coverSourceAria": "منبع تصویر",
   "toolNames.video": "ویدیو",
   "toolNames.audio": "صدا",
+  "a11y.allBlocksSelected": "همه بلوک‌ها انتخاب شدند، {count} بلوک",
   "a11y.blocksSelected": "{count} بلوک انتخاب شد",
   "a11y.navigationModeEntered": "حالت پیمایش. برای جابجایی بین بلوک‌ها از کلیدهای جهت‌نما، برای ویرایش از Enter و برای خروج از Escape استفاده کنید.",
   "a11y.navigationModeExited": "از حالت پیمایش خارج شد",

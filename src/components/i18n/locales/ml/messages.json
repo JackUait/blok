@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "നീക്കാൻ വലിച്ചിടുക",
   "blockSettings.clickToOpenMenu": "മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക",
-  "blockSettings.clickOrShortcutToOpenMenu": "മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "താഴെ ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക",
@@ -96,6 +95,7 @@
   "a11y.searchResults": "{count} ഫലങ്ങൾ",
   "a11y.blockToolbar": "ബ്ലോക്ക് ടൂൾബാർ",
   "a11y.textFormatting": "ടെക്‌സ്റ്റ് ഫോർമാറ്റിംഗ്",
+  "a11y.allBlocksSelected": "എല്ലാ ബ്ലോക്കുകളും തിരഞ്ഞെടുത്തു, {count} ബ്ലോക്കുകൾ",
   "a11y.blocksSelected": "{count} ബ്ലോക്കുകൾ തിരഞ്ഞെടുത്തു",
   "a11y.navigationModeEntered": "നാവിഗേഷൻ മോഡ്. ബ്ലോക്കുകൾക്കിടയിൽ നീങ്ങാൻ ആരോ കീകൾ, എഡിറ്റ് ചെയ്യാൻ Enter, പുറത്തുകടക്കാൻ Escape ഉപയോഗിക്കുക.",
   "a11y.navigationModeExited": "നാവിഗേഷൻ മോഡിൽ നിന്ന് പുറത്തുകടന്നു",

@@ -3,7 +3,7 @@ import type { DatabaseData, DatabaseConfig, DatabaseRow, DatabaseRowData, ViewTy
 import { DatabaseModel } from './database-model';
 import { DatabaseBoardView } from './database-board-view';
 import { DatabaseListView } from './database-list-view';
-import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { DatabaseBackendSync } from './database-backend-sync';
 import { DatabaseCardDrag } from './database-card-drag';
@@ -142,7 +142,7 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.cursor = 'text';
     titleEl.style.wordBreak = 'break-word';
 
-    titleEl.className = PLACEHOLDER_CLASSES.join(' ');
+    titleEl.className = getPlaceholderClasses('always').join(' ');
     setupPlaceholder(titleEl, 'New database');
 
     if (!this.readOnly) {

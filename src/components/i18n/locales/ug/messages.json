@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "يۆتكەش ئۈچۈن سۆرەڭ",
   "blockSettings.clickToOpenMenu": "تىزىملىكنى ئېچىش ئۈچۈن چېكىڭ",
-  "blockSettings.clickOrShortcutToOpenMenu": "تىزىملىكنى ئېچىش ئۈچۈن چېكىڭ ياكى {shortcut}",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "ئاستىغا قوشۇش ئۈچۈن چېكىڭ",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "رەسىم URL سىنى چاپلاڭ…",
   "tools.audio.coverUrlAria": "رەسىم URL",
   "tools.audio.coverSourceAria": "رەسىم مەنبەسى",
+  "a11y.allBlocksSelected": "بارلىق بۆلەكلەر تاللاندى، {count} بۆلەك",
   "a11y.blocksSelected": "{count} بۆلەك تاللاندى",
   "a11y.navigationModeEntered": "يول باشلاش ھالىتى. بۆلەكلەر ئارىسىدا يۆتكىلىش ئۈچۈن يا ئوق كۇنۇپكىلىرىنى، تەھرىرلەش ئۈچۈن Enter، چېكىنىش ئۈچۈن Escape نى ئىشلىتىڭ.",
   "a11y.navigationModeExited": "يول باشلاش ھالىتىدىن چېكىندى",

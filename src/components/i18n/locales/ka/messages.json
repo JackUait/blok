@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "გადაიტანეთ გადასატანად",
   "blockSettings.clickToOpenMenu": "დააწკაპუნეთ მენიუს გასახსნელად",
-  "blockSettings.clickOrShortcutToOpenMenu": "დააწკაპუნეთ ან {shortcut} მენიუს გასახსნელად",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "დააწკაპუნეთ ქვემოთ დასამატებლად",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "ჩასვით სურათის URL…",
   "tools.audio.coverUrlAria": "სურათის URL",
   "tools.audio.coverSourceAria": "სურათის წყარო",
+  "a11y.allBlocksSelected": "არჩეულია ყველა ბლოკი, {count} ბლოკი",
   "a11y.blocksSelected": "არჩეულია {count} ბლოკი",
   "a11y.navigationModeEntered": "ნავიგაციის რეჟიმი. გამოიყენეთ ისრები ბლოკებს შორის გადასაადგილებლად, Enter რედაქტირებისთვის, Escape გამოსასვლელად.",
   "a11y.navigationModeExited": "ნავიგაციის რეჟიმიდან გამოსვლა",

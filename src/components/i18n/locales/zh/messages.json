@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "拖动以移动",
   "blockSettings.clickToOpenMenu": "点击打开菜单",
-  "blockSettings.clickOrShortcutToOpenMenu": "点击或 {shortcut} 打开菜单",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "点击在下方添加",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "粘贴图片 URL…",
   "tools.audio.coverUrlAria": "图片 URL",
   "tools.audio.coverSourceAria": "图片来源",
+  "a11y.allBlocksSelected": "已选择全部内容块，共 {count} 个",
   "a11y.blocksSelected": "已选择 {count} 个内容块",
   "a11y.navigationModeEntered": "导航模式。使用方向键在内容块之间移动，Enter 编辑，Escape 退出。",
   "a11y.navigationModeExited": "已退出导航模式",

@@ -63,6 +63,13 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
   private i18n = new LightweightI18n();
 
   /**
+   * Element that had DOM focus before the sheet opened (usually the
+   * contenteditable block holding the caret). Focus is returned to it when
+   * the sheet closes, so keyboard and AT users are not stranded.
+   */
+  private previouslyFocusedElement: HTMLElement | null = null;
+
+  /**
    * Construct the instance
    * @param params - popover params
    */
@@ -103,9 +110,17 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       css.popoverContainerMobile
     );
 
+    // The sheet's items wrapper takes real DOM focus while the sheet is open
+    // (Radix Dialog/Drawer behaviour). Without it, keydowns keep targeting the
+    // contenteditable block behind the sheet and the flipper skips them.
+    this.nodes.items.tabIndex = -1;
+
     this.flipper = new Flipper({
       items: this.flippableElements,
       focusedItemClass: popoverItemCls.focused,
+      // Mirror the flipper's virtual focus onto the really-focused items
+      // wrapper so screen readers can follow keyboard navigation.
+      activeDescendantHost: this.nodes.items,
       allowedKeys: [
         keyCodes.TAB,
         keyCodes.UP,
@@ -135,6 +150,12 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    */
   private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
     if (item instanceof PopoverItemHtml) {
+      const controls = item.getControls();
+
+      if (controls.length > 0) {
+        return controls;
+      }
+
       const element = item.getElement();
 
       return element ? [ element ] : [];
@@ -166,6 +187,10 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    * Open popover
    */
   public show(): void {
+    this.previouslyFocusedElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
     this.nodes.overlay.removeAttribute(DATA_ATTR.overlayHidden);
     this.nodes.overlay.className = twMerge(css.popoverOverlay, 'fixed inset-0 block visible z-3 opacity-50');
 
@@ -191,6 +216,10 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     // the current page's items.
     this.flipper.activate(this.flippableElements);
     this.flipper.focusItem(0, { skipNextTab: true });
+
+    // Take real DOM focus so keydowns target the sheet (not the block behind
+    // it) and AT perceives focus as inside the dialog.
+    this.nodes.items.focus();
   }
 
   /**
@@ -204,6 +233,8 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     super.hide();
 
     this.flipper.deactivate();
+
+    this.restorePreviousFocus();
 
     this.nodes.overlay.setAttribute(DATA_ATTR.overlayHidden, '');
     this.nodes.overlay.className = css.popoverOverlay;
@@ -227,10 +258,26 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
   public destroy(): void {
     this.flipper.deactivate();
 
+    this.restorePreviousFocus();
+
     super.destroy();
 
     if (this.scrollLocker.isLocked) {
       this.scrollLocker.unlock();
+    }
+  }
+
+  /**
+   * Returns DOM focus to the element that was focused before the sheet
+   * opened, if it is still attached to the document.
+   */
+  private restorePreviousFocus(): void {
+    const previous = this.previouslyFocusedElement;
+
+    this.previouslyFocusedElement = null;
+
+    if (previous !== null && previous.isConnected) {
+      previous.focus();
     }
   }
 

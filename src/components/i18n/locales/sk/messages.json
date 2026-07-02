@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "Potiahnutím presuniete",
   "blockSettings.clickToOpenMenu": "Kliknutím otvoríte ponuku",
-  "blockSettings.clickOrShortcutToOpenMenu": "Kliknutím alebo {shortcut} otvoríte ponuku",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Kliknutím pridáte nižšie",
@@ -465,6 +464,7 @@
   "tools.audio.coverUrlPlaceholder": "Vložte URL obrázka…",
   "tools.audio.coverUrlAria": "URL obrázka",
   "tools.audio.coverSourceAria": "Zdroj obrázka",
+  "a11y.allBlocksSelected": "Vybrané všetky bloky, blokov: {count}",
   "a11y.blocksSelected": "Vybraných blokov: {count}",
   "a11y.navigationModeEntered": "Režim navigácie. Na presun medzi blokmi použite klávesy so šípkami, Enter na úpravu, Escape na ukončenie.",
   "a11y.navigationModeExited": "Režim navigácie ukončený",

@@ -137,6 +137,29 @@ describe('Flipper', () => {
     flipper.deactivate();
   });
 
+  it('ignores keydown events whose default action was already prevented', () => {
+    const items = createItems();
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+    });
+    const onFlipSpy = vi.fn();
+
+    flipper.onFlip(onFlipSpy);
+    flipper.activate();
+
+    const event = createKeyboardEvent('ArrowDown');
+
+    event.preventDefault();
+
+    flipper.handleExternalKeydown(event);
+
+    expect(onFlipSpy).not.toHaveBeenCalled();
+    expect(items[0]).not.toHaveAttribute('data-blok-focused');
+
+    flipper.deactivate();
+  });
+
   it('pressing Enter on a focused item triggers click and activate callback', () => {
     const items = createItems();
     const clickSpy = vi.fn();

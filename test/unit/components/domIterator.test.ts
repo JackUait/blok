@@ -263,6 +263,50 @@ describe('DomIterator', () => {
       expect(host).toHaveAttribute('aria-activedescendant', 'preexisting-id');
     });
 
+    it.each(['menuitem', 'menuitemradio', 'menuitemcheckbox'])(
+      'does not write aria-selected onto role="%s" items (aria-activedescendant alone conveys the highlight)',
+      (role) => {
+        const items = createItems();
+
+        items.forEach((item) => item.setAttribute('role', role));
+
+        const host = document.createElement('div');
+        const iterator = new DomIterator(items, focusedClass, host);
+
+        iterator.setCursor(0);
+
+        expect(items[0].hasAttribute('aria-selected')).toBe(false);
+        expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+      }
+    );
+
+    it('removes a stale aria-selected from a menuitem when it becomes highlighted', () => {
+      const items = createItems();
+
+      items.forEach((item) => item.setAttribute('role', 'menuitem'));
+      items[0].setAttribute('aria-selected', 'true');
+
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      expect(items[0].hasAttribute('aria-selected')).toBe(false);
+    });
+
+    it('keeps writing aria-selected for role="option" items (listbox popovers)', () => {
+      const items = createItems();
+
+      items.forEach((item) => item.setAttribute('role', 'option'));
+
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      expect(items[0]).toHaveAttribute('aria-selected', 'true');
+    });
+
     it('does not touch aria-* attributes or generate ids when no host is set', () => {
       const items = createItems();
       const iterator = new DomIterator(items, focusedClass);

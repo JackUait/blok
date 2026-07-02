@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "ရွှေ့ရန် ဆွဲယူပါ",
   "blockSettings.clickToOpenMenu": "မီနူးဖွင့်ရန် နှိပ်ပါ",
-  "blockSettings.clickOrShortcutToOpenMenu": "မီနူးဖွင့်ရန် နှိပ်ပါ သို့မဟုတ် {shortcut} ကိုနှိပ်ပါ",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "အောက်တွင် ထည့်ရန် နှိပ်ပါ",
@@ -96,6 +95,7 @@
   "a11y.searchResults": "ရလဒ် {count} ခု",
   "a11y.blockToolbar": "ဘလောက်ကိရိယာဘား",
   "a11y.textFormatting": "စာသားဖော်မတ်ချခြင်း",
+  "a11y.allBlocksSelected": "ဘလောက်အားလုံး ရွေးထားသည်၊ ဘလောက် {count} ခု",
   "a11y.blocksSelected": "ဘလောက် {count} ခု ရွေးထားသည်",
   "a11y.navigationModeEntered": "လမ်းညွှန်မုဒ်။ ဘလောက်များအကြား ရွှေ့ရန် မြှားခလုတ်များ၊ တည်းဖြတ်ရန် Enter၊ ထွက်ရန် Escape ကို သုံးပါ။",
   "a11y.navigationModeExited": "လမ်းညွှန်မုဒ်မှ ထွက်ပြီးပါပြီ",

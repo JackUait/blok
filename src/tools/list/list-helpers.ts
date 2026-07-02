@@ -5,7 +5,7 @@
  */
 
 import { INDENT_PER_LEVEL, TOOL_NAME } from './constants';
-import { applyCheckboxState } from './dom-builder';
+import { applyChecklistCheckedState } from './dom-builder';
 import type { ListDepthValidator } from './depth-validator';
 import type { BlocksAPI , ListMarkerCalculator } from './marker-calculator';
 import type { ListItemStyle } from './types';
@@ -29,7 +29,8 @@ export const getContentElement = (
 }
 
 /**
- * Update the checkbox state for checklist items
+ * Update the checked state for checklist items — syncs the checkbox control
+ * and the text element (data-checked + strike-through) via the shared updater.
  */
 export const updateCheckboxState = (
   element: HTMLElement | null,
@@ -41,7 +42,7 @@ export const updateCheckboxState = (
     return;
   }
 
-  applyCheckboxState(checkbox, checked);
+  applyChecklistCheckedState(checkbox, getContentElement(element ?? null, 'checklist'), checked);
 }
 
 /**

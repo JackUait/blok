@@ -1,7 +1,6 @@
 {
   "blockSettings.dragToMove": "גרור להזזה",
   "blockSettings.clickToOpenMenu": "לחץ לפתיחת התפריט",
-  "blockSettings.clickOrShortcutToOpenMenu": "לחץ או {shortcut} לפתיחת התפריט",
   "blockSettings.menuShortcutMac": "⌘/",
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "לחץ להוספה מתחת",
@@ -465,6 +464,7 @@
   "tools.audio.coverSourceAria": "מקור תמונה",
   "toolNames.video": "וידאו",
   "toolNames.audio": "שמע",
+  "a11y.allBlocksSelected": "כל הבלוקים נבחרו, {count} בלוקים",
   "a11y.blocksSelected": "{count} בלוקים נבחרו",
   "a11y.navigationModeEntered": "מצב ניווט. השתמש במקשי החצים למעבר בין הבלוקים, Enter לעריכה, Escape ליציאה.",
   "a11y.navigationModeExited": "יצאת ממצב ניווט",

@@ -1510,9 +1510,17 @@ export class DragController extends Module {
 
   private cleanup(wasCancelled = false, skipToolbarReopen = false): void {
     if (wasCancelled && isActuallyDragging(this.stateMachine.getState())) {
+      // Announce ASSERTIVELY, consistent with the drag-start and drop-complete
+      // announcements. Cancellation is an important, time-sensitive state change
+      // the user must hear immediately. A polite announcement lands in the shared
+      // polite region and is clobbered ~150ms later by the post-cancel navigation
+      // announcement ("<block>, N of M") that fires as focus returns to the block
+      // — so a screen-reader user (and any listener) can miss the cancellation
+      // entirely. The assertive region is dedicated to these interrupts and is not
+      // overwritten by that follow-up, so the message survives its full lifetime.
       announce(
         this.Blok.I18n.t('a11y.dropCancelled'),
-        { politeness: 'polite' }
+        { politeness: 'assertive' }
       );
     }
 

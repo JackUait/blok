@@ -820,8 +820,15 @@ test.describe('popover', () => {
     // Default tunes (block color, convert-to) precede the custom items; Tab to
     // the first custom html item — this test cares about flipping BETWEEN the
     // custom items, not the exact count of leading default tunes.
+    //
+    // The PopoverItemHtml wrapper is intentionally role="presentation" and
+    // non-focusable; keyboard navigation (DomIterator) targets the inner
+    // interactive control returned by getControls(), so `data-blok-focused`
+    // lands on the rendered <button>, not the wrapper. Assert on that control.
     const customHtml = (text: string): Locator =>
-      page.locator(`${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"]`).filter({ hasText: text });
+      page.locator(
+        `${BLOCK_TUNES_SELECTOR} [data-blok-testid="popover-item-html"] [data-blok-testid="settings-button"]`
+      ).filter({ hasText: text });
 
     for (let i = 0; i < 15; i++) {
       if (await customHtml('Tune1').getAttribute('data-blok-focused') === 'true') {
@@ -830,13 +837,13 @@ test.describe('popover', () => {
       await page.keyboard.press('Tab');
     }
 
-    // Check the first custom html item wrapper is focused
+    // Check the first custom html item's control is focused
     await expect(customHtml('Tune1')).toHaveAttribute('data-blok-focused', 'true');
 
     // Press Tab - flip to second custom html item
     await page.keyboard.press('Tab');
 
-    // Check the second custom html item wrapper is focused
+    // Check the second custom html item's control is focused
     await expect(customHtml('Tune2')).toHaveAttribute('data-blok-focused', 'true');
 
     // Flipping continues past the custom items into the default action items.

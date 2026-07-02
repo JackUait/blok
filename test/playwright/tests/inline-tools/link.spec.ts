@@ -10,7 +10,9 @@ const PARAGRAPH_CONTENT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-compon
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
 const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened="true"]';
-const NOTIFIER_SELECTOR = '[data-blok-testid="notifier-container"]';
+// An invalid URL is surfaced via the accessible inline field error
+// (aria-invalid + error region), not a toast notification.
+const LINK_ERROR_SELECTOR = '[data-blok-link-tool-error]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
   return page.locator(PARAGRAPH_CONTENT_SELECTOR, { hasText: text });
@@ -276,11 +278,10 @@ test.describe('inline tool link', () => {
     await expect(linkInput).toHaveValue('https://example .com');
     await expect(paragraph.getByRole('link')).toHaveCount(0);
 
-    await page.waitForFunction(({ notifierSelector }) => {
-      const notifier = document.querySelector(notifierSelector);
-
-      return Boolean(notifier && notifier.textContent && notifier.textContent.includes('Invalid link'));
-    }, { notifierSelector: NOTIFIER_SELECTOR });
+    // The failure is surfaced via the accessible inline field error, and the
+    // input is marked aria-invalid.
+    await expect(page.locator(LINK_ERROR_SELECTOR)).toContainText('Invalid link');
+    await expect(linkInput).toHaveAttribute('aria-invalid', 'true');
   });
 
   test('should fill in and update existing link', async ({ page }) => {

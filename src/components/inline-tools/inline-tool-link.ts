@@ -413,11 +413,10 @@ export class LinkInlineTool implements InlineTool {
     }
 
     if (!this.validateURL(value)) {
+      // Surface the failure once, via the accessible inline field error
+      // (aria-invalid + error region). A duplicate notifier toast would render
+      // the same "Invalid link" text a second time.
       this.showValidationError();
-      this.notifier.show({
-        message: this.i18n.t('tools.link.invalidLink'),
-        style: 'error',
-      });
 
       return;
     }
@@ -646,11 +645,10 @@ export class LinkInlineTool implements InlineTool {
     }
 
     if (!this.validateURL(value)) {
+      // Surface the failure once, via the accessible inline field error
+      // (aria-invalid + error region). A duplicate notifier toast would render
+      // the same "Invalid link" text a second time.
       this.showValidationError();
-      this.notifier.show({
-        message: this.i18n.t('tools.link.invalidLink'),
-        style: 'error',
-      });
 
       log('Incorrect Link pasted', 'warn', value);
 

@@ -1779,6 +1779,20 @@ export class BlockManager extends Module {
 
     this.Blok.YjsManager.transact(() => {
       for (const [key, value] of Object.entries(savedData.data)) {
+        // A list item structurally nested under another list item derives its
+        // `depth` from the parentId chain (getStructuralListDepth), so persisting
+        // depth to the CRDT is redundant — and harmful: the derived value lands as
+        // a TRACKED write that pollutes the undo stack with a stray "depth-mirror"
+        // entry a Cmd+Z would pop instead of the real structural move (the bug
+        // behind "undo after Tab indentation restores original depth"). save()
+        // still reports depth for the public output and reload re-derives it from
+        // structure, so skipping the CRDT write is safe. Flat-carrier list items
+        // (authored/drag-nested via data.depth with no LIST parent) keep depth as
+        // their source of truth and are left untouched.
+        if (key === 'depth' && this.isStructurallyNestedListItem(block)) {
+          continue;
+        }
+
         if (this.Blok.YjsManager.updateBlockData(block.id, key, value)) {
           dataChangedRef.value = true;
         }
@@ -1797,5 +1811,22 @@ export class BlockManager extends Module {
 
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
     });
+  }
+
+  /**
+   * True when `block` is a list item nested directly under ANOTHER list item —
+   * i.e. its `depth` is derived from the structural parentId chain rather than an
+   * authored flat carrier. A list item at the root or directly inside a non-list
+   * container (column, table cell) keeps `depth` as its own source of truth and
+   * is NOT considered structurally nested here.
+   * @param block - the block to test
+   * @returns whether the block's list depth is structurally derived
+   */
+  private isStructurallyNestedListItem(block: Block): boolean {
+    if (block.name !== 'list' || block.parentId === null) {
+      return false;
+    }
+
+    return this.repository.getBlockById(block.parentId)?.name === 'list';
   }
 }

@@ -15,7 +15,9 @@ const getBlockTunesPopover = (page: Page): ReturnType<Page["locator"]> =>
   page
     .getByTestId("block-tunes-popover")
     .getByTestId("popover-container")
-    .filter({ has: page.getByRole("searchbox") });
+    // The popover search input is an accessible combobox (aria-autocomplete
+    // list), not a plain searchbox — match its actual ARIA role.
+    .filter({ has: page.getByRole("combobox") });
 
 declare global {
   interface Window {

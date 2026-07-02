@@ -254,7 +254,7 @@ describe('LinkInlineTool', () => {
     expect(inlineToolbar.close).toHaveBeenCalled();
   });
 
-  it('shows notifier when URL validation fails', () => {
+  it('surfaces the inline validation error (not a toast) when URL validation fails', () => {
     const { tool, notifier } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
     const input = getInputFromWrapper(renderResult.children.items[0].element);
@@ -264,10 +264,10 @@ describe('LinkInlineTool', () => {
 
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
 
-    expect(notifier.show).toHaveBeenCalledWith({
-      message: 'tools.link.invalidLink',
-      style: 'error',
-    });
+    // The failure is surfaced once, via the accessible inline field error —
+    // a duplicate toast would render the same "Invalid link" text twice.
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(notifier.show).not.toHaveBeenCalled();
     expect(insertLinkSpy).not.toHaveBeenCalled();
   });
 
@@ -326,10 +326,9 @@ describe('LinkInlineTool', () => {
 
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
 
-    expect(notifier.show).toHaveBeenCalledWith({
-      message: 'tools.link.invalidLink',
-      style: 'error',
-    });
+    // Rejected via the accessible inline field error, not a duplicate toast.
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(notifier.show).not.toHaveBeenCalled();
     expect(insertLinkSpy).not.toHaveBeenCalled();
   });
 
@@ -611,7 +610,7 @@ describe('LinkInlineTool', () => {
       expect(inlineToolbar.close).toHaveBeenCalled();
     });
 
-    it('confirmLink shows notifier for complete-looking URL with spaces and does not insert', () => {
+    it('confirmLink surfaces the inline validation error for a complete-looking URL with spaces and does not insert', () => {
       const { tool, notifier } = createTool();
       const renderResult = tool.render() as unknown as LinkToolRenderResult;
       const input = getInputFromWrapper(renderResult.children.items[0].element);
@@ -622,7 +621,10 @@ describe('LinkInlineTool', () => {
 
       (tool as unknown as { confirmLink(): void }).confirmLink();
 
-      expect(notifier.show).toHaveBeenCalledWith({ message: 'tools.link.invalidLink', style: 'error' });
+      // The failure is surfaced once, via the accessible inline field error
+      // (aria-invalid), NOT a duplicate toast notification.
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(notifier.show).not.toHaveBeenCalled();
       expect(insertLinkSpy).not.toHaveBeenCalled();
     });
 

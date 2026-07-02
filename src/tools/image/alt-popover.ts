@@ -15,7 +15,7 @@ export interface OpenAltPopoverOptions {
  * Incrementing counter minting unique ids for the description paragraph so it
  * can be referenced via `aria-describedby`.
  */
-let descriptionIdCounter = 0;
+const descriptionIdSeq = { current: 0 };
 
 /**
  * How long (ms) after an outside-pointer dismissal a re-open on the same
@@ -46,8 +46,8 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
   popover.setAttribute('data-role', 'image-alt-popover');
 
   const description = document.createElement('p');
-  descriptionIdCounter += 1;
-  description.id = `blok-image-alt-popover-description-${descriptionIdCounter}`;
+  descriptionIdSeq.current += 1;
+  description.id = `blok-image-alt-popover-description-${descriptionIdSeq.current}`;
   description.className = 'blok-image-alt-popover__description';
   description.textContent = tr(opts.i18n, 'tools.image.altDescription');
   popover.appendChild(description);

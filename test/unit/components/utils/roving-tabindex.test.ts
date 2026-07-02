@@ -59,7 +59,7 @@ describe('RovingTabindexController', () => {
 
       items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
-      expect(document.activeElement).toBe(items[1]);
+      expect(items[1]).toHaveFocus();
       expect(items[1].getAttribute('tabindex')).toBe('0');
       expect(items[0].getAttribute('tabindex')).toBe('-1');
     });
@@ -70,7 +70,7 @@ describe('RovingTabindexController', () => {
 
       items[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
 
-      expect(document.activeElement).toBe(items[1]);
+      expect(items[1]).toHaveFocus();
     });
 
     it('ignores vertical arrows in horizontal orientation', () => {
@@ -81,7 +81,7 @@ describe('RovingTabindexController', () => {
 
       items[0].dispatchEvent(event);
 
-      expect(document.activeElement).toBe(items[0]);
+      expect(items[0]).toHaveFocus();
       expect(event.defaultPrevented).toBe(false);
     });
 
@@ -103,10 +103,10 @@ describe('RovingTabindexController', () => {
       items[0].focus();
 
       items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-      expect(document.activeElement).toBe(items[1]);
+      expect(items[1]).toHaveFocus();
 
       items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
-      expect(document.activeElement).toBe(items[0]);
+      expect(items[0]).toHaveFocus();
     });
   });
 
@@ -117,7 +117,7 @@ describe('RovingTabindexController', () => {
 
       items[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
-      expect(document.activeElement).toBe(items[0]);
+      expect(items[0]).toHaveFocus();
     });
 
     it('clamps at the last item when loop is disabled', () => {
@@ -126,7 +126,7 @@ describe('RovingTabindexController', () => {
 
       items[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
-      expect(document.activeElement).toBe(items[2]);
+      expect(items[2]).toHaveFocus();
     });
   });
 
@@ -136,10 +136,10 @@ describe('RovingTabindexController', () => {
       controller.focus(1);
 
       items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
-      expect(document.activeElement).toBe(items[2]);
+      expect(items[2]).toHaveFocus();
 
       items[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
-      expect(document.activeElement).toBe(items[0]);
+      expect(items[0]).toHaveFocus();
     });
   });
 
@@ -151,7 +151,7 @@ describe('RovingTabindexController', () => {
 
       items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
-      expect(document.activeElement).toBe(items[2]);
+      expect(items[2]).toHaveFocus();
     });
 
     it('skips items hidden via a stylesheet class (display:none from CSS rules)', () => {
@@ -167,7 +167,7 @@ describe('RovingTabindexController', () => {
 
         items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
-        expect(document.activeElement).toBe(items[2]);
+        expect(items[2]).toHaveFocus();
       } finally {
         style.remove();
       }
@@ -180,7 +180,7 @@ describe('RovingTabindexController', () => {
 
       items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
-      expect(document.activeElement).toBe(items[2]);
+      expect(items[2]).toHaveFocus();
     });
 
     it('focusFirst lands on the first visible item', () => {
@@ -189,7 +189,7 @@ describe('RovingTabindexController', () => {
 
       controller.focusFirst();
 
-      expect(document.activeElement).toBe(items[1]);
+      expect(items[1]).toHaveFocus();
     });
   });
 
@@ -198,11 +198,11 @@ describe('RovingTabindexController', () => {
       controller = new RovingTabindexController(items, { tabbable: false });
 
       controller.focusFirst();
-      expect(document.activeElement).toBe(items[0]);
+      expect(items[0]).toHaveFocus();
       expect(controller.activeElement).toBe(items[0]);
 
       controller.focusLast();
-      expect(document.activeElement).toBe(items[2]);
+      expect(items[2]).toHaveFocus();
       expect(controller.activeElement).toBe(items[2]);
     });
   });
@@ -216,7 +216,7 @@ describe('RovingTabindexController', () => {
 
       items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
 
-      expect(document.activeElement).toBe(items[0]);
+      expect(items[0]).toHaveFocus();
     });
   });
 });

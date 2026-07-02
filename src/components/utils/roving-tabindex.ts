@@ -201,25 +201,41 @@ export class RovingTabindexController {
       return;
     }
 
-    let index = this.activeIndex;
+    const target = this.nextVisibleIndex(this.activeIndex, delta, count, count);
 
-    for (let step = 0; step < count; step++) {
-      index += delta;
-
-      if (index < 0 || index >= count) {
-        if (!this.loop) {
-          return;
-        }
-
-        index = (index + count) % count;
-      }
-
-      if (!isHidden(this.items[index])) {
-        this.focus(index);
-
-        return;
-      }
+    if (target !== -1) {
+      this.focus(target);
     }
+  }
+
+  /**
+   * Finds the next visible item stepping by `delta` from `from`, honoring
+   * `loop`. Scans at most `stepsRemaining` positions.
+   * @param from - index to step away from
+   * @param delta - +1 forward, -1 backward
+   * @param count - number of items
+   * @param stepsRemaining - remaining positions to probe
+   * @returns visible index, or -1 if none found within range
+   */
+  private nextVisibleIndex(from: number, delta: number, count: number, stepsRemaining: number): number {
+    if (stepsRemaining === 0) {
+      return -1;
+    }
+
+    const advanced = from + delta;
+    const outOfRange = advanced < 0 || advanced >= count;
+
+    if (outOfRange && !this.loop) {
+      return -1;
+    }
+
+    const candidate = outOfRange ? (advanced + count) % count : advanced;
+
+    if (!isHidden(this.items[candidate])) {
+      return candidate;
+    }
+
+    return this.nextVisibleIndex(candidate, delta, count, stepsRemaining - 1);
   }
 
   /**
@@ -229,13 +245,15 @@ export class RovingTabindexController {
    * @returns visible index, or -1 if none
    */
   private findVisible(from: number, direction: number): number {
-    for (let index = from; index >= 0 && index < this.items.length; index += direction) {
-      if (!isHidden(this.items[index])) {
-        return index;
-      }
+    if (from < 0 || from >= this.items.length) {
+      return -1;
     }
 
-    return -1;
+    if (!isHidden(this.items[from])) {
+      return from;
+    }
+
+    return this.findVisible(from + direction, direction);
   }
 
   /**

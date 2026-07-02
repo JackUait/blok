@@ -244,7 +244,7 @@ export class DomIterator {
 
     if (this.activeDescendantHost) {
       if (!item.id) {
-        item.id = generateId('blok-flipper-item-');
+        item.setAttribute('id', generateId('blok-flipper-item-'));
       }
 
       /**
@@ -298,24 +298,12 @@ export class DomIterator {
       return;
     }
 
-    if (edge === 'first') {
-      for (let index = 0; index < length; index++) {
-        if (!this.isDisabled(this.items[index])) {
-          this.applyCursor(index, { setCaret: true });
+    // Scan order: forward from 0 for 'first', backward from the end for 'last'.
+    const order = Array.from({ length }, (_, offset) => (edge === 'first' ? offset : length - 1 - offset));
+    const target = order.find((index) => !this.isDisabled(this.items[index]));
 
-          return;
-        }
-      }
-
-      return;
-    }
-
-    for (let index = length - 1; index >= 0; index--) {
-      if (!this.isDisabled(this.items[index])) {
-        this.applyCursor(index, { setCaret: true });
-
-        return;
-      }
+    if (target !== undefined) {
+      this.applyCursor(target, { setCaret: true });
     }
   }
 
@@ -362,19 +350,22 @@ export class DomIterator {
      * bounded by the number of items, so if every item is disabled we bail out
      * and leave the cursor unchanged (guards against an infinite loop).
      */
-    let focusedButtonIndex = startingIndex;
+    // Candidate indices in scan order: one step per iteration in `step`
+    // direction, normalized to stay within [0, length) (guards the negative
+    // modulo bug for left-ward scans).
+    const candidates = Array.from(
+      { length },
+      (_, scanned) => (((startingIndex + step * (scanned + 1)) % length) + length) % length
+    );
+    const focusedButtonIndex = candidates.find((index) => !this.isDisabled(this.items[index]));
 
-    for (let scanned = 0; scanned < length; scanned++) {
-      focusedButtonIndex = (focusedButtonIndex + step + length) % length;
+    if (focusedButtonIndex !== undefined) {
+      /**
+       * Remove markers from the old item and apply them (plus the caret) to the new one
+       */
+      this.applyCursor(focusedButtonIndex, { setCaret: true });
 
-      if (!this.isDisabled(this.items[focusedButtonIndex])) {
-        /**
-         * Remove markers from the old item and apply them (plus the caret) to the new one
-         */
-        this.applyCursor(focusedButtonIndex, { setCaret: true });
-
-        return focusedButtonIndex;
-      }
+      return focusedButtonIndex;
     }
 
     /**

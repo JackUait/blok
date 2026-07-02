@@ -2668,7 +2668,7 @@ describe('Toolbox', () => {
 
   describe('accessibility (combobox + listbox)', () => {
     it('constructs the popover as a listbox with the provided listboxId', () => {
-      // eslint-disable-next-line no-new -- constructing for its side effect (captures params)
+       
       new Toolbox({
         api: mocks.api,
         tools: mocks.tools,
@@ -2682,7 +2682,7 @@ describe('Toolbox', () => {
     });
 
     it('passes a searchResults announcement template (from i18n) to the popover', () => {
-      // eslint-disable-next-line no-new -- constructing for its side effect (captures params)
+       
       new Toolbox({
         api: mocks.api,
         tools: mocks.tools,

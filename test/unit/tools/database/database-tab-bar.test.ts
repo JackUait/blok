@@ -612,7 +612,7 @@ describe('DatabaseTabBar', () => {
       const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
       rename.click();
       const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
-      expect(document.activeElement).toBe(input);
+      expect(input).toHaveFocus();
       el.remove();
     });
 

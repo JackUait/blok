@@ -61,7 +61,7 @@ describe('rovingRadioGroup', () => {
     press(radios[0], 'ArrowRight');
 
     expect(onSelect).toHaveBeenCalledWith(1);
-    expect(document.activeElement).toBe(radios[1]);
+    expect(radios[1]).toHaveFocus();
     expect(radios.map((r) => r.tabIndex)).toEqual([-1, 0, -1]);
   });
 
@@ -75,7 +75,7 @@ describe('rovingRadioGroup', () => {
     press(radios[1], 'ArrowLeft');
 
     expect(onSelect).toHaveBeenCalledWith(0);
-    expect(document.activeElement).toBe(radios[0]);
+    expect(radios[0]).toHaveFocus();
   });
 
   it('ArrowRight wraps from the last radio to the first', () => {
@@ -88,7 +88,7 @@ describe('rovingRadioGroup', () => {
     press(radios[2], 'ArrowRight');
 
     expect(onSelect).toHaveBeenCalledWith(0);
-    expect(document.activeElement).toBe(radios[0]);
+    expect(radios[0]).toHaveFocus();
   });
 
   it('Home selects the first radio and End selects the last', () => {
@@ -100,11 +100,11 @@ describe('rovingRadioGroup', () => {
 
     press(radios[2], 'Home');
     expect(onSelect).toHaveBeenLastCalledWith(0);
-    expect(document.activeElement).toBe(radios[0]);
+    expect(radios[0]).toHaveFocus();
 
     press(radios[0], 'End');
     expect(onSelect).toHaveBeenLastCalledWith(3);
-    expect(document.activeElement).toBe(radios[3]);
+    expect(radios[3]).toHaveFocus();
   });
 
   it('supports vertical orientation via ArrowDown/ArrowUp', () => {

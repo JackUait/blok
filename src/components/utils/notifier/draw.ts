@@ -115,7 +115,7 @@ export const getPositionClasses = (position: NotifierPosition = DEFAULT_NOTIFIER
  * Incrementing counter used to mint unique ids for the message element so that
  * modal dialogs can reference it via aria-labelledby.
  */
-let messageIdCounter = 0;
+const messageIdState = { count: 0 };
 
 const MESSAGE_TEXT_TESTID = 'notification-message-text';
 
@@ -162,6 +162,25 @@ const makeModal = (
 };
 
 /**
+ * Builds the cancel handler shared by {@link confirm} and {@link prompt}: it
+ * invokes the caller's optional cancel callback (when provided) and then closes
+ * the modal dialog. The handle is resolved lazily via {@link getHandle} because
+ * it is constructed after the handler at both call sites.
+ * @param {((event: Event) => void) | undefined} cancelHandler - caller's cancel callback
+ * @param {() => ModalDialogHandle} getHandle - resolves the modal dialog handle
+ * @returns {(event: Event) => void} the cancel handler
+ */
+const makeCancelHandler = (
+  cancelHandler: ((event: Event) => void) | undefined,
+  getHandle: () => ModalDialogHandle
+) => (event: Event): void => {
+  if (typeof cancelHandler === 'function') {
+    cancelHandler(event);
+  }
+  getHandle().close();
+};
+
+/**
  * @param {NotifierOptions} options - options for the notification
  * @returns {HTMLElement} - the notification element
  */
@@ -190,8 +209,8 @@ export const alert = (options: NotifierOptions): HTMLElement => {
   // Live region so assistive tech announces the message text.
   const messageText = document.createElement('div');
 
-  messageIdCounter += 1;
-  messageText.id = `blok-notification-message-${messageIdCounter}`;
+  messageIdState.count += 1;
+  messageText.id = `blok-notification-message-${messageIdState.count}`;
   messageText.setAttribute('data-blok-testid', MESSAGE_TEXT_TESTID);
   messageText.setAttribute('aria-live', style === 'error' ? 'assertive' : 'polite');
   messageText.setAttribute('aria-atomic', 'true');
@@ -253,12 +272,7 @@ export const confirm = (options: ConfirmNotifierOptions): HTMLElement => {
     notify.appendChild(btnsWrapper);
   }
 
-  const cancel = (event: Event): void => {
-    if (typeof cancelHandler === 'function') {
-      cancelHandler(event);
-    }
-    handle.close();
-  };
+  const cancel = makeCancelHandler(cancelHandler, () => handle);
 
   const confirmOk = (event: Event): void => {
     if (typeof okHandler === 'function') {
@@ -339,12 +353,7 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
     handle.close();
   };
 
-  const cancel = (event: Event): void => {
-    if (typeof cancelHandler === 'function') {
-      cancelHandler(event);
-    }
-    handle.close();
-  };
+  const cancel = makeCancelHandler(cancelHandler, () => handle);
 
   const handle = makeModal(notify, messageText, () => input, () => cancel(new Event('dismiss')));
 

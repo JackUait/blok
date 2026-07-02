@@ -137,6 +137,25 @@ function positionVertical(
 }
 
 /**
+ * Cross-axis (vertical) start position for a horizontally-placed content box,
+ * given its alignment against the reference rect.
+ * @param align - cross-axis alignment
+ * @param alignRect - cross-axis alignment reference rect
+ * @param height - measured content height
+ */
+function resolveDesiredTop(align: AnchoredAlign, alignRect: DOMRect, height: number): number {
+  if (align === 'start') {
+    return alignRect.top;
+  }
+
+  if (align === 'end') {
+    return alignRect.bottom - height;
+  }
+
+  return alignRect.top + alignRect.height / 2 - height / 2;
+}
+
+/**
  * Horizontal-primary placement (side `left`/`right`) — wraps the pure
  * {@link resolveNestedPopoverSide} (side flip) and {@link clampNestedPopoverTop}
  * (cross-axis clamp) that also back the submenu geometry.
@@ -179,11 +198,7 @@ function positionHorizontal(
     overlap,
   });
 
-  const desiredTop = align === 'start'
-    ? alignRect.top
-    : align === 'end'
-      ? alignRect.bottom - size.height
-      : alignRect.top + alignRect.height / 2 - size.height / 2;
+  const desiredTop = resolveDesiredTop(align, alignRect, size.height);
 
   // Same shift for the cross-axis clamp: run it in boundary-local space and
   // translate the result back to viewport coordinates.
@@ -244,12 +259,12 @@ export function positionAnchored(
     )
     : positionVertical(anchorRect, size, boundaryRect, offset);
 
-  content.dataset.side = resolved.side;
-  content.dataset.align = resolved.align;
+  content.setAttribute('data-side', resolved.side);
+  content.setAttribute('data-align', resolved.align);
 
   if (apply) {
-    content.style.top = `${resolved.top}px`;
-    content.style.left = `${resolved.left}px`;
+    content.style.setProperty('top', `${resolved.top}px`);
+    content.style.setProperty('left', `${resolved.left}px`);
   }
 
   return resolved;
@@ -277,8 +292,10 @@ export interface PositionTracker {
  * @param reposition - callback that re-computes and applies the position
  */
 export function createPositionTracker(content: Element, reposition: () => void): PositionTracker {
-  let attached = false;
-  let resizeObserver: ResizeObserver | null = null;
+  const state: { attached: boolean; resizeObserver: ResizeObserver | null } = {
+    attached: false,
+    resizeObserver: null,
+  };
 
   const scrollOptions: AddEventListenerOptions = { capture: true, passive: true };
   const onScroll = (): void => reposition();
@@ -286,31 +303,31 @@ export function createPositionTracker(content: Element, reposition: () => void):
 
   return {
     attach(): void {
-      if (attached) {
+      if (state.attached) {
         return;
       }
-      attached = true;
+      state.attached = true;
 
       window.addEventListener('scroll', onScroll, scrollOptions);
       window.addEventListener('resize', onResize);
 
       if (typeof ResizeObserver !== 'undefined') {
-        resizeObserver = new ResizeObserver(() => reposition());
-        resizeObserver.observe(content);
+        state.resizeObserver = new ResizeObserver(() => reposition());
+        state.resizeObserver.observe(content);
       }
     },
 
     detach(): void {
-      if (!attached) {
+      if (!state.attached) {
         return;
       }
-      attached = false;
+      state.attached = false;
 
       window.removeEventListener('scroll', onScroll, scrollOptions);
       window.removeEventListener('resize', onResize);
 
-      resizeObserver?.disconnect();
-      resizeObserver = null;
+      state.resizeObserver?.disconnect();
+      state.resizeObserver = null;
     },
   };
 }

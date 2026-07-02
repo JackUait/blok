@@ -50,7 +50,7 @@ describe('startInlineRename', () => {
     expect(input).not.toBeNull();
     expect(input?.value).toBe('Todo');
     expect(input?.getAttribute('aria-label')).toBe('Rename column');
-    expect(document.activeElement).toBe(input);
+    expect(input).toHaveFocus();
     expect(input?.selectionStart).toBe(0);
     expect(input?.selectionEnd).toBe('Todo'.length);
     // Original display element removed in favour of the input
@@ -204,8 +204,8 @@ describe('startInlineRename', () => {
     const restored = container.querySelector('div[data-title]');
 
     expect(restored).not.toBeNull();
-    expect(document.activeElement).toBe(restored);
-    expect(document.activeElement).not.toBe(document.body);
+    expect(restored).toHaveFocus();
+    expect(document.body).not.toHaveFocus();
   });
 
   it('fires onInput on every keystroke when provided', () => {

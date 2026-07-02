@@ -1535,6 +1535,30 @@ const mergeContentIds = (
  * table in its Blok-native block-ref shape, which round-trips correctly.
  * @param blocks - flat block array being collapsed
  */
+/** Extracts the string block-ref child ids from a single table cell's `blocks`. */
+const collectCellRefChildIds = (cell: unknown): string[] => {
+  const cellBlocks = (cell as { blocks?: unknown }).blocks;
+
+  if (!Array.isArray(cellBlocks)) {
+    return [];
+  }
+
+  return cellBlocks.filter((childId): childId is string => typeof childId === 'string');
+};
+
+/** Extracts the string block-ref child ids from a single table row. */
+const collectRowRefChildIds = (row: unknown): string[] => {
+  if (!Array.isArray(row)) {
+    return [];
+  }
+
+  return row.flatMap((cell) => collectCellRefChildIds(cell));
+};
+
+/** Extracts every string block-ref child id from a table's `data.content` grid. */
+const collectTableRefChildIds = (content: unknown[]): string[] =>
+  content.flatMap((row) => collectRowRefChildIds(row));
+
 const collectPreservedContainerSubtreeIds = (blocks: OutputBlockData[]): Set<BlockId> => {
   const preserved = new Set<BlockId>();
 
@@ -1549,28 +1573,13 @@ const collectPreservedContainerSubtreeIds = (blocks: OutputBlockData[]): Set<Blo
       continue;
     }
 
-    let tableHasRefCells = false;
+    const refChildIds = collectTableRefChildIds(content);
 
-    for (const row of content) {
-      if (!Array.isArray(row)) {
-        continue;
-      }
-      for (const cell of row) {
-        const cellBlocks = (cell as { blocks?: unknown }).blocks;
-
-        if (!Array.isArray(cellBlocks)) {
-          continue;
-        }
-        for (const childId of cellBlocks) {
-          if (typeof childId === 'string') {
-            preserved.add(childId);
-            tableHasRefCells = true;
-          }
-        }
-      }
+    for (const childId of refChildIds) {
+      preserved.add(childId);
     }
 
-    if (tableHasRefCells) {
+    if (refChildIds.length > 0) {
       preserved.add(block.id);
     }
   }

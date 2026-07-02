@@ -148,7 +148,7 @@ describe('crop-editor', () => {
     expect(chips[1].getAttribute('aria-checked')).toBe('true');
     expect(chips[1].getAttribute('data-active')).toBe('true');
     expect(chips[0].getAttribute('aria-checked')).toBe('false');
-    expect(document.activeElement).toBe(chips[1]);
+    expect(chips[1]).toHaveFocus();
     expect(chips.map((c) => c.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
   });
 
@@ -164,11 +164,11 @@ describe('crop-editor', () => {
     chips[0].focus();
     chips[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
     expect(chips[chips.length - 1].getAttribute('aria-checked')).toBe('true');
-    expect(document.activeElement).toBe(chips[chips.length - 1]);
+    expect(chips[chips.length - 1]).toHaveFocus();
 
     chips[chips.length - 1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
     expect(chips[0].getAttribute('aria-checked')).toBe('true');
-    expect(document.activeElement).toBe(chips[0]);
+    expect(chips[0]).toHaveFocus();
   });
 
   it('clicking a chip keeps the tab stop in sync (roving refresh)', () => {

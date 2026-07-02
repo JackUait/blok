@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type * as AnnouncerModuleNs from '../../../../src/components/utils/announcer';
 
 const POLITE_REGION_ID = 'blok-announcer';
 const ASSERTIVE_REGION_ID = 'blok-announcer-assertive';
 
-type AnnouncerModule = typeof import('../../../../src/components/utils/announcer');
+type AnnouncerModule = typeof AnnouncerModuleNs;
 
 /**
  * Load a fresh copy of the announcer module so its static singleton/refcount

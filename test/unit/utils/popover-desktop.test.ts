@@ -1933,7 +1933,7 @@ describe('PopoverDesktop', () => {
     });
 
     it('registers the search input as the flipper active-descendant host', () => {
-      const popover = createPopover({
+      createPopover({
         searchable: true,
         items: createDefaultItems(),
       });

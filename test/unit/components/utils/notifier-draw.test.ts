@@ -185,7 +185,7 @@ describe('Notifier draw', () => {
       document.body.appendChild(el);
       await Promise.resolve();
 
-      expect(document.activeElement).toBe(el.querySelector('[data-blok-testid="notification-confirm-button"]'));
+      expect(el.querySelector('[data-blok-testid="notification-confirm-button"]')).toHaveFocus();
     });
 
     it('cancels on Escape and restores focus', () => {
@@ -202,7 +202,7 @@ describe('Notifier draw', () => {
 
       expect(cancelHandler).toHaveBeenCalledTimes(1);
       expect(el.isConnected).toBe(false);
-      expect(document.activeElement).toBe(trigger);
+      expect(trigger).toHaveFocus();
 
       trigger.remove();
     });
@@ -218,11 +218,11 @@ describe('Notifier draw', () => {
 
       last.focus();
       last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
-      expect(document.activeElement).toBe(first);
+      expect(first).toHaveFocus();
 
       first.focus();
       first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
-      expect(document.activeElement).toBe(last);
+      expect(last).toHaveFocus();
     });
 
     it('excludes disabled and tabindex="-1" nodes from the focus-trap wrap targets', () => {
@@ -259,12 +259,12 @@ describe('Notifier draw', () => {
       // Tab from the last REAL focusable (cancelBtn) wraps to the first REAL focusable (okBtn).
       cancelBtn.focus();
       cancelBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
-      expect(document.activeElement).toBe(okBtn);
+      expect(okBtn).toHaveFocus();
 
       // Shift+Tab from the first REAL focusable wraps to the last REAL focusable (cancelBtn).
       okBtn.focus();
       okBtn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
-      expect(document.activeElement).toBe(cancelBtn);
+      expect(cancelBtn).toHaveFocus();
 
       el.remove();
     });
@@ -306,7 +306,7 @@ describe('Notifier draw', () => {
       document.body.appendChild(el);
       await Promise.resolve();
 
-      expect(document.activeElement).toBe(el.querySelector('[data-blok-testid="notification-input"]'));
+      expect(el.querySelector('[data-blok-testid="notification-input"]')).toHaveFocus();
     });
 
     it('submits with the input value when Enter is pressed', () => {

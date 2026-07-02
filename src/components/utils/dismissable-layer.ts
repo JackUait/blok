@@ -82,16 +82,12 @@ interface LayerEntry {
 const stack: LayerEntry[] = [];
 
 /**
- * Bound capture-phase keydown handler, non-null only while listeners are
- * installed.
+ * Tracks whether the shared capture-phase document listeners are currently
+ * installed. Held in a const container so the flag toggles without rebinding,
+ * keeping the {@link handleKeyDown}/{@link handlePointerDown} references stable
+ * across add/remove.
  */
-let boundKeyDown: ((event: KeyboardEvent) => void) | null = null;
-
-/**
- * Bound capture-phase pointerdown handler, non-null only while listeners are
- * installed.
- */
-let boundPointerDown: ((event: PointerEvent) => void) | null = null;
+const listeners = { installed: false };
 
 /**
  * Whether any registered layer participates in Escape dismissal. The popover
@@ -127,9 +123,7 @@ const handleKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
-  for (let i = stack.length - 1; i >= 0; i--) {
-    const entry = stack[i];
-
+  for (const entry of [...stack].reverse()) {
     if (!entry.escape) {
       continue;
     }
@@ -163,9 +157,7 @@ const handlePointerDown = (event: PointerEvent): void => {
     return;
   }
 
-  for (let i = stack.length - 1; i >= 0; i--) {
-    const entry = stack[i];
-
+  for (const entry of [...stack].reverse()) {
     if (isInsideLayer(entry, target)) {
       return;
     }
@@ -185,30 +177,28 @@ const handlePointerDown = (event: PointerEvent): void => {
  * registration.
  */
 const ensureListeners = (): void => {
-  if (boundKeyDown !== null) {
+  if (listeners.installed) {
     return;
   }
 
-  boundKeyDown = handleKeyDown;
-  boundPointerDown = handlePointerDown;
+  listeners.installed = true;
 
-  document.addEventListener('keydown', boundKeyDown, true);
-  document.addEventListener('pointerdown', boundPointerDown, true);
+  document.addEventListener('keydown', handleKeyDown, true);
+  document.addEventListener('pointerdown', handlePointerDown, true);
 };
 
 /**
  * Removes the shared document listeners once the stack empties.
  */
 const removeListeners = (): void => {
-  if (boundKeyDown === null || boundPointerDown === null) {
+  if (!listeners.installed) {
     return;
   }
 
-  document.removeEventListener('keydown', boundKeyDown, true);
-  document.removeEventListener('pointerdown', boundPointerDown, true);
+  document.removeEventListener('keydown', handleKeyDown, true);
+  document.removeEventListener('pointerdown', handlePointerDown, true);
 
-  boundKeyDown = null;
-  boundPointerDown = null;
+  listeners.installed = false;
 };
 
 /**

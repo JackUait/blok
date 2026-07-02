@@ -29,7 +29,7 @@ export const LIST_TEST_IDS = {
 } as const;
 
 /** Monotonic sequence backing stable content-div ids for checkbox labelling. */
-let checklistItemIdSeq = 0;
+const checklistItemIdSeq = { current: 0 };
 
 /**
  * Sync a checklist checkbox control's checked state and its `data-state`
@@ -40,7 +40,12 @@ let checklistItemIdSeq = 0;
  * @param checked - whether the item is checked
  */
 export const applyCheckboxState = (checkbox: HTMLInputElement, checked: boolean): void => {
-  checkbox.checked = checked;
+  // Set the IDL `checked` property (drives the `:checked` pseudo used by the
+  // checklist CSS) without a param-property assignment. Must set the property,
+  // not the `checked` attribute — this seam runs on toggle paths after the
+  // control's dirty-checked flag is set, where the attribute no longer reflects
+  // current checkedness.
+  Reflect.set(checkbox, 'checked', checked);
   checkbox.setAttribute('data-state', checked ? 'checked' : 'unchecked');
 };
 
@@ -280,7 +285,7 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   content.setAttribute('data-blok-testid', LIST_TEST_IDS.checklistContent);
   content.setAttribute('data-checked', String(data.checked));
   // Stable id so the nameless checkbox can borrow the item's text as its label.
-  content.id = `blok-checklist-item-${(checklistItemIdSeq += 1)}`;
+  content.id = `blok-checklist-item-${(checklistItemIdSeq.current += 1)}`;
   content.contentEditable = readOnly ? 'false' : 'true';
   content.innerHTML = data.text;
 

@@ -163,7 +163,7 @@ export const getTabbables = (container: HTMLElement): HTMLElement[] =>
   Array.from(container.querySelectorAll<HTMLElement>(TABBABLE_SELECTOR)).filter((el) => {
     // Attribute/property checks only — jsdom has no layout, so offsetParent /
     // computed visibility would wrongly reject every element here.
-    const isDisabled = 'disabled' in el && (el as HTMLButtonElement | HTMLInputElement).disabled === true;
+    const isDisabled = 'disabled' in el && (el as HTMLButtonElement | HTMLInputElement).disabled;
 
     if (isDisabled || el.hasAttribute('disabled')) {
       return false;
@@ -226,13 +226,11 @@ const bodyLevelAncestor = (node: HTMLElement): HTMLElement | null => {
     return null;
   }
 
-  let current: HTMLElement | null = node;
+  const body = document.body;
+  const climb = (current: HTMLElement | null): HTMLElement | null =>
+    current === null || current.parentElement === body ? current : climb(current.parentElement);
 
-  while (current !== null && current.parentElement !== document.body) {
-    current = current.parentElement;
-  }
-
-  return current;
+  return climb(node);
 };
 
 /**

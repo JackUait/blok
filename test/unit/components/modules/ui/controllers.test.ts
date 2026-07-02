@@ -884,25 +884,23 @@ describe('KeyboardController', () => {
       expect(blok.BlockManager.convert).not.toHaveBeenCalled();
     });
 
-    if (!isMac) {
-      it('lets the list combo win over Heading 5/6 on Win/Linux (Ctrl+Shift+5/6 collision)', () => {
-        const { controller, blok } = createKeyboardController({
-          configOverrides: { defaultBlock: 'paragraph' },
-        });
-
-        (controller as unknown as { enable: () => void }).enable();
-
-        const block = makeBlock();
-        blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
-
-        const event = new KeyboardEvent('keydown', { key: '5', code: 'Digit5', ctrlKey: true, shiftKey: true });
-        Object.defineProperty(event, 'target', { value: document.body });
-        document.dispatchEvent(event);
-
-        expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'list', { style: 'unordered' });
-        expect(blok.BlockManager.convert).not.toHaveBeenCalledWith(block, 'header', { level: 5 });
+    it.skipIf(isMac)('lets the list combo win over Heading 5/6 on Win/Linux (Ctrl+Shift+5/6 collision)', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
       });
-    }
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = new KeyboardEvent('keydown', { key: '5', code: 'Digit5', ctrlKey: true, shiftKey: true });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'list', { style: 'unordered' });
+      expect(blok.BlockManager.convert).not.toHaveBeenCalledWith(block, 'header', { level: 5 });
+    });
   });
 
   describe('Ctrl+Y redo alias (D9)', () => {

@@ -351,8 +351,8 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       label: this.i18n.t('tools.database.editCardTitle'),
       configureInput: (input) => {
         input.setAttribute('data-blok-database-card-title-input', '');
-        input.style.width = '100%';
-        input.style.boxSizing = 'border-box';
+        input.style.setProperty('width', '100%');
+        input.style.setProperty('box-sizing', 'border-box');
       },
       buildRestored: buildTitleDiv,
       onCommit: (newTitle) => {

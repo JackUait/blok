@@ -320,7 +320,7 @@ export class DatabaseListView implements DatabaseViewRenderer {
       stateText.style.padding = '0';
       stateText.style.margin = '-1px';
       stateText.style.overflow = 'hidden';
-      stateText.style.clip = 'rect(0, 0, 0, 0)';
+      stateText.style.clipPath = 'inset(50%)';
       stateText.style.whiteSpace = 'nowrap';
       stateText.style.border = '0';
       stateText.textContent = this.i18n.t(

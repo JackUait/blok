@@ -123,6 +123,30 @@ export abstract class BasePasteHandler implements PasteHandler {
     return linesToInsert;
   }
 
+  /**
+   * Resolve which pasted lines should be inserted as blocks.
+   *
+   * - When the first line can merge into the current block at the caret, split
+   *   it off and carry the caret remainder onto the tail.
+   * - When a newline-prefixed paste has an empty leading segment, drop it.
+   * - Otherwise insert every line as-is.
+   */
+  private async resolveLinesToInsert(
+    data: PasteData[],
+    canCaretSplit: boolean,
+    firstSegmentIsEmpty: boolean
+  ): Promise<PasteData[]> {
+    if (canCaretSplit) {
+      return this.caretSplitFirstLine(data);
+    }
+
+    if (firstSegmentIsEmpty) {
+      return data.slice(1);
+    }
+
+    return data;
+  }
+
   protected async insertPasteData(
     data: PasteData[],
     canReplaceCurrentBlock: boolean
@@ -172,11 +196,7 @@ export abstract class BasePasteHandler implements PasteHandler {
         !isContainerContext &&
         !firstSegmentIsEmpty;
 
-      const linesToInsert = canCaretSplit
-        ? await this.caretSplitFirstLine(data)
-        : firstSegmentIsEmpty
-          ? data.slice(1)
-          : data;
+      const linesToInsert = await this.resolveLinesToInsert(data, canCaretSplit, firstSegmentIsEmpty);
 
       const contextParentId = isInContainerTitle
         ? (currentBlock?.id ?? null)

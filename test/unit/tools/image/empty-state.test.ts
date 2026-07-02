@@ -39,7 +39,7 @@ describe('renderEmptyState', () => {
 
     expect(tabs[1].getAttribute('aria-selected')).toBe('true');
     expect(tabs[0].getAttribute('aria-selected')).toBe('false');
-    expect(document.activeElement).toBe(tabs[1]);
+    expect(tabs[1]).toHaveFocus();
     expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0]);
     expect(el.querySelector('input[type="url"]')).not.toBeNull();
     el.remove();
@@ -52,11 +52,11 @@ describe('renderEmptyState', () => {
     tabs[0].focus();
     tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
     expect(tabs[1].getAttribute('aria-selected')).toBe('true');
-    expect(document.activeElement).toBe(tabs[1]);
+    expect(tabs[1]).toHaveFocus();
 
     tabs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
-    expect(document.activeElement).toBe(tabs[0]);
+    expect(tabs[0]).toHaveFocus();
     el.remove();
   });
 

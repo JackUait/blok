@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PlusButtonHandler, TOOLBOX_POPOVER_ID } from '../../../../../src/components/modules/toolbar/plus-button';
-import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { ToolbarNodes } from '../../../../../src/components/modules/toolbar/types';
 

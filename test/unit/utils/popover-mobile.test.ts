@@ -482,11 +482,11 @@ describe('PopoverMobile', () => {
       const { popover } = createPopover();
       const nodes = getNodes(popover);
 
-      expect(document.activeElement).toBe(editable);
+      expect(editable).toHaveFocus();
 
       popover.show();
 
-      expect(document.activeElement).not.toBe(editable);
+      expect(editable).not.toHaveFocus();
       expect(
         document.activeElement instanceof HTMLElement && nodes.popover.contains(document.activeElement)
       ).toBe(true);
@@ -532,11 +532,11 @@ describe('PopoverMobile', () => {
 
       popover.show();
 
-      expect(document.activeElement).not.toBe(editable);
+      expect(editable).not.toHaveFocus();
 
       popover.hide();
 
-      expect(document.activeElement).toBe(editable);
+      expect(editable).toHaveFocus();
     });
 
     it('restores focus to the previously focused element on destroy', () => {
@@ -546,7 +546,7 @@ describe('PopoverMobile', () => {
       popover.show();
       popover.destroy();
 
-      expect(document.activeElement).toBe(editable);
+      expect(editable).toHaveFocus();
     });
 
     it('does not restore focus to an element that left the DOM', () => {
@@ -557,7 +557,7 @@ describe('PopoverMobile', () => {
       editable.remove();
 
       expect(() => popover.hide()).not.toThrow();
-      expect(document.activeElement).not.toBe(editable);
+      expect(editable).not.toHaveFocus();
     });
   });
 

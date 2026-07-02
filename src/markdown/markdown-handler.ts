@@ -150,12 +150,12 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     // Reparent every top-level produced block into the surrounding container so
     // the paste stays nested (hierarchical children like table cells already
     // carry their own parent and are left untouched).
-    if (contextParentId !== null) {
-      for (const { block, hasParent } of composed) {
-        if (!hasParent) {
-          BlockManager.setBlockParent(block, contextParentId);
-        }
+    for (const { block, hasParent } of composed) {
+      if (contextParentId === null || hasParent) {
+        continue;
       }
+
+      BlockManager.setBlockParent(block, contextParentId);
     }
 
     // Remove the replaced empty block

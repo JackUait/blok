@@ -109,11 +109,11 @@ describe('openModalDialog', () => {
 
     last.focus();
     last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
-    expect(document.activeElement).toBe(first);
+    expect(first).toHaveFocus();
 
     first.focus();
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
-    expect(document.activeElement).toBe(last);
+    expect(last).toHaveFocus();
 
     handle.close();
   });
@@ -129,7 +129,7 @@ describe('openModalDialog', () => {
     // Simulate focus escaping to an element outside the dialog surface.
     outside.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
 
-    expect(document.activeElement).toBe(first);
+    expect(first).toHaveFocus();
     handle.close();
   });
 
@@ -143,7 +143,7 @@ describe('openModalDialog', () => {
     });
 
     await Promise.resolve();
-    expect(document.activeElement).toBe(last);
+    expect(last).toHaveFocus();
     handle.close();
   });
 
@@ -205,7 +205,7 @@ describe('openModalDialog', () => {
     const handle = openModalDialog({ content, surface, onDismiss: vi.fn() });
 
     handle.close();
-    expect(document.activeElement).toBe(trigger);
+    expect(trigger).toHaveFocus();
   });
 
   it('does not throw restoring focus when the previous element was removed', () => {

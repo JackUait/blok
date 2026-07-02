@@ -312,18 +312,8 @@ class Blok {
           const topOffset = (isObject(this.initialConfiguration)
             ? (this.initialConfiguration as BlokConfig).scrollToBlock?.topOffset
             : undefined) ?? 0;
-          const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
 
-          window.scrollTo({ top: y, behavior: 'smooth' });
-
-          Blok.selectBlockById(blok, hash);
-          highlightBlockArrival(el);
-
-          const i18n = (blok.moduleInstances as Partial<BlokModules>).I18n;
-
-          if (i18n !== undefined) {
-            announce(i18n.t('a11y.navigatedToBlock'));
-          }
+          Blok.scrollToHashBlock(blok, el, hash, topOffset);
         } else if (blok.moduleInstances.Renderer !== undefined) {
           blok.moduleInstances.Renderer.pendingHashScroll = hash;
         }
@@ -528,6 +518,29 @@ class Blok {
     } catch {
       // Malformed percent-sequence (e.g. %ZZ) — return raw so no block is matched
       return raw;
+    }
+  }
+
+  /**
+   * Scrolls the located hash target into view, selects it, highlights its
+   * arrival, and announces the navigation to assistive technology.
+   * @param blok - Core instance
+   * @param el - matched block element
+   * @param hash - decoded block id
+   * @param topOffset - scroll top offset in pixels
+   */
+  private static scrollToHashBlock(blok: Core, el: Element, hash: string, topOffset: number): void {
+    const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
+
+    window.scrollTo({ top: y, behavior: 'smooth' });
+
+    Blok.selectBlockById(blok, hash);
+    highlightBlockArrival(el);
+
+    const i18n = (blok.moduleInstances as Partial<BlokModules>).I18n;
+
+    if (i18n !== undefined) {
+      announce(i18n.t('a11y.navigatedToBlock'));
     }
   }
 

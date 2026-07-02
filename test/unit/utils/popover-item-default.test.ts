@@ -461,7 +461,7 @@ describe('PopoverItemDefault', () => {
       }
 
       expect(element.getAttribute('role')).toBe('option');
-      expect(element).not.toHaveAttribute('aria-checked');
+      expect(element).not.toBeChecked();
     });
 
     it('promotes a checkbox item to role="menuitemradio" via useRadioRole() and keeps aria-checked', () => {

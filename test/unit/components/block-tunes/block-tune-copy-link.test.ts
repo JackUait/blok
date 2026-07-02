@@ -3,13 +3,14 @@ import type { Mock } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CopyLinkTune } from '../../../../src/components/block-tunes/block-tune-copy-link';
+import type * as BrowserModule from '../../../../src/components/utils/browser';
 
 const osState = vi.hoisted(() => ({
   os: { win: false, mac: true, x11: false, linux: false } as Record<string, boolean>,
 }));
 
 vi.mock('../../../../src/components/utils/browser', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/components/utils/browser')>();
+  const actual = await importOriginal<typeof BrowserModule>();
 
   return {
     ...actual,

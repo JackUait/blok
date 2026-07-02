@@ -46,16 +46,18 @@ export function rovingRadioGroup(options: RovingRadioGroupOptions): RovingRadioG
   const { radios, getSelectedIndex, onSelect } = options;
   const orientation = options.orientation ?? 'horizontal';
 
-  const prevKeys = orientation === 'vertical'
-    ? ['ArrowUp']
-    : orientation === 'both'
-      ? ['ArrowLeft', 'ArrowUp']
-      : ['ArrowLeft'];
-  const nextKeys = orientation === 'vertical'
-    ? ['ArrowDown']
-    : orientation === 'both'
-      ? ['ArrowRight', 'ArrowDown']
-      : ['ArrowRight'];
+  const prevKeysByOrientation: Record<RovingOrientation, string[]> = {
+    vertical: ['ArrowUp'],
+    both: ['ArrowLeft', 'ArrowUp'],
+    horizontal: ['ArrowLeft'],
+  };
+  const nextKeysByOrientation: Record<RovingOrientation, string[]> = {
+    vertical: ['ArrowDown'],
+    both: ['ArrowRight', 'ArrowDown'],
+    horizontal: ['ArrowRight'],
+  };
+  const prevKeys = prevKeysByOrientation[orientation];
+  const nextKeys = nextKeysByOrientation[orientation];
 
   const applyTabStop = (): void => {
     const selected = getSelectedIndex();
@@ -63,7 +65,7 @@ export function rovingRadioGroup(options: RovingRadioGroupOptions): RovingRadioG
     // the first radio when nothing is selected yet.
     const stop = selected >= 0 ? selected : 0;
     radios.forEach((radio, i) => {
-      radio.tabIndex = i === stop ? 0 : -1;
+      radio.setAttribute('tabindex', i === stop ? '0' : '-1');
     });
   };
 

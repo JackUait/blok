@@ -4,11 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DeleteTune } from '../../../../src/components/block-tunes/block-tune-delete';
 import { beautifyShortcut } from '../../../../src/components/utils/string';
+import type * as StringModule from '../../../../src/components/utils/string';
 import type { API } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 
 vi.mock('../../../../src/components/utils/string', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/components/utils/string')>();
+  const actual = await importOriginal<typeof StringModule>();
 
   return {
     ...actual,

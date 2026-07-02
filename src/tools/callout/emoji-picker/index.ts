@@ -392,7 +392,7 @@ export class EmojiPicker {
     announcer.style.padding = '0';
     announcer.style.margin = '-1px';
     announcer.style.overflow = 'hidden';
-    announcer.style.clip = 'rect(0, 0, 0, 0)';
+    announcer.style.clipPath = 'inset(50%)';
     announcer.style.whiteSpace = 'nowrap';
     announcer.style.border = '0';
     el.appendChild(announcer);

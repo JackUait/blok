@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type * as PopoverModule from '../../../../src/components/utils/popover';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 
@@ -7,7 +8,7 @@ const popoverMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../../src/components/utils/popover', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/components/utils/popover')>();
+  const actual = await importOriginal<typeof PopoverModule>();
 
   class MockPopoverDesktop {
     constructor(params: unknown) {

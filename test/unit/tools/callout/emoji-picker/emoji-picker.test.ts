@@ -891,7 +891,7 @@ describe('EmojiPicker', () => {
 
       const input = picker.getElement().querySelector('input[type="text"]') as HTMLInputElement;
 
-      expect(document.activeElement).toBe(input);
+      expect(input).toHaveFocus();
 
       picker.close();
       document.body.removeChild(anchor);
@@ -919,7 +919,7 @@ describe('EmojiPicker', () => {
       last.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(true);
-      expect(document.activeElement).toBe(first);
+      expect(first).toHaveFocus();
 
       picker.close();
       document.body.removeChild(anchor);
@@ -944,7 +944,7 @@ describe('EmojiPicker', () => {
       first.dispatchEvent(event);
 
       expect(event.defaultPrevented).toBe(true);
-      expect(document.activeElement).toBe(last);
+      expect(last).toHaveFocus();
 
       picker.close();
       document.body.removeChild(anchor);
@@ -961,11 +961,11 @@ describe('EmojiPicker', () => {
       document.body.appendChild(picker.getElement());
       await picker.open(opener);
 
-      expect(document.activeElement).not.toBe(opener);
+      expect(opener).not.toHaveFocus();
 
       picker.close();
 
-      expect(document.activeElement).toBe(opener);
+      expect(opener).toHaveFocus();
 
       document.body.removeChild(opener);
       document.body.removeChild(picker.getElement());
@@ -986,7 +986,7 @@ describe('EmojiPicker', () => {
       document.body.removeChild(opener);
       picker.close();
 
-      expect(document.activeElement).toBe(anchor);
+      expect(anchor).toHaveFocus();
 
       document.body.removeChild(anchor);
       document.body.removeChild(picker.getElement());

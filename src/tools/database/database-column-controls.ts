@@ -87,7 +87,7 @@ export class DatabaseColumnControls {
         configureInput: (input) => {
           input.setAttribute('data-blok-database-column-title-input', '');
           // Size sync for Firefox (no field-sizing: content)
-          const syncSize = (): void => { input.size = Math.max(input.value.length, 1); };
+          const syncSize = (): void => { input.setAttribute('size', String(Math.max(input.value.length, 1))); };
           syncSize();
           input.addEventListener('input', syncSize);
         },

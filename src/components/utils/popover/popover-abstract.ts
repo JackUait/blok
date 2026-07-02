@@ -148,7 +148,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // Update DOM state
     this.nodes.popover.setAttribute(DATA_ATTR.popoverOpened, 'true');
-    this.nodes.popover.dataset.state = 'open';
+    this.nodes.popover.setAttribute('data-state', 'open');
     this.nodes.popoverContainer.className = twMerge(
       this.nodes.popoverContainer.className,
       css.popoverContainerOpened
@@ -212,7 +212,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpened);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
-    this.nodes.popover.dataset.state = 'closed';
+    this.nodes.popover.setAttribute('data-state', 'closed');
     this.nodes.popoverContainer.className = css.popoverContainer;
 
     this.itemsDefault.forEach(item => item.reset());
@@ -268,7 +268,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       return;
     }
 
-    popover.dataset.state = 'closed';
+    popover.setAttribute('data-state', 'closed');
     popover.removeAttribute(DATA_ATTR.popoverOpened);
 
     if (!this.hasVisibleExitBox(popover)) {
@@ -281,12 +281,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popoverContainer.className = css.popoverContainer;
 
     const container = this.nodes.popoverContainer;
-    let removed = false;
+    const state = { removed: false };
     const remove = (): void => {
-      if (removed) {
+      if (state.removed) {
         return;
       }
-      removed = true;
+      state.removed = true;
       popover.remove();
     };
 
@@ -754,7 +754,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     resultsAnnouncer.style.padding = '0';
     resultsAnnouncer.style.margin = '-1px';
     resultsAnnouncer.style.overflow = 'hidden';
-    resultsAnnouncer.style.clip = 'rect(0, 0, 0, 0)';
+    resultsAnnouncer.style.clipPath = 'inset(50%)';
     resultsAnnouncer.style.whiteSpace = 'nowrap';
     resultsAnnouncer.style.border = '0';
 

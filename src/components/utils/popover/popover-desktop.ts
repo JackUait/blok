@@ -499,8 +499,8 @@ export class PopoverDesktop extends PopoverAbstract {
     this.setOpenTop(openTop);
     this.setOpenLeft(openLeft);
 
-    this.nodes.popover.dataset.side = openTop ? 'top' : 'bottom';
-    this.nodes.popover.dataset.align = openLeft ? 'end' : 'start';
+    this.nodes.popover.setAttribute('data-side', openTop ? 'top' : 'bottom');
+    this.nodes.popover.setAttribute('data-align', openLeft ? 'end' : 'start');
   }
 
   /**
@@ -1137,8 +1137,8 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Stamp the resolved side/align so CSS/animation can key off it, mirroring
     // the root popover's data-side/data-align contract.
-    actualPopoverEl.dataset.side = openNestedLeft ? 'left' : 'right';
-    actualPopoverEl.dataset.align = 'center';
+    actualPopoverEl.setAttribute('data-side', openNestedLeft ? 'left' : 'right');
+    actualPopoverEl.setAttribute('data-align', 'center');
 
     // Center nested popover vertically on the trigger item, then clamp
     // so the submenu never overflows the viewport top or bottom.

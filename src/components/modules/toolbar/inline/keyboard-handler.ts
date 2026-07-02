@@ -128,14 +128,21 @@ export class InlineKeyboardHandler {
       event.stopImmediatePropagation();
 
       if (flipper instanceof Flipper) {
-        if (event.key === 'ArrowRight') {
-          flipper.flipRight();
-        } else {
-          flipper.flipLeft();
-        }
+        this.flipToolbarItem(flipper, event.key);
       }
 
       return;
+    }
+  }
+
+  /**
+   * Move focus between horizontal toolbar items in the direction of the pressed arrow key
+   */
+  private flipToolbarItem(flipper: Flipper, key: string): void {
+    if (key === 'ArrowRight') {
+      flipper.flipRight();
+    } else {
+      flipper.flipLeft();
     }
   }
 

@@ -126,7 +126,7 @@ describe('openCoverPicker', () => {
     expect(dialog?.contains(document.activeElement)).toBe(true);
 
     handle.close();
-    expect(document.activeElement).toBe(trigger);
+    expect(trigger).toHaveFocus();
   });
 
   it('moves focus into the dialog on open', () => {
@@ -145,7 +145,7 @@ describe('openCoverPicker', () => {
     anchor.focus();
     const handle = openCoverPicker({ anchor, onFile: vi.fn(), onUrl: vi.fn() });
     handle.close();
-    expect(document.activeElement).toBe(anchor);
+    expect(anchor).toHaveFocus();
   });
 
   it('does not throw when the previously focused element was detached before close', () => {
@@ -169,12 +169,12 @@ describe('openCoverPicker', () => {
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
     last.focus();
-    expect(document.activeElement).toBe(last);
+    expect(last).toHaveFocus();
 
     last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
     // jsdom does not move focus for Tab, so landing on `first` proves the trap
     // itself performed the wrap.
-    expect(document.activeElement).toBe(first);
+    expect(first).toHaveFocus();
     handle.close();
   });
 
@@ -189,7 +189,7 @@ describe('openCoverPicker', () => {
     first.focus();
 
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
-    expect(document.activeElement).toBe(last);
+    expect(last).toHaveFocus();
     handle.close();
   });
 

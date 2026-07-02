@@ -42,36 +42,35 @@ interface PausableTimer {
  * @returns {PausableTimer}
  */
 const createPausableTimer = (durationMs: number, onExpire: () => void): PausableTimer => {
-  const state = { remaining: durationMs, deadline: 0 };
-  let handle: number | null = null;
+  const state = { remaining: durationMs, deadline: 0, handle: null as number | null };
 
   const resume = (): void => {
-    if (handle !== null || state.remaining <= 0) {
+    if (state.handle !== null || state.remaining <= 0) {
       return;
     }
 
     state.deadline = Date.now() + state.remaining;
-    handle = window.setTimeout(() => {
-      handle = null;
+    state.handle = window.setTimeout(() => {
+      state.handle = null;
       state.remaining = 0;
       onExpire();
     }, state.remaining);
   };
 
   const pause = (): void => {
-    if (handle === null) {
+    if (state.handle === null) {
       return;
     }
 
-    window.clearTimeout(handle);
-    handle = null;
+    window.clearTimeout(state.handle);
+    state.handle = null;
     state.remaining = Math.max(0, state.deadline - Date.now());
   };
 
   const clear = (): void => {
-    if (handle !== null) {
-      window.clearTimeout(handle);
-      handle = null;
+    if (state.handle !== null) {
+      window.clearTimeout(state.handle);
+      state.handle = null;
     }
     state.remaining = 0;
   };
@@ -156,13 +155,13 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
   // CSS reset (see top-layer.ts).
   promoteToTopLayer(wrapper);
 
-  let disposed = false;
+  const lifecycle = { disposed: false };
 
   const dispose = (): void => {
-    if (disposed) {
+    if (lifecycle.disposed) {
       return;
     }
-    disposed = true;
+    lifecycle.disposed = true;
     timer.clear();
     unregisterLayer();
     toastCleanups.delete(notify);

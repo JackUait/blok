@@ -24,6 +24,7 @@ import {
   IconZoomOut,
 } from '../../components/icons';
 import { applyRubberBand } from './spring';
+import { downloadImage } from './download';
 import { tr } from './i18n';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
 
@@ -354,14 +355,7 @@ export function openLightbox(opts: LightboxOptions): () => void {
     getZoom: () => zoomState.value,
     setZoom,
     onDownload: () => {
-      const a = document.createElement('a');
-      a.href = currentItem.url;
-      a.download = currentItem.fileName ?? '';
-      a.target = '_blank';
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      void downloadImage(currentItem.url, currentItem.fileName);
     },
     onCopyUrl: () => {
       const clip = (navigator as Navigator & { clipboard?: { writeText(text: string): Promise<void> } }).clipboard;

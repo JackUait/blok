@@ -53,6 +53,7 @@ import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
 import { convertGifToWebm } from './gif-to-webm';
+import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
@@ -1033,14 +1034,7 @@ export class ImageTool implements BlockTool {
   }
 
   private download(): void {
-    const a = document.createElement('a');
-    a.href = this.data.url;
-    a.download = this.data.fileName ?? '';
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    void downloadImage(this.data.url, this.data.fileName);
   }
 
   private copyUrl(): void {

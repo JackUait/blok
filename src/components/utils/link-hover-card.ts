@@ -25,7 +25,7 @@ const OFFSET_TOP = 6;
  */
 const ACTION_BUTTON_BASE = twJoin(
   'appearance-none border-0 bg-transparent m-0 box-border font-[inherit] cursor-pointer',
-  'inline-flex items-center justify-center h-8 rounded-lg select-none',
+  'inline-flex items-center justify-center h-7 rounded-md select-none',
   'text-gray-text transition-colors',
   'can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary'
 );
@@ -244,9 +244,9 @@ export class LinkHoverCard {
 
     wrapper.className = twJoin(
       'fixed z-overlay top-0 left-0',
-      'flex items-center h-11 pl-4 pr-2',
+      'flex items-center h-9 pl-3 pr-1.5',
       'bg-popover-bg rounded-xl',
-      'shadow-[0_1px_2px_rgba(13,20,33,0.05),0_10px_28px_-8px_rgba(13,20,33,0.14)]',
+      'shadow-[0_1px_2px_rgba(13,20,33,0.04),0_8px_22px_-8px_rgba(13,20,33,0.12)]',
       'text-sm leading-none text-text-primary',
       // Entrance: hidden + nudged down until data-state="open" (set next frame).
       'opacity-0 translate-y-[-2px] transition-[opacity,transform] duration-100 ease-out',
@@ -261,13 +261,13 @@ export class LinkHoverCard {
     // [data-blok-top-layer] where this promoted card lives.
     wrapper.style.borderWidth = '1px';
     wrapper.style.borderStyle = 'solid';
-    wrapper.style.borderColor = 'color-mix(in srgb, var(--color-gray-text) 50%, transparent)';
+    wrapper.style.borderColor = 'color-mix(in srgb, var(--color-gray-text) 30%, transparent)';
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
 
     const globe = document.createElement('span');
 
-    globe.className = 'shrink-0 flex items-center mr-2.5 text-gray-text [&>svg]:size-[18px]';
+    globe.className = 'shrink-0 flex items-center mr-2 text-gray-text [&>svg]:size-4';
     globe.innerHTML = IconGlobe;
 
     const url = document.createElement('button');
@@ -275,21 +275,16 @@ export class LinkHoverCard {
     url.type = 'button';
     url.className = twJoin(
       'appearance-none border-0 bg-transparent m-0 p-0 font-[inherit] cursor-pointer',
-      'min-w-0 max-w-[320px] truncate text-left font-medium text-text-primary',
+      'min-w-0 max-w-[280px] truncate text-left font-medium text-text-primary',
       'underline-offset-2 can-hover:hover:underline'
     );
     url.setAttribute('data-blok-testid', 'link-hover-card-url');
     url.addEventListener('click', this.handleOpen);
 
-    const divider = document.createElement('span');
-
-    divider.className = 'shrink-0 w-px h-5 bg-popover-border mx-2.5';
-    divider.setAttribute('aria-hidden', 'true');
-
     const copyButton = document.createElement('button');
 
     copyButton.type = 'button';
-    copyButton.className = twJoin(ACTION_BUTTON_BASE, 'w-8 [&>svg]:size-[18px]');
+    copyButton.className = twJoin(ACTION_BUTTON_BASE, 'ml-2 w-7 [&>svg]:size-4');
     copyButton.setAttribute('aria-label', this.labels.copy);
     copyButton.setAttribute('data-blok-testid', 'link-hover-card-copy');
     copyButton.innerHTML = IconCopy;
@@ -298,12 +293,12 @@ export class LinkHoverCard {
     const editButton = document.createElement('button');
 
     editButton.type = 'button';
-    editButton.className = twJoin(ACTION_BUTTON_BASE, 'px-2.5 font-medium text-text-primary');
+    editButton.className = twJoin(ACTION_BUTTON_BASE, 'px-2 font-medium text-text-primary');
     editButton.setAttribute('data-blok-testid', 'link-hover-card-edit');
     editButton.textContent = this.labels.edit;
     editButton.addEventListener('click', this.handleEdit);
 
-    wrapper.append(globe, url, divider, copyButton, editButton);
+    wrapper.append(globe, url, copyButton, editButton);
 
     // Hoverable card: keep it open while the pointer is over it.
     wrapper.addEventListener('mouseenter', () => this.cancelHide());

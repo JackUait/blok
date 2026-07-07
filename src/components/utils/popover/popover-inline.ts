@@ -43,7 +43,7 @@ export class PopoverInline extends PopoverDesktop {
    * {@link PopoverAbstract.hide} via the `onHide` template-method hook. The
    * inline toolbar previously re-implemented `hide()` as an arrow field and
    * forgot base steps (it never removed `data-blok-popover-opened`, so
-   * `isShown` stayed true, and it skipped haze/desktop-state resets). Extending
+   * `isShown` stayed true, and it skipped reel/desktop-state resets). Extending
    * the base hide path through this hook keeps that base cleanup while still
    * restoring the inline styles.
    */

@@ -21,6 +21,7 @@ import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
+import { REEL_DISTORTION } from '../../../src/components/utils/popover/popover.const';
 
 /**
  * Test implementation of PopoverAbstract for unit testing
@@ -808,154 +809,133 @@ describe('PopoverAbstract', () => {
     });
   });
 
-  describe('scroll hazes', () => {
-    it('creates scroll haze elements inside popoverContainer', () => {
+  describe('scroll reel distortion', () => {
+    /**
+     * Mocks the scroll metrics of the items container
+     * @param items - the popover items container
+     * @param metrics - scrollHeight / clientHeight / scrollTop to report
+     */
+    const setContainerMetrics = (
+      items: HTMLElement,
+      metrics: { scrollHeight?: number; clientHeight?: number; scrollTop?: number } = {}
+    ): void => {
+      Object.defineProperty(items, 'scrollHeight', { value: metrics.scrollHeight ?? 500, configurable: true });
+      Object.defineProperty(items, 'clientHeight', { value: metrics.clientHeight ?? 200, configurable: true });
+      Object.defineProperty(items, 'scrollTop', { value: metrics.scrollTop ?? 0, configurable: true, writable: true });
+    };
+
+    /**
+     * Mocks layout metrics of a single popover item element
+     * @param el - the item element
+     * @param top - offsetTop within the items container
+     * @param height - offsetHeight of the item
+     */
+    const setItemMetrics = (el: HTMLElement, top: number, height: number): void => {
+      Object.defineProperty(el, 'offsetTop', { value: top, configurable: true });
+      Object.defineProperty(el, 'offsetHeight', { value: height, configurable: true });
+    };
+
+    /**
+     * Expected transform string for a given clipped fraction
+     * @param overhang - fraction of the item clipped past the viewport edge (0..1)
+     */
+    const expectedTransform = (overhang: number): string => {
+      const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
+      const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
+
+      return `scaleX(${scaleX}) scaleY(${scaleY})`;
+    };
+
+    it('does not render gradient haze overlays anymore', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
 
-      expect(nodes.scrollHazeTop).toBeInstanceOf(HTMLElement);
-      expect(nodes.scrollHazeBottom).toBeInstanceOf(HTMLElement);
-      expect(nodes.popoverContainer.contains(nodes.scrollHazeTop)).toBe(true);
-      expect(nodes.popoverContainer.contains(nodes.scrollHazeBottom)).toBe(true);
+      const overlays = Array.from(nodes.popoverContainer.children)
+        .filter((el): el is HTMLElement => el instanceof HTMLElement)
+        .filter(el => el.style.background.includes('linear-gradient'));
+
+      expect(overlays).toHaveLength(0);
     });
 
-    it('hazes have pointer-events: none so they do not intercept clicks', () => {
+    it('leaves items fully inside the viewport undistorted', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
-      expect(nodes.scrollHazeTop.classList.contains('pointer-events-none')).toBe(true);
-      expect(nodes.scrollHazeBottom.classList.contains('pointer-events-none')).toBe(true);
-    });
-
-    it('both hazes are hidden when items do not overflow', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      setItemMetrics(first, 150, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(first.style.transform).toBe('');
+      expect(first.style.opacity).toBe('');
     });
 
-    it('shows bottom haze when items overflow and scroll is at top', () => {
+    it('squashes an item clipped by the top edge toward its bottom edge', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      // Item spans 80..120 while viewport starts at 100 → half clipped above
+      setItemMetrics(first, 80, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+      expect(first.style.transform).toBe(expectedTransform(0.5));
+      expect(first.style.transformOrigin).toBe('center bottom');
+      expect(Number(first.style.opacity)).toBeCloseTo(1 - REEL_DISTORTION.maxDim * 0.5, 3);
     });
 
-    it('shows top haze when scrolled to bottom', () => {
+    it('squashes an item clipped by the bottom edge toward its top edge', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const second = nodes.items.children[1] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 300, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 0 });
+      // Viewport ends at 200; item spans 180..220 → half clipped below
+      setItemMetrics(second, 180, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(second.style.transform).toBe(expectedTransform(0.5));
+      expect(second.style.transformOrigin).toBe('center top');
     });
 
-    it('shows both hazes when scrolled to middle', () => {
+    it('distorts more the deeper an item slides past the edge', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
+      const second = nodes.items.children[1] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 100, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      // First is 75% clipped above, second only 25%
+      setItemMetrics(first, 70, 40);
+      setItemMetrics(second, 90, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+      expect(first.style.transform).toBe(expectedTransform(0.75));
+      expect(second.style.transform).toBe(expectedTransform(0.25));
     });
 
-    it('updates hazes on scroll event', () => {
+    it('applies no distortion when items do not overflow', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-
-      let scrollTopValue = 0;
-
-      Object.defineProperty(nodes.items, 'scrollTop', {
-        get: () => scrollTopValue,
-        configurable: true,
-      });
+      setContainerMetrics(nodes.items, { scrollHeight: 200, clientHeight: 200, scrollTop: 0 });
+      setItemMetrics(first, -20, 40);
 
       popover.show();
 
-      // Initially at top — only bottom haze visible
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
-
-      // Scroll to middle — both hazes visible
-      scrollTopValue = 100;
-      nodes.items.dispatchEvent(new Event('scroll'));
-
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
-
-      // Scroll to bottom — only top haze visible
-      scrollTopValue = 300;
-      nodes.items.dispatchEvent(new Event('scroll'));
-
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(first.style.transform).toBe('');
     });
 
-    it('displays hazes instantly without CSS transition on show()', () => {
+    it('updates the distortion on scroll events', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
-
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
-
-      popover.show();
-
-      // Bottom haze is visible immediately
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
-      // Transition is disabled for instant appearance
-      expect(nodes.scrollHazeBottom.style.transition).toBe('none');
-    });
-
-    it('restores CSS transition after show() so scroll-triggered changes animate', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
-
-      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-        cb(0);
-
-        return 0;
-      });
-
-      popover.show();
-
-      // After rAF fires, transition is restored (empty = CSS class transition applies)
-      expect(nodes.scrollHazeTop.style.transition).toBe('');
-      expect(nodes.scrollHazeBottom.style.transition).toBe('');
-
-      rafSpy.mockRestore();
-    });
-
-    it('uses CSS transition for scroll-triggered haze visibility changes', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
       Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
       Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
@@ -967,44 +947,43 @@ describe('PopoverAbstract', () => {
         configurable: true,
       });
 
-      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-        cb(0);
-
-        return 0;
-      });
+      setItemMetrics(first, 0, 40);
 
       popover.show();
 
-      // Scroll to middle — top haze appears via scroll event
-      scrollTopValue = 100;
+      // At the top the first item is fully visible
+      expect(first.style.transform).toBe('');
+
+      // Scrolling 20px clips half of the first item above the edge
+      scrollTopValue = 20;
       nodes.items.dispatchEvent(new Event('scroll'));
 
-      // Transition should NOT be 'none' — CSS class transition applies for animated scroll haze
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeTop.style.transition).not.toBe('none');
+      expect(first.style.transform).toBe(expectedTransform(0.5));
+      expect(first.style.transformOrigin).toBe('center bottom');
 
-      rafSpy.mockRestore();
+      // Scrolling back restores the item
+      scrollTopValue = 0;
+      nodes.items.dispatchEvent(new Event('scroll'));
+
+      expect(first.style.transform).toBe('');
     });
 
-    it('resets hazes on hide', () => {
+    it('clears the distortion on hide', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 100, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      setItemMetrics(first, 80, 40);
 
       popover.show();
 
-      // Both hazes visible in middle scroll position
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+      expect(first.style.transform).not.toBe('');
 
       popover.hide();
 
-      // Hazes reset after hide
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(first.style.transform).toBe('');
+      expect(first.style.opacity).toBe('');
     });
   });
 

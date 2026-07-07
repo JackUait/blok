@@ -1655,7 +1655,7 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     this.toggleNothingFoundMessage(isNothingFound);
-    this.updateScrollHazes();
+    this.updateScrollReel();
 
     // Recalculate position since popover height may have changed (trigger-based popovers only;
     // non-trigger popovers use CSS variable positioning that doesn't need pixel recalculation)

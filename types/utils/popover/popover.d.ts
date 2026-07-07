@@ -243,12 +243,6 @@ export interface PopoverNodes {
 
   /** Popover items wrapper */
   items: HTMLElement;
-
-  /** Top scroll haze gradient overlay */
-  scrollHazeTop: HTMLElement;
-
-  /** Bottom scroll haze gradient overlay */
-  scrollHazeBottom: HTMLElement;
 }
 
 /**

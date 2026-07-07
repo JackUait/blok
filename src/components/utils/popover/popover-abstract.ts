@@ -9,7 +9,7 @@ import type { PopoverItem, PopoverItemRenderParamsMap , PopoverItemParams } from
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchInput } from './components/search-input';
 import { PopoverRegistry } from './popover-registry';
-import { css } from './popover.const';
+import { css, REEL_DISTORTION } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -91,9 +91,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
     }
 
-    // Set up scroll listener on items container for scroll hazes
+    // Set up scroll listener on items container for the edge reel distortion
     if (this.nodes.items) {
-      this.listeners.on(this.nodes.items, 'scroll', () => this.updateScrollHazes());
+      this.listeners.on(this.nodes.items, 'scroll', () => this.updateScrollReel());
     }
   }
 
@@ -165,15 +165,9 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     /**
-     * Show hazes instantly on open (no transition), then restore transition for scroll-triggered changes
+     * Apply the edge reel distortion for the initial scroll position
      */
-    this.nodes.scrollHazeTop.style.transition = 'none';
-    this.nodes.scrollHazeBottom.style.transition = 'none';
-    this.updateScrollHazes();
-    requestAnimationFrame(() => {
-      this.nodes.scrollHazeTop.style.transition = '';
-      this.nodes.scrollHazeBottom.style.transition = '';
-    });
+    this.updateScrollReel();
 
     const { trigger } = this.params;
     const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;
@@ -217,8 +211,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     this.itemsDefault.forEach(item => item.reset());
 
-    this.nodes.scrollHazeTop.style.opacity = '0';
-    this.nodes.scrollHazeBottom.style.opacity = '0';
+    this.resetScrollReel();
 
     if (this.search !== undefined) {
       this.search.clear();
@@ -235,7 +228,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Subclass hook invoked by {@link hide} after the base close sequence and
    * before the registry unregister + Closed emit. Base implementation is a
    * no-op. Subclasses override this instead of re-implementing hide(), so the
-   * base cleanup (removing the opened attribute, resetting hazes, clearing
+   * base cleanup (removing the opened attribute, resetting the reel, clearing
    * search) is never forgotten (template-method pattern).
    */
   protected onHide(): void {
@@ -644,21 +637,70 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
-   * Updates scroll haze visibility based on the items container scroll state.
-   * Shows top haze when scrolled down, bottom haze when more content below.
+   * Applies a reel-like distortion to items near the scroll viewport edges:
+   * the clipped part of an item squashes it toward its in-view edge (like a
+   * picker wheel rolling over a cylinder) instead of hiding behind a gradient
+   * haze. Fully visible items are left untouched.
    */
-  protected updateScrollHazes(): void {
-    const { items, scrollHazeTop, scrollHazeBottom } = this.nodes;
+  protected updateScrollReel(): void {
+    const { items } = this.nodes;
 
     const hasOverflow = items.scrollHeight > items.clientHeight;
-    const isAtTop = items.scrollTop <= 0;
-    const isAtBottom = items.scrollTop + items.clientHeight >= items.scrollHeight - 1;
+    const viewTop = items.scrollTop;
+    const viewBottom = viewTop + items.clientHeight;
 
-    scrollHazeTop.style.opacity = hasOverflow && !isAtTop ? '1' : '0';
-    scrollHazeBottom.style.opacity = hasOverflow && !isAtBottom ? '1' : '0';
+    for (const child of Array.from(items.children)) {
+      if (!(child instanceof HTMLElement)) {
+        continue;
+      }
 
-    scrollHazeTop.style.top = `${items.offsetTop}px`;
-    scrollHazeBottom.style.top = `${items.offsetTop + items.clientHeight - scrollHazeBottom.offsetHeight}px`;
+      const height = child.offsetHeight;
+
+      if (!hasOverflow || height === 0) {
+        this.clearReelDistortion(child);
+        continue;
+      }
+
+      const top = child.offsetTop;
+      const clippedByTop = Math.min(Math.max((viewTop - top) / height, 0), 1);
+      const clippedByBottom = Math.min(Math.max((top + height - viewBottom) / height, 0), 1);
+      const overhang = Math.max(clippedByTop, clippedByBottom);
+
+      if (overhang === 0) {
+        this.clearReelDistortion(child);
+        continue;
+      }
+
+      const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
+      const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
+
+      child.style.transform = `scaleX(${scaleX}) scaleY(${scaleY})`;
+      // Anchor the squash to the edge still in view so the item appears to
+      // curl over the viewport edge rather than shrink in place
+      child.style.transformOrigin = clippedByTop >= clippedByBottom ? 'center bottom' : 'center top';
+      child.style.opacity = (1 - REEL_DISTORTION.maxDim * overhang).toFixed(3);
+    }
+  }
+
+  /**
+   * Removes the reel distortion from every item (used on hide)
+   */
+  private resetScrollReel(): void {
+    for (const child of Array.from(this.nodes.items.children)) {
+      if (child instanceof HTMLElement) {
+        this.clearReelDistortion(child);
+      }
+    }
+  }
+
+  /**
+   * Removes the reel distortion styles from a single item element
+   * @param el - item element to restore
+   */
+  private clearReelDistortion(el: HTMLElement): void {
+    el.style.removeProperty('transform');
+    el.style.removeProperty('transform-origin');
+    el.style.removeProperty('opacity');
   }
 
   /**
@@ -758,19 +800,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     resultsAnnouncer.style.whiteSpace = 'nowrap';
     resultsAnnouncer.style.border = '0';
 
-    // Create scroll haze overlays
-    const scrollHazeTop = document.createElement('div');
-
-    scrollHazeTop.className = css.scrollHaze;
-    scrollHazeTop.style.background = 'linear-gradient(to bottom, var(--blok-popover-bg), transparent)';
-    scrollHazeTop.style.opacity = '0';
-
-    const scrollHazeBottom = document.createElement('div');
-
-    scrollHazeBottom.className = css.scrollHaze;
-    scrollHazeBottom.style.background = 'linear-gradient(to top, var(--blok-popover-bg), transparent)';
-    scrollHazeBottom.style.opacity = '0';
-
     const contextLabel = this.params.contextLabel !== undefined
       ? (() => {
         const el = document.createElement('div');
@@ -791,8 +820,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
     popoverContainer.appendChild(items);
     popoverContainer.appendChild(resultsAnnouncer);
-    popoverContainer.appendChild(scrollHazeTop);
-    popoverContainer.appendChild(scrollHazeBottom);
     popover.appendChild(popoverContainer);
 
     return {
@@ -802,8 +829,6 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       resultsAnnouncer,
       contextLabel,
       items,
-      scrollHazeTop,
-      scrollHazeBottom,
     };
   }
 

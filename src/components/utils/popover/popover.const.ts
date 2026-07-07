@@ -17,9 +17,25 @@ export const css = {
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
 
-  items: 'flex-1 min-h-0 overflow-y-auto overscroll-contain pb-1.5',
+  // `relative` makes the container the offsetParent of its items so the reel
+  // distortion can read item offsetTop values in container coordinates
+  items: 'relative flex-1 min-h-0 overflow-y-auto overscroll-contain pb-1.5',
+};
 
-  scrollHaze: 'absolute inset-x-0 h-6 pointer-events-none z-1 transition-opacity duration-300 ease-in-out',
+/**
+ * Reel-like edge distortion applied to popover items as they scroll past the
+ * viewport edges (instead of a gradient haze). Values are the maximum effect
+ * reached when an item is fully clipped past an edge.
+ */
+export const REEL_DISTORTION = {
+  /** Maximum vertical squash (scaleY shrinks to 1 - maxSquashY) */
+  maxSquashY: 0.6,
+
+  /** Maximum horizontal pinch (scaleX shrinks to 1 - maxSquashX) */
+  maxSquashX: 0.15,
+
+  /** Maximum opacity dim (opacity falls to 1 - maxDim) */
+  maxDim: 0.5,
 };
 
 /**

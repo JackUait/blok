@@ -31,11 +31,23 @@
 }
 
 /**
- * Custom scrollbar for popover items
+ * Custom scrollbar for popover items.
+ *
+ * `scrollbar-gutter: stable` + a styled ::-webkit-scrollbar keep the
+ * scrollbar "classic" (it takes layout space) so it never paints over the
+ * items, even when the OS uses overlay scrollbars. The standard
+ * scrollbar-width/scrollbar-color properties must stay Firefox-only: when
+ * they are set, Chromium ignores ::-webkit-scrollbar styling and falls back
+ * to the overlay scrollbar.
  */
 [data-blok-popover-items] {
-  scrollbar-width: thin;
-  scrollbar-color: var(--blok-popover-border) transparent;
+  scrollbar-gutter: stable;
+}
+@supports not selector(::-webkit-scrollbar) {
+  [data-blok-popover-items] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--blok-popover-border) transparent;
+  }
 }
 [data-blok-popover-items]::-webkit-scrollbar {
   width: 4px;

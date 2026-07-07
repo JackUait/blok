@@ -6,7 +6,8 @@ import type { BlockToolAdapter } from '../tools/block';
 import { capitalize, isMobileScreen } from '../utils';
 import { getCaretOffset } from '../utils/caret/selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
-import { translateToolTitle, translateToolName, type I18nInstance } from '../utils/tools';
+import { buildConvertMenuEntries, type ConvertMenuI18n } from '../utils/convert-menu';
+import { translateToolTitle, translateToolName } from '../utils/tools';
 
 /**
  * Inline tools for converting blocks
@@ -40,7 +41,7 @@ export class ConvertInlineTool implements InlineTool {
   /**
    * I18n instance wrapper for tool utilities
    */
-  private readonly i18nInstance: I18nInstance;
+  private readonly i18nInstance: ConvertMenuI18n;
 
   /**
    * API for working with Caret
@@ -57,11 +58,12 @@ export class ConvertInlineTool implements InlineTool {
     this.toolsAPI = api.tools;
     this.caretAPI = api.caret;
 
-    // Create wrapper that provides has() method for tool utilities
-    // Public API's t() returns the key itself when translation doesn't exist
+    // Create wrapper that provides has()/getEnglishTranslation() for tool utilities.
+    // Public API's t() returns the key itself when translation doesn't exist.
     this.i18nInstance = {
       t: (key, _vars) => this.i18nAPI.t(key),
       has: (key) => this.i18nAPI.t(key) !== key,
+      getEnglishTranslation: (key) => this.i18nAPI.getEnglishTranslation(key),
     };
   }
 
@@ -96,27 +98,18 @@ export class ConvertInlineTool implements InlineTool {
       return [];
     }
 
-    const convertToItems = convertibleTools.reduce<MenuConfigItem[]>((result, tool) => {
-      tool.toolbox?.forEach((toolboxItem) => {
-        if (toolboxItem.title === undefined) {
-          return;
-        }
+    const convertToItems = buildConvertMenuEntries(convertibleTools, this.i18nInstance)
+      .map<MenuConfigItem>((entry) => ({
+        icon: entry.icon,
+        title: entry.title,
+        name: entry.name,
+        closeOnActivate: true,
+        onActivate: async () => {
+          const newBlock = await this.blocksAPI.convert(currentBlock.id, entry.toolName, entry.data);
 
-        result.push({
-          icon: toolboxItem.icon,
-          title: translateToolTitle(this.i18nInstance, toolboxItem, tool.name),
-          name: toolboxItem.name ?? tool.name,
-          closeOnActivate: true,
-          onActivate: async () => {
-            const newBlock = await this.blocksAPI.convert(currentBlock.id, tool.name, toolboxItem.data);
-
-            this.caretAPI.setToBlock(newBlock, 'default', caretOffset);
-          },
-        });
-      });
-
-      return result;
-    }, []);
+          this.caretAPI.setToBlock(newBlock, 'default', caretOffset);
+        },
+      }));
 
     const currentBlockToolboxItem = await currentBlock.getActiveToolboxEntry();
     const currentBlockTitle = currentBlockToolboxItem

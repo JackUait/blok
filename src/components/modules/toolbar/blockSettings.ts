@@ -14,6 +14,7 @@ import { isMobileScreen, keyCodes } from '../../utils';
 import { beautifyShortcut } from '../../utils/string';
 import { getCaretOffset } from '../../utils/caret/selection';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
+import { buildConvertMenuEntries } from '../../utils/convert-menu';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
@@ -466,60 +467,50 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         )
       : await getConvertibleToolsForBlock(new BlockAPI(currentBlock), allBlockTools);
 
-    const convertToItems = convertibleTools.reduce<PopoverItemParams[]>((result, tool) => {
-      if (tool.toolbox === undefined) {
-        return result;
-      }
+    const convertToItems = buildConvertMenuEntries(convertibleTools, this.Blok.I18n)
+      .map<PopoverItemParams>((entry) => ({
+        icon: entry.icon,
+        title: entry.title,
+        name: entry.name,
+        englishTitle: entry.englishTitle,
+        searchTerms: entry.searchTerms,
+        closeOnActivate: true,
+        onActivate: async () => {
+          const { Caret, Toolbar } = this.Blok;
 
-      tool.toolbox.forEach((toolboxItem) => {
-        // Resolve English title for multilingual search
-        const titleKey = toolboxItem.titleKey;
-        const resolvedTitleKey = titleKey?.includes('.') ? titleKey : `toolNames.${titleKey}`;
-        const englishTitleKey = titleKey ? resolvedTitleKey : undefined;
-        const englishTitle = englishTitleKey
-          ? this.Blok.I18n.getEnglishTranslation(englishTitleKey)
-          : toolboxItem.title;
+          // The builder returns a tool NAME; convertBlock needs the adapter.
+          const tool = convertibleTools.find((candidate) => candidate.name === entry.toolName);
 
-        result.push({
-          icon: toolboxItem.icon,
-          title: translateToolTitle(this.Blok.I18n, toolboxItem, tool.name),
-          name: toolboxItem.name ?? tool.name,
-          englishTitle,
-          searchTerms: toolboxItem.searchTerms,
-          closeOnActivate: true,
-          onActivate: async () => {
-            const { Caret, Toolbar } = this.Blok;
+          if (tool === undefined) {
+            return;
+          }
 
-            // Convert immediately — no blocking confirm() prompt. A child-bearing
-            // block's children are outdented to its original parent (see
-            // BlockOperations.replace), matching Notion's instant "Turn into".
-            const newBlock = await this.convertBlock(
-              currentBlock,
-              selectedBlocks,
-              hasMultipleBlocksSelected,
-              tool,
-              toolboxItem.data
-            );
+          // Convert immediately — no blocking confirm() prompt. A child-bearing
+          // block's children are outdented to its original parent (see
+          // BlockOperations.replace), matching Notion's instant "Turn into".
+          const newBlock = await this.convertBlock(
+            currentBlock,
+            selectedBlocks,
+            hasMultipleBlocksSelected,
+            tool,
+            entry.data
+          );
 
-            Toolbar.close();
+          Toolbar.close();
 
-            if (newBlock) {
-              /**
-               * Multi-block conversions have no single caret to preserve, so
-               * land at the end; a single-block turn-into keeps its prior offset.
-               */
-              if (hasMultipleBlocksSelected) {
-                Caret.setToBlock(newBlock, Caret.positions.END);
-              } else {
-                Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
-              }
+          if (newBlock) {
+            /**
+             * Multi-block conversions have no single caret to preserve, so
+             * land at the end; a single-block turn-into keeps its prior offset.
+             */
+            if (hasMultipleBlocksSelected) {
+              Caret.setToBlock(newBlock, Caret.positions.END);
+            } else {
+              Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
             }
-          },
-        });
-      });
-
-      return result;
-    }, []);
+          }
+        },
+      }));
 
     /**
      * For a multi-block selection, "Turn into columns" belongs in the same

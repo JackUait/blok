@@ -92,3 +92,70 @@ test('inline "Turn into" on a paragraph offers the full text family', async ({ p
     expect(names).toContain(expected);
   }
 });
+
+/**
+ * Open the block-settings (☰) "Turn into" submenu for the current block and
+ * return the set of data-blok-item-name values in the opened popover.
+ *
+ * Test id verified against src/components/constants/test-ids.ts
+ * (`settingsToggler: 'settings-toggler'`) — the brief's guessed
+ * 'block-settings-toggler' does not exist. The "Turn into" entry name
+ * ('convert-to') was verified against blockSettings.ts, which pushes
+ * `{ name: 'convert-to', ... }` for the submenu toggle item.
+ * @param page - Playwright page
+ */
+const openSettingsConvertItemNames = async (page: Page): Promise<string[]> => {
+  // Selectors verified against test/playwright/tests/ui/block-settings-active-state.spec.ts,
+  // which exercises the same block-tunes convert-to submenu:
+  //   - settings toggler test id is 'settings-toggler' (the brief's guessed
+  //     'block-settings-toggler' does not exist).
+  //   - the block-tunes popover is scoped by 'block-tunes-popover'.
+  //   - the "Turn into" entry is name="convert-to" (built in blockSettings.ts).
+  //   - the nested submenu opens on HOVER, not click, and lives under
+  //     [data-blok-nested="true"].
+  // Click the block wrapper (mirrors the proven openBlockSettings helper in
+  // ui/block-settings-active-state.spec.ts) to surface the gutter toggler in a
+  // stable, clickable position.
+  const blockWrapper = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`).first();
+  await blockWrapper.click();
+
+  const settingsButton = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`);
+  await expect(settingsButton).toBeVisible();
+  await settingsButton.click();
+
+  const settings = page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]');
+  await expect(settings).toBeVisible();
+
+  await settings.locator('[data-blok-testid="popover-item"][data-blok-item-name="convert-to"]').hover();
+
+  // Scope to the nested popover, same as the inline dropdown helper above —
+  // the outer block-settings popover's own items (duplicate, delete, ...)
+  // also carry data-blok-item-name and would otherwise pollute the result.
+  const nestedPopover = page.locator('[data-blok-nested="true"] [data-blok-testid="popover-container"]');
+  await expect(nestedPopover).toBeVisible();
+
+  const items = nestedPopover.locator('[data-blok-testid="popover-item"][data-blok-item-name]');
+  await expect(items.first()).toBeVisible();
+
+  return items.evaluateAll((els) =>
+    els.map((el) => el.getAttribute('data-blok-item-name') ?? '').filter(Boolean)
+  );
+};
+
+test('inline and block-settings "Turn into" offer identical options', async ({ page }) => {
+  await createBlokWithBlocks(page, [
+    { type: 'paragraph', data: { text: 'convert me' } },
+  ]);
+
+  await page.locator(PARAGRAPH_SELECTOR).click();
+  await selectAllInEditable(page.locator(PARAGRAPH_SELECTOR));
+  const inlineNames = (await openConvertMenuItemNames(page)).sort();
+
+  // Dismiss the inline toolbar before opening block settings.
+  await page.keyboard.press('Escape');
+  await page.locator(PARAGRAPH_SELECTOR).click();
+
+  const settingsNames = (await openSettingsConvertItemNames(page)).sort();
+
+  expect(inlineNames).toEqual(settingsNames);
+});

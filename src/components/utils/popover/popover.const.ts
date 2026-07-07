@@ -29,19 +29,19 @@ export const css = {
  */
 export const REEL_DISTORTION = {
   /** Maximum vertical squash (scaleY shrinks to 1 - maxSquashY) */
-  maxSquashY: 0.8,
+  maxSquashY: 0.4,
 
   /** Maximum horizontal pinch (scaleX shrinks to 1 - maxSquashX) */
-  maxSquashX: 0.3,
+  maxSquashX: 0.1,
 
   /** Maximum opacity dim (opacity falls to 1 - maxDim) */
-  maxDim: 0.65,
+  maxDim: 0.5,
 
   /** Maximum rotateX tilt in degrees — curls the item over the reel edge */
-  maxTiltDeg: 65,
+  maxTiltDeg: 25,
 
   /** Perspective depth in px applied per item for the rotateX tilt */
-  perspective: 400,
+  perspective: 800,
 };
 
 /**

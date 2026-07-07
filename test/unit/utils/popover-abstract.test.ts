@@ -848,6 +848,16 @@ describe('PopoverAbstract', () => {
       return `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
     };
 
+    it('keeps the distortion strengths within realistic reel bounds', () => {
+      // A real picker reel bends items subtly — extreme values read as a glitch.
+      expect(REEL_DISTORTION.maxTiltDeg).toBeLessThanOrEqual(30);
+      expect(REEL_DISTORTION.maxSquashY).toBeLessThanOrEqual(0.5);
+      expect(REEL_DISTORTION.maxSquashX).toBeLessThanOrEqual(0.15);
+      expect(REEL_DISTORTION.maxDim).toBeLessThanOrEqual(0.55);
+      // Shallow perspective exaggerates the tilt; keep the camera far enough away
+      expect(REEL_DISTORTION.perspective).toBeGreaterThanOrEqual(600);
+    });
+
     it('does not render gradient haze overlays anymore', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();

@@ -245,7 +245,7 @@ export class LinkHoverCard {
     wrapper.className = twJoin(
       'fixed z-overlay top-0 left-0',
       'flex items-center h-11 pl-4 pr-2',
-      'bg-popover-bg rounded-xl border border-gray-text/50',
+      'bg-popover-bg rounded-xl',
       'shadow-[0_1px_2px_rgba(13,20,33,0.05),0_10px_28px_-8px_rgba(13,20,33,0.14)]',
       'text-sm leading-none text-text-primary',
       // Entrance: hidden + nudged down until data-state="open" (set next frame).
@@ -253,6 +253,15 @@ export class LinkHoverCard {
       'data-[state=open]:opacity-100 data-[state=open]:translate-y-0',
       'mobile:hidden'
     );
+    // Border is applied inline, not via a `border` utility: Blok's stylesheet is
+    // prepended to <head> (lowest priority), so a host page's own CSS reset
+    // (e.g. Tailwind preflight zeroing border-width) would otherwise win and the
+    // border would vanish. Inline styles beat host author stylesheets. The color
+    // stays theme-aware by resolving the token, which is re-declared on
+    // [data-blok-top-layer] where this promoted card lives.
+    wrapper.style.borderWidth = '1px';
+    wrapper.style.borderStyle = 'solid';
+    wrapper.style.borderColor = 'color-mix(in srgb, var(--color-gray-text) 50%, transparent)';
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
 

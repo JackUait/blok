@@ -51,17 +51,23 @@ describe('TOGGLE_WRAPPER_STYLES (arrow sits on first line)', () => {
   });
 });
 
-describe('ARROW_STYLES (first-line vertical alignment)', () => {
-  it('sizes the arrow box to one line height so its icon centers on the first line', () => {
-    expect(ARROW_STYLES).toContain('h-[1.5em]');
+describe('ARROW_STYLES (fixed-size pill, first-line aligned)', () => {
+  it('uses a fixed 28px square (h-7 w-7) so the container height never changes', () => {
+    expect(ARROW_STYLES).toContain('h-7');
+    expect(ARROW_STYLES).toContain('w-7');
   });
 
-  it('does NOT apply uniform p-[8px] (vertical padding would make the box taller than one line)', () => {
+  it('does NOT size the box with em units (would scale the pill with font-size)', () => {
+    expect(ARROW_STYLES).not.toContain('h-[1.5em]');
+    expect(ARROW_STYLES).not.toContain('h-[1.3em]');
+  });
+
+  it('does NOT apply uniform p-[8px] (vertical padding is replaced by the fixed square)', () => {
     expect(ARROW_STYLES).not.toContain('p-[8px]');
   });
 
-  it('keeps horizontal padding so the arrow width still aligns children indent (pl-7)', () => {
-    expect(ARROW_STYLES).toContain('px-[8px]');
+  it('offsets the fixed pill so its center lands on the first line (leading-1.5)', () => {
+    expect(ARROW_STYLES).toContain('mt-[calc(0.75em_-_14px)]');
   });
 });
 

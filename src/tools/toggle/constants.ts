@@ -50,14 +50,17 @@ export const TOGGLE_WRAPPER_STYLES = 'flex items-start';
 /**
  * Styles for the toggle arrow button
  *
- * h-[1.5em] makes the arrow box exactly one content line tall (content uses
- * leading-[1.5], and both share the block font-size), so the internally-centered
- * icon lands on the first line's vertical center. Padding is horizontal-only
- * (px-[8px]) — vertical padding would make the box taller than one line and pull
- * the icon below the first line. Total width stays 28px (8 + 12 icon + 8) to keep
- * children (pl-7) aligned under the title text.
+ * The pill is a FIXED 28px square (h-7 w-7) so its height never changes with the
+ * block's font-size — it looks identical for a paragraph toggle and every heading
+ * level. To keep it on the FIRST line of a wrapping title, its center is offset
+ * onto that line rather than sized to it: with the row using items-start the pill
+ * top starts at the content top, and mt-[calc(0.75em-14px)] shifts it up by
+ * (half a line − half the pill) so the pill's center coincides with the first
+ * line's center (0.75em = half of leading-[1.5]; 14px = half of h-7). em resolves
+ * against the shared block font-size, so this stays correct if the font changes.
+ * The 28px width keeps children (pl-7) aligned under the title text.
  */
-export const ARROW_STYLES = 'flex-shrink-0 px-[8px] h-[1.5em] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text';
+export const ARROW_STYLES = 'flex-shrink-0 w-7 h-7 mt-[calc(0.75em_-_14px)] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text';
 
 /**
  * SVG icon for the toggle arrow

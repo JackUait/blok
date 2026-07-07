@@ -952,14 +952,16 @@ export class Header implements BlockTool {
    * completely outside the heading's contenteditable scope, allowing Chrome to
    * place a cursor and insert text without interference.
    *
-   * The arrow is anchored to the FIRST line of the heading (top-[7px] matches the
-   * heading's py-[7px] top padding) and sized to a single heading line
-   * (h-[1.3em], matching BASE_STYLES leading-[1.3]). Its `em` must resolve against
-   * the heading's font-size — which the arrow (a sibling of the heading, not a
-   * child) does not inherit — so we copy the level's text-size class onto it. This
-   * keeps the internally-centered icon on the first line at every heading level,
-   * even when the title wraps to multiple lines. Using top-1/2 + -translate-y-1/2
-   * would instead center the arrow across the whole (multi-line) heading.
+   * The pill keeps the shared fixed 28px square (h-7 w-7 from ARROW_STYLES) so its
+   * height is identical at every heading level. To sit on the FIRST line of a
+   * (possibly multi-line) heading its CENTER is anchored there, not its box sized
+   * to it: top-[calc(7px+0.65em)] = the heading's py-[7px] top padding plus half a
+   * line (leading-[1.3]), and -translate-y-1/2 pulls the fixed pill up so its own
+   * center lands on that point. The `em` must resolve against the heading font-size
+   * — which the arrow (a sibling of the heading, not a child) does not inherit — so
+   * we copy the level's text-size class onto it; this keeps alignment correct at
+   * every level. mt-0 drops the toggle-list vertical offset baked into ARROW_STYLES.
+   * Using top-1/2 would instead center the arrow across the whole (multi-line) heading.
    *
    * @returns The arrow element
    */
@@ -970,7 +972,7 @@ export class Header implements BlockTool {
     });
     const textSizeClass = this.currentLevel.styles.match(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/)?.[0] ?? '';
 
-    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[7px] h-[1.3em] py-0', textSizeClass);
+    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[calc(7px_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
 
     return arrow;
   }

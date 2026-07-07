@@ -813,14 +813,15 @@ describe('ToggleItem', () => {
       expect(headerRow?.classList.contains('items-center')).toBe(false);
     });
 
-    // Fix 1: Touch target — arrow uses px-[8px] (28px wide box) and a one-line-tall
-    // h-[1.5em] height so its centered icon sits on the first line.
-    it('arrow element has px-[8px]/h-[1.5em] and no mt-px offset', async () => {
+    // Fix 1: Touch target — arrow is a fixed 28px square (h-7 w-7) whose center is
+    // offset onto the first line, so the container height stays constant.
+    it('arrow element is a fixed h-7/w-7 square with no mt-px offset', async () => {
       const { buildArrow } = await import('../../../../src/tools/toggle/dom-builder');
       const arrow = buildArrow(true, null);
 
-      expect(arrow.className).toContain('px-[8px]');
-      expect(arrow.className).toContain('h-[1.5em]');
+      expect(arrow.className).toContain('h-7');
+      expect(arrow.className).toContain('w-7');
+      expect(arrow.className).not.toContain('h-[1.5em]');
       expect(arrow.className).not.toContain('p-[10px]');
       expect(arrow.className).not.toContain('mt-px');
       expect(arrow.className).not.toContain('w-6');

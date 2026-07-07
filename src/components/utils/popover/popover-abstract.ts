@@ -671,13 +671,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
         continue;
       }
 
+      const clippedAtTop = clippedByTop >= clippedByBottom;
+      // Positive rotateX tips the top of the item away from the viewer; the
+      // sign flips at the bottom edge so both edges curl backward over the reel
+      const tilt = (REEL_DISTORTION.maxTiltDeg * overhang * (clippedAtTop ? 1 : -1)).toFixed(2);
       const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
       const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
 
-      child.style.transform = `scaleX(${scaleX}) scaleY(${scaleY})`;
-      // Anchor the squash to the edge still in view so the item appears to
+      child.style.transform = `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
+      // Anchor the distortion to the edge still in view so the item appears to
       // curl over the viewport edge rather than shrink in place
-      child.style.transformOrigin = clippedByTop >= clippedByBottom ? 'center bottom' : 'center top';
+      child.style.transformOrigin = clippedAtTop ? 'center bottom' : 'center top';
       child.style.opacity = (1 - REEL_DISTORTION.maxDim * overhang).toFixed(3);
     }
   }

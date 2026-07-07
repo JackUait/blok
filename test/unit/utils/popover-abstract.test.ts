@@ -838,12 +838,14 @@ describe('PopoverAbstract', () => {
     /**
      * Expected transform string for a given clipped fraction
      * @param overhang - fraction of the item clipped past the viewport edge (0..1)
+     * @param edge - which viewport edge clips the item
      */
-    const expectedTransform = (overhang: number): string => {
+    const expectedTransform = (overhang: number, edge: 'top' | 'bottom'): string => {
+      const tilt = (REEL_DISTORTION.maxTiltDeg * overhang * (edge === 'top' ? 1 : -1)).toFixed(2);
       const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
       const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
 
-      return `scaleX(${scaleX}) scaleY(${scaleY})`;
+      return `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
     };
 
     it('does not render gradient haze overlays anymore', () => {
@@ -882,7 +884,7 @@ describe('PopoverAbstract', () => {
 
       popover.show();
 
-      expect(first.style.transform).toBe(expectedTransform(0.5));
+      expect(first.style.transform).toBe(expectedTransform(0.5, 'top'));
       expect(first.style.transformOrigin).toBe('center bottom');
       expect(Number(first.style.opacity)).toBeCloseTo(1 - REEL_DISTORTION.maxDim * 0.5, 3);
     });
@@ -898,7 +900,7 @@ describe('PopoverAbstract', () => {
 
       popover.show();
 
-      expect(second.style.transform).toBe(expectedTransform(0.5));
+      expect(second.style.transform).toBe(expectedTransform(0.5, 'bottom'));
       expect(second.style.transformOrigin).toBe('center top');
     });
 
@@ -915,8 +917,8 @@ describe('PopoverAbstract', () => {
 
       popover.show();
 
-      expect(first.style.transform).toBe(expectedTransform(0.75));
-      expect(second.style.transform).toBe(expectedTransform(0.25));
+      expect(first.style.transform).toBe(expectedTransform(0.75, 'top'));
+      expect(second.style.transform).toBe(expectedTransform(0.25, 'top'));
     });
 
     it('applies no distortion when items do not overflow', () => {
@@ -958,7 +960,7 @@ describe('PopoverAbstract', () => {
       scrollTopValue = 20;
       nodes.items.dispatchEvent(new Event('scroll'));
 
-      expect(first.style.transform).toBe(expectedTransform(0.5));
+      expect(first.style.transform).toBe(expectedTransform(0.5, 'top'));
       expect(first.style.transformOrigin).toBe('center bottom');
 
       // Scrolling back restores the item

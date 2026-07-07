@@ -39,12 +39,20 @@ describe('icon refinements', () => {
   });
 
   describe('IconQuote', () => {
-    it('should accent with a solid fill bar, not a heavier stroke', () => {
-      expect(IconQuote).not.toContain('stroke-width="2.5"');
+    it('should draw the bar as a hairline stroke, not a heavy solid fill', () => {
+      // the quote bar used to be a 2.25u-wide solid rect, which read ~2x heavier
+      // than the 1.25 hairline lines beside it; it is now a 1.25 stroke line
+      expect(parseSvg(IconQuote).querySelector('rect')).toBeNull();
 
-      const rect = parseSvg(IconQuote).querySelector('rect');
+      const strokes = Array.from(parseSvg(IconQuote).querySelectorAll('path')).filter(
+        (p) => p.getAttribute('stroke') === 'currentColor',
+      );
 
-      expect(rect?.getAttribute('fill')).toBe('currentColor');
+      expect(strokes.length).toBeGreaterThanOrEqual(4);
+
+      for (const p of strokes) {
+        expect(p.getAttribute('stroke-width')).toBe('1.25');
+      }
     });
   });
 

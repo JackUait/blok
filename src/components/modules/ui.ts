@@ -17,6 +17,7 @@ import { SelectionUtils as Selection } from '../selection/index';
 import { debounce, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { LinkHoverCard } from '../utils/link-hover-card';
+import { hasUnsafeScheme } from '../utils/sanitize-url';
 
 // Controllers and handlers
 import { BlockHoverController } from './uiControllers/controllers/blockHover';
@@ -937,6 +938,22 @@ export class UI extends Module<UINodes> {
 
     this.linkHoverCard?.hide();
 
+    this.openLink(href);
+  }
+
+  /**
+   * Open a link href in a new tab, refusing schemes that execute script when
+   * followed (`javascript:`, `data:text/html`, …). Anchors can carry such a
+   * href when created outside the inline Link tool's creation-time guard (paste,
+   * import, programmatic data), so the click path that follows them must
+   * re-check — otherwise a plain click is click-to-XSS.
+   * @param href - the raw anchor href
+   */
+  private openLink(href: string): void {
+    if (hasUnsafeScheme(href)) {
+      return;
+    }
+
     openTab(getValidUrl(href));
   }
 
@@ -951,6 +968,7 @@ export class UI extends Module<UINodes> {
           edit: this.Blok.I18n.t('tools.link.edit'),
         },
         callbacks: {
+          onOpen: (href: string): void => this.openLink(href),
           onCopy: (href: string): void => this.copyLinkHref(href),
           onEdit: (anchor: HTMLAnchorElement): void => {
             void this.Blok.InlineToolbar.editLink(anchor);

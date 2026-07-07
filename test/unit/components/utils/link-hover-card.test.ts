@@ -29,17 +29,19 @@ const getCard = (): HTMLElement | null => document.querySelector(CARD_SELECTOR);
 
 describe('LinkHoverCard', () => {
   let card: LinkHoverCard;
+  let onOpen: ReturnType<typeof vi.fn>;
   let onCopy: ReturnType<typeof vi.fn>;
   let onEdit: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    onOpen = vi.fn();
     onCopy = vi.fn();
     onEdit = vi.fn();
     card = new LinkHoverCard({
       labels: { copy: 'Copy', edit: 'Edit' },
-      callbacks: { onCopy, onEdit },
+      callbacks: { onOpen, onCopy, onEdit },
       canEdit: () => true,
     });
   });
@@ -60,6 +62,17 @@ describe('LinkHoverCard', () => {
 
     expect(shown).not.toBeNull();
     expect(shown?.textContent).toContain('https://youtube.com/');
+  });
+
+  it('opens the href when the URL is clicked', () => {
+    const anchor = createAnchor('https://youtube.com/');
+
+    card.show(anchor);
+    getCard()
+      ?.querySelector<HTMLElement>('[data-blok-testid="link-hover-card-url"]')
+      ?.click();
+
+    expect(onOpen).toHaveBeenCalledWith('https://youtube.com/');
   });
 
   it('copies the href when the copy button is clicked', () => {
@@ -88,7 +101,7 @@ describe('LinkHoverCard', () => {
     card.destroy();
     card = new LinkHoverCard({
       labels: { copy: 'Copy', edit: 'Edit' },
-      callbacks: { onCopy, onEdit },
+      callbacks: { onOpen, onCopy, onEdit },
       canEdit: () => false,
     });
 

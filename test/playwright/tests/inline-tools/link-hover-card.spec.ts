@@ -84,6 +84,32 @@ test.describe('link hover card', () => {
     expect(popup.url()).toContain('youtube.com');
   });
 
+  test('does not execute or open javascript: scheme links on click', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Danger <a href="javascript:window.__xss=1">click</a> here',
+        },
+      },
+    ]);
+
+    const anchor = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] a`);
+    // A popup would signal the unsafe href was followed; expect none within the window.
+    const popupPromise = page.waitForEvent('popup', { timeout: 800 }).catch(() => null);
+
+    // Click the link if it survived rendering; either way the script must not run.
+    if (await anchor.count() > 0) {
+      await anchor.click();
+    }
+
+    const popup = await popupPromise;
+    const executed = await page.evaluate(() => (window as unknown as { __xss?: number }).__xss);
+
+    expect(popup).toBeNull();
+    expect(executed).toBeUndefined();
+  });
+
   test('edit button opens the link input prefilled with the href', async ({ page }) => {
     await createLinkParagraph(page);
 

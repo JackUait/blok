@@ -16,6 +16,20 @@ const GRACE_HIDE_DURATION = 100;
  */
 const OFFSET_TOP = 6;
 
+/**
+ * Shared chrome for the two trailing action buttons (copy / edit). Kept in one
+ * const so both stay visually identical. `appearance-none border-0 bg-transparent`
+ * + `font-[inherit]` neutralize any host-page global `button {}` styling (e.g.
+ * the docs demo page paints a border on every button) so the card renders the
+ * same everywhere.
+ */
+const ACTION_BUTTON_BASE = twJoin(
+  'appearance-none border-0 bg-transparent m-0 box-border font-[inherit] cursor-pointer',
+  'inline-flex items-center justify-center h-7 rounded-md select-none',
+  'text-gray-text transition-colors',
+  'can-hover:hover:bg-item-hover-bg can-hover:hover:text-text-primary'
+);
+
 interface LinkHoverCardLabels {
   /**
    * Accessible label for the copy-URL button.
@@ -28,6 +42,10 @@ interface LinkHoverCardLabels {
 }
 
 interface LinkHoverCardCallbacks {
+  /**
+   * Called with the anchor href when the URL itself is activated (opens it).
+   */
+  onOpen: (href: string) => void;
   /**
    * Called with the anchor href when the copy button is activated.
    */
@@ -49,12 +67,14 @@ interface LinkHoverCardOptions {
 }
 
 /**
- * A light, hoverable card shown when the pointer rests on a link inside the
+ * A compact, hoverable card shown when the pointer rests on a link inside the
  * editor. Mirrors the read-only "clickable link" affordance while editing:
- * surfaces the destination URL and offers copy / edit actions without forcing
- * the caret into the anchor.
+ * surfaces the destination URL (clickable — opens the link) plus copy / edit
+ * actions, without forcing the caret into the anchor.
  *
- * The card is promoted to the CSS Top Layer so it renders above host-page
+ * Styled to match Blok's own floating chrome (`bg-popover-bg`, the popover
+ * hairline border and overlay shadow, `bg-item-hover-bg` hovers) so it reads as
+ * a native control. Promoted to the CSS Top Layer so it renders above host-page
  * content, and stays open while the pointer is over it (grace-hide) so its
  * buttons remain reachable.
  */
@@ -64,8 +84,7 @@ export class LinkHoverCard {
    */
   private nodes: {
     wrapper: HTMLElement;
-    url: HTMLElement;
-    copyButton: HTMLButtonElement;
+    url: HTMLButtonElement;
     editButton: HTMLButtonElement;
   };
 
@@ -78,6 +97,11 @@ export class LinkHoverCard {
    * Deferred-hide timer armed when the pointer leaves the anchor or the card.
    */
   private graceHideTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Pending entrance-animation frame, cancelled on hide/destroy.
+   */
+  private enterFrame: number | null = null;
 
   /**
    * Whether the card is currently visible.
@@ -108,17 +132,24 @@ export class LinkHoverCard {
     const href = anchor.getAttribute('href') ?? anchor.href;
 
     this.nodes.url.textContent = href;
+    this.nodes.url.title = href;
     this.nodes.editButton.hidden = !this.canEdit();
 
     if (!this.nodes.wrapper.isConnected) {
       document.body.appendChild(this.nodes.wrapper);
     }
 
-    this.nodes.wrapper.style.visibility = 'hidden';
     this.shown = true;
     promoteToTopLayer(this.nodes.wrapper);
     this.position(anchor);
-    this.nodes.wrapper.style.visibility = 'visible';
+
+    // Entrance: fade + rise once positioned. Guarded so re-showing over the
+    // same target doesn't restart the animation mid-hover.
+    this.cancelEnterFrame();
+    this.enterFrame = requestAnimationFrame(() => {
+      this.enterFrame = null;
+      this.nodes.wrapper.setAttribute('data-state', 'open');
+    });
   }
 
   /**
@@ -149,6 +180,7 @@ export class LinkHoverCard {
    */
   public hide(): void {
     this.cancelHide();
+    this.cancelEnterFrame();
 
     if (!this.shown) {
       return;
@@ -156,8 +188,8 @@ export class LinkHoverCard {
 
     this.shown = false;
     this.currentAnchor = null;
+    this.nodes.wrapper.setAttribute('data-state', 'closed');
     removeFromTopLayer(this.nodes.wrapper);
-    this.nodes.wrapper.style.visibility = 'hidden';
     this.nodes.wrapper.remove();
   }
 
@@ -173,6 +205,7 @@ export class LinkHoverCard {
    */
   public destroy(): void {
     this.cancelHide();
+    this.cancelEnterFrame();
     removeFromTopLayer(this.nodes.wrapper);
     this.nodes.wrapper.remove();
     this.currentAnchor = null;
@@ -194,6 +227,16 @@ export class LinkHoverCard {
   }
 
   /**
+   * Cancel a pending entrance frame.
+   */
+  private cancelEnterFrame(): void {
+    if (this.enterFrame !== null) {
+      cancelAnimationFrame(this.enterFrame);
+      this.enterFrame = null;
+    }
+  }
+
+  /**
    * Build the card DOM once.
    */
   private build(): LinkHoverCard['nodes'] {
@@ -201,33 +244,42 @@ export class LinkHoverCard {
 
     wrapper.className = twJoin(
       'fixed z-overlay top-0 left-0',
-      'flex items-center gap-1.5 max-w-[360px]',
-      'pl-2.5 pr-1.5 py-1',
-      'bg-popover-bg rounded-xl shadow-tooltip',
-      'text-sm text-text-primary',
+      'flex items-center h-8 pl-2 pr-1',
+      'bg-popover-bg rounded-[10px] border border-popover-border shadow-overlay-pane',
+      'text-[13px] leading-none text-text-primary',
+      // Entrance: hidden + nudged down until data-state="open" (set next frame).
+      'opacity-0 translate-y-[-2px] transition-[opacity,transform] duration-100 ease-out',
+      'data-[state=open]:opacity-100 data-[state=open]:translate-y-0',
       'mobile:hidden'
     );
-    wrapper.style.visibility = 'hidden';
+    wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
 
     const globe = document.createElement('span');
 
-    globe.className = 'shrink-0 flex text-gray-text [&>svg]:size-4';
+    globe.className = 'shrink-0 flex items-center mr-2 text-gray-text [&>svg]:size-4';
     globe.innerHTML = IconGlobe;
 
-    const url = document.createElement('span');
+    const url = document.createElement('button');
 
-    url.className = 'min-w-0 truncate font-medium';
+    url.type = 'button';
+    url.className = twJoin(
+      'appearance-none border-0 bg-transparent m-0 p-0 font-[inherit] cursor-pointer',
+      'min-w-0 max-w-[260px] truncate text-left font-medium text-text-primary',
+      'underline-offset-2 can-hover:hover:underline'
+    );
     url.setAttribute('data-blok-testid', 'link-hover-card-url');
+    url.addEventListener('click', this.handleOpen);
+
+    const divider = document.createElement('span');
+
+    divider.className = 'shrink-0 w-px h-4 bg-popover-border mx-1.5';
+    divider.setAttribute('aria-hidden', 'true');
 
     const copyButton = document.createElement('button');
 
     copyButton.type = 'button';
-    copyButton.className = twJoin(
-      'shrink-0 flex items-center justify-center size-7 rounded-lg',
-      'text-gray-text can-hover:hover:bg-item-hover-bg transition-colors',
-      '[&>svg]:size-4'
-    );
+    copyButton.className = twJoin(ACTION_BUTTON_BASE, 'w-7 [&>svg]:size-4');
     copyButton.setAttribute('aria-label', this.labels.copy);
     copyButton.setAttribute('data-blok-testid', 'link-hover-card-copy');
     copyButton.innerHTML = IconCopy;
@@ -236,15 +288,12 @@ export class LinkHoverCard {
     const editButton = document.createElement('button');
 
     editButton.type = 'button';
-    editButton.className = twJoin(
-      'shrink-0 px-2 h-7 rounded-lg font-medium',
-      'text-text-primary can-hover:hover:bg-item-hover-bg transition-colors'
-    );
-    editButton.textContent = this.labels.edit;
+    editButton.className = twJoin(ACTION_BUTTON_BASE, 'px-2 font-medium text-text-primary');
     editButton.setAttribute('data-blok-testid', 'link-hover-card-edit');
+    editButton.textContent = this.labels.edit;
     editButton.addEventListener('click', this.handleEdit);
 
-    wrapper.append(globe, url, copyButton, editButton);
+    wrapper.append(globe, url, divider, copyButton, editButton);
 
     // Hoverable card: keep it open while the pointer is over it.
     wrapper.addEventListener('mouseenter', () => this.cancelHide());
@@ -252,14 +301,27 @@ export class LinkHoverCard {
 
     document.body.appendChild(wrapper);
 
-    return { wrapper, url, copyButton, editButton };
+    return { wrapper, url, editButton };
   }
+
+  /**
+   * URL click handler — opens the destination then hides the card.
+   */
+  private handleOpen = (): void => {
+    const href = this.hrefOf(this.currentAnchor);
+
+    this.hide();
+
+    if (href) {
+      this.callbacks.onOpen(href);
+    }
+  };
 
   /**
    * Copy button handler — forwards the href to the caller then hides the card.
    */
   private handleCopy = (): void => {
-    const href = this.currentAnchor?.getAttribute('href') ?? this.currentAnchor?.href;
+    const href = this.hrefOf(this.currentAnchor);
 
     if (href) {
       this.callbacks.onCopy(href);
@@ -279,4 +341,13 @@ export class LinkHoverCard {
       this.callbacks.onEdit(anchor);
     }
   };
+
+  /**
+   * Resolve an anchor's href, preferring the raw attribute over the resolved
+   * property so internal/relative links surface as authored.
+   * @param anchor - the anchor to read
+   */
+  private hrefOf(anchor: HTMLAnchorElement | null): string | undefined {
+    return anchor?.getAttribute('href') ?? anchor?.href;
+  }
 }

@@ -395,8 +395,9 @@
   flex: 1;
   overflow-y: auto;
   /* Classic (space-taking) scrollbar so it never overlays the content —
-     styled ::-webkit-scrollbar below opts out of the overlay scrollbar. */
-  scrollbar-gutter: stable;
+     styled ::-webkit-scrollbar below opts out of the overlay scrollbar.
+     both-edges keeps the horizontal padding symmetric. */
+  scrollbar-gutter: stable both-edges;
   padding: var(--blok-space-10) 60px var(--blok-space-5);
 }
 [data-blok-database-drawer-content]::-webkit-scrollbar {

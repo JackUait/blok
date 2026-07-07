@@ -2018,7 +2018,11 @@
 }
 
 [data-blok-popover-items] {
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
+}
+
+[data-blok-popover-inline] [data-blok-popover-items] {
+  scrollbar-gutter: auto;
 }
 
 [@supports not selector(::-webkit-scrollbar)] [data-blok-popover-items] {
@@ -2071,7 +2075,7 @@
 }
 
 [data-emoji-picker-body] {
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
 }
 
 [@supports not selector(::-webkit-scrollbar)] [data-emoji-picker-body] {
@@ -2419,7 +2423,7 @@
 [data-blok-database-drawer-content] {
   flex: 1;
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
   padding: var(--blok-space-10) 60px var(--blok-space-5);
 }
 
@@ -7260,7 +7264,7 @@
 }
 
 .blok-file-preview-pre, .blok-file-preview-md, .blok-file-preview-office {
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
 }
 
 .blok-file-preview-pre::-webkit-scrollbar, .blok-file-preview-md::-webkit-scrollbar, .blok-file-preview-office::-webkit-scrollbar {

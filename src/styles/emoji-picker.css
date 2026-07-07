@@ -38,7 +38,7 @@
  * Chromium ignore the ::-webkit-scrollbar styling below (overlay fallback).
  */
 [data-emoji-picker-body] {
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
 }
 @supports not selector(::-webkit-scrollbar) {
   [data-emoji-picker-body] {

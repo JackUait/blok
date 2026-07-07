@@ -588,7 +588,7 @@
 .blok-file-preview-pre,
 .blok-file-preview-md,
 .blok-file-preview-office {
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
 }
 .blok-file-preview-pre::-webkit-scrollbar,
 .blok-file-preview-md::-webkit-scrollbar,

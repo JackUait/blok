@@ -61,9 +61,9 @@ const firefoxOnlyRanges = (): Array<[number, number]> => {
 
 describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
   for (const selector of SCROLLABLE_SELECTORS) {
-    it(`${selector} declares scrollbar-gutter: stable`, () => {
+    it(`${selector} declares scrollbar-gutter: stable both-edges so left and right indents stay symmetric`, () => {
       const pattern = new RegExp(
-        `${escapeForRegex(selector)}[^{}]*\\{[^}]*scrollbar-gutter\\s*:\\s*stable`,
+        `${escapeForRegex(selector)}[^{}]*\\{[^}]*scrollbar-gutter\\s*:\\s*stable both-edges`,
       );
 
       expect(css).toMatch(pattern);
@@ -114,6 +114,12 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
         expect(css).toMatch(pattern);
       });
     }
+
+    it('inline (horizontal toolbar) popovers opt out of the vertical scrollbar gutter', () => {
+      const pattern = /\[data-blok-popover-inline\][^{}]*\[data-blok-popover-items\][^{}]*\{[^}]*scrollbar-gutter\s*:\s*auto/;
+
+      expect(css).toMatch(pattern);
+    });
 
     it('[data-blok-popover-items] reveals the thumb during keyboard-driven scrolling via [data-blok-scrolling]', () => {
       const pattern = /\[data-blok-popover-items\]\[data-blok-scrolling\][^{}]*::-webkit-scrollbar-thumb[^{}]*\{[^}]*background\s*:\s*(?!transparent)/;

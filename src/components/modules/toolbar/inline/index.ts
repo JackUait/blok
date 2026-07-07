@@ -259,6 +259,19 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   }
 
   /**
+   * Open the Link tool's editing menu for a given anchor, prefilled with its
+   * href. Selects the anchor contents first so the Link tool resolves the
+   * existing <a> and mirrors the CMD+K shortcut path. Used by the link hover
+   * card's "Edit" action.
+   * @param anchor - the anchor whose href should be edited
+   */
+  public async editLink(anchor: HTMLAnchorElement): Promise<void> {
+    new SelectionUtils().expandToTag(anchor);
+
+    await this.activateToolByShortcut('link');
+  }
+
+  /**
    * Hides Inline Toolbar
    */
   public close(): void {

@@ -325,7 +325,10 @@ describe('Toggle DOM Builder', () => {
 
         expect(headerRow).toBeInstanceOf(HTMLElement);
         expect(headerRow.className).toContain('flex');
-        expect(headerRow.className).toContain('items-center');
+        // items-start keeps the arrow pinned to the first line of a multi-line title
+        // instead of vertically centering it across every wrapped line.
+        expect(headerRow.className).toContain('items-start');
+        expect(headerRow.className).not.toContain('items-center');
       });
 
       it('header row contains arrow element as first child', () => {

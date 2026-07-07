@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BODY_PLACEHOLDER_STYLES, CONTENT_STYLES, TOGGLE_CHILDREN_STYLES } from '../../../../src/tools/toggle/constants';
+import { ARROW_STYLES, BODY_PLACEHOLDER_STYLES, CONTENT_STYLES, TOGGLE_CHILDREN_STYLES, TOGGLE_WRAPPER_STYLES } from '../../../../src/tools/toggle/constants';
 
 describe('BODY_PLACEHOLDER_STYLES', () => {
   it('does not contain text-sm (placeholder should match paragraph base font size)', () => {
@@ -38,6 +38,30 @@ describe('BODY_PLACEHOLDER_STYLES', () => {
 describe('CONTENT_STYLES (Notion alignment)', () => {
   it('uses unitless leading-[1.5] to match Notion line-height', () => {
     expect(CONTENT_STYLES).toContain('leading-[1.5]');
+  });
+});
+
+describe('TOGGLE_WRAPPER_STYLES (arrow sits on first line)', () => {
+  it('aligns children to the start so the arrow stays on the first line of multi-line titles', () => {
+    expect(TOGGLE_WRAPPER_STYLES).toContain('items-start');
+  });
+
+  it('does NOT use items-center (would vertically center the arrow across all wrapped lines)', () => {
+    expect(TOGGLE_WRAPPER_STYLES).not.toContain('items-center');
+  });
+});
+
+describe('ARROW_STYLES (first-line vertical alignment)', () => {
+  it('sizes the arrow box to one line height so its icon centers on the first line', () => {
+    expect(ARROW_STYLES).toContain('h-[1.5em]');
+  });
+
+  it('does NOT apply uniform p-[8px] (vertical padding would make the box taller than one line)', () => {
+    expect(ARROW_STYLES).not.toContain('p-[8px]');
+  });
+
+  it('keeps horizontal padding so the arrow width still aligns children indent (pl-7)', () => {
+    expect(ARROW_STYLES).toContain('px-[8px]');
   });
 });
 

@@ -947,10 +947,19 @@ export class Header implements BlockTool {
   /**
    * Build the arrow element for toggle heading.
    *
-   * The arrow is absolutely positioned within the wrapper div, sitting in the area
-   * to the left of the heading text (which has pl-7 padding). This keeps the arrow
+   * The arrow is absolutely positioned within the header row, sitting in the area
+   * to the left of the heading text (which has pl-8 padding). This keeps the arrow
    * completely outside the heading's contenteditable scope, allowing Chrome to
    * place a cursor and insert text without interference.
+   *
+   * The arrow is anchored to the FIRST line of the heading (top-[7px] matches the
+   * heading's py-[7px] top padding) and sized to a single heading line
+   * (h-[1.3em], matching BASE_STYLES leading-[1.3]). Its `em` must resolve against
+   * the heading's font-size — which the arrow (a sibling of the heading, not a
+   * child) does not inherit — so we copy the level's text-size class onto it. This
+   * keeps the internally-centered icon on the first line at every heading level,
+   * even when the title wraps to multiple lines. Using top-1/2 + -translate-y-1/2
+   * would instead center the arrow across the whole (multi-line) heading.
    *
    * @returns The arrow element
    */
@@ -959,7 +968,10 @@ export class Header implements BlockTool {
       collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
       expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
     });
-    arrow.classList.add('absolute', 'left-0', 'top-1/2', '-translate-y-1/2');
+    const textSizeClass = this.currentLevel.styles.match(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/)?.[0] ?? '';
+
+    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[7px] h-[1.3em] py-0', textSizeClass);
+
     return arrow;
   }
 

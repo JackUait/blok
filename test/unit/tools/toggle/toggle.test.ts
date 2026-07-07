@@ -790,8 +790,9 @@ describe('ToggleItem', () => {
   });
 
   describe('accessibility and visual fixes', () => {
-    // Fix: Vertical alignment — header row uses items-center so arrow SVG center aligns with text center
-    it('header row uses items-center class (not items-start) for vertical alignment', async () => {
+    // Fix: Vertical alignment — header row uses items-start so the arrow stays on the
+    // FIRST line of a multi-line title (items-center would drift it to the middle line).
+    it('header row uses items-start class (not items-center) for first-line alignment', async () => {
       const { buildToggleItem } = await import('../../../../src/tools/toggle/dom-builder');
       const result = buildToggleItem({
         data: { text: '' },
@@ -808,16 +809,18 @@ describe('ToggleItem', () => {
       const headerRow = result.wrapper.querySelector('div');
 
       expect(headerRow).not.toBeNull();
-      expect(headerRow?.classList.contains('items-center')).toBe(true);
-      expect(headerRow?.classList.contains('items-start')).toBe(false);
+      expect(headerRow?.classList.contains('items-start')).toBe(true);
+      expect(headerRow?.classList.contains('items-center')).toBe(false);
     });
 
-    // Fix 1: Touch target — arrow uses p-[8px] (28px box) with items-center alignment
-    it('arrow element has p-[8px] padding class and no mt-px offset', async () => {
+    // Fix 1: Touch target — arrow uses px-[8px] (28px wide box) and a one-line-tall
+    // h-[1.5em] height so its centered icon sits on the first line.
+    it('arrow element has px-[8px]/h-[1.5em] and no mt-px offset', async () => {
       const { buildArrow } = await import('../../../../src/tools/toggle/dom-builder');
       const arrow = buildArrow(true, null);
 
-      expect(arrow.className).toContain('p-[8px]');
+      expect(arrow.className).toContain('px-[8px]');
+      expect(arrow.className).toContain('h-[1.5em]');
       expect(arrow.className).not.toContain('p-[10px]');
       expect(arrow.className).not.toContain('mt-px');
       expect(arrow.className).not.toContain('w-6');

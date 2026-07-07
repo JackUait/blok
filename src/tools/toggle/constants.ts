@@ -39,13 +39,25 @@ export const CONTENT_STYLES = 'outline-hidden pl-0.5 leading-[1.5] flex-1 min-w-
 
 /**
  * Styles for toggle wrapper (arrow + content layout)
+ *
+ * items-start (not items-center) keeps the arrow pinned to the first line of the
+ * title. With items-center a title that wraps to multiple lines would drag the
+ * arrow down to the vertical middle of the whole block; items-start plus a
+ * one-line-tall arrow box (see ARROW_STYLES h-[1.5em]) keeps it on the first line.
  */
-export const TOGGLE_WRAPPER_STYLES = 'flex items-center';
+export const TOGGLE_WRAPPER_STYLES = 'flex items-start';
 
 /**
  * Styles for the toggle arrow button
+ *
+ * h-[1.5em] makes the arrow box exactly one content line tall (content uses
+ * leading-[1.5], and both share the block font-size), so the internally-centered
+ * icon lands on the first line's vertical center. Padding is horizontal-only
+ * (px-[8px]) — vertical padding would make the box taller than one line and pull
+ * the icon below the first line. Total width stays 28px (8 + 12 icon + 8) to keep
+ * children (pl-7) aligned under the title text.
  */
-export const ARROW_STYLES = 'flex-shrink-0 p-[8px] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text';
+export const ARROW_STYLES = 'flex-shrink-0 px-[8px] h-[1.5em] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text';
 
 /**
  * SVG icon for the toggle arrow

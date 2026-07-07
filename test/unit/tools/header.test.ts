@@ -467,6 +467,23 @@ describe('Header Tool - Custom Configurations', () => {
         expect(heading.contains(arrow)).toBe(false);
       });
 
+      it('anchors the arrow to the first line of a multi-line heading (not vertically centered)', () => {
+        const options = createHeaderOptions({ text: 'Test', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const wrapper = header.render();
+        const arrow = wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+        // top-1/2 + -translate-y-1/2 centre the arrow across the WHOLE heading, so on a
+        // multi-line toggle heading it drifts to the middle line. Pin it to the first line.
+        expect(arrow.className).not.toContain('top-1/2');
+        expect(arrow.className).not.toContain('-translate-y-1/2');
+        expect(arrow.className).toContain('top-[7px]');
+        // A one-line-tall box (h-[1.3em]) whose em resolves against the heading font-size
+        // makes the internally-centred icon land on the first line at any heading level.
+        expect(arrow.className).toContain('h-[1.3em]');
+        expect(arrow.className).toContain('text-2xl');
+      });
+
       it('marks wrapper data-blok-toggle-empty="true" when the toggle heading has no children', () => {
         const api = createMockAPI();
         const getChildren = api.blocks.getChildren as unknown as ReturnType<typeof vi.fn>;

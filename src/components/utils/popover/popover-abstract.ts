@@ -92,8 +92,12 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     // Set up scroll listener on items container for the edge reel distortion
+    // and the scroll-activity marker that reveals the auto-hidden scrollbar.
     if (this.nodes.items) {
-      this.listeners.on(this.nodes.items, 'scroll', () => this.updateScrollReel());
+      this.listeners.on(this.nodes.items, 'scroll', () => {
+        this.updateScrollReel();
+        this.markScrollActivity();
+      });
     }
   }
 
@@ -242,6 +246,35 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   private static readonly EXIT_ANIMATION_TIMEOUT_MS = 400;
 
   /**
+   * How long (ms) the scroll-activity marker outlives the last scroll event —
+   * mirrors the system scrollbar lingering briefly after scrolling stops.
+   */
+  private static readonly SCROLL_ACTIVITY_TIMEOUT_MS = 600;
+
+  /**
+   * Pending removal of the scroll-activity marker.
+   */
+  private scrollActivityTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Stamps the items container with the scrolling attribute while scroll
+   * events keep arriving. CSS uses it to reveal the otherwise-transparent
+   * scrollbar thumb during keyboard-driven scrolling, when there is no hover.
+   */
+  private markScrollActivity(): void {
+    this.nodes.items.setAttribute(DATA_ATTR.scrolling, '');
+
+    if (this.scrollActivityTimeout !== null) {
+      clearTimeout(this.scrollActivityTimeout);
+    }
+
+    this.scrollActivityTimeout = setTimeout(() => {
+      this.nodes.items.removeAttribute(DATA_ATTR.scrolling);
+      this.scrollActivityTimeout = null;
+    }, PopoverAbstract.SCROLL_ACTIVITY_TIMEOUT_MS);
+  }
+
+  /**
    * Clears memory.
    *
    * Instead of cloning the popover into a throwaway "ghost" (which duplicated
@@ -254,6 +287,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.items.forEach(item => item.destroy());
     this.listeners.removeAll();
     this.search?.destroy();
+
+    if (this.scrollActivityTimeout !== null) {
+      clearTimeout(this.scrollActivityTimeout);
+      this.scrollActivityTimeout = null;
+    }
 
     const popover = this.nodes.popover;
 

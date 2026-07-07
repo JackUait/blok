@@ -110,6 +110,8 @@ export const DATA_ATTR = {
   popoverContainer: 'data-blok-popover-container',
   /** Popover items list */
   popoverItems: 'data-blok-popover-items',
+  /** Stamped on a scroll container while it is actively scrolling (reveals the auto-hidden scrollbar thumb) */
+  scrolling: 'data-blok-scrolling',
   /** Popover overlay element */
   popoverOverlay: 'data-blok-popover-overlay',
   /** Popover custom content area */

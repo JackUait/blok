@@ -405,9 +405,13 @@
 [data-blok-database-drawer-content]::-webkit-scrollbar-track {
   background: transparent;
 }
+/* Thumb hidden at rest (system auto-hide behavior), revealed on hover. */
 [data-blok-database-drawer-content]::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, currentColor 15%, transparent);
+  background: transparent;
   border-radius: var(--blok-space-1);
+}
+[data-blok-database-drawer-content]:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
 }
 [data-blok-database-drawer-content]::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, currentColor 25%, transparent);

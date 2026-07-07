@@ -2023,6 +2023,10 @@
 
 [@supports not selector(::-webkit-scrollbar)] [data-blok-popover-items] {
   scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+[@supports not selector(::-webkit-scrollbar)] [data-blok-popover-items]:hover, [data-blok-popover-items][data-blok-scrolling] {
   scrollbar-color: var(--blok-popover-border) transparent;
 }
 
@@ -2035,8 +2039,12 @@
 }
 
 [data-blok-popover-items]::-webkit-scrollbar-thumb {
-  background: var(--blok-popover-border);
+  background: transparent;
   border-radius: var(--blok-space-1);
+}
+
+[data-blok-popover-items]:hover::-webkit-scrollbar-thumb, [data-blok-popover-items][data-blok-scrolling]::-webkit-scrollbar-thumb {
+  background: var(--blok-popover-border);
 }
 
 [data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
@@ -2424,8 +2432,12 @@
 }
 
 [data-blok-database-drawer-content]::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, currentColor 15%, transparent);
+  background: transparent;
   border-radius: var(--blok-space-1);
+}
+
+[data-blok-database-drawer-content]:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
 }
 
 [data-blok-database-drawer-content]::-webkit-scrollbar-thumb:hover {
@@ -7261,8 +7273,12 @@
 }
 
 .blok-file-preview-pre::-webkit-scrollbar-thumb, .blok-file-preview-md::-webkit-scrollbar-thumb, .blok-file-preview-office::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, currentColor 15%, transparent);
+  background: transparent;
   border-radius: var(--blok-space-1);
+}
+
+.blok-file-preview-pre:hover::-webkit-scrollbar-thumb, .blok-file-preview-md:hover::-webkit-scrollbar-thumb, .blok-file-preview-office:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
 }
 
 .blok-file-preview-pre::-webkit-scrollbar-thumb:hover, .blok-file-preview-md::-webkit-scrollbar-thumb:hover, .blok-file-preview-office::-webkit-scrollbar-thumb:hover {

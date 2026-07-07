@@ -2292,4 +2292,47 @@ describe('PopoverDesktop', () => {
       expect(actualPopoverEl?.dataset.side === 'left' || actualPopoverEl?.dataset.side === 'right').toBe(true);
     });
   });
+
+  describe('scroll activity marker', () => {
+    it('stamps data-blok-scrolling on the items container while it is being scrolled', () => {
+      const popover = createPopover() as PopoverDesktopInternal;
+      const items = popover.nodes.items;
+
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(false);
+
+      items.dispatchEvent(new Event('scroll'));
+
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(true);
+    });
+
+    it('removes data-blok-scrolling shortly after scrolling stops', () => {
+      vi.useFakeTimers();
+
+      const popover = createPopover() as PopoverDesktopInternal;
+      const items = popover.nodes.items;
+
+      items.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(200);
+
+      // Still scrolling — the timeout restarts on every scroll event.
+      items.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(200);
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(true);
+
+      vi.advanceTimersByTime(2000);
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(false);
+    });
+
+    it('clears the pending removal timeout on destroy', () => {
+      vi.useFakeTimers();
+
+      const popover = createPopover() as PopoverDesktopInternal;
+      const items = popover.nodes.items;
+
+      items.dispatchEvent(new Event('scroll'));
+      popover.destroy();
+
+      expect(() => vi.advanceTimersByTime(2000)).not.toThrow();
+    });
+  });
 });

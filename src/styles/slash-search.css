@@ -46,6 +46,10 @@
 @supports not selector(::-webkit-scrollbar) {
   [data-blok-popover-items] {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  [data-blok-popover-items]:hover,
+  [data-blok-popover-items][data-blok-scrolling] {
     scrollbar-color: var(--blok-popover-border) transparent;
   }
 }
@@ -55,9 +59,17 @@
 [data-blok-popover-items]::-webkit-scrollbar-track {
   background: transparent;
 }
+/* Thumb hidden at rest (system auto-hide behavior); the reserved gutter keeps
+   its layout space. Revealed while hovering the list or during scrolling —
+   [data-blok-scrolling] is stamped by the popover on scroll events so
+   keyboard-driven scrolling shows the thumb too. */
 [data-blok-popover-items]::-webkit-scrollbar-thumb {
-  background: var(--blok-popover-border);
+  background: transparent;
   border-radius: var(--blok-space-1);
+}
+[data-blok-popover-items]:hover::-webkit-scrollbar-thumb,
+[data-blok-popover-items][data-blok-scrolling]::-webkit-scrollbar-thumb {
+  background: var(--blok-popover-border);
 }
 [data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
   background: var(--blok-gray-text);

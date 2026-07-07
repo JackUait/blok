@@ -321,8 +321,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // H11 shared invalid-field convention: a global `[aria-invalid="true"]`
     // destructive-ring rule (border-color + focus box-shadow) in media-empty.css
     // so link/equation/embed inputs share one look. ~0.3KB intentional growth.
+    // Scrollbar gutter + system-like auto-hide: every vertical scroll container
+    // (popover items, emoji picker, database drawer, file previews) reserves
+    // scrollbar space (scrollbar-gutter: stable + classic ::-webkit-scrollbar)
+    // with the thumb transparent at rest and revealed on hover/scroll; standard
+    // scrollbar-width/color moved into Firefox-only @supports blocks because
+    // they disable webkit scrollbar styling in Chromium. ~2KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.35);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.36);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

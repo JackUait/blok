@@ -78,6 +78,50 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
     });
   }
 
+  /**
+   * System-like visibility: the scrollbar must take up space permanently, but
+   * stay invisible while idle (like macOS overlay scrollbars) — the thumb is
+   * transparent at rest and only revealed on hover or during scrolling.
+   */
+  describe('scrollbar stays invisible at rest and reveals on hover/scroll (system-like behavior)', () => {
+    /** Containers whose scrollbars auto-hide; reveal is hover- and/or scroll-driven. */
+    const AUTO_HIDE_SELECTORS = [
+      '[data-blok-popover-items]',
+      '[data-emoji-picker-body]',
+      '[data-blok-database-board]',
+      '[data-blok-database-drawer-content]',
+      '.blok-file-preview-pre',
+      '.blok-file-preview-md',
+      '.blok-file-preview-office',
+    ];
+
+    for (const selector of AUTO_HIDE_SELECTORS) {
+      it(`${selector} keeps its ::-webkit-scrollbar-thumb transparent at rest`, () => {
+        // Tempered token: allow further comma-grouped base selectors before
+        // the `{`, but never a `:hover` variant — that's the reveal rule.
+        const pattern = new RegExp(
+          `${escapeForRegex(selector)}::-webkit-scrollbar-thumb(?:(?!:hover)[^{}])*\\{[^}]*background\\s*:\\s*transparent`,
+        );
+
+        expect(css).toMatch(pattern);
+      });
+
+      it(`${selector} reveals the thumb on hover or scroll activity`, () => {
+        const pattern = new RegExp(
+          `${escapeForRegex(selector)}(?::hover|\\[data-blok-scrolling\\])[^{}]*::-webkit-scrollbar-thumb[^{}]*\\{[^}]*background\\s*:\\s*(?!transparent)`,
+        );
+
+        expect(css).toMatch(pattern);
+      });
+    }
+
+    it('[data-blok-popover-items] reveals the thumb during keyboard-driven scrolling via [data-blok-scrolling]', () => {
+      const pattern = /\[data-blok-popover-items\]\[data-blok-scrolling\][^{}]*::-webkit-scrollbar-thumb[^{}]*\{[^}]*background\s*:\s*(?!transparent)/;
+
+      expect(css).toMatch(pattern);
+    });
+  });
+
   it('standard scrollbar-width/scrollbar-color stay inside @supports not selector(::-webkit-scrollbar) — otherwise Chromium ignores the webkit styling and falls back to an overlay scrollbar', () => {
     const ranges = firefoxOnlyRanges();
     const insideFirefoxOnly = (offset: number): boolean =>

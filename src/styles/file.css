@@ -601,11 +601,17 @@
 .blok-file-preview-office::-webkit-scrollbar-track {
   background: transparent;
 }
+/* Thumb hidden at rest (system auto-hide behavior), revealed on hover. */
 .blok-file-preview-pre::-webkit-scrollbar-thumb,
 .blok-file-preview-md::-webkit-scrollbar-thumb,
 .blok-file-preview-office::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, currentColor 15%, transparent);
+  background: transparent;
   border-radius: var(--blok-space-1);
+}
+.blok-file-preview-pre:hover::-webkit-scrollbar-thumb,
+.blok-file-preview-md:hover::-webkit-scrollbar-thumb,
+.blok-file-preview-office:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
 }
 .blok-file-preview-pre::-webkit-scrollbar-thumb:hover,
 .blok-file-preview-md::-webkit-scrollbar-thumb:hover,

@@ -12,7 +12,9 @@ export const css = {
   popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] left-auto top-auto inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
 
   // Popover container - opened state
-  popoverContainerOpened: 'opacity-100 pointer-events-auto px-1.5 pt-1.5 pb-0 max-h-(--max-height) border-none',
+  // No top padding: item-list menus sit flush to the top edge. The search-input's top gap
+  // lives on the search element (mt-1.5), and the inline toolbar re-adds pt via cssInline.
+  popoverContainerOpened: 'opacity-100 pointer-events-auto px-1.5 pb-0 max-h-(--max-height) border-none',
 
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
@@ -55,8 +57,9 @@ export const cssInline = {
   // Container for inline popover
   popoverContainer: 'flex-row top-0 min-w-max w-max p-1 mobile:absolute',
 
-  // Opened state for inline popover - symmetric padding (no scroll area, so pb matches pt)
-  popoverContainerOpened: 'pb-1.5',
+  // Opened state for inline popover - symmetric padding (no scroll area, so pt matches pb).
+  // pt is re-added here because the shared opened state drops it for flush item-list menus.
+  popoverContainerOpened: 'pt-1.5 pb-1.5',
 };
 
 /**

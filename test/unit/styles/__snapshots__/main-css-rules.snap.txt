@@ -2019,10 +2019,16 @@
 
 [data-blok-popover-items] {
   scrollbar-gutter: stable both-edges;
+  margin-right: calc(-1 * var(--blok-space-1));
+  margin-left: calc(-1 * var(--blok-space-0-5));
+  padding-right: var(--blok-space-0-5);
 }
 
 [data-blok-popover-inline] > [data-blok-popover-container] > [data-blok-popover-items] {
   scrollbar-gutter: auto;
+  margin-right: 0;
+  margin-left: 0;
+  padding-right: 0;
 }
 
 [@supports not selector(::-webkit-scrollbar)] [data-blok-popover-items] {

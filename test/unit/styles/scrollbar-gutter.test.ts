@@ -137,6 +137,41 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
     });
   });
 
+  /**
+   * Popover scrollbar spacing spec: with the 6px container padding and the
+   * 4px scrollbar, the items element is offset so the right side reads
+   * content → 2px → scrollbar → 2px → popover edge, and the left indent is
+   * 4px + the scrollbar-width lane (8px total, symmetric with the right).
+   */
+  describe('popover scrollbar spacing (2px before/after the scrollbar; 4px + scrollbar width on the left)', () => {
+    const itemsRule = (): string => {
+      const match = css.match(/\[data-blok-popover-items\]\s*\{([^}]*)\}/);
+
+      return match === null ? '' : match[1];
+    };
+
+    it('pulls the items right edge to 2px from the popover edge (margin-right: -1 scrollbar width against the 6px container padding)', () => {
+      expect(itemsRule()).toMatch(/margin-right\s*:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    });
+
+    it('keeps a 2px gap between the content and the scrollbar (padding-right)', () => {
+      expect(itemsRule()).toMatch(/padding-right\s*:\s*var\(--blok-space-0-5\)/);
+    });
+
+    it('sets the left indent to 4px + the scrollbar lane (margin-left: -2px against the 6px container padding, lane via both-edges)', () => {
+      expect(itemsRule()).toMatch(/margin-left\s*:\s*calc\(-1 \* var\(--blok-space-0-5\)\)/);
+    });
+
+    it('inline (horizontal toolbar) popovers reset the vertical-scrollbar offsets', () => {
+      const match = css.match(/\[data-blok-popover-inline\]\s*>\s*\[data-blok-popover-container\]\s*>\s*\[data-blok-popover-items\][^{}]*\{([^}]*)\}/);
+      const body = match === null ? '' : match[1];
+
+      expect(body).toMatch(/margin-right\s*:\s*0/);
+      expect(body).toMatch(/margin-left\s*:\s*0/);
+      expect(body).toMatch(/padding-right\s*:\s*0/);
+    });
+  });
+
   it('standard scrollbar-width/scrollbar-color stay inside @supports not selector(::-webkit-scrollbar) — otherwise Chromium ignores the webkit styling and falls back to an overlay scrollbar', () => {
     const ranges = firefoxOnlyRanges();
     const insideFirefoxOnly = (offset: number): boolean =>

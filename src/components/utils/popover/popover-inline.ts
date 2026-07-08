@@ -287,16 +287,21 @@ export class PopoverInline extends PopoverDesktop {
     // Apply nested inline styles to the nested popover container
     const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
     if (nestedContainer) {
+      // No top padding: the nested item menu's first item sits flush to the top edge,
+      // matching the desktop popover. px/pb come from the shared opened state.
       nestedContainer.className = twMerge(
         nestedContainer.className,
-        'h-fit p-1.5 flex-col',
+        'h-fit px-1.5 pb-0 flex-col',
       );
     }
 
-    // Apply nested inline styles to the items container
+    // Apply nested inline styles to the items container. No explicit width:
+    // flex stretch sizes the element including its scrollbar-gutter margin
+    // offsets, whereas `w-full` pins it to the container content box and
+    // strands the scrollbar 8px from the popover edge instead of 2px.
     const nestedItems = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverItems}]`);
     if (nestedItems) {
-      nestedItems.className = twMerge(nestedItems.className, 'block w-full');
+      nestedItems.className = twMerge(nestedItems.className, 'block');
     }
 
     /**

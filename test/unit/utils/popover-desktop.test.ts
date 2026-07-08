@@ -1138,9 +1138,10 @@ describe('PopoverDesktop', () => {
       popover.invalidateSizeCache();
       void instance.size;
 
-      // The clone's container should include the opened-state padding (asymmetric: px-1.5 pt-1.5 pb-0 for scroll haze)
+      // The clone's container should include the opened-state padding. The top gap was
+      // moved off the container (no pt-1.5) so the first item sits flush to the top edge.
       expect(cloneContainerClass).toContain('px-1.5');
-      expect(cloneContainerClass).toContain('pt-1.5');
+      expect(cloneContainerClass).not.toContain('pt-1.5');
       expect(cloneContainerClass).toContain('pb-0');
     });
   });
@@ -1911,8 +1912,9 @@ describe('PopoverDesktop', () => {
 
       // Bottom padding lives on the scrollable items container (not the popover container),
       // so it is only visible when user scrolls to the bottom of the list.
-      // Top padding (pt-1.5) is on the outer popover container and is always visible.
+      // The outer container carries no top padding, so the first item sits flush to the top edge.
       expect(instance.nodes.items.className).toContain('pb-1.5');
+      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
     });
 
     it('wires the search input as a combobox controlling the results container', () => {
@@ -1930,6 +1932,21 @@ describe('PopoverDesktop', () => {
       expect(searchInput.controlsId).toBe(instance.nodes.items.id);
       // ...and an accessible label is plumbed through.
       expect(searchInput.label).toBe('Search');
+    });
+
+    it('gives the search input its own top gap since the container no longer pads the top', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+
+      popover.show();
+
+      const searchInput = getMockSearchInput();
+
+      // The top breathing room moved off the popover container onto the search element,
+      // so the input keeps its gap from the top edge while item-only menus sit flush.
+      expect(searchInput.element.className).toContain('mt-1.5');
     });
 
     it('registers the search input as the flipper active-descendant host', () => {
@@ -1981,13 +1998,13 @@ describe('PopoverDesktop', () => {
 
       expect(instance.nodes.nothingFoundMessage).toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
       expect(instance.nodes.popoverContainer.className).not.toContain('px-1.5');
-      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
 
       searchInput.emitSearch({ query: '', items: instance.itemsDefault });
 
       expect(instance.nodes.nothingFoundMessage).not.toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
       expect(instance.nodes.popoverContainer.className).toContain('px-1.5');
-      expect(instance.nodes.popoverContainer.className).toContain('pt-1.5');
+      // The container carries no top padding in any state — the top gap lives on the search input.
+      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
     });
 
     it('removes bottom padding from the outer popover container (pb-0 stays on wrapper)', () => {
@@ -1996,9 +2013,10 @@ describe('PopoverDesktop', () => {
 
       popover.show();
 
-      // Outer container keeps pb-0 so bottom padding is solely handled inside the scroll area.
+      // Outer container keeps pb-0 so bottom padding is solely handled inside the scroll area,
+      // and carries no top padding so the first item sits flush to the top edge.
       expect(instance.nodes.popoverContainer.className).toContain('pb-0');
-      expect(instance.nodes.popoverContainer.className).toContain('pt-1.5');
+      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
     });
   });
 

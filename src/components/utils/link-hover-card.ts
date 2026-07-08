@@ -257,11 +257,13 @@ export class LinkHoverCard {
     // prepended to <head> (lowest priority), so a host page's own CSS reset
     // (e.g. Tailwind preflight zeroing border-width) would otherwise win and the
     // border would vanish. Inline styles beat host author stylesheets. The color
-    // stays theme-aware by resolving the token, which is re-declared on
-    // [data-blok-top-layer] where this promoted card lives.
+    // is a literal (not a token): @theme colors like --color-gray-text are not
+    // present in the cascade at this body-promoted card, so a var() reference
+    // would resolve to currentColor (near-black). This faint neutral matches the
+    // hardcoded shadow tone below.
     wrapper.style.borderWidth = '1px';
     wrapper.style.borderStyle = 'solid';
-    wrapper.style.borderColor = 'color-mix(in srgb, var(--color-gray-text) 30%, transparent)';
+    wrapper.style.borderColor = 'rgba(13, 20, 33, 0.12)';
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
 
@@ -275,8 +277,8 @@ export class LinkHoverCard {
     url.type = 'button';
     url.className = twJoin(
       'appearance-none border-0 bg-transparent m-0 p-0 font-[inherit] cursor-pointer',
-      'min-w-0 max-w-[280px] truncate text-left font-medium text-text-primary',
-      'underline-offset-2 can-hover:hover:underline'
+      'min-w-0 max-w-[280px] truncate text-left text-gray-text',
+      'underline-offset-2 can-hover:hover:underline can-hover:hover:text-text-primary'
     );
     url.setAttribute('data-blok-testid', 'link-hover-card-url');
     url.addEventListener('click', this.handleOpen);
@@ -293,7 +295,7 @@ export class LinkHoverCard {
     const editButton = document.createElement('button');
 
     editButton.type = 'button';
-    editButton.className = twJoin(ACTION_BUTTON_BASE, 'px-2 font-medium text-text-primary');
+    editButton.className = twJoin(ACTION_BUTTON_BASE, 'px-2');
     editButton.setAttribute('data-blok-testid', 'link-hover-card-edit');
     editButton.textContent = this.labels.edit;
     editButton.addEventListener('click', this.handleEdit);

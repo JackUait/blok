@@ -223,6 +223,22 @@ export function isDefaultBlack(color: string): boolean {
 }
 
 /**
+ * Whether an element's text is entirely a link's text. Pasted links always use
+ * Blok's default link color, so any color on link text is dropped. True when the
+ * node is inside an `<a>` or wraps an `<a>` covering all of its text; a span that
+ * only partially overlaps a link keeps its color (intentional text formatting).
+ */
+function isLinkContent(node: Element): boolean {
+  if (node.closest('a') !== null) {
+    return true;
+  }
+
+  const anchor = node.querySelector('a');
+
+  return anchor !== null && anchor.textContent?.trim() === node.textContent?.trim();
+}
+
+/**
  * Extract HTML content from a `<td>`/`<th>` element, converting Google Docs
  * style-based spans to semantic tags and sanitizing to allowed formatting only.
  *
@@ -248,7 +264,8 @@ function sanitizeCellHtml(td: Element): string {
     const color = colorMatch?.[1]?.trim();
     const bgColor = bgMatch?.[1]?.trim();
 
-    const hasColor = color !== undefined && !isDefaultBlack(color);
+    const isLinkColor = color !== undefined && isLinkContent(span);
+    const hasColor = !isLinkColor && color !== undefined && !isDefaultBlack(color);
     // Filter resolved page bg (white/dark) so plain spans don't collapse onto gray preset.
     const hasBgColor = bgColor !== undefined
       && bgColor !== 'transparent'
@@ -278,40 +295,33 @@ function sanitizeCellHtml(td: Element): string {
     span.replaceWith(document.createRange().createContextualFragment(wrapped));
   }
 
-  // Move color/background-color from <a> tags into <mark> wrappers.
-  // The sanitizer only allows href on <a>, so inline color styles would be lost.
+  // Move background-color from <a> tags into <mark> wrappers.
+  // The sanitizer only allows href on <a>, so an inline background would be lost.
+  // A color on the <a> is the link's own color and is dropped: pasted links
+  // always use Blok's default link color.
   for (const anchor of Array.from(clone.querySelectorAll('a[style]'))) {
     const style = anchor.getAttribute('style') ?? '';
 
-    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
     const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
-
-    const color = colorMatch?.[1]?.trim();
     const bgColor = bgMatch?.[1]?.trim();
 
-    const hasColor = color !== undefined && !isDefaultBlack(color) && color !== 'inherit';
     const hasBgColor = bgColor !== undefined
       && bgColor !== 'transparent'
       && bgColor !== 'inherit'
       && !isDefaultWhiteBackground(bgColor)
       && !isDefaultDarkBackground(bgColor);
 
-    if (!hasColor && !hasBgColor) {
+    const el = anchor as HTMLElement;
+
+    el.style.removeProperty('color');
+
+    if (!hasBgColor) {
       continue;
     }
 
-    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
-    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+    const mappedBg = mapToNearestPresetColor(bgColor, 'bg');
 
-    const colorStyles = [
-      hasColor ? `color: ${mappedColor}` : '',
-      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
-    ].filter(Boolean).join('; ');
-
-    const el = anchor as HTMLElement;
-
-    el.innerHTML = `<mark style="${colorStyles};">${el.innerHTML}</mark>`;
-    el.style.removeProperty('color');
+    el.innerHTML = `<mark style="background-color: ${mappedBg};">${el.innerHTML}</mark>`;
     el.style.removeProperty('background-color');
   }
 

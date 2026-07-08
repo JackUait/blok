@@ -881,6 +881,42 @@ describe('table-cell-clipboard', () => {
       expect(markCount).toBe(1);
     });
 
+    it('drops a link color in a table cell so it uses the default link color', () => {
+      const html = '<table><tr><td><a href="https://example.com"><span style="color:#1155cc;text-decoration:underline;">Link text</span></a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const rawText = result?.cells[0][0].blocks[0].data.text;
+      const text = typeof rawText === 'string' ? rawText : '';
+
+      expect(text).not.toContain('#337ea9');
+      expect(text).toContain('Link text');
+    });
+
+    it('drops a color on the <a> itself in a table cell', () => {
+      const html = '<table><tr><td><a href="https://example.com" style="color:#1155cc;">Link text</a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const rawText = result?.cells[0][0].blocks[0].data.text;
+      const text = typeof rawText === 'string' ? rawText : '';
+
+      expect(text).not.toContain('#337ea9');
+      expect(text).toContain('Link text');
+    });
+
+    it('drops a non-blue link color in a table cell too', () => {
+      const html = '<table><tr><td><a href="https://example.com"><span style="color:#ff0000;">Red link</span></a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const rawText = result?.cells[0][0].blocks[0].data.text;
+      const text = typeof rawText === 'string' ? rawText : '';
+
+      expect(text).not.toContain('#d44c47');
+      expect(text).toContain('Red link');
+    });
+
     // -------------------------------------------------------------------------
     // Bug #7: parseGenericHtmlTable ignores <td> text color
     // -------------------------------------------------------------------------

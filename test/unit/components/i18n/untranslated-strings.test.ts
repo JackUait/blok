@@ -115,7 +115,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   am: new Set(['tools.colorPicker.defaultSwatchLabel', 'tools.colorPicker.colorSwatchLabel']),
   az: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
   bg: new Set(['tools.colorPicker.defaultSwatchLabel', 'tools.colorPicker.colorSwatchLabel']),
-  cs: new Set(['tools.database.propertyTypeText']),
+  // "Text" is a direct cognate of the English word in Czech.
+  cs: new Set(['tools.database.propertyTypeText', 'tools.link.linkText']),
   da: new Set([
     'tools.colorPicker.color.orange',
     'toolNames.database',
@@ -147,6 +148,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.defaultStatusProperty',
     'tools.database.defaultViewBoard',
     'searchTerms.layout',
+    // "Text" is a direct cognate of the English word in German.
+    'tools.link.linkText',
   ]),
   es: new Set(['tools.stub.error', 'tools.table.cellColor', 'tools.callout.color']),
   // "Link" is the standard loanword for a hyperlink in Estonian UIs.
@@ -229,8 +232,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.file.emptyLink',
     'tools.image.cropRatioOval',
     'tools.database.propertyTypeText',
+    // "Text" is a direct cognate of the English word in Romanian.
+    'tools.link.linkText',
   ]),
-  sk: new Set(['tools.marker.textColor', 'tools.database.propertyTypeText']),
+  sk: new Set(['tools.marker.textColor', 'tools.database.propertyTypeText', 'tools.link.linkText']),
   sq: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
   sv: new Set([
     'toolNames.text',
@@ -240,6 +245,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeText',
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
+    // "Text" is a direct cognate of the English word in Swedish.
+    'tools.link.linkText',
   ]),
   tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
 };

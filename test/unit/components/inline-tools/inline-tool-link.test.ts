@@ -62,7 +62,7 @@ type LinkToolRenderResult = {
 };
 
 const getInputFromWrapper = (wrapper: HTMLElement): HTMLInputElement => {
-  const input = wrapper.querySelector<HTMLInputElement>('input');
+  const input = wrapper.querySelector<HTMLInputElement>('[data-blok-testid="inline-tool-input"]');
 
   if (!input) {
     throw new Error('Input not found in wrapper');
@@ -73,6 +73,26 @@ const getInputFromWrapper = (wrapper: HTMLElement): HTMLInputElement => {
 
 const getSuggestionChip = (itemWrapper: HTMLElement): HTMLElement | null => {
   return itemWrapper.querySelector<HTMLElement>('[data-link-suggestion]');
+};
+
+const getTitleInput = (itemWrapper: HTMLElement): HTMLInputElement => {
+  const input = itemWrapper.querySelector<HTMLInputElement>('[data-blok-testid="inline-tool-title-input"]');
+
+  if (!input) {
+    throw new Error('Title input not found in wrapper');
+  }
+
+  return input;
+};
+
+const getRemoveButton = (itemWrapper: HTMLElement): HTMLButtonElement => {
+  const button = itemWrapper.querySelector<HTMLButtonElement>('[data-blok-testid="inline-tool-remove-link"]');
+
+  if (!button) {
+    throw new Error('Remove-link button not found in wrapper');
+  }
+
+  return button;
 };
 
 type LinkConfig = {
@@ -174,6 +194,17 @@ describe('LinkInlineTool', () => {
     const config = tool.render() as unknown as { children: { width?: string } };
 
     expect(config.children.width).toBeUndefined();
+  });
+
+  it('stretches the input to fill the popover width instead of a fixed pixel width', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    expect(input.className).toContain('w-full');
+    // No standalone fixed pixel width (a `min-w-[200px]` floor is fine).
+    expect(input.className).not.toMatch(/(^|\s)w-\[200px\]/);
   });
 
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
@@ -565,7 +596,7 @@ describe('LinkInlineTool', () => {
       expect(typeEl?.textContent).toBe('Jump to section');
     });
 
-    it('shows suggestion for existing link when popover opens', () => {
+    it('prefills the URL field and suppresses the suggestion chip when editing an existing link', () => {
       const { tool, selection } = createTool();
       const anchor = document.createElement('a');
 
@@ -577,9 +608,10 @@ describe('LinkInlineTool', () => {
       renderResult.children.onOpen();
 
       const itemWrapper = renderResult.children.items[0].element;
-      const urlEl = itemWrapper.querySelector('[data-link-suggestion-url]');
 
-      expect(urlEl?.textContent).toBe('https://notion.so');
+      // Edit mode uses the labeled fields, not the create-mode suggestion chip.
+      expect(getInputFromWrapper(itemWrapper).value).toBe('https://notion.so');
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(true);
     });
 
     it('hides suggestion when popover closes', () => {
@@ -655,6 +687,149 @@ describe('LinkInlineTool', () => {
 
       expect(insertLinkSpy).not.toHaveBeenCalled();
       expect(inlineToolbar.close).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('edit mode (title field + remove button)', () => {
+    const openEditing = (
+      href = 'https://example.com',
+      text = 'existing text'
+    ): { tool: InstanceType<typeof LinkInlineTool>; selection: SelectionMock; inlineToolbar: { close: ReturnType<typeof vi.fn> }; anchor: HTMLAnchorElement; itemWrapper: HTMLElement } => {
+      const setup = createTool();
+      const anchor = document.createElement('a');
+
+      anchor.setAttribute('href', href);
+      anchor.textContent = text;
+      document.body.appendChild(anchor);
+      setup.selection.findParentTag.mockReturnValue(anchor);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      return {
+        tool: setup.tool,
+        selection: setup.selection,
+        inlineToolbar: setup.inlineToolbar,
+        anchor,
+        itemWrapper: renderResult.children.items[0].element,
+      };
+    };
+
+    it('shows the "Page or URL" and "Link title" field labels when editing', () => {
+      const { itemWrapper } = openEditing();
+      const urlLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-url-label"]');
+      const titleLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-title-label"]');
+
+      expect(urlLabel?.textContent).toBe('tools.link.pageOrUrl');
+      expect(titleLabel?.textContent).toBe('tools.link.linkTitle');
+      expect(urlLabel?.classList.contains('hidden')).toBe(false);
+      expect(titleLabel?.classList.contains('hidden')).toBe(false);
+    });
+
+    it('hides the field labels when creating a new link', () => {
+      const { tool, selection } = createTool();
+
+      selection.findParentTag.mockReturnValue(null);
+
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      const itemWrapper = renderResult.children.items[0].element;
+      const urlLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-url-label"]');
+      const titleLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-title-label"]');
+
+      expect(urlLabel?.classList.contains('hidden')).toBe(true);
+      expect(titleLabel?.classList.contains('hidden')).toBe(true);
+    });
+
+    it('orders the URL field above the title field', () => {
+      const { itemWrapper } = openEditing();
+      const url = getInputFromWrapper(itemWrapper);
+      const title = getTitleInput(itemWrapper);
+
+      // Node.DOCUMENT_POSITION_FOLLOWING (4): title comes after url in the DOM.
+      expect(url.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('reveals the title field prefilled with the link text and the remove button when editing', () => {
+      const { itemWrapper } = openEditing('https://example.com', 'Blok repo');
+      const titleInput = getTitleInput(itemWrapper);
+      const removeButton = getRemoveButton(itemWrapper);
+
+      expect(titleInput.value).toBe('Blok repo');
+      expect(titleInput.classList.contains('hidden')).toBe(false);
+      expect(removeButton.classList.contains('hidden')).toBe(false);
+    });
+
+    it('keeps the title field and remove button hidden when creating a new link', () => {
+      const { tool, selection } = createTool();
+
+      selection.findParentTag.mockReturnValue(null);
+
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      const itemWrapper = renderResult.children.items[0].element;
+
+      expect(getTitleInput(itemWrapper).classList.contains('hidden')).toBe(true);
+      expect(getRemoveButton(itemWrapper).classList.contains('hidden')).toBe(true);
+    });
+
+    it('removes the link and closes the toolbar when the remove button is clicked', () => {
+      const { itemWrapper, inlineToolbar } = openEditing('https://example.com', 'link text');
+      const removeButton = getRemoveButton(itemWrapper);
+
+      removeButton.click();
+
+      expect(document.querySelector('a')).toBeNull();
+      expect(document.body).toHaveTextContent('link text');
+      expect(inlineToolbar.close).toHaveBeenCalled();
+    });
+
+    it('rewrites the anchor text when the title field changes before confirming', () => {
+      const { tool, itemWrapper, anchor } = openEditing('https://old.com', 'old text');
+      const titleInput = getTitleInput(itemWrapper);
+      const urlInput = getInputFromWrapper(itemWrapper);
+
+      titleInput.value = 'new title';
+      urlInput.value = 'https://new.com';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      expect(anchor.getAttribute('href')).toBe('https://new.com');
+      expect(anchor.textContent).toBe('new title');
+    });
+
+    it('leaves the anchor content untouched when the title field is unchanged', () => {
+      const { tool, itemWrapper, anchor } = openEditing('https://old.com', 'keep me');
+
+      anchor.innerHTML = '<strong>keep me</strong>';
+
+      const urlInput = getInputFromWrapper(itemWrapper);
+
+      urlInput.value = 'https://new.com';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      // Title unchanged → formatting preserved (not flattened to plain text).
+      expect(anchor.querySelector('strong')).not.toBeNull();
+    });
+
+    it('clears and hides the title field and remove button when the popover closes', () => {
+      const { tool, itemWrapper } = openEditing('https://example.com', 'text');
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onClose();
+
+      const titleInput = getTitleInput(itemWrapper);
+      const removeButton = getRemoveButton(itemWrapper);
+
+      expect(titleInput.value).toBe('');
+      expect(titleInput.classList.contains('hidden')).toBe(true);
+      expect(removeButton.classList.contains('hidden')).toBe(true);
     });
   });
 

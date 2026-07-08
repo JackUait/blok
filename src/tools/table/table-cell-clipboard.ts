@@ -1,6 +1,7 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard, TableClipboardCell } from './types';
 import { mapPastedTableCells } from './table-operations';
+import { parseCellContentToBlocks } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
 import { clean } from '../../components/utils/sanitizer';
@@ -209,6 +210,12 @@ const CELL_SANITIZE_CONFIG: SanitizerConfig = {
   i: true,
   em: true,
   br: true,
+  // List structure inside cells: parseCellContentToBlocks reads these to
+  // reconstruct list blocks — stripping them silently flattens cell lists.
+  ul: true,
+  ol: true,
+  li: { style: true, 'aria-level': true, 'data-list-style': true },
+  input: { type: true, checked: true },
   a: { href: true, target: '_blank', rel: 'nofollow' },
   mark: (node: Element): { [attr: string]: boolean | string } => {
     const el = node as HTMLElement;
@@ -415,14 +422,12 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
 
 /**
  * Build a clipboard cell payload from a single `<td>`/`<th>`: sanitized
- * paragraph blocks (split on line breaks) plus cell-level colors.
+ * paragraph blocks (split on line breaks), list blocks for `<ul>`/`<ol>`
+ * content (structure would otherwise silently flatten to text), plus
+ * cell-level colors.
  */
 function buildCellPayloadFromTd(td: Element): TableClipboardCell {
-  const text = sanitizeCellHtml(td);
-  const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
-  const blocks = segments.length > 0
-    ? segments.map(s => ({ tool: 'paragraph' as const, data: { text: s } }))
-    : [{ tool: 'paragraph' as const, data: { text: '' } }];
+  const blocks: ClipboardBlockData[] = parseCellContentToBlocks(sanitizeCellHtml(td));
 
   const cell: TableClipboardCell = { blocks };
 

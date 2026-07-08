@@ -1013,10 +1013,13 @@ export class TableSubsystems {
 
     if (payload.rows === 1 && payload.cols === 1) {
       const singleCell = payload.cells[0][0];
-      // Inline caret-insert only works for text blocks. A non-text block
-      // (image/embed/list/code) has no data.text and would be silently dropped,
-      // so recreate it as a real block in the target cell instead.
-      const isTextOnly = singleCell.blocks.every(block => typeof block.data.text === 'string');
+      // Inline caret-insert only works for plain text blocks. Anything else
+      // (image/embed/code, and list items — which DO carry data.text but would
+      // lose their list structure in a text join) must be recreated as real
+      // blocks in the target cell instead.
+      const isTextOnly = singleCell.blocks.every(
+        block => block.tool === 'paragraph' && typeof block.data.text === 'string'
+      );
 
       if (isTextOnly) {
         this.insertSingleCellPayloadInline(singleCell);

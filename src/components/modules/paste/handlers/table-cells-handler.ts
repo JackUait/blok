@@ -1,5 +1,6 @@
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 import { parseClipboardHtml } from '../../../../tools/table/table-cell-clipboard';
+import { serializeCellBlocksToHtml } from '../../../../tools/table/table-cell-paste';
 import type { CellContent, LegacyCellContent, TableCellsClipboard, TableClipboardCell } from '../../../../tools/table/types';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
@@ -156,9 +157,10 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
       return { blocks: [], mergedInto: origin };
     }
 
-    const text = cell.blocks
-      .map(b => (typeof b.data.text === 'string' ? b.data.text : ''))
-      .join(' ');
+    // Serialize blocks structurally (lists → <ul>/<ol> markup) so the Table
+    // tool's cell parser reconstructs them as list blocks instead of the
+    // text join flattening them to a single line.
+    const text = serializeCellBlocksToHtml(cell.blocks);
 
     const { colspan, rowspan } = clampSpans(cell, row, col, payload);
     const hasColor = cell.color !== undefined;

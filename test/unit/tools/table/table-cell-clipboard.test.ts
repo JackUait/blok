@@ -498,6 +498,28 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[1][1].blocks[0].data.text).toBe('D');
     });
 
+    it('preserves lists inside cells as list blocks (regression: pasted table lost bullets)', () => {
+      const html = '<table><tr>'
+        + '<td><ul><li>alpha</li><li>beta<ul><li>nested</li></ul></li></ul></td>'
+        + '<td><ol><li>one</li></ol></td>'
+        + '</tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+
+      const bulletBlocks = result?.cells[0][0].blocks ?? [];
+
+      expect(bulletBlocks.map(b => b.tool)).toEqual(['list', 'list', 'list']);
+      expect(bulletBlocks[0].data).toMatchObject({ text: 'alpha', style: 'unordered', depth: 0 });
+      expect(bulletBlocks[1].data).toMatchObject({ text: 'beta', style: 'unordered', depth: 0 });
+      expect(bulletBlocks[2].data).toMatchObject({ text: 'nested', style: 'unordered', depth: 1 });
+
+      const orderedBlocks = result?.cells[0][1].blocks ?? [];
+
+      expect(orderedBlocks[0].tool).toBe('list');
+      expect(orderedBlocks[0].data).toMatchObject({ text: 'one', style: 'ordered' });
+    });
+
     it('should handle Google Docs wrapper HTML', () => {
       const html = `
         <meta charset="utf-8">

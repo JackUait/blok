@@ -2456,9 +2456,11 @@ describe('Paste module', () => {
 
       const result = builder.getStructuralTagsConfig(wrapper);
 
+      // li keeps its paste-metadata attributes (depth/style stamps) — see
+      // STRUCTURAL_TAG_ATTRIBUTES.
       expect(result).toEqual({
         'ul': {},
-        'li': {},
+        'li': { style: true, 'aria-level': true, 'data-list-style': true },
         'ol': {},
       });
     });
@@ -2491,7 +2493,7 @@ describe('Paste module', () => {
         'tr': {},
         'td': {},
         'ul': {},
-        'li': {},
+        'li': { style: true, 'aria-level': true, 'data-list-style': true },
       });
     });
 

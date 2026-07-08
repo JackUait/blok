@@ -415,6 +415,75 @@ test.describe('Paste HTML Table into Editor', () => {
     // At most 2 top-level blocks: the table + one trailing default paragraph
     expect(topLevelBlocksAfter.length).toBeLessThanOrEqual(2);
   });
+
+  test('Pasting a table with lists in cells preserves list items as list blocks', async ({ page }) => {
+    await createBlok(page, {
+      tools: {
+        table: { className: 'Blok.Table' },
+        list: { className: 'Blok.List' },
+      },
+    });
+
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+
+    await paragraph.click();
+
+    // Google-Docs-shaped table: bullets (with a nested item) in the first cell,
+    // a numbered list in the second, plain text in the third.
+    const html = [
+      '<meta charset="utf-8">',
+      '<b style="font-weight:normal;" id="docs-internal-guid-list123">',
+      '<table><tbody><tr>',
+      '<td>',
+      '<ul><li><p>alpha</p></li><li><p>beta</p><ul><li><p>nested</p></li></ul></li></ul>',
+      '</td>',
+      '<td><ol><li><p>one</p></li><li><p>two</p></li></ol></td>',
+      '<td><p>plain</p></td>',
+      '</tr></tbody></table>',
+      '</b>',
+    ].join('');
+
+    await paste(paragraph, { 'text/html': html });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    const output = await page.evaluate(async () => window.blokInstance?.save());
+
+    const tableBlock = output?.blocks.find((b: { type: string }) => b.type === 'table');
+
+    expect(tableBlock).toBeDefined();
+
+    type SavedBlock = { type: string; parent?: string; data: Record<string, unknown> };
+    const cellLists = (output?.blocks as SavedBlock[]).filter(
+      (b) => b.type === 'list' && b.parent === (tableBlock as SavedBlock & { id: string }).id
+    );
+
+    const byText = (text: string): SavedBlock | undefined =>
+      cellLists.find((b) => (b.data.text as string).includes(text));
+
+    // Bulleted cell: two root items + one nested item
+    expect(byText('alpha')?.data.style).toBe('unordered');
+    expect(byText('alpha')?.data.depth ?? 0).toBe(0);
+    expect(byText('beta')?.data.style).toBe('unordered');
+    expect(byText('nested')?.data.style).toBe('unordered');
+    expect(byText('nested')?.data.depth).toBe(1);
+
+    // Numbered cell
+    expect(byText('one')?.data.style).toBe('ordered');
+    expect(byText('two')?.data.style).toBe('ordered');
+
+    // Plain cell stays a paragraph, and each list item's text is clean
+    const cellParagraphs = (output?.blocks as SavedBlock[]).filter(
+      (b) => b.type === 'paragraph'
+        && b.parent === (tableBlock as SavedBlock & { id: string }).id
+        && (b.data.text as string).includes('plain')
+    );
+
+    expect(cellParagraphs).toHaveLength(1);
+    expect((byText('alpha')?.data.text as string).trim()).toBe('alpha');
+  });
 });
 
 test.describe('Paste HTML table with merged cells', () => {

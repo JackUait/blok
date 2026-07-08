@@ -82,6 +82,15 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     // CONNECTED nodes) is a no-op here — ensureStrongElement swaps in place.
     wrapper.querySelectorAll('b').forEach(bold => ensureStrongElement(bold));
 
+    // Quote is a leaf tool: its onPaste stores innerHTML as inline rich text
+    // and its sanitizer strips list tags — a list left inside a <blockquote>
+    // would silently flatten on save. Split lists out first, then stamp them.
+    this.splitListsOutOfBlockquotes(wrapper);
+
+    // Notion/GDocs wrap quote text in <p>; the registered P tag would force
+    // the blockquote to descend into loose paragraphs and lose quote-ness.
+    this.unwrapBlockquoteParagraphs(wrapper);
+
     // Preserve nested-list depth and ordered/unordered context BEFORE the splitter
     // detaches each <li> from its ancestor <ul>/<ol> during sanitization.
     this.preprocessNestedLists(wrapper);
@@ -243,6 +252,75 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
    * Existing `aria-level`/`data-list-style` (e.g. from Google Docs) win and are
    * never overwritten.
    */
+  /**
+   * Split direct-child `<ul>`/`<ol>` elements out of every `<blockquote>`,
+   * preserving document order: lead content stays in the quote, the list
+   * becomes its next sibling, trailing content continues in a new quote.
+   * A quote left with no text is removed. Repeats until stable (each split
+   * strictly reduces the count of lists parented by a blockquote).
+   *
+   * @param wrapper - detached element holding the pasted document
+   */
+  private splitListsOutOfBlockquotes(wrapper: HTMLElement): void {
+    const isListElement = (candidate: Element): boolean =>
+      candidate.tagName === 'UL' || candidate.tagName === 'OL';
+
+    while (true) {
+      const quote = Array.from(wrapper.querySelectorAll('blockquote'))
+        .find((candidate) => Array.from(candidate.children).some(isListElement));
+
+      if (quote === undefined) {
+        return;
+      }
+
+      const children = Array.from(quote.childNodes);
+      const list = children.find(
+        (child): child is HTMLElement => child instanceof HTMLElement && isListElement(child)
+      ) as HTMLElement;
+
+      const trailingQuote = quote.cloneNode(false) as HTMLElement;
+
+      children.slice(children.indexOf(list) + 1).forEach((child) => trailingQuote.appendChild(child));
+
+      quote.after(list);
+
+      if ((trailingQuote.textContent ?? '').trim() !== '') {
+        list.after(trailingQuote);
+      }
+
+      if ((quote.textContent ?? '').trim() === '') {
+        quote.remove();
+      }
+    }
+  }
+
+  /**
+   * Unwrap direct `<p>` children of every `<blockquote>` into inline content
+   * separated by `<br>`, so the blockquote substitutes into ONE quote block.
+   * `<p>` is registered to the paragraph tool, which otherwise marks the
+   * blockquote as containing another tool's tag and forces it to descend
+   * into loose paragraph blocks — quote-ness silently lost.
+   *
+   * @param wrapper - detached element holding the pasted document
+   */
+  private unwrapBlockquoteParagraphs(wrapper: HTMLElement): void {
+    wrapper.querySelectorAll('blockquote').forEach((quote) => {
+      Array.from(quote.children)
+        .filter((child): child is HTMLElement => child.tagName === 'P')
+        .forEach((paragraph) => {
+          const hasContentBefore =
+            paragraph.previousElementSibling !== null ||
+            (paragraph.previousSibling?.textContent ?? '').trim() !== '';
+
+          if (hasContentBefore) {
+            paragraph.before(document.createElement('br'));
+          }
+
+          paragraph.replaceWith(...Array.from(paragraph.childNodes));
+        });
+    });
+  }
+
   private preprocessNestedLists(wrapper: HTMLElement): void {
     const listItems = Array.from(wrapper.querySelectorAll('li'));
 

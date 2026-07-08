@@ -470,6 +470,40 @@ test.describe('copy and paste', () => {
       });
     });
 
+    test('pasting a blockquote containing a list keeps the list as list blocks', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          quote: {
+            className: 'Blok.Quote',
+          },
+          list: {
+            className: 'Blok.List',
+          },
+        },
+      });
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+      await paste(page, block, {
+        'text/html': '<blockquote><p>Wise words</p><ul><li>alpha</li><li>beta</li></ul></blockquote>',
+      });
+
+      const quoteBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="quote"]`);
+
+      await expect(quoteBlock).toHaveText('Wise words');
+
+      const output = await saveBlok(page);
+      const savedTypes = output.blocks.map((savedBlock) => savedBlock.type);
+
+      // Regression: quote used to swallow the list into its rich text, and the
+      // quote sanitizer then mashed it into bare text ("Wise wordsalphabeta").
+      expect(savedTypes).toEqual(['quote', 'list', 'list']);
+      expect(output.blocks[0]?.data).toMatchObject({ text: 'Wise words' });
+      expect(output.blocks[1]?.data).toMatchObject({ text: 'alpha' });
+      expect(output.blocks[2]?.data).toMatchObject({ text: 'beta' });
+    });
+
     test('should sanitize dangerous HTML fragments on paste', async ({ page }) => {
       await createBlok(page);
 

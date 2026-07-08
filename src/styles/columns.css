@@ -26,7 +26,10 @@
  * col-resize cursor zone.
  */
 [data-blok-column-resizer] {
-  flex: 0 0 1.5rem;
+  /* Gutter width matches Notion: min(32px, 4vw) — a constant 32px on wide
+   * viewports, tracking 4vw on narrower ones. The gap stays the same for two,
+   * three, four or more columns; extra columns just add more gutters. */
+  flex: 0 0 min(2rem, 4vw);
   align-self: stretch;
   position: relative;
   cursor: col-resize;

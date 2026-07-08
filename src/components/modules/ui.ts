@@ -493,6 +493,23 @@ export class UI extends Module<UINodes> {
   };
 
   /**
+   * Link hover card show/hide handlers. Kept as stable references (not inline
+   * wrappers) so they can be bound to the read-only-insensitive listener set:
+   * the card must appear on hover in both edit and read-only modes.
+   */
+  private anchorMouseOverListener = (event: Event): void => {
+    if (event instanceof MouseEvent) {
+      this.handleAnchorMouseOver(event);
+    }
+  };
+
+  private anchorMouseOutListener = (event: Event): void => {
+    if (event instanceof MouseEvent) {
+      this.handleAnchorMouseOut(event);
+    }
+  };
+
+  /**
    * Right-click inside block content opens the block context menu (Block
    * Settings) anchored at the cursor, mirroring a desktop application. This is
    * a hover-independent path to the block menu that avoids the "wrong block"
@@ -734,6 +751,16 @@ export class UI extends Module<UINodes> {
     });
 
     this.listeners.on(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
+
+    /**
+     * Link hover card — show it while the pointer rests on a link, hide it once
+     * the pointer leaves both the link and the card. mouseover/mouseout bubble,
+     * so a single delegated pair covers every anchor in the redactor. Bound here
+     * (read-only-insensitive) so the card also appears in read-only mode, where
+     * it omits its edit affordance (see the hover card's canEdit).
+     */
+    this.listeners.on(this.nodes.redactor, 'mouseover', this.anchorMouseOverListener);
+    this.listeners.on(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
   }
 
   /**
@@ -744,6 +771,8 @@ export class UI extends Module<UINodes> {
     this.listeners.off(this.nodes.redactor, 'mousedown', this.documentTouchedListener);
     this.listeners.off(this.nodes.redactor, 'touchstart', this.documentTouchedListener);
     this.listeners.off(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
+    this.listeners.off(this.nodes.redactor, 'mouseover', this.anchorMouseOverListener);
+    this.listeners.off(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
 
     /**
      * Disable selection controller
@@ -771,23 +800,6 @@ export class UI extends Module<UINodes> {
     this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: Event) => {
       if (event instanceof MouseEvent) {
         this.redactorClicked(event);
-      }
-    }, false);
-
-    /**
-     * Link hover card — show it while the pointer rests on a link, hide it once
-     * the pointer leaves both the link and the card. mouseover/mouseout bubble,
-     * so a single delegated pair covers every anchor in the redactor.
-     */
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'mouseover', (event: Event) => {
-      if (event instanceof MouseEvent) {
-        this.handleAnchorMouseOver(event);
-      }
-    }, false);
-
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'mouseout', (event: Event) => {
-      if (event instanceof MouseEvent) {
-        this.handleAnchorMouseOut(event);
       }
     }, false);
 
@@ -829,8 +841,10 @@ export class UI extends Module<UINodes> {
     this.readOnlyMutableListeners.clearAll();
 
     /**
-     * The hover card only makes sense while editing; hide it whenever the
-     * edit-mode listeners are torn down (read-only toggle, destroy).
+     * Reset any visible hover card when the mode changes: entering read-only
+     * must drop the edit-mode card so the next hover re-renders it without the
+     * edit affordance. The hover listeners themselves persist (they are
+     * read-only-insensitive), so the card still appears in read-only mode.
      */
     this.linkHoverCard?.hide();
 

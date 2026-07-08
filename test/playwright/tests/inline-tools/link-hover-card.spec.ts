@@ -38,15 +38,27 @@ const createBlokWithBlocks = async (page: Page, blocks: OutputData['blocks']): P
   }, { holder: HOLDER_ID, blocks });
 };
 
-const createLinkParagraph = async (page: Page): Promise<void> => {
-  await createBlokWithBlocks(page, [
-    {
-      type: 'paragraph',
+const createLinkParagraph = async (page: Page, options: { readOnly?: boolean } = {}): Promise<void> => {
+  await resetBlok(page);
+  await page.evaluate(async ({ holder, url, readOnly }) => {
+    const blok = new window.Blok({
+      holder,
+      readOnly,
       data: {
-        text: `Visit <a href="${LINK_URL}" target="_blank" rel="nofollow">YouTube</a> today`,
+        blocks: [
+          {
+            type: 'paragraph',
+            data: {
+              text: `Visit <a href="${url}" target="_blank" rel="nofollow">YouTube</a> today`,
+            },
+          },
+        ],
       },
-    },
-  ]);
+    });
+
+    window.blokInstance = blok;
+    await blok.isReady;
+  }, { holder: HOLDER_ID, url: LINK_URL, readOnly: options.readOnly ?? false });
 };
 
 test.describe('link hover card', () => {
@@ -70,6 +82,19 @@ test.describe('link hover card', () => {
     await expect(card.getByTestId('link-hover-card-url')).toHaveText(LINK_URL);
     await expect(card.getByTestId('link-hover-card-copy')).toBeVisible();
     await expect(card.getByTestId('link-hover-card-edit')).toBeVisible();
+  });
+
+  test('shows the hover card without the edit button in read-only mode', async ({ page }) => {
+    await createLinkParagraph(page, { readOnly: true });
+
+    await page.locator(PARAGRAPH_LINK_SELECTOR).hover();
+
+    const card = page.getByTestId('link-hover-card');
+
+    await expect(card).toBeVisible();
+    await expect(card.getByTestId('link-hover-card-url')).toHaveText(LINK_URL);
+    await expect(card.getByTestId('link-hover-card-copy')).toBeVisible();
+    await expect(card.getByTestId('link-hover-card-edit')).toBeHidden();
   });
 
   test('opens the link in a new tab on a plain click', async ({ page }) => {
@@ -114,7 +139,13 @@ test.describe('link hover card', () => {
     await createLinkParagraph(page);
 
     await page.locator(PARAGRAPH_LINK_SELECTOR).hover();
-    await page.getByTestId('link-hover-card').getByTestId('link-hover-card-edit').click();
+
+    // Wait for the card to actually open (it appears after a hover-intent delay);
+    // its closed state is transparent but still "visible" to Playwright.
+    const card = page.getByTestId('link-hover-card');
+
+    await expect(card).toHaveAttribute('data-state', 'open');
+    await card.getByTestId('link-hover-card-edit').click();
 
     const linkInput = page.locator('[data-blok-link-tool-input-opened="true"]');
 

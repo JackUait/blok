@@ -55,6 +55,53 @@ const openToolbox = async (page: Page): Promise<void> => {
   await page.locator(ITEMS_SELECTOR).first().waitFor({ state: 'attached' });
 };
 
+/**
+ * Measures the reserved scrollbar-lane width (offsetWidth - clientWidth) of two
+ * probe elements: `classic` forces a space-taking scrollbar (the Windows/Linux
+ * default), `hidden` applies the popover's actual hiding rules. Lets a test
+ * prove the hiding rules zero out even a classic bar, on any host OS.
+ * @param page - the Playwright page
+ */
+const measureScrollbarLanes = (page: Page): Promise<{ classic: number; hidden: number }> =>
+  page.evaluate(() => {
+    const style = document.createElement('style');
+
+    style.textContent = `
+      .__sb-probe { position: absolute; top: -9999px; left: -9999px; width: 100px; height: 40px; overflow-y: scroll; }
+      .__sb-probe > div { height: 400px; }
+      /* Force a CLASSIC (space-taking) scrollbar — the same bar Windows/Linux
+         show by default. scrollbar-gutter:stable reserves the lane and a styled
+         ::-webkit-scrollbar renders it classic, so it takes layout space on
+         Chromium/WebKit even under a macOS overlay setting. */
+      .__sb-classic { scrollbar-gutter: stable; }
+      .__sb-classic::-webkit-scrollbar { width: 14px; background: #000; }
+      /* The popover's actual hiding rules (from slash-search.css). */
+      .__sb-hidden { scrollbar-width: none; }
+      .__sb-hidden::-webkit-scrollbar { display: none; }
+    `;
+    document.head.appendChild(style);
+
+    const measure = (className: string): number => {
+      const el = document.createElement('div');
+
+      el.className = `__sb-probe ${className}`;
+      el.innerHTML = '<div></div>';
+      document.body.appendChild(el);
+
+      const lane = el.offsetWidth - el.clientWidth;
+
+      el.remove();
+
+      return lane;
+    };
+
+    const result = { classic: measure('__sb-classic'), hidden: measure('__sb-hidden') };
+
+    style.remove();
+
+    return result;
+  });
+
 test.describe('popover scrollbar — identical across platforms', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();
@@ -76,6 +123,43 @@ test.describe('popover scrollbar — identical across platforms', () => {
     // layout width — the same on Chromium (was 8px), WebKit (was 4px) and
     // Firefox (was 0px). The custom thumb overlays without reflowing content.
     expect(lane).toBe(0);
+  });
+
+  /**
+   * On Windows and Linux the OS default is a CLASSIC scrollbar that takes
+   * layout space (macOS uses overlay scrollbars that don't). The popover's
+   * hiding rules — `scrollbar-width: none` + `::-webkit-scrollbar { display:
+   * none }` — must zero out even a space-taking classic bar, otherwise content
+   * would reflow on those platforms. This probes the raw technique against a
+   * forced classic scrollbar so the guarantee holds regardless of host OS, and
+   * runs on Linux in CI where the classic bar is the real default.
+   */
+  test('the hiding rules collapse the scrollbar lane to zero on every engine', async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+
+    const lanes = await measureScrollbarLanes(page);
+
+    // The popover's hiding rules always collapse the scrollbar lane to zero —
+    // on every engine, whether the OS uses classic (Windows/Linux) or overlay
+    // (macOS) scrollbars. No content reflow when the thumb appears.
+    expect(lanes.hidden).toBe(0);
+  });
+
+  test('a forced classic (space-taking) scrollbar is measurable, and the hiding rules remove it', async ({ page, browserName }) => {
+    // Firefox ignores ::-webkit-scrollbar, so a space-taking bar can't be forced
+    // on macOS (its overlay setting). Its real classic bar is exercised on Linux
+    // in CI, where the previous test's hidden===0 becomes the meaningful check.
+    test.skip(browserName === 'firefox', 'cannot force a classic scrollbar in Firefox under macOS overlay');
+
+    await page.goto(TEST_PAGE_URL);
+
+    const lanes = await measureScrollbarLanes(page);
+
+    // We actually produced a space-taking classic bar (the Windows/Linux
+    // default), so the zero below is meaningful — not a macOS overlay artefact.
+    expect(lanes.classic).toBeGreaterThan(0);
+    // And the popover's hiding rules zero it out regardless.
+    expect(lanes.hidden).toBe(0);
   });
 
   test('draws a custom thumb, sized and positioned, when the list overflows', async ({ page }) => {

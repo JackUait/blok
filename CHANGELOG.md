@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.0](https://github.com/JackUait/blok/compare/v0.23.5...v0.24.0) (2026-07-09)
+
+### Features
+
+- **Vue** — New first-class `@jackuait/blok/vue` adapter: `BlokEditor` component, `useBlok`, and `provideBlok`, plus `createVueBlock`/`useBlocks` for authoring custom blocks and driving the block tree from Vue. Custom Vue blocks support read-only in-place toggling.
+- **Angular** — New first-class `@jackuait/blok/angular` adapter shipped as an Angular Package Format build (ng-packagr): the editor component/directive, a block portal registry, the `BLOK_BLOCK_CONTEXT` render-context token, `createAngularBlock` authoring, and the reactive `injectBlocks` block-tree API.
+- **React** — New `useBlocks` hook exported from `@jackuait/blok/react`: a reactive block-tree API with reads, `insert` (position + append-to-parent, explicit id, tunes, `replace`), `move` (before/after/toIndex), `nest`/`unnest`/`remove`/`transact`, `insertMany`, atomic `insertTree` for nested subtrees, and additive `insertMarkdown`. Block-creation semantics are hardened across hierarchy edges with compile-time drift guards against the core API.
+- **Adapters** — Closed React/Vue/Angular parity gaps across component paths and escape hatches; shared one blocks-api core so Vue's `useBlocks` reaches React parity, and extracted shared `fillDefaults`/`PropSchema` helpers. Custom-block authoring is now first-class on the public API surface.
+- **Accessibility** — Five-wave overhaul adapting shadcn/ui interaction patterns to Blok's UI primitives: dismissal-layer/popover teardown/scroll-lock/announcer foundations, an anchored-positioning engine and shared modal `Dialog`, keyboard reachability for toolbars/menus/radios/rename, and assistive-tech feedback parity across selection, drag, menus, and arrival.
+- **Link** — Clickable links with a hover card in both edit and read-only modes (with enter/leave animation), an edit mode featuring a title field and remove-link action, refined hover-card chrome, blocking of unsafe-scheme navigation, and a consistent same-page/anchor-link rule that opens such links in the same window across all link-creation paths.
+- **Blocks** — Structural `parentId` nesting: any block can now be nested inside any list (flat per-block indent), with list keyboard nesting and drag/serialization migrated onto the structural block tree.
+- **Keyboard** — `Cmd+Left`/`Cmd+Right` navigate between blocks at block edges; `Backspace` at the start of a nested block removes one indent level; mixed-list `Tab` indents both kinds; and numerous Notion-parity `Tab`/arrow/Delete/Backspace fixes.
+- **Paste** — Paste-without-formatting (`Cmd`/`Ctrl+Shift+V`); recovery of buildin/Notion toggles and soft breaks from lossy GFM HTML fallback.
+- **Inline** — Link-markdown auto-format and a link-paste menu; shortcut-triggered Link/Equation/Marker now open a standalone menu positioned right under the selection.
+- **Popover** — Custom cross-platform scrollbar that hides the classic OS bar while keeping a stable gutter; reel-like edge distortion replacing the scroll haze.
+- **Convert** — Shared `buildConvertMenuEntries` with `titleKey` resolution, used by both block settings and the inline "Turn into" menu (which now lists the full text family), guarded by parity E2E.
+- **Image** — Configurable auto-retry on image load failure (default 5).
+
+### Bug Fixes
+
+- **CRDT/Yjs** — Undo/redo no longer yanks the caret to the top of the document; the caret restores to the correct position, `split()` inherits full tool data (correct heading undo caret), redo moves the caret to the new block on an Enter split, and five further Yjs sync gaps in tools and modules were closed.
+- **List** — Closed dozens of Notion-parity divergences across convert, keyboard, drag, selection, and copy/paste; source ordered lists renumber when an item is dragged away; bullet glyphs refresh on depth change.
+- **Text/Header** — Fixed 30+ Notion-parity bugs by root cause (slash+space, duplicate pulse, indent toolbar, caret offset preservation on turn-into, and more).
+- **Table** — Preserve merged cells and lists when pasting external tables, and keep list markup when copying cells out to external apps.
+- **Paste** — Preserve lists and quote-ness in pasted blockquotes; pasted links use the default link color; the link menu shows on non-empty blocks without erasing content; closed remaining sanitizer/merge data-loss gaps found by an audit.
+- **Blocks** — Re-parent a merged block's children onto the survivor instead of orphaning them; release toggle children as siblings when turning a toggle into text; fire the tool `moved()` hook on `setBlockParent`; never write split text into a mutation-free decoration.
+- **Columns** — Match Notion's inter-column gutter spacing; restore DOM order when undoing column creation.
+- **Drag** — List-item drop line tucks under the text with a marker lead-in; depth changes apply on same-slot drops; non-list blocks stop previewing nested drops they can't reach.
+- **Selection** — Fake highlight matches the native selection color and stays visible while a menu input is focused; `Cmd+A` container-scoped staging.
+- **Marker** — Reset `<mark>` background so colored text never shows the browser's yellow highlight.
+- **Toggle** — Arrow container stays a constant 28px square and pins to the first line for multi-line toggle/heading.
+- **Styles** — Reserve a scrollbar gutter on all scrollable components and keep it in nested inline-toolbar menus; auto-hide scrollbars system-style while keeping the gutter.
+
+### Maintenance
+
+- **Paste** — Mechanically enforce the paste attribute law and the paste stamp law via architecture tests.
+- **Tests** — Repaired all CI-matrix E2E shards; added regression coverage across list keyboard shortcuts, columns undo order, popover scrollbar spec, and adapter integration/e2e.
+- **Lint** — Resolved all 69 root ESLint problems at the root cause.
+
 ## [0.23.5](https://github.com/JackUait/blok/compare/v0.23.4...v0.23.5) (2026-06-25)
 
 ### Features

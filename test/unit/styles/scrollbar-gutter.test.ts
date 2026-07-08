@@ -22,9 +22,14 @@ import { readMainCss } from './helpers/read-main-css';
 
 const css = readMainCss();
 
-/** Every vertically scrollable container in the editor UI. */
+/**
+ * Vertically scrollable containers that still use the NATIVE scrollbar (styled
+ * `::-webkit-scrollbar` + Firefox-only `scrollbar-width`). The popover is NOT
+ * here: it hides the native scrollbar in every engine and draws its own thumb
+ * so it looks identical on all platforms — guarded by
+ * `popover-custom-scrollbar.test.ts` instead.
+ */
 const SCROLLABLE_SELECTORS = [
-  '[data-blok-popover-items]',
   '[data-emoji-picker-body]',
   '[data-blok-database-drawer-content]',
   '.blok-file-preview-pre',
@@ -86,7 +91,6 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
   describe('scrollbar stays invisible at rest and reveals on hover/scroll (system-like behavior)', () => {
     /** Containers whose scrollbars auto-hide; reveal is hover- and/or scroll-driven. */
     const AUTO_HIDE_SELECTORS = [
-      '[data-blok-popover-items]',
       '[data-emoji-picker-body]',
       '[data-blok-database-board]',
       '[data-blok-database-drawer-content]',
@@ -115,61 +119,6 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
       });
     }
 
-    it('inline (horizontal toolbar) popovers opt out of the vertical scrollbar gutter — via child combinators only', () => {
-      const pattern = /\[data-blok-popover-inline\]\s*>\s*\[data-blok-popover-container\]\s*>\s*\[data-blok-popover-items\][^{}]*\{[^}]*scrollbar-gutter\s*:\s*auto/;
-
-      expect(css).toMatch(pattern);
-    });
-
-    it('the inline opt-out does NOT descendant-match nested vertical menus (e.g. Turn into) mounted inside the inline popover root', () => {
-      // A space-combinator form would also strip the gutter from nested
-      // popovers appended into the inline root, making their left indent
-      // ignore the scrollbar width again.
-      const broadPattern = /\[data-blok-popover-inline\]\s+\[data-blok-popover-items\]/;
-
-      expect(css).not.toMatch(broadPattern);
-    });
-
-    it('[data-blok-popover-items] reveals the thumb during keyboard-driven scrolling via [data-blok-scrolling]', () => {
-      const pattern = /\[data-blok-popover-items\]\[data-blok-scrolling\][^{}]*::-webkit-scrollbar-thumb[^{}]*\{[^}]*background\s*:\s*(?!transparent)/;
-
-      expect(css).toMatch(pattern);
-    });
-  });
-
-  /**
-   * Popover scrollbar spacing spec: with the 6px container padding and the
-   * 4px scrollbar, the items element is offset so the right side reads
-   * content → 1px → scrollbar → 1px → popover edge, and the left indent is
-   * 2px + the scrollbar-width lane (6px total, symmetric with the right).
-   */
-  describe('popover scrollbar spacing (1px before/after the scrollbar; 2px + scrollbar width on the left)', () => {
-    const itemsRule = (): string => {
-      const match = css.match(/\[data-blok-popover-items\]\s*\{([^}]*)\}/);
-
-      return match === null ? '' : match[1];
-    };
-
-    it('pulls the items right edge to 1px from the popover edge (margin-right: -5px against the 6px container padding)', () => {
-      expect(itemsRule()).toMatch(/margin-right\s*:\s*calc\(-1 \* var\(--blok-space-1-25\)\)/);
-    });
-
-    it('keeps a 1px gap between the content and the scrollbar (padding-right)', () => {
-      expect(itemsRule()).toMatch(/padding-right\s*:\s*var\(--blok-space-0-25\)/);
-    });
-
-    it('sets the left indent to 2px + the scrollbar lane (margin-left: -4px against the 6px container padding, lane via both-edges)', () => {
-      expect(itemsRule()).toMatch(/margin-left\s*:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
-    });
-
-    it('inline (horizontal toolbar) popovers reset the vertical-scrollbar offsets', () => {
-      const match = css.match(/\[data-blok-popover-inline\]\s*>\s*\[data-blok-popover-container\]\s*>\s*\[data-blok-popover-items\][^{}]*\{([^}]*)\}/);
-      const body = match === null ? '' : match[1];
-
-      expect(body).toMatch(/margin-right\s*:\s*0/);
-      expect(body).toMatch(/margin-left\s*:\s*0/);
-      expect(body).toMatch(/padding-right\s*:\s*0/);
-    });
   });
 
   it('standard scrollbar-width/scrollbar-color stay inside @supports not selector(::-webkit-scrollbar) — otherwise Chromium ignores the webkit styling and falls back to an overlay scrollbar', () => {
@@ -184,9 +133,11 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
     while ((match = declaration.exec(css)) !== null) {
       const value = match[1].trim();
 
-      // Cascade resets (isolation layer) don't engage the standard scrollbar
-      // styling path, so they can live anywhere.
-      if (/^(?:initial|inherit|unset|revert|auto)\b/.test(value.replace(/\s*!important$/, ''))) {
+      // Cascade resets (isolation layer) and `none` (which simply HIDES the
+      // scrollbar — the popover's custom-thumb approach) don't engage the
+      // standard scrollbar styling path, so they can live anywhere. Only the
+      // active styling values (thin + colors) trigger Chromium's fallback.
+      if (/^(?:initial|inherit|unset|revert|auto|none)\b/.test(value.replace(/\s*!important$/, ''))) {
         continue;
       }
 

@@ -243,6 +243,9 @@ export interface PopoverNodes {
 
   /** Popover items wrapper */
   items: HTMLElement;
+
+  /** Custom, engine-independent scrollbar thumb overlaid on the items list */
+  scrollbarThumb: HTMLElement;
 }
 
 /**

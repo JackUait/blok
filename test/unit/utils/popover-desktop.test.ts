@@ -211,9 +211,27 @@ type PopoverDesktopInternal = PopoverDesktop & {
     popoverContainer: HTMLElement;
     items: HTMLElement;
     nothingFoundMessage: HTMLElement;
+    scrollbarThumb: HTMLElement;
   };
   nestedPopover: PopoverDesktop | null | undefined;
   nestedPopoverTriggerItem: PopoverItemDefault | null;
+  updateScrollbar: () => void;
+};
+
+/**
+ * Drives the layout metrics of a scroll container in jsdom (which reports 0
+ * for every geometry read) so the scrollbar math can be exercised.
+ * @param el - the scroll container element
+ * @param metrics - the fake scroll metrics to report
+ */
+const stubScrollMetrics = (
+  el: HTMLElement,
+  metrics: { clientHeight: number; scrollHeight: number; scrollTop: number; offsetTop?: number }
+): void => {
+  Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => metrics.clientHeight });
+  Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => metrics.scrollHeight });
+  Object.defineProperty(el, 'offsetTop', { configurable: true, get: () => metrics.offsetTop ?? 0 });
+  Object.defineProperty(el, 'scrollTop', { configurable: true, get: () => metrics.scrollTop });
 };
 
 const createRect = (overrides: Partial<DOMRect>): DOMRect => ({
@@ -381,6 +399,51 @@ describe('PopoverDesktop', () => {
       // Verify flipper is deactivated as part of cleanup
       const flipper = getMockFlipper();
       expect(flipper.deactivate).toHaveBeenCalled();
+    });
+  });
+
+  describe('custom scrollbar', () => {
+    it('creates a scrollbar thumb inside the popover container', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      expect(instance.nodes.scrollbarThumb).toBeInstanceOf(HTMLElement);
+      expect(instance.nodes.scrollbarThumb.parentElement).toBe(instance.nodes.popoverContainer);
+      expect(instance.nodes.scrollbarThumb).toHaveAttribute('data-blok-popover-scrollbar');
+    });
+
+    it('hides the thumb when the content does not overflow', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 120, scrollTop: 0 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(true);
+    });
+
+    it('sizes the thumb proportionally to the visible fraction when content overflows', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // Half the content is visible → thumb is half the viewport height.
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 400, scrollTop: 0 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(false);
+      expect(instance.nodes.scrollbarThumb.style.height).toBe('100px');
+    });
+
+    it('positions the thumb at the bottom of its travel when scrolled to the end', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // viewport 200, content 400 → thumb 100 tall, travel = 200 - 100 = 100.
+      // items sits 40px below the container top; scrolled fully → translateY 140px.
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 400, scrollTop: 200, offsetTop: 40 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(140px)');
     });
   });
 

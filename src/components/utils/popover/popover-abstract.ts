@@ -96,7 +96,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (this.nodes.items) {
       this.listeners.on(this.nodes.items, 'scroll', () => {
         this.updateScrollReel();
+        this.updateScrollbar();
         this.markScrollActivity();
+      });
+    }
+
+    // Drag-to-scroll on the custom scrollbar thumb (parity with a native bar).
+    if (this.nodes.scrollbarThumb) {
+      this.listeners.on(this.nodes.scrollbarThumb, 'pointerdown', (event: Event) => {
+        this.startScrollbarDrag(event as PointerEvent);
       });
     }
   }
@@ -169,9 +177,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     /**
-     * Apply the edge reel distortion for the initial scroll position
+     * Apply the edge reel distortion and size the custom scrollbar for the
+     * initial scroll position (deferred a frame so layout has settled and the
+     * items container reports its real height).
      */
     this.updateScrollReel();
+    this.updateScrollbar();
+    requestAnimationFrame(() => this.updateScrollbar());
 
     const { trigger } = this.params;
     const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;
@@ -675,6 +687,133 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Minimum rendered height (px) of the custom scrollbar thumb, so it stays
+   * grabbable even when the list is very long.
+   */
+  private static readonly MIN_SCROLLBAR_THUMB_HEIGHT = 24;
+
+  /**
+   * Active scrollbar-thumb drag session, or null when not dragging.
+   */
+  private scrollbarDrag: { pointerId: number; startY: number; startScrollTop: number } | null = null;
+
+  /**
+   * Sizes and positions the custom scrollbar thumb from the items' scroll
+   * metrics. Because Blok draws the thumb itself (the native scrollbar is
+   * hidden in every engine), the result is identical on Chromium, WebKit and
+   * Firefox, on classic and overlay scrollbar settings alike. Hidden entirely
+   * when the content does not overflow.
+   */
+  protected updateScrollbar(): void {
+    const { items, scrollbarThumb } = this.nodes;
+
+    if (!items || !scrollbarThumb) {
+      return;
+    }
+
+    const viewportHeight = items.clientHeight;
+    const contentHeight = items.scrollHeight;
+
+    if (contentHeight <= viewportHeight || viewportHeight === 0) {
+      scrollbarThumb.hidden = true;
+
+      return;
+    }
+
+    scrollbarThumb.hidden = false;
+
+    const thumbHeight = Math.max(
+      PopoverAbstract.MIN_SCROLLBAR_THUMB_HEIGHT,
+      Math.round((viewportHeight * viewportHeight) / contentHeight)
+    );
+    const maxScrollTop = contentHeight - viewportHeight;
+    const maxThumbTravel = viewportHeight - thumbHeight;
+    const thumbTop = maxScrollTop > 0
+      ? (items.scrollTop / maxScrollTop) * maxThumbTravel
+      : 0;
+
+    scrollbarThumb.style.height = `${thumbHeight}px`;
+    // Offset by the items' position within the container so the thumb tracks
+    // the scroll viewport (below the search input / context label, if any).
+    scrollbarThumb.style.transform = `translateY(${Math.round(items.offsetTop + thumbTop)}px)`;
+  }
+
+  /**
+   * Begins a drag-to-scroll session on the custom scrollbar thumb: pointer
+   * movement is mapped back to `items.scrollTop` through the content/viewport
+   * ratio, mirroring how dragging a native scrollbar behaves.
+   * @param event - the pointerdown event on the thumb
+   */
+  private startScrollbarDrag(event: PointerEvent): void {
+    const { items, scrollbarThumb } = this.nodes;
+
+    if (!items || !scrollbarThumb) {
+      return;
+    }
+
+    event.preventDefault();
+
+    this.scrollbarDrag = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startScrollTop: items.scrollTop,
+    };
+    scrollbarThumb.setAttribute(DATA_ATTR.popoverScrollbarDragging, '');
+    scrollbarThumb.setPointerCapture?.(event.pointerId);
+
+    this.listeners.on(scrollbarThumb, 'pointermove', this.handleScrollbarDragMove);
+    this.listeners.on(scrollbarThumb, 'pointerup', this.handleScrollbarDragEnd);
+    this.listeners.on(scrollbarThumb, 'pointercancel', this.handleScrollbarDragEnd);
+  }
+
+  /**
+   * Maps thumb pointer movement to a scroll offset while dragging.
+   */
+  private handleScrollbarDragMove = (event: Event): void => {
+    const pointerEvent = event as PointerEvent;
+    const { items } = this.nodes;
+
+    if (this.scrollbarDrag === null || !items) {
+      return;
+    }
+
+    const viewportHeight = items.clientHeight;
+    const contentHeight = items.scrollHeight;
+    const thumbHeight = Math.max(
+      PopoverAbstract.MIN_SCROLLBAR_THUMB_HEIGHT,
+      Math.round((viewportHeight * viewportHeight) / contentHeight)
+    );
+    const maxThumbTravel = viewportHeight - thumbHeight;
+
+    if (maxThumbTravel <= 0) {
+      return;
+    }
+
+    const deltaY = pointerEvent.clientY - this.scrollbarDrag.startY;
+    const scrollRatio = (contentHeight - viewportHeight) / maxThumbTravel;
+
+    items.scrollTop = this.scrollbarDrag.startScrollTop + deltaY * scrollRatio;
+  };
+
+  /**
+   * Ends a scrollbar drag session and tears down its transient listeners.
+   */
+  private handleScrollbarDragEnd = (event: Event): void => {
+    const pointerEvent = event as PointerEvent;
+    const { scrollbarThumb } = this.nodes;
+
+    this.scrollbarDrag = null;
+
+    if (scrollbarThumb) {
+      scrollbarThumb.removeAttribute(DATA_ATTR.popoverScrollbarDragging);
+      scrollbarThumb.releasePointerCapture?.(pointerEvent.pointerId);
+      this.listeners.off(scrollbarThumb, 'pointermove', this.handleScrollbarDragMove);
+      this.listeners.off(scrollbarThumb, 'pointerup', this.handleScrollbarDragEnd);
+      this.listeners.off(scrollbarThumb, 'pointercancel', this.handleScrollbarDragEnd);
+    }
+  };
+
+  /**
    * Applies a reel-like distortion to items near the scroll viewport edges:
    * the clipped part of an item squashes it toward its in-view edge (like a
    * picker wheel rolling over a cylinder) instead of hiding behind a gradient
@@ -855,6 +994,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       })()
       : undefined;
 
+    // Custom, engine-independent scrollbar thumb. Lives in the (non-scrolling)
+    // container — not inside `items`, whose children scroll and are reel-distorted
+    // — and is positioned in JS from the items' scroll metrics (updateScrollbar).
+    // Hidden until the list overflows.
+    const scrollbarThumb = document.createElement('div');
+
+    scrollbarThumb.setAttribute(DATA_ATTR.popoverScrollbar, '');
+    scrollbarThumb.hidden = true;
+
     // Assemble DOM structure
     popoverContainer.appendChild(nothingFoundMessage);
     if (contextLabel !== undefined) {
@@ -862,6 +1010,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
     popoverContainer.appendChild(items);
     popoverContainer.appendChild(resultsAnnouncer);
+    popoverContainer.appendChild(scrollbarThumb);
     popover.appendChild(popoverContainer);
 
     return {
@@ -871,6 +1020,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       resultsAnnouncer,
       contextLabel,
       items,
+      scrollbarThumb,
     };
   }
 

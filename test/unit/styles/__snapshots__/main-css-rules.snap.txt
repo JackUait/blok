@@ -2018,46 +2018,31 @@
 }
 
 [data-blok-popover-items] {
-  scrollbar-gutter: stable both-edges;
-  margin-right: calc(-1 * var(--blok-space-1-25));
-  margin-left: calc(-1 * var(--blok-space-1));
-  padding-right: var(--blok-space-0-25);
-}
-
-[data-blok-popover-inline] > [data-blok-popover-container] > [data-blok-popover-items] {
-  scrollbar-gutter: auto;
-  margin-right: 0;
-  margin-left: 0;
-  padding-right: 0;
-}
-
-[@supports not selector(::-webkit-scrollbar)] [data-blok-popover-items] {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-}
-
-[@supports not selector(::-webkit-scrollbar)] [data-blok-popover-items]:hover, [data-blok-popover-items][data-blok-scrolling] {
-  scrollbar-color: var(--blok-popover-border) transparent;
+  scrollbar-width: none;
 }
 
 [data-blok-popover-items]::-webkit-scrollbar {
-  width: 4px;
+  display: none;
 }
 
-[data-blok-popover-items]::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-[data-blok-popover-items]::-webkit-scrollbar-thumb {
-  background: transparent;
+[data-blok-popover-scrollbar] {
+  position: absolute;
+  top: 0;
+  right: var(--blok-space-0-25);
+  width: var(--blok-space-1);
   border-radius: var(--blok-space-1);
-}
-
-[data-blok-popover-items]:hover::-webkit-scrollbar-thumb, [data-blok-popover-items][data-blok-scrolling]::-webkit-scrollbar-thumb {
   background: var(--blok-popover-border);
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: auto;
+  cursor: default;
 }
 
-[data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
+[data-blok-popover-container]:hover [data-blok-popover-scrollbar], [data-blok-scrolling] ~ [data-blok-popover-scrollbar], [data-blok-popover-scrollbar][data-blok-dragging] {
+  opacity: 1;
+}
+
+[data-blok-popover-scrollbar]:hover, [data-blok-popover-scrollbar][data-blok-dragging] {
   background: var(--blok-gray-text);
 }
 

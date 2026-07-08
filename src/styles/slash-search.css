@@ -31,66 +31,53 @@
 }
 
 /**
- * Custom scrollbar for popover items.
+ * Popover items scrollbar — custom-drawn, identical on every platform.
  *
- * `scrollbar-gutter: stable` + a styled ::-webkit-scrollbar keep the
- * scrollbar "classic" (it takes layout space) so it never paints over the
- * items, even when the OS uses overlay scrollbars. The standard
- * scrollbar-width/scrollbar-color properties must stay Firefox-only: when
- * they are set, Chromium ignores ::-webkit-scrollbar styling and falls back
- * to the overlay scrollbar.
+ * Native scrollbars cannot be normalized across engines: Chromium honors a
+ * styled 4px `::-webkit-scrollbar` (classic, space-taking); WebKit ignores
+ * `scrollbar-gutter: both-edges`, so it never mirrors the left lane; Firefox
+ * cannot size a scrollbar to an exact pixel; and macOS/overlay-scrollbar
+ * settings make `scrollbar-gutter` a no-op that reserves nothing. Measured
+ * live, the same list reserved 8px (Chromium), 4px (WebKit) and 0px (Firefox).
+ *
+ * So the native scrollbar is hidden in EVERY engine and Blok draws its own
+ * thumb (`[data-blok-popover-scrollbar]`, sized and positioned in JS from the
+ * scroll metrics — see popover-abstract `updateScrollbar`). The 6px content
+ * indent comes entirely from the container padding (px-1.5); the 4px thumb is
+ * an overlay in the container's right padding zone, 1px from the popover edge,
+ * leaving a 1px gap to the content. Because it is an overlay, nothing reflows
+ * when it appears — the geometry and the auto-hide behavior are byte-identical
+ * on Chromium, WebKit, Firefox, desktop and mobile.
  */
 [data-blok-popover-items] {
-  /* both-edges keeps the left and right item indents symmetric: the scrollbar
-     lane is mirrored on the left instead of widening only the right side. */
-  scrollbar-gutter: stable both-edges;
-  /* Spacing spec against the 6px container padding and the 4px scrollbar:
-     right side reads content → 1px (padding) → scrollbar → 1px (popover
-     edge), left side is 2px + the mirrored scrollbar lane — 6px of content
-     indent on both sides. */
-  margin-right: calc(-1 * var(--blok-space-1-25));
-  margin-left: calc(-1 * var(--blok-space-1));
-  padding-right: var(--blok-space-0-25);
-}
-/* The inline popover's own items row is a horizontal toolbar — it never
-   scrolls vertically, so reserving a vertical scrollbar lane would only skew
-   its padding. Child combinators keep the opt-out away from nested vertical
-   menus (e.g. "Turn into") that mount inside the inline popover root and DO
-   need the symmetric gutter. */
-[data-blok-popover-inline] > [data-blok-popover-container] > [data-blok-popover-items] {
-  scrollbar-gutter: auto;
-  margin-right: 0;
-  margin-left: 0;
-  padding-right: 0;
-}
-@supports not selector(::-webkit-scrollbar) {
-  [data-blok-popover-items] {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-  }
-  [data-blok-popover-items]:hover,
-  [data-blok-popover-items][data-blok-scrolling] {
-    scrollbar-color: var(--blok-popover-border) transparent;
-  }
+  scrollbar-width: none; /* Firefox / standard: hide the native scrollbar */
 }
 [data-blok-popover-items]::-webkit-scrollbar {
-  width: 4px;
+  display: none; /* Chromium / WebKit: hide the native scrollbar */
 }
-[data-blok-popover-items]::-webkit-scrollbar-track {
-  background: transparent;
-}
-/* Thumb hidden at rest (system auto-hide behavior); the reserved gutter keeps
-   its layout space. Revealed while hovering the list or during scrolling —
-   [data-blok-scrolling] is stamped by the popover on scroll events so
-   keyboard-driven scrolling shows the thumb too. */
-[data-blok-popover-items]::-webkit-scrollbar-thumb {
-  background: transparent;
+
+/* The custom thumb. Transparent at rest — revealed while the popover is
+   hovered, while the list is actively scrolling ([data-blok-scrolling] is
+   stamped by the popover on scroll, so keyboard scrolling reveals it too), or
+   while being dragged. */
+[data-blok-popover-scrollbar] {
+  position: absolute;
+  top: 0;
+  right: var(--blok-space-0-25);
+  width: var(--blok-space-1);
   border-radius: var(--blok-space-1);
-}
-[data-blok-popover-items]:hover::-webkit-scrollbar-thumb,
-[data-blok-popover-items][data-blok-scrolling]::-webkit-scrollbar-thumb {
   background: var(--blok-popover-border);
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: auto;
+  cursor: default;
 }
-[data-blok-popover-items]::-webkit-scrollbar-thumb:hover {
+[data-blok-popover-container]:hover [data-blok-popover-scrollbar],
+[data-blok-scrolling] ~ [data-blok-popover-scrollbar],
+[data-blok-popover-scrollbar][data-blok-dragging] {
+  opacity: 1;
+}
+[data-blok-popover-scrollbar]:hover,
+[data-blok-popover-scrollbar][data-blok-dragging] {
   background: var(--blok-gray-text);
 }

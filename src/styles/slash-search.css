@@ -45,12 +45,12 @@
      lane is mirrored on the left instead of widening only the right side. */
   scrollbar-gutter: stable both-edges;
   /* Spacing spec against the 6px container padding and the 4px scrollbar:
-     right side reads content → 2px (padding) → scrollbar → 2px (popover
-     edge), left side is 4px + the mirrored scrollbar lane — 8px of content
+     right side reads content → 1px (padding) → scrollbar → 1px (popover
+     edge), left side is 2px + the mirrored scrollbar lane — 6px of content
      indent on both sides. */
-  margin-right: calc(-1 * var(--blok-space-1));
-  margin-left: calc(-1 * var(--blok-space-0-5));
-  padding-right: var(--blok-space-0-5);
+  margin-right: calc(-1 * var(--blok-space-1-25));
+  margin-left: calc(-1 * var(--blok-space-1));
+  padding-right: var(--blok-space-0-25);
 }
 /* The inline popover's own items row is a horizontal toolbar — it never
    scrolls vertically, so reserving a vertical scrollbar lane would only skew

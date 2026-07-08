@@ -140,26 +140,26 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
   /**
    * Popover scrollbar spacing spec: with the 6px container padding and the
    * 4px scrollbar, the items element is offset so the right side reads
-   * content → 2px → scrollbar → 2px → popover edge, and the left indent is
-   * 4px + the scrollbar-width lane (8px total, symmetric with the right).
+   * content → 1px → scrollbar → 1px → popover edge, and the left indent is
+   * 2px + the scrollbar-width lane (6px total, symmetric with the right).
    */
-  describe('popover scrollbar spacing (2px before/after the scrollbar; 4px + scrollbar width on the left)', () => {
+  describe('popover scrollbar spacing (1px before/after the scrollbar; 2px + scrollbar width on the left)', () => {
     const itemsRule = (): string => {
       const match = css.match(/\[data-blok-popover-items\]\s*\{([^}]*)\}/);
 
       return match === null ? '' : match[1];
     };
 
-    it('pulls the items right edge to 2px from the popover edge (margin-right: -1 scrollbar width against the 6px container padding)', () => {
-      expect(itemsRule()).toMatch(/margin-right\s*:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
+    it('pulls the items right edge to 1px from the popover edge (margin-right: -5px against the 6px container padding)', () => {
+      expect(itemsRule()).toMatch(/margin-right\s*:\s*calc\(-1 \* var\(--blok-space-1-25\)\)/);
     });
 
-    it('keeps a 2px gap between the content and the scrollbar (padding-right)', () => {
-      expect(itemsRule()).toMatch(/padding-right\s*:\s*var\(--blok-space-0-5\)/);
+    it('keeps a 1px gap between the content and the scrollbar (padding-right)', () => {
+      expect(itemsRule()).toMatch(/padding-right\s*:\s*var\(--blok-space-0-25\)/);
     });
 
-    it('sets the left indent to 4px + the scrollbar lane (margin-left: -2px against the 6px container padding, lane via both-edges)', () => {
-      expect(itemsRule()).toMatch(/margin-left\s*:\s*calc\(-1 \* var\(--blok-space-0-5\)\)/);
+    it('sets the left indent to 2px + the scrollbar lane (margin-left: -4px against the 6px container padding, lane via both-edges)', () => {
+      expect(itemsRule()).toMatch(/margin-left\s*:\s*calc\(-1 \* var\(--blok-space-1\)\)/);
     });
 
     it('inline (horizontal toolbar) popovers reset the vertical-scrollbar offsets', () => {

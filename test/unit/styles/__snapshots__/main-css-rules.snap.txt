@@ -2019,9 +2019,9 @@
 
 [data-blok-popover-items] {
   scrollbar-gutter: stable both-edges;
-  margin-right: calc(-1 * var(--blok-space-1));
-  margin-left: calc(-1 * var(--blok-space-0-5));
-  padding-right: var(--blok-space-0-5);
+  margin-right: calc(-1 * var(--blok-space-1-25));
+  margin-left: calc(-1 * var(--blok-space-1));
+  padding-right: var(--blok-space-0-25);
 }
 
 [data-blok-popover-inline] > [data-blok-popover-container] > [data-blok-popover-items] {

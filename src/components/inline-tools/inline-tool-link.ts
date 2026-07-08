@@ -903,12 +903,39 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
+   * Whether the link points at the current page — a bare anchor ("#results")
+   * or any URL that resolves to the same origin + pathname as the document.
+   * @param {string} link - "href" value to test
+   */
+  private isSamePageLink(link: string): boolean {
+    const trimmed = link.trim();
+
+    if (trimmed.charAt(0) === '#') {
+      return true;
+    }
+
+    try {
+      const current = new URL(window.location.href);
+      const resolved = new URL(trimmed, current.href);
+
+      return resolved.origin === current.origin && resolved.pathname === current.pathname;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Inserts <a> tag with "href"
    * @param {string} link - "href" value
    */
   private insertLink(link: string): void {
     const href = this.linkConfig.transformHref ? this.linkConfig.transformHref(link) : link;
-    const target = this.linkConfig.target ?? '_blank';
+    /**
+     * Same-page destinations (pure anchors like "#results" or links resolving to
+     * the current origin + pathname) always open in the same window, regardless
+     * of the configured target, so in-article navigation never spawns a new tab.
+     */
+    const target = this.isSamePageLink(link) ? '_self' : (this.linkConfig.target ?? '_blank');
     const rel = this.linkConfig.rel ?? 'nofollow';
 
     /**

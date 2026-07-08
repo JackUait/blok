@@ -500,6 +500,43 @@ describe('LinkInlineTool', () => {
       expect(existing.rel).toBe('sponsored');
     });
 
+    it('forces target="_self" for anchor links even when config sets _blank', () => {
+      const { tool } = createTool({ target: '_blank' });
+      const anchor = insertNewAnchor(tool, '#results');
+
+      expect(anchor.target).toBe('_self');
+    });
+
+    it('forces target="_self" for same-page links even when config sets _blank', () => {
+      const { tool } = createTool({ target: '_blank' });
+      const samePage = `${window.location.origin}${window.location.pathname}#section`;
+      const anchor = insertNewAnchor(tool, samePage);
+
+      expect(anchor.target).toBe('_self');
+    });
+
+    it('forces target="_self" for same-page links when editing an existing anchor', () => {
+      const { tool, selection } = createTool({ target: '_blank' });
+
+      const existing = document.createElement('a');
+
+      existing.href = 'https://old.com';
+      existing.textContent = 'link';
+      document.body.appendChild(existing);
+      selection.findParentTag.mockReturnValue(existing);
+
+      (tool as unknown as { insertLink(link: string): void }).insertLink('#anchor');
+
+      expect(existing.target).toBe('_self');
+    });
+
+    it('keeps the configured target for cross-page links', () => {
+      const { tool } = createTool({ target: '_blank' });
+      const anchor = insertNewAnchor(tool, 'https://google.com');
+
+      expect(anchor.target).toBe('_blank');
+    });
+
     it('transforms the href via transformHref before assigning it to the anchor', () => {
       const transformHref = vi.fn((href: string) => `https://proxy.example/?u=${encodeURIComponent(href)}`);
       const { tool } = createTool({ transformHref });

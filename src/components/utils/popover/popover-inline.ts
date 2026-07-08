@@ -135,9 +135,11 @@ export class PopoverInline extends PopoverDesktop {
       );
     }
 
-    // Apply inline items container styles
+    // Apply inline items container styles. The horizontal toolbar is a single row whose
+    // symmetric breathing room comes from the container, so drop the vertical-list
+    // before-first (pt-0) and after-last (pb-0) gaps that css.items carries.
     if (this.nodes.items) {
-      this.nodes.items.className = twMerge(css.items, 'flex pb-0');
+      this.nodes.items.className = twMerge(css.items, 'flex pt-0 pb-0');
     }
 
     // Set inline height CSS variables

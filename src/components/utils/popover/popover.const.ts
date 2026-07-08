@@ -20,8 +20,10 @@ export const css = {
   popoverOverlay: 'hidden bg-dark',
 
   // `relative` makes the container the offsetParent of its items so the reel
-  // distortion can read item offsetTop values in container coordinates
-  items: 'relative flex-1 min-h-0 overflow-y-auto overscroll-contain pb-1.5',
+  // distortion can read item offsetTop values in container coordinates.
+  // pt-1.5/pb-1.5 put the before-first and after-last gaps inside the scroll area so
+  // they scroll with the list and sit within the reel clip (the outer container has none).
+  items: 'relative flex-1 min-h-0 overflow-y-auto overscroll-contain pt-1.5 pb-1.5',
 };
 
 /**

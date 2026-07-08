@@ -217,6 +217,16 @@ describe('PopoverInline', () => {
       expect(instance.nodes.popoverContainer.className).not.toContain('pb-0');
     });
 
+    it('keeps the horizontal toolbar items flush — the before-first-element gap is a vertical-list concern', () => {
+      const popover = createPopoverInline();
+      const instance = popover as unknown as PopoverInlineInternal;
+
+      // The inline toolbar is a single horizontal row; its symmetric breathing room comes
+      // from the container (pt-1.5/pb-1.5), so the items list must not carry the vertical
+      // before-first-element gap that vertical menus use.
+      expect(instance.nodes.items.className).not.toContain('pt-1.5');
+    });
+
     it('should activate flipper with flippableElements', () => {
       vi.useFakeTimers();
 
@@ -474,15 +484,19 @@ describe('PopoverInline', () => {
 
       instance.showNestedItems(parentItem!);
 
-      const nestedContainer = instance.nestedPopover
-        ?.getElement()
-        .querySelector(`[${DATA_ATTR.popoverContainer}]`);
+      const nestedEl = instance.nestedPopover?.getElement();
+      const nestedContainer = nestedEl?.querySelector(`[${DATA_ATTR.popoverContainer}]`);
+      const nestedItems = nestedEl?.querySelector(`[${DATA_ATTR.popoverItems}]`);
 
-      // The nested "Turn into" menu is a vertical item list — its first item sits flush
-      // to the top edge, so the container carries horizontal padding but no top padding.
+      // The nested "Turn into" menu is a vertical item list — the outer container carries
+      // horizontal padding but no top padding.
       expect(nestedContainer?.className).toContain('px-1.5');
       expect(nestedContainer?.className).not.toContain('pt-1.5');
       expect(nestedContainer?.className).not.toContain('p-1.5');
+
+      // The 6px before-first-element gap lives on the scrollable items list instead, so it
+      // sits above "Heading 1" and scrolls with the list inside the reel clip.
+      expect(nestedItems?.className).toContain('pt-1.5');
     });
   });
 

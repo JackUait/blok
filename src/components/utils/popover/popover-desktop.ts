@@ -1490,8 +1490,10 @@ export class PopoverDesktop extends PopoverAbstract {
     const searchElement = this.search.getElement();
 
     // The popover container no longer pads its top, so the search input owns its own
-    // top gap from the container edge (mt) alongside its gap from the items list (mb).
-    searchElement.classList.add('mt-1.5', 'mb-1.5');
+    // top gap from the container edge (mt). Its gap from the results below is supplied by
+    // the items list's before-first-element padding (css.items pt-1.5), so no mb here —
+    // otherwise the search-to-results gap would double to 12px.
+    searchElement.classList.add('mt-1.5');
 
     this.nodes.popoverContainer.insertBefore(searchElement, this.nodes.popoverContainer.firstChild);
   }

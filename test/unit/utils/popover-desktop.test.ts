@@ -1906,13 +1906,14 @@ describe('PopoverDesktop', () => {
       expect(element?.className).toContain('pr-3');
     });
 
-    it('adds bottom padding inside the scrollable items container so it only shows at end of list', () => {
+    it('adds symmetric top/bottom padding inside the scrollable items container so gaps only show at the list edges', () => {
       const popover = createPopover();
       const instance = popover as unknown as PopoverDesktopInternal;
 
-      // Bottom padding lives on the scrollable items container (not the popover container),
-      // so it is only visible when user scrolls to the bottom of the list.
-      // The outer container carries no top padding, so the first item sits flush to the top edge.
+      // Both the before-first-element gap and the after-last-element gap live on the
+      // scrollable items container (not the popover container), so they scroll with the
+      // list and sit inside the reel clip. The outer container carries no top padding.
+      expect(instance.nodes.items.className).toContain('pt-1.5');
       expect(instance.nodes.items.className).toContain('pb-1.5');
       expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
     });

@@ -196,6 +196,44 @@ describe('table-cell-clipboard', () => {
       expect(html).toContain('<td>Cell B</td>');
     });
 
+    it('serializes list blocks as list markup in the visible td HTML (regression: copied cell lists flattened when pasted into external apps)', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            {
+              blocks: [
+                { tool: 'paragraph', data: { text: 'Intro' } },
+                { tool: 'list', data: { text: 'alpha', style: 'unordered', checked: false, depth: 0 } },
+                { tool: 'list', data: { text: 'nested', style: 'unordered', checked: false, depth: 1 } },
+                { tool: 'list', data: { text: 'first', style: 'ordered', checked: false, depth: 0 } },
+              ],
+            },
+          ],
+        ],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain(
+        '<td>Intro<ul><li aria-level="1">alpha</li><li aria-level="2">nested</li></ul>'
+        + '<ol><li aria-level="1">first</li></ol></td>'
+      );
+    });
+
+    it('keeps legacy items-array blocks readable in the visible td HTML', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'list', data: { items: ['x', 'y'] } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<td>x y</td>');
+    });
+
     it('should handle cells with empty blocks (empty <td>)', () => {
       const payload: TableCellsClipboard = {
         rows: 1,

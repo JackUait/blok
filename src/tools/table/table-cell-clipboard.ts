@@ -1,7 +1,7 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard, TableClipboardCell } from './types';
 import { mapPastedTableCells } from './table-operations';
-import { parseCellContentToBlocks } from './table-cell-paste';
+import { parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
 import { clean } from '../../components/utils/sanitizer';
@@ -160,7 +160,15 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
     .map((row) => {
       const cellsHtml = row
         .map((cell) => {
-          const text = cell.blocks.map(extractBlockHtml).join(' ');
+          // Blocks without a string `text` (legacy items-array shapes) are
+          // normalized to paragraphs so the canonical serializer — which keeps
+          // list blocks as real <ul>/<ol> markup for external apps — can
+          // render every block.
+          const text = serializeCellBlocksToHtml(
+            cell.blocks.map((block) =>
+              typeof block.data.text === 'string' ? block : { tool: 'paragraph', data: { text: extractBlockHtml(block) } }
+            )
+          );
 
           const styles = [
             cell.color ? `background-color: ${cell.color}` : '',

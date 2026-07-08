@@ -416,3 +416,87 @@ test.describe('Paste HTML Table into Editor', () => {
     expect(topLevelBlocksAfter.length).toBeLessThanOrEqual(2);
   });
 });
+
+test.describe('Paste HTML table with merged cells', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+    await createBlok(page, { tools: defaultTools });
+
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+
+    await paragraph.click();
+  });
+
+  test('colspan and rowspan survive the full paste pipeline (sanitizer included)', async ({ page }) => {
+    // Google-Docs-style layout: a wide merged header cell, a tall merged
+    // left cell, and regular data cells around them.
+    await pasteHtml(page, [
+      '<table>',
+      '<tr><td>Month</td><td colspan="2">May 2026</td></tr>',
+      '<tr><td rowspan="2">Vacancy</td><td>Goal</td><td>Fact</td></tr>',
+      '<tr><td>125</td><td>188</td></tr>',
+      '</table>',
+    ].join(''));
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    // Merged origins keep their span attributes in the rendered grid
+    const wideCell = table.locator(CELL_SELECTOR, { hasText: 'May 2026' });
+    const tallCell = table.locator(CELL_SELECTOR, { hasText: 'Vacancy' });
+
+    await expect(wideCell).toHaveAttribute('colspan', '2');
+    await expect(tallCell).toHaveAttribute('rowspan', '2');
+
+    // Cells after the rowspan land in their logical columns, not shifted left
+    const lastRowCells = table.locator('[data-blok-table-row]').nth(2).locator(CELL_SELECTOR);
+
+    await expect(lastRowCells).toHaveCount(2);
+    await expect(lastRowCells.nth(0)).toHaveAttribute('data-blok-table-cell-col', '1');
+
+    // The merge structure round-trips through save()
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const tableBlock = saved?.blocks.find((b: { type: string }) => b.type === 'table');
+
+    expect(tableBlock).toBeDefined();
+
+    const content = (tableBlock?.data as {
+      content: Array<Array<{ colspan?: number; rowspan?: number; mergedInto?: [number, number] }>>;
+    }).content;
+
+    expect(content[0][1].colspan).toBe(2);
+    expect(content[0][2].mergedInto).toEqual([0, 1]);
+    expect(content[1][0].rowspan).toBe(2);
+    expect(content[2][0].mergedInto).toEqual([1, 0]);
+  });
+
+  test('merged th header cells survive paste', async ({ page }) => {
+    await pasteHtml(page, [
+      '<table><thead>',
+      '<tr><th colspan="3">Quarter</th><th rowspan="2">Total</th></tr>',
+      '<tr><th>Jan</th><th>Feb</th><th>Mar</th></tr>',
+      '</thead><tbody>',
+      '<tr><td>1</td><td>2</td><td>3</td><td>6</td></tr>',
+      '</tbody></table>',
+    ].join(''));
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+    await expect(table.locator(CELL_SELECTOR, { hasText: 'Quarter' })).toHaveAttribute('colspan', '3');
+    await expect(table.locator(CELL_SELECTOR, { hasText: 'Total' })).toHaveAttribute('rowspan', '2');
+
+    // 4 logical columns: second header row occupies columns 0-2 under the span
+    const secondRowCells = table.locator('[data-blok-table-row]').nth(1).locator(CELL_SELECTOR);
+
+    await expect(secondRowCells).toHaveCount(3);
+    await expect(secondRowCells.nth(0)).toHaveAttribute('data-blok-table-cell-col', '0');
+    await expect(secondRowCells.nth(2)).toHaveAttribute('data-blok-table-cell-col', '2');
+  });
+});

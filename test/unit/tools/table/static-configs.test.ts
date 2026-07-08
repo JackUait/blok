@@ -102,7 +102,7 @@ describe('Table static configs', () => {
     }
   });
 
-  it('paste config preserves style attribute on TD and TH elements', () => {
+  it('paste config preserves style and span attributes on TD and TH elements', () => {
     const config = Table.pasteConfig;
 
     expect(config).not.toBe(false);
@@ -117,8 +117,10 @@ describe('Table static configs', () => {
 
       expect(tdConfig).toBeDefined();
       expect(thConfig).toBeDefined();
-      expect((tdConfig as Record<string, unknown>).TD).toEqual({ style: true });
-      expect((thConfig as Record<string, unknown>).TH).toEqual({ style: true });
+      // colspan/rowspan must stay whitelisted — without them the paste
+      // sanitizer strips merges before onPaste runs.
+      expect((tdConfig as Record<string, unknown>).TD).toEqual({ style: true, colspan: true, rowspan: true });
+      expect((thConfig as Record<string, unknown>).TH).toEqual({ style: true, colspan: true, rowspan: true });
     }
   });
 });

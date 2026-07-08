@@ -5,7 +5,7 @@ import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableGrid } from './table-core';
-import type { LegacyCellContent, TableData } from './types';
+import type { CellContent, LegacyCellContent, TableData } from './types';
 import { isCellWithBlocks } from './types';
 
 // ─── Pure DOM helpers ───────────────────────────────────────────────
@@ -419,6 +419,106 @@ export const rectangularizeContent = (
 
     return padded;
   });
+};
+
+/** HTML spec limits for span attributes (browsers clamp to the same values). */
+const MAX_COLSPAN = 1000;
+const MAX_ROWSPAN = 65534;
+
+const parseSpan = (cell: Element, attr: 'colspan' | 'rowspan', max: number): number => {
+  const raw = Number.parseInt(cell.getAttribute(attr) ?? '', 10);
+
+  if (!Number.isFinite(raw) || raw < 1) {
+    return 1;
+  }
+
+  return Math.min(raw, max);
+};
+
+/**
+ * Parse pasted `<tr>` elements into a rectangular logical grid, honouring
+ * colspan/rowspan the way the HTML table processing model does: each cell is
+ * placed at the first free logical slot of its row, and the slots it spans
+ * are recorded as covered (`mergedInto` pointing at the origin).
+ *
+ * This is what keeps merged tables from Google Docs / Word / buildin.ai
+ * intact — reading cells by their physical DOM index both drops the merge
+ * AND shifts every cell after a rowspan into the wrong column.
+ *
+ * @param rowElements - the pasted `<tr>` elements, in document order
+ * @param extractCellProps - per-cell extractor for extra props (e.g. colors)
+ */
+export const parsePastedTable = (
+  rowElements: ArrayLike<Element>,
+  extractCellProps: (cell: Element) => Partial<CellContent> = () => ({}),
+): CellContent[][] => {
+  const rows = Array.from(rowElements);
+  const grid: (CellContent | undefined)[][] = rows.map(() => []);
+
+  const nextFreeSlot = (row: (CellContent | undefined)[], start: number): number =>
+    row[start] === undefined ? start : nextFreeSlot(row, start + 1);
+
+  const markCoveredSlots = (r: number, c: number, rowspan: number, colspan: number): void => {
+    Array.from({ length: rowspan }).forEach((_, dr) => {
+      Array.from({ length: colspan }).forEach((__, dc) => {
+        if (dr === 0 && dc === 0) {
+          return;
+        }
+
+        // Malformed HTML can declare overlapping spans; keep the first
+        // cell that claimed a slot (matches browser behaviour).
+        grid[r + dr][c + dc] ??= { blocks: [], mergedInto: [r, c] };
+      });
+    });
+  };
+
+  rows.forEach((rowEl, r) => {
+    Array.from(rowEl.querySelectorAll('td, th')).reduce((cursor, cellEl) => {
+      // Skip slots already covered by spans from earlier rows/cells
+      const c = nextFreeSlot(grid[r], cursor);
+
+      const colspan = parseSpan(cellEl, 'colspan', MAX_COLSPAN);
+      // A rowspan can never extend past the last pasted row
+      const rowspan = Math.min(parseSpan(cellEl, 'rowspan', MAX_ROWSPAN), rows.length - r);
+
+      const cell: CellContent = {
+        blocks: [],
+        text: cellEl.innerHTML,
+        ...extractCellProps(cellEl),
+      };
+
+      if (colspan > 1) {
+        cell.colspan = colspan;
+      }
+
+      if (rowspan > 1) {
+        cell.rowspan = rowspan;
+      }
+
+      grid[r][c] = cell;
+
+      if (colspan > 1 || rowspan > 1) {
+        markCoveredSlots(r, c, rowspan, colspan);
+      }
+
+      return c + colspan;
+    }, 0);
+  });
+
+  const hasMerges = grid.some(row =>
+    row.some(cell => cell !== undefined && ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1))
+  );
+
+  // A `<tr>` with no cells and no coverage contributes nothing. Only safe to
+  // drop when the table has no merges — removing a row would otherwise shift
+  // the [row, col] coordinates that mergedInto references.
+  const kept = hasMerges ? grid : grid.filter(row => row.length > 0);
+
+  const width = kept.reduce((max, row) => Math.max(max, row.length), 0);
+
+  return kept.map(row =>
+    Array.from({ length: width }, (_, i) => row[i] ?? { blocks: [] })
+  );
 };
 
 export const normalizeTableData = (

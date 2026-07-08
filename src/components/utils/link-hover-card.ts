@@ -244,7 +244,7 @@ export class LinkHoverCard {
 
     wrapper.className = twJoin(
       'fixed z-overlay top-0 left-0',
-      'flex items-center h-9 pl-3 pr-1.5',
+      'flex items-center h-9',
       'bg-popover-bg rounded-lg',
       'shadow-[0_1px_2px_rgba(13,20,33,0.04),0_8px_22px_-8px_rgba(13,20,33,0.12)]',
       'text-sm leading-none text-text-primary',
@@ -253,17 +253,19 @@ export class LinkHoverCard {
       'data-[state=open]:opacity-100 data-[state=open]:translate-y-0',
       'mobile:hidden'
     );
-    // Border is applied inline, not via a `border` utility: Blok's stylesheet is
-    // prepended to <head> (lowest priority), so a host page's own CSS reset
-    // (e.g. Tailwind preflight zeroing border-width) would otherwise win and the
-    // border would vanish. Inline styles beat host author stylesheets. The color
-    // is a literal (not a token): @theme colors like --color-gray-text are not
-    // present in the cascade at this body-promoted card, so a var() reference
-    // would resolve to currentColor (near-black). This faint neutral matches the
-    // hardcoded shadow tone below.
+    // Border and horizontal padding are applied inline, not via utilities: this
+    // card is promoted to the Top Layer, and the `[data-blok-top-layer][popover]`
+    // reset in isolation.css (specificity 0,2,0) zeroes `border` and `padding` on
+    // the promoted element itself, overriding any Tailwind utility (0,1,0). Inline
+    // styles beat that reset. The border color is a literal (not a token): @theme
+    // colors like --color-gray-text are absent from the cascade here, so a var()
+    // reference would resolve to currentColor (near-black); this faint neutral
+    // matches the hardcoded shadow tone below.
     wrapper.style.borderWidth = '1px';
     wrapper.style.borderStyle = 'solid';
     wrapper.style.borderColor = 'rgba(13, 20, 33, 0.12)';
+    wrapper.style.paddingLeft = '1rem';
+    wrapper.style.paddingRight = '0.625rem';
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
 

@@ -1,6 +1,7 @@
 import type { Block } from '../../../block';
 import { HEADER_PATTERN, CHECKLIST_PATTERN, UNORDERED_LIST_PATTERN, ORDERED_LIST_PATTERN, ALPHA_ORDERED_LIST_PATTERN, TOGGLE_HEADER_PATTERN, TOGGLE_PATTERN, HEADER_TOOL_NAME, LIST_TOOL_NAME, TOGGLE_TOOL_NAME, DIVIDER_TOOL_NAME, DIVIDER_PATTERN, QUOTE_TOOL_NAME, QUOTE_PATTERN, CODE_TOOL_NAME, CODE_PATTERN } from '../constants';
 import { hasUnsafeScheme } from '../../../utils/sanitize-url';
+import { isSamePageLink } from '../../../../tools/link/registry';
 
 import { BlockEventComposer } from './__base';
 
@@ -519,7 +520,9 @@ export class MarkdownShortcuts extends BlockEventComposer {
     const anchor = document.createElement('a');
 
     anchor.href = url;
-    anchor.target = '_blank';
+    // Same-page destinations (#anchors or same origin+pathname) open in the same
+    // window; everything else keeps the new-tab default used by the Link tool.
+    anchor.target = isSamePageLink(url) ? '_self' : '_blank';
     anchor.rel = 'nofollow';
     anchor.textContent = label;
 

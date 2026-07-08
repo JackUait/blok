@@ -1,5 +1,5 @@
 import type { BlokConfig } from '../../../../../types/configs/blok-config';
-import { isHttpUrl } from '../../../../tools/link/registry';
+import { isHttpUrl, isSamePageLink } from '../../../../tools/link/registry';
 import { PasteMenuController, type LinkPasteMenu } from '../../../../tools/link/paste-menu/controller';
 import type { PasteMenuActionType } from '../../../../tools/link/paste-menu/options';
 import type { BlokModules } from '../../../../types-internal/blok-modules';
@@ -275,7 +275,8 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
     const anchor = document.createElement('a');
 
     anchor.href = url;
-    anchor.target = '_blank';
+    // A pasted URL pointing at the current page opens in the same window.
+    anchor.target = isSamePageLink(url) ? '_self' : '_blank';
     anchor.rel = 'nofollow';
     anchor.textContent = url;
 

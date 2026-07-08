@@ -12,6 +12,7 @@ import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
 import { setFieldValidity } from '../utils/field-validity';
+import { isSamePageLink } from '../../tools/link/registry';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 
@@ -903,28 +904,6 @@ export class LinkInlineTool implements InlineTool {
   }
 
   /**
-   * Whether the link points at the current page — a bare anchor ("#results")
-   * or any URL that resolves to the same origin + pathname as the document.
-   * @param {string} link - "href" value to test
-   */
-  private isSamePageLink(link: string): boolean {
-    const trimmed = link.trim();
-
-    if (trimmed.charAt(0) === '#') {
-      return true;
-    }
-
-    try {
-      const current = new URL(window.location.href);
-      const resolved = new URL(trimmed, current.href);
-
-      return resolved.origin === current.origin && resolved.pathname === current.pathname;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
    * Inserts <a> tag with "href"
    * @param {string} link - "href" value
    */
@@ -935,7 +914,7 @@ export class LinkInlineTool implements InlineTool {
      * the current origin + pathname) always open in the same window, regardless
      * of the configured target, so in-article navigation never spawns a new tab.
      */
-    const target = this.isSamePageLink(link) ? '_self' : (this.linkConfig.target ?? '_blank');
+    const target = isSamePageLink(link) ? '_self' : (this.linkConfig.target ?? '_blank');
     const rel = this.linkConfig.rel ?? 'nofollow';
 
     /**

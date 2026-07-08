@@ -1603,3 +1603,30 @@ export function isHttpUrl(value: string): boolean {
     return false;
   }
 }
+
+/**
+ * Whether a link points at the current page: a bare anchor ("#results") or any
+ * URL that resolves to the document's own origin + pathname. Such destinations
+ * always open in the same window, so in-article navigation never spawns a tab.
+ * @param value - raw href to test
+ */
+export function isSamePageLink(value: string): boolean {
+  const trimmed = value.trim();
+
+  if (trimmed.charAt(0) === '#') {
+    return true;
+  }
+
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const current = new URL(window.location.href);
+    const resolved = new URL(trimmed, current.href);
+
+    return resolved.origin === current.origin && resolved.pathname === current.pathname;
+  } catch {
+    return false;
+  }
+}

@@ -72,6 +72,41 @@ describe('applyLinkConfig', () => {
     expect(anchors.every((a) => a.getAttribute('target') === '_blank')).toBe(true);
   });
 
+  it('forces target="_self" on anchor-only links even when config sets _blank', () => {
+    const root = makeRoot('<a href="#results">jump</a>');
+
+    applyLinkConfig(root, { target: '_blank' });
+
+    expect(root.querySelector('a')?.getAttribute('target')).toBe('_self');
+  });
+
+  it('forces target="_self" on same-page links even when config sets _blank', () => {
+    const samePage = `${window.location.origin}${window.location.pathname}#section`;
+    const root = makeRoot(`<a href="${samePage}">section</a>`);
+
+    applyLinkConfig(root, { target: '_blank' });
+
+    expect(root.querySelector('a')?.getAttribute('target')).toBe('_self');
+  });
+
+  it('keeps the configured target for cross-page links', () => {
+    const root = makeRoot('<a href="https://google.com/">out</a>');
+
+    applyLinkConfig(root, { target: '_blank' });
+
+    expect(root.querySelector('a')?.getAttribute('target')).toBe('_blank');
+  });
+
+  it('decides same-page from the original href, not the transformHref result', () => {
+    const root = makeRoot('<a href="#results">jump</a>');
+    const transformHref = vi.fn((href: string) => `https://proxy.example/?u=${encodeURIComponent(href)}`);
+
+    applyLinkConfig(root, { target: '_blank', transformHref });
+
+    // The anchor still points at the current page conceptually, so it stays same-window.
+    expect(root.querySelector('a')?.getAttribute('target')).toBe('_self');
+  });
+
   it('is a no-op when there are no anchors', () => {
     const root = makeRoot('<p>plain paragraph</p>');
 

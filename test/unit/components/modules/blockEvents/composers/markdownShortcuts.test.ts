@@ -777,6 +777,25 @@ describe('MarkdownShortcuts', () => {
       expect(anchor?.getAttribute('rel')).toBe('nofollow');
     });
 
+    it('opens anchor-only links in the same window (target="_self")', () => {
+      const { input, result } = setupInline('[Top](#top)', ')');
+
+      expect(result).toBe(true);
+
+      const anchor = input.querySelector('a');
+
+      expect(anchor?.getAttribute('href')).toBe('#top');
+      expect(anchor?.getAttribute('target')).toBe('_self');
+    });
+
+    it('opens same-page links in the same window (target="_self")', () => {
+      const samePage = `${window.location.origin}${window.location.pathname}#section`;
+      const { input, result } = setupInline(`[Section](${samePage})`, ')');
+
+      expect(result).toBe(true);
+      expect(input.querySelector('a')?.getAttribute('target')).toBe('_self');
+    });
+
     it('preserves leading text before the formatted link', () => {
       const { input } = setupInline('see [Blok](https://blok.dev)', ')');
 

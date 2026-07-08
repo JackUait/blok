@@ -103,6 +103,27 @@ describe('PatternHandler — link paste menu gating', () => {
     expect(inserted.replace).toBe(true);
   });
 
+  it('builds a same-window (_self) anchor when pasting a same-page URL', async () => {
+    const handler = makeHandler({});
+    const samePageUrl = `${window.location.origin}${window.location.pathname}#section`;
+
+    await handler.handle(samePageUrl, context);
+
+    const inserted = insertMock.mock.calls[0][0] as { data: { text: string } };
+
+    expect(inserted.data.text).toContain('target="_self"');
+  });
+
+  it('builds a new-tab (_blank) anchor when pasting a cross-page URL', async () => {
+    const handler = makeHandler({});
+
+    await handler.handle('https://example.com/article', context);
+
+    const inserted = insertMock.mock.calls[0][0] as { data: { text: string } };
+
+    expect(inserted.data.text).toContain('target="_blank"');
+  });
+
   it('keeps the already-shown link without re-inserting when dismissed', async () => {
     const handler = makeHandler({});
 

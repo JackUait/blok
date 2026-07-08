@@ -833,6 +833,7 @@
 
 :where([data-blok-interface], [data-blok-popover]) mark {
   color: inherit;
+  background-color: transparent;
 }
 
 :where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {

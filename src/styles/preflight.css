@@ -65,11 +65,18 @@
   font-weight: bolder;
 }
 
-/* Override the browser UA color: MarkText on <mark> elements so that marks
-   without an explicit inline color inherit the parent's text color instead
-   of defaulting to black in dark mode. */
+/* Neutralise the browser UA styling on <mark> elements. Browsers paint <mark>
+   with `color: MarkText` and `background-color: Mark` (a yellow/system
+   highlight). Blok never wants that default: a mark's colour comes only from an
+   explicit inline `color` / `background-color` set by the Marker tool. Reset
+   both here so a mark carrying only a text colour (e.g. colour transferred/
+   pasted into an article, where `migrateMarkColors` maps the colour but does
+   not add an inline transparent background) never renders a spurious yellow
+   highlight. Real inline highlights still win — inline styles override this
+   zero-specificity `:where()` rule. */
 :where([data-blok-interface], [data-blok-popover]) mark {
   color: inherit;
+  background-color: transparent;
 }
 
 /* Correct the odd em font sizing in all browsers for code elements. */

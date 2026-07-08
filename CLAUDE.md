@@ -181,6 +181,8 @@ See `src/tools/` for examples: paragraph/, header/, list/
 
 **Toolbox**: Triggered by "/" in empty paragraph or clicking + button. Uses Popover component.
 
+**Paste attribute law**: before a tool's `onPaste` receives `event.detail.data`, the Paste module sanitizes it with html-janitor using ONLY the attribute whitelist from the tool's `pasteConfig` tags (e.g. `{ TD: { style: true, colspan: true, rowspan: true } }`). Every attribute that `onPaste` (or any helper it calls) reads from the pasted element or its descendants MUST be whitelisted there — a missing entry means the sanitizer silently strips it and data is lost with no error (this is how pasted merged table cells were flattened for months). When adding an attribute read to any paste handler, add it to `pasteConfig` in the same change AND add a test that pastes HTML carrying that attribute through the real sanitizer.
+
 **Drag & Drop**: Pointer-based (not HTML5 drag API) from ☰ icon. See `src/components/modules/dragManager.ts`.
 
 ## Code Conventions

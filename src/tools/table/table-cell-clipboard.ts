@@ -1,5 +1,6 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
-import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
+import type { CellPlacement, ClipboardBlockData, TableCellsClipboard, TableClipboardCell } from './types';
+import { mapPastedTableCells } from './table-operations';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
 import { clean } from '../../components/utils/sanitizer';
@@ -35,6 +36,10 @@ interface CellEntry {
   color?: string;
   textColor?: string;
   placement?: CellPlacement;
+  /** Columns spanned when the cell is a merge origin (default 1). */
+  colspan?: number;
+  /** Rows spanned when the cell is a merge origin (default 1). */
+  rowspan?: number;
 }
 
 /**
@@ -51,8 +56,10 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
   const minRow = Math.min(...entries.map((e) => e.row));
   const minCol = Math.min(...entries.map((e) => e.col));
 
-  const maxRow = Math.max(...entries.map((e) => e.row));
-  const maxCol = Math.max(...entries.map((e) => e.col));
+  // Merge origins extend the payload by their span: a fully merged region
+  // contributes a single physical entry but covers span-many positions.
+  const maxRow = Math.max(...entries.map((e) => e.row + (e.rowspan ?? 1) - 1));
+  const maxCol = Math.max(...entries.map((e) => e.col + (e.colspan ?? 1) - 1));
 
   const rows = maxRow - minRow + 1;
   const cols = maxCol - minCol + 1;
@@ -81,6 +88,14 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
 
     if (entry.placement !== undefined) {
       cells[r][c].placement = entry.placement;
+    }
+
+    if ((entry.colspan ?? 1) > 1) {
+      cells[r][c].colspan = entry.colspan;
+    }
+
+    if ((entry.rowspan ?? 1) > 1) {
+      cells[r][c].rowspan = entry.rowspan;
     }
   }
 
@@ -372,59 +387,23 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     return null;
   }
 
-  type CellPayload = TableCellsClipboard['cells'][number][number];
-
-  const cellGrid: CellPayload[][] = [];
-
-  rows.forEach((row) => {
-    const tds = row.querySelectorAll('td, th');
-    const rowCells: CellPayload[] = [];
-
-    tds.forEach((td) => {
-      const text = sanitizeCellHtml(td);
-      const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
-      const blocks = segments.length > 0
-        ? segments.map(s => ({ tool: 'paragraph' as const, data: { text: s } }))
-        : [{ tool: 'paragraph' as const, data: { text: '' } }];
-
-      const cell: CellPayload = { blocks };
-
-      // Extract cell-level colors from td/th style attribute
-      const tdStyle = td.getAttribute('style') ?? '';
-      const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
-
-      if (cellBgMatch?.[1]) {
-        const cellBg = cellBgMatch[1].trim();
-
-        // Skip resolved page bg (white/dark) so plain cells don't collapse onto gray preset.
-        if (!isDefaultWhiteBackground(cellBg) && !isDefaultDarkBackground(cellBg)) {
-          cell.color = mapToNearestPresetColor(cellBg, 'bg');
-        }
-      }
-
-      const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
-
-      if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
-        cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
-      }
-
-      rowCells.push(cell);
-    });
-
-    cellGrid.push(rowCells);
+  // Walk the rows with the shared occupancy model so colspan/rowspan place
+  // every cell at its correct LOGICAL column and merges survive as
+  // spans + covered flags (same fix as the top-level table paste).
+  const cellGrid = mapPastedTableCells<TableClipboardCell>(rows, {
+    cell: (td, { colspan, rowspan }) => ({
+      ...buildCellPayloadFromTd(td),
+      ...(colspan > 1 ? { colspan } : {}),
+      ...(rowspan > 1 ? { rowspan } : {}),
+    }),
+    covered: () => ({ blocks: [], covered: true }),
+    filler: () => ({ blocks: [{ tool: 'paragraph', data: { text: '' } }] }),
   });
 
-  const maxCols = Math.max(0, ...cellGrid.map((row) => row.length));
+  const maxCols = cellGrid[0]?.length ?? 0;
 
   if (cellGrid.length === 0 || maxCols === 0) {
     return null;
-  }
-
-  // Normalize: ensure all rows have the same number of columns
-  for (const row of cellGrid) {
-    while (row.length < maxCols) {
-      row.push({ blocks: [{ tool: 'paragraph', data: { text: '' } }] });
-    }
   }
 
   return {
@@ -432,6 +411,41 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     cols: maxCols,
     cells: cellGrid,
   };
+}
+
+/**
+ * Build a clipboard cell payload from a single `<td>`/`<th>`: sanitized
+ * paragraph blocks (split on line breaks) plus cell-level colors.
+ */
+function buildCellPayloadFromTd(td: Element): TableClipboardCell {
+  const text = sanitizeCellHtml(td);
+  const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
+  const blocks = segments.length > 0
+    ? segments.map(s => ({ tool: 'paragraph' as const, data: { text: s } }))
+    : [{ tool: 'paragraph' as const, data: { text: '' } }];
+
+  const cell: TableClipboardCell = { blocks };
+
+  // Extract cell-level colors from td/th style attribute
+  const tdStyle = td.getAttribute('style') ?? '';
+  const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+  if (cellBgMatch?.[1]) {
+    const cellBg = cellBgMatch[1].trim();
+
+    // Skip resolved page bg (white/dark) so plain cells don't collapse onto gray preset.
+    if (!isDefaultWhiteBackground(cellBg) && !isDefaultDarkBackground(cellBg)) {
+      cell.color = mapToNearestPresetColor(cellBg, 'bg');
+    }
+  }
+
+  const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+  if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
+    cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
+  }
+
+  return cell;
 }
 
 /**

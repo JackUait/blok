@@ -759,7 +759,7 @@ export class TableSubsystems {
 
   private collectCellBlockData(
     cells: HTMLElement[],
-  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string }> {
+  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string; colspan?: number; rowspan?: number }> {
     const gridEl = this.host.gridElement;
 
     if (!gridEl) {
@@ -817,6 +817,9 @@ export class TableSubsystems {
 
       const color = this.host.model.getCellColor(rowIndex, colIndex);
       const textColor = this.host.model.getCellTextColor(rowIndex, colIndex);
+      // Record merge spans so paste can reconstruct the merge instead of
+      // flattening it into a grid of real empty cells.
+      const span = this.host.model.getCellSpan(rowIndex, colIndex);
 
       return {
         row: rowIndex,
@@ -824,6 +827,8 @@ export class TableSubsystems {
         blocks,
         ...(color !== undefined ? { color } : {}),
         ...(textColor !== undefined ? { textColor } : {}),
+        ...(span.colspan > 1 ? { colspan: span.colspan } : {}),
+        ...(span.rowspan > 1 ? { rowspan: span.rowspan } : {}),
       };
     });
   }
@@ -1171,6 +1176,10 @@ export class TableSubsystems {
         });
       });
 
+      // Reconstruct merges carried by the payload: without this, a copied
+      // merged region pastes as a flat grid of real empty cells.
+      this.applyPayloadMerges(gridEl, payload, startRow, startCol);
+
       // Update table state after paste
       this.initResize(gridEl);
       this.addControls?.syncRowButtonWidth();
@@ -1197,6 +1206,86 @@ export class TableSubsystems {
     }
 
     this.host.api.caret.setToBlock(lastBlockId, 'end');
+  }
+
+  /**
+   * Merge regions declared by the payload's origin cells (colspan/rowspan > 1),
+   * clamped to the payload bounds. Payloads from older Blok versions carry no
+   * spans and yield an empty list (flat paste, back-compat).
+   */
+  private collectPayloadMerges(
+    payload: TableCellsClipboard,
+  ): Array<{ row: number; col: number; colspan: number; rowspan: number }> {
+    return payload.cells.flatMap((rowCells, r) =>
+      rowCells.flatMap((cell, c) => {
+        const colspan = Math.min(cell.colspan ?? 1, payload.cols - c);
+        const rowspan = Math.min(cell.rowspan ?? 1, payload.rows - r);
+
+        return colspan > 1 || rowspan > 1 ? [{ row: r, col: c, colspan, rowspan }] : [];
+      })
+    );
+  }
+
+  /**
+   * Re-apply the merges described by a pasted payload at the destination.
+   * Covered destination cells are cleared first so the merge doesn't absorb
+   * stale content that the (skipped) covered payload slots left behind.
+   */
+  private applyPayloadMerges(
+    gridEl: HTMLElement,
+    payload: TableCellsClipboard,
+    startRow: number,
+    startCol: number,
+  ): void {
+    const merges = this.collectPayloadMerges(payload);
+
+    if (merges.length === 0) {
+      return;
+    }
+
+    merges.forEach(({ row, col, colspan, rowspan }) => {
+      this.clearCoveredDestinationCells(gridEl, startRow + row, startCol + col, rowspan, colspan);
+      this.host.model.mergeCells({
+        minRow: startRow + row,
+        maxRow: startRow + row + rowspan - 1,
+        minCol: startCol + col,
+        maxCol: startCol + col + colspan - 1,
+      });
+    });
+
+    this.host.rebuildTableBody();
+  }
+
+  /**
+   * Delete the blocks and styling of every cell in a merge footprint except
+   * its origin, so a following mergeCells collects only the origin's content.
+   */
+  private clearCoveredDestinationCells(
+    gridEl: HTMLElement,
+    originRow: number,
+    originCol: number,
+    rowspan: number,
+    colspan: number,
+  ): void {
+    Array.from({ length: rowspan }).forEach((_, dr) => {
+      Array.from({ length: colspan }).forEach((__, dc) => {
+        if (dr === 0 && dc === 0) {
+          return;
+        }
+
+        const r = originRow + dr;
+        const c = originCol + dc;
+        const cell = this.host.grid.getCell(gridEl, r, c);
+
+        if (cell && this.host.cellBlocks) {
+          this.host.cellBlocks.deleteBlocks(this.host.cellBlocks.getBlockIdsFromCells([cell]));
+        }
+
+        this.host.model.setCellBlocks(r, c, []);
+        this.host.model.setCellColor(r, c, undefined);
+        this.host.model.setCellTextColor(r, c, undefined);
+      });
+    });
   }
 
   /**

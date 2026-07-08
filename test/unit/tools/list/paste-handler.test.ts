@@ -385,8 +385,9 @@ describe('paste-handler', () => {
 
       const result = extractPastedContent(content);
 
-      // innerHTML will include the checkbox element
-      expect(result.text).toContain('input');
+      // The checkbox control is stripped from the text — the checklist tool
+      // renders its own checkbox
+      expect(result.text).toBe('');
       expect(result.checked).toBe(true);
     });
 

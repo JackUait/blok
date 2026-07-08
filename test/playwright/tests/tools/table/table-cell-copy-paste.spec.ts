@@ -850,7 +850,9 @@ test.describe('Table cell copy/paste', () => {
 
     const { html, plain } = await performCopyAndCapture(page);
 
-    expect(plain).toBe('Merged');
+    // The clipboard payload now carries the merge footprint (1x2), so the
+    // plain-text projection is tab-separated like a spreadsheet would emit.
+    expect(plain).toBe('Merged\t');
 
     // Target cell: model col 2 (DOM col 1, because merge consumes col 0-1)
     // Use attribute-based locator to find it by model coordinates
@@ -909,7 +911,9 @@ test.describe('Table cell copy/paste', () => {
 
     const { html, plain } = await performCopyAndCapture(page);
 
-    expect(plain).toBe('SpanOrigin');
+    // The clipboard payload now carries the merge footprint (2x1), so the
+    // plain-text projection has a second (empty) covered row.
+    expect(plain).toBe('SpanOrigin\n');
 
     // Target: model [1,1] — first VISIBLE cell in row 1 (DOM col 0, model col 1)
     // Use attribute-based locator
@@ -997,6 +1001,91 @@ test.describe('Table cell copy/paste', () => {
     await page.keyboard.type('!');
 
     await expect(dest2).toHaveText('A!', { timeout: 3000 });
+  });
+
+  test('copying a merged region and pasting outside keeps the merge in the new table', async ({ page }) => {
+    // 2x2 table whose first row is a single merged cell (colspan=2), plus a
+    // paragraph below to paste into.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [
+                  { blocks: [], colspan: 2, text: 'Merged' },
+                  { blocks: [], mergedInto: [0, 0] as [number, number] },
+                ],
+                [
+                  { blocks: [], text: 'A' },
+                  { blocks: [], text: 'B' },
+                ],
+              ],
+            },
+          },
+          {
+            type: 'paragraph',
+            data: { text: '' },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Drag from the merged origin (row 0 renders a single physical cell) down
+    // to (1,1) — the selection covers the whole merge plus row 1.
+    await selectCells(page, 0, 0, 1, 1);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(3);
+
+    const { html, plain } = await performCopyAndCapture(page);
+
+    // The clipboard payload must carry the origin's span.
+    expect(html).toContain('colspan');
+
+    // Paste into the paragraph below the table.
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`).last();
+
+    await paragraph.click();
+    await dispatchPasteEvent(page, html, plain);
+
+    const tables = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`);
+
+    await expect(tables).toHaveCount(2, { timeout: 5000 });
+
+    // Save and assert the new table keeps colspan + mergedInto.
+    const savedData = await page.evaluate(async () => window.blokInstance?.save());
+
+    const tableBlocks = savedData?.blocks.filter(
+      (block: { type: string }) => block.type === 'table'
+    );
+
+    expect(tableBlocks).toHaveLength(2);
+
+    const newTableContent = (tableBlocks?.[1]?.data as {
+      content: Array<Array<string | { colspan?: number; rowspan?: number; mergedInto?: [number, number]; text?: string }>>;
+    }).content;
+
+    const origin = newTableContent[0][0] as { colspan?: number; text?: string };
+    const coveredCell = newTableContent[0][1] as { mergedInto?: [number, number] };
+
+    expect(origin.colspan).toBe(2);
+    expect(coveredCell.mergedInto).toEqual([0, 0]);
+
+    // Rendered content of the new table: merged origin text plus row 1 cells
+    // (saved cell content lives in child blocks, so assert via the DOM).
+    const newTable = tables.nth(1);
+
+    await expect(newTable.locator('[data-blok-table-cell] [contenteditable="true"]').first()).toHaveText('Merged');
+    await expect(
+      newTable.locator('[data-blok-table-row] >> nth=1').locator('[data-blok-table-cell] >> nth=0').locator('[contenteditable="true"]')
+    ).toHaveText('A');
+    await expect(
+      newTable.locator('[data-blok-table-row] >> nth=1').locator('[data-blok-table-cell] >> nth=1').locator('[contenteditable="true"]')
+    ).toHaveText('B');
   });
 
   test('should not intercept copy when user has text selected inside a single cell block', async ({ page }) => {

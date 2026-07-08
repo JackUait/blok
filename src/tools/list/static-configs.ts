@@ -33,6 +33,11 @@ export const getListSanitizeConfig = (): ToolSanitizerConfig => ({
  * - data-list-style stamped by the HTML paste pre-pass so the resolved
  *   ordered/unordered context survives once the <li> is detached from its
  *   ancestor <ul>/<ol>
+ *
+ * Also allows INPUT with type/checked so generic HTML checklists (e.g. GitHub
+ * task lists: `<li><input type="checkbox" checked>…</li>`) survive the paste
+ * sanitizer — the checkbox drives checklist style detection and checked state
+ * in the paste handler and is stripped from the item text afterwards.
  */
 export const getListPasteConfig = (): PasteConfig => ({
   tags: [
@@ -44,6 +49,13 @@ export const getListPasteConfig = (): PasteConfig => ({
         'aria-level': true,
         // Allow data-list-style so a detached <li> keeps its ordered/unordered context
         'data-list-style': true,
+      },
+    },
+    {
+      input: {
+        // Keep checkbox inputs so checklist detection and checked state survive sanitization
+        type: true,
+        checked: true,
       },
     },
   ],

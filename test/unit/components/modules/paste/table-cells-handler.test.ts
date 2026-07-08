@@ -424,6 +424,143 @@ describe('TableCellsHandler', () => {
     });
 
     // -------------------------------------------------------------------------
+    // Gap A: clipboard payloads carrying merge spans must produce TableData
+    // with colspan/rowspan on origins and mergedInto on covered slots — not a
+    // flattened grid of empty cells.
+    // -------------------------------------------------------------------------
+
+    it('reconstructs merges from clipboard spans (colspan)', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Merged' } }], colspan: 2 },
+            { blocks: [], covered: true },
+          ],
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'A' } }] },
+            { blocks: [{ tool: 'paragraph', data: { text: 'B' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const origin = callArgs.data.content[0][0] as {
+        text?: string; colspan?: number; rowspan?: number;
+      };
+      const covered = callArgs.data.content[0][1] as { mergedInto?: [number, number] };
+
+      expect(origin.colspan).toBe(2);
+      expect(origin.rowspan).toBeUndefined();
+      expect(origin.text).toBe('Merged');
+      expect(covered.mergedInto).toEqual([0, 0]);
+      // Untouched cells stay plain strings
+      expect(callArgs.data.content[1][0]).toBe('A');
+      expect(callArgs.data.content[1][1]).toBe('B');
+    });
+
+    it('reconstructs merges from clipboard spans (rowspan)', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Tall' } }], rowspan: 2 },
+            { blocks: [{ tool: 'paragraph', data: { text: 'B1' } }] },
+          ],
+          [
+            { blocks: [], covered: true },
+            { blocks: [{ tool: 'paragraph', data: { text: 'B2' } }] },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const origin = callArgs.data.content[0][0] as { text?: string; rowspan?: number };
+      const covered = callArgs.data.content[1][0] as { mergedInto?: [number, number] };
+
+      expect(origin.rowspan).toBe(2);
+      expect(origin.text).toBe('Tall');
+      expect(covered.mergedInto).toEqual([0, 0]);
+    });
+
+    it('preserves colors on merged origin cells', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 2,
+        cells: [
+          [
+            {
+              blocks: [{ tool: 'paragraph', data: { text: 'Colored merge' } }],
+              colspan: 2,
+              color: '#fdebec',
+            },
+            { blocks: [], covered: true },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      await handler.handle(html, context);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      const origin = callArgs.data.content[0][0] as {
+        text?: string; colspan?: number; color?: string;
+      };
+
+      expect(origin.colspan).toBe(2);
+      expect(origin.color).toBe('#fdebec');
+      expect(origin.text).toBe('Colored merge');
+    });
+
+    it('pastes legacy covered-only payloads (no spans) flat without errors', async () => {
+      // Old clipboard payloads flag covered slots but carry no colspan/rowspan.
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 2,
+        cells: [
+          [
+            { blocks: [{ tool: 'paragraph', data: { text: 'Origin' } }] },
+            { blocks: [], covered: true },
+          ],
+        ],
+      };
+      const html = buildClipboardHtml(payload);
+
+      const result = await handler.handle(html, context);
+
+      expect(result).toBe(true);
+
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as {
+        data: { content: unknown[][] };
+      };
+
+      // No spans to reconstruct — flat paste, covered slot becomes empty cell.
+      expect(callArgs.data.content[0][0]).toBe('Origin');
+      expect(callArgs.data.content[0][1]).toBe('');
+    });
+
+    // -------------------------------------------------------------------------
     // Bug: focus lost (activeElement === body) but currentBlock is inside a
     // table cell — handler should still bail instead of creating a new table
     // -------------------------------------------------------------------------

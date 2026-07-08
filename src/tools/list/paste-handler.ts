@@ -88,6 +88,24 @@ const getListStyleFromAttribute = (content: HTMLElement): 'ordered' | 'unordered
 };
 
 /**
+ * Find the checkbox input that marks pasted content as a checklist item.
+ * Handles both a checkbox nested inside an `<li>` (GitHub task lists) and the
+ * content being a bare `<input>` itself (tag-substitution paste of a lone input).
+ *
+ * @param content - The pasted content element
+ * @returns The checkbox input, or null when none is present
+ */
+const findChecklistCheckbox = (content: HTMLElement): HTMLInputElement | null => {
+  if (content instanceof HTMLInputElement && content.type === 'checkbox') {
+    return content;
+  }
+
+  const checkbox = content.querySelector('input[type="checkbox"]');
+
+  return checkbox instanceof HTMLInputElement ? checkbox : null;
+};
+
+/**
  * Detect list style from pasted content based on parent element
  *
  * @param content - The pasted content element
@@ -96,13 +114,13 @@ const getListStyleFromAttribute = (content: HTMLElement): 'ordered' | 'unordered
  */
 export const detectStyleFromPastedContent = (content: HTMLElement, currentStyle: ListItemStyle): ListItemStyle => {
   const parentList = content.parentElement;
+  const hasCheckbox = findChecklistCheckbox(content) !== null;
 
   // First, check parent element tag (most reliable)
   if (parentList?.tagName === 'OL') return 'ordered';
 
   if (parentList?.tagName === 'UL') {
     // Check for checkbox inputs to detect checklist
-    const hasCheckbox = content.querySelector('input[type="checkbox"]');
     return hasCheckbox ? 'checklist' : 'unordered';
   }
 
@@ -111,6 +129,11 @@ export const detectStyleFromPastedContent = (content: HTMLElement, currentStyle:
   // (e.g., Google Docs paste where <li> elements are extracted from their parent)
   const styleFromAttr = getListStyleFromAttribute(content);
   if (styleFromAttr) return styleFromAttr;
+
+  // A detached item that still carries a checkbox is a checklist item — the
+  // paste splitter clones each <li> out of its ancestor <ul>, so the parent
+  // tag check above never fires for sanitized paste content
+  if (hasCheckbox) return 'checklist';
 
   // Fall back to current style
   return currentStyle;
@@ -123,13 +146,25 @@ export const detectStyleFromPastedContent = (content: HTMLElement, currentStyle:
  * @returns Object with extracted text and checked state
  */
 export const extractPastedContent = (content: HTMLElement): { text: string; checked: boolean } => {
-  const text = content.innerHTML || content.textContent || '';
+  const checkbox = findChecklistCheckbox(content);
 
-  // Check for checked state if checklist
-  const checkbox = content.querySelector('input[type="checkbox"]');
-  const checked = checkbox instanceof HTMLInputElement ? checkbox.checked : false;
+  if (checkbox === null) {
+    const text = content.innerHTML || content.textContent || '';
 
-  return { text, checked };
+    return { text, checked: false };
+  }
+
+  // Strip the checkbox control(s) from the item text — the checklist tool
+  // renders its own checkbox, so leaving the pasted <input> in the text would
+  // duplicate it
+  const withoutCheckboxes = content.cloneNode(true) as HTMLElement;
+
+  withoutCheckboxes.querySelectorAll('input[type="checkbox"]').forEach((input) => input.remove());
+
+  return {
+    text: withoutCheckboxes.innerHTML.trim(),
+    checked: checkbox.checked,
+  };
 };
 
 /**

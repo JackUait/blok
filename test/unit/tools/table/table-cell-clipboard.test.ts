@@ -585,6 +585,49 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[0][0].blocks[0].tool).toBe('paragraph');
     });
 
+    // -------------------------------------------------------------------------
+    // Gap B: foreign tables with colspan/rowspan were read by physical DOM
+    // index — merges were dropped AND cells after a rowspan shifted into the
+    // wrong logical column.
+    // -------------------------------------------------------------------------
+
+    it('honours rowspan: later-row cells land at correct logical columns', () => {
+      const html = '<table><tr><td rowspan="2">Tall</td><td>B1</td></tr><tr><td>B2</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(2);
+      expect(result?.cols).toBe(2);
+      expect(result?.cells[0][0].rowspan).toBe(2);
+      expect(result?.cells[1][0].covered).toBe(true);
+      // B2 must land in logical column 1, not column 0.
+      expect(result?.cells[1][1].blocks[0].data.text).toBe('B2');
+    });
+
+    it('honours colspan: covered slots are flagged and spans recorded', () => {
+      const html = '<table><tr><td colspan="2">Wide</td></tr><tr><td>A</td><td>B</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(2);
+      expect(result?.cols).toBe(2);
+      expect(result?.cells[0][0].colspan).toBe(2);
+      expect(result?.cells[0][1].covered).toBe(true);
+      expect(result?.cells[1][0].blocks[0].data.text).toBe('A');
+      expect(result?.cells[1][1].blocks[0].data.text).toBe('B');
+    });
+
+    it('does not stamp spans or covered flags on a plain table', () => {
+      const html = '<table><tr><td>A</td><td>B</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      result?.cells.flat().forEach(cell => {
+        expect(cell.colspan).toBeUndefined();
+        expect(cell.rowspan).toBeUndefined();
+        expect(cell.covered).toBeUndefined();
+      });
+    });
+
     it('should preserve bold formatting from Google Docs style spans', () => {
       const html = '<table><tr><td><span style="font-weight:700">bold text</span></td></tr></table>';
       const result = parseGenericHtmlTable(html);

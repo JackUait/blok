@@ -1794,6 +1794,146 @@ describe('Paste module', () => {
       expect(secondTableData.querySelector('td')?.textContent).toBe('Table 2');
     });
 
+    it('keeps structural and tool tags in the first sanitize pass when a custom global sanitizer is configured', async () => {
+      const { paste, mocks } = createPaste({
+        sanitizer: { b: true, a: { href: true } } as unknown as SanitizerConfig,
+      });
+
+      const tableTool = {
+        name: 'table',
+        pasteConfig: {
+          tags: [
+            'TABLE',
+            'TR',
+            { TH: { colspan: true, rowspan: true } },
+            { TD: { colspan: true, rowspan: true } },
+          ],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const headerTool = {
+        name: 'header',
+        pasteConfig: {
+          tags: ['H1', 'H2', 'H3'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const listTool = {
+        name: 'list',
+        pasteConfig: {
+          tags: ['OL', 'UL', 'LI'],
+        },
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        baseSanitizeConfig: {},
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.blockTools.set('table', tableTool);
+      mocks.Tools.blockTools.set('header', headerTool);
+      mocks.Tools.blockTools.set('list', listTool);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const html = '<h2>title</h2><table><tbody><tr><td colspan="2">X</td><td>Y</td></tr></tbody></table><ul><li>item</li></ul>';
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': html,
+          'text/plain': 'title\nX\tY\nitem',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      const pastedTools = mocks.BlockManager.paste.mock.calls.map(([tool]) => tool);
+
+      expect(pastedTools).toContain('header');
+      expect(pastedTools).toContain('table');
+      expect(pastedTools).toContain('list');
+
+      const tableCall = mocks.BlockManager.paste.mock.calls.find(([tool]) => tool === 'table');
+      const tableData = (tableCall?.[1].detail as { data: HTMLElement }).data;
+
+      expect(tableData.querySelector('td')?.getAttribute('colspan')).toBe('2');
+
+      const headerCall = mocks.BlockManager.paste.mock.calls.find(([tool]) => tool === 'header');
+      const headerData = (headerCall?.[1].detail as { data: HTMLElement }).data;
+
+      expect(headerData.textContent).toContain('title');
+    });
+
+    it('lets a custom global sanitizer restrict attributes for tags it does specify in the first pass', async () => {
+      const { paste, mocks } = createPaste({
+        sanitizer: { a: { href: true } } as unknown as SanitizerConfig,
+      });
+
+      const defaultTool = {
+        name: 'paragraph',
+        pasteConfig: {},
+        // Downstream per-fragment sanitize keeps anchors, so the final result
+        // reflects what the whole-document first pass let through.
+        baseSanitizeConfig: { a: { href: true, target: true } },
+        hasOnPasteHandler: true,
+      } as unknown as BlockToolAdapter;
+
+      mocks.Tools.defaultTool = defaultTool;
+      mocks.Tools.blockTools.set('paragraph', defaultTool);
+      mocks.Tools.getAllInlineToolsSanitizeConfig.mockReturnValue({
+        a: { href: true, target: true },
+      } as unknown as SanitizerConfig);
+
+      await paste.prepare();
+
+      mocks.BlockManager.currentBlock = {
+        tool: { isDefault: true },
+        isEmpty: true,
+      };
+
+      mocks.BlockManager.paste.mockReturnValue({ id: 'block-id' });
+
+      const dataTransfer = new MockDataTransfer(
+        {
+          'text/html': '<p>See <a href="https://example.com" target="_blank">link</a></p>',
+          'text/plain': 'See link',
+        },
+        {} as FileList,
+        ['text/html', 'text/plain']
+      );
+
+      await paste.processDataTransfer(dataTransfer);
+
+      expect(mocks.BlockManager.paste).toHaveBeenCalled();
+
+      const [, event] = mocks.BlockManager.paste.mock.calls[0];
+      const anchor = (event.detail as { data: HTMLElement }).data.querySelector('a');
+
+      expect(anchor?.getAttribute('href')).toBe('https://example.com');
+      // The user's global rule for <a> (href only) wins over the inline tools'
+      // config, so target is stripped in the first pass.
+      expect(anchor?.getAttribute('target')).toBeNull();
+    });
+
     it('processes multi-table Google Docs HTML through full processDataTransfer flow', async () => {
       const { paste, mocks } = createPaste();
 

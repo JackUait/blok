@@ -1256,6 +1256,45 @@ test.describe('copy and paste', () => {
       await expect(listBlock).toContainText('Orphaned bulleted item');
     });
 
+    test('should preserve checked state when pasting a generic HTML checklist (GitHub task list)', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+
+      // GitHub task-list markup: plain <ul> with checkbox inputs inside <li>
+      const taskListHTML = '<ul><li><input type="checkbox" checked>Done task</li><li><input type="checkbox">Open task</li></ul>';
+
+      await paste(page, block, {
+        'text/html': taskListHTML,
+        'text/plain': 'Done task\nOpen task',
+      });
+
+      const listBlocks = page.locator('[data-blok-tool="list"]');
+
+      await expect(listBlocks).toHaveCount(2);
+
+      const doneItem = listBlocks.filter({ hasText: 'Done task' });
+      const openItem = listBlocks.filter({ hasText: 'Open task' });
+
+      await expect(doneItem).toHaveAttribute('data-list-style', 'checklist');
+      await expect(openItem).toHaveAttribute('data-list-style', 'checklist');
+
+      await expect(doneItem.getByRole('checkbox')).toBeChecked();
+      await expect(openItem.getByRole('checkbox')).not.toBeChecked();
+
+      const savedData = await saveBlok(page);
+      const listData = savedData.blocks
+        .filter((savedBlock) => savedBlock.type === 'list')
+        .map((savedBlock) => savedBlock.data as { text: string; style: string; checked: boolean });
+
+      expect(listData).toEqual([
+        expect.objectContaining({ style: 'checklist', checked: true, text: 'Done task' }),
+        expect.objectContaining({ style: 'checklist', checked: false, text: 'Open task' }),
+      ]);
+    });
+
     test('should detect lower-alpha numbered list style', async ({ page }) => {
       await createBlok(page);
 

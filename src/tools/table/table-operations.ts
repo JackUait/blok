@@ -436,26 +436,40 @@ const parseSpan = (cell: Element, attr: 'colspan' | 'rowspan', max: number): num
 };
 
 /**
- * Parse pasted `<tr>` elements into a rectangular logical grid, honouring
+ * Per-position factories used by {@link mapPastedTableCells} to build cells
+ * for the logical grid.
+ */
+export interface PastedCellFactories<T> {
+  /** Build a cell for a physical `<td>`/`<th>` (span already clamped). */
+  cell: (cellEl: Element, span: { colspan: number; rowspan: number }) => T;
+  /** Build a placeholder for a slot covered by a span originating at [row, col]. */
+  covered: (origin: [number, number]) => T;
+  /** Build a filler for slots left empty by ragged rows. */
+  filler: () => T;
+}
+
+/**
+ * Walk pasted `<tr>` elements into a rectangular logical grid, honouring
  * colspan/rowspan the way the HTML table processing model does: each cell is
  * placed at the first free logical slot of its row, and the slots it spans
- * are recorded as covered (`mergedInto` pointing at the origin).
+ * are claimed as covered.
  *
  * This is what keeps merged tables from Google Docs / Word / buildin.ai
  * intact — reading cells by their physical DOM index both drops the merge
  * AND shifts every cell after a rowspan into the wrong column.
  *
  * @param rowElements - the pasted `<tr>` elements, in document order
- * @param extractCellProps - per-cell extractor for extra props (e.g. colors)
+ * @param factories - builders for physical, covered and filler positions
  */
-export const parsePastedTable = (
+export const mapPastedTableCells = <T>(
   rowElements: ArrayLike<Element>,
-  extractCellProps: (cell: Element) => Partial<CellContent> = () => ({}),
-): CellContent[][] => {
+  factories: PastedCellFactories<T>,
+): T[][] => {
   const rows = Array.from(rowElements);
-  const grid: (CellContent | undefined)[][] = rows.map(() => []);
+  const grid: (T | undefined)[][] = rows.map(() => []);
+  const state = { hasMerges: false };
 
-  const nextFreeSlot = (row: (CellContent | undefined)[], start: number): number =>
+  const nextFreeSlot = (row: (T | undefined)[], start: number): number =>
     row[start] === undefined ? start : nextFreeSlot(row, start + 1);
 
   const markCoveredSlots = (r: number, c: number, rowspan: number, colspan: number): void => {
@@ -467,7 +481,7 @@ export const parsePastedTable = (
 
         // Malformed HTML can declare overlapping spans; keep the first
         // cell that claimed a slot (matches browser behaviour).
-        grid[r + dr][c + dc] ??= { blocks: [], mergedInto: [r, c] };
+        grid[r + dr][c + dc] ??= factories.covered([r, c]);
       });
     });
   };
@@ -481,23 +495,10 @@ export const parsePastedTable = (
       // A rowspan can never extend past the last pasted row
       const rowspan = Math.min(parseSpan(cellEl, 'rowspan', MAX_ROWSPAN), rows.length - r);
 
-      const cell: CellContent = {
-        blocks: [],
-        text: cellEl.innerHTML,
-        ...extractCellProps(cellEl),
-      };
-
-      if (colspan > 1) {
-        cell.colspan = colspan;
-      }
-
-      if (rowspan > 1) {
-        cell.rowspan = rowspan;
-      }
-
-      grid[r][c] = cell;
+      grid[r][c] = factories.cell(cellEl, { colspan, rowspan });
 
       if (colspan > 1 || rowspan > 1) {
+        state.hasMerges = true;
         markCoveredSlots(r, c, rowspan, colspan);
       }
 
@@ -505,21 +506,41 @@ export const parsePastedTable = (
     }, 0);
   });
 
-  const hasMerges = grid.some(row =>
-    row.some(cell => cell !== undefined && ((cell.colspan ?? 1) > 1 || (cell.rowspan ?? 1) > 1))
-  );
-
   // A `<tr>` with no cells and no coverage contributes nothing. Only safe to
   // drop when the table has no merges — removing a row would otherwise shift
-  // the [row, col] coordinates that mergedInto references.
-  const kept = hasMerges ? grid : grid.filter(row => row.length > 0);
+  // the [row, col] coordinates that covered origins reference.
+  const kept = state.hasMerges ? grid : grid.filter(row => row.length > 0);
 
   const width = kept.reduce((max, row) => Math.max(max, row.length), 0);
 
   return kept.map(row =>
-    Array.from({ length: width }, (_, i) => row[i] ?? { blocks: [] })
+    Array.from({ length: width }, (_, i) => row[i] ?? factories.filler())
   );
 };
+
+/**
+ * Parse pasted `<tr>` elements into a rectangular logical {@link CellContent}
+ * grid: spans are recorded on origin cells, covered slots carry `mergedInto`
+ * pointing at the origin.
+ *
+ * @param rowElements - the pasted `<tr>` elements, in document order
+ * @param extractCellProps - per-cell extractor for extra props (e.g. colors)
+ */
+export const parsePastedTable = (
+  rowElements: ArrayLike<Element>,
+  extractCellProps: (cell: Element) => Partial<CellContent> = () => ({}),
+): CellContent[][] =>
+  mapPastedTableCells<CellContent>(rowElements, {
+    cell: (cellEl, { colspan, rowspan }) => ({
+      blocks: [],
+      text: cellEl.innerHTML,
+      ...extractCellProps(cellEl),
+      ...(colspan > 1 ? { colspan } : {}),
+      ...(rowspan > 1 ? { rowspan } : {}),
+    }),
+    covered: (origin) => ({ blocks: [], mergedInto: origin }),
+    filler: () => ({ blocks: [] }),
+  });
 
 export const normalizeTableData = (
   data: TableData | Record<string, never>,

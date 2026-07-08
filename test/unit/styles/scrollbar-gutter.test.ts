@@ -115,10 +115,19 @@ describe('Scrollbar gutter reservation (flattened src/styles/main.css)', () => {
       });
     }
 
-    it('inline (horizontal toolbar) popovers opt out of the vertical scrollbar gutter', () => {
-      const pattern = /\[data-blok-popover-inline\][^{}]*\[data-blok-popover-items\][^{}]*\{[^}]*scrollbar-gutter\s*:\s*auto/;
+    it('inline (horizontal toolbar) popovers opt out of the vertical scrollbar gutter — via child combinators only', () => {
+      const pattern = /\[data-blok-popover-inline\]\s*>\s*\[data-blok-popover-container\]\s*>\s*\[data-blok-popover-items\][^{}]*\{[^}]*scrollbar-gutter\s*:\s*auto/;
 
       expect(css).toMatch(pattern);
+    });
+
+    it('the inline opt-out does NOT descendant-match nested vertical menus (e.g. Turn into) mounted inside the inline popover root', () => {
+      // A space-combinator form would also strip the gutter from nested
+      // popovers appended into the inline root, making their left indent
+      // ignore the scrollbar width again.
+      const broadPattern = /\[data-blok-popover-inline\]\s+\[data-blok-popover-items\]/;
+
+      expect(css).not.toMatch(broadPattern);
     });
 
     it('[data-blok-popover-items] reveals the thumb during keyboard-driven scrolling via [data-blok-scrolling]', () => {

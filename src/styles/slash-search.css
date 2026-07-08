@@ -45,9 +45,12 @@
      lane is mirrored on the left instead of widening only the right side. */
   scrollbar-gutter: stable both-edges;
 }
-/* Inline popovers are horizontal toolbars — they never scroll vertically, so
-   reserving a vertical scrollbar lane would only skew their padding. */
-[data-blok-popover-inline] [data-blok-popover-items] {
+/* The inline popover's own items row is a horizontal toolbar — it never
+   scrolls vertically, so reserving a vertical scrollbar lane would only skew
+   its padding. Child combinators keep the opt-out away from nested vertical
+   menus (e.g. "Turn into") that mount inside the inline popover root and DO
+   need the symmetric gutter. */
+[data-blok-popover-inline] > [data-blok-popover-container] > [data-blok-popover-items] {
   scrollbar-gutter: auto;
 }
 @supports not selector(::-webkit-scrollbar) {

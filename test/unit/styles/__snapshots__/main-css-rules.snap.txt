@@ -2021,7 +2021,7 @@
   scrollbar-gutter: stable both-edges;
 }
 
-[data-blok-popover-inline] [data-blok-popover-items] {
+[data-blok-popover-inline] > [data-blok-popover-container] > [data-blok-popover-items] {
   scrollbar-gutter: auto;
 }
 

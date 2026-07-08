@@ -245,7 +245,7 @@ export class LinkHoverCard {
     wrapper.className = twJoin(
       'fixed z-overlay top-0 left-0',
       'flex items-center h-9 pl-3 pr-1.5',
-      'bg-popover-bg rounded-xl',
+      'bg-popover-bg rounded-lg',
       'shadow-[0_1px_2px_rgba(13,20,33,0.04),0_8px_22px_-8px_rgba(13,20,33,0.12)]',
       'text-sm leading-none text-text-primary',
       // Entrance: hidden + nudged down until data-state="open" (set next frame).

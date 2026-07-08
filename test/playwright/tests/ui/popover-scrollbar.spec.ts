@@ -117,7 +117,7 @@ test.describe('popover scrollbar — identical across platforms', () => {
 
     const items = page.locator(ITEMS_SELECTOR).first();
 
-    const lane = await items.evaluate((el) => el.offsetWidth - el.clientWidth);
+    const lane = await items.evaluate((el: HTMLElement) => el.offsetWidth - el.clientWidth);
 
     // The native scrollbar is hidden in every engine, so it reserves zero
     // layout width — the same on Chromium (was 8px), WebKit (was 4px) and

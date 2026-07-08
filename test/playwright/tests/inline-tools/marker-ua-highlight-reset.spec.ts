@@ -9,6 +9,13 @@ const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="par
 const INLINE_TOOLBAR_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid=inline-toolbar]`;
 const MARKER_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="marker"]`;
 
+// The rendered <mark> is a UA element that carries no data-blok hook, so these
+// two helpers own the only raw tag-selector locators in the file.
+// eslint-disable-next-line internal-playwright/no-css-selectors -- <mark> has no data-blok hook
+const markInParagraph = (page: Page): Locator => page.locator(`${PARAGRAPH_SELECTOR} mark`);
+// eslint-disable-next-line internal-playwright/no-css-selectors -- <mark> has no data-blok hook
+const markInEditor = (page: Page): Locator => page.locator(`${BLOK_INTERFACE_SELECTOR} mark`);
+
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
     if (window.blokInstance) {
@@ -79,7 +86,7 @@ test.describe('colored mark must not render a spurious UA highlight', () => {
       { type: 'paragraph', data: { text: '<mark style="color: #d44c47;">transferred colored text</mark> plain' } },
     ]);
 
-    const bg = await page.locator(`${PARAGRAPH_SELECTOR} mark`).evaluate(
+    const bg = await markInParagraph(page).evaluate(
       (m) => getComputedStyle(m).backgroundColor
     );
 
@@ -93,10 +100,11 @@ test.describe('colored mark must not render a spurious UA highlight', () => {
       { type: 'paragraph', data: { text: '<mark>bare mark</mark> plain' } },
     ]);
 
-    const marks = page.locator(`${PARAGRAPH_SELECTOR} mark`);
+    const marks = markInParagraph(page);
     // A bare mark with no style may be sanitized away; only assert when present.
     if (await marks.count() > 0) {
       const bg = await marks.first().evaluate((m) => getComputedStyle(m).backgroundColor);
+      // eslint-disable-next-line playwright/no-conditional-expect -- bare <mark> may be sanitized away; assert only when it survives
       expect(bg).not.toBe('rgb(255, 255, 0)');
     }
   });
@@ -106,7 +114,7 @@ test.describe('colored mark must not render a spurious UA highlight', () => {
       { type: 'paragraph', data: { text: '<mark style="background-color: var(--blok-color-yellow-bg);">highlighted</mark> plain' } },
     ]);
 
-    const bg = await page.locator(`${PARAGRAPH_SELECTOR} mark`).evaluate(
+    const bg = await markInParagraph(page).evaluate(
       (m) => getComputedStyle(m).backgroundColor
     );
 
@@ -131,6 +139,7 @@ test.describe('colored mark must not render a spurious UA highlight', () => {
     await page.locator('[data-blok-testid="marker-swatch-color-default"]').click();
     await page.keyboard.press('Escape');
 
+    // eslint-disable-next-line internal-playwright/no-css-selectors -- <mark> has no data-blok hook
     await expect(paragraph.locator('mark')).toHaveCount(0);
     await expect(paragraph).toHaveText('transferred colored text plain');
   });
@@ -144,11 +153,17 @@ test.describe('colored mark must not render a spurious UA highlight', () => {
     // exactly what happens when a user reloads an article. This exercises
     // migrateMarkColors on the persisted mark.
     const saved = await page.evaluate(async () => {
-      return await window.blokInstance!.save!();
+      const instance = window.blokInstance;
+
+      if (!instance?.save) {
+        throw new Error('no blok instance to save');
+      }
+
+      return await instance.save();
     });
     await createBlokWithBlocks(page, saved.blocks);
 
-    const bg = await page.locator(`${PARAGRAPH_SELECTOR} mark`).evaluate(
+    const bg = await markInParagraph(page).evaluate(
       (m) => getComputedStyle(m).backgroundColor
     );
     expect(bg).not.toBe('rgb(255, 255, 0)');
@@ -175,10 +190,12 @@ test.describe('colored mark must not render a spurious UA highlight', () => {
     // programmatic paste). Assert only when the paste pipeline actually produced
     // a mark; the persisted/migration path is covered cross-engine by the
     // round-trip test above.
-    const mark = page.locator(`${PARAGRAPH_SELECTOR} mark`).first();
+    const mark = markInParagraph(page).first();
     if (await mark.count() > 0) {
       const bg = await mark.evaluate((m) => getComputedStyle(m).backgroundColor);
+      // eslint-disable-next-line playwright/no-conditional-expect -- synthetic paste is engine-dependent; assert only when a mark is produced
       expect(bg).not.toBe('rgb(255, 255, 0)');
+      // eslint-disable-next-line playwright/no-conditional-expect -- synthetic paste is engine-dependent; assert only when a mark is produced
       expect(['rgba(0, 0, 0, 0)', 'transparent']).toContain(bg);
     }
   });
@@ -194,7 +211,7 @@ test.describe('colored mark must not render a spurious UA highlight', () => {
       },
     ]);
 
-    const mark = page.locator(`${BLOK_INTERFACE_SELECTOR} mark`).first();
+    const mark = markInEditor(page).first();
     await expect(mark).toBeVisible();
     const bg = await mark.evaluate((m) => getComputedStyle(m).backgroundColor);
     expect(bg).not.toBe('rgb(255, 255, 0)');

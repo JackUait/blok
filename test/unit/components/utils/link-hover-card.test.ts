@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { LinkHoverCard } from '../../../../src/components/utils/link-hover-card';
 
 const CARD_SELECTOR = '[data-blok-testid="link-hover-card"]';
@@ -38,16 +38,16 @@ const showCard = (card: LinkHoverCard, anchor: HTMLAnchorElement): void => {
 
 describe('LinkHoverCard', () => {
   let card: LinkHoverCard;
-  let onOpen: ReturnType<typeof vi.fn>;
-  let onCopy: ReturnType<typeof vi.fn>;
-  let onEdit: ReturnType<typeof vi.fn>;
+  let onOpen: Mock<(href: string) => void>;
+  let onCopy: Mock<(href: string) => void>;
+  let onEdit: Mock<(anchor: HTMLAnchorElement) => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    onOpen = vi.fn();
-    onCopy = vi.fn();
-    onEdit = vi.fn();
+    onOpen = vi.fn<(href: string) => void>();
+    onCopy = vi.fn<(href: string) => void>();
+    onEdit = vi.fn<(anchor: HTMLAnchorElement) => void>();
     card = new LinkHoverCard({
       labels: { copy: 'Copy', edit: 'Edit' },
       callbacks: { onOpen, onCopy, onEdit },

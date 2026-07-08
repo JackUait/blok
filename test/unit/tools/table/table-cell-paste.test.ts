@@ -48,8 +48,10 @@ describe('parseCellContentToBlocks', () => {
   it('prefers aria-level for depth (stamped by the paste pre-pass)', () => {
     const result = parseCellContentToBlocks('<ul><li aria-level="1">a</li><li aria-level="2">b</li></ul>');
 
-    expect(result[0].data.depth).toBe(0);
-    expect(result[1].data.depth).toBe(1);
+    expect(result).toEqual([
+      { tool: 'list', data: { text: 'a', style: 'unordered', checked: false, depth: 0 } },
+      { tool: 'list', data: { text: 'b', style: 'unordered', checked: false, depth: 1 } },
+    ]);
   });
 
   it('handles hoisted sibling nested lists (paste pre-pass output shape)', () => {

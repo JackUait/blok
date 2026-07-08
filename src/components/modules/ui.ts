@@ -983,7 +983,9 @@ export class UI extends Module<UINodes> {
         },
         callbacks: {
           onOpen: (href: string): void => this.openLink(href),
-          onCopy: (href: string): void => this.copyLinkHref(href),
+          onCopy: (href: string): void => {
+            void this.copyLinkHref(href);
+          },
           onEdit: (anchor: HTMLAnchorElement): void => {
             void this.Blok.InlineToolbar.editLink(anchor);
           },

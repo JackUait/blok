@@ -54,8 +54,7 @@ const firefoxOnlyRanges = (): Array<[number, number]> => {
     let index = match.index + match[0].length;
 
     while (index < css.length && depth > 0) {
-      if (css[index] === '{') depth += 1;
-      if (css[index] === '}') depth -= 1;
+      depth += Number(css[index] === '{') - Number(css[index] === '}');
       index += 1;
     }
     ranges.push([match.index, index]);

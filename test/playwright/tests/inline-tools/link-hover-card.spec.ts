@@ -152,4 +152,60 @@ test.describe('link hover card', () => {
     await expect(linkInput).toBeVisible();
     await expect(linkInput).toHaveValue(LINK_URL);
   });
+
+  /**
+   * The edit menu opening is the flow that historically "did not open" from a
+   * user's perspective. These end-to-end guards exercise the *full* edit UI
+   * through the real hover-card → Edit path so any regression that stops the
+   * menu opening, or that drops the title field / remove action / labels, fails
+   * in CI rather than reaching users.
+   */
+  const openEditMenu = async (page: Page): Promise<void> => {
+    await page.locator(PARAGRAPH_LINK_SELECTOR).hover();
+
+    const card = page.getByTestId('link-hover-card');
+
+    // Gate on data-state=open: a closed card is opacity-0 but still "visible"
+    // to Playwright, so its Edit button would be a phantom-clickable no-op.
+    await expect(card).toHaveAttribute('data-state', 'open');
+    await card.getByTestId('link-hover-card-edit').click();
+  };
+
+  test('edit menu opens with the full editing UI: URL + title fields, labels, and remove action', async ({ page }) => {
+    await createLinkParagraph(page);
+    await openEditMenu(page);
+
+    // URL field, prefilled and visible.
+    const urlInput = page.getByTestId('inline-tool-input');
+
+    await expect(urlInput).toBeVisible();
+    await expect(urlInput).toHaveValue(LINK_URL);
+
+    // Title (link text) field, prefilled with the anchor's text.
+    const titleInput = page.getByTestId('inline-tool-title-input');
+
+    await expect(titleInput).toBeVisible();
+    await expect(titleInput).toHaveValue('YouTube');
+
+    // Section labels and the remove action are all part of edit mode.
+    await expect(page.getByTestId('inline-tool-url-label')).toBeVisible();
+    await expect(page.getByTestId('inline-tool-title-label')).toBeVisible();
+    await expect(page.getByTestId('inline-tool-remove-link')).toBeVisible();
+  });
+
+  test('editing the title field in the edit menu rewrites the link text', async ({ page }) => {
+    await createLinkParagraph(page);
+    await openEditMenu(page);
+
+    const titleInput = page.getByTestId('inline-tool-title-input');
+
+    await expect(titleInput).toBeVisible();
+    await titleInput.fill('Watch here');
+    await titleInput.press('Enter');
+
+    const anchor = page.locator(PARAGRAPH_LINK_SELECTOR);
+
+    await expect(anchor).toHaveText('Watch here');
+    await expect(anchor).toHaveAttribute('href', LINK_URL);
+  });
 });

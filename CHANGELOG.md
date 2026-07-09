@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.1](https://github.com/JackUait/blok/compare/v0.24.0...v0.24.1) (2026-07-09)
+
+### Bug Fixes
+
+- **Types** — Fixed a publishing defect (introduced in 0.24.0) where importing `@dodopizza/blok/react` — or `@dodopizza/blok/markdown` — made a consumer's TypeScript compiler follow the published declarations into raw `src/` implementation, producing spurious errors about unresolved `micromark-util-types` / `@types/mdast` (`TS2307`) and implicit `any` (`TS7006`). The public `types/*.d.ts` surface is now self-contained and no longer re-exports from `src/`.
+
+### Maintenance
+
+- **Types** — Mechanically enforce that no published `types/*.d.ts` re-exports or imports from `src/`, and generate the self-contained icon declarations from source (`scripts/generate-icons-dts.mjs`).
+
 ## [0.24.0](https://github.com/JackUait/blok/compare/v0.23.5...v0.24.0) (2026-07-09)
 
 ### Features

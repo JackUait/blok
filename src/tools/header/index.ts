@@ -73,6 +73,45 @@ export interface HeaderConfig {
   levelOverrides?: Record<number, HeaderLevelConfig>;
   /** Custom shortcuts per level. If undefined, uses default markdown (#, ##, etc). If empty {}, disables all shortcuts. */
   shortcuts?: Record<number, string>;
+  /**
+   * Opt-in text-derived anchor ids on rendered heading elements (default: off).
+   *
+   * - `true` — use the built-in slugifier: strips zero-width characters and
+   *   punctuation (Unicode letters and digits survive, case is PRESERVED) and
+   *   collapses whitespace runs into single hyphens
+   *   (e.g. «Обучайте команду» → id "Обучайте-команду").
+   * - a function `(text, blockId) => string` — consumer-provided id generator
+   *   receiving the heading's plain text and the block id; return an empty
+   *   string to skip setting an id.
+   *
+   * The id is re-derived when the heading text changes and survives level
+   * changes and re-renders. Toggle headings get ids through the same path.
+   *
+   * NOTE: cross-block duplicate deduplication is explicitly OUT of scope —
+   * two headings with identical text produce identical ids. Consumers that
+   * need uniqueness must dedup themselves.
+   */
+  anchorIds?: boolean | ((text: string, blockId: string) => string);
+}
+
+/**
+ * Built-in anchor-id slugifier used when `anchorIds: true`.
+ *
+ * Rules: strip zero-width characters, treat punctuation as a word separator
+ * while KEEPING Unicode letters and digits (Cyrillic survives; "а/б" becomes
+ * "а-б", not "аб"), preserve letter case, trim, and collapse whitespace runs
+ * into a single hyphen. Returns an empty string when nothing survives (caller
+ * then sets no id).
+ *
+ * @param text - the heading's plain text content
+ * @returns the derived anchor id, or an empty string
+ */
+export function slugifyHeadingText(text: string): string {
+  return text
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .trim()
+    .replace(/\s+/g, '-');
 }
 
 /**
@@ -207,6 +246,12 @@ export class Header implements BlockTool {
       this.block = block;
     }
 
+    /**
+     * Applied here (not inside getTag) so that the custom anchorIds generator
+     * receives the block id, which is only known after `block` is assigned.
+     */
+    this.applyAnchorId();
+
     if (!readOnly && this._data.isToggleable) {
       this.api.events.on('block changed', this.handleBlockChanged);
     }
@@ -316,6 +361,41 @@ export class Header implements BlockTool {
     if (this._data.isToggleable) {
       this.updateChildrenVisibility();
       this.updateBodyPlaceholderVisibility();
+    }
+  }
+
+  /**
+   * Called by the editor each time the block content is updated (e.g. after
+   * user edits reach the mutation observer). Keeps the text-derived anchor id
+   * in sync with the current heading text.
+   */
+  public updated(): void {
+    this.applyAnchorId();
+  }
+
+  /**
+   * Derive and apply the anchor id onto the heading element, per the
+   * `anchorIds` config option. No-op when the option is absent/false.
+   * An empty derived id removes the attribute. The id is only written when it
+   * actually changed, so repeated calls (e.g. from the `updated` lifecycle)
+   * never produce spurious DOM mutations.
+   */
+  private applyAnchorId(): void {
+    const anchorIds = this._settings.anchorIds;
+
+    if (!anchorIds || !this._element) {
+      return;
+    }
+
+    const text = this._element.textContent ?? '';
+    const id = typeof anchorIds === 'function'
+      ? anchorIds(text, this.blockId ?? '')
+      : slugifyHeadingText(text);
+
+    if (id === '') {
+      this._element.removeAttribute('id');
+    } else if (this._element.id !== id) {
+      this._element.id = id;
     }
   }
 
@@ -671,6 +751,8 @@ export class Header implements BlockTool {
       this.updateBodyPlaceholderVisibility();
     }
 
+    this.applyAnchorId();
+
     return true;
   }
 
@@ -844,6 +926,12 @@ export class Header implements BlockTool {
         this._headerRow = null;
       }
     }
+
+    /**
+     * Re-derive the anchor id: the element may have just been rebuilt (level
+     * change) or its text replaced, and getTag() runs before blockId exists.
+     */
+    this.applyAnchorId();
   }
 
   /**

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.24.2](https://github.com/JackUait/blok/compare/v0.24.1...v0.24.2) (2026-07-09)
+
+### Features
+
+- **Link** — New `link.transform` config, a superset of `transformHref`: consumers can set per-anchor `href`/`target`/`rel` plus extra attributes (`class`/`title`/`data-*`) without post-processing the rendered DOM. Applies consistently across every anchor path (render, paste, and hand-created links); omitted fields fall back to existing defaults (including the same-page `_self` rule) and extra attributes never clobber the managed `href`/`target`/`rel`.
+
+### Bug Fixes
+
+- **Columns** — Keep the inter-column gutter in read-only/published renders. The gap was previously produced entirely by the (no-op in read-only) resize handles, so read-only columns rendered flush; the gutter is now decoupled from the resizers.
+- **Link** — Center the hover card under the pointer (shifting near viewport edges) with a fixed gap to the link, and stop the block toolbar leaking through the card when hovering top-layer chrome.
+- **Notifier** — Fix top-layer placement so the toast stays in its corner (no UA Canvas box or top-left jump), remove the in-pill dismiss cross (auto-dismiss/Escape still close it), and tighten the pill's vertical padding.
+
 ## [0.24.1](https://github.com/JackUait/blok/compare/v0.24.0...v0.24.1) (2026-07-09)
 
 ### Bug Fixes

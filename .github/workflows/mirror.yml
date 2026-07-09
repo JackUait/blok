@@ -17,6 +17,12 @@ jobs:
       - name: Push to mirror
         run: |
           git remote add mirror https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/dodopizza/blok.git
+          # Learn the mirror's current refs. Without this the freshly-added remote is unknown to
+          # git, so every tag push is sent as a *create* (old-oid 0000…); a tag that already exists
+          # on the mirror is then rejected with "cannot lock ref … reference already exists" — the
+          # force prefix can't override a create-over-existing. Fetching lets git send proper
+          # (skip/update) commands instead.
+          git fetch mirror "+refs/tags/*:refs/tags/mirror/*" || true
           # Push from the remote-tracking ref (always present with fetch-depth: 0), so this works
           # on both branch-push (local master checked out) and tag-push (detached HEAD) events.
           # Avoids --mirror, which deletes the mirror's master when no local master exists.

@@ -10,9 +10,12 @@ export const CSS = {
    * The wrapper class is built dynamically per-position.
    * See getPositionClasses().
    */
-  wrapper: 'fixed z-[9999]',
+  // `bg-transparent` is load-bearing: promoted to the Top Layer, the UA
+  // `[popover] { background: Canvas }` default would otherwise paint an opaque
+  // box around the pill. The visible background lives on the inner notification.
+  wrapper: 'fixed z-[9999] bg-transparent',
   notification: twJoin(
-    'relative flex items-center justify-center mt-2 py-[10px] px-6',
+    'relative flex items-center justify-center mt-2 py-2 px-6',
     'bg-[#1c1c1e] text-[#f5f5f5]',
     'text-[15px] font-normal leading-[1.4] tracking-[-0.015em] wrap-break-word overflow-hidden',
     'rounded-[14px]',
@@ -106,6 +109,33 @@ export const getPositionClasses = (position: NotifierPosition = DEFAULT_NOTIFIER
     'top-left': 'top-5 left-5',
     'top-right': 'top-5 right-5',
     'top-center': 'top-5 left-1/2 -translate-x-1/2',
+  };
+
+  return map[position] ?? map['bottom-left'];
+};
+
+/**
+ * Maps NotifierPosition to the same corner placement as {@link getPositionClasses},
+ * but as inline-style declarations. The wrapper is promoted to the CSS Top Layer,
+ * where the `[data-blok-top-layer][popover] { inset: auto }` reset (specificity
+ * 0,2,0) outranks the `bottom-5 / left-1/2` utilities (0,1,0) and drops the toast
+ * into the top-left corner. Inline styles (specificity 1,0,0,0) beat the reset, so
+ * these must be applied directly to `wrapper.style`.
+ */
+export const getPositionStyles = (position: NotifierPosition = DEFAULT_NOTIFIER_POSITION): Record<string, string> => {
+  const EDGE = '1.25rem';
+  // Only the inset properties (top/right/bottom/left) are re-asserted inline: the
+  // reset zeroes `inset`, but leaves the `-translate-x-1/2` class's `translate`
+  // property intact, so centering still comes from the utility class. Setting an
+  // inline `transform`/`translate` here would STACK with it and double-shift the
+  // centered toasts off to the side.
+  const map: Record<NotifierPosition, Record<string, string>> = {
+    'bottom-left': { bottom: EDGE, left: EDGE },
+    'bottom-right': { bottom: EDGE, right: EDGE },
+    'bottom-center': { bottom: EDGE, left: '50%' },
+    'top-left': { top: EDGE, left: EDGE },
+    'top-right': { top: EDGE, right: EDGE },
+    'top-center': { top: EDGE, left: '50%' },
   };
 
   return map[position] ?? map['bottom-left'];
@@ -379,6 +409,12 @@ export const getWrapper = (position: NotifierPosition = DEFAULT_NOTIFIER_POSITIO
   wrapper.className = twJoin(CSS.wrapper, positionClasses);
   wrapper.setAttribute('data-blok-testid', 'notifier-container');
   wrapper.setAttribute('data-blok-position', position);
+
+  // Re-assert corner placement inline so the Top-Layer `inset: auto` reset can't
+  // clobber the utility classes above (see getPositionStyles).
+  Object.entries(getPositionStyles(position)).forEach(([prop, value]) => {
+    wrapper.style.setProperty(prop, value);
+  });
 
   return wrapper;
 };

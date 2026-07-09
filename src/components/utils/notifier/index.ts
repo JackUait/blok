@@ -1,7 +1,7 @@
 import { registerLayer } from '../dismissable-layer';
 import { promoteToTopLayer, removeFromTopLayer } from '../top-layer';
 
-import { alert, confirm, createDismissButton, getWrapper, modalCleanups, prompt } from './draw';
+import { alert, confirm, getWrapper, modalCleanups, prompt } from './draw';
 import type { NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions, NotifierPosition } from './types';
 import { DEFAULT_NOTIFIER_POSITION } from './types';
 
@@ -227,8 +227,6 @@ const startToastLifecycle = (wrapper: HTMLElement, notify: HTMLElement, position
     interaction.focused = false;
     resumeIfIdle();
   });
-
-  notify.appendChild(createDismissButton(dismiss));
 
   toastCleanups.set(notify, dispose);
 

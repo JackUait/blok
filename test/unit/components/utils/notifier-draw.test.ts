@@ -407,6 +407,44 @@ describe('Notifier draw', () => {
       expect(wrapper.getAttribute('data-blok-testid')).toBe('notifier-container');
       expect(wrapper.className).toContain('fixed');
     });
+
+    /**
+     * The wrapper is promoted to the CSS Top Layer, where the
+     * `[data-blok-top-layer][popover] { inset: auto }` reset (specificity 0,2,0)
+     * outranks the Tailwind `bottom-5 left-1/2` utilities (0,1,0) and drops the
+     * toast into the top-left corner. Inline styles (specificity 1,0,0,0) win, so
+     * corner placement must be applied inline — not via utility classes alone.
+     */
+    it('applies bottom-center inset via inline styles so the top-layer reset cannot clobber it', () => {
+      const wrapper = getWrapper('bottom-center');
+
+      expect(wrapper.style.bottom).toBe('1.25rem');
+      expect(wrapper.style.left).toBe('50%');
+      // Centering stays on the `-translate-x-1/2` utility (its `translate` survives
+      // the reset); an inline transform here would double-shift the toast.
+      expect(wrapper.style.transform).toBe('');
+      expect(wrapper.className).toContain('-translate-x-1/2');
+    });
+
+    it('applies top-right placement via inline styles', () => {
+      const wrapper = getWrapper('top-right');
+
+      expect(wrapper.style.top).toBe('1.25rem');
+      expect(wrapper.style.right).toBe('1.25rem');
+    });
+
+    /**
+     * The wrapper is a bare positioning container — the visible pill background
+     * lives on the inner notification. Promoted to the Top Layer, the UA
+     * `[popover] { background: Canvas }` default paints an opaque box around the
+     * pill unless the wrapper opts out. An author `bg-transparent` (any origin
+     * author declaration) beats the UA default, so it must be on the wrapper.
+     */
+    it('keeps the wrapper background transparent so the UA popover Canvas box does not show', () => {
+      const wrapper = getWrapper('bottom-center');
+
+      expect(wrapper.className).toContain('bg-transparent');
+    });
   });
 
   describe('CSS', () => {

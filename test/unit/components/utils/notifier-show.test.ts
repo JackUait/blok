@@ -177,17 +177,13 @@ describe('Notifier show (index.ts)', () => {
     expect(notification.getAttribute('data-state')).toBe('closed');
   });
 
-  it('renders a dismiss button that closes the toast when clicked', () => {
-    show({ message: 'dismiss me', time: 5000 });
+  it('does not render an in-pill dismiss button (toast auto-dismisses / Escape closes it)', () => {
+    show({ message: 'no cross', time: 5000 });
 
     const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
     const dismiss = notification.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]');
 
-    expect(dismiss).not.toBeNull();
-
-    dismiss?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    expect(notification.className).toContain('animate-notify-slide-out');
+    expect(dismiss).toBeNull();
   });
 
   it('does not add a dismiss button to confirm/prompt dialogs', () => {

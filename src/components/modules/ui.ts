@@ -1040,7 +1040,7 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    card.show(anchor);
+    card.show(anchor, { x: event.clientX, y: event.clientY });
   }
 
   /**

@@ -176,4 +176,70 @@ describe('LinkHoverCard', () => {
 
     expect(getCard()).toBeNull();
   });
+
+  describe('cursor-relative positioning', () => {
+    let originalOffsetWidth: PropertyDescriptor | undefined;
+    let originalOffsetHeight: PropertyDescriptor | undefined;
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+
+    beforeEach(() => {
+      originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+      originalOffsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => 200 });
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => 40 });
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1000 });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: 800 });
+    });
+
+    afterEach(() => {
+      if (originalOffsetWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidth);
+      }
+      if (originalOffsetHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetHeight', originalOffsetHeight);
+      }
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: originalInnerHeight });
+    });
+
+    it('centers the card horizontally under the cursor when there is room', () => {
+      const anchor = createAnchor('https://youtube.com/');
+
+      card.show(anchor, { x: 500, y: 100 });
+      vi.advanceTimersByTime(350);
+
+      const shown = getCard();
+
+      // centered on the cursor: x - width / 2 = 500 - 100
+      expect(shown?.style.left).toBe('400px');
+      // below the link with a fixed gap: anchor.bottom (40) + gap (10)
+      expect(shown?.style.top).toBe('50px');
+    });
+
+    it('shifts the card left so it stays on screen near the right edge', () => {
+      const anchor = createAnchor('https://youtube.com/');
+
+      // centered would be 950 - 100 = 850, overflowing the right edge; clamped
+      // to innerWidth - width - margin = 1000 - 200 - 4 = 796.
+      card.show(anchor, { x: 950, y: 100 });
+      vi.advanceTimersByTime(350);
+
+      const shown = getCard();
+
+      expect(shown?.style.left).toBe('796px');
+    });
+
+    it('shifts the card right so it stays on screen near the left edge', () => {
+      const anchor = createAnchor('https://youtube.com/');
+
+      // centered would be 20 - 100 = -80, off the left edge; clamped to margin.
+      card.show(anchor, { x: 20, y: 100 });
+      vi.advanceTimersByTime(350);
+
+      const shown = getCard();
+
+      expect(shown?.style.left).toBe('4px');
+    });
+  });
 });

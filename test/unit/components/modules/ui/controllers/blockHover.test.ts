@@ -878,6 +878,46 @@ describe('BlockHoverController', () => {
     });
   });
 
+  describe('top-layer floating chrome', () => {
+    it('does not emit a nearest-block hover when the cursor is over a top-layer element', () => {
+      /**
+       * Promoted floating chrome (link hover card, popovers, tooltips) lives in
+       * document.body, outside any block-wrapper. Without guarding, the cursor
+       * resting on it falls through to nearest-block detection and the block
+       * toolbar "goes through" the popup onto the block behind it. Hovering
+       * blok's own floating UI must suppress block-hover entirely.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const block = createMockBlock('block-1', 150, 250);
+
+      const topLayerEl = document.createElement('div');
+
+      topLayerEl.setAttribute('data-blok-top-layer', 'true');
+      document.body.appendChild(topLayerEl);
+
+      const innerButton = document.createElement('button');
+
+      topLayerEl.appendChild(innerButton);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      // Cursor rests on a button inside the promoted card, at the block's Y range.
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 200,
+        bubbles: true,
+      });
+      Object.defineProperty(event, 'target', { value: innerButton });
+
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+  });
+
   describe('edge cases', () => {
     it('handles MouseEvent type check', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController();

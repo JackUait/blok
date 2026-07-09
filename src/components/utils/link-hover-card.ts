@@ -18,9 +18,30 @@ const GRACE_HIDE_DURATION = 250;
 const SHOW_DELAY = 350;
 
 /**
- * Vertical gap (px) between the anchor and the card placed below it.
+ * Vertical gap (px) between the anchor and the card placed below it. Used by the
+ * anchor-relative fallback when no cursor position is supplied.
  */
 const OFFSET_TOP = 6;
+
+/**
+ * Vertical gap (px) between the link and the card. Anchored to the link's
+ * bottom edge (not the pointer) so the gap stays consistent no matter where on
+ * the link the pointer rests.
+ */
+const LINK_GAP_Y = 10;
+
+/**
+ * Minimum gap (px) kept between the card and the viewport edges when clamping.
+ */
+const VIEWPORT_MARGIN = 4;
+
+/**
+ * A pointer position in viewport coordinates.
+ */
+interface CursorPosition {
+  x: number;
+  y: number;
+}
 
 /**
  * Duration (ms) of the enter/leave fade+rise animation. MUST match the
@@ -129,6 +150,13 @@ export class LinkHoverCard {
   private pendingAnchor: HTMLAnchorElement | null = null;
 
   /**
+   * The pointer position captured when the show was queued, used to place the
+   * card beside the cursor once it appears. Null when the caller positions the
+   * card against the anchor instead (e.g. keyboard-driven shows, tests).
+   */
+  private pendingCursor: CursorPosition | null = null;
+
+  /**
    * Pending entrance-animation frame, cancelled on hide/destroy.
    */
   private enterFrame: number | null = null;
@@ -162,8 +190,10 @@ export class LinkHoverCard {
    * short {@link SHOW_DELAY} (hover intent), shows it. Re-queuing for the same
    * anchor is a no-op so the timer isn't restarted.
    * @param anchor - the link the pointer is hovering
+   * @param cursor - the pointer position, so the card can be placed beside the
+   * cursor; omit to fall back to anchor-relative placement
    */
-  public show(anchor: HTMLAnchorElement): void {
+  public show(anchor: HTMLAnchorElement, cursor?: CursorPosition): void {
     this.cancelHide();
 
     // Already visible for this anchor, or already queued for it: nothing to do.
@@ -173,18 +203,22 @@ export class LinkHoverCard {
 
     this.cancelShow();
     this.pendingAnchor = anchor;
+    this.pendingCursor = cursor ?? null;
     this.showTimeout = setTimeout(() => {
       this.showTimeout = null;
       this.pendingAnchor = null;
-      this.showNow(anchor);
+      this.showNow(anchor, this.pendingCursor);
+      this.pendingCursor = null;
     }, SHOW_DELAY);
   }
 
   /**
-   * Show the card for the given anchor immediately, positioned below it.
+   * Show the card for the given anchor immediately, positioned beside the cursor
+   * (or below the anchor when no cursor is supplied).
    * @param anchor - the link the pointer is hovering
+   * @param cursor - the pointer position, or null for anchor-relative placement
    */
-  private showNow(anchor: HTMLAnchorElement): void {
+  private showNow(anchor: HTMLAnchorElement, cursor: CursorPosition | null): void {
     this.cancelHide();
     // Re-shown while still fading out: keep the (still-connected) element and
     // cancel its scheduled removal so it animates straight back in.
@@ -211,7 +245,7 @@ export class LinkHoverCard {
 
     this.shown = true;
     promoteToTopLayer(this.nodes.wrapper);
-    this.position(anchor);
+    this.position(anchor, cursor);
 
     // Entrance: fade + rise once positioned. Guarded so re-showing over the
     // same target doesn't restart the animation mid-hover.
@@ -324,13 +358,41 @@ export class LinkHoverCard {
   }
 
   /**
-   * Place the card below the anchor, left-aligned, clamped to the viewport.
-   * @param anchor - the anchor to position against
+   * Place the card centered horizontally under the cursor, shifting left or
+   * right only when centering would push it past a viewport edge. Falls back to
+   * below the anchor when no cursor is supplied. Clamped to the viewport in both
+   * axes.
+   * @param anchor - the anchor to position against (fallback)
+   * @param cursor - the pointer position, or null for anchor-relative placement
    */
-  private position(anchor: HTMLAnchorElement): void {
-    const rect = anchor.getBoundingClientRect();
+  private position(anchor: HTMLAnchorElement, cursor: CursorPosition | null): void {
     const width = this.nodes.wrapper.offsetWidth;
-    const left = Math.max(4, Math.min(rect.left, window.innerWidth - width - 4));
+
+    if (cursor) {
+      const height = this.nodes.wrapper.offsetHeight;
+      const rect = anchor.getBoundingClientRect();
+
+      // Center on the cursor; the clamp shifts it left or right when a viewport
+      // edge is too close to keep it centered.
+      const centeredLeft = cursor.x - width / 2;
+      const left = Math.max(VIEWPORT_MARGIN, Math.min(centeredLeft, window.innerWidth - width - VIEWPORT_MARGIN));
+
+      // Keep a fixed gap between the link and the card by anchoring vertically to
+      // the link's bottom edge; flip above the link when it would spill past the
+      // bottom edge of the viewport.
+      const belowPlacement = rect.bottom + LINK_GAP_Y;
+      const overflowsBottom = belowPlacement + height > window.innerHeight - VIEWPORT_MARGIN;
+      const desiredTop = overflowsBottom ? rect.top - LINK_GAP_Y - height : belowPlacement;
+      const top = Math.max(VIEWPORT_MARGIN, desiredTop);
+
+      this.nodes.wrapper.style.left = `${left}px`;
+      this.nodes.wrapper.style.top = `${top}px`;
+
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const left = Math.max(VIEWPORT_MARGIN, Math.min(rect.left, window.innerWidth - width - VIEWPORT_MARGIN));
     const top = rect.bottom + OFFSET_TOP;
 
     this.nodes.wrapper.style.left = `${left}px`;

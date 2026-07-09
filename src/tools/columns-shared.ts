@@ -5,6 +5,13 @@ export const COLUMN_TOOL = 'column';
 export const COLUMNS_ATTR = 'data-blok-columns';
 export const COLUMN_ATTR = 'data-blok-column';
 export const COLUMN_RESIZER_ATTR = 'data-blok-column-resizer';
+/**
+ * Marks a column_list whose gutter must come from the container's own
+ * horizontal gap rather than from resizer elements. Set only in read-only
+ * mode, where resizers are not built — without it, columns would render flush
+ * with no gutter (the resizers ARE the gutter in editing mode).
+ */
+export const COLUMNS_STATIC_GUTTER_ATTR = 'data-blok-columns-static-gutter';
 
 /**
  * Smallest width (px) a column may be squeezed to while dragging a resizer.

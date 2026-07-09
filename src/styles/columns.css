@@ -7,6 +7,14 @@
  * on narrow viewports and restores side-by-side distribution above the
  * project's mobile breakpoint (651px, matching the `not-mobile` variant).
  */
+[data-blok-columns] {
+  /* Gutter width matches Notion: min(32px, 4vw) — a constant 32px on wide
+   * viewports, tracking 4vw on narrower ones. The gap stays the same for two,
+   * three, four or more columns. In editing mode the resizer flex items carry
+   * this width; in read-only the container's column-gap does. */
+  --blok-column-gutter: min(2rem, 4vw);
+}
+
 [data-blok-columns] > [data-blok-element] {
   flex-basis: 100%;
   flex-shrink: 0;
@@ -20,16 +28,29 @@
 }
 
 /*
+ * Read-only gutter. In editing mode the gutter is a resizer flex item between
+ * columns (see below); read-only strips those, so the container supplies the
+ * horizontal gap itself. Same width — min(32px, 4vw) — so edit and published
+ * views line up. Only above the stacking breakpoint, where columns sit
+ * side-by-side; below it they stack and the vertical gap-y takes over.
+ */
+@media (min-width: 651px) {
+  [data-blok-columns][data-blok-columns-static-gutter] {
+    column-gap: var(--blok-column-gutter);
+  }
+}
+
+/*
  * Resize separator — a fixed-width flex item that forms the gutter between two
  * columns. The visible bar is hidden until the gutter is hovered or dragged,
  * matching Notion. The bar is wider than its hit feel via the full-width
  * col-resize cursor zone.
  */
 [data-blok-column-resizer] {
-  /* Gutter width matches Notion: min(32px, 4vw) — a constant 32px on wide
-   * viewports, tracking 4vw on narrower ones. The gap stays the same for two,
-   * three, four or more columns; extra columns just add more gutters. */
-  flex: 0 0 min(2rem, 4vw);
+  /* The resizer IS the gutter in editing mode — same width as the read-only
+   * container gap (see --blok-column-gutter). Extra columns just add more
+   * gutters; each stays this constant width. */
+  flex: 0 0 var(--blok-column-gutter);
   align-self: stretch;
   position: relative;
   cursor: col-resize;

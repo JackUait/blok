@@ -172,6 +172,9 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.divider = this.createDivider();
     this.nodes.removeButton = this.createRemoveButton();
     this.nodes.inputWrapper = document.createElement('div');
+    // Horizontal padding keeps the URL input's 2px focus ring from being clipped
+    // by the popover's overflow-y-auto items box, which sits flush to the wrapper.
+    this.nodes.inputWrapper.className = 'px-1';
     this.nodes.inputWrapper.append(
       this.nodes.urlLabel,
       this.nodes.input,
@@ -307,7 +310,7 @@ export class LinkInlineTool implements InlineTool {
 
     const iconEl = document.createElement('span');
 
-    iconEl.className = 'shrink-0 flex text-gray-text transition-colors can-hover:group-hover/remove:text-red-500 [&>svg]:size-4';
+    iconEl.className = 'shrink-0 flex text-gray-text transition-colors can-hover:group-hover/remove:text-red-500 [&>svg]:size-5';
     iconEl.innerHTML = IconTrash;
 
     const label = document.createElement('span');

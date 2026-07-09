@@ -336,6 +336,8 @@ cd docs && yarn test
 - **Internal**: `src/types-internal/` - used within codebase
 - Key internal type: `BlokModules` interface
 
+**Published-types law**: `types/*.d.ts` is the hand-authored public type surface (the build emits only JS bundles — no `.d.ts` generation), so `exports` points every subpath's `types` at a file under `types/`. NO file under `types/` may re-export/import from a module that resolves into `src/`. A consumer's `tsc` follows the declaration graph from `types/`, and a `../src/...` specifier drags raw implementation `.ts` into their program — which then needs packages blok never declares as runtime `dependencies` (transitive type-only deps like `micromark-util-types`/`@types/mdast`), exploding their build with TS2307/TS7006 (this is what shipped in 0.24.0 via `react.d.ts` → `markdown.d.ts` → `../src/markdown`). To expose a value implemented in `src/`, hand-author its signature in `types/` (see `types/markdown.d.ts`) or generate a self-contained declaration (see `types/icons.d.ts` + `scripts/generate-icons-dts.mjs`) — never re-export from `../src/`. Mechanically enforced by `test/unit/architecture/published-types-no-src-refs.test.ts`.
+
 ## Icons
 
 All icons live in `src/components/icons/index.ts` as exported SVG string constants.
@@ -343,6 +345,8 @@ All icons live in `src/components/icons/index.ts` as exported SVG string constan
 The dev playground (`index.html`) has a `iconGroups` object (around line 909) that groups icons into named categories for the `/icons` gallery tab. **This list is manually maintained.**
 
 **Rule: whenever you add a new icon to `src/components/icons/index.ts`, you MUST also add its export name to the appropriate group in `iconGroups` in `index.html`. Place it in the most fitting existing category, or create a new named category if none fits.**
+
+**Rule: after adding/renaming/removing an icon, run `node scripts/generate-icons-dts.mjs` to regenerate the published `types/icons.d.ts` (self-contained declaration; see the Published-types law under Types). `test/unit/architecture/published-types-no-src-refs.test.ts` fails until it's in sync.**
 
 ## Important Patterns
 

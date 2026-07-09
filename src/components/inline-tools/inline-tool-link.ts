@@ -12,7 +12,7 @@ import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
 import { setFieldValidity } from '../utils/field-validity';
-import { isSamePageLink } from '../../tools/link/registry';
+import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../utils/resolve-link-attributes';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 
@@ -908,15 +908,6 @@ export class LinkInlineTool implements InlineTool {
    * @param {string} link - "href" value
    */
   private insertLink(link: string): void {
-    const href = this.linkConfig.transformHref ? this.linkConfig.transformHref(link) : link;
-    /**
-     * Same-page destinations (pure anchors like "#results" or links resolving to
-     * the current origin + pathname) always open in the same window, regardless
-     * of the configured target, so in-article navigation never spawns a new tab.
-     */
-    const target = isSamePageLink(link) ? '_self' : (this.linkConfig.target ?? '_blank');
-    const rel = this.linkConfig.rel ?? 'nofollow';
-
     /**
      * Edit all link, not selected part
      */
@@ -926,7 +917,8 @@ export class LinkInlineTool implements InlineTool {
       /**
        * Apply an edited link text before re-selecting: only when it actually
        * changed, so an untouched anchor keeps its inner formatting instead of
-       * being flattened to plain text.
+       * being flattened to plain text. Done before resolving so the `link`
+       * config's `transform` sees the final anchor text.
        */
       const newTitle = this.nodes.titleInput?.value ?? '';
 
@@ -936,9 +928,9 @@ export class LinkInlineTool implements InlineTool {
 
       this.selection.expandToTag(anchorTag);
 
-      anchorTag.href = href;
-      anchorTag.target = target;
-      anchorTag.rel = rel;
+      // Same-page targeting, transformHref/transform and any extra attributes are
+      // resolved centrally so hand-created links match render/paste exactly.
+      applyResolvedLinkAttributes(anchorTag, resolveLinkAttributes(link, anchorTag, this.linkConfig));
 
       return;
     }
@@ -951,11 +943,10 @@ export class LinkInlineTool implements InlineTool {
 
     const anchor = document.createElement('a');
 
-    anchor.href = href;
-    anchor.target = target;
-    anchor.rel = rel;
-
+    // Populate the anchor text before resolving so the `transform` sees it.
     anchor.appendChild(range.extractContents());
+
+    applyResolvedLinkAttributes(anchor, resolveLinkAttributes(link, anchor, this.linkConfig));
 
     range.insertNode(anchor);
 

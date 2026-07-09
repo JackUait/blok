@@ -1,6 +1,6 @@
 import type { BlokConfig } from '../../../types';
 
-import { isSamePageLink } from '../../tools/link/registry';
+import { applyResolvedLinkAttributes, resolveLinkAttributes } from './resolve-link-attributes';
 
 /**
  * Anchor-building configuration shared by the interactive Link inline tool,
@@ -19,28 +19,25 @@ type LinkConfig = NonNullable<BlokConfig['link']>;
  *   (`#anchors` or the current origin+pathname) which always open in the same
  *   window regardless of config,
  * - `rel` is forced (default `nofollow`),
- * - `transformHref` rewrites the existing href when provided.
+ * - `transformHref` rewrites the existing href when provided, or the richer
+ *   `transform` sets href/target/rel/extra attributes per anchor.
  *
  * @param root - element (or fragment) whose descendant anchors should be processed
  * @param link - the resolved `link` config from the editor configuration
  */
 export function applyLinkConfig(root: ParentNode, link: LinkConfig): void {
-  const configuredTarget = link.target ?? '_blank';
-  const rel = link.rel ?? 'nofollow';
-  const { transformHref } = link;
-
   root.querySelectorAll('a').forEach((anchor) => {
     const href = anchor.getAttribute('href');
 
-    // Decide same-page from the original href, before transformHref may proxy it
-    // to another origin — the link still conceptually leads to the current page.
-    const target = href !== null && isSamePageLink(href) ? '_self' : configuredTarget;
+    // An anchor without an href has no destination to transform or classify; it
+    // still gets target/rel forced, matching hand-created links.
+    if (href === null) {
+      anchor.setAttribute('target', link.target ?? '_blank');
+      anchor.setAttribute('rel', link.rel ?? 'nofollow');
 
-    if (transformHref !== undefined && href !== null) {
-      anchor.setAttribute('href', transformHref(href));
+      return;
     }
 
-    anchor.setAttribute('target', target);
-    anchor.setAttribute('rel', rel);
+    applyResolvedLinkAttributes(anchor, resolveLinkAttributes(href, anchor, link));
   });
 }

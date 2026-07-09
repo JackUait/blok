@@ -99,6 +99,12 @@ type LinkConfig = {
   target?: string;
   rel?: string;
   transformHref?: (href: string) => string;
+  transform?: (context: { href: string; text: string; element: HTMLAnchorElement }) => {
+    href?: string;
+    target?: string;
+    rel?: string;
+    attributes?: Record<string, string>;
+  } | void;
 };
 
 const createTool = (linkConfig?: LinkConfig): ToolSetup => {
@@ -544,6 +550,44 @@ describe('LinkInlineTool', () => {
 
       expect(transformHref).toHaveBeenCalledWith('https://google.com/');
       expect(anchor.getAttribute('href')).toBe('https://proxy.example/?u=https%3A%2F%2Fgoogle.com%2F');
+    });
+
+    it('applies the richer transform (href/rel/attributes + anchor text) to created anchors', () => {
+      const transform = vi.fn(() => ({
+        href: 'https://public.example/page',
+        rel: 'noopener',
+        attributes: { class: 'kb-link', 'data-internal': 'true' },
+      }));
+      const { tool } = createTool({ transform });
+      const anchor = insertNewAnchor(tool, 'https://kb.internal/page');
+
+      expect(transform).toHaveBeenCalledWith({
+        href: 'https://kb.internal/page',
+        text: 'selected text',
+        element: anchor,
+      });
+      expect(anchor.getAttribute('href')).toBe('https://public.example/page');
+      expect(anchor.getAttribute('rel')).toBe('noopener');
+      // target omitted by the transform → cross-page default.
+      expect(anchor.getAttribute('target')).toBe('_blank');
+      expect(anchor.getAttribute('class')).toBe('kb-link');
+      expect(anchor.getAttribute('data-internal')).toBe('true');
+    });
+
+    it('applies the richer transform when editing an existing anchor', () => {
+      const { tool, selection } = createTool({ transform: () => ({ href: 'https://rewritten.example/', rel: 'sponsored' }) });
+
+      const existing = document.createElement('a');
+
+      existing.href = 'https://old.com';
+      existing.textContent = 'old text';
+      document.body.appendChild(existing);
+      selection.findParentTag.mockReturnValue(existing);
+
+      (tool as unknown as { insertLink(link: string): void }).insertLink('https://new.com');
+
+      expect(existing.getAttribute('href')).toBe('https://rewritten.example/');
+      expect(existing.getAttribute('rel')).toBe('sponsored');
     });
   });
 

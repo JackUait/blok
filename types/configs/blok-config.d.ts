@@ -15,6 +15,61 @@ import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptN
  */
 export type DataModelFormat = 'legacy' | 'hierarchical' | 'auto';
 
+/**
+ * Context passed to {@link BlokConfig.link.transform} for a single anchor.
+ */
+export interface LinkTransformContext {
+  /**
+   * The anchor's href before transformation. On the render/paste paths this is
+   * the stored/pasted href; on the inline-tool path it is the user-entered,
+   * validated URL.
+   */
+  href: string;
+
+  /**
+   * The anchor's visible text (`element.textContent`), e.g. so the transform can
+   * key off the label as well as the destination. Empty string when the anchor
+   * has no text.
+   */
+  text: string;
+
+  /**
+   * The anchor element being built or updated. Provided for context; mutating it
+   * directly is discouraged — return the desired attributes instead.
+   */
+  element: HTMLAnchorElement;
+}
+
+/**
+ * The attributes {@link BlokConfig.link.transform} may set on an anchor. Every
+ * field is optional; anything left `undefined` falls back to the same defaults
+ * the shorthand config would produce (see {@link BlokConfig.link}).
+ */
+export interface LinkTransformResult {
+  /**
+   * Replacement href. Omit to keep the original href unchanged.
+   */
+  href?: string;
+
+  /**
+   * Replacement `target`. Omit to keep the resolved default (`_self` for
+   * same-page destinations, otherwise `link.target ?? '_blank'`).
+   */
+  target?: string;
+
+  /**
+   * Replacement `rel`. Omit to keep `link.rel ?? 'nofollow'`.
+   */
+  rel?: string;
+
+  /**
+   * Extra attributes (e.g. `class`, `title`, `data-*`) to set on the anchor.
+   * Applied before the managed `href`/`target`/`rel`, so those stay authoritative
+   * even if named here.
+   */
+  attributes?: Record<string, string>;
+}
+
 export interface BlokConfig {
   /**
    * Element where Blok will be appended
@@ -173,6 +228,30 @@ export interface BlokConfig {
      * @returns the href to set on the anchor
      */
     transformHref?: (href: string) => string;
+
+    /**
+     * Richer per-anchor transform. Runs on the same paths as {@link transformHref}
+     * (inline tool, render, paste) but receives the full {@link LinkTransformContext}
+     * (href, text, element) and may return any subset of {@link LinkTransformResult}
+     * — `href`, `target`, `rel`, and extra `attributes` — so consumers can control
+     * the whole anchor without post-processing the rendered DOM.
+     *
+     * Precedence:
+     * - when `transform` is provided it supersedes `transformHref`, which is then
+     *   ignored (`transform` is the superset — express the same rewrite as
+     *   `({ href }) => ({ href: fn(href) })`);
+     * - fields left `undefined` (or a `void`/absent return) fall back to the
+     *   defaults the shorthand config produces, including the same-page `_self`
+     *   rule decided from the original href.
+     *
+     * Like `transformHref`, it must be idempotent on the render/paste paths: it
+     * re-runs against already-transformed anchors on every render, so re-applying
+     * it must not change the result again.
+     *
+     * @param context - the anchor's href, text and element
+     * @returns the attributes to set on the anchor, or nothing to keep defaults
+     */
+    transform?: (context: LinkTransformContext) => LinkTransformResult | void;
   };
 
   /**

@@ -86,7 +86,9 @@ describe('SettingsPanel', () => {
 
       const panel = screen.getByTestId('demo-settings-panel');
       expect(panel.className).toContain('transition-transform');
-      expect(panel.className).toContain('translate-x-full');
+      // The floating panel sits a gap away from the edge, so sliding it fully
+      // out needs its own width plus that gap.
+      expect(panel.className).toMatch(/translate-x-\[calc\(100%\+/);
       expect(panel).toHaveAttribute('inert');
     });
 
@@ -97,8 +99,19 @@ describe('SettingsPanel', () => {
 
       const panel = screen.getByTestId('demo-settings-panel');
       expect(panel.className).toContain('translate-x-0');
-      expect(panel.className).not.toContain('translate-x-full');
+      expect(panel.className).not.toMatch(/translate-x-\[calc\(100%\+/);
       expect(panel).not.toHaveAttribute('inert');
+    });
+
+    it('renders as a floating rounded card instead of a flush drawer', () => {
+      renderPanel();
+
+      const panel = screen.getByTestId('demo-settings-panel');
+      expect(panel.className).toContain('rounded-3xl');
+      expect(panel.className).toContain('inset-y-3');
+      expect(panel.className).toContain('right-3');
+      expect(panel.className).not.toContain('inset-y-0');
+      expect(panel.className).not.toContain('right-0');
     });
 
     it('slides the edge tab out while the panel is open', () => {

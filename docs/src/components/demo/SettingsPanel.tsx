@@ -130,8 +130,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
         aria-hidden={open ? undefined : true}
         inert={!open}
         className={cn(
-          'fixed inset-y-0 right-0 z-40 flex w-[21.5rem] max-w-[88vw] flex-col border-l border-border bg-card shadow-2xl transition-transform duration-300 ease-out',
-          open ? 'translate-x-0' : 'translate-x-full'
+          'fixed inset-y-3 right-3 z-40 flex w-[21.5rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl transition-transform duration-300 ease-out',
+          open ? 'translate-x-0' : 'translate-x-[calc(100%+0.75rem)]'
         )}
       >
       <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-5 py-4">

@@ -35,6 +35,13 @@ export class ItalicInlineTool implements InlineTool {
   public static isInline = true;
 
   /**
+   * At a collapsed caret, defer Cmd/Ctrl+I to the browser's native pending-italic
+   * handler instead of intercepting it (see InlineShortcutManager). This is the
+   * only race-free, cross-engine way to get "toggle italic then type".
+   */
+  public static nativeCaretShortcut = true;
+
+  /**
    * Title for the Inline Tool
    */
   public static title = 'Italic';

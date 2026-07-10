@@ -2,6 +2,7 @@ import type { I18n } from '../../../types';
 import type { SelectOption, DatabaseRow } from './types';
 import type { DatabaseViewRenderer } from './database-view-renderer';
 import { IconPlus, IconPencil, IconDotsHorizontal } from '../../components/icons';
+import { startInlineRename } from '../../components/utils/inline-rename';
 
 interface DatabaseBoardViewOptions {
   readOnly: boolean;
@@ -334,61 +335,36 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
     }
 
     const originalTitle = titleEl.textContent ?? '';
-    const input = document.createElement('input');
 
-    input.type = 'text';
-    input.value = originalTitle;
-    input.setAttribute('data-blok-database-card-title-input', '');
-    input.setAttribute('aria-label', this.i18n.t('tools.database.editCardTitle'));
-    input.style.width = '100%';
-    input.style.boxSizing = 'border-box';
+    const buildTitleDiv = (title: string): HTMLElement => {
+      const div = document.createElement('div');
 
-    const state = { committed: false };
+      div.setAttribute('data-blok-database-card-title', '');
+      div.textContent = title;
 
-    const commit = (): void => {
-      if (state.committed) return;
-      state.committed = true;
-      const newTitle = input.value.trim() || originalTitle;
-      const restoredDiv = document.createElement('div');
-
-      restoredDiv.setAttribute('data-blok-database-card-title', '');
-      restoredDiv.textContent = newTitle;
-      input.replaceWith(restoredDiv);
-
-      if (newTitle !== originalTitle) {
-        this.onTitleEdit?.(rowId, newTitle);
-      }
-
-      if (newTitle) {
-        cardEl.removeAttribute('data-empty');
-      }
+      return div;
     };
 
-    const cancel = (): void => {
-      if (state.committed) return;
-      state.committed = true;
-      const restoredDiv = document.createElement('div');
+    startInlineRename({
+      target: titleEl,
+      currentValue: originalTitle,
+      label: this.i18n.t('tools.database.editCardTitle'),
+      configureInput: (input) => {
+        input.setAttribute('data-blok-database-card-title-input', '');
+        input.style.setProperty('width', '100%');
+        input.style.setProperty('box-sizing', 'border-box');
+      },
+      buildRestored: buildTitleDiv,
+      onCommit: (newTitle) => {
+        if (newTitle !== originalTitle) {
+          this.onTitleEdit?.(rowId, newTitle);
+        }
 
-      restoredDiv.setAttribute('data-blok-database-card-title', '');
-      restoredDiv.textContent = originalTitle;
-      input.replaceWith(restoredDiv);
-    };
-
-    input.addEventListener('blur', commit);
-    input.addEventListener('keydown', (ke) => {
-      ke.stopPropagation();
-      if (ke.key === 'Enter') {
-        input.removeEventListener('blur', commit);
-        commit();
-      } else if (ke.key === 'Escape') {
-        input.removeEventListener('blur', commit);
-        cancel();
-      }
+        if (newTitle) {
+          cardEl.removeAttribute('data-empty');
+        }
+      },
     });
-
-    titleEl.replaceWith(input);
-    input.focus();
-    input.select();
   }
 
   /**

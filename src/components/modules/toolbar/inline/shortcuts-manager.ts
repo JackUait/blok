@@ -171,7 +171,7 @@ export class InlineShortcutManager {
     Shortcuts.add({
       name: shortcut,
       handler: (event) => {
-        const { BlockManager } = this.getBlok();
+        const { BlockManager, Tools } = this.getBlok();
         const block = BlockManager.currentBlock
           ?? BlockManager.getBlockByChildNode(window.getSelection()?.anchorNode as Node);
 
@@ -180,6 +180,20 @@ export class InlineShortcutManager {
         }
 
         if (block.tool.enabledInlineTools === false) {
+          return;
+        }
+
+        // At a collapsed caret, format tools with a native browser equivalent
+        // (Bold, Italic) defer to the browser's own pending inline-format
+        // handling: do NOT preventDefault (so the keystroke reaches the
+        // contenteditable) and do NOT invoke the tool. This is the only
+        // race-free, cross-engine way to get "toggle bold/italic then type"
+        // (WebKit ignores scripted execCommand). With a selection the tool
+        // still wraps/unwraps as usual.
+        const selection = window.getSelection();
+        const isCollapsedCaret = !selection || selection.rangeCount === 0 || selection.getRangeAt(0).collapsed;
+
+        if (isCollapsedCaret && (Tools.inlineTools.get(toolName)?.nativeCaretShortcut ?? false)) {
           return;
         }
 

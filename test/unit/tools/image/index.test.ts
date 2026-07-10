@@ -1041,7 +1041,7 @@ describe('ImageTool — error state', () => {
   });
 
   it('broken-image error carries data-variant="broken"', () => {
-    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 1 }));
     const root = tool.render();
     const img = root.querySelector<HTMLImageElement>('img');
     if (!img) throw new Error('img missing');
@@ -1206,8 +1206,8 @@ describe('ImageTool — auto-retry on img load failure', () => {
     expect(root.getAttribute('data-state')).toBe('rendered');
   });
 
-  it('second consecutive img error falls through to broken image state', () => {
-    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+  it('falls through to broken image state once the configured retries are exhausted', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 1 }));
     const root = tool.render();
     const img = root.querySelector<HTMLImageElement>('img');
     if (!img) throw new Error('img missing');
@@ -1220,7 +1220,7 @@ describe('ImageTool — auto-retry on img load failure', () => {
   });
 
   it('broken image error explicitly says the image failed to load', () => {
-    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 1 }));
     const root = tool.render();
     const img = root.querySelector<HTMLImageElement>('img');
     if (!img) throw new Error('img missing');
@@ -1230,6 +1230,68 @@ describe('ImageTool — auto-retry on img load failure', () => {
 
     const title = root.querySelector('[data-role="error-state"] .blok-image-error__title');
     expect(title?.textContent).toBe('tools.image.errorImageFailedToLoad');
+  });
+
+  it('does not render the replace button on a broken image in readOnly mode', () => {
+    const tool = new ImageTool({ ...createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 1 }), readOnly: true });
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+
+    img.dispatchEvent(new Event('error'));
+    img.dispatchEvent(new Event('error'));
+
+    expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
+    expect(root.querySelector('[data-action="replace"]')).toBeNull();
+    expect(root.querySelector('[data-action="retry"]')).not.toBeNull();
+  });
+});
+
+describe('ImageTool — configurable reload attempts', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('retries the img src 5 times by default before giving up', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+
+    // 5 errors → 5 retries; still trying, never broken.
+    for (let i = 0; i < 5; i++) {
+      img.dispatchEvent(new Event('error'));
+      expect(root.getAttribute('data-state')).toBe('rendered');
+    }
+
+    // 6th error exhausts the 5 retries and falls through to broken.
+    img.dispatchEvent(new Event('error'));
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
+  });
+
+  it('honours a custom reloadAttempts count', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 2 }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+
+    img.dispatchEvent(new Event('error'));
+    img.dispatchEvent(new Event('error'));
+    expect(root.getAttribute('data-state')).toBe('rendered');
+
+    img.dispatchEvent(new Event('error'));
+    expect(root.getAttribute('data-state')).toBe('error');
+  });
+
+  it('reloadAttempts: 0 goes broken on the first failure with no retry', () => {
+    const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }, { reloadAttempts: 0 }));
+    const root = tool.render();
+    const img = root.querySelector<HTMLImageElement>('img');
+    if (!img) throw new Error('img missing');
+
+    img.dispatchEvent(new Event('error'));
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="error-state"]')).not.toBeNull();
   });
 });
 

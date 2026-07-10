@@ -66,6 +66,34 @@ describe('attachControls', () => {
     h.destroy();
   });
 
+  const fakeI18n = (map: Record<string, string>) => ({
+    has: (k: string): boolean => k in map,
+    t: (k: string): string => map[k] ?? k,
+  });
+
+  it('exposes the speed slider aria-valuetext at initial render (before any input)', () => {
+    const media = makeMedia();
+    const figure = document.createElement('figure');
+    const h = attachControls({ media, figure, data: { url: 'u' } });
+    const slider = h.element.querySelector('.blok-audio-controls__speed-slider') as HTMLInputElement;
+    expect(slider.getAttribute('aria-valuetext')).toBe('1×');
+    h.destroy();
+  });
+
+  it('i18n-translates the control labels when an I18n instance is provided', () => {
+    const media = makeMedia();
+    const figure = document.createElement('figure');
+    const h = attachControls({
+      media,
+      figure,
+      data: { url: 'u' },
+      i18n: fakeI18n({ 'tools.audio.volume': 'Volume FR', 'tools.audio.mute': 'Muet' }),
+    });
+    expect(h.element.querySelector('[data-role="audio-volume"]')!.getAttribute('aria-label')).toBe('Volume FR');
+    expect(h.element.querySelector('[data-role="audio-mute"]')!.getAttribute('aria-label')).toBe('Muet');
+    h.destroy();
+  });
+
   it('applies a preset speed but keeps the menu open for further tweaking', () => {
     const media = makeMedia();
     const figure = document.createElement('figure');

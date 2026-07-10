@@ -155,4 +155,27 @@ describe('PopoverHeader', () => {
     expect(backButton).not.toBeNull();
     expect(backButton?.className).toContain('outline-hidden');
   });
+
+  it('sets aria-label on the back button when backButtonLabel is provided', () => {
+    const header = createHeader({ backButtonLabel: 'Back' });
+    const backButton = header.getElement()?.querySelector<HTMLButtonElement>('button');
+
+    expect(backButton?.getAttribute('aria-label')).toBe('Back');
+  });
+
+  it('does not set aria-label on the back button when backButtonLabel is omitted', () => {
+    const header = createHeader();
+    const backButton = header.getElement()?.querySelector<HTMLButtonElement>('button');
+
+    expect(backButton?.hasAttribute('aria-label')).toBe(false);
+  });
+
+  it('assigns an id to the title element and exposes it via getTitleId', () => {
+    const header = createHeader({ text: 'Section title' });
+    const titleId = header.getTitleId();
+    const textElement = header.getElement()?.querySelector('[data-blok-testid="popover-header-text"]');
+
+    expect(titleId).not.toBe('');
+    expect(textElement?.id).toBe(titleId);
+  });
 });

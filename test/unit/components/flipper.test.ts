@@ -137,6 +137,29 @@ describe('Flipper', () => {
     flipper.deactivate();
   });
 
+  it('ignores keydown events whose default action was already prevented', () => {
+    const items = createItems();
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+    });
+    const onFlipSpy = vi.fn();
+
+    flipper.onFlip(onFlipSpy);
+    flipper.activate();
+
+    const event = createKeyboardEvent('ArrowDown');
+
+    event.preventDefault();
+
+    flipper.handleExternalKeydown(event);
+
+    expect(onFlipSpy).not.toHaveBeenCalled();
+    expect(items[0]).not.toHaveAttribute('data-blok-focused');
+
+    flipper.deactivate();
+  });
+
   it('pressing Enter on a focused item triggers click and activate callback', () => {
     const items = createItems();
     const clickSpy = vi.fn();
@@ -352,6 +375,128 @@ describe('Flipper', () => {
     expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
 
     flipper.deactivate();
+  });
+
+  it('sets aria-activedescendant on the provided host when navigating', () => {
+    const items = createItems();
+    const host = document.createElement('div');
+
+    document.body.appendChild(host);
+
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+      activeDescendantHost: host,
+    });
+
+    flipper.activate();
+    flipper.flipRight();
+
+    const focusedId = items[0].getAttribute('id');
+
+    expect(focusedId).toBeTruthy();
+    expect(host).toHaveAttribute('aria-activedescendant', focusedId as string);
+
+    flipper.deactivate();
+  });
+
+  it('Home moves focus to the first item and fires onFlip', () => {
+    const items = createItems();
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+    });
+    const onFlipSpy = vi.fn();
+
+    flipper.onFlip(onFlipSpy);
+    flipper.activate();
+    flipper.focusItem(2);
+    onFlipSpy.mockClear();
+
+    const event = createKeyboardEvent('Home');
+
+    flipper.handleExternalKeydown(event);
+
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
+    expect(onFlipSpy).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+
+    flipper.deactivate();
+  });
+
+  it('End moves focus to the last item and fires onFlip', () => {
+    const items = createItems();
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+    });
+    const onFlipSpy = vi.fn();
+
+    flipper.onFlip(onFlipSpy);
+    flipper.activate();
+    flipper.focusItem(0);
+    onFlipSpy.mockClear();
+
+    const event = createKeyboardEvent('End');
+
+    flipper.handleExternalKeydown(event);
+
+    expect(items[items.length - 1]).toHaveAttribute('data-blok-focused', 'true');
+    expect(onFlipSpy).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+
+    flipper.deactivate();
+  });
+
+  it('skips disabled items during arrow navigation', () => {
+    const items = createItems();
+
+    items[1].setAttribute('data-blok-disabled', '');
+
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+    });
+
+    flipper.activate();
+
+    flipper.handleExternalKeydown(createKeyboardEvent('ArrowDown'));
+    expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
+
+    flipper.handleExternalKeydown(createKeyboardEvent('ArrowDown'));
+    expect(items[2]).toHaveAttribute('data-blok-focused', 'true');
+    expect(items[1]).not.toHaveAttribute('data-blok-focused');
+
+    flipper.deactivate();
+  });
+
+  it('typeahead focuses the first item whose label matches, and resets the buffer after the window', () => {
+    vi.useFakeTimers();
+
+    const items = createItems();
+
+    items[0].textContent = 'Apple';
+    items[1].textContent = 'Banana';
+    items[2].textContent = 'Cherry';
+
+    const flipper = new Flipper({
+      focusedItemClass: focusedClass,
+      items,
+      typeAhead: true,
+    });
+
+    flipper.activate();
+
+    flipper.handleExternalKeydown(createKeyboardEvent('b'));
+    expect(items[1]).toHaveAttribute('data-blok-focused', 'true');
+
+    vi.advanceTimersByTime(600);
+
+    flipper.handleExternalKeydown(createKeyboardEvent('c'));
+    expect(items[2]).toHaveAttribute('data-blok-focused', 'true');
+
+    flipper.deactivate();
+    vi.useRealTimers();
   });
 
   it('skips inline tool inputs unless explicitly allowed', () => {

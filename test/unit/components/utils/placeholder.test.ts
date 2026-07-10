@@ -1,50 +1,34 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
-  PLACEHOLDER_EMPTY_EDITOR_CLASSES,
+  PLACEHOLDER_CLASSES,
+  PLACEHOLDER_ACTIVE_CLASSES,
   PLACEHOLDER_FOCUS_ONLY_CLASSES,
+  getPlaceholderClasses,
   setupPlaceholder,
   isContentEmpty,
   setCaretToStart,
 } from '../../../../src/components/utils/placeholder';
 
 describe('Placeholder utilities', () => {
-  describe('PLACEHOLDER_EMPTY_EDITOR_CLASSES', () => {
-    it('is an array of strings', () => {
-      expect(Array.isArray(PLACEHOLDER_EMPTY_EDITOR_CLASSES)).toBe(true);
-      expect(PLACEHOLDER_EMPTY_EDITOR_CLASSES.length).toBeGreaterThan(0);
-      PLACEHOLDER_EMPTY_EDITOR_CLASSES.forEach((cls) => {
-        expect(typeof cls).toBe('string');
-      });
-    });
-
-    it('targets data-blok-empty ancestor for before pseudo-element', () => {
-      const joined = PLACEHOLDER_EMPTY_EDITOR_CLASSES.join(' ');
-
-      expect(joined).toContain('data-blok-empty');
-      expect(joined).toContain('before:');
-      expect(joined).toContain('content-[attr(data-blok-placeholder-active)]');
-    });
-
-    it('does NOT require :focus for visibility', () => {
-      PLACEHOLDER_EMPTY_EDITOR_CLASSES.forEach((cls) => {
-        expect(cls).not.toContain(':focus');
-      });
-    });
-
-    it('includes pointer-events-none, text color, and cursor styles', () => {
-      const joined = PLACEHOLDER_EMPTY_EDITOR_CLASSES.join(' ');
-
-      expect(joined).toContain('pointer-events-none');
-      expect(joined).toContain('text-gray-text');
-      expect(joined).toContain('cursor-text');
-    });
-  });
-
   describe('PLACEHOLDER_FOCUS_ONLY_CLASSES', () => {
     it('requires :focus for visibility', () => {
       PLACEHOLDER_FOCUS_ONLY_CLASSES.forEach((cls) => {
         expect(cls).toContain('focus');
       });
+    });
+  });
+
+  describe('getPlaceholderClasses (single visibility-policy vocabulary)', () => {
+    it('maps "always" to the default placeholder classes', () => {
+      expect(getPlaceholderClasses('always')).toBe(PLACEHOLDER_CLASSES);
+    });
+
+    it('maps "always-active" to the data-blok-placeholder-active classes', () => {
+      expect(getPlaceholderClasses('always-active')).toBe(PLACEHOLDER_ACTIVE_CLASSES);
+    });
+
+    it('maps "focus" to the focus-only classes', () => {
+      expect(getPlaceholderClasses('focus')).toBe(PLACEHOLDER_FOCUS_ONLY_CLASSES);
     });
   });
 });
@@ -128,6 +112,30 @@ describe('setupPlaceholder', () => {
   it('sets placeholder attribute correctly', () => {
     setupPlaceholder(element, 'My placeholder');
     expect(element.getAttribute('data-placeholder')).toBe('My placeholder');
+  });
+
+  it('mirrors the placeholder text onto aria-placeholder for screen readers', () => {
+    setupPlaceholder(element, 'My placeholder');
+    expect(element.getAttribute('aria-placeholder')).toBe('My placeholder');
+  });
+
+  it('stamps the unified data-blok-placeholder-visible visibility vocabulary (default "always")', () => {
+    setupPlaceholder(element, 'My placeholder');
+    expect(element.getAttribute('data-blok-placeholder-visible')).toBe('always');
+  });
+
+  it('reflects the visibility policy passed by the caller', () => {
+    setupPlaceholder(element, 'Focus placeholder', 'data-blok-placeholder-active', 'focus');
+    expect(element.getAttribute('data-blok-placeholder-visible')).toBe('focus');
+  });
+
+  it('cleanup removes aria-placeholder and data-blok-placeholder-visible', () => {
+    const cleanup = setupPlaceholder(element, 'My placeholder');
+
+    cleanup();
+
+    expect(element.hasAttribute('aria-placeholder')).toBe(false);
+    expect(element.hasAttribute('data-blok-placeholder-visible')).toBe(false);
   });
 
   it('uses custom attribute name when provided', () => {

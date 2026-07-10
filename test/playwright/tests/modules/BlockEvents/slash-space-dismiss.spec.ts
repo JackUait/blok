@@ -70,7 +70,9 @@ test.describe('slash + space dismisses the toolbox (Notion parity)', () => {
     // Menu dismissed.
     await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeHidden();
 
-    // Literal "/ " remains in the block.
-    expect(await getTextContent(paragraph)).toBe('/ ');
+    // Literal "/ " remains in the block. A contenteditable stores the trailing
+    // space after "/" as a non-breaking space ( ) so it doesn't collapse;
+    // normalize it for the literal-text check.
+    expect((await getTextContent(paragraph)).replace(/ /g, ' ')).toBe('/ ');
   });
 });

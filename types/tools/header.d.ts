@@ -40,6 +40,23 @@ export interface HeaderConfig {
   defaultLevel?: number;
   /** Level-specific overrides keyed by level number (1-6) */
   levelOverrides?: Record<number, HeaderLevelConfig>;
+  /**
+   * Opt-in text-derived anchor ids on rendered heading elements (default: off).
+   *
+   * - `true` — built-in slugifier: strips zero-width characters and punctuation
+   *   (Unicode letters and digits survive, case is PRESERVED), collapses
+   *   whitespace runs into single hyphens (e.g. «Обучайте команду» →
+   *   id "Обучайте-команду").
+   * - a function `(text, blockId) => string` — consumer-provided id generator;
+   *   an empty-string return means "no id".
+   *
+   * The id is kept in sync when the heading text changes and survives level
+   * changes and re-renders. Toggle headings get ids through the same path.
+   *
+   * NOTE: cross-block duplicate deduplication is explicitly OUT of scope —
+   * consumers that need unique ids must dedup themselves.
+   */
+  anchorIds?: boolean | ((text: string, blockId: string) => string);
 }
 
 /**

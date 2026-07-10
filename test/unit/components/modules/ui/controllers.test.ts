@@ -7,6 +7,17 @@ import type { BlokConfig } from '../../../../../types';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 import type { PopoverAbstract } from '../../../../../src/components/utils/popover/popover-abstract';
+import { getCaretOffset } from '../../../../../src/components/utils/caret/selection';
+import type * as CaretSelectionModule from '../../../../../src/components/utils/caret/selection';
+
+vi.mock('../../../../../src/components/utils/caret/selection', async (importOriginal) => {
+  const actual = await importOriginal<typeof CaretSelectionModule>();
+
+  return {
+    ...actual,
+    getCaretOffset: vi.fn(() => 0),
+  };
+});
 
 const createBlokStub = (): BlokModules => {
   const blockSettingsWrapper = document.createElement('div');
@@ -85,6 +96,7 @@ const createBlokStub = (): BlokModules => {
       positions: {
         START: 'start',
         END: 'end',
+        DEFAULT: 'default',
       },
     },
     YjsManager: {
@@ -612,11 +624,14 @@ describe('KeyboardController', () => {
       expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'header', { level: 3 });
     });
 
-    it.each([
-      ['Digit4', 4],
-      ['Digit5', 5],
-      ['Digit6', 6],
-    ])('converts the current block to the matching heading with %s (levels 4-6)', (code, level) => {
+    // On Mac the heading combo is Cmd+Opt+digit, so 4/5/6 are collision-free.
+    // On Win/Linux it is Ctrl+Shift+digit, which for 5/6 now belongs to the list
+    // shortcut (Ctrl+Shift+5/6), so only Digit4 stays a heading there.
+    const headingLevelCases: [string, number][] = isMac
+      ? [['Digit4', 4], ['Digit5', 5], ['Digit6', 6]]
+      : [['Digit4', 4]];
+
+    it.each(headingLevelCases)('converts the current block to the matching heading with %s (levels 4-6)', (code, level) => {
       const { controller, blok } = createKeyboardController({
         configOverrides: { defaultBlock: 'paragraph' },
       });
@@ -702,6 +717,32 @@ describe('KeyboardController', () => {
       expect(blok.BlockManager.convert).not.toHaveBeenCalled();
     });
 
+    it('preserves the caret offset across the conversion (Notion parity)', async () => {
+      vi.mocked(getCaretOffset).mockReturnValue(3);
+
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const newBlock = { id: 'converted' };
+      (blok.BlockManager.convert as ReturnType<typeof vi.fn>).mockResolvedValue(newBlock);
+
+      const event = createTurnIntoEvent('Digit1');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      // setToBlock runs after the awaited convert() resolves
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(blok.Caret.setToBlock).toHaveBeenCalledWith(newBlock, 'default', 3);
+    });
+
     it('does nothing when there is no current block', () => {
       const { controller, blok } = createKeyboardController({
         configOverrides: { defaultBlock: 'paragraph' },
@@ -716,6 +757,149 @@ describe('KeyboardController', () => {
       document.dispatchEvent(event);
 
       expect(blok.BlockManager.convert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('List creation shortcuts (BUG A/B)', () => {
+    const isMac = process.platform === 'darwin';
+
+    // Mac: Cmd+Shift+N, Win/Linux: Ctrl+Shift+N (per style-config advertised combos).
+    const createListEvent = (code: string): KeyboardEvent => {
+      const modifiers = isMac
+        ? { metaKey: true, shiftKey: true }
+        : { ctrlKey: true, shiftKey: true };
+
+      return new KeyboardEvent('keydown', { key: code.replace('Digit', ''), code, ...modifiers });
+    };
+
+    const makeBlock = (): Block => ({
+      id: 'block-1',
+      name: 'paragraph',
+      holder: document.createElement('div'),
+    } as unknown as Block);
+
+    it.each([
+      ['Digit5', 'unordered'],
+      ['Digit6', 'ordered'],
+      ['Digit7', 'checklist'],
+    ])('converts the current block to a list with %s', (code, style) => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createListEvent(code);
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'list', { style });
+    });
+
+    it('converts the current block into a to-do list (BUG B)', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createListEvent('Digit7');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'list', { style: 'checklist' });
+    });
+
+    it('wraps the list conversion in stopCapturing so it is its own undo step', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createListEvent('Digit5');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.YjsManager.stopCapturing).toHaveBeenCalled();
+    });
+
+    it('prevents the browser from inserting the digit', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createListEvent('Digit5');
+      const preventDefaultSpy = vi.fn();
+      Object.defineProperty(event, 'preventDefault', { value: preventDefaultSpy });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('does nothing when there is no current block', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      blok.BlockManager.currentBlock = undefined;
+
+      const event = createListEvent('Digit5');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op in read-only mode (controller disabled)', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+      // Read-only toggle disables the controller.
+      (controller as unknown as { disable: () => void }).disable();
+
+      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = createListEvent('Digit5');
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).not.toHaveBeenCalled();
+    });
+
+    it.skipIf(isMac)('lets the list combo win over Heading 5/6 on Win/Linux (Ctrl+Shift+5/6 collision)', () => {
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { defaultBlock: 'paragraph' },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      const block = makeBlock();
+      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+
+      const event = new KeyboardEvent('keydown', { key: '5', code: 'Digit5', ctrlKey: true, shiftKey: true });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockManager.convert).toHaveBeenCalledWith(block, 'list', { style: 'unordered' });
+      expect(blok.BlockManager.convert).not.toHaveBeenCalledWith(block, 'header', { level: 5 });
     });
   });
 

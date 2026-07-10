@@ -57,20 +57,37 @@ export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
 ];
 
 /**
- * Placeholder classes that show when the editor is empty (ancestor has data-blok-empty="true").
- * Shows placeholder without requiring focus — used for initial empty-state hint.
- * Uses data-blok-placeholder-active attribute for the placeholder text.
+ * Placeholder visibility policy — the single vocabulary that selects which
+ * class array (and CSS `::before` visibility rule) a consumer wants:
+ *
+ * - `always`        — visible whenever empty (uses `data-placeholder`)
+ * - `always-active` — visible whenever empty (uses `data-blok-placeholder-active`)
+ * - `focus`         — visible only when empty AND focused
  */
-export const PLACEHOLDER_EMPTY_EDITOR_CLASSES: string[] = [
-  'empty:in-data-[blok-empty=true]:before:pointer-events-none',
-  'empty:in-data-[blok-empty=true]:before:text-gray-text',
-  'empty:in-data-[blok-empty=true]:before:cursor-text',
-  'empty:in-data-[blok-empty=true]:before:content-[attr(data-blok-placeholder-active)]',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:pointer-events-none',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:text-gray-text',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:cursor-text',
-  '[[data-blok-empty=true]_&[data-empty=true]]:before:content-[attr(data-blok-placeholder-active)]',
-];
+export type PlaceholderVisibility = 'always' | 'always-active' | 'focus';
+
+/**
+ * Resolve the placeholder class array for a given visibility policy.
+ *
+ * Consolidates the near-duplicate class-array variants behind one vocabulary
+ * keyed on {@link PlaceholderVisibility}. The class strings remain literal
+ * (Tailwind scans the source for them) — this is the single lookup seam
+ * callers use instead of importing the individual constants.
+ *
+ * @param visibility - when the placeholder should be shown
+ * @returns the matching class array
+ */
+export const getPlaceholderClasses = (visibility: PlaceholderVisibility): string[] => {
+  switch (visibility) {
+    case 'always-active':
+      return PLACEHOLDER_ACTIVE_CLASSES;
+    case 'focus':
+      return PLACEHOLDER_FOCUS_ONLY_CLASSES;
+    case 'always':
+    default:
+      return PLACEHOLDER_CLASSES;
+  }
+};
 
 /**
  * Check if an element's content is empty
@@ -127,14 +144,24 @@ const handleEmptyElement = (element: HTMLElement): void => {
  * @param element - The contenteditable element
  * @param placeholder - Optional placeholder text to set
  * @param attributeName - The attribute name for placeholder text (default: 'data-placeholder')
+ * @param visibility - When the placeholder is visible (drives the unified
+ *   `data-blok-placeholder-visible` state vocabulary; default: 'always')
  */
 export const setupPlaceholder = (
   element: HTMLElement,
   placeholder?: string,
-  attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder'
+  attributeName: 'data-placeholder' | 'data-blok-placeholder-active' = 'data-placeholder',
+  visibility: PlaceholderVisibility = 'always'
 ): (() => void) => {
+  const text = placeholder ?? '';
+
   // Always set the attribute, even if empty (for consistency and testing)
-  element.setAttribute(attributeName, placeholder ?? '');
+  element.setAttribute(attributeName, text);
+  // Expose the placeholder to assistive tech — the CSS `::before` text is
+  // invisible to screen readers, so mirror it onto `aria-placeholder`.
+  element.setAttribute('aria-placeholder', text);
+  // Single visibility-policy vocabulary shared across every placeholder host.
+  element.setAttribute('data-blok-placeholder-visible', visibility);
 
   const handler = (): void => handleEmptyElement(element);
 
@@ -143,5 +170,7 @@ export const setupPlaceholder = (
   return () => {
     element.removeEventListener('focus', handler);
     element.removeAttribute(attributeName);
+    element.removeAttribute('aria-placeholder');
+    element.removeAttribute('data-blok-placeholder-visible');
   };
 };

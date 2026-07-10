@@ -152,6 +152,32 @@ export class SettingsTogglerHandler {
       blok.I18n.t('a11y.dragHandleRole')
     );
 
+    /**
+     * Surface the keyboard block-move shortcut (previously documented only in a
+     * source comment) to assistive tech. aria-keyshortcuts uses the standard
+     * key-token syntax (not translated); the modifier is platform-branched to
+     * match the actual binding — Meta on mac, Control on Windows.
+     */
+    const keyshortcutModifier = getUserOS().win ? 'Control' : 'Meta';
+
+    settingsToggler.setAttribute(
+      'aria-keyshortcuts',
+      `${keyshortcutModifier}+Shift+ArrowUp ${keyshortcutModifier}+Shift+ArrowDown`
+    );
+
+    /**
+     * Keyboard activation: Enter / Space open the block settings menu, mirroring
+     * the plus button's handler. Space is prevented from scrolling the page.
+     */
+    settingsToggler.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') {
+        return;
+      }
+
+      e.preventDefault();
+      this.handleClick();
+    });
+
     // eslint-disable-next-line no-param-reassign -- nodes is mutated by design
     nodes.settingsToggler = settingsToggler;
 
@@ -168,10 +194,10 @@ export class SettingsTogglerHandler {
     const blockTunesTooltip = createTooltipContent([
       blok.I18n.t('blockSettings.dragToMove'),
       [
-        { text: 'Click', highlight: true },
-        { text: ' or ', highlight: false },
+        { text: blok.I18n.t('blockSettings.clickAction'), highlight: true },
+        { text: blok.I18n.t('blockSettings.orConjunction'), highlight: false },
         { text: shortcut, highlight: true },
-        { text: ' to open menu', highlight: false },
+        { text: blok.I18n.t('blockSettings.openMenuAction'), highlight: false },
       ],
     ]);
 

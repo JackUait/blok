@@ -10,6 +10,8 @@ import {
   IconPlus,
 } from '../../components/icons';
 import { createPlatterSpin } from './disc';
+import { tr } from './i18n';
+import type { I18nInstance } from '../../components/utils/tools';
 import type { AudioData } from '../../../types/tools/audio';
 
 /** Minimal storage seam (localStorage-shaped) for volume + position persistence. */
@@ -26,6 +28,8 @@ export interface AttachControlsOptions {
   /** Defaults to globalThis.localStorage; pass a custom object for tests. */
   storage?: AudioStorage;
   onLoopChange?(loop: boolean): void;
+  /** Editor i18n instance used to translate control labels. */
+  i18n?: I18nInstance;
 }
 
 export interface ControlsHandle {
@@ -65,10 +69,13 @@ export function attachControls({
   data,
   storage,
   onLoopChange,
+  i18n,
 }: AttachControlsOptions): ControlsHandle {
   // `media` aliases the destructured param so property writes below are not
   // flagged as parameter reassignment (mirrors the video controls pattern).
   const media = audioEl;
+  // Resolve a control label through i18n with an English fallback.
+  const i18nLabel = (key: string, fallback: string): string => tr(i18n, `tools.audio.${key}`, fallback);
 
   // ----- fallback storage -----
   const noopStorage: AudioStorage = {
@@ -98,7 +105,7 @@ export function attachControls({
   root.setAttribute('data-role', 'audio-controls');
 
   // ----- play/pause -----
-  const playToggle = button('audio-play', 'Play', IconPlayerPlay);
+  const playToggle = button('audio-play', i18nLabel('play', 'Play'), IconPlayerPlay);
 
   const state = { playing: false, selectedRate: 1 };
 
@@ -111,7 +118,7 @@ export function attachControls({
     state.playing = next;
     figure.setAttribute('data-playing', String(next));
     playToggle.innerHTML = next ? IconPlayerPause : IconPlayerPlay;
-    playToggle.setAttribute('aria-label', next ? 'Pause' : 'Play');
+    playToggle.setAttribute('aria-label', next ? i18nLabel('pause', 'Pause') : i18nLabel('play', 'Play'));
     if (next) platter.start(); else platter.stop();
   };
   setPlaying(false);
@@ -127,7 +134,7 @@ export function attachControls({
   };
 
   // ----- volume + mute -----
-  const muteToggle = button('audio-mute', 'Mute', IconPlayerVolume);
+  const muteToggle = button('audio-mute', i18nLabel('mute', 'Mute'), IconPlayerVolume);
   muteToggle.setAttribute('aria-pressed', 'false');
 
   const volumeInput = document.createElement('input');
@@ -138,7 +145,7 @@ export function attachControls({
   volumeInput.value = '1';
   volumeInput.className = 'blok-audio-controls__volume';
   volumeInput.setAttribute('data-role', 'audio-volume');
-  volumeInput.setAttribute('aria-label', 'Volume');
+  volumeInput.setAttribute('aria-label', i18nLabel('volume', 'Volume'));
 
   const isMuted = (): boolean => media.muted || media.volume === 0;
 
@@ -146,7 +153,7 @@ export function attachControls({
     const muted = isMuted();
     muteToggle.setAttribute('aria-pressed', String(muted));
     muteToggle.innerHTML = muted ? IconPlayerVolumeMute : IconPlayerVolume;
-    muteToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    muteToggle.setAttribute('aria-label', muted ? i18nLabel('unmute', 'Unmute') : i18nLabel('mute', 'Mute'));
     volumeInput.value = muted ? '0' : String(media.volume);
     // audio.css paints the filled track from --blok-audio-vol-pct (same naming
     // as the speed slider's --blok-audio-speed-pct); writing any other name
@@ -205,7 +212,7 @@ export function attachControls({
     Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(rate * 100) / 100));
   const speedLabel = (rate: number): string => `${rate}×`;
 
-  const gearBtn = button('audio-speed', 'Playback speed', IconPlayerSettings || IconPlayerSpeed);
+  const gearBtn = button('audio-speed', i18nLabel('playbackSpeed', 'Playback speed'), IconPlayerSettings || IconPlayerSpeed);
   gearBtn.setAttribute('aria-haspopup', 'menu');
   gearBtn.setAttribute('aria-expanded', 'false');
 
@@ -230,8 +237,8 @@ export function attachControls({
     btn.innerHTML = icon;
     return btn;
   };
-  const speedDec = speedStepper(IconMinus, 'Decrease playback speed');
-  const speedInc = speedStepper(IconPlus, 'Increase playback speed');
+  const speedDec = speedStepper(IconMinus, i18nLabel('speedDecrease', 'Decrease playback speed'));
+  const speedInc = speedStepper(IconPlus, i18nLabel('speedIncrease', 'Increase playback speed'));
 
   const speedSlider = document.createElement('input');
   speedSlider.type = 'range';
@@ -240,7 +247,10 @@ export function attachControls({
   speedSlider.max = String(SPEED_MAX);
   speedSlider.step = String(SPEED_SLIDER_STEP);
   speedSlider.value = String(state.selectedRate);
-  speedSlider.setAttribute('aria-label', 'Playback speed');
+  speedSlider.setAttribute('aria-label', i18nLabel('playbackSpeed', 'Playback speed'));
+  // Announce the initial rate up front — setRate only fires on interaction, so
+  // without this the slider reads its raw numeric value until the first change.
+  speedSlider.setAttribute('aria-valuetext', speedLabel(state.selectedRate));
 
   // Drive the elapsed-fill gradient from JS so the painted track tracks the
   // native knob exactly (same approach as the volume + video sliders).
@@ -321,7 +331,7 @@ export function attachControls({
   gearBtn.addEventListener('click', onGearClick);
 
   // ----- loop -----
-  const loopBtn = button('audio-loop', 'Loop', IconPlayerLoop);
+  const loopBtn = button('audio-loop', i18nLabel('loop', 'Loop'), IconPlayerLoop);
   loopBtn.setAttribute('aria-pressed', String(media.loop));
 
   // ----- assemble bar -----

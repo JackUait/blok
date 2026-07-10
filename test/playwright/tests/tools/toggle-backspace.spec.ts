@@ -163,9 +163,12 @@ test.describe('Toggle - Backspace key behavior', () => {
       expect(child1?.parent).toBe('toggle-1');
     });
 
-    test('Backspace at start of non-empty first child does nothing instead of promoting block out', async ({ page }) => {
-      // Non-empty first child, cursor positioned at start via Home key.
-      // Currently promotes the block out of the toggle; should do nothing (no previous sibling).
+    test('Backspace at start of a non-empty first child outdents it out of the toggle (Notion parity)', async ({ page }) => {
+      // Non-empty first/only child, cursor at start via Home key. Notion parity:
+      // Backspace removes one indent level — the child outdents OUT of the toggle to
+      // become a following sibling at root, preserving its text (mirrors the
+      // plain-parent "Backspace removes the indent" behaviour). It must NOT merge
+      // into the toggle title or stay put (the old no-op divergence).
       await createBlok(page, {
         blocks: [
           { id: 'toggle-1', type: 'toggle', data: { text: 'My Toggle' }, content: ['child-1'] },
@@ -186,21 +189,23 @@ test.describe('Toggle - Backspace key behavior', () => {
 
       const allBlocks = saved?.blocks ?? [];
 
-      // child-1 must NOT be promoted — 3 blocks remain, child-1 still inside toggle with text intact
+      // Still 3 blocks (nothing deleted/merged), but child-1 is now at root with its
+      // text intact — outdented out of the toggle.
       expect(allBlocks.length).toBe(3);
 
       const child1 = allBlocks.find(b => b.id === 'child-1');
 
-      expect(child1?.parent).toBe('toggle-1');
+      expect(child1?.parent).toBeUndefined();
       const child1Data = child1?.data as { text?: string } | undefined;
       expect(child1Data?.text).toBe('Hello world');
     });
 
-    test('Backspace at start of first child of the second of two adjacent toggles does NOT merge across containers', async ({ page }) => {
+    test('Backspace at start of first child of the second of two adjacent toggles outdents it WITHOUT merging across containers', async ({ page }) => {
       // Two adjacent toggles, each with one child. Caret at start of the second
       // toggle's first child. The previous block in the flat list is the first
-      // toggle's last child — a DIFFERENT parent container. Backspace must not
-      // cross the boundary.
+      // toggle's last child — a DIFFERENT parent container. Backspace outdents
+      // child-b out of toggle-b (Notion parity) but must NOT merge it into the first
+      // toggle's content (no cross-container merge).
       await createBlok(page, {
         blocks: [
           { id: 'toggle-a', type: 'toggle', data: { text: 'Toggle A' }, content: ['child-a'] },
@@ -224,16 +229,18 @@ test.describe('Toggle - Backspace key behavior', () => {
       const childAAfter = allBlocks.find(b => b.id === 'child-a');
       const childBAfter = allBlocks.find(b => b.id === 'child-b');
 
-      // Both children remain in their respective toggles.
+      // child-a is untouched inside toggle-a — NO cross-container merge happened.
       expect(childAAfter?.parent).toBe('toggle-a');
       expect((childAAfter?.data as { text?: string } | undefined)?.text).toBe('Inside A');
 
-      expect(childBAfter?.parent).toBe('toggle-b');
+      // child-b outdented OUT of toggle-b to root, text intact (not merged into A).
+      expect(childBAfter?.parent).toBeUndefined();
       expect((childBAfter?.data as { text?: string } | undefined)?.text).toBe('Inside B');
 
-      // No surprise orphans.
+      // Exactly one root paragraph (the outdented child-b); A's content was not stolen.
       const orphaned = allBlocks.filter(b => b.type === 'paragraph' && !b.parent);
-      expect(orphaned).toHaveLength(0);
+      expect(orphaned).toHaveLength(1);
+      expect(orphaned[0]?.id).toBe('child-b');
     });
 
     test('Backspace at start of non-empty child with previous sibling merges into previous sibling inside toggle', async ({ page }) => {

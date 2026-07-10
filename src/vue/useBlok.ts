@@ -13,8 +13,52 @@ import { Blok as BlokRuntime } from '../blok';
 import { setHolder, removeHolder } from './holder-map';
 import { deepEqual } from '../shared/deep-equal';
 import { BLOK_DEFAULT_CONFIG, mergeBlokDefaults } from './provide-blok';
+import {
+  createBlockPortalRegistry,
+  BLOK_PORTAL_REGISTRY_CONFIG_KEY,
+  type BlockPortalRegistry,
+} from './block-portal-registry';
+import { setRegistry, removeRegistry } from './registry-map';
 import type { Blok, OutputData } from '@/types';
 import type { UseBlokConfig } from './types';
+
+/**
+ * Inject the editor's portal registry into every `createVueBlock` tool's config
+ * (vanilla tools are left untouched), returning a NEW tools object so the
+ * consumer's config is never mutated. A vue-block tool is constructed by CORE,
+ * outside any Vue `setup`, so it cannot `inject()` — this config bridge is how
+ * the tool reaches its editor-scoped registry.
+ */
+const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): unknown => {
+  if (tools === null || typeof tools !== 'object') {
+    return tools;
+  }
+
+  const result: Record<string, unknown> = {};
+
+  for (const [name, entry] of Object.entries(tools as Record<string, unknown>)) {
+    const toolClass = typeof entry === 'function' ? entry : (entry as { class?: unknown })?.class;
+    const isVueBlock =
+      typeof toolClass === 'function' && (toolClass as { __isBlokVueBlock?: boolean }).__isBlokVueBlock === true;
+
+    if (!isVueBlock) {
+      result[name] = entry;
+
+      continue;
+    }
+
+    const base: Record<string, unknown> =
+      typeof entry === 'function' ? { class: entry } : { ...(entry as Record<string, unknown>) };
+
+    base.config = {
+      ...((base.config as Record<string, unknown> | undefined) ?? {}),
+      [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry,
+    };
+    result[name] = base;
+  }
+
+  return result;
+};
 
 /**
  * Composable that manages a Blok editor instance lifecycle.
@@ -92,6 +136,7 @@ export function useBlok(
   const teardown = (): void => {
     if (state.current !== null) {
       removeHolder(state.current);
+      removeRegistry(state.current);
       try {
         state.current.destroy();
       } catch {
@@ -111,6 +156,15 @@ export function useBlok(
 
     const snapshot = buildConfig();
 
+    // Per-editor portal registry for `createVueBlock` tools: inject it into each
+    // vue-block tool's config (so the core-constructed tool can reach it) and
+    // associate it with the editor below (so BlokContent can mount the host).
+    const registry = createBlockPortalRegistry();
+
+    if (snapshot.tools !== undefined) {
+      snapshot.tools = injectPortalRegistry(snapshot.tools, registry);
+    }
+
     // Wrap onSave (when the consumer opted in): record the editor's own
     // serialized output as the dedup baseline BEFORE notifying the consumer, so a
     // controlled `update:data -> data` echo deep-equals it and never re-renders.
@@ -126,6 +180,7 @@ export function useBlok(
 
     state.current = blok;
     setHolder(blok, holder);
+    setRegistry(blok, registry);
 
     void blok.isReady
       .then(() => {

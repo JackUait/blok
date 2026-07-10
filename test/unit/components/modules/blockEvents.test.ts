@@ -41,6 +41,8 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     } as unknown as BlokModules['Toolbar'],
     BlockSelection: {
       anyBlockSelected: false,
+      navigationModeEnabled: false,
+      adoptSelectionIntoNavigationMode: vi.fn(() => false),
       clearSelection: vi.fn(),
       copySelectedBlocks: vi.fn(() => Promise.resolve()),
       selectedBlocks: [],
@@ -56,6 +58,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
       previousBlock: null,
       nextBlock: null,
       getBlockByChildNode: vi.fn(),
+      setCurrentBlockByChildNode: vi.fn(),
       insertDefaultBlockAtIndex: vi.fn(),
       removeBlock: vi.fn(),
       removeSelectedBlocks: vi.fn(),
@@ -321,6 +324,26 @@ describe('BlockEvents', () => {
       expect(() => blockEvents.keydown(event)).not.toThrow();
     });
 
+    it.each([
+      ['Enter', keyCodes.ENTER],
+      ['Backspace', keyCodes.BACKSPACE],
+      ['Delete', keyCodes.DELETE],
+    ])('eagerly resolves currentBlock from the event target on %s keydown', (_label, keyCode) => {
+      const setCurrentBlockByChildNode = vi.fn();
+      const target = document.createElement('div');
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          setCurrentBlockByChildNode,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const event = createKeyboardEvent({ keyCode, target });
+
+      blockEvents.keydown(event);
+
+      expect(setCurrentBlockByChildNode).toHaveBeenCalledWith(target);
+    });
+
     it('activates toolbox and inserts slash when "/" key is pressed in empty block', () => {
       const currentBlock = {
         isEmpty: true,
@@ -458,6 +481,116 @@ describe('BlockEvents', () => {
       expect(moveAndOpen).toHaveBeenCalledTimes(1);
       expect(blockSettingsOpen).toHaveBeenCalledTimes(1);
       expect(blockSettingsOpened).toBe(true);
+    });
+
+    it('opens BlockSettings for Ctrl+Slash when multiple blocks are selected', () => {
+      let blockSettingsOpened = false;
+      const blockSettingsOpen = vi.fn().mockImplementation(async function(this: BlokModules['BlockSettings']) {
+        this.opened = true;
+        blockSettingsOpened = true;
+      });
+      const moveAndOpenForMultipleBlocks = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockSelection: {
+          selectedBlocks: [{}, {}] as unknown as Block[],
+        } as unknown as BlokModules['BlockSelection'],
+        BlockSettings: {
+          opened: false,
+          open: blockSettingsOpen,
+        } as unknown as BlokModules['BlockSettings'],
+        Toolbar: {
+          opened: false,
+          moveAndOpenForMultipleBlocks,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const event = createKeyboardEvent({ code: 'Slash', metaKey: true });
+
+      blockEvents.keydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(moveAndOpenForMultipleBlocks).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpen).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpened).toBe(true);
+    });
+  });
+
+  describe('Shift+F10 context menu', () => {
+    it('opens BlockSettings anchored to the current block holder rect', () => {
+      let blockSettingsOpened = false;
+      const blockSettingsOpen = vi.fn().mockImplementation(async function(this: BlokModules['BlockSettings']) {
+        this.opened = true;
+        blockSettingsOpened = true;
+      });
+      const moveAndOpen = vi.fn();
+      const holder = document.createElement('div');
+      const currentBlock = { holder } as unknown as Block;
+      const setCurrentBlockByChildNode = vi.fn(() => currentBlock);
+      const blockEvents = createBlockEvents({
+        BlockSelection: {
+          selectedBlocks: [],
+        } as unknown as BlokModules['BlockSelection'],
+        BlockManager: {
+          currentBlock,
+          setCurrentBlockByChildNode,
+        } as unknown as BlokModules['BlockManager'],
+        BlockSettings: {
+          opened: false,
+          open: blockSettingsOpen,
+        } as unknown as BlokModules['BlockSettings'],
+        Toolbar: {
+          opened: false,
+          moveAndOpen,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const event = createKeyboardEvent({ key: 'F10', shiftKey: true });
+
+      blockEvents.keydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(moveAndOpen).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpen).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpened).toBe(true);
+
+      // The block is passed and anchored to a DOMRect (the holder rect),
+      // not an element trigger.
+      const [passedBlock, passedAnchor] = blockSettingsOpen.mock.calls[0];
+
+      expect(passedBlock).toBe(currentBlock);
+      // A rect anchor (the holder's getBoundingClientRect), not an element.
+      expect(passedAnchor).not.toBeInstanceOf(HTMLElement);
+      expect(passedAnchor).toMatchObject({
+        top: expect.any(Number),
+        left: expect.any(Number),
+        width: expect.any(Number),
+        height: expect.any(Number),
+      });
+    });
+
+    it('routes a multi-block selection to the multi-block block settings path', () => {
+      const blockSettingsOpen = vi.fn().mockImplementation(async function(this: BlokModules['BlockSettings']) {
+        this.opened = true;
+      });
+      const moveAndOpenForMultipleBlocks = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockSelection: {
+          selectedBlocks: [{}, {}] as unknown as Block[],
+        } as unknown as BlokModules['BlockSelection'],
+        BlockSettings: {
+          opened: false,
+          open: blockSettingsOpen,
+        } as unknown as BlokModules['BlockSettings'],
+        Toolbar: {
+          opened: false,
+          moveAndOpenForMultipleBlocks,
+        } as unknown as BlokModules['Toolbar'],
+      });
+      const event = createKeyboardEvent({ key: 'F10', shiftKey: true });
+
+      blockEvents.keydown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(moveAndOpenForMultipleBlocks).toHaveBeenCalledTimes(1);
+      expect(blockSettingsOpen).toHaveBeenCalledTimes(1);
     });
   });
 

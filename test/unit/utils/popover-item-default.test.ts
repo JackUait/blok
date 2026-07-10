@@ -9,12 +9,17 @@ vi.mock('../../../src/components/utils/tooltip', () => ({
   hide: vi.fn(),
 }));
 
+vi.mock('../../../src/components/utils/logger', () => ({
+  log: vi.fn(),
+}));
+
 import {
   PopoverItemDefault,
   type PopoverItemDefaultParams
 } from '../../../src/components/utils/popover/components/popover-item';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import * as tooltip from '../../../src/components/utils/tooltip';
+import { log } from '../../../src/components/utils/logger';
 
 type ItemSetupResult = {
   item: PopoverItemDefault;
@@ -133,6 +138,37 @@ describe('PopoverItemDefault', () => {
     expect(onActivate).toHaveBeenCalledTimes(1);
     expect(onActivate).toHaveBeenCalledWith(params);
     expect(element).not.toHaveAttribute(DATA_ATTR.popoverItemConfirmation);
+  });
+
+  it('exposes a spec-valid keyboard shortcut via aria-keyshortcuts', () => {
+    const { element } = createItem({ title: 'Copy', secondaryLabel: '⌘C' });
+
+    // aria-keyshortcuts requires UI-Events key values ("Meta"), not the
+    // pretty display names ("Command").
+    expect(element).toHaveAttribute('aria-keyshortcuts', 'Meta+C');
+  });
+
+  it('formats multi-modifier shortcuts with spec-valid aria-keyshortcuts tokens', () => {
+    const { element } = createItem({ title: 'Copy link', secondaryLabel: '⌃⌘L' });
+
+    expect(element).toHaveAttribute('aria-keyshortcuts', 'Control+Meta+L');
+  });
+
+  it('does not set aria-keyshortcuts when the item has no shortcut', () => {
+    const { element } = createItem();
+
+    expect(element).not.toHaveAttribute('aria-keyshortcuts');
+  });
+
+  it('logs rather than swallows an error thrown by onActivate', () => {
+    const failure = new Error('activation failed');
+    const onActivate = vi.fn(() => {
+      throw failure;
+    });
+    const { item } = createItem({ onActivate });
+
+    expect(() => item.handleClick()).not.toThrow();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('onActivate'), 'error', failure);
   });
 
 
@@ -349,5 +385,170 @@ describe('PopoverItemDefault', () => {
     });
 
     expect(anyCallHasSecondaryArg).toBe(false);
+  });
+
+  describe('ARIA roles', () => {
+    it('exposes a plain actionable item as role="menuitem"', () => {
+      const { element } = createItem({ title: 'Copy' });
+
+      expect(element.getAttribute('role')).toBe('menuitem');
+    });
+
+    it('exposes a toggleable item as role="menuitemcheckbox" with aria-checked reflecting state', () => {
+      const item = new PopoverItemDefault({
+        title: 'Bold',
+        name: 'bold',
+        toggle: true,
+        isActive: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('menuitemcheckbox');
+      expect(element.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('defaults aria-checked to false for an inactive toggleable item', () => {
+      const item = new PopoverItemDefault({
+        title: 'Bold',
+        name: 'bold',
+        toggle: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('menuitemcheckbox');
+      expect(element.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('updates aria-checked when the active state toggles', () => {
+      const item = new PopoverItemDefault({
+        title: 'Bold',
+        name: 'bold',
+        toggle: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      item.toggleActive(true);
+      expect(element.getAttribute('aria-checked')).toBe('true');
+
+      item.toggleActive(false);
+      expect(element.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('exposes a listbox option via the menuItemRole render param', () => {
+      const item = new PopoverItemDefault(
+        { title: 'Heading', name: 'header', onActivate: vi.fn() },
+        { menuItemRole: 'option' }
+      );
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('option');
+      expect(element).not.toBeChecked();
+    });
+
+    it('promotes a checkbox item to role="menuitemradio" via useRadioRole() and keeps aria-checked', () => {
+      const item = new PopoverItemDefault({
+        title: 'Left',
+        name: 'left',
+        toggle: 'align',
+        isActive: true,
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      expect(element.getAttribute('role')).toBe('menuitemcheckbox');
+
+      item.useRadioRole();
+
+      expect(element.getAttribute('role')).toBe('menuitemradio');
+      expect(element.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('keeps aria-checked in sync on a menuitemradio item when toggling active', () => {
+      const item = new PopoverItemDefault({
+        title: 'Left',
+        name: 'left',
+        toggle: 'align',
+        onActivate: vi.fn(),
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      item.useRadioRole();
+      expect(element.getAttribute('aria-checked')).toBe('false');
+
+      item.toggleActive(true);
+      expect(element.getAttribute('aria-checked')).toBe('true');
+
+      item.toggleActive(false);
+      expect(element.getAttribute('aria-checked')).toBe('false');
+    });
+
+    it('leaves a listbox option untouched when useRadioRole() is called', () => {
+      const item = new PopoverItemDefault(
+        { title: 'Heading', name: 'header', toggle: 'align', onActivate: vi.fn() },
+        { menuItemRole: 'option' }
+      );
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      item.useRadioRole();
+
+      expect(element.getAttribute('role')).toBe('option');
+    });
+
+    it('marks a disabled item with aria-disabled', () => {
+      const { element } = createItem({ title: 'Copy', isDisabled: true });
+
+      expect(element.getAttribute('aria-disabled')).toBe('true');
+    });
+
+    it('hides decorative icon and chevron from assistive tech', () => {
+      const item = new PopoverItemDefault({
+        title: 'Convert',
+        name: 'convert',
+        icon: '<svg data-blok-testid="custom-icon"></svg>',
+        children: { items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }] },
+      });
+      const element = item.getElement();
+
+      if (element === null) {
+        throw new Error('root element expected');
+      }
+
+      const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+      const chevron = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-chevron-right"]');
+
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(chevron?.getAttribute('aria-hidden')).toBe('true');
+    });
   });
 });

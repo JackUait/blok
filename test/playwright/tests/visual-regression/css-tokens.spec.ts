@@ -117,7 +117,10 @@ test.describe('CSS tokens — visual regression baselines', () => {
       { type: 'list', data: { style: 'unordered', items: [{ content: 'One' }, { content: 'Two' }] } },
     ]);
 
-    const list = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"]`);
+    // A legacy list seed with multiple items migrates to one flat `list` block
+    // per item, so the component locator matches several elements — scope to the
+    // first to avoid a strict-mode violation.
+    const list = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-component="list"]`).first();
     await expect(list).toBeVisible();
 
     await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toHaveScreenshot('editor-shell.png', SCREENSHOT_OPTIONS);

@@ -66,32 +66,40 @@ type DupSetup = {
   blocks: Block[];
   caret: CaretMock;
   clearSelection: Mock;
+  selectBlock: Mock;
   moveAndOpen: Mock;
+  blockSelection: { selectedBlocks: Block[]; clearSelection: Mock; selectBlock: Mock };
 };
 
-const createSetup = (dup: Block): DupSetup => {
+const createSetup = (dups: Block | Block[]): DupSetup => {
+  const dupQueue = Array.isArray(dups) ? [...dups] : [dups];
   const wrapper = document.createElement('div');
 
   wrapper.setAttribute('data-blok-editor', '');
 
   const blocks = [createBlockStub('block-1'), createBlockStub('block-2')];
+  const allBlocks = [...blocks, ...dupQueue];
 
+  // Hand out one fresh copy per insert() call so a multi-block selection yields
+  // distinct duplicated blocks (single-block setups still get their one dup).
+  let insertCount = 0;
   const blockManager = {
     blocks,
-    getBlockIndex: vi.fn((block: Block) => blocks.indexOf(block)),
+    getBlockIndex: vi.fn((block: Block) => allBlocks.indexOf(block)),
     getBlockByIndex: vi.fn((index: number) => blocks[index]),
-    getBlockById: vi.fn((id: string) => blocks.find((b) => b.id === id)),
+    getBlockById: vi.fn((id: string) => allBlocks.find((b) => b.id === id)),
     move: vi.fn(),
-    insert: vi.fn(() => dup),
+    insert: vi.fn(() => dupQueue[insertCount++] ?? dupQueue[dupQueue.length - 1]),
     setBlockParent: vi.fn(),
     setBlockIndent: vi.fn(),
   };
 
   const clearSelection = vi.fn();
+  const selectBlock = vi.fn();
   const blockSelection = {
     selectedBlocks: [] as Block[],
     clearSelection,
-    selectBlock: vi.fn(),
+    selectBlock,
   };
 
   const moveAndOpen = vi.fn();
@@ -136,7 +144,7 @@ const createSetup = (dup: Block): DupSetup => {
   dragManager.state = state;
   void dragManager.prepare();
 
-  return { dragManager, blocks, caret, clearSelection, moveAndOpen };
+  return { dragManager, blocks, caret, clearSelection, selectBlock, moveAndOpen, blockSelection };
 };
 
 describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
@@ -160,5 +168,40 @@ describe('duplicateBlocksInPlace caret placement (BUG #9)', () => {
     // caret lands at the end of the new copy ready to edit (Notion parity).
     expect(clearSelection).toHaveBeenCalled();
     expect(caret.setToBlock).toHaveBeenCalledWith(dup, caret.positions.END);
+  });
+
+  it('briefly highlights the duplicated copy as just-added (blue arrival pulse)', async () => {
+    const dup = createBlockStub('dup-1');
+    const { dragManager, blocks } = createSetup(dup);
+
+    expect(dup.holder.classList.contains('blok-block--target')).toBe(false);
+
+    await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    // Notion parity: a freshly duplicated block gets the same blue "just added"
+    // arrival pulse as a hash-navigated block (the `blok-block--target` class,
+    // whose keyframes tween `var(--blok-selection)`), signalling what just
+    // appeared. Placing the caret alone (BUG #9) gave no visible cue.
+    expect(dup.holder.classList.contains('blok-block--target')).toBe(true);
+  });
+
+  it('keeps the duplicated blocks block-selected when the source was a block selection', async () => {
+    const dup1 = createBlockStub('dup-1');
+    const dup2 = createBlockStub('dup-2');
+    const { dragManager, blocks, caret, selectBlock, blockSelection } = createSetup([dup1, dup2]);
+
+    // Source: a multi-block BLOCK selection (both blocks selected).
+    for (const block of blocks) {
+      block.selected = true;
+    }
+    blockSelection.selectedBlocks = blocks;
+
+    await dragManager.duplicateBlocksInPlace(blocks[0]);
+
+    // Notion parity: duplicating a block selection keeps the NEW copies selected
+    // (so the duplicate move can be repeated), rather than collapsing to a caret.
+    expect(selectBlock).toHaveBeenCalledWith(dup1);
+    expect(selectBlock).toHaveBeenCalledWith(dup2);
+    expect(caret.setToBlock).not.toHaveBeenCalled();
   });
 });

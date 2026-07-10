@@ -1,5 +1,7 @@
 import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
-import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
+import type { CellPlacement, ClipboardBlockData, TableCellsClipboard, TableClipboardCell } from './types';
+import { mapPastedTableCells } from './table-operations';
+import { parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
 import { clean } from '../../components/utils/sanitizer';
@@ -35,6 +37,10 @@ interface CellEntry {
   color?: string;
   textColor?: string;
   placement?: CellPlacement;
+  /** Columns spanned when the cell is a merge origin (default 1). */
+  colspan?: number;
+  /** Rows spanned when the cell is a merge origin (default 1). */
+  rowspan?: number;
 }
 
 /**
@@ -51,8 +57,10 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
   const minRow = Math.min(...entries.map((e) => e.row));
   const minCol = Math.min(...entries.map((e) => e.col));
 
-  const maxRow = Math.max(...entries.map((e) => e.row));
-  const maxCol = Math.max(...entries.map((e) => e.col));
+  // Merge origins extend the payload by their span: a fully merged region
+  // contributes a single physical entry but covers span-many positions.
+  const maxRow = Math.max(...entries.map((e) => e.row + (e.rowspan ?? 1) - 1));
+  const maxCol = Math.max(...entries.map((e) => e.col + (e.colspan ?? 1) - 1));
 
   const rows = maxRow - minRow + 1;
   const cols = maxCol - minCol + 1;
@@ -81,6 +89,14 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
 
     if (entry.placement !== undefined) {
       cells[r][c].placement = entry.placement;
+    }
+
+    if ((entry.colspan ?? 1) > 1) {
+      cells[r][c].colspan = entry.colspan;
+    }
+
+    if ((entry.rowspan ?? 1) > 1) {
+      cells[r][c].rowspan = entry.rowspan;
     }
   }
 
@@ -144,7 +160,15 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
     .map((row) => {
       const cellsHtml = row
         .map((cell) => {
-          const text = cell.blocks.map(extractBlockHtml).join(' ');
+          // Blocks without a string `text` (legacy items-array shapes) are
+          // normalized to paragraphs so the canonical serializer — which keeps
+          // list blocks as real <ul>/<ol> markup for external apps — can
+          // render every block.
+          const text = serializeCellBlocksToHtml(
+            cell.blocks.map((block) =>
+              typeof block.data.text === 'string' ? block : { tool: 'paragraph', data: { text: extractBlockHtml(block) } }
+            )
+          );
 
           const styles = [
             cell.color ? `background-color: ${cell.color}` : '',
@@ -194,6 +218,12 @@ const CELL_SANITIZE_CONFIG: SanitizerConfig = {
   i: true,
   em: true,
   br: true,
+  // List structure inside cells: parseCellContentToBlocks reads these to
+  // reconstruct list blocks — stripping them silently flattens cell lists.
+  ul: true,
+  ol: true,
+  li: { style: true, 'aria-level': true, 'data-list-style': true },
+  input: { type: true, checked: true },
   a: { href: true, target: '_blank', rel: 'nofollow' },
   mark: (node: Element): { [attr: string]: boolean | string } => {
     const el = node as HTMLElement;
@@ -223,6 +253,22 @@ export function isDefaultBlack(color: string): boolean {
 }
 
 /**
+ * Whether an element's text is entirely a link's text. Pasted links always use
+ * Blok's default link color, so any color on link text is dropped. True when the
+ * node is inside an `<a>` or wraps an `<a>` covering all of its text; a span that
+ * only partially overlaps a link keeps its color (intentional text formatting).
+ */
+function isLinkContent(node: Element): boolean {
+  if (node.closest('a') !== null) {
+    return true;
+  }
+
+  const anchor = node.querySelector('a');
+
+  return anchor !== null && anchor.textContent?.trim() === node.textContent?.trim();
+}
+
+/**
  * Extract HTML content from a `<td>`/`<th>` element, converting Google Docs
  * style-based spans to semantic tags and sanitizing to allowed formatting only.
  *
@@ -248,7 +294,8 @@ function sanitizeCellHtml(td: Element): string {
     const color = colorMatch?.[1]?.trim();
     const bgColor = bgMatch?.[1]?.trim();
 
-    const hasColor = color !== undefined && !isDefaultBlack(color);
+    const isLinkColor = color !== undefined && isLinkContent(span);
+    const hasColor = !isLinkColor && color !== undefined && !isDefaultBlack(color);
     // Filter resolved page bg (white/dark) so plain spans don't collapse onto gray preset.
     const hasBgColor = bgColor !== undefined
       && bgColor !== 'transparent'
@@ -278,40 +325,33 @@ function sanitizeCellHtml(td: Element): string {
     span.replaceWith(document.createRange().createContextualFragment(wrapped));
   }
 
-  // Move color/background-color from <a> tags into <mark> wrappers.
-  // The sanitizer only allows href on <a>, so inline color styles would be lost.
+  // Move background-color from <a> tags into <mark> wrappers.
+  // The sanitizer only allows href on <a>, so an inline background would be lost.
+  // A color on the <a> is the link's own color and is dropped: pasted links
+  // always use Blok's default link color.
   for (const anchor of Array.from(clone.querySelectorAll('a[style]'))) {
     const style = anchor.getAttribute('style') ?? '';
 
-    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
     const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
-
-    const color = colorMatch?.[1]?.trim();
     const bgColor = bgMatch?.[1]?.trim();
 
-    const hasColor = color !== undefined && !isDefaultBlack(color) && color !== 'inherit';
     const hasBgColor = bgColor !== undefined
       && bgColor !== 'transparent'
       && bgColor !== 'inherit'
       && !isDefaultWhiteBackground(bgColor)
       && !isDefaultDarkBackground(bgColor);
 
-    if (!hasColor && !hasBgColor) {
+    const el = anchor as HTMLElement;
+
+    el.style.removeProperty('color');
+
+    if (!hasBgColor) {
       continue;
     }
 
-    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
-    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
+    const mappedBg = mapToNearestPresetColor(bgColor, 'bg');
 
-    const colorStyles = [
-      hasColor ? `color: ${mappedColor}` : '',
-      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
-    ].filter(Boolean).join('; ');
-
-    const el = anchor as HTMLElement;
-
-    el.innerHTML = `<mark style="${colorStyles};">${el.innerHTML}</mark>`;
-    el.style.removeProperty('color');
+    el.innerHTML = `<mark style="background-color: ${mappedBg};">${el.innerHTML}</mark>`;
     el.style.removeProperty('background-color');
   }
 
@@ -362,59 +402,23 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     return null;
   }
 
-  type CellPayload = TableCellsClipboard['cells'][number][number];
-
-  const cellGrid: CellPayload[][] = [];
-
-  rows.forEach((row) => {
-    const tds = row.querySelectorAll('td, th');
-    const rowCells: CellPayload[] = [];
-
-    tds.forEach((td) => {
-      const text = sanitizeCellHtml(td);
-      const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
-      const blocks = segments.length > 0
-        ? segments.map(s => ({ tool: 'paragraph' as const, data: { text: s } }))
-        : [{ tool: 'paragraph' as const, data: { text: '' } }];
-
-      const cell: CellPayload = { blocks };
-
-      // Extract cell-level colors from td/th style attribute
-      const tdStyle = td.getAttribute('style') ?? '';
-      const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
-
-      if (cellBgMatch?.[1]) {
-        const cellBg = cellBgMatch[1].trim();
-
-        // Skip resolved page bg (white/dark) so plain cells don't collapse onto gray preset.
-        if (!isDefaultWhiteBackground(cellBg) && !isDefaultDarkBackground(cellBg)) {
-          cell.color = mapToNearestPresetColor(cellBg, 'bg');
-        }
-      }
-
-      const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
-
-      if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
-        cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
-      }
-
-      rowCells.push(cell);
-    });
-
-    cellGrid.push(rowCells);
+  // Walk the rows with the shared occupancy model so colspan/rowspan place
+  // every cell at its correct LOGICAL column and merges survive as
+  // spans + covered flags (same fix as the top-level table paste).
+  const cellGrid = mapPastedTableCells<TableClipboardCell>(rows, {
+    cell: (td, { colspan, rowspan }) => ({
+      ...buildCellPayloadFromTd(td),
+      ...(colspan > 1 ? { colspan } : {}),
+      ...(rowspan > 1 ? { rowspan } : {}),
+    }),
+    covered: () => ({ blocks: [], covered: true }),
+    filler: () => ({ blocks: [{ tool: 'paragraph', data: { text: '' } }] }),
   });
 
-  const maxCols = Math.max(0, ...cellGrid.map((row) => row.length));
+  const maxCols = cellGrid[0]?.length ?? 0;
 
   if (cellGrid.length === 0 || maxCols === 0) {
     return null;
-  }
-
-  // Normalize: ensure all rows have the same number of columns
-  for (const row of cellGrid) {
-    while (row.length < maxCols) {
-      row.push({ blocks: [{ tool: 'paragraph', data: { text: '' } }] });
-    }
   }
 
   return {
@@ -422,6 +426,39 @@ export function parseGenericHtmlTable(html: string): TableCellsClipboard | null 
     cols: maxCols,
     cells: cellGrid,
   };
+}
+
+/**
+ * Build a clipboard cell payload from a single `<td>`/`<th>`: sanitized
+ * paragraph blocks (split on line breaks), list blocks for `<ul>`/`<ol>`
+ * content (structure would otherwise silently flatten to text), plus
+ * cell-level colors.
+ */
+function buildCellPayloadFromTd(td: Element): TableClipboardCell {
+  const blocks: ClipboardBlockData[] = parseCellContentToBlocks(sanitizeCellHtml(td));
+
+  const cell: TableClipboardCell = { blocks };
+
+  // Extract cell-level colors from td/th style attribute
+  const tdStyle = td.getAttribute('style') ?? '';
+  const cellBgMatch = /background-color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+  if (cellBgMatch?.[1]) {
+    const cellBg = cellBgMatch[1].trim();
+
+    // Skip resolved page bg (white/dark) so plain cells don't collapse onto gray preset.
+    if (!isDefaultWhiteBackground(cellBg) && !isDefaultDarkBackground(cellBg)) {
+      cell.color = mapToNearestPresetColor(cellBg, 'bg');
+    }
+  }
+
+  const cellTextColorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(tdStyle);
+
+  if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
+    cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
+  }
+
+  return cell;
 }
 
 /**

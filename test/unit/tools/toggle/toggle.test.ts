@@ -584,6 +584,27 @@ describe('ToggleItem', () => {
       }
     });
 
+    it('stamps data-blok-placeholder-visible="always-active" to match its always-when-empty rendering policy', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`);
+
+      expect(contentEl?.getAttribute('data-blok-placeholder-visible')).toBe('always-active');
+    });
+
+    it('does not carry empty-editor-gated placeholder classes (the placeholder shows whenever empty)', async () => {
+      const { ToggleItem } = await import('../../../../src/tools/toggle');
+      const toggle = new ToggleItem(createToggleOptions());
+      const element = toggle.render();
+      const contentEl = element.querySelector(`[${TOGGLE_ATTR.toggleContent}]`) as HTMLElement;
+
+      // The empty-editor variant is the only class source gated on a
+      // [data-blok-empty=true] ancestor; the toggle's real policy is
+      // "visible whenever empty", so no such hook may remain.
+      expect(contentEl.getAttribute('class') ?? '').not.toContain('data-blok-empty');
+    });
+
     it('sets placeholder text to "Toggle" by default', async () => {
       const { ToggleItem } = await import('../../../../src/tools/toggle');
       const toggle = new ToggleItem(createToggleOptions());
@@ -769,8 +790,9 @@ describe('ToggleItem', () => {
   });
 
   describe('accessibility and visual fixes', () => {
-    // Fix: Vertical alignment — header row uses items-center so arrow SVG center aligns with text center
-    it('header row uses items-center class (not items-start) for vertical alignment', async () => {
+    // Fix: Vertical alignment — header row uses items-start so the arrow stays on the
+    // FIRST line of a multi-line title (items-center would drift it to the middle line).
+    it('header row uses items-start class (not items-center) for first-line alignment', async () => {
       const { buildToggleItem } = await import('../../../../src/tools/toggle/dom-builder');
       const result = buildToggleItem({
         data: { text: '' },
@@ -787,16 +809,19 @@ describe('ToggleItem', () => {
       const headerRow = result.wrapper.querySelector('div');
 
       expect(headerRow).not.toBeNull();
-      expect(headerRow?.classList.contains('items-center')).toBe(true);
-      expect(headerRow?.classList.contains('items-start')).toBe(false);
+      expect(headerRow?.classList.contains('items-start')).toBe(true);
+      expect(headerRow?.classList.contains('items-center')).toBe(false);
     });
 
-    // Fix 1: Touch target — arrow uses p-[8px] (28px box) with items-center alignment
-    it('arrow element has p-[8px] padding class and no mt-px offset', async () => {
+    // Fix 1: Touch target — arrow is a fixed 28px square (h-7 w-7) whose center is
+    // offset onto the first line, so the container height stays constant.
+    it('arrow element is a fixed h-7/w-7 square with no mt-px offset', async () => {
       const { buildArrow } = await import('../../../../src/tools/toggle/dom-builder');
       const arrow = buildArrow(true, null);
 
-      expect(arrow.className).toContain('p-[8px]');
+      expect(arrow.className).toContain('h-7');
+      expect(arrow.className).toContain('w-7');
+      expect(arrow.className).not.toContain('h-[1.5em]');
       expect(arrow.className).not.toContain('p-[10px]');
       expect(arrow.className).not.toContain('mt-px');
       expect(arrow.className).not.toContain('w-6');

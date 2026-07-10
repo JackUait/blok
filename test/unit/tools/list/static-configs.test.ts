@@ -144,14 +144,42 @@ describe('static-configs', () => {
       const config = getListPasteConfig();
 
       if (config !== false && config.tags) {
-        // tags is now an array of SanitizerConfig objects
-        expect(config.tags).toHaveLength(1);
+        // tags is now an array of SanitizerConfig objects (li + input)
+        expect(config.tags).toHaveLength(2);
         const firstTag = config.tags[0];
         if (isSanitizerConfig(firstTag)) {
           expect(firstTag).toHaveProperty('li');
           expect(firstTag.li).toHaveProperty('style', true);
         } else {
           throw new Error('Expected first tag to be a SanitizerConfig object');
+        }
+      }
+    });
+
+    it('allows LI tags with aria-level and data-list-style attributes for detached paste context', () => {
+      const config = getListPasteConfig();
+
+      if (config !== false && config.tags) {
+        const firstTag = config.tags[0];
+        if (isSanitizerConfig(firstTag)) {
+          expect(firstTag.li).toHaveProperty('aria-level', true);
+          expect(firstTag.li).toHaveProperty('data-list-style', true);
+        } else {
+          throw new Error('Expected first tag to be a SanitizerConfig object');
+        }
+      }
+    });
+
+    it('allows INPUT tags with type and checked attributes so pasted checklists survive sanitization', () => {
+      const config = getListPasteConfig();
+
+      if (config !== false && config.tags) {
+        const inputTag = config.tags[1];
+        if (isSanitizerConfig(inputTag)) {
+          expect(inputTag.input).toHaveProperty('type', true);
+          expect(inputTag.input).toHaveProperty('checked', true);
+        } else {
+          throw new Error('Expected second tag to be a SanitizerConfig object');
         }
       }
     });

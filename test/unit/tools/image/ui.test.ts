@@ -355,7 +355,12 @@ describe('openLightbox', () => {
     close();
   });
 
-  it('download button uses url and fileName on an anchor that is triggered then cleaned up', () => {
+  it('download button fetches a blob and triggers a same-origin download without opening a page', async () => {
+    const blob = new Blob(['data'], { type: 'image/png' });
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, blob: async () => blob })));
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+
     const close = openLightbox({ url: 'https://x/y.png', fileName: 'pic.png' });
     const download = document.querySelector<HTMLButtonElement>('[data-action="lightbox-download"]');
     if (!download) throw new Error('download missing');
@@ -380,12 +385,15 @@ describe('openLightbox', () => {
       });
 
     download.click();
+    // Let the fetch → blob → object-url microtasks settle.
+    await vi.waitFor(() => expect(appended).toHaveLength(1));
 
-    expect(appended).toHaveLength(1);
     const anchor = appended[0];
-    expect(anchor.getAttribute('href')).toBe('https://x/y.png');
+    // Downloads from the same-origin object url, so `download` is honored...
+    expect(anchor.getAttribute('href')).toBe('blob:fake');
     expect(anchor.getAttribute('download')).toBe('pic.png');
-    expect(anchor.getAttribute('target')).toBe('_blank');
+    // ...and it must NOT open a new tab — that is what showed the image page.
+    expect(anchor.getAttribute('target')).toBeNull();
     expect(anchor.getAttribute('rel')).toBe('noopener');
     // The anchor was actually triggered and then detached again.
     expect(clicks).toEqual([anchor]);

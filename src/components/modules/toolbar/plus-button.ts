@@ -12,6 +12,13 @@ import { createTooltipContent } from './tooltip';
 import type { ToolbarNodes } from './types';
 
 /**
+ * Stable id applied to the Toolbox popover container element (in Toolbar.make()).
+ * Referenced by the plus button's `aria-controls` so assistive tech knows which
+ * menu the button expands.
+ */
+export const TOOLBOX_POPOVER_ID = 'blok-toolbox-popover';
+
+/**
  * PlusButtonHandler manages the plus button creation and behavior.
  * Creates the plus button element with tooltip.
  */
@@ -128,6 +135,33 @@ export class PlusButtonHandler {
     });
 
     plusButton.setAttribute(DATA_ATTR.testid, TEST_ID.plusButton);
+
+    /**
+     * Accessibility: expose the plus button as the trigger for the Toolbox
+     * listbox (a searchable combobox surface), not a menu. tabindex="-1" keeps
+     * it out of the tab order (keyboard users insert blocks via "/" or
+     * shortcuts) while still exposing role/label to assistive tech. aria-controls
+     * points at the listbox container (id lives on the popover items element).
+     */
+    plusButton.setAttribute('role', 'button');
+    plusButton.setAttribute('tabindex', '-1');
+    plusButton.setAttribute('aria-label', blok.I18n.t('a11y.insertBlock'));
+    plusButton.setAttribute('aria-haspopup', 'listbox');
+    plusButton.setAttribute('aria-expanded', 'false');
+    plusButton.setAttribute('aria-controls', TOOLBOX_POPOVER_ID);
+
+    /**
+     * Keyboard activation: Enter / Space open the toolbox, mirroring the
+     * mouse-driven flow. Space is prevented from scrolling the page.
+     */
+    plusButton.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') {
+        return;
+      }
+
+      e.preventDefault();
+      this.handleClick();
+    });
 
     // eslint-disable-next-line no-param-reassign -- nodes is mutated by design
     nodes.plusButton = plusButton;

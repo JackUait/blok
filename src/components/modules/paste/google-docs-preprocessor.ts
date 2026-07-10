@@ -213,6 +213,27 @@ function isDefaultBlack(color: string): boolean {
 }
 
 /**
+ * Whether an element's text is entirely a link's text.
+ *
+ * Editors color link text with their own link color (Google Docs `#1155cc`,
+ * Word `#0563c1`, …). Pasted links should always render with Blok's default
+ * link color, so any color sitting on link text is dropped. This returns true
+ * when the node is inside an `<a>`, or wraps an `<a>` that covers all of its
+ * text — the two shapes clipboards emit for a colored link. A span that only
+ * partially overlaps a link (surrounding text + link) is intentional text
+ * formatting and returns false so its color survives.
+ */
+function isLinkContent(node: Element): boolean {
+  if (node.closest('a') !== null) {
+    return true;
+  }
+
+  const anchor = node.querySelector('a');
+
+  return anchor !== null && anchor.textContent?.trim() === node.textContent?.trim();
+}
+
+/**
  * Compute the relative luminance of a CSS color value.
  * Supports rgb(), rgba(), hsl(), hsla(), and hex (#rrggbb / #rgb) formats.
  * Alpha components are ignored — only the base RGB channels are used.
@@ -387,9 +408,16 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
   const color = colorMatch?.[1]?.trim();
   const bgColor = bgMatch?.[1]?.trim();
 
-  const hasColor = isGoogleDocs
+  /**
+   * A link's own color is dropped so the link falls back to the default link
+   * color instead of an explicit <mark> — pasted links always use the default
+   * link color regardless of the source's color.
+   */
+  const isLinkColor = color !== undefined && isLinkContent(span);
+
+  const hasColor = !isLinkColor && (isGoogleDocs
     ? color !== undefined && !isDefaultBlack(color)
-    : color !== undefined && !isDefaultBlack(color) && !isDefaultLightText(color);
+    : color !== undefined && !isDefaultBlack(color) && !isDefaultLightText(color));
   /**
    * Default page backgrounds (white/near-white, near-black) are filtered for both
    * branches. Google Docs writes the page background-color onto every <span> in
@@ -437,42 +465,36 @@ function convertGoogleDocsStyles(wrapper: HTMLElement, isGoogleDocs: boolean): v
 }
 
 /**
- * Convert color/background-color styles on `<a>` elements to `<mark>` tags.
+ * Move background-color styles on `<a>` elements into `<mark>` wrappers.
  *
  * Google Docs sometimes puts background-color directly on the `<a>` element.
  * The sanitizer only allows `href`/`target`/`rel` on `<a>`, so inline styles
- * are stripped — losing the background.  This moves color styles into a
+ * are stripped — losing the background.  This moves the background into a
  * `<mark>` wrapping the link content before sanitization runs.
+ *
+ * A `color` on the `<a>` is the link's own color and is dropped: pasted links
+ * always render with Blok's default link color.
  */
 function convertAnchorColorStyles(wrapper: HTMLElement): void {
   for (const anchor of Array.from(wrapper.querySelectorAll('a[style]'))) {
     const style = anchor.getAttribute('style') ?? '';
 
-    const colorMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
     const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
-
-    const color = colorMatch?.[1]?.trim();
     const bgColor = bgMatch?.[1]?.trim();
 
-    const hasColor = color !== undefined && !isDefaultBlack(color) && color !== 'inherit';
     const hasBgColor = bgColor !== undefined && bgColor !== 'transparent' && bgColor !== 'inherit';
-
-    if (!hasColor && !hasBgColor) {
-      continue;
-    }
-
-    const mappedColor = hasColor ? mapToNearestPresetColor(color, 'text') : '';
-    const mappedBg = hasBgColor ? mapToNearestPresetColor(bgColor, 'bg') : '';
-
-    const colorStyles = [
-      hasColor ? `color: ${mappedColor}` : '',
-      resolveBackgroundStyle(hasBgColor, hasColor, mappedBg),
-    ].filter(Boolean).join('; ');
 
     const el = anchor as HTMLElement;
 
-    el.innerHTML = `<mark style="${colorStyles};">${el.innerHTML}</mark>`;
     el.style.removeProperty('color');
+
+    if (!hasBgColor) {
+      continue;
+    }
+
+    const mappedBg = mapToNearestPresetColor(bgColor, 'bg');
+
+    el.innerHTML = `<mark style="background-color: ${mappedBg};">${el.innerHTML}</mark>`;
     el.style.removeProperty('background-color');
   }
 }

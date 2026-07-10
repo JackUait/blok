@@ -136,6 +136,41 @@ describe('useBlocks — block-data reader (duplicate is composable)', () => {
     expect(captured.node).not.toBeNull();
     expect(captured.node?.type).toBe('header');
   });
+
+  it('round-trips read -> insert carrying TUNES, not just data (faithful duplicate)', () => {
+    // The headline "duplicate a block without the ref" capability must preserve
+    // BOTH data and tunes. getBlockData returns tunes; re-inserting with
+    // `tunes: content.tunes` must forward them to core's insert (8th positional
+    // arg). A duplicate that drops tunes silently loses alignment/color/etc.
+    const { editor } = makeFakeEditor([
+      { id: 'src', name: 'header', preservedData: { text: 'Dup me' }, preservedTunes: { align: { dir: 'left' } } },
+    ]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => {
+      const src = result.current.getById('src');
+      const content = result.current.getBlockData('src');
+
+      result.current.insert({
+        type: src?.type,
+        data: content?.data,
+        tunes: content?.tunes,
+        position: { after: 'src' },
+      });
+    });
+
+    // core.insert(type, data, config, index, needToFocus, replace, id, tunes)
+    expect(editor.blocks.insert).toHaveBeenCalledWith(
+      'header',
+      { text: 'Dup me' },
+      {},
+      expect.any(Number),
+      false,
+      false,
+      undefined,
+      { align: { dir: 'left' } }
+    );
+  });
 });
 
 describe('useBlocks — getBlockIndex(id)', () => {

@@ -641,7 +641,8 @@ test.describe('inline toolbar', () => {
         await page.keyboard.press('ArrowDown');
       }
 
-      // Use Enter to open nested popover (ArrowRight is blocked in inline toolbar per accessibility requirements)
+      // Use Enter to open nested popover (in the inline toolbar, ArrowLeft/ArrowRight move focus
+      // between toolbar items per the WAI-ARIA horizontal toolbar pattern and never open submenus)
       await page.keyboard.press('Enter');
 
       const nestedPopover = page.locator(`${INLINE_TOOLBAR_INTERFACE_SELECTOR} [data-blok-nested="true"] [data-blok-testid="popover-container"]`);

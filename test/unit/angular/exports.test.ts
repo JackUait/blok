@@ -8,4 +8,10 @@ describe('@jackuait/blok/angular exports', () => {
     expect(typeof AngularApi.provideBlok).toBe('function');
     expect(AngularApi.BLOK_DEFAULT_CONFIG).toBeDefined();
   });
+
+  it('exports the block-authoring surface', () => {
+    expect(typeof AngularApi.createAngularBlock).toBe('function');
+    expect(typeof AngularApi.injectBlocks).toBe('function');
+    expect(AngularApi.BLOK_BLOCK_CONTEXT).toBeDefined();
+  });
 });

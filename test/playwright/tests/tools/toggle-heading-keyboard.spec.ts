@@ -116,7 +116,7 @@ test.describe('Toggle Heading - keyboard interactions', () => {
       expect(saved.blocks[1].type).toBe('paragraph');
     });
 
-    test('Enter at end of content with toggle closed creates sibling toggle heading', async ({ page }) => {
+    test('Enter at end of content with toggle closed creates a plain paragraph sibling below (Notion parity)', async ({ page }) => {
       await createBlokWithData(page, [
         { id: 'h1', type: 'header', data: { text: 'My Heading', level: 2, isToggleable: true, isOpen: false } },
       ]);
@@ -126,23 +126,23 @@ test.describe('Toggle Heading - keyboard interactions', () => {
       await page.keyboard.press('End');
       await page.keyboard.press('Enter');
 
-      // When closed, Enter should create a new sibling toggle heading (not a child)
-      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(2);
+      // When collapsed, Enter inserts ONE plain paragraph sibling below the whole
+      // collapsed subtree — matching Notion — not another toggle heading.
+      await expect(page.locator(HEADER_BLOCK_SELECTOR)).toHaveCount(1);
 
-      // No paragraph should have been added as a child
+      // No paragraph should have been added as a hidden CHILD of the toggle.
       const childParagraph = page.locator(`${TOGGLE_CHILDREN_SELECTOR} ${PARAGRAPH_COMPONENT_SELECTOR}`);
       await expect(childParagraph).toHaveCount(0);
 
-      // Saved data: 2 header blocks
+      // Saved data: the header plus a plain paragraph sibling.
       const saved = await saveData(page);
       expect(saved.blocks).toHaveLength(2);
       expect(saved.blocks[0].type).toBe('header');
-      expect(saved.blocks[1].type).toBe('header');
+      expect(saved.blocks[1].type).toBe('paragraph');
 
-      // The new block should also be a toggle heading at the same level
-      const newBlockData = saved.blocks[1].data as { level?: number; isToggleable?: boolean };
-      expect(newBlockData.level).toBe(2);
-      expect(newBlockData.isToggleable).toBe(true);
+      // The paragraph is a root sibling, not parented to the header.
+      const paragraphParent = (saved.blocks[1] as { parent?: string | null }).parent ?? null;
+      expect(paragraphParent).toBeNull();
     });
 
     test('Enter mid-content splits toggle heading into two toggle headings at same level', async ({ page }) => {

@@ -210,6 +210,16 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     vi.restoreAllMocks();
   });
 
+  it('exposes the wrapper as a horizontal ARIA toolbar with a label', () => {
+    (inlineToolbar as unknown as { make: () => void }).make();
+
+    const wrapper = (inlineToolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+    expect(wrapper.getAttribute('role')).toBe('toolbar');
+    expect(wrapper.getAttribute('aria-orientation')).toBe('horizontal');
+    expect(wrapper.getAttribute('aria-label')).toBe('a11y.textFormatting');
+  });
+
   it('resets opened and openingPromise when open() throws', async () => {
     // Make PopoverInline constructor throw to simulate open() failing
     popoverHolder.factory = () => {
@@ -245,6 +255,27 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     ).popover;
 
     expect(popover).toBeNull();
+  });
+
+  it('applies a tool shortcut directly when the tool exposes applyShortcut (no picker)', async () => {
+    const applyShortcut = vi.fn();
+    const markerInstance = {
+      applyShortcut,
+      render: () => ({ name: 'marker', children: { items: [] } }),
+    };
+    const markerTool = { create: () => markerInstance };
+
+    (mockBlok.Tools as { inlineTools: BlokModules['Tools']['inlineTools'] }).inlineTools = new Map([
+      ['marker', markerTool],
+    ]) as unknown as BlokModules['Tools']['inlineTools'];
+
+    await (
+      inlineToolbar as unknown as { activateToolByShortcut: (name: string) => Promise<void> }
+    ).activateToolByShortcut('marker');
+
+    // The shortcut applies the last-used color directly instead of opening the picker.
+    expect(applyShortcut).toHaveBeenCalledTimes(1);
+    expect(inlineToolbar.opened).toBe(false);
   });
 
   it('does not corrupt state for subsequent tryToShow calls after an error', async () => {

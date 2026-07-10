@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Paragraph, type ParagraphConfig, type ParagraphData } from '../../../src/tools/paragraph';
 import type { API, BlockToolConstructorOptions, PasteEvent } from '../../../types';
-import {
-  PLACEHOLDER_EMPTY_EDITOR_CLASSES,
-  PLACEHOLDER_FOCUS_ONLY_CLASSES,
-} from '../../../src/components/utils/placeholder';
+import { PLACEHOLDER_FOCUS_ONLY_CLASSES } from '../../../src/components/utils/placeholder';
 import { sanitizeBlocks } from '../../../src/components/utils/sanitizer';
 
 const createMockAPI = (): API => ({
@@ -69,11 +66,8 @@ describe('Paragraph Tool - Custom Configurations', () => {
 
       const className = element.getAttribute('class') ?? '';
 
-      PLACEHOLDER_EMPTY_EDITOR_CLASSES.forEach((cls) => {
-        expect(className).not.toContain(cls);
-      });
-      // The empty-editor variant is the only source of a `data-blok-empty` hook
-      // on the paragraph; with it removed, none remains.
+      // The (now-removed) empty-editor variant was the only source of a
+      // `data-blok-empty` hook on the paragraph; none may remain.
       expect(className).not.toContain('data-blok-empty');
     });
 

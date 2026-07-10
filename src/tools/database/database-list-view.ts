@@ -299,11 +299,34 @@ export class DatabaseListView implements DatabaseViewRenderer {
         badge.style.color = `var(--blok-color-${option.color}-text)`;
       }
     } else if (propDef.type === 'checkbox') {
-      const checkbox = document.createElement('input');
+      const isChecked = value === true;
 
-      checkbox.type = 'checkbox';
-      checkbox.checked = value === true;
-      badge.appendChild(checkbox);
+      // Display-only in the list view — an aria-hidden glyph carries the visual
+      // tick, and a visually-hidden text node conveys the state to assistive tech
+      // (a real <input> would announce as an operable control it is not).
+      const glyph = document.createElement('span');
+
+      glyph.setAttribute('data-blok-database-checkbox-glyph', '');
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.setAttribute('data-state', isChecked ? 'checked' : 'unchecked');
+      glyph.textContent = isChecked ? '✓' : '';
+      badge.appendChild(glyph);
+
+      const stateText = document.createElement('span');
+
+      stateText.style.position = 'absolute';
+      stateText.style.width = '1px';
+      stateText.style.height = '1px';
+      stateText.style.padding = '0';
+      stateText.style.margin = '-1px';
+      stateText.style.overflow = 'hidden';
+      stateText.style.clipPath = 'inset(50%)';
+      stateText.style.whiteSpace = 'nowrap';
+      stateText.style.border = '0';
+      stateText.textContent = this.i18n.t(
+        isChecked ? 'tools.database.checkboxChecked' : 'tools.database.checkboxUnchecked'
+      );
+      badge.appendChild(stateText);
     } else if (typeof value === 'string' || typeof value === 'number') {
       badge.textContent = String(value);
     } else {

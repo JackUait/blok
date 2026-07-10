@@ -415,4 +415,157 @@ test.describe('Paste HTML Table into Editor', () => {
     // At most 2 top-level blocks: the table + one trailing default paragraph
     expect(topLevelBlocksAfter.length).toBeLessThanOrEqual(2);
   });
+
+  test('Pasting a table with lists in cells preserves list items as list blocks', async ({ page }) => {
+    await createBlok(page, {
+      tools: {
+        table: { className: 'Blok.Table' },
+        list: { className: 'Blok.List' },
+      },
+    });
+
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+
+    await paragraph.click();
+
+    // Google-Docs-shaped table: bullets (with a nested item) in the first cell,
+    // a numbered list in the second, plain text in the third.
+    const html = [
+      '<meta charset="utf-8">',
+      '<b style="font-weight:normal;" id="docs-internal-guid-list123">',
+      '<table><tbody><tr>',
+      '<td>',
+      '<ul><li><p>alpha</p></li><li><p>beta</p><ul><li><p>nested</p></li></ul></li></ul>',
+      '</td>',
+      '<td><ol><li><p>one</p></li><li><p>two</p></li></ol></td>',
+      '<td><p>plain</p></td>',
+      '</tr></tbody></table>',
+      '</b>',
+    ].join('');
+
+    await paste(paragraph, { 'text/html': html });
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible();
+
+    const output = await page.evaluate(async () => window.blokInstance?.save());
+
+    const tableBlock = output?.blocks.find((b: { type: string }) => b.type === 'table');
+
+    expect(tableBlock).toBeDefined();
+
+    type SavedBlock = { type: string; parent?: string; data: Record<string, unknown> };
+    const cellLists = (output?.blocks as SavedBlock[]).filter(
+      (b) => b.type === 'list' && b.parent === (tableBlock as SavedBlock & { id: string }).id
+    );
+
+    const byText = (text: string): SavedBlock | undefined =>
+      cellLists.find((b) => (b.data.text as string).includes(text));
+
+    // Bulleted cell: two root items + one nested item
+    expect(byText('alpha')?.data.style).toBe('unordered');
+    expect(byText('alpha')?.data.depth ?? 0).toBe(0);
+    expect(byText('beta')?.data.style).toBe('unordered');
+    expect(byText('nested')?.data.style).toBe('unordered');
+    expect(byText('nested')?.data.depth).toBe(1);
+
+    // Numbered cell
+    expect(byText('one')?.data.style).toBe('ordered');
+    expect(byText('two')?.data.style).toBe('ordered');
+
+    // Plain cell stays a paragraph, and each list item's text is clean
+    const cellParagraphs = (output?.blocks as SavedBlock[]).filter(
+      (b) => b.type === 'paragraph'
+        && b.parent === (tableBlock as SavedBlock & { id: string }).id
+        && (b.data.text as string).includes('plain')
+    );
+
+    expect(cellParagraphs).toHaveLength(1);
+    expect((byText('alpha')?.data.text as string).trim()).toBe('alpha');
+  });
+});
+
+test.describe('Paste HTML table with merged cells', () => {
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(TEST_PAGE_URL);
+    await page.waitForFunction(() => typeof window.Blok === 'function');
+    await createBlok(page, { tools: defaultTools });
+
+    const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`).first();
+
+    await paragraph.click();
+  });
+
+  test('colspan and rowspan survive the full paste pipeline (sanitizer included)', async ({ page }) => {
+    // Google-Docs-style layout: a wide merged header cell, a tall merged
+    // left cell, and regular data cells around them.
+    await pasteHtml(page, [
+      '<table>',
+      '<tr><td>Month</td><td colspan="2">May 2026</td></tr>',
+      '<tr><td rowspan="2">Vacancy</td><td>Goal</td><td>Fact</td></tr>',
+      '<tr><td>125</td><td>188</td></tr>',
+      '</table>',
+    ].join(''));
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+
+    // Merged origins keep their span attributes in the rendered grid
+    const wideCell = table.locator(CELL_SELECTOR, { hasText: 'May 2026' });
+    const tallCell = table.locator(CELL_SELECTOR, { hasText: 'Vacancy' });
+
+    await expect(wideCell).toHaveAttribute('colspan', '2');
+    await expect(tallCell).toHaveAttribute('rowspan', '2');
+
+    // Cells after the rowspan land in their logical columns, not shifted left
+    const lastRowCells = table.locator('[data-blok-table-row]').nth(2).locator(CELL_SELECTOR);
+
+    await expect(lastRowCells).toHaveCount(2);
+    await expect(lastRowCells.nth(0)).toHaveAttribute('data-blok-table-cell-col', '1');
+
+    // The merge structure round-trips through save()
+    const saved = await page.evaluate(async () => window.blokInstance?.save());
+    const tableBlock = saved?.blocks.find((b: { type: string }) => b.type === 'table');
+
+    expect(tableBlock).toBeDefined();
+
+    const content = (tableBlock?.data as {
+      content: Array<Array<{ colspan?: number; rowspan?: number; mergedInto?: [number, number] }>>;
+    }).content;
+
+    expect(content[0][1].colspan).toBe(2);
+    expect(content[0][2].mergedInto).toEqual([0, 1]);
+    expect(content[1][0].rowspan).toBe(2);
+    expect(content[2][0].mergedInto).toEqual([1, 0]);
+  });
+
+  test('merged th header cells survive paste', async ({ page }) => {
+    await pasteHtml(page, [
+      '<table><thead>',
+      '<tr><th colspan="3">Quarter</th><th rowspan="2">Total</th></tr>',
+      '<tr><th>Jan</th><th>Feb</th><th>Mar</th></tr>',
+      '</thead><tbody>',
+      '<tr><td>1</td><td>2</td><td>3</td><td>6</td></tr>',
+      '</tbody></table>',
+    ].join(''));
+
+    const table = page.locator(TABLE_SELECTOR);
+
+    await expect(table).toBeVisible({ timeout: 5000 });
+    await expect(table.locator(CELL_SELECTOR, { hasText: 'Quarter' })).toHaveAttribute('colspan', '3');
+    await expect(table.locator(CELL_SELECTOR, { hasText: 'Total' })).toHaveAttribute('rowspan', '2');
+
+    // 4 logical columns: second header row occupies columns 0-2 under the span
+    const secondRowCells = table.locator('[data-blok-table-row]').nth(1).locator(CELL_SELECTOR);
+
+    await expect(secondRowCells).toHaveCount(3);
+    await expect(secondRowCells.nth(0)).toHaveAttribute('data-blok-table-cell-col', '0');
+    await expect(secondRowCells.nth(2)).toHaveAttribute('data-blok-table-cell-col', '2');
+  });
 });

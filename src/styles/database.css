@@ -12,12 +12,20 @@
   padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
   padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
 
-  /* macOS-style scrollbar — thin, rounded, visible on hover/scroll */
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  /* macOS-style scrollbar — thin, rounded, visible on hover/scroll.
+     Reserve its layout space so it never paints over the columns. */
+  scrollbar-gutter: stable;
 }
-[data-blok-database-board]:hover {
-  scrollbar-color: color-mix(in srgb, currentColor 15%, transparent) transparent;
+/* Standard scrollbar-* properties are Firefox-only: setting them makes
+   Chromium ignore the ::-webkit-scrollbar styling below (overlay fallback). */
+@supports not selector(::-webkit-scrollbar) {
+  [data-blok-database-board] {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  [data-blok-database-board]:hover {
+    scrollbar-color: color-mix(in srgb, currentColor 15%, transparent) transparent;
+  }
 }
 [data-blok-database-board]::-webkit-scrollbar {
   height: 8px;
@@ -386,7 +394,28 @@
 [data-blok-database-drawer-content] {
   flex: 1;
   overflow-y: auto;
+  /* Classic (space-taking) scrollbar so it never overlays the content —
+     styled ::-webkit-scrollbar below opts out of the overlay scrollbar.
+     both-edges keeps the horizontal padding symmetric. */
+  scrollbar-gutter: stable both-edges;
   padding: var(--blok-space-10) 60px var(--blok-space-5);
+}
+[data-blok-database-drawer-content]::-webkit-scrollbar {
+  width: 8px;
+}
+[data-blok-database-drawer-content]::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* Thumb hidden at rest (system auto-hide behavior), revealed on hover. */
+[data-blok-database-drawer-content]::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--blok-space-1);
+}
+[data-blok-database-drawer-content]:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+[data-blok-database-drawer-content]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 25%, transparent);
 }
 
 /**

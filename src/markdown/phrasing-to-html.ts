@@ -1,5 +1,6 @@
 import type { PhrasingContent } from 'mdast';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
+import { isSamePageLink } from '../tools/link/registry';
 
 /**
  * Escape HTML special characters to prevent XSS.
@@ -46,7 +47,9 @@ function serializeNode(node: PhrasingContent): string {
         return children;
       }
 
-      return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer nofollow">${children}</a>`;
+      const target = isSamePageLink(url) ? '_self' : '_blank';
+
+      return `<a href="${escapeHtml(url)}" target="${target}" rel="noopener noreferrer nofollow">${children}</a>`;
     }
 
     case 'break':

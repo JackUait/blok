@@ -36,6 +36,16 @@ vi.mock('../../../../../src/components/block/api', () => ({
   BlockAPI: blockAPIConstructorSpy,
 }));
 
+// Spy on the announcer so tests can assert screen-reader announcements without
+// touching the real ARIA live regions.
+const { mockAnnounce } = vi.hoisted(() => ({ mockAnnounce: vi.fn() }));
+
+vi.mock('../../../../../src/components/utils/announcer', () => ({
+  announce: mockAnnounce,
+  registerAnnouncer: vi.fn(),
+  destroyAnnouncer: vi.fn(),
+}));
+
 type BlockStub = {
   id: string;
   name: string;
@@ -82,6 +92,7 @@ type BlockManagerMock = {
   update: ReturnType<typeof vi.fn>;
   convert: ReturnType<typeof vi.fn>;
   splitBlockWithData: ReturnType<typeof vi.fn>;
+  isPointerDragActive: boolean;
 };
 
 const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub() ]): BlockManagerMock => {
@@ -222,6 +233,7 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
 
       return newBlock;
     }) as ReturnType<typeof vi.fn>,
+    isPointerDragActive: false,
   };
 
   return blockManager;
@@ -262,6 +274,9 @@ type BlokStub = {
   };
   YjsManager: {
     stopCapturing: ReturnType<typeof vi.fn>;
+  };
+  I18n: {
+    t: ReturnType<typeof vi.fn>;
   };
   API: Record<string, unknown>;
 };
@@ -305,6 +320,9 @@ const createBlokStub = (
     },
     YjsManager: {
       stopCapturing: vi.fn(),
+    },
+    I18n: {
+      t: vi.fn((key: string) => key),
     },
     API: {},
   };
@@ -385,6 +403,18 @@ describe('BlocksAPI', () => {
       blockManager.currentBlockIndex = 2;
 
       expect(blocksApi.getCurrentBlockIndex()).toBe(2);
+    });
+
+    it('exposes live pointer-drag state via isPointerDragActive getter', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      expect(blocksApi.methods.isPointerDragActive).toBe(false);
+
+      blockManager.isPointerDragActive = true;
+
+      // Reads the LIVE flag each access (getter, not a snapshotted value),
+      // so the Vue commit-debounce can defer a dispatchChange mid-drag.
+      expect(blocksApi.methods.isPointerDragActive).toBe(true);
     });
   });
 
@@ -818,6 +848,55 @@ describe('BlocksAPI', () => {
       el.dispatchEvent(new Event('animationend'));
 
       expect(el.classList.contains('blok-block--target')).toBe(false);
+    });
+
+    it('announces navigation arrival to screen readers via the I18n key after deferred render', async () => {
+      const targetBlock = createBlockStub({ id: 'Wioa6QcE52' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({ blocks: [ targetBlock ] });
+
+      blok.Renderer.pendingHashScroll = 'Wioa6QcE52';
+
+      blockManager.getBlockById.mockImplementation((id: string) =>
+        id === 'Wioa6QcE52' ? targetBlock : undefined
+      );
+
+      const el = document.createElement('div');
+
+      el.getBoundingClientRect = () =>
+        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) } as DOMRect);
+
+      document.querySelector = vi.fn((selector: string): Element | null => {
+        if (selector === '[data-blok-id="Wioa6QcE52"]') {
+          return el;
+        }
+
+        return originalQuerySelector(selector);
+      }) as typeof document.querySelector;
+
+      const data: OutputData = {
+        blocks: [{ id: 'Wioa6QcE52', type: 'paragraph', data: { text: 'target' } }],
+      };
+
+      await blocksApi.render(data);
+
+      expect(blok.I18n.t).toHaveBeenCalledWith('a11y.navigatedToBlock');
+      expect(mockAnnounce).toHaveBeenCalledWith('a11y.navigatedToBlock');
+    });
+
+    it('does not announce navigation when the deferred hash block element is not found', async () => {
+      const { blocksApi, blok } = createBlocksApi();
+
+      blok.Renderer.pendingHashScroll = 'missingBlock';
+
+      // querySelector returns null by default
+
+      const data: OutputData = {
+        blocks: [{ id: 'id-1', type: 'paragraph', data: { text: 'text' } }],
+      };
+
+      await blocksApi.render(data);
+
+      expect(mockAnnounce).not.toHaveBeenCalled();
     });
 
     it('scrolls but does not select when DOM element exists but BlockManager has no matching block', async () => {

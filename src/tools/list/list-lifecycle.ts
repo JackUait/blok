@@ -4,7 +4,7 @@
  * Extracted from ListItem to reduce file size.
  */
 
-import { buildListItem } from './dom-builder';
+import { applyChecklistCheckedState, buildListItem } from './dom-builder';
 import type { ListItemData } from './types';
 
 /**
@@ -47,6 +47,7 @@ export const renderListItem = (context: RenderContext): HTMLElement => {
   if (result.checkboxElement && !readOnly) {
     const checkboxElement = result.checkboxElement;
     checkboxElement.addEventListener('change', () => {
+      applyChecklistCheckedState(checkboxElement, result.contentElement, checkboxElement.checked);
       onCheckboxChange(checkboxElement.checked, result.contentElement);
     });
   }

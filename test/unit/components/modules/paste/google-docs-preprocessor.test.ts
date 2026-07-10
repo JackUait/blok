@@ -899,6 +899,141 @@ describe('preprocessGoogleDocsHtml', () => {
     });
   });
 
+  describe('pasted links always use the default link color', () => {
+    /** A <mark> that colors the link text — links must never carry a text-color mark. */
+    const hasTextColorMark = (html: string): boolean => /<mark[^>]*[^-]color:/.test(html);
+
+    it('drops the link-blue color on a Google Docs link (a > span structure)', () => {
+      // Google Docs colors link text with its own link blue (#1155cc). The link
+      // should fall back to the default link color instead of an explicit <mark>.
+      const html = gdocs([
+        '<a href="https://example.com" style="text-decoration:none;">',
+        '<span style="color:#1155cc;text-decoration:underline;">Link text</span>',
+        '</a>',
+      ].join(''));
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(hasTextColorMark(result)).toBe(false);
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Link text');
+    });
+
+    it('drops the color when it is on the <a> itself', () => {
+      const html = gdocs('<a href="https://example.com" style="color:#1155cc;text-decoration:underline;">Link text</a>');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(hasTextColorMark(result)).toBe(false);
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Link text');
+    });
+
+    it('drops the color when a colored span wraps a link (span > a)', () => {
+      const html = gdocs([
+        '<span style="color:#1155cc;">',
+        '<a href="https://example.com" style="color:inherit;">Link text</a>',
+        '</span>',
+      ].join(''));
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(hasTextColorMark(result)).toBe(false);
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Link text');
+    });
+
+    it('drops a non-blue link color too — every link uses the default color', () => {
+      // The link color from the source is irrelevant: a red link must still
+      // paste with Blok's default link color, not a red <mark>.
+      const html = gdocs([
+        '<a href="https://example.com" style="text-decoration:none;">',
+        '<span style="color:#ff0000;">Red link</span>',
+        '</a>',
+      ].join(''));
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(hasTextColorMark(result)).toBe(false);
+      expect(result).not.toContain('#d44c47');
+      expect(result).toContain('Red link');
+    });
+
+    it('drops any link color for non-Google-Docs sources (a > span, no gdocs wrapper)', () => {
+      const html = '<a href="https://example.com"><span style="color:#0563c1;">Word link</span></a>';
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(hasTextColorMark(result)).toBe(false);
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Word link');
+    });
+
+    it('drops the link color but keeps the background on a highlighted link', () => {
+      const html = gdocs([
+        '<a href="https://example.com" style="text-decoration:none;">',
+        '<span style="color:#1155cc;background-color:#fce5cd;text-decoration:underline;">Link text</span>',
+        '</a>',
+      ].join(''));
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(hasTextColorMark(result)).toBe(false);
+      // Orange background survives as a mark
+      expect(result).toContain('background-color: #fbecdd');
+      expect(result).toContain('Link text');
+    });
+
+    it('end-to-end: link carries no color style after preprocess + sanitize', () => {
+      const html = gdocs([
+        '<a href="https://example.com" style="text-decoration:none;">',
+        '<span style="color:#1155cc;text-decoration:underline;">Link text</span>',
+        '</a>',
+      ].join(''));
+
+      const preprocessed = preprocessGoogleDocsHtml(html);
+
+      const sanitizerConfig = {
+        a: { href: true },
+        mark: (node: Element): { [attr: string]: boolean | string } => {
+          const el = node as HTMLElement;
+          const style = el.style;
+          const props = Array.from({ length: style.length }, (_, i) => style.item(i));
+          const allowed = new Set(['color', 'background-color']);
+
+          for (const prop of props) {
+            if (!allowed.has(prop)) {
+              style.removeProperty(prop);
+            }
+          }
+
+          return style.length > 0 ? { style: true } : {};
+        },
+        b: true,
+        i: true,
+        br: {},
+      };
+
+      const result = clean(preprocessed, sanitizerConfig);
+
+      expect(result).not.toMatch(/color\s*:/);
+      expect(result).toContain('<a href="https://example.com"');
+      expect(result).toContain('Link text');
+    });
+
+    it('keeps color on surrounding text when a span mixes link and non-link content', () => {
+      // A colored span that only partially covers a link is intentional text
+      // formatting — the color must survive on the non-link portion.
+      const html = gdocs('<span style="color:#ff0000;">before <a href="https://example.com">link</a> after</span>');
+
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('#d44c47');
+      expect(result).toContain('before');
+      expect(result).toContain('after');
+    });
+  });
+
   describe('Google Docs color mapping to Blok presets', () => {
     it('maps Google Docs pure red text color to Blok red preset', () => {
       const html = gdocs('<span style="color:#ff0000">red text</span>');

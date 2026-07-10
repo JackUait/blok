@@ -22,4 +22,10 @@ interface InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, InlineTool>
    * Whether the tool's shortcut may open its menu at a collapsed caret.
    */
   allowCaretShortcut: boolean;
+
+  /**
+   * Whether the tool's shortcut defers to native browser handling at a
+   * collapsed caret (Bold, Italic).
+   */
+  nativeCaretShortcut: boolean;
 }

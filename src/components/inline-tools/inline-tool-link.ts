@@ -7,10 +7,12 @@ import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconHash, IconTrash } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
+import { setFieldValidity } from '../utils/field-validity';
+import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../utils/resolve-link-attributes';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 
@@ -62,7 +64,7 @@ export class LinkInlineTool implements InlineTool {
   /**
    * Tailwind classes for input
    */
-  private readonly INPUT_BASE_CLASSES = 'hidden w-[200px] m-0 px-2 py-1 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-link-input-border rounded-lg! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text mobile:text-[15px] mobile:font-medium';
+  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[320px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border focus:shadow-[0_0_0_2px_rgba(35,131,226,0.15)] mobile:text-[15px] mobile:font-medium';
 
   /**
    * Data attributes for e2e selectors
@@ -78,15 +80,38 @@ export class LinkInlineTool implements InlineTool {
    */
   private nodes: {
     input: HTMLInputElement | null;
+    urlLabel: HTMLElement | null;
+    titleInput: HTMLInputElement | null;
+    titleLabel: HTMLElement | null;
     inputWrapper: HTMLElement | null;
     suggestion: HTMLElement | null;
+    error: HTMLElement | null;
+    divider: HTMLElement | null;
+    removeButton: HTMLButtonElement | null;
     button: HTMLButtonElement | null;
   } = {
       input: null,
+      urlLabel: null,
+      titleInput: null,
+      titleLabel: null,
       inputWrapper: null,
       suggestion: null,
+      error: null,
+      divider: null,
+      removeButton: null,
       button: null,
     };
+
+  /**
+   * Whether the popover is editing an existing link (vs. creating one). In edit
+   * mode the labeled Page/Title fields replace the create-mode suggestion chip.
+   */
+  private editing = false;
+
+  /**
+   * Stable id linking the input to its inline error via aria-describedby.
+   */
+  private readonly errorId = `blok-link-tool-error-${Math.random().toString(36).slice(2, 9)}`;
 
   /**
    * SelectionUtils instance
@@ -138,10 +163,28 @@ export class LinkInlineTool implements InlineTool {
     this.i18n = api.i18n;
     this.linkConfig = api.config.link ?? {};
     this.selection = new SelectionUtils();
+    this.nodes.urlLabel = this.createFieldLabel(this.i18n.t('tools.link.pageOrUrl'), 'inline-tool-url-label', false);
     this.nodes.input = this.createInput();
     this.nodes.suggestion = this.createSuggestion();
+    this.nodes.error = this.createError();
+    this.nodes.titleLabel = this.createFieldLabel(this.i18n.t('tools.link.linkTitle'), 'inline-tool-title-label', true);
+    this.nodes.titleInput = this.createTitleInput();
+    this.nodes.divider = this.createDivider();
+    this.nodes.removeButton = this.createRemoveButton();
     this.nodes.inputWrapper = document.createElement('div');
-    this.nodes.inputWrapper.append(this.nodes.input, this.nodes.suggestion);
+    // Horizontal padding keeps the URL input's 2px focus ring from being clipped
+    // by the popover's overflow-y-auto items box, which sits flush to the wrapper.
+    this.nodes.inputWrapper.className = 'px-1';
+    this.nodes.inputWrapper.append(
+      this.nodes.urlLabel,
+      this.nodes.input,
+      this.nodes.error,
+      this.nodes.suggestion,
+      this.nodes.titleLabel,
+      this.nodes.titleInput,
+      this.nodes.divider,
+      this.nodes.removeButton
+    );
   }
 
   /**
@@ -193,10 +236,138 @@ export class LinkInlineTool implements InlineTool {
       });
     });
     input.addEventListener('input', () => {
+      this.clearValidationError();
       this.updateSuggestion(input.value);
     });
 
     return input;
+  }
+
+  /**
+   * Title (link text) input, shown only when editing an existing link so the
+   * user can change the anchor's visible text alongside its href. Hidden when
+   * creating a new link (the selected text is the link text in that case).
+   */
+  private createTitleInput(): HTMLInputElement {
+    const input = document.createElement('input');
+
+    input.placeholder = this.i18n.t('tools.link.linkText');
+    input.enterKeyHint = 'done';
+    input.className = this.INPUT_BASE_CLASSES;
+    input.setAttribute('data-blok-testid', 'inline-tool-title-input');
+    input.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        this.enterPressed(event);
+      }
+    });
+
+    return input;
+  }
+
+  /**
+   * Small field caption shown above a field in edit mode (e.g. "Page or URL",
+   * "Link title"). Hidden by default; revealed alongside its field.
+   * @param text - the caption text
+   * @param testid - e2e selector hook
+   * @param topGap - whether to add top spacing (for the second, stacked label)
+   */
+  private createFieldLabel(text: string, testid: string, topGap: boolean): HTMLElement {
+    const label = document.createElement('div');
+
+    label.className = twMerge(
+      'hidden px-0.5 mb-1.5 text-xs font-normal tracking-[0.01em] text-gray-text',
+      topGap ? 'mt-3.5' : ''
+    );
+    label.textContent = text;
+    label.setAttribute('data-blok-testid', testid);
+
+    return label;
+  }
+
+  /**
+   * Hairline separator above the "Remove link" action in edit mode.
+   */
+  private createDivider(): HTMLElement {
+    const divider = document.createElement('div');
+
+    divider.className = 'hidden mt-2.5 mb-1.5 -mx-1 h-px bg-link-input-border';
+    divider.setAttribute('data-blok-testid', 'inline-tool-link-divider');
+
+    return divider;
+  }
+
+  /**
+   * "Remove link" action, shown only when editing an existing link. Unlinks the
+   * anchor (keeping its text) and closes the toolbar. A destructive menu row:
+   * neutral at rest, tinting red on hover (text + icon) to signal its intent.
+   */
+  private createRemoveButton(): HTMLButtonElement {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.className = 'hidden group/remove w-full flex items-center gap-2.5 px-2 py-1.5 rounded-[10px] text-left text-sm font-medium text-text-primary cursor-pointer can-hover:hover:bg-red-500/10 can-hover:hover:text-red-500 transition-colors appearance-none border-0 bg-transparent font-[inherit]';
+    button.setAttribute('data-blok-testid', 'inline-tool-remove-link');
+
+    const iconEl = document.createElement('span');
+
+    iconEl.className = 'shrink-0 flex text-gray-text transition-colors can-hover:group-hover/remove:text-red-500 [&>svg]:size-5';
+    iconEl.innerHTML = IconTrash;
+
+    const label = document.createElement('span');
+
+    label.textContent = this.i18n.t('tools.link.removeLink');
+
+    button.append(iconEl, label);
+
+    // Keep the selection intact when the button takes focus, then remove.
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+    button.addEventListener('click', () => this.removeLinkAndClose());
+
+    return button;
+  }
+
+  /**
+   * Inline error region for URL validation failures. Linked to the input via
+   * aria-describedby (see {@link setFieldValidity}) so the message is exposed
+   * to assistive tech alongside the existing toast.
+   */
+  private createError(): HTMLElement {
+    const error = document.createElement('div');
+
+    error.id = this.errorId;
+    error.className = 'mt-1 px-1.5 text-xs text-red-500';
+    error.setAttribute('data-blok-link-tool-error', '');
+    error.setAttribute('role', 'alert');
+    error.hidden = true;
+
+    return error;
+  }
+
+  /**
+   * Surface a URL validation failure: fill and reveal the inline error and
+   * mark the input aria-invalid, describing it by the error region.
+   */
+  private showValidationError(): void {
+    if (!this.nodes.input || !this.nodes.error) {
+      return;
+    }
+
+    this.nodes.error.textContent = this.i18n.t('tools.link.invalidLink');
+    this.nodes.error.hidden = false;
+    setFieldValidity(this.nodes.input, false, this.errorId);
+  }
+
+  /**
+   * Reset the inline error and the input's invalid state.
+   */
+  private clearValidationError(): void {
+    if (!this.nodes.input || !this.nodes.error) {
+      return;
+    }
+
+    this.nodes.error.textContent = '';
+    this.nodes.error.hidden = true;
+    setFieldValidity(this.nodes.input, true, this.errorId);
   }
 
   /**
@@ -257,7 +428,9 @@ export class LinkInlineTool implements InlineTool {
 
     const trimmed = value.trim();
 
-    if (!trimmed) {
+    // The suggestion chip belongs to create mode only; in edit mode the labeled
+    // Page/Title fields stand in for it.
+    if (!trimmed || this.editing) {
       this.nodes.suggestion.classList.add('hidden');
 
       return;
@@ -359,13 +532,15 @@ export class LinkInlineTool implements InlineTool {
     }
 
     if (!this.validateURL(value)) {
-      this.notifier.show({
-        message: this.i18n.t('tools.link.invalidLink'),
-        style: 'error',
-      });
+      // Surface the failure once, via the accessible inline field error
+      // (aria-invalid + error region). A duplicate notifier toast would render
+      // the same "Invalid link" text a second time.
+      this.showValidationError();
 
       return;
     }
+
+    this.clearValidationError();
 
     const preparedValue = this.prepareLink(value);
 
@@ -407,6 +582,15 @@ export class LinkInlineTool implements InlineTool {
       this.nodes.input.value = '';
     }
 
+    /**
+     * Editing an existing link surfaces the title field (prefilled with the
+     * anchor's text) and the remove-link action. Creating a new link keeps them
+     * hidden — the selected text already serves as the link text.
+     */
+    this.setEditAffordancesVisible(hasAnchor, anchorTag?.textContent ?? '');
+
+    // Edit mode uses the labeled Page/Title fields, not the create-mode
+    // suggestion chip — keep it hidden even though the URL is prefilled.
     this.updateSuggestion(this.nodes.input.value);
 
     this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
@@ -423,6 +607,43 @@ export class LinkInlineTool implements InlineTool {
     }
     this.inputOpened = true;
   }
+
+  /**
+   * Toggle the edit-only affordances (title field + remove button). When shown,
+   * the title field is prefilled with the link's current text.
+   * @param visible - whether the affordances should be shown
+   * @param titleValue - text to prefill the title field with when shown
+   */
+  private setEditAffordancesVisible(visible: boolean, titleValue = ''): void {
+    this.editing = visible;
+
+    if (this.nodes.titleInput) {
+      this.nodes.titleInput.value = visible ? titleValue : '';
+      this.nodes.titleInput.className = visible
+        ? twMerge(this.INPUT_BASE_CLASSES, 'block')
+        : this.INPUT_BASE_CLASSES;
+    }
+
+    this.nodes.urlLabel?.classList.toggle('hidden', !visible);
+    this.nodes.urlLabel?.classList.toggle('block', visible);
+    this.nodes.titleLabel?.classList.toggle('hidden', !visible);
+    this.nodes.titleLabel?.classList.toggle('block', visible);
+    this.nodes.divider?.classList.toggle('hidden', !visible);
+    this.nodes.divider?.classList.toggle('block', visible);
+    this.nodes.removeButton?.classList.toggle('hidden', !visible);
+    this.nodes.removeButton?.classList.toggle('flex', visible);
+  }
+
+  /**
+   * Restore the selection, unlink the anchor (keeping its text) and close the
+   * toolbar. Backs the explicit "Remove link" button in edit mode.
+   */
+  private removeLinkAndClose(): void {
+    this.restoreSelection();
+    this.unlink();
+    this.inlineToolbar.close();
+  }
+
   /**
    * Ensures the link input receives focus even if other listeners steal it
    */
@@ -517,6 +738,8 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.input.className = this.INPUT_BASE_CLASSES;
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.value = '';
+    this.setEditAffordancesVisible(false);
+    this.clearValidationError();
     this.nodes.suggestion?.classList.add('hidden');
     this.updateButtonStateAttributes(false);
     this.unlinkAvailable = false;
@@ -588,15 +811,17 @@ export class LinkInlineTool implements InlineTool {
     }
 
     if (!this.validateURL(value)) {
-      this.notifier.show({
-        message: this.i18n.t('tools.link.invalidLink'),
-        style: 'error',
-      });
+      // Surface the failure once, via the accessible inline field error
+      // (aria-invalid + error region). A duplicate notifier toast would render
+      // the same "Invalid link" text a second time.
+      this.showValidationError();
 
       log('Incorrect Link pasted', 'warn', value);
 
       return;
     }
+
+    this.clearValidationError();
 
     const preparedValue = this.prepareLink(value);
 
@@ -686,21 +911,29 @@ export class LinkInlineTool implements InlineTool {
    * @param {string} link - "href" value
    */
   private insertLink(link: string): void {
-    const href = this.linkConfig.transformHref ? this.linkConfig.transformHref(link) : link;
-    const target = this.linkConfig.target ?? '_blank';
-    const rel = this.linkConfig.rel ?? 'nofollow';
-
     /**
      * Edit all link, not selected part
      */
     const anchorTag = this.selection.findParentTag('A');
 
     if (anchorTag instanceof HTMLAnchorElement) {
+      /**
+       * Apply an edited link text before re-selecting: only when it actually
+       * changed, so an untouched anchor keeps its inner formatting instead of
+       * being flattened to plain text. Done before resolving so the `link`
+       * config's `transform` sees the final anchor text.
+       */
+      const newTitle = this.nodes.titleInput?.value ?? '';
+
+      if (newTitle.trim() !== '' && newTitle !== anchorTag.textContent) {
+        anchorTag.textContent = newTitle;
+      }
+
       this.selection.expandToTag(anchorTag);
 
-      anchorTag.href = href;
-      anchorTag.target = target;
-      anchorTag.rel = rel;
+      // Same-page targeting, transformHref/transform and any extra attributes are
+      // resolved centrally so hand-created links match render/paste exactly.
+      applyResolvedLinkAttributes(anchorTag, resolveLinkAttributes(link, anchorTag, this.linkConfig));
 
       return;
     }
@@ -713,11 +946,10 @@ export class LinkInlineTool implements InlineTool {
 
     const anchor = document.createElement('a');
 
-    anchor.href = href;
-    anchor.target = target;
-    anchor.rel = rel;
-
+    // Populate the anchor text before resolving so the `transform` sees it.
     anchor.appendChild(range.extractContents());
+
+    applyResolvedLinkAttributes(anchor, resolveLinkAttributes(link, anchor, this.linkConfig));
 
     range.insertNode(anchor);
 

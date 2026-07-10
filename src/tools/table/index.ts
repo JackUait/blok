@@ -28,9 +28,9 @@ import {
   getBlockIdsInRow,
   mountCellBlocksReadOnly,
   normalizeTableData,
+  parsePastedTable,
   populateNewCells,
   readPixelWidths,
-  rectangularizeContent,
   SCROLL_OVERFLOW_CLASSES,
   setupKeyboardNavigation,
   updateHeadingColumnStyles,
@@ -40,7 +40,7 @@ import { TableModel } from './table-model';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
-import type { LegacyCellContent, TableData, TableConfig } from './types';
+import type { CellContent, LegacyCellContent, TableData, TableConfig } from './types';
 import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -377,7 +377,14 @@ export class Table implements BlockTool {
 
   public static get pasteConfig(): PasteConfig {
     return {
-      tags: ['TABLE', 'TR', { TH: { style: true } }, { TD: { style: true } }],
+      // colspan/rowspan must be whitelisted here or the paste sanitizer strips
+      // them before onPaste runs, silently flattening merged cells.
+      tags: [
+        'TABLE',
+        'TR',
+        { TH: { style: true, colspan: true, rowspan: true } },
+        { TD: { style: true, colspan: true, rowspan: true } },
+      ],
     };
   }
 
@@ -925,52 +932,49 @@ export class Table implements BlockTool {
     }
   }
 
+  /**
+   * Extract background / text color overrides from a pasted cell's inline style.
+   */
+  private static extractPastedCellColors(cell: Element): Partial<CellContent> {
+    const style = cell.getAttribute('style') ?? '';
+    const entry: Partial<CellContent> = {};
+
+    const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
+
+    if (bgMatch?.[1]) {
+      entry.color = mapToNearestPresetColor(bgMatch[1].trim(), 'bg');
+    }
+
+    const textMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
+
+    if (textMatch?.[1] && !isDefaultBlack(textMatch[1].trim())) {
+      entry.textColor = mapToNearestPresetColor(textMatch[1].trim(), 'text');
+    }
+
+    return entry;
+  }
+
   public onPaste(event: HTMLPasteEvent): void {
     const content = event.detail.data;
     const rows = content.querySelectorAll('tr');
-    const tableContent: string[][] = [];
-    const cellColors: Array<Array<{ color?: string; textColor?: string }>> = [];
-
-    rows.forEach(row => {
-      const cells = row.querySelectorAll('td, th');
-      const rowData: string[] = [];
-      const rowColors: Array<{ color?: string; textColor?: string }> = [];
-
-      cells.forEach(cell => {
-        rowData.push(cell.innerHTML);
-
-        const style = cell.getAttribute('style') ?? '';
-        const entry: { color?: string; textColor?: string } = {};
-
-        const bgMatch = /background-color\s*:\s*([^;]+)/i.exec(style);
-
-        if (bgMatch?.[1]) {
-          entry.color = mapToNearestPresetColor(bgMatch[1].trim(), 'bg');
-        }
-
-        const textMatch = /(?<![a-z-])color\s*:\s*([^;]+)/i.exec(style);
-
-        if (textMatch?.[1] && !isDefaultBlack(textMatch[1].trim())) {
-          entry.textColor = mapToNearestPresetColor(textMatch[1].trim(), 'text');
-        }
-
-        rowColors.push(entry);
-      });
-
-      if (rowData.length > 0) {
-        tableContent.push(rowData);
-        cellColors.push(rowColors);
-      }
-    });
+    // Logical grid: spans are honoured, covered slots carry mergedInto and
+    // colors sit at their logical (not physical) coordinates.
+    const tableContent = parsePastedTable(rows, Table.extractPastedCellColors);
 
     const hasTheadHeadings = content.querySelector('thead') !== null;
     const hasThHeadings = rows[0]?.querySelector('th') !== null;
     const withHeadings = hasTheadHeadings || hasThHeadings;
 
-    this.initialContent = rectangularizeContent(tableContent);
+    this.initialContent = tableContent;
     this.model.setWithHeadings(withHeadings);
     this.model.setWithHeadingColumn(false);
     this.model.setColWidths(undefined);
+    // Push the parsed grid into the model BEFORE render() so the merge-aware
+    // path (createGridFromModel) builds the DOM with colspan/rowspan.
+    this.model.replaceAll({
+      ...this.model.snapshot(),
+      content: tableContent,
+    });
 
     this.runStructuralOp(() => {
       this.cellBlocks?.deleteAllBlocks();
@@ -999,19 +1003,6 @@ export class Table implements BlockTool {
           content: pasteContent,
         });
         this.initialContent = null;
-
-        // Apply cell colors extracted from td/th style attributes
-        cellColors.forEach((rowColors, r) => {
-          rowColors.forEach((colors, c) => {
-            if (colors.color !== undefined) {
-              this.model.setCellColor(r, c, colors.color);
-            }
-
-            if (colors.textColor !== undefined) {
-              this.model.setCellTextColor(r, c, colors.textColor);
-            }
-          });
-        });
       }, true);
 
       this.subsystems.initAll(gridEl);

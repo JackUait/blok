@@ -502,9 +502,19 @@ test.describe('flipper', () => {
     await plugin.click();
     await openBlockTunesWithShortcut(page, plugin);
 
-    await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
+    // The block-tunes popover leads with default tunes (block colors, convert-to),
+    // so the delete item is not the first focusable. Arrow down until it is focused
+    // rather than hard-coding the leading-item count.
+    const deleteItem = page.locator('[data-blok-item-name="delete"]');
 
-    await expect(page.locator('[data-blok-item-name="delete"]')).toHaveAttribute('data-blok-focused', 'true');
+    for (let i = 0; i < 15; i++) {
+      if (await deleteItem.getAttribute('data-blok-focused') === 'true') {
+        break;
+      }
+      await triggerKey(plugin, KEY_CODES.ARROW_DOWN, { key: 'ArrowDown' });
+    }
+
+    await expect(deleteItem).toHaveAttribute('data-blok-focused', 'true');
 
     await page.evaluate(() => {
       const deleteItem = document.querySelector('[data-blok-item-name="delete"]');

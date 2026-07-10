@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../../../../constants/data-attributes';
 import { IconChevronRight } from '../../../../../icons';
-import { makeShortcutHtml, shortcutToReadable } from '../../../../key-icon';
+import { makeShortcutHtml, shortcutToAriaKeyshortcuts, shortcutToReadable } from '../../../../key-icon';
+import { log } from '../../../../logger';
 import { onHover } from '../../../../tooltip';
 import { twMerge } from '../../../../tw';
 import { PopoverItem } from '../popover-item';
@@ -60,6 +61,15 @@ export class PopoverItemDefault extends PopoverItem {
    */
   public get isConfirmationStateEnabled(): boolean {
     return this.confirmationState !== null;
+  }
+
+  /**
+   * Title shown while the item is in confirmation mode ("click again to
+   * confirm" prompt). Undefined when the item is not awaiting confirmation.
+   * Used by the popover to announce the mode change to screen readers.
+   */
+  public get confirmationTitle(): string | undefined {
+    return this.confirmationState?.title;
   }
 
   /**
@@ -207,6 +217,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
     if (params.isDisabled) {
       root.setAttribute(DATA_ATTR.disabled, 'true');
+      root.setAttribute('aria-disabled', 'true');
     }
     if ('isDestructive' in params && params.isDestructive) {
       root.setAttribute(DATA_ATTR.popoverItemDestructive, 'true');
@@ -217,6 +228,12 @@ export class PopoverItemDefault extends PopoverItem {
     if (this.hasChildren) {
       root.setAttribute(DATA_ATTR.hasChildren, 'true');
     }
+
+    // Expose the item's ARIA role. In a listbox context (e.g. the Toolbox) the
+    // item is an "option"; in a menu context it is a "menuitem" — or a
+    // "menuitemcheckbox" when it represents a toggleable/checked state, in which
+    // case aria-checked mirrors the active flag (kept in sync by setActive()).
+    this.applyAriaRole(root, renderParams?.menuItemRole ?? 'menuitem');
 
     // Create content elements
     this.createContentElements(root, params, renderParams);
@@ -279,6 +296,12 @@ export class PopoverItemDefault extends PopoverItem {
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.innerHTML = makeShortcutHtml(params.secondaryLabel);
 
+      // Expose the shortcut to assistive tech. The glyphs themselves are
+      // aria-hidden inline SVGs, so without this the binding is invisible to
+      // screen readers. aria-keyshortcuts requires spec-valid UI-Events key
+      // values ("Meta+D"), not the pretty display names ("Command+D").
+      root.setAttribute('aria-keyshortcuts', shortcutToAriaKeyshortcuts(params.secondaryLabel));
+
       root.appendChild(secondaryEl);
       this.nodes.secondaryLabelEl = secondaryEl;
 
@@ -298,6 +321,7 @@ export class PopoverItemDefault extends PopoverItem {
 
       trailingEl.className = 'ml-auto shrink-0 flex items-center justify-center [&_svg]:w-icon [&_svg]:h-icon';
       trailingEl.setAttribute('data-blok-testid', 'popover-item-trailing-icon');
+      trailingEl.setAttribute('aria-hidden', 'true');
       trailingEl.innerHTML = params.trailingIcon;
 
       root.appendChild(trailingEl);
@@ -313,6 +337,7 @@ export class PopoverItemDefault extends PopoverItem {
       chevronEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
       chevronEl.setAttribute(DATA_ATTR.popoverItemIconChevronRight, '');
       chevronEl.setAttribute('data-blok-testid', 'popover-item-chevron-right');
+      chevronEl.setAttribute('aria-hidden', 'true');
       chevronEl.innerHTML = IconChevronRight;
 
       root.appendChild(chevronEl);
@@ -330,6 +355,7 @@ export class PopoverItemDefault extends PopoverItem {
     iconEl.className = this.getIconClass(iconWithGap, isInline, isNestedInline);
     iconEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
     iconEl.setAttribute('data-blok-testid', 'popover-item-icon');
+    iconEl.setAttribute('aria-hidden', 'true');
     iconEl.innerHTML = icon;
 
     if (iconWithGap) {
@@ -383,6 +409,63 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * True when the item represents a toggleable/checked state — i.e. it declares
+   * a `toggle` behaviour or an `isActive` flag. Such items are exposed as
+   * `menuitemcheckbox` (in a menu) with an `aria-checked` attribute.
+   */
+  private get isCheckable(): boolean {
+    return this.params.toggle !== undefined || 'isActive' in this.params;
+  }
+
+  /**
+   * Sets the item's ARIA role on the root element.
+   * @param root - item root element
+   * @param menuItemRole - 'menuitem' for menus, 'option' for listboxes
+   */
+  private applyAriaRole(root: HTMLElement, menuItemRole: 'menuitem' | 'option'): void {
+    if (menuItemRole === 'option') {
+      root.setAttribute('role', 'option');
+
+      return;
+    }
+
+    if (this.isCheckable) {
+      root.setAttribute('role', 'menuitemcheckbox');
+      root.setAttribute('aria-checked', this.isActive ? 'true' : 'false');
+
+      return;
+    }
+
+    root.setAttribute('role', 'menuitem');
+  }
+
+  /**
+   * Promotes a `menuitemcheckbox` item to `menuitemradio`.
+   *
+   * Called by the popover when the item belongs to an *exclusive* toggle group
+   * — i.e. two or more items share the same string `toggle` key, so selecting
+   * one deselects the others (the popover already enforces that exclusivity).
+   * Such a group is a radiogroup, not a set of independent checkboxes. A
+   * degenerate single-item toggle group (or a boolean `toggle`) stays a
+   * checkbox, so this is only invoked for genuine multi-member groups.
+   *
+   * No-op unless the item is currently a `menuitemcheckbox`, so listbox
+   * `option`s are left untouched.
+   */
+  public useRadioRole(): void {
+    if (this.nodes.root === null) {
+      return;
+    }
+
+    if (this.nodes.root.getAttribute('role') !== 'menuitemcheckbox') {
+      return;
+    }
+
+    this.nodes.root.setAttribute('role', 'menuitemradio');
+    this.nodes.root.setAttribute('aria-checked', this.isActive ? 'true' : 'false');
+  }
+
+  /**
    * Sets the active state of the item
    */
   private setActive(isActive: boolean): void {
@@ -394,6 +477,14 @@ export class PopoverItemDefault extends PopoverItem {
       this.nodes.root.setAttribute(DATA_ATTR.popoverItemActive, 'true');
     } else {
       this.nodes.root.removeAttribute(DATA_ATTR.popoverItemActive);
+    }
+
+    // Keep aria-checked in sync for menuitemcheckbox / menuitemradio items so
+    // screen readers announce the current toggle state.
+    const role = this.nodes.root.getAttribute('role');
+
+    if (role === 'menuitemcheckbox' || role === 'menuitemradio') {
+      this.nodes.root.setAttribute('aria-checked', isActive ? 'true' : 'false');
     }
   }
 
@@ -663,8 +754,8 @@ export class PopoverItemDefault extends PopoverItem {
       try {
         item.onActivate?.(item);
         this.disableConfirmationMode();
-      } catch {
-        // onActivate threw an error
+      } catch (error) {
+        log('Popover item onActivate handler threw an error', 'error', error);
       }
     } else {
       this.enableConfirmationMode(item.confirmation);

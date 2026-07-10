@@ -467,6 +467,38 @@ describe('Header Tool - Custom Configurations', () => {
         expect(heading.contains(arrow)).toBe(false);
       });
 
+      it('anchors the arrow to the first line of a multi-line heading (not vertically centered)', () => {
+        const options = createHeaderOptions({ text: 'Test', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const wrapper = header.render();
+        const arrow = wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+        // top-1/2 centres the arrow across the WHOLE heading, so on a multi-line toggle
+        // heading it drifts to the middle line. Anchor its centre to the first line:
+        // top-[calc(7px+0.65em)] = heading top padding + half a line, then -translate-y-1/2
+        // pulls the fixed-size pill up so its own centre lands there.
+        expect(arrow.className).not.toContain('top-1/2');
+        expect(arrow.className).toContain('top-[calc(7px_+_0.65em)]');
+        expect(arrow.className).toContain('-translate-y-1/2');
+        // The em in the calc must resolve against the heading font-size (arrow is a
+        // sibling, not a child), so the level's text-size class is copied onto it.
+        expect(arrow.className).toContain('text-2xl');
+      });
+
+      it('gives the arrow a fixed 28px square container that does not scale with heading level', () => {
+        const level1 = new Header(createHeaderOptions({ text: 'A', level: 1, isToggleable: true })).render();
+        const level6 = new Header(createHeaderOptions({ text: 'B', level: 6, isToggleable: true })).render();
+        const arrow1 = level1.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+        const arrow6 = level6.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`) as HTMLElement;
+
+        for (const arrow of [arrow1, arrow6]) {
+          // Fixed pixel square — never an em-based height that would grow with the heading.
+          expect(arrow.className).toContain('h-7');
+          expect(arrow.className).toContain('w-7');
+          expect(arrow.className).not.toContain('h-[1.3em]');
+        }
+      });
+
       it('marks wrapper data-blok-toggle-empty="true" when the toggle heading has no children', () => {
         const api = createMockAPI();
         const getChildren = api.blocks.getChildren as unknown as ReturnType<typeof vi.fn>;

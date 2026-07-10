@@ -397,7 +397,7 @@ export class BlockHierarchy {
    * that moved. Cycle-safe via a visited set.
    * @param block - the subtree root to re-indent
    */
-  private reindentSubtree(block: Block, visited: Set<string> = new Set<string>()): void {
+  private reindentSubtree(block: Block, visited: Set<string> = new Set<string>(), isRoot = true): void {
     if (visited.has(block.id)) {
       return;
     }
@@ -405,11 +405,27 @@ export class BlockHierarchy {
 
     this.updateBlockIndentation(block);
 
+    // A list item renders its nesting indent + bullet/number glyph from its
+    // STRUCTURAL depth, on its inner [role="listitem"] element — not via the
+    // generic holder margin that updateBlockIndentation applies. Reparenting the
+    // subtree root shifts every DESCENDANT's structural depth too, but only the
+    // root's tool MOVED hook fires (blockManager fires it for keyboard nesting,
+    // the drag pipeline for drag). Without re-running each descendant list tool's
+    // MOVED hook here, nested items keep a stale visual indent + glyph. Fire it
+    // for descendant list blocks so they recompute their depth-derived UI. The
+    // root is skipped to avoid double-firing with the caller that owns it.
+    if (!isRoot && block.name === 'list') {
+      block.call('moved', {
+        fromIndex: this.repository.getBlockIndex(block),
+        toIndex: this.repository.getBlockIndex(block),
+      });
+    }
+
     for (const childId of block.contentIds) {
       const child = this.repository.getBlockById(childId);
 
       if (child !== undefined) {
-        this.reindentSubtree(child, visited);
+        this.reindentSubtree(child, visited, false);
       }
     }
   }

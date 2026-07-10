@@ -10,7 +10,9 @@ const PARAGRAPH_CONTENT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-compon
 const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
 const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened="true"]';
-const NOTIFIER_SELECTOR = '[data-blok-testid="notifier-container"]';
+// An invalid URL is surfaced via the accessible inline field error
+// (aria-invalid + error region), not a toast notification.
+const LINK_ERROR_SELECTOR = '[data-blok-link-tool-error]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
   return page.locator(PARAGRAPH_CONTENT_SELECTOR, { hasText: text });
@@ -276,11 +278,10 @@ test.describe('inline tool link', () => {
     await expect(linkInput).toHaveValue('https://example .com');
     await expect(paragraph.getByRole('link')).toHaveCount(0);
 
-    await page.waitForFunction(({ notifierSelector }) => {
-      const notifier = document.querySelector(notifierSelector);
-
-      return Boolean(notifier && notifier.textContent && notifier.textContent.includes('Invalid link'));
-    }, { notifierSelector: NOTIFIER_SELECTOR });
+    // The failure is surfaced via the accessible inline field error, and the
+    // input is marked aria-invalid.
+    await expect(page.locator(LINK_ERROR_SELECTOR)).toContainText('Invalid link');
+    await expect(linkInput).toHaveAttribute('aria-invalid', 'true');
   });
 
   test('should fill in and update existing link', async ({ page }) => {
@@ -308,6 +309,108 @@ test.describe('inline tool link', () => {
     await submitLink(page, 'example.org');
 
     await expect(paragraph.getByRole('link')).toHaveAttribute('href', 'http://example.org');
+  });
+
+  test('edit mode (opening an existing link) shows the title field, labels and remove action', async ({ page }) => {
+    // Guards the full edit UI end-to-end: a regression that stops the edit menu
+    // opening, or that drops the title/remove/label affordances, must fail here.
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: '<a href="https://google.com">First block text</a>',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByText(page, 'First block text');
+
+    await selectAll(paragraph);
+    await ensureLinkInputOpen(page);
+
+    // URL prefilled + edit-only affordances present.
+    await expect(page.getByTestId('inline-tool-input')).toHaveValue('https://google.com');
+    await expect(page.getByTestId('inline-tool-title-input')).toBeVisible();
+    await expect(page.getByTestId('inline-tool-title-input')).toHaveValue('First block text');
+    await expect(page.getByTestId('inline-tool-url-label')).toBeVisible();
+    await expect(page.getByTestId('inline-tool-title-label')).toBeVisible();
+    await expect(page.getByTestId('inline-tool-remove-link')).toBeVisible();
+  });
+
+  test('remove-link button in edit mode unlinks the anchor but keeps its text', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: '<a href="https://google.com">Remove via button</a>',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByText(page, 'Remove via button');
+
+    await selectAll(paragraph);
+    await ensureLinkInputOpen(page);
+
+    const removeButton = page.getByTestId('inline-tool-remove-link');
+
+    await expect(removeButton).toBeVisible();
+    await removeButton.click();
+
+    await expect(paragraph.getByRole('link')).toHaveCount(0);
+    await expect(paragraph).toContainText('Remove via button');
+  });
+
+  test('editing the title field in edit mode rewrites the link text', async ({ page }) => {
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: '<a href="https://google.com">Old label</a>',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByText(page, 'Old label');
+
+    await selectAll(paragraph);
+    await ensureLinkInputOpen(page);
+
+    const titleInput = page.getByTestId('inline-tool-title-input');
+
+    await expect(titleInput).toHaveValue('Old label');
+    await titleInput.fill('New label');
+    await titleInput.press('Enter');
+
+    // Locate the anchor via a role locator (not via the paragraph's original
+    // text, which has just been rewritten by the edit).
+    const anchor = page.locator(PARAGRAPH_CONTENT_SELECTOR).getByRole('link');
+
+    await expect(anchor).toHaveText('New label');
+    await expect(anchor).toHaveAttribute('href', 'https://google.com');
+  });
+
+  test('create mode (new link) hides the title field, labels and remove action', async ({ page }) => {
+    // The edit-only affordances must NOT leak into link creation.
+    await createBlokWithBlocks(page, [
+      {
+        type: 'paragraph',
+        data: {
+          text: 'Plain text here',
+        },
+      },
+    ]);
+
+    const paragraph = getParagraphByText(page, 'Plain text here');
+
+    await selectText(paragraph, 'Plain text');
+    await ensureLinkInputOpen(page);
+
+    await expect(page.getByTestId('inline-tool-input')).toBeVisible();
+    await expect(page.getByTestId('inline-tool-title-input')).toBeHidden();
+    await expect(page.getByTestId('inline-tool-url-label')).toBeHidden();
+    await expect(page.getByTestId('inline-tool-title-label')).toBeHidden();
+    await expect(page.getByTestId('inline-tool-remove-link')).toBeHidden();
   });
 
   test('should remove link when toggled', async ({ page }) => {

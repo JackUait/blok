@@ -1,6 +1,7 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { SelectionUtils } from '../selection/index';
+import { announce } from '../utils/announcer';
 import { mouseButtons } from '../utils';
 
 /**
@@ -16,6 +17,26 @@ export class CrossBlockSelection extends Module {
    * Last selected Block
    */
   private lastSelectedBlock: Block | null = null;
+
+  /**
+   * Ids of the blocks that were already selected when a Shift+pointer gesture
+   * began. A Shift+DRAG must EXTEND this base set (Notion-additive), not replace
+   * it, so we snapshot it on mousedown and re-apply it on every drag move.
+   */
+  private shiftDragBaseSelected: Set<string> | null = null;
+
+  /**
+   * The block the Shift+pointer gesture started on — the pivot the drag range
+   * extends from.
+   */
+  private shiftDragClickedBlock: Block | null = null;
+
+  /**
+   * Whether the current Shift+pointer gesture became a drag (a mouseover reached
+   * a different block before mouseup). A pure Shift+CLICK leaves this false and
+   * the synchronous range-select from mousedown stands.
+   */
+  private shiftDragActive = false;
 
   /**
    * Module preparation
@@ -49,6 +70,243 @@ export class CrossBlockSelection extends Module {
 
     this.listeners.on(document, 'mouseover', this.onMouseOver);
     this.listeners.on(document, 'mouseup', this.onMouseUp);
+  }
+
+  /**
+   * Handle a Shift+Click: select the inclusive block-level range from the anchor
+   * block to the clicked block. The anchor is the first block of an in-progress
+   * block selection if one exists, otherwise the block holding the caret. Mixed
+   * list types and non-list blocks are all included (the range is purely
+   * index-based, like drag selection).
+   * @param event - the Shift+Click mouse down event
+   * @returns true when a range was selected (caller should stop), false when
+   *   there was nothing to anchor or target so the normal path should run
+   */
+  private handleShiftClick(event: MouseEvent): boolean {
+    const { BlockManager } = this.Blok;
+
+    const clickedBlock = BlockManager.getBlock(event.target as HTMLElement);
+
+    if (!clickedBlock) {
+      return false;
+    }
+
+    const targetBlock = BlockManager.resolveToRootBlock(clickedBlock);
+
+    const anchorCandidate = this.firstSelectedBlock ?? BlockManager.currentBlock ?? null;
+
+    if (!anchorCandidate) {
+      return false;
+    }
+
+    const anchorBlock = BlockManager.resolveToRootBlock(anchorCandidate);
+
+    /**
+     * Prevent the native caret placement / text-selection extend so the gesture
+     * reads as a pure block-range selection.
+     */
+    event.preventDefault();
+
+    const countBefore = this.Blok.BlockSelection.selectedBlocks.length;
+
+    this.selectBlockRange(anchorBlock, targetBlock);
+
+    /**
+     * Announce the new selection size — but only when the click actually
+     * changed it, so re-clicking the same target stays silent.
+     */
+    if (this.Blok.BlockSelection.selectedBlocks.length !== countBefore) {
+      this.announceSelectionCount();
+    }
+
+    return true;
+  }
+
+  /**
+   * Start watching a Shift+pointer gesture for a drag after the synchronous
+   * range-click has been applied. Snapshots the base selection and the clicked
+   * pivot block so a subsequent drag can extend the selection additively.
+   * @param baseSelected - ids of blocks selected before this gesture began
+   */
+  private beginShiftDragWatch(baseSelected: Set<string>): void {
+    this.shiftDragBaseSelected = baseSelected;
+    // selectBlockRange (via handleShiftClick) sets lastSelectedBlock to the clicked block.
+    this.shiftDragClickedBlock = this.lastSelectedBlock;
+    this.shiftDragActive = false;
+
+    this.listeners.on(document, 'mouseover', this.onShiftDragOver);
+    this.listeners.on(document, 'mouseup', this.onShiftDragUp);
+  }
+
+  /**
+   * Mouse over handler for a Shift+DRAG. Re-selects the union of the pre-gesture
+   * base selection and the inclusive range from the clicked pivot to the hovered
+   * block, so dragging EXTENDS the existing selection rather than replacing it.
+   * @param event - mouseover event
+   */
+  private onShiftDragOver = (event: Event): void => {
+    const mouseEvent = event as MouseEvent;
+    const { BlockManager, BlockSelection, DragManager } = this.Blok;
+
+    if (!this.shiftDragClickedBlock || !this.shiftDragBaseSelected || DragManager.isDragging) {
+      return;
+    }
+
+    const rawHover = BlockManager.getBlockByChildNode(mouseEvent.target as Node);
+
+    if (!rawHover) {
+      return;
+    }
+
+    const hoverBlock = BlockManager.resolveToRootBlock(rawHover);
+    const anchorIndex = BlockManager.blocks.indexOf(this.shiftDragClickedBlock);
+    const hoverIndex = BlockManager.blocks.indexOf(hoverBlock);
+
+    if (anchorIndex === -1 || hoverIndex === -1 || anchorIndex === hoverIndex) {
+      return;
+    }
+
+    const start = Math.min(anchorIndex, hoverIndex);
+    const end = Math.max(anchorIndex, hoverIndex);
+
+    this.shiftDragActive = true;
+    SelectionUtils.get()?.removeAllRanges();
+
+    BlockManager.blocks.forEach((block, index) => {
+      const inDraggedRange = index >= start && index <= end;
+      const inBaseSelection = this.shiftDragBaseSelected?.has(block.id) ?? false;
+
+      BlockManager.blocks[index].selected = inDraggedRange || inBaseSelection;
+    });
+
+    BlockSelection.clearCache();
+
+    this.firstSelectedBlock = this.shiftDragClickedBlock;
+    this.lastSelectedBlock = hoverBlock;
+
+    this.Blok.Toolbar.close();
+  };
+
+  /**
+   * Mouse up handler ending a Shift+pointer gesture. Tears down the drag-watch
+   * listeners and, when the gesture was a drag, re-opens the multi-block toolbar.
+   */
+  private onShiftDragUp = (): void => {
+    this.listeners.off(document, 'mouseover', this.onShiftDragOver);
+    this.listeners.off(document, 'mouseup', this.onShiftDragUp);
+
+    const wasDrag = this.shiftDragActive;
+
+    this.shiftDragBaseSelected = null;
+    this.shiftDragClickedBlock = null;
+    this.shiftDragActive = false;
+
+    if (wasDrag && this.Blok.BlockSelection.anyBlockSelected) {
+      this.Blok.UI.disableHoverForCooldown();
+      this.Blok.UI.resetBlockHoverState();
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+      this.announceSelectionCount();
+    }
+  };
+
+  /**
+   * Handle a Cmd/Ctrl+Shift+Click or Alt+Shift+Click: TOGGLE the clicked block
+   * in or out of the current selection without collapsing any existing
+   * (possibly non-adjacent) selection — Notion parity for non-contiguous
+   * multi-block selection. The selection model stores a per-block `selected`
+   * flag (BlockSelection.selectedBlocks is a filter over those flags), so gaps
+   * are represented natively; no contiguous-range assumption is involved here.
+   * @param event - the modifier+Shift+Click mouse down event
+   * @returns true when a block was toggled (caller should stop), false when
+   *   there was nothing to toggle so the normal path should run
+   */
+  private handleToggleClick(event: MouseEvent): boolean {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    const clickedBlock = BlockManager.getBlock(event.target as HTMLElement);
+
+    if (!clickedBlock) {
+      return false;
+    }
+
+    const targetBlock = BlockManager.resolveToRootBlock(clickedBlock);
+
+    /**
+     * Prevent native caret placement / text-selection extend so the gesture
+     * reads as a pure block-level toggle.
+     */
+    event.preventDefault();
+
+    SelectionUtils.get()?.removeAllRanges();
+
+    targetBlock.selected = !targetBlock.selected;
+
+    BlockSelection.clearCache();
+
+    /**
+     * Track the clicked block as the anchor so a subsequent Shift+Arrow /
+     * Shift+Click extends from here. Seed firstSelectedBlock when this is the
+     * first block being selected.
+     */
+    this.firstSelectedBlock = this.firstSelectedBlock ?? targetBlock;
+    this.lastSelectedBlock = targetBlock;
+
+    this.Blok.InlineToolbar.close();
+
+    if (BlockSelection.anyBlockSelected) {
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    } else {
+      this.firstSelectedBlock = this.lastSelectedBlock = null;
+      this.Blok.Toolbar.close();
+    }
+
+    /**
+     * Announce the updated selection size (a toggle always changes the count;
+     * announceSelectionCount itself skips single-block/empty selections).
+     */
+    this.announceSelectionCount();
+
+    return true;
+  }
+
+  /**
+   * Select the inclusive range of blocks between two blocks (by flat index),
+   * clearing any prior selection. Reuses the same Math.min/max index-range logic
+   * the drag path uses. Records the anchor/target as first/last selected so a
+   * subsequent Shift+Arrow or Shift+Click keeps extending from the same anchor.
+   * @param anchorBlock - the block the range starts from
+   * @param targetBlock - the block the range ends at
+   */
+  private selectBlockRange(anchorBlock: Block, targetBlock: Block): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    const fIndex = BlockManager.blocks.indexOf(anchorBlock);
+    const lIndex = BlockManager.blocks.indexOf(targetBlock);
+
+    if (fIndex === -1 || lIndex === -1) {
+      return;
+    }
+
+    SelectionUtils.get()?.removeAllRanges();
+
+    const start = Math.min(fIndex, lIndex);
+    const end = Math.max(fIndex, lIndex);
+
+    for (const block of BlockManager.blocks) {
+      block.selected = false;
+    }
+
+    for (const i of Array.from({ length: end - start + 1 }, (_unused, idx) => start + idx)) {
+      BlockManager.blocks[i].selected = true;
+    }
+
+    BlockSelection.clearCache();
+
+    this.firstSelectedBlock = anchorBlock;
+    this.lastSelectedBlock = targetBlock;
+
+    this.Blok.InlineToolbar.close();
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
   }
 
   /**
@@ -127,6 +385,28 @@ export class CrossBlockSelection extends Module {
     if (this.isCrossBlockSelectionStarted) {
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
     }
+
+    /**
+     * Announce the selection size as it grows via Shift+Arrow.
+     */
+    this.announceSelectionCount();
+  }
+
+  /**
+   * Announce how many blocks are currently selected as the selection grows.
+   * A single-block selection is not announced (nothing multi-block to convey).
+   */
+  private announceSelectionCount(): void {
+    const count = this.Blok.BlockSelection.selectedBlocks.length;
+
+    if (count <= 1) {
+      return;
+    }
+
+    announce(
+      this.Blok.I18n.t('a11y.blocksSelected', { count }),
+      { politeness: 'polite' }
+    );
   }
 
   /**
@@ -199,6 +479,49 @@ export class CrossBlockSelection extends Module {
     }
 
     /**
+     * Cmd/Ctrl+Shift+Click (or Alt+Shift+Click) TOGGLES the clicked block in/out
+     * of the current selection, allowing a non-contiguous set — Notion parity.
+     * Must be checked before the plain Shift+Click range path (which also sees
+     * shiftKey) so the modifier gesture is not swallowed as a contiguous range.
+     */
+    if (
+      event.shiftKey &&
+      (event.metaKey || event.ctrlKey || event.altKey) &&
+      event.button === mouseButtons.LEFT &&
+      UI.nodes.redactor.contains(event.target as Node) &&
+      this.handleToggleClick(event)
+    ) {
+      return;
+    }
+
+    /**
+     * Shift+Click selects the inclusive block-level range from the anchor (the
+     * caret's block, or the first block of an in-progress selection) to the
+     * clicked block — Notion parity. Handled before the native-selection clear so
+     * the new range overrides any leftover text selection.
+     *
+     * A Shift+mousedown is ambiguous: it may be a Shift+CLICK (range-select,
+     * handled synchronously here) or the start of a Shift+DRAG (which must EXTEND
+     * the existing selection additively). We resolve the range-click immediately
+     * so pure clicks keep working, but also snapshot the pre-gesture selection and
+     * start watching for a drag; if the pointer then reaches another block, the
+     * drag re-applies `base ∪ dragged-range` instead of the replaced range.
+     */
+    if (
+      event.shiftKey &&
+      event.button === mouseButtons.LEFT &&
+      UI.nodes.redactor.contains(event.target as Node)
+    ) {
+      const baseSelected = new Set(this.Blok.BlockSelection.selectedBlocks.map((block) => block.id));
+
+      if (this.handleShiftClick(event)) {
+        this.beginShiftDragWatch(baseSelected);
+
+        return;
+      }
+    }
+
+    /**
      * Each mouse down on must disable selectAll state
      */
     if (!SelectionUtils.isCollapsed) {
@@ -240,6 +563,7 @@ export class CrossBlockSelection extends Module {
       this.Blok.UI.resetBlockHoverState();
 
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+      this.announceSelectionCount();
     }
   };
 

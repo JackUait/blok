@@ -1,5 +1,7 @@
 import { defineComponent, h, onMounted, onBeforeUnmount, ref, toRaw, watch, type PropType } from 'vue';
 import { getHolder } from './holder-map';
+import { getRegistry } from './registry-map';
+import { BlockPortalHost } from './BlockPortalHost';
 import type { Blok } from '@/types';
 
 /**
@@ -63,6 +65,16 @@ export const BlokContent = defineComponent({
       detach(props.editor);
     });
 
-    return () => h('div', { ref: container });
+    return () => {
+      const editorVal = props.editor;
+      // The shared portal host for `createVueBlock` tools (when this editor has
+      // one). It emits ONLY <Teleport> anchors — no real DOM in the container —
+      // so the imperatively-appended holder is undisturbed and the container
+      // stays a single root for attribute fallthrough. Registry-less editors
+      // (vanilla-only) render the bare div exactly as before.
+      const registry = editorVal === null ? undefined : getRegistry(toRaw(editorVal));
+
+      return h('div', { ref: container }, registry === undefined ? [] : [h(BlockPortalHost, { registry })]);
+    };
   },
 });

@@ -318,8 +318,22 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Drag drop-indicator: list-item drop lines gained a grayish lead-in
     // (::after rule + lead-bg tokens) drawn from the editor's left edge to the
     // coloured line. ~1KB intentional growth.
+    // H11 shared invalid-field convention: a global `[aria-invalid="true"]`
+    // destructive-ring rule (border-color + focus box-shadow) in media-empty.css
+    // so link/equation/embed inputs share one look. ~0.3KB intentional growth.
+    // Scrollbar gutter + system-like auto-hide: every vertical scroll container
+    // (popover items, emoji picker, database drawer, file previews) reserves
+    // scrollbar space (scrollbar-gutter: stable + classic ::-webkit-scrollbar)
+    // with the thumb transparent at rest and revealed on hover/scroll; standard
+    // scrollbar-width/color moved into Firefox-only @supports blocks because
+    // they disable webkit scrollbar styling in Chromium. ~2KB intentional growth.
+    // master merge: the docs/airbnb-redesign preflight rework (all resets moved
+    // into @layer base) landed alongside master's own CSS additions (inline-code
+    // surface, <mark> UA-highlight reset, etc.); combining both branches' growth
+    // pushes the imported bytes past the 1.36 ceiling, so the headroom multiplier
+    // is nudged to 1.37. ~1.5KB combined growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.34);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.37);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

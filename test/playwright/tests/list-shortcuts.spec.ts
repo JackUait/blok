@@ -156,4 +156,24 @@ test.describe('list keyboard shortcuts', () => {
     await boot(page, saved);
     await expect.poll(() => layout(page)).toEqual(['a/root', 'b@1/nested']);
   });
+
+  test('Tab on a MIXED list + non-list selection indents each kind (Notion parity, no longer a no-op)', async ({ page }) => {
+    // Anchor paragraph 'a', then a paragraph 'b' and a list item 'c' that are
+    // selected together. Tab must indent BOTH: 'b' nests structurally under 'a',
+    // and 'c' gains one list depth level — instead of doing nothing.
+    await boot(page, [
+      { type: 'paragraph', data: { text: 'a' } } as OutputData['blocks'][number],
+      { type: 'paragraph', data: { text: 'b' } } as OutputData['blocks'][number],
+      li('c'),
+    ]);
+
+    // Select 'b' + 'c' via a cross-block selection.
+    await page.getByText('b', { exact: true }).click();
+    await page.keyboard.press('Shift+ArrowDown');
+
+    await page.keyboard.press('Tab');
+
+    // 'b' nested under 'a' (structural); 'c' indented one list depth level.
+    await expect.poll(() => layout(page)).toEqual(['a/root', 'b/nested', 'c@1/root']);
+  });
 });

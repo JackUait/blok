@@ -773,6 +773,72 @@ test.describe('arrow up/down keydown - Notion-style vertical navigation', () => 
     });
   });
 
+  test.describe('modifier+arrow falls through to native (no Blok cross-block jump)', () => {
+    /**
+     * Regression for "Cmd/Ctrl+Arrow not distinguished at block boundaries". Plain
+     * arrows navigate line-by-line and cross blocks (covered above); a modifier+arrow
+     * (Cmd/Ctrl/Alt) is a native gesture confined to the block's own contenteditable,
+     * so it must NEVER trigger Blok's cross-block navigation. Previously Blok
+     * half-intercepted modifier+Up/Down — crossing blocks here, or leaving the caret
+     * stuck mid-paragraph in a wrapped block.
+     */
+    const getCurrentBlockIndex = (page: Page): Promise<number> =>
+      page.evaluate(() => window.blokInstance?.blocks.getCurrentBlockIndex?.() ?? -1);
+
+    for (const mod of ['Meta', 'Control', 'Alt'] as const) {
+      test(`${mod}+ArrowDown at end of a block does not cross into the next block`, async ({ page }) => {
+        await createParagraphBlok(page, ['First block alpha', 'Second block beta']);
+
+        const firstParagraph = getParagraphByIndex(page, 0);
+
+        await firstParagraph.click();
+        await page.keyboard.press('End');
+        await page.keyboard.press(`${mod}+ArrowDown`);
+
+        // Native gesture stays inside block 0's contenteditable — no cross-block jump.
+        await expect.poll(() => getCurrentBlockIndex(page)).toBe(0);
+
+        const caretInfo = await getCaretInfoOrThrow(firstParagraph);
+
+        expect(caretInfo.inside).toBe(true);
+      });
+
+      test(`${mod}+ArrowUp at start of a block does not cross into the previous block`, async ({ page }) => {
+        await createParagraphBlok(page, ['First block alpha', 'Second block beta']);
+
+        const secondParagraph = getParagraphByIndex(page, 1);
+
+        await secondParagraph.click();
+        await page.keyboard.press('Home');
+        await page.keyboard.press(`${mod}+ArrowUp`);
+
+        // Native gesture stays inside block 1's contenteditable — no cross-block jump.
+        await expect.poll(() => getCurrentBlockIndex(page)).toBe(1);
+
+        const caretInfo = await getCaretInfoOrThrow(secondParagraph);
+
+        expect(caretInfo.inside).toBe(true);
+      });
+    }
+
+    test('plain ArrowDown at end of a block still crosses into the next block (unchanged)', async ({ page }) => {
+      await createParagraphBlok(page, ['First block alpha', 'Second block beta']);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+      const secondParagraph = getParagraphByIndex(page, 1);
+
+      await firstParagraph.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('ArrowDown');
+
+      await waitForCaretInBlock(page, secondParagraph, 1);
+
+      const caretInfo = await getCaretInfoOrThrow(secondParagraph);
+
+      expect(caretInfo.inside).toBe(true);
+    });
+  });
+
   test.describe('list item navigation with caret visibility', () => {
     test('caret remains visible when navigating down through list items from start of first item', async ({ page }) => {
       await createBlokWithListTool(page, createListItems([

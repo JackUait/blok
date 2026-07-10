@@ -28,7 +28,7 @@ import {
 } from '../../components/shared/block-color';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { stripFakeBackgroundElements } from '../../components/utils';
-import { isContentEmpty, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 /**
@@ -257,7 +257,7 @@ export class Paragraph implements BlockTool {
     div.className = twMerge(
       this.api.styles.block,
       Paragraph.WRAPPER_CLASSES,
-      PLACEHOLDER_FOCUS_ONLY_CLASSES
+      getPlaceholderClasses('focus')
     );
     div.setAttribute(DATA_ATTR.tool, 'paragraph');
     div.contentEditable = 'false';
@@ -285,7 +285,7 @@ export class Paragraph implements BlockTool {
     if (!this.readOnly) {
       div.contentEditable = 'true';
       div.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(div, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active', 'focus');
     }
 
     return div;
@@ -332,7 +332,7 @@ export class Paragraph implements BlockTool {
     } else {
       this._element.contentEditable = 'true';
       this._element.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(this._placeholder), 'data-blok-placeholder-active', 'focus');
 
       if (this._element.innerHTML === '<br>') {
         this._element.innerHTML = '';

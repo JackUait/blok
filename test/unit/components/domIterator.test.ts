@@ -154,5 +154,280 @@ describe('DomIterator', () => {
     expect(hoistedMocks.setCursorMock).toHaveBeenCalledTimes(1);
     expect(hoistedMocks.setCursorMock).toHaveBeenCalledWith(items[0]);
   });
+
+  describe('active-descendant host', () => {
+    it('sets aria-selected on focused item and aria-activedescendant on host with a generated stable id', () => {
+      const items = createItems();
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      const id = items[0].getAttribute('id');
+
+      expect(id).toBeTruthy();
+      expect(items[0]).toHaveAttribute('aria-selected', 'true');
+      expect(host).toHaveAttribute('aria-activedescendant', id as string);
+    });
+
+    it('accepts host via setActiveDescendantHost setter', () => {
+      const items = createItems();
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.setActiveDescendantHost(host);
+      iterator.setCursor(1);
+
+      const id = items[1].getAttribute('id');
+
+      expect(id).toBeTruthy();
+      expect(host).toHaveAttribute('aria-activedescendant', id as string);
+    });
+
+    it('moves aria-selected/aria-activedescendant to the new item and clears the old one', () => {
+      const items = createItems();
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.next();
+      const firstId = items[0].getAttribute('id');
+
+      expect(host).toHaveAttribute('aria-activedescendant', firstId as string);
+
+      iterator.next();
+      const secondId = items[1].getAttribute('id');
+
+      expect(items[0]).not.toHaveAttribute('aria-selected');
+      expect(items[1]).toHaveAttribute('aria-selected', 'true');
+      expect(host).toHaveAttribute('aria-activedescendant', secondId as string);
+    });
+
+    it('clears aria-selected and host aria-activedescendant on dropCursor', () => {
+      const items = createItems();
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+      iterator.dropCursor();
+
+      expect(items[0]).not.toHaveAttribute('aria-selected');
+      expect(host).not.toHaveAttribute('aria-activedescendant');
+    });
+
+    it('clears aria-activedescendant on host and aria-selected on the focused item when host is set to null', () => {
+      const items = createItems();
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+      expect(items[0]).toHaveAttribute('aria-selected', 'true');
+
+      iterator.setActiveDescendantHost(null);
+
+      expect(host).not.toHaveAttribute('aria-activedescendant');
+      expect(items[0]).not.toHaveAttribute('aria-selected');
+    });
+
+    it('moves aria-activedescendant off the old host onto the new host when swapped while focused', () => {
+      const items = createItems();
+      const hostA = document.createElement('div');
+      const hostB = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, hostA);
+
+      iterator.setCursor(1);
+
+      const id = items[1].getAttribute('id');
+
+      expect(hostA).toHaveAttribute('aria-activedescendant', id as string);
+
+      iterator.setActiveDescendantHost(hostB);
+
+      expect(hostA).not.toHaveAttribute('aria-activedescendant');
+      expect(hostB).toHaveAttribute('aria-activedescendant', id as string);
+      expect(items[1]).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('reuses an existing id instead of regenerating it', () => {
+      const items = createItems();
+
+      items[0].id = 'preexisting-id';
+
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      expect(items[0].id).toBe('preexisting-id');
+      expect(host).toHaveAttribute('aria-activedescendant', 'preexisting-id');
+    });
+
+    it.each(['menuitem', 'menuitemradio', 'menuitemcheckbox'])(
+      'does not write aria-selected onto role="%s" items (aria-activedescendant alone conveys the highlight)',
+      (role) => {
+        const items = createItems();
+
+        items.forEach((item) => item.setAttribute('role', role));
+
+        const host = document.createElement('div');
+        const iterator = new DomIterator(items, focusedClass, host);
+
+        iterator.setCursor(0);
+
+        expect(items[0].hasAttribute('aria-selected')).toBe(false);
+        expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+      }
+    );
+
+    it('removes a stale aria-selected from a menuitem when it becomes highlighted', () => {
+      const items = createItems();
+
+      items.forEach((item) => item.setAttribute('role', 'menuitem'));
+      items[0].setAttribute('aria-selected', 'true');
+
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      expect(items[0].hasAttribute('aria-selected')).toBe(false);
+    });
+
+    it('keeps writing aria-selected for role="option" items (listbox popovers)', () => {
+      const items = createItems();
+
+      items.forEach((item) => item.setAttribute('role', 'option'));
+
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursor(0);
+
+      expect(items[0]).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('does not touch aria-* attributes or generate ids when no host is set', () => {
+      const items = createItems();
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.setCursor(0);
+      iterator.next();
+
+      items.forEach((item) => {
+        expect(item.hasAttribute('aria-selected')).toBe(false);
+        expect(item.hasAttribute('id')).toBe(false);
+      });
+    });
+  });
+
+  describe('Home / End (first / last)', () => {
+    it('setCursorToFirst focuses the first item and sets markers', () => {
+      const items = createItems();
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.setCursor(2);
+      iterator.setCursorToFirst();
+
+      expect(iterator.currentItem).toBe(items[0]);
+      expect(items[0]).toHaveAttribute('data-blok-focused', 'true');
+      expect(items[2]).not.toHaveAttribute('data-blok-focused');
+    });
+
+    it('setCursorToLast focuses the last item and sets markers', () => {
+      const items = createItems();
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.setCursor(0);
+      iterator.setCursorToLast();
+
+      const last = items[items.length - 1];
+
+      expect(iterator.currentItem).toBe(last);
+      expect(last).toHaveAttribute('data-blok-focused', 'true');
+      expect(items[0]).not.toHaveAttribute('data-blok-focused');
+    });
+
+    it('setCursorToFirst/Last update aria-activedescendant on the host', () => {
+      const items = createItems();
+      const host = document.createElement('div');
+      const iterator = new DomIterator(items, focusedClass, host);
+
+      iterator.setCursorToFirst();
+      expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+
+      iterator.setCursorToLast();
+      const last = items[items.length - 1];
+
+      expect(host).toHaveAttribute('aria-activedescendant', last.getAttribute('id') as string);
+    });
+  });
+
+  describe('disabled items', () => {
+    it('skips disabled items when moving next', () => {
+      const items = createItems();
+
+      items[1].setAttribute('data-blok-disabled', '');
+
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.next();
+      expect(iterator.currentItem).toBe(items[0]);
+
+      iterator.next();
+      expect(iterator.currentItem).toBe(items[2]);
+      expect(items[1]).not.toHaveAttribute('data-blok-focused');
+    });
+
+    it('skips disabled items when moving previous', () => {
+      const items = createItems();
+
+      items[1].setAttribute('data-blok-disabled', '');
+
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.previous();
+      expect(iterator.currentItem).toBe(items[2]);
+
+      iterator.previous();
+      expect(iterator.currentItem).toBe(items[0]);
+    });
+
+    it('leaves the cursor unchanged when all items are disabled', () => {
+      const items = createItems();
+
+      items.forEach(item => item.setAttribute('data-blok-disabled', ''));
+
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.next();
+
+      expect(iterator.currentItem).toBeNull();
+    });
+
+    it('setCursorToFirst skips leading disabled items', () => {
+      const items = createItems();
+
+      items[0].setAttribute('data-blok-disabled', '');
+
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.setCursorToFirst();
+
+      expect(iterator.currentItem).toBe(items[1]);
+    });
+
+    it('setCursorToLast skips trailing disabled items', () => {
+      const items = createItems();
+
+      items[items.length - 1].setAttribute('data-blok-disabled', '');
+
+      const iterator = new DomIterator(items, focusedClass);
+
+      iterator.setCursorToLast();
+
+      expect(iterator.currentItem).toBe(items[items.length - 2]);
+    });
+  });
 });
 

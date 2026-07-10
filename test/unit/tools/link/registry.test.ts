@@ -3,6 +3,7 @@ import {
   matchEmbedService,
   buildEmbedUrl,
   isHttpUrl,
+  isSamePageLink,
   EMBED_SERVICES,
 } from '../../../../src/tools/link/registry';
 
@@ -2623,6 +2624,29 @@ describe('link registry', () => {
 
     it('rejects a non-URL string', () => {
       expect(isHttpUrl('just text')).toBe(false);
+    });
+  });
+
+  describe('isSamePageLink', () => {
+    it('treats bare anchors as same-page', () => {
+      expect(isSamePageLink('#results')).toBe(true);
+      expect(isSamePageLink('  #top')).toBe(true);
+    });
+
+    it('treats a URL resolving to the current origin + pathname as same-page', () => {
+      const samePage = `${window.location.origin}${window.location.pathname}#section`;
+
+      expect(isSamePageLink(samePage)).toBe(true);
+      expect(isSamePageLink(window.location.href)).toBe(true);
+    });
+
+    it('treats cross-page and cross-origin URLs as not same-page', () => {
+      expect(isSamePageLink('https://google.com')).toBe(false);
+      expect(isSamePageLink(`${window.location.origin}/other-path`)).toBe(false);
+    });
+
+    it('treats a plain string that is not a URL as not same-page', () => {
+      expect(isSamePageLink('just text')).toBe(false);
     });
   });
 

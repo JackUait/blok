@@ -8,6 +8,7 @@ import { Block } from '../../block';
 import { BlockAPI } from '../../block/api';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
+import { announce } from '../../utils/announcer';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 
@@ -30,9 +31,13 @@ export class BlocksAPI extends Module {
       get isSyncingFromYjs(): boolean {
         return blocksAPI.Blok.BlockManager.isSyncingFromYjs;
       },
+      get isPointerDragActive(): boolean {
+        return blocksAPI.Blok.BlockManager.isPointerDragActive;
+      },
       clear: (): Promise<void> => this.clear(),
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
+      importMarkdown: (md: string, options?: MarkdownImportConfig): Promise<OutputData> => this.importMarkdown(md, options),
       delete: (index?: number, setCaret?: boolean): Promise<void> => this.delete(index, setCaret),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
@@ -615,5 +620,7 @@ export class BlocksAPI extends Module {
     }
 
     highlightBlockArrival(el);
+
+    announce(this.Blok.I18n.t('a11y.navigatedToBlock'));
   }
 }

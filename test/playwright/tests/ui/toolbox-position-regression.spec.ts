@@ -73,6 +73,21 @@ interface PositionMeasurement {
  * @param page - playwright page
  */
 const emptyCurrentEditable = async (page: Page): Promise<void> => {
+  // If the focused editable is already empty, do nothing. Select-all + Delete on
+  // an empty block now selects the WHOLE block and removes it (Notion-parity
+  // block selection), which would destroy the very block the caller is about to
+  // measure. Clearing an already-empty block is a no-op anyway.
+  const alreadyEmpty = await page.evaluate(() => {
+    const active = document.activeElement;
+    const editable = active?.closest('[contenteditable]') ?? active;
+
+    return (editable?.textContent ?? '').trim().length === 0;
+  });
+
+  if (alreadyEmpty) {
+    return;
+  }
+
   const isMac = process.platform === 'darwin';
   const selectAll = isMac ? 'Meta+A' : 'Control+A';
 

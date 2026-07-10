@@ -46,23 +46,24 @@ describe('notion-style heading / list / toggle icons', () => {
       IconH6,
     };
 
-    it.each(Object.entries(numbered))('%s should be two filled glyph paths (H + digit), no strokes', (_name, icon) => {
+    it.each(Object.entries(numbered))('%s should be two stroked line-art paths (H + digit), no fills', (_name, icon) => {
       const all = paths(icon);
 
       expect(all.length).toBe(2);
 
       for (const p of all) {
-        expect(p.getAttribute('fill')).toBe('currentColor');
-        expect(p.getAttribute('stroke')).toBeNull();
+        expect(p.getAttribute('stroke')).toBe('currentColor');
+        expect(p.getAttribute('fill')).toBeNull();
+        expect(p.getAttribute('stroke-linecap')).toBe('round');
       }
     });
 
-    it('IconHeading should be a single filled H glyph', () => {
+    it('IconHeading should be a single stroked H glyph', () => {
       const all = paths(IconHeading);
 
       expect(all.length).toBe(1);
-      expect(all[0].getAttribute('fill')).toBe('currentColor');
-      expect(all[0].getAttribute('stroke')).toBeNull();
+      expect(all[0].getAttribute('stroke')).toBe('currentColor');
+      expect(all[0].getAttribute('fill')).toBeNull();
     });
   });
 
@@ -73,7 +74,7 @@ describe('notion-style heading / list / toggle icons', () => {
       IconToggleH3,
     };
 
-    it.each(Object.entries(toggles))('%s should lead with a solid triangle followed by filled glyphs', (_name, icon) => {
+    it.each(Object.entries(toggles))('%s should lead with a solid triangle followed by stroked glyphs', (_name, icon) => {
       const all = paths(icon);
 
       expect(all.length).toBe(3);
@@ -83,11 +84,11 @@ describe('notion-style heading / list / toggle icons', () => {
       expect(all[0].getAttribute('stroke-linejoin')).toBe('round');
       expect(all[0].getAttribute('d')).toContain('Z');
 
-      // letterforms: filled, no stroke
-      expect(all[1].getAttribute('fill')).toBe('currentColor');
-      expect(all[1].getAttribute('stroke')).toBeNull();
-      expect(all[2].getAttribute('fill')).toBe('currentColor');
-      expect(all[2].getAttribute('stroke')).toBeNull();
+      // letterforms: stroked line-art, no fill
+      expect(all[1].getAttribute('stroke')).toBe('currentColor');
+      expect(all[1].getAttribute('fill')).toBeNull();
+      expect(all[2].getAttribute('stroke')).toBe('currentColor');
+      expect(all[2].getAttribute('fill')).toBeNull();
     });
 
     it.each(Object.entries(toggles))('%s should not keep the old trailing chevron', (_name, icon) => {
@@ -111,17 +112,20 @@ describe('notion-style heading / list / toggle icons', () => {
   });
 
   describe('IconListNumbered', () => {
-    it('should render digits as filled glyph paths, not <text>', () => {
+    it('should render digits as hairline stroked glyph paths, not <text> or solid fills', () => {
       const svg = parseSvg(IconListNumbered);
 
       expect(svg.querySelectorAll('text').length).toBe(0);
 
-      const digitPaths = paths(IconListNumbered).filter((p) => p.getAttribute('fill') === 'currentColor');
+      const digitPaths = paths(IconListNumbered).filter(
+        (p) => p.getAttribute('stroke') === 'currentColor' && p.getAttribute('d') !== 'M8 5h9M8 10h9M8 15h9',
+      );
 
       expect(digitPaths.length).toBe(3);
 
+      // stroked, never a solid fill — that is what kept the old digits looking thick
       for (const p of digitPaths) {
-        expect(p.getAttribute('stroke')).toBeNull();
+        expect(p.getAttribute('fill')).not.toBe('currentColor');
       }
     });
 
@@ -130,7 +134,9 @@ describe('notion-style heading / list / toggle icons', () => {
     });
 
     it('should leave breathing room between stacked digits', () => {
-      const digitPaths = paths(IconListNumbered).filter((p) => p.getAttribute('fill') === 'currentColor');
+      const digitPaths = paths(IconListNumbered).filter(
+        (p) => p.getAttribute('stroke') === 'currentColor' && p.getAttribute('d') !== 'M8 5h9M8 10h9M8 15h9',
+      );
 
       // SVGPathPen emits absolute commands; collect Y values per command type
       const yRange = (p: SVGPathElement): [number, number] => {

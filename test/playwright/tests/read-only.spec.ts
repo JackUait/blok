@@ -519,7 +519,7 @@ test.describe('read-only mode', () => {
     await expect(paragraph).toHaveCount(1);
     await paste(page, paragraph, {
 
-      'text/plain': ' + pasted text',
+      'text/plain': ' and pasted text',
     });
 
     await expect(paragraph).toHaveText('Original content');
@@ -530,10 +530,10 @@ test.describe('read-only mode', () => {
 
     await paste(page, paragraph, {
 
-      'text/plain': ' + pasted text',
+      'text/plain': ' and pasted text',
     });
 
-    await expect(paragraph).toContainText('Original content + pasted text');
+    await expect(paragraph).toContainText('Original content and pasted text');
   });
 
   test('in-place toggle preserves content without re-render', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
+import { generateId } from '../id-generator';
 
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemSeparator, css as popoverItemCls, PopoverItemDefault, PopoverItemType } from './components/popover-item';
@@ -12,6 +13,7 @@ import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, resolveNestedPopoverSide } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
+import { createPositionTracker, type PositionTracker } from './anchored-position';
 import { stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
 
@@ -117,6 +119,34 @@ export class PopoverDesktop extends PopoverAbstract {
   private suppressSyncHoverRaf: number | null = null;
 
   /**
+   * Delay (ms) a *pointer hover* waits before opening a nested submenu (Radix
+   * SubTrigger "open intent"). Keeps a diagonal pointer path that merely clips
+   * a trigger-with-children on the way somewhere else from flashing a submenu
+   * open. Keyboard navigation stays synchronous — it never goes through this.
+   */
+  private static readonly NESTED_OPEN_INTENT_DELAY_MS = 100;
+
+  /**
+   * Grace period (ms) an open nested submenu survives after the pointer leaves
+   * it, before it is torn down. Canceled when the pointer re-enters the nested
+   * popover, so a brief excursion across the gap between parent and submenu
+   * does not close it.
+   */
+  private static readonly NESTED_CLOSE_GRACE_DELAY_MS = 300;
+
+  /**
+   * Pending pointer open-intent timer (see {@link NESTED_OPEN_INTENT_DELAY_MS}).
+   * Null when no open is pending.
+   */
+  private nestedOpenIntentTimer: number | null = null;
+
+  /**
+   * Pending close-grace timer (see {@link NESTED_CLOSE_GRACE_DELAY_MS}). Null
+   * when no deferred close is pending.
+   */
+  private nestedCloseGraceTimer: number | null = null;
+
+  /**
    * Element of the page that creates 'scope' of the popover.
    * If possible, popover will not cross specified element's borders when opening.
    */
@@ -159,6 +189,14 @@ export class PopoverDesktop extends PopoverAbstract {
   public setLeftAlignElement(element: HTMLElement | undefined): void {
     this.leftAlignElement = element;
   }
+
+  /**
+   * Keeps the popover anchored to its trigger while it is open by re-running
+   * {@link reposition} on scroll / resize / content-resize. Created on show()
+   * for trigger-based (root) popovers and torn down on hide()/destroy().
+   * Undefined while the popover is closed.
+   */
+  private positionTracker: PositionTracker | undefined;
 
   /**
    * Popover size cache
@@ -269,6 +307,38 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     this.flipper?.onFlip(this.onFlip);
+
+    // The flipper is created after addSearch(), so a search-field host recorded
+    // there must be re-applied to the freshly-built flipper.
+    if (this.activeDescendantHost !== null) {
+      this.flipper?.setActiveDescendantHost(this.activeDescendantHost);
+    }
+  }
+
+  /**
+   * Sets the element that owns DOM focus while this popover is open (e.g. the
+   * combobox contentEditable that drives the Toolbox). The flipper reflects the
+   * currently-highlighted item on it via `aria-activedescendant`.
+   * @param host - focus-owning element, or null to clear
+   */
+  public setActiveDescendantHost(host: HTMLElement | null): void {
+    this.activeDescendantHost = host;
+    this.flipper?.setActiveDescendantHost(host);
+  }
+
+  /**
+   * Element that owns DOM focus while this popover is open when focus is kept
+   * outside the popover subtree (combobox contentEditable). Null when focus
+   * lives inside the popover.
+   */
+  private activeDescendantHost: HTMLElement | null = null;
+
+  /**
+   * Exposes the active-descendant focus host so the registry's focus-out
+   * dismissal treats focus on it as "inside" the popover.
+   */
+  public override getFocusHost(): HTMLElement | null {
+    return this.activeDescendantHost;
   }
 
   /**
@@ -333,8 +403,7 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nodes.popover.style.left = `${left}px`;
       this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, '0px');
       this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, '0px');
-      this.setOpenTop(openTop);
-      this.setOpenLeft(openLeft);
+      this.applyResolvedSide(openTop, openLeft);
     }
 
     const measuredSize = this.size;
@@ -349,26 +418,18 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (!this.trigger) {
-      const containerRect = this.nodes.popoverContainer.getBoundingClientRect();
-      // offset: 0 because the visual gap is handled by CSS calc (0.5rem), not pixel positioning
-      const { openTop, openLeft } = resolvePosition({
-        anchor: containerRect,
-        popoverSize: measuredSize,
-        scopeBounds: this.scopeElement.getBoundingClientRect(),
-        viewportSize: { width: window.innerWidth, height: window.innerHeight },
-        scrollOffset: { x: window.scrollX, y: window.scrollY },
-        offset: 0,
-      });
+      this.applyNonTriggerPosition(measuredSize);
+    }
 
-      if (openTop) {
-        this.setOpenTop(true);
-        this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, 'calc(-1 * (0.5rem + var(--popover-height)))');
-      }
-
-      if (openLeft) {
-        this.setOpenLeft(true);
-        this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, 'calc(-1 * var(--width) + 100%)');
-      }
+    // Keep the popover anchored to its trigger while it is open: a page scroll,
+    // a viewport resize, or the popover's own size changing would otherwise
+    // strand it away from the trigger. Only trigger-based (root, body-mounted)
+    // popovers track — nested submenus follow their parent, and non-trigger
+    // inline popovers scroll with their owning wrapper.
+    if (this.trigger) {
+      this.positionTracker?.detach();
+      this.positionTracker = createPositionTracker(this.nodes.popover, () => this.reposition());
+      this.positionTracker.attach();
     }
 
     // Set flag BEFORE super.show() so handleHover can suppress the
@@ -421,9 +482,70 @@ export class PopoverDesktop extends PopoverAbstract {
 
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
-      this.setOpenTop(openTop);
-      this.setOpenLeft(openLeft);
+      this.applyResolvedSide(openTop, openLeft);
     }
+  }
+
+  /**
+   * Applies the resolved vertical/horizontal placement flags: keeps the legacy
+   * `data-blok-popover-open-top`/`-open-left` attributes (which
+   * `popover-animation.css` keys off for transform-origin) in sync AND stamps
+   * the Radix-style `data-side`/`data-align` attributes so newer CSS/animation
+   * can key off the resolved side.
+   * @param openTop - true when the popover opened above the anchor
+   * @param openLeft - true when the popover opened to the left of the anchor
+   */
+  private applyResolvedSide(openTop: boolean, openLeft: boolean): void {
+    this.setOpenTop(openTop);
+    this.setOpenLeft(openLeft);
+
+    this.nodes.popover.setAttribute('data-side', openTop ? 'top' : 'bottom');
+    this.nodes.popover.setAttribute('data-align', openLeft ? 'end' : 'start');
+  }
+
+  /**
+   * Positions a non-trigger (inline-mounted) popover via CSS variables so the
+   * visual gap stays handled by CSS `calc` rather than pixel math.
+   * @param measuredSize - measured popover size
+   */
+  private applyNonTriggerPosition(measuredSize: { height: number; width: number }): void {
+    const containerRect = this.nodes.popoverContainer.getBoundingClientRect();
+    // offset: 0 because the visual gap is handled by CSS calc (0.5rem), not pixel positioning
+    const { openTop, openLeft } = resolvePosition({
+      anchor: containerRect,
+      popoverSize: measuredSize,
+      scopeBounds: this.scopeElement.getBoundingClientRect(),
+      viewportSize: { width: window.innerWidth, height: window.innerHeight },
+      scrollOffset: { x: window.scrollX, y: window.scrollY },
+      offset: 0,
+    });
+
+    this.nodes.popover.style.setProperty(CSSVariables.PopoverTop, openTop
+      ? 'calc(-1 * (0.5rem + var(--popover-height)))'
+      : '0px');
+    this.nodes.popover.style.setProperty(CSSVariables.PopoverLeft, openLeft
+      ? 'calc(-1 * var(--width) + 100%)'
+      : '0px');
+
+    this.setOpenTop(openTop);
+    this.setOpenLeft(openLeft);
+  }
+
+  /**
+   * Re-computes and re-applies the trigger-based popover position. Invoked by
+   * the {@link positionTracker} on scroll / resize / content-resize while the
+   * popover is open, so it stays anchored to a trigger that moved.
+   */
+  private reposition(): void {
+    if (this.trigger === undefined || !this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
+      return;
+    }
+
+    const { top, left, openTop, openLeft } = this.calculatePosition();
+
+    this.nodes.popover.style.top = `${top}px`;
+    this.nodes.popover.style.left = `${left}px`;
+    this.applyResolvedSide(openTop, openLeft);
   }
 
   /**
@@ -469,11 +591,19 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
-   * Closes popover
+   * Desktop close cleanup, run by the base {@link PopoverAbstract.hide} through
+   * the template-method `onHide` hook (converted from an arrow-function `hide`
+   * override so `PopoverInline` can extend the base close path instead of
+   * re-implementing it and forgetting base steps).
    */
-  public hide = (): void => {
+  protected override onHide(): void {
+    this.positionTracker?.detach();
+    this.positionTracker = undefined;
+
+    this.cancelNestedOpenIntent();
+    this.cancelNestedCloseGrace();
+
     this.cleanupPromotedItems();
-    super.hide();
 
     this.destroyNestedPopoverIfExists();
 
@@ -493,6 +623,15 @@ export class PopoverDesktop extends PopoverAbstract {
     this.params.position = undefined;
     this.nodes.popover.style.top = '';
     this.nodes.popover.style.left = '';
+  }
+
+  /**
+   * Bound wrapper used as the `ClosedOnActivate` event-handler reference for a
+   * nested popover — `hide` is a regular method now, so on/off need a stable
+   * bound reference to add and remove the same listener.
+   */
+  private readonly closeOnNestedActivate = (): void => {
+    this.hide();
   };
 
   /**
@@ -583,6 +722,11 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
+    // The keyboard path opens synchronously — abandon any pending pointer-driven
+    // open/close intent so a stale hover timer cannot fight the keyboard.
+    this.cancelNestedOpenIntent();
+    this.cancelNestedCloseGrace();
+
     this.nestedPopoverTriggerItem = item;
 
     this.showNestedPopoverForItem(item);
@@ -615,13 +759,9 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
-    if (this.previouslyHoveredItem === item) {
-      return;
-    }
-
     /**
      * If the pointer moved into the nested popover (e.g. user is about to click
-     * an item in the sub-menu), do not destroy it.
+     * an item in the sub-menu), keep it open and cancel any pending close.
      */
     if (
       this.nestedPopover !== undefined &&
@@ -629,44 +769,58 @@ export class PopoverDesktop extends PopoverAbstract {
       event.target instanceof Node &&
       this.nestedPopover.hasNode(event.target)
     ) {
+      this.cancelNestedCloseGrace();
+
       return;
     }
 
+    if (this.previouslyHoveredItem === item) {
+      return;
+    }
+
+    this.previouslyHoveredItem = item;
+
+    // Moving onto a different item abandons a pending open-intent that targeted
+    // the item we just left — this is what keeps a diagonal pointer path that
+    // merely clips a sibling trigger from opening that sibling's submenu.
+    this.cancelNestedOpenIntent();
+
     /**
-     * If a nested popover is already open, only destroy it when the pointer
-     * moves onto a *different* trigger item (so we can open that item's
-     * submenu instead). Hovering plain parent items or re-hovering the
-     * current trigger during click dispatch must not tear the nested popover
-     * down — otherwise Playwright's click resolves to a stale/detached node
-     * while the pointer sweeps across the parent on its way to the nested
-     * submenu.
+     * If a nested popover is already open, only swap it when the pointer moves
+     * onto a *different* trigger item — and even then defer the swap so a
+     * diagonal path that clips a sibling on the way to the current submenu does
+     * not tear it down. Hovering plain items or re-hovering the current trigger
+     * keeps the submenu open.
      */
     if (this.nestedPopover !== undefined && this.nestedPopover !== null) {
       if (item === this.nestedPopoverTriggerItem) {
+        this.cancelNestedCloseGrace();
+
         return;
       }
 
       if (!item.hasChildren) {
-        this.previouslyHoveredItem = item;
-
         return;
       }
+
+      this.scheduleNestedOpenIntent(item);
+
+      return;
     }
-
-    this.destroyNestedPopoverIfExists(false);
-
-    this.previouslyHoveredItem = item;
 
     if (!item.hasChildren) {
       return;
     }
 
-    this.showNestedPopoverForItem(item);
+    // Fresh open: defer by the intent delay so a quick pass-over does not flash
+    // a submenu open.
+    this.scheduleNestedOpenIntent(item);
   }
 
   /**
    * Handles mouse leaving the popover container.
-   * Destroys nested popover unless the mouse moved into it.
+   * Defers destroying the nested popover (close-grace) unless the mouse moved
+   * into it; a `pointerenter` on the nested popover cancels the deferred close.
    * @param event - mouseleave event
    */
   protected handleMouseLeave(event: Event): void {
@@ -679,11 +833,85 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nestedPopover !== null &&
       this.nestedPopover.hasNode(relatedTarget)
     ) {
+      this.cancelNestedCloseGrace();
+
       return;
     }
 
-    this.destroyNestedPopoverIfExists(false);
+    // Leaving the popover abandons any submenu that was about to open.
+    this.cancelNestedOpenIntent();
+
+    if (this.nestedPopover !== undefined && this.nestedPopover !== null) {
+      this.scheduleNestedCloseGrace();
+
+      return;
+    }
+
     this.previouslyHoveredItem = null;
+  }
+
+  /**
+   * Schedules a deferred pointer-driven open of the nested submenu for the given
+   * item. Any previously-scheduled open is canceled first.
+   * @param item - trigger-with-children item to open a submenu for
+   */
+  private scheduleNestedOpenIntent(item: PopoverItem): void {
+    this.cancelNestedOpenIntent();
+
+    this.nestedOpenIntentTimer = window.setTimeout(() => {
+      this.nestedOpenIntentTimer = null;
+      this.openNestedForHoveredItem(item);
+    }, PopoverDesktop.NESTED_OPEN_INTENT_DELAY_MS);
+  }
+
+  /**
+   * Cancels a pending pointer open-intent, if any.
+   */
+  private cancelNestedOpenIntent(): void {
+    if (this.nestedOpenIntentTimer !== null) {
+      window.clearTimeout(this.nestedOpenIntentTimer);
+      this.nestedOpenIntentTimer = null;
+    }
+  }
+
+  /**
+   * Schedules a deferred close of the open nested submenu. Any previously-
+   * scheduled close is canceled first.
+   */
+  private scheduleNestedCloseGrace(): void {
+    this.cancelNestedCloseGrace();
+
+    this.nestedCloseGraceTimer = window.setTimeout(() => {
+      this.nestedCloseGraceTimer = null;
+      this.destroyNestedPopoverIfExists(false);
+      this.previouslyHoveredItem = null;
+    }, PopoverDesktop.NESTED_CLOSE_GRACE_DELAY_MS);
+  }
+
+  /**
+   * Cancels a pending close-grace, if any.
+   */
+  private cancelNestedCloseGrace(): void {
+    if (this.nestedCloseGraceTimer !== null) {
+      window.clearTimeout(this.nestedCloseGraceTimer);
+      this.nestedCloseGraceTimer = null;
+    }
+  }
+
+  /**
+   * Opens the nested submenu for a pointer-hovered item once its open-intent
+   * delay has elapsed, tearing down any submenu currently open for a different
+   * item first.
+   * @param item - trigger-with-children item to open a submenu for
+   */
+  private openNestedForHoveredItem(item: PopoverItem): void {
+    this.cancelNestedCloseGrace();
+
+    // No-op when no submenu is open; tears down a submenu open for another item.
+    this.destroyNestedPopoverIfExists(false);
+
+    this.nestedPopoverTriggerItem = item;
+    this.showNestedPopoverForItem(item);
   }
 
   /**
@@ -742,7 +970,7 @@ export class PopoverDesktop extends PopoverAbstract {
     const triggerItemElement = this.nestedPopoverTriggerItem?.getElement();
     const elementToRemove = this.nestedPopover.getElement();
 
-    this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.hide);
+    this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
     elementToRemove.remove();
@@ -810,20 +1038,16 @@ export class PopoverDesktop extends PopoverAbstract {
      * Close nested popover when item with 'closeOnActivate' property set was clicked
      * parent popover should also be closed
      */
-    this.nestedPopover.on(PopoverEvent.ClosedOnActivate, this.hide);
+    this.nestedPopover.on(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
 
     const nestedPopoverEl = this.nestedPopover.getMountElement();
-    const actualNestedPopoverEl = this.nestedPopover.getElement();
 
     this.nodes.popover.appendChild(nestedPopoverEl);
 
     this.setTriggerItemPosition(nestedPopoverEl, item);
 
-    /* We need nesting level value in CSS to calculate offset left for nested popover */
-    /* Set on the actual popover element so it's available for --popover-left calculation */
-    actualNestedPopoverEl.style.setProperty(CSSVariables.NestingLevel, this.nestedPopover.nestingLevel.toString());
-
-    // Apply nested popover positioning (moved from popover.css)
+    // Apply nested popover positioning (horizontal offset resolved to explicit
+    // pixels; the former nesting-level CSS-var calc has been removed).
     this.applyNestedPopoverPositioning(nestedPopoverEl, item);
 
     /**
@@ -835,6 +1059,13 @@ export class PopoverDesktop extends PopoverAbstract {
       if (this.nestedPopoverTriggerItem !== null) {
         this.refreshItemActiveState(this.nestedPopoverTriggerItem);
       }
+    });
+
+    // Entering the submenu cancels both the close-grace (so it stays open) and
+    // any pending open-intent for a sibling clipped on the diagonal path in.
+    this.listeners.on(nestedPopoverEl, 'pointerenter', () => {
+      this.cancelNestedOpenIntent();
+      this.cancelNestedCloseGrace();
     });
 
     this.nestedPopover.show();
@@ -859,26 +1090,31 @@ export class PopoverDesktop extends PopoverAbstract {
     const queriedPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`);
     const actualPopoverEl: HTMLElement = queriedPopoverEl instanceof HTMLElement ? queriedPopoverEl : nestedPopoverEl;
 
-    // Check if parent popover has openTop or openLeft state
-    const _isParentOpenTop = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenTop);
     const parentPrefersLeft = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenLeft);
 
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
-    // Get parent width - use computed width if --width resolves to 'auto'
-    const parentContainerWidth = this.nodes.popoverContainer.offsetWidth;
-    const parentWidth = this.params.width === undefined || this.params.width === 'auto'
-      ? `${parentContainerWidth}px`
-      : 'var(--width)';
+    // Overlap (px) the nested submenu is allowed to share with the parent's
+    // trailing edge — matches the `--nested-popover-overlap` CSS variable
+    // (0.25rem = 4px).
+    const overlap = 4;
 
     // Decide the side based on measured space, not just the parent's flag.
     // The flag can be truthy for very different reasons (open-left after a
     // right-edge flip vs. placeLeftOfAnchor) — mirroring it blindly used to
     // push the nested popover off-screen when the parent itself hugged the
     // viewport's left edge (e.g. BlockSettings on the leftmost block).
+    //
+    // Uses the same pure geometry primitives as the shared `positionAnchored`
+    // engine (resolveNestedPopoverSide + clampNestedPopoverTop); the resulting
+    // offset is resolved to explicit pixels — the former nesting-level CSS-var
+    // `calc()` branch has been removed. The nested container stays positioned
+    // relative to its parent popover root (its offset parent), so the resolved
+    // viewport coordinates are converted into that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
-    const nestedMeasuredWidth = this.nestedPopover?.size.width ?? parentContainerWidth;
+    const parentRootRect = this.nodes.popover.getBoundingClientRect();
+    const nestedMeasuredWidth = this.nestedPopover?.size.width ?? this.nodes.popoverContainer.offsetWidth;
     const { openLeft: openNestedLeft } = resolveNestedPopoverSide({
       parentRect: {
         left: parentRect.left,
@@ -888,17 +1124,21 @@ export class PopoverDesktop extends PopoverAbstract {
       nestedWidth: nestedMeasuredWidth,
       viewportWidth: window.innerWidth,
       parentPrefersLeft,
+      overlap,
     });
 
-    // Calculate --popover-left based on nesting level and chosen side.
-    // Set on the actual popover element to override its default value.
-    if (openNestedLeft) {
-      // Position to the left
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(-1 * (var(--nesting-level) + 1) * ${parentWidth} + 100%)`);
-    } else {
-      // Position to the right
-      actualPopoverEl.style.setProperty(CSSVariables.PopoverLeft, `calc(var(--nesting-level) * (${parentWidth} - var(--nested-popover-overlap)))`);
-    }
+    // Horizontal: place the submenu beside the parent, overlapping its trailing
+    // edge by `overlap` px, then convert to parent-root-relative pixels.
+    const viewportLeft = openNestedLeft
+      ? parentRect.left - nestedMeasuredWidth + overlap
+      : parentRect.right - overlap;
+
+    nestedContainer.style.left = `${viewportLeft - parentRootRect.left}px`;
+
+    // Stamp the resolved side/align so CSS/animation can key off it, mirroring
+    // the root popover's data-side/data-align contract.
+    actualPopoverEl.setAttribute('data-side', openNestedLeft ? 'left' : 'right');
+    actualPopoverEl.setAttribute('data-align', 'center');
 
     // Center nested popover vertically on the trigger item, then clamp
     // so the submenu never overflows the viewport top or bottom.
@@ -915,9 +1155,7 @@ export class PopoverDesktop extends PopoverAbstract {
         viewportHeight: window.innerHeight,
       });
 
-      const parentRootTop = this.nodes.popover.getBoundingClientRect().top;
-
-      nestedContainer.style.top = `${clampedTop - parentRootTop}px`;
+      nestedContainer.style.top = `${clampedTop - parentRootRect.top}px`;
     } else {
       nestedContainer.style.top = 'calc(var(--trigger-item-top) - var(--popover-height) / 2 + var(--item-height) / 2)';
     }
@@ -997,6 +1235,14 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
     if (item instanceof PopoverItemHtml) {
+      // The wrapper is role="presentation" and non-focusable, so keyboard
+      // navigation must target the inner interactive controls instead.
+      const controls = item.getControls();
+
+      if (controls.length > 0) {
+        return controls;
+      }
+
       const element = item.getElement();
 
       return element ? [element] : [];
@@ -1079,7 +1325,9 @@ export class PopoverDesktop extends PopoverAbstract {
         continue;
       }
 
-      const childInstance = new PopoverItemDefault(childParam);
+      const childInstance = new PopoverItemDefault(childParam, {
+        menuItemRole: this.params.listbox === true ? 'option' : 'menuitem',
+      });
 
       if (childInstance.name !== undefined && this.isNamePermanentlyHidden(childInstance.name)) {
         childInstance.destroy();
@@ -1182,10 +1430,25 @@ export class PopoverDesktop extends PopoverAbstract {
    * Adds search to the popover
    */
   private addSearch(): void {
+    // The combobox input needs a results container to point aria-controls at.
+    // The listbox surfaces (e.g. Toolbox) supply a stable id via listboxId; for
+    // menu surfaces (e.g. BlockSettings) generate one so the link still holds.
+    if (this.nodes.items !== null && this.nodes.items.id === '') {
+      this.nodes.items.id = generateId('blok-popover-items-');
+    }
+
     this.search = new SearchInput({
       items: this.itemsDefault,
       placeholder: this.messages.search,
+      label: this.messages.search,
+      controlsId: this.nodes.items?.id,
     });
+
+    // Wire the search input as the aria-activedescendant host so the flipper
+    // mirrors the virtually-focused result onto it while the caret stays in the
+    // field. The Toolbox drives its own contentEditable host instead (it has no
+    // search field), so this only applies to search-field popovers.
+    this.setActiveDescendantHost(this.search.getInput());
 
     this.search.on(SearchInputEvent.Search, (searchData: { query: string; items: SearchableItem[] }) => {
       const isEmptyQuery = searchData.query === '';
@@ -1226,7 +1489,11 @@ export class PopoverDesktop extends PopoverAbstract {
 
     const searchElement = this.search.getElement();
 
-    searchElement.classList.add('mb-1.5');
+    // The popover container no longer pads its top, so the search input owns its own
+    // top gap from the container edge (mt). Its gap from the results below is supplied by
+    // the items list's before-first-element padding (css.items pt-1.5), so no mb here —
+    // otherwise the search-to-results gap would double to 12px.
+    searchElement.classList.add('mt-1.5');
 
     this.nodes.popoverContainer.insertBefore(searchElement, this.nodes.popoverContainer.firstChild);
   }
@@ -1305,6 +1572,8 @@ export class PopoverDesktop extends PopoverAbstract {
       : allTopLevel;
 
     const isNothingFound = matchingTopLevel.length === 0 && data.promotedItems.length === 0;
+
+    this.announceResults(data.query, isNothingFound, matchingTopLevel.length + data.promotedItems.length);
 
     this.items
       .forEach((item) => {
@@ -1390,7 +1659,9 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     this.toggleNothingFoundMessage(isNothingFound);
-    this.updateScrollHazes();
+    this.updateScrollReel();
+    // Filtering changes the list height, hence whether/where the thumb sits.
+    this.updateScrollbar();
 
     // Recalculate position since popover height may have changed (trigger-based popovers only;
     // non-trigger popovers use CSS variable positioning that doesn't need pixel recalculation)
@@ -1399,8 +1670,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
       this.nodes.popover.style.top = `${top}px`;
       this.nodes.popover.style.left = `${left}px`;
-      this.setOpenTop(openTop);
-      this.setOpenLeft(openLeft);
+      this.applyResolvedSide(openTop, openLeft);
     }
 
     // Build flippable elements list: top-level matches + promoted items
@@ -1426,6 +1696,43 @@ export class PopoverDesktop extends PopoverAbstract {
       this.flipper.focusItem(0, { skipNextTab: true });
     }
   };
+
+  /**
+   * Writes the current filter result count (or the empty-state message) into
+   * the visually-hidden live region so screen readers announce it. The
+   * announcer is cleared for an empty query so the full unfiltered list is not
+   * announced as a "result count".
+   * @param query - the current search query
+   * @param isNothingFound - true when no items matched
+   * @param count - number of matching items (top-level + promoted)
+   */
+  private announceResults(query: string, isNothingFound: boolean, count: number): void {
+    const announcer = this.nodes.resultsAnnouncer;
+
+    if (announcer === undefined) {
+      return;
+    }
+
+    if (query === '') {
+      announcer.textContent = '';
+
+      return;
+    }
+
+    if (isNothingFound) {
+      announcer.textContent = this.messages.nothingFound ?? 'Nothing found';
+
+      return;
+    }
+
+    const template = this.messages.searchResults;
+
+    // Only announce a running count when a template is supplied (the Toolbox).
+    // Other popovers keep the region silent for non-empty results.
+    announcer.textContent = template !== undefined
+      ? template.replace('{count}', String(count))
+      : '';
+  }
 
   /**
    * Reorders DOM children of the items container to match the ranked order.

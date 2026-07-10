@@ -79,6 +79,19 @@ const makeFakeEditor = (
         list.splice(at, 0, ...created);
         return created.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId }));
       }),
+      // Faithful to core's insertInsideParent: creates one child block under
+      // parentId at the given flat index and returns a BlockAPI-like `{ id }`.
+      insertInsideParent: vi.fn((parentId: string, insertIndex: number, _childData?: unknown) => {
+        const id = `child-${list.length}`;
+        const row = { id, name: 'paragraph', parentId };
+
+        list.splice(insertIndex, 0, row);
+        return { id, name: row.name, parentId };
+      }),
+      render: vi.fn(() => Promise.resolve()),
+      clear: vi.fn(() => Promise.resolve()),
+      // Read-only flag on core; the hook's isSyncingFromYjs() reads it LIVE.
+      isSyncingFromYjs: false,
     },
     caret: {
       setToBlock: vi.fn((_idOrIndex: unknown, _position?: string, _offset?: number) => true),
@@ -1370,6 +1383,21 @@ describe('useBlocks additional read/creation APIs', () => {
     expect(data).toEqual({ composedFrom: 'header' });
   });
 
+  it('composeBlockData PROPAGATES a core rejection (unknown tool) instead of swallowing it', async () => {
+    // The JSDoc promises composeBlockData "Rejects (via core) for an unknown
+    // tool". Unlike update/convert (which swallow rejections to stay graceful
+    // no-ops), this reader is a pure passthrough, so the caller can `await`/catch
+    // it. Guard that the wrapper never starts swallowing the rejection.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+
+    (editor.blocks.composeBlockData as ReturnType<typeof vi.fn>).mockImplementationOnce(() =>
+      Promise.reject(new Error('Tool «ghost» not found'))
+    );
+    const { result } = renderHook(() => useBlocks(editor));
+
+    await expect(result.current.composeBlockData('ghost')).rejects.toThrow('not found');
+  });
+
   it('transactWithoutCapture delegates to core (no-undo grouping)', () => {
     const { editor } = makeFakeEditor([{ id: 'a' }]);
     const { result } = renderHook(() => useBlocks(editor));
@@ -1459,6 +1487,96 @@ describe('useBlocks additional read/creation APIs', () => {
   });
 });
 
+describe('useBlocks — core-parity additions (insertInsideParent / render / clear / isSyncingFromYjs)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('insertInsideParent creates a child under the parent and returns the new node', () => {
+    const { editor } = makeFakeEditor([{ id: 'p' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: ReturnType<typeof result.current.insertInsideParent> = null;
+
+    act(() => { node = result.current.insertInsideParent('p', 1, { text: 'child' }); });
+    expect(editor.blocks.insertInsideParent).toHaveBeenCalledWith('p', 1, { text: 'child' });
+    expect(node).toMatchObject({ type: 'paragraph', parentId: 'p' });
+  });
+
+  it('insertInsideParent is a no-op (null) for a dangling parentId, without calling core', () => {
+    const { editor } = makeFakeEditor([{ id: 'p' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: ReturnType<typeof result.current.insertInsideParent> = { id: 'x' } as never;
+
+    act(() => { node = result.current.insertInsideParent('ghost', 0); });
+    expect(node).toBeNull();
+    expect(editor.blocks.insertInsideParent).not.toHaveBeenCalled();
+  });
+
+  it('insertInsideParent returns null (does not throw) when the child tool is unknown', () => {
+    const { editor } = makeFakeEditor([{ id: 'p' }]);
+
+    (editor.blocks.insertInsideParent as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new ToolNotFoundError('nope');
+    });
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: ReturnType<typeof result.current.insertInsideParent> = { id: 'x' } as never;
+    let threw = false;
+
+    act(() => {
+      try {
+        node = result.current.insertInsideParent('p', 0);
+      } catch {
+        threw = true;
+      }
+    });
+    expect(threw).toBe(false);
+    expect(node).toBeNull();
+  });
+
+  it('insertInsideParent is NOT wrapped in the hook transact (core owns its atomic undo step)', () => {
+    const { editor } = makeFakeEditor([{ id: 'p' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    act(() => { result.current.insertInsideParent('p', 1); });
+    expect(editor.blocks.transact).not.toHaveBeenCalled();
+  });
+
+  it('render delegates to core.render', async () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    const data = { blocks: [{ id: 'x', type: 'paragraph', data: { text: 'hi' } }] };
+
+    await act(async () => { await result.current.render(data); });
+    expect(editor.blocks.render).toHaveBeenCalledWith(data);
+  });
+
+  it('clear delegates to core.clear', async () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    await act(async () => { await result.current.clear(); });
+    expect(editor.blocks.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('isSyncingFromYjs reads the LIVE core flag (not a stale snapshot)', () => {
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+
+    expect(result.current.isSyncingFromYjs()).toBe(false);
+    // Flip the flag AFTER the api handle is memoized — a live read must see it.
+    (editor.blocks as unknown as { isSyncingFromYjs: boolean }).isSyncingFromYjs = true;
+    expect(result.current.isSyncingFromYjs()).toBe(true);
+  });
+
+  it('pre-ready (null editor): render/clear resolve, insertInsideParent is null, isSyncingFromYjs is false', async () => {
+    const { result } = renderHook(() => useBlocks(null));
+
+    expect(result.current.insertInsideParent('p', 0)).toBeNull();
+    expect(result.current.isSyncingFromYjs()).toBe(false);
+    await expect(result.current.render({ blocks: [] })).resolves.toBeUndefined();
+    await expect(result.current.clear()).resolves.toBeUndefined();
+  });
+});
+
 describe('useBlocks splitBlock — guards and error handling', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
@@ -1471,6 +1589,19 @@ describe('useBlocks splitBlock — guards and error handling', () => {
     let node: ReturnType<typeof result.current.splitBlock> = { id: 'sentinel' } as never;
 
     act(() => { node = result.current.splitBlock('ghost', {}, 'paragraph', {}, 0); });
+    expect(node).toBeNull();
+    expect(editor.blocks.splitBlock).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op (returns null) for a negative insertIndex, without calling core', () => {
+    // Consistency with insertOutputData, which silently no-ops a negative index
+    // rather than forwarding the malformed value to core. A negative insertIndex
+    // is meaningless for splitBlock too, so honor the same silent-no-op convention.
+    const { editor } = makeFakeEditor([{ id: 'a' }]);
+    const { result } = renderHook(() => useBlocks(editor));
+    let node: ReturnType<typeof result.current.splitBlock> = { id: 'sentinel' } as never;
+
+    act(() => { node = result.current.splitBlock('a', {}, 'paragraph', {}, -1); });
     expect(node).toBeNull();
     expect(editor.blocks.splitBlock).not.toHaveBeenCalled();
   });

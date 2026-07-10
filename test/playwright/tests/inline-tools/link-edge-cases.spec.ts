@@ -10,7 +10,9 @@ const INLINE_TOOLBAR_SELECTOR = INLINE_TOOLBAR_INTERFACE_SELECTOR;
 // The link tool renders the item itself as a button, not a nested button
 const LINK_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name="link"]`;
 const LINK_INPUT_SELECTOR = '[data-blok-link-tool-input-opened="true"]';
-const NOTIFIER_SELECTOR = '[data-blok-testid="notifier-container"]';
+// An invalid URL is surfaced via the accessible inline field error
+// (aria-invalid + error region), not a toast notification.
+const LINK_ERROR_SELECTOR = '[data-blok-link-tool-error]';
 
 const getParagraphByText = (page: Page, text: string): Locator => {
   return page.locator(PARAGRAPH_CONTENT_SELECTOR, { hasText: text });
@@ -198,8 +200,8 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.fill('http://example.com/foo bar');
     await linkInput.press('Enter');
 
-    // Expect error notification
-    await expect(page.locator(NOTIFIER_SELECTOR)).toContainText('Invalid link');
+    // Expect the accessible inline validation error
+    await expect(page.locator(LINK_ERROR_SELECTOR)).toContainText('Invalid link');
     // Link should not be created
     await expect(paragraph.getByRole('link')).toHaveCount(0);
   });
@@ -261,7 +263,7 @@ test.describe('inline tool link - edge cases', () => {
     await linkInput.press('Enter');
 
     // javascript: URLs are rejected at input time — no anchor is inserted
-    await expect(page.locator(NOTIFIER_SELECTOR)).toContainText('Invalid link');
+    await expect(page.locator(LINK_ERROR_SELECTOR)).toContainText('Invalid link');
     await expect(paragraph.getByRole('link')).toHaveCount(0);
 
     const savedData = await page.evaluate(async () => {

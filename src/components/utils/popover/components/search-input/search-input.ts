@@ -42,10 +42,16 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
    * @param options - available config
    * @param options.items - searchable items list
    * @param options.placeholder - input placeholder
+   * @param options.label - accessible label (aria-label) for the combobox input.
+   *   Falls back to the placeholder when omitted.
+   * @param options.controlsId - id of the results container the combobox owns.
+   *   Wired as `aria-controls` so assistive tech links the input to its listbox.
    */
-  constructor({ items, placeholder }: {
+  constructor({ items, placeholder, label, controlsId }: {
     items: SearchableItem[];
     placeholder?: string;
+    label?: string;
+    controlsId?: string;
   }) {
     super();
 
@@ -73,10 +79,26 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     this.input.setAttribute('data-blok-flipper-navigation-target', 'true');
     this.input.setAttribute('data-blok-testid', 'popover-search-input');
 
+    // Expose the input as an ARIA combobox that filters a results list, so
+    // screen readers announce it as a search combobox and can track the
+    // virtually-focused result via aria-activedescendant (mirrored onto this
+    // input by the popover flipper). See H10.
+    this.input.setAttribute('role', 'combobox');
+    this.input.setAttribute('aria-autocomplete', 'list');
+    this.input.setAttribute('aria-expanded', 'true');
+
+    const accessibleLabel = label ?? placeholder;
+
+    if (accessibleLabel !== undefined) {
+      this.input.setAttribute('aria-label', accessibleLabel);
+    }
+
+    if (controlsId !== undefined) {
+      this.input.setAttribute('aria-controls', controlsId);
+    }
+
     this.wrapper.appendChild(iconWrapper);
     this.wrapper.appendChild(this.input);
-
-    this.overrideValueProperty();
 
     const eventsToHandle = ['input', 'keyup', 'search', 'change'] as const;
 
@@ -93,6 +115,14 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
   }
 
   /**
+   * Returns the underlying combobox input element. Exposed so the popover can
+   * wire it as the aria-activedescendant host for keyboard navigation.
+   */
+  public getInput(): HTMLInputElement {
+    return this.input;
+  }
+
+  /**
    * Sets focus to the input
    */
   public focus(): void {
@@ -100,10 +130,21 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
   }
 
   /**
+   * Sets the input value programmatically and applies the search. Use this
+   * instead of assigning `input.value` directly, which does not emit a native
+   * `input` event and would leave the search state stale.
+   * @param value - new query value
+   */
+  public setValue(value: string): void {
+    this.input.value = value;
+    this.applySearch(value);
+  }
+
+  /**
    * Clears search query and results
    */
   public clear(): void {
-    this.input.value = '';
+    this.setValue('');
   }
 
   /**
@@ -127,35 +168,6 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     this.emit(SearchInputEvent.Search, {
       query,
       items: this.foundItems,
-    });
-  }
-
-  /**
-   * Overrides value property setter to catch programmatic changes
-   */
-  private overrideValueProperty(): void {
-    const prototype = Object.getPrototypeOf(this.input) as PropertyDescriptorMap & { value?: PropertyDescriptor };
-    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
-
-    if (descriptor?.set === undefined || descriptor.get === undefined) {
-      return;
-    }
-
-    const applySearch = this.applySearch.bind(this);
-    const getter: (() => unknown) | undefined = descriptor.get;
-    const setter: ((value: string) => void) | undefined = descriptor.set;
-
-    Object.defineProperty(this.input, 'value', {
-      configurable: descriptor.configurable ?? true,
-      enumerable: descriptor.enumerable ?? false,
-      get(): string {
-        const value = getter?.call(this);
-        return typeof value === 'string' ? value : '';
-      },
-      set(value: string): void {
-        setter?.call(this, value);
-        applySearch(value);
-      },
     });
   }
 

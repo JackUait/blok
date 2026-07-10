@@ -83,6 +83,17 @@ describe('EquationInlineTool', () => {
     expect(input?.placeholder).toBe('tools.equation.placeholder');
   });
 
+  it('marks the live preview region as an aria-live area so parse errors are announced', () => {
+    const config = tool.render() as unknown as WithChildren<{ children: { items: unknown[] } }>;
+    const items = (config.children as { items: PopoverItemHtmlParams[] }).items;
+    const htmlItem = items.find((item) => item.type === PopoverItemType.Html);
+    const element = (htmlItem as PopoverItemHtmlParams).element;
+    const preview = element.querySelector('[data-blok-equation-preview]');
+
+    expect(preview).not.toBeNull();
+    expect(preview?.getAttribute('aria-live')).toBe('polite');
+  });
+
   describe('applyEquation', () => {
     const selectFirstWord = (): void => {
       container.innerHTML = 'x^2 plus one';

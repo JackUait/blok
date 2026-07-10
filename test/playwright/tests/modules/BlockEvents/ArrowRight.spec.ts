@@ -369,6 +369,53 @@ test.describe('arrow right keydown', () => {
 
     expect(caretInfo.inside).toBe(true);
   });
+
+  test.describe('Cmd+ArrowRight (line-end within a block, boundary no-op at the end)', () => {
+    test('Cmd+ArrowRight at the end of a block stays in the block (boundary no-op)', async ({ page }) => {
+      await createParagraphBlok(page, [ 'First', 'Second' ]);
+
+      const firstParagraph = getParagraphByIndex(page, 0);
+
+      await firstParagraph.click();
+      await firstParagraph.press('End');
+
+      // Caret is at the block's end → Cmd+ArrowRight is a native line-end gesture
+      // (macOS) and a boundary no-op: the caret stays in THIS block and must NOT
+      // cross into the next block (Notion parity — Cmd+→ is a within-line move,
+      // not a cross-block arrow).
+      await page.keyboard.press('Meta+ArrowRight');
+
+      await waitForCaretInBlock(page, firstParagraph, 0);
+
+      const caretInfo = await getCaretInfoOrThrow(firstParagraph);
+
+      expect(caretInfo.inside).toBe(true);
+    });
+
+    test('Cmd+ArrowRight in a multi-line block moves to the line end and stays in the block', async ({ page }) => {
+      // pre-wrap is applied in beforeEach, so this long text wraps to several lines.
+      const longText = 'The quick brown fox jumps over the lazy dog and keeps going so that this paragraph wraps onto more than one visual line within its single block';
+
+      await createParagraphBlok(page, [ longText, 'Next' ]);
+
+      const wrapped = getParagraphByIndex(page, 0);
+
+      await wrapped.click();
+      await wrapped.press('Home');
+
+      // Cmd+ArrowRight from the start of a non-last visual line is a native line-end
+      // gesture INSIDE the block — Blok must not hijack it to cross into the next
+      // block. (The native within-line movement itself is the browser's job; the
+      // Blok-owned contract verified here is that the caret stays in this block.)
+      await page.keyboard.press('Meta+ArrowRight');
+
+      await waitForCaretInBlock(page, wrapped, 0);
+
+      const after = await getCaretInfoOrThrow(wrapped);
+
+      expect(after.inside).toBe(true);
+    });
+  });
 });
 
 declare global {

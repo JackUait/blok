@@ -437,6 +437,39 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
+  it('anchors the popover to a provided DOMRect via the position param instead of treating it as a trigger', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    const rect = new DOMRect(120, 240, 0, 0);
+
+    await blockSettings.open(block, rect);
+
+    const popover = getLastPopover();
+    const params = popover?.params as { position?: DOMRect; trigger?: HTMLElement; placeLeftOfAnchor?: boolean };
+
+    // The rect is forwarded as the explicit `position`, not as the trigger.
+    expect(params?.position).toBe(rect);
+    // The trigger falls back to the settings wrapper element (never the rect).
+    expect(params?.trigger).toBe(blockSettings.getElement());
+    // A cursor/holder-anchored menu opens at the anchor (down/right), not to
+    // the left of a dots button.
+    expect(params?.placeLeftOfAnchor).toBe(false);
+
+    getTunesItemsSpy.mockRestore();
+  });
+
   it('passes placeLeftOfAnchor:true to popover so menu opens to the left of dots button, vertically centered', async () => {
     blockSettings.make();
 
@@ -771,7 +804,14 @@ describe('BlockSettings', () => {
     if (lastItem && 'name' in lastItem) {
       expect(lastItem.name).toBe('delete');
     }
-    expect(getConvertibleToolsForBlockMock).toHaveBeenCalledWith(block, Array.from(blokMock.Tools.blockTools.values()));
+    // The single-block path now wraps the current block in a BlockAPI (matching
+    // the multi-block path) so it satisfies getConvertibleToolsForBlock's
+    // BlockAPI parameter; assert the wrapper proxies the same underlying block.
+    const [passedBlock, passedTools] = getConvertibleToolsForBlockMock.mock.calls[0];
+
+    expect((passedBlock as { holder: HTMLElement }).holder).toBe(block.holder);
+    expect((passedBlock as { name: string }).name).toBe(block.name);
+    expect(passedTools).toEqual(Array.from(blokMock.Tools.blockTools.values()));
   });
 
   it('returns only common tunes when there are no tool-specific or convertible tunes', async () => {

@@ -31,14 +31,23 @@
 }
 
 /**
- * Emoji picker — thin scrollbar (only visible on hover)
+ * Emoji picker — thin scrollbar (only visible on hover).
+ *
+ * scrollbar-gutter reserves the scrollbar's layout space up front; standard
+ * scrollbar-* properties are Firefox-only because setting them makes
+ * Chromium ignore the ::-webkit-scrollbar styling below (overlay fallback).
  */
 [data-emoji-picker-body] {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable both-edges;
 }
-[data-emoji-picker-body]:hover {
-  scrollbar-color: color-mix(in srgb, currentColor 12%, transparent) transparent;
+@supports not selector(::-webkit-scrollbar) {
+  [data-emoji-picker-body] {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  [data-emoji-picker-body]:hover {
+    scrollbar-color: color-mix(in srgb, currentColor 12%, transparent) transparent;
+  }
 }
 [data-emoji-picker-body]::-webkit-scrollbar {
   width: 6px;

@@ -220,6 +220,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private leftAlignElement?: HTMLElement;
 
   /**
+   * Stable id applied to the popover's listbox (items) container so the block's
+   * combobox contentEditable can reference it via `aria-controls`.
+   */
+  private listboxId?: string;
+
+  /**
    * The block element currently being listened to for inline slash search
    */
   private currentBlockForSearch: HTMLElement | null = null;
@@ -269,13 +275,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param options.triggerElement - Element relative to which the popover should be positioned
    * @param options.leftAlignElement - Element whose left edge is used for horizontal popover alignment
    */
-  constructor({ api, tools, i18nLabels, i18n, triggerElement, leftAlignElement }: {
+  constructor({ api, tools, i18nLabels, i18n, triggerElement, leftAlignElement, listboxId }: {
     api: API;
     tools: ToolsCollection<BlockToolAdapter>;
     i18nLabels: Record<ToolboxTextLabelsKeys, string>;
     i18n: I18nInstance;
     triggerElement?: HTMLElement;
     leftAlignElement?: HTMLElement;
+    listboxId?: string;
   }) {
     super();
 
@@ -285,6 +292,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.i18n = i18n;
     this.triggerElement = triggerElement;
     this.leftAlignElement = leftAlignElement;
+    this.listboxId = listboxId;
 
     this.enableShortcuts();
 
@@ -548,10 +556,16 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       messages: {
         nothingFound: this.i18nLabels.nothingFound,
         search: this.i18nLabels.filter,
+        searchResults: this.i18n.t('a11y.searchResults'),
       },
       items: this.toolboxItemsToBeDisplayed,
       handleContentEditableNavigation: true,
       minWidth: '220px',
+      // The Toolbox is a searchable combobox surface: render the items as an
+      // ARIA listbox (options), not a menu, and give it a stable id so the
+      // block's combobox contentEditable can point aria-controls at it.
+      listbox: true,
+      listboxId: this.listboxId,
     });
 
     this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
@@ -932,6 +946,16 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       && blockText.charAt(slashQuerySpan.start) === '/'
       && this.removeSpan(blockText, slashQuerySpan).trim() === '';
 
+    /**
+     * Whether the user actually typed a "/query" span (a leading "/" with at
+     * least one character) somewhere in the block. Distinguishes a real slash
+     * command surrounded by content (→ in-place convert) from a non-empty block
+     * with no slash query, where there is nothing to fold in.
+     */
+    const hasTypedSlashQuery = slashQuerySpan !== null
+      && slashQuerySpan.end > slashQuerySpan.start
+      && blockText.charAt(slashQuerySpan.start) === '/';
+
     const shouldReplaceBlock = currentBlock.isEmpty
       || !this.openedWithSlash
       || blockHasOnlySlashQuery;
@@ -950,6 +974,28 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
      */
     if (!shouldReplaceBlock && contentEditable !== null && slashQuerySpan !== null) {
       this.stripSlashQuery(contentEditable, slashQuerySpan);
+
+      /**
+       * Notion parity (M-1): with real content surrounding the "/query", TURN
+       * the current block into the chosen tool in place — folding the leading
+       * text into it — instead of inserting an empty sibling (which left an
+       * orphan paragraph + empty block). The "/query" was just stripped above so
+       * it is not carried into the converted data. Tools that cannot accept the
+       * current text (no conversionConfig) make convert() throw; those fall
+       * through to the insert-sibling path below so the tool is still created.
+       */
+      const convertedBlock = hasTypedSlashQuery
+        ? await this.convertCurrentBlockInPlace(
+          currentBlock.id,
+          toolName,
+          blockDataOverrides,
+          slashQuerySpan.start
+        )
+        : null;
+
+      if (convertedBlock !== null && convertedBlock !== undefined) {
+        return;
+      }
     }
 
     const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides).length > 0;
@@ -1000,6 +1046,41 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
+   * Notion-parity in-place "turn into" for a slash command typed after real
+   * content (M-1). Converts the block to the chosen tool, keeping its surrounding
+   * text, restores the caret where the "/query" was, announces the result so the
+   * toolbar clears its cancel context, and closes the toolbar. Returns the
+   * converted block, or null when the conversion is not possible — the caller
+   * then falls back to inserting a sibling.
+   * @param blockId - id of the block to convert
+   * @param toolName - target tool name
+   * @param blockDataOverrides - predefined data for the target tool (from the toolbox entry)
+   * @param caretOffset - plain-text offset to place the caret at after conversion
+   */
+  private async convertCurrentBlockInPlace(
+    blockId: string,
+    toolName: string,
+    blockDataOverrides: BlockToolData | undefined,
+    caretOffset: number
+  ): Promise<BlockAPI | null> {
+    try {
+      const convertedBlock = await this.api.blocks.convert(blockId, toolName, blockDataOverrides);
+
+      this.api.caret.setToBlock(convertedBlock, 'default', caretOffset);
+
+      this.emit(ToolboxEvent.BlockAdded, {
+        block: convertedBlock,
+      });
+
+      this.api.toolbar.close({ setExplicitlyClosed: false });
+
+      return convertedBlock;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  /**
    * Runs a block-insert callback inside a transaction when the block has a parent,
    * so that parent-clear + insert + parent-restore form a single undo entry.
    * When there is no parent (or transact is unavailable), runs the callback directly.
@@ -1044,8 +1125,53 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);
+      this.applyComboboxRoles(this.currentContentEditable);
+      this.setPopoverActiveDescendantHost(this.currentContentEditable);
     }
     this.listeners.on(this.currentBlockForSearch, 'input', this.handleBlockInput);
+  }
+
+  /**
+   * Exposes the block's focused contentEditable as the ARIA combobox that owns
+   * the open Toolbox listbox. The contentEditable keeps DOM focus in both slash
+   * and plus-button modes, so aria-activedescendant on it lets screen readers
+   * track the highlighted option while the caret stays in the editor.
+   * @param host - the block's contentEditable element
+   */
+  private applyComboboxRoles(host: HTMLElement): void {
+    host.setAttribute('role', 'combobox');
+    host.setAttribute('aria-expanded', 'true');
+    host.setAttribute('aria-autocomplete', 'list');
+    host.setAttribute('aria-haspopup', 'listbox');
+
+    if (this.listboxId !== undefined) {
+      host.setAttribute('aria-controls', this.listboxId);
+    }
+  }
+
+  /**
+   * Removes the combobox ARIA attributes previously applied to the block's
+   * contentEditable so it returns to a plain editor element once the Toolbox closes.
+   * @param host - the block's contentEditable element
+   */
+  private removeComboboxRoles(host: HTMLElement): void {
+    host.removeAttribute('role');
+    host.removeAttribute('aria-expanded');
+    host.removeAttribute('aria-autocomplete');
+    host.removeAttribute('aria-haspopup');
+    host.removeAttribute('aria-controls');
+    host.removeAttribute('aria-activedescendant');
+  }
+
+  /**
+   * Forwards the active-descendant host to the popover's flipper when supported
+   * (desktop). Mobile popovers do not expose this and are skipped.
+   * @param host - focus-owning element, or null to clear
+   */
+  private setPopoverActiveDescendantHost(host: HTMLElement | null): void {
+    if (this.popover !== null && 'setActiveDescendantHost' in this.popover) {
+      (this.popover as { setActiveDescendantHost: (h: HTMLElement | null) => void }).setActiveDescendantHost(host);
+    }
   }
 
   /**
@@ -1056,7 +1182,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       this.listeners.off(this.currentBlockForSearch, 'input', this.handleBlockInput);
       if (this.currentContentEditable instanceof HTMLElement) {
         this.currentContentEditable.removeAttribute(DATA_ATTR.slashSearch);
+        this.removeComboboxRoles(this.currentContentEditable);
       }
+      this.setPopoverActiveDescendantHost(null);
       this.currentBlockForSearch = null;
       this.currentContentEditable = null;
     }
@@ -1104,8 +1232,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
        * leaves a literal "/ " in the block. Without this the query would become
        * a lone space and the toolbox would stay open filtering by whitespace
        * until the "/" itself is deleted.
+       *
+       * A contenteditable inserts a non-breaking space ( ) for the trailing
+       * space after "/" (a regular trailing space would collapse), so accept
+       * either form — otherwise the menu never dismisses.
        */
-      if (text.charAt(slashIndex + 1) === ' ') {
+      const charAfterSlash = text.charAt(slashIndex + 1);
+
+      if (charAfterSlash === ' ' || charAfterSlash === ' ') {
         this.close();
 
         return;

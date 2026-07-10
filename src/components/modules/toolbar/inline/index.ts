@@ -24,6 +24,25 @@ import { InlineToolsManager } from './tools-manager';
 import type { InlineToolbarNodes } from './types';
 
 /**
+ * Inline tool that applies its effect directly on its keyboard shortcut
+ * (e.g. Marker re-applies the last-used color) instead of opening its popover.
+ */
+interface ShortcutApplicableTool {
+  applyShortcut(): void;
+}
+
+/**
+ * Type guard: whether an inline tool instance exposes a direct keyboard-apply hook.
+ * @param tool - inline tool instance
+ */
+function hasApplyShortcut(tool: unknown): tool is ShortcutApplicableTool {
+  return typeof tool === 'object'
+    && tool !== null
+    && 'applyShortcut' in tool
+    && typeof (tool as { applyShortcut: unknown }).applyShortcut === 'function';
+}
+
+/**
  * Inline toolbar with actions that modifies selected text fragment
  *
  * |¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯|
@@ -153,7 +172,8 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
      * Handle arrow key events for inline toolbar
      * - Close toolbar when Up/Down arrow key is pressed without Shift (allows cursor movement)
      *   but only if no toolbar item is focused (user hasn't started keyboard navigation via Tab)
-     * - Left/Right arrow keys have no effect within the inline toolbar (per accessibility requirements)
+     * - Left/Right arrow keys move focus between toolbar items (WAI-ARIA horizontal
+     *   toolbar) when the flipper has focus and no nested submenu is open
      * - Show toolbar when Shift+Arrow is pressed (extends selection)
      *
      * Note: We listen on window with capture=true to ensure this runs before
@@ -236,6 +256,19 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.Blok.Toolbar.hideBlockActions();
+  }
+
+  /**
+   * Open the Link tool's editing menu for a given anchor, prefilled with its
+   * href. Selects the anchor contents first so the Link tool resolves the
+   * existing <a> and mirrors the CMD+K shortcut path. Used by the link hover
+   * card's "Edit" action.
+   * @param anchor - the anchor whose href should be edited
+   */
+  public async editLink(anchor: HTMLAnchorElement): Promise<void> {
+    new SelectionUtils().expandToTag(anchor);
+
+    await this.activateToolByShortcut('link');
   }
 
   /**
@@ -334,6 +367,14 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     ));
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, INLINE_TOOLBAR_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'inline-toolbar');
+
+    /**
+     * Accessibility: expose the inline toolbar as a horizontal ARIA toolbar
+     * with a descriptive label for the text-formatting controls it hosts.
+     */
+    this.nodes.wrapper.setAttribute('role', 'toolbar');
+    this.nodes.wrapper.setAttribute('aria-label', this.Blok.I18n.t('a11y.textFormatting'));
+    this.nodes.wrapper.setAttribute('aria-orientation', 'horizontal');
 
     $.append(this.Blok.UI.nodes.wrapper, this.nodes.wrapper);
   }
@@ -460,6 +501,15 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    */
   private async activateToolByShortcut(toolName: string): Promise<void> {
     /**
+     * Some popover-entry tools expose a direct keyboard-apply hook (e.g. Marker
+     * re-applies the last-used color). Their shortcut applies instantly rather
+     * than opening the picker — the picker stays reachable via the toolbar button.
+     */
+    if (this.tryApplyToolShortcut(toolName)) {
+      return;
+    }
+
+    /**
      * Popover-entry tools (Link, Equation, Marker) present their own menu.
      * Triggered by shortcut they replace the inline toolbar with just that menu
      * — never the full format-button row flanking a fly-out input.
@@ -491,6 +541,30 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     this.invokeToolActionDirectly(toolName);
+  }
+
+  /**
+   * Invoke a tool's direct keyboard-apply hook when it exposes one. Such tools
+   * (e.g. Marker) act on the current selection immediately on their shortcut
+   * instead of opening their popover. Returns true when the shortcut was handled.
+   * @param toolName - inline tool name
+   */
+  private tryApplyToolShortcut(toolName: string): boolean {
+    const tool = this.Blok.Tools.inlineTools.get(toolName);
+
+    if (!tool) {
+      return false;
+    }
+
+    const instance = tool.create();
+
+    if (!hasApplyShortcut(instance)) {
+      return false;
+    }
+
+    instance.applyShortcut();
+
+    return true;
   }
 
   /**

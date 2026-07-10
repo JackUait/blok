@@ -83,6 +83,18 @@ export class BlockHoverController extends Controller {
         return;
       }
 
+      /**
+       * Blok's promoted floating chrome (link hover card, popovers, tooltips)
+       * lives in document.body, outside any block-wrapper. When the pointer
+       * rests on it, the closest-block lookup below fails and nearest-block
+       * detection would "leak through" the popup, moving the block toolbar onto
+       * whatever block sits behind it. Bail out so hovering our own floating UI
+       * never drives block hover.
+       */
+      if ((event.target as Element | null)?.closest('[data-blok-top-layer]')) {
+        return;
+      }
+
       const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
 
       /**

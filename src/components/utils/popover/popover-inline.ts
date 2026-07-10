@@ -7,11 +7,9 @@ import type { PopoverItem } from './components/popover-item';
 import { PopoverItemDefault, PopoverItemType , css as popoverItemCls } from './components/popover-item';
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import { PopoverDesktop } from './popover-desktop';
-import { PopoverRegistry } from './popover-registry';
 import { css, cssInline, CSSVariables, getNestedLevelAttrValue } from './popover.const';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
-import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 
 
@@ -41,21 +39,17 @@ export class PopoverInline extends PopoverDesktop {
   }
 
   /**
-   * Closes popover - override as arrow function to match parent
+   * Inline-specific close cleanup, run by the base
+   * {@link PopoverAbstract.hide} via the `onHide` template-method hook. The
+   * inline toolbar previously re-implemented `hide()` as an arrow field and
+   * forgot base steps (it never removed `data-blok-popover-opened`, so
+   * `isShown` stayed true, and it skipped reel/desktop-state resets). Extending
+   * the base hide path through this hook keeps that base cleanup while still
+   * restoring the inline styles.
    */
-  public override hide = (): void => {
-    // Call parent hide logic manually (can't use super for arrow functions)
-    this.setOpenTop(false);
-    this.setOpenLeft(false);
-
-    this.itemsDefault.forEach(item => item.reset());
-
-    if (this.search !== undefined) {
-      this.search.clear();
-    }
-
-    this.destroyNestedPopoverIfExists();
-    this.flipper?.deactivate();
+  protected override onHide(): void {
+    // Desktop cleanup (nested popover teardown, flipper deactivate, etc.).
+    super.onHide();
 
     // Reset to closed inline styles
     this.nodes.popover.className = twMerge(cssInline.popover);
@@ -66,13 +60,7 @@ export class PopoverInline extends PopoverDesktop {
       );
       this.nodes.popoverContainer.style.height = '';
     }
-
-    // Unregister from PopoverRegistry (from abstract)
-    PopoverRegistry.instance.unregister(this);
-
-    // Emit closed event (from abstract)
-    this.emit(PopoverEvent.Closed);
-  };
+  }
 
   /**
    * Constructs the instance
@@ -147,9 +135,11 @@ export class PopoverInline extends PopoverDesktop {
       );
     }
 
-    // Apply inline items container styles
+    // Apply inline items container styles. The horizontal toolbar is a single row whose
+    // symmetric breathing room comes from the container, so drop the vertical-list
+    // before-first (pt-0) and after-last (pb-0) gaps that css.items carries.
     if (this.nodes.items) {
-      this.nodes.items.className = twMerge(css.items, 'flex pb-0');
+      this.nodes.items.className = twMerge(css.items, 'flex pt-0 pb-0');
     }
 
     // Set inline height CSS variables
@@ -299,16 +289,21 @@ export class PopoverInline extends PopoverDesktop {
     // Apply nested inline styles to the nested popover container
     const nestedContainer = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
     if (nestedContainer) {
+      // No top padding: the nested item menu's first item sits flush to the top edge,
+      // matching the desktop popover. px/pb come from the shared opened state.
       nestedContainer.className = twMerge(
         nestedContainer.className,
-        'h-fit p-1.5 flex-col',
+        'h-fit px-1.5 pb-0 flex-col',
       );
     }
 
-    // Apply nested inline styles to the items container
+    // Apply nested inline styles to the items container. No explicit width:
+    // flex stretch sizes the element including its scrollbar-gutter margin
+    // offsets, whereas `w-full` pins it to the container content box and
+    // strands the scrollbar 8px from the popover edge instead of 2px.
     const nestedItems = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverItems}]`);
     if (nestedItems) {
-      nestedItems.className = twMerge(nestedItems.className, 'block w-full');
+      nestedItems.className = twMerge(nestedItems.className, 'block');
     }
 
     /**

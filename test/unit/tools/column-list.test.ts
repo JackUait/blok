@@ -206,6 +206,26 @@ describe('ColumnList tool', () => {
     expect(container.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(0);
   });
 
+  it('carries a static gutter attribute in read-only mode so the gap survives without resizers', () => {
+    const options = createColumnListOptions();
+    options.readOnly = true;
+    const list = new ColumnList(options);
+    const container = list.render();
+
+    // In read-only there are no resizer elements to form the gutter, so the
+    // container itself must provide the horizontal gap. Editing mode gets its
+    // gutter from the resizers, so it must NOT carry this attribute (else the
+    // gap would be doubled: container gap + resizer width).
+    expect(container).toHaveAttribute('data-blok-columns-static-gutter');
+  });
+
+  it('does not carry the static gutter attribute in edit mode (resizers form the gutter)', () => {
+    const list = new ColumnList(createColumnListOptions());
+    const container = list.render();
+
+    expect(container).not.toHaveAttribute('data-blok-columns-static-gutter');
+  });
+
   it('marks the separator as a vertical separator for assistive tech', () => {
     const api = createMockAPI({
       blocks: {
@@ -305,6 +325,19 @@ describe('ColumnList tool', () => {
       list.setReadOnly(false);
 
       expect(container.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(1);
+    });
+
+    it('adds the static gutter when entering read-only and removes it when leaving', () => {
+      const { list, container } = createMountedList();
+
+      // Edit mode: resizers form the gutter, no static gutter.
+      expect(container).not.toHaveAttribute('data-blok-columns-static-gutter');
+
+      list.setReadOnly(true);
+      expect(container).toHaveAttribute('data-blok-columns-static-gutter');
+
+      list.setReadOnly(false);
+      expect(container).not.toHaveAttribute('data-blok-columns-static-gutter');
     });
   });
 });

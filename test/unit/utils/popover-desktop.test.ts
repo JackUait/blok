@@ -12,6 +12,7 @@ type MockFlipperShape = {
   onFlip: Mock<(callback: () => void) => void>;
   removeOnFlip: Mock<(callback: () => void) => void>;
   getHandleContentEditableTargets: Mock<() => boolean>;
+  setActiveDescendantHost: Mock<(host: HTMLElement | null) => void>;
   triggerFlip: () => void;
   lastActivatedWith: HTMLElement[] | undefined;
   readonly isActivated: boolean;
@@ -21,13 +22,18 @@ type MockFlipperShape = {
 type MockSearchInputShape = {
   on: Mock<(event: string, handler: (payload: SearchPayload) => void) => void>;
   getElement: Mock<() => HTMLElement>;
+  getInput: Mock<() => HTMLInputElement>;
+  setValue: Mock<(value: string) => void>;
   focus: Mock<() => void>;
   clear: Mock<() => void>;
   destroy: Mock<() => void>;
   emitSearch: (payload: SearchPayload) => void;
   element: HTMLElement;
+  input: HTMLInputElement;
   items: unknown[];
   placeholder: string | undefined;
+  label: string | undefined;
+  controlsId: string | undefined;
 };
 
 const flipperRegistry = vi.hoisted(() => ({
@@ -63,6 +69,8 @@ vi.mock('../../../src/components/flipper', () => {
     public readonly hasFocus = vi.fn(() => this.activated);
 
     public readonly getHandleContentEditableTargets = vi.fn(() => false);
+
+    public readonly setActiveDescendantHost = vi.fn((_host: HTMLElement | null) => {});
 
     public lastActivatedWith: HTMLElement[] | undefined;
 
@@ -118,6 +126,12 @@ vi.mock('../../../src/components/utils/popover/components/search-input', async (
 
     public readonly getElement = vi.fn(() => this.element);
 
+    public readonly getInput = vi.fn(() => this.input);
+
+    public readonly setValue = vi.fn((value: string) => {
+      this.input.value = value;
+    });
+
     public readonly focus = vi.fn(() => {});
 
     public readonly clear = vi.fn(() => {});
@@ -126,17 +140,26 @@ vi.mock('../../../src/components/utils/popover/components/search-input', async (
 
     public readonly element: HTMLElement;
 
+    public readonly input: HTMLInputElement;
+
     public readonly items: unknown[];
 
     public readonly placeholder: string | undefined;
 
+    public readonly label: string | undefined;
+
+    public readonly controlsId: string | undefined;
+
     private readonly handlers = new Map<string, Array<(payload: SearchPayload) => void>>();
 
-    constructor({ items, placeholder }: { items: unknown[]; placeholder?: string }) {
+    constructor({ items, placeholder, label, controlsId }: { items: unknown[]; placeholder?: string; label?: string; controlsId?: string }) {
       this.items = items;
       this.placeholder = placeholder;
+      this.label = label;
+      this.controlsId = controlsId;
       this.element = document.createElement('div');
       this.element.setAttribute('data-blok-testid', 'mock-search-input');
+      this.input = document.createElement('input');
 
       searchInputRegistry.instances.push(this);
     }
@@ -180,6 +203,7 @@ type PopoverDesktopInternal = PopoverDesktop & {
   destroyNestedPopoverIfExists: () => void;
   handleHover: (event: Event) => void;
   handleMouseLeave: (event: Event) => void;
+  showNestedItems: (item: PopoverItemDefault) => void;
   readonly itemsDefault: PopoverItemDefault[];
   readonly items: Array<PopoverItemDefault | PopoverItemSeparator>;
   nodes: {
@@ -187,9 +211,27 @@ type PopoverDesktopInternal = PopoverDesktop & {
     popoverContainer: HTMLElement;
     items: HTMLElement;
     nothingFoundMessage: HTMLElement;
+    scrollbarThumb: HTMLElement;
   };
   nestedPopover: PopoverDesktop | null | undefined;
   nestedPopoverTriggerItem: PopoverItemDefault | null;
+  updateScrollbar: () => void;
+};
+
+/**
+ * Drives the layout metrics of a scroll container in jsdom (which reports 0
+ * for every geometry read) so the scrollbar math can be exercised.
+ * @param el - the scroll container element
+ * @param metrics - the fake scroll metrics to report
+ */
+const stubScrollMetrics = (
+  el: HTMLElement,
+  metrics: { clientHeight: number; scrollHeight: number; scrollTop: number; offsetTop?: number }
+): void => {
+  Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => metrics.clientHeight });
+  Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => metrics.scrollHeight });
+  Object.defineProperty(el, 'offsetTop', { configurable: true, get: () => metrics.offsetTop ?? 0 });
+  Object.defineProperty(el, 'scrollTop', { configurable: true, get: () => metrics.scrollTop });
 };
 
 const createRect = (overrides: Partial<DOMRect>): DOMRect => ({
@@ -266,6 +308,7 @@ beforeEach(() => {
 afterEach(() => {
   rafSpy?.mockRestore();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('PopoverDesktop', () => {
@@ -356,6 +399,51 @@ describe('PopoverDesktop', () => {
       // Verify flipper is deactivated as part of cleanup
       const flipper = getMockFlipper();
       expect(flipper.deactivate).toHaveBeenCalled();
+    });
+  });
+
+  describe('custom scrollbar', () => {
+    it('creates a scrollbar thumb inside the popover container', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      expect(instance.nodes.scrollbarThumb).toBeInstanceOf(HTMLElement);
+      expect(instance.nodes.scrollbarThumb.parentElement).toBe(instance.nodes.popoverContainer);
+      expect(instance.nodes.scrollbarThumb).toHaveAttribute('data-blok-popover-scrollbar');
+    });
+
+    it('hides the thumb when the content does not overflow', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 120, scrollTop: 0 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(true);
+    });
+
+    it('sizes the thumb proportionally to the visible fraction when content overflows', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // Half the content is visible → thumb is half the viewport height.
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 400, scrollTop: 0 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.hidden).toBe(false);
+      expect(instance.nodes.scrollbarThumb.style.height).toBe('100px');
+    });
+
+    it('positions the thumb at the bottom of its travel when scrolled to the end', () => {
+      const popover = createPopover();
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // viewport 200, content 400 → thumb 100 tall, travel = 200 - 100 = 100.
+      // items sits 40px below the container top; scrolled fully → translateY 140px.
+      stubScrollMetrics(instance.nodes.items, { clientHeight: 200, scrollHeight: 400, scrollTop: 200, offsetTop: 40 });
+      instance.updateScrollbar();
+
+      expect(instance.nodes.scrollbarThumb.style.transform).toBe('translateY(140px)');
     });
   });
 
@@ -495,7 +583,7 @@ describe('PopoverDesktop', () => {
 
 
   describe('flippableElements', () => {
-    it('includes only enabled default items and wrapper element from HTML items', () => {
+    it('includes enabled default items and inner controls of HTML items', () => {
       const htmlElement = document.createElement('div');
       const htmlButton = document.createElement('button');
       const htmlInput = document.createElement('input');
@@ -532,16 +620,35 @@ describe('PopoverDesktop', () => {
 
       const elements = instance.flippableElements;
 
-      // HTML items return their wrapper element (not inner controls) for keyboard navigation
+      // HTML items expose their inner interactive controls (not the
+      // role="presentation" wrapper) for keyboard navigation, so the flipper
+      // lands on real focusable/Enter-activatable elements.
+      if (defaultElement) {
+        expect(elements).toEqual([defaultElement, htmlButton, htmlInput]);
+      }
+    });
+
+    it('falls back to the wrapper element for HTML items without inner controls', () => {
+      const htmlElement = document.createElement('div');
+
+      htmlElement.textContent = 'static content';
+
+      const popover = createPopover({
+        items: [
+          {
+            type: PopoverItemType.Html,
+            name: 'static-html',
+            element: htmlElement,
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
       const htmlItemWrapper = instance.items.find(
-        item => item.name === 'custom-html'
+        item => item.name === 'static-html'
       )?.getElement();
 
       expect(htmlItemWrapper).not.toBeNull();
-
-      if (defaultElement && htmlItemWrapper) {
-        expect(elements).toEqual([defaultElement, htmlItemWrapper]);
-      }
+      expect(instance.flippableElements).toEqual([ htmlItemWrapper ]);
     });
   });
 
@@ -699,6 +806,7 @@ describe('PopoverDesktop', () => {
 
   describe('handleHover', () => {
     it('opens nested popover for hovered item with children and avoids reopening for the same item', () => {
+      vi.useFakeTimers();
       const popover = createPopover({
         items: [
           ...createDefaultItems(),
@@ -735,11 +843,17 @@ describe('PopoverDesktop', () => {
 
       instance.handleHover(hoverEvent);
 
+      // Pointer hover defers the open by the intent delay (Radix SubTrigger).
+      expect(instance.nestedPopover).toBeFalsy();
+
+      vi.advanceTimersByTime(100);
+
       expect(destroyNestedSpy).toHaveBeenCalledTimes(1);
       expect(showNestedSpy).toHaveBeenCalledWith(parentItem);
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
 
       instance.handleHover(hoverEvent);
+      vi.advanceTimersByTime(100);
 
       expect(destroyNestedSpy).toHaveBeenCalledTimes(1);
       expect(showNestedSpy).toHaveBeenCalledTimes(1);
@@ -1087,9 +1201,10 @@ describe('PopoverDesktop', () => {
       popover.invalidateSizeCache();
       void instance.size;
 
-      // The clone's container should include the opened-state padding (asymmetric: px-1.5 pt-1.5 pb-0 for scroll haze)
+      // The clone's container should include the opened-state padding. The top gap was
+      // moved off the container (no pt-1.5) so the first item sits flush to the top edge.
       expect(cloneContainerClass).toContain('px-1.5');
-      expect(cloneContainerClass).toContain('pt-1.5');
+      expect(cloneContainerClass).not.toContain('pt-1.5');
       expect(cloneContainerClass).toContain('pb-0');
     });
   });
@@ -1591,6 +1706,7 @@ describe('PopoverDesktop', () => {
 
   describe('handleMouseLeave', () => {
     it('destroys nested popover and resets hover state when mouse leaves popover container', () => {
+      vi.useFakeTimers();
       const popover = createPopover({
         items: [
           ...createDefaultItems(),
@@ -1624,6 +1740,7 @@ describe('PopoverDesktop', () => {
       } as unknown as Event;
 
       instance.handleHover(hoverEvent);
+      vi.advanceTimersByTime(100);
 
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
 
@@ -1639,6 +1756,11 @@ describe('PopoverDesktop', () => {
 
       instance.handleMouseLeave(mouseLeaveEvent);
 
+      // Close is deferred by the grace window, then fires.
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      vi.advanceTimersByTime(300);
+
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
 
@@ -1646,6 +1768,7 @@ describe('PopoverDesktop', () => {
     });
 
     it('preserves nested popover when mouse moves into the nested popover', () => {
+      vi.useFakeTimers();
       const popover = createPopover({
         items: [
           {
@@ -1678,20 +1801,157 @@ describe('PopoverDesktop', () => {
       } as unknown as Event;
 
       instance.handleHover(hoverEvent);
+      vi.advanceTimersByTime(100);
 
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
 
       // Mouse moves into the nested popover element
-      const nestedPopoverElement = instance.nestedPopover!.getElement();
+      const openNested = instance.nestedPopover;
+
+      if (openNested === null || openNested === undefined) {
+        throw new Error('Expected nested popover to be open');
+      }
+
+      const nestedPopoverElement = openNested.getElement();
       const mouseLeaveEvent = new MouseEvent('mouseleave', {
         relatedTarget: nestedPopoverElement,
         bubbles: false,
       });
 
       instance.handleMouseLeave(mouseLeaveEvent);
+      vi.advanceTimersByTime(300);
 
       // Nested popover should still be open
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+  });
+
+  describe('nested hover intent (M4)', () => {
+    const createPopoverWithParentAndSibling = (): {
+      instance: PopoverDesktopInternal;
+      parentItem: PopoverItemDefault;
+      siblingItem: PopoverItemDefault;
+    } => {
+      const popover = createPopover({
+        items: [
+          { title: 'Plain', name: 'plain', onActivate: vi.fn() },
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [{ title: 'Child', name: 'child', onActivate: vi.fn() }],
+            },
+          },
+          {
+            title: 'Sibling',
+            name: 'sibling',
+            children: {
+              items: [{ title: 'Other', name: 'other', onActivate: vi.fn() }],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.itemsDefault.find(item => item.name === 'parent');
+      const siblingItem = instance.itemsDefault.find(item => item.name === 'sibling');
+
+      if (parentItem === undefined || siblingItem === undefined) {
+        throw new Error('Expected parent and sibling items to exist');
+      }
+
+      return { instance,
+        parentItem,
+        siblingItem };
+    };
+
+    const hoverEventFor = (item: PopoverItemDefault): Event => {
+      const element = item.getElement();
+
+      return {
+        target: element,
+        composedPath: () => (element ? [element] : []),
+      } as unknown as Event;
+    };
+
+    it('defers opening the submenu until the open-intent delay elapses', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem } = createPopoverWithParentAndSibling();
+
+      instance.handleHover(hoverEventFor(parentItem));
+
+      expect(instance.nestedPopover).toBeFalsy();
+
+      vi.advanceTimersByTime(99);
+      expect(instance.nestedPopover).toBeFalsy();
+
+      vi.advanceTimersByTime(1);
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+
+    it('cancels a pending open when the pointer clips a sibling trigger on the way elsewhere', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem, siblingItem } = createPopoverWithParentAndSibling();
+
+      // Pointer briefly clips the sibling trigger-with-children...
+      instance.handleHover(hoverEventFor(siblingItem));
+      // ...then continues onto the parent trigger before the intent delay.
+      vi.advanceTimersByTime(50);
+      instance.handleHover(hoverEventFor(parentItem));
+
+      // Advancing past the original sibling timer must not open the sibling.
+      vi.advanceTimersByTime(60);
+      expect(instance.nestedPopover).toBeFalsy();
+
+      // The parent's own intent then completes and opens the parent submenu.
+      vi.advanceTimersByTime(50);
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+      expect(instance.nestedPopoverTriggerItem).toBe(parentItem);
+    });
+
+    it('opens synchronously via the keyboard path (showNestedItems)', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem } = createPopoverWithParentAndSibling();
+
+      instance.showNestedItems(parentItem);
+
+      // No timer advance: the keyboard path must not be delayed.
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+
+    it('cancels the close-grace when the pointer re-enters the nested popover', () => {
+      vi.useFakeTimers();
+
+      const { instance, parentItem } = createPopoverWithParentAndSibling();
+
+      instance.handleHover(hoverEventFor(parentItem));
+      vi.advanceTimersByTime(100);
+
+      const openNested = instance.nestedPopover;
+
+      if (openNested === null || openNested === undefined) {
+        throw new Error('Expected nested popover to be open');
+      }
+
+      // Pointer leaves toward an unrelated element -> close grace scheduled.
+      const outside = document.createElement('div');
+
+      document.body.appendChild(outside);
+      instance.handleMouseLeave(new MouseEvent('mouseleave', {
+        relatedTarget: outside,
+        bubbles: false,
+      }));
+
+      // Pointer re-enters the nested popover before the grace elapses.
+      vi.advanceTimersByTime(150);
+      openNested.getElement().dispatchEvent(new Event('pointerenter'));
+
+      vi.advanceTimersByTime(300);
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      outside.remove();
     });
   });
 
@@ -1709,14 +1969,60 @@ describe('PopoverDesktop', () => {
       expect(element?.className).toContain('pr-3');
     });
 
-    it('adds bottom padding inside the scrollable items container so it only shows at end of list', () => {
+    it('adds symmetric top/bottom padding inside the scrollable items container so gaps only show at the list edges', () => {
       const popover = createPopover();
       const instance = popover as unknown as PopoverDesktopInternal;
 
-      // Bottom padding lives on the scrollable items container (not the popover container),
-      // so it is only visible when user scrolls to the bottom of the list.
-      // Top padding (pt-1.5) is on the outer popover container and is always visible.
+      // Both the before-first-element gap and the after-last-element gap live on the
+      // scrollable items container (not the popover container), so they scroll with the
+      // list and sit inside the reel clip. The outer container carries no top padding.
+      expect(instance.nodes.items.className).toContain('pt-1.5');
       expect(instance.nodes.items.className).toContain('pb-1.5');
+      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
+    });
+
+    it('wires the search input as a combobox controlling the results container', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      const searchInput = getMockSearchInput();
+
+      // The items container gets a stable id...
+      expect(instance.nodes.items.id).not.toBe('');
+      // ...that the search input's aria-controls points at (via controlsId).
+      expect(searchInput.controlsId).toBe(instance.nodes.items.id);
+      // ...and an accessible label is plumbed through.
+      expect(searchInput.label).toBe('Search');
+    });
+
+    it('gives the search input its own top gap since the container no longer pads the top', () => {
+      const popover = createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+
+      popover.show();
+
+      const searchInput = getMockSearchInput();
+
+      // The top breathing room moved off the popover container onto the search element,
+      // so the input keeps its gap from the top edge while item-only menus sit flush.
+      expect(searchInput.element.className).toContain('mt-1.5');
+    });
+
+    it('registers the search input as the flipper active-descendant host', () => {
+      createPopover({
+        searchable: true,
+        items: createDefaultItems(),
+      });
+
+      const searchInput = getMockSearchInput();
+      const flipper = getMockFlipper();
+
+      expect(flipper.setActiveDescendantHost).toHaveBeenCalledWith(searchInput.input);
     });
 
     it('hides items-container bottom padding while "nothing found" is displayed', () => {
@@ -1756,13 +2062,13 @@ describe('PopoverDesktop', () => {
 
       expect(instance.nodes.nothingFoundMessage).toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
       expect(instance.nodes.popoverContainer.className).not.toContain('px-1.5');
-      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
 
       searchInput.emitSearch({ query: '', items: instance.itemsDefault });
 
       expect(instance.nodes.nothingFoundMessage).not.toHaveAttribute(DATA_ATTR.nothingFoundDisplayed);
       expect(instance.nodes.popoverContainer.className).toContain('px-1.5');
-      expect(instance.nodes.popoverContainer.className).toContain('pt-1.5');
+      // The container carries no top padding in any state — the top gap lives on the search input.
+      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
     });
 
     it('removes bottom padding from the outer popover container (pb-0 stays on wrapper)', () => {
@@ -1771,9 +2077,10 @@ describe('PopoverDesktop', () => {
 
       popover.show();
 
-      // Outer container keeps pb-0 so bottom padding is solely handled inside the scroll area.
+      // Outer container keeps pb-0 so bottom padding is solely handled inside the scroll area,
+      // and carries no top padding so the first item sits flush to the top edge.
       expect(instance.nodes.popoverContainer.className).toContain('pb-0');
-      expect(instance.nodes.popoverContainer.className).toContain('pt-1.5');
+      expect(instance.nodes.popoverContainer.className).not.toContain('pt-1.5');
     });
   });
 
@@ -1835,6 +2142,279 @@ describe('PopoverDesktop', () => {
       swatchBtn.click();
 
       expect(triggerItem.getElement()?.hasAttribute(DATA_ATTR.popoverItemActive)).toBe(false);
+    });
+  });
+
+  describe('results announcer', () => {
+    it('announces the result count via the searchResults template when filtering', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+          { title: 'Alpine', name: 'alpine', onActivate: vi.fn() },
+          { title: 'Beta', name: 'beta', onActivate: vi.fn() },
+        ],
+        messages: { searchResults: '{count} results', nothingFound: 'Nothing found' },
+      });
+
+      const announcer = popover.getElement().querySelector<HTMLElement>('[data-blok-testid="popover-results-announcer"]');
+
+      popover.filterItems('alp');
+
+      expect(announcer?.textContent).toBe('2 results');
+    });
+
+    it('announces the nothing-found message when no items match', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+        messages: { searchResults: '{count} results', nothingFound: 'Nothing found' },
+      });
+
+      const announcer = popover.getElement().querySelector<HTMLElement>('[data-blok-testid="popover-results-announcer"]');
+
+      popover.filterItems('zzz');
+
+      expect(announcer?.textContent).toBe('Nothing found');
+    });
+
+    it('clears the announcer when the query is emptied', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+        messages: { searchResults: '{count} results', nothingFound: 'Nothing found' },
+      });
+
+      const announcer = popover.getElement().querySelector<HTMLElement>('[data-blok-testid="popover-results-announcer"]');
+
+      popover.filterItems('alp');
+      popover.filterItems('');
+
+      expect(announcer?.textContent).toBe('');
+    });
+  });
+
+  describe('setActiveDescendantHost', () => {
+    it('forwards the host to the flipper', () => {
+      const popover = createPopover();
+      const flipper = getMockFlipper();
+      const host = document.createElement('div');
+
+      popover.setActiveDescendantHost(host);
+
+      expect(flipper.setActiveDescendantHost).toHaveBeenCalledWith(host);
+    });
+  });
+
+  describe('resolved side/align stamping (H2)', () => {
+    it('stamps data-side and data-align on the popover element when shown with a trigger', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+
+      popover.show();
+
+      // Space below → side bottom, left-aligned → align start
+      expect(popover.getElement().dataset.side).toBe('bottom');
+      expect(popover.getElement().dataset.align).toBe('start');
+
+      trigger.remove();
+    });
+
+    it('stamps data-side=top when the popover flips above the trigger', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 500, bottom: 540, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 300, width: 200 });
+
+      const originalInnerHeight = window.innerHeight;
+
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600, writable: true });
+
+      try {
+        popover.show();
+        expect(popover.getElement().dataset.side).toBe('top');
+      } finally {
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+        trigger.remove();
+      }
+    });
+  });
+
+  describe('position tracking (H2)', () => {
+    it('re-positions the popover when the page scrolls while it is open', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+
+      popover.show();
+
+      expect(popover.getElement().style.top).toBe(`${148 + window.scrollY}px`);
+
+      // Trigger moves (as it would when the page scrolls under a fixed anchor)
+      rectSpy.mockReturnValue(
+        createRect({ top: 300, bottom: 340, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      window.dispatchEvent(new Event('scroll'));
+
+      expect(popover.getElement().style.top).toBe(`${348 + window.scrollY}px`);
+
+      trigger.remove();
+    });
+
+    it('stops re-positioning after the popover is hidden', () => {
+      const trigger = document.createElement('button');
+
+      document.body.appendChild(trigger);
+
+      const rectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+        createRect({ top: 100, bottom: 140, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      const popover = createPopover({ trigger });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 100, width: 200 });
+
+      popover.show();
+      popover.hide();
+
+      const topAfterHide = popover.getElement().style.top;
+
+      rectSpy.mockReturnValue(
+        createRect({ top: 300, bottom: 340, left: 50, right: 200, width: 150, height: 40 })
+      );
+
+      window.dispatchEvent(new Event('scroll'));
+
+      // hide() cleared inline top; a stray scroll must not re-apply a position
+      expect(popover.getElement().style.top).toBe(topAfterHide);
+
+      trigger.remove();
+    });
+  });
+
+  describe('nested popover pixel positioning (H2)', () => {
+    it('positions the nested submenu with explicit pixel left (no nesting-level CSS calc)', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [
+                { title: 'Child', name: 'child', onActivate: vi.fn() },
+              ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item: PopoverItemDefault | PopoverItemSeparator): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.hasChildren
+      );
+
+      expect(parentItem).toBeDefined();
+
+      if (!parentItem) {
+        return;
+      }
+
+      instance.nestedPopoverTriggerItem = parentItem;
+      instance.showNestedPopoverForItem(parentItem);
+
+      const nested = instance.nestedPopover;
+
+      expect(nested).toBeInstanceOf(PopoverDesktop);
+
+      const actualPopoverEl = nested?.getElement();
+      const nestedContainer = nested
+        ?.getMountElement()
+        .querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
+
+      expect(nestedContainer).not.toBeNull();
+
+      // Left is an explicit pixel value, not a nesting-level CSS-var calc string
+      const leftValue = nestedContainer?.style.left ?? '';
+
+      expect(leftValue).toMatch(/px$/);
+      expect(leftValue).not.toContain('calc');
+      expect(actualPopoverEl?.style.getPropertyValue(CSSVariables.PopoverLeft)).not.toContain('nesting-level');
+
+      // resolved side is stamped for CSS/animation
+      expect(actualPopoverEl?.dataset.side === 'left' || actualPopoverEl?.dataset.side === 'right').toBe(true);
+    });
+  });
+
+  describe('scroll activity marker', () => {
+    it('stamps data-blok-scrolling on the items container while it is being scrolled', () => {
+      const popover = createPopover() as PopoverDesktopInternal;
+      const items = popover.nodes.items;
+
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(false);
+
+      items.dispatchEvent(new Event('scroll'));
+
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(true);
+    });
+
+    it('removes data-blok-scrolling shortly after scrolling stops', () => {
+      vi.useFakeTimers();
+
+      const popover = createPopover() as PopoverDesktopInternal;
+      const items = popover.nodes.items;
+
+      items.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(200);
+
+      // Still scrolling — the timeout restarts on every scroll event.
+      items.dispatchEvent(new Event('scroll'));
+      vi.advanceTimersByTime(200);
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(true);
+
+      vi.advanceTimersByTime(2000);
+      expect(items.hasAttribute('data-blok-scrolling')).toBe(false);
+    });
+
+    it('clears the pending removal timeout on destroy', () => {
+      vi.useFakeTimers();
+
+      const popover = createPopover() as PopoverDesktopInternal;
+      const items = popover.nodes.items;
+
+      items.dispatchEvent(new Event('scroll'));
+      popover.destroy();
+
+      expect(() => vi.advanceTimersByTime(2000)).not.toThrow();
     });
   });
 });

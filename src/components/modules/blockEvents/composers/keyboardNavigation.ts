@@ -147,6 +147,15 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     if (outcome.handled) {
+      /**
+       * The indent/outdent shifts the block horizontally. The toolbar's
+       * content-relative gutter offset is cached by the positioner, so without
+       * an explicit reposition the +/⋮⋮ handles keep the pre-indent offset and
+       * end up jammed against the text. Re-run moveAndOpen (same call Enter
+       * makes) so the positioner recomputes against the new nested geometry.
+       */
+      this.Blok.Toolbar.moveAndOpen(this.Blok.BlockManager.currentBlock);
+
       event.preventDefault();
 
       return;
@@ -154,11 +163,24 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /**
      * Indent/outdent was impossible (no preceding sibling for Tab, already at root
-     * for Shift+Tab). Notion never relocates the caret to another block on Tab, so
-     * this is a strict no-op: we do NOT navigate the caret. We also leave the native
-     * Tab default intact (no preventDefault) so focus can still leave the editor for
-     * accessibility.
+     * for Shift+Tab). Notion never tabs focus OUT of the editor, so a non-indentable
+     * Tab must not relocate focus to an element outside Blok.
+     *
+     * Exception: a block with multiple inputs (e.g. a caption) should still let
+     * native Tab walk between its own inputs. So if the current block has a further
+     * input in the Tab direction, let native Tab move to it (it stays inside the
+     * editor); otherwise preventDefault so focus stays put instead of leaving.
      */
+    const { currentBlock } = this.Blok.BlockManager;
+    const hasInputToMoveTo = event.shiftKey
+      ? currentBlock?.previousInput !== undefined
+      : currentBlock?.nextInput !== undefined;
+
+    if (hasInputToMoveTo) {
+      return;
+    }
+
+    event.preventDefault();
   }
 
   /**
@@ -331,14 +353,34 @@ export class KeyboardNavigation extends BlockEventComposer {
    * Returns the promoted block, or null if no promotion occurred.
    */
   /**
-   * Whether an empty nested block should stepwise-outdent on Enter. True only for
-   * blocks structurally nested under a PLAIN parent (e.g. a paragraph indented under
-   * another paragraph via Tab). Special containers — toggles, columns and callouts —
-   * manage their own empty-child Enter behaviour and are excluded, as are table cells
-   * and lists (lists handle their own Enter).
-   * @param block - the empty block where Enter was pressed
+   * Whether a nested block should stepwise-outdent — used both for Enter on an
+   * empty nested block and for Backspace at the start of a nested block (the
+   * "remove one indent level" gesture). True only for blocks structurally nested
+   * under a PLAIN parent (e.g. a paragraph indented under another paragraph via
+   * Tab). Special containers — toggles, columns and callouts — manage their own
+   * child behaviour and are excluded, as are table cells and lists (lists handle
+   * their own keydowns).
+   * @param block - the nested block where Enter/Backspace was pressed
    */
-  private shouldOutdentEmptyNestedBlock(block: Block): boolean {
+  /**
+   * True when `block`'s immediate parent is a toggle container — the toggle tool
+   * or a toggle heading, both of which render the `data-blok-toggle-open` marker on
+   * their wrapper. Column and callout containers do not render it, so they keep
+   * their own empty-child behaviour. Used to decide whether a no-previous-sibling
+   * Backspace should outdent the child out of the toggle (Notion parity).
+   * @param block - the block whose parent is inspected
+   */
+  private hasToggleParent(block: Block): boolean {
+    if (block.parentId === null) {
+      return false;
+    }
+
+    const parent = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    return parent !== undefined && parent.holder.querySelector('[data-blok-toggle-open]') !== null;
+  }
+
+  private shouldOutdentNestedBlock(block: Block): boolean {
     if (block.parentId == null || block.name === LIST_TOOL_NAME || this.isCurrentBlockInsideTableCell) {
       return false;
     }
@@ -450,7 +492,7 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Case 2 path then creates a new block. Special containers (toggle, column,
      * callout) are excluded — they keep their own empty-child Enter behaviour below.
      */
-    if (currentBlock.isEmpty && this.shouldOutdentEmptyNestedBlock(currentBlock)) {
+    if (currentBlock.isEmpty && this.shouldOutdentNestedBlock(currentBlock)) {
       this.outdentCurrentBlock();
 
       return currentBlock;
@@ -588,6 +630,41 @@ export class KeyboardNavigation extends BlockEventComposer {
       previousBlock.parentId !== currentBlock.parentId;
 
     if (currentBlock.parentId != null && !this.isCurrentBlockInsideTableCell && hasNoPreviousSiblingInParent) {
+      /**
+       * Notion parity — "remove the indent with Backspace". When the block is
+       * nested under a PLAIN structural parent (a paragraph/header indented under
+       * another block via Tab) and the block immediately above is that parent,
+       * Backspace at the start removes ONE indent level: the block outdents to a
+       * sibling of its former parent (adopting its following siblings, like
+       * Shift+Tab) while keeping its content — instead of doing nothing or merging
+       * into the parent. Repeated Backspace steps it out until it reaches root,
+       * where the normal merge/remove logic below takes over.
+       *
+       * Container parents (toggle, column, callout) are excluded by
+       * shouldOutdentNestedBlock and keep their own empty-child behaviour below.
+       */
+      if (this.shouldOutdentNestedBlock(currentBlock)) {
+        this.outdentNestedBlockOnBackspace(currentBlock);
+
+        return;
+      }
+
+      /**
+       * Notion parity — a NON-EMPTY first/only child of a toggle outdents OUT of
+       * the toggle to become a following sibling at the toggle's level, preserving
+       * its text. This mirrors the plain-parent "Backspace removes the indent"
+       * behaviour above; it is NOT a cross-container merge (the previous toggle's
+       * content is untouched). Only toggle containers (the toggle tool and toggle
+       * headings, both detected via the `data-blok-toggle-open` marker) take this
+       * path — column/callout keep their own empty-child handling below. Empty
+       * children still fall through to remove-and-focus-next.
+       */
+      if (!currentBlock.isEmpty && this.hasToggleParent(currentBlock)) {
+        this.outdentNestedBlockOnBackspace(currentBlock);
+
+        return;
+      }
+
       // A column's sole empty child collapses the column itself; otherwise
       // fall back to the toggle-child behaviour (remove + focus next sibling).
       if (!this.removeSoleEmptyColumnChild(currentBlock)) {
@@ -779,15 +856,26 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
-     * Notion parity — symmetric to the Backspace "empty styled previous wins"
-     * exception. When the current block is an EMPTY STYLED block (heading/quote —
-     * anything that isn't the plain default paragraph) and the next block has
-     * text, the next block's text is pulled UP into the current block and adopts
-     * its type — the styled block wins. Only when the empty block is a plain
-     * default paragraph does it fall through to the line-break removal below.
+     * Notion parity — the UPPER block's type always wins on a forward-Delete
+     * merge, symmetric with Backspace (which already demotes a heading into a
+     * preceding paragraph). When the current (upper) block is EMPTY and the next
+     * block has mergeable text, the next block's text is pulled UP into the current
+     * block, adopting the current block's type. This holds even when the empty
+     * upper block is the plain default paragraph (the next styled block is demoted
+     * to text) — previously default paragraphs fell through to line-break removal,
+     * which let the LOWER block's type win (the m2 divergence).
+     *
+     * Restricted to TOP-LEVEL blocks: an empty CONTAINER child (toggle/callout/
+     * column row) shares its parentId with the next sibling, so this branch would
+     * otherwise absorb the sibling's text and delete it. Container children must
+     * fall through to the container-aware empty-block handling below (remove self
+     * when a previous sibling exists, no-op for a lone first child).
      */
-    if (currentBlock.isEmpty && !currentBlock.tool.isDefault && areBlocksMergeable(currentBlock, nextBlock)) {
-      this.mergeBlocks(currentBlock, nextBlock);
+    if (currentBlock.parentId === null && currentBlock.isEmpty && areBlocksMergeable(currentBlock, nextBlock)) {
+      // The empty upper block absorbs the next block's text, so the caret belongs
+      // at the START of the merged content (the empty input the pre-merge focus()
+      // anchored to is replaced when the merge re-renders — re-anchor after it).
+      this.mergeBlocks(currentBlock, nextBlock, true);
 
       return;
     }
@@ -848,8 +936,8 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @param targetBlock - to which Block we want to merge
    * @param blockToMerge - what Block we want to merge
    */
-  private mergeBlocks(targetBlock: Block, blockToMerge: Block): void {
-    const { BlockManager } = this.Blok;
+  private mergeBlocks(targetBlock: Block, blockToMerge: Block, restoreCaretToStart = false): void {
+    const { BlockManager, Caret } = this.Blok;
 
     if (targetBlock.lastInput === undefined) {
       return;
@@ -860,6 +948,13 @@ export class KeyboardNavigation extends BlockEventComposer {
     BlockManager
       .mergeBlocks(targetBlock, blockToMerge)
       .then(() => {
+        // For a merge INTO an empty target (forward-Delete "upper wins"), the
+        // pre-merge focus() anchored the caret on the empty input that the merge
+        // then replaced, so re-anchor it on the merged block's fresh DOM.
+        if (restoreCaretToStart) {
+          Caret.setToBlock(targetBlock, Caret.positions.START);
+        }
+
         this.closeToolbarIfNotInTableCell();
       })
       .catch(() => {
@@ -972,14 +1067,37 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Determine navigation type based on key pressed:
      * - Arrow Down: use vertical navigation (Notion-style line-by-line)
      * - Arrow Right: use horizontal navigation (character-by-character)
+     *
+     * Plain (no Cmd/Ctrl/Alt) vertical navigation only — symmetric with isRightKey
+     * below. A modifier+ArrowDown is a native gesture (Cmd = doc/line end, Ctrl/Alt =
+     * paragraph/word) and must fall through to the browser; without this guard Blok
+     * half-intercepts it, crossing blocks at a boundary or leaving the caret stuck
+     * mid-block in a wrapped paragraph.
      */
-    const isDownKey = keyCode === keyCodes.DOWN;
+    const isDownKey =
+      keyCode === keyCodes.DOWN &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
     /**
-     * Plain (non-Shift) horizontal navigation only — Shift+ArrowRight at a
-     * boundary is handled above as cross-block selection and must never collapse
-     * the caret into the next block.
+     * Horizontal navigation flag for ArrowRight. Only plain ArrowRight qualifies;
+     * Ctrl/Alt (word nav), Shift (handled above as cross-block selection) and Cmd
+     * (line-end) do not.
+     *
+     * Cmd+ArrowRight is the macOS line-end gesture and must stay fully native
+     * (symmetric with isDownKey above, which also excludes metaKey): within a
+     * multi-line block it moves to the visual line end, and at the block's absolute
+     * end the native gesture keeps the caret inside the block — it never crosses into
+     * the next block (Notion parity: Cmd+Right is a within-line move / boundary
+     * no-op, not a cross-block arrow).
      */
-    const isRightKey = keyCode === keyCodes.RIGHT && !this.isRtl && !event.shiftKey;
+    const isRightKey =
+      keyCode === keyCodes.RIGHT &&
+      !this.isRtl &&
+      !event.shiftKey &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
 
     const isNavigated = (() => {
       if (isDownKey) {
@@ -1133,14 +1251,37 @@ export class KeyboardNavigation extends BlockEventComposer {
      * Determine navigation type based on key pressed:
      * - Arrow Up: use vertical navigation (Notion-style line-by-line)
      * - Arrow Left: use horizontal navigation (character-by-character)
+     *
+     * Plain (no Cmd/Ctrl/Alt) vertical navigation only — symmetric with isLeftKey
+     * below. A modifier+ArrowUp is a native gesture (Cmd = doc/line start, Ctrl/Alt =
+     * paragraph/word) and must fall through to the browser; without this guard Blok
+     * half-intercepts it, crossing blocks at a boundary or leaving the caret stuck
+     * mid-block in a wrapped paragraph.
      */
-    const isUpKey = keyCode === keyCodes.UP;
+    const isUpKey =
+      keyCode === keyCodes.UP &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
     /**
-     * Plain (non-Shift) horizontal navigation only — Shift+ArrowLeft at a
-     * boundary is handled above as cross-block selection and must never collapse
-     * the caret into the previous block.
+     * Horizontal navigation flag for ArrowLeft. Only plain ArrowLeft qualifies;
+     * Ctrl/Alt (word nav), Shift (handled above as cross-block selection) and Cmd
+     * (line-start) do not.
+     *
+     * Cmd+ArrowLeft is the macOS line-start gesture and must stay fully native
+     * (symmetric with isUpKey above, which also excludes metaKey): within a
+     * multi-line block it moves to the visual line start, and at the block's absolute
+     * start the native gesture keeps the caret inside the block — it never crosses
+     * into the previous block (Notion parity: Cmd+Left is a within-line move /
+     * boundary no-op, not a cross-block arrow).
      */
-    const isLeftKey = keyCode === keyCodes.LEFT && !this.isRtl && !event.shiftKey;
+    const isLeftKey =
+      keyCode === keyCodes.LEFT &&
+      !this.isRtl &&
+      !event.shiftKey &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
 
     const isNavigated = (() => {
       if (isUpKey) {
@@ -1249,6 +1390,31 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     return true;
+  }
+
+  /**
+   * Backspace "remove one indent level": outdent a block nested under a plain
+   * structural parent by one level, preserving its content and keeping the caret
+   * at its start. Mirrors the Tab handler — the reparent runs inside a single
+   * `transactMoves` group so one Cmd+Z reverses it, and the toolbar is
+   * repositioned against the new (shallower) geometry.
+   * @param block - the current block being outdented (BlockManager.currentBlock)
+   */
+  private outdentNestedBlockOnBackspace(block: Block): void {
+    const { YjsManager, Caret, Toolbar } = this.Blok;
+
+    const reparent = (): void => {
+      this.outdentCurrentBlock();
+    };
+
+    if (typeof YjsManager.transactMoves === 'function') {
+      YjsManager.transactMoves(reparent);
+    } else {
+      reparent();
+    }
+
+    Caret.setToBlock(block, Caret.positions.START);
+    Toolbar.moveAndOpen(block);
   }
 
 }

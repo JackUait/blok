@@ -7,6 +7,7 @@ import type {
   RootContent, List, ListItem, Table, TableRow, Code, Heading, Blockquote,
   PhrasingContent, Definition, FootnoteDefinition,
 } from 'mdast';
+import { isSamePageLink } from '../tools/link/registry';
 import { isHighlightable, tokenizePrism } from '../tools/code/prism-loader';
 import { extToPrismLang } from '../tools/file/code-languages';
 import { renderLatex } from '../tools/code/katex-loader';
@@ -387,7 +388,9 @@ async function inlineToHtml(node: InlineNode, ctx: RenderContext): Promise<strin
 }
 
 function anchor(url: string, children: string): string {
-  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer nofollow">${children}</a>`;
+  const target = isSamePageLink(url) ? '_self' : '_blank';
+
+  return `<a href="${escapeHtml(url)}" target="${target}" rel="noopener noreferrer nofollow">${children}</a>`;
 }
 
 function imageHtml(rawUrl: string, alt: string): string {

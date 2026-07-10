@@ -99,6 +99,54 @@ export abstract class BasePasteHandler implements PasteHandler {
   /**
    * Insert paste data as blocks.
    */
+  /**
+   * Caret-split for a multi-line plain-text paste into a NON-EMPTY block: extract
+   * the current block's post-caret remainder, merge the FIRST pasted line inline at
+   * the caret, carry that remainder onto the LAST line, and return the remaining
+   * lines (everything after the first) to be inserted as new blocks.
+   * @param data - the multi-line paste, one item per line
+   */
+  private async caretSplitFirstLine(data: PasteData[]): Promise<PasteData[]> {
+    const { Caret } = this.Blok;
+    const trailingFragment = Caret.extractFragmentFromCaretPosition();
+
+    // First line merges into the current block at the caret.
+    await this.processInlinePaste(data[0], false);
+
+    const linesToInsert = data.slice(1);
+
+    // Carry the current block's post-caret remainder onto the last line.
+    if (trailingFragment) {
+      linesToInsert[linesToInsert.length - 1].content.append(trailingFragment);
+    }
+
+    return linesToInsert;
+  }
+
+  /**
+   * Resolve which pasted lines should be inserted as blocks.
+   *
+   * - When the first line can merge into the current block at the caret, split
+   *   it off and carry the caret remainder onto the tail.
+   * - When a newline-prefixed paste has an empty leading segment, drop it.
+   * - Otherwise insert every line as-is.
+   */
+  private async resolveLinesToInsert(
+    data: PasteData[],
+    canCaretSplit: boolean,
+    firstSegmentIsEmpty: boolean
+  ): Promise<PasteData[]> {
+    if (canCaretSplit) {
+      return this.caretSplitFirstLine(data);
+    }
+
+    if (firstSegmentIsEmpty) {
+      return data.slice(1);
+    }
+
+    return data;
+  }
+
   protected async insertPasteData(
     data: PasteData[],
     canReplaceCurrentBlock: boolean
@@ -116,9 +164,40 @@ export abstract class BasePasteHandler implements PasteHandler {
       this.redirectToTableParentIfNeeded(data, BlockManager);
 
       const currentBlock = BlockManager.currentBlock;
+
+      // Caret-split path: a multi-line PLAIN-TEXT paste (every item is inline,
+      // not a block) into a NON-EMPTY block must split at the caret, matching
+      // Notion: the first line merges into the current block at the caret, the
+      // middle lines become new blocks, and the current block's post-caret
+      // remainder rides with the LAST pasted segment.
+      const isInlineMultiline = data.every((item) => !item.isBlock);
+
+      // Container context: the caret is either in a container's title (the block
+      // owns the [data-blok-toggle-children] region but the caret is outside it)
+      // or inside a container child (the block's holder lives within that region).
+      // A caret-split would wrongly merge the first line into the title/child, so
+      // it must be suppressed — the pasted lines belong in the container's children.
       const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
       const isInContainerTitle = childContainer !== null &&
         !childContainer.contains(currentBlock?.currentInput ?? null);
+      const isInContainerChild = currentBlock?.holder?.closest('[data-blok-toggle-children]') != null;
+      const isContainerContext = isInContainerTitle || isInContainerChild;
+
+      // A newline-prefixed paste has an empty first segment: there is no real
+      // inline first line to merge, so suppress the caret-split and drop the
+      // empty lead — the remaining lines become new blocks.
+      const firstSegmentIsEmpty = isInlineMultiline &&
+        (data[0]?.content?.textContent ?? '').trim() === '';
+
+      const canCaretSplit = isInlineMultiline &&
+        currentBlock !== undefined &&
+        !currentBlock.isEmpty &&
+        currentBlock.currentInput != null &&
+        !isContainerContext &&
+        !firstSegmentIsEmpty;
+
+      const linesToInsert = await this.resolveLinesToInsert(data, canCaretSplit, firstSegmentIsEmpty);
+
       const contextParentId = isInContainerTitle
         ? (currentBlock?.id ?? null)
         : (currentBlock?.parentId ?? null);
@@ -141,9 +220,17 @@ export abstract class BasePasteHandler implements PasteHandler {
       const operationsBridge = (BlockManager as unknown as { operations?: { suppressStopCapturing: boolean } }).operations;
       const pasteChainRef: { current: Promise<void> } = { current: Promise.resolve() };
 
+      // Notion parity (M-17): pasting list-style continuation blocks into an
+      // EMPTY list item replaces it with the first inserted block. The global
+      // canReplaceCurrentBlock flag is false for a non-default (list) target,
+      // so allow the replace here when the produced blocks are list items.
+      const firstIsListOverride = this.readListOverride(linesToInsert[0]?.content) !== null;
+      const targetIsEmptyList = currentBlock?.name === 'list' && currentBlock.isEmpty;
+      const allowReplaceEmptyList = firstIsListOverride && targetIsEmptyList;
+
       const runPasteLoop = (): void => {
         pasteChainRef.current = (async (): Promise<void> => {
-          for (const [index, pasteData] of data.entries()) {
+          for (const [index, pasteData] of linesToInsert.entries()) {
             // Re-assert suppression on every iteration — transactForTool's
             // close-boundary microtask may have flipped suppressStopCapturing
             // back to false before the next paste() runs its sync prefix.
@@ -151,10 +238,18 @@ export abstract class BasePasteHandler implements PasteHandler {
               operationsBridge.suppressStopCapturing = true;
             }
 
-            const shouldReplace = index === 0 && canReplaceCurrentBlock && BlockManager.currentBlock?.isEmpty === true;
-            const block = shouldReplace
+            const shouldReplace = index === 0 &&
+              (canReplaceCurrentBlock || allowReplaceEmptyList) &&
+              BlockManager.currentBlock?.isEmpty === true;
+            const pastedBlock = shouldReplace
               ? await BlockManager.paste(pasteData.tool, pasteData.event, true)
               : await BlockManager.paste(pasteData.tool, pasteData.event);
+
+            // Stamp the inherited list style/depth/checked onto the freshly
+            // pasted list block. The list tool's onPaste only sets text + a
+            // default style from the plain-text content, so the override is
+            // applied here via BlockManager.update (carrier read from content).
+            const block = await this.applyListStyleOverride(pastedBlock, pasteData.content, operationsBridge);
 
             Caret.setToBlock(block, Caret.positions.END);
             insertedByIndex.push(block);
@@ -189,6 +284,63 @@ export abstract class BasePasteHandler implements PasteHandler {
     }
 
     await this.processInlinePaste(singleItem, canReplaceCurrentBlock);
+  }
+
+  /**
+   * Stamp the inherited list style/depth/checked onto a freshly pasted list
+   * block. Returns the (possibly re-created) block, or the original block when
+   * no override applies.
+   * @param pastedBlock - the block produced by the paste
+   * @param content - the pasted item's content carrying the list override
+   * @param operationsBridge - undo-suppression bridge, re-asserted before update
+   */
+  private async applyListStyleOverride(
+    pastedBlock: Awaited<ReturnType<BlokModules['BlockManager']['paste']>>,
+    content: HTMLElement | undefined,
+    operationsBridge: { suppressStopCapturing: boolean } | undefined
+  ): Promise<Awaited<ReturnType<BlokModules['BlockManager']['paste']>>> {
+    const { BlockManager } = this.Blok;
+    const listOverride = this.readListOverride(content);
+
+    if (listOverride === null || typeof BlockManager.update !== 'function') {
+      return pastedBlock;
+    }
+
+    if (operationsBridge !== undefined) {
+      const bridge = operationsBridge;
+
+      bridge.suppressStopCapturing = true;
+    }
+
+    return BlockManager.update(pastedBlock, listOverride);
+  }
+
+  /**
+   * Read the inherited list style/depth carried on a pasted item's content
+   * (set by TextHandler when the paste target is a list item). Returns the
+   * data to merge into the new block, or null when the item is not a list
+   * continuation. New list items are always created unchecked (m-16).
+   */
+  private readListOverride(content: HTMLElement | undefined): { style: string; depth: number; checked: boolean } | null {
+    if (content === undefined) {
+      return null;
+    }
+
+    const style = content.getAttribute('data-blok-paste-list-style');
+
+    if (style !== 'ordered' && style !== 'unordered' && style !== 'checklist') {
+      return null;
+    }
+
+    const depthAttr = content.getAttribute('data-blok-paste-list-depth');
+    const parsedDepth = depthAttr !== null ? Number.parseInt(depthAttr, 10) : 0;
+    const depth = Number.isNaN(parsedDepth) ? 0 : Math.max(0, parsedDepth);
+
+    return {
+      style,
+      depth,
+      checked: false,
+    };
   }
 
   /**

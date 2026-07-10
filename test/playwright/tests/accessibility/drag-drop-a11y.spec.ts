@@ -135,8 +135,10 @@ test.describe('drag and drop accessibility', () => {
       // Move the block up using keyboard shortcut
       await page.keyboard.press(`${MODIFIER_KEY}+Shift+ArrowUp`);
 
-      // Check that the live region exists
-      const liveRegion = page.locator('[data-blok-announcer]');
+      // Check that the polite status live region exists. The announcer builds
+      // TWO regions — a polite role="status" and an assertive role="alert" — both
+      // marked data-blok-announcer, so scope to the status region here.
+      const liveRegion = page.locator('[data-blok-announcer][role="status"]');
 
       await expect(liveRegion).toBeAttached();
       await expect(liveRegion).toHaveAttribute('role', 'status');
@@ -158,8 +160,9 @@ test.describe('drag and drop accessibility', () => {
       await page.getByText('Second block').click();
       await page.keyboard.press(`${MODIFIER_KEY}+Shift+ArrowUp`);
 
-      // Check that the live region is visually hidden
-      const liveRegion = page.locator('[data-blok-announcer]');
+      // Check that the live region is visually hidden (scope to the polite
+      // status region; both announcer regions are equivalently hidden).
+      const liveRegion = page.locator('[data-blok-announcer][role="status"]');
       const boundingBox = await liveRegion.boundingBox();
 
       // The element should be clipped/hidden but still in the DOM
@@ -187,7 +190,10 @@ test.describe('drag and drop accessibility', () => {
       await page.keyboard.press(`${MODIFIER_KEY}+Shift+ArrowUp`);
 
       // Check announcement contains position info
-      const liveRegion = page.locator('[data-blok-announcer]');
+      // Narrow to whichever announcer region received the text (moves land in
+      // the assertive region, boundaries in the polite one) — avoids a strict
+      // match against both data-blok-announcer regions.
+      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /moved up|position/i });
 
       // Wait for announcement to appear
       await expect(liveRegion).toContainText(/moved up|position/i, { timeout: 2000 });
@@ -211,7 +217,7 @@ test.describe('drag and drop accessibility', () => {
       await page.keyboard.press(`${MODIFIER_KEY}+Shift+ArrowDown`);
 
       // Check announcement
-      const liveRegion = page.locator('[data-blok-announcer]');
+      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /moved down|position/i });
 
       await expect(liveRegion).toContainText(/moved down|position/i, { timeout: 2000 });
     });
@@ -233,7 +239,7 @@ test.describe('drag and drop accessibility', () => {
       await page.keyboard.press(`${MODIFIER_KEY}+Shift+ArrowUp`);
 
       // Check announcement
-      const liveRegion = page.locator('[data-blok-announcer]');
+      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /top|cannot/i });
 
       await expect(liveRegion).toContainText(/top|cannot/i, { timeout: 2000 });
     });
@@ -255,7 +261,7 @@ test.describe('drag and drop accessibility', () => {
       await page.keyboard.press(`${MODIFIER_KEY}+Shift+ArrowDown`);
 
       // Check announcement
-      const liveRegion = page.locator('[data-blok-announcer]');
+      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /bottom|cannot/i });
 
       await expect(liveRegion).toContainText(/bottom|cannot/i, { timeout: 2000 });
     });
@@ -310,7 +316,7 @@ test.describe('drag and drop accessibility', () => {
       await page.keyboard.press('Escape');
 
       // Check announcement
-      const liveRegion = page.locator('[data-blok-announcer]');
+      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /cancel/i });
 
       await expect(liveRegion).toContainText(/cancel/i, { timeout: 2000 });
     });
@@ -356,7 +362,7 @@ test.describe('drag and drop accessibility', () => {
       await page.mouse.up();
 
       // Check announcement for successful drop
-      const liveRegion = page.locator('[data-blok-announcer]');
+      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /moved|position/i });
 
       await expect(liveRegion).toContainText(/moved|position/i, { timeout: 2000 });
     });

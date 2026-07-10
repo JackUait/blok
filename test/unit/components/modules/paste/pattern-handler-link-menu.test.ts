@@ -15,6 +15,7 @@ import type { HandlerContext } from '../../../../../src/components/modules/paste
 describe('PatternHandler — link paste menu gating', () => {
   const pasteMock = vi.fn();
   const insertMock = vi.fn();
+  const insertAtCaretMock = vi.fn();
   let menuOpen: PasteMenuOpenParams | null = null;
 
   const makeLinkHolder = (): HTMLElement => {
@@ -39,7 +40,7 @@ describe('PatternHandler — link paste menu gating', () => {
       Caret: {
         setToBlock: vi.fn(),
         positions: { END: 'end' },
-        insertContentAtCaretPosition: vi.fn(),
+        insertContentAtCaretPosition: insertAtCaretMock,
       },
       I18n: { t: (key: string): string => key },
     }) as unknown as BlokModules;
@@ -102,6 +103,27 @@ describe('PatternHandler — link paste menu gating', () => {
     expect(inserted.replace).toBe(true);
   });
 
+  it('builds a same-window (_self) anchor when pasting a same-page URL', async () => {
+    const handler = makeHandler({});
+    const samePageUrl = `${window.location.origin}${window.location.pathname}#section`;
+
+    await handler.handle(samePageUrl, context);
+
+    const inserted = insertMock.mock.calls[0][0] as { data: { text: string } };
+
+    expect(inserted.data.text).toContain('target="_self"');
+  });
+
+  it('builds a new-tab (_blank) anchor when pasting a cross-page URL', async () => {
+    const handler = makeHandler({});
+
+    await handler.handle('https://example.com/article', context);
+
+    const inserted = insertMock.mock.calls[0][0] as { data: { text: string } };
+
+    expect(inserted.data.text).toContain('target="_blank"');
+  });
+
   it('keeps the already-shown link without re-inserting when dismissed', async () => {
     const handler = makeHandler({});
 
@@ -146,5 +168,51 @@ describe('PatternHandler — link paste menu gating', () => {
 
     expect(pasteMock).toHaveBeenCalledTimes(1);
     expect(pasteMock.mock.calls[0][0]).toBe('bookmark');
+  });
+
+  describe('block already has content (not replaceable)', () => {
+    // A URL pasted with a collapsed caret inside existing text must show the menu
+    // (like an empty block) AND keep the existing content: the link is inserted
+    // inline at the caret, never by replacing the whole block.
+    const nonEmptyContext: HandlerContext = {
+      canReplaceCurrentBlock: false,
+      currentBlock: undefined,
+    };
+
+    it('inserts the link inline at the caret instead of replacing the block', async () => {
+      const handler = makeHandler({});
+
+      const handled = await handler.handle('https://example.com/article', nonEmptyContext);
+
+      expect(handled).toBe(true);
+      expect(insertAtCaretMock).toHaveBeenCalledTimes(1);
+      expect(insertAtCaretMock.mock.calls[0][0]).toContain('href="https://example.com/article"');
+      // Never a whole-block replace when content is present.
+      expect(insertMock).not.toHaveBeenCalled();
+    });
+
+    it('still opens the bookmark/embed menu when content is present', async () => {
+      const handler = makeHandler({});
+
+      await handler.handle('https://example.com/article', nonEmptyContext);
+
+      expect(fakeMenu.open).toHaveBeenCalledTimes(1);
+      expect(menuOpen?.url).toBe('https://example.com/article');
+      // Nothing is bookmarked/embedded until the user picks.
+      expect(pasteMock).not.toHaveBeenCalled();
+    });
+
+    it('inserts the bookmark as a NEW block (no replace) so content is kept', async () => {
+      const handler = makeHandler({});
+
+      await handler.handle('https://example.com/article', nonEmptyContext);
+      menuOpen?.onSelect('bookmark');
+      await Promise.resolve();
+
+      expect(pasteMock).toHaveBeenCalledTimes(1);
+      expect(pasteMock.mock.calls[0][0]).toBe('bookmark');
+      // canReplace === false → append a new block, never overwrite the text block.
+      expect(pasteMock.mock.calls[0][2]).toBe(false);
+    });
   });
 });

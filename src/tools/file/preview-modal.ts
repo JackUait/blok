@@ -1,4 +1,4 @@
-import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { openModalDialog } from '../../components/utils/modal-dialog';
 import { safePreviewSrc } from './url';
 import { extOf, getPreviewKind, type PreviewKind } from './preview';
 import { loadTextPreview } from './text-preview';
@@ -10,34 +10,6 @@ import { IconFile, IconCross, IconLinkExternal } from '../../components/icons';
 import { buildErrorInto } from './preview-error';
 import { fillOfficeBody, isOfficeKind } from './office-preview';
 import { ScrollHaze } from './preview-scroll-haze';
-
-/** Time budget for the close animation before forcing teardown (ms). */
-const CLOSE_ANIMATION_FALLBACK_MS = 260;
-
-function readAnimationName(el: Element): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-  try {
-    return window.getComputedStyle(el).animationName || '';
-  } catch {
-    return '';
-  }
-}
-
-/** jsdom has no animation engine; skip the wait there so closes stay synchronous. */
-function supportsAnimations(): boolean {
-  if (typeof navigator === 'undefined') {
-    return false;
-  }
-
-  return !/jsdom/i.test(navigator.userAgent);
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined'
-    && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-}
 
 export interface FilePreviewOptions {
   url: string;
@@ -303,7 +275,6 @@ function buildElements(opts: FilePreviewOptions): PreviewElements {
 }
 
 export function openFilePreview(opts: FilePreviewOptions): () => void {
-  const previouslyFocused = document.activeElement;
   const { backdrop, dialog, header, closeButton, body, kind } = buildElements(opts);
   const officeKind = isOfficeKind(kind) ? kind : null;
   const textualKind = kind === null || kind === 'pdf' || officeKind !== null ? null : kind;
@@ -316,91 +287,30 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   // an iframe with its own scrollbar, so they opt out.
   const haze = new ScrollHaze();
 
-  // Immediate teardown — used for the close animation's end and for the
-  // programmatic teardown the host calls when the block is removed/re-rendered.
-  const finalize = (): void => {
-    if (state.closed) {
-      return;
-    }
-    state.closed = true;
-    haze.destroy();
-    document.removeEventListener('keydown', onKeyDown);
-    document.body.style.overflow = previousBodyOverflow;
-    if (backdrop.parentNode) {
-      removeFromTopLayer(backdrop);
-      backdrop.parentNode.removeChild(backdrop);
-    }
-    if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
-      previouslyFocused.focus();
-    }
-  };
+  const label = opts.fileName ?? opts.labels.close;
 
-  // User-initiated close — plays the exit animation, then finalizes. Falls back
-  // to an immediate finalize when motion is reduced or unsupported (jsdom).
-  const closeAnimated = (): void => {
-    if (state.closed) {
-      return;
-    }
-    backdrop.setAttribute('data-blok-closing', 'true');
-
-    if (prefersReducedMotion() || !supportsAnimations()) {
-      finalize();
-
-      return;
-    }
-
-    const animationName = readAnimationName(dialog);
-    if (animationName === '' || animationName === 'none') {
-      finalize();
-
-      return;
-    }
-
-    const settle = { done: false, fallback: 0 };
-    const onAnimationEnd = (event: AnimationEvent): void => {
-      if (event.target !== dialog) {
-        return;
-      }
-      finishClose();
-    };
-    const finishClose = (): void => {
-      if (settle.done) {
-        return;
-      }
-      settle.done = true;
-      dialog.removeEventListener('animationend', onAnimationEnd);
-      if (settle.fallback !== 0) {
-        window.clearTimeout(settle.fallback);
-      }
-      finalize();
-    };
-
-    dialog.addEventListener('animationend', onAnimationEnd);
-    settle.fallback = window.setTimeout(finishClose, CLOSE_ANIMATION_FALLBACK_MS);
-  };
-
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
-      closeAnimated();
-    }
-  };
-
-  backdrop.addEventListener('click', (event) => {
-    if (!dialog.contains(event.target instanceof Node ? event.target : null)) {
-      closeAnimated();
-    }
+  // The shared modal primitive owns mounting, Top Layer promotion, background
+  // `inert`, the focus trap, focus restore, Escape/outside dismissal and the
+  // exit-animation settle. `content` is the full-screen backdrop; `surface` is
+  // the centred dialog (so a press on the dim area counts as "outside").
+  const dialogHandle = openModalDialog({
+    content: backdrop,
+    surface: dialog,
+    role: 'dialog',
+    label,
+    initialFocus: () => closeButton,
+    onDismiss: () => dialogHandle.closeAnimated(),
+    onClose: () => {
+      state.closed = true;
+      haze.destroy();
+      document.body.style.overflow = previousBodyOverflow;
+    },
   });
-  closeButton.addEventListener('click', () => closeAnimated());
-  document.addEventListener('keydown', onKeyDown);
 
-  document.body.appendChild(backdrop);
+  closeButton.addEventListener('click', () => dialogHandle.closeAnimated());
+
   // Lock page scroll so the content behind the modal stays put.
   document.body.style.overflow = 'hidden';
-  // Promote into the CSS Top Layer so the modal renders above all editor and
-  // host-page content, and so the `[data-blok-top-layer]` marker lets the
-  // scoped design tokens (tint, radius, spacing) resolve on a body-mounted node.
-  promoteToTopLayer(backdrop);
-  closeButton.focus();
 
   const startFill = (): Promise<void> => {
     if (officeKind !== null) {
@@ -423,5 +333,6 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
     }
   });
 
-  return finalize;
+  // Host teardown (block removed/re-rendered) is immediate — no exit animation.
+  return dialogHandle.close;
 }

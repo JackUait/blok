@@ -6,6 +6,7 @@ import { PopoverDesktop } from '../../../src/components/utils/popover/popover-de
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import type { PopoverParams } from '@/types/utils/popover/popover';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 // Mock dependencies that are not directly under test
 vi.mock('../../../src/components/utils', async () => {
@@ -216,6 +217,16 @@ describe('PopoverInline', () => {
       expect(instance.nodes.popoverContainer.className).not.toContain('pb-0');
     });
 
+    it('keeps the horizontal toolbar items flush — the before-first-element gap is a vertical-list concern', () => {
+      const popover = createPopoverInline();
+      const instance = popover as unknown as PopoverInlineInternal;
+
+      // The inline toolbar is a single horizontal row; its symmetric breathing room comes
+      // from the container (pt-1.5/pb-1.5), so the items list must not carry the vertical
+      // before-first-element gap that vertical menus use.
+      expect(instance.nodes.items.className).not.toContain('pt-1.5');
+    });
+
     it('should activate flipper with flippableElements', () => {
       vi.useFakeTimers();
 
@@ -269,6 +280,31 @@ describe('PopoverInline', () => {
       // Hide should work even if no nested popover exists
       expect(() => popover.hide()).not.toThrow();
     });
+
+    it('removes the opened attribute so isShown becomes false (base cleanup not forgotten)', () => {
+      const popover = createPopoverInline();
+
+      popover.show();
+
+      expect(popover.getElement()).toHaveAttribute(DATA_ATTR.popoverOpened, 'true');
+      expect(popover.isShown).toBe(true);
+
+      popover.hide();
+
+      expect(popover.getElement()).not.toHaveAttribute(DATA_ATTR.popoverOpened);
+      expect(popover.isShown).toBe(false);
+    });
+
+    it('emits the Closed event through the base hide path', () => {
+      const popover = createPopoverInline();
+      const closedHandler = vi.fn();
+
+      popover.on(PopoverEvent.Closed, closedHandler);
+      popover.show();
+      popover.hide();
+
+      expect(closedHandler).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('hasNestedPopoverOpen', () => {
@@ -317,6 +353,46 @@ describe('PopoverInline', () => {
 
       expect(element).toBeInstanceOf(HTMLElement);
       expect(element).toHaveAttribute(DATA_ATTR.popoverInline, '');
+    });
+  });
+
+  describe('nested popover items sizing', () => {
+    it('does NOT pin the nested items width with w-full — an explicit width ignores the scrollbar-gutter margin offsets, leaving the scrollbar 8px from the popover edge instead of 2px', () => {
+      const popover = createPopoverInline({
+        items: [
+          {
+            icon: 'Icon',
+            title: 'Turn into',
+            name: 'convert-to',
+            children: {
+              items: [
+                {
+                  title: 'Child Action',
+                  name: 'child-action',
+                  onActivate: vi.fn(),
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      const instance = popover as unknown as PopoverInlineInternal;
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.hasChildren
+      );
+
+      expect(parentItem).toBeDefined();
+
+      instance.showNestedItems(parentItem!);
+
+      const nestedItems = instance.nestedPopover
+        ?.getElement()
+        .querySelector(`[${DATA_ATTR.popoverItems}]`);
+
+      expect(nestedItems).not.toBeNull();
+      expect(nestedItems?.classList.contains('w-full')).toBe(false);
     });
   });
 
@@ -378,6 +454,49 @@ describe('PopoverInline', () => {
       expect(onClose).not.toHaveBeenCalled();
 
       outsideElement.remove();
+    });
+
+    it('opens the nested item menu flush to the top with no top padding', () => {
+      const popover = createPopoverInline({
+        items: [
+          {
+            icon: 'Icon',
+            title: 'Turn into',
+            name: 'turn-into',
+            children: {
+              items: [
+                {
+                  title: 'Heading 1',
+                  name: 'heading-1',
+                  onActivate: vi.fn(),
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      const instance = popover as unknown as PopoverInlineInternal;
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.hasChildren
+      );
+
+      instance.showNestedItems(parentItem!);
+
+      const nestedEl = instance.nestedPopover?.getElement();
+      const nestedContainer = nestedEl?.querySelector(`[${DATA_ATTR.popoverContainer}]`);
+      const nestedItems = nestedEl?.querySelector(`[${DATA_ATTR.popoverItems}]`);
+
+      // The nested "Turn into" menu is a vertical item list — the outer container carries
+      // horizontal padding but no top padding.
+      expect(nestedContainer?.className).toContain('px-1.5');
+      expect(nestedContainer?.className).not.toContain('pt-1.5');
+      expect(nestedContainer?.className).not.toContain('p-1.5');
+
+      // The 6px before-first-element gap lives on the scrollable items list instead, so it
+      // sits above "Heading 1" and scrolls with the list inside the reel clip.
+      expect(nestedItems?.className).toContain('pt-1.5');
     });
   });
 

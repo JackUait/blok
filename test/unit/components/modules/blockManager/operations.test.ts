@@ -141,6 +141,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
     YjsManager: {
       addBlock: vi.fn(),
       removeBlock: vi.fn(),
+      replaceBlockContent: vi.fn(() => true),
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
       updateBlockTune: vi.fn(),
@@ -994,6 +995,56 @@ describe('BlockOperations', () => {
     });
 
     /**
+     * Notion parity: deleting a nested parent promotes its children EXACTLY one
+     * level — to the removed block's own parent (the grandparent) — not to root.
+     * Build A (toggle) -> B (toggle, child of A) -> C (paragraph, child of B).
+     * Deleting B must leave C a child of A, not stranded at the document root.
+     */
+    it('promotes children of a nested parent to the grandparent (one level), not root', async () => {
+      const a = createMockBlock({ id: 'a', name: 'toggle', contentIds: ['b'] });
+      const b = createMockBlock({ id: 'b', name: 'toggle', parentId: 'a', contentIds: ['c'] });
+      const c = createMockBlock({ id: 'c', name: 'paragraph', parentId: 'b' });
+
+      const store = createBlocksStore([a, b, c]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 1);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(b, false, false, store);
+
+      expect(c.parentId).toBe('a');
+      expect(a.contentIds).toEqual(['c']);
+      expect(repo.blocks.map((block) => block.id)).toEqual(['a', 'c']);
+    });
+
+    /**
+     * Ordering + deeper nesting: A -> [B(child), C(child)]; C owns D. Deleting A
+     * promotes B and C to root (A had no parent) preserving order, while D stays
+     * nested under C (only DIRECT children move one level).
+     */
+    it('promotes only direct children one level and preserves order + sub-nesting', async () => {
+      const a = createMockBlock({ id: 'a', name: 'toggle', contentIds: ['b', 'c'] });
+      const b = createMockBlock({ id: 'b', name: 'paragraph', parentId: 'a' });
+      const c = createMockBlock({ id: 'c', name: 'toggle', parentId: 'a', contentIds: ['d'] });
+      const d = createMockBlock({ id: 'd', name: 'paragraph', parentId: 'c' });
+
+      const store = createBlocksStore([a, b, c, d]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const ops = new BlockOperations(dependencies, repo, factory, new BlockHierarchy(repo), blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      await ops.removeBlock(a, false, false, store);
+
+      expect(b.parentId).toBeNull();
+      expect(c.parentId).toBeNull();
+      expect(d.parentId).toBe('c');
+      expect(c.contentIds).toEqual(['d']);
+      expect(repo.blocks.map((block) => block.id)).toEqual(['b', 'c', 'd']);
+    });
+
+    /**
      * Regression: a self-managing container (table/database) nested inside a
      * toggle/callout/toggleable-header must NOT have its own cell/row children
      * DOM-lifted out when it is removed. The table tears down its own cell
@@ -1133,6 +1184,45 @@ describe('BlockOperations', () => {
       expect(repo.getBlockById('c1')).toBeDefined();
       expect(repo.getBlockById('p1b')).toBeDefined();
     });
+
+    /**
+     * Regression: removing a CONTAINER block (callout/toggle/table/database)
+     * whose parent is a pure-layout `column` must promote its children to ROOT,
+     * not reparent them INTO the column. Reparenting into the column keeps the
+     * column non-empty, so the collapse-when-childless check never fires and the
+     * column_list never unwraps (7 failing e2e tests).
+     */
+    it('promotes a container\'s children to root (not into the column) when the container sits in a column', async () => {
+      const columnList = createMockBlock({ id: 'cl1', name: 'column_list', contentIds: ['c1', 'c2'] });
+      const column1 = createMockBlock({ id: 'c1', name: 'column', parentId: 'cl1', contentIds: ['callout'] });
+      const callout = createMockBlock({ id: 'callout', name: 'callout', parentId: 'c1', contentIds: ['x1', 'x2'] });
+      const x1 = createMockBlock({ id: 'x1', name: 'paragraph', parentId: 'callout' });
+      const x2 = createMockBlock({ id: 'x2', name: 'paragraph', parentId: 'callout' });
+      const column2 = createMockBlock({ id: 'c2', name: 'column', parentId: 'cl1', contentIds: ['p2'] });
+      const para2 = createMockBlock({ id: 'p2', name: 'paragraph', parentId: 'c2' });
+
+      const store = createBlocksStore([columnList, column1, callout, x1, x2, column2, para2]);
+      const repo = new BlockRepository();
+      repo.initialize(store);
+      const hier = new BlockHierarchy(repo);
+      const ops = new BlockOperations(dependencies, repo, factory, hier, blockDidMutatedSpy, 0);
+      ops.setYjsSync(yjsSync);
+
+      const target = repo.getBlockById('callout');
+      if (!target) {
+        throw new Error('Test setup failed: callout not found');
+      }
+
+      await ops.removeBlock(target, false, false, store);
+
+      // Promoted children survive at ROOT, never parked in the column.
+      expect(x1.parentId).toBeNull();
+      expect(x2.parentId).toBeNull();
+      expect(column1.contentIds).not.toContain('x1');
+      expect(column1.contentIds).not.toContain('x2');
+      // With no children left, the column (and hence its unwrap) can collapse.
+      expect(column1.contentIds).toEqual([]);
+    });
   });
 
   describe('update', () => {
@@ -1246,8 +1336,24 @@ describe('BlockOperations', () => {
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
       expect(newBlock).toBeDefined();
-      expect(dependencies.YjsManager.removeBlock).toHaveBeenCalledWith(block.id);
-      expect(dependencies.YjsManager.addBlock).toHaveBeenCalled();
+      // Mutates the type + data on the SAME Yjs entry (keeps the id) rather than
+      // remove+add — a remove+add of the same id is misread as a no-op move and
+      // breaks undo of conversions.
+      expect(dependencies.YjsManager.replaceBlockContent).toHaveBeenCalledWith(block.id, 'paragraph', { text: 'New' });
+      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+    });
+
+    it('BUG 3: preserves the original block id across replace/turn-into (id-keyed refs survive)', () => {
+      const block = repository.getBlockById('block-1');
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+
+      const originalId = block.id;
+      const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
+
+      expect(newBlock.id).toBe(originalId);
     });
 
     /**
@@ -1256,7 +1362,7 @@ describe('BlockOperations', () => {
      * If `block` has been removed between the caller obtaining its reference
      * and `replace()` executing (e.g., Yjs remote delete while
      * `await block.save()` resolves during `convert()`), `getBlockIndex`
-     * returns -1, then `YjsManager.addBlock({...}, -1)` and
+     * returns -1, then `YjsManager.replaceBlockContent(id, ...)` and
      * `insert({ index: -1, replace: true })` corrupt downstream state.
      *
      * Abort cleanly when the source is stale: return the original block and
@@ -1268,11 +1374,10 @@ describe('BlockOperations', () => {
       const result = operations.replace(staleBlock, 'paragraph', { text: 'New' }, blocksStore);
 
       expect(result).toBe(staleBlock);
-      expect(dependencies.YjsManager.removeBlock).not.toHaveBeenCalled();
-      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.replaceBlockContent).not.toHaveBeenCalled();
     });
 
-    it('uses Yjs transaction for atomic undo', () => {
+    it('replaces block content atomically for a single undo entry', () => {
       const block = repository.getBlockById('block-1');
       if (!block) {
         throw new Error('Test setup failed: block-1 not found');
@@ -1280,22 +1385,25 @@ describe('BlockOperations', () => {
 
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
-      expect(dependencies.YjsManager.transact).toHaveBeenCalled();
+      // The whole conversion is one Yjs call (which transacts internally), so it
+      // undoes/redoes as a single step.
+      expect(dependencies.YjsManager.replaceBlockContent).toHaveBeenCalledTimes(1);
       expect(newBlock).toBeDefined();
     });
 
-    it('inserts with skipYjsSync since transaction handles sync', () => {
+    it('writes to Yjs only through replaceBlockContent (DOM insert is skipYjsSync)', () => {
       const block = repository.getBlockById('block-1');
       if (!block) {
         throw new Error('Test setup failed: block-1 not found');
       }
-      const transactSpy = vi.fn((fn: () => void) => fn());
-
-      (dependencies.YjsManager.transact as ReturnType<typeof vi.fn>).mockImplementation(transactSpy);
 
       const newBlock = operations.replace(block, 'paragraph', { text: 'New' }, blocksStore);
 
-      expect(transactSpy).toHaveBeenCalled();
+      // The DOM re-render uses skipYjsSync, so the atomic replaceBlockContent is
+      // the ONLY Yjs write — no secondary updateBlockData/addBlock sync that
+      // would split the conversion into extra undo entries.
+      expect(dependencies.YjsManager.replaceBlockContent).toHaveBeenCalledTimes(1);
+      expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
       expect(newBlock).toBeDefined();
     });
 
@@ -1895,6 +2003,68 @@ describe('BlockOperations', () => {
       expect(dependencies.YjsManager.transact).not.toHaveBeenCalled();
     });
 
+    /**
+     * Data-loss regression (Notion parity bug #1): Backspace-merging a block that
+     * owns Tab-indented children must NOT drop those children.
+     *
+     * The scenario: a survivor paragraph A and a paragraph B are root siblings; B
+     * has its own nested child C (parentId=B). Pressing Backspace at the start of B
+     * merges B into A. Before the fix, `mergeBlocks` copied only B's text into A and
+     * then `removeBlock(B)` → `promoteChildrenToRoot` re-parented C to ROOT
+     * (parentId=null), silently severing C from the merged content. Notion re-parents
+     * the merged block's children onto the survivor.
+     *
+     * After the fix, C must belong to A (A.contentIds includes C, C.parentId === A),
+     * and the hierarchy invariant must hold.
+     */
+    it('re-parents the merged block\'s nested children onto the survivor (no data loss)', async () => {
+      const survivor = createMockBlock({
+        id: 'survivor',
+        name: 'paragraph',
+        mergeable: true,
+        data: { text: 'A' },
+      });
+      (survivor.mergeWith as Mock).mockResolvedValue(undefined);
+      const merged = createMockBlock({
+        id: 'merged',
+        name: 'paragraph',
+        mergeable: true,
+        contentIds: ['kid'],
+        data: { text: 'B' },
+      });
+      const kid = createMockBlock({
+        id: 'kid',
+        name: 'paragraph',
+        parentId: 'merged',
+        data: { text: 'C' },
+      });
+
+      const testStore = createBlocksStore([survivor, merged, kid]);
+      const testRepo = new BlockRepository();
+      testRepo.initialize(testStore);
+      const testOps = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        new BlockHierarchy(testRepo),
+        blockDidMutatedSpy,
+        1
+      );
+      testOps.setYjsSync(yjsSync);
+
+      // Baseline: the constructed hierarchy is valid before we touch it.
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+
+      await testOps.mergeBlocks(survivor, merged, testStore);
+
+      // The merged block's child survived and now belongs to the survivor —
+      // NOT promoted to root (parentId=null), which would be data loss.
+      expect(kid.parentId).toBe('survivor');
+      expect(survivor.contentIds).toContain('kid');
+      // No orphans, no dangling contentIds.
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
+    });
+
     it('still merges blocks that share the same parentId (within-container merge)', async () => {
       const targetInCell = createMockBlock({
         id: 'target-same-cell',
@@ -2253,6 +2423,38 @@ describe('BlockOperations', () => {
       operations.splitBlockWithData('block-1', {}, 'paragraph', {}, 1, blocksStore);
 
       expect(operations.currentBlockIndexValue).toBe(1);
+    });
+
+    it('writes truncated text to the real content element, never a mutation-free decoration (list marker ghost)', () => {
+      // Regression: a list item's holder has a bullet/number MARKER span before
+      // the content div. The marker is a mutation-free decoration and is meant to
+      // stay non-editable, but if anything flips it contenteditable="true" (e.g. a
+      // read-only toggle running a greedy [contenteditable] loop), the split must
+      // STILL write the item text into the real content element — not the marker.
+      // Otherwise the text is duplicated into the bullet, rendering a large ghost.
+      operations.currentBlockIndexValue = 0;
+      const block = repository.getBlockById('block-1');
+
+      if (!block) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+
+      const marker = document.createElement('span');
+
+      marker.setAttribute('contenteditable', 'true');
+      marker.setAttribute('data-blok-mutation-free', 'true');
+      marker.setAttribute('data-list-marker', 'true');
+      marker.textContent = '•';
+      block.holder.insertBefore(marker, block.holder.firstChild);
+
+      operations.splitBlockWithData('block-1', { text: 'Clean JSON output' }, 'paragraph', {}, 1, blocksStore);
+
+      const content = block.holder.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
+
+      // The bullet marker must be left untouched (no ghost duplicate of the text).
+      expect(marker.innerHTML).toBe('•');
+      // The real content element must carry the truncated text.
+      expect(content?.innerHTML).toBe('Clean JSON output');
     });
 
     it('defers currentBlockIndex update so blockDidMutated sees original block as current', () => {

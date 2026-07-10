@@ -590,6 +590,32 @@ describe('DatabaseTabBar', () => {
       el.remove();
     });
 
+    it('gives the rename input an accessible aria-label', () => {
+      const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
+      rename.click();
+      const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
+      expect(input.getAttribute('aria-label')).toBe('Rename');
+      el.remove();
+    });
+
+    it('focuses the rename input so keyboard users can type immediately', () => {
+      const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
+      const el = bar.render();
+      document.body.appendChild(el);
+      const tab = el.querySelector('[data-view-id="v1"]') as HTMLElement;
+      tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+      const rename = document.querySelector('[data-blok-database-tab-action="rename"]') as HTMLElement;
+      rename.click();
+      const input = tab.querySelector('[data-blok-database-tab-rename-input]') as HTMLInputElement;
+      expect(input).toHaveFocus();
+      el.remove();
+    });
+
     it('calls onRename with new name on blur', () => {
       const bar = createTabBar([makeView({ id: 'v1', name: 'Board' })], 'v1');
       const el = bar.render();

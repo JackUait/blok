@@ -2,6 +2,8 @@ import type { API } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 import { CELL_ATTR, ROW_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
+import { parseCellContentToBlocks } from './table-cell-paste';
+import type { CellBlockInsert } from './table-cell-paste';
 import { getCellPosition } from './table-operations';
 import type { TableModel } from './table-model';
 import type { LegacyCellContent, CellContent } from './types';
@@ -373,6 +375,23 @@ export class TableCellBlocks {
    * - Cells that already have block references get those blocks mounted.
    * - If referenced blocks are missing from BlockManager, a fallback paragraph is created.
    */
+  /**
+   * Insert one parsed cell-content block at the end of the flat block list.
+   * Falls back to a paragraph when the insert's tool is not registered in
+   * this editor (e.g. no list tool), so pasted cell content is never lost.
+   */
+  private insertCellContentBlock(insert: CellBlockInsert): ReturnType<API['blocks']['insert']> {
+    if (insert.tool !== 'paragraph') {
+      try {
+        return this.api.blocks.insert(insert.tool, insert.data, {}, this.api.blocks.getBlocksCount(), false);
+      } catch {
+        // Tool unavailable — degrade to a paragraph carrying the item text.
+      }
+    }
+
+    return this.api.blocks.insert('paragraph', { text: insert.data.text }, {}, this.api.blocks.getBlocksCount(), false);
+  }
+
   public initializeCells(
     content: LegacyCellContent[][]
   ): CellContent[][] {
@@ -460,12 +479,10 @@ export class TableCellBlocks {
           const text = typeof cellContent === 'string'
             ? cellContent
             : (cellContent.text ?? '');
-          const segments = text.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
-          const textsToInsert = segments.length > 0 ? segments : [text];
           const ids: string[] = [];
 
-          for (const segmentText of textsToInsert) {
-            const block = this.api.blocks.insert('paragraph', { text: segmentText }, {}, this.api.blocks.getBlocksCount(), false);
+          for (const insert of parseCellContentToBlocks(text)) {
+            const block = this.insertCellContentBlock(insert);
 
             container.appendChild(block.holder);
             this.api.blocks.setBlockParent(block.id, this.tableBlockId);

@@ -8,7 +8,8 @@ import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-dat
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../../types/events/block/BlockMoved';
 import type { Block } from '../../block';
-import { isEmpty, isObject, isString, log, generateBlockId } from '../../utils';
+import type { BlockToolAdapter } from '../../tools/block';
+import { isEmpty, isObject, isString, log } from '../../utils';
 import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
@@ -155,21 +156,34 @@ export class BlockMutation {
       return block;
     }
 
-    const newBlockId = generateBlockId();
+    /**
+     * Preserve the ORIGINAL block id across the replacement.
+     *
+     * `replace()` backs both "turn into" (convert) and in-place markdown
+     * conversion (typing `- ` on a paragraph). External references — comments,
+     * backlinks, block-mentions — anchor to the block id, so regenerating it
+     * here silently broke every id-keyed reference the moment a block changed
+     * type. Keeping the id keeps those anchors intact.
+     */
+    const newBlockId = block.id;
 
     // Capture hierarchy before replacement
     const oldParentId = block.parentId;
     const oldContentIds = [...block.contentIds];
 
-    // Atomic transaction: remove old block + add new block as single undo entry
-    this.dependencies.YjsManager.transact(() => {
-      this.dependencies.YjsManager.removeBlock(block.id);
-      this.dependencies.YjsManager.addBlock({
-        id: newBlockId,
-        type: newTool,
-        data,
-      }, blockIndex);
-    });
+    /**
+     * Mutate the block's TYPE and DATA in place on the SAME Yjs entry (one
+     * transaction = one undo entry).
+     *
+     * The previous implementation removed the yblock and re-added a NEW one that
+     * REUSED the same id. `BlockObserver` saw the id in both the added and
+     * removed sets and emitted a no-op MOVE, so undoing a conversion never
+     * re-rendered the block back to its prior tool (the undo/redo regression in
+     * the list convert/delete specs). An in-place mutation emits an `update`
+     * event instead, which the Yjs→DOM reconciler resolves against the yblock's
+     * `type` and re-renders the correct tool.
+     */
+    this.dependencies.YjsManager.replaceBlockContent(newBlockId, newTool, data);
 
     // DOM update (skip Yjs sync — already done above)
     const newBlock = this.ctx.insert({
@@ -238,6 +252,48 @@ export class BlockMutation {
         this.hierarchy.setBlockParent(childBlock, newParentId);
       }
     }
+  }
+
+  /**
+   * Resolve the FLAT tag-rule {@link SanitizerConfig} that `clean()` needs for
+   * the field of `tool` that will receive imported content on convert/merge.
+   *
+   * A tool's `sanitizeConfig` is keyed by DATA FIELD (`{ text: { b, i, a } }`),
+   * but `clean()` expects a flat map of TAG rules (`{ b, i, a }`). When
+   * `conversionConfig.import` is a STRING it names the receiving field directly,
+   * so we return that field's rules. When it is a FUNCTION (e.g. the list tool)
+   * there is no field name — returning the whole `{ text: {...} }` object would
+   * make `clean()` treat `text` as the only allowed tag and strip every inline
+   * mark (b/i/a/…). Flatten the field-level rule objects into one tag map so
+   * inline formatting survives turn-into.
+   * @param tool - destination tool receiving the imported content
+   */
+  private resolveImportSanitizeConfig(tool: BlockToolAdapter): SanitizerConfig {
+    const importProp = tool.conversionConfig?.import;
+    const sanitizeConfig = tool.sanitizeConfig;
+
+    if (isString(importProp)) {
+      return isObject(sanitizeConfig[importProp])
+        ? sanitizeConfig[importProp] as SanitizerConfig
+        : sanitizeConfig;
+    }
+
+    /**
+     * Function import: flatten every field-level tag-rule object into a single
+     * flat tag map. Non-object field rules (booleans/strings) can't merge into a
+     * flat tag config, so they're skipped.
+     */
+    const flat = {} as SanitizerConfig;
+
+    for (const field in sanitizeConfig) {
+      const rule = sanitizeConfig[field];
+
+      if (isObject(rule)) {
+        Object.assign(flat, rule);
+      }
+    }
+
+    return isEmpty(flat) ? sanitizeConfig : flat;
   }
 
   /**
@@ -493,6 +549,21 @@ export class BlockMutation {
       // The entire operation is wrapped in withAtomicOperation to suppress stopCapturing
       // when currentBlockIndexValue is set at the end
       this.yjsSync.withAtomicOperation(() => {
+        /**
+         * Re-parent the merged block's nested children onto the survivor BEFORE
+         * removing it. `removeBlock(blockToMerge)` runs `promoteChildrenToParent`,
+         * which would otherwise re-home Tab-indented children onto the merged
+         * block's parent — since the user perceives them as
+         * belonging to the now-merged content. Notion re-parents them onto the
+         * surviving block. Reparenting first empties `blockToMerge.contentIds`, so
+         * the subsequent promote step is a no-op.
+         */
+        const childIdsToReparent = [...blockToMerge.contentIds];
+
+        if (childIdsToReparent.length > 0) {
+          this.reparentChildren(childIdsToReparent, targetBlock.id);
+        }
+
         void targetBlock.mergeWith(mergeData).then(() => {
           return this.ctx.removeBlock(blockToMerge, true, true, blocksStore);
         });
@@ -535,10 +606,7 @@ export class BlockMutation {
       /**
        * Extract the field-specific sanitize rules for the field that will receive the imported content.
        */
-      const importProp = targetBlock.tool.conversionConfig?.import;
-      const fieldSanitizeConfig = isString(importProp) && isObject(targetBlock.tool.sanitizeConfig[importProp])
-        ? targetBlock.tool.sanitizeConfig[importProp] as SanitizerConfig
-        : targetBlock.tool.sanitizeConfig;
+      const fieldSanitizeConfig = this.resolveImportSanitizeConfig(targetBlock.tool);
 
       const cleanData = clean(blockToMergeDataStringified, fieldSanitizeConfig);
       const blockToMergeData = convertStringToBlockData(cleanData, targetBlock.tool.conversionConfig);
@@ -584,10 +652,7 @@ export class BlockMutation {
      * We need to extract the field-specific sanitize rules for the field that will receive the imported content.
      * The tool's sanitizeConfig has the format { fieldName: { tagRules } }, but clean() expects just { tagRules }.
      */
-    const importProp = replacingTool.conversionConfig?.import;
-    const fieldSanitizeConfig = isString(importProp) && isObject(replacingTool.sanitizeConfig[importProp])
-      ? replacingTool.sanitizeConfig[importProp] as SanitizerConfig
-      : replacingTool.sanitizeConfig;
+    const fieldSanitizeConfig = this.resolveImportSanitizeConfig(replacingTool);
 
     const cleanData = clean(
       exportedData,
@@ -617,6 +682,28 @@ export class BlockMutation {
       if (typeof sourceValue === 'string' && newBlockData[colorField] === undefined) {
         newBlockData[colorField] = sourceValue;
       }
+    }
+
+    /**
+     * Preserve the to-do `checked` state across a turn-into round trip
+     * (to-do → bulleted → to-do must come back checked).
+     *
+     * Unlike colors, the list `import` HARDCODES `checked: false`, so the
+     * `=== undefined` guard used above never fires — the imported default would
+     * always clobber the source state. Carry `checked` from the source data
+     * instead, gated so it only applies when:
+     *   - the destination tool's import actually declares a `checked` field
+     *     (i.e. a list-family target — never leaks `checked` onto paragraphs), and
+     *   - the caller didn't pass an explicit `checked` override (overrides win).
+     */
+    const sourceChecked = savedBlock.data.checked;
+
+    if (
+      typeof sourceChecked === 'boolean'
+      && 'checked' in baseBlockData
+      && blockDataOverrides?.checked === undefined
+    ) {
+      newBlockData.checked = sourceChecked;
     }
 
     /**

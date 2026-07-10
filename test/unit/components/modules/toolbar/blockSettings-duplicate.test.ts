@@ -10,6 +10,7 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
 import type { BlokConfig } from '../../../../../types';
 import type { MenuConfigItem } from '../../../../../types/tools';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
+import { beautifyShortcut } from '../../../../../src/components/utils/string';
 
 type PopoverMock = {
   on: Mock;
@@ -182,6 +183,28 @@ describe('BlockSettings — Duplicate menu item (BUG #8)', () => {
     );
 
     expect(duplicate).toBeDefined();
+  });
+
+  it('renders the Duplicate shortcut via the OS-aware beautifyShortcut helper', async () => {
+    const block = createBlock();
+    const commonTunes: MenuConfigItem[] = [
+      { name: 'delete', title: 'Delete', onActivate: vi.fn() },
+    ];
+
+    getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+    const items = await (blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }).getTunesItems(block, commonTunes);
+
+    const duplicate = items.find(
+      (item): item is PopoverItemParams & { name?: string; secondaryLabel?: string } =>
+        'name' in item && item.name === 'duplicate'
+    );
+
+    expect(duplicate?.secondaryLabel).toBe(beautifyShortcut('CMD+D'));
+    // The hardcoded literal is gone — it must be derived per-platform.
+    expect(duplicate?.secondaryLabel).not.toBe('⌘D');
   });
 
   it('invokes the existing duplicate operation when the Duplicate item is activated', async () => {

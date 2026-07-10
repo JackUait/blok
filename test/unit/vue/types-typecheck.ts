@@ -24,7 +24,21 @@ import type * as Source from '../../../src/vue/index';
 
 type PublishedValueExports = Exclude<
   keyof typeof Published,
-  'UseBlokConfig' | 'BlokContentProps' | 'BlokEditorProps' | 'BlokEditorEmits' | 'BlokEditorExposed'
+  | 'UseBlokConfig'
+  | 'BlokContentProps'
+  | 'BlokEditorProps'
+  | 'BlokEditorEmits'
+  | 'BlokEditorExposed'
+  | 'UseBlocksApi'
+  | 'BlockNode'
+  | 'CaretTarget'
+  | 'InsertPosition'
+  | 'InsertSpec'
+  | 'MoveTarget'
+  | 'CreateVueBlockSpec'
+  | 'PropSchema'
+  | 'PropSchemaEntry'
+  | 'VueBlockRenderProps'
 >;
 type _ExportsCovered = Expect<Equal<PublishedValueExports, keyof typeof Source>>;
 

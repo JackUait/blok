@@ -578,6 +578,10 @@ export class CodeTool implements BlockTool {
       width: '200px',
       messages: {
         search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
+        nothingFound: this.api.i18n.t('popover.nothingFound'),
+        // Result-count announcement template for screen readers (parity with
+        // the Block Settings / Toolbox searchable popovers).
+        searchResults: this.api.i18n.t('a11y.searchResults'),
       },
     });
   }

@@ -89,11 +89,27 @@ export interface ClipboardBlockData {
 }
 
 /**
+ * One cell of a {@link TableCellsClipboard} payload.
+ */
+export interface TableClipboardCell {
+  blocks: ClipboardBlockData[];
+  color?: string;
+  textColor?: string;
+  placement?: CellPlacement;
+  /** True when this position is covered by a merge (no physical cell). */
+  covered?: boolean;
+  /** Number of columns this cell spans (only set on merge origins, > 1). */
+  colspan?: number;
+  /** Number of rows this cell spans (only set on merge origins, > 1). */
+  rowspan?: number;
+}
+
+/**
  * Clipboard payload for copied table cells.
  * Stored as JSON in a data attribute on the HTML table element.
  */
 export interface TableCellsClipboard {
   rows: number;
   cols: number;
-  cells: Array<Array<{ blocks: ClipboardBlockData[]; color?: string; textColor?: string; placement?: CellPlacement; covered?: boolean }>>;
+  cells: TableClipboardCell[][];
 }

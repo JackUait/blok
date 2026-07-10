@@ -6,6 +6,7 @@ import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
 import { preprocessNotionHtml } from './notion-preprocessor';
+import { recoverGfmToggles } from './gfm-toggle-recovery';
 import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
 import { NEXT_SPACE_MIMES, parseNextSpaceBlocks } from './next-space-blocks';
 import type { PasteHandler } from './handlers/base';
@@ -293,15 +294,24 @@ export class Paste extends Module {
     const structuralTagsConfig = Object.fromEntries(
       [...SAFE_STRUCTURAL_TAGS].map((tag) => [tag, {}])
     ) as SanitizerConfig;
+    /**
+     * The whole-document first pass must always keep structural tags and tool
+     * substitution tags — they exist so tools can receive their elements later
+     * in the pipeline. Passing the user's global sanitizer as the compose base
+     * would drop every tag it doesn't mention (tables, headers, lists), so we
+     * compose from an empty base and append the user's config last: its rules
+     * still win for the tags it does specify.
+     */
     const customConfig = composeSanitizerConfig(
-      this.config.sanitizer as SanitizerConfig,
+      {} as SanitizerConfig,
       structuralTagsConfig,
       toolsTags,
       inlineSanitizeConfig,
-      { br: {} }
+      { br: {} },
+      this.config.sanitizer as SanitizerConfig
     );
 
-    const preprocessed = preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData));
+    const preprocessed = recoverGfmToggles(preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData)));
     const cleanData = clean(preprocessed, customConfig);
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);

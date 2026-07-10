@@ -163,11 +163,13 @@
 }
 
 /**
- * Navigation mode styles
- * Applied when user enters block navigation mode via Escape key
+ * Navigation mode focus marker
+ * Escape makes the focused block a real selection (data-blok-selected), which
+ * paints the highlight — so this marker adds no width/margin (the old
+ * w-content-width + mx-auto shifted the block right).
  */
 [data-blok-navigation-focused="true"] {
-  @apply bg-item-focus-bg rounded-md w-content-width max-w-full mx-auto;
+  @apply rounded-md;
 }
 
 /**

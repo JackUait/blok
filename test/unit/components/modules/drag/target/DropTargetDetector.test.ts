@@ -789,6 +789,76 @@ describe('DropTargetDetector', () => {
         expect(depth).toBe(1);
       });
     });
+
+    describe('with clientX (cursor-controlled nesting depth)', () => {
+      // mockUI.contentRect.left is 100; INDENT_PER_LEVEL is 27.
+
+      it('nests one level when the cursor is dragged right past one indent step', () => {
+        // Two root list items. Auto-resolution (no cursor) keeps the drop at root,
+        // but moving the cursor right past one indent nests under the previous item.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        // clientX 130 → (130 - 100) / 27 ≈ 1.1 → snaps to depth 1.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 130)).toBe(1);
+      });
+
+      it('keeps the drop at root when the cursor stays at the content origin', () => {
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        // clientX 100 == content origin → depth 0.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 100)).toBe(0);
+      });
+
+      it('clamps cursor nesting to previousDepth + 1', () => {
+        // Previous item is depth 0 → maxAllowed 1. A cursor two indents in
+        // (still inside the engage band, maxAllowed + slack) cannot exceed the cap.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        // contentLeft 100, INDENT 27 → clientX 154 ≈ 2 steps → clamped to maxAllowed 1.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 154)).toBe(1);
+      });
+
+      it('BUG 3: holds at the deepest legal depth for a far-right over-drag', () => {
+        // A cursor dragged far to the right must CAP at the deepest legal depth
+        // (previousDepth + 1) and HOLD there — the pointer is authoritative, so an
+        // over-drag never falls through to neighbour auto-resolution.
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        // clientX 700 → ~22 steps, far past maxAllowed(1) → clamped and held at 1.
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock, 700)).toBe(1);
+      });
+
+      it('falls back to auto-resolution when clientX is omitted', () => {
+        const previousBlock = createMockListBlock('prev', 0);
+        const targetBlock = createMockListBlock('target', 0);
+        const sourceBlock = createMockListBlock('source', 0);
+
+        mockBlockManager.getBlockIndex = vi.fn(() => 0);
+        mockBlockManager.getBlockByIndex = vi.fn((index) => (index === 0 ? previousBlock : undefined));
+
+        expect(detector.calculateTargetDepth(targetBlock, 'bottom', sourceBlock)).toBe(0);
+      });
+    });
   });
 
   describe('toggle nesting detection', () => {

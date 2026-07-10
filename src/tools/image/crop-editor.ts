@@ -1,5 +1,6 @@
 import type { ImageCrop, ImageCropShape } from '../../../types/tools/image';
 import type { I18nInstance } from '../../components/utils/tools';
+import { rovingRadioGroup } from '../../components/utils/roving-radio-group';
 import { FULL_RECT, clampRect, isFullRect, resizeRect, applyRatio, type Handle } from './crop-math';
 import { tr } from './i18n';
 
@@ -140,6 +141,7 @@ export function mountCropEditor(
   ratioGroup.setAttribute('data-action', 'ratio');
 
   const ratioChips: Record<string, HTMLButtonElement> = {};
+  const ratioChipList: HTMLButtonElement[] = [];
   for (const r of RATIOS) {
     const chip = document.createElement('button');
     chip.type = 'button';
@@ -155,7 +157,17 @@ export function mountCropEditor(
     });
     ratioGroup.appendChild(chip);
     ratioChips[r.key] = chip;
+    ratioChipList.push(chip);
   }
+
+  // Single tab stop + arrow-key navigation with selection-follows-focus, per the
+  // Radix RadioGroup contract. `onSelect` reuses `setRatio` so keyboard and click
+  // share one selection path; `refresh()` keeps the tab stop aligned after clicks.
+  const ratioRoving = rovingRadioGroup({
+    radios: ratioChipList,
+    getSelectedIndex: () => RATIOS.findIndex((r) => r.key === state.ratioKey),
+    onSelect: (index) => setRatio(RATIOS[index]),
+  });
 
   const actions = document.createElement('div');
   actions.className = 'blok-image-crop-editor__actions';
@@ -228,6 +240,7 @@ export function mountCropEditor(
       chip.setAttribute('data-active', String(active));
       chip.setAttribute('aria-checked', String(active));
     }
+    ratioRoving.refresh();
   }
 
   function updateEdgeVisibility(): void {
@@ -317,15 +330,18 @@ export function mountCropEditor(
   const resetBtn = assertEl(actions.querySelector<HTMLButtonElement>('[data-action="reset"]'), 'reset button');
   resetBtn.addEventListener('click', () => setRect({ ...FULL_RECT }));
 
+  // Escape is deliberately NOT handled here: the crop modal (crop-modal.ts)
+  // registers Escape dismissal through the shared dismissable-layer stack, and
+  // a second Escape path would invoke onCancel twice per press.
   const onKey = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape') { e.preventDefault(); opts.onCancel(); }
-    else if (e.key === 'Enter') { e.preventDefault(); applyDone(); }
+    if (e.key === 'Enter') { e.preventDefault(); applyDone(); }
   };
   document.addEventListener('keydown', onKey);
 
   return (): void => {
     document.removeEventListener('keydown', onKey);
     source.removeEventListener('load', updatePill);
+    ratioRoving.destroy();
     root.remove();
   };
 }

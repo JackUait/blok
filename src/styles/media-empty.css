@@ -462,6 +462,21 @@
 }
 .blok-media-empty__error[hidden] { display: none; }
 
+/* ----- Shared invalid-field convention (H11): destructive ring keyed on
+   aria-invalid, applied wherever setFieldValidity() marks a control. Shipped
+   via main.css so link/embed/media inputs share one look, but scoped to the
+   Blok isolation ancestors (same trio as the preflight reset) so host-app
+   form fields outside the editor are never affected. :where() keeps the
+   specificity identical to the previous bare attribute selector. ----- */
+:where([data-blok-interface], [data-blok-popover], [data-blok-top-layer]) [aria-invalid="true"] {
+  border-color: var(--blok-color-danger);
+}
+:where([data-blok-interface], [data-blok-popover], [data-blok-top-layer]) [aria-invalid="true"]:focus,
+:where([data-blok-interface], [data-blok-popover], [data-blok-top-layer]) [aria-invalid="true"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-danger) 25%, transparent);
+}
+
 @container (max-width: 460px) {
   .blok-media-empty__panel { flex-wrap: wrap; }
   .blok-media-empty__content--row { flex-wrap: wrap; }

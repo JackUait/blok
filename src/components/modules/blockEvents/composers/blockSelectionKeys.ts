@@ -27,15 +27,16 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
-   * Check if all selected list items can be indented.
+   * Check if all of the given list items can be indented.
    * Each item must have a previous list item, and its depth must be <= previous item's depth.
-   * @returns true if all selected items can be indented
+   * @param listItems - the list blocks to test
+   * @returns true if all of them can be indented
    */
-  private canIndentSelectedListItems(): boolean {
-    const { BlockSelection, BlockManager } = this.Blok;
-    const selectedSet = new Set(BlockSelection.selectedBlocks);
+  private canIndentListItems(listItems: Block[]): boolean {
+    const { BlockManager } = this.Blok;
+    const selectedSet = new Set(listItems);
 
-    for (const block of BlockSelection.selectedBlocks) {
+    for (const block of listItems) {
       const blockIndex = BlockManager.getBlockIndex(block);
 
       if (blockIndex === undefined) {
@@ -73,21 +74,23 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
-   * Check if all selected list items can be outdented (all have depth > 0).
-   * @returns true if all selected items can be outdented
+   * Check if all of the given list items can be outdented (all have depth > 0).
+   * @param listItems - the list blocks to test
+   * @returns true if all of them can be outdented
    */
-  private canOutdentSelectedListItems(): boolean {
-    return this.Blok.BlockSelection.selectedBlocks.every((block) => this.getListBlockDepth(block) > 0);
+  private canOutdentListItems(listItems: Block[]): boolean {
+    return listItems.every((block) => this.getListBlockDepth(block) > 0);
   }
 
   /**
-   * Update depth of all selected list items.
+   * Update depth of the given list items.
+   * @param listItems - the list blocks to re-depth
    * @param delta - depth change (+1 for indent, -1 for outdent)
    */
-  private async updateSelectedListItemsDepth(delta: number): Promise<void> {
+  private async updateListItemsDepth(listItems: Block[], delta: number): Promise<void> {
     const { BlockSelection, BlockManager } = this.Blok;
 
-    const blockIndices = BlockSelection.selectedBlocks
+    const blockIndices = listItems
       .map((block) => BlockManager.getBlockIndex(block))
       .filter((index): index is number => index >= 0)
       .sort((a, b) => a - b);
@@ -124,54 +127,75 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     const selectedBlocks = BlockSelection.selectedBlocks;
-    const allListItems = selectedBlocks.every((block) => block.name === LIST_TOOL_NAME);
+    const listItems = selectedBlocks.filter((block) => block.name === LIST_TOOL_NAME);
+    const structuralItems = selectedBlocks.filter((block) => block.name !== LIST_TOOL_NAME);
+
+    const allListItems = structuralItems.length === 0;
 
     if (allListItems) {
       event.preventDefault();
 
-      const isOutdent = event.shiftKey;
-
-      if (isOutdent && this.canOutdentSelectedListItems()) {
-        void this.updateSelectedListItemsDepth(-1);
-
-        return true;
-      }
-
-      if (!isOutdent && this.canIndentSelectedListItems()) {
-        void this.updateSelectedListItemsDepth(1);
+      /**
+       * List nesting is STRUCTURAL (parentId/contentIds), the same as single-item
+       * Tab — not a flat `data.depth` bump (Notion parity M-9/M-8). The list tool's
+       * `moved()` hook derives `data.depth` from the new tree position, so the
+       * visual indent and the saved tree stay in sync.
+       *
+       * Tab nests every selected item but the first: it nests under the preceding
+       * sibling of the first selected item, or — when the first selected item has
+       * no preceding sibling (it is the first item of its list and cannot indent,
+       * Notion) — the remaining items nest under that first item.
+       *
+       * Shift+Tab outdents each item with a parent INDIVIDUALLY, leaving items
+       * already at the document root (leftmost) in place. Items nested via the
+       * FLAT `data.depth` carrier (authored/drag-nested, no structural parent) are
+       * outdented by decrementing that carrier — all-or-nothing across the flat
+       * items, so a selection that includes a depth-0 flat item is a no-op.
+       */
+      if (event.shiftKey) {
+        this.outdentListItemsStructurally(listItems);
+        this.outdentFlatListItems(listItems);
+      } else {
+        this.indentSelectedBlocksStructurally(listItems);
       }
 
       return true;
     }
 
     /**
-     * Non-list selections of ANY block type indent/outdent structurally, the same
-     * way single-block Tab nesting does — selecting paragraphs/headings and pressing
-     * Tab nests the whole group (Notion parity). Mixed list + non-list selections are
-     * left to the default (lists store depth differently), so return false.
+     * Non-list and MIXED selections indent/outdent each block by its own mechanism,
+     * the same way single-block Tab nesting does (Notion parity): structural blocks
+     * (paragraph/header/…) nest under their preceding sibling, while list items move
+     * by their data-driven depth. A mixed selection is no longer a no-op — each kind
+     * is handled independently and the relative structure of each is preserved.
      */
-    const noListItems = selectedBlocks.every((block) => block.name !== LIST_TOOL_NAME);
-
-    if (!noListItems) {
-      return false;
-    }
-
     event.preventDefault();
 
     if (event.shiftKey) {
-      this.outdentSelectedBlocksStructurally(selectedBlocks);
+      if (listItems.length > 0 && this.canOutdentListItems(listItems)) {
+        void this.updateListItemsDepth(listItems, -1);
+      }
+      this.outdentSelectedBlocksStructurally(structuralItems);
     } else {
-      this.indentSelectedBlocksStructurally(selectedBlocks);
+      if (listItems.length > 0 && this.canIndentListItems(listItems)) {
+        void this.updateListItemsDepth(listItems, 1);
+      }
+      this.indentSelectedBlocksStructurally(structuralItems);
     }
 
     return true;
   }
 
   /**
-   * Nest the whole selection one level deeper, under the preceding sibling of the
-   * first selected block. Only the selection's top-level blocks are reparented;
-   * their descendants follow automatically. No-op when the first block has no
-   * preceding sibling (nothing to nest under).
+   * Nest the selection one level deeper. The anchor is the preceding sibling of
+   * the first selected block, or — when the first selected block has no preceding
+   * sibling (it is the first item of its list and cannot indent, Notion) — the
+   * first selected block itself. Every selected top-level block EXCEPT the anchor
+   * is reparented under the anchor; their descendants follow automatically.
+   *
+   * So a selection that starts at the very top of a list still indents every item
+   * but the first (the first becomes the new parent), while a selection with room
+   * above it nests entirely under that preceding sibling.
    * @param blocks - the selected blocks, in document order
    */
   private indentSelectedBlocksStructurally(blocks: Block[]): void {
@@ -183,16 +207,16 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     const precedingSibling = getPrecedingSibling(BlockManager, first);
-
-    if (precedingSibling === null) {
-      return;
-    }
-
+    const anchor = precedingSibling ?? first;
     const originalParentId = first.parentId;
 
     for (const block of blocks) {
+      if (block === anchor) {
+        continue;
+      }
+
       if (block.parentId === originalParentId) {
-        BlockManager.setBlockParent(block, precedingSibling.id);
+        BlockManager.setBlockParent(block, anchor.id);
       }
     }
   }
@@ -236,6 +260,166 @@ export class BlockSelectionKeys extends BlockEventComposer {
         BlockManager.setBlockParent(block, grandparentId);
       }
     }
+  }
+
+  /**
+   * Outdent the FLAT-carrier list items in the selection (no structural parent but
+   * `data.depth` > 0, e.g. authored/drag-nested). Decrement is all-or-nothing across
+   * the flat items, so a selection that includes a depth-0 flat item is a no-op —
+   * matching the legacy flat multi-select semantics. Structurally nested items are
+   * handled separately by {@link outdentListItemsStructurally}.
+   * @param listItems - the selected list blocks, in document order
+   */
+  private outdentFlatListItems(listItems: Block[]): void {
+    const flatItems = listItems.filter((block) => block.parentId === null);
+
+    if (flatItems.length > 0 && flatItems.every((block) => this.getListBlockDepth(block) > 0)) {
+      void this.updateListItemsDepth(flatItems, -1);
+    }
+  }
+
+  /**
+   * Outdent each selected list item that has a structural parent (depth > 0) by one
+   * level — Notion's per-item Shift+Tab on a mixed-depth selection (M-8). Items
+   * already at the document root (leftmost) stay put instead of failing the whole
+   * group, and an item whose ancestor is also selected is carried along by that
+   * ancestor's move, so it is not reparented directly (preserving relative nesting).
+   * @param listItems - the selected list blocks, in document order
+   */
+  private outdentListItemsStructurally(listItems: Block[]): void {
+    const { BlockManager } = this.Blok;
+    const selectedIds = new Set(listItems.map((block) => block.id));
+
+    /**
+     * Resolve each eligible item's target parent (its grandparent) BEFORE mutating
+     * the tree, so one item's move can't shift a sibling's computed grandparent.
+     */
+    const moves: Array<{ block: Block; grandparentId: string | null }> = [];
+
+    for (const block of listItems) {
+      // Already leftmost — nothing to outdent.
+      if (block.parentId === null) {
+        continue;
+      }
+
+      // A selected ancestor will carry this block along; don't move it directly.
+      if (this.hasSelectedAncestor(block, selectedIds)) {
+        continue;
+      }
+
+      const parent = BlockManager.getBlockById(block.parentId);
+
+      if (parent === undefined) {
+        continue;
+      }
+
+      moves.push({ block, grandparentId: parent.parentId });
+    }
+
+    for (const { block, grandparentId } of moves) {
+      BlockManager.setBlockParent(block, grandparentId);
+    }
+  }
+
+  /**
+   * True when any ancestor of `block` (walking the parentId chain) is itself in
+   * the selection.
+   * @param block - the block whose ancestors to test
+   * @param selectedIds - ids of every block in the current selection
+   */
+  private hasSelectedAncestor(block: Block, selectedIds: Set<string>): boolean {
+    const { BlockManager } = this.Blok;
+    const { parentId } = block;
+
+    if (parentId === null) {
+      return false;
+    }
+
+    if (selectedIds.has(parentId)) {
+      return true;
+    }
+
+    const parent = BlockManager.getBlockById(parentId);
+
+    return parent !== undefined ? this.hasSelectedAncestor(parent, selectedIds) : false;
+  }
+
+  /**
+   * Cmd/Ctrl+Enter toggles the `checked` state of every selected checklist (to-do)
+   * list item in place, via the public block update API — matching Notion's keyboard
+   * checkbox toggle across a multi-selection (m-12). Non-checklist blocks in the
+   * selection are left untouched.
+   * @param event - keyboard event
+   * @returns true if at least one checklist item was toggled
+   */
+  public handleToggleCheckbox(event: KeyboardEvent): boolean {
+    const { BlockSelection } = this.Blok;
+
+    /**
+     * Self-guard on the Cmd/Ctrl modifier (like handleDeletion guards on its key)
+     * so the dispatch site can call this unconditionally on Enter — a plain Enter
+     * must still split / create a new item, never toggle.
+     */
+    if (!event.metaKey && !event.ctrlKey) {
+      return false;
+    }
+
+    if (!BlockSelection.anyBlockSelected) {
+      return false;
+    }
+
+    const checklistItems = BlockSelection.selectedBlocks.filter(
+      (block) => this.getChecklistCheckbox(block) !== null
+    );
+
+    if (checklistItems.length === 0) {
+      return false;
+    }
+
+    event.preventDefault();
+    void this.toggleCheckboxes(checklistItems);
+
+    return true;
+  }
+
+  /**
+   * Returns a checklist (to-do) list item's checkbox input, or null when the block
+   * is not a checklist list item. Only the checklist style renders a checkbox, so
+   * its presence is a synchronous, reliable test for "this is a to-do item".
+   * @param block - the block to test
+   */
+  private getChecklistCheckbox(block: Block): HTMLInputElement | null {
+    if (block.name !== LIST_TOOL_NAME) {
+      return null;
+    }
+
+    const checkbox = block.holder?.querySelector('input[type="checkbox"]');
+
+    return checkbox instanceof HTMLInputElement ? checkbox : null;
+  }
+
+  /**
+   * Flip `checked` on each selected checklist item through BlockManager.update
+   * (which merges the partial data onto the existing tool data). The current state
+   * is read from the rendered checkbox — the same source the click-toggle uses.
+   * @param checklistItems - the selected checklist list blocks to toggle
+   */
+  private async toggleCheckboxes(checklistItems: Block[]): Promise<void> {
+    const { BlockSelection, BlockManager } = this.Blok;
+
+    for (const block of checklistItems) {
+      const checkbox = this.getChecklistCheckbox(block);
+
+      if (checkbox === null) {
+        continue;
+      }
+
+      const newBlock = await BlockManager.update(block, { checked: !checkbox.checked });
+
+      newBlock.selected = true;
+    }
+
+    BlockSelection.clearCache();
   }
 
   /**

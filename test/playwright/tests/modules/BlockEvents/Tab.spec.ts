@@ -226,19 +226,20 @@ test.describe('tab keydown', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('should focus next block when current block has single input', async ({ page }) => {
+  test('keeps focus in place when the first block has no preceding sibling to indent under', async ({ page }) => {
     await createParagraphBlok(page, ['first paragraph', 'second paragraph']);
 
     const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'first paragraph' });
-    const secondParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
 
     await firstParagraph.click();
     await firstParagraph.press('Tab');
 
-    await expect(secondParagraph).toBeFocused();
+    // Notion: a non-indentable Tab is a strict no-op — focus must NOT jump to the
+    // next block. handleTab preventDefaults so native Tab cannot relocate focus.
+    await expect(firstParagraph).toBeFocused();
   });
 
-  test('should focus next input within same block when block has multiple inputs', async ({ page }) => {
+  test('walks to the next input within a multi-input block when Tab cannot indent', async ({ page }) => {
     await createBlokWithTwoInputTool(page);
 
     const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR);
@@ -247,6 +248,9 @@ test.describe('tab keydown', () => {
     await firstInput.click();
     await firstInput.press('Tab');
 
+    // The block can't indent (no preceding sibling), but it has a second input.
+    // Native Tab walks to it — that keeps focus INSIDE the editor (the divergence
+    // we fix is Tab leaving the editor, not Tab moving between a block's own inputs).
     await expect(secondInput).toBeFocused();
   });
 
@@ -284,20 +288,9 @@ test.describe('tab keydown', () => {
     expect(savedTypes).toEqual(['paragraph', 'contentlessTool', 'paragraph']);
   });
 
-  test('should focus input outside blok when Tab pressed in last block', async ({ page }) => {
+  test('keeps focus inside the editor on Tab instead of tabbing out to a sibling input', async ({ page }) => {
     await createDefaultBlok(page);
     await addRegularInput(page, 'after');
-    await page.evaluate(() => {
-      /**
-       * Hide block tune popovers to keep the tab order identical to the previous e2e plugin,
-       * which skips hidden elements when emulating native Tab navigation.
-       */
-      const elements = Array.from(document.querySelectorAll('[data-blok-testid="popover-items"]'));
-
-      for (const element of elements) {
-        (element as HTMLElement).style.display = 'none';
-      }
-    });
 
     const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'default paragraph' });
     const regularInput = page.locator(REGULAR_INPUT_SELECTOR);
@@ -305,7 +298,11 @@ test.describe('tab keydown', () => {
     await lastParagraph.click();
     await lastParagraph.press('Tab');
 
-    await expect(regularInput).toBeFocused();
+    // The sole block has no preceding sibling → Tab is a strict no-op. Notion never
+    // tabs focus out of the editor: preventDefault keeps the caret in the block and
+    // the external input must NOT receive focus.
+    await expect(lastParagraph).toBeFocused();
+    await expect(regularInput).not.toBeFocused();
   });
 });
 
@@ -315,19 +312,20 @@ test.describe('shift+Tab keydown', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('should focus previous block when current block has single input', async ({ page }) => {
+  test('keeps focus in place when a root block cannot be outdented (single input)', async ({ page }) => {
     await createParagraphBlok(page, ['first paragraph', 'second paragraph']);
 
     const lastParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'second paragraph' });
-    const firstParagraph = page.locator(PARAGRAPH_SELECTOR).filter({ hasText: 'first paragraph' });
 
     await lastParagraph.click();
     await lastParagraph.press('Shift+Tab');
 
-    await expect(firstParagraph).toBeFocused();
+    // The block is already at root (parentId === null) → Shift+Tab is a strict
+    // no-op. Notion never relocates the caret to another block: focus stays put.
+    await expect(lastParagraph).toBeFocused();
   });
 
-  test('should focus previous input within same block when block has multiple inputs', async ({ page }) => {
+  test('walks to the previous input within a multi-input block when Shift+Tab cannot outdent', async ({ page }) => {
     await createBlokWithTwoInputTool(page);
 
     const firstInput = page.locator(TOOL_WITH_TWO_INPUTS_PRIMARY_SELECTOR);
@@ -336,6 +334,8 @@ test.describe('shift+Tab keydown', () => {
     await secondInput.click();
     await secondInput.press('Shift+Tab');
 
+    // Can't outdent (root block) but there is an earlier input — native Shift+Tab
+    // walks back to it, keeping focus INSIDE the editor.
     await expect(firstInput).toBeFocused();
   });
 
@@ -373,7 +373,7 @@ test.describe('shift+Tab keydown', () => {
     expect(savedTypes).toEqual(['paragraph', 'contentlessTool', 'paragraph']);
   });
 
-  test('should focus input outside blok when Shift+Tab pressed in first block', async ({ page }) => {
+  test('keeps focus inside the editor on Shift+Tab instead of tabbing out to a sibling input', async ({ page }) => {
     await createDefaultBlok(page);
     await addRegularInput(page, 'before');
 
@@ -383,7 +383,10 @@ test.describe('shift+Tab keydown', () => {
     await paragraph.click();
     await paragraph.press('Shift+Tab');
 
-    await expect(regularInput).toBeFocused();
+    // The sole block is at root → Shift+Tab is a strict no-op. Notion never tabs
+    // focus out of the editor: focus stays in the block, the external input does not.
+    await expect(paragraph).toBeFocused();
+    await expect(regularInput).not.toBeFocused();
   });
 });
 

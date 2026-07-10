@@ -11,6 +11,11 @@ import * as utils from '../../../../src/components/utils';
 import type { SanitizerConfig } from '../../../../types/configs';
 import type { Block } from '../../../../src/components/block';
 import { clean } from '../../../../src/components/utils/sanitizer';
+import { announce } from '../../../../src/components/utils/announcer';
+
+vi.mock('../../../../src/components/utils/announcer', () => ({
+  announce: vi.fn(),
+}));
 
 type ModuleOverrides = Partial<BlokModules>;
 
@@ -134,6 +139,9 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
     Paste: {
       MIME_TYPE: 'application/x-blok',
     } as unknown as BlokModules['Paste'],
+    I18n: {
+      t: vi.fn((key: string) => key),
+    } as unknown as BlokModules['I18n'],
   };
 
   const mergedState = { ...defaults,
@@ -375,6 +383,52 @@ describe('BlockSelection', () => {
       expect(replaceSpy).toHaveBeenCalledWith(event);
     });
 
+    it('replaces selected blocks when a collapsed caret lingers (cross-block mouse drag)', () => {
+      // A cross-block mouse drag removes the native range but leaves a collapsed
+      // caret inside the last selected block, so isSelectionExists stays true.
+      const { blockSelection, blocks } = createBlockSelection();
+      const replacerHost = blockSelection as unknown as {
+        replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
+      };
+      const replaceSpy = vi.spyOn(replacerHost, 'replaceSelectedBlocksWithPrintableKey').mockImplementation(() => undefined);
+
+      blocks[0].selected = true;
+
+      vi.spyOn(utils, 'isPrintableKey').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isSelectionExists', 'get').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(true);
+
+      const event = new KeyboardEvent('keydown', { key: 'x' });
+
+      Object.defineProperty(event, 'keyCode', { value: 88 });
+
+      blockSelection.clearSelection(event);
+
+      expect(replaceSpy).toHaveBeenCalledWith(event);
+    });
+
+    it('does NOT replace selected blocks when a real (non-collapsed) text selection exists', () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const replacerHost = blockSelection as unknown as {
+        replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
+      };
+      const replaceSpy = vi.spyOn(replacerHost, 'replaceSelectedBlocksWithPrintableKey').mockImplementation(() => undefined);
+
+      blocks[0].selected = true;
+
+      vi.spyOn(utils, 'isPrintableKey').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isSelectionExists', 'get').mockReturnValue(true);
+      vi.spyOn(SelectionUtils, 'isCollapsed', 'get').mockReturnValue(false);
+
+      const event = new KeyboardEvent('keydown', { key: 'x' });
+
+      Object.defineProperty(event, 'keyCode', { value: 88 });
+
+      blockSelection.clearSelection(event);
+
+      expect(replaceSpy).not.toHaveBeenCalled();
+    });
+
     it('clears selected blocks even when rectangle selection is active', () => {
       const isRectActivatedMock = vi.fn(() => true);
       const rectangleClearSelectionMock = vi.fn();
@@ -435,7 +489,7 @@ describe('BlockSelection', () => {
       expect(secondBlock.save).not.toHaveBeenCalled();
     });
 
-    it('writes stripped plain text (not Markdown) to text/plain on a default copy, matching Notion', async () => {
+    it('m17: writes Markdown markers to text/plain on a default copy, matching Notion', async () => {
       const { blockSelection, blocks } = createBlockSelection();
       const clipboardData = { setData: vi.fn() };
       const clipboardEvent = {
@@ -458,8 +512,100 @@ describe('BlockSelection', () => {
 
       await blockSelection.copySelectedBlocks(clipboardEvent);
 
-      // Notion's default Cmd+C puts rendered text (no #, no **) into text/plain.
-      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', 'Title\n\na bold word');
+      // Notion's default Cmd+C puts Markdown markers (#, **) into text/plain.
+      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', '## Title\n\na **bold** word');
+    });
+
+    it('m17: default copy of a bulleted/numbered list writes list markers to text/plain', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const bullet = blocks[0];
+      const numbered = blocks[1];
+
+      bullet.holder.innerHTML = '<li>first</li>';
+      numbered.holder.innerHTML = '<li>second</li>';
+      (bullet as unknown as { id: string }).id = 'block-bullet';
+      (numbered as unknown as { id: string }).id = 'block-numbered';
+      (bullet as unknown as { name: string }).name = 'list';
+      (numbered as unknown as { name: string }).name = 'list';
+      (bullet as unknown as { preservedData: unknown }).preservedData = { text: 'first', style: 'unordered' };
+      (numbered as unknown as { preservedData: unknown }).preservedData = { text: 'second', style: 'ordered' };
+      bullet.selected = true;
+      numbered.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', '- first\n1. second');
+    });
+
+    it('m18: default copy of a to-do list writes - [x]/- [ ] markers to text/plain', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const done = blocks[0];
+      const todo = blocks[1];
+
+      done.holder.innerHTML = '<li>done task</li>';
+      todo.holder.innerHTML = '<li>open task</li>';
+      (done as unknown as { id: string }).id = 'block-done';
+      (todo as unknown as { id: string }).id = 'block-todo';
+      (done as unknown as { name: string }).name = 'list';
+      (todo as unknown as { name: string }).name = 'list';
+      (done as unknown as { preservedData: unknown }).preservedData = { text: 'done task', style: 'checklist', checked: true };
+      (todo as unknown as { preservedData: unknown }).preservedData = { text: 'open task', style: 'checklist', checked: false };
+      done.selected = true;
+      todo.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      expect(clipboardData.setData).toHaveBeenCalledWith('text/plain', '- [x] done task\n- [ ] open task');
+    });
+
+    it('bug1: default copy of a list writes SEMANTIC list HTML (not paragraphs) to text/html', async () => {
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const bullet = blocks[0];
+      const nested = blocks[1];
+
+      // The rendered DOM is the non-semantic div/marker structure that used to
+      // collapse into <p> with a leaked bullet glyph.
+      bullet.holder.innerHTML = '<div role="listitem"><span data-list-marker>•</span><div>Buy milk</div></div>';
+      nested.holder.innerHTML = '<div role="listitem"><span data-list-marker>◦</span><div>Buy oat milk</div></div>';
+      (bullet as unknown as { id: string }).id = 'block-bullet';
+      (nested as unknown as { id: string }).id = 'block-nested';
+      (bullet as unknown as { name: string }).name = 'list';
+      (nested as unknown as { name: string }).name = 'list';
+      (bullet as unknown as { preservedData: unknown }).preservedData = { text: 'Buy milk', style: 'unordered', depth: 0 };
+      (nested as unknown as { preservedData: unknown }).preservedData = { text: 'Buy oat milk', style: 'unordered', depth: 1 };
+      bullet.selected = true;
+      nested.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      const htmlCall = clipboardData.setData.mock.calls.find(([format]) => format === 'text/html');
+      const html = htmlCall?.[1] as string;
+
+      expect(html).toContain('<ul>');
+      expect(html).toContain('<li>Buy milk');
+      expect(html).toContain('<li>Buy oat milk');
+      // No <p> collapse and no leaked marker glyph.
+      expect(html).not.toContain('<p>');
+      expect(html).not.toContain('•');
+      expect(html).not.toContain('◦');
     });
 
     it('copySelectedBlocksAsMarkdown writes Markdown to the clipboard (Notion Cmd+Shift+C)', async () => {
@@ -961,6 +1107,115 @@ describe('BlockSelection', () => {
       expect(selectAllSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('M6: a root parent with Tab-nested children escalates block → block+subtree → all blocks', () => {
+      // A root-level parent (parentId === null) whose children were nested via Tab.
+      const parent = createBlockStub({ id: 'parent', contentIds: ['child-1', 'child-2'] });
+      const child1 = createBlockStub({ id: 'child-1', parentId: 'parent', contentIds: ['grandchild'] });
+      const grandchild = createBlockStub({ id: 'grandchild', parentId: 'child-1' });
+      const child2 = createBlockStub({ id: 'child-2', parentId: 'parent' });
+      const sibling = createBlockStub({ id: 'sibling' });
+      const allBlocks = [parent, child1, grandchild, child2, sibling];
+
+      const { blockSelection } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: parent,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: parent.holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      // 1st press: native text selection only.
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(false);
+
+      // 2nd press: select just the parent block.
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(true);
+      expect(child1.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 3rd press: select the parent PLUS its entire nested subtree (DFS over contentIds).
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(true);
+      expect(child1.selected).toBe(true);
+      expect(grandchild.selected).toBe(true);
+      expect(child2.selected).toBe(true);
+      expect(sibling.selected).toBe(false);
+      expect(blockSelection.allBlocksSelected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // 4th press: escalate to the whole document.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('M6: a nested parent escalates block → block+subtree → container siblings → all blocks', () => {
+      // A nested parent (parentId set) that itself owns children: the subtree
+      // stage fires before the container-siblings stage.
+      const container = createBlockStub({ id: 'container', contentIds: ['p', 'uncle'] });
+      const parent = createBlockStub({ id: 'p', parentId: 'container', contentIds: ['kid'] });
+      const kid = createBlockStub({ id: 'kid', parentId: 'p' });
+      const uncle = createBlockStub({ id: 'uncle', parentId: 'container' });
+      const root = createBlockStub({ id: 'root' });
+      const allBlocks = [container, parent, kid, uncle, root];
+
+      const { blockSelection } = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: parent,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
+      const event = {
+        target: parent.holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      expect(parent.selected).toBe(true);
+      expect(kid.selected).toBe(false);
+
+      // subtree stage: parent + its own descendants only.
+      handler.handleCommandA(event);
+      expect(parent.selected).toBe(true);
+      expect(kid.selected).toBe(true);
+      expect(uncle.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // container stage: parent's container siblings.
+      handler.handleCommandA(event);
+      expect(uncle.selected).toBe(true);
+      expect(root.selected).toBe(false);
+      expect(selectAllSpy).not.toHaveBeenCalled();
+
+      // all blocks.
+      handler.handleCommandA(event);
+      expect(selectAllSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('M7: a block pre-selected via selectBlock escalates to all-blocks on the next Cmd+A', () => {
       const { blockSelection, blocks } = createBlockSelection();
       const selectAllSpy = vi.spyOn(blockSelection as unknown as { selectAllBlocks: () => void }, 'selectAllBlocks');
@@ -1000,9 +1255,14 @@ describe('BlockSelection', () => {
         replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
       };
 
-      host.replaceSelectedBlocksWithPrintableKey({ key: 'x' } as KeyboardEvent);
+      const preventDefault = vi.fn();
 
-      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+      host.replaceSelectedBlocksWithPrintableKey({ key: 'x', preventDefault } as unknown as KeyboardEvent);
+
+      // Native char insertion is prevented so the char is not typed twice.
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      // A replacement block is forced so the char always lands in a clean block.
+      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledWith(true);
       expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
       expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('x');
       expect(delaySpy).toHaveBeenCalledTimes(1);
@@ -1029,9 +1289,9 @@ describe('BlockSelection', () => {
         replaceSelectedBlocksWithPrintableKey: (event: KeyboardEvent) => void;
       };
 
-      host.replaceSelectedBlocksWithPrintableKey({ key: 'Enter' } as KeyboardEvent);
+      host.replaceSelectedBlocksWithPrintableKey({ key: 'Enter', preventDefault: vi.fn() } as unknown as KeyboardEvent);
 
-      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledTimes(1);
+      expect(blockManager.deleteSelectedBlocksAndInsertReplacement).toHaveBeenCalledWith(true);
       expect(caret.setToBlock).toHaveBeenCalledWith(insertedBlock);
       expect(caret.insertContentAtCaretPosition).toHaveBeenCalledWith('');
     });
@@ -1286,6 +1546,79 @@ describe('BlockSelection', () => {
       });
     });
 
+    describe('real block selection (Notion parity)', () => {
+      it('enableNavigationMode marks the focused block as a REAL selection', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+
+        // Escape must produce a genuine block selection so Backspace/Delete,
+        // Cmd+C and Shift+Arrow (all gated on anyBlockSelected) actually fire.
+        expect(blocks[1].selected).toBe(true);
+        expect(blockSelection.anyBlockSelected).toBe(true);
+      });
+
+      it('navigateNext moves the real selection to the adjacent block (stays single-selection)', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 0;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.navigateNext();
+
+        expect(blocks[0].selected).toBe(false);
+        expect(blocks[1].selected).toBe(true);
+        expect(blockSelection.selectedBlocks).toEqual([blocks[1]]);
+      });
+
+      it('navigatePrevious moves the real selection to the previous block (stays single-selection)', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 2;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.navigatePrevious();
+
+        expect(blocks[2].selected).toBe(false);
+        expect(blocks[1].selected).toBe(true);
+        expect(blockSelection.selectedBlocks).toEqual([blocks[1]]);
+      });
+
+      it('navigating collapses any Shift+Arrow extension back to a single selection', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 0;
+
+        blockSelection.enableNavigationMode();
+        // Simulate a Shift+Arrow extension leaving a second block selected.
+        blocks[1].selected = true;
+        blockSelection.clearCache();
+
+        blockSelection.navigateNext();
+
+        expect(blockSelection.selectedBlocks).toEqual([blocks[1]]);
+      });
+
+      it('disableNavigationMode clears the real selection', () => {
+        const { blockSelection, blocks, modules } = createBlockSelection();
+        const blockManager = modules.BlockManager as unknown as { currentBlockIndex: number };
+
+        blockManager.currentBlockIndex = 1;
+
+        blockSelection.enableNavigationMode();
+        blockSelection.disableNavigationMode(false);
+
+        expect(blocks[1].selected).toBe(false);
+        expect(blockSelection.anyBlockSelected).toBe(false);
+      });
+    });
+
     describe('clearSelection disables navigation mode', () => {
       it('disables navigation mode when selection is cleared', () => {
         const { blockSelection, modules } = createBlockSelection();
@@ -1300,6 +1633,204 @@ describe('BlockSelection', () => {
 
         expect(blockSelection.navigationModeEnabled).toBe(false);
       });
+    });
+  });
+
+  describe('screen-reader announcements (H9)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('announces an assertive entry hint when navigation mode is enabled', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.navigationModeEntered');
+      expect(announce).toHaveBeenCalledWith('a11y.navigationModeEntered', { politeness: 'assertive' });
+    });
+
+    it('announces the focused block position after the throttle window', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+
+      vi.advanceTimersByTime(300);
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.navigationPosition', {
+        tool: 'paragraph',
+        position: 1,
+        total: 3,
+      });
+      expect(announce).toHaveBeenCalledWith('a11y.navigationPosition', { politeness: 'polite' });
+    });
+
+    it('coalesces rapid navigation into a single throttled position announcement', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      blockSelection.navigateNext();
+      blockSelection.navigateNext();
+
+      vi.advanceTimersByTime(300);
+
+      const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call) => call[0] === 'a11y.navigationPosition'
+      );
+
+      expect(positionCalls).toHaveLength(1);
+      expect(positionCalls[0][1]).toEqual({ tool: 'paragraph', position: 3, total: 3 });
+    });
+
+    it('announces a polite exit hint when navigation mode is disabled', () => {
+      const { blockSelection } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      blockSelection.disableNavigationMode();
+
+      expect(announce).toHaveBeenCalledWith('a11y.navigationModeExited', { politeness: 'polite' });
+    });
+
+    it('does not announce a stale position when returning to the last-announced block within the throttle window', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+
+      // First announcement fires for index 0 (position 1).
+      vi.advanceTimersByTime(300);
+
+      (modules.I18n.t as ReturnType<typeof vi.fn>).mockClear();
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      // Move away and back within the throttle window: the pending index 1
+      // must NOT fire — the user is back on the already-announced index 0.
+      blockSelection.navigateNext();
+      blockSelection.navigatePrevious();
+
+      vi.advanceTimersByTime(300);
+
+      const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call) => call[0] === 'a11y.navigationPosition'
+      );
+
+      expect(positionCalls).toHaveLength(0);
+    });
+
+    it('still announces a new position reached within the throttle window after returning and moving again', () => {
+      const { blockSelection, modules } = createBlockSelection();
+
+      blockSelection.enableNavigationMode();
+      vi.advanceTimersByTime(300);
+
+      (modules.I18n.t as ReturnType<typeof vi.fn>).mockClear();
+
+      // 0 → 1 → 0 → 1 → 2 within the window: only the final index 2 fires.
+      blockSelection.navigateNext();
+      blockSelection.navigatePrevious();
+      blockSelection.navigateNext();
+      blockSelection.navigateNext();
+
+      vi.advanceTimersByTime(300);
+
+      const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call) => call[0] === 'a11y.navigationPosition'
+      );
+
+      expect(positionCalls).toHaveLength(1);
+      expect(positionCalls[0][1]).toEqual({ tool: 'paragraph', position: 3, total: 3 });
+    });
+  });
+
+  describe('Cmd+A escalation announcements', () => {
+    beforeEach(() => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+    });
+
+    const createNestedSetup = (): ReturnType<typeof createBlockSelection> & { allBlocks: Block[] } => {
+      const container = createBlockStub({ id: 'container', contentIds: ['c1', 'c2'] });
+      const c1 = createBlockStub({ id: 'c1', parentId: 'container', contentIds: ['kid'] });
+      const kid = createBlockStub({ id: 'kid', parentId: 'c1' });
+      const c2 = createBlockStub({ id: 'c2', parentId: 'container' });
+      const root = createBlockStub({ id: 'root' });
+      const allBlocks = [container, c1, kid, c2, root];
+
+      const setup = createBlockSelection({
+        BlockManager: {
+          blocks: allBlocks,
+          currentBlock: c1,
+          getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+          getBlock: vi.fn((element: HTMLElement) => allBlocks.find((block) => block.holder === element) ?? null),
+          getBlockById: vi.fn((id: string) => allBlocks.find((block) => block.id === id) ?? undefined),
+          getBlockDepth: vi.fn(() => 0),
+          removeSelectedBlocks: vi.fn(),
+          insertDefaultBlockAtIndex: vi.fn(),
+          deleteSelectedBlocksAndInsertReplacement: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      return { ...setup, allBlocks };
+    };
+
+    it('announces the selected block count when the subtree stage fires', () => {
+      const { blockSelection, modules, allBlocks } = createNestedSetup();
+      const event = {
+        target: allBlocks[1].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      handler.handleCommandA(event); // subtree: c1 + kid
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.blocksSelected', { count: 2 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('announces the selected block count when the container stage fires', () => {
+      const { blockSelection, modules, allBlocks } = createNestedSetup();
+      const event = {
+        target: allBlocks[1].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      handler.handleCommandA(event); // subtree
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      handler.handleCommandA(event); // container siblings: c1, kid (still selected), c2
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('announces the all-blocks stage with a distinct message and the total block count', () => {
+      const { blockSelection, blocks, modules } = createBlockSelection();
+      const event = {
+        target: blocks[0].holder,
+        preventDefault: vi.fn(),
+      } as unknown as KeyboardEvent;
+      const handler = blockSelection as unknown as { handleCommandA: (keyboardEvent: KeyboardEvent) => void };
+
+      handler.handleCommandA(event); // text
+      handler.handleCommandA(event); // this block
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      handler.handleCommandA(event); // all blocks
+
+      expect(modules.I18n.t).toHaveBeenCalledWith('a11y.allBlocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.allBlocksSelected', { politeness: 'polite' });
     });
   });
 });

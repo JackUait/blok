@@ -470,6 +470,40 @@ test.describe('copy and paste', () => {
       });
     });
 
+    test('pasting a blockquote containing a list keeps the list as list blocks', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          quote: {
+            className: 'Blok.Quote',
+          },
+          list: {
+            className: 'Blok.List',
+          },
+        },
+      });
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+      await paste(page, block, {
+        'text/html': '<blockquote><p>Wise words</p><ul><li>alpha</li><li>beta</li></ul></blockquote>',
+      });
+
+      const quoteBlock = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="quote"]`);
+
+      await expect(quoteBlock).toHaveText('Wise words');
+
+      const output = await saveBlok(page);
+      const savedTypes = output.blocks.map((savedBlock) => savedBlock.type);
+
+      // Regression: quote used to swallow the list into its rich text, and the
+      // quote sanitizer then mashed it into bare text ("Wise wordsalphabeta").
+      expect(savedTypes).toEqual(['quote', 'list', 'list']);
+      expect(output.blocks[0]?.data).toMatchObject({ text: 'Wise words' });
+      expect(output.blocks[1]?.data).toMatchObject({ text: 'alpha' });
+      expect(output.blocks[2]?.data).toMatchObject({ text: 'beta' });
+    });
+
     test('should sanitize dangerous HTML fragments on paste', async ({ page }) => {
       await createBlok(page);
 
@@ -1019,6 +1053,48 @@ test.describe('copy and paste', () => {
 
       await expect(paragraph).toHaveText('Existing content');
     });
+
+    test('should split a non-empty block at the caret on multi-line plain-text paste', async ({ page }) => {
+      await createBlok(page);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await paragraph.click();
+      await paragraph.type('ABXY');
+
+      // Move the caret between "AB" and "XY".
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+
+      await paste(page, paragraph, {
+        'text/plain': '1\n2\n3',
+      });
+
+      // First line merges at the caret, middle line becomes a block, and the
+      // post-caret remainder ("XY") rides with the last line.
+      await expect(page.locator(BLOCK_SELECTOR)).toHaveText(['AB1', '2', '3XY']);
+    });
+
+    test('should insert an inline markdown fragment at the caret in a non-empty block', async ({ page }) => {
+      await createBlok(page);
+
+      const paragraph = getParagraphByIndex(page, 0);
+
+      await paragraph.click();
+      await paragraph.type('Hello ');
+
+      await paste(page, paragraph, {
+        'text/plain': '**bold**',
+      });
+
+      // Inline, not a sibling block: still a single paragraph with rich text.
+      await expect(page.locator(BLOCK_SELECTOR)).toHaveText(['Hello bold']);
+
+      // The pasted "**bold**" became real bold markup inside the same paragraph.
+      const boldCount = await paragraph.evaluate((element) => element.querySelectorAll('strong, b').length);
+
+      expect(boldCount).toBe(1);
+    });
   });
 
   test.describe('paste in read-only mode', () => {
@@ -1212,6 +1288,45 @@ test.describe('copy and paste', () => {
       await expect(listBlock).toHaveCount(1);
       await expect(listBlock).toHaveAttribute('data-list-style', 'unordered');
       await expect(listBlock).toContainText('Orphaned bulleted item');
+    });
+
+    test('should preserve checked state when pasting a generic HTML checklist (GitHub task list)', async ({ page }) => {
+      await createBlok(page);
+
+      const block = getBlockByIndex(page, 0);
+
+      await block.click();
+
+      // GitHub task-list markup: plain <ul> with checkbox inputs inside <li>
+      const taskListHTML = '<ul><li><input type="checkbox" checked>Done task</li><li><input type="checkbox">Open task</li></ul>';
+
+      await paste(page, block, {
+        'text/html': taskListHTML,
+        'text/plain': 'Done task\nOpen task',
+      });
+
+      const listBlocks = page.locator('[data-blok-tool="list"]');
+
+      await expect(listBlocks).toHaveCount(2);
+
+      const doneItem = listBlocks.filter({ hasText: 'Done task' });
+      const openItem = listBlocks.filter({ hasText: 'Open task' });
+
+      await expect(doneItem).toHaveAttribute('data-list-style', 'checklist');
+      await expect(openItem).toHaveAttribute('data-list-style', 'checklist');
+
+      await expect(doneItem.getByRole('checkbox')).toBeChecked();
+      await expect(openItem.getByRole('checkbox')).not.toBeChecked();
+
+      const savedData = await saveBlok(page);
+      const listData = savedData.blocks
+        .filter((savedBlock) => savedBlock.type === 'list')
+        .map((savedBlock) => savedBlock.data as { text: string; style: string; checked: boolean });
+
+      expect(listData).toEqual([
+        expect.objectContaining({ style: 'checklist', checked: true, text: 'Done task' }),
+        expect.objectContaining({ style: 'checklist', checked: false, text: 'Open task' }),
+      ]);
     });
 
     test('should detect lower-alpha numbered list style', async ({ page }) => {

@@ -30,11 +30,22 @@ vi.mock('../../../../src/components/utils/notifier/draw', () => {
     return bar;
   };
 
+  const createDismissButton = (onDismiss: () => void): HTMLButtonElement => {
+    const btn = document.createElement('button');
+
+    btn.setAttribute('data-blok-testid', 'notification-dismiss');
+    btn.addEventListener('click', () => onDismiss());
+
+    return btn;
+  };
+
   return {
     alert: vi.fn((options: { message: string; style?: string }) => createMockAlert(options)),
     confirm: vi.fn((options: { message: string; style?: string }) => createMockAlert(options)),
     prompt: vi.fn((options: { message: string; style?: string }) => createMockAlert(options)),
     createProgressBar: vi.fn(createProgressBar),
+    createDismissButton: vi.fn((onDismiss: () => void) => createDismissButton(onDismiss)),
+    modalCleanups: new WeakMap<HTMLElement, () => void>(),
     getWrapper: vi.fn(() => {
       const wrapper = document.createElement('div');
 
@@ -112,11 +123,163 @@ describe('Notifier show (index.ts)', () => {
     expect(notification.className).toContain('animate-notify-slide-out');
   });
 
+  it('does not auto-dismiss confirm notifications', () => {
+    show({ message: 'confirm?', type: 'confirm', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    expect(notification).not.toBeNull();
+
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+  });
+
+  it('does not auto-dismiss prompt notifications', () => {
+    show({ message: 'prompt?', type: 'prompt', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    expect(notification).not.toBeNull();
+
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+  });
+
   it('ignores show calls with empty message', () => {
     show({ message: '' });
 
     const notification = document.querySelector('[data-blok-testid^="notification"]');
 
     expect(notification).toBeNull();
+  });
+
+  it('promotes the toast wrapper into the Top Layer', () => {
+    show({ message: 'top layer', time: 5000 });
+
+    const wrapper = document.querySelector('[data-blok-testid="notifier-container"]');
+
+    expect(wrapper?.getAttribute('data-blok-top-layer')).toBe('true');
+  });
+
+  it('marks the toast open with data-state and closes it on dismiss', () => {
+    show({ message: 'stateful', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    expect(notification.getAttribute('data-state')).toBe('open');
+
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.getAttribute('data-state')).toBe('closed');
+  });
+
+  it('does not render an in-pill dismiss button (toast auto-dismisses / Escape closes it)', () => {
+    show({ message: 'no cross', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+    const dismiss = notification.querySelector<HTMLElement>('[data-blok-testid="notification-dismiss"]');
+
+    expect(dismiss).toBeNull();
+  });
+
+  it('does not add a dismiss button to confirm/prompt dialogs', () => {
+    show({ message: 'confirm?', type: 'confirm' });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+    const dismiss = notification.querySelector('[data-blok-testid="notification-dismiss"]');
+
+    expect(dismiss).toBeNull();
+  });
+
+  it('dismisses the toast on Escape', () => {
+    show({ message: 'escape me', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(notification.className).toContain('animate-notify-slide-out');
+  });
+
+  it('pauses the auto-dismiss timer on pointerenter and resumes on pointerleave', () => {
+    show({ message: 'pause me', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    // Hover pauses before the timer would elapse.
+    notification.dispatchEvent(new Event('pointerenter'));
+    vi.advanceTimersByTime(10000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+
+    // Leaving resumes the remaining time.
+    notification.dispatchEvent(new Event('pointerleave'));
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).toContain('animate-notify-slide-out');
+  });
+
+  it('keeps the timer paused when the pointer leaves while focus is still inside the toast', () => {
+    show({ message: 'union me', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    notification.dispatchEvent(new Event('focusin'));
+    notification.dispatchEvent(new Event('pointerenter'));
+    notification.dispatchEvent(new Event('pointerleave'));
+
+    // Focus is still inside: pointerleave must NOT resume the countdown.
+    vi.advanceTimersByTime(10000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+
+    // Only once both hover AND focus are gone does the timer resume.
+    notification.dispatchEvent(new Event('focusout'));
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).toContain('animate-notify-slide-out');
+  });
+
+  it('keeps the timer paused when focus leaves while the pointer is still hovering the toast', () => {
+    show({ message: 'union me too', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    notification.dispatchEvent(new Event('pointerenter'));
+    notification.dispatchEvent(new Event('focusin'));
+    notification.dispatchEvent(new Event('focusout'));
+
+    // Pointer is still hovering: focusout must NOT resume the countdown.
+    vi.advanceTimersByTime(10000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+    expect(notification.isConnected).toBe(true);
+
+    notification.dispatchEvent(new Event('pointerleave'));
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).toContain('animate-notify-slide-out');
+  });
+
+  it('pauses the auto-dismiss timer while focus is inside the toast', () => {
+    show({ message: 'focus me', time: 5000 });
+
+    const notification = document.querySelector('[data-blok-testid^="notification"]') as HTMLElement;
+
+    notification.dispatchEvent(new Event('focusin'));
+    vi.advanceTimersByTime(10000);
+
+    expect(notification.className).not.toContain('animate-notify-slide-out');
+
+    notification.dispatchEvent(new Event('focusout'));
+    vi.advanceTimersByTime(5000);
+
+    expect(notification.className).toContain('animate-notify-slide-out');
   });
 });

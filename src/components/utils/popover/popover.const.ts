@@ -12,14 +12,40 @@ export const css = {
   popoverContainerMobile: 'fixed max-w-none rounded-[10px] min-w-[calc(100%-var(--offset)*2)] left-auto top-auto inset-[auto_var(--offset)_calc(var(--offset)+env(safe-area-inset-bottom))_var(--offset)]',
 
   // Popover container - opened state
-  popoverContainerOpened: 'opacity-100 pointer-events-auto px-1.5 pt-1.5 pb-0 max-h-(--max-height) border-none',
+  // No top padding: item-list menus sit flush to the top edge. The search-input's top gap
+  // lives on the search element (mt-1.5), and the inline toolbar re-adds pt via cssInline.
+  popoverContainerOpened: 'opacity-100 pointer-events-auto px-1.5 pb-0 max-h-(--max-height) border-none',
 
   // Popover overlay
   popoverOverlay: 'hidden bg-dark',
 
-  items: 'flex-1 min-h-0 overflow-y-auto overscroll-contain pb-1.5',
+  // `relative` makes the container the offsetParent of its items so the reel
+  // distortion can read item offsetTop values in container coordinates.
+  // pt-1.5/pb-1.5 put the before-first and after-last gaps inside the scroll area so
+  // they scroll with the list and sit within the reel clip (the outer container has none).
+  items: 'relative flex-1 min-h-0 overflow-y-auto overscroll-contain pt-1.5 pb-1.5',
+};
 
-  scrollHaze: 'absolute inset-x-0 h-6 pointer-events-none z-1 transition-opacity duration-300 ease-in-out',
+/**
+ * Reel-like edge distortion applied to popover items as they scroll past the
+ * viewport edges (instead of a gradient haze). Values are the maximum effect
+ * reached when an item is fully clipped past an edge.
+ */
+export const REEL_DISTORTION = {
+  /** Maximum vertical squash (scaleY shrinks to 1 - maxSquashY) */
+  maxSquashY: 0.4,
+
+  /** Maximum horizontal pinch (scaleX shrinks to 1 - maxSquashX) */
+  maxSquashX: 0.1,
+
+  /** Maximum opacity dim (opacity falls to 1 - maxDim) */
+  maxDim: 0.5,
+
+  /** Maximum rotateX tilt in degrees — curls the item over the reel edge */
+  maxTiltDeg: 25,
+
+  /** Perspective depth in px applied per item for the rotateX tilt */
+  perspective: 800,
 };
 
 /**
@@ -33,8 +59,9 @@ export const cssInline = {
   // Container for inline popover
   popoverContainer: 'flex-row top-0 min-w-max w-max p-1 mobile:absolute',
 
-  // Opened state for inline popover - symmetric padding (no scroll area, so pb matches pt)
-  popoverContainerOpened: 'pb-1.5',
+  // Opened state for inline popover - symmetric padding (no scroll area, so pt matches pb).
+  // pt is re-added here because the shared opened state drops it for flush item-list menus.
+  popoverContainerOpened: 'pt-1.5 pb-1.5',
 };
 
 /**

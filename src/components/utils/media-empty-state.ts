@@ -6,7 +6,9 @@ import {
   IconUpload,
 } from '../icons';
 import { formatBytes } from './format-bytes';
+import { setFieldValidity } from './field-validity';
 import { matchesMime } from './mime-match';
+import { rovingRadioGroup } from './roving-radio-group';
 
 /**
  * Shared "empty" uploader surface for media-style block tools (image, file):
@@ -282,7 +284,9 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
 
   const error = document.createElement('div');
   error.className = 'blok-media-empty__error';
+  error.id = `blok-media-empty-error-${uid()}`;
   error.setAttribute('data-role', 'error');
+  error.setAttribute('role', 'alert');
   error.hidden = true;
 
   const input = document.createElement('input');
@@ -385,6 +389,13 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       const valid = isValid(urlInput.value);
       bar.setAttribute('data-valid', valid ? 'true' : 'false');
       submit.setAttribute('aria-disabled', valid ? 'false' : 'true');
+      // Editing after a rejected submit resets the shared invalid state so the
+      // stale error doesn't linger while the user fixes the URL.
+      if (!error.hidden) {
+        error.hidden = true;
+        error.textContent = '';
+        setFieldValidity(urlInput, true, error.id);
+      }
     };
 
     const commit = (): void => {
@@ -448,24 +459,18 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
       activate(tabKinds[idx], true);
       tab.focus();
     });
-    tab.addEventListener('keydown', (ev) => {
-      if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
-        ev.preventDefault();
-        const dir = ev.key === 'ArrowRight' ? 1 : -1;
-        const next = (idx + dir + tabList.length) % tabList.length;
-        activate(tabKinds[next], true);
-        tabList[next].focus();
-      } else if (ev.key === 'Home') {
-        ev.preventDefault();
-        activate(tabKinds[0], true);
-        tabList[0].focus();
-      } else if (ev.key === 'End') {
-        ev.preventDefault();
-        const last = tabList.length - 1;
-        activate(tabKinds[last], true);
-        tabList[last].focus();
-      }
-    });
+  });
+
+  // Single tab stop + selection-follows-focus arrow/Home/End navigation, shared
+  // with the crop editor's ratio radiogroup. `activate` owns the tab state; the
+  // helper focuses and manages the roving tabindex.
+  rovingRadioGroup({
+    radios: tabList,
+    getSelectedIndex: () => {
+      const active = card.getAttribute('data-active-tab') as SourceKind | null;
+      return active ? tabKinds.indexOf(active) : 0;
+    },
+    onSelect: (idx) => activate(tabKinds[idx], true),
   });
 
   panel.addEventListener('click', (ev) => {
@@ -538,13 +543,19 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
   activate(initialKind);
 
   root.setError = (message: string | null): void => {
+    // Mirror the message onto the active URL field via the shared invalid-state
+    // convention so the error is announced and linked (aria-invalid + describedby).
+    const urlInput = root.querySelector<HTMLInputElement>('.blok-media-empty__embed-input');
+
     if (!message) {
       error.hidden = true;
       error.textContent = '';
+      if (urlInput) setFieldValidity(urlInput, true, error.id);
       return;
     }
     error.hidden = false;
     error.textContent = message;
+    if (urlInput) setFieldValidity(urlInput, false, error.id);
   };
 
   return root;

@@ -224,6 +224,7 @@ const createBlockManager = (
       addBlock: vi.fn(),
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
+      replaceBlockContent: vi.fn(() => true),
       updateBlockData: vi.fn(() => true),
       updateBlockMetadata: vi.fn(() => true),
       updateBlockTune: vi.fn(),
@@ -619,6 +620,68 @@ describe('BlockManager', () => {
       skipYjsSync: true,
     }));
 
+    expect(result).toBe(replacementBlock);
+  });
+
+  it('does NOT insert a replacement for a partial selection by default (Backspace over a subset)', () => {
+    const blocks = [
+      createBlockStub({ id: 'first' }),
+      createBlockStub({ id: 'second' }),
+      createBlockStub({ id: 'third' }),
+    ];
+
+    // Only the first two of three blocks are selected.
+    blocks[0].selected = true;
+    blocks[1].selected = true;
+
+    const { blockManager } = createBlockManager({ initialBlocks: blocks });
+
+    vi
+      .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
+      .mockResolvedValue();
+
+    const insertSpy = vi
+      .spyOn(blockManager as unknown as { insert: BlockManager['insert'] }, 'insert')
+      .mockReturnValue(createBlockStub({ id: 'replacement' }));
+
+    const result = blockManager.deleteSelectedBlocksAndInsertReplacement();
+
+    // A partial delete must not spawn a stray empty paragraph.
+    expect(insertSpy).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+  });
+
+  it('forces a replacement block for a partial selection when asked (typing over a subset)', () => {
+    const blocks = [
+      createBlockStub({ id: 'first' }),
+      createBlockStub({ id: 'second' }),
+      createBlockStub({ id: 'third' }),
+    ];
+
+    // Only the first two of three blocks are selected.
+    blocks[0].selected = true;
+    blocks[1].selected = true;
+
+    const { blockManager } = createBlockManager({ initialBlocks: blocks });
+
+    vi
+      .spyOn(blockManager as unknown as { removeBlock: BlockManager['removeBlock'] }, 'removeBlock')
+      .mockResolvedValue();
+
+    const replacementBlock = createBlockStub({ id: 'replacement' });
+    const insertSpy = vi
+      .spyOn(blockManager as unknown as { insert: BlockManager['insert'] }, 'insert')
+      .mockReturnValue(replacementBlock);
+
+    const result = blockManager.deleteSelectedBlocksAndInsertReplacement(true);
+
+    // The typed char gets one clean block at the seam (index of the first selected block).
+    expect(insertSpy).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'paragraph',
+      index: 0,
+      needToFocus: true,
+      skipYjsSync: true,
+    }));
     expect(result).toBe(replacementBlock);
   });
 

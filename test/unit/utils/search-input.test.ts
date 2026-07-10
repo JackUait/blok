@@ -4,7 +4,7 @@ import type { SearchableItem } from '../../../src/components/utils/popover/compo
 import { SearchInputEvent } from '../../../src/components/utils/popover/components/search-input/search-input.types';
 
 const getInput = (instance: SearchInput): HTMLInputElement => {
-  return (instance as unknown as { input: HTMLInputElement }).input;
+  return instance.getInput();
 };
 
 describe('SearchInput', () => {
@@ -43,6 +43,24 @@ describe('SearchInput', () => {
     expect(input.placeholder).toBe('Filter actions');
   });
 
+  it('exposes the input as an ARIA combobox with an accessible label', () => {
+    const searchInput = createSearchInput({ label: 'Search actions', controlsId: 'popover-items-1' });
+    const input = getInput(searchInput);
+
+    expect(input).toHaveAttribute('role', 'combobox');
+    expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveAttribute('aria-label', 'Search actions');
+    expect(input).toHaveAttribute('aria-controls', 'popover-items-1');
+  });
+
+  it('falls back to the placeholder for the accessible label when no label is given', () => {
+    const searchInput = createSearchInput();
+    const input = getInput(searchInput);
+
+    expect(input).toHaveAttribute('aria-label', 'Filter actions');
+  });
+
   it('focuses the underlying input', () => {
     const searchInput = createSearchInput();
     const wrapper = searchInput.getElement();
@@ -62,8 +80,8 @@ describe('SearchInput', () => {
 
     const input = getInput(searchInput);
 
-    // Setting the input value triggers the search via the overridden value property
-    input.value = 'move';
+    // Setting the value programmatically triggers the search via setValue()
+    searchInput.setValue('move');
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith({
@@ -72,6 +90,24 @@ describe('SearchInput', () => {
     });
     // Verify the input value was actually set
     expect(input.value).toBe('move');
+  });
+
+  it('emits search event on native input events', () => {
+    const searchInput = createSearchInput();
+    const handler = vi.fn();
+
+    searchInput.on(SearchInputEvent.Search, handler);
+
+    const input = getInput(searchInput);
+
+    input.value = 'move';
+    input.dispatchEvent(new Event('input'));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({
+      query: 'move',
+      items: [ defaultItems[0] ],
+    });
   });
 
   it('clears value and emits empty query', () => {
@@ -86,7 +122,7 @@ describe('SearchInput', () => {
     searchInput.on(SearchInputEvent.Search, handler);
 
     // Set initial value to filter items
-    input.value = 'alpha';
+    searchInput.setValue('alpha');
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenLastCalledWith({
@@ -107,15 +143,16 @@ describe('SearchInput', () => {
     });
   });
 
-  it('removes listeners on destroy', () => {
+  it('removes native listeners on destroy', () => {
     const searchInput = createSearchInput();
     const input = getInput(searchInput);
     const handler = vi.fn();
 
     searchInput.on(SearchInputEvent.Search, handler);
 
-    // Verify initial state - search works
+    // Verify initial state - native input event triggers search
     input.value = 'move';
+    input.dispatchEvent(new Event('input'));
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith({
       query: 'move',
@@ -125,14 +162,10 @@ describe('SearchInput', () => {
     // Destroy should not throw
     expect(() => searchInput.destroy()).not.toThrow();
 
-    // After destroy, the value property override still triggers search
-    // (The property override uses a bound reference to applySearch, independent of DOM listeners)
+    // After destroy, native input events no longer trigger search (listeners removed)
     input.value = 'delete';
-    expect(handler).toHaveBeenCalledTimes(2);
-    expect(handler).toHaveBeenLastCalledWith({
-      query: 'delete',
-      items: [ defaultItems[1] ],
-    });
+    input.dispatchEvent(new Event('input'));
+    expect(handler).toHaveBeenCalledTimes(1);
 
     // Destroy can be called multiple times (idempotent)
     expect(() => searchInput.destroy()).not.toThrow();
@@ -149,9 +182,7 @@ describe('SearchInput', () => {
 
     instance.on(SearchInputEvent.Search, handler);
 
-    const input = getInput(instance);
-
-    input.value = 'head';
+    instance.setValue('head');
 
     expect(handler).toHaveBeenCalledTimes(1);
     const emittedItems = handler.mock.calls[0][0].items;

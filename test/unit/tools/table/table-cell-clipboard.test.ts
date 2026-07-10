@@ -196,6 +196,44 @@ describe('table-cell-clipboard', () => {
       expect(html).toContain('<td>Cell B</td>');
     });
 
+    it('serializes list blocks as list markup in the visible td HTML (regression: copied cell lists flattened when pasted into external apps)', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [
+          [
+            {
+              blocks: [
+                { tool: 'paragraph', data: { text: 'Intro' } },
+                { tool: 'list', data: { text: 'alpha', style: 'unordered', checked: false, depth: 0 } },
+                { tool: 'list', data: { text: 'nested', style: 'unordered', checked: false, depth: 1 } },
+                { tool: 'list', data: { text: 'first', style: 'ordered', checked: false, depth: 0 } },
+              ],
+            },
+          ],
+        ],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain(
+        '<td>Intro<ul><li aria-level="1">alpha</li><li aria-level="2">nested</li></ul>'
+        + '<ol><li aria-level="1">first</li></ol></td>'
+      );
+    });
+
+    it('keeps legacy items-array blocks readable in the visible td HTML', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'list', data: { items: ['x', 'y'] } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<td>x y</td>');
+    });
+
     it('should handle cells with empty blocks (empty <td>)', () => {
       const payload: TableCellsClipboard = {
         rows: 1,
@@ -498,6 +536,28 @@ describe('table-cell-clipboard', () => {
       expect(result?.cells[1][1].blocks[0].data.text).toBe('D');
     });
 
+    it('preserves lists inside cells as list blocks (regression: pasted table lost bullets)', () => {
+      const html = '<table><tr>'
+        + '<td><ul><li>alpha</li><li>beta<ul><li>nested</li></ul></li></ul></td>'
+        + '<td><ol><li>one</li></ol></td>'
+        + '</tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+
+      const bulletBlocks = result?.cells[0][0].blocks ?? [];
+
+      expect(bulletBlocks.map(b => b.tool)).toEqual(['list', 'list', 'list']);
+      expect(bulletBlocks[0].data).toMatchObject({ text: 'alpha', style: 'unordered', depth: 0 });
+      expect(bulletBlocks[1].data).toMatchObject({ text: 'beta', style: 'unordered', depth: 0 });
+      expect(bulletBlocks[2].data).toMatchObject({ text: 'nested', style: 'unordered', depth: 1 });
+
+      const orderedBlocks = result?.cells[0][1].blocks ?? [];
+
+      expect(orderedBlocks[0].tool).toBe('list');
+      expect(orderedBlocks[0].data).toMatchObject({ text: 'one', style: 'ordered' });
+    });
+
     it('should handle Google Docs wrapper HTML', () => {
       const html = `
         <meta charset="utf-8">
@@ -583,6 +643,49 @@ describe('table-cell-clipboard', () => {
       const result = parseGenericHtmlTable(html);
 
       expect(result?.cells[0][0].blocks[0].tool).toBe('paragraph');
+    });
+
+    // -------------------------------------------------------------------------
+    // Gap B: foreign tables with colspan/rowspan were read by physical DOM
+    // index — merges were dropped AND cells after a rowspan shifted into the
+    // wrong logical column.
+    // -------------------------------------------------------------------------
+
+    it('honours rowspan: later-row cells land at correct logical columns', () => {
+      const html = '<table><tr><td rowspan="2">Tall</td><td>B1</td></tr><tr><td>B2</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(2);
+      expect(result?.cols).toBe(2);
+      expect(result?.cells[0][0].rowspan).toBe(2);
+      expect(result?.cells[1][0].covered).toBe(true);
+      // B2 must land in logical column 1, not column 0.
+      expect(result?.cells[1][1].blocks[0].data.text).toBe('B2');
+    });
+
+    it('honours colspan: covered slots are flagged and spans recorded', () => {
+      const html = '<table><tr><td colspan="2">Wide</td></tr><tr><td>A</td><td>B</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      expect(result?.rows).toBe(2);
+      expect(result?.cols).toBe(2);
+      expect(result?.cells[0][0].colspan).toBe(2);
+      expect(result?.cells[0][1].covered).toBe(true);
+      expect(result?.cells[1][0].blocks[0].data.text).toBe('A');
+      expect(result?.cells[1][1].blocks[0].data.text).toBe('B');
+    });
+
+    it('does not stamp spans or covered flags on a plain table', () => {
+      const html = '<table><tr><td>A</td><td>B</td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      result?.cells.flat().forEach(cell => {
+        expect(cell.colspan).toBeUndefined();
+        expect(cell.rowspan).toBeUndefined();
+        expect(cell.covered).toBeUndefined();
+      });
     });
 
     it('should preserve bold formatting from Google Docs style spans', () => {
@@ -879,6 +982,42 @@ describe('table-cell-clipboard', () => {
       const markCount = (text.match(/<mark/g) || []).length;
 
       expect(markCount).toBe(1);
+    });
+
+    it('drops a link color in a table cell so it uses the default link color', () => {
+      const html = '<table><tr><td><a href="https://example.com"><span style="color:#1155cc;text-decoration:underline;">Link text</span></a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const rawText = result?.cells[0][0].blocks[0].data.text;
+      const text = typeof rawText === 'string' ? rawText : '';
+
+      expect(text).not.toContain('#337ea9');
+      expect(text).toContain('Link text');
+    });
+
+    it('drops a color on the <a> itself in a table cell', () => {
+      const html = '<table><tr><td><a href="https://example.com" style="color:#1155cc;">Link text</a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const rawText = result?.cells[0][0].blocks[0].data.text;
+      const text = typeof rawText === 'string' ? rawText : '';
+
+      expect(text).not.toContain('#337ea9');
+      expect(text).toContain('Link text');
+    });
+
+    it('drops a non-blue link color in a table cell too', () => {
+      const html = '<table><tr><td><a href="https://example.com"><span style="color:#ff0000;">Red link</span></a></td></tr></table>';
+      const result = parseGenericHtmlTable(html);
+
+      expect(result).not.toBeNull();
+      const rawText = result?.cells[0][0].blocks[0].data.text;
+      const text = typeof rawText === 'string' ? rawText : '';
+
+      expect(text).not.toContain('#d44c47');
+      expect(text).toContain('Red link');
     });
 
     // -------------------------------------------------------------------------

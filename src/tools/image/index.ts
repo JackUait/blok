@@ -31,7 +31,7 @@ import {
   IconImage,
   IconReplace,
 } from '../../components/icons';
-import { DEFAULT_CAPTION_PLACEHOLDER, URL_PATTERN } from './constants';
+import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_RELOAD_ATTEMPTS, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
@@ -53,6 +53,7 @@ import { probeImageDimensions } from './probe-dimensions';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { Uploader, type UploadResult } from './uploader';
 import { convertGifToWebm } from './gif-to-webm';
+import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
@@ -390,8 +391,15 @@ export class ImageTool implements BlockTool {
     imgEl.style.setProperty('min-height', '0px');
   }
 
+  private get maxReloadAttempts(): number {
+    const configured = this.config.reloadAttempts;
+    return typeof configured === 'number' && configured >= 0
+      ? Math.floor(configured)
+      : DEFAULT_RELOAD_ATTEMPTS;
+  }
+
   private handleImgLoadFailure(imgEl: HTMLImageElement, figure: HTMLElement): void {
-    if (this.reloadAttempts >= 1) {
+    if (this.reloadAttempts >= this.maxReloadAttempts) {
       figure.removeAttribute('data-loading');
       this.applyBrokenImage();
       return;
@@ -722,7 +730,7 @@ export class ImageTool implements BlockTool {
       onTryAgain: isBroken
         ? () => this.retryBrokenImage()
         : () => this.retryLastSource(),
-      onSwap: () => this.transitionToEmpty(),
+      onSwap: this.readOnly ? undefined : () => this.transitionToEmpty(),
       i18n: this.api.i18n,
     });
     this.root.appendChild(el);
@@ -1026,14 +1034,7 @@ export class ImageTool implements BlockTool {
   }
 
   private download(): void {
-    const a = document.createElement('a');
-    a.href = this.data.url;
-    a.download = this.data.fileName ?? '';
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    void downloadImage(this.data.url, this.data.fileName);
   }
 
   private copyUrl(): void {

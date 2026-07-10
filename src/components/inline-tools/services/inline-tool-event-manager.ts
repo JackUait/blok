@@ -17,6 +17,16 @@ export interface InlineToolEventHandler {
   /** Called when keyboard shortcut fires */
   onShortcut?(event: KeyboardEvent, selection: Selection): void;
 
+  /**
+   * Called when a shortcut matches, before the event is intercepted. Return
+   * false to let the keystroke fall through to the browser's default handling
+   * (i.e. do NOT preventDefault / call onShortcut). Used by bold/italic to let
+   * the browser apply its native pending inline-format on a collapsed caret,
+   * which is race-free and works consistently across engines (WebKit only
+   * applies pending format via its own default handler, not scripted commands).
+   */
+  shouldHandleShortcut?(selection: Selection): boolean;
+
   /** Called on selection changes */
   onSelectionChange?(selection: Selection): void;
 
@@ -215,6 +225,13 @@ export class InlineToolEventManager {
       }
 
       if (handler.isRelevant && !handler.isRelevant(selection)) {
+        return;
+      }
+
+      // Let the handler opt out of interception so the browser applies its own
+      // native behavior for this keystroke (e.g. pending bold on a collapsed
+      // caret). When opted out we neither preventDefault nor run onShortcut.
+      if (handler.shouldHandleShortcut && !handler.shouldHandleShortcut(selection)) {
         return;
       }
 

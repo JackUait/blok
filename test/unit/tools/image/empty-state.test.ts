@@ -23,6 +23,43 @@ describe('renderEmptyState', () => {
     expect(url).not.toBeNull();
   });
 
+  it('tablist keeps a single tab stop on the selected tab', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    expect(tabs).toHaveLength(2);
+    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1]);
+  });
+
+  it('ArrowRight moves to the next tab and follows focus', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    document.body.appendChild(el);
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    tabs[0].focus();
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
+    expect(tabs[1]).toHaveFocus();
+    expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0]);
+    expect(el.querySelector('input[type="url"]')).not.toBeNull();
+    el.remove();
+  });
+
+  it('Home/End jump to the first/last tab', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn() });
+    document.body.appendChild(el);
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    tabs[0].focus();
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    expect(tabs[1].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[1]).toHaveFocus();
+
+    tabs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0]).toHaveFocus();
+    el.remove();
+  });
+
   it('calls onFile with the picked file', () => {
     const onFile = vi.fn();
     const el = renderEmptyState({ onFile, onUrl: vi.fn() });
@@ -67,6 +104,45 @@ describe('renderEmptyState', () => {
     const err = el.querySelector('[data-role="error"]');
     if (!err) throw new Error('error region missing');
     expect(err.textContent).toBe('boom');
+  });
+
+  it('setError marks the URL input aria-invalid and links the error region', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+
+    el.setError('bad url');
+
+    const err = el.querySelector<HTMLElement>('[data-role="error"]');
+    if (!err) throw new Error('error region missing');
+    expect(err.id).toBeTruthy();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toContain(err.id);
+  });
+
+  it('setError(null) clears the URL input invalid state', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+
+    el.setError('bad url');
+    el.setError(null);
+
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('editing the URL after an error clears the invalid state', () => {
+    const el = renderEmptyState({ onFile: vi.fn(), onUrl: vi.fn(), sources: 'url' });
+    const input = el.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+
+    el.setError('bad url');
+    input.value = 'https://example.com/a.png';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+    const err = el.querySelector<HTMLElement>('[data-role="error"]');
+    expect(err?.hidden).toBe(true);
   });
 
   it('with sources "upload" renders only the Upload source (no Link tab)', () => {

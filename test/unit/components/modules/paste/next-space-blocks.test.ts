@@ -116,6 +116,28 @@ describe('parseNextSpaceBlocks', () => {
       expect(out?.[0].data.text).toBe('foo bar');
     });
 
+    // buildin stores a Shift+Enter soft line break as a literal newline inside a
+    // segment's text. A raw `\n` collapses to a space when set as innerHTML, so
+    // it must become a `<br>` to survive — otherwise multi-line text flattens to
+    // one line (the "displayed on a single string" migration bug).
+    it('converts a soft line break (\\n) inside a segment to <br>', () => {
+      const out = parseNextSpaceBlocks(envelope(node('a', 1, { data: segments('first\nsecond') })));
+
+      expect(out?.[0].data.text).toBe('first<br>second');
+    });
+
+    it('converts a Windows soft line break (\\r\\n) to a single <br>', () => {
+      const out = parseNextSpaceBlocks(envelope(node('a', 1, { data: segments('first\r\nsecond') })));
+
+      expect(out?.[0].data.text).toBe('first<br>second');
+    });
+
+    it('converts a newline carried as its own segment to <br>', () => {
+      const out = parseNextSpaceBlocks(envelope(node('a', 1, { data: segments('first', '\n', 'second') })));
+
+      expect(out?.[0].data.text).toBe('first<br>second');
+    });
+
     it('maps a quote (type 12)', () => {
       const out = parseNextSpaceBlocks(envelope(node('q', 12, { data: segments('wisdom') })));
 
@@ -477,6 +499,48 @@ describe('parseNextSpaceBlocks', () => {
       );
 
       expect(out).toEqual([{ id: 'e', tool: 'paragraph', data: { text: 'no link' } }]);
+    });
+  });
+
+  // Copying a SINGLE block in buildin ships the `text/next-space-content`
+  // flavour, whose envelope drops the multi-block `blocks: [{ id, subTree }]`
+  // wrapper. The parser must still decode it — otherwise a single-toggle copy
+  // returns null, falls back to buildin's lossy HTML twin, and the toggle
+  // arrives as a bullet list (the reported migration bug).
+  describe('single-block content envelope (text/next-space-content)', () => {
+    it('decodes a lone toggle (subTree wrapper, no blocks array) as a toggle with its child', () => {
+      const payload = JSON.stringify({
+        subTree: {
+          'raw-tg': node('tg', 6, { data: segments('Open me'), subNodes: ['c1'] }),
+          'raw-c1': node('c1', 1, { parentId: 'tg', data: segments('inside') }),
+        },
+        pageId: PAGE,
+        fromType: 'copy',
+      });
+
+      const out = parseNextSpaceBlocks(payload);
+
+      expect(out).toEqual([
+        { id: 'tg', tool: 'toggle', data: { text: 'Open me', isOpen: true } },
+        { id: 'c1', tool: 'paragraph', data: { text: 'inside' }, parentId: 'tg' },
+      ]);
+    });
+
+    it('decodes a bare single node (no wrapper at all)', () => {
+      const out = parseNextSpaceBlocks(JSON.stringify(node('p', 1, { data: segments('lonely') })));
+
+      expect(out).toEqual([{ id: 'p', tool: 'paragraph', data: { text: 'lonely' } }]);
+    });
+
+    it('decodes a single-block node map keyed by raw id', () => {
+      const out = parseNextSpaceBlocks(JSON.stringify({ 'raw-b': node('b', 4, { data: segments('Bullet') }) }));
+
+      expect(out).toEqual([{ id: 'b', tool: 'list', data: { text: 'Bullet', style: 'unordered' } }]);
+    });
+
+    it('still returns null when the object carries no buildin nodes', () => {
+      expect(parseNextSpaceBlocks(JSON.stringify({ subTree: { x: { notANode: true } } }))).toBeNull();
+      expect(parseNextSpaceBlocks(JSON.stringify({ random: 'object' }))).toBeNull();
     });
   });
 

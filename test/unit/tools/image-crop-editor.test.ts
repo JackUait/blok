@@ -89,15 +89,16 @@ describe('mountCropEditor', () => {
     expect(onApply).toHaveBeenCalledWith(null);
   });
 
-  it('Escape key triggers onCancel', () => {
+  it('Escape does NOT trigger onCancel from the editor itself (the modal dismissal layer owns Escape)', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const onCancel = vi.fn();
     const onApply = vi.fn();
     mountCropEditor(host, { url: 'x.png', onApply, onCancel });
     simulateKeydown(document, 'Escape');
-    expect(onCancel).toHaveBeenCalled();
-    // Escape routes to cancel only — it must not apply the crop.
+    // crop-modal.ts registers Escape dismissal via the shared dismissable-layer
+    // stack; a second Escape path here would run onCancel twice per press.
+    expect(onCancel).not.toHaveBeenCalled();
     expect(onApply).not.toHaveBeenCalled();
     // Editor stays mounted (teardown is the caller's responsibility via detach).
     const editor = host.querySelector('.blok-image-crop-editor');

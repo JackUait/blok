@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => {
           react: path.resolve(__dirname, 'src', 'react', 'index.ts'),
           vue: path.resolve(__dirname, 'src', 'vue', 'index.ts'),
           markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
+          icons: path.resolve(__dirname, 'src', 'icons', 'index.ts'),
         },
         formats: ['es', 'cjs'],
       },

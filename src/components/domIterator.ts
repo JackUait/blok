@@ -1,6 +1,8 @@
+import { DATA_ATTR } from './constants';
 import { Dom } from './dom';
 import { SelectionUtils } from './selection/index';
 import { delay } from './utils';
+import { generateId } from './utils/id-generator';
 
 /**
  * Iterator above passed Elements list.
@@ -35,15 +37,73 @@ export class DomIterator {
   private items: HTMLElement[] = [];
 
   /**
+   * Optional host element that mirrors the virtual focus to assistive tech
+   * via aria-activedescendant, without moving real DOM focus.
+   */
+  private activeDescendantHost: HTMLElement | null = null;
+
+  /**
    * @param {HTMLElement[]} nodeList — the list of iterable HTML-items
    * @param {string} focusedCssClass - user-provided CSS-class that will be set in flipping process
+   * @param {HTMLElement | null} activeDescendantHost - optional host for aria-activedescendant
    */
   constructor(
     nodeList: HTMLElement[] | null | undefined,
-    focusedCssClass: string
+    focusedCssClass: string,
+    activeDescendantHost?: HTMLElement | null
   ) {
     this.items = nodeList ?? [];
     this.focusedCssClass = focusedCssClass;
+    this.activeDescendantHost = activeDescendantHost ?? null;
+  }
+
+  /**
+   * Sets (or clears) the aria-activedescendant host element
+   * @param host - element that should receive aria-activedescendant, or null to disable
+   */
+  public setActiveDescendantHost(host: HTMLElement | null): void {
+    if (host === this.activeDescendantHost) {
+      return;
+    }
+
+    const previousHost = this.activeDescendantHost;
+    const currentItem = this.currentItem;
+
+    /**
+     * Detach the stale aria-activedescendant from the previous host so it never
+     * points at an option that no longer belongs to an open combobox.
+     */
+    if (previousHost !== null) {
+      previousHost.removeAttribute('aria-activedescendant');
+    }
+
+    this.activeDescendantHost = host;
+
+    if (host === null) {
+      /**
+       * With no combobox referencing the virtual focus, the aria-selected marker
+       * is meaningless. Drop it, but leave the focus class / data attribute / id
+       * intact (id reuse is intended, styling is owned by dropCursor).
+       */
+      if (currentItem !== null) {
+        currentItem.removeAttribute('aria-selected');
+      }
+
+      return;
+    }
+
+    /**
+     * Mirror the existing virtual focus onto the new host so swapping hosts keeps
+     * a valid aria-activedescendant → option relationship.
+     */
+    if (currentItem !== null) {
+      if (!currentItem.id) {
+        currentItem.id = generateId('blok-flipper-item-');
+      }
+
+      currentItem.setAttribute('aria-selected', 'true');
+      host.setAttribute('aria-activedescendant', currentItem.id);
+    }
   }
 
   /**
@@ -64,10 +124,7 @@ export class DomIterator {
    */
   public setCursor(cursorPosition: number): void {
     if (cursorPosition < this.items.length && cursorPosition >= -1) {
-      this.dropCursor();
-      this.cursor = cursorPosition;
-      this.items[this.cursor].classList.add(this.focusedCssClass);
-      this.items[this.cursor].setAttribute('data-blok-focused', 'true');
+      this.applyCursor(cursorPosition, { setCaret: false });
     }
   }
 
@@ -84,6 +141,31 @@ export class DomIterator {
    */
   public hasItems(): boolean {
     return this.items.length > 0;
+  }
+
+  /**
+   * Returns the current list of iterable items
+   */
+  public getItems(): HTMLElement[] {
+    return this.items;
+  }
+
+  /**
+   * Moves cursor to the first non-disabled item (Home navigation).
+   * Routes through the caret-aware path like arrow navigation. Leaves the
+   * cursor unchanged when every item is disabled.
+   */
+  public setCursorToFirst(): void {
+    this.setCursorToEdge('first');
+  }
+
+  /**
+   * Moves cursor to the last non-disabled item (End navigation).
+   * Routes through the caret-aware path like arrow navigation. Leaves the
+   * cursor unchanged when every item is disabled.
+   */
+  public setCursorToLast(): void {
+    this.setCursorToEdge('last');
   }
 
   /**
@@ -108,9 +190,121 @@ export class DomIterator {
       return;
     }
 
-    this.items[this.cursor].classList.remove(this.focusedCssClass);
-    this.items[this.cursor].removeAttribute('data-blok-focused');
+    this.removeFocusMarkers(this.items[this.cursor]);
     this.cursor = -1;
+
+    if (this.activeDescendantHost) {
+      this.activeDescendantHost.removeAttribute('aria-activedescendant');
+    }
+  }
+
+  /**
+   * Removes all focus markers from the previously-focused item (if any),
+   * moves the virtual cursor to the given index and applies all focus markers
+   * to the newly-focused item.
+   * @param index - target item index
+   * @param options - focus behavior options
+   * @param options.setCaret - when true, moves the editor caret to the item (arrow/tab path)
+   */
+  private applyCursor(index: number, options?: { setCaret?: boolean }): void {
+    if (this.cursor !== -1) {
+      this.removeFocusMarkers(this.items[this.cursor]);
+    }
+
+    this.cursor = index;
+
+    if (index === -1) {
+      if (this.activeDescendantHost) {
+        this.activeDescendantHost.removeAttribute('aria-activedescendant');
+      }
+
+      return;
+    }
+
+    const item = this.items[index];
+
+    if (options?.setCaret && Dom.canSetCaret(item)) {
+      /**
+       * Focus input with micro-delay to ensure DOM is updated
+       */
+      delay(() => SelectionUtils.setCursor(item), 50)();
+    }
+
+    this.addFocusMarkers(item);
+  }
+
+  /**
+   * Applies all focus markers (CSS class, data attribute, and — when a host is
+   * present — aria-selected + aria-activedescendant) to the given item.
+   * @param item - item to focus
+   */
+  private addFocusMarkers(item: HTMLElement): void {
+    item.classList.add(this.focusedCssClass);
+    item.setAttribute('data-blok-focused', 'true');
+
+    if (this.activeDescendantHost) {
+      if (!item.id) {
+        item.setAttribute('id', generateId('blok-flipper-item-'));
+      }
+
+      /**
+       * aria-selected is not allowed on menuitem roles (axe: aria-allowed-attr);
+       * for those, aria-activedescendant alone conveys the highlight. Keep
+       * aria-selected for option-like items (listbox popovers).
+       */
+      const role = item.getAttribute('role');
+      const isMenuItemRole = role === 'menuitem' || role === 'menuitemradio' || role === 'menuitemcheckbox';
+
+      if (isMenuItemRole) {
+        item.removeAttribute('aria-selected');
+      } else {
+        item.setAttribute('aria-selected', 'true');
+      }
+
+      this.activeDescendantHost.setAttribute('aria-activedescendant', item.id);
+    }
+  }
+
+  /**
+   * Removes all focus markers from the given item.
+   * @param item - item to unfocus
+   */
+  private removeFocusMarkers(item: HTMLElement): void {
+    item.classList.remove(this.focusedCssClass);
+    item.removeAttribute('data-blok-focused');
+
+    if (this.activeDescendantHost) {
+      item.removeAttribute('aria-selected');
+    }
+  }
+
+  /**
+   * Returns true when the item is marked as disabled and should be skipped
+   * during navigation.
+   * @param item - candidate item
+   */
+  private isDisabled(item: HTMLElement | undefined): boolean {
+    return !!item && item.hasAttribute(DATA_ATTR.disabled);
+  }
+
+  /**
+   * Moves the cursor to the first (or last) non-disabled item.
+   * @param edge - 'first' scans forward from index 0, 'last' scans backward
+   */
+  private setCursorToEdge(edge: 'first' | 'last'): void {
+    const length = this.items.length;
+
+    if (length === 0) {
+      return;
+    }
+
+    // Scan order: forward from 0 for 'first', backward from the end for 'last'.
+    const order = Array.from({ length }, (_, offset) => (edge === 'first' ? offset : length - 1 - offset));
+    const target = order.find((index) => !this.isDisabled(this.items[index]));
+
+    if (target !== undefined) {
+      this.applyCursor(target, { setCaret: true });
+    }
   }
 
   /**
@@ -142,48 +336,41 @@ export class DomIterator {
      */
     const defaultIndex = direction === DomIterator.directions.RIGHT ? -1 : 0;
     const startingIndex = this.cursor === -1 ? defaultIndex : this.cursor;
+    const length = this.items.length;
 
     /**
-     * If we have chosen Tool then remove highlighting
+     * Step is +1 to the right and -1 to the left.
+     * `length` is added before the modulo to avoid "The JavaScript Modulo Bug"
+     * for negative operands.
      */
-    if (startingIndex !== -1) {
-      this.items[startingIndex].classList.remove(this.focusedCssClass);
-      this.items[startingIndex].removeAttribute('data-blok-focused');
-    }
+    const step = direction === DomIterator.directions.RIGHT ? 1 : -1;
 
     /**
-     * Count index for next Tool
+     * Advance in the chosen direction skipping any disabled items. The scan is
+     * bounded by the number of items, so if every item is disabled we bail out
+     * and leave the cursor unchanged (guards against an infinite loop).
      */
-    const focusedButtonIndex = direction === DomIterator.directions.RIGHT
-      ? /**
-         * If we go right then choose next (+1) Tool
-         * @type {number}
-         */
-      (startingIndex + 1) % this.items.length
-      : /**
-         * If we go left then choose previous (-1) Tool
-         * Before counting module we need to add length before because of "The JavaScript Modulo Bug"
-         * @type {number}
-         */
-      (this.items.length + startingIndex - 1) % this.items.length;
+    // Candidate indices in scan order: one step per iteration in `step`
+    // direction, normalized to stay within [0, length) (guards the negative
+    // modulo bug for left-ward scans).
+    const candidates = Array.from(
+      { length },
+      (_, scanned) => (((startingIndex + step * (scanned + 1)) % length) + length) % length
+    );
+    const focusedButtonIndex = candidates.find((index) => !this.isDisabled(this.items[index]));
 
-    if (Dom.canSetCaret(this.items[focusedButtonIndex])) {
+    if (focusedButtonIndex !== undefined) {
       /**
-       * Focus input with micro-delay to ensure DOM is updated
+       * Remove markers from the old item and apply them (plus the caret) to the new one
        */
-       
-      delay(() => SelectionUtils.setCursor(this.items[focusedButtonIndex]), 50)();
+      this.applyCursor(focusedButtonIndex, { setCaret: true });
+
+      return focusedButtonIndex;
     }
 
     /**
-     * Highlight new chosen Tool
+     * All items are disabled — keep the current cursor position.
      */
-    this.items[focusedButtonIndex].classList.add(this.focusedCssClass);
-    this.items[focusedButtonIndex].setAttribute('data-blok-focused', 'true');
-
-    /**
-     * Return focused button's index
-     */
-    return focusedButtonIndex;
+    return this.cursor;
   }
 }

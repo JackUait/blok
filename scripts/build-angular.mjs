@@ -27,7 +27,7 @@
 
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { rollup } from 'rollup';
 import dtsPlugin from 'rollup-plugin-dts';
@@ -61,11 +61,189 @@ await bundle.close();
 // 2. Stage the adapter + its shared dependency under one root. The entry file
 //    sits at the staging root so ng-packagr's rootDir covers both `angular/`
 //    and `shared/`; the `../shared/deep-equal` import resolves unchanged.
+//
+//    Additional staging: adapter files added in createAngularBlock/injectBlocks
+//    import helpers from outside `src/angular/` and `src/shared/` — stage only
+//    the specific modules they need so the relative paths (which mirror the
+//    original `src/` layout) resolve correctly under `rootDir`.
 cpSync(path.resolve(root, 'src/angular'), path.resolve(stagingDir, 'angular'), {
   recursive: true,
   filter: (src) => !src.endsWith('.json'),
 });
 cpSync(path.resolve(root, 'src/shared'), path.resolve(stagingDir, 'shared'), { recursive: true });
+
+// Helpers shared with the core (injectBlocks, createAngularBlock). These files
+// use `../../types/...` or `../../markdown/types` relative imports that resolve
+// to `types/` at the repo root, which contains a mix of `.d.ts` and `.ts` files.
+// The `.ts` files (e.g. `types/data-formats/block-id.ts`) cause ngtsc to crash.
+// After copying, we rewrite all `import type` statements that reference the
+// repo-root `types/` or `markdown/types` to `'@jackuait/blok'` (the staged
+// flat-declaration alias), which is a single clean `.d.ts` with no `.ts` deps.
+// `BlockTuneData` and `MarkdownImportConfig` are not in the standard
+// `@jackuait/blok` exports, so we append them to `blok-core.d.ts` first.
+let coreTypes = readFileSync(coreTypesFile, 'utf8');
+if (!coreTypes.includes('export type BlockTuneData')) {
+  coreTypes += '\nexport type BlockTuneData = unknown;\n';
+}
+// Promotion-matched guard: the symbol must be present after the append.
+if (!coreTypes.includes('export type BlockTuneData')) {
+  throw new Error(
+    `[build-angular] Promotion guard failed: 'export type BlockTuneData' is missing from ` +
+    `blok-core.d.ts after promotion. The rollup output may have changed.`
+  );
+}
+const beforeMarkdownReplace = coreTypes;
+coreTypes = coreTypes.replace(
+  /^interface MarkdownImportConfig /m,
+  'export interface MarkdownImportConfig '
+);
+// Promotion-matched guard: the regex must have matched at least once.
+if (coreTypes === beforeMarkdownReplace) {
+  throw new Error(
+    `[build-angular] Promotion guard failed: 'interface MarkdownImportConfig' was not found in ` +
+    `blok-core.d.ts — the regex did not match. The interface may have been renamed, removed, or ` +
+    `is already exported. Expected a bare 'interface MarkdownImportConfig' declaration in the ` +
+    `rollup-flattened types.`
+  );
+}
+writeFileSync(coreTypesFile, coreTypes, 'utf8');
+
+// Stub `@jackuait/blok/markdown` so the dynamic `await import('../../markdown/index')`
+// in blocks-api.ts can be remapped to a path TypeScript CAN resolve.  The stub
+// only needs the ONE symbol consumed (`markdownToBlocks`); it borrows the types
+// from the already-staged `blok-core.d.ts`.
+writeFileSync(
+  path.resolve(stagingDir, 'blok-markdown.d.ts'),
+  [
+    `import type { OutputBlockData, MarkdownImportConfig } from '@jackuait/blok';`,
+    `export declare function markdownToBlocks(`,
+    `  md: string,`,
+    `  config?: MarkdownImportConfig`,
+    `): Promise<OutputBlockData[]>;`,
+  ].join('\n') + '\n',
+  'utf8'
+);
+
+/** Rewrite imports that resolve to the repo-root `types/` tree (where some
+ *  files are `.ts`, triggering ngtsc crashes) to go through the staged
+ *  `@jackuait/blok` alias (`blok-core.d.ts`) instead.  Also rewrites the
+ *  markdown helpers so they stay resolvable in the staging layout.
+ */
+const rewriteTypeImports = (filePath) => {
+  let src = readFileSync(filePath, 'utf8');
+
+  // 1. `import type { … } from '…/types/…'` or `'…/markdown/types'` → @jackuait/blok
+  const TYPE_PATTERNS = [
+    /^import type \{([^}]+)\} from ['"](?:\.\.\/)*types(?:\/[^'"]+)?['"];?\n?/gm,
+    /^import type \{([^}]+)\} from ['"](?:\.\.\/)*markdown\/types['"];?\n?/gm,
+  ];
+  const symbols = [];
+  for (const re of TYPE_PATTERNS) {
+    src = src.replace(re, (_, captured) => {
+      symbols.push(...captured.split(',').map((s) => s.trim()).filter(Boolean));
+      return '';
+    });
+  }
+  if (symbols.length > 0) {
+    const unique = [...new Set(symbols)];
+    src = `import type { ${unique.join(', ')} } from '@jackuait/blok';\n` + src;
+  }
+
+  // 2. Dynamic `import('…/markdown/index')` → `import('@jackuait/blok/markdown')`
+  //    so the path is resolvable under the staging tsconfig's `paths` aliases.
+  src = src.replace(
+    /import\(['"](?:\.\.\/)*markdown\/index['"]\)/g,
+    `import('@jackuait/blok/markdown')`
+  );
+
+  writeFileSync(filePath, src, 'utf8');
+};
+
+const copyAndRewrite = (relSrc, relDest) => {
+  const dest = path.resolve(stagingDir, relDest);
+  mkdirSync(path.dirname(dest), { recursive: true });
+  cpSync(path.resolve(root, relSrc), dest);
+  rewriteTypeImports(dest);
+};
+
+copyAndRewrite('src/components/utils/blocks-tree.ts',         'components/utils/blocks-tree.ts');
+copyAndRewrite('src/components/utils/blocks-api.ts',          'components/utils/blocks-api.ts');
+// id-generator.ts imports `nanoid` (a bare specifier). ng-packagr/rollup
+// externalizes ALL bare specifiers, so it cannot be bundled. Replace the
+// import with a minimal inline implementation using crypto.getRandomValues(),
+// which produces the same 10-char URL-safe alphabet as nanoid.
+(() => {
+  const dest = path.resolve(stagingDir, 'components/utils/id-generator.ts');
+  mkdirSync(path.dirname(dest), { recursive: true });
+  const original = readFileSync(path.resolve(root, 'src/components/utils/id-generator.ts'), 'utf8');
+  writeFileSync(
+    dest,
+    original.replace(
+      `import { nanoid } from 'nanoid';`,
+      `// nanoid replaced with inline crypto implementation for the Angular adapter bundle.\n` +
+      `const _ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';\n` +
+      `const _nanoid = (n: number): string => {\n` +
+      `  const buf = crypto.getRandomValues(new Uint8Array(n));\n` +
+      `  return Array.from(buf, (b) => _ID_CHARS[b % 64]).join('');\n` +
+      `};\n` +
+      `const nanoid = _nanoid;`,
+    ),
+    'utf8'
+  );
+})();
+copyAndRewrite('src/components/errors/tool-not-found.ts',     'components/errors/tool-not-found.ts');
+copyAndRewrite('src/components/constants/data-attributes.ts', 'components/constants/data-attributes.ts');
+copyAndRewrite('src/tools/nested-blocks.ts',                  'tools/nested-blocks.ts');
+// Also rewrite staged angular/ files that import from '../../types/...'.
+rewriteTypeImports(path.resolve(stagingDir, 'angular/useBlocks.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/block-context.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/createAngularBlock.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-editor.component.ts'));
+rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-content.directive.ts'));
+
+// Fail-loud guard: after all rewrites, no staged .ts source file should still contain
+// a relative import whose specifier points into the core types/ or markdown/types tree.
+// rewriteTypeImports() uses single-line `import type { }` regexes and would silently
+// miss multi-line type imports or inline-`type` modifiers in mixed imports.  This scan
+// catches those misses immediately with a clear diagnostic instead of a cryptic ng-packagr
+// compile error downstream.
+const gatherTsSourceFiles = (dir) => {
+  const results = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) results.push(...gatherTsSourceFiles(full));
+    // Skip generated .d.ts files — they are declaration stubs, not source.
+    else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) results.push(full);
+  }
+  return results;
+};
+
+for (const tsFile of gatherTsSourceFiles(stagingDir)) {
+  const src = readFileSync(tsFile, 'utf8');
+  // Match any 'from' clause with a relative specifier that goes UP at least one
+  // directory level (starts with ../).  Specifiers that only descend (./foo) are
+  // intra-staging and are fine (e.g. './types' → angular/types.ts is staged).
+  // No staging directory is named 'types', so any UP-going path containing
+  // '/types' is a leaked reference that should have been rewritten to '@jackuait/blok'.
+  const re = /from\s+['"]((?:\.\.\/)+[^'"]+)['"]/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const spec = m[1];
+    if (
+      spec.includes('/types/') ||
+      spec.endsWith('/types') ||
+      /\/markdown\/types/.test(spec)
+    ) {
+      const rel = path.relative(stagingDir, tsFile);
+      throw new Error(
+        `[build-angular] Leftover core type import in staged file '${rel}': ` +
+        `'${spec}' was not rewritten to '@jackuait/blok'. ` +
+        `Check rewriteTypeImports() — the import may be multi-line or use an inline 'type' modifier.`
+      );
+    }
+  }
+}
+
 writeFileSync(path.resolve(stagingDir, 'index.ts'), `export * from './angular';\n`, 'utf8');
 
 // 3. The published package.json: name + peer ranges from the canonical template
@@ -90,6 +268,7 @@ writeFileSync(
       $schema: '../../node_modules/ng-packagr/ng-package.schema.json',
       dest: '../angular',
       lib: { entryFile: 'index.ts' },
+      allowedNonPeerDependencies: ['.'],
     },
     null,
     2
@@ -110,7 +289,10 @@ writeFileSync(
         noEmit: false,
         types: ['node'],
         baseUrl: '.',
-        paths: { '@jackuait/blok': ['./blok-core.d.ts'] },
+        paths: {
+          '@jackuait/blok': ['./blok-core.d.ts'],
+          '@jackuait/blok/markdown': ['./blok-markdown.d.ts'],
+        },
       },
       angularCompilerOptions: {
         compilationMode: 'partial',

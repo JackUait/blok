@@ -21,6 +21,7 @@ import {
 } from './block-operations';
 import { PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { getContentOffset } from './content-offset';
+import { applyChecklistCheckedState } from './dom-builder';
 import { parseHTML } from './content-operations';
 import { normalizeListItemData } from './data-normalizer';
 import { ListDepthValidator } from './depth-validator';
@@ -34,7 +35,7 @@ import {
   updateMarkersInRange,
   updateAllOrderedListMarkers,
 } from './list-helpers';
-import { handleEnter, handleBackspace, handleIndent, handleOutdent } from './list-keyboard';
+import { handleEnter, handleBackspace, handleIndent, handleOutdent, toggleChecklistChecked } from './list-keyboard';
 import { renderListItem } from './list-lifecycle';
 import { ListMarkerCalculator } from './marker-calculator';
 import { OrderedMarkerManager } from './ordered-marker-manager';
@@ -139,6 +140,11 @@ export class ListItem implements BlockTool {
       return this._element;
     }
 
+    // Reconcile the flat carrier to the tree BEFORE the DOM builder reads
+    // data.depth for the indent/marker, so a stale value can never render a
+    // depth that disagrees with the block's structural nesting.
+    this.reconcileDepthFromStructure();
+
     const blockIndex = this.blockId
       ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
       : this.api.blocks.getCurrentBlockIndex();
@@ -157,12 +163,10 @@ export class ListItem implements BlockTool {
       itemSize: this.itemSize,
       markerDepth,
       setupItemPlaceholder: this.setupItemPlaceholder.bind(this),
-      onCheckboxChange: (checked, content) => {
+      // DOM sync (checkbox state, data-checked, strike-through) is handled by
+      // applyChecklistCheckedState in the change listener — only track the data.
+      onCheckboxChange: (checked) => {
         this._data.checked = checked;
-        if (content instanceof HTMLElement) {
-          content.classList.toggle('line-through', checked);
-          content.classList.toggle('opacity-60', checked);
-        }
       },
       keydownHandler: this.readOnly ? undefined : this.boundHandleKeyDown,
     });
@@ -215,13 +219,42 @@ export class ListItem implements BlockTool {
   public rendered(): void {
     // Seed the structural-nesting flag from the loaded tree so the first move
     // after render can distinguish a structural outdent from a flat drag.
-    this.wasStructurallyNested = this.getStructuralListDepth() !== null;
+    const structuralDepth = this.getStructuralListDepth();
+    this.wasStructurallyNested = structuralDepth !== null;
+
+    // The parentId chain may only be assembled AFTER the initial render() (the
+    // block is parented once the tree is built). If it turned out to be
+    // structurally nested at a depth the flat carrier didn't match, reconcile
+    // the rendered indent + marker now so structure stays the source of truth.
+    if (structuralDepth !== null && structuralDepth !== (this._data.depth ?? 0)) {
+      this.adjustDepthTo(structuralDepth);
+      this.updateMarkerForDepth(structuralDepth, this._data.style);
+    }
+
     this.updateMarkersAfterPositionChange();
   }
 
   public moved(event: MoveEvent): void {
+    // A horizontal drag-to-indent supplies the pointer-resolved drop depth. It is
+    // authoritative — the drop must land at the depth the indicator previewed, not
+    // the neighbour auto-resolution — so honor it directly (still clamped to the
+    // legal range by the validator's pointer path) and skip the auto heuristics.
+    if (event.targetDepth !== undefined) {
+      this.validateAndAdjustDepthAfterMove(event.toIndex, event.isGroupMove, event.targetDepth);
+      this.wasStructurallyNested = this.getStructuralListDepth() !== null;
+      this.updateMarkersAfterPositionChange();
+      this.markerManager?.scheduleUpdateAll();
+
+      return;
+    }
+
     const structuralDepth = this.getStructuralListDepth();
-    const isStructural = structuralDepth !== null || this.wasStructurallyNested;
+    // A history-replay reparent (undo/redo) is definitionally structural: derive
+    // depth from the tree even on a freshly-rendered instance whose in-memory
+    // `wasStructurallyNested` flag was reset. Without this, undoing a keyboard Tab
+    // leaves the flat `data.depth` carrier stale (still 1) so save() reports the
+    // wrong depth.
+    const isStructural = event.structural === true || structuralDepth !== null || this.wasStructurallyNested;
 
     if (isStructural) {
       // Keyboard Tab/Shift+Tab nests/outdents list items STRUCTURALLY
@@ -281,6 +314,22 @@ export class ListItem implements BlockTool {
     return depth > 0 ? depth : null;
   }
 
+  /**
+   * Collapse the flat `data.depth` carrier onto the STRUCTURAL depth whenever
+   * this item has a list parent, so the persisted value can never drift from the
+   * block tree (which is the single source of truth for a nested item). No-op for
+   * flat/unparented items (structural depth null): they legitimately rely on the
+   * flat carrier for drag/paste until they gain a structural parent, and
+   * {@link getDepth} keeps reading it as the fallback in that case.
+   */
+  private reconcileDepthFromStructure(): void {
+    const structuralDepth = this.getStructuralListDepth();
+
+    if (structuralDepth !== null && structuralDepth !== (this._data.depth ?? 0)) {
+      this._data.depth = structuralDepth;
+    }
+  }
+
   private updateMarkersAfterPositionChange(): void {
     if (this._data.style !== 'ordered' || !this._element) {
       return;
@@ -290,12 +339,13 @@ export class ListItem implements BlockTool {
     this.updateSiblingListMarkers();
   }
 
-  private validateAndAdjustDepthAfterMove(newIndex: number, skipDepthPromotion?: boolean): void {
+  private validateAndAdjustDepthAfterMove(newIndex: number, skipDepthPromotion?: boolean, pointerDepth?: number): void {
     const currentDepth = this.getDepth();
     const targetDepth = this.depthValidator.getTargetDepthForMove({
       blockIndex: newIndex,
       currentDepth,
       skipDepthPromotion,
+      pointerDepth,
     });
 
     if (currentDepth !== targetDepth) {
@@ -378,9 +428,12 @@ export class ListItem implements BlockTool {
 
   private updateCheckboxState(checked: boolean): void {
     const checkbox = this._element?.querySelector('input[type="checkbox"]');
-    if (checkbox instanceof HTMLInputElement) {
-      checkbox.checked = checked;
-    }
+
+    applyChecklistCheckedState(
+      checkbox instanceof HTMLInputElement ? checkbox : null,
+      this.getContentElement(),
+      checked
+    );
   }
 
   private getDepth(): number {
@@ -392,6 +445,15 @@ export class ListItem implements BlockTool {
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
+    // Notion parity (m-11): Cmd/Ctrl+Enter toggles a to-do's checkbox IN PLACE,
+    // it does not split or create a new item.
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && this._data.style === 'checklist') {
+      event.preventDefault();
+      void this.toggleChecked();
+
+      return;
+    }
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void this.handleEnter();
@@ -427,15 +489,59 @@ export class ListItem implements BlockTool {
        * carrier — handleIndent caps at the max allowed depth, handleOutdent
        * guards at depth 0. Structurally nested items fall through to the shared
        * handler.
+       *
+       * Notion parity (M-2): an item whose previous block is a NON-list block
+       * (paragraph/heading) must NOT be handled here. The flat handleIndent has
+       * nothing to nest under (its first-in-group guard no-ops), and swallowing
+       * the event with preventDefault would short-circuit the shared structural
+       * handler that DOES indent type-agnostically (nesting the item as the last
+       * child of the preceding paragraph/heading). Leave the event un-prevented
+       * so that handler runs.
+       *
+       * Notion parity (M-9): an un-nested list item (flat depth 0) must nest
+       * STRUCTURALLY under its preceding sibling so the indent survives a
+       * save()/reload — exactly like the multi-select Tab path. Only keep the
+       * flat indent for items already carried by a flat `data.depth` (> 0), where
+       * the cap-based depth bump must be preserved (drag/authored nesting).
        */
+      const previousBlockIsList = this.getPreviousBlock()?.name === TOOL_NAME;
+
       if (event.shiftKey && this.getDepth() > 0) {
         event.preventDefault();
         void this.handleOutdent();
-      } else if (!event.shiftKey) {
+      } else if (!event.shiftKey && previousBlockIsList && this.getDepth() > 0) {
         event.preventDefault();
         void this.handleIndent();
       }
     }
+  }
+
+  /**
+   * The block immediately preceding this list item in the document order, or
+   * undefined when this is the first block.
+   */
+  private getPreviousBlock(): { name: string } | undefined {
+    const currentBlockIndex = this.blockId
+      ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
+      : this.api.blocks.getCurrentBlockIndex();
+
+    return currentBlockIndex > 0
+      ? this.api.blocks.getBlockByIndex(currentBlockIndex - 1)
+      : undefined;
+  }
+
+  private async toggleChecked(): Promise<void> {
+    const context = {
+      api: this.api,
+      blockId: this.blockId,
+      data: this._data,
+      element: this._element,
+      getContentElement: this.getContentElement.bind(this),
+      syncContentFromDOM: this.syncContentFromDOM.bind(this),
+      getDepth: this.getDepth.bind(this),
+    };
+
+    await toggleChecklistChecked(context);
   }
 
   private async handleEnter(): Promise<void> {
@@ -529,6 +635,10 @@ export class ListItem implements BlockTool {
   }
 
   private rerender(): void {
+    // Same drift guard as render(): keep the rebuilt indent/marker aligned with
+    // the structural tree rather than a possibly-stale flat depth carrier.
+    this.reconcileDepthFromStructure();
+
     const blockIndex = this.blockId
       ? this.api.blocks.getBlockIndex(this.blockId) ?? this.api.blocks.getCurrentBlockIndex()
       : this.api.blocks.getCurrentBlockIndex();
@@ -543,12 +653,10 @@ export class ListItem implements BlockTool {
       markerDepth: this.markerCalculator.getVisualDepth(blockIndex, depth),
       element: this._element,
       setupItemPlaceholder: this.setupItemPlaceholder.bind(this),
-      onCheckboxChange: (checked, content) => {
+      // DOM sync (checkbox state, data-checked, strike-through) is handled by
+      // applyChecklistCheckedState in the change listener — only track the data.
+      onCheckboxChange: (checked) => {
         this._data.checked = checked;
-        if (content instanceof HTMLElement) {
-          content.classList.toggle('line-through', checked);
-          content.classList.toggle('opacity-60', checked);
-        }
       },
       keydownHandler: this.readOnly ? undefined : this.boundHandleKeyDown ?? undefined,
     });

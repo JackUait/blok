@@ -108,17 +108,23 @@ describe('openFilePreview', () => {
     expect(getDialog()).toBeNull();
   });
 
-  it('closes when the backdrop is clicked but not when the dialog is clicked', () => {
+  it('closes when the backdrop is pressed but not when the dialog is pressed', () => {
     openFilePreview({ url: 'https://example.com/a.pdf', labels });
 
     const dialog = getDialog();
     if (!dialog) throw new Error('dialog missing');
-    dialog.click();
+    // A pointer press inside the dialog surface must not dismiss.
+    const insidePress = new PointerEvent('pointerdown', { bubbles: true });
+    Object.defineProperty(insidePress, 'target', { value: dialog });
+    document.dispatchEvent(insidePress);
     expect(getDialog()).not.toBeNull();
 
     const backdrop = document.body.querySelector<HTMLElement>('[data-role="file-preview-backdrop"]');
     if (!backdrop) throw new Error('backdrop missing');
-    backdrop.click();
+    // A pointer press on the dim backdrop (outside the surface) dismisses.
+    const outsidePress = new PointerEvent('pointerdown', { bubbles: true });
+    Object.defineProperty(outsidePress, 'target', { value: backdrop });
+    document.dispatchEvent(outsidePress);
     expect(getDialog()).toBeNull();
   });
 
@@ -130,6 +136,18 @@ describe('openFilePreview', () => {
     close.click();
 
     expect(getDialog()).toBeNull();
+  });
+
+  it('makes background siblings inert while open and clears it on teardown (H4)', () => {
+    const behind = document.createElement('div');
+    behind.setAttribute('data-role', 'editor-behind');
+    document.body.appendChild(behind);
+
+    const teardown = openFilePreview({ url: 'https://example.com/a.pdf', labels });
+    expect(behind.hasAttribute('inert')).toBe(true);
+
+    teardown();
+    expect(behind.hasAttribute('inert')).toBe(false);
   });
 
   it('focuses the close button on open', () => {

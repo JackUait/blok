@@ -31,8 +31,21 @@ export const beautifyShortcut = (shortcut: string): string => {
     .replace(/right/gi, '←')
     .replace(/escape/gi, '⎋')
     .replace(/insert/gi, 'Ins')
-    .replace(/delete/gi, '␡')
+    .replace(/delete/gi, 'Del')
     .replace(/\+/gi, ' + ');
+
+  /**
+   * When a shortcut combines CTRL and CMD, CTRL means the literal Control key
+   * (not a cross-platform alias for Command), and CMD maps to the platform
+   * meta key (⌘ on mac, Win elsewhere).
+   */
+  if (/ctrl/i.test(shortcut) && /cmd/i.test(shortcut)) {
+    if (OS.mac) {
+      return normalizedShortcut.replace(/ctrl/gi, '⌃').replace(/cmd/gi, '⌘').replace(/alt/gi, '⌥');
+    }
+
+    return normalizedShortcut.replace(/ctrl/gi, 'Ctrl').replace(/cmd/gi, 'Win').replace(/windows/gi, 'WIN');
+  }
 
   if (OS.mac) {
     return normalizedShortcut.replace(/ctrl|cmd/gi, '⌘').replace(/alt/gi, '⌥');

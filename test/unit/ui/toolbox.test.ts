@@ -49,6 +49,7 @@ const mockPopoverInstance = vi.hoisted(() => ({
   toggleItemHiddenByName: vi.fn(),
   updatePosition: vi.fn(),
   setLeftAlignElement: vi.fn(),
+  setActiveDescendantHost: vi.fn(),
 }));
 
 /**
@@ -91,6 +92,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
+      public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
     PopoverMobile: class MockPopoverMobile {
       public show = mockPopoverInstance.show;
@@ -104,6 +106,7 @@ vi.mock('../../../src/components/utils/popover', () => {
       public toggleItemHiddenByName = mockPopoverInstance.toggleItemHiddenByName;
       public updatePosition = mockPopoverInstance.updatePosition;
       public setLeftAlignElement = mockPopoverInstance.setLeftAlignElement;
+      public setActiveDescendantHost = mockPopoverInstance.setActiveDescendantHost;
     },
   };
 });
@@ -1374,11 +1377,12 @@ describe('Toolbox', () => {
       );
     });
 
-    it('strips the typed "/query" from a non-empty block and inserts the new block after it (Notion parity)', async () => {
+    it('converts a non-empty block in place when "/" is typed after its text, stripping only the "/query" (Notion parity)', async () => {
       /**
        * Notion: typing "/" on a NON-empty block opens the menu; selecting a tool
-       * inserts a NEW block as the next sibling and removes only the "/query"
-       * portion from the current block — the preceding text stays intact.
+       * TURNS the current block into the chosen type, folding the preceding text
+       * into it and removing only the "/query" — it does NOT split into an orphan
+       * paragraph + empty sibling.
        */
       const holderElement = document.createElement('div');
       const contentEditableElement = document.createElement('div');
@@ -1389,12 +1393,14 @@ describe('Toolbox', () => {
 
       const nonEmptyBlock = {
         ...mocks.blockAPI,
+        id: 'source-block-id',
         isEmpty: false,
         holder: holderElement,
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.convert).mockResolvedValue({ id: 'converted-block-id' } as BlockAPI);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1407,15 +1413,9 @@ describe('Toolbox', () => {
       toolbox.open();
       await toolbox.toolButtonActivated('testTool', {});
 
-      // New block inserted AFTER the current one (index 1, shouldReplace=false)
-      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
-        'testTool',
-        undefined,
-        undefined,
-        1,
-        undefined,
-        false
-      );
+      // The current block is converted in place — no sibling is inserted.
+      expect(mocks.api.blocks.convert).toHaveBeenCalledWith('source-block-id', 'testTool', {});
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
 
       // Only the "/head" slash query is removed; "Hello" stays in the current block
       expect(contentEditableElement.textContent).toBe('Hello');
@@ -1459,14 +1459,14 @@ describe('Toolbox', () => {
       );
     });
 
-    it('inserts a NEW block (does not replace) when "/" is typed BEFORE existing content', async () => {
+    it('converts in place (keeping content) when "/" is typed BEFORE existing content', async () => {
       /**
        * The block already held "Hello"; the user placed the caret at the START
        * and typed "/head" → "/headHello" with the caret right after "/head".
        * The leading "/head" is a slash query but "Hello" is real content, so the
-       * tool must be inserted as a NEW block — the "Hello" content must NOT be
-       * replaced/discarded. Regression: the old `startsWith('/')` check treated
-       * the whole block as a search query and replaced it in place.
+       * block must be CONVERTED in place — folding "Hello" into the new tool —
+       * not split into a separate empty block. The "Hello" content must NOT be
+       * discarded.
        */
       const holderElement = document.createElement('div');
       const contentEditableElement = document.createElement('div');
@@ -1478,12 +1478,14 @@ describe('Toolbox', () => {
 
       const nonEmptyBlock = {
         ...mocks.blockAPI,
+        id: 'source-block-id',
         isEmpty: false,
         holder: holderElement,
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.convert).mockResolvedValue({ id: 'converted-block-id' } as BlockAPI);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1510,15 +1512,9 @@ describe('Toolbox', () => {
 
       await toolbox.toolButtonActivated('testTool', {});
 
-      // New block inserted AFTER the current one (index 1, shouldReplace=false)
-      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
-        'testTool',
-        undefined,
-        undefined,
-        1,
-        undefined,
-        false
-      );
+      // The current block is converted in place — no sibling is inserted.
+      expect(mocks.api.blocks.convert).toHaveBeenCalledWith('source-block-id', 'testTool', {});
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
 
       // Only the "/head" slash query is removed; "Hello" stays in the current block
       expect(contentEditableElement.textContent).toBe('Hello');
@@ -1527,13 +1523,12 @@ describe('Toolbox', () => {
       holderElement.remove();
     });
 
-    it('strips only the slash-query span, preserving content typed after the caret', async () => {
+    it('strips only the slash-query span and converts in place, preserving content typed after the caret', async () => {
       /**
        * The block held "Hello world"; the user placed the caret after "Hello"
        * and typed "/head" → "Hello/head world" with the caret after "/head".
-       * Selecting a tool must insert a NEW block and remove ONLY the "/head"
-       * span — the trailing " world" content must NOT be discarded. Regression:
-       * the old stripper removed from the last "/" to the END of the block.
+       * Selecting a tool must CONVERT the block in place and remove ONLY the
+       * "/head" span — the trailing " world" content must NOT be discarded.
        */
       const holderElement = document.createElement('div');
       const contentEditableElement = document.createElement('div');
@@ -1545,12 +1540,14 @@ describe('Toolbox', () => {
 
       const nonEmptyBlock = {
         ...mocks.blockAPI,
+        id: 'source-block-id',
         isEmpty: false,
         holder: holderElement,
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.convert).mockResolvedValue({ id: 'converted-block-id' } as BlockAPI);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1577,6 +1574,112 @@ describe('Toolbox', () => {
 
       await toolbox.toolButtonActivated('testTool', {});
 
+      // The current block is converted in place — no sibling is inserted.
+      expect(mocks.api.blocks.convert).toHaveBeenCalledWith('source-block-id', 'testTool', {});
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+
+      // Only "/head" is removed; the leading "Hello" and trailing " world" remain.
+      expect(contentEditableElement.textContent).toBe('Hello world');
+
+      window.getSelection()?.removeAllRanges();
+      holderElement.remove();
+    });
+
+    it('converts the current block IN PLACE (folding leading text) when "/" follows real content (Notion parity M-1)', async () => {
+      /**
+       * Notion: typing "Hello/bullet" then picking the tool TURNS the current
+       * block into the chosen type, keeping "Hello" as its content and deleting
+       * only the "/bullet" query. Blok must convert in place — NOT strip the
+       * query and insert an empty sibling (which left an orphan paragraph).
+       */
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = 'Hello/bullet';
+      holderElement.appendChild(contentEditableElement);
+      document.body.appendChild(holderElement);
+
+      const convertedBlock = {
+        ...mocks.blockAPI,
+        id: 'converted-block-id',
+        name: 'list',
+      } as unknown as BlockAPI;
+
+      const nonEmptyBlock = {
+        ...mocks.blockAPI,
+        id: 'source-block-id',
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.convert).mockResolvedValue(convertedBlock);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      const emitSpy = vi.spyOn(toolbox, 'emit');
+
+      toolbox.open();
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // The current block is converted in place — NOT inserted as a sibling.
+      expect(mocks.api.blocks.convert).toHaveBeenCalledWith('source-block-id', 'testTool', {});
+      expect(mocks.api.blocks.insert).not.toHaveBeenCalled();
+
+      // Only the "/bullet" query is stripped; "Hello" is folded into the block.
+      expect(contentEditableElement.textContent).toBe('Hello');
+
+      // The converted block is announced so listeners (toolbar) clear their state.
+      expect(emitSpy).toHaveBeenCalledWith(ToolboxEvent.BlockAdded, { block: convertedBlock });
+
+      holderElement.remove();
+    });
+
+    it('falls back to inserting a sibling when the in-place conversion is not possible', async () => {
+      /**
+       * Some target tools cannot accept the current text (no conversionConfig).
+       * `convert` throws in that case; the toolbox must fall back to stripping
+       * the "/query" and inserting the new block as the next sibling so the tool
+       * is still created and no content is lost.
+       */
+      const holderElement = document.createElement('div');
+      const contentEditableElement = document.createElement('div');
+
+      contentEditableElement.setAttribute('contenteditable', 'true');
+      contentEditableElement.textContent = 'Hello/embed';
+      holderElement.appendChild(contentEditableElement);
+      document.body.appendChild(holderElement);
+
+      const nonEmptyBlock = {
+        ...mocks.blockAPI,
+        id: 'source-block-id',
+        isEmpty: false,
+        holder: holderElement,
+      };
+
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.convert).mockRejectedValue(new Error('not convertable'));
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+      await toolbox.toolButtonActivated('testTool', {});
+
+      // Conversion was attempted, then the sibling-insert fallback ran.
+      expect(mocks.api.blocks.convert).toHaveBeenCalledWith('source-block-id', 'testTool', {});
       expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
         'testTool',
         undefined,
@@ -1586,10 +1689,9 @@ describe('Toolbox', () => {
         false
       );
 
-      // Only "/head" is removed; the leading "Hello" and trailing " world" remain.
-      expect(contentEditableElement.textContent).toBe('Hello world');
+      // The "/embed" query is stripped regardless of which path runs.
+      expect(contentEditableElement.textContent).toBe('Hello');
 
-      window.getSelection()?.removeAllRanges();
       holderElement.remove();
     });
   });
@@ -2561,6 +2663,82 @@ describe('Toolbox', () => {
       toolbox.open();
 
       expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('block-color-bg-red', true);
+    });
+  });
+
+  describe('accessibility (combobox + listbox)', () => {
+    it('constructs the popover as a listbox with the provided listboxId', () => {
+       
+      new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        listboxId: 'blok-toolbox-popover',
+      });
+
+      expect(lastPopoverParams.value.listbox).toBe(true);
+      expect(lastPopoverParams.value.listboxId).toBe('blok-toolbox-popover');
+    });
+
+    it('passes a searchResults announcement template (from i18n) to the popover', () => {
+       
+      new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      const messages = lastPopoverParams.value.messages as { searchResults?: string } | undefined;
+
+      // mockI18n.t echoes the key back
+      expect(messages?.searchResults).toBe('a11y.searchResults');
+    });
+
+    it('marks the block contentEditable as a combobox and wires activeDescendant on open', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        listboxId: 'blok-toolbox-popover',
+      });
+
+      toolbox.open();
+
+      const ce = mocks.blockAPI.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      expect(ce?.getAttribute('role')).toBe('combobox');
+      expect(ce?.getAttribute('aria-expanded')).toBe('true');
+      expect(ce?.getAttribute('aria-autocomplete')).toBe('list');
+      expect(ce?.getAttribute('aria-haspopup')).toBe('listbox');
+      expect(ce?.getAttribute('aria-controls')).toBe('blok-toolbox-popover');
+      expect(mockPopoverInstance.setActiveDescendantHost).toHaveBeenCalledWith(ce);
+    });
+
+    it('clears combobox roles and activeDescendant host on close', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        listboxId: 'blok-toolbox-popover',
+      });
+
+      toolbox.open();
+
+      const ce = mocks.blockAPI.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      // Simulate a stale aria-activedescendant left by the flipper's virtual focus
+      ce?.setAttribute('aria-activedescendant', 'blok-flipper-item-stale');
+
+      toolbox.close();
+
+      expect(ce?.hasAttribute('role')).toBe(false);
+      expect(ce?.hasAttribute('aria-expanded')).toBe(false);
+      expect(ce?.hasAttribute('aria-activedescendant')).toBe(false);
+      expect(mockPopoverInstance.setActiveDescendantHost).toHaveBeenLastCalledWith(null);
     });
   });
 

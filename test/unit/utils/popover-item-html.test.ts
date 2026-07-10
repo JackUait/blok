@@ -67,6 +67,12 @@ describe('PopoverItemHtml', () => {
     expect(customElement.parentElement).toBe(root);
   });
 
+  it('marks the wrapper as role="presentation" so it is not an invalid owned child of role=menu', () => {
+    const { root } = createItem();
+
+    expect(root.getAttribute('role')).toBe('presentation');
+  });
+
   it('adds hint with provided params when hints are enabled', () => {
     const hint = {
       title: 'HTML hint',

@@ -62,7 +62,7 @@ type LinkToolRenderResult = {
 };
 
 const getInputFromWrapper = (wrapper: HTMLElement): HTMLInputElement => {
-  const input = wrapper.querySelector<HTMLInputElement>('input');
+  const input = wrapper.querySelector<HTMLInputElement>('[data-blok-testid="inline-tool-input"]');
 
   if (!input) {
     throw new Error('Input not found in wrapper');
@@ -75,10 +75,36 @@ const getSuggestionChip = (itemWrapper: HTMLElement): HTMLElement | null => {
   return itemWrapper.querySelector<HTMLElement>('[data-link-suggestion]');
 };
 
+const getTitleInput = (itemWrapper: HTMLElement): HTMLInputElement => {
+  const input = itemWrapper.querySelector<HTMLInputElement>('[data-blok-testid="inline-tool-title-input"]');
+
+  if (!input) {
+    throw new Error('Title input not found in wrapper');
+  }
+
+  return input;
+};
+
+const getRemoveButton = (itemWrapper: HTMLElement): HTMLButtonElement => {
+  const button = itemWrapper.querySelector<HTMLButtonElement>('[data-blok-testid="inline-tool-remove-link"]');
+
+  if (!button) {
+    throw new Error('Remove-link button not found in wrapper');
+  }
+
+  return button;
+};
+
 type LinkConfig = {
   target?: string;
   rel?: string;
   transformHref?: (href: string) => string;
+  transform?: (context: { href: string; text: string; element: HTMLAnchorElement }) => {
+    href?: string;
+    target?: string;
+    rel?: string;
+    attributes?: Record<string, string>;
+  } | void;
 };
 
 const createTool = (linkConfig?: LinkConfig): ToolSetup => {
@@ -176,6 +202,17 @@ describe('LinkInlineTool', () => {
     expect(config.children.width).toBeUndefined();
   });
 
+  it('stretches the input to fill the popover width instead of a fixed pixel width', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    expect(input.className).toContain('w-full');
+    // No standalone fixed pixel width (a `min-w-[200px]` floor is fine).
+    expect(input.className).not.toMatch(/(^|\s)w-\[200px\]/);
+  });
+
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
     const { tool } = createTool();
     const enterSpy = vi.spyOn(tool as unknown as { enterPressed(event: KeyboardEvent): void }, 'enterPressed');
@@ -254,7 +291,7 @@ describe('LinkInlineTool', () => {
     expect(inlineToolbar.close).toHaveBeenCalled();
   });
 
-  it('shows notifier when URL validation fails', () => {
+  it('surfaces the inline validation error (not a toast) when URL validation fails', () => {
     const { tool, notifier } = createTool();
     const renderResult = tool.render() as unknown as LinkToolRenderResult;
     const input = getInputFromWrapper(renderResult.children.items[0].element);
@@ -264,11 +301,50 @@ describe('LinkInlineTool', () => {
 
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
 
-    expect(notifier.show).toHaveBeenCalledWith({
-      message: 'tools.link.invalidLink',
-      style: 'error',
-    });
+    // The failure is surfaced once, via the accessible inline field error —
+    // a duplicate toast would render the same "Invalid link" text twice.
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(notifier.show).not.toHaveBeenCalled();
     expect(insertLinkSpy).not.toHaveBeenCalled();
+  });
+
+  it('marks the input aria-invalid and shows an inline error when validation fails', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    input.value = 'https://google .com';
+
+    (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+    const error = wrapper.querySelector<HTMLElement>('[data-blok-link-tool-error]');
+
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(error).not.toBeNull();
+    expect(error?.hidden).toBe(false);
+    expect(error?.textContent).toBe('tools.link.invalidLink');
+    expect(error?.id).toBeTruthy();
+    expect(input.getAttribute('aria-describedby')).toContain(error?.id ?? '');
+  });
+
+  it('clears the aria-invalid error once the user edits the input', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    input.value = 'https://google .com';
+    (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+
+    input.value = 'https://google.com';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const error = wrapper.querySelector<HTMLElement>('[data-blok-link-tool-error]');
+
+    expect(input.hasAttribute('aria-invalid')).toBe(false);
+    expect(error?.hidden).toBe(true);
   });
 
   it.each([
@@ -287,10 +363,9 @@ describe('LinkInlineTool', () => {
 
     (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
 
-    expect(notifier.show).toHaveBeenCalledWith({
-      message: 'tools.link.invalidLink',
-      style: 'error',
-    });
+    // Rejected via the accessible inline field error, not a duplicate toast.
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(notifier.show).not.toHaveBeenCalled();
     expect(insertLinkSpy).not.toHaveBeenCalled();
   });
 
@@ -431,6 +506,43 @@ describe('LinkInlineTool', () => {
       expect(existing.rel).toBe('sponsored');
     });
 
+    it('forces target="_self" for anchor links even when config sets _blank', () => {
+      const { tool } = createTool({ target: '_blank' });
+      const anchor = insertNewAnchor(tool, '#results');
+
+      expect(anchor.target).toBe('_self');
+    });
+
+    it('forces target="_self" for same-page links even when config sets _blank', () => {
+      const { tool } = createTool({ target: '_blank' });
+      const samePage = `${window.location.origin}${window.location.pathname}#section`;
+      const anchor = insertNewAnchor(tool, samePage);
+
+      expect(anchor.target).toBe('_self');
+    });
+
+    it('forces target="_self" for same-page links when editing an existing anchor', () => {
+      const { tool, selection } = createTool({ target: '_blank' });
+
+      const existing = document.createElement('a');
+
+      existing.href = 'https://old.com';
+      existing.textContent = 'link';
+      document.body.appendChild(existing);
+      selection.findParentTag.mockReturnValue(existing);
+
+      (tool as unknown as { insertLink(link: string): void }).insertLink('#anchor');
+
+      expect(existing.target).toBe('_self');
+    });
+
+    it('keeps the configured target for cross-page links', () => {
+      const { tool } = createTool({ target: '_blank' });
+      const anchor = insertNewAnchor(tool, 'https://google.com');
+
+      expect(anchor.target).toBe('_blank');
+    });
+
     it('transforms the href via transformHref before assigning it to the anchor', () => {
       const transformHref = vi.fn((href: string) => `https://proxy.example/?u=${encodeURIComponent(href)}`);
       const { tool } = createTool({ transformHref });
@@ -438,6 +550,44 @@ describe('LinkInlineTool', () => {
 
       expect(transformHref).toHaveBeenCalledWith('https://google.com/');
       expect(anchor.getAttribute('href')).toBe('https://proxy.example/?u=https%3A%2F%2Fgoogle.com%2F');
+    });
+
+    it('applies the richer transform (href/rel/attributes + anchor text) to created anchors', () => {
+      const transform = vi.fn(() => ({
+        href: 'https://public.example/page',
+        rel: 'noopener',
+        attributes: { class: 'kb-link', 'data-internal': 'true' },
+      }));
+      const { tool } = createTool({ transform });
+      const anchor = insertNewAnchor(tool, 'https://kb.internal/page');
+
+      expect(transform).toHaveBeenCalledWith({
+        href: 'https://kb.internal/page',
+        text: 'selected text',
+        element: anchor,
+      });
+      expect(anchor.getAttribute('href')).toBe('https://public.example/page');
+      expect(anchor.getAttribute('rel')).toBe('noopener');
+      // target omitted by the transform → cross-page default.
+      expect(anchor.getAttribute('target')).toBe('_blank');
+      expect(anchor.getAttribute('class')).toBe('kb-link');
+      expect(anchor.getAttribute('data-internal')).toBe('true');
+    });
+
+    it('applies the richer transform when editing an existing anchor', () => {
+      const { tool, selection } = createTool({ transform: () => ({ href: 'https://rewritten.example/', rel: 'sponsored' }) });
+
+      const existing = document.createElement('a');
+
+      existing.href = 'https://old.com';
+      existing.textContent = 'old text';
+      document.body.appendChild(existing);
+      selection.findParentTag.mockReturnValue(existing);
+
+      (tool as unknown as { insertLink(link: string): void }).insertLink('https://new.com');
+
+      expect(existing.getAttribute('href')).toBe('https://rewritten.example/');
+      expect(existing.getAttribute('rel')).toBe('sponsored');
     });
   });
 
@@ -527,7 +677,7 @@ describe('LinkInlineTool', () => {
       expect(typeEl?.textContent).toBe('Jump to section');
     });
 
-    it('shows suggestion for existing link when popover opens', () => {
+    it('prefills the URL field and suppresses the suggestion chip when editing an existing link', () => {
       const { tool, selection } = createTool();
       const anchor = document.createElement('a');
 
@@ -539,9 +689,10 @@ describe('LinkInlineTool', () => {
       renderResult.children.onOpen();
 
       const itemWrapper = renderResult.children.items[0].element;
-      const urlEl = itemWrapper.querySelector('[data-link-suggestion-url]');
 
-      expect(urlEl?.textContent).toBe('https://notion.so');
+      // Edit mode uses the labeled fields, not the create-mode suggestion chip.
+      expect(getInputFromWrapper(itemWrapper).value).toBe('https://notion.so');
+      expect(getSuggestionChip(itemWrapper)?.classList.contains('hidden')).toBe(true);
     });
 
     it('hides suggestion when popover closes', () => {
@@ -572,7 +723,7 @@ describe('LinkInlineTool', () => {
       expect(inlineToolbar.close).toHaveBeenCalled();
     });
 
-    it('confirmLink shows notifier for complete-looking URL with spaces and does not insert', () => {
+    it('confirmLink surfaces the inline validation error for a complete-looking URL with spaces and does not insert', () => {
       const { tool, notifier } = createTool();
       const renderResult = tool.render() as unknown as LinkToolRenderResult;
       const input = getInputFromWrapper(renderResult.children.items[0].element);
@@ -583,7 +734,10 @@ describe('LinkInlineTool', () => {
 
       (tool as unknown as { confirmLink(): void }).confirmLink();
 
-      expect(notifier.show).toHaveBeenCalledWith({ message: 'tools.link.invalidLink', style: 'error' });
+      // The failure is surfaced once, via the accessible inline field error
+      // (aria-invalid), NOT a duplicate toast notification.
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(notifier.show).not.toHaveBeenCalled();
       expect(insertLinkSpy).not.toHaveBeenCalled();
     });
 
@@ -614,6 +768,149 @@ describe('LinkInlineTool', () => {
 
       expect(insertLinkSpy).not.toHaveBeenCalled();
       expect(inlineToolbar.close).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('edit mode (title field + remove button)', () => {
+    const openEditing = (
+      href = 'https://example.com',
+      text = 'existing text'
+    ): { tool: InstanceType<typeof LinkInlineTool>; selection: SelectionMock; inlineToolbar: { close: ReturnType<typeof vi.fn> }; anchor: HTMLAnchorElement; itemWrapper: HTMLElement } => {
+      const setup = createTool();
+      const anchor = document.createElement('a');
+
+      anchor.setAttribute('href', href);
+      anchor.textContent = text;
+      document.body.appendChild(anchor);
+      setup.selection.findParentTag.mockReturnValue(anchor);
+
+      const renderResult = setup.tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      return {
+        tool: setup.tool,
+        selection: setup.selection,
+        inlineToolbar: setup.inlineToolbar,
+        anchor,
+        itemWrapper: renderResult.children.items[0].element,
+      };
+    };
+
+    it('shows the "Page or URL" and "Link title" field labels when editing', () => {
+      const { itemWrapper } = openEditing();
+      const urlLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-url-label"]');
+      const titleLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-title-label"]');
+
+      expect(urlLabel?.textContent).toBe('tools.link.pageOrUrl');
+      expect(titleLabel?.textContent).toBe('tools.link.linkTitle');
+      expect(urlLabel?.classList.contains('hidden')).toBe(false);
+      expect(titleLabel?.classList.contains('hidden')).toBe(false);
+    });
+
+    it('hides the field labels when creating a new link', () => {
+      const { tool, selection } = createTool();
+
+      selection.findParentTag.mockReturnValue(null);
+
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      const itemWrapper = renderResult.children.items[0].element;
+      const urlLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-url-label"]');
+      const titleLabel = itemWrapper.querySelector<HTMLElement>('[data-blok-testid="inline-tool-title-label"]');
+
+      expect(urlLabel?.classList.contains('hidden')).toBe(true);
+      expect(titleLabel?.classList.contains('hidden')).toBe(true);
+    });
+
+    it('orders the URL field above the title field', () => {
+      const { itemWrapper } = openEditing();
+      const url = getInputFromWrapper(itemWrapper);
+      const title = getTitleInput(itemWrapper);
+
+      // Node.DOCUMENT_POSITION_FOLLOWING (4): title comes after url in the DOM.
+      expect(url.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('reveals the title field prefilled with the link text and the remove button when editing', () => {
+      const { itemWrapper } = openEditing('https://example.com', 'Blok repo');
+      const titleInput = getTitleInput(itemWrapper);
+      const removeButton = getRemoveButton(itemWrapper);
+
+      expect(titleInput.value).toBe('Blok repo');
+      expect(titleInput.classList.contains('hidden')).toBe(false);
+      expect(removeButton.classList.contains('hidden')).toBe(false);
+    });
+
+    it('keeps the title field and remove button hidden when creating a new link', () => {
+      const { tool, selection } = createTool();
+
+      selection.findParentTag.mockReturnValue(null);
+
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onOpen();
+
+      const itemWrapper = renderResult.children.items[0].element;
+
+      expect(getTitleInput(itemWrapper).classList.contains('hidden')).toBe(true);
+      expect(getRemoveButton(itemWrapper).classList.contains('hidden')).toBe(true);
+    });
+
+    it('removes the link and closes the toolbar when the remove button is clicked', () => {
+      const { itemWrapper, inlineToolbar } = openEditing('https://example.com', 'link text');
+      const removeButton = getRemoveButton(itemWrapper);
+
+      removeButton.click();
+
+      expect(document.querySelector('a')).toBeNull();
+      expect(document.body).toHaveTextContent('link text');
+      expect(inlineToolbar.close).toHaveBeenCalled();
+    });
+
+    it('rewrites the anchor text when the title field changes before confirming', () => {
+      const { tool, itemWrapper, anchor } = openEditing('https://old.com', 'old text');
+      const titleInput = getTitleInput(itemWrapper);
+      const urlInput = getInputFromWrapper(itemWrapper);
+
+      titleInput.value = 'new title';
+      urlInput.value = 'https://new.com';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      expect(anchor.getAttribute('href')).toBe('https://new.com');
+      expect(anchor.textContent).toBe('new title');
+    });
+
+    it('leaves the anchor content untouched when the title field is unchanged', () => {
+      const { tool, itemWrapper, anchor } = openEditing('https://old.com', 'keep me');
+
+      anchor.innerHTML = '<strong>keep me</strong>';
+
+      const urlInput = getInputFromWrapper(itemWrapper);
+
+      urlInput.value = 'https://new.com';
+
+      (tool as unknown as { confirmLink(): void }).confirmLink();
+
+      // Title unchanged → formatting preserved (not flattened to plain text).
+      expect(anchor.querySelector('strong')).not.toBeNull();
+    });
+
+    it('clears and hides the title field and remove button when the popover closes', () => {
+      const { tool, itemWrapper } = openEditing('https://example.com', 'text');
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+
+      renderResult.children.onClose();
+
+      const titleInput = getTitleInput(itemWrapper);
+      const removeButton = getRemoveButton(itemWrapper);
+
+      expect(titleInput.value).toBe('');
+      expect(titleInput.classList.contains('hidden')).toBe(true);
+      expect(removeButton.classList.contains('hidden')).toBe(true);
     });
   });
 

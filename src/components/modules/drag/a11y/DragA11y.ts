@@ -23,7 +23,9 @@ export class DragA11y {
   private i18n: I18nAdapter;
   private announcer: AnnouncerAdapter;
   private lastAnnouncedDropIndex: number | null = null;
-  private pendingAnnouncementIndex: number | null = null;
+  private lastAnnouncedKey: string | null = null;
+  private pendingKey: string | null = null;
+  private pendingMessage: (() => string) | null = null;
   private announcementTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -44,56 +46,80 @@ export class DragA11y {
    * @param targetEdge - Edge of target ('top' or 'bottom')
    */
   announceDropPosition(targetBlock: Block, targetEdge: 'top' | 'bottom' | 'left' | 'right'): void {
-    // Horizontal (column-creating) drops do not reorder by index, so the
-    // position announcement does not apply. A dedicated phrasing needs new
-    // i18n keys across all 68 locales; that string round is deferred together
-    // with the rest of the columns a11y work, so skip the announcement here.
+    // Horizontal drops create a column left/right of the target rather than
+    // reordering by index, so they get a dedicated phrasing.
     if (targetEdge === 'left' || targetEdge === 'right') {
+      const i18nKey = targetEdge === 'left' ? 'a11y.dropCreateColumnLeft' : 'a11y.dropCreateColumnRight';
+
+      this.scheduleAnnouncement(`column-${targetEdge}`, () => this.i18n.t(i18nKey));
+
       return;
     }
 
     const targetIndex = this.blockManager.getBlockIndex(targetBlock);
     const dropIndex = targetEdge === 'top' ? targetIndex : targetIndex + 1;
 
-    // Don't announce if position hasn't changed
-    if (this.lastAnnouncedDropIndex === dropIndex) {
-      return;
-    }
+    this.scheduleAnnouncement(`index-${dropIndex}`, () => {
+      this.lastAnnouncedDropIndex = dropIndex;
 
-    // Store the pending announcement
-    this.pendingAnnouncementIndex = dropIndex;
+      const total = this.blockManager.blocks.length;
+
+      return this.i18n.t('a11y.dropPosition', {
+        position: dropIndex + 1,
+        total,
+      });
+    });
+  }
+
+  /**
+   * Throttles and de-duplicates a polite drop announcement.
+   * Only the most recent pending announcement fires once the throttle elapses,
+   * and an identical consecutive announcement (same dedupe key) is suppressed.
+   * @param dedupeKey - Stable identity of the announcement to suppress repeats
+   * @param buildMessage - Lazily builds the message when the throttle fires
+   */
+  private scheduleAnnouncement(dedupeKey: string, buildMessage: () => string): void {
+    // Always record the CURRENT position first (last one wins): an
+    // already-scheduled timeout reads this at fire time, so returning to the
+    // last-announced position within the throttle window overwrites a stale
+    // pending position instead of letting it fire.
+    this.pendingKey = dedupeKey;
+    this.pendingMessage = buildMessage;
 
     // If there's already a pending timeout, let it handle the announcement
     if (this.announcementTimeoutId !== null) {
       return;
     }
 
-    // Schedule the announcement with throttling
-    this.announcementTimeoutId = setTimeout(() => {
-      if (this.pendingAnnouncementIndex === null) {
-        return;
-      }
+    // Nothing new to announce and no timeout in flight — don't schedule one
+    if (this.lastAnnouncedKey === dedupeKey) {
+      this.pendingKey = null;
+      this.pendingMessage = null;
 
-      const pendingIndex = this.pendingAnnouncementIndex;
+      return;
+    }
+
+    this.announcementTimeoutId = setTimeout(() => {
+      const pendingKey = this.pendingKey;
+      const pendingMessage = this.pendingMessage;
 
       // Clear the timeout state
       this.announcementTimeoutId = null;
-      this.pendingAnnouncementIndex = null;
+      this.pendingKey = null;
+      this.pendingMessage = null;
 
-      // Don't announce if it's the same as what we already announced
-      if (this.lastAnnouncedDropIndex === pendingIndex) {
+      if (pendingKey === null || pendingMessage === null) {
         return;
       }
 
-      this.lastAnnouncedDropIndex = pendingIndex;
+      // Don't announce if it's the same as what we already announced
+      if (this.lastAnnouncedKey === pendingKey) {
+        return;
+      }
 
-      const total = this.blockManager.blocks.length;
-      const message = this.i18n.t('a11y.dropPosition', {
-        position: pendingIndex + 1,
-        total,
-      });
+      this.lastAnnouncedKey = pendingKey;
 
-      this.announcer.announce(message, { politeness: 'polite' });
+      this.announcer.announce(pendingMessage(), { politeness: 'polite' });
     }, DRAG_CONFIG.announcementThrottleMs);
   }
 
@@ -165,7 +191,9 @@ export class DragA11y {
     }
 
     this.lastAnnouncedDropIndex = null;
-    this.pendingAnnouncementIndex = null;
+    this.lastAnnouncedKey = null;
+    this.pendingKey = null;
+    this.pendingMessage = null;
   }
 
   /**

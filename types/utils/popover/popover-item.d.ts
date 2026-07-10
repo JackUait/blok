@@ -308,6 +308,14 @@ export type PopoverItemRenderParamsMap = {
      * True by default. Set to false for inline tools where icons are displayed without titles.
      */
     iconWithGap?: boolean;
+
+    /**
+     * ARIA role for the item's root element.
+     * 'menuitem' (default) for menu popovers; 'option' for listbox popovers
+     * (e.g. the Toolbox combobox). When 'menuitem', toggleable items are
+     * automatically upgraded to 'menuitemcheckbox' with aria-checked.
+     */
+    menuItemRole?: 'menuitem' | 'option';
   };
 
   [PopoverItemType.Html]?: PopoverItemCommonRenderParams & {

@@ -582,6 +582,43 @@
   overflow: auto;
 }
 
+/* Preview scroll containers reserve the scrollbar's layout space; the styled
+   ::-webkit-scrollbar keeps it classic (space-taking) instead of an overlay
+   scrollbar painting over the content. */
+.blok-file-preview-pre,
+.blok-file-preview-md,
+.blok-file-preview-office {
+  scrollbar-gutter: stable both-edges;
+}
+.blok-file-preview-pre::-webkit-scrollbar,
+.blok-file-preview-md::-webkit-scrollbar,
+.blok-file-preview-office::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.blok-file-preview-pre::-webkit-scrollbar-track,
+.blok-file-preview-md::-webkit-scrollbar-track,
+.blok-file-preview-office::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* Thumb hidden at rest (system auto-hide behavior), revealed on hover. */
+.blok-file-preview-pre::-webkit-scrollbar-thumb,
+.blok-file-preview-md::-webkit-scrollbar-thumb,
+.blok-file-preview-office::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--blok-space-1);
+}
+.blok-file-preview-pre:hover::-webkit-scrollbar-thumb,
+.blok-file-preview-md:hover::-webkit-scrollbar-thumb,
+.blok-file-preview-office:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+.blok-file-preview-pre::-webkit-scrollbar-thumb:hover,
+.blok-file-preview-md::-webkit-scrollbar-thumb:hover,
+.blok-file-preview-office::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, currentColor 25%, transparent);
+}
+
 /* Source pane — shared by the markdown raw view, code-file previews, and
    plain-text previews. Reads like a code editor: comfortable monospace,
    generous gutters, small tab stops. Code/text keep `pre` so columns stay

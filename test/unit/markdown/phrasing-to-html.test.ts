@@ -66,6 +66,18 @@ describe('phrasingToHtml', () => {
     );
   });
 
+  it('opens anchor-only links in the same window (target="_self")', () => {
+    const nodes: PhrasingContent[] = [{
+      type: 'link',
+      url: '#results',
+      children: [{ type: 'text', value: 'jump' }],
+    }];
+
+    expect(phrasingToHtml(nodes)).toBe(
+      '<a href="#results" target="_self" rel="noopener noreferrer nofollow">jump</a>'
+    );
+  });
+
   it('escapes quotes in link URLs', () => {
     const nodes: PhrasingContent[] = [{
       type: 'link',

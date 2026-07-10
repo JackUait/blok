@@ -49,7 +49,7 @@ export interface ResolvedPosition {
  * When neither side fits, stays on the preferred side so the popover remains adjacent
  * to the anchor instead of getting clamped to a distant boundary edge.
  */
-function shouldFlip(popoverDimension: number, spaceOnPreferred: number, spaceOnAlternate: number): boolean {
+export function shouldFlip(popoverDimension: number, spaceOnPreferred: number, spaceOnAlternate: number): boolean {
   if (popoverDimension <= spaceOnPreferred) {
     return false;
   }

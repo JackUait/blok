@@ -78,39 +78,13 @@ export function parseNextSpaceBlocks(json: string): NextSpaceParsedBlock[] | nul
     return null;
   }
 
-  const blocks = (parsed as { blocks?: unknown }).blocks;
+  const envelope = decodeEnvelope(parsed as Record<string, unknown>);
 
-  if (!Array.isArray(blocks) || blocks.length === 0) {
+  if (envelope === null) {
     return null;
   }
 
-  // Merge every entry's `subTree` map into one uuid → node lookup, and remember
-  // the top-level (selected) order from the `blocks` array.
-  const byId = new Map<string, NextSpaceNode>();
-
-  blocks.forEach((entry) => {
-    const subTree = (entry as { subTree?: Record<string, NextSpaceNode> })?.subTree;
-
-    if (subTree === undefined || subTree === null || typeof subTree !== 'object') {
-      return;
-    }
-
-    Object.values(subTree).forEach((value) => {
-      if (value !== undefined && value !== null && typeof value === 'object' && typeof value.uuid === 'string') {
-        byId.set(value.uuid, value);
-      }
-    });
-  });
-
-  // Require envelope structure: at least one resolvable node.
-  if (byId.size === 0) {
-    return null;
-  }
-
-  const topLevelOrder = blocks
-    .map((entry) => (entry as { id?: string })?.id)
-    .filter((id): id is string => typeof id === 'string');
-
+  const { byId, topLevelOrder } = envelope;
   const result: NextSpaceParsedBlock[] = [];
   const visited = new Set<string>();
 
@@ -174,6 +148,60 @@ export function parseNextSpaceBlocks(json: string): NextSpaceParsedBlock[] | nul
   topLevelOrder.forEach((id) => walk(id, null));
 
   return result;
+}
+
+/**
+ * Decode a buildin clipboard payload into a uuid → node lookup plus the
+ * top-level document order, or `null` when no buildin nodes are present.
+ *
+ * Two envelope shapes are accepted:
+ *  - `text/next-space-blocks` (multi-block copy): `{ blocks: [{ id, subTree }] }`
+ *    — order comes from the `blocks` array.
+ *  - `text/next-space-content` (single-block copy): the `blocks` wrapper is
+ *    absent, so nodes are read from `subTree`, a bare node, or a raw node-map,
+ *    and every node whose parent is outside the copied set is a top-level root.
+ */
+function decodeEnvelope(parsed: Record<string, unknown>): { byId: Map<string, NextSpaceNode>; topLevelOrder: string[] } | null {
+  const byId = new Map<string, NextSpaceNode>();
+  const blocks = (parsed as { blocks?: unknown }).blocks;
+
+  if (Array.isArray(blocks) && blocks.length > 0) {
+    blocks.forEach((entry) => indexNodes((entry as { subTree?: unknown })?.subTree, byId));
+
+    if (byId.size === 0) {
+      return null;
+    }
+
+    const topLevelOrder = blocks
+      .map((entry) => (entry as { id?: string })?.id)
+      .filter((id): id is string => typeof id === 'string');
+
+    return { byId, topLevelOrder };
+  }
+
+  const subTree = (parsed as { subTree?: unknown }).subTree;
+
+  if (subTree !== undefined) {
+    indexNodes(subTree, byId);
+  } else if (isNextSpaceNode(parsed)) {
+    byId.set(parsed.uuid, parsed);
+  } else {
+    indexNodes(parsed, byId);
+  }
+
+  if (byId.size === 0) {
+    return null;
+  }
+
+  const topLevelOrder = [...byId.values()]
+    .filter((node) => {
+      const parentId = (node as { parentId?: unknown }).parentId;
+
+      return typeof parentId !== 'string' || !byId.has(parentId);
+    })
+    .map((node) => node.uuid);
+
+  return { byId, topLevelOrder };
 }
 
 /**
@@ -468,6 +496,12 @@ function safeJsonParse(json: string): unknown {
  * `{}` — so this currently joins the HTML-escaped `text` of each segment, which
  * is correct and lossless for plain text.
  *
+ * Soft line breaks (Shift+Enter) are carried as literal `\n` characters in the
+ * segment text. A raw newline collapses to a single space when assigned as
+ * innerHTML, so each is converted to a `<br>` — otherwise multi-line text
+ * flattens onto one line on paste. (Code blocks keep their real newlines: they
+ * read segment text via {@link plainText}, not this function.)
+ *
  * EXTENSION POINT: inline marks (bold / italic / link / colour) live in
  * `segment.enhancer`; to render them, branch here on the enhancer's keys and
  * wrap the escaped text accordingly (mirroring notion-blocks-v3's `segmentHtml`).
@@ -479,9 +513,19 @@ function segmentsToHtml(segments: unknown): string {
     return '';
   }
 
-  return segments
-    .map((segment) => (isPlainObject(segment) && typeof segment.text === 'string' ? escapeHtml(segment.text) : ''))
-    .join('');
+  return newlinesToBr(
+    segments
+      .map((segment) => (isPlainObject(segment) && typeof segment.text === 'string' ? escapeHtml(segment.text) : ''))
+      .join('')
+  );
+}
+
+/**
+ * Replace literal line breaks (`\n`, `\r\n`, `\r`) with `<br>`. Run AFTER HTML
+ * escaping so the inserted tags are not themselves escaped.
+ */
+function newlinesToBr(html: string): string {
+  return html.replace(/\r\n?|\n/g, '<br>');
 }
 
 /** Concatenate a buildin `segments` array into raw plain text (no escaping). */
@@ -512,6 +556,24 @@ function firstHttpUrl(...candidates: unknown[]): string | null {
 /** Whether a value is a non-null, non-array object. */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Whether a value is a buildin block node (the minimal `{ uuid, type }` shape). */
+function isNextSpaceNode(value: unknown): value is NextSpaceNode {
+  return isPlainObject(value) && typeof value.uuid === 'string' && typeof value.type === 'number';
+}
+
+/** Add every buildin node found among a map's values to `byId`. */
+function indexNodes(map: unknown, byId: Map<string, NextSpaceNode>): void {
+  if (!isPlainObject(map)) {
+    return;
+  }
+
+  Object.values(map).forEach((value) => {
+    if (isNextSpaceNode(value)) {
+      byId.set(value.uuid, value);
+    }
+  });
 }
 
 /** Escape `&`, `<`, `>` for HTML text content. */

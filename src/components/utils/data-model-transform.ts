@@ -1129,6 +1129,29 @@ const stripHierarchyFields = (block: OutputBlockData): OutputBlockData => {
 };
 
 /**
+ * Decide how to emit a non-list block during legacy collapse.
+ *
+ * A non-list block nested under a list cannot be folded into the list's legacy
+ * items[] (see processRootListItem), so keep it flat WITH its parent ref — the
+ * parent list block carries a matching content[] ref, so the nesting survives.
+ * Every other non-list block becomes a legacy root block (no parent/content).
+ */
+const collapseNonListBlock = (
+  block: OutputBlockData,
+  blockMap: Map<BlockId, OutputBlockData>
+): OutputBlockData => {
+  const parentBlock = block.parent !== undefined ? blockMap.get(block.parent) : undefined;
+
+  if (parentBlock !== undefined && parentBlock.type === 'list') {
+    const { content: _content, ...keptWithParent } = block;
+
+    return keptWithParent;
+  }
+
+  return stripHierarchyFields(block);
+};
+
+/**
  * Collect child items from content IDs
  */
 const collectChildItems = (
@@ -1212,6 +1235,19 @@ const processRootListItem = (
   const style = isObjectWithStyle(data) ? data.style : 'unordered';
   const start = isObjectWithStart(data) ? data.start : undefined;
 
+  // A list block may have NON-list structural children (e.g. a quote/paragraph
+  // dragged into the list). Legacy `items[]` can only represent list sub-items,
+  // so these children cannot be folded into the list — collectChildItems above
+  // deliberately skips them. Preserve the hierarchy by keeping a `content[]` ref
+  // to each non-list child (the children themselves stay flat with their
+  // `parent` ref, see the isNonListItem branch in collapseToLegacy). Without
+  // this, the child's nesting is silently dropped on save.
+  const nonListContent = (block.content ?? []).filter((childId) => {
+    const child = blockMap.get(childId);
+
+    return child !== undefined && child.type !== 'list';
+  });
+
   const listBlock: OutputBlockData = {
     id: block.id,
     type: 'list',
@@ -1221,6 +1257,7 @@ const processRootListItem = (
       ...(style === 'ordered' && start !== undefined && start !== 1 ? { start } : {}),
     } as LegacyListData,
     ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
+    ...(nonListContent.length > 0 ? { content: nonListContent } : {}),
   };
 
   return listBlock;
@@ -1484,6 +1521,72 @@ const mergeContentIds = (
   return merged;
 };
 
+/**
+ * Ids that must keep their flat parent/content hierarchy through a legacy
+ * collapse: every `table` block that references its cell content by block id
+ * (`data.content[row][col].blocks`) plus each referenced child.
+ *
+ * A Blok-native table always stores its cells as child blocks — even inside a
+ * document whose top-level shape is otherwise legacy. Unlike list/toggle/callout
+ * (whose bodies fold inline into legacy fields), a table has NO inline legacy
+ * body to fold cell blocks into, so the collapse's strip paths would eject the
+ * cell paragraphs to the document root (dropping the table's `content` and each
+ * cell's `parent`) — silent data loss. Preserving the subtree as-is keeps the
+ * table in its Blok-native block-ref shape, which round-trips correctly.
+ * @param blocks - flat block array being collapsed
+ */
+/** Extracts the string block-ref child ids from a single table cell's `blocks`. */
+const collectCellRefChildIds = (cell: unknown): string[] => {
+  const cellBlocks = (cell as { blocks?: unknown }).blocks;
+
+  if (!Array.isArray(cellBlocks)) {
+    return [];
+  }
+
+  return cellBlocks.filter((childId): childId is string => typeof childId === 'string');
+};
+
+/** Extracts the string block-ref child ids from a single table row. */
+const collectRowRefChildIds = (row: unknown): string[] => {
+  if (!Array.isArray(row)) {
+    return [];
+  }
+
+  return row.flatMap((cell) => collectCellRefChildIds(cell));
+};
+
+/** Extracts every string block-ref child id from a table's `data.content` grid. */
+const collectTableRefChildIds = (content: unknown[]): string[] =>
+  content.flatMap((row) => collectRowRefChildIds(row));
+
+const collectPreservedContainerSubtreeIds = (blocks: OutputBlockData[]): Set<BlockId> => {
+  const preserved = new Set<BlockId>();
+
+  for (const block of blocks) {
+    if (block.type !== 'table' || block.id === undefined || block.id === null) {
+      continue;
+    }
+
+    const content = (block.data as { content?: unknown }).content;
+
+    if (!Array.isArray(content)) {
+      continue;
+    }
+
+    const refChildIds = collectTableRefChildIds(content);
+
+    for (const childId of refChildIds) {
+      preserved.add(childId);
+    }
+
+    if (refChildIds.length > 0) {
+      preserved.add(block.id);
+    }
+  }
+
+  return preserved;
+};
+
 export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] => {
   // Defense-in-depth: reconcile each parent's content[] from children's parent
   // fields before processing. Saver is the primary source of truth for content[]
@@ -1525,6 +1628,12 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
   }
 
+  // Self-managing containers (tables) keep their child-block subtree flat
+  // instead of being stripped — see collectPreservedContainerSubtreeIds.
+  const preservedIds = collectPreservedContainerSubtreeIds(reconciledBlocks);
+  const isPreserved = (block: OutputBlockData): boolean =>
+    block.id !== undefined && block.id !== null && preservedIds.has(block.id);
+
   // If no flat-model list, toggle, or callout blocks, just strip hierarchy fields and return
   const hasFlatListBlocks = reconciledBlocks.some(isFlatModelListBlock);
   const hasFlatToggleBlocks = reconciledBlocks.some(isFlatModelToggleBlock);
@@ -1532,7 +1641,7 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
   const hasFlatCalloutBlocks = reconciledBlocks.some(isFlatModelCalloutBlock);
 
   if (!hasFlatListBlocks && !hasFlatToggleBlocks && !hasFlatToggleableHeaders && !hasFlatCalloutBlocks) {
-    return reconciledBlocks.map(stripHierarchyFields);
+    return reconciledBlocks.map(block => (isPreserved(block) ? block : stripHierarchyFields(block)));
   }
 
   // Process blocks, converting root flat-model list blocks to legacy List blocks
@@ -1581,7 +1690,7 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
 
     if (isNonListItem) {
-      result.push(stripHierarchyFields(block));
+      result.push(isPreserved(block) ? block : collapseNonListBlock(block, blockMap));
       markBlockAsProcessed(block.id, processedIds);
     }
   }

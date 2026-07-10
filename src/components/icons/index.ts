@@ -155,55 +155,55 @@ export const IconSearch = `
 // Heading 1 icon
 export const IconH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.46 5.5V15H5.43V10.9H9.04V15H11V5.5H9.04V9.15H5.43V5.5Z" fill="currentColor"/>
-  <path d="M15.56 15V9.12H14.61Q14.56 9.45 14.4 9.68Q14.24 9.91 14.01 10.05Q13.78 10.18 13.49 10.24Q13.2 10.29 12.89 10.29V11.18H14.37V15Z" fill="currentColor"/>
+  <path d="M4.09 5.5V15M10.36 5.5V15M4.09 10.1H10.36" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13.5 10.1L14.5 9.3V15" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Heading 2 icon
 export const IconH2 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.46 5.5V15H5.43V10.9H9.04V15H11V5.5H9.04V9.15H5.43V5.5Z" fill="currentColor"/>
-  <path d="M12.58 11.38H13.72Q13.72 11.14 13.77 10.9Q13.82 10.66 13.93 10.47Q14.03 10.27 14.22 10.15Q14.4 10.03 14.66 10.03Q15.04 10.03 15.29 10.26Q15.54 10.5 15.54 10.93Q15.54 11.2 15.42 11.41Q15.3 11.62 15.11 11.79Q14.93 11.96 14.72 12.1Q14.5 12.24 14.3 12.37Q13.93 12.63 13.59 12.88Q13.24 13.13 12.99 13.43Q12.74 13.73 12.59 14.11Q12.45 14.49 12.45 15H16.77V13.97H13.98Q14.2 13.67 14.49 13.45Q14.77 13.22 15.08 13.02Q15.38 12.82 15.68 12.62Q15.98 12.42 16.21 12.17Q16.45 11.92 16.59 11.61Q16.73 11.29 16.73 10.84Q16.73 10.41 16.57 10.07Q16.4 9.72 16.13 9.49Q15.85 9.25 15.48 9.13Q15.12 9 14.72 9Q14.19 9 13.78 9.18Q13.37 9.36 13.1 9.68Q12.83 10.01 12.7 10.44Q12.56 10.87 12.58 11.38Z" fill="currentColor"/>
+  <path d="M4.09 5.5V15M10.36 5.5V15M4.09 10.1H10.36" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.9 10.6Q12.9 9.3 14.4 9.3Q15.9 9.3 15.9 10.75Q15.9 11.8 14.3 13L12.9 15H16" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Heading 3 icon
 export const IconH3 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.46 5.5V15H5.43V10.9H9.04V15H11V5.5H9.04V9.15H5.43V5.5Z" fill="currentColor"/>
-  <path d="M14.19 11.5V12.34Q14.4 12.34 14.64 12.35Q14.88 12.36 15.09 12.44Q15.29 12.52 15.42 12.7Q15.55 12.87 15.55 13.21Q15.55 13.64 15.27 13.89Q14.99 14.13 14.59 14.13Q14.33 14.13 14.14 14.04Q13.95 13.95 13.82 13.79Q13.7 13.64 13.63 13.42Q13.56 13.21 13.56 12.97H12.42Q12.41 13.49 12.57 13.88Q12.72 14.28 13.01 14.55Q13.3 14.82 13.7 14.97Q14.11 15.11 14.61 15.11Q15.03 15.11 15.43 14.98Q15.82 14.86 16.13 14.61Q16.43 14.37 16.61 14.01Q16.79 13.65 16.79 13.18Q16.79 12.68 16.51 12.32Q16.24 11.96 15.75 11.85V11.83Q16.16 11.71 16.37 11.39Q16.57 11.06 16.57 10.63Q16.57 10.24 16.4 9.93Q16.22 9.63 15.94 9.42Q15.66 9.21 15.3 9.11Q14.95 9 14.6 9Q14.14 9 13.77 9.15Q13.4 9.29 13.14 9.56Q12.88 9.83 12.73 10.21Q12.58 10.58 12.56 11.03H13.7Q13.69 10.58 13.92 10.28Q14.15 9.98 14.61 9.98Q14.93 9.98 15.19 10.18Q15.44 10.39 15.44 10.76Q15.44 11.02 15.32 11.17Q15.19 11.32 15.01 11.4Q14.82 11.48 14.6 11.5Q14.38 11.51 14.19 11.5Z" fill="currentColor"/>
+  <path d="M4.09 5.5V15M10.36 5.5V15M4.09 10.1H10.36" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.95 10.2Q13.1 9.3 14.45 9.3Q15.85 9.3 15.85 10.55Q15.85 11.75 14.4 11.85Q15.95 11.95 15.95 13.2Q15.95 15 14.4 15Q13.05 15 12.9 13.7" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Heading 4 icon
 export const IconH4 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.46 5.5V15H5.43V10.9H9.04V15H11V5.5H9.04V9.15H5.43V5.5Z" fill="currentColor"/>
-  <path d="M14.89 10.61V12.66H13.35L14.87 10.61ZM14.89 13.64V15H16.03V13.64H16.81V12.66H16.03V9.12H14.96L12.4 12.55V13.64Z" fill="currentColor"/>
+  <path d="M4.09 5.5V15M10.36 5.5V15M4.09 10.1H10.36" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.35 9.3L12.7 13.35H16.15M15.35 11.2V15" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Heading 5 icon
 export const IconH5 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.46 5.5V15H5.43V10.9H9.04V15H11V5.5H9.04V9.15H5.43V5.5Z" fill="currentColor"/>
-  <path d="M16.47 10.1V9.12H13.19L12.61 12.37H13.68Q13.86 12.13 14.06 12.01Q14.26 11.9 14.58 11.9Q14.82 11.9 15.01 11.98Q15.19 12.07 15.33 12.22Q15.46 12.37 15.53 12.57Q15.6 12.77 15.6 13Q15.6 13.22 15.53 13.42Q15.45 13.63 15.32 13.79Q15.19 13.94 15.01 14.04Q14.82 14.13 14.58 14.13Q14.18 14.13 13.92 13.89Q13.66 13.66 13.61 13.25H12.42Q12.43 13.71 12.61 14.06Q12.79 14.41 13.09 14.65Q13.4 14.88 13.79 15Q14.18 15.11 14.61 15.11Q15.05 15.12 15.45 14.96Q15.84 14.81 16.14 14.52Q16.44 14.24 16.61 13.84Q16.79 13.45 16.79 13Q16.79 12.59 16.67 12.22Q16.55 11.86 16.32 11.59Q16.09 11.32 15.75 11.16Q15.41 11 14.98 11Q14.62 11 14.35 11.11Q14.07 11.21 13.82 11.45L13.81 11.44L14.04 10.1Z" fill="currentColor"/>
+  <path d="M4.09 5.5V15M10.36 5.5V15M4.09 10.1H10.36" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.75 9.4H13.2L12.95 12.05Q13.55 11.5 14.4 11.5Q15.95 11.5 15.95 13.2Q15.95 15 14.35 15Q13 15 12.9 13.6" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Heading 6 icon
 export const IconH6 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.46 5.5V15H5.43V10.9H9.04V15H11V5.5H9.04V9.15H5.43V5.5Z" fill="currentColor"/>
-  <path d="M14.67 11.95Q14.9 11.95 15.07 12.05Q15.24 12.14 15.35 12.3Q15.46 12.45 15.52 12.65Q15.57 12.85 15.57 13.06Q15.57 13.26 15.51 13.45Q15.45 13.65 15.34 13.8Q15.22 13.95 15.06 14.04Q14.89 14.13 14.67 14.13Q14.45 14.13 14.27 14.04Q14.09 13.95 13.97 13.79Q13.85 13.64 13.79 13.44Q13.72 13.24 13.72 13.04Q13.72 12.82 13.78 12.63Q13.84 12.43 13.96 12.28Q14.08 12.13 14.26 12.04Q14.44 11.95 14.67 11.95ZM15.53 10.63H16.66Q16.61 10.24 16.45 9.93Q16.3 9.63 16.04 9.42Q15.79 9.22 15.46 9.11Q15.14 9 14.76 9Q14.13 9 13.69 9.28Q13.25 9.55 12.98 10Q12.7 10.44 12.57 10.98Q12.45 11.53 12.45 12.08Q12.45 12.64 12.55 13.18Q12.65 13.72 12.91 14.15Q13.17 14.58 13.61 14.84Q14.04 15.11 14.71 15.11Q15.17 15.11 15.55 14.95Q15.93 14.78 16.2 14.49Q16.47 14.2 16.62 13.81Q16.77 13.42 16.77 12.97Q16.77 12.61 16.66 12.27Q16.55 11.92 16.31 11.66Q16.06 11.38 15.7 11.21Q15.34 11.05 14.96 11.05Q14.53 11.05 14.2 11.2Q13.88 11.35 13.63 11.71L13.61 11.69Q13.62 11.45 13.68 11.13Q13.74 10.82 13.87 10.55Q13.99 10.28 14.21 10.09Q14.42 9.9 14.74 9.9Q15.05 9.9 15.26 10.12Q15.47 10.34 15.53 10.63Z" fill="currentColor"/>
+  <path d="M4.09 5.5V15M10.36 5.5V15M4.09 10.1H10.36" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.6 10.1Q15.3 9.3 14.35 9.3Q12.9 9.3 12.9 12.15Q12.9 15 14.4 15Q15.95 15 15.95 13.3Q15.95 11.65 14.45 11.65Q13.15 11.65 12.95 12.8" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Heading icon
 export const IconHeading = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M6.03 5V15H8.1V10.69H11.9V15H13.97V5H11.9V8.84H8.1V5Z" fill="currentColor"/>
+  <path d="M6.67 5V15M13.33 5V15M6.67 10H13.33" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -256,9 +256,9 @@ export const IconListBulleted = `
 export const IconListNumbered = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M8 5h9M8 10h9M8 15h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M4.65 7V3.08H4.01Q3.98 3.3 3.87 3.45Q3.77 3.61 3.61 3.7Q3.46 3.79 3.27 3.83Q3.07 3.86 2.86 3.86V4.46H3.85V7Z" fill="currentColor"/>
-  <path d="M2.66 9.59H3.42Q3.42 9.43 3.45 9.27Q3.48 9.11 3.55 8.98Q3.63 8.85 3.75 8.76Q3.87 8.68 4.04 8.68Q4.3 8.68 4.46 8.84Q4.63 9 4.63 9.29Q4.63 9.47 4.55 9.61Q4.47 9.75 4.35 9.86Q4.23 9.97 4.08 10.06Q3.93 10.16 3.81 10.25Q3.55 10.42 3.33 10.59Q3.1 10.76 2.93 10.96Q2.76 11.15 2.67 11.41Q2.57 11.66 2.57 12H5.45V11.32H3.59Q3.74 11.11 3.93 10.96Q4.12 10.81 4.32 10.68Q4.52 10.55 4.72 10.41Q4.92 10.28 5.08 10.11Q5.23 9.95 5.33 9.74Q5.42 9.52 5.42 9.23Q5.42 8.94 5.32 8.71Q5.21 8.48 5.02 8.32Q4.84 8.17 4.59 8.08Q4.35 8 4.08 8Q3.73 8 3.46 8.12Q3.18 8.24 3 8.46Q2.83 8.67 2.74 8.96Q2.65 9.25 2.66 9.59Z" fill="currentColor"/>
-  <path d="M3.73 14.66V15.22Q3.87 15.22 4.03 15.23Q4.19 15.24 4.33 15.29Q4.46 15.35 4.55 15.46Q4.63 15.58 4.63 15.81Q4.63 16.09 4.45 16.26Q4.27 16.42 4 16.42Q3.82 16.42 3.7 16.36Q3.57 16.3 3.49 16.2Q3.4 16.09 3.36 15.95Q3.31 15.81 3.31 15.65H2.55Q2.55 15.99 2.65 16.25Q2.75 16.52 2.94 16.7Q3.13 16.88 3.41 16.98Q3.68 17.07 4.01 17.07Q4.29 17.07 4.56 16.99Q4.82 16.9 5.02 16.74Q5.22 16.58 5.34 16.34Q5.46 16.1 5.46 15.79Q5.46 15.45 5.28 15.21Q5.09 14.97 4.77 14.9V14.89Q5.04 14.81 5.18 14.59Q5.32 14.37 5.32 14.09Q5.32 13.82 5.2 13.62Q5.08 13.42 4.9 13.28Q4.71 13.14 4.47 13.07Q4.24 13 4 13Q3.7 13 3.45 13.1Q3.21 13.2 3.03 13.38Q2.85 13.55 2.76 13.8Q2.66 14.05 2.65 14.36H3.4Q3.4 14.05 3.55 13.85Q3.7 13.66 4.01 13.66Q4.23 13.66 4.39 13.79Q4.56 13.92 4.56 14.18Q4.56 14.34 4.48 14.45Q4.4 14.55 4.27 14.6Q4.15 14.65 4 14.66Q3.86 14.68 3.73 14.66Z" fill="currentColor"/>
+  <path d="M3.3 4.2 4.05 3.7V6.3" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.15 9.1Q3.15 8.7 4.05 8.7Q4.95 8.7 4.95 9.4Q4.95 9.95 4.05 10.7L3.15 11.3H4.95" stroke="currentColor" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.2 13.75Q3.55 13.6 4.05 13.6Q4.95 13.6 4.95 14.3Q4.95 15 4.05 15H4.2Q4.95 15 4.95 15.75Q4.95 16.45 4.05 16.45Q3.5 16.45 3.15 16.25" stroke="currentColor" stroke-width="1.15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -405,8 +405,8 @@ export const IconDotsHorizontal = `
 export const IconToggleH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M2.5 7.9L5.7 10L2.5 12.1Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.47 6.25V13.75H8.98V10.51H11.78V13.75H13.29V6.25H11.78V9.13H8.98V6.25Z" fill="currentColor"/>
-  <path d="M16.9 13.75V9.04H16.14Q16.1 9.31 15.97 9.49Q15.84 9.68 15.65 9.79Q15.47 9.9 15.24 9.94Q15.01 9.99 14.76 9.98V10.7H15.94V13.75Z" fill="currentColor"/>
+  <path d="M7.97 6.25V13.75M12.92 6.25V13.75M7.97 9.9H12.92" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.15 9.69L15.98 9.03V16.4" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -414,8 +414,8 @@ export const IconToggleH1 = `
 export const IconToggleH2 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M2.5 7.9L5.7 10L2.5 12.1Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.47 6.25V13.75H8.98V10.51H11.78V13.75H13.29V6.25H11.78V9.13H8.98V6.25Z" fill="currentColor"/>
-  <path d="M14.51 10.85H15.42Q15.42 10.66 15.46 10.47Q15.5 10.28 15.58 10.12Q15.67 9.97 15.82 9.87Q15.96 9.77 16.17 9.77Q16.48 9.77 16.68 9.96Q16.88 10.15 16.88 10.5Q16.88 10.71 16.78 10.88Q16.68 11.05 16.54 11.18Q16.39 11.32 16.22 11.43Q16.04 11.54 15.89 11.65Q15.58 11.85 15.31 12.06Q15.04 12.26 14.84 12.5Q14.64 12.73 14.52 13.04Q14.4 13.34 14.4 13.75H17.86V12.93H15.63Q15.81 12.69 16.03 12.51Q16.26 12.32 16.51 12.17Q16.75 12.01 16.99 11.85Q17.22 11.69 17.41 11.49Q17.6 11.29 17.72 11.03Q17.83 10.78 17.83 10.42Q17.83 10.08 17.7 9.8Q17.57 9.53 17.35 9.34Q17.12 9.15 16.83 9.05Q16.54 8.95 16.22 8.95Q15.79 8.95 15.47 9.09Q15.14 9.24 14.93 9.5Q14.71 9.76 14.6 10.1Q14.5 10.45 14.51 10.85Z" fill="currentColor"/>
+  <path d="M7.97 6.25V13.75M12.92 6.25V13.75M7.97 9.9H12.92" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.65 10.11Q14.65 9.03 15.9 9.03Q17.15 9.03 17.15 10.23Q17.15 11.1 15.82 12.09L14.65 13.75H17.23" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -423,8 +423,8 @@ export const IconToggleH2 = `
 export const IconToggleH3 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M2.5 7.9L5.7 10L2.5 12.1Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.47 6.25V13.75H8.98V10.51H11.78V13.75H13.29V6.25H11.78V9.13H8.98V6.25Z" fill="currentColor"/>
-  <path d="M15.79 10.95V11.62Q15.97 11.62 16.16 11.63Q16.35 11.64 16.51 11.7Q16.67 11.77 16.78 11.91Q16.88 12.05 16.88 12.32Q16.88 12.66 16.66 12.86Q16.44 13.06 16.12 13.06Q15.91 13.06 15.76 12.98Q15.6 12.91 15.5 12.79Q15.4 12.66 15.35 12.49Q15.3 12.32 15.29 12.13H14.38Q14.37 12.54 14.5 12.86Q14.62 13.17 14.85 13.39Q15.08 13.61 15.41 13.72Q15.73 13.84 16.13 13.84Q16.47 13.84 16.79 13.74Q17.1 13.64 17.35 13.44Q17.59 13.25 17.73 12.96Q17.88 12.67 17.88 12.3Q17.88 11.89 17.65 11.61Q17.43 11.32 17.04 11.23V11.22Q17.37 11.12 17.54 10.86Q17.7 10.6 17.7 10.25Q17.7 9.94 17.56 9.7Q17.42 9.45 17.19 9.29Q16.97 9.12 16.69 9.03Q16.4 8.95 16.12 8.95Q15.76 8.95 15.46 9.07Q15.17 9.19 14.96 9.4Q14.74 9.62 14.63 9.91Q14.51 10.21 14.5 10.58H15.4Q15.4 10.21 15.58 9.98Q15.77 9.74 16.13 9.74Q16.39 9.74 16.59 9.9Q16.79 10.06 16.79 10.36Q16.79 10.56 16.7 10.68Q16.6 10.81 16.45 10.87Q16.3 10.93 16.12 10.95Q15.95 10.96 15.79 10.95Z" fill="currentColor"/>
+  <path d="M7.97 6.25V13.75M12.92 6.25V13.75M7.97 9.9H12.92" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14.69 9.78Q14.82 9.03 15.94 9.03Q17.11 9.03 17.11 10.07Q17.11 11.06 15.9 11.14Q17.19 11.23 17.19 12.26Q17.19 13.75 15.9 13.75Q14.78 13.75 14.65 12.67" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -466,10 +466,10 @@ export const IconHash = `
 // Quote icon
 export const IconQuote = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <rect x="3.5" y="4" width="2.25" height="12" rx="1.125" fill="currentColor"/>
-  <path d="M9 6h7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M9 10h7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-  <path d="M9 14h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M4.6 4.75V15.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 6h7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 10h7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 14h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

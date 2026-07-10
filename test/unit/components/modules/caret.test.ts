@@ -907,7 +907,7 @@ describe('Caret module', () => {
       expect(setToBlockAtXPosition).toHaveBeenCalledWith(above, 50, false);
     });
 
-    it('ArrowRight at end of a column block does not teleport into the adjacent column', () => {
+    it('ArrowRight at end of a column block slides into the adjacent sibling column', () => {
       const { caret, blockManager } = createCaret();
       const { l1, r1, below, blocks, getBlockById } = buildColumnLayout({ below: true });
 
@@ -923,12 +923,12 @@ describe('Caret module', () => {
       const result = caret.navigateNext();
 
       expect(result).toBe(true);
-      // Resolves to the root block after the column_list, never the right column.
-      expect(setToBlock).toHaveBeenCalledWith(below, caret.positions.START);
-      expect(setToBlock).not.toHaveBeenCalledWith(r1, expect.anything());
+      // Crosses into the right column's edge block, not out to the root below.
+      expect(setToBlock).toHaveBeenCalledWith(r1, caret.positions.START);
+      expect(setToBlock).not.toHaveBeenCalledWith(below, expect.anything());
     });
 
-    it('ArrowLeft at start of a column block does not teleport into the adjacent column', () => {
+    it('ArrowLeft at start of a column block slides into the adjacent sibling column', () => {
       const { caret, blockManager } = createCaret();
       const { l1, r1, above, blocks, getBlockById } = buildColumnLayout({ above: true });
 
@@ -944,9 +944,9 @@ describe('Caret module', () => {
       const result = caret.navigatePrevious();
 
       expect(result).toBe(true);
-      // Resolves to the root block before the column_list, never the left column.
-      expect(setToBlock).toHaveBeenCalledWith(above, caret.positions.END);
-      expect(setToBlock).not.toHaveBeenCalledWith(l1, expect.anything());
+      // Crosses into the left column's edge block, not out to the root above.
+      expect(setToBlock).toHaveBeenCalledWith(l1, caret.positions.END);
+      expect(setToBlock).not.toHaveBeenCalledWith(above, expect.anything());
     });
   });
 

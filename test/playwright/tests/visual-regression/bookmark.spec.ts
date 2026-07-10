@@ -294,6 +294,10 @@ test.describe('Bookmark — visual regression', () => {
     await editable.click();
     await pasteText(editable, BOOKMARK_URL);
 
+    // A URL paste now opens the link-paste menu instead of auto-claiming a
+    // bookmark — pick "Bookmark" to insert the card (then it unfurls).
+    await page.locator('[data-blok-item-name="paste-menu-bookmark"]').click();
+
     await expect(page.locator('[data-blok-testid="bookmark-loading"]')).toBeVisible();
 
     await expect(bookmarkTool(page)).toHaveScreenshot('bookmark-loading.png', SCREENSHOT_OPTIONS);
@@ -308,6 +312,10 @@ test.describe('Bookmark — visual regression', () => {
 
     await editable.click();
     await pasteText(editable, BOOKMARK_URL);
+
+    // A URL paste now opens the link-paste menu instead of auto-claiming a
+    // bookmark — pick "Bookmark" to insert the card (then the unfurl fails).
+    await page.locator('[data-blok-item-name="paste-menu-bookmark"]').click();
 
     await expect(page.locator('[data-blok-testid="bookmark-error"]')).toBeVisible();
 

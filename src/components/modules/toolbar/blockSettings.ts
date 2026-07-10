@@ -11,8 +11,10 @@ import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
+import { beautifyShortcut } from '../../utils/string';
 import { getCaretOffset } from '../../utils/caret/selection';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
+import { buildConvertMenuEntries } from '../../utils/convert-menu';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
@@ -21,6 +23,13 @@ import { isToolConvertable, translateToolName, translateToolTitle } from '../../
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
+
+/**
+ * Stable id applied to the block-settings popover element on open.
+ * Referenced by the settings toggler's `aria-controls` (wired in Toolbar.make())
+ * so assistive tech knows which menu the toggler expands.
+ */
+export const SETTINGS_POPOVER_ID = 'blok-block-settings-popover';
 
 /**
  * HTML Elements that used for BlockSettings
@@ -122,6 +131,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private deleteKeyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   /**
+   * The element (settings toggler) the popover was opened from. Used to return
+   * focus to it when the popover is dismissed and focus would otherwise be lost.
+   */
+  private settingsTrigger: HTMLElement | null = null;
+
+  /**
    * Panel with block settings with 2 sections:
    *  - Tool's Settings
    *  - Default Settings [Move, Remove, etc]
@@ -146,14 +161,30 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   /**
    * Open Block Settings pane
    * @param targetBlock - near which Block we should open BlockSettings
-   * @param trigger - element to position the popover relative to
+   * @param anchor - element to position the popover relative to, OR a virtual
+   *   DOMRect (e.g. the cursor position for a right-click context menu, or the
+   *   block holder rect for the Shift+F10 keyboard shortcut). A rect is
+   *   forwarded to the popover as an explicit `position`, which
+   *   {@link PopoverDesktop.calculatePosition} prefers over the trigger.
    * @param options - popover placement overrides
    */
   public async open(
     targetBlock?: Block,
-    trigger?: HTMLElement,
+    anchor?: HTMLElement | DOMRect,
     options?: { placeLeftOfAnchor?: boolean }
   ): Promise<void> {
+    /**
+     * Split the anchor: an element is used as the trigger (and, on dismissal,
+     * the focus return target); anything else is a virtual DOMRect that
+     * positions the popover at an explicit point. We branch on `HTMLElement`
+     * rather than `DOMRect` because a rect from `getBoundingClientRect()` is
+     * not always a `DOMRect` instance across environments. When a rect is given
+     * there is no trigger element, so the popover falls back to the settings
+     * wrapper for mounting.
+     */
+    const trigger = anchor instanceof HTMLElement ? anchor : undefined;
+    const anchorRect = anchor instanceof HTMLElement ? undefined : anchor;
+
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
 
@@ -242,10 +273,19 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         messages: {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
           search: this.Blok.I18n.t('popover.search'),
+          // Plumb the result-count announcement template so the search field
+          // announces matches to screen readers (parity with the Toolbox).
+          searchResults: this.Blok.I18n.t('a11y.searchResults'),
         },
         autoFocusFirstItem: false,
         minWidth: '220px',
-        placeLeftOfAnchor: options?.placeLeftOfAnchor ?? true,
+        position: anchorRect,
+        /**
+         * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
+         * anchor going down/right; the dots-button menu opens to the LEFT of
+         * the toggler. Default accordingly when the caller doesn't override.
+         */
+        placeLeftOfAnchor: options?.placeLeftOfAnchor ?? (anchorRect === undefined),
         viewportMargin: 50,
         contextLabel,
       };
@@ -257,6 +297,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       this.popover = new PopoverClass(popoverParams);
       popoverRef.current = this.popover.getElement();
       popoverRef.current.setAttribute('data-blok-testid', 'block-tunes-popover');
+      popoverRef.current.id = SETTINGS_POPOVER_ID;
+
+      /**
+       * Remember the trigger (settings toggler) so focus can be returned to it
+       * when the popover is dismissed via Escape — keyboard users land back on
+       * the control they opened, not on document.body.
+       */
+      this.settingsTrigger = trigger ?? null;
 
       this.popover.on(PopoverEvent.Closed, this.onPopoverClose);
 
@@ -417,62 +465,52 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           selectedBlocks.map((block) => new BlockAPI(block)),
           allBlockTools
         )
-      : await getConvertibleToolsForBlock(currentBlock, allBlockTools);
+      : await getConvertibleToolsForBlock(new BlockAPI(currentBlock), allBlockTools);
 
-    const convertToItems = convertibleTools.reduce<PopoverItemParams[]>((result, tool) => {
-      if (tool.toolbox === undefined) {
-        return result;
-      }
+    const convertToItems = buildConvertMenuEntries(convertibleTools, this.Blok.I18n)
+      .map<PopoverItemParams>((entry) => ({
+        icon: entry.icon,
+        title: entry.title,
+        name: entry.name,
+        englishTitle: entry.englishTitle,
+        searchTerms: entry.searchTerms,
+        closeOnActivate: true,
+        onActivate: async () => {
+          const { Caret, Toolbar } = this.Blok;
 
-      tool.toolbox.forEach((toolboxItem) => {
-        // Resolve English title for multilingual search
-        const titleKey = toolboxItem.titleKey;
-        const resolvedTitleKey = titleKey?.includes('.') ? titleKey : `toolNames.${titleKey}`;
-        const englishTitleKey = titleKey ? resolvedTitleKey : undefined;
-        const englishTitle = englishTitleKey
-          ? this.Blok.I18n.getEnglishTranslation(englishTitleKey)
-          : toolboxItem.title;
+          // The builder returns a tool NAME; convertBlock needs the adapter.
+          const tool = convertibleTools.find((candidate) => candidate.name === entry.toolName);
 
-        result.push({
-          icon: toolboxItem.icon,
-          title: translateToolTitle(this.Blok.I18n, toolboxItem, tool.name),
-          name: toolboxItem.name ?? tool.name,
-          englishTitle,
-          searchTerms: toolboxItem.searchTerms,
-          closeOnActivate: true,
-          onActivate: async () => {
-            const { Caret, Toolbar } = this.Blok;
+          if (tool === undefined) {
+            return;
+          }
 
-            // Convert immediately — no blocking confirm() prompt. A child-bearing
-            // block's children are outdented to its original parent (see
-            // BlockOperations.replace), matching Notion's instant "Turn into".
-            const newBlock = await this.convertBlock(
-              currentBlock,
-              selectedBlocks,
-              hasMultipleBlocksSelected,
-              tool,
-              toolboxItem.data
-            );
+          // Convert immediately — no blocking confirm() prompt. A child-bearing
+          // block's children are outdented to its original parent (see
+          // BlockOperations.replace), matching Notion's instant "Turn into".
+          const newBlock = await this.convertBlock(
+            currentBlock,
+            selectedBlocks,
+            hasMultipleBlocksSelected,
+            tool,
+            entry.data
+          );
 
-            Toolbar.close();
+          Toolbar.close();
 
-            if (newBlock) {
-              /**
-               * Multi-block conversions have no single caret to preserve, so
-               * land at the end; a single-block turn-into keeps its prior offset.
-               */
-              if (hasMultipleBlocksSelected) {
-                Caret.setToBlock(newBlock, Caret.positions.END);
-              } else {
-                Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
-              }
+          if (newBlock) {
+            /**
+             * Multi-block conversions have no single caret to preserve, so
+             * land at the end; a single-block turn-into keeps its prior offset.
+             */
+            if (hasMultipleBlocksSelected) {
+              Caret.setToBlock(newBlock, Caret.positions.END);
+            } else {
+              Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
             }
-          },
-        });
-      });
-
-      return result;
-    }, []);
+          }
+        },
+      }));
 
     /**
      * For a multi-block selection, "Turn into columns" belongs in the same
@@ -550,7 +588,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       icon: IconCopy,
       title: this.Blok.I18n.t('blockSettings.duplicate'),
       name: 'duplicate',
-      secondaryLabel: '⌘D',
+      secondaryLabel: beautifyShortcut('CMD+D'),
       closeOnActivate: true,
       onActivate: () => {
         const { BlockSelection, DragManager, Toolbar } = this.Blok;
@@ -590,7 +628,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         title: this.Blok.I18n.t('blockSettings.delete'),
         name: 'delete',
         isDestructive: true,
-        secondaryLabel: 'Del',
+        secondaryLabel: beautifyShortcut('DELETE'),
         closeOnActivate: true,
         onActivate: () => {
           const { BlockManager, Caret, Toolbar } = this.Blok;
@@ -689,7 +727,19 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Handles popover close event
    */
   private onPopoverClose = (): void => {
+    const trigger = this.settingsTrigger;
+
     this.close();
+
+    /**
+     * On dismissal (Escape / click-outside) focus can fall to document.body,
+     * stranding keyboard users. Return focus to the settings toggler that
+     * opened the menu — but only when focus was actually lost, so we never
+     * steal it from a caret an activated item just placed inside a block.
+     */
+    if (trigger !== null && document.activeElement === document.body) {
+      trigger.focus();
+    }
   };
 
   /**

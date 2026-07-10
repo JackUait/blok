@@ -617,6 +617,56 @@ describe('BlockHierarchy', () => {
     });
   });
 
+  describe('reindentSubtree — descendant list glyph/indent refresh (BUG 1)', () => {
+    /**
+     * BUG 1: keyboard indent/outdent of a list item with nested descendants.
+     * setBlockParent reindents the WHOLE subtree structurally, but only the moved
+     * block's tool MOVED hook fires (blockManager fires it for the root). The
+     * descendants keep a STALE visual indent + bullet/number glyph. reindentSubtree
+     * must fire each descendant LIST tool's `moved` hook so it re-renders its
+     * depth-derived indent and marker.
+     */
+    it('fires the MOVED hook on descendant list items when the subtree is reindented', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'anchor', parentId: null, name: 'list', contentIds: [] },
+        { id: 'A', parentId: null, name: 'list', contentIds: ['B'] },
+        { id: 'B', parentId: 'A', name: 'list', contentIds: ['C'] },
+        { id: 'C', parentId: 'B', name: 'list', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const a = requireBlock('A');
+      const b = requireBlock('B');
+      const c = requireBlock('C');
+
+      hierarchy.setBlockParent(a, 'anchor');
+
+      // Descendants re-render via their MOVED hook.
+      expect(b.call).toHaveBeenCalledWith('moved', expect.anything());
+      expect(c.call).toHaveBeenCalledWith('moved', expect.anything());
+
+      // The subtree ROOT is NOT refreshed here — blockManager fires its MOVED hook
+      // (keyboard) / the drag pipeline does (drag). Firing it here too would double.
+      expect(a.call).not.toHaveBeenCalledWith('moved', expect.anything());
+    });
+
+    it('does NOT fire MOVED on non-list descendants (e.g. toggle child paragraphs)', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'anchor', parentId: null, name: 'list', contentIds: [] },
+        { id: 'toggle', parentId: null, name: 'list', contentIds: ['para'] },
+        { id: 'para', parentId: 'toggle', name: 'paragraph', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const toggle = requireBlock('toggle');
+      const para = requireBlock('para');
+
+      hierarchy.setBlockParent(toggle, 'anchor');
+
+      expect(para.call).not.toHaveBeenCalledWith('moved', expect.anything());
+    });
+  });
+
   describe('updateBlockIndentation', () => {
     beforeEach(() => {
       repository = createRepositoryWithBlocks([

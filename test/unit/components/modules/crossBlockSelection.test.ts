@@ -3,6 +3,11 @@ import { CrossBlockSelection } from '../../../../src/components/modules/crossBlo
 import * as _ from '../../../../src/components/utils';
 import type { Block } from '../../../../src/components/block';
 import type { Listeners } from '../../../../src/components/utils/listeners';
+import { announce } from '../../../../src/components/utils/announcer';
+
+vi.mock('../../../../src/components/utils/announcer', () => ({
+  announce: vi.fn(),
+}));
 
 type MutableSelection = Selection & {
   isCollapsed: boolean;
@@ -56,8 +61,10 @@ describe('CrossBlockSelection', () => {
   let caretSetToBlock: ReturnType<typeof vi.fn>;
   let selectionMock: MutableSelection;
   let redactor: HTMLElement;
+  let i18nT: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    i18nT = vi.fn((key: string) => key);
     toolbarClose = vi.fn();
     inlineToolbarClose = vi.fn();
     blockSelectionClearCache = vi.fn();
@@ -103,8 +110,12 @@ describe('CrossBlockSelection', () => {
       BlockSelection: {
         clearCache: blockSelectionClearCache,
         clearSelection: blockSelectionClearSelection,
-        anyBlockSelected: false,
-        selectedBlocks: [],
+        get anyBlockSelected() {
+          return blocks.some((block) => block.selected);
+        },
+        get selectedBlocks() {
+          return blocks.filter((block) => block.selected);
+        },
       },
       InlineToolbar: {
         close: inlineToolbarClose,
@@ -128,6 +139,9 @@ describe('CrossBlockSelection', () => {
         nodes: {
           redactor,
         },
+        disableHoverForCooldown: vi.fn(),
+        resetBlockHoverState: vi.fn(),
+        someToolbarOpened: false,
       },
       DragManager: {
         isDragging: false,
@@ -137,6 +151,9 @@ describe('CrossBlockSelection', () => {
       },
       BlockSettings: {
         opened: false,
+      },
+      I18n: {
+        t: i18nT,
       },
     } as unknown as CrossBlockSelection['Blok'];
 
@@ -274,6 +291,14 @@ describe('CrossBlockSelection', () => {
       expect(blockSelectionClearCache).toHaveBeenCalled();
       expect(toolbarClose).toHaveBeenCalled();
     });
+
+    it('announces the selected block count as the keyboard selection grows (H9)', () => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      crossBlockSelection.toggleBlockSelectedState(true);
+
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
   });
 
   describe('clear', () => {
@@ -284,7 +309,7 @@ describe('CrossBlockSelection', () => {
     it('restores caret position at the end when clearing with ArrowDown', () => {
       const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
 
-      (blokState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = true;
+      blocks[0].selected = true;
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
       setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
 
@@ -298,7 +323,7 @@ describe('CrossBlockSelection', () => {
     it('restores caret at the start when clearing with ArrowUp', () => {
       const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
 
-      (blokState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = true;
+      blocks[0].selected = true;
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
       setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
 
@@ -308,9 +333,7 @@ describe('CrossBlockSelection', () => {
     });
 
     it('skips caret restoration when nothing is selected', () => {
-      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
-
-      (blokState.BlockSelection as { anyBlockSelected: boolean }).anyBlockSelected = false;
+      // No blocks selected → anyBlockSelected getter returns false.
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
       setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
 
@@ -364,6 +387,272 @@ describe('CrossBlockSelection', () => {
     });
   });
 
+  describe('M7: Shift+Click range selection', () => {
+    let enableCrossBlockSelection: (event: MouseEvent) => void;
+
+    beforeEach(() => {
+      enableCrossBlockSelection = accessPrivate(crossBlockSelection, 'enableCrossBlockSelection');
+      // Start from a clean caret state (no prior block selection).
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', null);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', null);
+      for (const block of blocks) {
+        block.selected = false;
+      }
+    });
+
+    it('selects the inclusive range from the caret block to the Shift+clicked block (downward)', () => {
+      const preventDefault = vi.fn();
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[2].holder,
+        preventDefault,
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(preventDefault).toHaveBeenCalled();
+      expect(blocks[0].selected).toBe(true);
+      expect(blocks[1].selected).toBe(true);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(false);
+      expect(accessPrivate<Block>(crossBlockSelection, 'firstSelectedBlock')).toBe(blocks[0]);
+      expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[2]);
+    });
+
+    it('selects the inclusive range upward when the anchor is below the clicked block', () => {
+      const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
+
+      (blokState.BlockManager as unknown as { currentBlock: Block }).currentBlock = blocks[3];
+
+      const preventDefault = vi.fn();
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[1].holder,
+        preventDefault,
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks[1].selected).toBe(true);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(true);
+      expect(blocks[0].selected).toBe(false);
+    });
+
+    it('extends an existing block selection from its anchor to the Shift+clicked block', () => {
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[1]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[1]);
+      blocks[1].selected = true;
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks[0].selected).toBe(false);
+      expect(blocks[1].selected).toBe(true);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(true);
+      expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[3]);
+    });
+
+    it('announces the selected block count after a Shift+Click range selection (H9)', () => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+      i18nT.mockClear();
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[2].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(i18nT).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('does not re-announce when a Shift+Click leaves the selected count unchanged (H9)', () => {
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        target: blocks[2].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      // Same click again: same range, same count — no repeat announcement.
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('does not range-select on a plain (no Shift) click', () => {
+      const watchSpy = vi.spyOn(crossBlockSelection, 'watchSelection');
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: false,
+        target: blocks[2].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      // Plain click still goes through the drag-watch path, not range selection.
+      expect(watchSpy).toHaveBeenCalledWith(event);
+      expect(blocks[1].selected).toBe(false);
+    });
+  });
+
+  describe('Cmd/Ctrl/Alt + Shift + Click non-contiguous toggle', () => {
+    let enableCrossBlockSelection: (event: MouseEvent) => void;
+
+    beforeEach(() => {
+      enableCrossBlockSelection = accessPrivate(crossBlockSelection, 'enableCrossBlockSelection');
+      for (const block of blocks) {
+        block.selected = false;
+      }
+      // Start from a single selected block (nav-mode selection of block 0).
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
+      blocks[0].selected = true;
+    });
+
+    it('Cmd+Shift+Click toggles the clicked block INTO a non-contiguous set (does not fill the gap)', () => {
+      const preventDefault = vi.fn();
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        metaKey: true,
+        target: blocks[3].holder,
+        preventDefault,
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(preventDefault).toHaveBeenCalled();
+      // {0, 3} selected — the gap (1, 2) stays UNselected.
+      expect(blocks[0].selected).toBe(true);
+      expect(blocks[1].selected).toBe(false);
+      expect(blocks[2].selected).toBe(false);
+      expect(blocks[3].selected).toBe(true);
+    });
+
+    it('Ctrl+Shift+Click toggles the clicked block INTO a non-contiguous set', () => {
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        ctrlKey: true,
+        target: blocks[2].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks[0].selected).toBe(true);
+      expect(blocks[1].selected).toBe(false);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(false);
+    });
+
+    it('Alt+Shift+Click toggles the clicked block INTO a non-contiguous set', () => {
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        altKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks[0].selected).toBe(true);
+      expect(blocks[1].selected).toBe(false);
+      expect(blocks[2].selected).toBe(false);
+      expect(blocks[3].selected).toBe(true);
+    });
+
+    it('Cmd+Shift+Click on an already-selected block toggles it OUT, leaving the rest intact', () => {
+      blocks[3].selected = true;
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[3]);
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        metaKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(blocks[0].selected).toBe(true);
+      expect(blocks[3].selected).toBe(false);
+    });
+
+    it('announces the updated selected block count after a toggle-click (H9)', () => {
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+      i18nT.mockClear();
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        metaKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(i18nT).toHaveBeenCalledWith('a11y.blocksSelected', { count: 2 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('does not announce when a toggle-click collapses the selection to a single block (H9)', () => {
+      blocks[3].selected = true;
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[3]);
+
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        metaKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      // Toggling block 3 OUT leaves only block 0 selected — nothing multi-block to convey.
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('records the toggled block as the new anchor for subsequent extension', () => {
+      const event = {
+        button: _.mouseButtons.LEFT,
+        shiftKey: true,
+        metaKey: true,
+        target: blocks[3].holder,
+        preventDefault: vi.fn(),
+      } as unknown as MouseEvent;
+
+      enableCrossBlockSelection.call(crossBlockSelection, event);
+
+      expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[3]);
+    });
+  });
+
   describe('onMouseUp', () => {
     it('removes temporary listeners', () => {
       const listeners = accessPrivate<Listeners>(crossBlockSelection, 'listeners');
@@ -373,6 +662,21 @@ describe('CrossBlockSelection', () => {
 
       expect(offSpy).toHaveBeenCalledWith(document, 'mouseover', accessPrivate(crossBlockSelection, 'onMouseOver'));
       expect(offSpy).toHaveBeenCalledWith(document, 'mouseup', accessPrivate(crossBlockSelection, 'onMouseUp'));
+    });
+
+    it('announces the selected block count after a drag mouseup (H9)', () => {
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
+      blocks[0].selected = true;
+      blocks[1].selected = true;
+      blocks[2].selected = true;
+
+      (announce as ReturnType<typeof vi.fn>).mockClear();
+
+      accessPrivate<() => void>(crossBlockSelection, 'onMouseUp')();
+
+      expect(i18nT).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
+      expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
     });
   });
 

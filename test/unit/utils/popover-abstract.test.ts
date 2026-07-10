@@ -21,6 +21,7 @@ import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import type { SearchInput } from '../../../src/components/utils/popover/components/search-input';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import { PopoverRegistry } from '../../../src/components/utils/popover/popover-registry';
+import { REEL_DISTORTION } from '../../../src/components/utils/popover/popover.const';
 
 /**
  * Test implementation of PopoverAbstract for unit testing
@@ -176,6 +177,52 @@ describe('PopoverAbstract', () => {
     });
   });
 
+  describe('ARIA container semantics', () => {
+    it('exposes the items container as role="menu" by default', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.items.getAttribute('role')).toBe('menu');
+    });
+
+    it('exposes the items container as role="listbox" when listbox is set', () => {
+      const popover = createPopover({ listbox: true });
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.items.getAttribute('role')).toBe('listbox');
+    });
+
+    it('applies listboxId to the items container id', () => {
+      const popover = createPopover({ listbox: true, listboxId: 'my-listbox' });
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.items.id).toBe('my-listbox');
+    });
+
+    it('renders default items as role="option" in a listbox popover', () => {
+      const popover = createPopover({ listbox: true });
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('option');
+    });
+
+    it('renders default items as role="menuitem" in a menu popover', () => {
+      const popover = createPopover();
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('menuitem');
+    });
+
+    it('creates a visually-hidden polite live region for result announcements', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      expect(nodes.resultsAnnouncer).toBeInstanceOf(HTMLElement);
+      expect(nodes.resultsAnnouncer.getAttribute('aria-live')).toBe('polite');
+      expect(nodes.popoverContainer.contains(nodes.resultsAnnouncer)).toBe(true);
+    });
+  });
+
   describe('buildItems()', () => {
     it('returns appropriate instances for different item types', () => {
       const popover = createPopover();
@@ -237,6 +284,73 @@ describe('PopoverAbstract', () => {
     });
   });
 
+  describe('confirmation-mode announcement', () => {
+    it('announces the confirmation prompt via the results announcer when an item enters confirmation mode', async () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Delete',
+            name: 'delete',
+            isDestructive: true,
+            confirmation: {
+              title: 'Click to confirm',
+              onActivate: vi.fn(),
+            },
+          },
+        ],
+      });
+      const nodes = popover.getNodesForTests();
+      const [deleteItem] = popover.getItemsForTests();
+
+      popover.invokeHandleItemClick(deleteItem);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('Click to confirm');
+    });
+
+    it('clears the announcer before re-setting so identical text is re-announced', async () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Delete',
+            name: 'delete',
+            isDestructive: true,
+            confirmation: {
+              title: 'Click to confirm',
+              onActivate: vi.fn(),
+            },
+          },
+        ],
+      });
+      const nodes = popover.getNodesForTests();
+      const [deleteItem] = popover.getItemsForTests();
+
+      // Simulate a previous identical announcement lingering in the live
+      // region — without a clear-then-set the same text produces no
+      // announcement in screen readers.
+      nodes.resultsAnnouncer.textContent = 'Click to confirm';
+
+      popover.invokeHandleItemClick(deleteItem);
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('');
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('Click to confirm');
+    });
+
+    it('does not announce for a plain (non-confirmation) item click', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+      const [firstItem] = popover.getItemsForTests();
+
+      popover.invokeHandleItemClick(firstItem);
+
+      expect(nodes.resultsAnnouncer.textContent).toBe('');
+    });
+  });
+
   describe('public API', () => {
     it('show() marks popover as opened and focuses search when available', () => {
       const popover = createPopover();
@@ -294,6 +408,89 @@ describe('PopoverAbstract', () => {
       expect(removeAllSpy).toHaveBeenCalledTimes(1);
       destroySpies.forEach(spy => expect(spy).toHaveBeenCalled());
       expect(searchMock.destroy).toHaveBeenCalledTimes(1);
+      expect(document.body.contains(nodes.popover)).toBe(false);
+    });
+
+    it('show() stamps data-state="open" and hide() stamps data-state="closed"', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+      expect(nodes.popover.dataset.state).toBe('open');
+
+      popover.hide();
+      expect(nodes.popover.dataset.state).toBe('closed');
+    });
+
+    it('destroy() animates the real element instead of cloning a ghost live region', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+
+      // Give the popover a measurable box so destroy() takes the animated path
+      // (in jsdom getBoundingClientRect is 0×0 by default).
+      vi.spyOn(nodes.popover, 'getBoundingClientRect').mockReturnValue({
+        width: 200,
+        height: 120,
+        top: 10,
+        left: 10,
+        right: 210,
+        bottom: 130,
+        x: 10,
+        y: 10,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      const announcersBefore = document.body.querySelectorAll('[aria-live]').length;
+
+      popover.destroy();
+
+      // The real element is retained (still connected) so its exit transition
+      // can play — it is NOT removed synchronously and NOT replaced by a clone.
+      expect(document.body.contains(nodes.popover)).toBe(true);
+      expect(nodes.popover.dataset.state).toBe('closed');
+
+      // No cloned live region: the announcer count must not have grown.
+      expect(document.body.querySelectorAll('[aria-live]').length).toBe(announcersBefore);
+    });
+
+    it('destroy() removes the real element once the exit transition ends', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+
+      vi.spyOn(nodes.popover, 'getBoundingClientRect').mockReturnValue({
+        width: 200,
+        height: 120,
+        top: 10,
+        left: 10,
+        right: 210,
+        bottom: 130,
+        x: 10,
+        y: 10,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      popover.destroy();
+
+      expect(document.body.contains(nodes.popover)).toBe(true);
+
+      nodes.popoverContainer.dispatchEvent(new Event('transitionend'));
+
+      expect(document.body.contains(nodes.popover)).toBe(false);
+    });
+
+    it('destroy() removes the element synchronously when it has no visible box', () => {
+      const popover = createPopover();
+      const nodes = popover.getNodesForTests();
+
+      popover.show();
+
+      // jsdom default rect is 0×0 → no animation → immediate removal.
+      popover.destroy();
+
       expect(document.body.contains(nodes.popover)).toBe(false);
     });
 
@@ -418,6 +615,61 @@ describe('PopoverAbstract', () => {
       popover.invokeHandleItemClick(second);
       expect(secondEl?.getAttribute(DATA_ATTR.popoverItemActive)).toBe('true');
       expect(firstEl?.getAttribute(DATA_ATTR.popoverItemActive)).toBeNull();
+    });
+
+    it('exposes members of an exclusive string-key toggle group as role="menuitemradio"', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Left', name: 'left', toggle: 'align', onActivate: vi.fn() },
+          { title: 'Center', name: 'center', toggle: 'align', onActivate: vi.fn() },
+          { title: 'Right', name: 'right', toggle: 'align', onActivate: vi.fn() },
+        ],
+      });
+      const items = popover.getItemsForTests() as PopoverItemDefault[];
+
+      items.forEach(item => {
+        expect(item.getElement()?.getAttribute('role')).toBe('menuitemradio');
+      });
+    });
+
+    it('keeps a degenerate single-member string-key toggle group as role="menuitemcheckbox"', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Solo', name: 'solo', toggle: 'align', onActivate: vi.fn() },
+        ],
+      });
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('menuitemcheckbox');
+    });
+
+    it('keeps a boolean toggle item as role="menuitemcheckbox"', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Bold', name: 'bold', toggle: true, onActivate: vi.fn() },
+        ],
+      });
+      const item = popover.getItemsForTests()[0] as PopoverItemDefault;
+
+      expect(item.getElement()?.getAttribute('role')).toBe('menuitemcheckbox');
+    });
+
+    it('syncs aria-checked across a menuitemradio toggle group on click', () => {
+      const popover = createPopover({
+        items: [
+          { title: 'Left', name: 'left', toggle: 'align', onActivate: vi.fn() },
+          { title: 'Right', name: 'right', toggle: 'align', onActivate: vi.fn() },
+        ],
+      });
+      const [first, second] = popover.getItemsForTests() as PopoverItemDefault[];
+
+      popover.invokeHandleItemClick(first);
+      expect(first.getElement()?.getAttribute('aria-checked')).toBe('true');
+      expect(second.getElement()?.getAttribute('aria-checked')).toBe('false');
+
+      popover.invokeHandleItemClick(second);
+      expect(second.getElement()?.getAttribute('aria-checked')).toBe('true');
+      expect(first.getElement()?.getAttribute('aria-checked')).toBe('false');
     });
 
     it('hides popover and emits ClosedOnActivate when item requires closing', () => {
@@ -557,154 +809,145 @@ describe('PopoverAbstract', () => {
     });
   });
 
-  describe('scroll hazes', () => {
-    it('creates scroll haze elements inside popoverContainer', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
+  describe('scroll reel distortion', () => {
+    /**
+     * Mocks the scroll metrics of the items container
+     * @param items - the popover items container
+     * @param metrics - scrollHeight / clientHeight / scrollTop to report
+     */
+    const setContainerMetrics = (
+      items: HTMLElement,
+      metrics: { scrollHeight?: number; clientHeight?: number; scrollTop?: number } = {}
+    ): void => {
+      Object.defineProperty(items, 'scrollHeight', { value: metrics.scrollHeight ?? 500, configurable: true });
+      Object.defineProperty(items, 'clientHeight', { value: metrics.clientHeight ?? 200, configurable: true });
+      Object.defineProperty(items, 'scrollTop', { value: metrics.scrollTop ?? 0, configurable: true, writable: true });
+    };
 
-      expect(nodes.scrollHazeTop).toBeInstanceOf(HTMLElement);
-      expect(nodes.scrollHazeBottom).toBeInstanceOf(HTMLElement);
-      expect(nodes.popoverContainer.contains(nodes.scrollHazeTop)).toBe(true);
-      expect(nodes.popoverContainer.contains(nodes.scrollHazeBottom)).toBe(true);
+    /**
+     * Mocks layout metrics of a single popover item element
+     * @param el - the item element
+     * @param top - offsetTop within the items container
+     * @param height - offsetHeight of the item
+     */
+    const setItemMetrics = (el: HTMLElement, top: number, height: number): void => {
+      Object.defineProperty(el, 'offsetTop', { value: top, configurable: true });
+      Object.defineProperty(el, 'offsetHeight', { value: height, configurable: true });
+    };
+
+    /**
+     * Expected transform string for a given clipped fraction
+     * @param overhang - fraction of the item clipped past the viewport edge (0..1)
+     * @param edge - which viewport edge clips the item
+     */
+    const expectedTransform = (overhang: number, edge: 'top' | 'bottom'): string => {
+      const tilt = (REEL_DISTORTION.maxTiltDeg * overhang * (edge === 'top' ? 1 : -1)).toFixed(2);
+      const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
+      const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
+
+      return `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
+    };
+
+    it('keeps the distortion strengths within realistic reel bounds', () => {
+      // A real picker reel bends items subtly — extreme values read as a glitch.
+      expect(REEL_DISTORTION.maxTiltDeg).toBeLessThanOrEqual(30);
+      expect(REEL_DISTORTION.maxSquashY).toBeLessThanOrEqual(0.5);
+      expect(REEL_DISTORTION.maxSquashX).toBeLessThanOrEqual(0.15);
+      expect(REEL_DISTORTION.maxDim).toBeLessThanOrEqual(0.55);
+      // Shallow perspective exaggerates the tilt; keep the camera far enough away
+      expect(REEL_DISTORTION.perspective).toBeGreaterThanOrEqual(600);
     });
 
-    it('hazes have pointer-events: none so they do not intercept clicks', () => {
+    it('does not render gradient haze overlays anymore', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
 
-      expect(nodes.scrollHazeTop.classList.contains('pointer-events-none')).toBe(true);
-      expect(nodes.scrollHazeBottom.classList.contains('pointer-events-none')).toBe(true);
+      const overlays = Array.from(nodes.popoverContainer.children)
+        .filter((el): el is HTMLElement => el instanceof HTMLElement)
+        .filter(el => el.style.background.includes('linear-gradient'));
+
+      expect(overlays).toHaveLength(0);
     });
 
-    it('both hazes are hidden when items do not overflow', () => {
+    it('leaves items fully inside the viewport undistorted', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
+
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      setItemMetrics(first, 150, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(first.style.transform).toBe('');
+      expect(first.style.opacity).toBe('');
     });
 
-    it('shows bottom haze when items overflow and scroll is at top', () => {
+    it('squashes an item clipped by the top edge toward its bottom edge', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      // Item spans 80..120 while viewport starts at 100 → half clipped above
+      setItemMetrics(first, 80, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+      expect(first.style.transform).toBe(expectedTransform(0.5, 'top'));
+      expect(first.style.transformOrigin).toBe('center bottom');
+      expect(Number(first.style.opacity)).toBeCloseTo(1 - REEL_DISTORTION.maxDim * 0.5, 3);
     });
 
-    it('shows top haze when scrolled to bottom', () => {
+    it('squashes an item clipped by the bottom edge toward its top edge', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const second = nodes.items.children[1] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 300, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 0 });
+      // Viewport ends at 200; item spans 180..220 → half clipped below
+      setItemMetrics(second, 180, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(second.style.transform).toBe(expectedTransform(0.5, 'bottom'));
+      expect(second.style.transformOrigin).toBe('center top');
     });
 
-    it('shows both hazes when scrolled to middle', () => {
+    it('distorts more the deeper an item slides past the edge', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
+      const second = nodes.items.children[1] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 100, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      // First is 75% clipped above, second only 25%
+      setItemMetrics(first, 70, 40);
+      setItemMetrics(second, 90, 40);
 
       popover.show();
 
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+      expect(first.style.transform).toBe(expectedTransform(0.75, 'top'));
+      expect(second.style.transform).toBe(expectedTransform(0.25, 'top'));
     });
 
-    it('updates hazes on scroll event', () => {
+    it('applies no distortion when items do not overflow', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-
-      let scrollTopValue = 0;
-
-      Object.defineProperty(nodes.items, 'scrollTop', {
-        get: () => scrollTopValue,
-        configurable: true,
-      });
+      setContainerMetrics(nodes.items, { scrollHeight: 200, clientHeight: 200, scrollTop: 0 });
+      setItemMetrics(first, -20, 40);
 
       popover.show();
 
-      // Initially at top — only bottom haze visible
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
-
-      // Scroll to middle — both hazes visible
-      scrollTopValue = 100;
-      nodes.items.dispatchEvent(new Event('scroll'));
-
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
-
-      // Scroll to bottom — only top haze visible
-      scrollTopValue = 300;
-      nodes.items.dispatchEvent(new Event('scroll'));
-
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(first.style.transform).toBe('');
     });
 
-    it('displays hazes instantly without CSS transition on show()', () => {
+    it('updates the distortion on scroll events', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
-
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
-
-      popover.show();
-
-      // Bottom haze is visible immediately
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
-      // Transition is disabled for instant appearance
-      expect(nodes.scrollHazeBottom.style.transition).toBe('none');
-    });
-
-    it('restores CSS transition after show() so scroll-triggered changes animate', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
-
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 0, configurable: true, writable: true });
-
-      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-        cb(0);
-
-        return 0;
-      });
-
-      popover.show();
-
-      // After rAF fires, transition is restored (empty = CSS class transition applies)
-      expect(nodes.scrollHazeTop.style.transition).toBe('');
-      expect(nodes.scrollHazeBottom.style.transition).toBe('');
-
-      rafSpy.mockRestore();
-    });
-
-    it('uses CSS transition for scroll-triggered haze visibility changes', () => {
-      const popover = createPopover();
-      const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
       Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
       Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
@@ -716,44 +959,43 @@ describe('PopoverAbstract', () => {
         configurable: true,
       });
 
-      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-        cb(0);
-
-        return 0;
-      });
+      setItemMetrics(first, 0, 40);
 
       popover.show();
 
-      // Scroll to middle — top haze appears via scroll event
-      scrollTopValue = 100;
+      // At the top the first item is fully visible
+      expect(first.style.transform).toBe('');
+
+      // Scrolling 20px clips half of the first item above the edge
+      scrollTopValue = 20;
       nodes.items.dispatchEvent(new Event('scroll'));
 
-      // Transition should NOT be 'none' — CSS class transition applies for animated scroll haze
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeTop.style.transition).not.toBe('none');
+      expect(first.style.transform).toBe(expectedTransform(0.5, 'top'));
+      expect(first.style.transformOrigin).toBe('center bottom');
 
-      rafSpy.mockRestore();
+      // Scrolling back restores the item
+      scrollTopValue = 0;
+      nodes.items.dispatchEvent(new Event('scroll'));
+
+      expect(first.style.transform).toBe('');
     });
 
-    it('resets hazes on hide', () => {
+    it('clears the distortion on hide', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();
+      const first = nodes.items.children[0] as HTMLElement;
 
-      Object.defineProperty(nodes.items, 'scrollHeight', { value: 500, configurable: true });
-      Object.defineProperty(nodes.items, 'clientHeight', { value: 200, configurable: true });
-      Object.defineProperty(nodes.items, 'scrollTop', { value: 100, configurable: true, writable: true });
+      setContainerMetrics(nodes.items, { scrollTop: 100 });
+      setItemMetrics(first, 80, 40);
 
       popover.show();
 
-      // Both hazes visible in middle scroll position
-      expect(nodes.scrollHazeTop.style.opacity).toBe('1');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('1');
+      expect(first.style.transform).not.toBe('');
 
       popover.hide();
 
-      // Hazes reset after hide
-      expect(nodes.scrollHazeTop.style.opacity).toBe('0');
-      expect(nodes.scrollHazeBottom.style.opacity).toBe('0');
+      expect(first.style.transform).toBe('');
+      expect(first.style.opacity).toBe('');
     });
   });
 

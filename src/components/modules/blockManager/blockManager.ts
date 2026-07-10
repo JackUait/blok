@@ -38,6 +38,14 @@ type BlocksStoreProxy = BlocksStore & {
 };
 
 /**
+ * Tool name of the standalone collapsible "toggle list" tool. Used by convert()
+ * to distinguish a toggle LIST source (children stay nested on convert, M-5)
+ * from a toggle HEADING source (children released, like the header tune switch).
+ * Kept as a local literal to avoid a core → tool import dependency.
+ */
+const TOGGLE_TOOL_NAME = 'toggle';
+
+/**
  * @typedef {BlockManager} BlockManager
  * @property {number} currentBlockIndex - Index of current working block
  * @property {Proxy} _blocks - Proxy for Blocks instance {@link Blocks}
@@ -205,6 +213,17 @@ export class BlockManager extends Module {
    */
   public setPointerDragActive(active: boolean): void {
     this._isPointerDragActive = active;
+  }
+
+  /**
+   * Returns true while a pointer drag interaction is active.
+   * The read-only counterpart of {@link setPointerDragActive}; exposed so
+   * framework adapters can defer a programmatic `dispatchChange` mid-drag
+   * (a change dispatched while this is true is silently dropped by the
+   * `blockDidMutated` gate) and re-dispatch it on drag-end.
+   */
+  public get isPointerDragActive(): boolean {
+    return this._isPointerDragActive;
   }
 
   /**
@@ -714,9 +733,18 @@ export class BlockManager extends Module {
 
   /**
    * Delete all selected blocks and insert a replacement block at their position.
-   * Only inserts a replacement block if all blocks were deleted.
+   *
+   * A replacement block is inserted when the whole document was selected (so the
+   * editor is never left empty) or when {@link forceReplacement} is set. Typing
+   * over a cross-block selection passes `forceReplacement` so the typed character
+   * always lands in ONE clean block at the seam of the deleted span, instead of
+   * merging into whichever adjacent block still holds the caret (Notion parity).
+   * Backspace/Delete leaves it `false` so a partial multi-block delete does not
+   * spawn a stray empty paragraph.
+   * @param forceReplacement - always insert a replacement block, even for a
+   *   partial (non-whole-document) selection
    */
-  public deleteSelectedBlocksAndInsertReplacement(): Block | undefined {
+  public deleteSelectedBlocksAndInsertReplacement(forceReplacement = false): Block | undefined {
     // Collect selected blocks, expanded to include each one's flat-indent
     // followers (Notion deletes a Tab-nested parent together with its children),
     // then attach indices sorted descending for safe removal.
@@ -729,8 +757,10 @@ export class BlockManager extends Module {
       return undefined;
     }
 
-    // Check if all blocks are being deleted
+    // Insert a replacement when the whole document is being cleared (never leave
+    // an empty editor) or when the caller demands one (typing over the selection).
     const allBlocksDeleted = selectedBlockEntries.length === this.blocks.length;
+    const shouldInsertReplacement = allBlocksDeleted || forceReplacement;
 
     // Get insertion index (minimum index among selected blocks)
     const insertionIndex = selectedBlockEntries[selectedBlockEntries.length - 1].index;
@@ -743,7 +773,7 @@ export class BlockManager extends Module {
     }
 
     // Generate new block ID upfront for the transaction (only if needed)
-    const newBlockId = allBlocksDeleted ? generateBlockId() : undefined;
+    const newBlockId = shouldInsertReplacement ? generateBlockId() : undefined;
 
     // Single Yjs transaction for all removals + insertion (single undo entry)
     this.Blok.YjsManager.transact(() => {
@@ -751,8 +781,7 @@ export class BlockManager extends Module {
         this.Blok.YjsManager.removeBlock(id);
       }
 
-      // Only insert replacement block if all blocks were deleted
-      if (allBlocksDeleted && newBlockId !== undefined) {
+      if (newBlockId !== undefined) {
         this.Blok.YjsManager.addBlock({
           id: newBlockId,
           type: defaultToolName,
@@ -767,8 +796,8 @@ export class BlockManager extends Module {
       void this.removeBlock(block, false, true);
     }
 
-    // Insert replacement block only if all blocks were deleted (skip Yjs sync since we handled it above)
-    if (allBlocksDeleted && newBlockId !== undefined) {
+    // Insert replacement block (skip Yjs sync since we handled it above)
+    if (newBlockId !== undefined) {
       return this.insert({
         id: newBlockId,
         tool: defaultToolName,
@@ -997,7 +1026,14 @@ export class BlockManager extends Module {
     //     BlockMoved through `move()` already,
     //   - Yjs sync (undo/redo/remote) which drives re-renders via its own path.
     const actualNewParentId = block.parentId;
-    const isDragMove = this.Blok.YjsManager.isInMoveGroup || this._isPointerDragActive;
+    /**
+     * Only a DRAG move group (or an adapter-flagged pointer drag) fires the tool
+     * MOVED hook itself via the drag `move()` pipeline, so skip it here to avoid a
+     * double-fire. A KEYBOARD move group (Tab/Shift+Tab nesting) does NOT fire
+     * MOVED elsewhere, so this path must fire it — otherwise a list item nested via
+     * the keyboard updates its model (parentId) but never re-renders its indent.
+     */
+    const isDragMove = this.Blok.YjsManager.isDragMoveGroupActive || this._isPointerDragActive;
 
     if (actualNewParentId !== oldParentId && !this.yjsSync.isSyncingFromYjs && !isDragMove) {
       const index = this.repository.getBlockIndex(block);
@@ -1092,6 +1128,27 @@ export class BlockManager extends Module {
     //   - any DOM mutation observer write-back into Yjs
     this.yjsSync.withAtomicOperation(() => {
       this.hierarchy.setBlockParent(block, newParentId);
+
+      // Fire the tool's MOVED lifecycle hook, mirroring the public
+      // setBlockParent path (~1053). The public path recomputes nesting-dependent
+      // UI here (e.g. the list tool re-derives its structural depth in moved()).
+      // Undo/redo replays a keyboard reparent through THIS method, so without
+      // firing MOVED the block's parentId is restored but the tool's cached
+      // structural state (list _data.depth) stays stale and save() returns the
+      // wrong depth. Runs inside withAtomicOperation (isSyncingFromYjs === true),
+      // so the handler only mutates tool-local _data/DOM and never emits an extra
+      // Yjs write.
+      const index = this.repository.getBlockIndex(block);
+
+      block.call(BlockToolAPI.MOVED, {
+        fromIndex: index,
+        toIndex: index,
+        // Mark this a STRUCTURAL move so a depth-carrying tool (list) recomputes
+        // its depth from the restored tree position instead of a stale in-memory
+        // carrier — essential on undo, where the block may be a freshly-rendered
+        // instance that lost its "was nested" flag.
+        structural: true,
+      });
     });
   }
 
@@ -1243,7 +1300,49 @@ export class BlockManager extends Module {
    * Converts passed Block to the new Tool
    */
   public async convert(block: Block, targetToolName: string, blockDataOverrides?: BlockToolData): Promise<Block> {
+    /**
+     * Notion parity: turning a TOGGLE HEADING into a non-toggle target via the
+     * "Turn into" menu must RELEASE its children as following siblings — exactly
+     * what the "Toggle heading" tune switch already does (setToggleable(false) →
+     * releaseChildrenAsSiblings). Without this, the generic convert() → replace()
+     * path RE-NESTS the children under the now-plain heading, so the two UIs
+     * disagree. Notion releases heading children on this conversion.
+     *
+     * Notion parity M-5: a TOGGLE LIST (the standalone `toggle` tool) is the
+     * opposite — converting it to a non-toggle type keeps its children NESTED one
+     * level under the new block; only the collapse affordance disappears. So the
+     * toggle-list source must fall through to the generic convert() → replace()
+     * path, which re-nests children (block-mutation.replace → reparentChildren).
+     *
+     * Both sources render the same `data-blok-toggle-open` marker, so the
+     * heading-only release is gated additionally on the source NOT being the
+     * toggle-list tool. (callout/column render no toggle marker at all.)
+     */
+    const sourceIsToggle = block.holder.querySelector('[data-blok-toggle-open]') !== null;
+    const sourceIsToggleList = block.name === TOGGLE_TOOL_NAME;
+    const targetIsToggleHeader = targetToolName === 'header' && blockDataOverrides?.isToggleable === true;
+
+    if (sourceIsToggle && !sourceIsToggleList && !targetIsToggleHeader) {
+      this.releaseChildrenToRoot(block);
+    }
+
     return this.operations.convert(block, targetToolName, this.blocksStore, blockDataOverrides);
+  }
+
+  /**
+   * Release every child of `block` to the document root (parentId = null) via the
+   * Yjs-correct `setBlockParent`, as following siblings. Snapshot the ids first
+   * since `setBlockParent` mutates the parent's contentIds while iterating.
+   * @param block - the (toggle) container whose children are released
+   */
+  private releaseChildrenToRoot(block: Block): void {
+    for (const childId of [...block.contentIds]) {
+      const child = this.getBlockById(childId);
+
+      if (child !== undefined) {
+        this.setBlockParent(child, null);
+      }
+    }
   }
 
   /**
@@ -1680,6 +1779,20 @@ export class BlockManager extends Module {
 
     this.Blok.YjsManager.transact(() => {
       for (const [key, value] of Object.entries(savedData.data)) {
+        // A list item structurally nested under another list item derives its
+        // `depth` from the parentId chain (getStructuralListDepth), so persisting
+        // depth to the CRDT is redundant — and harmful: the derived value lands as
+        // a TRACKED write that pollutes the undo stack with a stray "depth-mirror"
+        // entry a Cmd+Z would pop instead of the real structural move (the bug
+        // behind "undo after Tab indentation restores original depth"). save()
+        // still reports depth for the public output and reload re-derives it from
+        // structure, so skipping the CRDT write is safe. Flat-carrier list items
+        // (authored/drag-nested via data.depth with no LIST parent) keep depth as
+        // their source of truth and are left untouched.
+        if (key === 'depth' && this.isStructurallyNestedListItem(block)) {
+          continue;
+        }
+
         if (this.Blok.YjsManager.updateBlockData(block.id, key, value)) {
           dataChangedRef.value = true;
         }
@@ -1698,5 +1811,22 @@ export class BlockManager extends Module {
 
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
     });
+  }
+
+  /**
+   * True when `block` is a list item nested directly under ANOTHER list item —
+   * i.e. its `depth` is derived from the structural parentId chain rather than an
+   * authored flat carrier. A list item at the root or directly inside a non-list
+   * container (column, table cell) keeps `depth` as its own source of truth and
+   * is NOT considered structurally nested here.
+   * @param block - the block to test
+   * @returns whether the block's list depth is structurally derived
+   */
+  private isStructurallyNestedListItem(block: Block): boolean {
+    if (block.name !== 'list' || block.parentId === null) {
+      return false;
+    }
+
+    return this.repository.getBlockById(block.parentId)?.name === 'list';
   }
 }

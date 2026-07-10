@@ -517,6 +517,37 @@ test.describe('markdown shortcuts', () => {
       expect(blocksAfter[0].type).toBe('list');
     });
   });
+
+  test.describe('link shortcut', () => {
+    test('converts [label](url) into a link when the closing ) is typed', async ({ page }) => {
+      await createParagraphBlok(page, ['']);
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await paragraph.click();
+      // A slash-free URL avoids an unrelated Chromium contenteditable quirk where
+      // typing "/" splits the run into multiple text nodes (also affects the
+      // pre-existing **bold** shortcut on slash-containing text — not something
+      // introduced or fixable here).
+      await page.keyboard.type('See [Blok](blok.dev) for docs');
+
+      const link = paragraph.getByRole('link', { name: 'Blok' });
+
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', 'blok.dev');
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'nofollow');
+
+      const text = await paragraph.evaluate((el) => el.textContent?.replace(/ /g, ' '));
+
+      expect(text).toBe('See Blok for docs');
+
+      const { blocks } = await page.evaluate(async () => await window.blokInstance?.save() as OutputData);
+
+      expect(blocks).toHaveLength(1);
+      expect((blocks[0].data as { text: string }).text).toContain('<a href="blok.dev" target="_blank" rel="nofollow">Blok</a>');
+    });
+  });
 });
 
 declare global {

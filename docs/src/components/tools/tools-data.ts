@@ -136,6 +136,13 @@ const editor = new Blok({
         description:
           'Custom keyboard shortcuts per level. If omitted, markdown-style shortcuts (#, ## …) are used. Pass an empty object {} to disable all shortcuts.',
       },
+      {
+        option: 'anchorIds',
+        type: 'boolean | (text: string, blockId: string) => string',
+        default: 'undefined',
+        description:
+          'Opt-in text-derived anchor ids on rendered headings. true uses the built-in slugifier (keeps Unicode letters/digits and letter case, strips punctuation and zero-width chars, joins words with hyphens, e.g. «Обучайте команду» → id "Обучайте-команду"); a function lets you generate ids yourself (empty string = no id). Ids stay in sync on text edits and survive level changes. Cross-block duplicate dedup is out of scope — consumers dedup themselves.',
+      },
     ],
     saveDataShape: `interface HeaderData {
   text: string;             // Heading HTML content
@@ -651,6 +658,13 @@ const editor = new Blok({
         type: 'string',
         default: '"Write a caption…"',
         description: 'Placeholder text shown in the caption field.',
+      },
+      {
+        option: 'reloadAttempts',
+        type: 'number',
+        default: '5',
+        description:
+          'How many times a rendered image silently re-fetches its `src` after a load error before showing the broken-image state. Set 0 to disable auto-retry.',
       },
     ],
     saveDataShape: `interface ImageData {

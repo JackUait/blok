@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ListDepthValidator, resolveTargetDepth } from '../../../../src/tools/list/depth-validator';
+import { ListDepthValidator, resolveTargetDepth, selectPointerDepth } from '../../../../src/tools/list/depth-validator';
 import type { BlocksAPI } from '../../../../src/tools/list/marker-calculator';
 
 describe('ListDepthValidator', () => {
@@ -384,6 +384,124 @@ describe('ListDepthValidator', () => {
           nextDepth: 0,
         })
       );
+    });
+  });
+
+  describe('selectPointerDepth (clientX → discrete indent step)', () => {
+    const INDENT = 27;
+
+    it('returns 0 at the base-left origin', () => {
+      expect(selectPointerDepth(100, 100, INDENT)).toBe(0);
+    });
+
+    it('clamps to 0 when the cursor sits left of the origin', () => {
+      expect(selectPointerDepth(40, 100, INDENT)).toBe(0);
+    });
+
+    it('snaps to one level after a full indent step to the right', () => {
+      expect(selectPointerDepth(100 + INDENT, 100, INDENT)).toBe(1);
+    });
+
+    it('snaps to two levels after two indent steps', () => {
+      expect(selectPointerDepth(100 + 2 * INDENT, 100, INDENT)).toBe(2);
+    });
+
+    it('rounds to the nearest step at the half-way boundary', () => {
+      // 1.5 steps rounds up to 2; 1.4 steps rounds down to 1.
+      expect(selectPointerDepth(100 + Math.round(1.5 * INDENT), 100, INDENT)).toBe(2);
+      expect(selectPointerDepth(100 + Math.round(1.4 * INDENT), 100, INDENT)).toBe(1);
+    });
+  });
+
+  describe('resolveTargetDepth with pointerDepth (cursor controls nesting)', () => {
+    const ctx = (over: Partial<Parameters<typeof resolveTargetDepth>[0]>): Parameters<typeof resolveTargetDepth>[0] => ({
+      currentDepth: 0,
+      previousIsListItem: false,
+      previousDepth: 0,
+      nextIsListItem: false,
+      nextDepth: 0,
+      ...over,
+    });
+
+    it('uses the cursor depth, clamped to previousDepth + 1', () => {
+      // Cursor wants depth 3, but previous is depth 1 → max allowed is 2.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 3, previousIsListItem: true, previousDepth: 1 }))).toBe(2);
+    });
+
+    it('lets the cursor outdent to root even when auto would nest from the bottom', () => {
+      // prev(1), next(0): auto returns 1 ("nest from the bottom"); cursor at 0 overrides → 0.
+      expect(resolveTargetDepth(ctx({
+        pointerDepth: 0, previousIsListItem: true, previousDepth: 1, nextIsListItem: true, nextDepth: 0,
+      }))).toBe(0);
+    });
+
+    it('lets the cursor nest under a same-depth previous item', () => {
+      // prev(0), no next, source(0): auto stays at 0; cursor at 1 nests → 1.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 1, previousIsListItem: true, previousDepth: 0 }))).toBe(1);
+    });
+
+    it('ignores the cursor when there is no predecessor at all (root of the document)', () => {
+      // No predecessor (neither list nor any other block) → no legal nesting
+      // parent, so the cursor is ignored and auto-resolution applies (root).
+      expect(resolveTargetDepth(ctx({ pointerDepth: 2, previousIsListItem: false, currentDepth: 0 }))).toBe(0);
+    });
+
+    it('BUG 2: the cursor nests under a NON-list predecessor when one exists (previousExists)', () => {
+      // A list item dragged right and dropped after a paragraph: previousIsListItem
+      // is false, but a predecessor DOES exist, so the cursor may nest one level
+      // under it — matching Notion (nest under any preceding block).
+      expect(resolveTargetDepth(ctx({ pointerDepth: 1, previousIsListItem: false, previousExists: true }))).toBe(1);
+      // Still capped at the first-in-group max of 1 for a non-list predecessor.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 3, previousIsListItem: false, previousExists: true }))).toBe(1);
+      // Cursor at the edge still lands at root.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 0, previousIsListItem: false, previousExists: true }))).toBe(0);
+    });
+
+    it('falls back to auto-resolution when pointerDepth is undefined', () => {
+      // No cursor info → unchanged behaviour (deeper previous pulls the drop in).
+      expect(resolveTargetDepth(ctx({ previousIsListItem: true, previousDepth: 1 }))).toBe(1);
+    });
+
+    it('BUG 3: holds at the deepest legal depth for a far-right over-drag (no fall-through to auto)', () => {
+      // prev(0) → maxAllowed 1. A far-right cursor (raw step 22) must CAP at the
+      // deepest legal depth (1) and HOLD there, rather than fall through to
+      // neighbour auto-resolution (which returned 0). The pointer is authoritative
+      // and deterministic whenever a nesting-context predecessor exists.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 22, previousIsListItem: true, previousDepth: 0 }))).toBe(1);
+      // prev(1) → maxAllowed 2, a far-right over-drag caps and holds at 2.
+      expect(resolveTargetDepth(ctx({ pointerDepth: 22, previousIsListItem: true, previousDepth: 1 }))).toBe(2);
+    });
+  });
+
+  describe('getTargetDepthForMove with pointerDepth (drop honors the cursor — BUG 1)', () => {
+    it('honors pointerDepth so the applied drop matches the indicator (no auto override)', () => {
+      // First(0), Second(1), [drop slot], no next. Auto "nests from the bottom"
+      // to depth 1, but a cursor at the content edge (pointerDepth 0) previews
+      // ROOT — and the drop MUST land at root to match that preview.
+      const blocks = [
+        createMockBlock({ depth: 0 }), // index 0: First
+        createMockBlock({ depth: 1 }), // index 1: Second (previous)
+        createMockBlock({ depth: 0 }), // index 2: placeholder for the moved block
+      ];
+      const validator = new ListDepthValidator(createMockBlocksAPI(blocks));
+
+      // Without the cursor: auto nests from the bottom → 1 (unchanged behaviour).
+      expect(validator.getTargetDepthForMove({ blockIndex: 2, currentDepth: 0 })).toBe(1);
+      // With the cursor at root: the drop honors it → 0.
+      expect(validator.getTargetDepthForMove({ blockIndex: 2, currentDepth: 0, pointerDepth: 0 })).toBe(0);
+    });
+
+    it('honors a deeper pointerDepth, clamped to the legal max', () => {
+      const blocks = [
+        createMockBlock({ depth: 0 }), // index 0: previous list item at depth 0
+        createMockBlock({ depth: 0 }), // index 1: placeholder for the moved block
+      ];
+      const validator = new ListDepthValidator(createMockBlocksAPI(blocks));
+
+      // prev(0) → max 1; cursor wants 1 → nests to 1.
+      expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 0, pointerDepth: 1 })).toBe(1);
+      // cursor over-drags (raw 5) → caps and holds at the legal max 1.
+      expect(validator.getTargetDepthForMove({ blockIndex: 1, currentDepth: 0, pointerDepth: 5 })).toBe(1);
     });
   });
 

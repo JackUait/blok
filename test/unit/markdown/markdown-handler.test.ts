@@ -78,6 +78,55 @@ describe('MarkdownHandler', () => {
     }
   });
 
+  it('reparents list-shaped markdown under the container when pasted into a container child', async () => {
+    const setBlockParent = vi.fn();
+    const holder = document.createElement('div');
+    const currentInput = document.createElement('div');
+
+    holder.appendChild(currentInput);
+
+    const composedById = new Map<string, { id: string; parentId?: string }>();
+    const compose = vi.fn().mockImplementation((options: { id: string; parentId?: string }) => {
+      const block = { id: options.id, parentId: options.parentId };
+
+      composedById.set(options.id, block);
+
+      return block;
+    });
+
+    const containerBlok = {
+      BlockManager: {
+        composeBlock: compose,
+        insertMany: vi.fn(),
+        removeBlock: vi.fn().mockResolvedValue(undefined),
+        setBlockParent,
+        currentBlock: {
+          id: 'body1',
+          parentId: 'cal1',
+          isEmpty: true,
+          currentInput,
+          holder,
+        },
+        currentBlockIndex: 1,
+      },
+      Caret: { setToBlock: vi.fn(), positions: { END: 'end' } },
+    } as unknown as BlokModules;
+
+    const containerHandler = new MarkdownHandler(containerBlok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+
+    const handled = await containerHandler.handle('1. First line\n2. Second line\n3. Third line', {
+      canReplaceCurrentBlock: false,
+    });
+
+    expect(handled).toBe(true);
+    // Every top-level produced block (all three list items) must be reparented
+    // under the callout so they stay inside the container instead of ejecting.
+    expect(setBlockParent).toHaveBeenCalledTimes(3);
+    for (const call of setBlockParent.mock.calls) {
+      expect(call[1]).toBe('cal1');
+    }
+  });
+
   it('normalizes flat-array table children even if markdownToBlocks emits children without parent', async () => {
     // Defense-in-depth: if mdast-to-blocks ever regresses to emitting the
     // dodopizza shape (table cells reference children by id but the children
@@ -137,6 +186,83 @@ describe('MarkdownHandler', () => {
     }
 
     vi.doUnmock('../../../src/markdown/index');
+  });
+});
+
+describe('MarkdownHandler — inline fragment pasted mid-text (Notion parity)', () => {
+  let insertContentAtCaretPosition: ReturnType<typeof vi.fn>;
+  let insertMany: ReturnType<typeof vi.fn>;
+
+  const createInlineFragmentBlok = (overrides: {
+    isEmpty?: boolean;
+    hasCurrentInput?: boolean;
+  } = {}): BlokModules => {
+    const currentInput = overrides.hasCurrentInput === false ? null : document.createElement('div');
+
+    return {
+      BlockManager: {
+        composeBlock: vi.fn().mockImplementation((options: { id: string }) => ({ id: options.id })),
+        insertMany,
+        removeBlock: vi.fn().mockResolvedValue(undefined),
+        paste: vi.fn(),
+        currentBlock: {
+          isEmpty: overrides.isEmpty ?? false,
+          currentInput,
+          tool: { baseSanitizeConfig: { strong: true, a: { href: true } } },
+        },
+        currentBlockIndex: 0,
+      },
+      Caret: {
+        setToBlock: vi.fn(),
+        positions: { END: 'end' },
+        insertContentAtCaretPosition,
+      },
+    } as unknown as BlokModules;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertContentAtCaretPosition = vi.fn();
+    insertMany = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('inserts a single-line bold fragment INLINE at the caret, not as a sibling block', async () => {
+    const blok = createInlineFragmentBlok();
+    const inlineHandler = new MarkdownHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+
+    const handled = await inlineHandler.handle('**bold**', { canReplaceCurrentBlock: false });
+
+    expect(handled).toBe(true);
+    // Merged inline into the current non-empty block (rich formatting preserved).
+    expect(insertContentAtCaretPosition).toHaveBeenCalledTimes(1);
+    expect(insertContentAtCaretPosition.mock.calls[0][0]).toContain('strong');
+    // No sibling block was created below the current block.
+    expect(insertMany).not.toHaveBeenCalled();
+  });
+
+  it('still converts a single-line heading into a block (block-level markdown)', async () => {
+    const blok = createInlineFragmentBlok();
+    const blockHandler = new MarkdownHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+
+    await blockHandler.handle('# Heading', { canReplaceCurrentBlock: false });
+
+    // Heading is block-level — it must be inserted as a block, not inline.
+    expect(insertMany).toHaveBeenCalledTimes(1);
+    expect(insertContentAtCaretPosition).not.toHaveBeenCalled();
+  });
+
+  it('still inserts an inline fragment as a block when the current block is empty', async () => {
+    const blok = createInlineFragmentBlok({ isEmpty: true });
+    const blockHandler = new MarkdownHandler(blok, {} as ToolRegistry, {} as SanitizerConfigBuilder);
+
+    await blockHandler.handle('**bold**', { canReplaceCurrentBlock: true });
+
+    expect(insertMany).toHaveBeenCalledTimes(1);
+    expect(insertContentAtCaretPosition).not.toHaveBeenCalled();
   });
 });
 

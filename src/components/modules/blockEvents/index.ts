@@ -102,6 +102,21 @@ export class BlockEvents extends Module {
     const keyCode = keyCodeFromEvent(event);
 
     /**
+     * Eagerly resolve currentBlock from the event target for keys that mutate
+     * block structure (Enter split, Backspace/Delete merge). The debounced
+     * selectionchange handler (180ms) may not have fired yet when the caret was
+     * set programmatically (e.g. inside a column), leaving currentBlock
+     * undefined — the handlers would then bail before preventDefault and the
+     * browser would perform a destructive native edit. Mirrors slashPressed.
+     */
+    if (
+      (keyCode === keyCodes.ENTER || keyCode === keyCodes.BACKSPACE || keyCode === keyCodes.DELETE) &&
+      event.target instanceof Node
+    ) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
+    /**
      * Fire keydown processor by normalized keyboard code
      */
     switch (keyCode) {
@@ -114,6 +129,14 @@ export class BlockEvents extends Module {
         break;
 
       case keyCodes.ENTER:
+        /**
+         * Cmd/Ctrl+Enter toggles the checkbox of every selected to-do item
+         * (Notion parity). The handler self-guards on the modifier and on the
+         * presence of a block selection, so a plain Enter falls through to split.
+         */
+        if (this.blockSelectionKeys.handleToggleCheckbox(event)) {
+          return;
+        }
         this.keyboardNavigation.handleEnter(event);
         break;
 
@@ -139,6 +162,16 @@ export class BlockEvents extends Module {
     }
 
     /**
+     * Home/End move the caret horizontally to the line start/end via the
+     * browser's native handling. Like ArrowLeft/Right, a horizontal move must
+     * reset the sticky vertical goal column so the next ArrowUp/Down aims at the
+     * caret's new X instead of a stale column captured by an earlier move.
+     */
+    if (event.key === 'Home' || event.key === 'End') {
+      this.Blok.Caret.resetGoalColumn();
+    }
+
+    /**
      * We check for "key" here since on different keyboard layouts "/" can be typed as "Shift + 7" etc
      * @todo probably using "beforeInput" event would be better here
      */
@@ -153,6 +186,17 @@ export class BlockEvents extends Module {
     if (event.code === 'Slash' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       this.commandSlashPressed();
+    }
+
+    /**
+     * Shift+F10 opens the block context menu (Block Settings) for the current
+     * block — the standard keyboard equivalent of a right-click. A keyboard-only
+     * path to the block menu that never depends on the hover-driven settings
+     * toggler.
+     */
+    if (event.key === 'F10' && event.shiftKey) {
+      event.preventDefault();
+      this.contextMenuKeyPressed(event);
     }
   }
 
@@ -291,10 +335,58 @@ export class BlockEvents extends Module {
    */
   private commandSlashPressed(): void {
     if (this.Blok.BlockSelection.selectedBlocks.length > 1) {
+      this.activateBlockSettingsForMultipleBlocks();
+
       return;
     }
 
     this.activateBlockSettings();
+  }
+
+  /**
+   * Shift+F10 keydown inside a Block — opens the block context menu.
+   *
+   * A multi-block selection routes to the multi-block Block Settings path
+   * (turn-into, delete, etc.). A single block anchors the menu to the block's
+   * holder rect (mirrors the right-click context menu), so it appears next to
+   * the block even without the hover-driven settings toggler being visible.
+   * @param event - keydown
+   */
+  private contextMenuKeyPressed(event: KeyboardEvent): void {
+    if (this.Blok.BlockSelection.selectedBlocks.length > 1) {
+      this.activateBlockSettingsForMultipleBlocks();
+
+      return;
+    }
+
+    /**
+     * Eagerly resolve the current block from the event target: the debounced
+     * selectionchange handler may not have fired yet after a programmatic caret
+     * move (e.g. inside a column), which would leave currentBlock stale.
+     */
+    if (event.target instanceof Node) {
+      this.Blok.BlockManager.setCurrentBlockByChildNode(event.target);
+    }
+
+    const block = this.Blok.BlockManager.currentBlock;
+
+    if (block === undefined) {
+      return;
+    }
+
+    if (!this.Blok.Toolbar.opened) {
+      this.Blok.Toolbar.moveAndOpen();
+    }
+
+    if (!this.Blok.BlockSettings.opened) {
+      const anchor = block.holder.getBoundingClientRect();
+
+      Promise
+        .resolve(this.Blok.BlockSettings.open(block, anchor))
+        .catch(() => {
+          // Error handling for BlockSettings.open
+        });
+    }
   }
 
   /**
@@ -404,6 +496,29 @@ export class BlockEvents extends Module {
   /**
    * Open Toolbar and show BlockSettings before flipping Tools
    */
+  /**
+   * Open the Block Settings / turn-into menu for a multi-block selection.
+   *
+   * Notion parity: Cmd/Ctrl+/ with 2+ blocks selected opens the block actions
+   * menu for the whole selection (turn-into, delete, etc.). We anchor the
+   * toolbar to the first selected block via the multi-block path (mirrors the
+   * settings-toggler click flow) and then open BlockSettings, which already
+   * builds a multi-selection menu when several blocks are selected.
+   */
+  private activateBlockSettingsForMultipleBlocks(): void {
+    if (!this.Blok.Toolbar.opened) {
+      this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    }
+
+    if (!this.Blok.BlockSettings.opened) {
+      Promise
+        .resolve(this.Blok.BlockSettings.open())
+        .catch(() => {
+          // Error handling for BlockSettings.open
+        });
+    }
+  }
+
   private activateBlockSettings(): void {
     if (!this.Blok.Toolbar.opened) {
       this.Blok.Toolbar.moveAndOpen();

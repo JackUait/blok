@@ -7,7 +7,7 @@
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { stripFakeBackgroundElements } from '../../components/utils';
 
-import { buildListItem } from './dom-builder';
+import { applyChecklistCheckedState, buildListItem } from './dom-builder';
 import type { ListItemStyle, ListItemData, StyleConfig } from './types';
 
 /**
@@ -56,6 +56,7 @@ export const rerenderListItem = (context: RerenderContext): HTMLElement | null =
   if (result.checkboxElement && !readOnly) {
     const checkboxElement = result.checkboxElement;
     checkboxElement.addEventListener('change', () => {
+      applyChecklistCheckedState(checkboxElement, result.contentElement, checkboxElement.checked);
       onCheckboxChange(checkboxElement.checked, result.contentElement);
     });
   }

@@ -376,7 +376,21 @@ test.describe('keyboard shortcuts', () => {
     await expect(paragraph).toHaveCount(1);
     await paragraphInput.click();
 
-    // Each of the 4/5/6 combos must convert to the matching heading level.
+    // On Mac the heading combo is Cmd+Opt+digit, distinct from the list toolbox's
+    // Cmd+Shift+5/6/7, so 4/5/6 all reach the matching heading level. On Win/Linux
+    // the heading combo is Ctrl+Shift+digit, which collides with the advertised
+    // list shortcuts (Ctrl+Shift+5 → bulleted, +6 → numbered). The list toolbox
+    // owns that combo by design (see KeyboardController.handleListShortcut, which
+    // runs before handleTurnInto), so only level 4 stays heading-reachable there;
+    // 5/6 intentionally become lists.
+    const expectedFor = (level: number): { type: string | undefined; level?: number } => {
+      if (isMac || level === 4) {
+        return { type: 'header', level };
+      }
+
+      return { type: 'list', level: undefined };
+    };
+
     for (const level of [4, 5, 6]) {
       const blockInput = page
         .locator(`${BLOK_INTERFACE_SELECTOR} [contenteditable="true"]`, { hasText: 'Deep heading' })
@@ -390,7 +404,7 @@ test.describe('keyboard shortcuts', () => {
         const block = data.blocks.find((candidate) => (candidate.data as { text?: string }).text === 'Deep heading');
 
         return { type: block?.type, level: (block?.data as { level?: number } | undefined)?.level };
-      }).toEqual({ type: 'header', level });
+      }).toEqual(expectedFor(level));
     }
   });
 

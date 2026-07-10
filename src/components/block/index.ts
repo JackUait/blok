@@ -269,6 +269,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     id = generateBlockId(),
     data,
     tool,
+    api,
     readOnly,
     tunesData,
     parentId,
@@ -292,7 +293,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.settings = tool.settings;
     this.config = this.settings;
     this.blokEventBus = eventBus || null;
-    this.blockAPI = new BlockAPI(this);
+    this.blockAPI = new BlockAPI(this, api);
 
     this.readOnly = readOnly;
     this.tool = tool;

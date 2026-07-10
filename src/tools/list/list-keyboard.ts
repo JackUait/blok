@@ -6,13 +6,14 @@
 
 import type { API } from '../../../types';
 
-import { setCaretToBlockContent } from './caret-manager';
+import { setCaretToBlockContent, setCaretToBlockContentOffset, getCaretOffsetWithin } from './caret-manager';
 import { TOOL_NAME } from './constants';
 import {
   splitContentAtCursor,
   isAtStart,
   isEntireContentSelected,
 } from './content-operations';
+import { applyChecklistCheckedState } from './dom-builder';
 import type { ListDepthValidator } from './depth-validator';
 import type { ListItemData } from './types';
 
@@ -69,7 +70,9 @@ export const handleEnter = async (
     const newBlock = api.blocks.insert(TOOL_NAME, {
       text: afterContent,
       style: data.style,
-      ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
+      // Notion parity (m-9): a new to-do is always UNCHECKED, even when split
+      // from a checked item — only text/depth carry over.
+      ...(data.style === 'checklist' ? { checked: false } : {}),
       depth: data.depth,
     }, undefined, currentBlockIndex + 1, true);
 
@@ -85,7 +88,9 @@ export const handleEnter = async (
     {
       text: afterContent,
       style: data.style,
-      ...(data.style === 'checklist' ? { checked: Boolean(data.checked) } : {}),
+      // Notion parity (m-9): a new to-do is always UNCHECKED, even when split
+      // from a checked item — only text/depth carry over.
+      ...(data.style === 'checklist' ? { checked: false } : {}),
       depth: data.depth,
     },
     currentBlockIndex + 1
@@ -164,14 +169,14 @@ const exitListOrOutdent = async (
 };
 
 /**
- * Handle Backspace key - convert to paragraph or clear content
+ * Handle Backspace key - outdent a nested item, or convert to paragraph
  */
 export const handleBackspace = async(
   context: KeyboardContext,
   event: KeyboardEvent,
   depthValidator?: ListDepthValidator
 ): Promise<void> => {
-  const { api, blockId, data, element, getContentElement, getDepth, syncContentFromDOM } = context;
+  const { blockId, data, element, getContentElement, syncContentFromDOM, getDepth, api } = context;
 
   const selection = window.getSelection();
   if (!selection || !element) return;
@@ -184,7 +189,6 @@ export const handleBackspace = async(
   syncContentFromDOM();
 
   const currentContent = data.text;
-  const currentDepth = getDepth();
 
   // Check if entire content is selected
   const entireContentSelected = isEntireContentSelected(contentEl, range);
@@ -205,8 +209,25 @@ export const handleBackspace = async(
     return;
   }
 
+  // A non-collapsed PARTIAL selection (e.g. "hello" out of "hello world",
+  // anchored at offset 0) must delete natively — never convert. The isAtStart
+  // check below is true for any selection anchored at 0, so without this guard
+  // the convert-to-paragraph path fired on the FULL text and swallowed the
+  // delete. Only a COLLAPSED caret at offset 0 converts.
+  if (!selection.isCollapsed) return;
+
   // Only handle at start of content for non-selection cases
   if (!isAtStart(contentEl, range)) return;
+
+  // Notion parity (m-10): a modifier-held Backspace is a word/line delete, not a
+  // list operation. At offset 0 native word/line delete is a no-op, so the marker
+  // and content stay intact. preventDefault also stops the shared block handler
+  // from merging this item into the previous block.
+  if (event.metaKey || event.ctrlKey || event.altKey) {
+    event.preventDefault();
+
+    return;
+  }
 
   event.preventDefault();
 
@@ -214,14 +235,14 @@ export const handleBackspace = async(
     return;
   }
 
-  // Notion: Backspace at the START of a NESTED list item outdents it one level
-  // instead of converting it to a paragraph — mirroring the Enter-on-empty path.
-  // Only a top-level item converts to a paragraph.
+  // Notion parity (BUG #11): Backspace at the START of a NESTED list item OUTDENTS
+  // it one level while keeping its list type — mirroring the empty-item Enter path
+  // (exitListOrOutdent). A structurally nested (keyboard-Tab) item reparents to its
+  // grandparent; a flat drag-nested item drops one flat depth. Only a truly
+  // top-level item (no structural parent AND depth 0) converts to a paragraph.
   const structuralParentId = getStructuralListParentId(api, blockId);
 
   if (structuralParentId !== null) {
-    // Structurally nested (keyboard Tab): reparent to the grandparent, keeping
-    // nesting in the block tree rather than a flat depth.
     const grandparentId = api.blocks.getById(structuralParentId)?.parentId ?? null;
 
     api.blocks.setBlockParent(blockId, grandparentId);
@@ -235,14 +256,13 @@ export const handleBackspace = async(
     return;
   }
 
-  // Drag-nested (flat depth) items still outdent via the flat carrier.
-  if (currentDepth > 0) {
+  if (getDepth() > 0) {
     await handleOutdent(context, depthValidator);
 
     return;
   }
 
-  // At top level, convert to paragraph using convert API for proper undo/redo support.
+  // Top-level item: convert to a plain PARAGRAPH in place, preserving content.
   const newBlock = await api.blocks.convert(blockId, 'paragraph', { text: currentContent });
 
   setCaretToBlockContent(api, newBlock, 'start');
@@ -282,18 +302,58 @@ const cascadeDepthReduction = async (
 };
 
 /**
+ * Increase depth by 1 for all descendant list items following the given block.
+ * Symmetric to {@link cascadeDepthReduction}: stops at non-list blocks or blocks
+ * whose depth is <= the parent's original depth (siblings, not descendants). Used
+ * so a flat-carrier indent carries its nested descendants' depth/glyph along.
+ */
+const cascadeDepthIncrease = async (
+  api: API,
+  blockId: string | undefined,
+  parentOriginalDepth: number,
+  depthValidator: ListDepthValidator
+): Promise<void> => {
+  const startIndex = blockId
+    ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
+    : api.blocks.getCurrentBlockIndex();
+  const blocksCount = api.blocks.getBlocksCount();
+
+  const processDescendant = async (index: number): Promise<void> => {
+    if (index >= blocksCount) return;
+
+    const block = api.blocks.getBlockByIndex(index);
+
+    if (!block || block.name !== TOOL_NAME) return;
+
+    const blockDepth = depthValidator.getBlockDepth(block);
+
+    if (blockDepth <= parentOriginalDepth) return;
+
+    await api.blocks.update(block.id, { depth: blockDepth + 1 });
+    await processDescendant(index + 1);
+  };
+
+  await processDescendant(startIndex + 1);
+};
+
+/**
  * Handle Shift+Tab key - outdent the list item and cascade to descendants
  */
 export const handleOutdent = async(
   context: KeyboardContext,
   depthValidator?: ListDepthValidator
 ): Promise<void> => {
-  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
+  const { api, blockId, data, syncContentFromDOM, getDepth, getContentElement } = context;
 
   const currentDepth = getDepth();
 
   // Can't outdent if already at root level
   if (currentDepth === 0) return;
+
+  // Snapshot the caret offset BEFORE the re-render so it can be restored — the
+  // flat path re-renders via api.blocks.update, and the default 'end' caret would
+  // otherwise jump the caret to the end of the item.
+  const caretOffset = getCaretOffsetWithin(getContentElement());
 
   // Sync current content before updating
   syncContentFromDOM();
@@ -313,8 +373,48 @@ export const handleOutdent = async(
     await cascadeDepthReduction(api, blockId, currentDepth, depthValidator);
   }
 
-  // Restore focus to the updated block after DOM has been updated
-  setCaretToBlockContent(api, updatedBlock);
+  // Restore focus + caret to the updated block after DOM has been updated
+  if (caretOffset !== null) {
+    setCaretToBlockContentOffset(api, updatedBlock, caretOffset);
+  } else {
+    setCaretToBlockContent(api, updatedBlock);
+  }
+};
+
+/**
+ * Toggle a checklist item's `checked` state IN PLACE — Notion's Cmd/Ctrl+Enter on
+ * a to-do. Flips `data.checked`, syncs the checkbox input and the strike-through
+ * styling, and persists via the blocks API. No split / new item is created.
+ *
+ * @param context - keyboard context for the current list item
+ * @returns true when the item is a checklist (and was toggled); false otherwise,
+ *   so the caller can fall back to the normal Enter behaviour.
+ */
+export const toggleChecklistChecked = async (
+  context: KeyboardContext
+): Promise<boolean> => {
+  const { api, blockId, data, element, getContentElement } = context;
+
+  if (data.style !== 'checklist') {
+    return false;
+  }
+
+  const newChecked = !data.checked;
+  data.checked = newChecked;
+
+  const checkbox = element?.querySelector('input[type="checkbox"]');
+
+  applyChecklistCheckedState(
+    checkbox instanceof HTMLInputElement ? checkbox : null,
+    getContentElement(),
+    newChecked
+  );
+
+  if (blockId !== undefined) {
+    await api.blocks.update(blockId, { ...data, checked: newChecked });
+  }
+
+  return true;
 };
 
 /**
@@ -331,18 +431,43 @@ export const handleIndent = async(
   context: KeyboardContext,
   depthValidator: ListDepthValidator
 ): Promise<void> => {
-  const { api, blockId, data, syncContentFromDOM, getDepth } = context;
+  const { api, blockId, data, syncContentFromDOM, getDepth, getContentElement } = context;
 
   const currentBlockIndex = blockId !== undefined
     ? api.blocks.getBlockIndex(blockId) ?? api.blocks.getCurrentBlockIndex()
     : api.blocks.getCurrentBlockIndex();
   const currentDepth = getDepth();
+
+  /**
+   * Notion parity: a list item can only be indented when there is a preceding
+   * LIST sibling for it to nest under — the same precondition the structural Tab
+   * path enforces (getPrecedingSibling). A FIRST-in-group item (the first block,
+   * or a list item whose previous block is not a list) has nothing to nest under,
+   * so Tab is a strict no-op.
+   *
+   * Without this guard the flat path derives its cap from getMaxAllowedDepth,
+   * which returns 1 for first-in-group items (a deliberate rule for DRAG via
+   * resolveTargetDepth, but wrong for keyboard Tab), so the first bullet of every
+   * list could be wrongly indented to an orphaned depth 1.
+   */
+  const previousBlock = currentBlockIndex > 0
+    ? api.blocks.getBlockByIndex(currentBlockIndex - 1)
+    : undefined;
+
+  if (previousBlock === undefined || previousBlock.name !== TOOL_NAME) {
+    return;
+  }
+
   const maxAllowedDepth = depthValidator.getMaxAllowedDepth(currentBlockIndex);
 
   // Already at the deepest allowed level — nothing to do.
   if (currentDepth >= maxAllowedDepth) {
     return;
   }
+
+  // Snapshot the caret offset BEFORE the re-render so it can be restored (the
+  // default 'end' caret would otherwise jump the caret to the end of the item).
+  const caretOffset = getCaretOffsetWithin(getContentElement());
 
   // Sync current content before updating
   syncContentFromDOM();
@@ -355,6 +480,14 @@ export const handleIndent = async(
     depth: newDepth,
   });
 
-  // Restore focus to the updated block after DOM has been updated
-  setCaretToBlockContent(api, updatedBlock);
+  // Cascade the depth INCREASE to descendant list items so their depth/glyph
+  // stays in sync — symmetric with handleOutdent's cascadeDepthReduction.
+  await cascadeDepthIncrease(api, blockId, currentDepth, depthValidator);
+
+  // Restore focus + caret to the updated block after DOM has been updated
+  if (caretOffset !== null) {
+    setCaretToBlockContentOffset(api, updatedBlock, caretOffset);
+  } else {
+    setCaretToBlockContent(api, updatedBlock);
+  }
 };

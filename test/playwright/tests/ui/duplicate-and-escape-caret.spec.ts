@@ -117,6 +117,48 @@ test.describe('caret restoration regressions', () => {
     await expect(getBlockWrapper(page, 0).locator('[contenteditable="true"]')).toHaveText('Hello');
   });
 
+  test('BUG #2: Cmd/Ctrl+D highlights the duplicated copy with the blue "just-added" pulse', async ({ page }) => {
+    await createParagraphBlok(page, ['Hello']);
+
+    const firstInput = getBlockWrapper(page, 0).locator('[contenteditable="true"]');
+
+    await firstInput.click();
+
+    // Record any block that gains the arrival-pulse class. The class is removed
+    // on animationend (~1.5s), so poll-based assertions can race it — an
+    // observer captures the transient state deterministically.
+    await page.evaluate(() => {
+      const seen: string[] = [];
+
+      (window as unknown as { __pulseSeen: string[] }).__pulseSeen = seen;
+
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          const element = mutation.target;
+
+          if (element instanceof Element && element.classList.contains('blok-block--target')) {
+            seen.push(element.textContent ?? '');
+          }
+        }
+      });
+
+      observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    });
+
+    await page.keyboard.press(`${MODIFIER_KEY}+d`);
+
+    await expect(page.locator(BLOCK_WRAPPER_SELECTOR)).toHaveCount(2);
+
+    // The duplicated copy (text "Hello") received the blue arrival pulse — the
+    // same "just added" cue a hash-navigated block gets (Notion parity).
+    const pulseSeen = await page.evaluate(() => (window as unknown as { __pulseSeen: string[] }).__pulseSeen);
+
+    expect(pulseSeen.some((text) => text.includes('Hello'))).toBe(true);
+
+    // The caret still lands in the copy (BUG #9 is preserved alongside the pulse).
+    expect(await caretIsInEditor(page)).toBe(true);
+  });
+
   test('BUG #19: Escape after select-all-blocks clears the highlight and restores the caret', async ({ page }) => {
     await createParagraphBlok(page, ['First', 'Second']);
 

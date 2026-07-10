@@ -264,6 +264,44 @@ test.describe('list tool (ListItem)', () => {
 
       await expect(items).toHaveCount(2);
     });
+
+    test('Enter split after a read-only toggle keeps the bullet marker intact (no ghost duplicate)', async ({ page }) => {
+      // Regression: the React adapter re-applies editability on mount via
+      // readOnly.set(false). That used to flip the list bullet marker (a
+      // deliberately non-editable span that sits before the content) to
+      // contenteditable="true", after which the Enter-split wrote the item's
+      // own text INTO the marker span — rendering a large ghost duplicate of
+      // the text overlapping the real list item.
+      await createBlok(page, {
+        tools: defaultTools,
+        data: createListItems([{ text: 'Alpha' }, { text: 'Clean JSON output' }]),
+      });
+
+      await page.evaluate(async () => {
+        await window.blokInstance?.readOnly.set(false);
+      });
+
+      const target = page
+        .locator(`${LIST_BLOCK_SELECTOR} [contenteditable="true"]`)
+        .filter({ hasText: 'Clean JSON output' });
+
+      await target.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+
+      // Three items now: Alpha, Clean JSON output, and the new empty item.
+      const markers = page.locator(`${LIST_BLOCK_SELECTOR} [data-list-marker]`);
+
+      await expect(markers).toHaveCount(3);
+
+      // Every marker still shows the bullet glyph — none was overwritten with text.
+      await expect(markers.nth(0)).toHaveText('•');
+      await expect(markers.nth(1)).toHaveText('•');
+      await expect(markers.nth(2)).toHaveText('•');
+
+      // The item text appears exactly once — no ghost duplicate in a marker span.
+      await expect(page.getByText('Clean JSON output', { exact: true })).toHaveCount(1);
+    });
   });
 
   test.describe('enter on empty item exits list', () => {
@@ -351,7 +389,7 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[1].data.depth).toBe(1);
     });
 
-    test('tab indents first item to depth 1', async ({ page }) => {
+    test('tab is a no-op on the first item (no preceding sibling to nest under)', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -365,16 +403,17 @@ test.describe('list tool (ListItem)', () => {
 
       await firstItem.click();
 
-      // Press Tab - first-in-group items can nest one level
+      // Press Tab — Notion parity: the FIRST item of a list has no preceding sibling
+      // to nest under, so Tab is a strict no-op (it must NOT indent to an orphaned
+      // depth 1). This is the structural-nesting path that text/headers also use.
       await page.keyboard.press('Tab');
 
-      // Save and verify depth is now 1
+      // Save and verify the first item stayed at depth 0 (unchanged).
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
-       
-      expect(savedData?.blocks[0].data.depth).toBe(1);
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
     });
 
     test('shift+tab decreases depth', async ({ page }) => {
@@ -1847,7 +1886,7 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
     });
 
-    test('tab indents all selected items when first-in-group can still nest', async ({ page }) => {
+    test('tab on a selection starting at the first list item nests every item but the first', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: createListItems([
@@ -1857,21 +1896,24 @@ test.describe('list tool (ListItem)', () => {
         ]),
       });
 
-      // Select first and second items (first-in-group items can nest one level)
+      // Select first and second items.
       await selectBlocksRange(page, 0, 1);
 
-      // Press Tab - first-in-group items at depth 0 can indent to depth 1
+      // Press Tab - Notion parity: the first item of the list has no preceding
+      // sibling so it CANNOT indent; the second nests structurally under it.
       await page.keyboard.press('Tab');
 
-      // Verify both items were indented to depth 1
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
-       
-      expect(savedData?.blocks[0].data.depth).toBe(1);
-       
+      // First item stays at the root (depth 0); second item nests under it.
+
+      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+
       expect(savedData?.blocks[1].data.depth).toBe(1);
+
+      expect(savedData?.blocks[1].parent).toBe('list-item-0');
     });
 
     test('shift+tab does nothing when any selected item is at depth 0', async ({ page }) => {
@@ -1902,7 +1944,7 @@ test.describe('list tool (ListItem)', () => {
       expect(savedData?.blocks[2].data.depth ?? 0).toBe(0);
     });
 
-    test('tab does nothing when selection includes non-list blocks', async ({ page }) => {
+    test('tab on a mixed list + non-list selection indents each kind (Notion parity, no longer a no-op)', async ({ page }) => {
       await createBlok(page, {
         tools: defaultTools,
         data: {
@@ -1920,17 +1962,21 @@ test.describe('list tool (ListItem)', () => {
       await page.keyboard.press('Meta+a');
       await page.keyboard.press('Shift+ArrowDown');
 
-      // Press Tab - should do nothing because selection includes paragraph
+      // Press Tab - each kind indents by its own mechanism: the list item gains a
+      // depth level, the paragraph nests structurally under its preceding sibling.
       await page.keyboard.press('Tab');
-
-      // Verify list item was not indented
 
       const savedData: OutputData | undefined = await page.evaluate(async () => {
         return await window.blokInstance?.save();
       });
 
-       
-      expect(savedData?.blocks[0].data.depth ?? 0).toBe(0);
+      // List item indented one depth level (no longer a no-op).
+
+      expect(savedData?.blocks[0].data.depth).toBe(1);
+
+      // Paragraph nested under the preceding list item.
+
+      expect(savedData?.blocks[1].parent).toBe('list-1');
     });
 
     test('selection is preserved after indent', async ({ page }) => {

@@ -35,6 +35,8 @@ const AMOUNT_OF_LOCAL_WORKERS = 3;
 
 // Cross-browser critical tests - require validation on all browsers
 const CROSS_BROWSER_TESTS = [
+  // Custom popover scrollbar must render identically on every engine
+  '**/ui/popover-scrollbar.spec.ts',
   // Browser-specific event handling
   '**/drag-drop.spec.ts',
   '**/copy-paste.spec.ts',

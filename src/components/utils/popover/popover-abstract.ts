@@ -9,7 +9,7 @@ import type { PopoverItem, PopoverItemRenderParamsMap , PopoverItemParams } from
 import { PopoverItemHtml } from './components/popover-item/popover-item-html/popover-item-html';
 import type { SearchInput } from './components/search-input';
 import { PopoverRegistry } from './popover-registry';
-import { css } from './popover.const';
+import { css, REEL_DISTORTION } from './popover.const';
 
 import type { PopoverEventMap, PopoverMessages, PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -82,14 +82,30 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // Append item elements to the items container
     this.appendItemElements();
 
+    // Promote members of exclusive (string-key) toggle groups to
+    // role="menuitemradio" now that every sibling is known.
+    this.assignExclusiveToggleRoles();
+
     // Set up click listener on the container
     if (this.nodes.popoverContainer) {
       this.listeners.on(this.nodes.popoverContainer, 'click', (event: Event) => this.handleClick(event));
     }
 
-    // Set up scroll listener on items container for scroll hazes
+    // Set up scroll listener on items container for the edge reel distortion
+    // and the scroll-activity marker that reveals the auto-hidden scrollbar.
     if (this.nodes.items) {
-      this.listeners.on(this.nodes.items, 'scroll', () => this.updateScrollHazes());
+      this.listeners.on(this.nodes.items, 'scroll', () => {
+        this.updateScrollReel();
+        this.updateScrollbar();
+        this.markScrollActivity();
+      });
+    }
+
+    // Drag-to-scroll on the custom scrollbar thumb (parity with a native bar).
+    if (this.nodes.scrollbarThumb) {
+      this.listeners.on(this.nodes.scrollbarThumb, 'pointerdown', (event: Event) => {
+        this.startScrollbarDrag(event as PointerEvent);
+      });
     }
   }
 
@@ -144,6 +160,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     // Update DOM state
     this.nodes.popover.setAttribute(DATA_ATTR.popoverOpened, 'true');
+    this.nodes.popover.setAttribute('data-state', 'open');
     this.nodes.popoverContainer.className = twMerge(
       this.nodes.popoverContainer.className,
       css.popoverContainerOpened
@@ -160,15 +177,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     }
 
     /**
-     * Show hazes instantly on open (no transition), then restore transition for scroll-triggered changes
+     * Apply the edge reel distortion and size the custom scrollbar for the
+     * initial scroll position (deferred a frame so layout has settled and the
+     * items container reports its real height).
      */
-    this.nodes.scrollHazeTop.style.transition = 'none';
-    this.nodes.scrollHazeBottom.style.transition = 'none';
-    this.updateScrollHazes();
-    requestAnimationFrame(() => {
-      this.nodes.scrollHazeTop.style.transition = '';
-      this.nodes.scrollHazeBottom.style.transition = '';
-    });
+    this.updateScrollReel();
+    this.updateScrollbar();
+    requestAnimationFrame(() => this.updateScrollbar());
 
     const { trigger } = this.params;
     const isRootWithTrigger = (this.params.nestingLevel ?? 0) === 0 && trigger !== undefined;
@@ -176,6 +191,17 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     if (isRootWithTrigger) {
       PopoverRegistry.instance.register(this, trigger);
     }
+
+    this.onShow();
+  }
+
+  /**
+   * Subclass hook invoked at the end of {@link show}. Base implementation is a
+   * no-op; subclasses override to run show-time setup while inheriting the base
+   * open sequence (template-method pattern).
+   */
+  protected onShow(): void {
+    // No-op in base class.
   }
 
   /**
@@ -196,16 +222,18 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpened);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenTop);
     this.nodes.popover.removeAttribute(DATA_ATTR.popoverOpenLeft);
+    this.nodes.popover.setAttribute('data-state', 'closed');
     this.nodes.popoverContainer.className = css.popoverContainer;
 
     this.itemsDefault.forEach(item => item.reset());
 
-    this.nodes.scrollHazeTop.style.opacity = '0';
-    this.nodes.scrollHazeBottom.style.opacity = '0';
+    this.resetScrollReel();
 
     if (this.search !== undefined) {
       this.search.clear();
     }
+
+    this.onHide();
 
     PopoverRegistry.instance.unregister(this);
 
@@ -213,90 +241,119 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
-   * Clears memory
+   * Subclass hook invoked by {@link hide} after the base close sequence and
+   * before the registry unregister + Closed emit. Base implementation is a
+   * no-op. Subclasses override this instead of re-implementing hide(), so the
+   * base cleanup (removing the opened attribute, resetting the reel, clearing
+   * search) is never forgotten (template-method pattern).
    */
-  public destroy(): void {
-    const ghost = this.createCloseGhost();
-
-    this.items.forEach(item => item.destroy());
-    this.nodes.popover?.remove();
-    this.listeners.removeAll();
-    this.search?.destroy();
-
-    this.playCloseGhost(ghost);
+  protected onHide(): void {
+    // No-op in base class.
   }
 
   /**
-   * Snapshots the popover so its exit transition can play after the real
-   * element is torn down. Returns null when there is nothing visible to
-   * animate (e.g. popover never opened).
+   * Timeout fallback (ms) for removing the popover element if no
+   * transitionend/animationend fires (e.g. reduced-motion, no transition).
    */
-  private createCloseGhost(): HTMLElement | null {
+  private static readonly EXIT_ANIMATION_TIMEOUT_MS = 400;
+
+  /**
+   * How long (ms) the scroll-activity marker outlives the last scroll event —
+   * mirrors the system scrollbar lingering briefly after scrolling stops.
+   */
+  private static readonly SCROLL_ACTIVITY_TIMEOUT_MS = 600;
+
+  /**
+   * Pending removal of the scroll-activity marker.
+   */
+  private scrollActivityTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Stamps the items container with the scrolling attribute while scroll
+   * events keep arriving. CSS uses it to reveal the otherwise-transparent
+   * scrollbar thumb during keyboard-driven scrolling, when there is no hover.
+   */
+  private markScrollActivity(): void {
+    this.nodes.items.setAttribute(DATA_ATTR.scrolling, '');
+
+    if (this.scrollActivityTimeout !== null) {
+      clearTimeout(this.scrollActivityTimeout);
+    }
+
+    this.scrollActivityTimeout = setTimeout(() => {
+      this.nodes.items.removeAttribute(DATA_ATTR.scrolling);
+      this.scrollActivityTimeout = null;
+    }, PopoverAbstract.SCROLL_ACTIVITY_TIMEOUT_MS);
+  }
+
+  /**
+   * Clears memory.
+   *
+   * Instead of cloning the popover into a throwaway "ghost" (which duplicated
+   * the element's `aria-live` announcer region — a second live region in the
+   * AT tree), the real element is kept in the DOM, stamped `data-state="closed"`
+   * with the open attribute removed so `popover-animation.css` plays the exit
+   * transition, and removed once that transition ends (with a timeout fallback).
+   */
+  public destroy(): void {
+    this.items.forEach(item => item.destroy());
+    this.listeners.removeAll();
+    this.search?.destroy();
+
+    if (this.scrollActivityTimeout !== null) {
+      clearTimeout(this.scrollActivityTimeout);
+      this.scrollActivityTimeout = null;
+    }
+
     const popover = this.nodes.popover;
 
-    if (!popover?.isConnected) {
-      return null;
+    if (popover === null) {
+      return;
+    }
+
+    popover.setAttribute('data-state', 'closed');
+    popover.removeAttribute(DATA_ATTR.popoverOpened);
+
+    if (!this.hasVisibleExitBox(popover)) {
+      popover.remove();
+
+      return;
+    }
+
+    // Drop the opened container styling so the exit transform plays.
+    this.nodes.popoverContainer.className = css.popoverContainer;
+
+    const container = this.nodes.popoverContainer;
+    const state = { removed: false };
+    const remove = (): void => {
+      if (state.removed) {
+        return;
+      }
+      state.removed = true;
+      popover.remove();
+    };
+
+    // Raw listeners (not via this.listeners, which was just torn down) so they
+    // survive the destroy and fire once the exit transition completes.
+    container.addEventListener('transitionend', remove, { once: true });
+    container.addEventListener('animationend', remove, { once: true });
+    window.setTimeout(remove, PopoverAbstract.EXIT_ANIMATION_TIMEOUT_MS);
+  }
+
+  /**
+   * Returns true when the popover has a visible box worth animating out. When
+   * detached or zero-sized (e.g. never opened, or under jsdom), the element is
+   * removed immediately with no exit transition.
+   * @param popover - the popover root element
+   */
+  private hasVisibleExitBox(popover: HTMLElement): boolean {
+    if (!popover.isConnected) {
+      return false;
     }
 
     const rect = popover.getBoundingClientRect();
 
-    if (rect.width === 0 && rect.height === 0) {
-      return null;
-    }
-
-    const ghost = popover.cloneNode(true) as HTMLElement;
-
-    ghost.removeAttribute('id');
-    ghost.removeAttribute('data-blok-testid');
-    ghost.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-    ghost.querySelectorAll('[data-blok-testid]').forEach(el => el.removeAttribute('data-blok-testid'));
-
-    ghost.setAttribute(DATA_ATTR.popoverOpened, 'true');
-
-    const ghostContainer = ghost.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
-
-    if (ghostContainer) {
-      ghostContainer.className = twMerge(css.popoverContainer, css.popoverContainerOpened);
-    }
-
-    ghost.style.position = 'absolute';
-    ghost.style.top = `${rect.top + window.scrollY}px`;
-    ghost.style.left = `${rect.left + window.scrollX}px`;
-    ghost.style.pointerEvents = 'none';
-
-    ghost.querySelectorAll<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`).forEach((container) => {
-      container.style.setProperty('pointer-events', 'none');
-    });
-
-    return ghost;
-  }
-
-  /**
-   * Mounts the ghost and triggers the exit transition, then cleans it up
-   * when the transition completes.
-   * @param ghost - element produced by createCloseGhost
-   */
-  private playCloseGhost(ghost: HTMLElement | null): void {
-    if (!ghost) {
-      return;
-    }
-
-    document.body.appendChild(ghost);
-
-    void ghost.offsetHeight;
-
-    ghost.removeAttribute(DATA_ATTR.popoverOpened);
-
-    const ghostContainer = ghost.querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
-
-    if (ghostContainer) {
-      ghostContainer.className = css.popoverContainer;
-    }
-
-    const cleanup = (): void => ghost.remove();
-
-    ghostContainer?.addEventListener('transitionend', cleanup, { once: true });
-    window.setTimeout(cleanup, 400);
+    return rect.width > 0 || rect.height > 0;
   }
 
   /**
@@ -355,10 +412,45 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
+   * Promotes items belonging to an exclusive toggle group to `menuitemradio`.
+   *
+   * A string `toggle` value declares group membership; when two or more items
+   * share a key, selecting one deselects the rest (radiogroup semantics — see
+   * {@link toggleItemActivenessIfNeeded}). Such items are the accessible
+   * equivalent of radio buttons, not independent checkboxes. Single-member
+   * groups (and boolean toggles) behave like a lone checkbox and are left as
+   * `menuitemcheckbox`.
+   */
+  private assignExclusiveToggleRoles(): void {
+    const groups = new Map<string, PopoverItemDefault[]>();
+
+    for (const item of this.itemsDefault) {
+      if (typeof item.toggle !== 'string') {
+        continue;
+      }
+
+      const members = groups.get(item.toggle) ?? [];
+
+      members.push(item);
+      groups.set(item.toggle, members);
+    }
+
+    for (const members of groups.values()) {
+      if (members.length < 2) {
+        continue;
+      }
+
+      members.forEach(member => member.useRadioRole());
+    }
+  }
+
+  /**
    * Factory method for creating popover items
    * @param items - list of items params
    */
   protected buildItems(items: PopoverItemParams[]): Array<PopoverItem> {
+    const menuItemRole = this.params.listbox === true ? 'option' : 'menuitem';
+
     return items.map(item => {
       switch (item.type) {
         case PopoverItemType.Separator:
@@ -367,7 +459,10 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
           return new PopoverItemHtml(item, this.itemsRenderParams[PopoverItemType.Html]);
         case PopoverItemType.Default:
         case undefined:
-          return new PopoverItemDefault(item, this.itemsRenderParams[PopoverItemType.Default]);
+          return new PopoverItemDefault(item, {
+            ...this.itemsRenderParams[PopoverItemType.Default],
+            menuItemRole,
+          });
       }
     });
   }
@@ -419,11 +514,43 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
      */
     this.refreshItemActiveState(item);
 
+    // A destructive item swaps its content to a "click again to confirm" prompt
+    // silently; announce that mode change so screen readers learn the click did
+    // not act immediately. Reuses the existing results-announcer live region.
+    if (item instanceof PopoverItemDefault && item.isConfirmationStateEnabled) {
+      this.announceConfirmationMode(item);
+    }
+
     if (item.closeOnActivate === true) {
       this.hide();
 
       this.emit(PopoverEvent.ClosedOnActivate);
     }
+  }
+
+  /**
+   * Writes the confirmation prompt into the visually-hidden live region so
+   * screen readers announce that the destructive item is now awaiting a second
+   * click to confirm.
+   * @param item - the item that just entered confirmation mode
+   */
+  private announceConfirmationMode(item: PopoverItemDefault): void {
+    const announcer = this.nodes.resultsAnnouncer;
+    const title = item.confirmationTitle;
+
+    if (announcer === undefined || title === undefined) {
+      return;
+    }
+
+    /**
+     * Clear-then-set: re-arming an item with the same confirmation text must
+     * still be announced. Setting identical textContent is a no-op for live
+     * regions, so clear synchronously and set on the next macrotask.
+     */
+    announcer.textContent = '';
+    window.setTimeout(() => {
+      announcer.textContent = title;
+    }, 0);
   }
 
   /**
@@ -524,13 +651,13 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.nodes.nothingFoundMessage.classList.remove('hidden');
       this.nodes.nothingFoundMessage.setAttribute(DATA_ATTR.nothingFoundDisplayed, 'true');
       this.nodes.items?.classList.remove('pb-1.5');
-      this.nodes.popoverContainer?.classList.remove('px-1.5', 'pt-1.5');
+      this.nodes.popoverContainer?.classList.remove('px-1.5');
     } else {
       this.nodes.nothingFoundMessage.classList.add('hidden');
       this.nodes.nothingFoundMessage.removeAttribute(DATA_ATTR.nothingFoundDisplayed);
       this.nodes.items?.classList.add('pb-1.5');
       if (this.isShown) {
-        this.nodes.popoverContainer?.classList.add('px-1.5', 'pt-1.5');
+        this.nodes.popoverContainer?.classList.add('px-1.5');
       }
     }
   }
@@ -560,21 +687,201 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
   }
 
   /**
-   * Updates scroll haze visibility based on the items container scroll state.
-   * Shows top haze when scrolled down, bottom haze when more content below.
+   * Minimum rendered height (px) of the custom scrollbar thumb, so it stays
+   * grabbable even when the list is very long.
    */
-  protected updateScrollHazes(): void {
-    const { items, scrollHazeTop, scrollHazeBottom } = this.nodes;
+  private static readonly MIN_SCROLLBAR_THUMB_HEIGHT = 24;
+
+  /**
+   * Active scrollbar-thumb drag session, or null when not dragging.
+   */
+  private scrollbarDrag: { pointerId: number; startY: number; startScrollTop: number } | null = null;
+
+  /**
+   * Sizes and positions the custom scrollbar thumb from the items' scroll
+   * metrics. Because Blok draws the thumb itself (the native scrollbar is
+   * hidden in every engine), the result is identical on Chromium, WebKit and
+   * Firefox, on classic and overlay scrollbar settings alike. Hidden entirely
+   * when the content does not overflow.
+   */
+  protected updateScrollbar(): void {
+    const { items, scrollbarThumb } = this.nodes;
+
+    if (!items || !scrollbarThumb) {
+      return;
+    }
+
+    const viewportHeight = items.clientHeight;
+    const contentHeight = items.scrollHeight;
+
+    if (contentHeight <= viewportHeight || viewportHeight === 0) {
+      scrollbarThumb.hidden = true;
+
+      return;
+    }
+
+    scrollbarThumb.hidden = false;
+
+    const thumbHeight = Math.max(
+      PopoverAbstract.MIN_SCROLLBAR_THUMB_HEIGHT,
+      Math.round((viewportHeight * viewportHeight) / contentHeight)
+    );
+    const maxScrollTop = contentHeight - viewportHeight;
+    const maxThumbTravel = viewportHeight - thumbHeight;
+    const thumbTop = maxScrollTop > 0
+      ? (items.scrollTop / maxScrollTop) * maxThumbTravel
+      : 0;
+
+    scrollbarThumb.style.height = `${thumbHeight}px`;
+    // Offset by the items' position within the container so the thumb tracks
+    // the scroll viewport (below the search input / context label, if any).
+    scrollbarThumb.style.transform = `translateY(${Math.round(items.offsetTop + thumbTop)}px)`;
+  }
+
+  /**
+   * Begins a drag-to-scroll session on the custom scrollbar thumb: pointer
+   * movement is mapped back to `items.scrollTop` through the content/viewport
+   * ratio, mirroring how dragging a native scrollbar behaves.
+   * @param event - the pointerdown event on the thumb
+   */
+  private startScrollbarDrag(event: PointerEvent): void {
+    const { items, scrollbarThumb } = this.nodes;
+
+    if (!items || !scrollbarThumb) {
+      return;
+    }
+
+    event.preventDefault();
+
+    this.scrollbarDrag = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startScrollTop: items.scrollTop,
+    };
+    scrollbarThumb.setAttribute(DATA_ATTR.popoverScrollbarDragging, '');
+    scrollbarThumb.setPointerCapture?.(event.pointerId);
+
+    this.listeners.on(scrollbarThumb, 'pointermove', this.handleScrollbarDragMove);
+    this.listeners.on(scrollbarThumb, 'pointerup', this.handleScrollbarDragEnd);
+    this.listeners.on(scrollbarThumb, 'pointercancel', this.handleScrollbarDragEnd);
+  }
+
+  /**
+   * Maps thumb pointer movement to a scroll offset while dragging.
+   */
+  private handleScrollbarDragMove = (event: Event): void => {
+    const pointerEvent = event as PointerEvent;
+    const { items } = this.nodes;
+
+    if (this.scrollbarDrag === null || !items) {
+      return;
+    }
+
+    const viewportHeight = items.clientHeight;
+    const contentHeight = items.scrollHeight;
+    const thumbHeight = Math.max(
+      PopoverAbstract.MIN_SCROLLBAR_THUMB_HEIGHT,
+      Math.round((viewportHeight * viewportHeight) / contentHeight)
+    );
+    const maxThumbTravel = viewportHeight - thumbHeight;
+
+    if (maxThumbTravel <= 0) {
+      return;
+    }
+
+    const deltaY = pointerEvent.clientY - this.scrollbarDrag.startY;
+    const scrollRatio = (contentHeight - viewportHeight) / maxThumbTravel;
+
+    items.scrollTop = this.scrollbarDrag.startScrollTop + deltaY * scrollRatio;
+  };
+
+  /**
+   * Ends a scrollbar drag session and tears down its transient listeners.
+   */
+  private handleScrollbarDragEnd = (event: Event): void => {
+    const pointerEvent = event as PointerEvent;
+    const { scrollbarThumb } = this.nodes;
+
+    this.scrollbarDrag = null;
+
+    if (scrollbarThumb) {
+      scrollbarThumb.removeAttribute(DATA_ATTR.popoverScrollbarDragging);
+      scrollbarThumb.releasePointerCapture?.(pointerEvent.pointerId);
+      this.listeners.off(scrollbarThumb, 'pointermove', this.handleScrollbarDragMove);
+      this.listeners.off(scrollbarThumb, 'pointerup', this.handleScrollbarDragEnd);
+      this.listeners.off(scrollbarThumb, 'pointercancel', this.handleScrollbarDragEnd);
+    }
+  };
+
+  /**
+   * Applies a reel-like distortion to items near the scroll viewport edges:
+   * the clipped part of an item squashes it toward its in-view edge (like a
+   * picker wheel rolling over a cylinder) instead of hiding behind a gradient
+   * haze. Fully visible items are left untouched.
+   */
+  protected updateScrollReel(): void {
+    const { items } = this.nodes;
 
     const hasOverflow = items.scrollHeight > items.clientHeight;
-    const isAtTop = items.scrollTop <= 0;
-    const isAtBottom = items.scrollTop + items.clientHeight >= items.scrollHeight - 1;
+    const viewTop = items.scrollTop;
+    const viewBottom = viewTop + items.clientHeight;
 
-    scrollHazeTop.style.opacity = hasOverflow && !isAtTop ? '1' : '0';
-    scrollHazeBottom.style.opacity = hasOverflow && !isAtBottom ? '1' : '0';
+    for (const child of Array.from(items.children)) {
+      if (!(child instanceof HTMLElement)) {
+        continue;
+      }
 
-    scrollHazeTop.style.top = `${items.offsetTop}px`;
-    scrollHazeBottom.style.top = `${items.offsetTop + items.clientHeight - scrollHazeBottom.offsetHeight}px`;
+      const height = child.offsetHeight;
+
+      if (!hasOverflow || height === 0) {
+        this.clearReelDistortion(child);
+        continue;
+      }
+
+      const top = child.offsetTop;
+      const clippedByTop = Math.min(Math.max((viewTop - top) / height, 0), 1);
+      const clippedByBottom = Math.min(Math.max((top + height - viewBottom) / height, 0), 1);
+      const overhang = Math.max(clippedByTop, clippedByBottom);
+
+      if (overhang === 0) {
+        this.clearReelDistortion(child);
+        continue;
+      }
+
+      const clippedAtTop = clippedByTop >= clippedByBottom;
+      // Positive rotateX tips the top of the item away from the viewer; the
+      // sign flips at the bottom edge so both edges curl backward over the reel
+      const tilt = (REEL_DISTORTION.maxTiltDeg * overhang * (clippedAtTop ? 1 : -1)).toFixed(2);
+      const scaleX = (1 - REEL_DISTORTION.maxSquashX * overhang).toFixed(3);
+      const scaleY = (1 - REEL_DISTORTION.maxSquashY * overhang).toFixed(3);
+
+      child.style.transform = `perspective(${REEL_DISTORTION.perspective}px) rotateX(${tilt}deg) scaleX(${scaleX}) scaleY(${scaleY})`;
+      // Anchor the distortion to the edge still in view so the item appears to
+      // curl over the viewport edge rather than shrink in place
+      child.style.transformOrigin = clippedAtTop ? 'center bottom' : 'center top';
+      child.style.opacity = (1 - REEL_DISTORTION.maxDim * overhang).toFixed(3);
+    }
+  }
+
+  /**
+   * Removes the reel distortion from every item (used on hide)
+   */
+  private resetScrollReel(): void {
+    for (const child of Array.from(this.nodes.items.children)) {
+      if (child instanceof HTMLElement) {
+        this.clearReelDistortion(child);
+      }
+    }
+  }
+
+  /**
+   * Removes the reel distortion styles from a single item element
+   * @param el - item element to restore
+   */
+  private clearReelDistortion(el: HTMLElement): void {
+    el.style.removeProperty('transform');
+    el.style.removeProperty('transform-origin');
+    el.style.removeProperty('opacity');
   }
 
   /**
@@ -583,6 +890,18 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public hasNode(node: Node): boolean {
     return this.nodes.popover.contains(node);
+  }
+
+  /**
+   * Returns the element that owns DOM focus while this popover is open, when
+   * focus is intentionally kept outside the popover subtree (e.g. the combobox
+   * contentEditable that drives the Toolbox via aria-activedescendant). The
+   * registry treats focus landing on this host as "inside" so its focus-out
+   * dismissal does not close a popover that is working as designed. Base
+   * popovers keep focus inside themselves and return null.
+   */
+  public getFocusHost(): HTMLElement | null {
+    return null;
   }
 
   /**
@@ -639,19 +958,28 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     items.className = css.items;
     items.setAttribute(DATA_ATTR.popoverItems, '');
     items.setAttribute('data-blok-testid', 'popover-items');
+    // Expose the container as a listbox (search/combobox surfaces) or a menu.
+    items.setAttribute('role', this.params.listbox === true ? 'listbox' : 'menu');
+    if (this.params.listboxId !== undefined) {
+      items.id = this.params.listboxId;
+    }
 
-    // Create scroll haze overlays
-    const scrollHazeTop = document.createElement('div');
+    // Visually-hidden polite live region: announces search result counts / the
+    // empty state to screen readers as items are filtered.
+    const resultsAnnouncer = document.createElement('div');
 
-    scrollHazeTop.className = css.scrollHaze;
-    scrollHazeTop.style.background = 'linear-gradient(to bottom, var(--blok-popover-bg), transparent)';
-    scrollHazeTop.style.opacity = '0';
-
-    const scrollHazeBottom = document.createElement('div');
-
-    scrollHazeBottom.className = css.scrollHaze;
-    scrollHazeBottom.style.background = 'linear-gradient(to top, var(--blok-popover-bg), transparent)';
-    scrollHazeBottom.style.opacity = '0';
+    resultsAnnouncer.setAttribute('aria-live', 'polite');
+    resultsAnnouncer.setAttribute('role', 'status');
+    resultsAnnouncer.setAttribute('data-blok-testid', 'popover-results-announcer');
+    resultsAnnouncer.style.position = 'absolute';
+    resultsAnnouncer.style.width = '1px';
+    resultsAnnouncer.style.height = '1px';
+    resultsAnnouncer.style.padding = '0';
+    resultsAnnouncer.style.margin = '-1px';
+    resultsAnnouncer.style.overflow = 'hidden';
+    resultsAnnouncer.style.clipPath = 'inset(50%)';
+    resultsAnnouncer.style.whiteSpace = 'nowrap';
+    resultsAnnouncer.style.border = '0';
 
     const contextLabel = this.params.contextLabel !== undefined
       ? (() => {
@@ -666,24 +994,33 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       })()
       : undefined;
 
+    // Custom, engine-independent scrollbar thumb. Lives in the (non-scrolling)
+    // container — not inside `items`, whose children scroll and are reel-distorted
+    // — and is positioned in JS from the items' scroll metrics (updateScrollbar).
+    // Hidden until the list overflows.
+    const scrollbarThumb = document.createElement('div');
+
+    scrollbarThumb.setAttribute(DATA_ATTR.popoverScrollbar, '');
+    scrollbarThumb.hidden = true;
+
     // Assemble DOM structure
     popoverContainer.appendChild(nothingFoundMessage);
     if (contextLabel !== undefined) {
       popoverContainer.appendChild(contextLabel);
     }
     popoverContainer.appendChild(items);
-    popoverContainer.appendChild(scrollHazeTop);
-    popoverContainer.appendChild(scrollHazeBottom);
+    popoverContainer.appendChild(resultsAnnouncer);
+    popoverContainer.appendChild(scrollbarThumb);
     popover.appendChild(popoverContainer);
 
     return {
       popover,
       popoverContainer,
       nothingFoundMessage,
+      resultsAnnouncer,
       contextLabel,
       items,
-      scrollHazeTop,
-      scrollHazeBottom,
+      scrollbarThumb,
     };
   }
 

@@ -16,6 +16,8 @@ const MARKDOWN_SIGNALS: RegExp[] = [
   /^```/m,                         // Fenced code blocks
   /\|\s*---/,                      // GFM table separator: | --- |
   /^- \[[ x]\]/m,                  // Task list items: - [ ] or - [x]
+  /^[ \t]*[-*+][ \t]+\S/m,         // Unordered list item: - / * / + marker + content
+  /^[ \t]*\d{1,9}[.)][ \t]+\S/m,  // Ordered list item: 1. / 1) marker + content
   /\[.+?\]\(.+?\)/,               // Markdown links: [text](url)
   /\*\*.+?\*\*/,                   // Bold: **text**
   /!\[/,                           // Image: ![
@@ -72,32 +74,89 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
+    const { BlockManager, Caret } = this.Blok;
+
+    // Inline markdown fragment pasted mid-text: a single-line input that
+    // converts to exactly one paragraph block is INLINE content (e.g.
+    // `**bold**`, `[text](url)`), not a block. When the caret sits inside a
+    // NON-EMPTY block, Notion merges the converted rich text at the caret
+    // instead of dropping a sibling paragraph below. Block-level markdown
+    // (headings, lists, code, multi-line) keeps converting to blocks.
+    const currentBlock = BlockManager.currentBlock;
+    const isSingleLine = !/\r?\n/.test(data);
+    const convertsToInlineParagraph = rawOutputBlocks.length === 1 && rawOutputBlocks[0].type === 'paragraph';
+
+    if (
+      isSingleLine &&
+      convertsToInlineParagraph &&
+      currentBlock !== undefined &&
+      !currentBlock.isEmpty &&
+      currentBlock.currentInput != null
+    ) {
+      const text = (rawOutputBlocks[0].data as { text?: string }).text ?? '';
+      const content = document.createElement('div');
+
+      content.innerHTML = text;
+
+      const event = this.composePasteEvent('tag', { data: content });
+
+      await this.processInlinePaste(
+        { content, tool: rawOutputBlocks[0].type, isBlock: false, event },
+        false
+      );
+
+      return true;
+    }
+
     // Defense-in-depth: backfill `parent` on table cell children so that any
     // future regression in mdast-to-blocks (or external converter) cannot
     // produce the dodopizza shape (children referenced by table cells but
     // lacking explicit parent), which would render them at page bottom.
     const outputBlocks = normalizeTableChildParents(rawOutputBlocks);
 
-    const { BlockManager, Caret } = this.Blok;
-
     // Replace empty default block if present
-    const currentBlock = BlockManager.currentBlock;
     const shouldReplace = context.canReplaceCurrentBlock && currentBlock !== undefined && currentBlock.isEmpty;
     const insertIndex = shouldReplace
       ? BlockManager.currentBlockIndex
       : BlockManager.currentBlockIndex + 1;
 
+    // Container membership: when the caret sits inside a container child (e.g. a
+    // callout/toggle body) the converted top-level blocks must stay inside that
+    // container instead of ejecting to the root. Mirrors BasePasteHandler's
+    // contextParentId capture. The container itself is NOT part of the inserted
+    // set, so we reparent AFTER insertMany via setBlockParent (insertMany would
+    // otherwise clear a parentId that points outside its input).
+    const childContainer = currentBlock?.holder?.querySelector('[data-blok-toggle-children]') ?? null;
+    const isInContainerTitle = childContainer !== null &&
+      !childContainer.contains(currentBlock?.currentInput ?? null);
+    const contextParentId = isInContainerTitle
+      ? (currentBlock?.id ?? null)
+      : (currentBlock?.parentId ?? null);
+
     // Compose Block instances from OutputBlockData
-    const blocksToInsert = outputBlocks.map(({ id, type, data: blockData, parent }) =>
-      BlockManager.composeBlock({
+    const composed = outputBlocks.map(({ id, type, data: blockData, parent }) => ({
+      block: BlockManager.composeBlock({
         id,
         tool: type,
         data: blockData,
         parentId: parent,
-      })
-    );
+      }),
+      hasParent: parent !== undefined && parent !== null,
+    }));
+    const blocksToInsert = composed.map(({ block }) => block);
 
     BlockManager.insertMany(blocksToInsert, insertIndex);
+
+    // Reparent every top-level produced block into the surrounding container so
+    // the paste stays nested (hierarchical children like table cells already
+    // carry their own parent and are left untouched).
+    for (const { block, hasParent } of composed) {
+      if (contextParentId === null || hasParent) {
+        continue;
+      }
+
+      BlockManager.setBlockParent(block, contextParentId);
+    }
 
     // Remove the replaced empty block
     if (shouldReplace && currentBlock !== undefined) {

@@ -15,6 +15,8 @@ vi.mock('../../../../src/tools/audio/metadata', () => ({
 }));
 
 const coverPickerCalls: Array<{
+  anchor: HTMLElement;
+  trigger?: HTMLElement;
   onFile: (f: File) => void;
   onUrl: (u: string) => void;
   onClose?: () => void;
@@ -25,9 +27,22 @@ vi.mock('../../../../src/tools/audio/cover-picker', async (importOriginal) => {
   const actual = await importOriginal<typeof CoverPickerModule>();
   return {
     ...actual,
-    openCoverPicker: vi.fn((o: { onFile: (f: File) => void; onUrl: (u: string) => void; onClose?: () => void }) => {
+    openCoverPicker: vi.fn((o: {
+      anchor: HTMLElement;
+      trigger?: HTMLElement;
+      onFile: (f: File) => void;
+      onUrl: (u: string) => void;
+      onClose?: () => void;
+    }) => {
       const handle = { close: vi.fn(), setError: vi.fn() };
-      coverPickerCalls.push({ onFile: o.onFile, onUrl: o.onUrl, onClose: o.onClose, handle });
+      coverPickerCalls.push({
+        anchor: o.anchor,
+        trigger: o.trigger,
+        onFile: o.onFile,
+        onUrl: o.onUrl,
+        onClose: o.onClose,
+        handle,
+      });
       return handle;
     }),
   };
@@ -364,6 +379,17 @@ describe('AudioTool', () => {
       expect(img?.getAttribute('src')).toBe('https://cdn/cover.png');
       expect(block.dispatchChange).toHaveBeenCalled();
       expect(coverPickerCalls[0].handle.close).toHaveBeenCalled();
+    });
+
+    it('passes the Change-cover button as the picker trigger (aria state target) and the cover div as anchor', () => {
+      const { root } = renderTool();
+      const cover = root.querySelector<HTMLElement>('[data-role="audio-cover"]')!;
+      const button = root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!;
+      button.click();
+
+      expect(coverPickerCalls[0].anchor).toBe(cover);
+      // AT hears expanded/collapsed on the real button, not the role-less div.
+      expect(coverPickerCalls[0].trigger).toBe(button);
     });
 
     it('keeps the cover marked open while the picker is mounted', () => {

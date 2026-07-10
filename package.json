@@ -1,6 +1,6 @@
 {
   "name": "@jackuait/blok",
-  "version": "0.23.5",
+  "version": "0.24.3",
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "module": "dist/blok.mjs",
   "main": "./dist/blok.cjs",
@@ -30,6 +30,9 @@
       ],
       "markdown": [
         "./types/markdown.d.ts"
+      ],
+      "icons": [
+        "./types/icons.d.ts"
       ]
     }
   },
@@ -71,6 +74,11 @@
       "types": "./types/markdown.d.ts",
       "import": "./dist/markdown.mjs",
       "require": "./dist/markdown.cjs"
+    },
+    "./icons": {
+      "types": "./types/icons.d.ts",
+      "import": "./dist/icons.mjs",
+      "require": "./dist/icons.cjs"
     },
     "./umd": {
       "default": "./dist/blok.umd.js"
@@ -162,13 +170,6 @@
     "type": "git",
     "url": "git+https://github.com/JackUait/blok.git"
   },
-  "dependencies": {
-    "mdast-util-from-markdown": "^2.0.3",
-    "mdast-util-gfm": "^3.1.0",
-    "mdast-util-math": "^3.0.0",
-    "micromark-extension-gfm": "^3.0.0",
-    "micromark-extension-math": "^3.1.0"
-  },
   "devDependencies": {
     "@aiden0z/pptx-renderer": "^1.1.0",
     "@analogjs/vite-plugin-angular": "2.6.1",
@@ -231,7 +232,12 @@
     "jsdom": "28.1.0",
     "jszip": "^3.10.1",
     "katex": "^0.16.44",
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "mdast-util-math": "^3.0.0",
     "mermaid": "^11.15.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "micromark-extension-math": "^3.1.0",
     "music-metadata": "^11.13.0",
     "nanoid": "5.1.9",
     "ng-packagr": "20.3.2",

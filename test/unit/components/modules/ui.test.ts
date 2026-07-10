@@ -358,6 +358,99 @@ describe("UI module", () => {
     });
   });
 
+  describe("block context menu (right-click)", () => {
+    interface ContextMenuHarness {
+      redactor: HTMLDivElement;
+      open: ReturnType<typeof vi.fn>;
+      moveAndOpen: ReturnType<typeof vi.fn>;
+      block: { holder: HTMLElement };
+    }
+
+    const setupContextMenu = (): ContextMenuHarness => {
+      const open = vi.fn(() => Promise.resolve());
+      const moveAndOpen = vi.fn();
+      const block = { holder: document.createElement("div") };
+      const { ui, redactor } = createUI({
+        blokOverrides: {
+          BlockManager: {
+            currentBlock: block,
+            setCurrentBlockByChildNode: vi.fn(() => block),
+          },
+          BlockSettings: {
+            opened: false,
+            open,
+            close: vi.fn(),
+            contains: vi.fn(() => false),
+            nodes: { wrapper: document.createElement("div") },
+          },
+          Toolbar: {
+            opened: false,
+            moveAndOpen,
+            close: vi.fn(),
+            toolbox: { opened: false, close: vi.fn(), hasFocus: vi.fn(() => false) },
+            contains: vi.fn(() => false),
+            nodes: {
+              wrapper: document.createElement("div"),
+              settingsToggler: document.createElement("button"),
+              plusButton: document.createElement("button"),
+            },
+          },
+        } as unknown as Partial<ReturnType<typeof createUI>["blok"]>,
+      });
+
+      (ui as unknown as { bindReadOnlyInsensitiveListeners: () => void }).bindReadOnlyInsensitiveListeners();
+
+      return { redactor, open, moveAndOpen, block };
+    };
+
+    it("opens Block Settings anchored at the cursor and suppresses the native menu", () => {
+      const { redactor, open, moveAndOpen, block } = setupContextMenu();
+
+      const content = document.createElement("div");
+
+      content.setAttribute("contenteditable", "true");
+      redactor.appendChild(content);
+
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 120,
+        clientY: 240,
+      });
+
+      content.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(moveAndOpen).toHaveBeenCalledWith(block);
+      expect(open).toHaveBeenCalledTimes(1);
+
+      const [passedBlock, passedAnchor] = open.mock.calls[0];
+
+      expect(passedBlock).toBe(block);
+      expect(passedAnchor).toMatchObject({ left: 120, top: 240 });
+    });
+
+    it("leaves the native context menu untouched on links", () => {
+      const { redactor, open, moveAndOpen } = setupContextMenu();
+
+      const link = document.createElement("a");
+
+      link.href = "https://example.com";
+      redactor.appendChild(link);
+
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+      });
+
+      link.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(moveAndOpen).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+    });
+  });
+
   describe("read-only state management", () => {
     it("unbinds sensitive listeners when read-only mode enabled", () => {
       const { ui } = createUI();
@@ -420,6 +513,39 @@ describe("UI module", () => {
       // Returning to read-write restores the configured min-height
       ui.toggleReadOnly(false);
       expect(bottomZone.style.minHeight).toBe("120px");
+    });
+
+    it("does not make a block's non-editable marker element editable when toggling to read-write", () => {
+      // Regression: a list item's holder has a bullet/marker element that is
+      // explicitly contenteditable="false" and sits BEFORE the real content
+      // element in the DOM. updateBlocksContentEditable used to grab the first
+      // `[contenteditable]` (the marker) and flip it to "true", which later let
+      // splitBlockWithData overwrite the bullet with the item's text on Enter.
+      const { ui, blok } = createUI();
+
+      const holder = document.createElement("div");
+      // Mirror the rendered DOM: attributes (not just IDL props) so the
+      // `[contenteditable]` attribute selector matches, as it does in a browser.
+      const marker = document.createElement("span");
+      marker.setAttribute("data-list-marker", "true");
+      marker.setAttribute("data-blok-mutation-free", "true");
+      marker.setAttribute("contenteditable", "false");
+      marker.textContent = "•";
+      const content = document.createElement("div");
+      content.setAttribute("contenteditable", "false");
+      content.textContent = "Clean JSON output";
+      holder.appendChild(marker);
+      holder.appendChild(content);
+
+      (blok.BlockManager as unknown as { blocks: Array<{ holder: HTMLElement }> }).blocks = [
+        { holder },
+      ];
+
+      ui.toggleReadOnly(false);
+
+      // The marker (bullet) must stay non-editable; only real content becomes editable.
+      expect(marker.contentEditable).not.toBe("true");
+      expect(content.contentEditable).toBe("true");
     });
   });
 

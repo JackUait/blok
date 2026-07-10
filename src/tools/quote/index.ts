@@ -13,7 +13,7 @@ import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconQuote } from '../../components/icons';
 import { stripFakeBackgroundElements } from '../../components/utils';
-import { isContentEmpty, PLACEHOLDER_FOCUS_ONLY_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 export interface QuoteData extends BlockToolData {
@@ -75,7 +75,7 @@ export class Quote implements BlockTool {
     el.className = twMerge(
       this.api.styles.block,
       BASE_CLASSES,
-      PLACEHOLDER_FOCUS_ONLY_CLASSES,
+      getPlaceholderClasses('focus'),
       this._data.size === 'large' ? LARGE_CLASS : ''
     );
     el.setAttribute(DATA_ATTR.tool, 'quote');
@@ -90,7 +90,7 @@ export class Quote implements BlockTool {
     if (!this.readOnly) {
       el.contentEditable = 'true';
       el.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(el, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(el, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active', 'focus');
     }
 
     return el;
@@ -126,7 +126,7 @@ export class Quote implements BlockTool {
     } else {
       this._element.contentEditable = 'true';
       this._element.addEventListener('keyup', this.onKeyUp);
-      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active');
+      this.placeholderCleanup = setupPlaceholder(this._element, this.api.i18n.t(DEFAULT_PLACEHOLDER), 'data-blok-placeholder-active', 'focus');
 
       if (this._element.innerHTML === '<br>') {
         this._element.innerHTML = '';
@@ -196,7 +196,7 @@ export class Quote implements BlockTool {
       this._element.className = twMerge(
         this.api.styles.block,
         BASE_CLASSES,
-        PLACEHOLDER_FOCUS_ONLY_CLASSES,
+        getPlaceholderClasses('focus'),
         size === 'large' ? LARGE_CLASS : ''
       );
     }

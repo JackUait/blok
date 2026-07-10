@@ -6,6 +6,7 @@ import type {
 } from '../../../types';
 import {
   COLUMNS_ATTR,
+  COLUMNS_STATIC_GUTTER_ATTR,
   COLUMN_RESIZER_ATTR,
   COLUMN_TOOL,
   buildColumnResizers,
@@ -44,6 +45,12 @@ export class ColumnList implements BlockTool {
     container.setAttribute(COLUMNS_ATTR, '');
     container.setAttribute('data-blok-testid', 'column-list');
     container.setAttribute(DATA_ATTR.nestedBlocks, '');
+
+    // In read-only mode no resizers are built, so the container must supply the
+    // horizontal gutter itself — otherwise columns render flush with no gap.
+    if (this.readOnly) {
+      container.setAttribute(COLUMNS_STATIC_GUTTER_ATTR, '');
+    }
 
     this.container = container;
 
@@ -128,8 +135,15 @@ export class ColumnList implements BlockTool {
         .querySelectorAll(`[${COLUMN_RESIZER_ATTR}]`)
         .forEach(resizer => resizer.remove());
 
+      // Resizers gone — the container now owns the gutter.
+      this.container.setAttribute(COLUMNS_STATIC_GUTTER_ATTR, '');
+
       return;
     }
+
+    // Resizers reinstate the gutter, so drop the container's static one to
+    // avoid doubling the gap.
+    this.container.removeAttribute(COLUMNS_STATIC_GUTTER_ATTR);
 
     const children = this.api.blocks.getChildren(this.blockId);
 

@@ -259,7 +259,7 @@ describe('DatabaseListView', () => {
       expect(badge.style.color).toBe('var(--blok-color-red-text)');
     });
 
-    it('renders checkbox property as an input[type=checkbox]', () => {
+    it('renders a display-only checkbox property as an aria-hidden glyph plus accessible state text', () => {
       const schema: PropertyDefinition[] = [
         { id: 'title', name: 'Title', type: 'title', position: 'a0' },
         { id: 'done', name: 'Done', type: 'checkbox', position: 'a1' },
@@ -272,10 +272,36 @@ describe('DatabaseListView', () => {
       const list = view.createView();
 
       const badge = list.querySelector('[data-blok-database-list-row-property][data-property-id="done"]') as HTMLElement;
-      const checkbox = badge.querySelector('input[type="checkbox"]') as HTMLInputElement;
 
-      expect(checkbox).not.toBeNull();
-      expect(checkbox.checked).toBe(true);
+      // No real form control — the list view checkbox is read-only display.
+      expect(badge.querySelector('input[type="checkbox"]')).toBeNull();
+
+      const glyph = badge.querySelector('[data-blok-database-checkbox-glyph]') as HTMLElement;
+      expect(glyph).not.toBeNull();
+      expect(glyph.getAttribute('aria-hidden')).toBe('true');
+      expect(glyph.getAttribute('data-state')).toBe('checked');
+
+      // Accessible state conveyed to screen readers.
+      expect(badge.textContent).toContain('tools.database.checkboxChecked');
+    });
+
+    it('conveys an unchecked checkbox with the unchecked state text', () => {
+      const schema: PropertyDefinition[] = [
+        { id: 'title', name: 'Title', type: 'title', position: 'a0' },
+        { id: 'done', name: 'Done', type: 'checkbox', position: 'a1' },
+      ];
+      const rows = [makeRow({ id: 'row-1', properties: { title: 'Row', done: false } })];
+      const view = new DatabaseListView({
+        readOnly: false, i18n, rows, titlePropertyId: 'title', schema,
+        visiblePropertyIds: ['done'],
+      });
+      const list = view.createView();
+
+      const badge = list.querySelector('[data-blok-database-list-row-property][data-property-id="done"]') as HTMLElement;
+      const glyph = badge.querySelector('[data-blok-database-checkbox-glyph]') as HTMLElement;
+
+      expect(glyph.getAttribute('data-state')).toBe('unchecked');
+      expect(badge.textContent).toContain('tools.database.checkboxUnchecked');
     });
 
     it('renders number property as plain text', () => {

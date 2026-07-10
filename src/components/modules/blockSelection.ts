@@ -12,7 +12,28 @@ import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
 import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
+import { announce } from '../utils/announcer';
 import { Shortcuts } from '../utils/shortcuts';
+import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
+import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
+import type { ListItemStyle } from '../../tools/list/types';
+
+/**
+ * A run of consecutive selected blocks for clipboard serialization: either a
+ * group of adjacent list blocks (emitted as a single semantic list) or a single
+ * non-list block (emitted via the sanitize path).
+ */
+type ClipboardSegment =
+  | { type: 'list'; items: Block[] }
+  | { type: 'other'; block: Block };
+
+/**
+ * Throttle window (ms) for per-step navigation-mode position announcements.
+ * Mirrors the drag announcer's throttle so a rapid run of arrow presses
+ * collapses to a single "{tool}, {position} of {total}" announcement instead
+ * of flooding assistive technology.
+ */
+const NAVIGATION_ANNOUNCE_THROTTLE_MS = 300;
 
 /**
  *
@@ -37,6 +58,21 @@ export class BlockSelection extends Module {
    * Index of the currently focused block in navigation mode
    */
   private navigationFocusIndex = -1;
+
+  /**
+   * Pending timeout for the throttled navigation-mode position announcement.
+   */
+  private navigationAnnounceTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * The most recent block index awaiting a throttled position announcement.
+   */
+  private pendingNavigationAnnounceIndex: number | null = null;
+
+  /**
+   * The block index last announced, so an unchanged position is not re-announced.
+   */
+  private lastAnnouncedNavigationIndex: number | null = null;
 
   /**
    * Sanitizer Config
@@ -171,6 +207,17 @@ export class BlockSelection extends Module {
   private containerBlocksSelected = false;
 
   /**
+   * Flag used to define the subtree-scoped intermediate stage (Notion parity).
+   * When the working Block owns nested descendants (its `contentIds` is
+   * non-empty), the escalation after the single-Block stage selects the working
+   * Block PLUS its entire subtree before climbing to the container/all-Blocks
+   * stages. This flag records that the subtree stage has already happened so a
+   * further Cmd+A keeps escalating.
+   * @type {boolean}
+   */
+  private subtreeBlocksSelected = false;
+
+  /**
    * SelectionUtils instance
    * @type {SelectionUtils}
    */
@@ -269,6 +316,7 @@ export class BlockSelection extends Module {
     this.nativeInputSelected = false;
     this.readyToBlockSelection = false;
     this.containerBlocksSelected = false;
+    this.subtreeBlocksSelected = false;
 
     /**
      * Disable navigation mode when selection is cleared
@@ -283,9 +331,18 @@ export class BlockSelection extends Module {
 
     /**
      * If reason caused clear of the selection was printable key and any block is selected,
-     * remove selected blocks and insert pressed key
+     * remove selected blocks and insert pressed key.
+     *
+     * A collapsed caret counts as "no selection" here (mirroring Backspace/Enter,
+     * which use `!selectionExists || isCollapsed`). A cross-block mouse drag ends
+     * with the native range removed but a collapsed caret lingering inside the
+     * last selected block, so `isSelectionExists` stays true; without the collapse
+     * check the replacement was skipped and the character was typed natively into
+     * that block while the selected blocks were never deleted.
      */
-    if (this.anyBlockSelected && isKeyboard && isPrintableKey && !SelectionUtils.isSelectionExists) {
+    const nativeSelectionBlocksReplace = SelectionUtils.isSelectionExists && SelectionUtils.isCollapsed === false;
+
+    if (this.anyBlockSelected && isKeyboard && isPrintableKey && !nativeSelectionBlocksReplace) {
       this.replaceSelectedBlocksWithPrintableKey(reason);
     }
 
@@ -346,41 +403,35 @@ export class BlockSelection extends Module {
      * so paste can restore the full toggle with its children).
      */
     const savedData = this.serializeBlocksForClipboard(this.selectedBlocks);
-    const textPlainChunks: string[] = [];
 
-    this.selectedBlocks.forEach((block) => {
-      const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
-      const wrapper = $.make('div');
+    /**
+     * List blocks render as non-semantic `<div role="listitem">` with a marker
+     * `<span>`, so sanitizing their rendered `holder.innerHTML` would strip them to
+     * bare text and wrap each in a `<p>` — collapsing the list into paragraphs (and
+     * leaking the bullet glyph) in Word / Google-Docs / other HTML editors. Emit
+     * SEMANTIC `<ul>`/`<ol>` instead, grouping consecutive selected list blocks into
+     * a single nested list per depth. Non-list blocks keep the sanitize path.
+     */
+    const segments = this.groupBlocksForClipboard(this.selectedBlocks);
 
-      wrapper.innerHTML = cleanHTML;
-
-      const textContent = wrapper.textContent ?? '';
-
-      textPlainChunks.push(textContent);
-
-      const hasElementChildren = Array.from(wrapper.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
-      const shouldWrapWithParagraph = !hasElementChildren && textContent.trim().length > 0;
-
-      if (shouldWrapWithParagraph) {
-        const paragraph = $.make('p');
-
-        paragraph.innerHTML = wrapper.innerHTML;
-        fakeClipboard.appendChild(paragraph);
+    segments.forEach((segment) => {
+      if (segment.type === 'list') {
+        this.appendSemanticList(segment.items, fakeClipboard);
       } else {
-        while (wrapper.firstChild) {
-          fakeClipboard.appendChild(wrapper.firstChild);
-        }
+        this.appendNonListBlock(segment.block, fakeClipboard);
       }
     });
 
     /**
-     * The text/plain flavor carries the rendered text with Markdown syntax
-     * stripped — matching Notion's default Cmd+C, which puts plain rendered text
-     * (no `#`/`**`/`- `) into text/plain. Markdown is produced only by the
-     * explicit "Copy as Markdown" command ({@link copySelectedBlocksAsMarkdown},
-     * bound to Cmd/Ctrl+Shift+C), mirroring Notion.
+     * The text/plain flavor carries Markdown — headings as `#`, bold as `**`,
+     * lists as `- `/`1. `, and to-dos as `- [x]`/`- [ ]` with structural
+     * indentation — matching Notion's default Cmd+C, which puts marker-bearing
+     * Markdown (not stripped text) into text/plain so structure survives in
+     * plain-text-only targets. The explicit "Copy as Markdown" command
+     * ({@link copySelectedBlocksAsMarkdown}, bound to Cmd/Ctrl+Shift+C) emits the
+     * same Markdown but writes it via navigator.clipboard.writeText.
      */
-    const textPlain = textPlainChunks.join('\n\n');
+    const textPlain = blocksToMarkdown(savedData);
     const textHTML = fakeClipboard.innerHTML;
 
     /**
@@ -427,6 +478,92 @@ export class BlockSelection extends Module {
     if (clipboard !== undefined && typeof clipboard.writeText === 'function') {
       await clipboard.writeText(markdown);
     }
+  }
+
+  /**
+   * Partition selected blocks into runs of consecutive list blocks (grouped into
+   * a single semantic list) and standalone non-list blocks.
+   * @param blocks - the selected blocks in document order
+   * @returns the ordered clipboard segments
+   */
+  private groupBlocksForClipboard(blocks: Block[]): ClipboardSegment[] {
+    return blocks.reduce<ClipboardSegment[]>((segments, block) => {
+      const last = segments[segments.length - 1];
+      const isList = block.name === LIST_TOOL_NAME;
+
+      if (isList && last?.type === 'list') {
+        last.items.push(block);
+      } else if (isList) {
+        segments.push({ type: 'list', items: [block] });
+      } else {
+        segments.push({ type: 'other', block });
+      }
+
+      return segments;
+    }, []);
+  }
+
+  /**
+   * Append a group of consecutive list blocks to the fake clipboard as a single
+   * semantic `<ul>`/`<ol>` structure.
+   * @param items - the consecutive list blocks
+   * @param fakeClipboard - the container receiving the semantic list
+   */
+  private appendSemanticList(items: Block[], fakeClipboard: HTMLElement): void {
+    const group: SemanticListItem[] = items.map((block) => this.toSemanticListItem(block.preservedData));
+    const listContainer = buildSemanticListHtml(group);
+
+    while (listContainer.firstChild) {
+      fakeClipboard.appendChild(listContainer.firstChild);
+    }
+  }
+
+  /**
+   * Append a single non-list block to the fake clipboard via the sanitize path,
+   * wrapping bare text in a paragraph so structure survives in HTML targets.
+   * @param block - the non-list block
+   * @param fakeClipboard - the container receiving the sanitized content
+   */
+  private appendNonListBlock(block: Block, fakeClipboard: HTMLElement): void {
+    const cleanHTML = clean(block.holder.innerHTML, this.sanitizerConfig);
+    const wrapper = $.make('div');
+
+    wrapper.innerHTML = cleanHTML;
+
+    const textContent = wrapper.textContent ?? '';
+    const hasElementChildren = Array.from(wrapper.childNodes).some((node) => node.nodeType === Node.ELEMENT_NODE);
+    const shouldWrapWithParagraph = !hasElementChildren && textContent.trim().length > 0;
+
+    if (shouldWrapWithParagraph) {
+      const paragraph = $.make('p');
+
+      paragraph.innerHTML = wrapper.innerHTML;
+      fakeClipboard.appendChild(paragraph);
+
+      return;
+    }
+
+    while (wrapper.firstChild) {
+      fakeClipboard.appendChild(wrapper.firstChild);
+    }
+  }
+
+  /**
+   * Narrow a list block's preserved data into the minimal shape the semantic HTML
+   * builder needs, defaulting unknown/missing fields safely.
+   * @param data - the list block's preserved data
+   * @returns the semantic list item descriptor
+   */
+  private toSemanticListItem(data: Record<string, unknown>): SemanticListItem {
+    const rawStyle = data.style;
+    const style: ListItemStyle = rawStyle === 'ordered' || rawStyle === 'checklist' ? rawStyle : 'unordered';
+
+    return {
+      text: typeof data.text === 'string' ? data.text : '',
+      style,
+      checked: Boolean(data.checked),
+      depth: typeof data.depth === 'number' ? data.depth : 0,
+    };
   }
 
   /**
@@ -551,6 +688,12 @@ export class BlockSelection extends Module {
     this._navigationModeEnabled = true;
 
     /**
+     * Announce the mode change and how to use it. Assertive because entering
+     * navigation mode changes what every keypress does, so it should interrupt.
+     */
+    announce(this.Blok.I18n.t('a11y.navigationModeEntered'), { politeness: 'assertive' });
+
+    /**
      * Start navigation from current block or first block
      */
     const startIndex = BlockManager.currentBlockIndex >= 0
@@ -558,6 +701,45 @@ export class BlockSelection extends Module {
       : 0;
 
     this.setNavigationFocus(startIndex);
+  }
+
+  /**
+   * Adopt an existing single-block selection into navigation mode so plain
+   * Up/Down moves it to the adjacent block, exactly like an Escape-initiated
+   * navigation. A single-block selection can be entered by several paths that do
+   * NOT set navigation mode — Cmd+A stage 2, Shift+Click, or the public select
+   * API — and without this a plain arrow would collapse the selection to a caret
+   * instead of moving it (Notion parity).
+   *
+   * Only a selection of EXACTLY one FOCUSABLE block is adopted; a multi-block
+   * selection is left untouched so its arrow behaviour is unchanged. A single
+   * NON-focusable block selection (e.g. the transient caret-navigation highlight
+   * placed on a contentless/image/embed block while arrowing past it) is also
+   * left untouched, so the arrow falls through to caret navigation and lands a
+   * real caret in the adjacent focusable block instead of dragging the highlight.
+   * @returns true when navigation mode is now active on a single-block selection
+   */
+  public adoptSelectionIntoNavigationMode(): boolean {
+    if (this._navigationModeEnabled) {
+      return true;
+    }
+
+    const selected = this.selectedBlocks;
+
+    if (selected.length !== 1 || !selected[0].focusable) {
+      return false;
+    }
+
+    const index = this.Blok.BlockManager.blocks.indexOf(selected[0]);
+
+    if (index < 0) {
+      return false;
+    }
+
+    this._navigationModeEnabled = true;
+    this.setNavigationFocus(index);
+
+    return true;
   }
 
   /**
@@ -569,16 +751,33 @@ export class BlockSelection extends Module {
       return;
     }
 
+    /**
+     * Cancel any pending position announcement and clear the throttle memory so
+     * a future navigation session starts fresh, then announce the mode exit.
+     */
+    this.resetNavigationAnnounce();
+    announce(this.Blok.I18n.t('a11y.navigationModeExited'), { politeness: 'polite' });
+
     const focusedBlock = this.navigationFocusedBlock;
 
     /**
-     * Remove navigation highlight from current block
+     * Remove navigation marker from current block
      */
     if (focusedBlock) {
       focusedBlock.holder.removeAttribute('data-blok-navigation-focused');
     }
 
     this._navigationModeEnabled = false;
+
+    /**
+     * Clear the REAL block selection that backed navigation mode (the focused
+     * block plus any Shift+Arrow extension). Done before setting the caret so
+     * editing resumes on a clean, unselected block.
+     */
+    for (const selected of this.selectedBlocks) {
+      selected.selected = false;
+    }
+    this.clearCache();
 
     /**
      * If requested, focus the block for editing
@@ -647,7 +846,7 @@ export class BlockSelection extends Module {
     }
 
     /**
-     * Remove highlight from previous block
+     * Remove the navigation marker from the previously focused block
      */
     const previousBlock = this.navigationFocusedBlock;
 
@@ -656,24 +855,53 @@ export class BlockSelection extends Module {
     }
 
     /**
-     * Update focus index and highlight new block
+     * Navigation mode is a REAL single-block selection that moves with the arrow
+     * keys (Notion parity). Collapse any existing selection — the previously
+     * focused block plus any blocks a Shift+Arrow extension added — down to the
+     * newly focused block so plain Arrow navigation stays single-selection while
+     * Backspace/Delete, Cmd+C and Shift+Arrow keep operating on the selection.
      */
-    this.navigationFocusIndex = index;
-    block.holder.setAttribute('data-blok-navigation-focused', 'true');
+    for (const selected of this.selectedBlocks) {
+      if (selected !== block) {
+        selected.selected = false;
+      }
+    }
 
     /**
-     * Remove text selection and blur active element to hide caret
+     * Remove the native text selection and blur the caret BEFORE selecting the
+     * block for real, mirroring {@link selectBlock} — so the selection setter's
+     * fake-cursor logic doesn't drop a stray cursor into the now-selected block.
      */
     const selection = SelectionUtils.get();
 
     selection?.removeAllRanges();
 
-    /**
-     * Blur the active element to remove caret from contenteditable
-     */
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
+
+    /**
+     * Update focus index, mark the new block, and select it for real so
+     * anyBlockSelected becomes true (gates deletion/copy/extension).
+     */
+    this.navigationFocusIndex = index;
+    BlockManager.currentBlockIndex = index;
+    block.holder.setAttribute('data-blok-navigation-focused', 'true');
+    block.selected = true;
+    this.clearCache();
+
+    /**
+     * Prime the Cmd+A escalation state, mirroring {@link selectBlock}, so a Cmd+A
+     * after Escape escalates to all Blocks instead of dropping back to the text
+     * stage.
+     */
+    this.readyToBlockSelection = true;
+    this.needToSelectAll = true;
+
+    /**
+     * Announce the newly focused block's tool and position (throttled).
+     */
+    this.announceNavigationPosition(index);
 
     /**
      * Scroll block into view if needed
@@ -682,6 +910,84 @@ export class BlockSelection extends Module {
       behavior: 'smooth',
       block: 'nearest',
     });
+  }
+
+  /**
+   * Announce the focused block's tool and its position in the document while in
+   * navigation mode. Throttled (and de-duplicated) like the drag announcer so a
+   * rapid run of arrow presses collapses to a single announcement of the final
+   * resting position.
+   * @param index - the block index that just received navigation focus
+   */
+  private announceNavigationPosition(index: number): void {
+    /**
+     * Always record the CURRENT index first: an already-scheduled timeout reads
+     * this at fire time, so returning to the last-announced index within the
+     * throttle window overwrites (and thereby cancels, via the fire-time
+     * dedupe check) a stale pending index instead of letting it fire.
+     */
+    this.pendingNavigationAnnounceIndex = index;
+
+    /**
+     * A timeout is already scheduled — let it announce whatever the latest
+     * pending index is when it fires.
+     */
+    if (this.navigationAnnounceTimeoutId !== null) {
+      return;
+    }
+
+    /**
+     * Nothing new to announce and no timeout in flight — don't schedule one.
+     */
+    if (this.lastAnnouncedNavigationIndex === index) {
+      this.pendingNavigationAnnounceIndex = null;
+
+      return;
+    }
+
+    this.navigationAnnounceTimeoutId = setTimeout(() => {
+      const pendingIndex = this.pendingNavigationAnnounceIndex;
+
+      this.navigationAnnounceTimeoutId = null;
+      this.pendingNavigationAnnounceIndex = null;
+
+      if (pendingIndex === null || this.lastAnnouncedNavigationIndex === pendingIndex) {
+        return;
+      }
+
+      const block = this.Blok.BlockManager.getBlockByIndex(pendingIndex);
+
+      if (!block) {
+        return;
+      }
+
+      this.lastAnnouncedNavigationIndex = pendingIndex;
+
+      const total = this.Blok.BlockManager.blocks.length;
+
+      announce(
+        this.Blok.I18n.t('a11y.navigationPosition', {
+          tool: block.name,
+          position: pendingIndex + 1,
+          total,
+        }),
+        { politeness: 'polite' }
+      );
+    }, NAVIGATION_ANNOUNCE_THROTTLE_MS);
+  }
+
+  /**
+   * Cancel any pending navigation position announcement and forget the last
+   * announced index. Called when navigation mode ends.
+   */
+  private resetNavigationAnnounce(): void {
+    if (this.navigationAnnounceTimeoutId !== null) {
+      clearTimeout(this.navigationAnnounceTimeoutId);
+      this.navigationAnnounceTimeoutId = null;
+    }
+
+    this.pendingNavigationAnnounceIndex = null;
+    this.lastAnnouncedNavigationIndex = null;
   }
 
   /**
@@ -760,10 +1066,26 @@ export class BlockSelection extends Module {
       event.preventDefault();
 
       /**
+       * Subtree-scoped intermediate stage (Notion parity): when the working
+       * Block owns nested descendants (Tab-nested children, etc.), the first
+       * escalation selects the working Block PLUS its entire subtree before
+       * climbing to the container/all-Blocks stages. This is the only stage that
+       * fires for a root-level parent (parentId === null) whose children were
+       * nested via Tab — previously it jumped straight to all-Blocks, never
+       * selecting the subtree it owns.
+       */
+      if (workingBlock.contentIds.length > 0 && !this.subtreeBlocksSelected) {
+        this.selectSubtree(workingBlock);
+        this.subtreeBlocksSelected = true;
+
+        return;
+      }
+
+      /**
        * Container-scoped intermediate stage (Notion parity): when the working
-       * Block is nested inside a container, the first escalation selects the
-       * container's sibling Blocks; only the next press selects every Block in
-       * the document.
+       * Block is nested inside a container, the next escalation selects the
+       * container's sibling Blocks; only the press after that selects every
+       * Block in the document.
        */
       if (workingBlock.parentId !== null && !this.containerBlocksSelected) {
         this.selectContainerBlocks(workingBlock);
@@ -780,6 +1102,7 @@ export class BlockSelection extends Module {
       this.needToSelectAll = false;
       this.readyToBlockSelection = false;
       this.containerBlocksSelected = false;
+      this.subtreeBlocksSelected = false;
 
       return;
     }
@@ -829,6 +1152,54 @@ export class BlockSelection extends Module {
   }
 
   /**
+   * Select the working Block plus its entire nested subtree (a DFS over
+   * `contentIds`). Used by the Cmd+A escalation as the stage that selects an
+   * item together with the descendants it owns — including a root-level parent
+   * whose children were nested via Tab.
+   * @param block - the Block whose subtree to select
+   */
+  private selectSubtree(block: Block): void {
+    const { BlockManager } = this.Blok;
+
+    /**
+     * Save selection — will be restored when closeSelection fires
+     */
+    this.selection.save();
+
+    const selection = SelectionUtils.get();
+
+    selection?.removeAllRanges();
+
+    const select = (current: Block): void => {
+      const target = current;
+
+      target.selected = true;
+
+      for (const childId of current.contentIds) {
+        const child = BlockManager.getBlockById(childId);
+
+        if (child !== undefined) {
+          select(child);
+        }
+      }
+    };
+
+    select(block);
+
+    this.clearCache();
+
+    /** close InlineToolbar when we selected the subtree */
+    this.Blok.InlineToolbar.close();
+
+    /**
+     * Show toolbar for multi-block selection
+     */
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+    this.announceSelectedCount();
+  }
+
+  /**
    * Select the sibling Blocks that share the working Block's container.
    * Used by the Cmd+A escalation as the intermediate stage between selecting
    * the single Block and selecting every Block in the document.
@@ -874,6 +1245,22 @@ export class BlockSelection extends Module {
      * Show toolbar for multi-block selection
      */
     this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+    this.announceSelectedCount();
+  }
+
+  /**
+   * Announce how many Blocks the Cmd+A escalation just selected, so a
+   * screen-reader user gets feedback as each stage widens the selection.
+   */
+  private announceSelectedCount(): void {
+    const count = this.selectedBlocks.length;
+
+    if (count <= 1) {
+      return;
+    }
+
+    announce(this.Blok.I18n.t('a11y.blocksSelected', { count }), { politeness: 'polite' });
   }
 
   private selectAllBlocks(): void {
@@ -899,6 +1286,15 @@ export class BlockSelection extends Module {
      * Show toolbar for multi-block selection
      */
     this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+
+    /**
+     * Announce the terminal escalation stage distinctly from the count-based
+     * stages so a screen-reader user knows the WHOLE document is now selected.
+     */
+    announce(
+      this.Blok.I18n.t('a11y.allBlocksSelected', { count: this.Blok.BlockManager.blocks.length }),
+      { politeness: 'polite' }
+    );
   }
 
   /**
@@ -908,7 +1304,27 @@ export class BlockSelection extends Module {
   private replaceSelectedBlocksWithPrintableKey(event: KeyboardEvent): void {
     const { BlockManager, Caret } = this.Blok;
 
-    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
+    /**
+     * Prevent the browser from ALSO inserting this character natively. A
+     * cross-block mouse drag can leave a collapsed caret inside a still-focused
+     * block, so without preventing the default the character would be typed
+     * twice: once natively into that block and once by the deferred
+     * `insertContentAtCaretPosition` below into the fresh replacement block.
+     */
+    event.preventDefault();
+
+    /**
+     * Drop any lingering collapsed caret/native range so the character can only
+     * arrive through the replacement block created below.
+     */
+    SelectionUtils.get()?.removeAllRanges();
+
+    /**
+     * Force a replacement block so the typed character lands in ONE clean block
+     * at the seam of the deleted span — even for a partial (subset) selection
+     * where the whole document was not selected.
+     */
+    const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement(true);
 
     if (insertedBlock) {
       Caret.setToBlock(insertedBlock);

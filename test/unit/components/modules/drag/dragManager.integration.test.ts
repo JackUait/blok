@@ -471,9 +471,12 @@ describe("DragManager - Component Integration", () => {
       );
 
       vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
-      // Bottom half of the target -> drop below it.
+      // Bottom half of the target -> drop below it. clientX sits at the content
+      // origin (contentRect.left = 0) so the cursor selects depth 0 — this test
+      // pins the marker-to-text geometry at the target's own depth, not the
+      // horizontal drag-to-indent behaviour covered elsewhere.
       document.dispatchEvent(
-        createMouseEvent("mousemove", { clientX: 50, clientY: 240 }),
+        createMouseEvent("mousemove", { clientX: 0, clientY: 240 }),
       );
 
       expect(targetBlock.holder).toHaveAttribute("data-drop-indicator");
@@ -740,6 +743,11 @@ describe("DragManager - Component Integration", () => {
 
       document.body.appendChild(wrapper);
       blocks.forEach((block) => wrapper.appendChild(block.holder));
+
+      // Shift the content origin far to the right so the central drop X (50, chosen
+      // to clear the side-drop zones) reads as the content's LEFT edge — i.e. the
+      // cursor selects depth 0 (a plain root reorder), not a horizontal nest.
+      (modules.UI.contentRect as { left: number }).left = 1000;
 
       // Drag the list item at index 1 down past block-4 (index 3) — a real
       // reorder, not a same-slot drop.

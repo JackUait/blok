@@ -5,7 +5,7 @@ import type { ToolsCollection } from '../../tools/collection';
 import { isObject } from '../../utils';
 import { clean , composeSanitizerConfig } from '../../utils/sanitizer';
 
-import { SAFE_STRUCTURAL_TAGS, collectTagNames } from './constants';
+import { SAFE_STRUCTURAL_TAGS, STRUCTURAL_TAG_ATTRIBUTES, collectTagNames } from './constants';
 import type { TagSubstitute } from './types';
 
 /**
@@ -47,7 +47,7 @@ export class SanitizerConfigBuilder {
       const tagName = current.tagName.toLowerCase();
 
       if (SAFE_STRUCTURAL_TAGS.has(tagName)) {
-        config[tagName] = config[tagName] ?? {};
+        config[tagName] = config[tagName] ?? STRUCTURAL_TAG_ATTRIBUTES[tagName] ?? {};
       }
 
       nodesToProcess.push(...Array.from(current.children));
@@ -96,11 +96,13 @@ export class SanitizerConfigBuilder {
     /**
      * Allow `<img>` inside table cells so pasted images (e.g. from Google Docs
      * tables) survive sanitization and end up in the cell's paragraph content
-     * rather than being stripped silently.
+     * rather than being stripped silently. Checkbox `<input>` likewise — it
+     * carries checklist state for task lists pasted inside cells.
      */
     const tableConfig: SanitizerConfig = {
       ...config,
       img: { src: true, alt: true, width: true, height: true },
+      input: { type: true, checked: true },
     };
     const cleanTableHTML = clean(table.outerHTML, tableConfig);
     const tmpWrapper = document.createElement('div');

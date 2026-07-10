@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, type Mock } from 'vitest';
 import { Toolbar } from '../../../../../src/components/modules/toolbar/index';
 import type * as UtilsModule from '../../../../../src/components/utils';
 import { BlockHovered } from '../../../../../src/components/events/BlockHovered';
@@ -69,6 +69,41 @@ vi.mock('../../../../../src/components/i18n', () => ({
   },
 }));
 
+/**
+ * Lightweight Toolbox mock: records handlers registered via on() so tests can
+ * emit Opened/Closed and assert the Toolbar's reaction (e.g. plus button
+ * aria-expanded toggling).
+ */
+vi.mock('../../../../../src/components/ui/toolbox', () => {
+  const ToolboxEvent = {
+    Opened: 'toolbox-opened',
+    Closed: 'toolbox-closed',
+    BlockAdded: 'toolbox-block-added',
+  };
+
+  class Toolbox {
+    private handlers = new Map<string, () => void>();
+
+    public on(event: string, cb: () => void): void {
+      this.handlers.set(event, cb);
+    }
+
+    public emit(event: string): void {
+      this.handlers.get(event)?.();
+    }
+
+    public getElement(): HTMLElement {
+      return document.createElement('div');
+    }
+
+    public setCalloutBackground(): void {}
+    public close(): void {}
+    public open(): void {}
+  }
+
+  return { Toolbox, ToolboxEvent };
+});
+
 describe('Toolbar module interactions', () => {
   let toolbar: Toolbar;
   let blockHoveredHandler: ((data: { block: unknown }) => void) | undefined;
@@ -132,6 +167,10 @@ describe('Toolbar module interactions', () => {
       },
       RectangleSelection: {
         isRectActivated: vi.fn(() => false),
+      },
+      Caret: {
+        setToBlock: vi.fn(),
+        positions: { START: 'start', END: 'end', DEFAULT: 'default' },
       },
     } as unknown as Toolbar['Blok'];
 
@@ -780,7 +819,7 @@ describe('Plus button interactions', () => {
       Caret: {
         setToBlock: vi.fn(),
         insertContentAtCaretPosition: vi.fn(),
-        positions: { START: 'start', DEFAULT: 'default' },
+        positions: { START: 'start', END: 'end', DEFAULT: 'default' },
       },
       I18n: {
         t: vi.fn((key: string) => key),
@@ -1363,6 +1402,184 @@ describe('Plus button interactions', () => {
       expect(() => toolbar.discardPlusContext()).not.toThrow();
       expect(internal.preToolboxBlock).toBeNull();
       expect(internal.plusInsertedBlock).toBeNull();
+    });
+  });
+
+  describe('block toolbar ARIA wrapper', () => {
+    it('exposes the toolbar wrapper as an ARIA toolbar with a label', async () => {
+      const blok = getBlok() as unknown as {
+        API: { methods: unknown };
+        Tools: { blockTools: Map<string, unknown> };
+        I18n: { t: (key: string) => string };
+      };
+
+      blok.API = { methods: {} };
+      blok.Tools = { blockTools: new Map() };
+      blok.I18n = { t: (key: string): string => key };
+
+      await (toolbar as unknown as { make: () => Promise<void> }).make();
+
+      const wrapper = (toolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+      expect(wrapper.getAttribute('role')).toBe('toolbar');
+      expect(wrapper.getAttribute('aria-label')).toBe('a11y.blockToolbar');
+    });
+
+    it('declares a horizontal aria-orientation for the roving group', async () => {
+      const blok = getBlok() as unknown as {
+        API: { methods: unknown };
+        Tools: { blockTools: Map<string, unknown> };
+        I18n: { t: (key: string) => string };
+      };
+
+      blok.API = { methods: {} };
+      blok.Tools = { blockTools: new Map() };
+      blok.I18n = { t: (key: string): string => key };
+
+      await (toolbar as unknown as { make: () => Promise<void> }).make();
+
+      const wrapper = (toolbar as unknown as { nodes: { wrapper: HTMLElement } }).nodes.wrapper;
+
+      expect(wrapper.getAttribute('aria-orientation')).toBe('horizontal');
+    });
+  });
+
+  describe('focus-the-toolbar shortcut (Alt+F10) and Escape return', () => {
+    type MutableListenersMock = {
+      on: Mock;
+      clearAll: Mock;
+    };
+
+    const findListener = (
+      target: EventTarget,
+      type: string
+    ): ((event: Event) => void) | undefined => {
+      const rml = (toolbar as unknown as { readOnlyMutableListeners: MutableListenersMock })
+        .readOnlyMutableListeners;
+      const call = rml.on.mock.calls.find((args) => args[0] === target && args[1] === type);
+
+      return call?.[2] as ((event: Event) => void) | undefined;
+    };
+
+    it('moves focus into the roving group when Alt+F10 is pressed over a block', () => {
+      const block = { id: 'b1', inputs: [document.createElement('div')], holder: document.createElement('div') };
+      const blok = getBlok();
+
+      (blok.BlockManager as unknown as { currentBlock: unknown }).currentBlock = block;
+
+      const focusFirst = vi.fn();
+
+      (toolbar as unknown as { rovingController: { focusFirst: () => void } }).rovingController = {
+        focusFirst,
+      };
+
+      const moveAndOpenSpy = vi
+        .spyOn(toolbar as unknown as { moveAndOpen: (b: unknown) => void }, 'moveAndOpen')
+        .mockImplementation(() => {});
+
+      (toolbar as unknown as { enableModuleBindings: () => void }).enableModuleBindings();
+
+      const handler = findListener(blok.UI.nodes.wrapper, 'keydown');
+
+      expect(handler).toBeDefined();
+
+      const event = new KeyboardEvent('keydown', { key: 'F10', altKey: true, bubbles: true, cancelable: true });
+
+      handler?.(event);
+
+      expect(moveAndOpenSpy).toHaveBeenCalledWith(block);
+      expect(focusFirst).toHaveBeenCalledTimes(1);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('does nothing on Alt+F10 when there is no target block', () => {
+      const blok = getBlok();
+
+      (blok.BlockManager as unknown as { currentBlock: unknown }).currentBlock = null;
+
+      const focusFirst = vi.fn();
+
+      (toolbar as unknown as { rovingController: { focusFirst: () => void } }).rovingController = {
+        focusFirst,
+      };
+
+      (toolbar as unknown as { enableModuleBindings: () => void }).enableModuleBindings();
+
+      const handler = findListener(blok.UI.nodes.wrapper, 'keydown');
+      const event = new KeyboardEvent('keydown', { key: 'F10', altKey: true, bubbles: true, cancelable: true });
+
+      handler?.(event);
+
+      expect(focusFirst).not.toHaveBeenCalled();
+    });
+
+    it('returns focus to the origin block on Escape from inside the toolbar', () => {
+      const block = { id: 'b1', inputs: [document.createElement('div')], holder: document.createElement('div') };
+      const blok = getBlok();
+
+      (blok.BlockManager as unknown as { currentBlock: unknown }).currentBlock = block;
+
+      (toolbar as unknown as { rovingController: { focusFirst: () => void } }).rovingController = {
+        focusFirst: vi.fn(),
+      };
+
+      vi.spyOn(toolbar as unknown as { moveAndOpen: (b: unknown) => void }, 'moveAndOpen')
+        .mockImplementation(() => {});
+
+      (toolbar as unknown as { enableModuleBindings: () => void }).enableModuleBindings();
+
+      // Enter the toolbar first so the origin block is remembered.
+      const focusHandler = findListener(blok.UI.nodes.wrapper, 'keydown');
+
+      focusHandler?.(new KeyboardEvent('keydown', { key: 'F10', altKey: true, cancelable: true }));
+
+      const wrapper = (toolbar as unknown as { nodes: { wrapper: EventTarget } }).nodes.wrapper;
+      const escapeHandler = findListener(wrapper, 'keydown');
+
+      expect(escapeHandler).toBeDefined();
+
+      escapeHandler?.(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+
+      expect((blok.Caret.setToBlock as Mock)).toHaveBeenCalledWith(block, 'end');
+    });
+  });
+
+  describe('menu-button aria-expanded wiring', () => {
+    it('toggles the plus button aria-expanded when the toolbox opens and closes', () => {
+      const blok = getBlok() as unknown as {
+        API: { methods: unknown };
+        Tools: { blockTools: Map<string, unknown> };
+        I18n: { t: (key: string) => string };
+      };
+
+      blok.API = { methods: {} };
+      blok.Tools = { blockTools: new Map() };
+      blok.I18n = { t: (key: string): string => key };
+
+      (toolbar as unknown as { makeToolbox: () => Element }).makeToolbox();
+
+      const toolboxInstance = (toolbar as unknown as {
+        toolboxInstance: { emit: (event: string) => void };
+      }).toolboxInstance;
+      const plusButton = (toolbar as unknown as { nodes: { plusButton: HTMLElement } }).nodes.plusButton;
+
+      toolboxInstance.emit('toolbox-opened');
+      expect(plusButton.getAttribute('aria-expanded')).toBe('true');
+
+      toolboxInstance.emit('toolbox-closed');
+      expect(plusButton.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('toggles the settings toggler aria-expanded when block settings open and close', () => {
+      const settingsToggler = (toolbar as unknown as {
+        nodes: { settingsToggler: HTMLElement };
+      }).nodes.settingsToggler;
+
+      (toolbar as unknown as { onBlockSettingsOpen: () => void }).onBlockSettingsOpen();
+      expect(settingsToggler.getAttribute('aria-expanded')).toBe('true');
+
+      (toolbar as unknown as { onBlockSettingsClose: () => void }).onBlockSettingsClose();
+      expect(settingsToggler.getAttribute('aria-expanded')).toBe('false');
     });
   });
 });

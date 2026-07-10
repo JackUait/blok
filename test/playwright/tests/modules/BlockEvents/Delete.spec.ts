@@ -569,7 +569,7 @@ test.describe('delete keydown', () => {
     await expectToolbarClosed(page);
   });
 
-  test('should remove current empty block and place caret at next block start', async ({ page }) => {
+  test('forward-Delete from an empty block merges the next block UP (upper wins) with caret at start', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         id: 'block1',
@@ -595,8 +595,13 @@ test.describe('delete keydown', () => {
 
     const { blocks } = await saveBlok(page);
 
+    // Notion parity: forward-Delete from the empty UPPER block pulls the next
+    // block's text UP into it (symmetric with Backspace) — the upper block wins,
+    // so block1 survives carrying block2's content. User-visible result is a
+    // single "Not empty block" with the caret at its start.
     expect(blocks).toHaveLength(1);
-    expect(blocks[0].id).toBe('block2');
+    expect(blocks[0].id).toBe('block1');
+    expect(blocks[0].data.text).toBe('Not empty block');
 
     await expectCaretAtStart(getParagraphByIndex(page, 0));
     await expectToolbarClosed(page);

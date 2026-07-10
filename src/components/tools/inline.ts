@@ -80,4 +80,19 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
 
     return constructable?.allowCaretShortcut ?? false;
   }
+
+  /**
+   * Whether, at a collapsed caret, the tool's keyboard shortcut should defer to
+   * the browser's own native handling instead of being intercepted. True for
+   * format tools with a native browser equivalent (Bold, Italic): the browser
+   * applies its pending inline-format to the next typed characters, which is the
+   * only race-free, cross-engine way to get "toggle then type" behaviour (WebKit
+   * ignores scripted execCommand). When true the shortcut manager does NOT
+   * preventDefault and does NOT invoke the tool at a collapsed caret.
+   */
+  public get nativeCaretShortcut(): boolean {
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+
+    return constructable?.nativeCaretShortcut ?? false;
+  }
 }

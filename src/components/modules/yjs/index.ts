@@ -53,11 +53,28 @@ export class YjsManager extends Module {
   private isMoveGroupActive = false;
 
   /**
-   * Whether a drag-backed move group is currently open.
+   * Whether the currently-open move group is a DRAG move group (the drag pipeline
+   * fires the tool MOVED lifecycle hook itself via `move()`, so `setBlockParent`
+   * must NOT also fire it). Keyboard move groups (Tab/Shift+Tab nesting) leave
+   * this false: they do not fire MOVED elsewhere, so `setBlockParent` owns it.
+   */
+  private isDragMoveGroup = false;
+
+  /**
+   * Whether a move group is currently open (drag OR keyboard nesting).
    * See `isMoveGroupActive`.
    */
   public get isInMoveGroup(): boolean {
     return this.isMoveGroupActive;
+  }
+
+  /**
+   * Whether the open move group is a drag move group (vs a keyboard one).
+   * Used by `BlockManager.setBlockParent` to decide whether to fire the tool
+   * MOVED hook (skipped for drag, which fires it itself).
+   */
+  public get isDragMoveGroupActive(): boolean {
+    return this.isDragMoveGroup;
   }
 
   /**
@@ -170,6 +187,22 @@ export class YjsManager extends Module {
     this.undoHistory.markCaretBeforeChange();
 
     this.documentStore.removeBlock(id);
+  }
+
+  /**
+   * Replace a block's tool TYPE and DATA in place (turn-into / markdown
+   * conversion), preserving its id, position, parentId, contentIds and tunes.
+   * Emits an `update` event so undo/redo re-renders the correct tool — unlike a
+   * remove+add of the same id, which the observer misreads as a no-op move.
+   * @param id - Block id whose content to replace
+   * @param type - New tool name
+   * @param data - New tool data
+   * @returns true if the block existed and was mutated
+   */
+  public replaceBlockContent(id: string, type: string, data: Record<string, unknown>): boolean {
+    this.undoHistory.markCaretBeforeChange();
+
+    return this.documentStore.replaceBlockContent(id, type, data);
   }
 
   /**
@@ -331,13 +364,18 @@ export class YjsManager extends Module {
   /**
    * Execute multiple move operations as a single atomic undo group.
    * @param fn - Function containing move operations to execute atomically
+   * @param isDrag - true when the group is a pointer drag (the drag pipeline
+   *   fires the tool MOVED hook itself, so `setBlockParent` must not). Keyboard
+   *   nesting leaves this false so `setBlockParent` fires MOVED.
    */
-  public transactMoves(fn: () => void): void {
+  public transactMoves(fn: () => void, isDrag = false): void {
     this.isMoveGroupActive = true;
+    this.isDragMoveGroup = isDrag;
     try {
       this.undoHistory.transactMoves(fn);
     } finally {
       this.isMoveGroupActive = false;
+      this.isDragMoveGroup = false;
     }
   }
 

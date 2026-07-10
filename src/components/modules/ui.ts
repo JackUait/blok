@@ -16,6 +16,8 @@ import { Flipper } from '../flipper';
 import { SelectionUtils as Selection } from '../selection/index';
 import { debounce, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
+import { LinkHoverCard } from '../utils/link-hover-card';
+import { hasUnsafeScheme } from '../utils/sanitize-url';
 
 // Controllers and handlers
 import { BlockHoverController } from './uiControllers/controllers/blockHover';
@@ -75,6 +77,15 @@ export class UI extends Module<UINodes> {
   private selectionController: SelectionController | null = null;
   private blockHoverController: BlockHoverController | null = null;
   private toggleShortcuts: ToggleShortcuts | null = null;
+
+  /**
+   * Hoverable card shown when the pointer rests on a link while editing —
+   * surfaces the destination URL with copy/edit actions, mirroring the
+   * read-only "clickable link" affordance. Created lazily once modules (I18n)
+   * are ready. Only active in edit mode (its listeners live on
+   * {@link readOnlyMutableListeners}).
+   */
+  private linkHoverCard: LinkHoverCard | null = null;
 
   /**
    * Handlers for simple event behaviors
@@ -445,6 +456,9 @@ export class UI extends Module<UINodes> {
     this.unbindReadOnlyInsensitiveListeners();
     this.unbindReadOnlySensitiveListeners();
 
+    this.linkHoverCard?.destroy();
+    this.linkHoverCard = null;
+
     // Remove the per-instance font style tag to prevent leaks in SPAs
     if (this.fontStyleTagId !== null) {
       const fontStyleTag = $.get(this.fontStyleTagId);
@@ -476,6 +490,69 @@ export class UI extends Module<UINodes> {
     if (this.redactorTouchHandler) {
       this.redactorTouchHandler(event);
     }
+  };
+
+  /**
+   * Link hover card show/hide handlers. Kept as stable references (not inline
+   * wrappers) so they can be bound to the read-only-insensitive listener set:
+   * the card must appear on hover in both edit and read-only modes.
+   */
+  private anchorMouseOverListener = (event: Event): void => {
+    if (event instanceof MouseEvent) {
+      this.handleAnchorMouseOver(event);
+    }
+  };
+
+  private anchorMouseOutListener = (event: Event): void => {
+    if (event instanceof MouseEvent) {
+      this.handleAnchorMouseOut(event);
+    }
+  };
+
+  /**
+   * Right-click inside block content opens the block context menu (Block
+   * Settings) anchored at the cursor, mirroring a desktop application. This is
+   * a hover-independent path to the block menu that avoids the "wrong block"
+   * race in the hover-driven settings toggler.
+   *
+   * The native context menu is left intact on interactive and media elements
+   * (links, form fields, images, media) where it carries real value — only
+   * plain block content is hijacked.
+   * @param event - contextmenu event
+   */
+  private redactorContextMenu = (event: Event): void => {
+    if (!(event instanceof MouseEvent)) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target.closest('a, input, textarea, select, img, video, audio')) {
+      return;
+    }
+
+    const block = this.Blok.BlockManager.setCurrentBlockByChildNode(target);
+
+    if (block === undefined) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const { BlockSettings, Toolbar } = this.Blok;
+
+    /**
+     * Anchor the toolbar to the right-clicked block (moveAndOpen also closes any
+     * already-open settings menu, so a second right-click repositions cleanly),
+     * then open Block Settings at the cursor via a zero-size virtual rect.
+     */
+    Toolbar.moveAndOpen(block);
+
+    void BlockSettings.open(block, new DOMRect(event.clientX, event.clientY, 0, 0));
   };
 
   /**
@@ -692,6 +769,17 @@ export class UI extends Module<UINodes> {
       passive: true,
     });
 
+    this.listeners.on(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
+
+    /**
+     * Link hover card — show it while the pointer rests on a link, hide it once
+     * the pointer leaves both the link and the card. mouseover/mouseout bubble,
+     * so a single delegated pair covers every anchor in the redactor. Bound here
+     * (read-only-insensitive) so the card also appears in read-only mode, where
+     * it omits its edit affordance (see the hover card's canEdit).
+     */
+    this.listeners.on(this.nodes.redactor, 'mouseover', this.anchorMouseOverListener);
+    this.listeners.on(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
   }
 
   /**
@@ -701,6 +789,9 @@ export class UI extends Module<UINodes> {
     this.listeners.off(window, 'resize', this.resizeDebouncer);
     this.listeners.off(this.nodes.redactor, 'mousedown', this.documentTouchedListener);
     this.listeners.off(this.nodes.redactor, 'touchstart', this.documentTouchedListener);
+    this.listeners.off(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
+    this.listeners.off(this.nodes.redactor, 'mouseover', this.anchorMouseOverListener);
+    this.listeners.off(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
 
     /**
      * Disable selection controller
@@ -723,7 +814,7 @@ export class UI extends Module<UINodes> {
     }, false);
 
     /**
-     * Redactor click handler for Ctrl+click anchor navigation
+     * Redactor click handler for anchor navigation (plain or Ctrl+click)
      */
     this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: Event) => {
       if (event instanceof MouseEvent) {
@@ -767,6 +858,14 @@ export class UI extends Module<UINodes> {
    */
   private unbindReadOnlySensitiveListeners(options?: { keepBlockHover?: boolean }): void {
     this.readOnlyMutableListeners.clearAll();
+
+    /**
+     * Reset any visible hover card when the mode changes: entering read-only
+     * must drop the edit-mode card so the next hover re-renders it without the
+     * edit affordance. The hover listeners themselves persist (they are
+     * read-only-insensitive), so the card still appears in read-only mode.
+     */
+    this.linkHoverCard?.hide();
 
     /**
      * Disable keyboard controller
@@ -832,28 +931,158 @@ export class UI extends Module<UINodes> {
   }
 
   /**
-   * Handle Ctrl+click on anchor elements to open in new tab
+   * Open a link on click, mirroring read-only mode where anchors are natively
+   * clickable. A plain left-click on a link navigates; a modifier click still
+   * works too. Text selection (a non-collapsed range, e.g. drag-selecting the
+   * link text) is left untouched so the link stays editable.
    */
   private redactorClicked(event: MouseEvent): void {
-    const element = event.target as Element;
-    const ctrlKey = event.metaKey || event.ctrlKey;
+    const target = event.target as Element | null;
+    const anchor = target?.closest?.('a');
 
-    if (!$.isAnchor(element) || !ctrlKey) {
+    if (!(anchor instanceof HTMLAnchorElement) || !this.nodes.redactor.contains(anchor)) {
       return;
     }
 
-    event.stopImmediatePropagation();
-    event.stopPropagation();
+    /**
+     * Only the primary button navigates. A modifier click always opens; a plain
+     * click opens only when the selection is collapsed, so drag-selecting the
+     * link's text to edit it does not fire off a navigation.
+     */
+    const isModifierClick = event.metaKey || event.ctrlKey;
 
-    const href = element.getAttribute('href');
+    if (event.button !== 0) {
+      return;
+    }
+
+    if (!isModifierClick && !Selection.isCollapsed) {
+      return;
+    }
+
+    const href = anchor.getAttribute('href');
 
     if (!href) {
       return;
     }
 
-    const validUrl = getValidUrl(href);
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+    event.preventDefault();
 
-    openTab(validUrl);
+    this.linkHoverCard?.hide();
+
+    this.openLink(href);
+  }
+
+  /**
+   * Open a link href in a new tab, refusing schemes that execute script when
+   * followed (`javascript:`, `data:text/html`, …). Anchors can carry such a
+   * href when created outside the inline Link tool's creation-time guard (paste,
+   * import, programmatic data), so the click path that follows them must
+   * re-check — otherwise a plain click is click-to-XSS.
+   * @param href - the raw anchor href
+   */
+  private openLink(href: string): void {
+    if (hasUnsafeScheme(href)) {
+      return;
+    }
+
+    openTab(getValidUrl(href));
+  }
+
+  /**
+   * Lazily build the link hover card once modules (I18n / Notifier) are ready.
+   */
+  private ensureLinkHoverCard(): LinkHoverCard {
+    if (this.linkHoverCard === null) {
+      this.linkHoverCard = new LinkHoverCard({
+        labels: {
+          copy: this.Blok.I18n.t('tools.link.copyUrl'),
+          edit: this.Blok.I18n.t('tools.link.edit'),
+        },
+        callbacks: {
+          onOpen: (href: string): void => this.openLink(href),
+          onCopy: (href: string): void => {
+            void this.copyLinkHref(href);
+          },
+          onEdit: (anchor: HTMLAnchorElement): void => {
+            void this.Blok.InlineToolbar.editLink(anchor);
+          },
+        },
+        canEdit: (): boolean => !this.Blok.ReadOnly.isEnabled,
+      });
+    }
+
+    return this.linkHoverCard;
+  }
+
+  /**
+   * Copy a link's destination to the clipboard and notify the user.
+   * @param href - the URL to copy
+   */
+  private async copyLinkHref(href: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(href);
+      this.Blok.NotifierAPI.methods.show({
+        message: this.Blok.I18n.t('tools.link.urlCopied'),
+        style: 'success',
+        time: 2000,
+      });
+    } catch {
+      this.Blok.NotifierAPI.methods.show({
+        message: this.Blok.I18n.t('tools.link.copyFailed'),
+        style: 'error',
+        time: 3000,
+      });
+    }
+  }
+
+  /**
+   * Show the link hover card when the pointer enters an anchor.
+   * @param event - mouseover event delegated from the redactor
+   */
+  private handleAnchorMouseOver(event: MouseEvent): void {
+    const target = event.target as Element | null;
+    const anchor = target?.closest?.('a');
+
+    if (!(anchor instanceof HTMLAnchorElement) || !this.nodes.redactor.contains(anchor)) {
+      return;
+    }
+
+    if (!anchor.getAttribute('href')) {
+      return;
+    }
+
+    const card = this.ensureLinkHoverCard();
+
+    if (card.anchor === anchor) {
+      return;
+    }
+
+    card.show(anchor, { x: event.clientX, y: event.clientY });
+  }
+
+  /**
+   * Schedule hiding the link hover card when the pointer leaves an anchor.
+   * Movement within the same anchor (to a child node) is ignored; the card's
+   * own hover keeps it open when the pointer travels onto it.
+   * @param event - mouseout event delegated from the redactor
+   */
+  private handleAnchorMouseOut(event: MouseEvent): void {
+    const target = event.target as Element | null;
+    const anchor = target?.closest?.('a');
+
+    if (!(anchor instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    const related = event.relatedTarget as Node | null;
+
+    if (related !== null && anchor.contains(related)) {
+      return;
+    }
+
+    this.linkHoverCard?.scheduleHide();
   }
 
   /**

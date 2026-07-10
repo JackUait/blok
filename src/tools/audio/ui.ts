@@ -91,6 +91,10 @@ export function renderNowPlaying(data: AudioData, opts: NowPlayingOptions): NowP
     button.className = 'blok-audio-cover__change';
     button.setAttribute('data-role', 'audio-cover-change');
     button.setAttribute('aria-label', opts.coverChangeLabel ?? 'Change cover');
+    // The button opens the cover-picker dialog; the picker toggles
+    // aria-expanded while it is open.
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('aria-expanded', 'false');
     button.innerHTML = IconImage;
     cover.appendChild(button);
 

@@ -102,6 +102,15 @@ describe('parseNotionBlocksV3', () => {
       expect(out).toEqual([{ id: 'a', tool: 'paragraph', data: { text: '' } }]);
     });
 
+    // Notion stores a Shift+Enter soft line break as a literal `\n` inside the
+    // segment text. A raw newline collapses to a space when set as innerHTML, so
+    // it must become a `<br>` — otherwise multi-line text flattens onto one line.
+    it('converts a soft line break (\\n) in segment text to <br>', () => {
+      const out = parseNotionBlocksV3(v3(value('a', 'text', { properties: title(['first\nsecond']) })));
+
+      expect(out?.[0].data.text).toBe('first<br>second');
+    });
+
     it('maps header / sub_header / sub_sub_header to header levels 1/2/3', () => {
       const out = parseNotionBlocksV3(
         v3(

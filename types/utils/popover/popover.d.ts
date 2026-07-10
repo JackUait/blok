@@ -41,6 +41,13 @@ export interface Flipper {
 
   /** Whether keydown events from contenteditable targets are handled. */
   getHandleContentEditableTargets(): boolean;
+
+  /**
+   * Sets the element that owns DOM focus while the popover is open. When set,
+   * the iterator reflects the currently-highlighted item on it via
+   * `aria-activedescendant`. Pass null to clear.
+   */
+  setActiveDescendantHost(host: HTMLElement | null): void;
 }
 
 /**
@@ -162,6 +169,19 @@ export interface PopoverParams {
    * Rendered at the top, below the search input, before any items.
    */
   contextLabel?: string;
+
+  /**
+   * When true, the items container is exposed as an ARIA `listbox` (and its
+   * default items as `option`s) instead of a `menu`. Used by search/combobox
+   * surfaces such as the Toolbox.
+   */
+  listbox?: boolean;
+
+  /**
+   * Optional stable id applied to the items container (the `menu`/`listbox`
+   * element). Lets an external combobox trigger reference it via `aria-controls`.
+   */
+  listboxId?: string;
 }
 
 
@@ -177,6 +197,12 @@ export interface PopoverMessages {
 
   /** Group label shown above top-level matches in search results */
   actions?: string
+
+  /**
+   * Template announced to screen readers with the current result count while
+   * filtering. Use the `{count}` placeholder, e.g. "{count} results".
+   */
+  searchResults?: string
 }
 
 
@@ -209,17 +235,17 @@ export interface PopoverNodes {
   /** Message displayed when no items found while searching */
   nothingFoundMessage: HTMLElement;
 
+  /** Visually-hidden polite live region announcing search result counts */
+  resultsAnnouncer: HTMLElement;
+
   /** Optional label describing what the popover targets, rendered above items */
   contextLabel?: HTMLElement;
 
   /** Popover items wrapper */
   items: HTMLElement;
 
-  /** Top scroll haze gradient overlay */
-  scrollHazeTop: HTMLElement;
-
-  /** Bottom scroll haze gradient overlay */
-  scrollHazeBottom: HTMLElement;
+  /** Custom, engine-independent scrollbar thumb overlaid on the items list */
+  scrollbarThumb: HTMLElement;
 }
 
 /**

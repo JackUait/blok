@@ -3,6 +3,12 @@ import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 import { COVER_TYPES, COVER_MAX_SIZE } from './constants';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { getTabbables } from '../../components/utils/modal-dialog';
+import { registerLayer } from '../../components/utils/dismissable-layer';
+import {
+  positionAnchored,
+  createPositionTracker,
+} from '../../components/utils/popover/anchored-position';
 import {
   renderMediaEmptyState,
   type MediaEmptyStateElement,
@@ -20,7 +26,14 @@ export function validateCoverFile(file: File, i18n?: I18nInstance): string | nul
 }
 
 export interface OpenCoverPickerOptions {
+  /** Element the picker is visually anchored to (the cover art). */
   anchor: HTMLElement;
+  /**
+   * The button that opened the picker. It carries the aria-haspopup /
+   * aria-expanded state (a role-less anchor div is mute to AT) and regains
+   * focus when the picker closes. Falls back to `anchor` when omitted.
+   */
+  trigger?: HTMLElement;
   onFile(file: File): void;
   onUrl(url: string): void;
   onClose?(): void;
@@ -62,21 +75,57 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
   });
   dialog.appendChild(surface);
 
+  // The element that owns the picker's ARIA state and regains focus on close.
+  const trigger = opts.trigger ?? opts.anchor;
+
+  // Fallback focus target for when the trigger's block was torn down
+  // mid-session (an isConnected guard covers that on close).
+  const previouslyFocused = document.activeElement;
+
   document.body.appendChild(dialog);
   promoteToTopLayer(dialog);
-  position(dialog, opts.anchor);
+
+  // Anchored positioning via the shared engine: prefers the space below the
+  // anchor, flips above when the viewport bottom would clip the picker, and
+  // clamps horizontally. Coordinates are document-relative → absolute.
+  dialog.style.position = 'absolute';
+  const reposition = (): void => {
+    positionAnchored(dialog, opts.anchor, { side: 'bottom', offset: 8 });
+  };
+  reposition();
+
+  // The picker is an anchored, non-modal dialog, so it advertises its open state
+  // on the trigger button (mirrors the alt-text popover) rather than inert-ing
+  // the page.
+  trigger.setAttribute('aria-haspopup', 'dialog');
+  trigger.setAttribute('aria-expanded', 'true');
+
+  // Pull focus into the picker so keyboard + screen-reader users land inside it.
+  getTabbables(dialog)[0]?.focus();
 
   const state = { detached: false };
+
+  // Keep the picker glued to the anchor across scroll / resize / own-size
+  // changes (shared autoUpdate-style tracker).
+  const tracker = createPositionTracker(dialog, () => {
+    if (!state.detached) reposition();
+  });
+  tracker.attach();
 
   const detach = (): void => {
     if (state.detached) return;
     state.detached = true;
     document.removeEventListener('keydown', onKeyDown, true);
-    document.removeEventListener('mousedown', onOutside);
-    window.removeEventListener('resize', reposition);
-    window.removeEventListener('scroll', reposition, true);
+    tracker.detach();
+    unregisterLayer();
     removeFromTopLayer(dialog);
     dialog.remove();
+    trigger.setAttribute('aria-expanded', 'false');
+    if (trigger.isConnected) {
+      trigger.focus();
+    } else if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+      previouslyFocused.focus();
+    }
   };
 
   const close = (): void => {
@@ -84,43 +133,43 @@ export function openCoverPicker(opts: OpenCoverPickerOptions): CoverPickerHandle
     opts.onClose?.();
   };
 
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') {
+  // Escape + outside-press dismissal via the shared dismissable-layer stack
+  // (one capture-phase listener pair for all floating surfaces; only the
+  // topmost layer is peeled per interaction).
+  const unregisterLayer = registerLayer({
+    element: dialog,
+    anchor: opts.anchor,
+    onDismiss: () => close(),
+  });
+
+  // Soft focus trap: keep Tab / Shift+Tab cycling within the picker's own
+  // tabbables (it is non-modal, so nothing inert-s the background).
+  const trapTab = (event: KeyboardEvent): void => {
+    const focusables = getTabbables(dialog);
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
       event.preventDefault();
-      event.stopPropagation();
-      close();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      event.preventDefault();
+      first.focus();
     }
   };
 
-  const onOutside = (event: MouseEvent): void => {
-    const target = event.target as Node | null;
-    if (target && (dialog.contains(target) || opts.anchor.contains(target))) return;
-    close();
+  // Capture phase so the trap wins over the editor's own key handling.
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Tab') {
+      trapTab(event);
+    }
   };
 
-  function reposition(): void {
-    if (state.detached) return;
-    position(dialog, opts.anchor);
-  }
-
-  // Capture phase for Escape so it beats the editor's own key handling.
   document.addEventListener('keydown', onKeyDown, true);
-  document.addEventListener('mousedown', onOutside);
-  window.addEventListener('resize', reposition);
-  window.addEventListener('scroll', reposition, true);
 
   return {
     close,
     setError: (message) => surface.setError(message),
   };
-}
-
-function position(dialog: HTMLElement, anchor: HTMLElement): void {
-  const rect = anchor.getBoundingClientRect();
-  const gap = 8;
-  const { style } = dialog;
-  style.position = 'fixed';
-  style.top = `${rect.bottom + gap}px`;
-  style.left = `${Math.max(8, rect.left)}px`;
-  style.right = 'auto';
 }

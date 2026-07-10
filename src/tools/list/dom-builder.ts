@@ -6,7 +6,7 @@
  */
 
 import { DATA_ATTR } from '../../components/constants';
-import { PLACEHOLDER_CLASSES } from '../../components/utils/placeholder';
+import { getPlaceholderClasses } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 
 import {
@@ -27,6 +27,55 @@ export const LIST_TEST_IDS = {
   contentContainer: 'list-content-container',
   checklistContent: 'list-checklist-content',
 } as const;
+
+/** Monotonic sequence backing stable content-div ids for checkbox labelling. */
+const checklistItemIdSeq = { current: 0 };
+
+/**
+ * Sync a checklist checkbox control's checked state and its `data-state`
+ * (`checked` | `unchecked`) attribute — the single seam every toggle path uses
+ * so the accessible control state never drifts from the visible tick.
+ *
+ * @param checkbox - the checklist `<input type="checkbox">`
+ * @param checked - whether the item is checked
+ */
+export const applyCheckboxState = (checkbox: HTMLInputElement, checked: boolean): void => {
+  // Set the IDL `checked` property (drives the `:checked` pseudo used by the
+  // checklist CSS) without a param-property assignment. Must set the property,
+  // not the `checked` attribute — this seam runs on toggle paths after the
+  // control's dirty-checked flag is set, where the attribute no longer reflects
+  // current checkedness.
+  Reflect.set(checkbox, 'checked', checked);
+  checkbox.setAttribute('data-state', checked ? 'checked' : 'unchecked');
+};
+
+/**
+ * The single seam every checked-state change goes through — pointer click,
+ * Cmd/Ctrl+Enter keyboard toggle, and programmatic in-place `setData({checked})`.
+ * Keeps the checkbox control (`checked` + `data-state`) AND the text element
+ * (`data-checked` attribute + strike-through classes) in sync, so the dark-mode
+ * CSS keyed off `[data-checked="true"]` (src/styles/checklist.css) never drifts
+ * from the visible tick.
+ *
+ * @param checkbox - the checklist `<input type="checkbox">`, if present
+ * @param content - the item's text element, if present
+ * @param checked - whether the item is checked
+ */
+export const applyChecklistCheckedState = (
+  checkbox: HTMLInputElement | null,
+  content: HTMLElement | null,
+  checked: boolean
+): void => {
+  if (checkbox) {
+    applyCheckboxState(checkbox, checked);
+  }
+
+  if (content) {
+    content.classList.toggle('line-through', checked);
+    content.classList.toggle('opacity-60', checked);
+    content.setAttribute('data-checked', String(checked));
+  }
+};
 
 /**
  * Interface for elements that can store placeholder text before setup
@@ -157,7 +206,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
 
   const item = document.createElement('div');
   item.setAttribute('role', 'listitem');
-  item.className = twMerge(ITEM_STYLES, 'flex', ...PLACEHOLDER_CLASSES);
+  item.className = twMerge(ITEM_STYLES, 'flex', ...getPlaceholderClasses('always'));
 
   // Apply custom styles if configured
   if (itemColor) {
@@ -182,7 +231,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
 
   // Create content container
   const contentContainer = document.createElement('div');
-  contentContainer.className = twMerge('flex-1 min-w-0 outline-hidden', ...PLACEHOLDER_CLASSES);
+  contentContainer.className = twMerge('flex-1 min-w-0 outline-hidden', ...getPlaceholderClasses('always'));
   contentContainer.setAttribute('data-blok-testid', LIST_TEST_IDS.contentContainer);
   contentContainer.contentEditable = context.readOnly ? 'false' : 'true';
   contentContainer.innerHTML = data.text;
@@ -225,19 +274,24 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.className = CHECKBOX_STYLES;
-  checkbox.checked = Boolean(data.checked);
   checkbox.disabled = readOnly;
 
   const content = document.createElement('div');
   content.className = twMerge(
     'flex-1 outline-hidden leading-[1.5]',
     data.checked ? 'line-through opacity-60' : '',
-    ...PLACEHOLDER_CLASSES
+    ...getPlaceholderClasses('always')
   );
   content.setAttribute('data-blok-testid', LIST_TEST_IDS.checklistContent);
   content.setAttribute('data-checked', String(data.checked));
+  // Stable id so the nameless checkbox can borrow the item's text as its label.
+  content.id = `blok-checklist-item-${(checklistItemIdSeq.current += 1)}`;
   content.contentEditable = readOnly ? 'false' : 'true';
   content.innerHTML = data.text;
+
+  // The checkbox has no visible label of its own — point it at the text.
+  checkbox.setAttribute('aria-labelledby', content.id);
+  applyCheckboxState(checkbox, Boolean(data.checked));
 
   // Store placeholder for setup by caller
   setPlaceholder(content, placeholder);
@@ -246,6 +300,113 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
   wrapper.appendChild(content);
 
   return wrapper;
+};
+
+/**
+ * Minimal shape of a list item needed to serialize semantic clipboard HTML.
+ */
+export interface SemanticListItem {
+  /** Item text content (may include inline HTML) */
+  text: string;
+  /** List style: unordered, ordered, or checklist */
+  style: ListItemStyle;
+  /** Checked state for checklist items */
+  checked?: boolean;
+  /** Nesting depth level (0 = root, 1 = first indent, …) */
+  depth?: number;
+}
+
+/**
+ * Build SEMANTIC list HTML (`<ul>`/`<ol>` with `<li>` items) from a flat,
+ * depth-carrying list of items — the `text/html` clipboard flavor for a copied
+ * Blok list.
+ *
+ * Blok renders list items as non-semantic `<div role="listitem">` with a marker
+ * `<span>`, so copying the rendered DOM into Word/Google-Docs/another HTML editor
+ * would otherwise collapse the list into paragraphs (and leak the bullet glyph as
+ * literal text). Emitting real nested `<ul>`/`<ol>` keeps the structure and the
+ * ordered-vs-unordered-vs-checklist distinction, with NO marker-glyph text.
+ *
+ * @param items - list items in document order, each carrying its depth
+ * @returns a container element whose children are the top-level list element(s)
+ */
+export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement => {
+  const container = document.createElement('div');
+
+  type Level = { style: ListItemStyle; listEl: HTMLElement; lastItem: HTMLElement | null };
+  const stack: Level[] = [];
+
+  const makeListElement = (style: ListItemStyle): HTMLElement =>
+    document.createElement(style === 'ordered' ? 'ol' : 'ul');
+
+  const buildItemElement = (item: SemanticListItem): HTMLElement => {
+    const li = document.createElement('li');
+
+    if (item.style === 'checklist') {
+      const checkbox = document.createElement('input');
+
+      checkbox.type = 'checkbox';
+      checkbox.checked = Boolean(item.checked);
+      li.appendChild(checkbox);
+
+      const label = document.createElement('span');
+
+      label.innerHTML = item.text;
+      li.appendChild(label);
+    } else {
+      li.innerHTML = item.text;
+    }
+
+    return li;
+  };
+
+  // Return the open list level for `depth`, opening (and anchoring) a fresh
+  // list element when none is open or the open one has a different style.
+  const ensureLevel = (item: SemanticListItem, depth: number): Level => {
+    const existing = stack[depth];
+
+    if (existing !== undefined && existing.style === item.style) {
+      return existing;
+    }
+
+    const listEl = makeListElement(item.style);
+
+    if (depth === 0) {
+      container.appendChild(listEl);
+    } else {
+      const parent = stack[depth - 1];
+      const anchor = parent.lastItem ?? parent.listEl.appendChild(document.createElement('li'));
+
+      parent.lastItem = anchor;
+      anchor.appendChild(listEl);
+    }
+
+    const level: Level = { style: item.style, listEl, lastItem: null };
+
+    stack[depth] = level;
+    stack.length = depth + 1;
+
+    return level;
+  };
+
+  for (const item of items) {
+    // Clamp so an item can be at most one level deeper than the deepest open
+    // list — a jump from depth 0 to 2 would otherwise leave an orphan level.
+    const depth = Math.min(Math.max(0, item.depth ?? 0), stack.length);
+
+    // Close any levels deeper than this item's depth.
+    while (stack.length > depth + 1) {
+      stack.pop();
+    }
+
+    const level = ensureLevel(item, depth);
+    const li = buildItemElement(item);
+
+    level.listEl.appendChild(li);
+    level.lastItem = li;
+  }
+
+  return container;
 };
 
 /**

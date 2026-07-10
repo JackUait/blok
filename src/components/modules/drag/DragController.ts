@@ -3,6 +3,7 @@ import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { DATA_ATTR } from '../../constants';
 import { announce } from '../../utils/announcer';
+import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 import { hide as hideTooltip } from '../../utils/tooltip';
 
 import { addColumnToList, wrapInNewColumnList } from '../../../tools/column-drop';
@@ -685,7 +686,7 @@ export class DragController extends Module {
     if (e.altKey) {
       void this.handleDuplicate(sourceBlocks, targetBlock, targetEdge);
     } else {
-      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge);
+      this.handleDrop(sourceBlock, sourceBlocks, targetBlock, targetEdge, e.clientX);
     }
 
     this.cleanup(false, e.altKey);
@@ -805,7 +806,8 @@ export class DragController extends Module {
     sourceBlock: Block,
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom'
+    edge: 'top' | 'bottom',
+    clientX?: number
   ): void {
     // History integration: wrap the entire drop (array move + every
     // subsequent `setBlockParent`) in a single `YjsManager.transactMoves`
@@ -829,20 +831,21 @@ export class DragController extends Module {
 
     if (yjsManager !== undefined && typeof yjsManager.transactMoves === 'function') {
       yjsManager.transactMoves(() => {
-        this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge);
-      });
+        this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX);
+      }, true);
 
       return;
     }
 
-    this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge);
+    this.handleDropImpl(sourceBlock, sourceBlocks, targetBlock, edge, clientX);
   }
 
   private handleDropImpl(
     sourceBlock: Block,
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom'
+    edge: 'top' | 'bottom',
+    clientX?: number
   ): void {
     const isMultiBlockDrag = sourceBlocks.length > 1;
 
@@ -865,7 +868,7 @@ export class DragController extends Module {
     // Applied below to non-list blocks; list items derive their own depth via
     // the list tool's moved() hook.
     const dropDepth = this.targetDetector
-      ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock)
+      ? this.targetDetector.calculateTargetDepth(targetBlock, edge, sourceBlock, clientX)
       : 0;
 
     const result = this.operations.moveBlocks(sourceBlocks, targetBlock, edge);
@@ -945,14 +948,39 @@ export class DragController extends Module {
     // Re-fire moved() now that parentId is final, so the list tool recomputes its
     // depth/indent/marker/numbering from the actual tree — keeping data.depth
     // consistent with the structural parent (no stale flat depth leaking into save()).
+    //
+    // For a SINGLE-block list drag (no descendants), the primary item also honors
+    // the pointer-resolved dropDepth: the flat-array move auto-resolved its depth
+    // from neighbours (ignoring the cursor), so it could land deeper than the
+    // indicator previewed (e.g. auto "nests from the bottom" while the cursor
+    // pointed at root). Passing targetDepth makes the applied depth equal the
+    // indicator's — the "indicator == drop" invariant. Subtree/group drags keep
+    // their preserved relative structure (no targetDepth), so descendants are not
+    // pulled off their base depth. The override only fires when the auto-resolved
+    // flat depth actually DIVERGED from the pointer, so a plain reorder that lands
+    // at the same depth stays a silent no-op (no spurious moved() re-fire).
+    const applyPointerDepth = !isMultiBlockDrag;
+
     for (const movedBlock of result.movedBlocks) {
-      if (movedBlock.name !== 'list' || !reparentedListIds.has(movedBlock.id)) {
+      if (movedBlock.name !== 'list') {
+        continue;
+      }
+
+      const isPrimary = movedBlock.id === sourceBlock.id;
+      const flatDepth = getListItemDepth(movedBlock) ?? 0;
+      const honorsPointer = applyPointerDepth && isPrimary && flatDepth !== dropDepth;
+
+      if (!reparentedListIds.has(movedBlock.id) && !honorsPointer) {
         continue;
       }
 
       const listIndex = this.Blok.BlockManager.getBlockIndex(movedBlock);
 
-      movedBlock.call(BlockToolAPI.MOVED, { fromIndex: listIndex, toIndex: listIndex });
+      movedBlock.call(BlockToolAPI.MOVED, {
+        fromIndex: listIndex,
+        toIndex: listIndex,
+        targetDepth: honorsPointer ? dropDepth : undefined,
+      });
     }
 
     // Notify affected parent blocks so toggle tools update their visual state
@@ -981,9 +1009,17 @@ export class DragController extends Module {
 
   /**
    * Maps a drop-slot depth (what the indicator showed) to a STRUCTURAL parent:
-   * the nearest preceding block (not part of the moving group) whose depth is one
-   * less than the target depth. Returns null for a root-level drop (depth 0) or
-   * when there is no suitable ancestor at this position.
+   * the nearest preceding block (not part of the moving group) that is a LEGAL
+   * nesting parent for the moved block. Returns null for a root-level drop
+   * (depth 0) or when there is no suitable ancestor at this position.
+   *
+   * Legal-parent rule (Notion parity): a list item may nest under ANY preceding
+   * block (a bullet nests under a preceding paragraph too); every OTHER block may
+   * nest only under a preceding LIST item — never under a plain paragraph or a
+   * (closed) toggle. Open containers are re-homed earlier by resolveParentForDrop,
+   * so they never reach here. This keeps cursor-authoritative (cap-and-hold) depth
+   * for list drags while stopping a paragraph/other block from silently nesting
+   * under a non-list predecessor it dropped beside.
    * @param movedBlock - the block that was dropped
    * @param dropDepth - the visual depth the drop indicator showed
    * @param movingIds - ids of every block in the moving group (skipped as anchors)
@@ -997,6 +1033,7 @@ export class DragController extends Module {
       return null;
     }
 
+    const movedIsList = movedBlock.name === 'list';
     const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
     const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
 
@@ -1005,16 +1042,27 @@ export class DragController extends Module {
         continue;
       }
 
+      // A list item may nest under any block; any other block may nest only under
+      // a list item (paragraphs / closed toggles are not valid nesting parents).
+      const candidateIsList = candidate.name === 'list';
+      const isValidParent = movedIsList || candidateIsList;
+
       const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
 
       if (candidateDepth === dropDepth - 1) {
-        return candidate.id;
+        // Candidate sits exactly at the target parent depth: nest under it only
+        // when it is a legal parent, otherwise bail to root (never nest a
+        // non-list block under a plain paragraph or a closed toggle).
+        return isValidParent ? candidate.id : null;
       }
 
-      // A shallower block than the target parent depth means there is no valid
-      // ancestor at this slot — fall back to root rather than over-nesting.
+      // No ancestor at the exact target depth. A non-list block clamps onto the
+      // nearest shallower LIST item — flat list carriers are all structural
+      // depth 0, so this is the deepest reachable parent and matches the
+      // "nest from the bottom" preview. A list block (or a non-list block whose
+      // nearest predecessor is not a list) bails to root rather than over-nesting.
       if (candidateDepth < dropDepth - 1) {
-        return null;
+        return !movedIsList && candidateIsList ? candidate.id : null;
       }
     }
 
@@ -1022,11 +1070,14 @@ export class DragController extends Module {
   }
 
   /**
-   * Re-homes each dropped root block under the preceding block at dropDepth-1 so
-   * a block dropped at a visual depth becomes a real structural child. List items
-   * nest only under a preceding LIST item (resolvePrecedingListParentForDepth);
-   * every other block nests under any preceding block at dropDepth-1
-   * (resolveStructuralParentForDepth). No-ops when the parent is already correct.
+   * Re-homes dropped root blocks so a block dropped at a visual depth becomes a
+   * real structural child. A single block (or a group's SHALLOWEST member — the
+   * dragged primary) nests under the external anchor at dropDepth-1 via
+   * {@link resolveStructuralParentForDepth}. Deeper members of a moved subtree nest
+   * under their WITHIN-GROUP parent instead, so the subtree keeps its relative
+   * structure and shifts by the same depth delta as its root — rather than every
+   * member flattening onto the anchor at the same depth. No-ops when the parent is
+   * already correct.
    * @param reparentedBlocks - the dropped blocks that landed at root level
    * @param dropDepth - the visual depth the drop indicator showed
    * @param movingIds - ids of the moving group (skipped as anchors)
@@ -1039,10 +1090,43 @@ export class DragController extends Module {
     affectedParentIds: Set<string>,
     reparentedListIds: Set<string>
   ): void {
-    for (const movedBlock of reparentedBlocks) {
-      const structuralParentId = movedBlock.name === 'list'
-        ? this.resolvePrecedingListParentForDepth(movedBlock, dropDepth, movingIds)
+    // Process in document order so a subtree's shallower members are seen before
+    // their descendants (needed to link each descendant to its within-group parent).
+    const ordered = [...reparentedBlocks].sort(
+      (a, b) => this.Blok.BlockManager.getBlockIndex(a) - this.Blok.BlockManager.getBlockIndex(b)
+    );
+
+    // Snapshot each block's flat (pre-reparent) list depth up front, before any
+    // setBlockParent mutates the tree, so the relative structure can be preserved.
+    const flatDepthOf = new Map<string, number>();
+
+    for (const block of ordered) {
+      flatDepthOf.set(block.id, getListItemDepth(block) ?? 0);
+    }
+
+    // parentByFlatDepth[d] = id of the most recent processed group member at flat
+    // depth d — the structural parent for the next member at flat depth d + 1.
+    const parentByFlatDepth = new Map<number, string>();
+
+    for (const movedBlock of ordered) {
+      const flatDepth = flatDepthOf.get(movedBlock.id) ?? 0;
+      const inGroupParentId = flatDepth > 0 ? parentByFlatDepth.get(flatDepth - 1) : undefined;
+
+      // A within-group ancestor exists → this is a deeper member of the moved
+      // subtree; nest under it to preserve relative depth. Otherwise this is the
+      // group's root (or a single block) → re-home under the external anchor at
+      // the pointer-resolved drop depth.
+      const structuralParentId = inGroupParentId !== undefined
+        ? inGroupParentId
         : this.resolveStructuralParentForDepth(movedBlock, dropDepth, movingIds);
+
+      // Record this member as a candidate parent for deeper members, and drop any
+      // stale deeper entries (a shallower member closes deeper sub-lists).
+      parentByFlatDepth.set(flatDepth, movedBlock.id);
+
+      [...parentByFlatDepth.keys()]
+        .filter(depth => depth > flatDepth)
+        .forEach(depth => parentByFlatDepth.delete(depth));
 
       if (structuralParentId === movedBlock.parentId) {
         continue;
@@ -1060,54 +1144,6 @@ export class DragController extends Module {
         affectedParentIds.add(structuralParentId);
       }
     }
-  }
-
-  /**
-   * Maps a list item's drop-slot depth to its STRUCTURAL list parent: the nearest
-   * preceding LIST block (not part of the moving group) whose structural depth is
-   * one less than the drop depth. A list item nests only under a preceding list
-   * item — never under a paragraph — so a non-list predecessor (or a shallower
-   * block than the target parent depth) breaks the run and lands the item at root.
-   * Returns null for a root-level drop (depth 0) or when no such list parent exists.
-   * @param movedBlock - the list block that was dropped
-   * @param dropDepth - the visual depth the drop indicator showed
-   * @param movingIds - ids of every block in the moving group (skipped as anchors)
-   */
-  private resolvePrecedingListParentForDepth(
-    movedBlock: Block,
-    dropDepth: number,
-    movingIds: Set<string>
-  ): string | null {
-    if (dropDepth <= 0) {
-      return null;
-    }
-
-    const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
-    const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
-
-    for (const candidate of preceding) {
-      if (movingIds.has(candidate.id)) {
-        continue;
-      }
-
-      if (candidate.name !== 'list') {
-        return null;
-      }
-
-      const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
-
-      if (candidateDepth === dropDepth - 1) {
-        return candidate.id;
-      }
-
-      // A list item shallower than the target parent depth means there is no valid
-      // list ancestor at this slot — fall back to root rather than over-nesting.
-      if (candidateDepth < dropDepth - 1) {
-        return null;
-      }
-    }
-
-    return null;
   }
 
   /**
@@ -1408,16 +1444,35 @@ export class DragController extends Module {
     if (duplicated.length > 0) {
       const [firstCopy] = duplicated;
 
-      /**
-       * applyDuplicates block-selects the copies — correct for alt-drag, but the
-       * Cmd/Ctrl+D path mirrors Notion by landing a text caret in the new copy
-       * ready to edit. Clear that lingering block selection and focus the first
-       * copy instead. Guarded because narrow drag test harnesses omit Caret.
-       */
-      if (this.Blok.Caret !== undefined) {
+      if (isBlockSelected) {
+        /**
+         * The source was a BLOCK selection (Cmd/Ctrl+D on selected blocks), so
+         * mirror Notion by keeping the NEW copies block-selected — the duplicate
+         * move can then be repeated. Clear the originals' selection first (and the
+         * copies that applyDuplicates already selected), then select only the
+         * copies so a follow-up Cmd+D acts on them, not the originals too.
+         */
+        this.Blok.BlockSelection.clearSelection();
+        duplicated.forEach((dup) => this.Blok.BlockSelection.selectBlock(dup));
+      } else if (this.Blok.Caret !== undefined) {
+        /**
+         * applyDuplicates block-selects the copies — correct for alt-drag, but the
+         * single text-caret Cmd/Ctrl+D path mirrors Notion by landing a text caret
+         * in the new copy ready to edit. Clear that lingering block selection and
+         * focus the first copy instead. Guarded because narrow drag test harnesses
+         * omit Caret.
+         */
         this.Blok.BlockSelection.clearSelection();
         this.Blok.Caret.setToBlock(firstCopy, this.Blok.Caret.positions.END);
       }
+
+      /**
+       * Signal that the copy is "just added" with the blue arrival pulse (the
+       * same cue a hash-navigated block gets) — Notion highlights a freshly
+       * duplicated block. Landing the caret alone left no visible indication of
+       * what appeared.
+       */
+      highlightBlockArrival(firstCopy.holder);
 
       this.Blok.Toolbar.moveAndOpen(firstCopy);
     }
@@ -1455,9 +1510,17 @@ export class DragController extends Module {
 
   private cleanup(wasCancelled = false, skipToolbarReopen = false): void {
     if (wasCancelled && isActuallyDragging(this.stateMachine.getState())) {
+      // Announce ASSERTIVELY, consistent with the drag-start and drop-complete
+      // announcements. Cancellation is an important, time-sensitive state change
+      // the user must hear immediately. A polite announcement lands in the shared
+      // polite region and is clobbered ~150ms later by the post-cancel navigation
+      // announcement ("<block>, N of M") that fires as focus returns to the block
+      // — so a screen-reader user (and any listener) can miss the cancellation
+      // entirely. The assertive region is dedicated to these interrupts and is not
+      // overwritten by that follow-up, so the message survives its full lifetime.
       announce(
         this.Blok.I18n.t('a11y.dropCancelled'),
-        { politeness: 'polite' }
+        { politeness: 'assertive' }
       );
     }
 

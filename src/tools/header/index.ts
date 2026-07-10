@@ -20,7 +20,7 @@ import type {
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3 } from '../../components/icons';
-import { PLACEHOLDER_CLASSES, setupPlaceholder } from '../../components/utils/placeholder';
+import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
@@ -73,6 +73,45 @@ export interface HeaderConfig {
   levelOverrides?: Record<number, HeaderLevelConfig>;
   /** Custom shortcuts per level. If undefined, uses default markdown (#, ##, etc). If empty {}, disables all shortcuts. */
   shortcuts?: Record<number, string>;
+  /**
+   * Opt-in text-derived anchor ids on rendered heading elements (default: off).
+   *
+   * - `true` — use the built-in slugifier: strips zero-width characters and
+   *   punctuation (Unicode letters and digits survive, case is PRESERVED) and
+   *   collapses whitespace runs into single hyphens
+   *   (e.g. «Обучайте команду» → id "Обучайте-команду").
+   * - a function `(text, blockId) => string` — consumer-provided id generator
+   *   receiving the heading's plain text and the block id; return an empty
+   *   string to skip setting an id.
+   *
+   * The id is re-derived when the heading text changes and survives level
+   * changes and re-renders. Toggle headings get ids through the same path.
+   *
+   * NOTE: cross-block duplicate deduplication is explicitly OUT of scope —
+   * two headings with identical text produce identical ids. Consumers that
+   * need uniqueness must dedup themselves.
+   */
+  anchorIds?: boolean | ((text: string, blockId: string) => string);
+}
+
+/**
+ * Built-in anchor-id slugifier used when `anchorIds: true`.
+ *
+ * Rules: strip zero-width characters, treat punctuation as a word separator
+ * while KEEPING Unicode letters and digits (Cyrillic survives; "а/б" becomes
+ * "а-б", not "аб"), preserve letter case, trim, and collapse whitespace runs
+ * into a single hyphen. Returns an empty string when nothing survives (caller
+ * then sets no id).
+ *
+ * @param text - the heading's plain text content
+ * @returns the derived anchor id, or an empty string
+ */
+export function slugifyHeadingText(text: string): string {
+  return text
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .trim()
+    .replace(/\s+/g, '-');
 }
 
 /**
@@ -207,6 +246,12 @@ export class Header implements BlockTool {
       this.block = block;
     }
 
+    /**
+     * Applied here (not inside getTag) so that the custom anchorIds generator
+     * receives the block id, which is only known after `block` is assigned.
+     */
+    this.applyAnchorId();
+
     if (!readOnly && this._data.isToggleable) {
       this.api.events.on('block changed', this.handleBlockChanged);
     }
@@ -316,6 +361,41 @@ export class Header implements BlockTool {
     if (this._data.isToggleable) {
       this.updateChildrenVisibility();
       this.updateBodyPlaceholderVisibility();
+    }
+  }
+
+  /**
+   * Called by the editor each time the block content is updated (e.g. after
+   * user edits reach the mutation observer). Keeps the text-derived anchor id
+   * in sync with the current heading text.
+   */
+  public updated(): void {
+    this.applyAnchorId();
+  }
+
+  /**
+   * Derive and apply the anchor id onto the heading element, per the
+   * `anchorIds` config option. No-op when the option is absent/false.
+   * An empty derived id removes the attribute. The id is only written when it
+   * actually changed, so repeated calls (e.g. from the `updated` lifecycle)
+   * never produce spurious DOM mutations.
+   */
+  private applyAnchorId(): void {
+    const anchorIds = this._settings.anchorIds;
+
+    if (!anchorIds || !this._element) {
+      return;
+    }
+
+    const text = this._element.textContent ?? '';
+    const id = typeof anchorIds === 'function'
+      ? anchorIds(text, this.blockId ?? '')
+      : slugifyHeadingText(text);
+
+    if (id === '') {
+      this._element.removeAttribute('id');
+    } else if (this._element.id !== id) {
+      this._element.id = id;
     }
   }
 
@@ -506,7 +586,7 @@ export class Header implements BlockTool {
     this._data.isOpen = true;
 
     this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-8');
+    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'pl-8');
 
     if (!this.readOnly) {
       this._element.addEventListener('keydown', this.handleKeyDown);
@@ -539,7 +619,7 @@ export class Header implements BlockTool {
     this.api.events.off('block changed', this.handleBlockChanged);
 
     this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
-    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+    this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'));
 
     if (this._wrapper) {
       const parent = this._wrapper.parentNode;
@@ -670,6 +750,8 @@ export class Header implements BlockTool {
       this.updateChildrenVisibility();
       this.updateBodyPlaceholderVisibility();
     }
+
+    this.applyAnchorId();
 
     return true;
   }
@@ -810,7 +892,7 @@ export class Header implements BlockTool {
      */
     if (this._data.isToggleable) {
       this._element.setAttribute(TOGGLE_ATTR.toggleOpen, String(this._isOpen));
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, 'pl-8');
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), 'pl-8');
 
       if (!this._wrapper) {
         /**
@@ -828,7 +910,7 @@ export class Header implements BlockTool {
       }
     } else {
       this._element.removeAttribute(TOGGLE_ATTR.toggleOpen);
-      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES);
+      this._element.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'));
       this._arrowElement = null;
 
       if (this._wrapper) {
@@ -844,6 +926,12 @@ export class Header implements BlockTool {
         this._headerRow = null;
       }
     }
+
+    /**
+     * Re-derive the anchor id: the element may have just been rebuilt (level
+     * change) or its text replaced, and getTag() runs before blockId exists.
+     */
+    this.applyAnchorId();
   }
 
   /**
@@ -888,7 +976,7 @@ export class Header implements BlockTool {
      * When isToggleable, add left padding to leave room for the arrow (which lives
      * in the wrapper div as a sibling, not inside this element).
      */
-    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, PLACEHOLDER_CLASSES, this._data.isToggleable ? 'pl-8' : '');
+    tag.className = twMerge(Header.BASE_STYLES, this.currentLevel.styles, getPlaceholderClasses('always'), this._data.isToggleable ? 'pl-8' : '');
 
     /**
      * Apply inline styles for custom overrides (dynamic values from config)
@@ -947,10 +1035,21 @@ export class Header implements BlockTool {
   /**
    * Build the arrow element for toggle heading.
    *
-   * The arrow is absolutely positioned within the wrapper div, sitting in the area
-   * to the left of the heading text (which has pl-7 padding). This keeps the arrow
+   * The arrow is absolutely positioned within the header row, sitting in the area
+   * to the left of the heading text (which has pl-8 padding). This keeps the arrow
    * completely outside the heading's contenteditable scope, allowing Chrome to
    * place a cursor and insert text without interference.
+   *
+   * The pill keeps the shared fixed 28px square (h-7 w-7 from ARROW_STYLES) so its
+   * height is identical at every heading level. To sit on the FIRST line of a
+   * (possibly multi-line) heading its CENTER is anchored there, not its box sized
+   * to it: top-[calc(7px+0.65em)] = the heading's py-[7px] top padding plus half a
+   * line (leading-[1.3]), and -translate-y-1/2 pulls the fixed pill up so its own
+   * center lands on that point. The `em` must resolve against the heading font-size
+   * — which the arrow (a sibling of the heading, not a child) does not inherit — so
+   * we copy the level's text-size class onto it; this keeps alignment correct at
+   * every level. mt-0 drops the toggle-list vertical offset baked into ARROW_STYLES.
+   * Using top-1/2 would instead center the arrow across the whole (multi-line) heading.
    *
    * @returns The arrow element
    */
@@ -959,7 +1058,10 @@ export class Header implements BlockTool {
       collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
       expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
     });
-    arrow.classList.add('absolute', 'left-0', 'top-1/2', '-translate-y-1/2');
+    const textSizeClass = this.currentLevel.styles.match(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/)?.[0] ?? '';
+
+    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[calc(7px_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
+
     return arrow;
   }
 

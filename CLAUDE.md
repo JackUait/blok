@@ -181,6 +181,14 @@ See `src/tools/` for examples: paragraph/, header/, list/
 
 **Toolbox**: Triggered by "/" in empty paragraph or clicking + button. Uses Popover component.
 
+**Paste attribute law**: before a tool's `onPaste` receives `event.detail.data`, the Paste module sanitizes it with html-janitor using ONLY the attribute whitelist from the tool's `pasteConfig` tags (e.g. `{ TD: { style: true, colspan: true, rowspan: true } }`). Every attribute that `onPaste` (or any helper it calls) reads from the pasted element or its descendants MUST be whitelisted there — a missing entry means the sanitizer silently strips it and data is lost with no error (this is how pasted merged table cells were flattened for months). When adding an attribute read to any paste handler, add it to `pasteConfig` in the same change AND add a test that pastes HTML carrying that attribute through the real sanitizer.
+
+The law applies to **tags and downstream parsing too**, not just attributes:
+
+- **Descendant tags a paste handler reads must survive sanitization.** But NEVER whitelist them by adding extra tags to `pasteConfig.tags` — that map doubles as the tag→tool substitution registry, so adding `P`/`UL`/`LI` to the table's `pasteConfig` would make standalone pasted paragraphs/lists substitute into table blocks. Instead: structural tags (`ul`/`ol`/`li`, table tags…) survive via `SAFE_STRUCTURAL_TAGS`; their meaningful attributes via `STRUCTURAL_TAG_ATTRIBUTES` (`src/components/modules/paste/constants.ts`); table-cell-specific extras (img, checkbox input) via `sanitizeTable` in `sanitizer-config.ts`.
+- **Stamps must survive too (the write side).** Paste pre-passes stamp metadata onto pasted DOM (`preprocessNestedLists` stamps `aria-level`/`data-list-style` on `li`); any stamped attribute outside `STRUCTURAL_TAG_ATTRIBUTES` / some tool's `pasteConfig` is silently stripped before onPaste — core code destroying what core code just wrote. Mechanically enforced by `test/unit/architecture/paste-stamp-law.test.ts` (scans every `setAttribute` in the paste module; exemptions need reasons).
+- **Sanitizer survival is not enough — the consumer must parse the structure.** Table cells store content as an HTML string; anything that turns that string into blocks MUST go through `parseCellContentToBlocks` (`src/tools/table/table-cell-paste.ts`), and anything serializing cell blocks back into that string MUST use `serializeCellBlocksToHtml` (same file). Ad-hoc `<br>`-splitting or `.join(' ')` of block texts silently destroys lists in cells — that exact pattern existed in FIVE places (initializeCells, buildCellPayloadFromTd, buildCellContent, insertSingleCellPayloadInline, buildClipboardHtml) and each one flattened lists on a different copy/paste path — including the COPY direction (Blok → external apps), not just paste. If you add a new cell-content path, reuse those two functions and add a paste test carrying a nested list through it. This rule is mechanically enforced by `test/unit/architecture/table-cell-content-law.test.ts` (static scan for `<br>`-split / `<br>`-join / space-join fingerprints across all table + cell-handler files, exemptions require reasons, mutation-verified).
+
 **Drag & Drop**: Pointer-based (not HTML5 drag API) from ☰ icon. See `src/components/modules/dragManager.ts`.
 
 ## Code Conventions
@@ -328,6 +336,8 @@ cd docs && yarn test
 - **Internal**: `src/types-internal/` - used within codebase
 - Key internal type: `BlokModules` interface
 
+**Published-types law**: `types/*.d.ts` is the hand-authored public type surface (the build emits only JS bundles — no `.d.ts` generation), so `exports` points every subpath's `types` at a file under `types/`. NO file under `types/` may re-export/import from a module that resolves into `src/`. A consumer's `tsc` follows the declaration graph from `types/`, and a `../src/...` specifier drags raw implementation `.ts` into their program — which then needs packages blok never declares as runtime `dependencies` (transitive type-only deps like `micromark-util-types`/`@types/mdast`), exploding their build with TS2307/TS7006 (this is what shipped in 0.24.0 via `react.d.ts` → `markdown.d.ts` → `../src/markdown`). To expose a value implemented in `src/`, hand-author its signature in `types/` (see `types/markdown.d.ts`) or generate a self-contained declaration (see `types/icons.d.ts` + `scripts/generate-icons-dts.mjs`) — never re-export from `../src/`. Mechanically enforced by `test/unit/architecture/published-types-no-src-refs.test.ts`.
+
 ## Icons
 
 All icons live in `src/components/icons/index.ts` as exported SVG string constants.
@@ -335,6 +345,8 @@ All icons live in `src/components/icons/index.ts` as exported SVG string constan
 The dev playground (`index.html`) has a `iconGroups` object (around line 909) that groups icons into named categories for the `/icons` gallery tab. **This list is manually maintained.**
 
 **Rule: whenever you add a new icon to `src/components/icons/index.ts`, you MUST also add its export name to the appropriate group in `iconGroups` in `index.html`. Place it in the most fitting existing category, or create a new named category if none fits.**
+
+**Rule: after adding/renaming/removing an icon, run `node scripts/generate-icons-dts.mjs` to regenerate the published `types/icons.d.ts` (self-contained declaration; see the Published-types law under Types). `test/unit/architecture/published-types-no-src-refs.test.ts` fails until it's in sync.**
 
 ## Important Patterns
 

@@ -1,10 +1,21 @@
 import { IconTrash } from '../../../../src/components/icons';
 import type { Mock } from 'vitest';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DeleteTune } from '../../../../src/components/block-tunes/block-tune-delete';
+import { beautifyShortcut } from '../../../../src/components/utils/string';
+import type * as StringModule from '../../../../src/components/utils/string';
 import type { API } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
+
+vi.mock('../../../../src/components/utils/string', async (importOriginal) => {
+  const actual = await importOriginal<typeof StringModule>();
+
+  return {
+    ...actual,
+    beautifyShortcut: vi.fn(actual.beautifyShortcut),
+  };
+});
 
 type BlocksMocks = {
   delete: Mock<() => void>;
@@ -34,6 +45,10 @@ const createApiMocks = (): { api: API; blocks: BlocksMocks; i18n: I18nMocks } =>
 };
 
 describe('DeleteTune', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -58,12 +73,13 @@ describe('DeleteTune', () => {
     expect(handleClickSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('includes Del secondaryLabel for keyboard shortcut hint', () => {
+  it('routes the shortcut hint through the shared beautifyShortcut helper', () => {
     const { api } = createApiMocks();
     const tune = new DeleteTune({ api });
 
     const config = tune.render() as MenuConfig & { secondaryLabel?: string };
 
+    expect(vi.mocked(beautifyShortcut)).toHaveBeenCalledWith('DELETE');
     expect(config.secondaryLabel).toBe('Del');
   });
 

@@ -9,11 +9,6 @@ describe('InlineKeyboardHandler', () => {
   let flipperMock: {
     hasFocus: ReturnType<typeof vi.fn>;
   };
-  let nestedPopoverMock: {
-    flipper?: {
-      hasFocus: ReturnType<typeof vi.fn>;
-    };
-  } | null;
   let closeNestedPopoverFn: ReturnType<typeof vi.fn>;
   let currentHasNestedPopoverValue: boolean;
 
@@ -39,7 +34,6 @@ describe('InlineKeyboardHandler', () => {
       hasFocus: vi.fn(() => false),
     };
 
-    nestedPopoverMock = null;
     mockPopover = createMockPopover(false);
 
     const getPopover = () => mockPopover;
@@ -59,14 +53,10 @@ describe('InlineKeyboardHandler', () => {
       expect(keyboardHandler.hasFlipperFocus).toBe(true);
     });
 
-    it('should return true when nested flipper has focus', () => {
-      nestedPopoverMock = {
-        flipper: {
-          hasFocus: vi.fn(() => true),
-        },
-      };
-
-      (mockPopover as unknown as { nestedPopover: typeof nestedPopoverMock }).nestedPopover = nestedPopoverMock;
+    it('should return true when a nested popover is open', () => {
+      flipperMock.hasFocus.mockReturnValue(false);
+      mockPopover = createMockPopover(true);
+      keyboardHandler = new InlineKeyboardHandler(() => mockPopover, closeCallback);
 
       expect(keyboardHandler.hasFlipperFocus).toBe(true);
     });
@@ -181,13 +171,10 @@ describe('InlineKeyboardHandler', () => {
       expect(closeCallback).not.toHaveBeenCalled();
     });
 
-    it('should not close toolbar when nested popover exists', () => {
-      nestedPopoverMock = {
-        flipper: {
-          hasFocus: vi.fn(() => false),
-        },
-      };
-      (mockPopover as unknown as { nestedPopover: typeof nestedPopoverMock }).nestedPopover = nestedPopoverMock;
+    it('should not close toolbar when nested popover is open', () => {
+      flipperMock.hasFocus.mockReturnValue(false);
+      mockPopover = createMockPopover(true);
+      keyboardHandler = new InlineKeyboardHandler(() => mockPopover, closeCallback);
 
       const event = new KeyboardEvent('keydown', { key: 'ArrowUp', shiftKey: false });
 

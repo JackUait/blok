@@ -2,10 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MigrationPage } from './MigrationPage';
-import {
-  MIGRATION_STEPS,
-  DIFF_CHANGES,
-} from '../components/migration/migration-data';
+import { MIGRATION_STEPS } from '../components/migration/migration-data';
 import { I18nProvider } from '../contexts/I18nContext';
 import enJson from '../i18n/en.json';
 
@@ -64,21 +61,24 @@ describe('MigrationPage', () => {
     expect(changesCta).toHaveAttribute('href', '#changes');
   });
 
-  it('should render the rewrite preview card in the hero', () => {
+  it('should render the hero rewrite preview as a finished Blok config file', () => {
+    // jsdom has no matchMedia, so the preview renders its static final state:
+    // the file fully rewritten to Blok, no EditorJS code left.
     renderMigrationPage();
 
     const preview = screen.getByTestId('hero-rewrite-preview');
-    expect(preview).toHaveTextContent(DIFF_CHANGES[0].removed);
-    expect(preview).toHaveTextContent(DIFF_CHANGES[0].added);
+    expect(preview).toHaveTextContent("import { Blok } from '@jackuait/blok';");
+    expect(preview).toHaveTextContent("import { Header } from '@jackuait/blok/tools';");
+    expect(preview).toHaveTextContent('const editor = new Blok({');
+    expect(preview).not.toHaveTextContent('@editorjs/editorjs');
   });
 
-  it('should render the rewrite preview as a flat diff without group labels', () => {
+  it('should keep the untouched config lines in the rewrite preview', () => {
     renderMigrationPage();
 
     const preview = screen.getByTestId('hero-rewrite-preview');
-    expect(within(preview).queryByText(m.changeImports)).not.toBeInTheDocument();
-    expect(within(preview).queryByText(m.changeCssSelectors)).not.toBeInTheDocument();
-    expect(within(preview).queryByText(m.changeDataAttributes)).not.toBeInTheDocument();
+    expect(preview).toHaveTextContent("holder: 'editor',");
+    expect(preview).toHaveTextContent('tools: { header: Header },');
   });
 
   it('should link the rewrite preview to the full changes section', () => {

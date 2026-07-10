@@ -474,56 +474,23 @@
   }
 }
 
-/* Live-rewrite choreography — the /migration hero diff window plays the codemod
-   on load. Each row enters, its old line gets struck out (full ink → dimmed, the
-   strike fading in), then the new line wipes in left-to-right as if just written.
-   Rows stagger via --rw-delay (set inline per row in RewritePreview.tsx).
-   `both` fill holds each element on its `from` frame until its delay. */
-.rewrite-live .rw-row {
-  animation: rw-row-in 0.5s ease-out both;
-  animation-delay: var(--rw-delay, 0ms);
+/* The /migration hero's live-rewrite caret. The typing itself is driven from
+   RewritePreview.tsx (a tick interval over the pure rewrite-script engine, so
+   the timeline is unit-testable); this is just the blinking insertion point.
+   Reduced-motion users never see it — the component pins the finished file. */
+.rw-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--primary);
+  animation: rw-caret-blink 1s steps(2, start) infinite;
 }
 
-.rewrite-live .rw-removed {
-  animation: rw-strike 0.45s ease-out both;
-  animation-delay: calc(var(--rw-delay, 0ms) + 350ms);
-}
-
-.rewrite-live .rw-added {
-  animation: rw-wipe-in 0.5s ease-out both;
-  animation-delay: calc(var(--rw-delay, 0ms) + 650ms);
-}
-
-@keyframes rw-row-in {
-  from {
+@keyframes rw-caret-blink {
+  50% {
     opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
-@keyframes rw-strike {
-  from {
-    color: var(--foreground);
-    text-decoration-color: transparent;
-  }
-}
-
-@keyframes rw-wipe-in {
-  from {
-    clip-path: inset(0 100% 0 0);
-    opacity: 0;
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rewrite-live .rw-row,
-  .rewrite-live .rw-removed,
-  .rewrite-live .rw-added {
-    animation: none;
   }
 }
 

@@ -82,6 +82,35 @@ describe('EditorWrapper', () => {
       expect(typeof editor.redo).toBe('function');
     });
 
+    it('registers every built-in block and inline tool the editor ships', async () => {
+      const { container } = renderEditor();
+
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="mock-blok-editor"]')).toBeInTheDocument();
+      });
+
+      const registered = (
+        container
+          .querySelector('[data-testid="mock-blok-editor"]')
+          ?.getAttribute('data-tool-names') ?? ''
+      ).split(',');
+
+      const expectedBlockTools = [
+        'paragraph', 'header', 'list', 'table', 'toggle', 'callout',
+        'database', 'database-row', 'divider', 'quote', 'code',
+        'image', 'file', 'video', 'audio', 'column_list', 'column',
+        'embed', 'bookmark',
+      ];
+      const expectedInlineTools = [
+        'bold', 'italic', 'underline', 'strikethrough',
+        'inlineCode', 'equation', 'link', 'marker',
+      ];
+
+      for (const tool of [...expectedBlockTools, ...expectedInlineTools]) {
+        expect(registered, `tool "${tool}" must be registered in the demo`).toContain(tool);
+      }
+    });
+
     it('left-aligns block content so it starts under the Nav logo', async () => {
       const { container } = renderEditor();
 

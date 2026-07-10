@@ -57,6 +57,7 @@ export default defineConfig({
                   className: props.className,
                   'data-testid': 'mock-blok-editor',
                   'data-blok-content-align': (props.style && props.style.contentAlign) || 'left',
+                  'data-tool-names': props.tools ? Object.keys(props.tools).join(',') : '',
                 });
               });
             `,
@@ -91,6 +92,21 @@ export default defineConfig({
               export const Italic = class {};
               export const Link = class {};
             `,
+          };
+        }
+        // Provide mock implementation for /dist/tools.mjs in tests — mirrors
+        // the full tool export surface of the real bundle.
+        if (id === '/dist/tools.mjs') {
+          const toolExports = [
+            'Paragraph', 'Header', 'List', 'Table', 'Toggle', 'Callout',
+            'Database', 'DatabaseRow', 'Divider', 'Quote', 'Code',
+            'Image', 'File', 'Audio', 'Video', 'ColumnList', 'Column',
+            'Embed', 'Bookmark',
+            'Bold', 'Italic', 'Underline', 'Strikethrough',
+            'InlineCode', 'Equation', 'Link', 'Marker',
+          ];
+          return {
+            code: toolExports.map((name) => `export const ${name} = class {};`).join('\n'),
           };
         }
         return null;

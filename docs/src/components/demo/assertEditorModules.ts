@@ -7,16 +7,30 @@
  * Checking the shape right after import turns that crash into the page's
  * existing "Failed to load" UI, with a message that says why.
  */
+
+/**
+ * Every tool export the demo registers — the full feature surface of the
+ * editor (all block tools + all inline tools from /dist/tools.mjs).
+ */
+export const REQUIRED_TOOL_EXPORTS = [
+  // Block tools
+  'Paragraph', 'Header', 'List', 'Table', 'Toggle', 'Callout',
+  'Database', 'DatabaseRow', 'Divider', 'Quote', 'Code',
+  'Image', 'File', 'Audio', 'Video', 'ColumnList', 'Column',
+  'Embed', 'Bookmark',
+  // Inline tools
+  'Bold', 'Italic', 'Underline', 'Strikethrough',
+  'InlineCode', 'Equation', 'Link', 'Marker',
+] as const;
+
 export function assertEditorModulesComplete(
   react: Record<string, unknown>,
   tools: Record<string, unknown>,
 ): void {
-  const required = {
-    BlokEditor: react.BlokEditor,
-    Header: tools.Header,
-    Paragraph: tools.Paragraph,
-    List: tools.List,
-  };
+  const required: Record<string, unknown> = { BlokEditor: react.BlokEditor };
+  for (const name of REQUIRED_TOOL_EXPORTS) {
+    required[name] = tools[name];
+  }
 
   const missing = Object.entries(required)
     .filter(([, value]) => value === undefined)

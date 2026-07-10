@@ -17,8 +17,21 @@ type BlokReactModule = {
     Record<string, unknown> & React.RefAttributes<BlokEditorInstance | null>
   >;
 };
-type BlokToolsModule = {
-  Header: unknown; Paragraph: unknown; List: unknown;
+type BlokToolsModule = Record<string, unknown>;
+
+/**
+ * Fake uploader for the media tools: the docs site has no upload backend, so
+ * files are kept in-memory as object URLs — enough to try every media block.
+ */
+const objectUrlUploader = {
+  uploader: {
+    uploadByFile: async (file: File) => ({
+      url: URL.createObjectURL(file),
+      fileName: file.name,
+      size: file.size,
+      mimeType: file.type,
+    }),
+  },
 };
 
 export const EditorWrapper: React.FC<{
@@ -48,8 +61,8 @@ export const EditorWrapper: React.FC<{
         const [react, tools] = await Promise.all([
           // @ts-expect-error - /dist/react.mjs is served by Vite, not resolvable at compile time
           import("/dist/react.mjs") as Promise<BlokReactModule>,
-          // @ts-expect-error - /dist/full.mjs is served by Vite, not resolvable at compile time
-          import("/dist/full.mjs") as Promise<BlokToolsModule>,
+          // @ts-expect-error - /dist/tools.mjs is served by Vite, not resolvable at compile time
+          import("/dist/tools.mjs") as Promise<BlokToolsModule>,
         ]);
         assertEditorModulesComplete(react, tools);
         if (active) setMods({ react, tools });
@@ -125,7 +138,14 @@ export const EditorWrapper: React.FC<{
   }
 
   const { BlokEditor } = mods.react;
-  const { Header, Paragraph, List } = mods.tools;
+  const {
+    Paragraph, Header, List, Table, Toggle, Callout,
+    Database, DatabaseRow, Divider, Quote, Code,
+    Image, File: FileTool, Audio, Video, ColumnList, Column,
+    Embed, Bookmark,
+    Bold, Italic, Underline, Strikethrough,
+    InlineCode, Equation, Link, Marker,
+  } = mods.tools;
 
   return (
     <BlokEditor
@@ -134,9 +154,38 @@ export const EditorWrapper: React.FC<{
       theme={resolvedTheme}
       style={{ contentAlign: "left" }}
       tools={{
-        header: { class: Header, config: { placeholder: t("demo.headerPlaceholder"), levels: [1, 2, 3, 4], defaultLevel: 2 }, inlineToolbar: ["bold", "italic", "link"] },
-        paragraph: { class: Paragraph, inlineToolbar: ["bold", "italic", "link"], config: { preserveBlank: true, placeholder: t("demo.paragraphPlaceholder") } },
+        // Block tools — the editor's full feature surface, mirroring the dev
+        // playground (index.html) configuration.
+        paragraph: { class: Paragraph, inlineToolbar: true, config: { preserveBlank: true, placeholder: t("demo.paragraphPlaceholder") } },
+        header: { class: Header, inlineToolbar: true, config: { placeholder: t("demo.headerPlaceholder"), levels: [1, 2, 3, 4], defaultLevel: 2 } },
         list: { class: List, inlineToolbar: true, config: { defaultStyle: "unordered" } },
+        table: Table,
+        toggle: { class: Toggle, inlineToolbar: true },
+        callout: { class: Callout, inlineToolbar: true },
+        database: Database,
+        "database-row": DatabaseRow,
+        divider: Divider,
+        quote: { class: Quote, inlineToolbar: true },
+        code: { class: Code, inlineToolbar: false },
+        image: Image,
+        file: { class: FileTool, config: objectUrlUploader },
+        video: { class: Video, config: objectUrlUploader },
+        audio: { class: Audio, config: objectUrlUploader },
+        column_list: ColumnList,
+        column: Column,
+        // Link-paste tools. Embed works standalone; Bookmark is contract-only
+        // and needs a metadata backend at `endpoint`.
+        embed: Embed,
+        bookmark: { class: Bookmark, config: { endpoint: "/unfurl" } },
+        // Inline tools
+        bold: Bold,
+        italic: Italic,
+        underline: Underline,
+        strikethrough: Strikethrough,
+        inlineCode: InlineCode,
+        equation: Equation,
+        link: Link,
+        marker: Marker,
       }}
       data={{
         blocks: [

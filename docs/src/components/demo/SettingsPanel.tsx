@@ -49,33 +49,44 @@ const Segmented: React.FC<{
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
-}> = ({ label, value, options, onChange }) => (
-  <div>
-    <p className="mb-2 text-sm font-semibold text-foreground"><Typo>{label}</Typo></p>
-    <div role="radiogroup" aria-label={label} className="flex rounded-full border border-border bg-muted/40 p-1">
-      {options.map(option => {
-        const active = option.value === value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              'flex-1 cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
-              active
-                ? 'bg-foreground text-background shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Typo>{option.label}</Typo>
-          </button>
-        );
-      })}
+}> = ({ label, value, options, onChange }) => {
+  const activeIndex = Math.max(0, options.findIndex(option => option.value === value));
+
+  return (
+    <div>
+      <p className="mb-2 text-sm font-semibold text-foreground"><Typo>{label}</Typo></p>
+      <div role="radiogroup" aria-label={label} className="relative flex rounded-full border border-border bg-muted/40 p-1">
+        <span
+          aria-hidden="true"
+          data-blok-testid="segmented-thumb"
+          className="absolute inset-y-1 left-1 rounded-full bg-foreground shadow-sm transition-transform duration-300 ease-out"
+          style={{
+            width: `calc((100% - 0.5rem) / ${options.length})`,
+            transform: `translateX(${activeIndex * 100}%)`,
+          }}
+        />
+        {options.map(option => {
+          const active = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(option.value)}
+              className={cn(
+                'relative flex-1 cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-300',
+                active ? 'text-background' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Typo>{option.label}</Typo>
+            </button>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * A tab pinned to the right edge of the viewport that opens a non-modal panel

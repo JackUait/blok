@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { SettingsPanel } from './SettingsPanel';
 import { DEFAULT_EDITOR_SETTINGS, type EditorSettings } from './editor-settings';
@@ -218,6 +218,43 @@ describe('SettingsPanel', () => {
       fireEvent.click(screen.getByRole('radio', { name: 'Center' }));
 
       expect(onSettingsChange).toHaveBeenCalledWith({ ...DEFAULT_EDITOR_SETTINGS, contentAlign: 'center' });
+    });
+  });
+
+  describe('segmented control animation', () => {
+    it('renders a sliding pill that sits under the active option', () => {
+      renderPanel({ theme: 'dark' });
+
+      openPanel();
+
+      const group = screen.getByRole('radiogroup', { name: 'Theme' });
+      const thumb = within(group).getByTestId('segmented-thumb');
+      expect(thumb.className).toContain('transition-transform');
+      // 'dark' is the third of three options — the pill slides two widths over.
+      expect(thumb.style.transform).toBe('translateX(200%)');
+      // jsdom normalizes the calc — just check it's a third of the padded track.
+      expect(thumb.style.width).toContain('100% - 0.5rem');
+      expect(thumb.style.width).toMatch(/0\.333|\/ 3/);
+    });
+
+    it('moves the pill when another option is chosen', () => {
+      renderPanel({ contentAlign: 'center' });
+
+      openPanel();
+
+      const group = screen.getByRole('radiogroup', { name: 'Content alignment' });
+      const thumb = within(group).getByTestId('segmented-thumb');
+      expect(thumb.style.transform).toBe('translateX(100%)');
+    });
+
+    it('paints the active label via text color instead of a per-button background', () => {
+      renderPanel();
+
+      openPanel();
+
+      const active = screen.getByRole('radio', { name: 'Narrow' });
+      expect(active.className).not.toContain('bg-foreground');
+      expect(active.className).toContain('text-background');
     });
   });
 

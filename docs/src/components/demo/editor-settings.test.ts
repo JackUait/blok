@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   DEFAULT_EDITOR_SETTINGS,
   buildEditorSettingsProps,
+  loadEditorSettings,
+  saveEditorSettings,
   type EditorSettings,
 } from './editor-settings';
 
@@ -51,6 +53,47 @@ describe('buildEditorSettingsProps', () => {
 
     expect(withText.props.placeholder).toBe('Write here…');
     expect(blank.props.placeholder).toBeUndefined();
+  });
+
+  describe('localStorage persistence', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('returns the defaults when nothing is stored', () => {
+      expect(loadEditorSettings()).toEqual(DEFAULT_EDITOR_SETTINGS);
+    });
+
+    it('round-trips saved settings', () => {
+      const settings: EditorSettings = {
+        ...DEFAULT_EDITOR_SETTINGS,
+        readOnly: true,
+        width: 'full',
+        placeholder: 'Write…',
+      };
+
+      saveEditorSettings(settings);
+
+      expect(loadEditorSettings()).toEqual(settings);
+    });
+
+    it('falls back to the defaults on corrupt JSON', () => {
+      localStorage.setItem('blok-docs-demo-editor-settings', '{not json');
+
+      expect(loadEditorSettings()).toEqual(DEFAULT_EDITOR_SETTINGS);
+    });
+
+    it('sanitizes invalid values field by field', () => {
+      localStorage.setItem(
+        'blok-docs-demo-editor-settings',
+        JSON.stringify({ readOnly: 'yes', width: 'huge', contentAlign: 'center', placeholder: 42 })
+      );
+
+      expect(loadEditorSettings()).toEqual({
+        ...DEFAULT_EDITOR_SETTINGS,
+        contentAlign: 'center',
+      });
+    });
   });
 
   describe('deps (settings that require recreating the editor)', () => {

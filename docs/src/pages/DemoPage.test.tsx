@@ -168,6 +168,29 @@ describe('DemoPage', () => {
       expect(screen.getByRole('textbox', { name: 'First block placeholder' })).toBeInTheDocument();
     });
 
+    it('restores saved editor settings from localStorage', () => {
+      localStorage.setItem(
+        'blok-docs-demo-editor-settings',
+        JSON.stringify({ readOnly: true, width: 'full' })
+      );
+
+      renderDemoPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+
+      expect(screen.getByRole('switch', { name: 'Read-only mode' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: 'Full' })).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('persists setting changes to localStorage', () => {
+      renderDemoPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+      fireEvent.click(screen.getByRole('switch', { name: 'Hide toolbar' }));
+
+      const stored = JSON.parse(localStorage.getItem('blok-docs-demo-editor-settings') ?? '{}');
+      expect(stored.hideToolbar).toBe(true);
+    });
+
     it('switches the whole documentation theme from the panel', () => {
       renderDemoPage();
 

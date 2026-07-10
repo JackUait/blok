@@ -4,7 +4,7 @@ import { Footer } from '../components/layout/Footer';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
 import { OutputPanel } from '../components/demo/OutputPanel';
 import { SettingsPanel } from '../components/demo/SettingsPanel';
-import { DEFAULT_EDITOR_SETTINGS } from '../components/demo/editor-settings';
+import { loadEditorSettings, saveEditorSettings, type EditorSettings } from '../components/demo/editor-settings';
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
 import { ShortcutKeys } from '../components/common/KeyIcon';
@@ -279,7 +279,12 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
 
 export const DemoPage: React.FC = () => {
   const { t } = useI18n();
-  const [editorSettings, setEditorSettings] = useState(DEFAULT_EDITOR_SETTINGS);
+  const [editorSettings, setEditorSettings] = useState(loadEditorSettings);
+
+  const handleSettingsChange = useCallback((settings: EditorSettings) => {
+    setEditorSettings(settings);
+    saveEditorSettings(settings);
+  }, []);
 
   return (
     <>
@@ -302,7 +307,7 @@ export const DemoPage: React.FC = () => {
               <EditorWrapper settings={editorSettings} />
             </div>
           </div>
-          <SettingsPanel settings={editorSettings} onSettingsChange={setEditorSettings} />
+          <SettingsPanel settings={editorSettings} onSettingsChange={handleSettingsChange} />
         </main>
       </div>
       <Footer />

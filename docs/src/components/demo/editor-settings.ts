@@ -53,3 +53,50 @@ export function buildEditorSettingsProps(
     deps: [settings.contentAlign, settings.autofocus, settings.hideToolbar],
   };
 }
+
+const SETTINGS_STORAGE_KEY = 'blok-docs-demo-editor-settings';
+
+const isOneOf = <T extends string>(value: unknown, allowed: readonly T[]): value is T =>
+  typeof value === 'string' && (allowed as readonly string[]).includes(value);
+
+/**
+ * Loads persisted playground settings, sanitizing field by field so a stale or
+ * tampered payload can never produce an invalid EditorSettings.
+ */
+export function loadEditorSettings(): EditorSettings {
+  let parsed: unknown;
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (raw === null) {
+      return DEFAULT_EDITOR_SETTINGS;
+    }
+    parsed = JSON.parse(raw);
+  } catch {
+    return DEFAULT_EDITOR_SETTINGS;
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    return DEFAULT_EDITOR_SETTINGS;
+  }
+  const stored = parsed as Record<string, unknown>;
+
+  return {
+    readOnly: typeof stored.readOnly === 'boolean' ? stored.readOnly : DEFAULT_EDITOR_SETTINGS.readOnly,
+    width: isOneOf(stored.width, ['narrow', 'full']) ? stored.width : DEFAULT_EDITOR_SETTINGS.width,
+    placeholder: typeof stored.placeholder === 'string' ? stored.placeholder : DEFAULT_EDITOR_SETTINGS.placeholder,
+    contentAlign: isOneOf(stored.contentAlign, ['left', 'center', 'right'])
+      ? stored.contentAlign
+      : DEFAULT_EDITOR_SETTINGS.contentAlign,
+    autofocus: typeof stored.autofocus === 'boolean' ? stored.autofocus : DEFAULT_EDITOR_SETTINGS.autofocus,
+    hideToolbar: typeof stored.hideToolbar === 'boolean' ? stored.hideToolbar : DEFAULT_EDITOR_SETTINGS.hideToolbar,
+  };
+}
+
+/** Persists playground settings; storage failures (private mode, quota) are ignored. */
+export function saveEditorSettings(settings: EditorSettings): void {
+  try {
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Persistence is best-effort — the panel keeps working from React state.
+  }
+}

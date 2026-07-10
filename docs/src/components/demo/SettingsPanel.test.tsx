@@ -70,6 +70,16 @@ describe('SettingsPanel', () => {
       expect(screen.queryByText(/reload/)).not.toBeInTheDocument();
     });
 
+    it('shows no subtitles under the switches', () => {
+      renderPanel();
+
+      openPanel();
+
+      expect(screen.queryByText(/Locks the content/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Places the caret/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/drag handle/)).not.toBeInTheDocument();
+    });
+
     it('closes via the close button', () => {
       renderPanel();
 

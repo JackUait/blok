@@ -13,15 +13,11 @@ interface SettingsPanelProps {
 
 const SwitchRow: React.FC<{
   label: string;
-  hint: string;
   checked: boolean;
   onToggle: () => void;
-}> = ({ label, hint, checked, onToggle }) => (
-  <div className="flex items-start justify-between gap-4">
-    <div className="min-w-0">
-      <p className="text-sm font-semibold text-foreground"><Typo>{label}</Typo></p>
-      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground"><Typo>{hint}</Typo></p>
-    </div>
+}> = ({ label, checked, onToggle }) => (
+  <div className="flex items-center justify-between gap-4">
+    <p className="min-w-0 text-sm font-semibold text-foreground"><Typo>{label}</Typo></p>
     <button
       type="button"
       role="switch"
@@ -29,7 +25,7 @@ const SwitchRow: React.FC<{
       aria-label={label}
       onClick={onToggle}
       className={cn(
-        'relative mt-0.5 h-6 w-10 shrink-0 cursor-pointer rounded-full transition-colors',
+        'relative h-6 w-10 shrink-0 cursor-pointer rounded-full transition-colors',
         checked ? 'bg-foreground' : 'bg-muted-foreground/25'
       )}
     >
@@ -164,19 +160,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-5">
         <SwitchRow
           label={t('demo.settings.readOnlyLabel')}
-          hint={t('demo.settings.readOnlyHint')}
           checked={settings.readOnly}
           onToggle={() => patch({ readOnly: !settings.readOnly })}
         />
         <SwitchRow
           label={t('demo.settings.autofocusLabel')}
-          hint={t('demo.settings.autofocusHint')}
           checked={settings.autofocus}
           onToggle={() => patch({ autofocus: !settings.autofocus })}
         />
         <SwitchRow
           label={t('demo.settings.hideToolbarLabel')}
-          hint={t('demo.settings.hideToolbarHint')}
           checked={settings.hideToolbar}
           onToggle={() => patch({ hideToolbar: !settings.hideToolbar })}
         />

@@ -190,7 +190,8 @@ export class SettingsTogglerHandler {
 
   /**
    * Binds the settings toggler tooltip to match the current read-only state.
-   * Dragging is suppressed in read-only, so the "Drag to move" line is omitted there.
+   * Read-only suppresses both the drag gesture and the Cmd/Ctrl+Slash shortcut
+   * (block keydown handlers are unbound), so the tooltip there promises only a click.
    * Called on creation and whenever read-only is toggled.
    */
   public refreshTooltip(): void {
@@ -199,20 +200,24 @@ export class SettingsTogglerHandler {
     }
 
     const blok = this.getBlok();
+    const openMenuAction = { text: blok.I18n.t('blockSettings.openMenuAction'), highlight: false };
+    const clickAction = { text: blok.I18n.t('blockSettings.clickAction'), highlight: true };
+
     const shortcut = getUserOS().win
       ? blok.I18n.t('blockSettings.menuShortcutWin')
       : blok.I18n.t('blockSettings.menuShortcutMac');
 
-    const openMenuLine = [
-      { text: blok.I18n.t('blockSettings.clickAction'), highlight: true },
-      { text: blok.I18n.t('blockSettings.orConjunction'), highlight: false },
-      { text: shortcut, highlight: true },
-      { text: blok.I18n.t('blockSettings.openMenuAction'), highlight: false },
-    ];
-
     const lines = blok.ReadOnly.isEnabled
-      ? [openMenuLine]
-      : [blok.I18n.t('blockSettings.dragToMove'), openMenuLine];
+      ? [[clickAction, openMenuAction]]
+      : [
+        blok.I18n.t('blockSettings.dragToMove'),
+        [
+          clickAction,
+          { text: blok.I18n.t('blockSettings.orConjunction'), highlight: false },
+          { text: shortcut, highlight: true },
+          openMenuAction,
+        ],
+      ];
 
     onHover(this.settingsTogglerElement, createTooltipContent(lines), {
       delay: 500,
@@ -261,11 +266,9 @@ export class SettingsTogglerHandler {
   }
 
   /**
-   * Handles the settings toggler click.
-   * Also used by the Cmd/Ctrl+Slash shortcut in read-only mode, where the block
-   * keydown handlers are unbound and cannot reach BlockEvents.
+   * Handles the settings toggler click
    */
-  public handleClick(): void {
+  private handleClick(): void {
     const blok = this.getBlok();
 
     /**

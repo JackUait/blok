@@ -175,11 +175,8 @@ describe('SettingsTogglerHandler', () => {
       settingsToggler: undefined,
     });
 
-    it('omits the "Drag to move" line when read-only is enabled', async () => {
+    it('drops the drag line and the shortcut when read-only is enabled', async () => {
       const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
-      const { getUserOS } = await import('../../../../../src/components/utils');
-
-      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
 
       readOnlyEnabled = true;
 
@@ -188,8 +185,6 @@ describe('SettingsTogglerHandler', () => {
       expect(createTooltipContent).toHaveBeenCalledWith([
         [
           { text: 'blockSettings.clickAction', highlight: true },
-          { text: 'blockSettings.orConjunction', highlight: false },
-          { text: 'blockSettings.menuShortcutMac', highlight: true },
           { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);
@@ -198,9 +193,6 @@ describe('SettingsTogglerHandler', () => {
     it('re-binds the tooltip when read-only is toggled after creation', async () => {
       const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
       const { onHover } = await import('../../../../../src/components/utils/tooltip');
-      const { getUserOS } = await import('../../../../../src/components/utils');
-
-      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
 
       const settingsToggler = settingsTogglerHandler.make(emptyNodes());
 
@@ -213,8 +205,6 @@ describe('SettingsTogglerHandler', () => {
       expect(createTooltipContent).toHaveBeenCalledWith([
         [
           { text: 'blockSettings.clickAction', highlight: true },
-          { text: 'blockSettings.orConjunction', highlight: false },
-          { text: 'blockSettings.menuShortcutMac', highlight: true },
           { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);

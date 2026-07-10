@@ -9,6 +9,7 @@ import { MigrationSectionHeader } from '../components/migration/MigrationSection
 import { MIGRATION_STEPS } from '../components/migration/migration-data';
 import { useI18n } from '../contexts/I18nContext';
 import { Typo } from '../components/common/Typo';
+import { Button } from '@/components/ui/button';
 import { NAV_LINKS } from '../utils/constants';
 import { cn } from '@/lib/utils';
 
@@ -69,10 +70,18 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
 
   return (
     <>
-      <section className={cn('mx-auto w-full max-w-6xl px-6 pb-16', inline ? 'pt-10' : 'pt-16 sm:pt-24')}>
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center lg:gap-x-16">
+      <section className={cn('relative overflow-hidden pb-16', inline ? 'pt-10' : 'pt-16 sm:pt-24')}>
+        {/* The same soft atmosphere the home hero breathes — brand wash + dotted grid. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -top-28 left-1/4 size-[32rem] -translate-x-1/2 rounded-full bg-primary/[0.07] blur-3xl" />
+          <div className="absolute -top-8 right-[-7rem] size-[26rem] rounded-full bg-chart-3/10 blur-3xl" />
+          <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(var(--color-border)_1px,transparent_1px)] [background-size:26px_26px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]" />
+        </div>
+
+        <div className="mx-auto w-full max-w-6xl px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center lg:gap-x-16">
           <div className="duration-700 animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <span aria-hidden className="h-px w-8 bg-brand-gradient" />
               <Typo>{t('migration.heroEyebrow')}</Typo>
             </p>
             <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-balance text-foreground sm:text-5xl lg:text-6xl">
@@ -82,6 +91,24 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               <Typo>{t('migration.heroDescription')}</Typo>
             </p>
+            <div
+              className="mt-9 flex flex-wrap items-center gap-3 duration-700 animate-in fade-in slide-in-from-bottom-2 fill-mode-both delay-150"
+              data-blok-testid="hero-ctas"
+            >
+              <Button variant="brand" size="lg" asChild>
+                <a href="#codemod">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 17l6-5-6-5M12 19h8" />
+                  </svg>
+                  <Typo>{t('migration.sectionCodemodTitle')}</Typo>
+                </a>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <a href="#changes">
+                  <Typo>{t('migration.sectionChangesTitle')}</Typo>
+                </a>
+              </Button>
+            </div>
           </div>
 
           <RewritePreview className="mt-14 duration-700 animate-in fade-in slide-in-from-bottom-4 zoom-in-[0.98] fill-mode-both delay-150 lg:mt-0" />

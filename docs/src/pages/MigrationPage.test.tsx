@@ -51,6 +51,17 @@ describe('MigrationPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('should render hero CTAs anchored to the codemod and changes sections', () => {
+    renderMigrationPage();
+
+    const ctas = screen.getByTestId('hero-ctas');
+    // Typo inserts non-breaking spaces, so match words with \s+.
+    const codemodCta = within(ctas).getByRole('link', { name: /Run\s+the\s+codemod/i });
+    const changesCta = within(ctas).getByRole('link', { name: /What\s+changes/i });
+    expect(codemodCta).toHaveAttribute('href', '#codemod');
+    expect(changesCta).toHaveAttribute('href', '#changes');
+  });
+
   it('should render the rewrite preview card in the hero', () => {
     renderMigrationPage();
 

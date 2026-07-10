@@ -28,7 +28,7 @@ export const RewritePreview: React.FC<RewritePreviewProps> = ({ className }) => 
         <div className="absolute bottom-0 left-6 size-52 rounded-full bg-chart-3/10 blur-3xl" />
       </div>
 
-      <div className="hero-float overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <div className="hero-float rewrite-live overflow-hidden rounded-2xl border border-border bg-card shadow-card">
         <div className="flex items-center gap-3 border-b border-border bg-secondary/50 px-4 py-2.5">
           <span aria-hidden className="flex gap-1.5">
             <span className="size-2.5 rounded-full bg-border" />
@@ -45,8 +45,12 @@ export const RewritePreview: React.FC<RewritePreviewProps> = ({ className }) => 
         </div>
 
         <div className="divide-y divide-border">
-          {PREVIEW_CHANGES.map((change) => (
-            <div key={change.titleKey} className="px-4 py-3.5">
+          {PREVIEW_CHANGES.map((change, index) => (
+            <div
+              key={change.titleKey}
+              className="rw-row px-4 py-3.5"
+              style={{ "--rw-delay": `${450 + index * 650}ms` } as React.CSSProperties}
+            >
               <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
                 <Typo>{t(change.titleKey)}</Typo>
               </p>

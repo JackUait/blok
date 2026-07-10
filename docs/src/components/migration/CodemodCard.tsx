@@ -34,36 +34,42 @@ export const CodemodCard: React.FC = () => {
   ], [t]);
 
   return (
-    <div
-      className="rounded-2xl border border-border bg-card p-6 shadow-card sm:p-8"
-      data-blok-testid="codemod-card"
-    >
-      <div className="flex flex-col gap-6">
-        {sessionSteps.map((step, index) => (
-          <div key={step.id} data-blok-testid={`codemod-step-${step.id}`}>
-            <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="font-mono text-xs tabular-nums text-muted-foreground/70">
-                {index + 1}
-              </span>
-              <span className="text-sm font-semibold text-foreground">{step.label}</span>
-              <span className="text-sm text-muted-foreground"><Typo>{step.hint}</Typo></span>
+    <div className="flex flex-col gap-6" data-blok-testid="codemod-card">
+      {/* One terminal window, two prompts — not two stacked cards. */}
+      <div
+        className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+        data-blok-testid="codemod-session"
+      >
+        <div className="divide-y divide-border">
+          {sessionSteps.map((step, index) => (
+            <div key={step.id} className="px-4 py-4 sm:px-5" data-blok-testid={`codemod-step-${step.id}`}>
+              <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 pl-1">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-secondary font-mono text-[10px] tabular-nums text-muted-foreground">
+                  {index + 1}
+                </span>
+                <span className="text-sm font-semibold text-foreground">{step.label}</span>
+                <span className="text-sm text-muted-foreground"><Typo>{step.hint}</Typo></span>
+              </div>
+              <CodeBlock code={step.command} language="bash" embedded />
             </div>
-            <CodeBlock code={step.command} language="bash" />
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="mt-8 border-t border-border pt-6" data-blok-testid="codemod-options">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
+      <div
+        className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+        data-blok-testid="codemod-options"
+      >
+        <h3 className="border-b border-border bg-secondary/50 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
           {t('migration.codemodOptionsTitle')}
         </h3>
-        <dl className="mt-4 flex flex-col divide-y divide-border">
+        <dl className="flex flex-col divide-y divide-border">
           {codemodOptions.map((option) => (
             <div
               key={option.flag}
-              className="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:gap-4"
+              className="flex flex-col gap-1 px-5 py-3.5 transition-colors hover:bg-secondary/40 sm:flex-row sm:items-baseline sm:gap-4"
             >
-              <dt className="shrink-0 font-mono text-xs font-semibold text-foreground sm:w-40">
+              <dt className="shrink-0 font-mono text-xs font-semibold text-foreground sm:w-44">
                 {option.flag}
               </dt>
               <dd className="text-sm text-muted-foreground"><Typo>{option.description}</Typo></dd>
@@ -72,16 +78,16 @@ export const CodemodCard: React.FC = () => {
         </dl>
       </div>
 
-      <div
-        className="mt-6 rounded-xl bg-secondary/60 p-5"
+      <aside
+        className="rounded-2xl border border-border bg-secondary/50 p-5"
         data-blok-testid="alias-note"
       >
         <h3 className="text-sm font-bold tracking-tight text-foreground"><Typo>{t('migration.aliasNoteTitle')}</Typo></h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           <Typo>{t('migration.aliasNoteDescription')}</Typo>
         </p>
-        <code className="mt-3 inline-block rounded-lg bg-card px-3 py-2 font-mono text-xs text-foreground shadow-sm">{t('migration.aliasNoteCode')}</code>
-      </div>
+        <code className="mt-3.5 block overflow-x-auto rounded-lg border border-border bg-card px-3 py-2.5 font-mono text-xs whitespace-pre text-foreground">{t('migration.aliasNoteCode')}</code>
+      </aside>
     </div>
   );
 };

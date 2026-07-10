@@ -22,8 +22,9 @@ interface CodeBlockProps {
   onPackageManagerChange?: (manager: PackageManager) => void;
   /**
    * When embedded inside a parent surface (e.g. a window frame), drop the
-   * block's own border / radius / background so it blends into the host shell
-   * instead of drawing a second card outline.
+   * block's own border / radius / background / language label so it blends into
+   * the host shell instead of drawing a second card outline. The host is
+   * expected to label the block itself.
    */
   embedded?: boolean;
 }
@@ -296,13 +297,23 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       data-code-block
       data-blok-testid="code-block"
     >
-      <div className="flex items-center gap-3 px-3 pt-3 pb-1.5">
+      {/* Embedded: the host already labels the block, so the copy button is all
+          that's left — pin it to the code's top-right instead of letting it
+          float on a row of its own. */}
+      <div
+        className={cn(
+          "flex items-center gap-3",
+          embedded ? "absolute top-1.5 right-1.5 z-10" : "px-3 pt-3 pb-1.5",
+        )}
+      >
         {showPackageManagerToggle && packageName ? (
           <PackageManagerToggle onChange={handlePackageManagerChange} />
         ) : (
-          <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {displayLanguage}
-          </span>
+          !embedded && (
+            <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              {displayLanguage}
+            </span>
+          )
         )}
         <button
           className={cn(
@@ -360,10 +371,13 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           )}
         </button>
       </div>
-      <div className="relative mx-3 mb-3">
+      <div className={cn("relative", !embedded && "mx-3 mb-3")}>
         <div
           ref={scrollRef}
-          className="overflow-x-auto rounded-xl pt-3 pr-8 pb-3 pl-4 font-mono text-sm leading-relaxed [&_pre]:!m-0 [&_code]:font-mono"
+          className={cn(
+            "overflow-x-auto rounded-xl pt-3 pb-3 pl-4 font-mono text-sm leading-relaxed [&_pre]:!m-0 [&_code]:font-mono",
+            embedded ? "pr-12" : "pr-8",
+          )}
           style={{ backgroundColor: codeBg }}
         >
           <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />

@@ -5,6 +5,7 @@ import { CodeBlock } from '../components/common/CodeBlock';
 import { CodemodCard } from '../components/migration/CodemodCard';
 import { MigrationSteps } from '../components/migration/MigrationSteps';
 import { MigrationStepRail } from '../components/migration/MigrationStepRail';
+import { MigrationSectionHeader } from '../components/migration/MigrationSectionHeader';
 import {
   CODEMOD_DRY_RUN_COMMAND,
   MIGRATION_STEPS,
@@ -21,11 +22,24 @@ const useActiveStep = (): string => {
   const [activeId, setActiveId] = useState<string>(STEP_IDS[0]);
 
   useEffect(() => {
+    // IntersectionObserver hands entries back in an unspecified order, so track
+    // what's on screen and resolve the winner in document order — otherwise the
+    // rail's active step (and its progress fill) flickers between neighbours.
+    const visible = new Set<string>();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries.filter((entry) => entry.isIntersecting);
-        if (visible.length > 0) {
-          setActiveId(visible[0].target.id);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            visible.add(entry.target.id);
+          } else {
+            visible.delete(entry.target.id);
+          }
+        });
+
+        const topmost = STEP_IDS.find((id) => visible.has(id));
+        if (topmost) {
+          setActiveId(topmost);
         }
       },
       { rootMargin: '-15% 0px -70% 0px' },
@@ -70,39 +84,37 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
 
   return (
     <>
-      <section className={cn('mx-auto w-full max-w-6xl px-6 pb-12', inline ? 'pt-10' : 'pt-16 sm:pt-24')}>
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <Typo>{t('migration.heroEyebrow')}</Typo>
-            </p>
-            <h1 className="mt-4 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              {t('migration.heroFromEditorJS')} {t('migration.heroToBlok')}{' '}
-              <span className="text-brand-gradient">{t('migration.heroBlok')}</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              <Typo>{t('migration.heroDescription')}</Typo>
-            </p>
-            <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2" data-blok-testid="hero-facts">
-              {facts.map((fact) => (
-                <li key={fact} className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <FactCheckIcon />
-                  <Typo>{fact}</Typo>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <section className={cn('mx-auto w-full max-w-6xl px-6 pb-16', inline ? 'pt-10' : 'pt-16 sm:pt-24')}>
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          <Typo>{t('migration.heroEyebrow')}</Typo>
+        </p>
+        <h1 className="mt-5 max-w-3xl font-display text-4xl font-extrabold tracking-tight text-balance text-foreground sm:text-5xl lg:text-6xl">
+          {t('migration.heroFromEditorJS')} {t('migration.heroToBlok')}{' '}
+          <span className="text-brand-gradient">{t('migration.heroBlok')}</span>
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+          <Typo>{t('migration.heroDescription')}</Typo>
+        </p>
+        <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2.5" data-blok-testid="hero-facts">
+          {facts.map((fact) => (
+            <li key={fact} className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <FactCheckIcon />
+              <Typo>{fact}</Typo>
+            </li>
+          ))}
+        </ul>
 
-          <div className="min-w-0" data-blok-testid="hero-command">
-            <CodeBlock code={CODEMOD_DRY_RUN_COMMAND} language="bash" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              <Typo>{t('migration.heroCommandHint')}</Typo>
-            </p>
-          </div>
+        {/* The command is the hero's payload — give it the full measure so it
+            never truncates mid-flag the way a half-width column did. */}
+        <div className="mt-10 max-w-3xl" data-blok-testid="hero-command">
+          <CodeBlock code={CODEMOD_DRY_RUN_COMMAND} language="bash" />
+          <p className="mt-3 text-sm text-muted-foreground">
+            <Typo>{t('migration.heroCommandHint')}</Typo>
+          </p>
         </div>
       </section>
 
-      <div className="mx-auto w-full max-w-6xl px-6 lg:grid lg:grid-cols-[13rem_1fr] lg:gap-14">
+      <div className="mx-auto w-full max-w-6xl px-6 lg:grid lg:grid-cols-[13rem_1fr] lg:gap-x-16">
         <div className="hidden lg:block">
           <MigrationStepRail activeId={activeId} className="sticky top-28" />
         </div>
@@ -110,20 +122,14 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
         <div className="min-w-0">
           <section
             id="codemod"
-            className="scroll-mt-24 py-12"
+            className="scroll-mt-28 border-t border-border pt-12 pb-16"
             data-blok-testid="codemod-section"
           >
-            <header className="mb-8">
-              <div className="flex items-baseline gap-3">
-                <span className="font-mono text-sm tabular-nums text-muted-foreground/70">01</span>
-                <h2 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-                  <Typo>{t(codemodStep.titleKey)}</Typo>
-                </h2>
-              </div>
-              <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-                <Typo>{t(codemodStep.descriptionKey)}</Typo>
-              </p>
-            </header>
+            <MigrationSectionHeader
+              step={1}
+              title={t(codemodStep.titleKey)}
+              description={t(codemodStep.descriptionKey)}
+            />
             <CodemodCard />
           </section>
 

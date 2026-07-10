@@ -30,6 +30,25 @@ describe('CodemodCard', () => {
     expect(apply).toHaveTextContent(CODEMOD_APPLY_COMMAND);
   });
 
+  it('should render both steps inside a single terminal shell', () => {
+    renderCard();
+
+    const session = screen.getByTestId('codemod-session');
+    expect(within(session).getByTestId('codemod-step-dry-run')).toBeInTheDocument();
+    expect(within(session).getByTestId('codemod-step-apply')).toBeInTheDocument();
+  });
+
+  it('should embed the session code blocks so they do not draw their own card', () => {
+    renderCard();
+
+    const session = screen.getByTestId('codemod-session');
+    within(session)
+      .getAllByTestId('code-block')
+      .forEach((block) => {
+        expect(block).not.toHaveClass('border');
+      });
+  });
+
   it('should not render tab buttons', () => {
     renderCard();
 

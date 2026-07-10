@@ -82,6 +82,16 @@ describe('CodeBlock', () => {
     expect(screen.getByText('Terminal')).toBeInTheDocument();
   });
 
+  it('hides the language label when embedded, since the host shell labels itself', () => {
+    renderWithI18n(<CodeBlock code="echo hello" language="bash" embedded />);
+    expect(screen.queryByText('Terminal')).not.toBeInTheDocument();
+  });
+
+  it('keeps the copy button when embedded', () => {
+    renderWithI18n(<CodeBlock code="echo hello" language="bash" embedded />);
+    expect(screen.getByTestId('code-copy-button')).toBeInTheDocument();
+  });
+
   it('displays copy button', () => {
     renderWithI18n(<CodeBlock code="echo hello" language="bash" />);
     expect(screen.getByRole('button')).toBeInTheDocument();

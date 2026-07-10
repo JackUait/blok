@@ -47,4 +47,29 @@ describe('MigrationStepRail', () => {
     expect(screen.getByText(m.sectionCodemodTitle)).toBeInTheDocument();
     expect(screen.getByText(m.sectionVerifyTitle)).toBeInTheDocument();
   });
+
+  it('should mark steps before the active one as done and later ones as todo', () => {
+    renderRail(MIGRATION_STEPS[2].id);
+
+    const nav = screen.getByRole('navigation', { name: m.stepRailLabel });
+    const links = within(nav).getAllByRole('link');
+    expect(links[0]).toHaveAttribute('data-state', 'done');
+    expect(links[1]).toHaveAttribute('data-state', 'done');
+    expect(links[2]).toHaveAttribute('data-state', 'active');
+    expect(links[3]).toHaveAttribute('data-state', 'todo');
+    expect(links[4]).toHaveAttribute('data-state', 'todo');
+  });
+
+  it('should fill the progress spine in proportion to the active step', () => {
+    renderRail(MIGRATION_STEPS[2].id);
+
+    const progress = screen.getByTestId('step-rail-progress');
+    expect(progress).toHaveStyle({ height: '50%' });
+  });
+
+  it('should leave the progress spine empty on the first step', () => {
+    renderRail(MIGRATION_STEPS[0].id);
+
+    expect(screen.getByTestId('step-rail-progress')).toHaveStyle({ height: '0%' });
+  });
 });

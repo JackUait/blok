@@ -68,6 +68,22 @@
 }
 
 /**
+ * Multi-line drag selection inside a cell: a run of adjacent selected
+ * line-blocks reads as one shape. Square the corners where two selected
+ * blocks touch so only the run's first-top and last-bottom corners stay
+ * rounded (StyleManager gives each selected content element rounded-[4px]).
+ */
+[data-blok-table-cell] [data-blok-selected="true"] + [data-blok-selected="true"] [data-blok-element-content] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+[data-blok-table-cell] [data-blok-selected="true"]:has(+ [data-blok-selected="true"]) [data-blok-element-content] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/**
  * Table heading styles
  * Applied to first row (heading row) and first column (heading column) cells
  */

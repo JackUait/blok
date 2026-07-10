@@ -26,32 +26,59 @@ describe('adaptExample — api-call', () => {
     expect(adaptExample(code, 'vanilla')).toEqual({ code, language: 'typescript' });
   });
 
-  it('optional-chains the editor handle for react', () => {
+  it('guards the nullable editor handle once for react', () => {
     expect(adaptExample(code, 'react').code).toBe(
-      '// Move current block to top\neditor?.blocks.move(0);',
+      'if (editor) {\n  // Move current block to top\n  editor.blocks.move(0);\n}',
     );
     expect(adaptExample(code, 'react').language).toBe('typescript');
   });
 
-  it('unwraps the ref with .value for vue', () => {
+  it('captures the ref value behind a guard for vue', () => {
     expect(adaptExample(code, 'vue').code).toBe(
-      '// Move current block to top\neditor.value?.blocks.move(0);',
+      'const blok = editor.value;\nif (blok) {\n  // Move current block to top\n  blok.blocks.move(0);\n}',
     );
   });
 
   it('adapts every editor reference, not just the first', () => {
     const multi = 'editor.focus();\neditor.focus(true);';
-    expect(adaptExample(multi, 'react').code).toBe('editor?.focus();\neditor?.focus(true);');
+    expect(adaptExample(multi, 'react').code).toBe(
+      'if (editor) {\n  editor.focus();\n  editor.focus(true);\n}',
+    );
     expect(adaptExample(multi, 'vue').code).toBe(
-      'editor.value?.focus();\neditor.value?.focus(true);',
+      'const blok = editor.value;\nif (blok) {\n  blok.focus();\n  blok.focus(true);\n}',
+    );
+  });
+
+  it('keeps the call result non-nullable so downstream access type-checks', () => {
+    // The guard narrows `editor`, so `data` stays `OutputData` (not `| undefined`)
+    // and `data.blocks` compiles — the reason we guard instead of optional-chaining.
+    const result = 'const data = await editor.save();\nconsole.log(data.blocks);';
+    expect(adaptExample(result, 'react').code).toBe(
+      'if (editor) {\n  const data = await editor.save();\n  console.log(data.blocks);\n}',
+    );
+    expect(adaptExample(result, 'vue').code).toBe(
+      'const blok = editor.value;\nif (blok) {\n  const data = await blok.save();\n  console.log(data.blocks);\n}',
     );
   });
 
   it('does not touch handles derived from the editor', () => {
     const derived = "const block = editor.blocks.getById('x');\nblock.update();";
     expect(adaptExample(derived, 'react').code).toBe(
-      "const block = editor?.blocks.getById('x');\nblock.update();",
+      "if (editor) {\n  const block = editor.blocks.getById('x');\n  block.update();\n}",
     );
+  });
+
+  it('replaces the adapter-owned destroy() example with a note, not a call', () => {
+    const destroy = '// Clean up on component unmount\neditor.destroy();';
+    for (const fw of ['react', 'vue', 'angular'] as const) {
+      const out = adaptExample(destroy, fw).code;
+      // The note is comment-only — no live destroy() call on the editor handle.
+      expect(out).not.toMatch(/editor[.?]/);
+      expect(out).toContain('never call destroy() yourself');
+    }
+    expect(adaptExample(destroy, 'angular').code).toContain('<blok-editor>');
+    // Vanilla still shows the real teardown call.
+    expect(adaptExample(destroy, 'vanilla').code).toBe(destroy);
   });
 
   it('wraps the body in an onReady handler for angular', () => {

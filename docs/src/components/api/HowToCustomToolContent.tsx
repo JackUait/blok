@@ -35,11 +35,13 @@ export class CalloutTool {
 }`;
 
 const REGISTER_CODE = `import { Blok } from '@jackuait/blok';
+import { Paragraph } from '@jackuait/blok/tools';
 import { CalloutTool } from './callout-tool';
 
 const editor = new Blok({
   holder: 'editor',
   tools: {
+    paragraph: Paragraph, // the default block every empty editor starts with
     callout: CalloutTool, // the key becomes the block's \`type\`
   },
 });`;
@@ -48,11 +50,14 @@ const OUTPUT_CODE = `const data = await editor.save();
 
 // Your block round-trips exactly like a built-in one:
 // {
+//   id: 'x9k2f1',
 //   type: 'callout',
 //   data: { text: 'Heads up — this is a callout.' },
 // }`;
 
-const VALIDATE_AND_TUNES_CODE = `// callout-tool.ts (extended)
+// Framework-agnostic: the extended tool class plus a custom block tune. A
+// tune is a settings-menu control — set `isTune` and return a menu item.
+const VALIDATE_AND_TUNE_CODE = `// callout-tool.ts (extended)
 export class CalloutTool {
   // ...constructor, render() unchanged
 
@@ -66,11 +71,26 @@ export class CalloutTool {
   }
 }
 
-// Opt the block into built-in tunes at registration time:
+// text-color-tune.ts — a block tune adds a control to the settings menu.
+export class TextColorTune {
+  static isTune = true;
+
+  render() {
+    return { title: 'Text color', icon: '🎨', onActivate: () => {/* recolor */} };
+  }
+}`;
+
+// Setup half: adapted to the active framework like the step snippets above.
+const TUNES_REGISTER_CODE = `import { Blok } from '@jackuait/blok';
+import { CalloutTool } from './callout-tool';
+import { TextColorTune } from './text-color-tune';
+
 const editor = new Blok({
   holder: 'editor',
   tools: {
     callout: { class: CalloutTool, tunes: ['textColor'] },
+    // Register the tune as a tool so a block can list it by name.
+    textColor: TextColorTune,
   },
 });`;
 
@@ -140,7 +160,16 @@ export const HowToCustomToolContent: React.FC = () => {
         <p className={proseClass}>
           {renderInline(t("api.howToCustomTool.further.body"))}
         </p>
-        <CodeBlock code={VALIDATE_AND_TUNES_CODE} language="typescript" />
+        <CodeBlock code={VALIDATE_AND_TUNE_CODE} language="typescript" />
+        {(() => {
+          const registerSnippet = adaptExample(TUNES_REGISTER_CODE, framework);
+          return (
+            <CodeBlock
+              code={registerSnippet.code}
+              language={registerSnippet.language}
+            />
+          );
+        })()}
         <p className={proseClass}>
           {renderInline(t("api.howToCustomTool.further.exampleNote"))}
         </p>

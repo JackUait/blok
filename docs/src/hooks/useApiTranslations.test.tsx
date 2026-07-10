@@ -116,7 +116,7 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const isReadyProp = coreSection?.properties?.find(p => p.name === 'isReady');
-    expect(isReadyProp?.description).toBe('Promise, который разрешается, когда редактор готов');
+    expect(isReadyProp?.description).toBe('Promise, который разрешается готовым экземпляром редактора');
 
     const blocksProp = coreSection?.properties?.find(p => p.name === 'blocks');
     expect(blocksProp?.description).toBe('Модуль API для работы с блоками');
@@ -227,7 +227,7 @@ describe('useApiTranslations', () => {
     const readOnlySection = result.current.apiSections.find(s => s.id === 'readonly-api');
     const toggleMethod = readOnlySection?.methods?.find(m => m.name.startsWith('readOnly.toggle('));
 
-    expect(toggleMethod?.deprecatedSince).toBe('0.23.5');
+    expect(toggleMethod?.deprecatedSince).toBe('0.6.0');
     expect(toggleMethod?.replacedBy).toBe('readOnly.set');
   });
 });

@@ -121,7 +121,7 @@ describe("API_SECTIONS", () => {
         "blocks.clear()",
         "blocks.render(data)",
         "blocks.renderFromHTML(data)",
-        "blocks.delete(index?)",
+        "blocks.delete(index?, setCaret?)",
         "blocks.move(toIndex, fromIndex?)",
         "blocks.getBlockByIndex(index)",
         "blocks.getById(id)",
@@ -130,7 +130,7 @@ describe("API_SECTIONS", () => {
         "blocks.getBlockByElement(element)",
         "blocks.getChildren(parentId)",
         "blocks.getBlocksCount()",
-        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?)",
+        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?)",
         "blocks.insertMany(blocks, index?)",
         "blocks.composeBlockData(toolName)",
         "blocks.update(id, data?, tunes?)",
@@ -238,7 +238,7 @@ describe("API_SECTIONS", () => {
       const expectedMethods = [
         "toolbar.close(options?)",
         "toolbar.open()",
-        "toolbar.toggleBlockSettings(openingState?)",
+        "toolbar.toggleBlockSettings(openingState?, trigger?, options?)",
         "toolbar.toggleToolbox(openingState?)",
       ];
 
@@ -366,7 +366,7 @@ describe("API_SECTIONS", () => {
     it("blocks.insert example shows the inserted block's id as output", () => {
       const method = findMethod(
         "blocks-api",
-        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?)",
+        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?)",
       );
       expect(method?.example).toMatch(/\/\/\s*→/);
     });

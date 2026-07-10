@@ -37,19 +37,22 @@ const BLOCK_SHAPE_CODE = `// Every block — whatever its type — is the same s
   tunes: {},                      // block-level settings (optional)
 }`;
 
-const BLOCK_TREE_CODE = `// A database block holds its rows as children
+const BLOCK_TREE_CODE = `// A database block holds its rows as children.
+// In saved JSON the hierarchy fields are named \`content\` and \`parent\`;
+// on live Block objects (and the React BlockNode) the same links are
+// exposed as \`contentIds\` and \`parentId\`.
 {
   id: 'db-1',
   type: 'database',
   data: { schema: [/* columns */], views: [/* configs */] },
-  contentIds: ['row-1', 'row-2'], // its children
+  content: ['row-1', 'row-2'], // its children
 }
 
 // A row is a block that points back to its parent
 {
   id: 'row-1',
   type: 'database-row',
-  parentId: 'db-1',
+  parent: 'db-1',
   data: { properties: { status: 'Done', priority: 'High' } },
 }`;
 

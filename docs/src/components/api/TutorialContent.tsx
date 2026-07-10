@@ -15,7 +15,7 @@ console.log(data);
 //   blocks: [
 //     { id: 'a1b2c3', type: 'paragraph', data: { text: 'Hello, Blok' } },
 //   ],
-//   version: '1.0.0',
+//   version: '0.23.5', // the installed Blok package version
 // }`;
 
 const RENDER_CODE = `// On the next page load, hand the same object back:

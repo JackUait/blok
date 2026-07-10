@@ -22,8 +22,8 @@ export interface QuickStartSnippet {
 /**
  * Per-framework setup snippets, mirroring the real published adapters:
  * - vanilla — `new Blok({ holder, tools })` from the core package
- * - react   — `useBlok(config)` + `<BlokContent editor={editor} />`
- * - vue     — `useBlok(config)` composable + `<BlokContent :editor="editor" />`
+ * - react   — `<BlokEditor tools={…} />`, the recommended all-in-one component
+ * - vue     — `<BlokEditor :tools="…" />`, the blessed all-in-one component
  * - angular — `<blok-editor [tools]="tools" />` standalone component
  *
  * Only instantiation and how you reach the live editor change between
@@ -54,26 +54,32 @@ const editor = new Blok({
     },
     save: {
       language: 'typescript',
-      code: `const data = await editor.save();
+      // `save` (like the rest of the API) is attached once `isReady` resolves,
+      // so await it before calling save() right after construction.
+      code: `await editor.isReady;
+
+const data = await editor.save();
 console.log(data.blocks);`,
     },
   },
   react: {
     create: {
       language: 'tsx',
-      code: `import { useBlok, BlokContent } from '@jackuait/blok/react';
+      // <BlokEditor> is the recommended all-in-one React component: it wires
+      // useBlok + BlokContent for you and takes all config as props.
+      code: `import { BlokEditor } from '@jackuait/blok/react';
 import { Header, Paragraph, List } from '@jackuait/blok/tools';
 
 export function Editor() {
-  const editor = useBlok({
-    tools: {
-      paragraph: Paragraph,
-      header: { class: Header, placeholder: 'Enter a heading' },
-      list: List,
-    },
-  });
-
-  return <BlokContent editor={editor} />;
+  return (
+    <BlokEditor
+      tools={{
+        paragraph: Paragraph,
+        header: { class: Header, placeholder: 'Enter a heading' },
+        list: List,
+      }}
+    />
+  );
 }`,
     },
     save: {
@@ -82,50 +88,60 @@ export function Editor() {
       // on every change, so `data` always mirrors the editor — no manual
       // save() polling needed.
       code: `import { useState } from 'react';
+import { BlokEditor } from '@jackuait/blok/react';
 import type { OutputData } from '@jackuait/blok';
 
-const [data, setData] = useState<OutputData>();
+export function Editor() {
+  // onSave fires with the latest content on every change — no manual save().
+  const [data, setData] = useState<OutputData>();
 
-// Add onSave to the useBlok config below — no manual save() call needed.
-const editor = useBlok({ /* config */, onSave: setData });
-
-console.log(data?.blocks);`,
+  return (
+    <>
+      <BlokEditor onSave={setData} />
+      <pre>{JSON.stringify(data?.blocks, null, 2)}</pre>
+    </>
+  );
+}`,
     },
   },
   vue: {
     create: {
       language: 'vue',
+      // <BlokEditor> is the blessed all-in-one component for embedding Blok in
+      // Vue: it wires useBlok + BlokContent and takes config through props/emits.
       code: `<script setup lang="ts">
-import { useBlok, BlokContent } from '@jackuait/blok/vue';
+import { BlokEditor } from '@jackuait/blok/vue';
 import { Header, Paragraph, List } from '@jackuait/blok/tools';
 
-const editor = useBlok({
-  tools: {
-    paragraph: Paragraph,
-    header: { class: Header, placeholder: 'Enter a heading' },
-    list: List,
-  },
-});
+const tools = {
+  paragraph: Paragraph,
+  header: { class: Header, placeholder: 'Enter a heading' },
+  list: List,
+};
 </script>
 
 <template>
-  <BlokContent :editor="editor" />
+  <BlokEditor :tools="tools" />
 </template>`,
     },
     save: {
-      language: 'typescript',
-      // onSave is the idiomatic Vue path: it fires with the latest content
-      // on every change, so `data` always mirrors the editor — no manual
-      // save() polling needed.
-      code: `import { ref } from 'vue';
+      language: 'vue',
+      // The `save` emit is the idiomatic Vue path: it fires with the latest
+      // content on every change, so `data` always mirrors the editor — no
+      // manual save() polling needed.
+      code: `<script setup lang="ts">
+import { ref } from 'vue';
+import { BlokEditor } from '@jackuait/blok/vue';
 import type { OutputData } from '@jackuait/blok';
 
 const data = ref<OutputData>();
+</script>
 
-// Add onSave to the useBlok config below — no manual save() call needed.
-const editor = useBlok({ /* config */, onSave: (d) => (data.value = d) });
-
-console.log(data.value?.blocks);`,
+<template>
+  <!-- @save fires with the latest content — no manual save() call needed. -->
+  <BlokEditor @save="(d: OutputData) => (data = d)" />
+  <pre>{{ data?.blocks }}</pre>
+</template>`,
     },
   },
   angular: {
@@ -184,34 +200,33 @@ const editor = new Blok(config);`,
   },
   react: {
     language: 'tsx',
-    code: `import { useBlok, BlokContent } from '@jackuait/blok/react';
+    code: `import { BlokEditor } from '@jackuait/blok/react';
 
 export function Editor() {
-  // The adapter manages the mount point, so \`holder\` is omitted.
-  const editor = useBlok({
-    placeholder: 'Start writing...',
-    autofocus: true,
-    readOnly: false,
-  });
-
-  return <BlokContent editor={editor} />;
+  // Config options map straight to props; the mount point is managed for you,
+  // so \`holder\` is omitted.
+  return (
+    <BlokEditor
+      placeholder="Start writing..."
+      autofocus
+      readOnly={false}
+    />
+  );
 }`,
   },
   vue: {
     language: 'vue',
     code: `<script setup lang="ts">
-import { useBlok, BlokContent } from '@jackuait/blok/vue';
-
-// The adapter manages the mount point, so \`holder\` is omitted.
-const editor = useBlok({
-  placeholder: 'Start writing...',
-  autofocus: true,
-  readOnly: false,
-});
+import { BlokEditor } from '@jackuait/blok/vue';
 </script>
 
 <template>
-  <BlokContent :editor="editor" />
+  <!-- Config options map straight to props; \`holder\` is managed for you. -->
+  <BlokEditor
+    placeholder="Start writing..."
+    :autofocus="true"
+    :read-only="false"
+  />
 </template>`,
   },
   angular: {
@@ -255,27 +270,23 @@ await editor.isReady;`,
   },
   react: {
     language: 'tsx',
-    code: `import { useBlok, BlokContent } from '@jackuait/blok/react';
+    code: `import { BlokEditor } from '@jackuait/blok/react';
 
 export function Editor() {
-  // useBlok mounts the editor for you — no holder id, and it stays
-  // null until the editor is ready.
-  const editor = useBlok();
-
-  return <BlokContent editor={editor} />;
+  // <BlokEditor> mounts the editor for you — no holder id, and it manages
+  // its own readiness lifecycle.
+  return <BlokEditor />;
 }`,
   },
   vue: {
     language: 'vue',
     code: `<script setup lang="ts">
-import { useBlok, BlokContent } from '@jackuait/blok/vue';
-
-// useBlok mounts the editor for you — no holder id needed.
-const editor = useBlok();
+import { BlokEditor } from '@jackuait/blok/vue';
 </script>
 
 <template>
-  <BlokContent :editor="editor" />
+  <!-- <BlokEditor> mounts the editor for you — no holder id needed. -->
+  <BlokEditor />
 </template>`,
   },
   angular: {

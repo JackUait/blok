@@ -122,7 +122,7 @@
         },
         "clear": {
           "name": "clear()",
-          "returnType": "void",
+          "returnType": "Promise<void>",
           "description": "Removes all blocks from the editor.",
           "note": "Wipes all blocks and leaves one empty paragraph. It's undoable — unlike `destroy()`, which tears the instance down."
         },
@@ -136,42 +136,42 @@
       "properties": {
         "isReady": {
           "name": "isReady",
-          "type": "Promise<void>",
-          "description": "Promise that resolves when editor is ready"
+          "type": "Promise<Blok>",
+          "description": "Promise that resolves with the ready editor instance"
         },
         "blocks": {
           "name": "blocks",
-          "type": "BlocksAPI",
+          "type": "Blocks",
           "description": "Blocks API module"
         },
         "caret": {
           "name": "caret",
-          "type": "CaretAPI",
+          "type": "Caret",
           "description": "Caret API module"
         },
         "history": {
           "name": "history",
-          "type": "HistoryAPI",
+          "type": "History",
           "description": "History API module"
         },
         "saver": {
           "name": "saver",
-          "type": "SaverAPI",
+          "type": "Saver",
           "description": "Saver API module"
         },
         "toolbar": {
           "name": "toolbar",
-          "type": "ToolbarAPI",
+          "type": "Toolbar",
           "description": "Toolbar API module"
         },
         "inlineToolbar": {
           "name": "inlineToolbar",
-          "type": "InlineToolbarAPI",
+          "type": "InlineToolbar",
           "description": "Inline toolbar API module"
         },
         "events": {
           "name": "events",
-          "type": "EventsAPI",
+          "type": "Events",
           "description": "Events API module"
         }
       }
@@ -188,21 +188,21 @@
         },
         "tools": {
           "option": "tools",
-          "type": "Record<string, ToolConfig>",
+          "type": "Record<string, ToolConstructable | ToolSettings>",
           "default": "{}",
           "description": "Available block and inline tools"
         },
         "placeholder": {
           "option": "placeholder",
-          "type": "string",
-          "default": "''",
-          "description": "Placeholder text for empty blocks"
+          "type": "string | false",
+          "default": "false",
+          "description": "Placeholder text shown in the first block when the editor is empty; false disables it"
         },
         "minHeight": {
           "option": "minHeight",
-          "type": "string | number",
-          "default": "'300px'",
-          "description": "Minimum height of the editor"
+          "type": "number",
+          "default": "300",
+          "description": "Height in px of the editor's bottom clickable zone"
         },
         "defaultBlock": {
           "option": "defaultBlock",
@@ -224,9 +224,45 @@
         },
         "onChange": {
           "option": "onChange",
-          "type": "(api: API) => void",
+          "type": "(api: API, event: BlockMutationEvent | BlockMutationEvent[]) => void",
           "default": "undefined",
-          "description": "Change callback function"
+          "description": "Change callback function; the event argument carries the mutation(s) that occurred (batched into an array when several fire at once)"
+        },
+        "onSave": {
+          "option": "onSave",
+          "type": "(data: OutputData, api: API) => void",
+          "default": "undefined",
+          "description": "Reactive save callback — fires automatically with the full serialized content on every debounced content change, so you don't have to call save() by hand."
+        },
+        "onReady": {
+          "option": "onReady",
+          "type": "(blok?: Blok) => void",
+          "default": "undefined",
+          "description": "Fires once when the editor becomes ready, receiving the fully-initialized Blok instance"
+        },
+        "autofocus": {
+          "option": "autofocus",
+          "type": "boolean",
+          "default": "false",
+          "description": "If true, sets the caret in the first block once the editor is ready"
+        },
+        "inlineToolbar": {
+          "option": "inlineToolbar",
+          "type": "string[] | boolean",
+          "default": "true",
+          "description": "Default inline toolbar for all tools; an array restricts it to the listed inline tools, false disables it"
+        },
+        "i18n": {
+          "option": "i18n",
+          "type": "I18nConfig",
+          "default": "undefined",
+          "description": "Internationalization config (locale + message dictionary)"
+        },
+        "theme": {
+          "option": "theme",
+          "type": "'auto' | 'light' | 'dark'",
+          "default": "'auto'",
+          "description": "Color theme; 'auto' follows the OS preference via prefers-color-scheme"
         }
       }
     },
@@ -246,7 +282,7 @@
             "note": "Handy for importing legacy HTML, but the result is only as good as the tools' paste handlers — JSON via `render()` preserves more fidelity when you control the source."
           },
           "delete": {
-            "note": "Without an index it deletes the focused block. Deleting the last block leaves the editor empty, so insert a paragraph if you need a caret target."
+            "note": "Without an index it deletes the focused block. Deleting the last remaining block automatically inserts a fresh empty paragraph, so the editor is never left without a caret target."
           },
           "move": {
             "note": "`toIndex` is in post-removal index space: for a forward move, subtract 1 or the block lands one slot too far."
@@ -270,7 +306,7 @@
             "note": "Returns the direct children of a container block (a column, toggle, or database). Empty array if it has none."
           },
           "getBlocksCount": {
-            "note": "Counts only top-level blocks, not nested children. Use it for bounds before an index-based `insert()` or `move()`."
+            "note": "Counts every block including nested children (columns, toggles, table cells), not just top-level blocks. Use it for bounds before an index-based `insert()` or `move()`."
           },
           "insert": {
             "note": "Every parameter is optional — call `insert()` for an empty paragraph, or pass `type`/`data`/`index` for full control. Pass `replace: true` to overwrite the block at `index`.",
@@ -281,7 +317,8 @@
               "index": { "description": "Position to insert the block at." },
               "needToFocus": { "description": "Whether to move focus to the inserted block." },
               "replace": { "description": "Replace the existing block at index instead of inserting around it." },
-              "id": { "description": "Custom id for the new block." }
+              "id": { "description": "Custom id for the new block." },
+              "tunes": { "description": "Optional tune data applied at creation, keyed by tune name." }
             },
             "errors": {
               "0": {
@@ -551,11 +588,11 @@
                 "message": { "description": "Notification text. May contain HTML." },
                 "type": { "description": "Notification type. `confirm` and `prompt` add action buttons." },
                 "style": { "description": "Built-in visual style for alert notifications." },
-                "time": { "description": "Auto-dismiss delay in ms. Applies to alert notifications only." },
+                "time": { "description": "Auto-dismiss delay in ms for every notification type (default 8000)." },
                 "okText": { "description": "Label for the confirm/submit button (`confirm`/`prompt` types only)." },
                 "okHandler": { "description": "Confirm/submit callback. Receives the click event for `confirm`, or the input value for `prompt`. Required for prompt notifications." },
-                "cancelText": { "description": "Label for the cancel button (`confirm`/`prompt` types only)." },
-                "cancelHandler": { "description": "Cancel/close callback (`confirm`/`prompt` types only)." },
+                "cancelText": { "description": "Label for the cancel button (`confirm` type only)." },
+                "cancelHandler": { "description": "Cancel/close callback (`confirm` type only)." },
                 "inputType": { "description": "HTML input type for the prompt's text field (`prompt` type only)." },
                 "placeholder": { "description": "Placeholder text for the prompt's input field (`prompt` type only)." },
                 "default": { "description": "Default value pre-filled in the prompt's input field (`prompt` type only)." }
@@ -630,6 +667,9 @@
           },
           "getEnglishTranslation": {
             "note": "Returns the English value regardless of locale — used to index content for multilingual search."
+          },
+          "getLocale": {
+            "note": "Returns the active locale code (e.g. `'en'`) so a tool can branch on the editor's current language."
           }
         }
       }
@@ -822,7 +862,7 @@
       "further": {
         "title": "Going further",
         "body": "Add a `validate()` method to drop empty blocks, a settings menu through `renderSettings()`, or paste handling with `onPaste`. The `BlockTool` interface covers the full lifecycle — `rendered()`, `updated()`, `moved()`, and `removed()`.",
-        "exampleNote": "`validate()` runs before `save()` resolves, so an empty callout never makes it into the output. Tunes are opt-in per tool — pass `tunes: ['textColor']` at registration and Blok adds them to the block's settings menu automatically."
+        "exampleNote": "`validate()` runs before `save()` resolves, so an empty callout never makes it into the output. Tunes are opt-in per tool — register the tune class as a tool (a class with `static isTune = true`), then list its name in `tunes: [...]` and Blok adds it to the block's settings menu."
       },
       "next": {
         "intro": "For the complete tool contract, see the",
@@ -936,7 +976,7 @@
         "description": "Yjs-backed history with ⌘Z / ⌘⇧Z. Conflict-free, grouped at word boundaries, and it restores your caret.",
         "learnMore": "Learn more about undo and redo",
         "details": {
-          "summary": "History is built on the same CRDT that powers live collaboration, so undo behaves predictably even when several people edit at once.",
+          "summary": "History is built on a CRDT (Yjs), so undo and redo are conflict-free and behave predictably even across complex block operations.",
           "benefit1": "CRDT-based, conflict-free history",
           "benefit2": "Grouped at word boundaries",
           "benefit3": "Caret restored after undo",
@@ -996,7 +1036,7 @@
       "vueDescription": "Same shape as React: useBlok drives the editor, <BlokContent> mounts it. Vue 3.",
       "angularName": "Angular",
       "angularTagline": "A standalone component",
-      "angularDescription": "Add <blok-editor> and bind your tools. Standalone component, Angular 16+.",
+      "angularDescription": "Add <blok-editor> and bind your tools. Standalone component, Angular 20+.",
       "cdnName": "CDN",
       "cdnTagline": "No bundler required",
       "cdnDescription": "Add one script tag and use the BlokEditor global. Good for prototypes and no-build pages.",
@@ -1195,20 +1235,20 @@
     "customInlineToolBefore": "render() { /* returns an HTMLElement button */ }",
     "customInlineToolAfter": "render() { return { icon, name, onActivate, isActive }; }",
     "customInlineToolFastPathTitle": "Fast path — wrapLegacyInlineTool",
-    "customInlineToolFastPathNote": "Keep an existing EditorJS inline tool without a rewrite by wrapping its class. The shim routes onActivate → surround, isActive → checkState, forwards the static title/shortcut/sanitize and pulls the icon from the legacy render(). Without it, Blok silently skips a legacy HTMLElement render() and the tool vanishes. renderActions()/clear() are not bridged; the native MenuConfig rewrite remains recommended for full feature access.",
+    "customInlineToolFastPathNote": "Keep an existing EditorJS inline tool without a rewrite by wrapping its class. The shim routes onActivate → surround, isActive → checkState, forwards the static title/shortcut/sanitize and pulls the icon from the legacy render(). Without it, Blok silently skips a legacy HTMLElement render() and the tool vanishes. renderActions() is surfaced as a popover panel and clear() runs when the popover closes; the native MenuConfig rewrite is still recommended for full control.",
     "customInlineToolFastPathCode": "marker: wrapLegacyInlineTool(MarkerTool)",
     "customBlockToolTitle": "Block tools port unchanged",
     "customBlockToolNote": "render, save, validate, renderSettings, merge, onPaste and the toolbox/conversionConfig statics are read by the same keys. Optionally add setReadOnly(state) for cheaper read-only toggling.",
     "droppedFieldsTitle": "Dropped fields & migration warnings",
     "droppedFieldsWarning": "When auto-migration drops a field with no Blok equivalent, Blok emits a console.warn prefixed [Blok migration] naming the block and field, so the loss is visible rather than silent. Capture any of these before migrating if you depend on them.",
     "droppedFieldsQuoteBlock": "quote",
-    "droppedFieldsQuoteFields": "caption, alignment",
+    "droppedFieldsQuoteFields": "alignment (caption is auto-migrated into a following paragraph)",
     "droppedFieldsImageBlock": "image",
     "droppedFieldsImageFields": "withBackground",
     "droppedFieldsLinkToolBlock": "linkTool",
     "droppedFieldsLinkToolFields": "meta.site_name",
     "droppedFieldsListBlock": "list item",
-    "droppedFieldsListFields": "meta",
+    "droppedFieldsListFields": "meta (dropped silently — no console.warn)",
     "droppedFieldsColBlock": "Block",
     "droppedFieldsColFields": "Dropped field(s)",
     "ctaTitle": "Ready to Migrate?",
@@ -1237,7 +1277,7 @@
     "supportedVersionsDescription": "Coverage is per block/tool, not per Editor.js point release — what matters is which tools your content uses.",
     "supportedVersionsTargetTitle": "Target line",
     "supportedVersionsTarget": "Blok targets the Editor.js 2.x line. The codemod is built against typical 2.x package versions (editorjs ^2.28, header ^2.8, paragraph ^2.11, list ^1.9) and the runtime reads the saved-data shapes those versions produce.",
-    "supportedVersionsStubNote": "Any block type Blok doesn't recognize and has no registered tool for renders as a stub and logs \"Tool not found\". Its data is preserved, so registering the tool later restores the block.",
+    "supportedVersionsStubNote": "Any block type Blok doesn't recognize and has no registered tool for renders as a stub and logs a \"Tool «name» is not found\" warning. Its data is preserved, so registering the tool later restores the block.",
     "compatStatusDropIn": "Drop-in unchanged",
     "compatStatusRuntime": "Auto-migrated at runtime",
     "compatStatusRuntimeCodemod": "Auto-migrated at runtime + codemod",

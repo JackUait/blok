@@ -122,7 +122,7 @@
         },
         "clear": {
           "name": "clear()",
-          "returnType": "void",
+          "returnType": "Promise<void>",
           "description": "Удаляет все блоки из редактора.",
           "note": "Удаляет все блоки и оставляет один пустой параграф. Действие отменяемо — в отличие от `destroy()`, уничтожающего экземпляр."
         },
@@ -136,42 +136,42 @@
       "properties": {
         "isReady": {
           "name": "isReady",
-          "type": "Promise<void>",
-          "description": "Promise, который разрешается, когда редактор готов"
+          "type": "Promise<Blok>",
+          "description": "Promise, который разрешается готовым экземпляром редактора"
         },
         "blocks": {
           "name": "blocks",
-          "type": "BlocksAPI",
+          "type": "Blocks",
           "description": "Модуль API для работы с блоками"
         },
         "caret": {
           "name": "caret",
-          "type": "CaretAPI",
+          "type": "Caret",
           "description": "Модуль API для управления курсором"
         },
         "history": {
           "name": "history",
-          "type": "HistoryAPI",
+          "type": "History",
           "description": "Модуль API истории"
         },
         "saver": {
           "name": "saver",
-          "type": "SaverAPI",
+          "type": "Saver",
           "description": "Модуль API сохранения"
         },
         "toolbar": {
           "name": "toolbar",
-          "type": "ToolbarAPI",
+          "type": "Toolbar",
           "description": "Модуль API панели инструментов"
         },
         "inlineToolbar": {
           "name": "inlineToolbar",
-          "type": "InlineToolbarAPI",
+          "type": "InlineToolbar",
           "description": "Модуль API строчной панели"
         },
         "events": {
           "name": "events",
-          "type": "EventsAPI",
+          "type": "Events",
           "description": "Модуль API событий"
         }
       }
@@ -188,21 +188,21 @@
         },
         "tools": {
           "option": "tools",
-          "type": "Record<string, ToolConfig>",
+          "type": "Record<string, ToolConstructable | ToolSettings>",
           "default": "{}",
           "description": "Доступные блочные и строчные инструменты"
         },
         "placeholder": {
           "option": "placeholder",
-          "type": "string",
-          "default": "''",
-          "description": "Текст-заполнитель для пустых блоков"
+          "type": "string | false",
+          "default": "false",
+          "description": "Текст-заполнитель, показываемый в первом блоке, когда редактор пуст; false отключает его"
         },
         "minHeight": {
           "option": "minHeight",
-          "type": "string | number",
-          "default": "'300px'",
-          "description": "Минимальная высота редактора"
+          "type": "number",
+          "default": "300",
+          "description": "Высота в px нижней кликабельной зоны редактора"
         },
         "defaultBlock": {
           "option": "defaultBlock",
@@ -224,9 +224,45 @@
         },
         "onChange": {
           "option": "onChange",
-          "type": "(api: API) => void",
+          "type": "(api: API, event: BlockMutationEvent | BlockMutationEvent[]) => void",
           "default": "undefined",
-          "description": "Функция обратного вызова при изменении"
+          "description": "Функция обратного вызова при изменении; аргумент event несёт произошедшую мутацию (или массив мутаций, если несколько срабатывают одновременно)"
+        },
+        "onSave": {
+          "option": "onSave",
+          "type": "(data: OutputData, api: API) => void",
+          "default": "undefined",
+          "description": "Реактивный колбэк сохранения — срабатывает автоматически с полным сериализованным содержимым при каждом отложенном изменении, поэтому save() вручную вызывать не нужно."
+        },
+        "onReady": {
+          "option": "onReady",
+          "type": "(blok?: Blok) => void",
+          "default": "undefined",
+          "description": "Срабатывает один раз, когда редактор становится готов, получая полностью инициализированный экземпляр Blok"
+        },
+        "autofocus": {
+          "option": "autofocus",
+          "type": "boolean",
+          "default": "false",
+          "description": "Если true, устанавливает курсор в первый блок, как только редактор готов"
+        },
+        "inlineToolbar": {
+          "option": "inlineToolbar",
+          "type": "string[] | boolean",
+          "default": "true",
+          "description": "Строчная панель по умолчанию для всех инструментов; массив ограничивает её перечисленными строчными инструментами, false отключает её"
+        },
+        "i18n": {
+          "option": "i18n",
+          "type": "I18nConfig",
+          "default": "undefined",
+          "description": "Конфигурация интернационализации (локаль + словарь сообщений)"
+        },
+        "theme": {
+          "option": "theme",
+          "type": "'auto' | 'light' | 'dark'",
+          "default": "'auto'",
+          "description": "Цветовая тема; 'auto' следует настройке ОС через prefers-color-scheme"
         }
       }
     },
@@ -246,7 +282,7 @@
             "note": "Удобно для импорта старого HTML, но результат зависит от обработчиков вставки инструментов — JSON через `render()` сохраняет больше точности, когда источник под контролем."
           },
           "delete": {
-            "note": "Без индекса удаляет блок в фокусе. Удаление последнего блока оставляет редактор пустым — вставьте параграф, если нужна цель для курсора."
+            "note": "Без индекса удаляет блок в фокусе. Удаление последнего оставшегося блока автоматически вставляет свежий пустой параграф, поэтому редактор никогда не остаётся без цели для курсора."
           },
           "move": {
             "note": "`toIndex` — это индекс после удаления: при перемещении вперёд вычтите 1, иначе блок встанет на позицию дальше нужной."
@@ -270,7 +306,7 @@
             "note": "Возвращает прямых потомков блока-контейнера (колонки, тоггла или базы данных). Пустой массив, если потомков нет."
           },
           "getBlocksCount": {
-            "note": "Считает только блоки верхнего уровня, без вложенных. Используйте для границ перед `insert()` или `move()` по индексу."
+            "note": "Считает все блоки, включая вложенные дочерние (колонки, тогглы, ячейки таблиц), а не только блоки верхнего уровня. Используйте для границ перед `insert()` или `move()` по индексу."
           },
           "insert": {
             "note": "Все параметры необязательны — `insert()` даёт пустой параграф, либо передайте `type`/`data`/`index` для контроля. `replace: true` заменяет блок по индексу `index`.",
@@ -281,7 +317,8 @@
               "index": { "description": "Позиция для вставки блока." },
               "needToFocus": { "description": "Переводить ли фокус на вставленный блок." },
               "replace": { "description": "Заменить существующий блок по индексу вместо вставки рядом с ним." },
-              "id": { "description": "Собственный id для нового блока." }
+              "id": { "description": "Собственный id для нового блока." },
+              "tunes": { "description": "Необязательные данные тюнов, применяемые при создании, с ключами по имени тюна." }
             },
             "errors": {
               "0": {
@@ -551,11 +588,11 @@
                 "message": { "description": "Текст уведомления. Может содержать HTML." },
                 "type": { "description": "Тип уведомления. `confirm` и `prompt` добавляют кнопки действий." },
                 "style": { "description": "Встроенный визуальный стиль для уведомлений-алертов." },
-                "time": { "description": "Время автозакрытия в мс. Применяется только к уведомлениям-алертам." },
+                "time": { "description": "Время автозакрытия в мс для всех типов уведомлений (по умолчанию 8000)." },
                 "okText": { "description": "Текст кнопки подтверждения/отправки (только для `confirm`/`prompt`)." },
                 "okHandler": { "description": "Колбэк подтверждения/отправки. Получает событие клика для `confirm` или значение поля для `prompt`. Обязателен для уведомлений типа prompt." },
-                "cancelText": { "description": "Текст кнопки отмены (только для `confirm`/`prompt`)." },
-                "cancelHandler": { "description": "Колбэк отмены/закрытия (только для `confirm`/`prompt`)." },
+                "cancelText": { "description": "Текст кнопки отмены (только для `confirm`)." },
+                "cancelHandler": { "description": "Колбэк отмены/закрытия (только для `confirm`)." },
                 "inputType": { "description": "Тип HTML-поля ввода для текстового поля prompt (только для типа prompt)." },
                 "placeholder": { "description": "Текст плейсхолдера для поля ввода prompt (только для типа prompt)." },
                 "default": { "description": "Значение по умолчанию, предзаполненное в поле ввода prompt (только для типа prompt)." }
@@ -630,6 +667,9 @@
           },
           "getEnglishTranslation": {
             "note": "Возвращает английское значение независимо от локали — используется для индексации контента в мультиязычном поиске."
+          },
+          "getLocale": {
+            "note": "Возвращает код активной локали (например, `'en'`), чтобы инструмент мог ветвиться по текущему языку редактора."
           }
         }
       }
@@ -822,7 +862,7 @@
       "further": {
         "title": "Что дальше",
         "body": "Добавьте метод `validate()`, чтобы отбрасывать пустые блоки, меню настроек через `renderSettings()` или обработку вставки через `onPaste`. Интерфейс `BlockTool` покрывает весь жизненный цикл — `rendered()`, `updated()`, `moved()` и `removed()`.",
-        "exampleNote": "`validate()` выполняется перед тем, как разрешится `save()`, поэтому пустая выноска никогда не попадёт в результат. Tunes подключаются по желанию для каждого инструмента — передайте `tunes: ['textColor']` при регистрации, и Blok автоматически добавит их в меню настроек блока."
+        "exampleNote": "`validate()` выполняется перед тем, как разрешится `save()`, поэтому пустая выноска никогда не попадёт в результат. Tunes подключаются по желанию для каждого инструмента — зарегистрируйте класс тюна как инструмент (класс со `static isTune = true`), затем укажите его имя в `tunes: [...]`, и Blok добавит его в меню настроек блока."
       },
       "next": {
         "intro": "Полный контракт инструмента смотрите в",
@@ -936,7 +976,7 @@
         "description": "История на Yjs с ⌘Z / ⌘⇧Z. Бесконфликтная, с группировкой по словам и восстановлением каретки.",
         "learnMore": "Подробнее об отмене и повторе",
         "details": {
-          "summary": "История построена на том же CRDT, что и совместное редактирование, поэтому отмена работает предсказуемо даже когда правят несколько человек.",
+          "summary": "История построена на CRDT (Yjs), поэтому отмена и повтор бесконфликтны и работают предсказуемо даже при сложных операциях с блоками.",
           "benefit1": "Бесконфликтная история на основе CRDT",
           "benefit2": "Группировка по границам слов",
           "benefit3": "Восстановление каретки после отмены",
@@ -996,7 +1036,7 @@
       "vueDescription": "Та же структура, что и в React: useBlok управляет редактором, а <BlokContent> монтирует его. Vue 3.",
       "angularName": "Angular",
       "angularTagline": "Standalone-компонент",
-      "angularDescription": "Добавьте <blok-editor> и привяжите инструменты. Standalone-компонент, Angular 16+.",
+      "angularDescription": "Добавьте <blok-editor> и привяжите инструменты. Standalone-компонент, Angular 20+.",
       "cdnName": "CDN",
       "cdnTagline": "Без сборщика",
       "cdnDescription": "Подключите один тег script и используйте глобальный объект BlokEditor. Подходит для прототипов и страниц без сборки.",
@@ -1195,20 +1235,20 @@
     "customInlineToolBefore": "render() { /* returns an HTMLElement button */ }",
     "customInlineToolAfter": "render() { return { icon, name, onActivate, isActive }; }",
     "customInlineToolFastPathTitle": "Быстрый путь — wrapLegacyInlineTool",
-    "customInlineToolFastPathNote": "Сохраните существующий инлайн-инструмент EditorJS без переработки, обернув его класс. Обёртка направляет onActivate → surround, isActive → checkState, передаёт статические title/shortcut/sanitize и берёт иконку из устаревшего render(). Без неё Blok молча пропускает устаревший render(), возвращающий HTMLElement, и инструмент исчезает. renderActions()/clear() не поддерживаются; для полного доступа к возможностям по-прежнему рекомендуется нативная переработка под MenuConfig.",
+    "customInlineToolFastPathNote": "Сохраните существующий инлайн-инструмент EditorJS без переработки, обернув его класс. Обёртка направляет onActivate → surround, isActive → checkState, передаёт статические title/shortcut/sanitize и берёт иконку из устаревшего render(). Без неё Blok молча пропускает устаревший render(), возвращающий HTMLElement, и инструмент исчезает. renderActions() отображается как панель во всплывающем окне, а clear() вызывается при его закрытии; для полного контроля по-прежнему рекомендуется нативная переработка под MenuConfig.",
     "customInlineToolFastPathCode": "marker: wrapLegacyInlineTool(MarkerTool)",
     "customBlockToolTitle": "Блочные инструменты переносятся без изменений",
     "customBlockToolNote": "render, save, validate, renderSettings, merge, onPaste и статические toolbox/conversionConfig читаются по тем же ключам. При желании добавьте setReadOnly(state) для более дешёвого переключения режима только для чтения.",
     "droppedFieldsTitle": "Отбрасываемые поля и предупреждения о миграции",
     "droppedFieldsWarning": "Когда автомиграция отбрасывает поле без эквивалента в Blok, Blok выводит console.warn с префиксом [Blok migration], указывая блок и поле, чтобы потеря была заметна, а не происходила незаметно. Сохраните любое из этих полей до миграции, если вы от них зависите.",
     "droppedFieldsQuoteBlock": "quote",
-    "droppedFieldsQuoteFields": "caption, alignment",
+    "droppedFieldsQuoteFields": "alignment (caption автоматически переносится в следующий параграф)",
     "droppedFieldsImageBlock": "image",
     "droppedFieldsImageFields": "withBackground",
     "droppedFieldsLinkToolBlock": "linkTool",
     "droppedFieldsLinkToolFields": "meta.site_name",
     "droppedFieldsListBlock": "list item",
-    "droppedFieldsListFields": "meta",
+    "droppedFieldsListFields": "meta (отбрасывается молча — без console.warn)",
     "droppedFieldsColBlock": "Блок",
     "droppedFieldsColFields": "Отбрасываемые поля",
     "ctaTitle": "Готовы к миграции?",
@@ -1237,7 +1277,7 @@
     "supportedVersionsDescription": "Покрытие определяется по блокам и инструментам, а не по конкретной версии Editor.js — важно лишь то, какие инструменты использует ваш контент.",
     "supportedVersionsTargetTitle": "Целевая линейка",
     "supportedVersionsTarget": "Blok ориентирован на линейку Editor.js 2.x. Codemod собран под типичные версии пакетов 2.x (editorjs ^2.28, header ^2.8, paragraph ^2.11, list ^1.9), а среда выполнения читает форматы сохранённых данных, которые создают эти версии.",
-    "supportedVersionsStubNote": "Любой тип блока, который Blok не распознаёт и для которого нет зарегистрированного инструмента, отображается как заглушка и выводит в консоль \"Tool not found\". Его данные сохраняются, поэтому регистрация инструмента позже восстановит блок.",
+    "supportedVersionsStubNote": "Любой тип блока, который Blok не распознаёт и для которого нет зарегистрированного инструмента, отображается как заглушка и выводит в консоль предупреждение \"Tool «name» is not found\". Его данные сохраняются, поэтому регистрация инструмента позже восстановит блок.",
     "compatStatusDropIn": "Работает без изменений",
     "compatStatusRuntime": "Автомиграция во время выполнения",
     "compatStatusRuntimeCodemod": "Автомиграция во время выполнения + codemod",

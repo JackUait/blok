@@ -9,9 +9,14 @@ import type { Snippet } from './framework-snippets';
  * - **setup**    — constructs the editor (`new Blok({...})`). Regenerated as the
  *   real per-framework mount: `useBlok` + `<BlokContent>` for react/vue, an
  *   `@Component` with `<blok-editor>` for angular.
- * - **api-call** — calls into an existing `editor` instance. Only the handle
- *   differs per framework, so just that is rewritten: `editor.` → `editor?.`
- *   (react), `editor.value?.` (vue), wrapped in the `(ready)` handler (angular).
+ * - **api-call** — calls into an existing `editor` instance. The handle is
+ *   nullable in the adapters (`useBlok` returns `Blok | null`), so the body is
+ *   guarded once rather than optional-chaining every access — otherwise the
+ *   call's result is `undefined` and downstream `data.blocks` no longer
+ *   type-checks. React narrows with `if (editor) { … }`, vue captures
+ *   `editor.value` into a local const first, and angular wraps the body in an
+ *   `onReady(editor)` handler. Lifecycle-owned teardown (`destroy()`) is
+ *   adapter-managed, so it is replaced with a note instead of a call.
  * - **agnostic** — no editor at all (JSON shapes, types, a tool class). Returned
  *   unchanged for every framework.
  */
@@ -60,11 +65,33 @@ const extractBraceLiteral = (source: string, from: number): string | null => {
 // ── api-call ────────────────────────────────────────────────────────────────
 
 const adaptApiCall = (code: string, framework: Framework): Snippet => {
+  if (framework === 'vanilla') {
+    return { code, language: 'typescript' };
+  }
+
+  // `destroy()` is owned by the adapter lifecycle — `useBlok` / the component
+  // tears the editor down when it unmounts, so a consumer must never call it.
+  // Replace the vanilla teardown example with a framework-appropriate note
+  // rather than a rewrite that would destroy a still-mounting editor.
+  if (/\beditor\.destroy\s*\(/.test(code)) {
+    const note =
+      framework === 'angular'
+        ? '// The <blok-editor> component destroys the editor for you when Angular\n// destroys the component — never call destroy() yourself.'
+        : '// The editor is destroyed for you when the component unmounts —\n// useBlok owns teardown, so you never call destroy() yourself.';
+    return { code: note, language: 'typescript' };
+  }
+
   switch (framework) {
     case 'react':
-      return { code: code.replace(/\beditor\./g, 'editor?.'), language: 'typescript' };
-    case 'vue':
-      return { code: code.replace(/\beditor\./g, 'editor.value?.'), language: 'typescript' };
+      // `editor` is a `const` (`Blok | null`); narrowing it once persists across
+      // the whole block, so the call's result keeps its non-nullable type.
+      return { code: `if (editor) {\n${indent(code, 2)}\n}`, language: 'typescript' };
+    case 'vue': {
+      // Capture the ref's `.value` into a local const so narrowing survives the
+      // intervening method calls (property-access narrowing would reset).
+      const body = indent(code.replace(/\beditor\./g, 'blok.'), 2);
+      return { code: `const blok = editor.value;\nif (blok) {\n${body}\n}`, language: 'typescript' };
+    }
     case 'angular': {
       const isAsync = /\bawait\b/.test(code);
       const head = `${isAsync ? 'async ' : ''}onReady(editor: Blok) {`;

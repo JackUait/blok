@@ -324,6 +324,9 @@
 
 [data-blok-content-align="right"] [data-blok-element-content] {
   margin-left: auto;
+  /* The base class is mx-auto — without zeroing margin-right the rule
+     collapses into centering. */
+  margin-right: 0;
 }
 
 /**

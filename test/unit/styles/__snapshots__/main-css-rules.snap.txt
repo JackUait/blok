@@ -1819,6 +1819,7 @@
 
 [data-blok-content-align="right"] [data-blok-element-content] {
   margin-left: auto;
+  margin-right: 0;
 }
 
 [data-blok-width="full"] [data-blok-element-content] {

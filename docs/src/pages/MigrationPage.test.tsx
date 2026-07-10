@@ -28,12 +28,14 @@ describe('MigrationPage', () => {
     expect(screen.getByRole('main')).toBeInTheDocument();
   });
 
-  it('should render the hero heading with eyebrow', () => {
+  it('should render the hero heading without an eyebrow label', () => {
     renderMigrationPage();
 
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toHaveTextContent(m.heroBlok);
-    expect(screen.getByText(m.heroEyebrow)).toBeInTheDocument();
+    // Case-sensitive: the footer legitimately links to "Migration Guide";
+    // the removed eyebrow label was sentence-case "Migration guide".
+    expect(screen.queryByText(/Migration\s+guide/)).not.toBeInTheDocument();
   });
 
   it('should render the rewritten hero description', () => {

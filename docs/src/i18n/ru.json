@@ -1274,7 +1274,6 @@
     "supportedVersionsStubNote": "Неизвестные типы блоков отображаются как заглушки с предупреждением \"Tool «name» is not found\" в консоли. Их данные сохраняются — зарегистрируйте инструмент позже, и блок вернётся.",
     "removed": "Удалено",
     "added": "Добавлено",
-    "heroEyebrow": "Гид по миграции",
     "stepRailLabel": "Шаги миграции",
     "sectionCodemodTitle": "Запустите codemod",
     "sectionCodemodDescription": "Сначала предпросмотр, затем применение.",

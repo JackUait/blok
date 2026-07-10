@@ -1274,7 +1274,6 @@
     "supportedVersionsStubNote": "Unknown block types render as stubs and log a \"Tool «name» is not found\" warning. Their data is preserved — register the tool later and the block comes back.",
     "removed": "Removed",
     "added": "Added",
-    "heroEyebrow": "Migration guide",
     "stepRailLabel": "Migration steps",
     "sectionCodemodTitle": "Run the codemod",
     "sectionCodemodDescription": "Preview first, then apply.",

@@ -80,11 +80,7 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
 
         <div className="mx-auto w-full max-w-6xl px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center lg:gap-x-16">
           <div className="duration-700 animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
-            <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <span aria-hidden className="h-px w-8 bg-brand-gradient" />
-              <Typo>{t('migration.heroEyebrow')}</Typo>
-            </p>
-            <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-balance text-foreground sm:text-5xl lg:text-6xl">
+            <h1 className="font-display text-4xl font-extrabold tracking-tight text-balance text-foreground sm:text-5xl lg:text-6xl">
               {t('migration.heroFromEditorJS')} {t('migration.heroToBlok')}{' '}
               <span className="text-brand-gradient">{t('migration.heroBlok')}</span>
             </h1>

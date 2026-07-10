@@ -1386,6 +1386,31 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * Cmd/Ctrl+Slash opens the block menu for the hovered block in read-only mode.
+     * In edit mode BlockEvents handles this shortcut, but its keydown listeners are
+     * unbound in read-only — and without a caret there is no current block anyway,
+     * so the hovered block (the one whose toolbar and tooltip are on screen) is the target.
+     */
+    this.readOnlyMutableListeners.on(document, 'keydown', (e) => {
+      const event = e as KeyboardEvent;
+
+      if (!this.Blok.ReadOnly.isEnabled || event.code !== 'Slash') {
+        return;
+      }
+
+      if (!event.metaKey && !event.ctrlKey) {
+        return;
+      }
+
+      if (this.settingsTogglerHandler.hoveredBlock === null) {
+        return;
+      }
+
+      event.preventDefault();
+      this.settingsTogglerHandler.handleClick();
+    });
+
+    /**
      * Focus-the-toolbar shortcut (WAI-ARIA APG style). Alt+F10 pressed while
      * editing a block moves focus into the toolbar's roving group. The buttons
      * are intentionally not Tab-reachable, so this is the keyboard entry point.

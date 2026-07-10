@@ -457,6 +457,31 @@ test.describe('read-only mode', () => {
     await expect(popover.getByText('Convert to')).toHaveCount(0);
   });
 
+  test('Cmd/Ctrl+Slash opens block settings for the hovered block in read-only mode', async ({ page }) => {
+    await createBlok(page, {
+      readOnly: true,
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Shortcut me' } },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+    await paragraph.hover();
+    await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+    await page.keyboard.press(`${modifier}+Slash`);
+
+    const popover = page.locator(BLOCK_TUNES_POPOVER_SELECTOR);
+
+    await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+    await expect(popover.getByText('Copy link to block')).toHaveCount(1);
+  });
+
   test('clicking copy-link in read-only mode writes URL to clipboard and shows success notifier', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 

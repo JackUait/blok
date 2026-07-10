@@ -261,9 +261,11 @@ export class SettingsTogglerHandler {
   }
 
   /**
-   * Handles the settings toggler click
+   * Handles the settings toggler click.
+   * Also used by the Cmd/Ctrl+Slash shortcut in read-only mode, where the block
+   * keydown handlers are unbound and cannot reach BlockEvents.
    */
-  private handleClick(): void {
+  public handleClick(): void {
     const blok = this.getBlok();
 
     /**

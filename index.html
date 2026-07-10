@@ -630,10 +630,14 @@
     /* Settings panel polish */
     #settings-panel {
       font-family: var(--pg-font);
-      box-shadow: -8px 0 24px -8px rgba(0,0,0,0.06), -1px 0 0 0 rgba(0,0,0,0.04);
+      box-shadow: 0 12px 32px -8px rgba(0,0,0,0.10), 0 2px 8px -2px rgba(0,0,0,0.04);
     }
     .dark-mode #settings-panel {
-      box-shadow: -8px 0 32px -8px rgba(0,0,0,0.4), -1px 0 0 0 rgba(255,255,255,0.05);
+      box-shadow: 0 12px 32px -8px rgba(0,0,0,0.5), 0 2px 8px -2px rgba(0,0,0,0.3);
+    }
+    /* Clear the viewport edge when closed, so the inset panel hides fully */
+    #settings-panel.translate-x-full {
+      transform: translateX(calc(100% + 12px));
     }
 
     .settings-section-label {
@@ -867,8 +871,8 @@
   </button>
 
   <!-- Settings side panel: drawer -->
-  <div id="settings-panel" class="fixed right-0 top-0 bottom-0 w-[300px] bg-white dark-mode:bg-[#191919] border-l border-[#ebebeb] dark-mode:border-[#2f2f2f] translate-x-full transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0.0,0.2,1)] z-10 overflow-y-auto" style="transform: translateX(100%)" aria-label="Settings panel">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f] mt-[80px]">
+  <div id="settings-panel" class="fixed right-3 top-[92px] bottom-3 w-[300px] bg-white dark-mode:bg-[#191919] border border-[#ebebeb] dark-mode:border-[#2f2f2f] rounded-2xl translate-x-full transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0.0,0.2,1)] z-10 overflow-y-auto" style="transform: translateX(calc(100% + 12px))" aria-label="Settings panel">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f]">
       <span class="text-[15px] font-semibold tracking-tight dark-mode:text-[#ffffff]" style="letter-spacing: -0.015em;">Settings</span>
       <button id="settings-close" type="button" aria-label="Close settings panel" title="Close (Esc)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
@@ -2050,7 +2054,7 @@
       settingsPanel.style.transform = '';
       settingsPanel.classList.remove('translate-x-full');
       settingsTab.classList.add('hidden');
-      mainContent.style.marginRight = '300px';
+      mainContent.style.marginRight = '324px';
     }
 
     function closeSettingsPanel() {

@@ -1,6 +1,4 @@
-import { Link } from "react-router-dom";
 import {
-  BLOK_VERSION_BREAKING_CHANGES,
   COMPATIBILITY_GROUPS,
   CSS_MAPPINGS,
   DIFF_CHANGES,
@@ -211,41 +209,6 @@ export const MigrationSteps: React.FC = () => {
         </p>
       </section>
 
-      <section className="border-t border-border pt-12 pb-16" data-blok-testid="blok-upgrade-section">
-        <header className="mb-8">
-          <h2 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-            <Typo>{t('migration.blokUpgradeTitle')}</Typo>
-          </h2>
-          <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            <Typo>{t('migration.blokUpgradeDescription')}</Typo>
-          </p>
-        </header>
-
-        <div className={SHELL_CLASS} data-blok-testid="blok-upgrade-table">
-          <div className="divide-y divide-border">
-            {BLOK_VERSION_BREAKING_CHANGES.map((change) => (
-              <div
-                key={change.version}
-                className="flex flex-col gap-2 px-5 py-4 transition-colors hover:bg-secondary/40 sm:flex-row sm:items-start sm:gap-4"
-                data-blok-testid="blok-upgrade-row"
-              >
-                <code className="shrink-0 rounded-lg border border-border bg-secondary/60 px-2.5 py-1 font-mono text-xs font-semibold text-foreground">
-                  v{change.version}
-                </code>
-                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  <Typo>{t(change.descriptionKey)}</Typo>{' '}
-                  <Link
-                    to={change.link}
-                    className="font-semibold text-primary underline-offset-4 hover:underline"
-                  >
-                    <Typo>{t('migration.blokUpgradeViewChangelog')}</Typo>
-                  </Link>
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </>
   );
 };

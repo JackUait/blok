@@ -6,7 +6,6 @@ import {
   CSS_MAPPINGS,
   DIFF_CHANGES,
   COMPATIBILITY_GROUPS,
-  BLOK_VERSION_BREAKING_CHANGES,
 } from './migration-data';
 import { I18nProvider } from '../../contexts/I18nContext';
 import enJson from '../../i18n/en.json';
@@ -126,21 +125,19 @@ describe('MigrationSteps', () => {
   });
 
   describe('upgrading within Blok (coda)', () => {
-    it('should render one row per Blok breaking change with a changelog link', () => {
+    it('should not render the Blok → Blok upgrade coda', () => {
       renderSteps();
 
-      const rows = screen.getAllByTestId('blok-upgrade-row');
-      expect(rows).toHaveLength(BLOK_VERSION_BREAKING_CHANGES.length);
-      expect(within(rows[0]).getByText(`v${BLOK_VERSION_BREAKING_CHANGES[0].version}`)).toBeInTheDocument();
-      const links = screen.getAllByText(m.blokUpgradeViewChangelog);
-      expect(links.length).toBe(BLOK_VERSION_BREAKING_CHANGES.length);
+      expect(screen.queryByTestId('blok-upgrade-section')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('blok-upgrade-table')).not.toBeInTheDocument();
+      expect(screen.queryAllByTestId('blok-upgrade-row')).toHaveLength(0);
     });
 
-    it('should render the coda as a visually separated section', () => {
+    it('should end on the verify step', () => {
       renderSteps();
 
-      expect(screen.getByTestId('blok-upgrade-section')).toBeInTheDocument();
-      expect(screen.getByText(m.blokUpgradeTitle)).toBeInTheDocument();
+      expect(screen.getByTestId('supported-versions-section')).toBeInTheDocument();
+      expect(screen.queryByText('Upgrading within Blok')).not.toBeInTheDocument();
     });
   });
 });

@@ -123,22 +123,3 @@ export const CSS_MAPPINGS: CssMapping[] = [
   { editorjs: "data-placeholder", blok: "data-blok-placeholder" },
 ];
 
-export interface BlokVersionBreakingChange {
-  /** Semver version where the breaking change shipped. */
-  version: string;
-  /** i18n key for a one-line description of the change. */
-  descriptionKey: string;
-  /** Link back to the relevant changelog entry. */
-  link: string;
-}
-
-/**
- * Breaking changes within Blok's own 0.x version history (Blok → Blok
- * upgrades), as distinct from the Editor.js → Blok migration above. Grounded
- * in CHANGELOG.md's "⚠ BREAKING CHANGES" sections and inline **Breaking:**
- * call-outs — only changes the changelog itself flags as breaking are listed.
- */
-export const BLOK_VERSION_BREAKING_CHANGES: BlokVersionBreakingChange[] = [
-  { version: "0.19.2", descriptionKey: "migration.blokBreaking0192", link: "/changelog" },
-  { version: "0.17.0", descriptionKey: "migration.blokBreaking0170", link: "/changelog" },
-];

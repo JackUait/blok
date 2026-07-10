@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import { useTheme, type Theme } from '../../hooks/useTheme';
 import { Typo } from '../common/Typo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,6 +93,7 @@ const Segmented: React.FC<{
  */
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettingsChange }) => {
   const { t } = useI18n();
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
   const patch = (partial: Partial<EditorSettings>) =>
@@ -178,13 +180,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
 
         <Segmented
           label={t('demo.settings.themeLabel')}
-          value={settings.theme}
+          value={theme}
           options={[
-            { value: 'site', label: t('demo.settings.themeSite') },
             { value: 'light', label: t('demo.settings.themeLight') },
             { value: 'dark', label: t('demo.settings.themeDark') },
           ]}
-          onChange={value => patch({ theme: value as EditorSettings['theme'] })}
+          onChange={value => setTheme(value as Theme)}
         />
         <Segmented
           label={t('demo.settings.widthLabel')}

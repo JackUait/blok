@@ -168,6 +168,15 @@ describe('DemoPage', () => {
       expect(screen.getByRole('textbox', { name: 'First block placeholder' })).toBeInTheDocument();
     });
 
+    it('switches the whole documentation theme from the panel', () => {
+      renderDemoPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    });
+
     it('re-aligns the editor content when alignment is changed in the panel', async () => {
       const { container } = renderDemoPage();
 

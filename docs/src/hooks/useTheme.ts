@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export type Theme = 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
 const STORAGE_KEY = 'blok-docs-theme';
 const VALID_THEMES: Theme[] = ['light', 'dark'];
+/** Broadcast between useTheme instances so every consumer re-renders in sync. */
+const THEME_CHANGE_EVENT = 'blok-docs:theme-change';
 
 /**
  * Hook to manage light/dark theme with system preference detection
@@ -44,6 +46,18 @@ export const useTheme = () => {
     root.classList.add(theme);
   }, [theme]);
 
+  // Sync with other useTheme instances (Nav toggle, settings panel, editor):
+  // every explicit change is broadcast as a window event, so each instance's
+  // local state follows no matter which component made the change.
+  useEffect(() => {
+    const handleThemeEvent = (event: Event) => {
+      setThemeState((event as CustomEvent<Theme>).detail);
+    };
+
+    window.addEventListener(THEME_CHANGE_EVENT, handleThemeEvent);
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, handleThemeEvent);
+  }, []);
+
   // Listen for system theme changes
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -59,20 +73,20 @@ export const useTheme = () => {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // Set theme and persist to localStorage
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
+
+  // Set theme, persist to localStorage, and broadcast to other instances
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
     window.localStorage.setItem(STORAGE_KEY, newTheme);
+    window.dispatchEvent(new CustomEvent<Theme>(THEME_CHANGE_EVENT, { detail: newTheme }));
   }, []);
 
   // Toggle between light and dark
   const toggleTheme = useCallback(() => {
-    setThemeState((prev) => {
-      const newTheme = prev === 'light' ? 'dark' : 'light';
-      window.localStorage.setItem(STORAGE_KEY, newTheme);
-      return newTheme;
-    });
-  }, []);
+    setTheme(themeRef.current === 'light' ? 'dark' : 'light');
+  }, [setTheme]);
 
   return {
     theme,

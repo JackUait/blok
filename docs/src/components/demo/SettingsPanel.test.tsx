@@ -24,10 +24,13 @@ function openPanel() {
 describe('SettingsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    document.documentElement.removeAttribute('data-theme');
   });
 
   describe('edge tab', () => {
@@ -203,22 +206,44 @@ describe('SettingsPanel', () => {
   });
 
   describe('segmented choices', () => {
-    it('forces the dark theme', () => {
+    it('switches the whole documentation to the dark theme', () => {
       const { onSettingsChange } = renderPanel();
 
       openPanel();
       fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
 
-      expect(onSettingsChange).toHaveBeenCalledWith({ ...DEFAULT_EDITOR_SETTINGS, theme: 'dark' });
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+      // The site theme is not an editor setting — it must not touch them.
+      expect(onSettingsChange).not.toHaveBeenCalled();
     });
 
-    it('marks the active theme option as checked', () => {
-      renderPanel({ theme: 'dark' });
+    it('switches the documentation back to the light theme', () => {
+      renderPanel();
+
+      openPanel();
+      fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
+
+      expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    });
+
+    it('offers only Light and Dark — no Match site option', () => {
+      renderPanel();
 
       openPanel();
 
-      expect(screen.getByRole('radio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
-      expect(screen.getByRole('radio', { name: 'Match site' })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.queryByRole('radio', { name: 'Match site' })).not.toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Light' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Dark' })).toBeInTheDocument();
+    });
+
+    it('marks the current site theme as checked', () => {
+      renderPanel();
+
+      openPanel();
+
+      expect(screen.getByRole('radio', { name: 'Light' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'false');
     });
 
     it('switches to full width', () => {
@@ -242,14 +267,14 @@ describe('SettingsPanel', () => {
 
   describe('segmented control animation', () => {
     it('renders a sliding pill that sits under the active option', () => {
-      renderPanel({ theme: 'dark' });
+      renderPanel({ contentAlign: 'right' });
 
       openPanel();
 
-      const group = screen.getByRole('radiogroup', { name: 'Theme' });
+      const group = screen.getByRole('radiogroup', { name: 'Content alignment' });
       const thumb = within(group).getByTestId('segmented-thumb');
       expect(thumb.className).toContain('transition-transform');
-      // 'dark' is the third of three options — the pill slides two widths over.
+      // 'right' is the third of three options — the pill slides two widths over.
       expect(thumb.style.transform).toBe('translateX(200%)');
       // jsdom normalizes the calc — just check it's a third of the padded track.
       expect(thumb.style.width).toContain('100% - 0.5rem');
@@ -295,7 +320,7 @@ describe('SettingsPanel', () => {
 
   describe('reset', () => {
     it('restores the defaults', () => {
-      const { onSettingsChange } = renderPanel({ readOnly: true, theme: 'dark', width: 'full' });
+      const { onSettingsChange } = renderPanel({ readOnly: true, width: 'full' });
 
       openPanel();
       fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }));

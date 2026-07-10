@@ -204,6 +204,32 @@ describe('useTheme', () => {
     });
   });
 
+  describe('cross-instance sync', () => {
+    it('keeps multiple hook instances in sync when one sets the theme', () => {
+      const first = renderHook(() => useTheme());
+      const second = renderHook(() => useTheme());
+
+      act(() => {
+        first.result.current.setTheme('dark');
+      });
+
+      expect(first.result.current.theme).toBe('dark');
+      expect(second.result.current.theme).toBe('dark');
+    });
+
+    it('keeps multiple hook instances in sync when one toggles the theme', () => {
+      const first = renderHook(() => useTheme());
+      const second = renderHook(() => useTheme());
+
+      act(() => {
+        second.result.current.toggleTheme();
+      });
+
+      expect(first.result.current.theme).toBe('dark');
+      expect(second.result.current.theme).toBe('dark');
+    });
+  });
+
   describe('system theme changes', () => {
     it('should update resolved theme when system theme changes from light to dark', () => {
       // Start with light system preference

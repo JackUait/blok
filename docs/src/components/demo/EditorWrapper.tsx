@@ -3,11 +3,9 @@ import { useI18n } from "../../contexts/I18nContext";
 import { useTheme } from "../../hooks/useTheme";
 import { Typo } from "../common/Typo";
 import { assertEditorModulesComplete } from "./assertEditorModules";
-import { cn } from "@/lib/utils";
 import {
   buildEditorSettingsProps,
   DEFAULT_EDITOR_SETTINGS,
-  editorBackdropClassName,
   type EditorSettings,
 } from "./editor-settings";
 
@@ -161,7 +159,7 @@ export const EditorWrapper: React.FC<{
   return (
     <BlokEditor
       ref={handleEditorRef}
-      className={cn('blok-editor', editorBackdropClassName(settings, resolvedTheme))}
+      className="blok-editor"
       {...settingsProps}
       deps={settingsDeps}
       tools={{

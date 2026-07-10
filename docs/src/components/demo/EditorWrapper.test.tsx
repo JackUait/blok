@@ -122,19 +122,6 @@ describe('EditorWrapper', () => {
       });
     });
 
-    it('wraps the editor in a contrasting backdrop when the theme is forced away from the site theme', async () => {
-      const { DEFAULT_EDITOR_SETTINGS } = await import('./editor-settings');
-      const { container } = renderEditor({
-        settings: { ...DEFAULT_EDITOR_SETTINGS, theme: 'dark' },
-      });
-
-      // jsdom has no dark OS preference, so the site theme resolves to light —
-      // a forced dark editor needs its own dark background to stay readable.
-      await waitFor(() => {
-        expect(container.querySelector('.blok-editor')?.className).toContain('demo-forced-theme');
-      });
-    });
-
     it('left-aligns block content so it starts under the Nav logo', async () => {
       const { container } = renderEditor();
 

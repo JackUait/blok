@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_EDITOR_SETTINGS,
   buildEditorSettingsProps,
-  editorBackdropClassName,
   type EditorSettings,
 } from './editor-settings';
 
@@ -19,18 +18,10 @@ describe('buildEditorSettingsProps', () => {
     expect(props.placeholder).toBeUndefined();
   });
 
-  it('follows the site theme when theme is "site"', () => {
+  it('always follows the site theme', () => {
     const { props } = buildEditorSettingsProps(DEFAULT_EDITOR_SETTINGS, 'dark');
 
     expect(props.theme).toBe('dark');
-  });
-
-  it('overrides the site theme when a forced theme is chosen', () => {
-    const settings: EditorSettings = { ...DEFAULT_EDITOR_SETTINGS, theme: 'light' };
-
-    const { props } = buildEditorSettingsProps(settings, 'dark');
-
-    expect(props.theme).toBe('light');
   });
 
   it('passes readOnly, width and contentAlign through', () => {
@@ -62,37 +53,13 @@ describe('buildEditorSettingsProps', () => {
     expect(blank.props.placeholder).toBeUndefined();
   });
 
-  describe('editorBackdropClassName', () => {
-    it('adds no backdrop when the editor follows the site theme', () => {
-      expect(editorBackdropClassName(DEFAULT_EDITOR_SETTINGS, 'light')).toBe('');
-      expect(editorBackdropClassName(DEFAULT_EDITOR_SETTINGS, 'dark')).toBe('');
-    });
-
-    it('adds no backdrop when the forced theme matches the site theme', () => {
-      expect(editorBackdropClassName({ ...DEFAULT_EDITOR_SETTINGS, theme: 'light' }, 'light')).toBe('');
-      expect(editorBackdropClassName({ ...DEFAULT_EDITOR_SETTINGS, theme: 'dark' }, 'dark')).toBe('');
-    });
-
-    it('adds a contrasting backdrop when the forced theme differs from the site theme', () => {
-      const darkOnLight = editorBackdropClassName({ ...DEFAULT_EDITOR_SETTINGS, theme: 'dark' }, 'light');
-      const lightOnDark = editorBackdropClassName({ ...DEFAULT_EDITOR_SETTINGS, theme: 'light' }, 'dark');
-
-      expect(darkOnLight).toContain('demo-forced-theme');
-      expect(darkOnLight).toMatch(/bg-/);
-      expect(lightOnDark).toContain('demo-forced-theme');
-      expect(lightOnDark).toMatch(/bg-/);
-      expect(darkOnLight).not.toBe(lightOnDark);
-    });
-  });
-
   describe('deps (settings that require recreating the editor)', () => {
-    it('is stable across reactive-only changes (readOnly, theme, width, placeholder)', () => {
+    it('is stable across reactive-only changes (readOnly, width, placeholder)', () => {
       const base = buildEditorSettingsProps(DEFAULT_EDITOR_SETTINGS, 'light');
       const changed = buildEditorSettingsProps(
         {
           ...DEFAULT_EDITOR_SETTINGS,
           readOnly: true,
-          theme: 'dark',
           width: 'full',
           placeholder: 'hi',
         },

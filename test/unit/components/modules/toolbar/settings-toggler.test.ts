@@ -54,8 +54,13 @@ describe('SettingsTogglerHandler', () => {
   let getBlok: () => BlokModules;
   let setHoveredBlockSpy: ReturnType<typeof vi.fn>;
   let cancelTrackingSpy: ReturnType<typeof vi.fn>;
+  let readOnlyEnabled: boolean;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
+    readOnlyEnabled = false;
+
     clickDragHandler = new ClickDragHandler();
 
     mockBlock = {
@@ -84,6 +89,11 @@ describe('SettingsTogglerHandler', () => {
       },
       DragManager: {
         cancelTracking: cancelTrackingSpy,
+      },
+      ReadOnly: {
+        get isEnabled(): boolean {
+          return readOnlyEnabled;
+        },
       },
       I18n: {
         t: vi.fn((key: string) => key),
@@ -153,6 +163,62 @@ describe('SettingsTogglerHandler', () => {
           { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);
+    });
+  });
+
+  describe('read-only tooltip', () => {
+    const emptyNodes = (): Parameters<SettingsTogglerHandler['make']>[0] => ({
+      wrapper: undefined,
+      content: undefined,
+      actions: undefined,
+      plusButton: undefined,
+      settingsToggler: undefined,
+    });
+
+    it('omits the "Drag to move" line when read-only is enabled', async () => {
+      const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
+
+      readOnlyEnabled = true;
+
+      settingsTogglerHandler.make(emptyNodes());
+
+      expect(createTooltipContent).toHaveBeenCalledWith([
+        [
+          { text: 'blockSettings.clickAction', highlight: true },
+          { text: 'blockSettings.orConjunction', highlight: false },
+          { text: 'blockSettings.menuShortcutMac', highlight: true },
+          { text: 'blockSettings.openMenuAction', highlight: false },
+        ],
+      ]);
+    });
+
+    it('re-binds the tooltip when read-only is toggled after creation', async () => {
+      const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
+      const { onHover } = await import('../../../../../src/components/utils/tooltip');
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      (createTooltipContent as Mock).mockClear();
+      (onHover as Mock).mockClear();
+
+      readOnlyEnabled = true;
+      settingsTogglerHandler.refreshTooltip();
+
+      expect(createTooltipContent).toHaveBeenCalledWith([
+        [
+          { text: 'blockSettings.clickAction', highlight: true },
+          { text: 'blockSettings.orConjunction', highlight: false },
+          { text: 'blockSettings.menuShortcutMac', highlight: true },
+          { text: 'blockSettings.openMenuAction', highlight: false },
+        ],
+      ]);
+      expect(onHover).toHaveBeenCalledWith(settingsToggler, 'tooltip content', { delay: 500 });
     });
   });
 

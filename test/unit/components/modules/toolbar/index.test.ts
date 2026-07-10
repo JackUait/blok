@@ -1359,6 +1359,17 @@ describe('Plus button interactions', () => {
       expect(isHidden).toBe(true);
     });
 
+    it('re-binds the settings toggler tooltip when toggleReadOnly is called', () => {
+      const settingsTogglerHandler = (toolbar as unknown as {
+        settingsTogglerHandler: { refreshTooltip: () => void };
+      }).settingsTogglerHandler;
+      const refreshTooltipSpy = vi.spyOn(settingsTogglerHandler, 'refreshTooltip');
+
+      toolbar.toggleReadOnly(true);
+
+      expect(refreshTooltipSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('exposes moveAndOpen after toggleReadOnly(true) and does not throw when called with no args', () => {
       toolbar.toggleReadOnly(true);
 

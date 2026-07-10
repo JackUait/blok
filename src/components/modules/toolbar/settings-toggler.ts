@@ -183,29 +183,40 @@ export class SettingsTogglerHandler {
 
     this.settingsTogglerElement = settingsToggler;
 
-    /**
-     * Add events to show/hide tooltip for settings toggler
-     */
-    const userOS = getUserOS();
-    const shortcut = userOS.win
+    this.refreshTooltip();
+
+    return settingsToggler;
+  }
+
+  /**
+   * Binds the settings toggler tooltip to match the current read-only state.
+   * Dragging is suppressed in read-only, so the "Drag to move" line is omitted there.
+   * Called on creation and whenever read-only is toggled.
+   */
+  public refreshTooltip(): void {
+    if (this.settingsTogglerElement === null) {
+      return;
+    }
+
+    const blok = this.getBlok();
+    const shortcut = getUserOS().win
       ? blok.I18n.t('blockSettings.menuShortcutWin')
       : blok.I18n.t('blockSettings.menuShortcutMac');
 
-    const blockTunesTooltip = createTooltipContent([
-      blok.I18n.t('blockSettings.dragToMove'),
-      [
-        { text: blok.I18n.t('blockSettings.clickAction'), highlight: true },
-        { text: blok.I18n.t('blockSettings.orConjunction'), highlight: false },
-        { text: shortcut, highlight: true },
-        { text: blok.I18n.t('blockSettings.openMenuAction'), highlight: false },
-      ],
-    ]);
+    const openMenuLine = [
+      { text: blok.I18n.t('blockSettings.clickAction'), highlight: true },
+      { text: blok.I18n.t('blockSettings.orConjunction'), highlight: false },
+      { text: shortcut, highlight: true },
+      { text: blok.I18n.t('blockSettings.openMenuAction'), highlight: false },
+    ];
 
-    onHover(settingsToggler, blockTunesTooltip, {
+    const lines = blok.ReadOnly.isEnabled
+      ? [openMenuLine]
+      : [blok.I18n.t('blockSettings.dragToMove'), openMenuLine];
+
+    onHover(this.settingsTogglerElement, createTooltipContent(lines), {
       delay: 500,
     });
-
-    return settingsToggler;
   }
 
   /**

@@ -40,6 +40,14 @@ export class CrossBlockSelection extends Module {
   private shiftDragActive = false;
 
   /**
+   * Whether the current drag gesture has selected a multi-line child-block
+   * range inside a nested-blocks container (several "lines" in one table
+   * cell). While false, a drag that stays on the anchor line is a plain
+   * native TEXT selection and must not be hijacked into a block selection.
+   */
+  private nestedRangeDragActive = false;
+
+  /**
    * Module preparation
    * @returns {Promise}
    */
@@ -68,6 +76,7 @@ export class CrossBlockSelection extends Module {
 
     this.firstSelectedBlock = block;
     this.lastSelectedBlock = block;
+    this.nestedRangeDragActive = false;
 
     this.listeners.on(document, 'mouseover', this.onMouseOver);
     this.listeners.on(document, 'mouseup', this.onMouseUp);
@@ -550,6 +559,8 @@ export class CrossBlockSelection extends Module {
     this.listeners.off(document, 'mouseover', this.onMouseOver);
     this.listeners.off(document, 'mouseup', this.onMouseUp);
 
+    this.nestedRangeDragActive = false;
+
     /**
      * Show toolbar for multi-block selection after mouse up
      */
@@ -713,12 +724,21 @@ export class CrossBlockSelection extends Module {
     }
 
     if (rawTargetBlock === anchorBlock) {
-      /** Back on the anchor line — collapse the range to just the anchor. */
-      this.selectNestedBlockRange(targetContainer, anchorBlock, anchorBlock);
+      /**
+       * The pointer is (back) on the anchor line. Only collapse the range to
+       * the anchor when this gesture already selected a multi-line range —
+       * otherwise this is a plain text drag inside one line (the pointer may
+       * graze the cell padding and re-enter) and the native text selection
+       * must be left alone.
+       */
+      if (this.nestedRangeDragActive) {
+        this.selectNestedBlockRange(targetContainer, anchorBlock, anchorBlock);
+      }
 
       return;
     }
 
+    this.nestedRangeDragActive = true;
     this.selectNestedBlockRange(targetContainer, anchorBlock, rawTargetBlock);
   }
 

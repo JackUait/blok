@@ -269,6 +269,69 @@ test.describe('table cell — selecting several lines inside one cell', () => {
     await expect(cell).not.toContainText('Line one');
   });
 
+  test('text drag inside a single-line cell keeps the native text selection even when the pointer strays into cell padding', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['HTML tables supported', 'B1'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    const line = getCell(page, 0, 0).locator('[data-blok-component="paragraph"]');
+    const box = assertBoundingBox(await line.locator('[contenteditable="true"]').boundingBox(), 'cell line');
+    const midY = box.y + box.height / 2;
+
+    // A real hand drag is imprecise: start on the text, wander up into the
+    // cell padding above the line, come back onto the text, release.
+    // The start point sits well inside the text so the hover grip overlay at
+    // the block's left edge cannot swallow the mousedown.
+    await page.mouse.move(box.x + 30, midY);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 80, midY, { steps: 4 });
+    await page.mouse.move(box.x + 80, box.y - 6, { steps: 4 });
+    await page.mouse.move(box.x + 110, midY, { steps: 4 });
+    await page.mouse.up();
+
+    const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? '');
+
+    expect(selectedText.length, `native text selection should survive the drag, got "${selectedText}"`).toBeGreaterThan(0);
+    await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(0);
+  });
+
+  test('text drag inside ONE line of a multi-line cell selects text, not the line block', async ({ page }) => {
+    await createTableWithMultilineCell(page);
+
+    const cell = getCell(page, 0, 0);
+    const lineOne = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line one' });
+    const box = assertBoundingBox(await lineOne.locator('[contenteditable="true"]').boundingBox(), 'line one');
+    const midY = box.y + box.height / 2;
+
+    await page.mouse.move(box.x + 30, midY);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 60, midY, { steps: 4 });
+    await page.mouse.move(box.x + 60, box.y - 6, { steps: 4 });
+    await page.mouse.move(box.x + 75, midY, { steps: 4 });
+    await page.mouse.up();
+
+    const selectedText = await page.evaluate(() => window.getSelection()?.toString() ?? '');
+
+    expect(selectedText.length, `native text selection should survive the drag, got "${selectedText}"`).toBeGreaterThan(0);
+    await expect(cell.locator('[data-blok-selected="true"]')).toHaveCount(0);
+  });
+
   test('dragging on into a different cell falls back to cell-rectangle selection', async ({ page }) => {
     await createTableWithMultilineCell(page);
 

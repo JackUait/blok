@@ -816,7 +816,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 <body class="m-0 text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
-  <div class="text-base transition-[margin] duration-200 ease-in-out" id="main-content">
+  <div class="text-base" id="main-content">
     <!-- Header -->
     <div class="playground-header relative flex items-center px-[30px] max-md:px-5 border-b border-[#ebebeb] dark-mode:border-[#2f2f2f] transition-colors duration-150">
       <span class="playground-wordmark text-inherit mr-7 select-none">
@@ -2048,20 +2048,17 @@
     const settingsTab = document.getElementById('settings-tab');
     const settingsPanel = document.getElementById('settings-panel');
     const settingsClose = document.getElementById('settings-close');
-    const mainContent = document.getElementById('main-content');
 
     function openSettingsPanel() {
       settingsPanel.style.transform = '';
       settingsPanel.classList.remove('translate-x-full');
       settingsTab.classList.add('hidden');
-      mainContent.style.marginRight = '324px';
     }
 
     function closeSettingsPanel() {
       settingsPanel.classList.add('translate-x-full');
       settingsTab.classList.remove('hidden');
       settingsTab.classList.remove('is-hidden');
-      mainContent.style.marginRight = '0';
     }
 
     function toggleSettingsPanel() {

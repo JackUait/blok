@@ -13,6 +13,16 @@ import type { ToolbarNodes } from './types';
 
 
 /**
+ * Cursor classes that advertise the drag gesture. Applied only while editing —
+ * read-only suppresses dragging, so the handle must read as a plain click target.
+ */
+const DRAG_CURSOR_CLASSES = [
+  'active:cursor-grabbing',
+  'can-hover:hover:cursor-grab',
+  'group-data-[blok-dragging=true]:cursor-grabbing',
+];
+
+/**
  * SettingsTogglerHandler manages the settings toggler (drag handle) behavior.
  * Creates the settings toggler element with tooltip.
  */
@@ -117,10 +127,8 @@ export class SettingsTogglerHandler {
         'text-text-secondary cursor-pointer w-[18px] h-6 rounded-[5px] inline-flex justify-center items-center select-none',
         // SVG sizing
         '[&_svg]:h-[22px] [&_svg]:w-[22px] [&_svg]:shrink-0',
-        // Active state
-        'active:cursor-grabbing',
         // Hover (can-hover)
-        'can-hover:hover:bg-bg-light can-hover:hover:cursor-grab',
+        'can-hover:hover:bg-bg-light',
         // Hide when the toolbox popover is open
         'group-data-[blok-toolbox-opened=true]:hidden',
         // Hide while the block settings popover is open (matches plus-button)
@@ -129,7 +137,6 @@ export class SettingsTogglerHandler {
         'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile'
       ),
-      'group-data-[blok-dragging=true]:cursor-grabbing',
     ], {
       innerHTML: IconMenu,
     });
@@ -184,8 +191,26 @@ export class SettingsTogglerHandler {
     this.settingsTogglerElement = settingsToggler;
 
     this.refreshTooltip();
+    this.refreshCursor();
 
     return settingsToggler;
+  }
+
+  /**
+   * Matches the settings toggler cursor to the current read-only state: the
+   * grab cursors only in edit mode, the base pointer everywhere else.
+   * Called on creation and whenever read-only is toggled.
+   */
+  public refreshCursor(): void {
+    if (this.settingsTogglerElement === null) {
+      return;
+    }
+
+    const draggable = !this.getBlok().ReadOnly.isEnabled;
+
+    DRAG_CURSOR_CLASSES.forEach((className) => {
+      this.settingsTogglerElement?.classList.toggle(className, draggable);
+    });
   }
 
   /**

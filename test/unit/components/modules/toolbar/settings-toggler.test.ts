@@ -212,6 +212,58 @@ describe('SettingsTogglerHandler', () => {
     });
   });
 
+  describe('read-only cursor', () => {
+    const emptyNodes = (): Parameters<SettingsTogglerHandler['make']>[0] => ({
+      wrapper: undefined,
+      content: undefined,
+      actions: undefined,
+      plusButton: undefined,
+      settingsToggler: undefined,
+    });
+
+    const grabClasses = [
+      'active:cursor-grabbing',
+      'can-hover:hover:cursor-grab',
+      'group-data-[blok-dragging=true]:cursor-grabbing',
+    ];
+
+    it('keeps the grab cursors while editing', () => {
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(true);
+      });
+    });
+
+    it('drops the grab cursors when read-only is enabled', () => {
+      readOnlyEnabled = true;
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(false);
+      });
+    });
+
+    it('re-applies the cursors when read-only is toggled after creation', () => {
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      readOnlyEnabled = true;
+      settingsTogglerHandler.refreshCursor();
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(false);
+      });
+
+      readOnlyEnabled = false;
+      settingsTogglerHandler.refreshCursor();
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(true);
+      });
+    });
+  });
+
   describe('make - keyboard activation', () => {
     it('activates handleClick on Enter', () => {
       const settingsToggler = settingsTogglerHandler.make({

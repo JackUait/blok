@@ -404,6 +404,7 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     this.applyReadOnlyToPlusButton(readOnlyEnabled);
     this.settingsTogglerHandler.refreshTooltip();
+    this.settingsTogglerHandler.refreshCursor();
   }
 
   /**

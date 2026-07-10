@@ -78,6 +78,7 @@ const CROSS_BROWSER_TESTS = [
   '**/ui/toolbar-nested-list-positioning.spec.ts',
   '**/ui/toolbar-rubber-band-hover.spec.ts',
   '**/tools/table-cell-multiline-selection.spec.ts',
+  '**/tools/nested-container-multiline-selection.spec.ts',
   '**/ui/toolbar-always-visible.spec.ts',
   '**/ui/settings-toggler-after-drag.spec.ts',
 

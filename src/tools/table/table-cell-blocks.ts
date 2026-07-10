@@ -816,6 +816,33 @@ export class TableCellBlocks {
   }
 
   /**
+   * Place the caret inside a cell after its content has been cleared.
+   *
+   * Clearing a multi-cell selection deletes every block those cells owned via
+   * async `api.blocks.delete()`. When the deleted blocks were the table's only
+   * blocks, the editor has no sibling to move the caret to and focus falls onto
+   * <body>. We restore focus into the given cell once the async deletion and the
+   * empty-cell repair (ensureCellHasBlock) have settled — scheduled on the next
+   * frame so it runs after those microtasks and wins the caret.
+   */
+  public focusClearedCell(cell: HTMLElement): void {
+    requestAnimationFrame(() => {
+      if (!this.gridElement.contains(cell)) {
+        return;
+      }
+
+      this.ensureCellHasBlock(cell);
+
+      const firstHolder = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}] [data-blok-id]`);
+      const blockId = firstHolder?.getAttribute('data-blok-id');
+
+      if (blockId) {
+        this.api.caret.setToBlock(blockId, 'start');
+      }
+    });
+  }
+
+  /**
    * Handle block mutation events from the editor.
    * When a block is added, check if it should be claimed by a cell.
    * When a block is removed, ensure no cell is left empty.

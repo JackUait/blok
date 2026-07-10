@@ -867,6 +867,10 @@ export class TableSubsystems {
           return;
         }
 
+        // Keep the caret inside the table after clearing. cells[0] is the
+        // top-left cell of the selection (collected row-major).
+        const anchorCell = cells[0];
+
         this.host.runTransactedStructuralOp(() => {
           const blockIds = cellBlocks.getBlockIdsFromCells(cells);
 
@@ -891,6 +895,10 @@ export class TableSubsystems {
             cell.style.color = '';
           }
         });
+
+        if (anchorCell) {
+          cellBlocks.focusClearedCell(anchorCell);
+        }
       },
       onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);

@@ -288,6 +288,55 @@ test.describe('table cell selection — delete key', () => {
     await expect(getCellEditable(page, 0, 2)).toHaveText('C1');
   });
 
+  test('multi-cell delete keeps focus inside the anchor cell', async ({ page }) => {
+    // A 2x2 table where the selection spans every cell: deleting clears all of
+    // the table's blocks, so the editor has no sibling to move the caret to.
+    // Regression: focus fell onto <body> instead of staying in the table.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                ['A1', 'B1'],
+                ['A2', 'B2'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Select every cell (0,0) → (1,1)
+    await selectCells(page, 0, 0, 1, 1);
+
+    const selected = page.locator('[data-blok-table-cell-selected]');
+
+    await expect(selected).toHaveCount(4);
+
+    await page.keyboard.press('Delete');
+
+    // Content is cleared
+    await expect(getCellEditable(page, 0, 0)).toHaveText('');
+
+    // Focus lands in the top-left anchor cell, not <body>.
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const cell = document.activeElement?.closest('[data-blok-table-cell]');
+
+          return cell?.getAttribute('data-blok-table-cell-row') === '0'
+            && cell?.getAttribute('data-blok-table-cell-col') === '0';
+        })
+      )
+      .toBe(true);
+  });
+
   test('column selection delete clears all cells in column', async ({ page }) => {
     await create3x3TableWithContent(page);
 

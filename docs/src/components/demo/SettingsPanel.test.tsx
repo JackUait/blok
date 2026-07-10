@@ -174,6 +174,15 @@ describe('SettingsPanel', () => {
       expect(screen.getByRole('switch', { name: 'Read-only mode' })).toHaveAttribute('aria-checked', 'true');
     });
 
+    it('toggles when the row label is clicked, not just the toggle control', () => {
+      const { onSettingsChange } = renderPanel();
+
+      openPanel();
+      fireEvent.click(screen.getByText('Read-only mode'));
+
+      expect(onSettingsChange).toHaveBeenCalledWith({ ...DEFAULT_EDITOR_SETTINGS, readOnly: true });
+    });
+
     it('turns autofocus on', () => {
       const { onSettingsChange } = renderPanel();
 

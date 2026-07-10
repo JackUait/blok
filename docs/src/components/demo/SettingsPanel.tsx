@@ -16,28 +16,30 @@ const SwitchRow: React.FC<{
   checked: boolean;
   onToggle: () => void;
 }> = ({ label, checked, onToggle }) => (
-  <div className="flex items-center justify-between gap-4">
-    <p className="min-w-0 text-sm font-semibold text-foreground"><Typo>{label}</Typo></p>
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={onToggle}
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={label}
+    onClick={onToggle}
+    className="flex w-full cursor-pointer items-center justify-between gap-4 text-left"
+  >
+    <span className="min-w-0 text-sm font-semibold text-foreground"><Typo>{label}</Typo></span>
+    <span
+      aria-hidden="true"
       className={cn(
-        'relative h-6 w-10 shrink-0 cursor-pointer rounded-full transition-colors',
+        'relative h-6 w-10 shrink-0 rounded-full transition-colors',
         checked ? 'bg-foreground' : 'bg-muted-foreground/25'
       )}
     >
       <span
-        aria-hidden="true"
         className={cn(
           'absolute top-0.5 size-5 rounded-full bg-background shadow-sm transition-all',
           checked ? 'left-[calc(100%-1.375rem)]' : 'left-0.5'
         )}
       />
-    </button>
-  </div>
+    </span>
+  </button>
 );
 
 const Segmented: React.FC<{

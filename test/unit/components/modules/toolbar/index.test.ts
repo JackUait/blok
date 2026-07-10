@@ -1381,6 +1381,17 @@ describe('Plus button interactions', () => {
       expect(refreshCursorSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('re-applies the settings toggler aria-label when toggleReadOnly is called', () => {
+      const settingsTogglerHandler = (toolbar as unknown as {
+        settingsTogglerHandler: { refreshAriaLabel: () => void };
+      }).settingsTogglerHandler;
+      const refreshAriaLabelSpy = vi.spyOn(settingsTogglerHandler, 'refreshAriaLabel');
+
+      toolbar.toggleReadOnly(true);
+
+      expect(refreshAriaLabelSpy).toHaveBeenCalledTimes(1);
+    });
+
     it('exposes moveAndOpen after toggleReadOnly(true) and does not throw when called with no args', () => {
       toolbar.toggleReadOnly(true);
 

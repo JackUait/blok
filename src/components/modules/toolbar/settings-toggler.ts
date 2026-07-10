@@ -120,7 +120,6 @@ export class SettingsTogglerHandler {
    * @returns The created settings toggler element
    */
   public make(nodes: ToolbarNodes): HTMLElement {
-    const blok = this.getBlok();
     const settingsToggler = $.make('span', [
       twJoin(
         // Base toolbox-button styles
@@ -150,27 +149,6 @@ export class SettingsTogglerHandler {
     // Users can move blocks with keyboard shortcuts (Cmd/Ctrl+Shift+Arrow)
     settingsToggler.setAttribute('role', 'button');
     settingsToggler.setAttribute('tabindex', '-1');
-    settingsToggler.setAttribute(
-      'aria-label',
-      blok.I18n.t('a11y.dragHandle')
-    );
-    settingsToggler.setAttribute(
-      'aria-roledescription',
-      blok.I18n.t('a11y.dragHandleRole')
-    );
-
-    /**
-     * Surface the keyboard block-move shortcut (previously documented only in a
-     * source comment) to assistive tech. aria-keyshortcuts uses the standard
-     * key-token syntax (not translated); the modifier is platform-branched to
-     * match the actual binding — Meta on mac, Control on Windows.
-     */
-    const keyshortcutModifier = getUserOS().win ? 'Control' : 'Meta';
-
-    settingsToggler.setAttribute(
-      'aria-keyshortcuts',
-      `${keyshortcutModifier}+Shift+ArrowUp ${keyshortcutModifier}+Shift+ArrowDown`
-    );
 
     /**
      * Keyboard activation: Enter / Space open the block settings menu, mirroring
@@ -192,8 +170,50 @@ export class SettingsTogglerHandler {
 
     this.refreshTooltip();
     this.refreshCursor();
+    this.refreshAriaLabel();
 
     return settingsToggler;
+  }
+
+  /**
+   * Matches what assistive tech announces to the current read-only state.
+   * Read-only suppresses both the drag gesture and the Cmd/Ctrl+Shift+Arrow
+   * block-move shortcut, so there the handle is announced as a plain button
+   * that opens the block menu.
+   * Called on creation and whenever read-only is toggled.
+   */
+  public refreshAriaLabel(): void {
+    const settingsToggler = this.settingsTogglerElement;
+
+    if (settingsToggler === null) {
+      return;
+    }
+
+    const blok = this.getBlok();
+
+    if (blok.ReadOnly.isEnabled) {
+      settingsToggler.setAttribute('aria-label', blok.I18n.t('blockSettings.clickToOpenMenu'));
+      settingsToggler.removeAttribute('aria-roledescription');
+      settingsToggler.removeAttribute('aria-keyshortcuts');
+
+      return;
+    }
+
+    settingsToggler.setAttribute('aria-label', blok.I18n.t('a11y.dragHandle'));
+    settingsToggler.setAttribute('aria-roledescription', blok.I18n.t('a11y.dragHandleRole'));
+
+    /**
+     * Surface the keyboard block-move shortcut (previously documented only in a
+     * source comment) to assistive tech. aria-keyshortcuts uses the standard
+     * key-token syntax (not translated); the modifier is platform-branched to
+     * match the actual binding — Meta on mac, Control on Windows.
+     */
+    const keyshortcutModifier = getUserOS().win ? 'Control' : 'Meta';
+
+    settingsToggler.setAttribute(
+      'aria-keyshortcuts',
+      `${keyshortcutModifier}+Shift+ArrowUp ${keyshortcutModifier}+Shift+ArrowDown`
+    );
   }
 
   /**

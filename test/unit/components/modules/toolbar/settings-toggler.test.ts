@@ -264,6 +264,56 @@ describe('SettingsTogglerHandler', () => {
     });
   });
 
+  describe('read-only aria-label', () => {
+    const emptyNodes = (): Parameters<SettingsTogglerHandler['make']>[0] => ({
+      wrapper: undefined,
+      content: undefined,
+      actions: undefined,
+      plusButton: undefined,
+      settingsToggler: undefined,
+    });
+
+    it('announces the drag affordance while editing', () => {
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('a11y.dragHandle');
+      expect(settingsToggler.getAttribute('aria-roledescription')).toBe('a11y.dragHandleRole');
+    });
+
+    it('announces only the menu when read-only is enabled', () => {
+      readOnlyEnabled = true;
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('blockSettings.clickToOpenMenu');
+      expect(settingsToggler.hasAttribute('aria-roledescription')).toBe(false);
+      expect(settingsToggler.hasAttribute('aria-keyshortcuts')).toBe(false);
+    });
+
+    it('re-applies the labels when read-only is toggled after creation', async () => {
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      readOnlyEnabled = true;
+      settingsTogglerHandler.refreshAriaLabel();
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('blockSettings.clickToOpenMenu');
+      expect(settingsToggler.hasAttribute('aria-roledescription')).toBe(false);
+
+      readOnlyEnabled = false;
+      settingsTogglerHandler.refreshAriaLabel();
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('a11y.dragHandle');
+      expect(settingsToggler.getAttribute('aria-roledescription')).toBe('a11y.dragHandleRole');
+      expect(settingsToggler.getAttribute('aria-keyshortcuts')).toBe(
+        'Meta+Shift+ArrowUp Meta+Shift+ArrowDown'
+      );
+    });
+  });
+
   describe('make - keyboard activation', () => {
     it('activates handleClick on Enter', () => {
       const settingsToggler = settingsTogglerHandler.make({

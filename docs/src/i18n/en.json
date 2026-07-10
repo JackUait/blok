@@ -876,7 +876,6 @@
   },
   "home": {
     "hero": {
-      "eyebrow": "Open-Source Editor",
       "title": "Build beautiful",
       "titleGradient": "block-based editors",
       "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app. Customizable, themeable, and battle-tested.",

@@ -55,12 +55,6 @@ const useActiveStep = (): string => {
   return activeId;
 };
 
-const FactCheckIcon: React.FC = () => (
-  <svg className="shrink-0 text-primary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M20 6L9 17l-5-5" />
-  </svg>
-);
-
 interface MigrationContentProps {
   /** When embedded inline (homepage tab strip), tighten the hero top spacing. */
   inline?: boolean;
@@ -70,12 +64,6 @@ interface MigrationContentProps {
 export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = false }) => {
   const { t } = useI18n();
   const activeId = useActiveStep();
-
-  const facts = [
-    t('migration.factOneCommand'),
-    t('migration.factToolsMapped'),
-    t('migration.factAlias'),
-  ];
 
   const codemodStep = MIGRATION_STEPS[0];
 
@@ -94,14 +82,6 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               <Typo>{t('migration.heroDescription')}</Typo>
             </p>
-            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2.5" data-blok-testid="hero-facts">
-              {facts.map((fact) => (
-                <li key={fact} className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <FactCheckIcon />
-                  <Typo>{fact}</Typo>
-                </li>
-              ))}
-            </ul>
           </div>
 
           <RewritePreview className="mt-14 duration-700 animate-in fade-in slide-in-from-bottom-4 zoom-in-[0.98] fill-mode-both delay-150 lg:mt-0" />

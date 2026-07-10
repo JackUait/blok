@@ -67,13 +67,11 @@ describe('MigrationPage', () => {
     expect(link).toHaveAttribute('href', '#changes');
   });
 
-  it('should render the fact row instead of marketing stat cards', () => {
+  it('should not render a hero fact row', () => {
     renderMigrationPage();
 
-    const facts = screen.getByTestId('hero-facts');
-    expect(facts).toHaveTextContent(m.factOneCommand);
-    expect(facts).toHaveTextContent(m.factToolsMapped);
-    expect(facts).toHaveTextContent(m.factAlias);
+    expect(screen.queryByTestId('hero-facts')).not.toBeInTheDocument();
+    expect(screen.queryByText('One codemod command')).not.toBeInTheDocument();
   });
 
   it('should render the step rail with anchors for every section', () => {

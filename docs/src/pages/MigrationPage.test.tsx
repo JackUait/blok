@@ -5,6 +5,7 @@ import { MigrationPage } from './MigrationPage';
 import {
   MIGRATION_STEPS,
   CODEMOD_DRY_RUN_COMMAND,
+  DIFF_CHANGES,
 } from '../components/migration/migration-data';
 import { I18nProvider } from '../contexts/I18nContext';
 import enJson from '../i18n/en.json';
@@ -48,6 +49,22 @@ describe('MigrationPage', () => {
     const heroCommand = screen.getByTestId('hero-command');
     expect(heroCommand).toHaveTextContent(CODEMOD_DRY_RUN_COMMAND);
     expect(screen.getByText(m.heroCommandHint)).toBeInTheDocument();
+  });
+
+  it('should render the rewrite preview card in the hero', () => {
+    renderMigrationPage();
+
+    const preview = screen.getByTestId('hero-rewrite-preview');
+    expect(preview).toHaveTextContent(DIFF_CHANGES[0].removed);
+    expect(preview).toHaveTextContent(DIFF_CHANGES[0].added);
+  });
+
+  it('should link the rewrite preview to the full changes section', () => {
+    renderMigrationPage();
+
+    const preview = screen.getByTestId('hero-rewrite-preview');
+    const link = within(preview).getByRole('link');
+    expect(link).toHaveAttribute('href', '#changes');
   });
 
   it('should render the fact row instead of marketing stat cards', () => {

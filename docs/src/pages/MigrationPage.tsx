@@ -3,6 +3,7 @@ import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { CodeBlock } from '../components/common/CodeBlock';
 import { CodemodCard } from '../components/migration/CodemodCard';
+import { RewritePreview } from '../components/migration/RewritePreview';
 import { MigrationSteps } from '../components/migration/MigrationSteps';
 import { MigrationStepRail } from '../components/migration/MigrationStepRail';
 import { MigrationSectionHeader } from '../components/migration/MigrationSectionHeader';
@@ -85,28 +86,37 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
   return (
     <>
       <section className={cn('mx-auto w-full max-w-6xl px-6 pb-16', inline ? 'pt-10' : 'pt-16 sm:pt-24')}>
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          <Typo>{t('migration.heroEyebrow')}</Typo>
-        </p>
-        <h1 className="mt-5 max-w-3xl font-display text-4xl font-extrabold tracking-tight text-balance text-foreground sm:text-5xl lg:text-6xl">
-          {t('migration.heroFromEditorJS')} {t('migration.heroToBlok')}{' '}
-          <span className="text-brand-gradient">{t('migration.heroBlok')}</span>
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-          <Typo>{t('migration.heroDescription')}</Typo>
-        </p>
-        <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2.5" data-blok-testid="hero-facts">
-          {facts.map((fact) => (
-            <li key={fact} className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <FactCheckIcon />
-              <Typo>{fact}</Typo>
-            </li>
-          ))}
-        </ul>
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center lg:gap-x-16">
+          <div className="duration-700 animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <Typo>{t('migration.heroEyebrow')}</Typo>
+            </p>
+            <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-balance text-foreground sm:text-5xl lg:text-6xl">
+              {t('migration.heroFromEditorJS')} {t('migration.heroToBlok')}{' '}
+              <span className="text-brand-gradient">{t('migration.heroBlok')}</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+              <Typo>{t('migration.heroDescription')}</Typo>
+            </p>
+            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2.5" data-blok-testid="hero-facts">
+              {facts.map((fact) => (
+                <li key={fact} className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <FactCheckIcon />
+                  <Typo>{fact}</Typo>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        {/* The command is the hero's payload — give it the full measure so it
+          <RewritePreview className="mt-14 duration-700 animate-in fade-in slide-in-from-bottom-4 zoom-in-[0.98] fill-mode-both delay-150 lg:mt-0" />
+        </div>
+
+        {/* The command is the hero's payload — keep it at full measure so it
             never truncates mid-flag the way a half-width column did. */}
-        <div className="mt-10 max-w-3xl" data-blok-testid="hero-command">
+        <div
+          className="mt-14 max-w-3xl duration-700 animate-in fade-in fill-mode-both delay-300"
+          data-blok-testid="hero-command"
+        >
           <CodeBlock code={CODEMOD_DRY_RUN_COMMAND} language="bash" />
           <p className="mt-3 text-sm text-muted-foreground">
             <Typo>{t('migration.heroCommandHint')}</Typo>

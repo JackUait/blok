@@ -5,6 +5,7 @@ import {
   MIGRATION_STEPS,
 } from "./migration-data";
 import { MigrationSectionHeader } from "./MigrationSectionHeader";
+import { Diff } from "./Diff";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
 
@@ -21,32 +22,6 @@ const SHELL_CLASS = "overflow-hidden rounded-2xl border border-border bg-card sh
  *  sit directly above the code they name. */
 const MAPPING_GRID =
   "grid grid-cols-[minmax(0,1fr)_0.8125rem_minmax(0,1fr)] items-center gap-x-3";
-
-interface DiffProps {
-  removed: string;
-  added: string;
-}
-
-/**
- * A before/after pair. The palette has no green, so the added line earns its
- * emphasis from weight and full-contrast ink rather than a foreign hue.
- */
-const Diff: React.FC<DiffProps> = ({ removed, added }) => {
-  const { t } = useI18n();
-
-  return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <div className="flex items-start gap-2.5 rounded-lg bg-destructive/[0.06] px-2.5 py-1.5">
-        <span className="select-none font-mono text-sm leading-5 font-bold text-destructive/70" aria-label={t('migration.removed')}>−</span>
-        <code className="min-w-0 break-all font-mono text-xs leading-5 text-muted-foreground line-through decoration-destructive/40">{removed}</code>
-      </div>
-      <div className="flex items-start gap-2.5 rounded-lg bg-foreground/[0.04] px-2.5 py-1.5">
-        <span className="select-none font-mono text-sm leading-5 font-bold text-foreground/50" aria-label={t('migration.added')}>+</span>
-        <code className="min-w-0 break-all font-mono text-xs leading-5 font-medium text-foreground">{added}</code>
-      </div>
-    </div>
-  );
-};
 
 /** Steps 2–5 of the migration guide, plus the Blok → Blok upgrade coda. */
 export const MigrationSteps: React.FC = () => {

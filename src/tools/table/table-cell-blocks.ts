@@ -1318,6 +1318,18 @@ export class TableCellBlocks {
       return;
     }
 
+    /**
+     * A drag across several line blocks inside one cell ends with a click
+     * whose target is retargeted to the blocks container (the common ancestor
+     * of the mousedown/mouseup targets). That is NOT a blank-space click:
+     * stealing the caret here would run Caret.setToBlock →
+     * BlockSelection.clearSelection() and wipe the just-created multi-line
+     * selection. Skip while any block inside this grid is selected.
+     */
+    if (this.gridElement.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null) {
+      return;
+    }
+
     const cell = isCell ? target : target.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
     if (!cell) {

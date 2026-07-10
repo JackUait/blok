@@ -1,5 +1,6 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
+import { DATA_ATTR } from '../constants';
 import { SelectionUtils } from '../selection/index';
 import { announce } from '../utils/announcer';
 import { mouseButtons } from '../utils';
@@ -623,6 +624,17 @@ export class CrossBlockSelection extends Module {
     const targetBlock = BlockManager.resolveToRootBlock(rawTargetBlock);
 
     if (targetBlock === relatedBlock) {
+      /**
+       * Both blocks live inside the same root container (e.g. a table).
+       * Each child block is its own contenteditable, so the browser cannot
+       * extend a native text selection across them — without this branch a
+       * drag across several lines inside one table cell selects NOTHING.
+       * When the drag stays inside one nested-blocks container (one cell),
+       * select the child-block range, mirroring how a drag across top-level
+       * blocks selects them.
+       */
+      this.handleSameRootHover(rawTargetBlock);
+
       return;
     }
 
@@ -654,9 +666,126 @@ export class CrossBlockSelection extends Module {
 
     this.Blok.InlineToolbar.close();
 
+    /**
+     * A drag that started inside a nested container (table cell) may have
+     * selected child blocks before leaving the container's root — drop those
+     * so the root-level range selection below is the only selection.
+     */
+    this.clearNestedBlockSelection();
+
     this.toggleBlocksSelectedState(relatedBlock, targetBlock);
     this.lastSelectedBlock = targetBlock;
   };
+
+  /**
+   * Return the nearest nested-blocks container (e.g. a table cell's blocks
+   * wrapper) holding the given block, or null for top-level blocks.
+   * @param block - the block whose container to find
+   */
+  private getNestedBlocksContainer(block: Block): HTMLElement | null {
+    return block.holder.parentElement?.closest<HTMLElement>(`[${DATA_ATTR.nestedBlocks}]`) ?? null;
+  }
+
+  /**
+   * Handle a drag hover where the hovered block and the drag anchor resolve to
+   * the same root block. When the gesture started on a child block and the
+   * hovered block is a DIFFERENT child of the SAME nested-blocks container
+   * (several "lines" inside one table cell), select the child-block range
+   * between them. When the hover leaves that container (e.g. crosses into
+   * another cell, where the table's own rectangle selection takes over), drop
+   * any child-block selection this path created.
+   * @param rawTargetBlock - the (unresolved) block currently hovered
+   */
+  private handleSameRootHover(rawTargetBlock: Block): void {
+    const anchorBlock = this.firstSelectedBlock;
+
+    if (!anchorBlock) {
+      return;
+    }
+
+    const targetContainer = this.getNestedBlocksContainer(rawTargetBlock);
+    const anchorContainer = this.getNestedBlocksContainer(anchorBlock);
+
+    if (targetContainer === null || targetContainer !== anchorContainer) {
+      this.clearNestedBlockSelection();
+
+      return;
+    }
+
+    if (rawTargetBlock === anchorBlock) {
+      /** Back on the anchor line — collapse the range to just the anchor. */
+      this.selectNestedBlockRange(targetContainer, anchorBlock, anchorBlock);
+
+      return;
+    }
+
+    this.selectNestedBlockRange(targetContainer, anchorBlock, rawTargetBlock);
+  }
+
+  /**
+   * Select the DOM-ordered range of child blocks between two blocks of one
+   * nested-blocks container, deselecting the container's other children.
+   * @param container - the nested-blocks container (one table cell)
+   * @param anchorBlock - the child block the drag started on
+   * @param targetBlock - the child block currently hovered
+   */
+  private selectNestedBlockRange(container: HTMLElement, anchorBlock: Block, targetBlock: Block): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    /** Child blocks of THIS container only, in DOM order (not of nested containers deeper down). */
+    const childBlocks = Array.from(container.querySelectorAll<HTMLElement>(`[${DATA_ATTR.element}]`))
+      .filter((holder) => holder.parentElement?.closest(`[${DATA_ATTR.nestedBlocks}]`) === container)
+      .map((holder) => BlockManager.getBlock(holder))
+      .filter((block): block is Block => block !== undefined);
+
+    const anchorIndex = childBlocks.indexOf(anchorBlock);
+    const targetIndex = childBlocks.indexOf(targetBlock);
+
+    if (anchorIndex === -1 || targetIndex === -1) {
+      return;
+    }
+
+    /**
+     * The native selection is confined to the anchor line's contenteditable
+     * and cannot grow past it — replace it with a block-level selection.
+     */
+    SelectionUtils.get()?.removeAllRanges();
+
+    const start = Math.min(anchorIndex, targetIndex);
+    const end = Math.max(anchorIndex, targetIndex);
+
+    childBlocks.forEach((_, index) => {
+      childBlocks[index].selected = index >= start && index <= end;
+    });
+
+    BlockSelection.clearCache();
+
+    this.firstSelectedBlock = anchorBlock;
+    this.lastSelectedBlock = targetBlock;
+
+    this.Blok.InlineToolbar.close();
+    this.Blok.Toolbar.close();
+  }
+
+  /**
+   * Deselect any child (nested) blocks selected by the intra-container drag
+   * path. Top-level block selections are left untouched.
+   */
+  private clearNestedBlockSelection(): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    const selectedChildren = BlockManager.blocks.filter((block) => block.selected && block.parentId != null);
+
+    if (selectedChildren.length === 0) {
+      return;
+    }
+
+    selectedChildren.forEach((_, index) => {
+      selectedChildren[index].selected = false;
+    });
+
+    BlockSelection.clearCache();
+  }
 
   /**
    * Change blocks selection state between passed two blocks.

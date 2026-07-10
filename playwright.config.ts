@@ -77,6 +77,7 @@ const CROSS_BROWSER_TESTS = [
   '**/tools/columns.spec.ts', // responsive vertical-stack assertion is layout/engine-dependent
   '**/ui/toolbar-nested-list-positioning.spec.ts',
   '**/ui/toolbar-rubber-band-hover.spec.ts',
+  '**/tools/table-cell-multiline-selection.spec.ts',
   '**/ui/toolbar-always-visible.spec.ts',
   '**/ui/settings-toggler-after-drag.spec.ts',
 

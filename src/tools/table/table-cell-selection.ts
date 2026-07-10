@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { IconCopy, IconCross, IconMarker, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
@@ -400,10 +401,17 @@ export class TableCellSelection {
       // interaction's pointerdown triggering the clear handler.
       document.addEventListener('pointerdown', this.boundClearSelection);
     } else if (this.anchorCell) {
-      if (this.hasSelection) {
+      // A whole-cell rectangle must not coexist with line blocks selected
+      // INSIDE the cell (a cross-block drag within one cell) — that block
+      // selection is the meaningful one, the rectangle would be misleading.
+      const hasBlockSelectionInGrid = this.grid.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null;
+
+      if (this.hasSelection && hasBlockSelectionInGrid) {
+        this.clearSelection();
+      } else if (this.hasSelection) {
         // Already selected (same single cell) — just re-register clear handler
         document.addEventListener('pointerdown', this.boundClearSelection);
-      } else {
+      } else if (!hasBlockSelectionInGrid) {
         // Single click without drag — select the clicked cell
         this.showProgrammaticSelection(
           this.anchorCell.row,

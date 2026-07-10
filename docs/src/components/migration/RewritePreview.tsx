@@ -97,7 +97,6 @@ interface RewritePreviewProps {
 export const RewritePreview: React.FC<RewritePreviewProps> = ({ className }) => {
   const { t } = useI18n();
   const { views, fading } = useRewritePlayback();
-  const done = views.every((view) => view.phase === "done");
 
   return (
     <div className={cn("relative", className)} data-blok-testid="hero-rewrite-preview">
@@ -108,20 +107,10 @@ export const RewritePreview: React.FC<RewritePreviewProps> = ({ className }) => 
       </div>
 
       <div className="hero-float overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-        {/* Editor chrome: an open file tab + the codemod running on the right. */}
-        <div className="flex items-end justify-between gap-3 border-b border-border bg-secondary/50 pr-4">
+        {/* Editor chrome: an open file tab. */}
+        <div className="flex items-end gap-3 border-b border-border bg-secondary/50 pr-4">
           <span className="-mb-px border-b-2 border-foreground px-4 pb-2 pt-2.5 font-mono text-xs text-foreground">
             editor.ts
-          </span>
-          <span className="flex items-center gap-2 pb-2 font-mono text-[11px] text-muted-foreground/80">
-            {done ? (
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-primary" aria-hidden="true">
-                <path d="M4 12l5 5L20 6" />
-              </svg>
-            ) : (
-              <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-primary" />
-            )}
-            migrate-from-editorjs
           </span>
         </div>
 

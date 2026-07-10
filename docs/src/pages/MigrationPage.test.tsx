@@ -84,11 +84,11 @@ describe('MigrationPage', () => {
     expect(within(section as HTMLElement).getByTestId('codemod-card')).toBeInTheDocument();
   });
 
-  it('should render the CTA with demo and docs links', () => {
+  it('should not render a trailing CTA section', () => {
     renderMigrationPage();
 
-    expect(screen.getByText(m.ctaTitle)).toBeInTheDocument();
-    expect(screen.getByText(m.ctaTryDemo).closest('a')).toHaveAttribute('href', '/demo');
-    expect(screen.getByText(m.ctaViewDocs).closest('a')).toHaveAttribute('href', '/docs');
+    expect(screen.queryByText('Ready to Migrate?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Try the Demo')).not.toBeInTheDocument();
+    expect(screen.queryByText('View API Docs')).not.toBeInTheDocument();
   });
 });

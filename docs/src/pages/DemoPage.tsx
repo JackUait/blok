@@ -3,6 +3,8 @@ import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { EditorWrapper } from '../components/demo/EditorWrapper';
 import { OutputPanel } from '../components/demo/OutputPanel';
+import { SettingsPanel } from '../components/demo/SettingsPanel';
+import { DEFAULT_EDITOR_SETTINGS } from '../components/demo/editor-settings';
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
 import { ShortcutKeys } from '../components/common/KeyIcon';
@@ -277,6 +279,7 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
 
 export const DemoPage: React.FC = () => {
   const { t } = useI18n();
+  const [editorSettings, setEditorSettings] = useState(DEFAULT_EDITOR_SETTINGS);
 
   return (
     <>
@@ -296,9 +299,10 @@ export const DemoPage: React.FC = () => {
             data-blok-testid="demo-editor-container"
           >
             <div className="mx-auto w-full max-w-6xl px-6">
-              <EditorWrapper />
+              <EditorWrapper settings={editorSettings} />
             </div>
           </div>
+          <SettingsPanel settings={editorSettings} onSettingsChange={setEditorSettings} />
         </main>
       </div>
       <Footer />

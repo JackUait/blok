@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
 import { DemoPage } from './DemoPage';
@@ -138,6 +138,45 @@ describe('DemoPage', () => {
       renderDemoPage();
 
       expect(screen.queryByTestId('output-panel')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('settings panel', () => {
+    it('renders a settings tab on the right edge', () => {
+      renderDemoPage();
+
+      expect(screen.getByRole('button', { name: 'Open editor settings' })).toBeInTheDocument();
+    });
+
+    it('opens the editor settings panel when the tab is clicked', () => {
+      renderDemoPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+
+      expect(screen.getByRole('heading', { name: 'Editor settings' })).toBeInTheDocument();
+    });
+
+    it('exposes the interesting editor settings as controls', () => {
+      renderDemoPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+
+      expect(screen.getByRole('switch', { name: 'Read-only mode' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Dark' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Full' })).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Hide toolbar' })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'First block placeholder' })).toBeInTheDocument();
+    });
+
+    it('re-aligns the editor content when alignment is changed in the panel', async () => {
+      const { container } = renderDemoPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Center' }));
+
+      await waitFor(() => {
+        expect(container.querySelector('.blok-editor')).toHaveAttribute('data-blok-content-align', 'center');
+      });
     });
   });
 

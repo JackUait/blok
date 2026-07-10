@@ -3,6 +3,13 @@ import { useI18n } from "../../contexts/I18nContext";
 import { useTheme } from "../../hooks/useTheme";
 import { Typo } from "../common/Typo";
 import { assertEditorModulesComplete } from "./assertEditorModules";
+import { cn } from "@/lib/utils";
+import {
+  buildEditorSettingsProps,
+  DEFAULT_EDITOR_SETTINGS,
+  editorBackdropClassName,
+  type EditorSettings,
+} from "./editor-settings";
 
 interface BlokEditorInstance {
   save: () => Promise<unknown>;
@@ -36,7 +43,9 @@ const objectUrlUploader = {
 
 export const EditorWrapper: React.FC<{
   onEditorReady?: (editor: BlokEditorInstance) => void;
-}> = ({ onEditorReady }) => {
+  /** Playground settings from the /demo settings panel. */
+  settings?: EditorSettings;
+}> = ({ onEditorReady, settings = DEFAULT_EDITOR_SETTINGS }) => {
   const { t } = useI18n();
   const { resolvedTheme } = useTheme();
   const [mods, setMods] = useState<{ react: BlokReactModule; tools: BlokToolsModule } | null>(null);
@@ -147,12 +156,14 @@ export const EditorWrapper: React.FC<{
     InlineCode, Equation, Link, Marker,
   } = mods.tools;
 
+  const { props: settingsProps, deps: settingsDeps } = buildEditorSettingsProps(settings, resolvedTheme);
+
   return (
     <BlokEditor
       ref={handleEditorRef}
-      className="blok-editor"
-      theme={resolvedTheme}
-      style={{ contentAlign: "left" }}
+      className={cn('blok-editor', editorBackdropClassName(settings, resolvedTheme))}
+      {...settingsProps}
+      deps={settingsDeps}
       tools={{
         // Block tools — the editor's full feature surface, mirroring the dev
         // playground (index.html) configuration.

@@ -30,7 +30,9 @@ type I18nMocks = {
   t: Mock<(text: string) => string>;
 };
 
-const createMocks = (): { api: API; block: BlockAPI; notifier: NotifierMocks; i18n: I18nMocks } => {
+const createMocks = (
+  { readOnly = false }: { readOnly?: boolean } = {}
+): { api: API; block: BlockAPI; notifier: NotifierMocks; i18n: I18nMocks } => {
   const notifier: NotifierMocks = { show: vi.fn() };
   const i18n: I18nMocks = { t: vi.fn((text: string) => text) };
 
@@ -38,6 +40,7 @@ const createMocks = (): { api: API; block: BlockAPI; notifier: NotifierMocks; i1
     api: {
       notifier: notifier as unknown as API['notifier'],
       i18n: i18n as unknown as API['i18n'],
+      readOnly: { isEnabled: readOnly } as unknown as API['readOnly'],
     } as API,
     block: { id: 'abc123XYZ0' } as unknown as BlockAPI,
     notifier,
@@ -95,6 +98,16 @@ describe('CopyLinkTune', () => {
     expect(label).not.toContain('⌃');
     expect(label).not.toContain('⌘');
     expect(label).toBe('Ctrl + Win + L');
+  });
+
+  it('omits the shortcut hint in read-only mode', () => {
+    const { api, block } = createMocks({ readOnly: true });
+    const tune = new CopyLinkTune({ api, block });
+
+    const config = tune.render() as MenuConfigItem;
+
+    expect((config as { secondaryLabel?: string }).secondaryLabel).toBeUndefined();
+    expect(config.title).toBe('blockSettings.copyLink');
   });
 
   it('copies the correct URL to clipboard and shows success notification when activated', async () => {

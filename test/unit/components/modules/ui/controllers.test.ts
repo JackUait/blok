@@ -40,6 +40,7 @@ const createBlokStub = (): BlokModules => {
       currentBlock: null,
       currentBlockIndex: -1,
       lastBlock: null,
+      blocks: [],
       insert: vi.fn(() => ({})),
       insertAtEnd: vi.fn(),
       unsetCurrentBlock: vi.fn(),

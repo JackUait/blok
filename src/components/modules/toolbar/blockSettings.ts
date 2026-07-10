@@ -13,6 +13,7 @@ import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
 import { beautifyShortcut } from '../../utils/string';
 import { getCaretOffset } from '../../utils/caret/selection';
+import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../utils/nested-container-caret';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
 import { buildConvertMenuEntries } from '../../utils/convert-menu';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
@@ -633,10 +634,23 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         onActivate: () => {
           const { BlockManager, Caret, Toolbar } = this.Blok;
 
+          const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+
           const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
           if (insertedBlock) {
             Caret.setToBlock(insertedBlock, Caret.positions.END);
+          } else {
+            /**
+             * A partial multi-block delete inserts no replacement and sets no
+             * caret. When the deleted blocks all lived in one nested-blocks
+             * container (e.g. a table cell), restore the caret there so focus
+             * does not fall to <body>.
+             */
+            scheduleCaretIntoNestedContainer(nestedContainer, {
+              getBlock: (holder) => BlockManager.getBlock(holder),
+              setCaretToBlockStart: (block) => Caret.setToBlock(block, Caret.positions.START),
+            });
           }
 
           Toolbar.close();

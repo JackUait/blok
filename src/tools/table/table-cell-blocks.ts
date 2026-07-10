@@ -84,6 +84,9 @@ export class TableCellBlocks {
   /** When true, handleBlockMutation skips claiming so exitTableForward's new block stays outside the grid. */
   private isExitingTable = false;
 
+  /** When true, ensureCellHasBlock is inserting its own repair block — skip claim heuristics for it. */
+  private isRepairingCell = false;
+
   constructor(options: TableCellBlocksOptions) {
     this.api = options.api;
     this.gridElement = options.gridElement;
@@ -805,14 +808,25 @@ export class TableCellBlocks {
     // Wrap in transactWithoutCapture so this auto-repair insertion does not
     // pollute the undo history. If a drag or other operation causes a cell to
     // temporarily lose its block, the repair should be invisible to undo/redo.
-    this.api.blocks.transactWithoutCapture?.(() => {
-      const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
+    //
+    // isRepairingCell suppresses handleBlockMutation's claim heuristics for the
+    // repair block's own block-added event: this method places the block itself,
+    // and the removed-entry route would otherwise mis-claim it into whichever
+    // cell recorded a removal at a coincidentally-equal flat index.
+    this.isRepairingCell = true;
 
-      container.appendChild(block.holder);
-      this.api.blocks.setBlockParent(block.id, this.tableBlockId);
-      this.syncBlockToModel(cell, block.id);
-      this.stripPlaceholders(container);
-    });
+    try {
+      this.api.blocks.transactWithoutCapture?.(() => {
+        const block = this.api.blocks.insert('paragraph', { text: '' }, {}, this.api.blocks.getBlocksCount(), true);
+
+        container.appendChild(block.holder);
+        this.api.blocks.setBlockParent(block.id, this.tableBlockId);
+        this.syncBlockToModel(cell, block.id);
+        this.stripPlaceholders(container);
+      });
+    } finally {
+      this.isRepairingCell = false;
+    }
   }
 
   /**
@@ -884,6 +898,14 @@ export class TableCellBlocks {
     }
 
     if (type !== 'block-added') {
+      return;
+    }
+
+    // ensureCellHasBlock is inserting its own repair block and places it
+    // itself — claim heuristics (especially the removed-entry route) would
+    // mis-claim the repair into a different cell that recorded a removal at
+    // the same flat index.
+    if (this.isRepairingCell) {
       return;
     }
 
@@ -1102,6 +1124,22 @@ export class TableCellBlocks {
 
     if (cell && this.gridElement.contains(cell)) {
       this.removedBlockCells.set(detail.target.id, { cell, index: detail.index });
+
+      return;
+    }
+
+    /**
+     * The holder may already be detached when block-removed fires (typing over
+     * a block selection deletes the DOM before emitting the event). The model
+     * still maps the block to its cell at this point (handleBlockRemoved clears
+     * it right after this call), so fall back to it — otherwise the replacement
+     * block is never claimed into the cell and lands after the table.
+     */
+    const cellPos = this.model.findCellForBlock(detail.target.id);
+    const cellEl = cellPos ? this.getCell(cellPos.row, cellPos.col) : null;
+
+    if (cellEl) {
+      this.removedBlockCells.set(detail.target.id, { cell: cellEl, index: detail.index });
     }
   }
 

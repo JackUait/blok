@@ -178,6 +178,7 @@ type BlokMock = {
   };
   BlockManager: {
     currentBlock?: Block;
+    blocks: Block[];
     convert: Mock<(block: Block, tool: string, data?: unknown) => Promise<Block>>;
     deleteSelectedBlocksAndInsertReplacement?: Mock<() => Block | null>;
   };
@@ -233,6 +234,7 @@ const createBlokMock = (): BlokMock => {
   };
   const blockManager = {
     currentBlock: undefined as Block | undefined,
+    blocks: [] as Block[],
     convert: vi.fn(async (_block: Block, _tool: string, _data?: unknown) => createBlock()),
   };
   const crossBlockSelection = {

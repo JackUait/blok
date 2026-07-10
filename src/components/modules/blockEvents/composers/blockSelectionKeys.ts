@@ -1,5 +1,6 @@
 import type { Block } from '../../../block';
 import { SelectionUtils } from '../../../selection/index';
+import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
@@ -452,10 +453,14 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
+    const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+
     const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
     if (insertedBlock) {
       Caret.setToBlock(insertedBlock, Caret.positions.START);
+    } else {
+      this.scheduleCaretRestore(nestedContainer);
     }
 
     BlockSelection.clearSelection(event);
@@ -465,6 +470,20 @@ export class BlockSelectionKeys extends BlockEventComposer {
     event.stopPropagation();
 
     return true;
+  }
+
+  /**
+   * Restore the caret into the nested-blocks container (e.g. a table cell)
+   * that held the deleted selection, so focus does not fall onto <body>.
+   * @param container - the container the deleted blocks lived in, or null
+   */
+  private scheduleCaretRestore(container: HTMLElement | null): void {
+    const { BlockManager, Caret } = this.Blok;
+
+    scheduleCaretIntoNestedContainer(container, {
+      getBlock: (holder) => BlockManager.getBlock(holder),
+      setCaretToBlockStart: (block) => Caret.setToBlock(block, Caret.positions.START),
+    });
   }
 
   /**
@@ -494,10 +513,14 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     BlockSelection.copySelectedBlocks(event).then(() => {
+      const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+
       const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
       if (insertedBlock) {
         Caret.setToBlock(insertedBlock, Caret.positions.START);
+      } else {
+        this.scheduleCaretRestore(nestedContainer);
       }
 
       BlockSelection.clearSelection(event);

@@ -211,6 +211,26 @@ export class RectangleSelection extends Module {
     }
 
     /**
+     * The block toolbar hovers ABOVE block content — e.g. at the left edge of
+     * a line inside a table cell. A mousedown that lands on the toolbar while
+     * a nested-blocks container (a table cell's content) sits under the
+     * pointer is a text-selection gesture inside that cell, never a lasso;
+     * arming the lasso here made such a drag select (and a following
+     * Backspace delete) the whole table. Toolbar mousedowns over the page
+     * margin remain valid rubber-band starts.
+     */
+    if (startsInsideToolbar) {
+      const nestedBlocksSelector = createSelector(DATA_ATTR.nestedBlocks);
+      const startsOverNestedBlocks = document
+        .elementsFromPoint(pageX - scrollLeft, pointerY)
+        .some((el) => el.matches(nestedBlocksSelector));
+
+      if (startsOverNestedBlocks) {
+        return;
+      }
+    }
+
+    /**
      * Schedule toolbar close for the first mousemove (i.e. when the user actually drags).
      * Deferring prevents a plain click (e.g. on the plus button) from accidentally closing
      * the toolbar before its own click handler fires.

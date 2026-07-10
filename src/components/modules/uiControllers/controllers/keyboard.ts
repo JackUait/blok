@@ -1,6 +1,7 @@
 import type { Block } from '../../../block';
 import { SelectionUtils as Selection } from '../../../selection/index';
 import { getCaretOffset } from '../../../utils/caret/selection';
+import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
@@ -554,10 +555,22 @@ export class KeyboardController extends Controller {
       return;
     }
 
+    const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+
     const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
     if (insertedBlock) {
       Caret.setToBlock(insertedBlock, Caret.positions.START);
+    } else {
+      /**
+       * A partial multi-block delete inserts no replacement and sets no caret.
+       * When the deleted blocks all lived in one nested-blocks container (e.g.
+       * a table cell), restore the caret there so focus does not fall to <body>.
+       */
+      scheduleCaretIntoNestedContainer(nestedContainer, {
+        getBlock: (holder) => BlockManager.getBlock(holder),
+        setCaretToBlockStart: (block) => Caret.setToBlock(block, Caret.positions.START),
+      });
     }
 
     BlockSelection.clearSelection(event);

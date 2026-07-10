@@ -80,6 +80,50 @@ describe('SettingsPanel', () => {
     });
   });
 
+  describe('open/close animation', () => {
+    it('keeps the closed panel mounted off-screen so it can slide in', () => {
+      renderPanel();
+
+      const panel = screen.getByTestId('demo-settings-panel');
+      expect(panel.className).toContain('transition-transform');
+      expect(panel.className).toContain('translate-x-full');
+      expect(panel).toHaveAttribute('inert');
+    });
+
+    it('slides the panel in when opened', () => {
+      renderPanel();
+
+      openPanel();
+
+      const panel = screen.getByTestId('demo-settings-panel');
+      expect(panel.className).toContain('translate-x-0');
+      expect(panel.className).not.toContain('translate-x-full');
+      expect(panel).not.toHaveAttribute('inert');
+    });
+
+    it('slides the edge tab out while the panel is open', () => {
+      renderPanel();
+
+      openPanel();
+
+      const tab = screen.getByTestId('demo-settings-tab');
+      expect(tab.className).toContain('transition-');
+      expect(tab.className).toContain('translate-x-full');
+      expect(tab).toHaveAttribute('inert');
+    });
+
+    it('slides the edge tab back in after closing', () => {
+      renderPanel();
+
+      openPanel();
+      fireEvent.click(screen.getByRole('button', { name: 'Close editor settings' }));
+
+      const tab = screen.getByTestId('demo-settings-tab');
+      expect(tab.className).not.toContain('translate-x-full');
+      expect(tab).not.toHaveAttribute('inert');
+    });
+  });
+
   describe('toggles', () => {
     it('turns read-only mode on', () => {
       const { onSettingsChange } = renderPanel();

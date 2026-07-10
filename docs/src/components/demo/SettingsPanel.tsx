@@ -101,13 +101,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open]);
 
-  if (!open) {
-    return (
+  return (
+    <>
       <button
         type="button"
+        data-blok-testid="demo-settings-tab"
         aria-label={t('demo.settings.openAriaLabel')}
+        aria-hidden={open ? true : undefined}
+        inert={open}
         onClick={() => setOpen(true)}
-        className="fixed right-0 top-1/2 z-40 flex -translate-y-1/2 cursor-pointer flex-col items-center gap-2 rounded-l-2xl border border-r-0 border-border bg-card px-2.5 py-4 text-muted-foreground shadow-card transition-colors hover:text-foreground"
+        className={cn(
+          'fixed right-0 top-1/2 z-40 flex -translate-y-1/2 cursor-pointer flex-col items-center gap-2 rounded-l-2xl border border-r-0 border-border bg-card px-2.5 py-4 text-muted-foreground shadow-card transition-[translate,opacity,color] duration-300 ease-out hover:text-foreground',
+          open ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'
+        )}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3" />
@@ -117,14 +123,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
           <Typo>{t('demo.settings.tabLabel')}</Typo>
         </span>
       </button>
-    );
-  }
 
-  return (
-    <aside
-      aria-label={t('demo.settings.title')}
-      className="fixed inset-y-0 right-0 z-40 flex w-[21.5rem] max-w-[88vw] flex-col border-l border-border bg-card shadow-2xl"
-    >
+      <aside
+        data-blok-testid="demo-settings-panel"
+        aria-label={t('demo.settings.title')}
+        aria-hidden={open ? undefined : true}
+        inert={!open}
+        className={cn(
+          'fixed inset-y-0 right-0 z-40 flex w-[21.5rem] max-w-[88vw] flex-col border-l border-border bg-card shadow-2xl transition-transform duration-300 ease-out',
+          open ? 'translate-x-0' : 'translate-x-full'
+        )}
+      >
       <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-5 py-4">
         <div className="min-w-0">
           <h2 className="text-sm font-bold text-foreground"><Typo>{t('demo.settings.title')}</Typo></h2>
@@ -221,6 +230,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
           <Typo>{t('demo.settings.recreateNote')}</Typo>
         </p>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };

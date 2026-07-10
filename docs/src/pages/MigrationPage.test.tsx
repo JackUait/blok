@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { MigrationPage } from './MigrationPage';
 import {
   MIGRATION_STEPS,
-  CODEMOD_DRY_RUN_COMMAND,
   DIFF_CHANGES,
 } from '../components/migration/migration-data';
 import { I18nProvider } from '../contexts/I18nContext';
@@ -43,12 +42,13 @@ describe('MigrationPage', () => {
     expect(screen.getByText(m.heroDescription)).toBeInTheDocument();
   });
 
-  it('should promote the dry-run command into the hero', () => {
+  it('should not render a standalone command block in the hero', () => {
     renderMigrationPage();
 
-    const heroCommand = screen.getByTestId('hero-command');
-    expect(heroCommand).toHaveTextContent(CODEMOD_DRY_RUN_COMMAND);
-    expect(screen.getByText(m.heroCommandHint)).toBeInTheDocument();
+    expect(screen.queryByTestId('hero-command')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Dry run — prints the plan, writes nothing.'),
+    ).not.toBeInTheDocument();
   });
 
   it('should render the rewrite preview card in the hero', () => {

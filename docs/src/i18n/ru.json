@@ -1278,7 +1278,6 @@
     "factOneCommand": "Одна команда codemod",
     "factToolsMapped": "15 инструментов Editor.js сопоставлены",
     "factAlias": "Полная замена через алиас EditorJS",
-    "heroCommandHint": "Пробный запуск — покажет план и ничего не изменит.",
     "stepRailLabel": "Шаги миграции",
     "sectionCodemodTitle": "Запустите codemod",
     "sectionCodemodDescription": "Одна команда переписывает импорты, типы, селекторы и конфигурацию. Сначала посмотрите план, затем применяйте.",

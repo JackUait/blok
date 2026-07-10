@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
-import { CodeBlock } from '../components/common/CodeBlock';
 import { CodemodCard } from '../components/migration/CodemodCard';
 import { RewritePreview } from '../components/migration/RewritePreview';
 import { MigrationSteps } from '../components/migration/MigrationSteps';
 import { MigrationStepRail } from '../components/migration/MigrationStepRail';
 import { MigrationSectionHeader } from '../components/migration/MigrationSectionHeader';
-import {
-  CODEMOD_DRY_RUN_COMMAND,
-  MIGRATION_STEPS,
-} from '../components/migration/migration-data';
+import { MIGRATION_STEPS } from '../components/migration/migration-data';
 import { useI18n } from '../contexts/I18nContext';
 import { Typo } from '../components/common/Typo';
 import { NAV_LINKS } from '../utils/constants';
@@ -109,18 +105,6 @@ export const MigrationContent: React.FC<MigrationContentProps> = ({ inline = fal
           </div>
 
           <RewritePreview className="mt-14 duration-700 animate-in fade-in slide-in-from-bottom-4 zoom-in-[0.98] fill-mode-both delay-150 lg:mt-0" />
-        </div>
-
-        {/* The command is the hero's payload — keep it at full measure so it
-            never truncates mid-flag the way a half-width column did. */}
-        <div
-          className="mt-14 max-w-3xl duration-700 animate-in fade-in fill-mode-both delay-300"
-          data-blok-testid="hero-command"
-        >
-          <CodeBlock code={CODEMOD_DRY_RUN_COMMAND} language="bash" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            <Typo>{t('migration.heroCommandHint')}</Typo>
-          </p>
         </div>
       </section>
 

@@ -1209,7 +1209,6 @@
       "closeAriaLabel": "Close editor settings",
       "tabLabel": "Settings",
       "title": "Editor settings",
-      "subtitle": "Changes apply to the editor live.",
       "readOnlyLabel": "Read-only mode",
       "readOnlyHint": "Locks the content — no toolbar, no editing.",
       "autofocusLabel": "Autofocus on load",
@@ -1229,7 +1228,6 @@
       "alignRight": "Right",
       "placeholderLabel": "First block placeholder",
       "placeholderInputPlaceholder": "Type \"/\" for commands...",
-      "recreateNote": "Alignment, autofocus and toolbar changes reload the demo content.",
       "resetLabel": "Reset to defaults"
     }
   },

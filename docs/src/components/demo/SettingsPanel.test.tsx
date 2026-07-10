@@ -61,6 +61,15 @@ describe('SettingsPanel', () => {
       expect(screen.queryByRole('button', { name: 'Open editor settings' })).not.toBeInTheDocument();
     });
 
+    it('shows no explanatory hint texts in the header or footer', () => {
+      renderPanel();
+
+      openPanel();
+
+      expect(screen.queryByText(/Changes apply to the editor live/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/reload/)).not.toBeInTheDocument();
+    });
+
     it('closes via the close button', () => {
       renderPanel();
 

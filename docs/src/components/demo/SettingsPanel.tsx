@@ -135,10 +135,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
         )}
       >
       <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-5 py-4">
-        <div className="min-w-0">
-          <h2 className="text-sm font-bold text-foreground"><Typo>{t('demo.settings.title')}</Typo></h2>
-          <p className="mt-0.5 text-xs text-muted-foreground"><Typo>{t('demo.settings.subtitle')}</Typo></p>
-        </div>
+        <h2 className="min-w-0 text-sm font-bold text-foreground"><Typo>{t('demo.settings.title')}</Typo></h2>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -226,9 +223,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
         >
           <Typo>{t('demo.settings.resetLabel')}</Typo>
         </Button>
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          <Typo>{t('demo.settings.recreateNote')}</Typo>
-        </p>
       </div>
       </aside>
     </>

@@ -15,9 +15,11 @@ describe('buildEditorSettingsProps', () => {
     expect(props.theme).toBe('light');
     expect(props.width).toBe('narrow');
     expect(props.autofocus).toBe(false);
-    expect(props.hideToolbar).toBe(false);
     expect(props.style).toEqual({ contentAlign: 'left' });
     expect(props.placeholder).toBeUndefined();
+    // hideToolbar is dead config in the core — the demo hides the toolbar via
+    // CSS instead, so it must not be passed to the editor.
+    expect('hideToolbar' in props).toBe(false);
   });
 
   it('always follows the site theme', () => {
@@ -96,34 +98,23 @@ describe('buildEditorSettingsProps', () => {
     });
   });
 
-  describe('deps (settings that require recreating the editor)', () => {
-    it('is stable across reactive-only changes (readOnly, width, placeholder)', () => {
+  describe('deps', () => {
+    it('never changes — every setting applies live without recreating the editor', () => {
       const base = buildEditorSettingsProps(DEFAULT_EDITOR_SETTINGS, 'light');
-      const changed = buildEditorSettingsProps(
+      const allChanged = buildEditorSettingsProps(
         {
-          ...DEFAULT_EDITOR_SETTINGS,
           readOnly: true,
           width: 'full',
           placeholder: 'hi',
+          contentAlign: 'right',
+          autofocus: true,
+          hideToolbar: true,
         },
         'dark'
       );
 
-      expect(changed.deps).toEqual(base.deps);
-    });
-
-    it.each([
-      ['contentAlign', { contentAlign: 'right' as const }],
-      ['autofocus', { autofocus: true }],
-      ['hideToolbar', { hideToolbar: true }],
-    ])('changes when %s changes', (_name, override) => {
-      const base = buildEditorSettingsProps(DEFAULT_EDITOR_SETTINGS, 'light');
-      const changed = buildEditorSettingsProps(
-        { ...DEFAULT_EDITOR_SETTINGS, ...override },
-        'light'
-      );
-
-      expect(changed.deps).not.toEqual(base.deps);
+      expect(base.deps).toEqual([]);
+      expect(allChanged.deps).toEqual([]);
     });
   });
 });

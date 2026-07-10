@@ -52,6 +52,17 @@ export const EditorWrapper: React.FC<{
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
 
+  const hostRef = useRef<HTMLDivElement>(null);
+
+  // Alignment is creation-time config, but recreating the editor to change it
+  // flashes the content — re-stamp the live wrapper's attribute instead. The
+  // initial render is covered by the style prop at creation.
+  useEffect(() => {
+    hostRef.current
+      ?.querySelector('[data-blok-content-align]')
+      ?.setAttribute('data-blok-content-align', settings.contentAlign);
+  }, [settings.contentAlign]);
+
   // Fires when BlokEditor attaches/detaches its instance to the forwarded ref.
   // Using a callback ref (not onReady) guarantees the instance is committed
   // before we hand it to the consumer — onReady fires before the ref commits.
@@ -157,6 +168,10 @@ export const EditorWrapper: React.FC<{
   const { props: settingsProps, deps: settingsDeps } = buildEditorSettingsProps(settings, resolvedTheme);
 
   return (
+    // The host div carries the toolbar-hiding class (the core's hideToolbar
+    // config is dead, and recreating the editor to toggle chrome would flash
+    // the content) and anchors the runtime alignment re-stamping above.
+    <div ref={hostRef} className={settings.hideToolbar ? 'demo-toolbar-hidden' : undefined}>
     <BlokEditor
       ref={handleEditorRef}
       className="blok-editor"
@@ -204,5 +219,6 @@ export const EditorWrapper: React.FC<{
         ],
       }}
     />
+    </div>
   );
 };

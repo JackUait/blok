@@ -1659,3 +1659,10 @@
     opacity: 1;
   }
 }
+
+/* /demo settings panel: hide the block toolbar (+ button and drag handle)
+   without recreating the editor — the core's hideToolbar config is
+   creation-time only, and recreation flashes the content. */
+.demo-toolbar-hidden [data-blok-toolbar] {
+  display: none !important;
+}

@@ -25,16 +25,18 @@ interface EditorSettingsProps {
   width: 'narrow' | 'full';
   placeholder?: string;
   autofocus: boolean;
-  hideToolbar: boolean;
   style: { contentAlign: EditorSettings['contentAlign'] };
 }
 
 /**
  * Maps panel settings to BlokEditor props. readOnly/theme/width/placeholder are
- * reactive on the React adapter and update the live editor; the rest is
- * creation-time config, so those values go into `deps` to recreate the editor.
- * The editor's theme always mirrors the site theme (the panel's Theme control
- * switches the whole documentation, and the editor follows).
+ * reactive on the React adapter and update the live editor. contentAlign and
+ * autofocus are creation-time config here, but changing them never recreates
+ * the editor (deps stays empty — recreation flashes the content): EditorWrapper
+ * re-applies alignment on the live DOM, and autofocus naturally applies on the
+ * next load. hideToolbar is dead config in the core, so it isn't passed at all —
+ * EditorWrapper hides the toolbar with a CSS host class instead. The editor's
+ * theme always mirrors the site theme.
  */
 export function buildEditorSettingsProps(
   settings: EditorSettings,
@@ -47,10 +49,9 @@ export function buildEditorSettingsProps(
       width: settings.width,
       placeholder: settings.placeholder.trim() === '' ? undefined : settings.placeholder,
       autofocus: settings.autofocus,
-      hideToolbar: settings.hideToolbar,
       style: { contentAlign: settings.contentAlign },
     },
-    deps: [settings.contentAlign, settings.autofocus, settings.hideToolbar],
+    deps: [],
   };
 }
 

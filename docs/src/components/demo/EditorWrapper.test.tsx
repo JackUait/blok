@@ -122,6 +122,26 @@ describe('EditorWrapper', () => {
       });
     });
 
+    it('hides the block toolbar via a CSS host class when hideToolbar is on', async () => {
+      const { DEFAULT_EDITOR_SETTINGS } = await import('./editor-settings');
+      const { container } = renderEditor({
+        settings: { ...DEFAULT_EDITOR_SETTINGS, hideToolbar: true },
+      });
+
+      await waitFor(() => {
+        expect(container.querySelector('.demo-toolbar-hidden')).toBeInTheDocument();
+      });
+    });
+
+    it('does not apply the toolbar-hiding class by default', async () => {
+      const { container } = renderEditor();
+
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="mock-blok-editor"]')).toBeInTheDocument();
+      });
+      expect(container.querySelector('.demo-toolbar-hidden')).not.toBeInTheDocument();
+    });
+
     it('left-aligns block content so it starts under the Nav logo', async () => {
       const { container } = renderEditor();
 

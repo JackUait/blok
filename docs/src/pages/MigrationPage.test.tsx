@@ -72,6 +72,15 @@ describe('MigrationPage', () => {
     expect(preview).toHaveTextContent(DIFF_CHANGES[0].added);
   });
 
+  it('should render the rewrite preview as a flat diff without group labels', () => {
+    renderMigrationPage();
+
+    const preview = screen.getByTestId('hero-rewrite-preview');
+    expect(within(preview).queryByText(m.changeImports)).not.toBeInTheDocument();
+    expect(within(preview).queryByText(m.changeCssSelectors)).not.toBeInTheDocument();
+    expect(within(preview).queryByText(m.changeDataAttributes)).not.toBeInTheDocument();
+  });
+
   it('should link the rewrite preview to the full changes section', () => {
     renderMigrationPage();
 

@@ -1,5 +1,4 @@
 import { DIFF_CHANGES } from "./migration-data";
-import { Diff } from "./Diff";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
 import { cn } from "@/lib/utils";
@@ -14,8 +13,9 @@ interface RewritePreviewProps {
 
 /**
  * Hero visual: the codemod's output as a floating diff window. Real rows from
- * DIFF_CHANGES — a preview of step 2, not marketing artwork — with a link
- * down to the full list.
+ * DIFF_CHANGES rendered as a flat, editor-style diff — full-width tinted rows
+ * with a −/+ gutter and blank lines between groups, no boxes or labels — with
+ * a link down to the full list.
  */
 export const RewritePreview: React.FC<RewritePreviewProps> = ({ className }) => {
   const { t } = useI18n();
@@ -44,17 +44,21 @@ export const RewritePreview: React.FC<RewritePreviewProps> = ({ className }) => 
           </span>
         </div>
 
-        <div className="divide-y divide-border">
+        <div className="py-4 font-mono text-xs leading-5">
           {PREVIEW_CHANGES.map((change, index) => (
             <div
               key={change.titleKey}
-              className="rw-row px-4 py-3.5"
+              className={cn("rw-row", index > 0 && "mt-5")}
               style={{ "--rw-delay": `${450 + index * 650}ms` } as React.CSSProperties}
             >
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
-                <Typo>{t(change.titleKey)}</Typo>
-              </p>
-              <Diff removed={change.removed} added={change.added} />
+              <div className="flex items-start gap-3 bg-destructive/[0.05] px-5 py-1">
+                <span className="select-none font-bold text-destructive/60" aria-label={t('migration.removed')}>−</span>
+                <code className="rw-removed min-w-0 break-all text-muted-foreground line-through decoration-destructive/40">{change.removed}</code>
+              </div>
+              <div className="rw-added flex items-start gap-3 px-5 py-1">
+                <span className="select-none font-bold text-muted-foreground/50" aria-label={t('migration.added')}>+</span>
+                <code className="min-w-0 break-all font-medium text-foreground">{change.added}</code>
+              </div>
             </div>
           ))}
         </div>

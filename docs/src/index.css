@@ -477,9 +477,8 @@
 /* Live-rewrite choreography — the /migration hero diff window plays the codemod
    on load. Each row enters, its old line gets struck out (full ink → dimmed, the
    strike fading in), then the new line wipes in left-to-right as if just written.
-   Rows stagger via --rw-delay (set inline per row); the rw-* hooks in Diff.tsx
-   are inert outside a .rewrite-live ancestor, so the full changes list stays
-   static. `both` fill holds each element on its `from` frame until its delay. */
+   Rows stagger via --rw-delay (set inline per row in RewritePreview.tsx).
+   `both` fill holds each element on its `from` frame until its delay. */
 .rewrite-live .rw-row {
   animation: rw-row-in 0.5s ease-out both;
   animation-delay: var(--rw-delay, 0ms);

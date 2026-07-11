@@ -5,6 +5,7 @@ import { HomePage } from "./pages/HomePage";
 import { DemoPage } from "./pages/DemoPage";
 import { ApiPage } from "./pages/ApiPage";
 import { MigrationPage } from "./pages/MigrationPage";
+import { MigrationReferencePage } from "./pages/MigrationReferencePage";
 import ChangelogPage from "./pages/ChangelogPage";
 import { PageTransition } from "./components/common/PageTransition";
 
@@ -163,6 +164,7 @@ const App = () => {
           <Route path="/docs/*" element={<PageTransition><ApiPage /></PageTransition>} />
           <Route path="/tools" element={<ToolsRedirect />} />
           <Route path="/migration" element={<PageTransition><MigrationPage /></PageTransition>} />
+          <Route path="/migration/reference" element={<PageTransition><MigrationReferencePage /></PageTransition>} />
           <Route path="/changelog" element={<PageTransition><ChangelogPage /></PageTransition>} />
         </Routes>
       </AnimatePresence>

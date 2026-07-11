@@ -123,3 +123,34 @@ export const CSS_MAPPINGS: CssMapping[] = [
   { editorjs: "data-placeholder", blok: "data-blok-placeholder" },
 ];
 
+export interface MigrationWall {
+  id: "flat" | "plugins" | "engine" | "framework";
+  oldTitleKey: string;
+  oldDescKey: string;
+  newTitleKey: string;
+  newDescKey: string;
+}
+
+/** The Editor.js ceilings this page names, each paired with how Blok clears it. */
+export const MIGRATION_WALLS: MigrationWall[] = [
+  { id: "flat", oldTitleKey: "migration.wallFlatOldTitle", oldDescKey: "migration.wallFlatOldDesc", newTitleKey: "migration.wallFlatNewTitle", newDescKey: "migration.wallFlatNewDesc" },
+  { id: "plugins", oldTitleKey: "migration.wallPluginsOldTitle", oldDescKey: "migration.wallPluginsOldDesc", newTitleKey: "migration.wallPluginsNewTitle", newDescKey: "migration.wallPluginsNewDesc" },
+  { id: "engine", oldTitleKey: "migration.wallEngineOldTitle", oldDescKey: "migration.wallEngineOldDesc", newTitleKey: "migration.wallEngineNewTitle", newDescKey: "migration.wallEngineNewDesc" },
+  { id: "framework", oldTitleKey: "migration.wallFrameworkOldTitle", oldDescKey: "migration.wallFrameworkOldDesc", newTitleKey: "migration.wallFrameworkNewTitle", newDescKey: "migration.wallFrameworkNewDesc" },
+];
+
+/** Objection-killer checklist — each an i18n key for one reassurance line. */
+export const MIGRATION_OBJECTIONS: string[] = [
+  "migration.objectionContentLoads",
+  "migration.objectionToolsPort",
+  "migration.objectionInlineWrap",
+  "migration.objectionWarnings",
+];
+
+/** The three-step "the move" sequence, i18n keys in order. */
+export const MIGRATION_MOVE_STEPS: string[] = [
+  "migration.moveStep1",
+  "migration.moveStep2",
+  "migration.moveStep3",
+];
+

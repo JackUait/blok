@@ -103,6 +103,34 @@ test.describe('Spacer block', () => {
     expect(savedSpacer?.data).toEqual({ height: 104 });
   });
 
+  test('chrome stays visible while dragging even when the pointer leaves the block', async ({ page }) => {
+    await createBlok(page, spacerFixture);
+
+    const spacer = page.locator(SPACER);
+
+    await spacer.hover();
+    const gripBox = await page.locator(BOTTOM_GRIP).boundingBox();
+
+    if (!gripBox) {
+      throw new Error('missing grip bounding box');
+    }
+
+    const startX = gripBox.x + gripBox.width / 2;
+    const startY = gripBox.y + gripBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    // Drag far below the block — the pointer is no longer over the spacer.
+    await page.mouse.move(startX, startY + 200, { steps: 10 });
+
+    await expect(spacer).toHaveAttribute('data-blok-spacer-dragging', '');
+    expect(await spacer.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('dashed');
+    expect(await page.locator(BOTTOM_GRIP).evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+
+    await page.mouse.up();
+    await expect(spacer).not.toHaveAttribute('data-blok-spacer-dragging', '');
+  });
+
   test('grip resizes with arrow keys and clamps at the Text-block-height floor', async ({ page }) => {
     await createBlok(page, {
       blocks: [

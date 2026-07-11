@@ -409,6 +409,56 @@ describe('SpacerTool', () => {
       expect(el.style.height).toBe('38px');
     });
 
+    it('pins the chrome visible while dragging, even when the pointer leaves the block', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 100, pointerId: 1, bubbles: true }));
+      // Pointer far outside the spacer mid-drag — hover is gone, chrome must stay.
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 400, pointerId: 1 }));
+
+      expect(el.hasAttribute('data-blok-spacer-dragging')).toBe(true);
+      expect(el.className).toContain('outline-dashed');
+      for (const g of getGrips(el)) {
+        expect(g.className).toContain('opacity-100');
+      }
+      expect(el.querySelector('[data-blok-spacer-readout]')?.className).toContain('opacity-100');
+    });
+
+    it('unpins the chrome when the drag ends', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 100, pointerId: 1, bubbles: true }));
+      expect(el.hasAttribute('data-blok-spacer-dragging')).toBe(true);
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 200, pointerId: 1 }));
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 200, pointerId: 1 }));
+
+      expect(el.hasAttribute('data-blok-spacer-dragging')).toBe(false);
+      for (const g of getGrips(el)) {
+        expect(g.className).not.toContain(' opacity-100');
+      }
+      // Back to hover-gated discoverability.
+      expect(el.className).toContain('hover:outline-dashed');
+    });
+
+    it('unpins the chrome when the drag is cancelled', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 100, pointerId: 1, bubbles: true }));
+      expect(el.hasAttribute('data-blok-spacer-dragging')).toBe(true);
+      window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
+
+      expect(el.hasAttribute('data-blok-spacer-dragging')).toBe(false);
+    });
+
     it('stops tracking pointer moves after pointerup', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions({ height: 48 }));

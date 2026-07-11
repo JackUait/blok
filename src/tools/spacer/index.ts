@@ -31,6 +31,12 @@ type GripEdge = 'top' | 'bottom';
  */
 const HOVER_OUTLINE_CLASSES = ['hover:outline-dashed', 'hover:outline-1', 'hover:outline-(--blok-color-accent)'];
 
+/**
+ * Non-hover-gated outline used while the chrome is force-shown
+ * (fresh insert, active drag)
+ */
+const PINNED_OUTLINE_CLASSES = ['outline-dashed', 'outline-1', 'outline-(--blok-color-accent)'];
+
 const clampHeight = (value: number): number => Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, value));
 
 /**
@@ -222,11 +228,8 @@ export class SpacerTool implements BlockTool {
       return;
     }
 
-    const revealed = [...this.grips, this.readout].filter((node): node is HTMLElement => node !== null);
-
     this.element.setAttribute('data-blok-spacer-fresh', '');
-    this.element.classList.add('outline-dashed', 'outline-1', 'outline-(--blok-color-accent)');
-    revealed.forEach((node) => node.classList.add('opacity-100'));
+    this.showChrome();
 
     const dismiss = (): void => {
       document.removeEventListener('pointerdown', dismiss, true);
@@ -235,13 +238,28 @@ export class SpacerTool implements BlockTool {
       this.isFresh = false;
 
       this.element?.removeAttribute('data-blok-spacer-fresh');
-      this.element?.classList.remove('outline-dashed', 'outline-1', 'outline-(--blok-color-accent)');
-      revealed.forEach((node) => node.classList.remove('opacity-100'));
+      this.hideChrome();
     };
 
     document.addEventListener('pointerdown', dismiss, true);
     document.addEventListener('keydown', dismiss, true);
     this.dismissFreshReveal = dismiss;
+  }
+
+  /**
+   * Force the chrome (outline, grips, readout) visible regardless of hover
+   */
+  private showChrome(): void {
+    this.element?.classList.add(...PINNED_OUTLINE_CLASSES);
+    [...this.grips, this.readout].forEach((node) => node?.classList.add('opacity-100'));
+  }
+
+  /**
+   * Put the chrome back behind the hover gate
+   */
+  private hideChrome(): void {
+    this.element?.classList.remove(...PINNED_OUTLINE_CLASSES);
+    [...this.grips, this.readout].forEach((node) => node?.classList.remove('opacity-100'));
   }
 
   /**
@@ -328,6 +346,12 @@ export class SpacerTool implements BlockTool {
       const startY = event.clientY;
       const startHeight = this.height;
 
+      // Pin the chrome for the whole gesture — mid-drag the pointer easily
+      // leaves the block, and losing the hover state would make the spacer
+      // vanish while the user is resizing it.
+      this.element?.setAttribute('data-blok-spacer-dragging', '');
+      this.showChrome();
+
       const onMove = (move: PointerEvent): void => {
         this.setHeight(startHeight + (move.clientY - startY) * direction);
       };
@@ -335,6 +359,9 @@ export class SpacerTool implements BlockTool {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
         window.removeEventListener('pointercancel', onUp);
+
+        this.element?.removeAttribute('data-blok-spacer-dragging');
+        this.hideChrome();
       };
 
       window.addEventListener('pointermove', onMove);

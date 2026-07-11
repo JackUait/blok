@@ -26,6 +26,11 @@ const KEYBOARD_STEP = 8;
 
 type GripEdge = 'top' | 'bottom';
 
+/**
+ * Hover discoverability outline; present only while editable
+ */
+const HOVER_OUTLINE_CLASSES = ['hover:outline-dashed', 'hover:outline-1', 'hover:outline-(--blok-color-accent)'];
+
 const clampHeight = (value: number): number => Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, value));
 
 /**
@@ -97,16 +102,15 @@ export class SpacerTool implements BlockTool {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-spacer', '');
-    // The gap is invisible content — the hover outline + px readout are what
-    // make it discoverable as a real, resizable block instead of plain margin.
-    wrapper.className = twMerge(
-      'relative', 'group/spacer', 'rounded-md',
-      'hover:outline-dashed', 'hover:outline-1', 'hover:outline-(--blok-color-accent)'
-    );
+    wrapper.className = twMerge('relative', 'group/spacer', 'rounded-md');
     wrapper.style.height = `${this.height}px`;
     this.element = wrapper;
 
     if (!this.readOnly) {
+      // The gap is invisible content — the hover outline + px readout are what
+      // make it discoverable as a real, resizable block instead of plain
+      // margin. In read-only mode the spacer stays fully invisible.
+      this.addHoverOutline();
       this.attachGrips();
 
       if (this.isFresh) {
@@ -146,11 +150,13 @@ export class SpacerTool implements BlockTool {
 
     if (state) {
       this.dismissFreshReveal?.();
+      this.element?.classList.remove(...HOVER_OUTLINE_CLASSES);
       this.grips.forEach((grip) => grip.remove());
       this.grips = [];
       this.readout?.remove();
       this.readout = null;
     } else if (this.element !== null && this.grips.length === 0) {
+      this.addHoverOutline();
       this.attachGrips();
     }
   }
@@ -197,6 +203,13 @@ export class SpacerTool implements BlockTool {
     if (this.readout !== null) {
       this.readout.textContent = `${this.height}px`;
     }
+  }
+
+  /**
+   * Make the gap discoverable while editable: dashed accent outline on hover
+   */
+  private addHoverOutline(): void {
+    this.element?.classList.add(...HOVER_OUTLINE_CLASSES);
   }
 
   /**

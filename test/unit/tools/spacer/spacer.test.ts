@@ -425,6 +425,31 @@ describe('SpacerTool', () => {
   });
 
   describe('read-only mode', () => {
+    it('is fully invisible: no hover outline classes in read-only mode', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 40 }, { readOnly: true }));
+      const el = tool.render();
+
+      expect(el.className).not.toContain('hover:outline-dashed');
+      expect(el.className).not.toContain('hover:outline-(--blok-color-accent)');
+    });
+
+    it('setReadOnly toggles the hover outline together with the grips', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 40 }));
+      const el = tool.render();
+
+      expect(el.className).toContain('hover:outline-dashed');
+
+      tool.setReadOnly(true);
+      expect(el.className).not.toContain('hover:outline-dashed');
+      expect(el.className).not.toContain('hover:outline-(--blok-color-accent)');
+
+      tool.setReadOnly(false);
+      expect(el.className).toContain('hover:outline-dashed');
+      expect(el.className).toContain('hover:outline-(--blok-color-accent)');
+    });
+
     it('renders no grips in read-only mode', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions({ height: 40 }, { readOnly: true }));

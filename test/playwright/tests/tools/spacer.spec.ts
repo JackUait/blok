@@ -174,6 +174,10 @@ test.describe('Spacer block', () => {
     await expect(page.locator(SPACER)).toHaveCount(1);
     expect(await getSpacerHeight(page)).toBe(64);
     await expect(page.locator(GRIP)).toHaveCount(0);
+
+    // Fully invisible in read-only: hovering must not reveal any outline.
+    await page.locator(SPACER).hover();
+    expect(await page.locator(SPACER).evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
   });
 
   test('spacer inside a column pushes following blocks down and round-trips', async ({ page }) => {

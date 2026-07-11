@@ -33,12 +33,62 @@ const getGrip = (el: HTMLElement, edge: 'top' | 'bottom' = 'bottom'): HTMLElemen
 const getGrips = (el: HTMLElement): HTMLElement[] =>
   Array.from(el.querySelectorAll('[data-blok-spacer-grip]'));
 
+const stubRect = (el: HTMLElement, rect: Partial<DOMRect>): void => {
+  const value = Object.assign(
+    { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) },
+    rect
+  ) as DOMRect;
+
+  Object.defineProperty(el, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => value,
+  });
+};
+
+/**
+ * Put the rendered spacer into the right column of a two-column list whose
+ * left column holds blocks ending at the given viewport bottoms. The spacer's
+ * own top is pinned at y=100 so drag maths in the tests are readable.
+ */
+const mountInColumns = (spacerElement: HTMLElement, siblingBlockBottoms: number[]): void => {
+  const columns = document.createElement('div');
+
+  columns.setAttribute('data-blok-columns', '');
+  stubRect(columns, { left: 10, right: 610, width: 600 });
+
+  const left = document.createElement('div');
+
+  left.setAttribute('data-blok-column', '');
+  siblingBlockBottoms.forEach((bottom) => {
+    const holder = document.createElement('div');
+
+    holder.setAttribute('data-blok-element', '');
+    stubRect(holder, { bottom });
+    left.appendChild(holder);
+  });
+
+  const right = document.createElement('div');
+
+  right.setAttribute('data-blok-column', '');
+  const holder = document.createElement('div');
+
+  holder.setAttribute('data-blok-element', '');
+  stubRect(spacerElement, { top: 100 });
+  holder.appendChild(spacerElement);
+  right.appendChild(holder);
+
+  columns.appendChild(left);
+  columns.appendChild(right);
+  document.body.appendChild(columns);
+};
+
 describe('SpacerTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    document.body.innerHTML = '';
   });
 
   describe('render()', () => {
@@ -474,6 +524,78 @@ describe('SpacerTool', () => {
       window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
 
       expect(el.hasAttribute('data-blok-spacer-dragging')).toBe(false);
+    });
+
+    it('snaps to a sibling column block bottom and shows the guideline', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+
+      mountInColumns(el, [220]);
+      const grip = getGrip(el)!;
+
+      // Spacer top is at 100 → dragging the bottom edge to ~218 lands within
+      // the snap threshold of the sibling block's bottom (220).
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 148, pointerId: 1, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 218, pointerId: 1 }));
+
+      // Snapped: height is exactly the distance from the spacer top to 220.
+      expect(el.style.height).toBe('120px');
+      expect(document.querySelector('[data-blok-spacer-guide]')).not.toBeNull();
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 218, pointerId: 1 }));
+    });
+
+    it('does not snap when the edge is far from any sibling block bottom', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+
+      mountInColumns(el, [220]);
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 148, pointerId: 1, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 190, pointerId: 1 }));
+
+      // Free drag: 48 + (190 - 148) = 90.
+      expect(el.style.height).toBe('90px');
+      expect(document.querySelector('[data-blok-spacer-guide]')).toBeNull();
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 190, pointerId: 1 }));
+    });
+
+    it('removes the guideline when the drag ends', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+
+      mountInColumns(el, [220]);
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 148, pointerId: 1, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 218, pointerId: 1 }));
+      expect(document.querySelector('[data-blok-spacer-guide]')).not.toBeNull();
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 218, pointerId: 1 }));
+
+      expect(document.querySelector('[data-blok-spacer-guide]')).toBeNull();
+    });
+
+    it('a spacer outside any column drags freely with no guideline', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+
+      document.body.appendChild(el);
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 100, pointerId: 1, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 140, pointerId: 1 }));
+
+      expect(el.style.height).toBe('88px');
+      expect(document.querySelector('[data-blok-spacer-guide]')).toBeNull();
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 140, pointerId: 1 }));
     });
 
     it('stops tracking pointer moves after pointerup', async () => {

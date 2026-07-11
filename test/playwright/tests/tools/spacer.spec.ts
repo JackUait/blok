@@ -208,6 +208,84 @@ test.describe('Spacer block', () => {
     expect(await page.locator(SPACER).evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
   });
 
+  test('dragging near a sibling column block end snaps and shows the guideline', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1-a', 'c1-b'] },
+        { id: 'c1-a', type: 'paragraph', data: { text: 'Left first line.' }, parent: 'c1' },
+        { id: 'c1-b', type: 'paragraph', data: { text: 'Left second line.' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['c2-p', 'sp1', 'c2-f'] },
+        { id: 'c2-p', type: 'paragraph', data: { text: 'Right text.' }, parent: 'c2' },
+        { id: 'sp1', type: 'spacer', data: { height: 40 }, parent: 'c2' },
+        { id: 'c2-f', type: 'paragraph', data: { text: 'Right footer.' }, parent: 'c2' },
+      ],
+    });
+
+    const spacer = page.locator(SPACER);
+    const spacerBox = await spacer.boundingBox();
+    // The alignment we are hunting: the bottom of the LAST block in the left column.
+    const leftLast = await page.getByText('Left second line.').boundingBox();
+
+    if (!spacerBox || !leftLast) {
+      throw new Error('missing bounding boxes');
+    }
+
+    const targetY = leftLast.y + leftLast.height;
+
+    await spacer.hover();
+    const gripBox = await page.locator(BOTTOM_GRIP).boundingBox();
+
+    if (!gripBox) {
+      throw new Error('missing grip bounding box');
+    }
+
+    const startX = gripBox.x + gripBox.width / 2;
+    const startY = gripBox.y + gripBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    // Land 4px shy of the alignment — inside the 6px snap threshold.
+    await page.mouse.move(startX, targetY - 4, { steps: 12 });
+
+    // The guideline appears, spanning the column list at the alignment.
+    const guide = page.locator('[data-blok-spacer-guide]');
+
+    await expect(guide).toHaveCount(1);
+
+    const guideBox = await guide.boundingBox();
+
+    if (!guideBox) {
+      throw new Error('missing guide bounding box');
+    }
+    expect(Math.abs(guideBox.y - targetY)).toBeLessThanOrEqual(2);
+
+    // It must actually PAINT: the guide sits on <body>, outside the editor's
+    // token scope, so a var() background would silently resolve to nothing.
+    const paint = await guide.evaluate((el) => {
+      const style = getComputedStyle(el);
+
+      return { background: style.backgroundColor, width: el.getBoundingClientRect().width };
+    });
+
+    expect(paint.background).not.toBe('rgba(0, 0, 0, 0)');
+    expect(paint.background).not.toBe('transparent');
+    expect(paint.width).toBeGreaterThan(100);
+
+    // The spacer's bottom edge snapped onto the alignment, not to the pointer.
+    const draggedBox = await spacer.boundingBox();
+
+    if (!draggedBox) {
+      throw new Error('missing dragged spacer box');
+    }
+    expect(Math.abs(draggedBox.y + draggedBox.height - targetY)).toBeLessThanOrEqual(1);
+
+    await page.mouse.up();
+
+    // The guide is transient — it belongs to the gesture, not the document.
+    await expect(guide).toHaveCount(0);
+  });
+
   test('spacer inside a column pushes following blocks down and round-trips', async ({ page }) => {
     await createBlok(page, {
       blocks: [

@@ -8,6 +8,8 @@ import type {
 import type { SpacerData } from './types';
 import { IconSpacer } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+import { AlignmentGuide, collectSiblingBlockBottoms, findSnapTarget } from './alignment-guide';
+import { COLUMNS_ATTR } from '../columns-shared';
 
 /**
  * Height bounds and default (px). The minimum matches the default Text block
@@ -86,6 +88,11 @@ export class SpacerTool implements BlockTool {
   private dismissFreshReveal: (() => void) | null = null;
 
   /**
+   * Guideline drawn when a dragged edge lines up with a sibling column's block
+   */
+  private guide = new AlignmentGuide();
+
+  /**
    * Blok API for i18n
    */
   private api: API;
@@ -132,6 +139,7 @@ export class SpacerTool implements BlockTool {
    */
   public removed(): void {
     this.dismissFreshReveal?.();
+    this.guide.hide();
   }
 
   /**
@@ -209,6 +217,56 @@ export class SpacerTool implements BlockTool {
     if (this.readout !== null) {
       this.readout.textContent = `${this.height}px`;
     }
+  }
+
+  /**
+   * Snap the in-progress height so the dragged edge lands exactly on a sibling
+   * column's block end when it comes close, and draw the guideline there.
+   * Returns the height to apply (unchanged when nothing is in range).
+   *
+   * The moving edge's viewport position is derived from the FIXED edge (the one
+   * not being dragged), which does not move during the gesture: dragging the
+   * bottom keeps the top pinned, and vice versa.
+   *
+   * @param freeHeight - height the raw pointer delta asks for
+   * @param edge - which edge is being dragged
+   * @param targets - sibling block bottoms captured at gesture start
+   * @param columnList - the enclosing column list the guide spans; null outside columns
+   */
+  private applySnap(
+    freeHeight: number,
+    edge: GripEdge,
+    targets: number[],
+    columnList: HTMLElement | null
+  ): number {
+    if (this.element === null || columnList === null || targets.length === 0) {
+      return freeHeight;
+    }
+
+    const rect = this.element.getBoundingClientRect();
+    const clamped = clampHeight(Math.round(freeHeight));
+    // Where the dragged edge would sit at the requested height.
+    const movingEdgeY = edge === 'bottom' ? rect.top + clamped : rect.bottom - clamped;
+    const target = findSnapTarget(movingEdgeY, targets);
+
+    if (target === null) {
+      this.guide.hide();
+
+      return freeHeight;
+    }
+
+    const snappedHeight = edge === 'bottom' ? target - rect.top : rect.bottom - target;
+    // Only honour the snap if the aligned height is a legal one; otherwise the
+    // guide would promise an alignment the clamp then refuses.
+    if (snappedHeight !== clampHeight(Math.round(snappedHeight))) {
+      this.guide.hide();
+
+      return freeHeight;
+    }
+
+    this.guide.show(target, columnList.getBoundingClientRect(), columnList);
+
+    return snappedHeight;
   }
 
   /**
@@ -356,14 +414,24 @@ export class SpacerTool implements BlockTool {
       this.element?.setAttribute('data-blok-spacer-dragging', '');
       this.showChrome();
 
+      // Snapshot the sibling columns' block ends once, at gesture start: the
+      // dragged edge pushes this column's own content around, but the blocks
+      // we align against are in OTHER columns and hold still.
+      const snapTargets = this.element === null ? [] : collectSiblingBlockBottoms(this.element);
+      const columnList = this.element?.closest<HTMLElement>(`[${COLUMNS_ATTR}]`) ?? null;
+
       const onMove = (move: PointerEvent): void => {
-        this.setHeight(startHeight + (move.clientY - startY) * direction);
+        const freeHeight = startHeight + (move.clientY - startY) * direction;
+        const snapped = this.applySnap(freeHeight, edge, snapTargets, columnList);
+
+        this.setHeight(snapped);
       };
       const onUp = (): void => {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
         window.removeEventListener('pointercancel', onUp);
 
+        this.guide.hide();
         this.element?.removeAttribute('data-blok-spacer-dragging');
         this.hideChrome();
       };

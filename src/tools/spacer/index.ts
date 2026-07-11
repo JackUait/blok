@@ -62,6 +62,19 @@ export class SpacerTool implements BlockTool {
   private readOnly: boolean;
 
   /**
+   * Whether this spacer was just created (no stored height yet). A fresh
+   * spacer is visually identical to the empty paragraph it replaced, so it
+   * reveals its resize chrome until the user interacts elsewhere — otherwise
+   * inserting one from the toolbox looks like nothing happened.
+   */
+  private isFresh: boolean;
+
+  /**
+   * Removes the fresh-reveal document listeners; null when no reveal is active
+   */
+  private dismissFreshReveal: (() => void) | null = null;
+
+  /**
    * Blok API for i18n
    */
   private api: API;
@@ -72,6 +85,7 @@ export class SpacerTool implements BlockTool {
   constructor(options: BlockToolConstructorOptions<SpacerData>) {
     this.api = options.api;
     this.readOnly = options.readOnly;
+    this.isFresh = typeof options.data.height !== 'number';
     this.height = clampHeight(typeof options.data.height === 'number' ? options.data.height : DEFAULT_HEIGHT);
   }
 
@@ -94,9 +108,20 @@ export class SpacerTool implements BlockTool {
 
     if (!this.readOnly) {
       this.attachGrips();
+
+      if (this.isFresh) {
+        this.revealFreshChrome();
+      }
     }
 
     return wrapper;
+  }
+
+  /**
+   * Clean up the fresh-reveal document listeners when the block is removed
+   */
+  public removed(): void {
+    this.dismissFreshReveal?.();
   }
 
   /**
@@ -120,6 +145,7 @@ export class SpacerTool implements BlockTool {
     this.readOnly = state;
 
     if (state) {
+      this.dismissFreshReveal?.();
       this.grips.forEach((grip) => grip.remove());
       this.grips = [];
       this.readout?.remove();
@@ -171,6 +197,38 @@ export class SpacerTool implements BlockTool {
     if (this.readout !== null) {
       this.readout.textContent = `${this.height}px`;
     }
+  }
+
+  /**
+   * Show the resize chrome (outline, grips, readout) outright on a freshly
+   * inserted spacer, and arm one-shot document listeners that put it back
+   * behind the hover gate as soon as the user clicks or types elsewhere.
+   */
+  private revealFreshChrome(): void {
+    if (this.element === null) {
+      return;
+    }
+
+    const revealed = [...this.grips, this.readout].filter((node): node is HTMLElement => node !== null);
+
+    this.element.setAttribute('data-blok-spacer-fresh', '');
+    this.element.classList.add('outline-dashed', 'outline-1', 'outline-(--blok-color-accent)');
+    revealed.forEach((node) => node.classList.add('opacity-100'));
+
+    const dismiss = (): void => {
+      document.removeEventListener('pointerdown', dismiss, true);
+      document.removeEventListener('keydown', dismiss, true);
+      this.dismissFreshReveal = null;
+      this.isFresh = false;
+
+      this.element?.removeAttribute('data-blok-spacer-fresh');
+      this.element?.classList.remove('outline-dashed', 'outline-1', 'outline-(--blok-color-accent)');
+      revealed.forEach((node) => node.classList.remove('opacity-100'));
+    };
+
+    document.addEventListener('pointerdown', dismiss, true);
+    document.addEventListener('keydown', dismiss, true);
+    this.dismissFreshReveal = dismiss;
   }
 
   /**

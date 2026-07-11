@@ -34,6 +34,38 @@ test.describe('Spacer block', () => {
     await page.goto(TEST_PAGE_URL);
   });
 
+  test('inserting from the slash menu creates a visible spacer block', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [{ id: 'p0', type: 'paragraph', data: { text: '' } }],
+    });
+
+    await page.locator('[data-blok-interface=blok] [contenteditable]').first().focus();
+    await page.keyboard.type('/spacer');
+
+    const popover = page.getByTestId('toolbox-popover');
+    await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+    await popover.locator('[data-blok-item-name="spacer"]').click();
+
+    await expect(page.locator(SPACER)).toHaveCount(1);
+
+    // A freshly inserted spacer must not look like nothing happened: its
+    // outline, grips, and readout are revealed outright (not hover-gated).
+    const spacer = page.locator(SPACER);
+
+    await expect(spacer).toHaveAttribute('data-blok-spacer-fresh', '');
+    expect(await spacer.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('dashed');
+    expect(await page.locator(BOTTOM_GRIP).evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+
+    // Typing elsewhere puts the chrome back behind the hover gate.
+    await page.keyboard.type('next');
+    await expect(spacer).not.toHaveAttribute('data-blok-spacer-fresh', '');
+
+    const saved = await saveBlok(page);
+    const savedSpacer = saved.blocks.find((block) => block.type === 'spacer');
+
+    expect(savedSpacer?.data).toEqual({ height: 38 });
+  });
+
   test('renders with the stored height between paragraphs', async ({ page }) => {
     await createBlok(page, spacerFixture);
 

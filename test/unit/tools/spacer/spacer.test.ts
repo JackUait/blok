@@ -182,6 +182,69 @@ describe('SpacerTool', () => {
     });
   });
 
+  describe('fresh-insert reveal', () => {
+    it('a spacer constructed without a stored height reveals its affordances', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions());
+      const el = tool.render();
+
+      expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(true);
+      // Outline is shown outright, not hover-gated.
+      expect(el.className).toContain('outline-dashed');
+      for (const grip of getGrips(el)) {
+        expect(grip.className).toContain('opacity-100');
+      }
+      expect(el.querySelector('[data-blok-spacer-readout]')?.className).toContain('opacity-100');
+    });
+
+    it('a spacer constructed with a stored height is not revealed', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 64 }));
+      const el = tool.render();
+
+      expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(false);
+      for (const grip of getGrips(el)) {
+        expect(grip.className).not.toContain(' opacity-100');
+      }
+    });
+
+    it('clicking elsewhere dismisses the reveal back to hover-gated chrome', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions());
+      const el = tool.render();
+
+      expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(true);
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+      expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(false);
+      for (const grip of getGrips(el)) {
+        expect(grip.className).not.toContain(' opacity-100');
+      }
+      // Hover affordances stay intact after dismissal.
+      expect(el.className).toContain('hover:outline-dashed');
+      expect(el.querySelector('[data-blok-spacer-readout]')).not.toBeNull();
+    });
+
+    it('typing dismisses the reveal', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions());
+      const el = tool.render();
+
+      expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(true);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+
+      expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(false);
+    });
+
+    it('read-only spacers are never revealed', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({}, { readOnly: true }));
+      const el = tool.render();
+
+      expect(el.hasAttribute('data-blok-spacer-fresh')).toBe(false);
+    });
+  });
+
   describe('save()', () => {
     it('returns the current height', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');

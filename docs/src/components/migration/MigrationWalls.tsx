@@ -23,12 +23,12 @@ export const MigrationWalls: React.FC<{ className?: string }> = ({ className }) 
             className="grid items-center gap-4 py-6 sm:grid-cols-[1fr_auto_1fr]"
             data-blok-testid={`wall-${wall.id}`}
           >
-            {/* The old world — deliberately dimmed */}
-            <div className="opacity-70">
-              <span className="text-[0.7rem] font-bold uppercase tracking-wider text-destructive">
+            {/* The old world — label and title deliberately dimmed; description stays at full contrast */}
+            <div>
+              <span className="text-[0.7rem] font-bold uppercase tracking-wider text-destructive opacity-70">
                 {t("migration.wallOldLabel")}
               </span>
-              <h3 className="mt-1 text-base font-semibold text-foreground">
+              <h3 className="mt-1 text-base font-semibold text-foreground opacity-70">
                 <Typo>{t(wall.oldTitleKey)}</Typo>
               </h3>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">

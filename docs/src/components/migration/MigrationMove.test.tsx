@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { I18nProvider } from "../../contexts/I18nContext";
 import { MigrationMove } from "./MigrationMove";
-import { CODEMOD_APPLY_COMMAND } from "./migration-data";
+import { CODEMOD_DRY_RUN_COMMAND } from "./migration-data";
 import en from "../../i18n/en.json";
 
 const renderMove = () =>
@@ -16,9 +16,9 @@ const renderMove = () =>
   );
 
 describe("MigrationMove", () => {
-  it("renders the codemod apply command", () => {
+  it("renders the codemod dry-run command", () => {
     renderMove();
-    expect(screen.getByText(CODEMOD_APPLY_COMMAND)).toBeInTheDocument();
+    expect(screen.getByText(CODEMOD_DRY_RUN_COMMAND)).toBeInTheDocument();
   });
 
   it("renders all three steps", () => {

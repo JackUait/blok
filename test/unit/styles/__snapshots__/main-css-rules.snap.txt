@@ -1921,6 +1921,16 @@
   transition-property: background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
 }
 
+[data-blok-table-cell] [data-blok-selected="true"] + [data-blok-selected="true"] [data-blok-element-content] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+[data-blok-table-cell] [data-blok-selected="true"]:has(+ [data-blok-selected="true"]) [data-blok-element-content] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 [data-blok-table-heading] [data-blok-table-cell], [data-blok-table-heading-col] {
   background-color: var(--blok-table-heading-bg);
 }

@@ -286,6 +286,51 @@ test.describe('Spacer block', () => {
     await expect(guide).toHaveCount(0);
   });
 
+  test('an empty text block in a sibling column offers no snap target', async ({ page }) => {
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1-a', 'c1-empty'] },
+        { id: 'c1-a', type: 'paragraph', data: { text: 'Left text.' }, parent: 'c1' },
+        // The trailing empty paragraph an Enter press leaves behind.
+        { id: 'c1-empty', type: 'paragraph', data: { text: '' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['c2-p', 'sp1'] },
+        { id: 'c2-p', type: 'paragraph', data: { text: 'Right text.' }, parent: 'c2' },
+        { id: 'sp1', type: 'spacer', data: { height: 40 }, parent: 'c2' },
+      ],
+    });
+
+    const emptyBlock = page.locator('[data-blok-id="c1-empty"]');
+    const emptyBox = await emptyBlock.boundingBox();
+
+    if (!emptyBox) {
+      throw new Error('missing empty block bounding box');
+    }
+
+    // Aim the dragged edge right at the empty paragraph's bottom.
+    const targetY = emptyBox.y + emptyBox.height;
+    const spacer = page.locator(SPACER);
+
+    await spacer.hover();
+    const gripBox = await page.locator(BOTTOM_GRIP).boundingBox();
+
+    if (!gripBox) {
+      throw new Error('missing grip bounding box');
+    }
+
+    const startX = gripBox.x + gripBox.width / 2;
+    const startY = gripBox.y + gripBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, targetY, { steps: 12 });
+
+    // No guideline: the empty paragraph's bottom is not an alignment worth offering.
+    await expect(page.locator('[data-blok-spacer-guide]')).toHaveCount(0);
+
+    await page.mouse.up();
+  });
+
   test('spacer inside a column pushes following blocks down and round-trips', async ({ page }) => {
     await createBlok(page, {
       blocks: [

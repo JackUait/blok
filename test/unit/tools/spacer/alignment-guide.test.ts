@@ -19,12 +19,37 @@ const stubRect = (el: HTMLElement, rect: Partial<DOMRect>): void => {
 };
 
 /**
+ * Append a block holder to a column. Defaults to a paragraph carrying text, so
+ * callers only spell out what matters to their case.
+ */
+const addBlock = (
+  column: HTMLElement,
+  options: { bottom: number; component?: string; text?: string; html?: string }
+): void => {
+  const holder = document.createElement('div');
+
+  holder.setAttribute('data-blok-element', '');
+  holder.setAttribute('data-blok-component', options.component ?? 'paragraph');
+
+  if (options.html !== undefined) {
+    holder.innerHTML = options.html;
+  } else {
+    holder.textContent = options.text ?? 'Block text';
+  }
+
+  stubRect(holder, { bottom: options.bottom });
+  column.appendChild(holder);
+};
+
+/**
  * Build a column-list DOM:
  *   [data-blok-columns]
  *     [data-blok-column] (left)  with block holders at given bottoms
  *     [data-blok-column] (right) containing the spacer
  */
-const buildColumns = (leftBlockBottoms: number[]): { spacer: HTMLElement; columns: HTMLElement } => {
+const buildColumns = (
+  leftBlockBottoms: number[]
+): { spacer: HTMLElement; columns: HTMLElement; siblingColumn: HTMLElement } => {
   const columns = document.createElement('div');
 
   columns.setAttribute('data-blok-columns', '');
@@ -33,13 +58,7 @@ const buildColumns = (leftBlockBottoms: number[]): { spacer: HTMLElement; column
   const left = document.createElement('div');
 
   left.setAttribute('data-blok-column', '');
-  leftBlockBottoms.forEach((bottom) => {
-    const holder = document.createElement('div');
-
-    holder.setAttribute('data-blok-element', '');
-    stubRect(holder, { bottom });
-    left.appendChild(holder);
-  });
+  leftBlockBottoms.forEach((bottom) => addBlock(left, { bottom }));
 
   const right = document.createElement('div');
 
@@ -57,7 +76,7 @@ const buildColumns = (leftBlockBottoms: number[]): { spacer: HTMLElement; column
   columns.appendChild(right);
   document.body.appendChild(columns);
 
-  return { spacer, columns };
+  return { spacer, columns, siblingColumn: left };
 };
 
 describe('spacer alignment guide', () => {
@@ -101,6 +120,46 @@ describe('spacer alignment guide', () => {
       document.body.appendChild(spacer);
 
       expect(collectSiblingBlockBottoms(spacer)).toEqual([]);
+    });
+
+    it('skips empty text blocks — they have no visible end to align with', () => {
+      const { spacer, siblingColumn } = buildColumns([120]);
+
+      // A trailing empty paragraph, as left behind by pressing Enter.
+      addBlock(siblingColumn, { bottom: 300, component: 'paragraph', text: '' });
+
+      expect(collectSiblingBlockBottoms(spacer)).toEqual([120]);
+    });
+
+    it('skips empty text blocks holding only whitespace or a <br>', () => {
+      const { spacer, siblingColumn } = buildColumns([]);
+
+      addBlock(siblingColumn, { bottom: 200, component: 'paragraph', html: '<br>' });
+      addBlock(siblingColumn, { bottom: 300, component: 'header', text: '   ' });
+      addBlock(siblingColumn, { bottom: 400, component: 'quote', text: '' });
+
+      expect(collectSiblingBlockBottoms(spacer)).toEqual([]);
+    });
+
+    it('keeps text blocks that actually have text', () => {
+      const { spacer, siblingColumn } = buildColumns([]);
+
+      addBlock(siblingColumn, { bottom: 200, component: 'paragraph', text: 'Real text.' });
+      addBlock(siblingColumn, { bottom: 300, component: 'header', text: 'Title' });
+
+      expect(collectSiblingBlockBottoms(spacer)).toEqual([200, 300]);
+    });
+
+    it('keeps non-text blocks that legitimately render no text', () => {
+      const { spacer, siblingColumn } = buildColumns([]);
+
+      // A divider, an image and a spacer are textless but visible — their ends
+      // are real alignment targets.
+      addBlock(siblingColumn, { bottom: 200, component: 'divider', text: '' });
+      addBlock(siblingColumn, { bottom: 300, component: 'image', text: '' });
+      addBlock(siblingColumn, { bottom: 400, component: 'spacer', text: '' });
+
+      expect(collectSiblingBlockBottoms(spacer)).toEqual([200, 300, 400]);
     });
   });
 

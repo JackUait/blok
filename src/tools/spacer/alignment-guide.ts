@@ -27,10 +27,36 @@ export const findSnapTarget = (edgeY: number, targets: number[]): number | null 
 };
 
 /**
+ * Tools whose block renders nothing at all when it holds no text. A textless
+ * divider/image/spacer still has a visible end worth aligning to; an empty
+ * paragraph does not.
+ */
+const TEXT_COMPONENTS = new Set(['paragraph', 'header', 'quote']);
+
+/**
+ * Whether a block holder is a text block with no text in it — the trailing
+ * empty paragraph an Enter press leaves behind. Its bottom is an invisible
+ * boundary, so offering it as an alignment target is noise.
+ *
+ * @param holder - a block holder element
+ */
+const isEmptyTextBlock = (holder: HTMLElement): boolean => {
+  const component = holder.getAttribute('data-blok-component');
+
+  if (component === null || !TEXT_COMPONENTS.has(component)) {
+    return false;
+  }
+
+  // Browsers park a <br> inside an empty contenteditable; textContent ignores it.
+  return (holder.textContent ?? '').trim() === '';
+};
+
+/**
  * Viewport bottoms of every block sitting in the spacer's SIBLING columns —
- * the ends the user is trying to line their content up with. Blocks in the
- * spacer's own column are excluded: snapping to those would be snapping to
- * itself and its own neighbours, which carries no alignment meaning.
+ * the ends the user is trying to line their content up with. Two exclusions:
+ * blocks in the spacer's own column (snapping to those would be snapping to
+ * its own neighbours, which carries no alignment meaning), and empty text
+ * blocks (no visible end to align with).
  *
  * @param spacerElement - the rendered spacer wrapper
  */
@@ -47,6 +73,7 @@ export const collectSiblingBlockBottoms = (spacerElement: HTMLElement): number[]
 
   return siblingColumns.flatMap((column) =>
     Array.from(column.querySelectorAll<HTMLElement>(`[${DATA_ATTR.element}]`))
+      .filter((holder) => !isEmptyTextBlock(holder))
       .map((holder) => holder.getBoundingClientRect().bottom)
   );
 };

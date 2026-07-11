@@ -212,11 +212,15 @@ describe('Embed tool', () => {
     expect(root.querySelector('blockquote.twitter-tweet')).toBeNull();
   });
 
-  it('validates only when source and embed are present', () => {
+  it('validates only when source is present and embed is a safe https URL', () => {
     const tool = new Embed(createOptions());
 
     expect(
-      tool.validate({ service: 'youtube', source: 'a', embed: 'b' } as EmbedData)
+      tool.validate({
+        service: 'youtube',
+        source: 'https://youtu.be/dQw4w9WgXcQ',
+        embed: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      } as EmbedData)
     ).toBe(true);
     expect(tool.validate({ service: 'youtube', source: '', embed: '' } as EmbedData)).toBe(false);
   });
@@ -906,5 +910,76 @@ describe('Embed toolbar integration', () => {
       expect(editableCaption?.getAttribute('contenteditable')).toBe('true');
       expect(tool.save().caption).toBe('Edited live');
     });
+  });
+});
+
+describe('Embed stored-data URL safety (stored XSS guard)', () => {
+  // Saved documents are attacker-controllable in host apps: data.embed must be
+  // re-validated at RENDER time, not only when a URL is pasted.
+  it.each([
+    ['javascript:alert(1)'],
+    ['data:text/html,<script>alert(1)</script>'],
+    ['//evil.example/frame'],
+    ['http://evil.example/frame'],
+  ])('refuses to render an iframe for unsafe stored embed URL %s', (embed) => {
+    const tool = new Embed(createOptions(iframeData({ embed })));
+
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+  });
+
+  it('refuses the script path entirely when the stored embed URL is unsafe', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'threads',
+        source: 'https://www.threads.net/@zuck/post/C8z2Qq0Rk1x',
+        embed: 'javascript:alert(1)',
+        kind: 'script',
+      })
+    );
+
+    const root = tool.render();
+
+    expect(root.querySelector('script')).toBeNull();
+    expect(root.querySelector('blockquote')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+  });
+
+  it('never lets an unsafe stored source reach the twitter blockquote anchor', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'twitter',
+        source: 'javascript:alert(1)',
+        embed: 'https://twitter.com/i/status/1234567890',
+        kind: 'script',
+      })
+    );
+
+    const root = tool.render();
+    const href = root.querySelector('blockquote a')?.getAttribute('href') ?? '';
+
+    expect(href.startsWith('javascript:')).toBe(false);
+  });
+
+  it('still renders a valid https registry embed (guard must not break real embeds)', () => {
+    const tool = new Embed(createOptions(iframeData()));
+
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')?.getAttribute('src')).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+  });
+
+  it('rejects unsafe embed URLs in validate() so they are dropped on save', () => {
+    const tool = new Embed(createOptions(iframeData()));
+
+    expect(
+      tool.validate({
+        service: 'youtube',
+        source: 'https://youtu.be/dQw4w9WgXcQ',
+        embed: 'javascript:alert(1)',
+      } as EmbedData)
+    ).toBe(false);
   });
 });

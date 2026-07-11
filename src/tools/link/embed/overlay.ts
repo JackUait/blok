@@ -6,6 +6,7 @@ import {
   IconLinkExternal,
   IconMoreHorizontal,
 } from '../../../components/icons';
+import { setSafeLinkHref } from '../registry';
 
 export type EmbedAlignment = 'left' | 'center' | 'right';
 
@@ -118,7 +119,7 @@ function appendOpenOriginal(root: HTMLElement, opts: EmbedOverlayOptions): void 
 
   anchor.setAttribute('data-action', 'open-original');
   anchor.className = 'blok-embed-toolbar__btn';
-  anchor.href = opts.source;
+  setSafeLinkHref(anchor, opts.source);
   anchor.target = '_blank';
   anchor.rel = 'noreferrer nofollow';
   anchor.setAttribute('aria-label', opts.i18n.t('tools.embed.openOriginal'));

@@ -89,3 +89,17 @@ describe('MENTION_SANITIZE_CONFIG', () => {
     });
   });
 });
+
+describe('buildMentionElement URL safety', () => {
+  it('never renders a javascript: href from stored mention data', () => {
+    const el = buildMentionElement({ url: 'javascript:alert(1)', title: 'Click me' });
+
+    expect(el.getAttribute('href') ?? '').not.toContain('javascript:');
+  });
+
+  it('never renders a data: href from stored mention data', () => {
+    const el = buildMentionElement({ url: 'data:text/html,<script>alert(1)</script>', title: 'x' });
+
+    expect(el.getAttribute('href') ?? '').not.toContain('data:');
+  });
+});

@@ -14,7 +14,7 @@ import { IconCopy, IconGlobe, IconLinkCopy, IconReplace } from '../../../compone
 import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
-import { EMBED_SERVICES, matchEmbedService, isHttpUrl, type EmbedKind } from '../registry';
+import { EMBED_SERVICES, matchEmbedService, isHttpUrl, isHttpsUrl, type EmbedKind } from '../registry';
 
 export interface EmbedData extends BlockToolData {
   service: string;
@@ -36,9 +36,32 @@ const TELEGRAM_WIDGET_SRC = 'https://telegram.org/js/telegram-widget.js?22';
 const TWITTER_WIDGET_SRC = 'https://platform.twitter.com/widgets.js';
 const THREADS_WIDGET_SRC = 'https://www.threads.com/embed.js';
 
+/**
+ * Gate every URL that reaches a live sink (iframe `src`, widget anchor
+ * `href`) through the https-only check. Saved documents are attacker-
+ * controllable in host apps, so `this.data` must NEVER flow into a sink
+ * unwrapped — a `javascript:` src would execute in the host page's origin
+ * despite the sandbox (sandboxed frames with `allow-scripts
+ * allow-same-origin` inherit the embedder origin for javascript: URLs).
+ */
+function toSafeEmbedSrc(value: string | undefined): string {
+  return value !== undefined && isHttpsUrl(value) ? value : '';
+}
+
 const DEFAULT_WIDTH = 580;
 const DEFAULT_HEIGHT = 320;
 const FULL_WIDTH_PERCENT = 100;
+/**
+ * Sandbox for embedded provider iframes. `allow-same-origin` is deliberately
+ * kept alongside `allow-scripts`: it is only dangerous when the framed
+ * document shares the host page's origin (or runs a `javascript:`/`data:`
+ * URL, which inherits it) — and `toSafeEmbedSrc` guarantees the src is an
+ * absolute https URL on the provider's own origin, so the frame stays
+ * cross-origin to the host. Providers (YouTube, Vimeo, Spotify, …) need
+ * same-origin access to their OWN origin for storage/player APIs; removing
+ * it breaks most players. Any change to this constant must keep the
+ * `toSafeEmbedSrc` guarantee intact (see link-url-sink-law architecture test).
+ */
 const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-popups allow-presentation';
 const IFRAME_ALLOW = 'encrypted-media; fullscreen; picture-in-picture';
 
@@ -119,7 +142,10 @@ export class Embed implements BlockTool {
       return true;
     }
 
-    if (this.isGenericAllowed() && isHttpUrl(url)) {
+    // Generic embeds must be https: the render path refuses anything else,
+    // so rejecting here surfaces the error at input time instead of silently
+    // rendering an empty block.
+    if (this.isGenericAllowed() && isHttpsUrl(url)) {
       this.data = {
         service: '',
         source: url,
@@ -167,7 +193,9 @@ export class Embed implements BlockTool {
   }
 
   public validate(data: EmbedData): boolean {
-    return Boolean(data.source) && Boolean(data.embed);
+    // An unsafe embed URL is rejected outright so save() drops the block
+    // instead of persisting a payload that every future render must dodge.
+    return Boolean(data.source) && isHttpsUrl(data.embed);
   }
 
   /**
@@ -253,7 +281,8 @@ export class Embed implements BlockTool {
 
     this.detachResizers();
 
-    if (!this.data.embed) {
+    // Unsafe stored URLs render the inert empty state — never a frame/widget.
+    if (toSafeEmbedSrc(this.data.embed) === '') {
       this.root.replaceChildren(this.buildEmpty());
 
       return;
@@ -313,12 +342,12 @@ export class Embed implements BlockTool {
       const threadsQuote = document.createElement('blockquote');
 
       threadsQuote.className = 'text-post-media';
-      threadsQuote.setAttribute('data-text-post-permalink', this.data.embed ?? '');
+      threadsQuote.setAttribute('data-text-post-permalink', toSafeEmbedSrc(this.data.embed));
       threadsQuote.setAttribute('data-text-post-version', '0');
 
       const threadsAnchor = document.createElement('a');
 
-      threadsAnchor.href = this.data.embed ?? '';
+      threadsAnchor.href = toSafeEmbedSrc(this.data.embed);
       threadsQuote.appendChild(threadsAnchor);
       container.appendChild(threadsQuote);
 
@@ -338,7 +367,7 @@ export class Embed implements BlockTool {
 
     const anchor = document.createElement('a');
 
-    anchor.href = this.data.source ?? '';
+    anchor.href = toSafeEmbedSrc(this.data.source);
     blockquote.appendChild(anchor);
     container.appendChild(blockquote);
 
@@ -521,7 +550,7 @@ export class Embed implements BlockTool {
     const iframe = document.createElement('iframe');
 
     iframe.setAttribute('data-blok-testid', 'embed-frame');
-    iframe.src = this.data.embed ?? '';
+    iframe.src = toSafeEmbedSrc(this.data.embed);
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.border = '0';

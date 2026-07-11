@@ -935,7 +935,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -966,6 +966,7 @@
         callout: true,
         database: true,
         divider: true,
+        spacer: true,
         quote: true,
         code: true,
         image: true,
@@ -1875,6 +1876,7 @@
         tools['database-row'] = DatabaseRow;
       }
       if (state.tools.divider) tools.divider = Divider;
+      if (state.tools.spacer) tools.spacer = Spacer;
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       if (state.tools.image) tools.image = Image;
@@ -2213,6 +2215,7 @@
       { key: 'callout', label: 'Callout', icon: Icons.IconCallout },
       { key: 'database', label: 'Database', icon: Icons.IconDatabase },
       { key: 'divider', label: 'Divider', icon: Icons.IconDivider },
+      { key: 'spacer', label: 'Spacer', icon: Icons.IconSpacer },
       { key: 'quote', label: 'Quote', icon: Icons.IconQuote },
     ];
 
@@ -2256,7 +2259,7 @@
       'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconMinus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronRightSmall', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine', 'IconMoreHorizontal', 'IconCloseThick', 'IconDice'],
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconEquation', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconDivider', 'IconSpacer', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCaptionImage', 'IconCrop', 'IconCropImage', 'IconReplaceImage', 'IconExpandFullscreen', 'IconExpandFullscreenImage', 'IconCollapseFullscreen', 'IconPlayerFullscreenExit', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconDownloadImage', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement'],
@@ -2526,6 +2529,17 @@
             { id: 'd-a', type: 'paragraph', data: { text: 'Above divider.' } },
             { id: 'd', type: 'divider', data: {} },
             { id: 'd-b', type: 'paragraph', data: { text: 'Below divider.' } },
+          ] },
+        ],
+      },
+      {
+        tool: 'spacer',
+        label: 'Spacer',
+        states: [
+          { label: 'Between paragraphs', blocks: [
+            { id: 'sp-a', type: 'paragraph', data: { text: 'Above spacer.' } },
+            { id: 'sp', type: 'spacer', data: { height: 64 } },
+            { id: 'sp-b', type: 'paragraph', data: { text: 'Below spacer.' } },
           ] },
         ],
       },
@@ -2856,6 +2870,7 @@
           database: Database,
           'database-row': DatabaseRow,
           divider: Divider,
+          spacer: Spacer,
           quote: Quote,
           code: Code,
           image: Image,

@@ -299,6 +299,47 @@ test.describe('table cells — any block type', () => {
       await expect(listInCell).toContainText('Item');
     });
 
+    test('list items in a cell match paragraph font-size even when list itemSize is configured', async ({ page }) => {
+      // Regression: a host configuring a global list font (itemSize) used to make
+      // list items ignore the cell's reduced (text-sm) type scale, so a list
+      // rendered larger than sibling paragraph text in the same cell.
+      await createBlok(page, {
+        tools: {
+          ...defaultTools,
+          list: { className: 'Blok.List', config: { itemSize: '16px' } },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: { withHeadings: false, content: [['', ''], ['', '']] },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      await getCellEditable(page, 0, 0).click();
+      await page.keyboard.type('Hello');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('- Item');
+
+      const firstCell = getCell(page, 0, 0);
+      const paragraph = firstCell.locator('[data-blok-tool="paragraph"]').first();
+      const listItem = firstCell.locator('[data-blok-tool="list"] [role="listitem"]').first();
+
+      await expect(paragraph).toBeVisible();
+      await expect(listItem).toBeVisible();
+
+      const paragraphFontSize = await paragraph.evaluate((el) => getComputedStyle(el).fontSize);
+      const listItemFontSize = await listItem.evaluate((el) => getComputedStyle(el).fontSize);
+
+      // The cell's type scale is authoritative: a list must not outsize the
+      // paragraph text next to it, regardless of the tool's itemSize config.
+      expect(listItemFontSize).toBe(paragraphFontSize);
+    });
+
     test('list items inside a table cell have 2px top/bottom spacing', async ({ page }) => {
       await create2x2Table(page);
 

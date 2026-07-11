@@ -16,6 +16,17 @@
   @apply py-0 mt-[2px] mb-[2px];
 }
 
+/*
+ * The cell's type scale (text-sm) is authoritative for every block inside it.
+ * The list tool sets its configured itemSize as an INLINE font-size per item,
+ * which would beat the cell's inherited size and render list text larger than
+ * the paragraph next to it. Force items to inherit the cell font. !important is
+ * required to override the inline style.
+ */
+[data-blok-table-cell-blocks] [data-blok-tool="list"] [role="listitem"] {
+  font-size: inherit !important;
+}
+
 /* ─── Cell content placement ──────────────────────────────────── */
 
 [data-blok-cell-placement="top-center"] {

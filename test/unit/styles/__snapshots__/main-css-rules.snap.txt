@@ -1881,6 +1881,10 @@
 
 }
 
+[data-blok-table-cell-blocks] [data-blok-tool="list"] [role="listitem"] {
+  font-size: inherit !important;
+}
+
 [data-blok-cell-placement="top-center"] {
   align-items: center;
 }

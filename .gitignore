@@ -80,3 +80,5 @@ skills-lock.json
 
 # stray ng-packagr staging artifact (real staging is dist/.angular-build)
 /.angular-build/
+
+.superpowers/

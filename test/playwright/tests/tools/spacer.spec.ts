@@ -14,6 +14,8 @@ test.beforeAll(() => {
 
 const SPACER = '[data-blok-spacer]';
 const GRIP = '[data-blok-spacer-grip]';
+const BOTTOM_GRIP = '[data-blok-spacer-grip="bottom"]';
+const TOP_GRIP = '[data-blok-spacer-grip="top"]';
 
 const spacerFixture: OutputData = {
   blocks: [
@@ -47,7 +49,7 @@ test.describe('Spacer block', () => {
     const spacer = page.locator(SPACER);
 
     await spacer.hover();
-    const gripBox = await page.locator(GRIP).boundingBox();
+    const gripBox = await page.locator(BOTTOM_GRIP).boundingBox();
 
     if (!gripBox) {
       throw new Error('missing grip bounding box');
@@ -69,26 +71,65 @@ test.describe('Spacer block', () => {
     expect(savedSpacer?.data).toEqual({ height: 104 });
   });
 
-  test('grip resizes with arrow keys and clamps at the minimum', async ({ page }) => {
+  test('grip resizes with arrow keys and clamps at the Text-block-height floor', async ({ page }) => {
     await createBlok(page, {
-      blocks: [{ id: 'sp1', type: 'spacer', data: { height: 16 } }],
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'Reference line.' } },
+        { id: 'sp1', type: 'spacer', data: { height: 54 } },
+      ],
     });
 
-    const grip = page.locator(GRIP);
+    const grip = page.locator(BOTTOM_GRIP);
 
     await grip.focus();
     await page.keyboard.press('ArrowDown');
-    expect(await getSpacerHeight(page)).toBe(24);
+    expect(await getSpacerHeight(page)).toBe(62);
 
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('ArrowUp');
-    // 24 → 16 → 8, then clamped at the 8px floor
-    expect(await getSpacerHeight(page)).toBe(8);
+    await page.keyboard.press('ArrowUp');
+    // 62 → 54 → 46 → 38, then clamped at the floor
+    expect(await getSpacerHeight(page)).toBe(38);
+
+    // The floor is the default Text block height — a spacer can never be
+    // thinner than one line of text.
+    const paragraphHeight = await page
+      .getByText('Reference line.')
+      .evaluate((el) => el.getBoundingClientRect().height);
+
+    expect(await getSpacerHeight(page)).toBe(paragraphHeight);
 
     const saved = await saveBlok(page);
+    const savedSpacer = saved.blocks.find((block) => block.type === 'spacer');
 
-    expect(saved.blocks[0]?.data).toEqual({ height: 8 });
+    expect(savedSpacer?.data).toEqual({ height: 38 });
+  });
+
+  test('dragging the top grip upward grows the spacer', async ({ page }) => {
+    await createBlok(page, spacerFixture);
+
+    await page.locator(SPACER).hover();
+    const gripBox = await page.locator(TOP_GRIP).boundingBox();
+
+    if (!gripBox) {
+      throw new Error('missing top grip bounding box');
+    }
+
+    const startX = gripBox.x + gripBox.width / 2;
+    const startY = gripBox.y + gripBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, startY - 30, { steps: 10 });
+    await page.mouse.up();
+
+    expect(await getSpacerHeight(page)).toBe(94);
+
+    const saved = await saveBlok(page);
+    const savedSpacer = saved.blocks.find((block) => block.type === 'spacer');
+
+    expect(savedSpacer?.data).toEqual({ height: 94 });
   });
 
   test('read-only mode renders the gap without a resize grip', async ({ page }) => {

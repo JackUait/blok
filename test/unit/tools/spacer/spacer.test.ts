@@ -27,7 +27,11 @@ const createOptions = (
   block: { id: 'spacer-block-id' } as never,
 });
 
-const getGrip = (el: HTMLElement): HTMLElement | null => el.querySelector('[data-blok-spacer-grip]');
+const getGrip = (el: HTMLElement, edge: 'top' | 'bottom' = 'bottom'): HTMLElement | null =>
+  el.querySelector(`[data-blok-spacer-grip="${edge}"]`);
+
+const getGrips = (el: HTMLElement): HTMLElement[] =>
+  Array.from(el.querySelectorAll('[data-blok-spacer-grip]'));
 
 describe('SpacerTool', () => {
   beforeEach(() => {
@@ -55,20 +59,20 @@ describe('SpacerTool', () => {
       expect(el.style.height).toBe('64px');
     });
 
-    it('defaults to 24px when no height is stored', async () => {
+    it('defaults to 38px (one Text block) when no height is stored', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions());
       const el = tool.render();
 
-      expect(el.style.height).toBe('24px');
+      expect(el.style.height).toBe('38px');
     });
 
-    it('clamps stored height below the minimum up to 8px', async () => {
+    it('clamps stored height below the minimum up to the Text block height (38px)', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions({ height: 2 }));
       const el = tool.render();
 
-      expect(el.style.height).toBe('8px');
+      expect(el.style.height).toBe('38px');
     });
 
     it('clamps stored height above the maximum down to 600px', async () => {
@@ -87,30 +91,51 @@ describe('SpacerTool', () => {
       expect(el.querySelectorAll('[contenteditable="true"]')).toHaveLength(0);
     });
 
-    it('renders a focusable resize grip with separator semantics', async () => {
+    it('renders grips on both the top and bottom edges', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions({ height: 40 }));
       const el = tool.render();
-      const grip = getGrip(el);
 
-      expect(grip).not.toBeNull();
-      expect(grip?.getAttribute('role')).toBe('separator');
-      expect(grip?.getAttribute('aria-orientation')).toBe('horizontal');
-      expect(grip?.getAttribute('tabindex')).toBe('0');
-      expect(grip?.getAttribute('aria-label')).toBe('tools.spacer.resizeAriaLabel');
-      expect(grip?.getAttribute('aria-valuemin')).toBe('8');
-      expect(grip?.getAttribute('aria-valuemax')).toBe('600');
-      expect(grip?.getAttribute('aria-valuenow')).toBe('40');
+      expect(getGrip(el, 'top')).not.toBeNull();
+      expect(getGrip(el, 'bottom')).not.toBeNull();
+    });
+
+    it('renders focusable resize grips with separator semantics', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 40 }));
+      const el = tool.render();
+
+      for (const grip of getGrips(el)) {
+        expect(grip.getAttribute('role')).toBe('separator');
+        expect(grip.getAttribute('aria-orientation')).toBe('horizontal');
+        expect(grip.getAttribute('tabindex')).toBe('0');
+        expect(grip.getAttribute('aria-label')).toBe('tools.spacer.resizeAriaLabel');
+        expect(grip.getAttribute('aria-valuemin')).toBe('38');
+        expect(grip.getAttribute('aria-valuemax')).toBe('600');
+        expect(grip.getAttribute('aria-valuenow')).toBe('40');
+      }
     });
   });
 
   describe('hover affordances', () => {
-    it('marks the block boundary with a dashed outline on hover', async () => {
+    it('marks the block boundary with a dashed accent-blue outline on hover', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions());
       const el = tool.render();
 
       expect(el.className).toContain('hover:outline-dashed');
+      expect(el.className).toContain('hover:outline-(--blok-color-accent)');
+    });
+
+    it('grip zones advertise dragging: resize cursor + accent pill on direct hover', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions());
+      const el = tool.render();
+
+      for (const grip of getGrips(el)) {
+        expect(grip.className).toContain('cursor-ns-resize');
+        expect(grip.className).toContain('hover:after:bg-(--blok-color-accent)');
+      }
     });
 
     it('renders a px readout that reflects the stored height', async () => {
@@ -127,13 +152,13 @@ describe('SpacerTool', () => {
 
     it('updates the readout when the height changes', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 24 }));
+      const tool = new SpacerTool(createOptions({ height: 48 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
       grip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 
-      expect(el.querySelector('[data-blok-spacer-readout]')?.textContent).toBe('32px');
+      expect(el.querySelector('[data-blok-spacer-readout]')?.textContent).toBe('56px');
     });
 
     it('renders no readout in read-only mode', async () => {
@@ -173,7 +198,7 @@ describe('SpacerTool', () => {
 
       tool.render();
 
-      expect(tool.save()).toEqual({ height: 24 });
+      expect(tool.save()).toEqual({ height: 38 });
     });
   });
 
@@ -187,38 +212,60 @@ describe('SpacerTool', () => {
   });
 
   describe('keyboard resize', () => {
-    it('ArrowDown on the grip grows the height by 8px', async () => {
+    it('ArrowDown on the bottom grip grows the height by 8px', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 24 }));
+      const tool = new SpacerTool(createOptions({ height: 48 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
       grip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 
-      expect(el.style.height).toBe('32px');
-      expect(grip.getAttribute('aria-valuenow')).toBe('32');
+      expect(el.style.height).toBe('56px');
+      expect(grip.getAttribute('aria-valuenow')).toBe('56');
     });
 
-    it('ArrowUp on the grip shrinks the height by 8px', async () => {
+    it('ArrowUp on the bottom grip shrinks the height by 8px', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 24 }));
+      const tool = new SpacerTool(createOptions({ height: 56 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
       grip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
 
-      expect(el.style.height).toBe('16px');
+      expect(el.style.height).toBe('48px');
     });
 
-    it('never shrinks below the 8px minimum', async () => {
+    it('ArrowUp on the top grip grows the height by 8px (edge moves up)', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 8 }));
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+      const grip = getGrip(el, 'top')!;
+
+      grip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+
+      expect(el.style.height).toBe('56px');
+    });
+
+    it('ArrowDown on the top grip shrinks the height by 8px (edge moves down)', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 56 }));
+      const el = tool.render();
+      const grip = getGrip(el, 'top')!;
+
+      grip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+      expect(el.style.height).toBe('48px');
+    });
+
+    it('never shrinks below the 38px minimum', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 38 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
       grip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
 
-      expect(el.style.height).toBe('8px');
+      expect(el.style.height).toBe('38px');
     });
 
     it('never grows above the 600px maximum', async () => {
@@ -234,20 +281,20 @@ describe('SpacerTool', () => {
 
     it('saved data reflects a keyboard resize', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 24 }));
+      const tool = new SpacerTool(createOptions({ height: 48 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
       grip.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 
-      expect(tool.save()).toEqual({ height: 32 });
+      expect(tool.save()).toEqual({ height: 56 });
     });
   });
 
   describe('pointer resize', () => {
-    it('dragging the grip down grows the height by the pointer delta', async () => {
+    it('dragging the bottom grip down grows the height by the pointer delta', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 24 }));
+      const tool = new SpacerTool(createOptions({ height: 48 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
@@ -255,13 +302,40 @@ describe('SpacerTool', () => {
       window.dispatchEvent(new PointerEvent('pointermove', { clientY: 140, pointerId: 1 }));
       window.dispatchEvent(new PointerEvent('pointerup', { clientY: 140, pointerId: 1 }));
 
-      expect(el.style.height).toBe('64px');
-      expect(tool.save()).toEqual({ height: 64 });
+      expect(el.style.height).toBe('88px');
+      expect(tool.save()).toEqual({ height: 88 });
     });
 
-    it('dragging up clamps at the minimum', async () => {
+    it('dragging the top grip up grows the height by the pointer delta', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 24 }));
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+      const grip = getGrip(el, 'top')!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 100, pointerId: 1, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 60, pointerId: 1 }));
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 60, pointerId: 1 }));
+
+      expect(el.style.height).toBe('88px');
+      expect(tool.save()).toEqual({ height: 88 });
+    });
+
+    it('dragging the top grip down shrinks the height', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 64 }));
+      const el = tool.render();
+      const grip = getGrip(el, 'top')!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 100, pointerId: 1, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 120, pointerId: 1 }));
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 120, pointerId: 1 }));
+
+      expect(el.style.height).toBe('44px');
+    });
+
+    it('dragging up clamps at the 38px minimum', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
@@ -269,12 +343,12 @@ describe('SpacerTool', () => {
       window.dispatchEvent(new PointerEvent('pointermove', { clientY: 0, pointerId: 1 }));
       window.dispatchEvent(new PointerEvent('pointerup', { clientY: 0, pointerId: 1 }));
 
-      expect(el.style.height).toBe('8px');
+      expect(el.style.height).toBe('38px');
     });
 
     it('stops tracking pointer moves after pointerup', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
-      const tool = new SpacerTool(createOptions({ height: 24 }));
+      const tool = new SpacerTool(createOptions({ height: 48 }));
       const el = tool.render();
       const grip = getGrip(el)!;
 
@@ -283,30 +357,31 @@ describe('SpacerTool', () => {
       window.dispatchEvent(new PointerEvent('pointerup', { clientY: 110, pointerId: 1 }));
       window.dispatchEvent(new PointerEvent('pointermove', { clientY: 300, pointerId: 1 }));
 
-      expect(el.style.height).toBe('34px');
+      expect(el.style.height).toBe('58px');
     });
   });
 
   describe('read-only mode', () => {
-    it('renders no grip in read-only mode', async () => {
+    it('renders no grips in read-only mode', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions({ height: 40 }, { readOnly: true }));
       const el = tool.render();
 
-      expect(getGrip(el)).toBeNull();
+      expect(getGrips(el)).toHaveLength(0);
       expect(el.style.height).toBe('40px');
     });
 
-    it('setReadOnly(true) removes the grip, setReadOnly(false) restores it', async () => {
+    it('setReadOnly(true) removes both grips, setReadOnly(false) restores them', async () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions({ height: 40 }));
       const el = tool.render();
 
       tool.setReadOnly(true);
-      expect(getGrip(el)).toBeNull();
+      expect(getGrips(el)).toHaveLength(0);
 
       tool.setReadOnly(false);
-      expect(getGrip(el)).not.toBeNull();
+      expect(getGrip(el, 'top')).not.toBeNull();
+      expect(getGrip(el, 'bottom')).not.toBeNull();
     });
   });
 

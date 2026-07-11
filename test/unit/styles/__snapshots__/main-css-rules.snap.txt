@@ -3746,6 +3746,7 @@
   display: inline-block;
   position: relative;
   max-width: 100%;
+  container-type: inline-size;
 }
 
 [data-blok-tool="image"][data-size="sm"] .blok-image-inner {
@@ -3805,7 +3806,7 @@
 [data-blok-tool="image"] .blok-image-caption {
   display: block;
   margin-top: var(--blok-space-2);
-  font-size: 13.5px;
+  font-size: clamp(10px, calc(6.5px + 1.5cqw), 13.5px);
   color: var(--blok-text-secondary);
   line-height: 1.5;
   outline: none;
@@ -3839,9 +3840,9 @@
 [data-blok-tool="image"] .blok-image-caption-row__alt {
   flex: 0 0 auto;
   margin-top: var(--blok-space-1);
-  padding: var(--blok-space-0-75) var(--blok-space-2);
+  padding: clamp(2px, 0.6cqw, 3px) clamp(4px, 1.6cqw, 8px);
   font: inherit;
-  font-size: 11px;
+  font-size: clamp(8.5px, calc(6px + 1cqw), 11px);
   font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1.4;
@@ -3894,8 +3895,8 @@
 }
 
 [data-blok-tool="image"] .blok-image-toolbar button {
-  width: 28px;
-  height: 28px;
+  width: clamp(18px, calc(8px + 4cqw), 28px);
+  height: clamp(18px, calc(8px + 4cqw), 28px);
   display: grid;
   place-items: center;
   color: var(--blok-overlay-fg);
@@ -3917,8 +3918,8 @@
 }
 
 [data-blok-tool="image"] .blok-image-toolbar button svg {
-  width: 14px;
-  height: 14px;
+  width: clamp(9px, calc(4px + 2cqw), 14px);
+  height: clamp(9px, calc(4px + 2cqw), 14px);
 }
 
 [data-blok-tool="image"] .blok-image-toolbar button[aria-pressed="true"], [data-blok-tool="image"] .blok-image-toolbar button[aria-expanded="true"] {
@@ -3940,7 +3941,7 @@
 }
 
 [data-blok-tool="image"] .blok-image-toolbar__pill button {
-  width: 26px;
+  width: clamp(17px, calc(7px + 3.8cqw), 26px);
   border-radius: 0;
 }
 
@@ -4045,7 +4046,7 @@
 [data-blok-tool="image"] [data-role="resize-handle"] {
   position: absolute;
   top: 50%;
-  width: 6px;
+  width: clamp(3.5px, calc(1px + 1cqw), 6px);
   height: clamp(24px, 25%, 50px);
   background: var(--blok-handle-bg-default);
   border: 1px solid var(--blok-handle-fg-default);

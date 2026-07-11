@@ -38,6 +38,7 @@ import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { renderErrorState } from './error-state';
 import { ImageError } from './errors';
 import { attachResizeHandle, type ResizeEdge } from './resizer';
+import { resizeFloorPx } from './resize-floor';
 import { widthForAspectChange } from './crop-math';
 import {
   applyAutoFull,
@@ -874,6 +875,10 @@ export class ImageTool implements BlockTool {
         container: figure.parentElement ?? figure,
         edge,
         alignment: this.data.alignment ?? 'center',
+        // Resolved at drag start: an image inside a table cell can't shrink below
+        // a fixed pixel width (a narrow column would otherwise reach the global
+        // 10% floor as an unusable sliver). Elsewhere there's no extra floor.
+        minWidthPx: () => resizeFloorPx(figure),
         onPreview: (percent) => {
           figure.style.setProperty('width', `${percent}%`);
         },

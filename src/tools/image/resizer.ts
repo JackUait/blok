@@ -93,8 +93,12 @@ export interface AttachResizeHandleOptions {
   container: HTMLElement;
   edge: ResizeEdge;
   alignment?: ImageAlignment;
-  /** Per-source hard minimum width in pixels; floors the resize lower bound. */
-  minWidthPx?: number;
+  /**
+   * Hard minimum width in pixels; floors the resize lower bound. May be a thunk
+   * resolved at drag start for context-dependent floors (e.g. an image inside a
+   * table cell) that are only known once the element is mounted.
+   */
+  minWidthPx?: number | (() => number | undefined);
   onPreview(percent: number): void;
   onCommit(percent: number): void;
 }
@@ -105,6 +109,7 @@ interface DragState {
   startWidth: number;
   containerWidth: number;
   lastPercent: number | undefined;
+  minWidthPx: number | undefined;
 }
 
 export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void {
@@ -114,6 +119,7 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
     startWidth: 0,
     containerWidth: 0,
     lastPercent: undefined,
+    minWidthPx: undefined,
   };
 
   const alignFrac = alignmentFraction(opts.alignment ?? 'center');
@@ -124,6 +130,7 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
     state.startWidth = opts.figure.getBoundingClientRect().width;
     state.containerWidth = opts.container.getBoundingClientRect().width;
     state.lastPercent = undefined;
+    state.minWidthPx = typeof opts.minWidthPx === 'function' ? opts.minWidthPx() : opts.minWidthPx;
     opts.handle.setPointerCapture(event.pointerId);
     event.preventDefault();
   };
@@ -137,7 +144,7 @@ export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void 
       startX: state.startX,
       currentX: event.clientX,
       alignFrac,
-      minWidthPx: opts.minWidthPx,
+      minWidthPx: state.minWidthPx,
     });
     state.lastPercent = result.percent;
     if (result.clampedToMin) {

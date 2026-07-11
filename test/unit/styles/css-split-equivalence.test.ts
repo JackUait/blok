@@ -332,8 +332,11 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // cell's text-sm scale instead of a tool's inline font-size (paragraph
     // styles.size, list itemSize), so no block outsizes its neighbours inside a
     // cell. Guarded by table-cell-font-scale-law.test.ts. ~0.4KB intentional growth.
+    // Fluid image chrome: caption font, Alt/"..." toolbar buttons+svg, and resize
+    // handles scale with the figure's width via container queries (cqw clamps) so
+    // small images don't get oversized chrome. See image.css. ~0.6KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.363);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.365);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

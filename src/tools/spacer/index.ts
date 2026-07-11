@@ -323,10 +323,14 @@ export class SpacerTool implements BlockTool {
       edge === 'bottom' ? 'bottom-0' : 'top-0',
       'opacity-0', 'transition-opacity',
       'group-hover/spacer:opacity-100', 'focus-visible:opacity-100',
+      // The pill: a capsule centered ON the edge line (half in, half out),
+      // ringed with the surface color so the dashed outline visibly breaks
+      // behind it instead of cutting through it.
       'after:absolute', 'after:left-1/2', 'after:-translate-x-1/2',
-      edge === 'bottom' ? 'after:bottom-0' : 'after:top-0',
-      'after:h-1', 'after:w-8', 'after:rounded-full', 'after:bg-border-primary',
-      'after:transition-all', 'hover:after:bg-(--blok-color-accent)', 'hover:after:w-12'
+      edge === 'bottom' ? 'after:bottom-0 after:translate-y-1/2' : 'after:top-0 after:-translate-y-1/2',
+      'after:h-2.5', 'after:w-10', 'after:rounded-full', 'after:bg-(--blok-color-accent)',
+      'after:border-2', 'after:border-solid', 'after:border-popover-bg', 'after:shadow-sm',
+      'after:transition-all', 'hover:after:w-14'
     );
 
     grip.addEventListener('keydown', (event: KeyboardEvent) => {

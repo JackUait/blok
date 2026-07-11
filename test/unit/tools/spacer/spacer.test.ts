@@ -134,8 +134,25 @@ describe('SpacerTool', () => {
 
       for (const grip of getGrips(el)) {
         expect(grip.className).toContain('cursor-ns-resize');
-        expect(grip.className).toContain('hover:after:bg-(--blok-color-accent)');
+        expect(grip.className).toContain('after:bg-(--blok-color-accent)');
+        expect(grip.className).toContain('hover:after:w-14');
       }
+    });
+
+    it('the pill is a capsule straddling its edge with a surface ring and shadow', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions());
+      const el = tool.render();
+
+      for (const grip of getGrips(el)) {
+        expect(grip.className).toContain('after:h-2.5');
+        expect(grip.className).toContain('after:border-2');
+        expect(grip.className).toContain('after:border-popover-bg');
+        expect(grip.className).toContain('after:shadow-sm');
+      }
+      // Centered ON the dashed line: each pill shifts half out of its edge.
+      expect(getGrip(el, 'bottom')?.className).toContain('after:translate-y-1/2');
+      expect(getGrip(el, 'top')?.className).toContain('after:-translate-y-1/2');
     });
 
     it('renders a px readout that reflects the stored height', async () => {

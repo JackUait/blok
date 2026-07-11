@@ -18,11 +18,23 @@
 
 /*
  * The cell's type scale (text-sm) is authoritative for every block inside it.
- * The list tool sets its configured itemSize as an INLINE font-size per item,
- * which would beat the cell's inherited size and render list text larger than
- * the paragraph next to it. Force items to inherit the cell font. !important is
- * required to override the inline style.
+ * Block tools apply host-configured font sizes as INLINE font-size — paragraph
+ * puts styles.size on its tool root, the list puts itemSize on each list item —
+ * which would beat the cell's inherited size and render that block's text
+ * larger than its neighbours in the same cell. Force cell block content to
+ * inherit the cell font so all cell text stays uniform regardless of any
+ * per-tool size config. !important is required to override the inline styles.
+ *
+ * NOTE: this invariant is mechanically guarded by
+ * test/unit/architecture/table-cell-font-scale-law.test.ts — a new block tool
+ * that sets an inline font-size on cell-reachable content must be covered here
+ * (or exempted there with a reason), or that test fails.
+ *
+ * The list marker (a fixed-size bullet) sets its own font-size on a child that
+ * is neither a [data-blok-tool] root nor a [role="listitem"], so it is left
+ * untouched here — matching its size behaviour outside cells.
  */
+[data-blok-table-cell-blocks] [data-blok-tool],
 [data-blok-table-cell-blocks] [data-blok-tool="list"] [role="listitem"] {
   font-size: inherit !important;
 }

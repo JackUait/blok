@@ -327,12 +327,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // with the thumb transparent at rest and revealed on hover/scroll; standard
     // scrollbar-width/color moved into Firefox-only @supports blocks because
     // they disable webkit scrollbar styling in Chromium. ~2KB intentional growth.
-    // Table-cell list font scale: a `font-size: inherit !important` rule in
-    // tables.css forces list items to honour the cell's text-sm scale instead of
-    // the list tool's inline itemSize, so lists no longer outsize sibling
-    // paragraphs inside a cell. ~0.3KB intentional growth.
+    // Table-cell font scale: a `font-size: inherit !important` rule in tables.css
+    // forces cell blocks (any [data-blok-tool] root) and list items to honour the
+    // cell's text-sm scale instead of a tool's inline font-size (paragraph
+    // styles.size, list itemSize), so no block outsizes its neighbours inside a
+    // cell. Guarded by table-cell-font-scale-law.test.ts. ~0.4KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.362);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.363);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

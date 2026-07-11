@@ -1881,7 +1881,7 @@
 
 }
 
-[data-blok-table-cell-blocks] [data-blok-tool="list"] [role="listitem"] {
+[data-blok-table-cell-blocks] [data-blok-tool], [data-blok-table-cell-blocks] [data-blok-tool="list"] [role="listitem"] {
   font-size: inherit !important;
 }
 

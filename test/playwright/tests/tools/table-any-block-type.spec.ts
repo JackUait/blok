@@ -340,6 +340,42 @@ test.describe('table cells — any block type', () => {
       expect(listItemFontSize).toBe(paragraphFontSize);
     });
 
+    test('paragraph text in a cell keeps the cell font-size even when paragraph size is configured', async ({ page }) => {
+      // Same bug class as the list case: a host configuring a global paragraph
+      // font (styles.size) must not override the cell's reduced type scale.
+      await createBlok(page, {
+        tools: {
+          ...defaultTools,
+          paragraph: { className: 'Blok.Paragraph', config: { styles: { size: '20px' } } },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'table',
+              data: { withHeadings: false, content: [['', ''], ['', '']] },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+      await getCellEditable(page, 0, 0).click();
+      await page.keyboard.type('Hello');
+
+      const firstCell = getCell(page, 0, 0);
+      const cell = firstCell.locator('[data-blok-table-cell-blocks]');
+      const paragraph = firstCell.locator('[data-blok-tool="paragraph"]').first();
+
+      await expect(paragraph).toBeVisible();
+
+      const cellFontSize = await cell.evaluate((el) => getComputedStyle(el).fontSize);
+      const paragraphFontSize = await paragraph.evaluate((el) => getComputedStyle(el).fontSize);
+
+      // The cell's type scale is authoritative regardless of the tool's size config.
+      expect(paragraphFontSize).toBe(cellFontSize);
+    });
+
     test('list items inside a table cell have 2px top/bottom spacing', async ({ page }) => {
       await create2x2Table(page);
 

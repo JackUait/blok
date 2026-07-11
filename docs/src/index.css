@@ -474,26 +474,6 @@
   }
 }
 
-/* The /migration hero's live-rewrite caret. The typing itself is driven from
-   RewritePreview.tsx (a tick interval over the pure rewrite-script engine, so
-   the timeline is unit-testable); this is just the blinking insertion point.
-   Reduced-motion users never see it — the component pins the finished file. */
-.rw-caret {
-  display: inline-block;
-  width: 2px;
-  height: 1.1em;
-  margin-left: 1px;
-  vertical-align: text-bottom;
-  background: var(--primary);
-  animation: rw-caret-blink 1s steps(2, start) infinite;
-}
-
-@keyframes rw-caret-blink {
-  50% {
-    opacity: 0;
-  }
-}
-
 /* Block-stack choreography — the four hero blocks endlessly re-arrange themselves
    through a shuffled, curated set of formations (list, explode, cascade, ring). The
    FORMATION engine lives in Hero.tsx (Web Animations API) because the order

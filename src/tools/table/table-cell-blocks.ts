@@ -1,5 +1,11 @@
 import type { API, BlockAPI } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import {
+  isCaretAtStartOfInput,
+  isCaretAtEndOfInput,
+  isCaretAtFirstLine,
+  isCaretAtLastLine,
+} from '../../components/utils/caret';
 
 import { CELL_ATTR, ROW_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import { parseCellContentToBlocks } from './table-cell-paste';
@@ -142,11 +148,167 @@ export class TableCellBlocks {
       return;
     }
 
-    // ArrowDown at last row -> exit table (skip if already handled by block-level navigation)
-    if (event.key === 'ArrowDown' && !event.defaultPrevented && position.row === this.getRowCount() - 1) {
-      event.preventDefault();
-      this.exitTableForward();
+  }
+
+  /**
+   * Grid-aware caret navigation for the four arrow keys, matching Notion:
+   * - Up/Down move the caret to the cell directly above/below in the SAME column;
+   * - Left/Right cross into the previous/next cell (reading order) at the cell's
+   *   text edge;
+   * - at the outer grid edge the caret exits the table (forward/backward).
+   *
+   * Runs in the CAPTURE phase (registered by setupKeyboardNavigation) so it acts
+   * BEFORE core's block-level keydown handler — which otherwise bails out of the
+   * whole table at a cell boundary. Only the boundary case is intercepted:
+   * mid-cell moves (another line or another block still inside the cell) fall
+   * through untouched so core/native handle within-cell movement.
+   *
+   * @param event - the keydown event (capture phase)
+   * @param position - the logical position of the cell holding the caret
+   */
+  handleArrowNavigation(event: KeyboardEvent, position: CellPosition): void {
+    // Modified arrows are native gestures (word/line/doc moves, selection) — leave them.
+    if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
     }
+
+    const caretInput = this.resolveCaretInput();
+    const lastRow = this.getRowCount() - 1;
+
+    switch (event.key) {
+      case 'ArrowDown': {
+        // Not yet at the cell's bottom edge — let core/native move within the cell.
+        if (caretInput !== null && !(isCaretAtLastLine(caretInput) && this.isCaretInLastCellBlock(caretInput))) {
+          return;
+        }
+
+        const below = position.row < lastRow ? this.findCellInColumn(position, 1) : null;
+
+        this.commitArrowNavigation(event, () => below ? this.navigateToCell(below) : this.exitTableForward());
+        break;
+      }
+      case 'ArrowUp': {
+        if (caretInput !== null && !(isCaretAtFirstLine(caretInput) && this.isCaretInFirstCellBlock(caretInput))) {
+          return;
+        }
+
+        const above = position.row > 0 ? this.findCellInColumn(position, -1) : null;
+
+        this.commitArrowNavigation(event, () => above ? this.navigateToCell(above, true) : this.exitTableBackward());
+        break;
+      }
+      case 'ArrowRight': {
+        if (caretInput !== null && !(isCaretAtEndOfInput(caretInput) && this.isCaretInLastCellBlock(caretInput))) {
+          return;
+        }
+
+        const next = this.findAdjacentLogicalCell(position, 1);
+
+        this.commitArrowNavigation(event, () => next ? this.navigateToCell(next) : this.exitTableForward());
+        break;
+      }
+      case 'ArrowLeft': {
+        if (caretInput !== null && !(isCaretAtStartOfInput(caretInput) && this.isCaretInFirstCellBlock(caretInput))) {
+          return;
+        }
+
+        const previous = this.findAdjacentLogicalCell(position, -1);
+
+        this.commitArrowNavigation(event, () => previous ? this.navigateToCell(previous, true) : this.exitTableBackward());
+        break;
+      }
+      default:
+    }
+  }
+
+  /**
+   * Suppress the native caret move AND core's block-level handler (which would
+   * exit the table), then run the grid navigation. stopPropagation is safe here
+   * because we only reach this after confirming the caret is at a cell edge.
+   */
+  private commitArrowNavigation(event: KeyboardEvent, navigate: () => void): void {
+    event.preventDefault();
+    event.stopPropagation();
+    navigate();
+  }
+
+  /**
+   * Resolve the contenteditable that currently holds the caret, or null when no
+   * live selection is resolvable (e.g. unit tests dispatching synthetic events).
+   * A null result makes the boundary checks degrade to "act on position alone".
+   */
+  private resolveCaretInput(): HTMLElement | null {
+    const selection = window.getSelection();
+    const anchor = selection?.anchorNode ?? null;
+    const fromSelection = anchor instanceof Element
+      ? anchor.closest<HTMLElement>('[contenteditable="true"]')
+      : anchor?.parentElement?.closest<HTMLElement>('[contenteditable="true"]') ?? null;
+
+    if (fromSelection !== null && this.gridElement.contains(fromSelection)) {
+      return fromSelection;
+    }
+
+    const active = document.activeElement;
+
+    if (active instanceof HTMLElement && this.gridElement.contains(active)) {
+      return active.closest<HTMLElement>('[contenteditable="true"]');
+    }
+
+    return null;
+  }
+
+  /**
+   * The top-level cell block (direct child of the cell's blocks container) that
+   * holds the given caret input, or null if the input is not inside a cell.
+   */
+  private cellBlockOf(caretInput: HTMLElement): HTMLElement | null {
+    const container = caretInput.closest<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (container === null) {
+      return null;
+    }
+
+    for (const child of Array.from(container.children)) {
+      if (child instanceof HTMLElement && child.contains(caretInput)) {
+        return child;
+      }
+    }
+
+    return null;
+  }
+
+  /** True when the caret is inside the FIRST block of its cell (or unknowable). */
+  private isCaretInFirstCellBlock(caretInput: HTMLElement): boolean {
+    const block = this.cellBlockOf(caretInput);
+
+    return block === null || block.previousElementSibling === null;
+  }
+
+  /** True when the caret is inside the LAST block of its cell (or unknowable). */
+  private isCaretInLastCellBlock(caretInput: HTMLElement): boolean {
+    const block = this.cellBlockOf(caretInput);
+
+    return block === null || block.nextElementSibling === null;
+  }
+
+  /**
+   * Walk the grid vertically from `position` in the SAME column (direction +1 =
+   * down, -1 = up), skipping merge-covered rows, and return the first non-spanned
+   * cell. Returns null when the walk runs past the top/bottom edge.
+   */
+  private findCellInColumn(position: CellPosition, direction: 1 | -1): CellPosition | null {
+    const totalRows = this.getRowCount();
+    const nextRow = position.row + direction;
+
+    if (nextRow < 0 || nextRow >= totalRows) {
+      return null;
+    }
+
+    if (this.model.isSpannedCell(nextRow, position.col)) {
+      return this.findCellInColumn({ row: nextRow, col: position.col }, direction);
+    }
+
+    return { row: nextRow, col: position.col };
   }
 
   /**

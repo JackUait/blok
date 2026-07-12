@@ -13,7 +13,6 @@ import { createCellColorPicker } from './table-cell-color-picker';
 import type { CellColorMode } from './table-cell-color-picker';
 import { createCellPlacementPicker } from './table-cell-placement-picker';
 import type { CellPlacement } from './types';
-import { createGripDotsSvg } from './table-grip-visuals';
 
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
@@ -26,6 +25,34 @@ const PILL_ATTR = 'data-blok-table-selection-pill';
 const PILL_WIDTH = 16;
 const PILL_HEIGHT = 20;
 const PILL_IDLE_SIZE = 4;
+
+/**
+ * Vertical 3-dot kebab (⋮) glyph for the selection pill. A kebab is the
+ * universal "more options" menu affordance and, unlike the 6-dot grip used for
+ * row/column DRAG handles, reads as a menu trigger — matching Notion's per-cell
+ * ⋯ options menu. Starts hidden (opacity-0) and is revealed when the pill
+ * expands (see expandPill).
+ */
+const createCellMenuDotsSvg = (): SVGElement => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+  svg.setAttribute('width', '4');
+  svg.setAttribute('height', '14');
+  svg.setAttribute('viewBox', '0 0 4 14');
+  svg.setAttribute('fill', 'currentColor');
+  svg.classList.add('opacity-0', 'transition-opacity', 'duration-150', 'text-white', 'pointer-events-none');
+
+  for (const cy of [2, 7, 12]) {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+
+    circle.setAttribute('cx', '2');
+    circle.setAttribute('cy', String(cy));
+    circle.setAttribute('r', '1.5');
+    svg.appendChild(circle);
+  }
+
+  return svg;
+};
 
 const PILL_CLASSES = [
   'absolute',
@@ -165,6 +192,10 @@ interface CellSelectionOptions {
   onColorChange?: (cells: HTMLElement[], color: string | null, mode: CellColorMode) => void;
   onPlacementChange?: (cells: HTMLElement[], placement: CellPlacement) => void;
   getCellPlacement?: (row: number, col: number) => CellPlacement | undefined;
+  /** Current background color of the cell at (row, col), or undefined if none. */
+  getCellColor?: (row: number, col: number) => string | undefined;
+  /** Current text color of the cell at (row, col), or undefined if none. */
+  getCellTextColor?: (row: number, col: number) => string | undefined;
   onPointerDragActiveChange?: (active: boolean) => void;
   isPopoverOpen?: () => boolean;
   /** Called to check if the current selection range can be merged. */
@@ -206,6 +237,8 @@ export class TableCellSelection {
   private onColorChange: ((cells: HTMLElement[], color: string | null, mode: CellColorMode) => void) | undefined;
   private onPlacementChange: ((cells: HTMLElement[], placement: CellPlacement) => void) | undefined;
   private getCellPlacement: ((row: number, col: number) => CellPlacement | undefined) | undefined;
+  private getCellColor: ((row: number, col: number) => string | undefined) | undefined;
+  private getCellTextColor: ((row: number, col: number) => string | undefined) | undefined;
   private onSelectionRangeChange: ((range: SelectionRange) => void) | undefined;
   private onPointerDragActiveChange: ((active: boolean) => void) | undefined;
   private isPopoverOpen: (() => boolean) | undefined;
@@ -250,6 +283,8 @@ export class TableCellSelection {
     this.onColorChange = options.onColorChange;
     this.onPlacementChange = options.onPlacementChange;
     this.getCellPlacement = options.getCellPlacement;
+    this.getCellColor = options.getCellColor;
+    this.getCellTextColor = options.getCellTextColor;
     this.onSelectionRangeChange = options.onSelectionRangeChange;
     this.onPointerDragActiveChange = options.onPointerDragActiveChange;
     this.isPopoverOpen = options.isPopoverOpen;
@@ -1225,6 +1260,10 @@ export class TableCellSelection {
     const pill = document.createElement('div');
 
     pill.setAttribute(PILL_ATTR, '');
+    // Marks the pill as a per-cell OPTIONS menu trigger (Notion's ⋯), not a drag
+    // grip. A single focused cell surfaces it, so it is the single-cell colour /
+    // action entry point and must read as a menu.
+    pill.setAttribute('data-blok-table-cell-menu', '');
     pill.setAttribute('contenteditable', 'false');
     pill.className = twMerge(PILL_CLASSES);
     pill.style.width = `${PILL_IDLE_SIZE}px`;
@@ -1233,10 +1272,8 @@ export class TableCellSelection {
     pill.style.transform = 'translate(-50%, -50%)';
     pill.style.outline = '2px solid var(--blok-table-grip-outline, transparent)';
 
-    const svg = createGripDotsSvg('vertical');
+    const svg = createCellMenuDotsSvg();
 
-    svg.classList.remove('text-gray-400');
-    svg.classList.add('text-white');
     pill.appendChild(svg);
 
     pill.addEventListener('mouseenter', () => {
@@ -1272,8 +1309,19 @@ export class TableCellSelection {
     const colorPickerItems: PopoverItemParams[] = [];
 
     if (this.onColorChange !== undefined) {
+      // Seed the picker with the selection origin's applied colors so the active
+      // swatch reflects the cell's real fill instead of always showing Default.
+      const colorOrigin = this.lastPaintedRange;
+      const currentColors = colorOrigin
+        ? {
+          textColor: this.getCellTextColor?.(colorOrigin.minRow, colorOrigin.minCol) ?? null,
+          backgroundColor: this.getCellColor?.(colorOrigin.minRow, colorOrigin.minCol) ?? null,
+        }
+        : undefined;
+
       const { element: pickerElement } = createCellColorPicker({
         i18n: this.i18n,
+        currentColors,
         onColorSelect: (color: string | null, mode: CellColorMode): void => {
           this.onColorChange?.([...this.selectedCells], color, mode);
         },

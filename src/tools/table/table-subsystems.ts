@@ -110,6 +110,8 @@ export interface TableHost {
   runTransactedStructuralOp<T>(fn: () => T, discard?: boolean): T;
   ensureScrollContainer(): HTMLDivElement;
   rebuildTableBody(): void;
+  /** Reset column widths to evenly distributed, page-fitted (Notion "Fit to page width"). */
+  fitToPageWidth(): void;
 }
 
 /**
@@ -929,6 +931,9 @@ export class TableSubsystems {
         this.scrollHaze?.update();
       },
       isPercentMode,
+      () => {
+        this.host.fitToPageWidth();
+      },
     );
 
     // Every structural grow path (grip insert-col, +button drag, corner drag,
@@ -1288,6 +1293,12 @@ export class TableSubsystems {
       },
       getCellPlacement: (row, col) => {
         return this.host.model.getCellPlacement(row, col);
+      },
+      getCellColor: (row, col) => {
+        return this.host.model.getCellColor(row, col);
+      },
+      getCellTextColor: (row, col) => {
+        return this.host.model.getCellTextColor(row, col);
       },
       canMergeCells: (range) => {
         return this.host.model.canMergeCells(range);

@@ -567,6 +567,21 @@ describe('TableCellSelection', () => {
       expect(pill).not.toBeNull();
     });
 
+    it('renders the pill as a "more options" (⋯) menu affordance, not a drag grip', () => {
+      // Notion surfaces per-cell actions through a ⋯ options menu. Blok's pill is
+      // that menu trigger — a single focused cell surfaces it — so it must READ as
+      // a menu (a horizontal 3-dot glyph), never a 6-dot vertical drag grip.
+      selection.selectColumn(0);
+
+      const pill = grid.querySelector(`[${PILL_ATTR}]`) as HTMLElement;
+
+      expect(pill.getAttribute('data-blok-table-cell-menu')).toBe('');
+
+      const dots = pill.querySelectorAll('svg circle');
+
+      expect(dots).toHaveLength(3);
+    });
+
     it('positions pill centered on the right edge of the overlay', () => {
       simulateDrag(grid, 0, 0, 1, 1);
 

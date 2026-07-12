@@ -285,10 +285,14 @@ const pressKey = (
     cancelable: true,
   });
 
-  cellBlocks.handleKeyDown(event, {
-    row: 0,
-    col: 0,
-  });
+  const position = { row: 0, col: 0 };
+
+  // Arrow navigation moved to the capture-phase handler; Tab stays on handleKeyDown.
+  if (key.startsWith('Arrow')) {
+    cellBlocks.handleArrowNavigation(event, position);
+  } else {
+    cellBlocks.handleKeyDown(event, position);
+  }
 };
 
 /**

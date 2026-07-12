@@ -917,7 +917,8 @@ describe('table-operations', () => {
       gridEl.appendChild(row);
 
       const handleKeyDown = vi.fn();
-      const cellBlocks = { handleKeyDown } as unknown as Parameters<typeof setupKeyboardNavigation>[1];
+      const handleArrowNavigation = vi.fn();
+      const cellBlocks = { handleKeyDown, handleArrowNavigation } as unknown as Parameters<typeof setupKeyboardNavigation>[1];
 
       const cleanup = setupKeyboardNavigation(gridEl, cellBlocks);
 

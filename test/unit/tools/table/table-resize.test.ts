@@ -145,6 +145,61 @@ describe('TableResize', () => {
       expect(handles).toHaveLength(0);
     });
 
+    /**
+     * A double-click is two press-release cycles on the same handle with no
+     * drag between them. The pointerdown preventDefault suppresses the native
+     * dblclick, so the reset is detected from the pointer sequence instead.
+     */
+    const doubleClickHandle = (handle: HTMLElement): void => {
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+    };
+
+    it('double-clicking a resize handle triggers the width reset (Notion "Fit to page width")', () => {
+      grid = createGrid([300, 700]);
+      const onResetWidths = vi.fn();
+
+      new TableResize(grid, [300, 700], vi.fn(), undefined, undefined, false, onResetWidths);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      doubleClickHandle(handle);
+
+      expect(onResetWidths).toHaveBeenCalledTimes(1);
+    });
+
+    it('a single press-release on a handle does NOT reset widths', () => {
+      grid = createGrid([300, 700]);
+      const onResetWidths = vi.fn();
+
+      new TableResize(grid, [300, 700], vi.fn(), undefined, undefined, false, onResetWidths);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      expect(onResetWidths).not.toHaveBeenCalled();
+    });
+
+    it('a drag followed by a press does NOT reset widths (only a clean double-click does)', () => {
+      grid = createGrid([300, 700]);
+      const onResetWidths = vi.fn();
+
+      new TableResize(grid, [300, 700], vi.fn(), undefined, undefined, false, onResetWidths);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      // First cycle MOVES (a real resize), so the following press is not a dbl-click.
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 360 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 360, bubbles: true }));
+
+      expect(onResetWidths).not.toHaveBeenCalled();
+    });
+
     it('positions handles as direct children of the grid', () => {
       grid = createGrid([500, 500]);
       new TableResize(grid, [500, 500], vi.fn());

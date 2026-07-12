@@ -287,6 +287,37 @@ test.describe('Column Resizing', () => {
     expect((tableBlock?.data.colWidths as number[]).length).toBe(2);
   });
 
+  test('Double-clicking a resize handle resets columns to fluid, page-fitted widths', async ({ page }) => {
+    // Start from an explicitly pinned (pixel) table so there is a width to reset.
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']], colWidths: [400, 200] },
+          },
+        ],
+      },
+    });
+
+    const handle = page.locator(RESIZE_HANDLE_SELECTOR).first();
+
+    await expect(handle).toBeAttached();
+
+    const handleBox = assertBoundingBox(await handle.boundingBox(), 'Resize handle');
+
+    // Double-click the column border — the inline "Fit to page width" gesture.
+    await page.mouse.dblclick(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+
+    // colWidths is cleared (undefined) — the table is back in fluid/equal mode.
+    const savedData = await page.evaluate(async () => window.blokInstance?.save());
+    const tableBlock = savedData?.blocks.find((b: { type: string }) => b.type === 'table');
+
+    expect(tableBlock).toBeDefined();
+    expect(tableBlock?.data.colWidths).toBeUndefined();
+  });
+
   test('Resize handles are not present in readOnly mode', async ({ page }) => {
     // Initialize editor with 2x2 table
     await createBlok(page, {

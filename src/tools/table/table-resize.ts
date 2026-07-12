@@ -2,6 +2,8 @@ import { BORDER_WIDTH, MIN_COL_WIDTH } from './table-core';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
 const HANDLE_HIT_WIDTH = 16;
+/** Two clicks on the same handle within this window count as a double-click. */
+const DBLCLICK_MS = 300;
 
 /**
  * Handles column resize drag interaction on the table grid.
@@ -16,10 +18,16 @@ export class TableResize {
   private onChange: (widths: number[]) => void;
   private onDragStart: (() => void) | null;
   private onDrag: (() => void) | null;
+  private onResetWidths: (() => void) | null;
   private isDragging = false;
   private dragStartX = 0;
   private dragColIndex = -1;
   private startColWidth = 0;
+  /** True once a drag has moved — so a no-move press-release reads as a click. */
+  private didDrag = false;
+  /** Timestamp + column of the last press-release, for double-click detection. */
+  private lastClickTime = 0;
+  private lastClickCol = -1;
   private dragColElements: HTMLElement[] | null = null;
   private handles: HTMLElement[] = [];
   private needsInitialApply: boolean;
@@ -45,12 +53,13 @@ export class TableResize {
     });
   }
 
-  constructor(gridEl: HTMLElement, colWidths: number[], onChange: (widths: number[]) => void, onDragStart?: () => void, onDrag?: () => void, skipInitialApply = false) {
+  constructor(gridEl: HTMLElement, colWidths: number[], onChange: (widths: number[]) => void, onDragStart?: () => void, onDrag?: () => void, skipInitialApply = false, onResetWidths?: () => void) {
     this.gridEl = gridEl;
     this.colWidths = [...colWidths];
     this.onChange = onChange;
     this.onDragStart = onDragStart ?? null;
     this.onDrag = onDrag ?? null;
+    this.onResetWidths = onResetWidths ?? null;
     this.needsInitialApply = skipInitialApply;
 
     this.boundPointerDown = this.onPointerDown.bind(this);
@@ -185,7 +194,32 @@ export class TableResize {
       return;
     }
 
-    this.dragColIndex = Number(colStr);
+    const colIndex = Number(colStr);
+
+    /**
+     * Notion parity: double-clicking a column border resets the table to evenly
+     * distributed, page-fitted columns — the inline equivalent of the settings
+     * menu's "Fit to page width", reachable without opening any menu. Detected
+     * from pointer events because the pointerdown preventDefault() above
+     * suppresses the native dblclick. A second press on the same handle within
+     * DBLCLICK_MS of a no-drag release counts as the double-click.
+     */
+    const now = Date.now();
+    const isDoubleClick = this.onResetWidths !== null &&
+      !this.didDrag &&
+      this.lastClickCol === colIndex &&
+      now - this.lastClickTime < DBLCLICK_MS;
+
+    if (isDoubleClick) {
+      this.lastClickTime = 0;
+      this.lastClickCol = -1;
+      this.onResetWidths?.();
+
+      return;
+    }
+
+    this.dragColIndex = colIndex;
+    this.didDrag = false;
     this.isDragging = true;
     this.dragStartX = e.clientX;
     this.startColWidth = this.colWidths[this.dragColIndex];
@@ -219,6 +253,12 @@ export class TableResize {
     const rawWidth = this.startColWidth + deltaPx;
     const newWidth = Math.max(MIN_COL_WIDTH, rawWidth);
 
+    // Only a width-changing move counts as a drag. A 0-delta pointermove (some
+    // browsers emit one between the clicks of a double-click) must NOT flag a
+    // drag, or it would defeat the double-click reset detection.
+    if (newWidth !== this.startColWidth) {
+      this.didDrag = true;
+    }
     this.colWidths[this.dragColIndex] = newWidth;
     this.applyWidths(this.dragColElements ?? undefined);
     this.updateHandlePositions();
@@ -242,6 +282,11 @@ export class TableResize {
 
     this.isDragging = false;
     this.gridEl.style.userSelect = '';
+
+    // Record this release for double-click detection: a no-drag release arms the
+    // next press on the same handle to be treated as a double-click.
+    this.lastClickTime = Date.now();
+    this.lastClickCol = this.dragColIndex;
 
     const activeHandle = this.handles[this.dragColIndex];
 

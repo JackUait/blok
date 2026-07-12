@@ -58,6 +58,13 @@ export interface ColorPickerOptions {
   modes: [ColorPickerMode, ColorPickerMode];
   testIdPrefix: string;
   onColorSelect: (color: string | null, modeKey: string) => void;
+  /**
+   * Seed the active-color indicator per mode so the picker opens showing the
+   * target's currently-applied color (a checkmark/ring on the matching swatch)
+   * instead of always defaulting to the Default swatch. Missing/undefined keys
+   * fall back to null (Default active).
+   */
+  initialActiveColors?: Record<string, string | null>;
 }
 
 /**
@@ -91,9 +98,11 @@ const SWATCH_NEUTRAL_BG = 'var(--blok-swatch-neutral-bg)';
  * Shared between the marker inline tool and the table cell color popover.
  */
 export function createColorPicker(options: ColorPickerOptions): ColorPickerHandle {
-  const { i18n, modes, testIdPrefix, onColorSelect } = options;
+  const { i18n, modes, testIdPrefix, onColorSelect, initialActiveColors } = options;
   const state = {
-    activeColors: Object.fromEntries(modes.map((m) => [m.key, null])) as Record<string, string | null>,
+    activeColors: Object.fromEntries(
+      modes.map((m) => [m.key, initialActiveColors?.[m.key] ?? null])
+    ) as Record<string, string | null>,
   };
 
   const wrapper = document.createElement('div');

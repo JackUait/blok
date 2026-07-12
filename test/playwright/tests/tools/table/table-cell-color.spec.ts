@@ -302,6 +302,26 @@ test.describe('Cell Background Color', () => {
     expect(cellBg.length).toBeGreaterThan(0);
   });
 
+  test('reopening the picker shows the cell\'s currently-applied color as active', async ({ page }) => {
+    await create3x3TableWithContent(page);
+
+    // Apply orange to a single cell.
+    await selectSingleCell(page, 0, 0);
+    await openColorPicker(page);
+    await clickSwatch(page, 'orange');
+
+    // Re-select the same cell and reopen the picker.
+    await selectSingleCell(page, 0, 0);
+    await openColorPicker(page);
+
+    // The orange background swatch is marked active (solid ring); Default is not.
+    const orangeSwatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]');
+    const defaultSwatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-default"]');
+
+    await expect(orangeSwatch).toHaveClass(/ring-2/);
+    await expect(defaultSwatch).not.toHaveClass(/(^|\s)ring-2(\s|$)/);
+  });
+
   test('color persists in saved data', async ({ page }) => {
     // 1. Initialize editor with a 3x3 table with content
     await create3x3TableWithContent(page);

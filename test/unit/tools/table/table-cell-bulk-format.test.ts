@@ -186,6 +186,7 @@ const createHarness = (): Harness => {
     },
     ensureScrollContainer: (): HTMLDivElement => scrollContainer,
     rebuildTableBody: vi.fn(),
+    fitToPageWidth: vi.fn(),
   };
 
   const subsystems = new TableSubsystems(host);

@@ -152,6 +152,7 @@ export class Table implements BlockTool {
       runTransactedStructuralOp: <T>(fn: () => T, discard?: boolean): T => self.runTransactedStructuralOp(fn, discard),
       ensureScrollContainer: (): HTMLDivElement => self.ensureScrollContainer(),
       rebuildTableBody: (): void => self.rebuildTableBody(),
+      fitToPageWidth: (): void => self.fitToPageWidth(),
     };
   }
 
@@ -621,7 +622,7 @@ export class Table implements BlockTool {
    * later render keeps those pixels, so without this action a single resize was
    * a permanent, irreversible conversion.
    */
-  private fitToPageWidth(): void {
+  public fitToPageWidth(): void {
     const gridEl = this.gridElement;
 
     if (!gridEl) {
@@ -1086,7 +1087,11 @@ export class Table implements BlockTool {
 
     const hasTheadHeadings = content.querySelector('thead') !== null;
     const hasThHeadings = rows[0]?.querySelector('th') !== null;
-    const withHeadings = hasTheadHeadings || hasThHeadings;
+    // Notion parity: pasted spreadsheet/HTML data treats its first row as the
+    // header by default. Explicit thead/th force it on; otherwise any multi-row
+    // paste heads its first row. A single-row paste has no body to head, so it
+    // stays plain (matches the "paste over a fully configured table" contract).
+    const withHeadings = hasTheadHeadings || hasThHeadings || rows.length >= 2;
 
     this.initialContent = tableContent;
     this.model.setWithHeadings(withHeadings);

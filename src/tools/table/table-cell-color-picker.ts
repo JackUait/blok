@@ -6,6 +6,11 @@ export type CellColorMode = 'textColor' | 'backgroundColor';
 interface CellColorPickerOptions {
   i18n: I18n;
   onColorSelect: (color: string | null, mode: CellColorMode) => void;
+  /**
+   * The target cell's currently-applied colors, so the picker opens with the
+   * active swatch marked. Absent/null means no color (Default stays active).
+   */
+  currentColors?: { textColor?: string | null; backgroundColor?: string | null };
 }
 
 interface CellColorPickerResult {
@@ -24,6 +29,10 @@ export const createCellColorPicker = (options: CellColorPickerOptions): CellColo
       { key: 'textColor', labelKey: 'tools.marker.textColor', presetField: 'text' },
       { key: 'backgroundColor', labelKey: 'tools.marker.background', presetField: 'bg' },
     ],
+    initialActiveColors: {
+      textColor: options.currentColors?.textColor ?? null,
+      backgroundColor: options.currentColors?.backgroundColor ?? null,
+    },
     onColorSelect: (color, modeKey) => {
       handle.setActiveColor(color, modeKey);
       options.onColorSelect(color, modeKey as CellColorMode);

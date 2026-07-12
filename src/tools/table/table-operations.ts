@@ -645,25 +645,44 @@ export const setupKeyboardNavigation = (
   gridEl: HTMLElement,
   cellBlocks: TableCellBlocks | null,
 ): (() => void) => {
-  const handler = (event: KeyboardEvent): void => {
+  const resolvePosition = (event: KeyboardEvent): { row: number; col: number } | null => {
     const target = event.target as HTMLElement;
     const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
     if (!cell) {
-      return;
+      return null;
     }
 
-    const position = getCellPosition(gridEl, cell);
+    return getCellPosition(gridEl, cell);
+  };
+
+  const handler = (event: KeyboardEvent): void => {
+    const position = resolvePosition(event);
 
     if (position) {
       cellBlocks?.handleKeyDown(event, position);
     }
   };
 
+  /**
+   * Arrow navigation runs in the CAPTURE phase so it acts before core's
+   * block-level keydown (bound on each block holder in bubble phase), which
+   * otherwise exits the whole table at a cell boundary. See handleArrowNavigation.
+   */
+  const arrowHandler = (event: KeyboardEvent): void => {
+    const position = resolvePosition(event);
+
+    if (position) {
+      cellBlocks?.handleArrowNavigation(event, position);
+    }
+  };
+
   gridEl.addEventListener('keydown', handler);
+  gridEl.addEventListener('keydown', arrowHandler, true);
 
   return () => {
     gridEl.removeEventListener('keydown', handler);
+    gridEl.removeEventListener('keydown', arrowHandler, true);
   };
 };
 

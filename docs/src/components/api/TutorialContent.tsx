@@ -6,6 +6,7 @@ import { useFramework } from "../../contexts/FrameworkContext";
 import { adaptExample } from "../common/framework-adapt";
 import { TUTORIAL_MOUNT_SNIPPETS } from "../common/framework-snippets";
 import { renderInline } from "./inline-code";
+import { BLOK_VERSION } from "../../utils/constants";
 
 const SAVE_CODE = `const data = await editor.save();
 
@@ -15,7 +16,7 @@ console.log(data);
 //   blocks: [
 //     { id: 'a1b2c3', type: 'paragraph', data: { text: 'Hello, Blok' } },
 //   ],
-//   version: '0.23.5', // the installed Blok package version
+//   version: '${BLOK_VERSION}', // the installed Blok package version
 // }`;
 
 const RENDER_CODE = `// On the next page load, hand the same object back:

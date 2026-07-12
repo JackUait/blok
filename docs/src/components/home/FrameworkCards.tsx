@@ -4,6 +4,7 @@ import { CodeBlock } from "../common/CodeBlock";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
 import { cn } from "@/lib/utils";
+import { BLOK_VERSION } from "../../utils/constants";
 // Official brand artwork (devicon), used verbatim as image assets.
 import typescriptLogo from "../../assets/logos/typescript.svg";
 import reactLogo from "../../assets/logos/react.svg";
@@ -215,11 +216,11 @@ export class EditorComponent {
     id: "cdn",
     key: "cdn",
     language: "html",
-    // Pinned to the published version (matches root package.json) rather than
-    // the unpinned default, so a future release can't silently change what
-    // this copy-pasted snippet loads.
+    // Pinned to the published version (BLOK_VERSION, derived from root
+    // package.json) rather than the unpinned default, so a future release can't
+    // silently change what this copy-pasted snippet loads.
     code: `<div id="editor"></div>
-<script src="https://unpkg.com/@jackuait/blok@0.23.5/dist/blok.iife.js"></script>
+<script src="https://unpkg.com/@jackuait/blok@${BLOK_VERSION}/dist/blok.iife.js"></script>
 <script>
   new BlokEditor.Blok({ holder: 'editor' });
 </script>`,

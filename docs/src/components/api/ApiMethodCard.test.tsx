@@ -236,6 +236,26 @@ describe('ApiMethodCard', () => {
       expect(screen.queryByTestId('api-method-deprecated')).not.toBeInTheDocument();
     });
 
+    it('should render the Deprecated badge and replacedBy link without a version when deprecated is true but deprecatedSince is unset', () => {
+      const deprecatedMethod: ApiMethod = {
+        name: 'readOnly.toggle(state?)',
+        returnType: 'Promise<boolean>',
+        description: 'Toggle read-only state.',
+        deprecated: true,
+        replacedBy: 'readOnly.set',
+      };
+
+      renderCard(deprecatedMethod, 'readonly-api');
+
+      expect(screen.getByTestId('api-method-deprecated-badge')).toBeInTheDocument();
+      // No fabricated version line, but the replacement link is still shown.
+      expect(screen.queryByText(/v\d+\.\d+\.\d+/)).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'readOnly.set' })).toHaveAttribute(
+        'href',
+        '#readonly-api-readonly-set',
+      );
+    });
+
     it('should link replacedBy to the in-page anchor of the replacement method', () => {
       const deprecatedMethod: ApiMethod = {
         name: 'readOnly.toggle(state?)',

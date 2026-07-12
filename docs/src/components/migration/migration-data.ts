@@ -79,7 +79,10 @@ export const COMPATIBILITY_GROUPS: CompatibilityGroup[] = [
     id: "drop-in",
     titleKey: "migration.compatGroupDropIn",
     hintKey: "migration.compatGroupDropInHint",
-    tools: ["paragraph", "header", "code", "embed"],
+    // marker/inlineCode keep their <mark>/<code> inline markup, and audio ships as
+    // a default block tool — all three are bundled and registered by default
+    // (src/tools/index.ts), so saved data loads as-is with no conversion.
+    tools: ["paragraph", "header", "code", "embed", "marker", "inlineCode", "audio"],
   },
   {
     id: "auto",
@@ -103,7 +106,7 @@ export const COMPATIBILITY_GROUPS: CompatibilityGroup[] = [
     id: "not-bundled",
     titleKey: "migration.compatGroupNotBundled",
     hintKey: "migration.compatGroupNotBundledHint",
-    tools: ["marker", "inlineCode", "personality", "button", "audio"],
+    tools: ["personality", "button"],
   },
 ];
 

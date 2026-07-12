@@ -1,4 +1,11 @@
 import type { NavLink } from '@/types/navigation';
+import rootPkg from '../../../package.json';
+
+/**
+ * The published @jackuait/blok version, derived from the root package.json so
+ * doc snippets (CDN pins, save() output examples) can't silently drift stale.
+ */
+export const BLOK_VERSION: string = rootPkg.version;
 
 // Unified navigation links used across all pages
 // Active state is determined by current path, not by this config

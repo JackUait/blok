@@ -227,7 +227,10 @@ describe('useApiTranslations', () => {
     const readOnlySection = result.current.apiSections.find(s => s.id === 'readonly-api');
     const toggleMethod = readOnlySection?.methods?.find(m => m.name.startsWith('readOnly.toggle('));
 
-    expect(toggleMethod?.deprecatedSince).toBe('0.6.0');
+    // Marked deprecated but with no version — the source @deprecated tag carries
+    // none, and 0.6.0 was never a real release.
+    expect(toggleMethod?.deprecated).toBe(true);
+    expect(toggleMethod?.deprecatedSince).toBeUndefined();
     expect(toggleMethod?.replacedBy).toBe('readOnly.set');
   });
 });

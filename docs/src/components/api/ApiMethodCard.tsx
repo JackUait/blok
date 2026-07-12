@@ -40,19 +40,23 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</h3>
         <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">{method.returnType}</span>
-        {method.deprecatedSince && (
+        {(method.deprecated || method.deprecatedSince) && (
           <Badge variant="muted" className="uppercase" data-blok-testid="api-method-deprecated-badge">
             <Typo>{t("api.deprecated")}</Typo>
           </Badge>
         )}
       </div>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground"><Typo>{method.description}</Typo></p>
-      {method.deprecatedSince && (
+      {(method.deprecated || method.deprecatedSince) && (
         <p className="mt-1 text-xs text-muted-foreground" data-blok-testid="api-method-deprecated">
-          <Typo>{t("api.deprecatedSince")}</Typo> v{method.deprecatedSince}
+          {method.deprecatedSince && (
+            <>
+              <Typo>{t("api.deprecatedSince")}</Typo> v{method.deprecatedSince}
+              {method.replacedBy && " — "}
+            </>
+          )}
           {method.replacedBy && (
             <>
-              {" — "}
               <Typo>{t("api.useInstead")}</Typo>{" "}
               <a
                 href={`#${generateMethodId(sectionId, method.replacedBy)}`}

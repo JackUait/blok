@@ -263,6 +263,17 @@ describe("API_SECTIONS", () => {
       expect(section).toBeDefined();
       expect(section!.methods).toBeDefined();
     });
+
+    it("options.time is scoped to alert notifications, not 'all notification types'", () => {
+      // src/components/utils/notifier/index.ts only auto-dismisses 'alert';
+      // confirm/prompt ignore `time` and stay until resolved.
+      const section = API_SECTIONS.find((s) => s.id === "notifier-api");
+      const show = section?.methods?.find((m) => m.name === "notifier.show(options)");
+      const timeParam = show?.params?.find((p) => p.name === "options.time");
+      expect(timeParam).toBeDefined();
+      expect(timeParam!.description).not.toContain("all notification types");
+      expect(timeParam!.description.toLowerCase()).toContain("alert");
+    });
   });
 
   describe("Sanitizer API", () => {
@@ -286,6 +297,16 @@ describe("API_SECTIONS", () => {
       const section = API_SECTIONS.find((s) => s.id === "readonly-api");
       expect(section).toBeDefined();
       expect(section!.methods).toBeDefined();
+    });
+
+    it("readOnly.toggle carries no fabricated deprecation version", () => {
+      // The @deprecated tag on readOnly.toggle (types/api/readonly.d.ts) has no
+      // version, and 0.6.0 was never released — so no version may be claimed.
+      const section = API_SECTIONS.find((s) => s.id === "readonly-api");
+      const toggle = section?.methods?.find((m) => m.name === "readOnly.toggle(state?)");
+      expect(toggle).toBeDefined();
+      expect(toggle!.replacedBy).toBe("readOnly.set");
+      expect(toggle!.deprecatedSince).toBeUndefined();
     });
   });
 

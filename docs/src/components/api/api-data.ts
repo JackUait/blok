@@ -1,3 +1,5 @@
+import { BLOK_VERSION } from "../../utils/constants";
+
 export interface ApiMethod {
   name: string;
   returnType: string;
@@ -36,8 +38,15 @@ export interface ApiMethod {
     resolution: string;
   }[];
   /**
-   * Editor version this method was deprecated in (e.g. "0.23.5"). When set,
-   * ApiMethodCard renders a visible "Deprecated" badge.
+   * Marks the method as deprecated. When true (or when deprecatedSince is set),
+   * ApiMethodCard renders a visible "Deprecated" badge. Use this when the source
+   * @deprecated tag carries no version.
+   */
+  deprecated?: boolean;
+  /**
+   * Editor version this method was deprecated in (e.g. "0.23.5"). Only set this
+   * when a real release version is known — when present, ApiMethodCard also
+   * renders a "deprecated since vX.Y.Z" line.
    */
   deprecatedSince?: string;
   /**
@@ -1384,7 +1393,7 @@ editor.notifier.show({
             type: "number",
             required: false,
             default: "8000",
-            description: "Auto-dismiss delay in ms for all notification types (default 8000).",
+            description: "Auto-dismiss delay in ms for alert notifications (default 8000). Confirm and prompt notifications ignore this and stay until the user resolves them.",
           },
           {
             name: "options.okText",
@@ -1522,7 +1531,7 @@ console.log(editor.readOnly.isEnabled); // true or false`,
         name: "readOnly.toggle(state?)",
         returnType: "Promise<boolean>",
         description: "Toggle read-only state. Without parameter, toggles current state. With parameter, sets to specified state.",
-        deprecatedSince: "0.6.0",
+        deprecated: true,
         replacedBy: "readOnly.set",
         example: `// Toggle current state
 const isReadOnly = await editor.readOnly.toggle();
@@ -1675,7 +1684,7 @@ interface OutputData {
 
 // Example output:
 {
-  "version": "0.23.5",
+  "version": "${BLOK_VERSION}",
   "time": 1704067200000,
   "blocks": [
     {

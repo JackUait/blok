@@ -1,36 +1,51 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
-import { search, getSearchIndex } from '@/utils/search';
-import type { SearchResult } from '@/types/search';
-import { ModuleIcon } from './ModuleIcon';
-import { KeyIcon, ShortcutKeys } from './KeyIcon';
-import buttonStyles from './SearchButton.module.css';
-import dialogStyles from './SearchDialog.module.css';
-import resultsStyles from './SearchResults.module.css';
-import { useI18n } from '../../contexts/I18nContext';
-
-// Combined styles object consolidating the split CSS modules
-const styles = { ...buttonStyles, ...dialogStyles, ...resultsStyles };
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { search, getSearchIndex } from "@/utils/search";
+import type { SearchResult } from "@/types/search";
+import { ModuleIcon } from "./ModuleIcon";
+import { KindIcon } from "./KindIcon";
+import { Typo } from "./Typo";
+import { useI18n } from "../../contexts/I18nContext";
+import { cn } from "@/lib/utils";
 
 interface SearchProps {
   open: boolean;
   onClose: () => void;
+  /** Dim the page behind the panel. Driven by the same morph as the panel so
+      the tint fades in/out in lockstep with the open/close animation. */
+  tinted?: boolean;
+  /**
+   * The button that opened the dialog. Focus returns here when the dialog
+   * closes (Escape, outside click, or selecting a result) — required so the
+   * dialog doesn't strand keyboard focus once it unmounts.
+   */
+  triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
-const SEARCH_SHORTCUT = 'k';
+const SEARCH_SHORTCUT = "k";
 const SEARCH_DEBOUNCE_MS = 150;
+
+// Keycap chip — mirrors the ⌘K kbd in the search input.
+const KEYCAP_CLASS =
+  "inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-secondary px-1 font-mono text-[10px] font-semibold leading-none text-muted-foreground/70";
 
 // Highlight matching text in search results
 // Matches the query term OR words that share a common prefix with it
 const highlightMatch = (text: string, query: string): React.ReactNode => {
   const trimmedQuery = query.trim().toLowerCase();
   if (!trimmedQuery) return text;
-  
+
   // Split query into words for multi-word matching
-  const queryWords = trimmedQuery.split(/\s+/).filter(w => w.length >= 2);
+  const queryWords = trimmedQuery.split(/\s+/).filter((w) => w.length >= 2);
   if (queryWords.length === 0) return text;
-  
+
   // Build a regex that matches:
   // 1. The exact query words
   // 2. Words that start with query words (prefix match)
@@ -38,42 +53,56 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
   const patterns: string[] = [];
   for (const qw of queryWords) {
     // Escape special regex characters
-    const escaped = qw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escaped = qw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     // Match word boundaries: query word followed by optional word chars (prefix match)
     patterns.push(`\\b${escaped}\\w*`);
     // Also match if query is longer: e.g., query "blocks" should highlight "block"
     if (qw.length >= 4) {
       // Try progressively shorter prefixes (minimum 3 chars)
-      const prefixPatterns = Array.from(
-        { length: qw.length - 3 },
-        (_, i) => {
-          const prefix = qw.slice(0, qw.length - 1 - i).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          return `\\b${prefix}\\b`;
-        }
-      );
+      const prefixPatterns = Array.from({ length: qw.length - 3 }, (_, i) => {
+        const prefix = qw
+          .slice(0, qw.length - 1 - i)
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return `\\b${prefix}\\b`;
+      });
       patterns.push(...prefixPatterns);
     }
   }
-  
-  const pattern = `(${patterns.join('|')})`;
-  const splitRegex = new RegExp(pattern, 'gi');
+
+  const pattern = `(${patterns.join("|")})`;
+  const splitRegex = new RegExp(pattern, "gi");
   const parts = text.split(splitRegex);
-  
+
   // Use a fresh regex for testing each part (avoid global state issues)
-  const testRegex = new RegExp(pattern, 'i');
-  
-  return parts.map((part, index) => 
+  const testRegex = new RegExp(pattern, "i");
+
+  return parts.map((part, index) =>
     testRegex.test(part) ? (
-      <mark key={index} className={styles['search-highlight']}>{part}</mark>
+      <mark
+        key={index}
+        className="rounded-[3px] bg-primary/12 px-0.5 font-semibold text-primary"
+      >
+        {part}
+      </mark>
     ) : (
       part
-    )
+    ),
   );
 };
 
 /** Group search results by module, preserving a predefined module order. */
-const groupResultsByModule = (searchResults: SearchResult[]): SearchResult[] => {
-  const moduleOrder = ['Guide', 'Core', 'API Modules', 'Data', 'Page'];
+const groupResultsByModule = (
+  searchResults: SearchResult[],
+): SearchResult[] => {
+  const moduleOrder = [
+    "Getting started",
+    "Core",
+    "Editing",
+    "Interface",
+    "Extending & system",
+    "Data types",
+    "Page",
+  ];
   const groupedByModule = new Map<string, SearchResult[]>();
 
   for (const result of searchResults) {
@@ -105,21 +134,60 @@ const groupResultsByModule = (searchResults: SearchResult[]): SearchResult[] => 
   return orderedResults;
 };
 
-const CLOSE_ANIMATION_MS = 200;
+type ResultsPluralForm = "one" | "few" | "many";
 
-export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
+/**
+ * Russian needs three grammatical plural forms for counts (one/few/many) —
+ * "1 результат", "2 результата", "5 результатов" — unlike English's binary
+ * singular/plural split. Mirrors the i18next `_one`/`_few`/`_many` suffix
+ * convention so the right `search.result_<form>` key gets picked.
+ */
+const getResultsPluralForm = (count: number, locale: string): ResultsPluralForm => {
+  if (locale === "ru") {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return "one";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "few";
+    return "many";
+  }
+  return count === 1 ? "one" : "many";
+};
+
+const MORPH_MS = 420;
+const CLOSE_ANIMATION_MS = MORPH_MS;
+const PANEL_MAX_WIDTH = 560;
+// easeOutExpo: a strong, smooth deceleration. The surface flies open then gently
+// settles — reads as a soft morph instead of an abrupt pop.
+const MORPH_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+export const Search: React.FC<SearchProps> = ({
+  open,
+  onClose,
+  tinted,
+  triggerRef,
+}) => {
   const navigate = useNavigate();
-  const { t } = useI18n();
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const { t, locale } = useI18n();
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
   const [isKeyboardNavMode, setIsKeyboardNavMode] = useState(false);
+  // Morph state: `entered` drives the pill→panel geometry transition.
+  const [entered, setEntered] = useState(false);
+  const [pillWidth, setPillWidth] = useState<number | null>(null);
+  const [targetWidth, setTargetWidth] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const keyboardNavTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keyboardNavTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  // Tracks whether the dialog was actually open, so the close-side effect
+  // only returns focus to the trigger on a real close, not on first mount.
+  const wasOpenRef = useRef(false);
 
   // Focus input when opened
   useEffect(() => {
@@ -128,22 +196,127 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
     }
   }, [open]);
 
+  // A11y: while open, hide the rest of the page from assistive tech and
+  // keyboard focus so Tab can't walk out of the dialog into the sidebar/page
+  // content behind it. Walks up from the dialog to <body>, inerting every
+  // sibling along the way (same `inert` mechanism used for FrameworkCards'
+  // accordion panels), and restores them on close.
+  useEffect(() => {
+    if (!open) return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const restoreFns: Array<() => void> = [];
+    let node: HTMLElement | null = dialog;
+
+    while (node && node !== document.body && node.parentElement) {
+      const parent: HTMLElement = node.parentElement;
+      Array.from(parent.children).forEach((sibling) => {
+        if (sibling === node || !(sibling instanceof HTMLElement)) return;
+        if (sibling.hasAttribute("inert")) return;
+        sibling.setAttribute("inert", "");
+        restoreFns.push(() => sibling.removeAttribute("inert"));
+      });
+      node = parent;
+    }
+
+    return () => {
+      restoreFns.forEach((restore) => restore());
+    };
+  }, [open]);
+
+  // A11y: trap Tab/Shift+Tab focus inside the dialog while it's open, so
+  // keyboard users can't tab past it into the (inerted, but defense-in-depth)
+  // page behind it.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleTabTrap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.getAttribute("tabindex") !== "-1");
+
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (e.shiftKey) {
+        if (active === first || !dialog.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !dialog.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleTabTrap);
+    return () => window.removeEventListener("keydown", handleTabTrap);
+  }, [open]);
+
+  // Morph open: paint the surface at the pill's width first, then on the next
+  // frame flip `entered` so width / radius / height transition into the panel.
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const slotWidth = wrapperRef.current?.parentElement?.clientWidth ?? null;
+    setPillWidth(slotWidth);
+    // Resolve the final panel width to a concrete px value so the collapsed→expanded
+    // width morph interpolates (px→% transitions snap instead of animating).
+    setTargetWidth(Math.min(PANEL_MAX_WIDTH, window.innerWidth - 32));
+
+    // Double rAF: let the collapsed (pill-width) geometry paint for one frame, THEN flip
+    // `entered` so width / radius / height have a real "from" value and actually animate.
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setEntered(true));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [open]);
+
   // Reset state when closed
   useEffect(() => {
-    if (open) return;
+    if (open) {
+      wasOpenRef.current = true;
+      return;
+    }
 
-    setQuery('');
-    setDebouncedQuery('');
+    setQuery("");
+    setDebouncedQuery("");
     setResults([]);
     setSelectedIndex(0);
     setIsClosing(false);
     setIsKeyboardNavMode(false);
+    setEntered(false);
+    setPillWidth(null);
+    setTargetWidth(null);
+
+    // Only return focus on an actual close (Escape, outside click, or
+    // selecting a result) — not on first mount while already closed.
+    if (wasOpenRef.current) {
+      wasOpenRef.current = false;
+      triggerRef?.current?.focus();
+    }
 
     if (!keyboardNavTimerRef.current) return;
 
     clearTimeout(keyboardNavTimerRef.current);
     keyboardNavTimerRef.current = null;
-  }, [open]);
+  }, [open, triggerRef]);
 
   // Cleanup keyboard nav timer on unmount
   useEffect(() => {
@@ -154,34 +327,37 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
     };
   }, []);
 
-  // Animated close handler
+  // Animated close handler — reverse the morph, then unmount after it settles.
   const handleClose = useCallback(() => {
     if (isClosing) return;
     setIsClosing(true);
+    setEntered(false);
     setTimeout(() => {
       onClose();
     }, CLOSE_ANIMATION_MS);
   }, [isClosing, onClose]);
 
-  // Disable body scroll when modal is open
-  // Set overflow on <html> not <body> — the portal renders fixed children directly
-  // inside <body>, and overflow:hidden on body clips its fixed children in some browsers.
+  // Close when clicking anywhere outside the inline panel.
   useEffect(() => {
-    if (open) {
-      const originalOverflow = document.documentElement.style.overflow;
-      document.documentElement.style.overflow = 'hidden';
-      return () => {
-        document.documentElement.style.overflow = originalOverflow;
-      };
-    }
-  }, [open]);
+    if (!open) return;
+
+    const handlePointerDown = (e: MouseEvent) => {
+      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
+        handleClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open, handleClose]);
 
   // Handle global keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isEscapeKey = e.key === 'Escape';
+      const isEscapeKey = e.key === "Escape";
       const isEscapeWithOpen = isEscapeKey && open;
-      const isShortcutKey = (e.metaKey || e.ctrlKey) && e.key === SEARCH_SHORTCUT;
+      const isShortcutKey =
+        (e.metaKey || e.ctrlKey) && e.key === SEARCH_SHORTCUT;
 
       // Handle Escape key separately
       if (isEscapeWithOpen) {
@@ -202,14 +378,14 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
       // This is handled by the Nav component
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, handleClose]);
 
   // Debounce the search query
   useEffect(() => {
     if (!query.trim()) {
-      setDebouncedQuery('');
+      setDebouncedQuery("");
       return;
     }
 
@@ -235,11 +411,14 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
   }, [debouncedQuery]);
 
   // Handle result click
-  const handleResultClick = useCallback((result: SearchResult) => {
-    const url = result.hash ? `${result.path}#${result.hash}` : result.path;
-    navigate(url);
-    handleClose();
-  }, [navigate, handleClose]);
+  const handleResultClick = useCallback(
+    (result: SearchResult) => {
+      const url = result.hash ? `${result.path}#${result.hash}` : result.path;
+      navigate(url);
+      handleClose();
+    },
+    [navigate, handleClose],
+  );
 
   // Handle keyboard navigation within results
   const handleKeyDown = useCallback(
@@ -247,7 +426,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
       if (results.length === 0) return;
 
       switch (e.key) {
-        case 'ArrowDown':
+        case "ArrowDown":
           e.preventDefault();
           setIsKeyboardNavMode(true);
           setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
@@ -259,7 +438,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
             setIsKeyboardNavMode(false);
           }, 500);
           break;
-        case 'ArrowUp':
+        case "ArrowUp":
           e.preventDefault();
           setIsKeyboardNavMode(true);
           setSelectedIndex((i) => Math.max(i - 1, 0));
@@ -271,7 +450,7 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
             setIsKeyboardNavMode(false);
           }, 500);
           break;
-        case 'Enter':
+        case "Enter":
           e.preventDefault();
           if (results[selectedIndex]) {
             handleResultClick(results[selectedIndex]);
@@ -279,28 +458,37 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
           break;
       }
     },
-    [results, selectedIndex, handleResultClick]
+    [results, selectedIndex, handleResultClick],
   );
 
   // Scroll a buffer element into view within the results container
-  const scrollBufferElement = useCallback((
-    bufferElement: Element | undefined,
-    container: HTMLElement,
-    containerRect: DOMRect,
-    edge: 'top' | 'bottom'
-  ) => {
-    if (!bufferElement) return;
+  const scrollBufferElement = useCallback(
+    (
+      bufferElement: Element | undefined,
+      container: HTMLElement,
+      containerRect: DOMRect,
+      edge: "top" | "bottom",
+    ) => {
+      if (!bufferElement) return;
 
-    const bufferRect = bufferElement.getBoundingClientRect();
+      const bufferRect = bufferElement.getBoundingClientRect();
 
-    const scrollOffset = edge === 'top'
-      ? bufferRect.top - containerRect.top + container.scrollTop - 10
-      : bufferRect.bottom - containerRect.top + container.scrollTop - container.clientHeight + 10;
+      const scrollOffset =
+        edge === "top"
+          ? bufferRect.top - containerRect.top + container.scrollTop - 10
+          : bufferRect.bottom -
+            containerRect.top +
+            container.scrollTop -
+            container.clientHeight +
+            10;
 
-    const topValue = edge === 'top' ? Math.max(0, scrollOffset) : scrollOffset;
-    container.scrollTo({ top: topValue, behavior: 'auto' });
-    inputRef.current?.focus();
-  }, []);
+      const topValue =
+        edge === "top" ? Math.max(0, scrollOffset) : scrollOffset;
+      container.scrollTo({ top: topValue, behavior: "auto" });
+      inputRef.current?.focus();
+    },
+    [],
+  );
 
   // Scroll selected result into view with buffer (only for keyboard navigation)
   const scrollSelectedIntoView = useCallback(() => {
@@ -308,9 +496,11 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
 
     const container = resultsRef.current;
     const allResults = Array.from(
-      container.querySelectorAll('[data-search-result-index]')
+      container.querySelectorAll("[data-search-result-index]"),
     );
-    const selectedElement = allResults[selectedIndex] as HTMLElement | undefined;
+    const selectedElement = allResults[selectedIndex] as
+      | HTMLElement
+      | undefined;
 
     if (!selectedElement) return;
 
@@ -329,79 +519,131 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
     // Check if selected element is near top edge
     if (elementTop < bufferPixels) {
       const bufferTopIndex = Math.max(0, selectedIndex - bufferSize);
-      scrollBufferElement(allResults[bufferTopIndex], container, containerRect, 'top');
+      scrollBufferElement(
+        allResults[bufferTopIndex],
+        container,
+        containerRect,
+        "top",
+      );
       return;
     }
 
     // Check if selected element is near bottom edge
     if (elementBottom <= containerHeight - bufferPixels) return;
 
-    const bufferBottomIndex = Math.min(allResults.length - 1, selectedIndex + bufferSize);
-    scrollBufferElement(allResults[bufferBottomIndex], container, containerRect, 'bottom');
+    const bufferBottomIndex = Math.min(
+      allResults.length - 1,
+      selectedIndex + bufferSize,
+    );
+    scrollBufferElement(
+      allResults[bufferBottomIndex],
+      container,
+      containerRect,
+      "bottom",
+    );
   }, [selectedIndex, results.length, scrollBufferElement]);
 
+  // Auto-scroll only follows keyboard navigation. Hovering a result near the
+  // top/bottom edge moves the selection too, but must NOT yank the list.
   useEffect(() => {
+    if (!isKeyboardNavMode) return;
     scrollSelectedIntoView();
-  }, [scrollSelectedIntoView]);
+  }, [scrollSelectedIntoView, isKeyboardNavMode]);
 
   if (!open) return null;
 
-  const handleDialogClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
+  // Inline morph: a single surface that grows out of the nav pill. The collapsed
+  // pill and this surface share geometry (slot width, 48px tall, full-round), so
+  // flipping `entered` transitions width / border-radius while the results region
+  // unrolls via the grid-rows 0fr→1fr trick — reading as one continuous shape.
+  // The wrapper holds the FINAL panel width and is centered exactly once (a constant
+  // translate), so the centering never drifts mid-morph. The dialog inside animates its
+  // own width and stays centered via auto margins — sidestepping the transform-vs-width
+  // race where `-translate-x-1/2` on an auto-width box freezes then snaps. Collapsed, the
+  // dialog matches the nav pill's width; `entered` widens it to fill the wrapper.
+  const expandedWidth = targetWidth
+    ? `${targetWidth}px`
+    : `min(${PANEL_MAX_WIDTH}px, calc(100vw - 2rem))`;
+  const dialogWidth = entered
+    ? expandedWidth
+    : pillWidth
+      ? `${pillWidth}px`
+      : expandedWidth;
 
-  const backdropClasses = `${styles['search-backdrop']} ${isClosing ? styles['search-backdrop-closing'] : ''}`;
-  const dialogClasses = `${styles['search-dialog']} ${isClosing ? styles['search-dialog-closing'] : ''}`;
-
-  return createPortal(
+  return (
     <>
-      <div className={backdropClasses} onClick={handleClose} data-blok-testid="search-backdrop" />
-      <div className={styles['search-container']} onClick={handleClose} data-blok-testid="search-container">
-        <div className={dialogClasses} ref={dialogRef} onClick={handleDialogClick} data-blok-testid="search-dialog">
-          <div className={styles['search-input-wrapper']}>
-            <svg
-              className={styles['search-icon']}
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <circle
-                cx="11"
-                cy="11"
-                r="7"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              />
-              <path
-                d="M21 21l-4.35-4.35"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <input
-              ref={inputRef}
-              type="text"
-              className={styles['search-input']}
-              placeholder={t('search.placeholder')}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              autoComplete="off"
-            />
-            {query && (
+      {/* Page tint — fades in/out on the SAME `entered` morph (and same
+          duration + easing) as the panel, so dim and panel move together.
+          Portaled to <body> so it can sit below the nav (z-30) yet above the
+          page. Only active when the caller asks for it (scrolled state). */}
+      {createPortal(
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-30 bg-foreground/25 backdrop-blur-[2px] motion-reduce:transition-none"
+          style={{
+            opacity: entered && tinted ? 1 : 0,
+            pointerEvents: entered && tinted ? "auto" : "none",
+            transition: `opacity ${MORPH_MS}ms ${MORPH_EASE}`,
+          }}
+        />,
+        document.body,
+      )}
+
+      <div
+        ref={wrapperRef}
+        className="pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2"
+        style={{ width: expandedWidth }}
+      >
+      <div
+        className="pointer-events-auto mx-auto overflow-hidden border border-border bg-card"
+        style={{
+          width: dialogWidth,
+          // 1.5rem == half the 48px collapsed height, so it reads as a full-round pill at
+          // rest but never balloons into an ellipse as the box grows (unlike 9999px).
+          borderRadius: entered ? "1rem" : "1.5rem",
+          boxShadow: entered
+            ? "0 16px 48px -12px rgba(17,17,17,0.22)"
+            : "0 2px 8px rgba(17,17,17,0.07)",
+          transition: `width ${MORPH_MS}ms ${MORPH_EASE}, border-radius ${MORPH_MS}ms ${MORPH_EASE}, box-shadow ${MORPH_MS}ms ${MORPH_EASE}`,
+        }}
+        ref={dialogRef}
+        data-blok-testid="search-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("nav.searchAriaLabel")}
+      >
+        {/* Header mirrors the nav pill so the morph reads as that pill growing:
+            neutral semibold prompt on the left, ⌘K hint + coral circular button on
+            the right. The coral circle is the shared anchor that holds its place
+            through the width morph. */}
+        <div
+          className={cn(
+            "flex h-12 items-center border-b pl-5 pr-1.5 transition-colors duration-200",
+            entered ? "border-border" : "border-transparent",
+          )}
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            className="min-w-0 flex-1 rounded-md bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-foreground placeholder:font-semibold placeholder:text-foreground/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            placeholder={t("search.placeholder")}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+          />
+          <div className="ml-3 flex shrink-0 items-center gap-2.5">
+            {query ? (
               <button
-                className={styles['search-clear']}
-                onClick={() => setQuery('')}
+                className="flex size-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                onClick={() => {
+                  setQuery("");
+                  inputRef.current?.focus();
+                }}
                 type="button"
-                aria-label={t('search.clearSearch')}>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                >
+                aria-label={t("search.clearSearch")}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path
                     d="M12 4L4 12M4 4l8 8"
                     stroke="currentColor"
@@ -410,124 +652,270 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                   />
                 </svg>
               </button>
-            )}
-            <KeyIcon className={styles['search-shortcut']}>{t('search.escKey')}</KeyIcon>
-          </div>
-
-          <div className={styles['search-results']} ref={resultsRef}>
-            {results.length === 0 ? (
-              <div className={styles['search-empty']}>
-                {query.trim() ? (
-                  <>
-                    <div className={styles['search-empty-icon']}>
-                      <svg
-                        width="32"
-                        height="32"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          cx="11"
-                          cy="11"
-                          r="7"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M21 21l-4.35-4.35"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                        <path
-                          d="M8 11h6"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </div>
-                    <p className={styles['search-empty-title']}>{t('search.noResultsTitle')}</p>
-                    <p className={styles['search-empty-description']}>
-                      {t('search.noResultsDescription')}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles['search-empty-icon']}>
-                      <svg
-                        width="32"
-                        height="32"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          cx="11"
-                          cy="11"
-                          r="7"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M21 21l-4.35-4.35"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </div>
-                    <p className={styles['search-empty-title']}>{t('search.emptyTitle')}</p>
-                    <p className={styles['search-empty-description']}>
-                      {t('search.emptyDescription')}
-                    </p>
-                  </>
-                )}
-              </div>
             ) : (
-              <>
-                <div className={styles['search-results-header']}>
-                  <span className={styles['search-results-count']} data-blok-testid="search-results-count">
-                    {results.length} {results.length === 1 ? t('search.result') : t('search.results')}
-                  </span>
-                </div>
-                {results.map((result, index) => {
-                  const showModuleHeader = index === 0 || result.module !== results[index - 1].module;
+              <kbd className="hidden items-center gap-0.5 rounded-md bg-secondary px-1.5 py-1 font-mono text-[10px] font-semibold leading-none text-muted-foreground/70 sm:inline-flex">
+                <span className="text-[12px] leading-none">⌘</span>K
+              </kbd>
+            )}
+            <button
+              type="button"
+              onClick={() => inputRef.current?.focus()}
+              tabIndex={-1}
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-[0_1px_3px_rgba(225,29,72,0.35)] transition-transform duration-200 hover:scale-105"
+              aria-label={t("nav.searchAriaLabel")}
+            >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                <circle
+                  cx="9"
+                  cy="9"
+                  r="6.25"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                />
+                <path
+                  d="M17.5 17.5l-4-4"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
 
-                  return (
-                    <div key={result.id}>
-                      {showModuleHeader && (
-                        <div className={styles['search-module-header']} data-blok-testid="search-module-header">
-                          <ModuleIcon module={result.module} />
-                          <span className={styles['search-module-title']}>
-                            {result.module}
-                          </span>
-                        </div>
-                      )}
-                      <button
-                        className={`${styles['search-result']} ${
-                          index === selectedIndex ? styles.selected : ''
-                        }`}
-                        onClick={() => handleResultClick(result)}
-                        type="button"
-                        onMouseEnter={() => {
-                          if (!isKeyboardNavMode) {
-                            setSelectedIndex(index);
-                          }
-                        }}
-                        data-search-result-index={index}
-                        data-keyboard-nav={isKeyboardNavMode}
+        <div
+          className="grid"
+          style={{
+            gridTemplateRows: entered ? "1fr" : "0fr",
+            transition: `grid-template-rows ${MORPH_MS}ms ${MORPH_EASE}`,
+          }}
+        >
+          <div
+            className="min-h-0 overflow-hidden"
+            style={{
+              opacity: entered ? 1 : 0,
+              // Content rises a few px into place so it lands after the surface
+              // opens, instead of every row appearing at once. Slight delay on open
+              // lets the box start unrolling first; fades out promptly on close.
+              transform: entered ? "translateY(0)" : "translateY(8px)",
+              transition: entered
+                ? `opacity ${MORPH_MS}ms ${MORPH_EASE} 70ms, transform ${MORPH_MS}ms ${MORPH_EASE} 70ms`
+                : `opacity ${Math.round(MORPH_MS * 0.5)}ms ease-out, transform ${MORPH_MS}ms ${MORPH_EASE}`,
+            }}
+          >
+            <div className="max-h-[60vh] overflow-y-auto p-2" ref={resultsRef}>
+              {results.length === 0 ? (
+                <div className="flex flex-col items-center px-6 py-12 text-center">
+                  {query.trim() ? (
+                    <>
+                      {/* Same doc page, greyed — no coral title — giving a resigned
+                          head-shake because nothing matched. */}
+                      <div className="mb-4" aria-hidden="true">
+                        <svg width="72" height="82" viewBox="0 0 56 64" fill="none">
+                          <g>
+                            <path
+                              d="M12 7H36L48 19V54a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z"
+                              className="fill-card stroke-muted-foreground/40"
+                              strokeWidth="1.6"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M36 7v8a4 4 0 0 0 4 4h8"
+                              className="fill-secondary stroke-muted-foreground/40"
+                              strokeWidth="1.6"
+                              strokeLinejoin="round"
+                            />
+                            {/* Blank, greyed content — nothing matched */}
+                            <rect x="16" y="23" width="22" height="4.5" rx="2.25" className="fill-muted-foreground/30" />
+                            <rect x="16" y="33" width="24" height="3" rx="1.5" className="fill-muted-foreground/20" />
+                            <rect x="16" y="39" width="19" height="3" rx="1.5" className="fill-muted-foreground/20" />
+                            <rect x="16" y="45" width="22" height="3" rx="1.5" className="fill-muted-foreground/20" />
+                          </g>
+                        </svg>
+                      </div>
+                      <p className="text-base font-semibold text-foreground">
+                        <Typo>{t("search.noResultsFor")}</Typo>{" "}
+                        <span className="text-primary">
+                          &ldquo;{query.trim()}&rdquo;
+                        </span>
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        <Typo>{t("search.noResultsDescription")}</Typo>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      {/* One confident doc page. Its dog-ear corner folds and
+                          unfolds from time to time: the flap pivots around the
+                          diagonal crease. The page body stays notched, so when the
+                          flap lays flat (card-coloured) it completes the rectangle,
+                          and when folded it shows the underside dog-ear. */}
+                      <div
+                        className="mb-4"
+                        aria-hidden="true"
+                        style={{ perspective: "300px" }}
                       >
-                        <span className={styles['search-result-number']}>{index + 1}</span>
-                        <div className={styles['search-result-content']}>
-                          <span className={styles['search-result-title']}>
-                            {highlightMatch(result.title, query)}
+                        <svg
+                          width="72"
+                          height="82"
+                          viewBox="0 0 56 64"
+                          fill="none"
+                          style={{ overflow: "visible", transformStyle: "preserve-3d" }}
+                        >
+                          {/* Page fill (notched) — unstroked; the outline below skips
+                              the diagonal so no crease shows when the corner unfolds. */}
+                          <path
+                            d="M12 7H36L48 19V54a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z"
+                            className="fill-card"
+                          />
+                          <path
+                            d="M48 19V54a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4H36"
+                            className="stroke-muted-foreground/40"
+                            strokeWidth="1.6"
+                            fill="none"
+                            strokeLinejoin="round"
+                          />
+                          {/* Coral title block + body lines */}
+                          <rect x="16" y="23" width="22" height="4.5" rx="2.25" className="fill-primary" />
+                          <rect x="16" y="33" width="24" height="3" rx="1.5" className="fill-muted-foreground/35" />
+                          <rect x="16" y="39" width="19" height="3" rx="1.5" className="fill-muted-foreground/35" />
+                          <rect x="16" y="45" width="22" height="3" rx="1.5" className="fill-muted-foreground/35" />
+                          {/* The folding corner flap, drawn at its unfolded
+                              position; the animation pivots it onto the page. Its
+                              two leg strokes become the rectangle's top+right edges
+                              when flat, and the dog-ear's free edges when folded. */}
+                          <g className="paper-fold">
+                            <path
+                              className="paper-fold-face"
+                              d="M36 7H44a4 4 0 0 1 4 4V19Z"
+                            />
+                            <path
+                              d="M36 7H44a4 4 0 0 1 4 4V19"
+                              className="stroke-muted-foreground/40"
+                              strokeWidth="1.6"
+                              fill="none"
+                              strokeLinejoin="round"
+                            />
+                          </g>
+                          {/* The crease, along the fixed fold axis. Visible only
+                              when folded (it's the cut edge); fades out as the corner
+                              lays flat so the rectangle reads seamless. */}
+                          <path
+                            className="paper-crease stroke-muted-foreground/40"
+                            d="M36 7L48 19"
+                            strokeWidth="1.6"
+                            fill="none"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-base font-semibold text-foreground">
+                        <Typo>{t("search.emptyTitle")}</Typo>
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        <Typo>{t("search.emptyDescription")}</Typo>
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="px-3 pb-1.5 pt-1.5">
+                    <span
+                      className="text-xs text-muted-foreground"
+                      data-blok-testid="search-results-count"
+                    >
+                      {results.length}{" "}
+                      {t(
+                        `search.result_${getResultsPluralForm(results.length, locale)}`,
+                      )}
+                    </span>
+                  </div>
+                  {results.map((result, index) => {
+                    const showModuleHeader =
+                      index === 0 ||
+                      result.module !== results[index - 1].module;
+                    const isSelected = index === selectedIndex;
+
+                    return (
+                      <div key={result.id}>
+                        {showModuleHeader && (
+                          <div
+                            className={cn(
+                              "flex items-center gap-2 px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground/70",
+                              index === 0 ? "pt-1" : "pt-3",
+                            )}
+                            data-blok-testid="search-module-header"
+                          >
+                            <ModuleIcon module={result.module} />
+                            <span>{result.module}</span>
+                          </div>
+                        )}
+                        <button
+                          className={cn(
+                            "group flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
+                            isSelected
+                              ? "bg-secondary"
+                              : "hover:bg-secondary/60",
+                          )}
+                          onClick={() => handleResultClick(result)}
+                          type="button"
+                          onMouseEnter={() => {
+                            if (!isKeyboardNavMode) {
+                              setSelectedIndex(index);
+                            }
+                          }}
+                          data-search-result-index={index}
+                          data-keyboard-nav={isKeyboardNavMode}
+                        >
+                          {/* Kind tile: a glyph that's the same for every result of a
+                              kind, so the eye groups methods / options / pages before
+                              reading a word. Methods carry the coral accent (callable). */}
+                          <span
+                            className={cn(
+                              "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                              result.kind === "method"
+                                ? "bg-primary/10 text-primary"
+                                : isSelected
+                                  ? "bg-background text-muted-foreground"
+                                  : "bg-secondary text-muted-foreground group-hover:bg-background",
+                            )}
+                            data-blok-testid="search-result-kind"
+                            data-kind={result.kind}
+                          >
+                            <KindIcon kind={result.kind} />
                           </span>
-                          <p className={styles['search-result-description']}>
-                            {highlightMatch(result.description || '', query)}
-                          </p>
-                        </div>
-                        <div className={styles['search-result-arrow']}>
+                          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="truncate text-sm font-medium text-foreground">
+                                {highlightMatch(result.title, query)}
+                              </span>
+                              <span
+                                className={cn(
+                                  "shrink-0 text-[10px] font-semibold uppercase tracking-[0.05em]",
+                                  result.kind === "method"
+                                    ? "text-primary/80"
+                                    : "text-muted-foreground/60",
+                                )}
+                              >
+                                {t(`search.kind.${result.kind}`)}
+                              </span>
+                            </span>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {result.section && (
+                                <span className="font-medium text-foreground/65">
+                                  {result.section}
+                                  {result.description ? " · " : ""}
+                                </span>
+                              )}
+                              {highlightMatch(result.description || "", query)}
+                            </p>
+                          </div>
                           <svg
+                            className={cn(
+                              "shrink-0 text-muted-foreground/50 transition-opacity duration-150",
+                              isSelected ? "opacity-100" : "opacity-0",
+                            )}
                             width="14"
                             height="14"
                             viewBox="0 0 16 16"
@@ -541,25 +929,32 @@ export const Search: React.FC<SearchProps> = ({ open, onClose }) => {
                               strokeLinejoin="round"
                             />
                           </svg>
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
 
-          <div className={styles['search-footer']}>
-            <span className={styles['search-footer-hint']}>
-              <ShortcutKeys keys={['↑', '↓']} /> {t('search.navigate')}
-              <span className={styles['search-footer-separator']} />
-              <KeyIcon>↵</KeyIcon> {t('search.select')}
-            </span>
+            <div className="flex items-center justify-center gap-4 border-t border-border bg-secondary/40 px-5 py-2.5">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <kbd className={KEYCAP_CLASS}>↑</kbd>
+                  <kbd className={KEYCAP_CLASS}>↓</kbd>
+                </span>
+                {t("search.navigate")}
+              </span>
+              <span className="h-3 w-px bg-border" />
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <kbd className={KEYCAP_CLASS}>↵</kbd>
+                {t("search.select")}
+              </span>
+            </div>
           </div>
         </div>
       </div>
-    </>,
-    document.body
+      </div>
+    </>
   );
 };

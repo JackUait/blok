@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
+import { FrameworkProvider } from '../contexts/FrameworkContext';
 import { ToolsPage } from './ToolsPage';
 import { TOOL_SECTIONS } from '../components/tools/tools-data';
 
@@ -10,7 +11,9 @@ const renderPage = () =>
   render(
     <MemoryRouter>
       <I18nProvider>
-        <ToolsPage />
+        <FrameworkProvider>
+          <ToolsPage />
+        </FrameworkProvider>
       </I18nProvider>
     </MemoryRouter>
   );
@@ -48,10 +51,9 @@ describe('ToolsPage', () => {
     }
   });
 
-  it('renders a section badge for each tool', () => {
+  it('does not render a type badge tag for tool sections', () => {
     renderPage();
-    const badges = screen.getAllByTestId('tools-section-badge');
-    expect(badges.length).toBe(TOOL_SECTIONS.length);
+    expect(screen.queryAllByTestId('tools-section-badge')).toHaveLength(0);
   });
 
   it('renders sidebar links for all tools', () => {

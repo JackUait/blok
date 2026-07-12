@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { cn } from "@/lib/utils";
 import { useI18n } from '../../contexts/I18nContext';
 import {
   createHighlighter,
@@ -19,6 +20,13 @@ interface CodeBlockProps {
   showPackageManagerToggle?: boolean;
   packageName?: string;
   onPackageManagerChange?: (manager: PackageManager) => void;
+  /**
+   * When embedded inside a parent surface (e.g. a window frame), drop the
+   * block's own border / radius / background / language label so it blends into
+   * the host shell instead of drawing a second card outline. The host is
+   * expected to label the block itself.
+   */
+  embedded?: boolean;
 }
 
 const getInstallCommand = (
@@ -59,6 +67,7 @@ const supportedLangs: (BundledLanguage | SpecialLanguage)[] = [
   "typescript",
   "tsx",
   "jsx",
+  "vue",
   "bash",
   "sh",
   "json",
@@ -75,6 +84,7 @@ const languageDisplayNames: Record<string, string> = {
   typescript: "TypeScript",
   tsx: "TSX",
   jsx: "JSX",
+  vue: "Vue",
   bash: "Terminal",
   sh: "Shell",
   json: "JSON",
@@ -130,6 +140,16 @@ const getHighlighter = async (lang: string): Promise<Highlighter> => {
   return initPromise;
 };
 
+// Shiki's codeToHtml emits the theme's calibrated background as an inline
+// style on the <pre> (e.g. style="background-color:#121212;..."). Pull it out
+// so the surrounding card can match it exactly instead of forcing a generic
+// `--card` background behind the tokens (which breaks the contrast ratios the
+// theme was calibrated for).
+const extractBackgroundColor = (html: string): string | undefined => {
+  const match = /background-color:\s*([^;"]+)/i.exec(html);
+  return match?.[1];
+};
+
 // Helper to create plain text HTML fallback (matches Shiki structure)
 const createPlainTextHtml = (text: string): string => {
   const escaped = text
@@ -149,6 +169,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   showPackageManagerToggle = false,
   packageName,
   onPackageManagerChange,
+  embedded = false,
 }) => {
   const { copyToClipboard } = useCopyToClipboard();
   const { t } = useI18n();
@@ -156,6 +177,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const [copied, setCopied] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [packageManager, setPackageManager] = useState<PackageManager>("yarn");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
 
   // Compute the display code based on package manager selection
   const displayCode =
@@ -221,6 +244,35 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     void highlight();
   }, [displayCode, language, isDark]);
 
+  // Track horizontal overflow to fade the scroll edges
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    const updateEdges = () => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      setEdges({
+        left: el.scrollLeft > 1,
+        right: el.scrollLeft < maxScroll - 1,
+      });
+    };
+
+    updateEdges();
+    el.addEventListener("scroll", updateEdges, { passive: true });
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateEdges)
+        : null;
+    observer?.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", updateEdges);
+      observer?.disconnect();
+    };
+  }, [highlightedCode]);
+
   const handleCopy = async () => {
     const success = await copyToClipboard(displayCode);
     if (success) {
@@ -232,22 +284,42 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const displayLanguage =
     languageDisplayNames[language.toLowerCase()] || language;
 
+  // The theme's own calibrated background — kept (not stripped to transparent)
+  // so token colors retain the contrast ratios the theme was designed for.
+  const codeBg = extractBackgroundColor(highlightedCode);
+
   return (
-    <div className="code-block" data-code-block data-blok-testid="code-block">
-      <div className="code-block-header">
-        <div className="code-block-controls">
-          <span className="code-block-control code-block-control--red" />
-          <span className="code-block-control code-block-control--yellow" />
-          <span className="code-block-control code-block-control--green" />
-        </div>
-        <span className="code-block-language">{displayLanguage}</span>
-        {showPackageManagerToggle && packageName && (
-          <div className="code-block-package-toggle">
-            <PackageManagerToggle onChange={handlePackageManagerChange} />
-          </div>
+    <div
+      className={cn(
+        "code-block group relative overflow-hidden",
+        !embedded && "rounded-2xl border border-border bg-card",
+      )}
+      data-code-block
+      data-blok-testid="code-block"
+    >
+      {/* Embedded: the host already labels the block, so the copy button is all
+          that's left — pin it to the code's top-right instead of letting it
+          float on a row of its own. */}
+      <div
+        className={cn(
+          "flex items-center gap-3",
+          embedded ? "absolute top-1.5 right-1.5 z-10" : "px-3 pt-3 pb-1.5",
+        )}
+      >
+        {showPackageManagerToggle && packageName ? (
+          <PackageManagerToggle onChange={handlePackageManagerChange} />
+        ) : (
+          !embedded && (
+            <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              {displayLanguage}
+            </span>
+          )
         )}
         <button
-          className={`code-copy ${copied ? "copied" : ""}`}
+          className={cn(
+            "ml-auto inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            copied && "text-primary",
+          )}
           data-copy
           data-code={displayCode}
           data-blok-testid="code-copy-button"
@@ -257,7 +329,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         >
           {copied ? (
             <svg
-              className="code-copy-icon"
+              className="size-4"
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -273,7 +345,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             </svg>
           ) : (
             <svg
-              className="code-copy-icon"
+              className="size-4"
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -299,8 +371,41 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           )}
         </button>
       </div>
-      <div className="code-block-content">
-        <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+      <div className={cn("relative", !embedded && "mx-3 mb-3")}>
+        <div
+          ref={scrollRef}
+          className={cn(
+            "overflow-x-auto rounded-xl pt-3 pb-3 pl-4 font-mono text-sm leading-relaxed [&_pre]:!m-0 [&_code]:font-mono",
+            embedded ? "pr-12" : "pr-8",
+          )}
+          style={{ backgroundColor: codeBg }}
+        >
+          <div dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+        </div>
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-xl transition-opacity duration-200",
+            edges.left ? "opacity-100" : "opacity-0",
+          )}
+          style={{
+            backgroundImage: codeBg
+              ? `linear-gradient(to right, ${codeBg}, transparent)`
+              : undefined,
+          }}
+        />
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-xl transition-opacity duration-200",
+            edges.right ? "opacity-100" : "opacity-0",
+          )}
+          style={{
+            backgroundImage: codeBg
+              ? `linear-gradient(to left, ${codeBg}, transparent)`
+              : undefined,
+          }}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { SearchIndexItem, SearchResult } from '@/types/search';
 import { API_SECTIONS, SIDEBAR_SECTIONS } from '@/components/api/api-data';
+import { generateMethodId, generatePropertyId, generateOptionId } from '@/components/api/api-anchors';
 
 export type { SearchIndexItem };
 
@@ -112,8 +113,10 @@ const indexMethods = (index: SearchIndexItem[], section: ApiSection): void => {
       description: method.description,
       category: section.badge ?? 'api',
       module,
-      path: '/docs',
-      hash: section.id,
+      kind: 'method',
+      section: section.title,
+      path: `/docs/${section.id}`,
+      hash: generateMethodId(section.id, method.name),
       keywords: createKeywords(
         methodName,
         section.title,
@@ -138,8 +141,10 @@ const indexProperties = (index: SearchIndexItem[], section: ApiSection): void =>
       description: prop.description,
       category: section.badge ?? 'api',
       module,
-      path: '/docs',
-      hash: section.id,
+      kind: 'property',
+      section: section.title,
+      path: `/docs/${section.id}`,
+      hash: generatePropertyId(section.id, prop.name),
       keywords: createKeywords(
         prop.name,
         section.title,
@@ -164,8 +169,10 @@ const indexTableOptions = (index: SearchIndexItem[], section: ApiSection): void 
       description: row.description,
       category: section.badge ?? 'api',
       module,
-      path: '/docs',
-      hash: section.id,
+      kind: 'option',
+      section: section.title,
+      path: `/docs/${section.id}`,
+      hash: generateOptionId(section.id, row.option),
       keywords: createKeywords(
         row.option,
         section.title,
@@ -175,61 +182,6 @@ const indexTableOptions = (index: SearchIndexItem[], section: ApiSection): void 
     });
   }
 };
-
-// Recipe data extracted from RecipesPage.tsx and recipe components
-const RECIPES: Array<{
-  id: string;
-  title: string;
-  description: string;
-  keywords: string[];
-}> = [
-  {
-    id: 'recipe-keyboard-shortcuts',
-    title: 'Keyboard Shortcuts',
-    description: 'All keyboard shortcuts for Blok editor',
-    keywords: [
-      'shortcut', 'keyboard', 'hotkey', 'slash', 'toolbox',
-      'bold', 'italic', 'underline', 'link', 'undo', 'redo',
-      'enter', 'backspace', 'tab', 'indent', 'outdent', 'list',
-    ],
-  },
-  {
-    id: 'recipe-autosave',
-    title: 'Autosave with Debouncing',
-    description: 'Automatically save content as users type, with debouncing to prevent excessive server requests.',
-    keywords: ['autosave', 'save', 'debounce', 'onchange', 'server', 'request'],
-  },
-  {
-    id: 'recipe-events',
-    title: 'Working with Events',
-    description: 'Listen to editor events to integrate with your application\'s state management or analytics.',
-    keywords: ['event', 'onready', 'onchange', 'listener', 'callback', 'analytics'],
-  },
-  {
-    id: 'recipe-custom-tool',
-    title: 'Creating a Custom Tool',
-    description: 'Build your own block type to extend Blok\'s functionality. This example creates a simple alert/callout block.',
-    keywords: ['custom', 'tool', 'plugin', 'extension', 'block', 'create', 'alert', 'callout'],
-  },
-  {
-    id: 'recipe-styling',
-    title: 'Styling with Data Attributes',
-    description: 'Customize Blok\'s appearance using CSS and data attributes. No need to fight with specificity.',
-    keywords: ['style', 'css', 'styling', 'theme', 'custom', 'appearance', 'data', 'attribute'],
-  },
-  {
-    id: 'recipe-readonly',
-    title: 'Read-Only Mode',
-    description: 'Display saved content without editing capabilities, or toggle between edit and preview modes.',
-    keywords: ['readonly', 'read-only', 'preview', 'toggle', 'edit', 'mode'],
-  },
-  {
-    id: 'recipe-locale',
-    title: 'Localization with Preloading',
-    description: 'Configure Blok for multiple languages with optional preloading for offline support or instant initialization.',
-    keywords: ['locale', 'i18n', 'localization', 'language', 'translation', 'preload', 'offline'],
-  },
-];
 
 // Build search index from API documentation
 export const buildSearchIndex = (): SearchIndexItem[] => {
@@ -246,8 +198,8 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       description: section.description,
       category: section.badge ?? 'api',
       module,
-      path: '/docs',
-      hash: section.id,
+      kind: 'section',
+      path: `/docs/${section.id}`,
       keywords: createKeywords(
         section.title,
         section.id,
@@ -269,6 +221,7 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       description: 'Welcome to Blok documentation',
       category: 'page',
       module: 'Page',
+      kind: 'page',
       path: '/',
       keywords: ['home', 'welcome', 'blok', 'editor', 'start', 'getting started'],
     },
@@ -278,7 +231,8 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       description: 'API documentation and guides',
       category: 'page',
       module: 'Page',
-      path: '/docs',
+      kind: 'page',
+      path: '/docs/quick-start',
       keywords: ['docs', 'documentation', 'api', 'reference', 'guide', 'manual'],
     },
     {
@@ -287,6 +241,7 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       description: 'Try the Blok editor',
       category: 'page',
       module: 'Page',
+      kind: 'page',
       path: '/demo',
       keywords: ['demo', 'try', 'editor', 'example', 'playground', 'test', 'live'],
     },
@@ -296,23 +251,11 @@ export const buildSearchIndex = (): SearchIndexItem[] => {
       description: 'Migrate from other editors',
       category: 'page',
       module: 'Page',
+      kind: 'page',
       path: '/migration',
       keywords: ['migration', 'migrate', 'convert', 'upgrade', 'editorjs', 'switch', 'transition'],
     }
   );
-
-  // Index recipes
-  for (const recipe of RECIPES) {
-    index.push({
-      id: recipe.id,
-      title: recipe.title,
-      description: recipe.description,
-      category: 'recipe',
-      module: 'Recipes',
-      path: '/recipes',
-      keywords: createKeywords(recipe.title, recipe.description, ...recipe.keywords),
-    });
-  }
 
   return index;
 };
@@ -475,6 +418,8 @@ export const search = (query: string, index: SearchIndexItem[]): SearchResult[] 
         description: item.description,
         category: item.category,
         module: item.module,
+        kind: item.kind,
+        section: item.section,
         path: item.path,
         hash: item.hash,
         rank: totalScore,

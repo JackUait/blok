@@ -82,6 +82,16 @@ describe('CodeBlock', () => {
     expect(screen.getByText('Terminal')).toBeInTheDocument();
   });
 
+  it('hides the language label when embedded, since the host shell labels itself', () => {
+    renderWithI18n(<CodeBlock code="echo hello" language="bash" embedded />);
+    expect(screen.queryByText('Terminal')).not.toBeInTheDocument();
+  });
+
+  it('keeps the copy button when embedded', () => {
+    renderWithI18n(<CodeBlock code="echo hello" language="bash" embedded />);
+    expect(screen.getByTestId('code-copy-button')).toBeInTheDocument();
+  });
+
   it('displays copy button', () => {
     renderWithI18n(<CodeBlock code="echo hello" language="bash" />);
     expect(screen.getByRole('button')).toBeInTheDocument();
@@ -119,6 +129,28 @@ describe('CodeBlock', () => {
       );
     });
     document.documentElement.classList.remove('dark');
+  });
+
+  it('does not force the syntax-highlighted background to transparent', () => {
+    const { container } = renderWithI18n(
+      <CodeBlock code="const x = 1;" language="typescript" />
+    );
+    const codeWrapper = container.querySelector('.font-mono');
+    expect(codeWrapper).not.toBeNull();
+    expect(codeWrapper?.className).not.toMatch(/bg-transparent/);
+  });
+
+  it("keeps the theme's own calibrated background behind the tokens", async () => {
+    mockCodeToHtml.mockReturnValue(
+      '<pre class="shiki vitesse-dark" style="background-color:#121212;color:#dbd7caee" tabindex="0"><code>const x = 1;</code></pre>'
+    );
+    const { container } = renderWithI18n(
+      <CodeBlock code="const x = 1;" language="typescript" />
+    );
+    await waitFor(() => {
+      const codeWrapper = container.querySelector('.font-mono') as HTMLElement | null;
+      expect(codeWrapper?.style.backgroundColor).toBe('rgb(18, 18, 18)');
+    });
   });
 
   it('shows yarn install command when package manager is yarn', async () => {

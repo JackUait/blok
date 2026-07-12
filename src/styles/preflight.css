@@ -1,40 +1,57 @@
 /* --- Scoped preflight (replaces tailwindcss/preflight.css) --- */
 
 /*
-  1. Prevent padding and border from affecting element width.
-  2. Remove default margins and padding.
-  3. Reset all borders.
+  Every plain reset below lives in @layer base (matching where Tailwind's own
+  preflight normally ships) so it still loses to Blok's own utilities, which
+  main.css imports into @layer utilities. Left unlayered, a reset ALWAYS beats
+  a layered rule regardless of specificity — so any Blok tool's own utility
+  class touching a property this file also resets (margin, padding, color,
+  display, font-size, …) would be silently overridden, no host page required.
+  This bit us for margin/padding (mt-[26px] etc. collapsing block spacing to
+  0) and would bite the same way for any other property here.
+
+  The two rules that use !important are the deliberate exception: they exist
+  specifically to beat HOST-page styles (even the host's own !important), so
+  they stay unlayered on purpose — moving them into a layer would let a
+  layered host rule with matching !important win instead.
 */
-:where([data-blok-interface], [data-blok-popover]) *,
-:where([data-blok-interface], [data-blok-popover]) ::after,
-:where([data-blok-interface], [data-blok-popover]) ::before,
-:where([data-blok-interface], [data-blok-popover]) ::backdrop,
-:where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
-  box-sizing: border-box; /* 1 */
-  margin: 0; /* 2 */
-  padding: 0; /* 2 */
-  border: 0 solid; /* 3 */
-}
+@layer base {
+  /*
+    1. Prevent padding and border from affecting element width.
+    2. Remove default margins and padding.
+    3. Reset all borders.
+  */
+  :where([data-blok-interface], [data-blok-popover]) *,
+  :where([data-blok-interface], [data-blok-popover]) ::after,
+  :where([data-blok-interface], [data-blok-popover]) ::before,
+  :where([data-blok-interface], [data-blok-popover]) ::backdrop,
+  :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
+    box-sizing: border-box; /* 1 */
+    margin: 0; /* 2 */
+    padding: 0; /* 2 */
+    border: 0 solid; /* 3 */
+  }
 
-/*
-  NOTE: The `html` rule from Tailwind preflight (line-height, font-family,
-  tap-highlight, etc.) is intentionally omitted. It cannot be scoped to a
-  sub-element, and it was the primary source of host-page <html> mutations.
-  Blok sets its own font-family and line-height via utility classes on the
-  wrapper and its descendants.
-*/
+  /*
+    NOTE: The `html` rule from Tailwind preflight (line-height, font-family,
+    tap-highlight, etc.) is intentionally omitted. It cannot be scoped to a
+    sub-element, and it was the primary source of host-page <html> mutations.
+    Blok sets its own font-family and line-height via utility classes on the
+    wrapper and its descendants.
+  */
 
-/* Correct the inheritance of border color in Firefox. */
-:where([data-blok-interface], [data-blok-popover]) hr {
-  height: 0;
-  color: inherit;
-  border-top-width: var(--blok-border-width-hairline);
-}
+  /* Correct the inheritance of border color in Firefox. */
+  :where([data-blok-interface], [data-blok-popover]) hr {
+    height: 0;
+    color: inherit;
+    border-top-width: var(--blok-border-width-hairline);
+  }
 
-/* Add the correct text decoration in Chrome, Edge, and Safari. */
-:where([data-blok-interface], [data-blok-popover]) abbr:where([title]) {
-  -webkit-text-decoration: underline dotted;
-  text-decoration: underline dotted;
+  /* Add the correct text decoration in Chrome, Edge, and Safari. */
+  :where([data-blok-interface], [data-blok-popover]) abbr:where([title]) {
+    -webkit-text-decoration: underline dotted;
+    text-decoration: underline dotted;
+  }
 }
 
 /*
@@ -53,202 +70,204 @@
   letter-spacing: inherit !important;
 }
 
-/* Reset links to optimize for opt-in styling instead of opt-out. */
-:where([data-blok-interface], [data-blok-popover]) a {
-  color: inherit;
-  -webkit-text-decoration: inherit;
-  text-decoration: inherit;
-}
-
-/* Add the correct font weight in Edge and Safari. */
-:where([data-blok-interface], [data-blok-popover]) :is(b, strong) {
-  font-weight: bolder;
-}
-
-/* Neutralise the browser UA styling on <mark> elements. Browsers paint <mark>
-   with `color: MarkText` and `background-color: Mark` (a yellow/system
-   highlight). Blok never wants that default: a mark's colour comes only from an
-   explicit inline `color` / `background-color` set by the Marker tool. Reset
-   both here so a mark carrying only a text colour (e.g. colour transferred/
-   pasted into an article, where `migrateMarkColors` maps the colour but does
-   not add an inline transparent background) never renders a spurious yellow
-   highlight. Real inline highlights still win — inline styles override this
-   zero-specificity `:where()` rule. */
-:where([data-blok-interface], [data-blok-popover]) mark {
-  color: inherit;
-  background-color: transparent;
-}
-
-/* Correct the odd em font sizing in all browsers for code elements. */
-:where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
-  /* Fallback list applies outside blok interface roots; --blok-font-mono resolves inside them */
-  font-family: var(--blok-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
-  font-feature-settings: --theme(--default-mono-font-feature-settings, normal);
-  font-variation-settings: --theme(--default-mono-font-variation-settings, normal);
-  font-size: 1em;
-}
-
-/* Inline code tool styling — coral/red text on a subtle surface.
-   Excludes <code> inside <pre> (block code tool), which paints its own surface. */
-:where([data-blok-interface], [data-blok-popover]) code:not(pre code) {
-  background-color: var(--blok-inline-code-bg);
-  color: var(--blok-color-red-text);
-  padding: var(--blok-space-0-5) var(--blok-space-1);
-  border-radius: 0.25em;
-  font-size: 0.875em;
-}
-
-/* Add the correct font size in all browsers. */
-:where([data-blok-interface], [data-blok-popover]) small {
-  font-size: 80%;
-}
-
-/* Prevent sub and sup elements from affecting line height. */
-:where([data-blok-interface], [data-blok-popover]) :is(sub, sup) {
-  font-size: 75%;
-  line-height: 0;
-  position: relative;
-  vertical-align: baseline;
-}
-:where([data-blok-interface], [data-blok-popover]) sub { bottom: -0.25em; }
-:where([data-blok-interface], [data-blok-popover]) sup { top: -0.5em; }
-
-/* Remove text indentation from table contents and fix border color inheritance. */
-:where([data-blok-interface], [data-blok-popover]) table {
-  text-indent: 0;
-  border-color: inherit;
-  border-collapse: collapse;
-}
-
-/* Use the modern Firefox focus style for all focusable elements. */
-:where([data-blok-interface], [data-blok-popover]) :-moz-focusring {
-  outline: auto;
-}
-
-/* Add the correct vertical alignment in Chrome and Firefox. */
-:where([data-blok-interface], [data-blok-popover]) progress {
-  vertical-align: baseline;
-}
-
-/* Add the correct display in Chrome and Safari. */
-:where([data-blok-interface], [data-blok-popover]) summary {
-  display: list-item;
-}
-
-/* Make lists unstyled by default. */
-:where([data-blok-interface], [data-blok-popover]) :is(ol, ul, menu) {
-  list-style: none;
-}
-
-/* Make replaced elements display: block by default. */
-:where([data-blok-interface], [data-blok-popover]) :is(img, svg, video, canvas, audio, iframe, embed, object) {
-  display: block;
-  vertical-align: middle;
-}
-
-/* Constrain images and videos to the parent width. */
-:where([data-blok-interface], [data-blok-popover]) :is(img, video) {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Inherit font styles in all browsers for form elements. */
-:where([data-blok-interface], [data-blok-popover]) :is(button, input, select, optgroup, textarea, ::file-selector-button) {
-  font: inherit;
-  font-feature-settings: inherit;
-  font-variation-settings: inherit;
-  letter-spacing: inherit;
-  color: inherit;
-  background-color: transparent;
-  opacity: 1;
-}
-
-/* Restore default font weight for optgroup. */
-:where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup {
-  font-weight: bolder;
-}
-
-/* Restore indentation for optgroup options. */
-:where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup option {
-  padding-inline-start: var(--blok-space-5);
-}
-
-/* Restore space after file selector button. */
-:where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
-  margin-inline-end: var(--blok-space-1);
-}
-
-/* Reset placeholder opacity in Firefox. */
-:where([data-blok-interface], [data-blok-popover]) ::placeholder {
-  opacity: 1;
-}
-
-/* Set placeholder color to semi-transparent version of current text color. */
-@supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
-  :where([data-blok-interface], [data-blok-popover]) ::placeholder {
-    color: color-mix(in oklab, currentcolor 50%, transparent);
+@layer base {
+  /* Reset links to optimize for opt-in styling instead of opt-out. */
+  :where([data-blok-interface], [data-blok-popover]) a {
+    color: inherit;
+    -webkit-text-decoration: inherit;
+    text-decoration: inherit;
   }
-}
 
-/* Prevent resizing textareas horizontally by default. */
-:where([data-blok-interface], [data-blok-popover]) textarea {
-  resize: vertical;
-}
+  /* Add the correct font weight in Edge and Safari. */
+  :where([data-blok-interface], [data-blok-popover]) :is(b, strong) {
+    font-weight: bolder;
+  }
 
-/* Remove inner padding and native cancel button in Chrome and Safari on macOS. */
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-search-decoration,
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-search-cancel-button {
-  -webkit-appearance: none;
-}
+  /* Neutralise the browser UA styling on <mark> elements. Browsers paint <mark>
+     with `color: MarkText` and `background-color: Mark` (a yellow/system
+     highlight). Blok never wants that default: a mark's colour comes only from an
+     explicit inline `color` / `background-color` set by the Marker tool. Reset
+     both here so a mark carrying only a text colour (e.g. colour transferred/
+     pasted into an article, where `migrateMarkColors` maps the colour but does
+     not add an inline transparent background) never renders a spurious yellow
+     highlight. Real inline highlights still win — inline styles override this
+     zero-specificity `:where()` rule. */
+  :where([data-blok-interface], [data-blok-popover]) mark {
+    color: inherit;
+    background-color: transparent;
+  }
 
-/* Ensure date/time inputs have consistent height in iOS Safari. */
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-date-and-time-value {
-  min-height: 1lh;
-  text-align: inherit;
-}
+  /* Correct the odd em font sizing in all browsers for code elements. */
+  :where([data-blok-interface], [data-blok-popover]) :is(code, kbd, samp, pre) {
+    /* Fallback list applies outside blok interface roots; --blok-font-mono resolves inside them */
+    font-family: var(--blok-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
+    font-feature-settings: --theme(--default-mono-font-feature-settings, normal);
+    font-variation-settings: --theme(--default-mono-font-variation-settings, normal);
+    font-size: 1em;
+  }
 
-/* Prevent height from changing on date/time inputs in macOS Safari. */
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit {
-  display: inline-flex;
-}
+  /* Inline code tool styling — coral/red text on a subtle surface.
+     Excludes <code> inside <pre> (block code tool), which paints its own surface. */
+  :where([data-blok-interface], [data-blok-popover]) code:not(pre code) {
+    background-color: var(--blok-inline-code-bg);
+    color: var(--blok-color-red-text);
+    padding: var(--blok-space-0-5) var(--blok-space-1);
+    border-radius: 0.25em;
+    font-size: 0.875em;
+  }
 
-/* Remove excess padding from pseudo-elements in date/time inputs. */
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit-fields-wrapper {
-  padding: 0;
-}
+  /* Add the correct font size in all browsers. */
+  :where([data-blok-interface], [data-blok-popover]) small {
+    font-size: 80%;
+  }
 
-:where([data-blok-interface], [data-blok-popover]) :is(
-  ::-webkit-datetime-edit,
-  ::-webkit-datetime-edit-year-field,
-  ::-webkit-datetime-edit-month-field,
-  ::-webkit-datetime-edit-day-field,
-  ::-webkit-datetime-edit-hour-field,
-  ::-webkit-datetime-edit-minute-field,
-  ::-webkit-datetime-edit-second-field,
-  ::-webkit-datetime-edit-millisecond-field,
-  ::-webkit-datetime-edit-meridiem-field
-) {
-  padding-block: 0;
-}
+  /* Prevent sub and sup elements from affecting line height. */
+  :where([data-blok-interface], [data-blok-popover]) :is(sub, sup) {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+  :where([data-blok-interface], [data-blok-popover]) sub { bottom: -0.25em; }
+  :where([data-blok-interface], [data-blok-popover]) sup { top: -0.5em; }
 
-/* Center dropdown marker on inputs with paired datalists. */
-:where([data-blok-interface], [data-blok-popover]) ::-webkit-calendar-picker-indicator {
-  line-height: 1;
-}
+  /* Remove text indentation from table contents and fix border color inheritance. */
+  :where([data-blok-interface], [data-blok-popover]) table {
+    text-indent: 0;
+    border-color: inherit;
+    border-collapse: collapse;
+  }
 
-/* Remove additional :invalid styles in Firefox. */
-:where([data-blok-interface], [data-blok-popover]) :-moz-ui-invalid {
-  box-shadow: none;
-}
+  /* Use the modern Firefox focus style for all focusable elements. */
+  :where([data-blok-interface], [data-blok-popover]) :-moz-focusring {
+    outline: auto;
+  }
 
-/* Correct the inability to style border-radius in iOS Safari. */
-:where([data-blok-interface], [data-blok-popover]) :is(button, input:where([type='button'], [type='reset'], [type='submit']), ::file-selector-button) {
-  appearance: button;
-}
+  /* Add the correct vertical alignment in Chrome and Firefox. */
+  :where([data-blok-interface], [data-blok-popover]) progress {
+    vertical-align: baseline;
+  }
 
-/* Correct the cursor style of increment/decrement buttons in Safari. */
-:where([data-blok-interface], [data-blok-popover]) :is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
-  height: auto;
+  /* Add the correct display in Chrome and Safari. */
+  :where([data-blok-interface], [data-blok-popover]) summary {
+    display: list-item;
+  }
+
+  /* Make lists unstyled by default. */
+  :where([data-blok-interface], [data-blok-popover]) :is(ol, ul, menu) {
+    list-style: none;
+  }
+
+  /* Make replaced elements display: block by default. */
+  :where([data-blok-interface], [data-blok-popover]) :is(img, svg, video, canvas, audio, iframe, embed, object) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  /* Constrain images and videos to the parent width. */
+  :where([data-blok-interface], [data-blok-popover]) :is(img, video) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Inherit font styles in all browsers for form elements. */
+  :where([data-blok-interface], [data-blok-popover]) :is(button, input, select, optgroup, textarea, ::file-selector-button) {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    background-color: transparent;
+    opacity: 1;
+  }
+
+  /* Restore default font weight for optgroup. */
+  :where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup {
+    font-weight: bolder;
+  }
+
+  /* Restore indentation for optgroup options. */
+  :where([data-blok-interface], [data-blok-popover]) :where(select:is([multiple], [size])) optgroup option {
+    padding-inline-start: var(--blok-space-5);
+  }
+
+  /* Restore space after file selector button. */
+  :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
+    margin-inline-end: var(--blok-space-1);
+  }
+
+  /* Reset placeholder opacity in Firefox. */
+  :where([data-blok-interface], [data-blok-popover]) ::placeholder {
+    opacity: 1;
+  }
+
+  /* Set placeholder color to semi-transparent version of current text color. */
+  @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
+    :where([data-blok-interface], [data-blok-popover]) ::placeholder {
+      color: color-mix(in oklab, currentcolor 50%, transparent);
+    }
+  }
+
+  /* Prevent resizing textareas horizontally by default. */
+  :where([data-blok-interface], [data-blok-popover]) textarea {
+    resize: vertical;
+  }
+
+  /* Remove inner padding and native cancel button in Chrome and Safari on macOS. */
+  :where([data-blok-interface], [data-blok-popover]) ::-webkit-search-decoration,
+  :where([data-blok-interface], [data-blok-popover]) ::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  /* Ensure date/time inputs have consistent height in iOS Safari. */
+  :where([data-blok-interface], [data-blok-popover]) ::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: inherit;
+  }
+
+  /* Prevent height from changing on date/time inputs in macOS Safari. */
+  :where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit {
+    display: inline-flex;
+  }
+
+  /* Remove excess padding from pseudo-elements in date/time inputs. */
+  :where([data-blok-interface], [data-blok-popover]) ::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+
+  :where([data-blok-interface], [data-blok-popover]) :is(
+    ::-webkit-datetime-edit,
+    ::-webkit-datetime-edit-year-field,
+    ::-webkit-datetime-edit-month-field,
+    ::-webkit-datetime-edit-day-field,
+    ::-webkit-datetime-edit-hour-field,
+    ::-webkit-datetime-edit-minute-field,
+    ::-webkit-datetime-edit-second-field,
+    ::-webkit-datetime-edit-millisecond-field,
+    ::-webkit-datetime-edit-meridiem-field
+  ) {
+    padding-block: 0;
+  }
+
+  /* Center dropdown marker on inputs with paired datalists. */
+  :where([data-blok-interface], [data-blok-popover]) ::-webkit-calendar-picker-indicator {
+    line-height: 1;
+  }
+
+  /* Remove additional :invalid styles in Firefox. */
+  :where([data-blok-interface], [data-blok-popover]) :-moz-ui-invalid {
+    box-shadow: none;
+  }
+
+  /* Correct the inability to style border-radius in iOS Safari. */
+  :where([data-blok-interface], [data-blok-popover]) :is(button, input:where([type='button'], [type='reset'], [type='submit']), ::file-selector-button) {
+    appearance: button;
+  }
+
+  /* Correct the cursor style of increment/decrement buttons in Safari. */
+  :where([data-blok-interface], [data-blok-popover]) :is(::-webkit-inner-spin-button, ::-webkit-outer-spin-button) {
+    height: auto;
+  }
 }
 
 /* Keep hidden elements hidden. */
@@ -256,41 +275,43 @@
   display: none !important;
 }
 
-/* Suppress focus outline on mouse/pointer clicks inside Blok boundaries.
-   :focus-visible below will re-enable it for keyboard navigation only. */
-[data-blok-interface] :focus:not(:focus-visible),
-[data-blok-popover] :focus:not(:focus-visible) {
-  outline: none;
-}
+@layer base {
+  /* Suppress focus outline on mouse/pointer clicks inside Blok boundaries.
+     :focus-visible below will re-enable it for keyboard navigation only. */
+  [data-blok-interface] :focus:not(:focus-visible),
+  [data-blok-popover] :focus:not(:focus-visible) {
+    outline: none;
+  }
 
-/* Never show a focus outline on text-entry elements — the text cursor
-   is sufficient affordance regardless of how focus was triggered.
-   Browsers always match :focus-visible on these elements even on mouse
-   click (per CSS Selectors L4), so the :focus-visible restore rule below
-   would otherwise override element-level outline-hidden utilities. */
-[data-blok-interface] :is([contenteditable], input, textarea):focus-visible,
-[data-blok-popover] :is([contenteditable], input, textarea):focus-visible {
-  outline: none;
-}
+  /* Never show a focus outline on text-entry elements — the text cursor
+     is sufficient affordance regardless of how focus was triggered.
+     Browsers always match :focus-visible on these elements even on mouse
+     click (per CSS Selectors L4), so the :focus-visible restore rule below
+     would otherwise override element-level outline-hidden utilities. */
+  [data-blok-interface] :is([contenteditable], input, textarea):focus-visible,
+  [data-blok-popover] :is([contenteditable], input, textarea):focus-visible {
+    outline: none;
+  }
 
-/* Restore browser-default :focus-visible styles inside Blok boundaries,
-   preventing host-page outline/border-radius overrides. */
-[data-blok-interface] :focus-visible,
-[data-blok-popover] :focus-visible {
-  outline: revert;
-  outline-offset: revert;
-  border-radius: revert;
-}
+  /* Restore browser-default :focus-visible styles inside Blok boundaries,
+     preventing host-page outline/border-radius overrides. */
+  [data-blok-interface] :focus-visible,
+  [data-blok-popover] :focus-visible {
+    outline: revert;
+    outline-offset: revert;
+    border-radius: revert;
+  }
 
-/* Define the text-selection highlight inside Blok boundaries as a single
-   design token (--blok-selection-inline) instead of leaving it to the
-   unpredictable per-browser default. This is the one source of truth for the
-   selection colour: the fake-background highlight (shown while a Link/Equation
-   menu input holds focus) reads the SAME token, so opening a menu never changes
-   the highlight colour. `color` stays reverted so selected text keeps its own
-   colour on the light highlight. */
-[data-blok-interface] ::selection,
-[data-blok-popover] ::selection {
-  background-color: var(--blok-selection-inline);
-  color: revert;
+  /* Define the text-selection highlight inside Blok boundaries as a single
+     design token (--blok-selection-inline) instead of leaving it to the
+     unpredictable per-browser default. This is the one source of truth for the
+     selection colour: the fake-background highlight (shown while a Link/Equation
+     menu input holds focus) reads the SAME token, so opening a menu never changes
+     the highlight colour. `color` stays reverted so selected text keeps its own
+     colour on the light highlight. */
+  [data-blok-interface] ::selection,
+  [data-blok-popover] ::selection {
+    background-color: var(--blok-selection-inline);
+    color: revert;
+  }
 }

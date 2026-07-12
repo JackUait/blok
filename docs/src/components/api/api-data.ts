@@ -3,6 +3,48 @@ export interface ApiMethod {
   returnType: string;
   description: string;
   example?: string;
+  /**
+   * Short "when to use / gotcha" guidance, injected per-locale by
+   * useApiTranslations from `api.<section>.methods.<methodKey>.note`. May
+   * contain `inline code` spans (rendered as chips by ApiMethodCard).
+   */
+  note?: string;
+  /**
+   * Structured parameter documentation, rendered as a table by
+   * ApiMethodCard. `name`/`type`/`required`/`default` are language-agnostic
+   * and live here; `description` is overlaid per-locale by
+   * useApiTranslations from
+   * `api.<section>.methods.<methodKey>.params.<paramName>.description`.
+   */
+  params?: {
+    name: string;
+    type: string;
+    required: boolean;
+    default?: string;
+    description: string;
+  }[];
+  /**
+   * Structured failure-mode documentation, rendered as a list by
+   * ApiMethodCard. `message` is the literal thrown error text
+   * (language-agnostic) and lives here; `condition`/`resolution` prose is
+   * overlaid per-locale by useApiTranslations from
+   * `api.<section>.methods.<methodKey>.errors.<index>.*`.
+   */
+  errors?: {
+    condition: string;
+    message: string;
+    resolution: string;
+  }[];
+  /**
+   * Editor version this method was deprecated in (e.g. "0.23.5"). When set,
+   * ApiMethodCard renders a visible "Deprecated" badge.
+   */
+  deprecatedSince?: string;
+  /**
+   * Method key (e.g. "readOnly.set") that replaces this deprecated method.
+   * Rendered by ApiMethodCard as an in-page anchor link.
+   */
+  replacedBy?: string;
 }
 
 export interface ApiSection {
@@ -10,6 +52,12 @@ export interface ApiSection {
   badge?: string;
   title: string;
   description?: string;
+  /**
+   * ISO date string (e.g. "2026-06-30") shown as a "Last updated" line near
+   * the page header. Kept as a plain static string per section — no
+   * git-log/build-time automation needed.
+   */
+  lastUpdated?: string;
   methods?: ApiMethod[];
   properties?: { name: string; type: string; description: string }[];
   table?: {
@@ -18,7 +66,7 @@ export interface ApiSection {
     default: string;
     description: string;
   }[];
-  customType?: "quick-start";
+  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool";
   example?: string;
 }
 
@@ -28,11 +76,40 @@ export const API_SECTIONS: ApiSection[] = [
     badge: "Guide",
     title: "Quick Start",
     description: "Get up and running with Blok in just a few simple steps.",
+    lastUpdated: "2026-06-30",
     customType: "quick-start",
+  },
+  {
+    id: "tutorial",
+    badge: "Tutorial",
+    title: "Build your first editor",
+    description:
+      "Mount Blok, capture some content, and save it as JSON you can store and load back — the full round-trip in five steps.",
+    lastUpdated: "2026-06-30",
+    customType: "tutorial",
+  },
+  {
+    id: "concepts",
+    badge: "Concepts",
+    title: "Everything is a block",
+    description:
+      "Blok has one core idea. Understand it, and the rest of the API falls into place.",
+    lastUpdated: "2026-06-30",
+    customType: "concepts",
+  },
+  {
+    id: "custom-block-tool",
+    badge: "How-to",
+    title: "Create a custom block tool",
+    description:
+      "Build a block tool from scratch — a callout box that renders, edits, and saves like any built-in block.",
+    lastUpdated: "2026-06-30",
+    customType: "how-to-custom-tool",
   },
   {
     id: "core",
     badge: "Core",
+    lastUpdated: "2026-06-30",
     title: "Blok Class",
     description:
       "The main editor class that initializes and manages the Blok editor instance.",
@@ -71,10 +148,10 @@ editor.focus(true);`,
       },
       {
         name: "clear()",
-        returnType: "void",
+        returnType: "Promise<void>",
         description: "Removes all blocks from the editor.",
         example: `// Clear all content
-editor.clear();`,
+await editor.clear();`,
       },
       {
         name: "destroy()",
@@ -88,24 +165,24 @@ editor.destroy();`,
     properties: [
       {
         name: "isReady",
-        type: "Promise<void>",
-        description: "Promise that resolves when editor is ready",
+        type: "Promise<Blok>",
+        description: "Promise that resolves with the ready editor instance",
       },
-      { name: "blocks", type: "BlocksAPI", description: "Blocks API module" },
-      { name: "caret", type: "CaretAPI", description: "Caret API module" },
-      { name: "history", type: "HistoryAPI", description: "History API module" },
-      { name: "saver", type: "SaverAPI", description: "Saver API module" },
+      { name: "blocks", type: "Blocks", description: "Blocks API module" },
+      { name: "caret", type: "Caret", description: "Caret API module" },
+      { name: "history", type: "History", description: "History API module" },
+      { name: "saver", type: "Saver", description: "Saver API module" },
       {
         name: "toolbar",
-        type: "ToolbarAPI",
+        type: "Toolbar",
         description: "Toolbar API module",
       },
       {
         name: "inlineToolbar",
-        type: "InlineToolbarAPI",
+        type: "InlineToolbar",
         description: "Inline toolbar API module",
       },
-      { name: "events", type: "EventsAPI", description: "Events API module" },
+      { name: "events", type: "Events", description: "Events API module" },
     ],
   },
   {
@@ -113,6 +190,7 @@ editor.destroy();`,
     title: "Configuration",
     description: "The configuration object passed to the Blok constructor.",
     example: `import { Blok, type BlokConfig } from '@jackuait/blok';
+import { Paragraph, Header } from '@jackuait/blok/tools';
 
 const config: BlokConfig = {
   holder: 'editor',
@@ -121,7 +199,7 @@ const config: BlokConfig = {
     header: { class: Header, placeholder: 'Enter a heading' },
   },
   placeholder: 'Start writing...',
-  minHeight: '300px',
+  minHeight: 300,
   defaultBlock: 'paragraph',
   data: {
     blocks: [
@@ -129,8 +207,8 @@ const config: BlokConfig = {
     ]
   },
   readOnly: false,
-  onChange: (api) => {
-    console.log('Content changed', api);
+  onChange: (api, event) => {
+    console.log('Content changed', event);
   },
 };
 
@@ -144,21 +222,23 @@ const editor = new Blok(config);`,
       },
       {
         option: "tools",
-        type: "Record<string, ToolConfig>",
+        type: "Record<string, ToolConstructable | ToolSettings>",
         default: "{}",
         description: "Available block and inline tools",
       },
       {
         option: "placeholder",
-        type: "string",
-        default: "''",
-        description: "Placeholder text for empty blocks",
+        type: "string | false",
+        default: "false",
+        description:
+          "Placeholder text shown in the first block when the editor is empty; false disables it",
       },
       {
         option: "minHeight",
-        type: "string | number",
-        default: "'300px'",
-        description: "Minimum height of the editor",
+        type: "number",
+        default: "300",
+        description:
+          "Height in px of the editor's bottom clickable zone",
       },
       {
         option: "defaultBlock",
@@ -180,9 +260,51 @@ const editor = new Blok(config);`,
       },
       {
         option: "onChange",
-        type: "(api: API) => void",
+        type: "(api: API, event: BlockMutationEvent | BlockMutationEvent[]) => void",
         default: "undefined",
-        description: "Change callback function",
+        description:
+          "Change callback function; the event argument carries the mutation(s) that occurred (batched into an array when several fire at once)",
+      },
+      {
+        option: "onSave",
+        type: "(data: OutputData, api: API) => void",
+        default: "undefined",
+        description:
+          "Reactive save callback — fires automatically with the full serialized content on every debounced content change, so you don't have to call save() by hand.",
+      },
+      {
+        option: "onReady",
+        type: "(blok?: Blok) => void",
+        default: "undefined",
+        description:
+          "Fires once when the editor becomes ready, receiving the fully-initialized Blok instance",
+      },
+      {
+        option: "autofocus",
+        type: "boolean",
+        default: "false",
+        description:
+          "If true, sets the caret in the first block once the editor is ready",
+      },
+      {
+        option: "inlineToolbar",
+        type: "string[] | boolean",
+        default: "true",
+        description:
+          "Default inline toolbar for all tools; an array restricts it to the listed inline tools, false disables it",
+      },
+      {
+        option: "i18n",
+        type: "I18nConfig",
+        default: "undefined",
+        description: "Internationalization config (locale + message dictionary)",
+      },
+      {
+        option: "theme",
+        type: "'auto' | 'light' | 'dark'",
+        default: "'auto'",
+        description:
+          "Color theme; 'auto' follows the OS preference via prefers-color-scheme",
       },
     ],
   },
@@ -198,7 +320,7 @@ const editor = new Blok(config);`,
         returnType: "Promise<void>",
         description: "Remove all blocks from the editor.",
         example: `await editor.blocks.clear();
-// Editor is now empty`,
+// All content removed; editor keeps one empty paragraph`,
       },
       {
         name: "blocks.render(data)",
@@ -222,7 +344,7 @@ await editor.blocks.renderFromHTML(html);
 // HTML is converted to appropriate blocks`,
       },
       {
-        name: "blocks.delete(index?)",
+        name: "blocks.delete(index?, setCaret?)",
         returnType: "Promise<void>",
         description:
           "Remove the block at the specified index, or current block if no index provided.",
@@ -230,7 +352,27 @@ await editor.blocks.renderFromHTML(html);
 await editor.blocks.delete();
 
 // Delete block at index 0
-await editor.blocks.delete(0);`,
+await editor.blocks.delete(0);
+
+// Delete without moving the user's caret (programmatic deletion)
+await editor.blocks.delete(0, false);`,
+        params: [
+          {
+            name: "index",
+            type: "number",
+            required: false,
+            default: "current block index",
+            description: "Index of the block to delete.",
+          },
+          {
+            name: "setCaret",
+            type: "boolean",
+            required: false,
+            default: "true",
+            description:
+              "Whether to move the caret to the surviving block after deletion; pass false to avoid stealing the user's caret during programmatic deletion.",
+          },
+        ],
       },
       {
         name: "blocks.move(toIndex, fromIndex?)",
@@ -260,7 +402,7 @@ if (block) {
           "Get the BlockAPI object for the block with the specified ID.",
         example: `const block = editor.blocks.getById('block-123');
 if (block) {
-  await block.update({ text: 'New content' });
+  await editor.blocks.update(block.id, { text: 'New content' });
 }`,
       },
       {
@@ -308,29 +450,131 @@ children.forEach(child => {
 console.log('Total blocks:', count);`,
       },
       {
-        name: "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?)",
+        name: "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?)",
         returnType: "BlockAPI",
         description:
           "Insert a new block with full control over its properties and position.",
-        example: `// Insert at end with default type
+        example: `// Insert after the current block with the default type
 const block = editor.blocks.insert();
+// → BlockAPI { id: 'kP3xQ...', name: 'paragraph', ... }
 
 // Insert paragraph with data at index 0
 const block = editor.blocks.insert('paragraph', { text: 'Hello' }, undefined, 0);
 
 // Insert with custom ID
 const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undefined, undefined, undefined, 'custom-id');`,
+        params: [
+          {
+            name: "type",
+            type: "string",
+            required: false,
+            default: "config.defaultBlock",
+            description: "Tool name to instantiate.",
+          },
+          {
+            name: "data",
+            type: "BlockToolData",
+            required: false,
+            default: "{}",
+            description: "Initial tool data for the new block.",
+          },
+          {
+            name: "config",
+            type: "ToolConfig",
+            required: false,
+            default: "{}",
+            description: "Tool config for this block instance.",
+          },
+          {
+            name: "index",
+            type: "number",
+            required: false,
+            default: "current block index + 1",
+            description: "Position to insert the block at.",
+          },
+          {
+            name: "needToFocus",
+            type: "boolean",
+            required: false,
+            default: "true",
+            description: "Whether to move focus to the inserted block. Pass false to insert without moving the caret.",
+          },
+          {
+            name: "replace",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description: "Replace the existing block at index instead of inserting around it.",
+          },
+          {
+            name: "id",
+            type: "string",
+            required: false,
+            default: "auto-generated",
+            description: "Custom id for the new block.",
+          },
+          {
+            name: "tunes",
+            type: "{ [name: string]: BlockTuneData }",
+            required: false,
+            default: "undefined",
+            description: "Optional tune data applied at creation, keyed by tune name.",
+          },
+        ],
+        errors: [
+          {
+            condition: "No `type` is given and no `defaultBlock` is configured.",
+            message: "Could not insert Block. Tool name is not specified.",
+            resolution: "Pass an explicit `type`, or set `defaultBlock` in the editor config.",
+          },
+          {
+            condition: "The resolved tool name is not registered in the editor.",
+            message: 'Could not compose Block. Tool «<type>» not found.',
+            resolution: "Register the tool in the editor's `tools` config before inserting a block of that type.",
+          },
+          {
+            condition: "`replace: true` is passed but no block exists at `index`.",
+            message: 'Could not replace Block at index <index>. Block not found.',
+            resolution: "Check `index` against `blocks.getBlocksCount()` before calling with `replace: true`.",
+          },
+        ],
       },
       {
         name: "blocks.insertMany(blocks, index?)",
         returnType: "BlockAPI[]",
-        description: "Insert multiple blocks at once at the specified index.",
+        description:
+          "Insert multiple blocks at once at the specified index. Always pass an explicit index — when omitted it defaults to before the last existing block, and resolves to -1 (an error) on an empty editor.",
         example: `const blocksToInsert = [
   { id: '1', type: 'paragraph', data: { text: 'First' } },
   { id: '2', type: 'paragraph', data: { text: 'Second' } }
 ];
 const inserted = editor.blocks.insertMany(blocksToInsert, 0);
 console.log('Inserted:', inserted.length, 'blocks');`,
+        params: [
+          {
+            name: "blocks",
+            type: "OutputBlockData[]",
+            required: true,
+            description: "The blocks to insert.",
+          },
+          {
+            name: "index",
+            type: "number",
+            required: false,
+            default: "blocks.length - 1",
+            description:
+              "Position to insert at. When omitted, defaults to the index of the last existing block (not an append).",
+          },
+        ],
+        errors: [
+          {
+            condition:
+              "The resolved `index` is negative (e.g. the default on an empty editor).",
+            message: "Index should be greater than or equal to 0",
+            resolution:
+              "Always pass an explicit non-negative `index` rather than relying on the default.",
+          },
+        ],
       },
       {
         name: "blocks.composeBlockData(toolName)",
@@ -338,6 +582,13 @@ console.log('Inserted:', inserted.length, 'blocks');`,
         description: "Create empty block data for the specified tool type.",
         example: `const emptyData = await editor.blocks.composeBlockData('paragraph');
 // Returns: { text: '' } or appropriate empty state for the tool`,
+        errors: [
+          {
+            condition: "`toolName` is not a registered tool.",
+            message: 'Block Tool with type "<toolName>" not found',
+            resolution: "Register the tool in the editor's `tools` config first.",
+          },
+        ],
       },
       {
         name: "blocks.update(id, data?, tunes?)",
@@ -347,7 +598,44 @@ console.log('Inserted:', inserted.length, 'blocks');`,
 const block = await editor.blocks.update('block-123', { text: 'New text' });
 
 // Update with tunes
-const block = await editor.blocks.update('block-123', undefined, { alignment: 'center' });`,
+const block = await editor.blocks.update('block-123', undefined, { alignment: 'center' });
+
+// Guard against an id that no longer exists (e.g. the block was deleted
+// concurrently) instead of letting the rejection surface unhandled
+try {
+  await editor.blocks.update(staleId, { text: 'New text' });
+} catch {
+  console.warn('Block was already removed, skipping update');
+}`,
+        params: [
+          {
+            name: "id",
+            type: "string",
+            required: true,
+            description: "Id of the block to update.",
+          },
+          {
+            name: "data",
+            type: "Partial<BlockToolData>",
+            required: false,
+            default: "undefined",
+            description: "Partial data merged into the block's existing data.",
+          },
+          {
+            name: "tunes",
+            type: "Record<string, BlockTuneData>",
+            required: false,
+            default: "undefined",
+            description: "Tune data merged into the block's existing tunes.",
+          },
+        ],
+        errors: [
+          {
+            condition: "No block exists with the given `id`.",
+            message: 'Block with id "<id>" not found',
+            resolution: "Confirm the id with `blocks.getById()` before calling `update()`.",
+          },
+        ],
       },
       {
         name: "blocks.convert(id, newType, dataOverrides?)",
@@ -358,7 +646,53 @@ const block = await editor.blocks.update('block-123', undefined, { alignment: 'c
 const headerBlock = await editor.blocks.convert('block-123', 'header', { level: 2 });
 
 // Convert with data overrides
-const headerBlock = await editor.blocks.convert('block-123', 'header', { text: 'New Title', level: 1 });`,
+const headerBlock = await editor.blocks.convert('block-123', 'header', { text: 'New Title', level: 1 });
+
+// Not every pair of tools supports conversion — guard it rather than
+// assuming the target type is always convertible
+try {
+  await editor.blocks.convert('block-123', 'table');
+} catch (error) {
+  console.warn('Conversion not supported between these tools:', error);
+}`,
+        params: [
+          {
+            name: "id",
+            type: "string",
+            required: true,
+            description: "Id of the block to convert. Its tool must declare conversionConfig.export.",
+          },
+          {
+            name: "newType",
+            type: "string",
+            required: true,
+            description: "Name of the registered tool to convert to. Its tool must declare conversionConfig.import.",
+          },
+          {
+            name: "dataOverrides",
+            type: "BlockToolData",
+            required: false,
+            default: "undefined",
+            description: "Data fields to overwrite on the resulting block after conversion.",
+          },
+        ],
+        errors: [
+          {
+            condition: "No block exists with the given `id`.",
+            message: 'Block with id "<id>" not found',
+            resolution: "Confirm the id with `blocks.getById()` before calling `convert()`.",
+          },
+          {
+            condition: "`newType` is not a registered tool.",
+            message: 'Block Tool with type "<newType>" not found',
+            resolution: "Register the target tool in the editor's `tools` config.",
+          },
+          {
+            condition: "The source tool has no conversionConfig.export, the target tool has no conversionConfig.import, or neither does.",
+            message: 'Conversion from "<sourceType>" to "<newType>" is not possible. <ToolName(s)> tool(s) should provide a "conversionConfig"',
+            resolution: "Add a conversionConfig to whichever tool is missing one, or convert through an intermediate tool that supports both directions.",
+          },
+        ],
       },
       {
         name: "blocks.splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex)",
@@ -398,8 +732,10 @@ editor.blocks.stopBlockMutationWatching(0);
         returnType: "Promise<void|SavedData>",
         description: "Save the block content and return its data.",
         example: `const block = editor.blocks.getById('block-123');
-const data = await block.save();
-console.log(data); // { text: 'Block content' }`,
+const saved = await block.save();
+// saved resolves to a SavedData wrapper (or undefined if extraction fails):
+// { id: 'block-123', tool: 'paragraph', data: { text: 'Block content' }, tunes: {}, time: 1717000000000 }
+console.log(saved?.data); // { text: 'Block content' }`,
       },
       {
         name: "block.validate(data)",
@@ -476,6 +812,23 @@ if (entry) {
         type: "boolean",
         description: "Getter/setter for block stretch state",
       },
+      {
+        name: "parentId",
+        type: "string | null",
+        description: "Id of the parent block, or null if this block has no parent",
+      },
+      {
+        name: "preservedData",
+        type: "BlockToolData",
+        description:
+          "Last successfully extracted block tool data, synchronous — useful when async save() is not feasible, e.g. clipboard operations",
+      },
+      {
+        name: "preservedTunes",
+        type: "{ [name: string]: BlockTuneData }",
+        description:
+          "Last successfully extracted block tune data, synchronous — useful when async save() is not feasible, e.g. clipboard operations",
+      },
     ],
   },
   {
@@ -526,13 +879,45 @@ editor.caret.setToLastBlock('start');`,
         description: "Set caret to a specific block by BlockAPI, ID, or index.",
         example: `// By index
 editor.caret.setToBlock(0, 'end');
+// → true if the caret moved, false if the target block doesn't exist
 
 // By ID
 editor.caret.setToBlock('block-123', 'start');
 
-// By BlockAPI
+// By BlockAPI (getById can return null, so guard it)
 const block = editor.blocks.getById('block-123');
-editor.caret.setToBlock(block);`,
+if (block) {
+  editor.caret.setToBlock(block);
+}`,
+        params: [
+          {
+            name: "blockOrIdOrIndex",
+            type: "BlockAPI | string | number",
+            required: true,
+            description: "Target block, given as a BlockAPI instance, block id, or numeric index.",
+          },
+          {
+            name: "position",
+            type: "'start' | 'end' | 'default'",
+            required: false,
+            default: "'default'",
+            description: "Where within the block to place the caret.",
+          },
+          {
+            name: "offset",
+            type: "number",
+            required: false,
+            default: "0",
+            description: "Character offset from position within the target input.",
+          },
+        ],
+        errors: [
+          {
+            condition: "blockOrIdOrIndex is a valid id or index that does not resolve to an existing block (unknown id or out-of-range index).",
+            message: "(no error thrown — the call returns false)",
+            resolution: "For id/index inputs, check the boolean return value — a falsy result is the only signal the target wasn't found. Passing a null BlockAPI (e.g. an unchecked getById() result) is invalid input and throws, so null-check before calling.",
+          },
+        ],
       },
       {
         name: "caret.focus(atEnd?)",
@@ -568,26 +953,30 @@ requestAnimationFrame(() => {
         name: "on(event, callback)",
         returnType: "void",
         description: "Subscribe to an editor event.",
-        example: `// Listen for content changes
-editor.on('change', (api) => {
-  console.log('Content changed');
-  const data = await api.save();
+        example: `// Listen for block mutations — the callback receives the event payload,
+// not an API object
+editor.on('block changed', ({ event }) => {
+  console.log('Block mutated:', event.type);
 });
 
-// Listen for block selection
-editor.on('block-selected', (block) => {
-  console.log('Selected block:', block.id);
-});`,
+// Listen for individual block renders
+editor.on('block:rendered', ({ blockId }) => {
+  console.log('Rendered block:', blockId);
+});
+
+// To react to content changes with access to the API, use the
+// onChange(api, event) config callback (async is allowed there):
+//   onChange: async (api) => { const data = await api.save(); }`,
       },
       {
         name: "off(event, callback)",
         returnType: "void",
         description: "Unsubscribe from an editor event.",
-        example: `const handleChange = (api) => console.log('Changed');
-editor.on('change', handleChange);
+        example: `const handleRendered = (payload) => console.log('Rendered');
+editor.on('block:rendered', handleRendered);
 
-// Later, remove the listener
-editor.off('change', handleChange);`,
+// Later, remove the listener (pass the same function reference)
+editor.off('block:rendered', handleRendered);`,
       },
       {
         name: "emit(event, data)",
@@ -793,6 +1182,7 @@ class MyCustomTool {
 // - api.styles.settingsButton     // Settings button
 // - api.styles.settingsButtonActive   // Active settings
 // - api.styles.settingsButtonFocused  // Focused settings
+// - api.styles.settingsButtonFocusedAnimated  // Focused settings with click animation
 // - api.styles.button             // General button`,
     properties: [
       {
@@ -845,11 +1235,11 @@ class MyCustomTool {
         name: "toolbar.close(options?)",
         returnType: "void",
         description: "Close the toolbar with optional configuration.",
-        example: `// Standard close
+        example: `// Standard close (prevents hover reopen — default)
 editor.toolbar.close();
 
-// Close and prevent hover reopen
-editor.toolbar.close({ setExplicitlyClosed: true });`,
+// Close but allow the toolbar to reopen on hover
+editor.toolbar.close({ setExplicitlyClosed: false });`,
       },
       {
         name: "toolbar.open()",
@@ -858,7 +1248,7 @@ editor.toolbar.close({ setExplicitlyClosed: true });`,
         example: `editor.toolbar.open();`,
       },
       {
-        name: "toolbar.toggleBlockSettings(openingState?)",
+        name: "toolbar.toggleBlockSettings(openingState?, trigger?, options?)",
         returnType: "void",
         description: "Toggle the block settings menu (☰).",
         example: `// Toggle current state
@@ -868,7 +1258,35 @@ editor.toolbar.toggleBlockSettings();
 editor.toolbar.toggleBlockSettings(true);
 
 // Force close
-editor.toolbar.toggleBlockSettings(false);`,
+editor.toolbar.toggleBlockSettings(false);
+
+// Anchor the settings popover to a custom trigger element,
+// placed to the left of the anchor
+editor.toolbar.toggleBlockSettings(true, triggerEl, { placeLeftOfAnchor: true });`,
+        params: [
+          {
+            name: "openingState",
+            type: "boolean",
+            required: false,
+            default: "toggle current state",
+            description: "Force the settings menu open (true) or closed (false).",
+          },
+          {
+            name: "trigger",
+            type: "HTMLElement",
+            required: false,
+            default: "undefined",
+            description: "Element to anchor the settings popover to.",
+          },
+          {
+            name: "options",
+            type: "ToolbarBlockSettingsOptions",
+            required: false,
+            default: "undefined",
+            description:
+              "Placement overrides — `placeLeftOfAnchor` positions the popover to the left of the anchor.",
+          },
+        ],
       },
       {
         name: "toolbar.toggleToolbox(openingState?)",
@@ -918,21 +1336,113 @@ editor.notifier.show({
   message: 'Changes saved',
   style: 'success'
 });
+// → renders a toast in the corner of the editor; returns nothing to await
 
 // Confirm notification
 editor.notifier.show({
   message: 'Delete this block?',
-  style: 'confirm',
-  onConfirm: () => console.log('Confirmed'),
-  onCancel: () => console.log('Cancelled')
+  type: 'confirm',
+  okHandler: () => console.log('Confirmed'),
+  cancelHandler: () => console.log('Cancelled')
 });
 
 // Prompt notification
 editor.notifier.show({
   message: 'Enter a title',
-  style: 'prompt',
-  onConfirm: (value) => console.log('Entered:', value)
+  type: 'prompt',
+  okHandler: (value) => console.log('Entered:', value)
 });`,
+        params: [
+          {
+            name: "options",
+            type: "NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions",
+            required: true,
+            description: "Notification configuration. Shape depends on type.",
+          },
+          {
+            name: "options.message",
+            type: "string",
+            required: true,
+            description: "Notification text. May contain HTML.",
+          },
+          {
+            name: "options.type",
+            type: "'alert' | 'confirm' | 'prompt'",
+            required: false,
+            default: "'alert'",
+            description: "Notification type. confirm and prompt add action buttons.",
+          },
+          {
+            name: "options.style",
+            type: "'success' | 'error'",
+            required: false,
+            default: "undefined",
+            description: "Built-in visual style for alert notifications.",
+          },
+          {
+            name: "options.time",
+            type: "number",
+            required: false,
+            default: "8000",
+            description: "Auto-dismiss delay in ms for all notification types (default 8000).",
+          },
+          {
+            name: "options.okText",
+            type: "string",
+            required: false,
+            default: "'Confirm' / 'Ok'",
+            description: "Label for the confirm/submit button (confirm/prompt types only).",
+          },
+          {
+            name: "options.okHandler",
+            type: "(event: Event) => void | (value: string) => void",
+            required: false,
+            default: "undefined",
+            description: "Confirm/submit callback. Receives the click event for confirm, or the input value for prompt. Required for prompt notifications.",
+          },
+          {
+            name: "options.cancelText",
+            type: "string",
+            required: false,
+            default: "'Cancel'",
+            description: "Label for the cancel button (confirm type only).",
+          },
+          {
+            name: "options.cancelHandler",
+            type: "(event: Event) => void",
+            required: false,
+            default: "undefined",
+            description: "Cancel/close callback (effective for confirm type only; prompt exposes it in the type but never invokes it).",
+          },
+          {
+            name: "options.inputType",
+            type: "string",
+            required: false,
+            default: "'text'",
+            description: "HTML input type for the prompt's text field (prompt type only).",
+          },
+          {
+            name: "options.placeholder",
+            type: "string",
+            required: false,
+            default: "undefined",
+            description: "Placeholder text for the prompt's input field (prompt type only).",
+          },
+          {
+            name: "options.default",
+            type: "string",
+            required: false,
+            default: "undefined",
+            description: "Default value pre-filled in the prompt's input field (prompt type only).",
+          },
+        ],
+        errors: [
+          {
+            condition: "The notifier module fails to load (e.g. blocked by CSP, dynamic import failure).",
+            message: "[Blok] Failed to display notification. Reason: <error>",
+            resolution: "show() never throws or rejects — check the browser console, since the failure is logged rather than propagated to your call site.",
+          },
+        ],
       },
     ],
   },
@@ -969,7 +1479,7 @@ const clean = editor.sanitizer.clean(dirtyHtml, {
         example: `const button = document.querySelector('button');
 editor.tooltip.show(button, 'Click to save', {
   placement: 'top',
-  duration: 2000
+  delay: 200 // timeout before showing
 });`,
       },
       {
@@ -1011,7 +1521,9 @@ console.log(editor.readOnly.isEnabled); // true or false`,
       {
         name: "readOnly.toggle(state?)",
         returnType: "Promise<boolean>",
-        description: "Toggle read-only state. Without parameter, toggles current state. With parameter, sets to specified state. (Deprecated - use set() instead)",
+        description: "Toggle read-only state. Without parameter, toggles current state. With parameter, sets to specified state.",
+        deprecatedSince: "0.6.0",
+        replacedBy: "readOnly.set",
         example: `// Toggle current state
 const isReadOnly = await editor.readOnly.toggle();
 
@@ -1040,8 +1552,8 @@ await editor.readOnly.toggle(false);`,
         name: "i18n.t(dictKey)",
         returnType: "string",
         description: "Translate a key from the global dictionary.",
-        example: `const text = editor.i18n.t('toolNames.paragraph');
-console.log(text); // 'Paragraph' (or translated string)
+        example: `const text = editor.i18n.t('toolNames.text');
+console.log(text); // 'Text' (or translated string)
 
 const deleteText = editor.i18n.t('blockSettings.delete');`,
       },
@@ -1049,8 +1561,8 @@ const deleteText = editor.i18n.t('blockSettings.delete');`,
         name: "i18n.has(dictKey)",
         returnType: "boolean",
         description: "Check if a translation exists for the given key.",
-        example: `if (editor.i18n.has('toolNames.paragraph')) {
-  const translation = editor.i18n.t('toolNames.paragraph');
+        example: `if (editor.i18n.has('toolNames.text')) {
+  const translation = editor.i18n.t('toolNames.text');
 }`,
       },
       {
@@ -1058,8 +1570,15 @@ const deleteText = editor.i18n.t('blockSettings.delete');`,
         returnType: "string",
         description:
           "Get the English translation for a key (used for multilingual search).",
-        example: `const english = editor.i18n.getEnglishTranslation('toolNames.header');
-console.log(english); // 'Header'`,
+        example: `const english = editor.i18n.getEnglishTranslation('toolNames.heading');
+console.log(english); // 'Heading'`,
+      },
+      {
+        name: "i18n.getLocale()",
+        returnType: "string",
+        description: "Get the active locale code (e.g. 'en').",
+        example: `const locale = editor.i18n.getLocale();
+console.log(locale); // 'en'`,
       },
     ],
   },
@@ -1149,14 +1668,14 @@ const data = await editor.save();
 
 // Result structure:
 interface OutputData {
-  version: string;    // Editor version
-  time: number;       // Save timestamp
-  blocks: BlockData[]; // Array of block data
+  version?: string;    // Editor version
+  time?: number;       // Save timestamp
+  blocks: OutputBlockData[]; // Array of block data
 }
 
 // Example output:
 {
-  "version": "2.0.0",
+  "version": "0.23.5",
   "time": 1704067200000,
   "blocks": [
     {
@@ -1174,19 +1693,19 @@ interface OutputData {
     table: [
       {
         option: "version",
-        type: "string",
+        type: "string (optional)",
         default: "—",
         description: "Editor version",
       },
       {
         option: "time",
-        type: "number",
+        type: "number (optional)",
         default: "—",
         description: "Timestamp of save",
       },
       {
         option: "blocks",
-        type: "BlockData[]",
+        type: "OutputBlockData[]",
         default: "—",
         description: "Array of block data",
       },
@@ -1195,41 +1714,47 @@ interface OutputData {
   {
     id: "block-data",
     badge: "Data",
-    title: "BlockData",
+    title: "OutputBlockData",
     description: "The structure of each block in the blocks array.",
     example: `// Individual block structure
-interface BlockData {
-  id: string;        // Unique identifier (auto-generated)
-  type: string;      // Tool name (e.g., "paragraph", "header")
-  data: object;      // Tool-specific data
-  tunes?: TuneData[]; // Optional block tunes/metadata
+interface OutputBlockData {
+  id?: string;        // Unique identifier (auto-generated)
+  type: string;       // Tool name (e.g., "paragraph", "header")
+  data: object;       // Tool-specific data
+  tunes?: { [name: string]: BlockTuneData }; // Optional block tunes/metadata
+  parent?: string;    // Id of the parent block (flat-with-references nesting)
+  content?: string[]; // Ids of child blocks (flat-with-references nesting)
+  indent?: number;    // Nesting/indent level
 }
 
 // Example blocks:
-const paragraphBlock: BlockData = {
+const paragraphBlock: OutputBlockData = {
   id: "block-abc123",
   type: "paragraph",
   data: { "text": "Hello, world!" }
 };
 
-const headerBlock: BlockData = {
+const headerBlock: OutputBlockData = {
   id: "block-def456",
   type: "header",
   data: { "text": "Chapter 1", "level": 1 }
 };
 
-const listBlock: BlockData = {
+// Each list item is its own block — the list tool saves a single item,
+// not an items[] array
+const listItemBlock: OutputBlockData = {
   id: "block-ghi789",
   type: "list",
   data: {
+    "text": "Item 1",
     "style": "unordered",
-    "items": ["Item 1", "Item 2", "Item 3"]
+    "depth": 0
   }
 };`,
     table: [
       {
         option: "id",
-        type: "string",
+        type: "string (optional)",
         default: "—",
         description: "Unique block identifier",
       },
@@ -1247,9 +1772,27 @@ const listBlock: BlockData = {
       },
       {
         option: "tunes",
-        type: "TuneData[]",
+        type: "{ [name: string]: BlockTuneData }",
         default: "—",
         description: "Block tunes/meta data",
+      },
+      {
+        option: "parent",
+        type: "string (optional)",
+        default: "—",
+        description: "Id of the parent block (flat-with-references nesting)",
+      },
+      {
+        option: "content",
+        type: "string[] (optional)",
+        default: "—",
+        description: "Ids of child blocks (flat-with-references nesting)",
+      },
+      {
+        option: "indent",
+        type: "number (optional)",
+        default: "—",
+        description: "Nesting/indent level",
       },
     ],
   },
@@ -1260,46 +1803,9 @@ export interface SidebarSection {
   links: { id: string; label: string }[];
 }
 
-export const SIDEBAR_SECTIONS: SidebarSection[] = [
-  {
-    title: "Guide",
-    links: [{ id: "quick-start", label: "Quick Start" }],
-  },
-  {
-    title: "Core",
-    links: [
-      { id: "core", label: "Blok Class" },
-      { id: "config", label: "Configuration" },
-    ],
-  },
-  {
-    title: "API Modules",
-    links: [
-      { id: "blocks-api", label: "Blocks" },
-      { id: "block-api", label: "BlockAPI" },
-      { id: "caret-api", label: "Caret" },
-      { id: "events-api", label: "Events" },
-      { id: "history-api", label: "History" },
-      { id: "saver-api", label: "Saver" },
-      { id: "selection-api", label: "Selection" },
-      { id: "styles-api", label: "Styles" },
-      { id: "toolbar-api", label: "Toolbar" },
-      { id: "inline-toolbar-api", label: "InlineToolbar" },
-      { id: "notifier-api", label: "Notifier" },
-      { id: "sanitizer-api", label: "Sanitizer" },
-      { id: "tooltip-api", label: "Tooltip" },
-      { id: "readonly-api", label: "ReadOnly" },
-      { id: "i18n-api", label: "I18n" },
-      { id: "ui-api", label: "UI" },
-      { id: "listeners-api", label: "Listeners" },
-      { id: "tools-api", label: "Tools" },
-    ],
-  },
-  {
-    title: "Data",
-    links: [
-      { id: "output-data", label: "OutputData" },
-      { id: "block-data", label: "BlockData" },
-    ],
-  },
-];
+import { SIDEBAR_GROUPS, GROUP_TITLES_EN, MODULE_LABELS_EN } from './api-nav';
+
+export const SIDEBAR_SECTIONS: SidebarSection[] = SIDEBAR_GROUPS.map((group) => ({
+  title: GROUP_TITLES_EN[group.key],
+  links: group.moduleIds.map((id) => ({ id, label: MODULE_LABELS_EN[id] })),
+}));

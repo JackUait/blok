@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MigrationCard } from './MigrationCard';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -69,7 +69,7 @@ describe('MigrationCard', () => {
     expect(screen.getByText(/Our automated codemod handles most of the transition/)).toBeInTheDocument();
   });
 
-  it('should render the migration badge', () => {
+  it('should not render the migration badge', () => {
     render(
       <I18nProvider>
         <MemoryRouter>
@@ -78,22 +78,8 @@ describe('MigrationCard', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByTestId('migration-badge')).toBeInTheDocument();
-    expect(screen.getByText('Zero downtime migration')).toBeInTheDocument();
-  });
-
-  it('should render the migration code', async () => {
-    render(
-      <I18nProvider>
-        <MemoryRouter>
-          <MigrationCard />
-        </MemoryRouter>
-      </I18nProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('npx -p @jackuait/blok migrate-from-editorjs ./src')).toBeInTheDocument();
-    });
+    expect(screen.queryByTestId('migration-badge')).not.toBeInTheDocument();
+    expect(screen.queryByText('Zero downtime migration')).not.toBeInTheDocument();
   });
 
   it('should render the View Migration Guide button', () => {
@@ -134,36 +120,6 @@ describe('MigrationCard', () => {
     );
 
     expect(screen.getByTestId('migration-content')).toBeInTheDocument();
-  });
-
-  it('should have migration-code element', () => {
-    render(
-      <I18nProvider>
-        <MemoryRouter>
-          <MigrationCard />
-        </MemoryRouter>
-      </I18nProvider>
-    );
-
-    expect(screen.getByTestId('migration-code')).toBeInTheDocument();
-  });
-
-  it('should have code element inside migration-code', async () => {
-    render(
-      <I18nProvider>
-        <MemoryRouter>
-          <MigrationCard />
-        </MemoryRouter>
-      </I18nProvider>
-    );
-
-    // The code is rendered within a pre/code element inside migration-code
-    const codeElement = screen.getByTestId('migration-code');
-    expect(codeElement).toBeInTheDocument();
-    // Verify the code text content is present (wait for async Shiki highlighting)
-    await waitFor(() => {
-      expect(codeElement.textContent).toContain('npx -p @jackuait/blok migrate-from-editorjs ./src');
-    });
   });
 
   it('should have migration-title', () => {

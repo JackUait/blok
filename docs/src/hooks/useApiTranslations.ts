@@ -1,13 +1,20 @@
 import { useMemo } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import type { ApiSection, SidebarSection } from '../components/api/api-data';
+import type { ApiSection } from '../components/api/api-data';
 import { API_SECTIONS as BASE_API_SECTIONS } from '../components/api/api-data';
+import type { SidebarSection } from '../components/common/Sidebar';
+import { SIDEBAR_GROUPS } from '../components/api/api-nav';
+import { SECTION_ICONS } from '../components/api/section-icons';
+import { TOOL_SECTIONS } from '../components/tools/tools-data';
 
 /**
  * Mapping of section IDs to translation keys
  */
 const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'quick-start': 'api.quickStart',
+  'tutorial': 'api.tutorial',
+  'concepts': 'api.concepts',
+  'custom-block-tool': 'api.howToCustomTool',
   'core': 'api.blokClass',
   'config': 'api.configuration',
   'blocks-api': 'api.blocksApi',
@@ -34,6 +41,9 @@ const SECTION_TRANSLATION_KEYS: Record<string, string> = {
 
 const SIDEBAR_LINK_KEYS: Record<string, string> = {
   'quick-start': 'api.links.quickStart',
+  'tutorial': 'api.links.tutorial',
+  'concepts': 'api.links.everythingIsABlock',
+  'custom-block-tool': 'api.links.customBlockTool',
   'core': 'api.links.blokClass',
   'config': 'api.links.configuration',
   'blocks-api': 'api.links.blocks',
@@ -91,8 +101,46 @@ export const useApiTranslations = () => {
       const translatedMethods = section.methods?.map((method) => {
         const methodKey = getMethodKey(method.name);
         const descKey = `${translationKey}.methods.${methodKey}.description`;
-        const translated = safeTranslate(t, descKey);
-        return translated !== undefined ? { ...method, description: translated } : method;
+        const noteKey = `${translationKey}.methods.${methodKey}.note`;
+        const translatedDesc = safeTranslate(t, descKey);
+        const translatedNote = safeTranslate(t, noteKey);
+
+        const translatedParams = method.params?.map((param) => {
+          const paramDescKey = `${translationKey}.methods.${methodKey}.params.${param.name}.description`;
+          const translated = safeTranslate(t, paramDescKey);
+          return translated !== undefined ? { ...param, description: translated } : param;
+        });
+
+        const translatedErrors = method.errors?.map((error, index) => {
+          const conditionKey = `${translationKey}.methods.${methodKey}.errors.${index}.condition`;
+          const resolutionKey = `${translationKey}.methods.${methodKey}.errors.${index}.resolution`;
+          const translatedCondition = safeTranslate(t, conditionKey);
+          const translatedResolution = safeTranslate(t, resolutionKey);
+          if (translatedCondition === undefined && translatedResolution === undefined) {
+            return error;
+          }
+          return {
+            ...error,
+            ...(translatedCondition !== undefined && { condition: translatedCondition }),
+            ...(translatedResolution !== undefined && { resolution: translatedResolution }),
+          };
+        });
+
+        if (
+          translatedDesc === undefined &&
+          translatedNote === undefined &&
+          translatedParams === undefined &&
+          translatedErrors === undefined
+        ) {
+          return method;
+        }
+        return {
+          ...method,
+          ...(translatedDesc !== undefined && { description: translatedDesc }),
+          ...(translatedNote !== undefined && { note: translatedNote }),
+          ...(translatedParams !== undefined && { params: translatedParams }),
+          ...(translatedErrors !== undefined && { errors: translatedErrors }),
+        };
       });
 
       const translatedProperties = section.properties?.map((property) => {
@@ -120,47 +168,38 @@ export const useApiTranslations = () => {
   }, [t, locale]);
 
   const translatedSidebarSections = useMemo((): SidebarSection[] => {
+    const apiGroups: SidebarSection[] = SIDEBAR_GROUPS.map((group) => ({
+      title: t(`api.sections.${group.key}`),
+      icon: SECTION_ICONS[group.key],
+      iconAnimation: group.key,
+      links: group.moduleIds.map((id) => ({ id, label: t(SIDEBAR_LINK_KEYS[id]) })),
+    }));
+
+    // Built-in tools now live in the general docs nav. Split by tool type and
+    // dedupe by id (tools-data has a stray duplicate) so each routes to a page.
+    const seen = new Set<string>();
+    const blockLinks: { id: string; label: string }[] = [];
+    const inlineLinks: { id: string; label: string }[] = [];
+    for (const tool of TOOL_SECTIONS) {
+      if (seen.has(tool.id)) continue;
+      seen.add(tool.id);
+      const link = { id: tool.id, label: safeTranslate(t, `tools.links.${tool.id}`) ?? tool.title };
+      (tool.type === 'block' ? blockLinks : inlineLinks).push(link);
+    }
+
     return [
+      ...apiGroups,
       {
-        title: t('api.sections.guide'),
-        links: [{ id: 'quick-start', label: t(SIDEBAR_LINK_KEYS['quick-start']) }],
+        title: t('tools.sections.blockTools'),
+        icon: SECTION_ICONS.blockTools,
+        iconAnimation: 'blockTools',
+        links: blockLinks,
       },
       {
-        title: t('api.sections.core'),
-        links: [
-          { id: 'core', label: t(SIDEBAR_LINK_KEYS['core']) },
-          { id: 'config', label: t(SIDEBAR_LINK_KEYS['config']) },
-        ],
-      },
-      {
-        title: t('api.sections.apiModules'),
-        links: [
-          { id: 'blocks-api', label: t(SIDEBAR_LINK_KEYS['blocks-api']) },
-          { id: 'block-api', label: t(SIDEBAR_LINK_KEYS['block-api']) },
-          { id: 'caret-api', label: t(SIDEBAR_LINK_KEYS['caret-api']) },
-          { id: 'events-api', label: t(SIDEBAR_LINK_KEYS['events-api']) },
-          { id: 'history-api', label: t(SIDEBAR_LINK_KEYS['history-api']) },
-          { id: 'saver-api', label: t(SIDEBAR_LINK_KEYS['saver-api']) },
-          { id: 'selection-api', label: t(SIDEBAR_LINK_KEYS['selection-api']) },
-          { id: 'styles-api', label: t(SIDEBAR_LINK_KEYS['styles-api']) },
-          { id: 'toolbar-api', label: t(SIDEBAR_LINK_KEYS['toolbar-api']) },
-          { id: 'inline-toolbar-api', label: t(SIDEBAR_LINK_KEYS['inline-toolbar-api']) },
-          { id: 'notifier-api', label: t(SIDEBAR_LINK_KEYS['notifier-api']) },
-          { id: 'sanitizer-api', label: t(SIDEBAR_LINK_KEYS['sanitizer-api']) },
-          { id: 'tooltip-api', label: t(SIDEBAR_LINK_KEYS['tooltip-api']) },
-          { id: 'readonly-api', label: t(SIDEBAR_LINK_KEYS['readonly-api']) },
-          { id: 'i18n-api', label: t(SIDEBAR_LINK_KEYS['i18n-api']) },
-          { id: 'ui-api', label: t(SIDEBAR_LINK_KEYS['ui-api']) },
-          { id: 'listeners-api', label: t(SIDEBAR_LINK_KEYS['listeners-api']) },
-          { id: 'tools-api', label: t(SIDEBAR_LINK_KEYS['tools-api']) },
-        ],
-      },
-      {
-        title: t('api.sections.data'),
-        links: [
-          { id: 'output-data', label: t(SIDEBAR_LINK_KEYS['output-data']) },
-          { id: 'block-data', label: t(SIDEBAR_LINK_KEYS['block-data']) },
-        ],
+        title: t('tools.sections.inlineTools'),
+        icon: SECTION_ICONS.inlineTools,
+        iconAnimation: 'inlineTools',
+        links: inlineLinks,
       },
     ];
   }, [t, locale]);

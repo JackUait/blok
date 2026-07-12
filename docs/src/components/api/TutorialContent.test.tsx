@@ -1,0 +1,57 @@
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { TutorialContent } from './TutorialContent';
+import { I18nProvider } from '../../contexts/I18nContext';
+import { FrameworkProvider } from '../../contexts/FrameworkContext';
+
+const renderTutorial = () =>
+  render(
+    <MemoryRouter>
+      <I18nProvider>
+        <FrameworkProvider>
+          <TutorialContent />
+        </FrameworkProvider>
+      </I18nProvider>
+    </MemoryRouter>,
+  );
+
+describe('TutorialContent', () => {
+  it('walks through the numbered first-editor steps', () => {
+    renderTutorial();
+    expect(screen.getByText('Mount the editor')).toBeInTheDocument();
+    expect(screen.getByText('Save it to JSON')).toBeInTheDocument();
+    expect(screen.getByText('Load it back')).toBeInTheDocument();
+    expect(screen.getByText('Add a tool')).toBeInTheDocument();
+  });
+
+  it('shows the save/render round-trip in code', () => {
+    const { container } = renderTutorial();
+    const code = container.textContent ?? '';
+    expect(code).toContain('new Blok');
+    expect(code).toContain('editor.save()');
+    expect(code).toContain('editor.render(');
+  });
+
+  it('points onward to the custom-tool how-to and the concepts page via router links', () => {
+    const { container } = renderTutorial();
+    // \s tolerates the non-breaking spaces Typo glues after short words ("a"/"is").
+    expect(
+      screen.getByRole('link', { name: /Create\sa\scustom\sblock\stool/ }),
+    ).toHaveAttribute('href', '/docs/custom-block-tool');
+    expect(
+      screen.getByRole('link', { name: /Everything\sis\sa\sblock/ }),
+    ).toHaveAttribute('href', '/docs/concepts');
+    expect(container.querySelector('a[href^="#"]')).toBeNull();
+  });
+
+  it('shows a closing checkpoint stating what success looks like', () => {
+    const { container } = renderTutorial();
+    expect(
+      screen.getByText('Checkpoint: what success looks like'),
+    ).toBeInTheDocument();
+    const text = container.textContent ?? '';
+    expect(text).toContain('editor.save()');
+    expect(text).toContain('editor.render()');
+  });
+});

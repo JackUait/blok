@@ -109,6 +109,22 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('video entry', () => {
+    test('has a video tab', () => {
+      expect(rawSpec).toContain("tool: 'video'");
+    });
+
+    test.each([
+      'Loaded',
+      'With caption',
+      'Small',
+      'Left aligned',
+      'Upload failed',
+    ])('covers the "%s" state', (label) => {
+      expect(sectionFor('video')).toContain(`label: '${label}'`);
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');

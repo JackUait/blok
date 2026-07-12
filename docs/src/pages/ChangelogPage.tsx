@@ -4,9 +4,12 @@ import { Nav } from "../components/layout/Nav";
 import { Footer } from "../components/layout/Footer";
 import { parseChangelog } from "../utils/changelog-parser";
 import type { Release } from "@/types/changelog";
-import "../../assets/changelog.css";
 import { NAV_LINKS } from "../utils/constants";
 import { useI18n } from "../contexts/I18nContext";
+import { Typo } from "../components/common/Typo";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 // Category icons as SVG components - refined strokes
 const Icons = {
@@ -170,7 +173,7 @@ const formatDescription = (text: string): React.ReactNode => {
 
       if (isBold) {
         return (
-          <strong key={`${key}-${matchIndex}`} className="changelog-bold">
+          <strong key={`${key}-${matchIndex}`} className="font-semibold text-foreground">
             {matched.slice(2, -2)}
           </strong>
         );
@@ -178,7 +181,10 @@ const formatDescription = (text: string): React.ReactNode => {
 
       if (isCode) {
         return (
-          <code key={`${key}-${matchIndex}`} className="changelog-code">
+          <code
+            key={`${key}-${matchIndex}`}
+            className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground"
+          >
             {matched.slice(1, -1)}
           </code>
         );
@@ -214,9 +220,9 @@ const formatDescription = (text: string): React.ReactNode => {
   if (hasEmDash) {
     return (
       <>
-        <span className="changelog-title">{formatPart(parts[0], 0)}</span>
-        <span className="changelog-separator"> — </span>
-        <span className="changelog-detail">{formatPart(parts.slice(1).join(" — "), 1)}</span>
+        <span className="font-medium text-foreground">{formatPart(parts[0], 0)}</span>
+        <span className="text-muted-foreground"> — </span>
+        <span className="text-muted-foreground">{formatPart(parts.slice(1).join(" — "), 1)}</span>
       </>
     );
   }
@@ -224,8 +230,17 @@ const formatDescription = (text: string): React.ReactNode => {
   return formatPart(text, 0);
 };
 
-const ChangelogPage: React.FC = () => {
+interface ChangelogContentProps {
+  /** When embedded inline (homepage tab strip), tighten the header top spacing. */
+  inline?: boolean;
+}
+
+const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) => {
   const { t, locale } = useI18n();
+  const headerClass = cn(
+    'mx-auto max-w-3xl px-6 pb-24 text-center',
+    inline ? 'pt-10' : 'pt-16 sm:pt-24',
+  );
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -255,130 +270,176 @@ const ChangelogPage: React.FC = () => {
 
   if (loading) {
     return (
-      <>
-        <Nav links={NAV_LINKS} />
-        <main className="changelog-main">
-          <div className="changelog-hero">
-            <div className="changelog-hero-badge">
-              <Icons.clock />
-              {t('changelog.badge')}
-            </div>
-            <h1 className="changelog-hero-title">{t('changelog.title')}</h1>
-            <p className="changelog-hero-description">{t('changelog.loading')}</p>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className={headerClass}>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
+          <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
+            <Icons.clock />
+          </span>
+          <Typo>{t('changelog.badge')}</Typo>
+        </span>
+        <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+          {t('changelog.title')}
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">{t('changelog.loading')}</p>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <>
-        <Nav links={NAV_LINKS} />
-        <main className="changelog-main">
-          <div className="changelog-hero">
-            <h1 className="changelog-hero-title">{t('changelog.title')}</h1>
-            <p className="changelog-hero-description">
-              {t('changelog.errorLoading')} {error}
-            </p>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className={headerClass}>
+        <h1 className="font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+          {t('changelog.title')}
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          <Typo>{t('changelog.errorLoading')}</Typo> {error}
+        </p>
+      </div>
     );
   }
 
+  const badgeVariantFor = (
+    category: string,
+  ): "default" | "secondary" | "outline" | "muted" => {
+    switch (category) {
+      case "added":
+        return "default";
+      case "fix":
+      case "security":
+        return "secondary";
+      case "removed":
+      case "deprecated":
+        return "muted";
+      default:
+        return "outline";
+    }
+  };
+
+  const visibleReleases = releases.filter((release) =>
+    release.changes.some((c) => c.description.trim().length > 0),
+  );
+
   return (
     <>
-      <Nav links={NAV_LINKS} />
-      <main className="changelog-main">
-        {/* Floating gradient orbs for ambient effect */}
-        <div className="changelog-gradient-1" aria-hidden="true" />
-        <div className="changelog-gradient-2" aria-hidden="true" />
-
-        <div className="changelog-hero">
-          <div className="changelog-hero-badge">
+      <div className={headerClass}>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
+          <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
             <Icons.clock />
-            {t('changelog.badge')}
-          </div>
-          <h1 className="changelog-hero-title">{t('changelog.title')}</h1>
-          <p className="changelog-hero-description">
-            {t('changelog.description')}
-          </p>
-        </div>
+          </span>
+          <Typo>{t('changelog.badge')}</Typo>
+        </span>
+        <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+          {t('changelog.title')}
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+          <Typo>{t('changelog.description')}</Typo>
+        </p>
+      </div>
 
-        <div className="changelog-timeline">
-          {releases.filter((release) => release.changes.some((c) => c.description.trim().length > 0)).map((release) => (
-            <article
-              key={release.version}
-              className={`changelog-release ${release.releaseType} ${release.highlight ? "highlight" : ""}`}
-            >
-              <div className="changelog-version">
-                {release.releaseUrl ? (
-                  <a
-                    href={release.releaseUrl}
-                    className="changelog-version-number"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    v{release.version}
-                  </a>
-                ) : (
-                  <span className="changelog-version-number">
-                    v{release.version}
+      <div className="mx-auto max-w-3xl px-6 pb-24">
+        <ol className="relative space-y-12 border-l border-border pl-8 sm:pl-10">
+            {visibleReleases.map((release) => (
+              <li key={release.version} className="relative">
+                <span
+                  className={cn(
+                    "absolute -left-[2.1rem] top-1.5 size-3 rounded-full ring-4 ring-background sm:-left-[2.6rem]",
+                    release.highlight ? "bg-primary" : "bg-border",
+                  )}
+                  aria-hidden="true"
+                />
+
+                <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+                  {release.releaseUrl ? (
+                    <a
+                      href={release.releaseUrl}
+                      className="font-display text-2xl font-extrabold tracking-tight text-foreground transition-colors hover:text-primary"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      v{release.version}
+                    </a>
+                  ) : (
+                    <span className="font-display text-2xl font-extrabold tracking-tight text-foreground">
+                      v{release.version}
+                    </span>
+                  )}
+                  <Badge variant="outline" className="uppercase">
+                    {t(`changelog.releaseType.${release.releaseType}`) || release.releaseType}
+                  </Badge>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {formatDate(release.date, locale)}
                   </span>
-                )}
-                <span className="changelog-version-type">
-                  {t(`changelog.releaseType.${release.releaseType}`) || release.releaseType}
-                </span>
-                <span className="changelog-version-date">
-                  {formatDate(release.date, locale)}
-                </span>
-              </div>
-
-              <div className="changelog-release-card">
-                {release.highlight && (
-                  <div className="changelog-release-highlight">
-                    <p>
-                      <Icons.sparkles />
-                      {formatDescription(release.highlight)}
-                    </p>
-                  </div>
-                )}
-
-                <div className="changelog-changes">
-                  {release.changes.filter((change) => change.description.trim().length > 0).map((change, index) => (
-                    <div key={index} className="changelog-change">
-                      <span
-                        className={`changelog-change-badge ${change.category}`}
-                      >
-                        <IconFor name={change.category as keyof typeof Icons} />
-                        {t(`changelog.category.${change.category}`) || change.category}
-                      </span>
-                      <span className="changelog-change-description">
-                        {formatDescription(change.description)}
-                        {change.link && (
-                          <Link
-                            to={change.link}
-                            className="changelog-change-link"
-                          >
-                            {t('changelog.viewDocs')}
-                            <Icons.external />
-                          </Link>
-                        )}
-                      </span>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            </article>
-          ))}
+
+                <div
+                  className={cn(
+                    "rounded-2xl border bg-card p-6 shadow-card sm:p-7",
+                    release.highlight ? "border-primary/30" : "border-border",
+                  )}
+                >
+                  {release.highlight && (
+                    <div className="mb-5 flex items-start gap-2.5 rounded-xl bg-secondary/60 p-4">
+                      <span className="mt-0.5 size-4 shrink-0 text-primary [&>svg]:size-full" aria-hidden="true">
+                        <Icons.sparkles />
+                      </span>
+                      <p className="text-sm leading-relaxed text-foreground">
+                        {formatDescription(release.highlight)}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-px">
+                    {release.changes
+                      .filter((change) => change.description.trim().length > 0)
+                      .map((change, index) => (
+                        <div key={index}>
+                          {index > 0 && <Separator className="my-4" />}
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
+                            <Badge
+                              variant={badgeVariantFor(change.category)}
+                              className="uppercase [&>span]:size-3"
+                            >
+                              <span className="[&>svg]:size-full" aria-hidden="true">
+                                <IconFor name={change.category as keyof typeof Icons} />
+                              </span>
+                              {t(`changelog.category.${change.category}`) || change.category}
+                            </Badge>
+                            <span className="text-sm leading-relaxed text-muted-foreground">
+                              {formatDescription(change.description)}
+                              {change.link && (
+                                <Link
+                                  to={change.link}
+                                  className="ml-1.5 inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+                                >
+                                  <Typo>{t('changelog.viewDocs')}</Typo>
+                                  <span className="size-3 [&>svg]:size-full" aria-hidden="true">
+                                    <Icons.external />
+                                  </span>
+                                </Link>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
-      </main>
-      <Footer />
     </>
   );
 };
 
+const ChangelogPage: React.FC = () => (
+  <>
+    <Nav links={NAV_LINKS} />
+    <main className="min-h-screen bg-background pt-16">
+      <ChangelogContent />
+    </main>
+    <Footer />
+  </>
+);
+
+export { ChangelogContent };
 export default ChangelogPage;

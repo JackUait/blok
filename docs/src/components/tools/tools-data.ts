@@ -13,7 +13,6 @@ export interface ToolSection {
   id: string;          // e.g. 'paragraph' — used as anchor and testid
   exportName: string;  // exact export name in src/tools/index.ts
   type: ToolType;
-  badge: string;       // 'Block Tool' | 'Inline Tool'
   title: string;
   description: string;
   importExample: string;
@@ -29,7 +28,6 @@ export const TOOL_SECTIONS: ToolSection[] = [
     id: 'paragraph',
     exportName: 'Paragraph',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Paragraph',
     description:
       'The default text block. Supports rich inline formatting (bold, italic, links, colour). Empty paragraphs are excluded from saved output unless `preserveBlank` is enabled.',
@@ -38,7 +36,7 @@ export const TOOL_SECTIONS: ToolSection[] = [
       {
         option: 'placeholder',
         type: 'string',
-        default: '""',
+        default: '"Write something or press / to select a tool" (localised)',
         description: 'Placeholder text shown when the block is empty and focused.',
       },
       {
@@ -73,7 +71,9 @@ export const TOOL_SECTIONS: ToolSection[] = [
       },
     ],
     saveDataShape: `interface ParagraphData {
-  text: string; // HTML string (may include <b>, <i>, <a>, <mark>)
+  text: string;             // HTML string (may include <b>, <i>, <a>, <mark>)
+  textColor?: string;       // Block colour preset, present when set
+  backgroundColor?: string; // Block background colour preset, present when set
 }`,
     saveDataExample: `{
   "id": "abc123",
@@ -100,7 +100,6 @@ const editor = new Blok({
     id: 'header',
     exportName: 'Header',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Header',
     description:
       'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) for H1–H3.',
@@ -109,7 +108,7 @@ const editor = new Blok({
       {
         option: 'placeholder',
         type: 'string',
-        default: '""',
+        default: 'level name (e.g. "Heading 2", localised)',
         description: 'Placeholder text shown in an empty heading block.',
       },
       {
@@ -146,9 +145,12 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface HeaderData {
-  text: string;           // Heading HTML content
-  level: number;          // 1–6
-  isToggleable?: boolean; // true when the heading has toggle (collapse/expand)
+  text: string;             // Heading HTML content
+  level: number;            // 1–6
+  isToggleable?: boolean;   // true when the heading has toggle (collapse/expand)
+  isOpen?: boolean;         // Persisted toggle state, present when toggleable
+  textColor?: string;       // Block colour preset, present when set
+  backgroundColor?: string; // Block background colour preset, present when set
 }`,
     saveDataExample: `{
   "id": "def456",
@@ -177,7 +179,6 @@ const editor = new Blok({
     id: 'list',
     exportName: 'List',
     type: 'block',
-    badge: 'Block Tool',
     title: 'List',
     description:
       'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default — one for each style — and items can be converted between styles via the block settings menu.',
@@ -247,7 +248,6 @@ const editor = new Blok({
     id: 'table',
     exportName: 'Table',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Table',
     description:
       'A full-featured table block. Each cell contains its own block editor (supporting any block type). Supports heading rows, heading columns, column resizing, cell background/text colours, row/column add and delete controls, and copy/paste.',
@@ -256,13 +256,13 @@ const editor = new Blok({
       {
         option: 'rows',
         type: 'number',
-        default: '2',
+        default: '3',
         description: 'Initial number of rows when a new table is inserted.',
       },
       {
         option: 'cols',
         type: 'number',
-        default: '2',
+        default: '3',
         description: 'Initial number of columns when a new table is inserted.',
       },
       {
@@ -297,6 +297,10 @@ interface CellContent {
   blocks: string[];    // IDs of child blocks in this cell
   color?: string;      // Cell background colour
   textColor?: string;  // Cell text colour
+  placement?: CellPlacement; // 9-way vertical+horizontal alignment (e.g. 'top-left', 'middle-center')
+  colspan?: number;    // Columns this cell spans (origin cells only)
+  rowspan?: number;    // Rows this cell spans (origin cells only)
+  mergedInto?: [number, number]; // Set when covered by a merge; origin cell at [row, col]
 }`,
     saveDataExample: `{
   "id": "jkl012",
@@ -329,10 +333,9 @@ const editor = new Blok({
     id: 'toggle',
     exportName: 'Toggle',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Toggle',
     description:
-      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when collapsed. Toggling is controlled by clicking the arrow icon. In read-only mode, toggles start collapsed.',
+      'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when collapsed. Toggling is controlled by clicking the arrow icon. The open/collapsed state is persisted via `isOpen` and restored on reload; toggles default to open.',
     importExample: `import { Toggle } from '@jackuait/blok/tools';`,
     configOptions: [
       {
@@ -343,7 +346,8 @@ const editor = new Blok({
       },
     ],
     saveDataShape: `interface ToggleItemData {
-  text: string; // Toggle title HTML content
+  text: string;     // Toggle title HTML content
+  isOpen?: boolean; // Whether the toggle is expanded — persisted and restored on reload
 }`,
     saveDataExample: `{
   "id": "mno345",
@@ -370,12 +374,19 @@ const editor = new Blok({
     id: 'callout',
     exportName: 'Callout',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Callout',
     description:
       'A container block for highlighted content with an emoji icon. Supports customisable text and background colours via a colour picker. Child blocks are nested inside the callout. Useful for tips, warnings, notes, and other call-to-action content.',
     importExample: `import { Callout } from '@jackuait/blok/tools';`,
-    configOptions: [],
+    configOptions: [
+      {
+        option: 'emojiPicker',
+        type: '(onSelect: (emoji: string) => void) => void',
+        default: 'undefined',
+        description:
+          'Custom emoji picker handler that replaces the built-in picker. Call `onSelect` with the chosen emoji, or "" to clear.',
+      },
+    ],
     saveDataShape: `interface CalloutData {
   emoji: string;             // Emoji character (e.g. "💡")
   textColor: string | null;  // Colour preset name, or null for default
@@ -407,7 +418,6 @@ const editor = new Blok({
     id: 'database',
     exportName: 'Database',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Database',
     description:
       'A multi-view database block supporting board (Kanban), list, table, and gallery views. Stores a schema of typed properties (text, select, status, date, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, sorting, filtering, drag-and-drop reordering, inline editing, and an optional backend sync adapter.',
@@ -438,7 +448,15 @@ const editor = new Blok({
       { "id": "prop2", "name": "Status", "type": "select", "position": "a1" }
     ],
     "views": [
-      { "id": "v1", "name": "Board", "type": "board", "position": "a0" }
+      {
+        "id": "v1",
+        "name": "Board",
+        "type": "board",
+        "position": "a0",
+        "sorts": [],
+        "filters": [],
+        "visibleProperties": ["prop1", "prop2"]
+      }
     ],
     "activeViewId": "v1"
   }
@@ -459,7 +477,6 @@ const editor = new Blok({
     id: 'database-row',
     exportName: 'DatabaseRow',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Database Row',
     description:
       'An internal block tool that stores a single database row. Not user-insertable — rows are created and managed by the parent Database block. Each row stores property values conforming to the parent database schema and a position string for ordering.',
@@ -498,7 +515,6 @@ const editor = new Blok({
     id: 'divider',
     exportName: 'Divider',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Divider',
     description:
       'A horizontal line separator. Renders a semantic `<hr>` element. Has no editable content or settings. Can be inserted via the toolbox or by typing `---` in an empty paragraph.',
@@ -526,10 +542,41 @@ const editor = new Blok({
   },
 
   {
+    id: 'spacer',
+    exportName: 'Spacer',
+    type: 'block',
+    title: 'Spacer',
+    description:
+      'An adjustable vertical gap. Drag either edge grip — or focus one and press ArrowUp/ArrowDown — to resize. Its main job is lining up content across sibling columns of unequal length, replacing piles of empty paragraphs. Invisible in read-only mode.',
+    importExample: `import { Spacer } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface SpacerData {
+  height?: number; // Gap height in px, clamped to 38–600 (default 38)
+}`,
+    saveDataExample: `{
+  "id": "spc001",
+  "type": "spacer",
+  "data": {
+    "height": 120
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Spacer } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    spacer: {
+      class: Spacer,
+    },
+  },
+});`,
+  },
+
+  {
     id: 'quote',
     exportName: 'Quote',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Quote',
     description:
       'A blockquote with a left border accent. Supports two sizes (default and large) switchable via the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block.',
@@ -564,10 +611,9 @@ const editor = new Blok({
     id: 'code',
     exportName: 'Code',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Code',
     description:
-      'A syntax-highlighted code block with a language picker, line numbers, line wrapping toggle, and copy-to-clipboard button. Supports 30+ languages via Shiki. LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block.',
+      'A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. Supports 30+ languages via Prism. LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block.',
     importExample: `import { Code } from '@jackuait/blok/tools';`,
     configOptions: [],
     saveDataShape: `interface CodeData {
@@ -602,11 +648,49 @@ const editor = new Blok({
     id: 'image',
     exportName: 'Image',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Image',
     description: 'Embed an image via URL upload or file paste.',
     importExample: "import { Image } from '@jackuait/blok/tools';",
     configOptions: [
+      {
+        option: 'uploader',
+        type: 'ImageUploader',
+        default: 'undefined',
+        description:
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. When omitted, images fall back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl).',
+      },
+      {
+        option: 'types',
+        type: 'string[]',
+        default: "['image/*']",
+        description:
+          'Accepted MIME allowlist. Entries may be exact (`image/png`) or family wildcards (`image/*`). Defaults to any image type.',
+      },
+      {
+        option: 'maxSize',
+        type: 'MaxSizeConfig',
+        default: '30 MiB',
+        description:
+          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback. Pass Infinity for unlimited.',
+      },
+      {
+        option: 'sources',
+        type: "'upload' | 'url' | 'both'",
+        default: "'both'",
+        description: 'Restrict how an image may be added — file upload only, URL only, or both.',
+      },
+      {
+        option: 'convertGifToVideo',
+        type: 'boolean',
+        default: 'true',
+        description: 'Auto-convert animated GIFs to a looping WebM video block on insert. Set false to keep GIFs as image blocks.',
+      },
+      {
+        option: 'captionPlaceholder',
+        type: 'string',
+        default: '"Write a caption…"',
+        description: 'Placeholder text shown in the caption field.',
+      },
       {
         option: 'compress',
         type: 'boolean | ImageCompressionConfig',
@@ -622,19 +706,59 @@ const editor = new Blok({
           'How many times a rendered image silently re-fetches its `src` after a load error before showing the broken-image state. Set 0 to disable auto-retry.',
       },
     ],
-    saveDataShape: '{ url: string; caption?: string; alt?: string; withBorder?: boolean; stretched?: boolean; withBackground?: boolean }',
-    saveDataExample: "{ url: 'https://example.com/image.png', caption: 'Cat', alt: 'A cat' }",
-    usageExample: "tools: { image: { class: Image, config: { endpoints: { byFile: '/upload', byUrl: '/fetch' } } } }",
+    saveDataShape: `interface ImageData {
+  url: string;             // Image source URL — http(s) or blob:
+  caption?: string;        // Plain-text caption
+  width?: number;          // Width as percent of container, 10–100 (default 100)
+  alignment?: 'left' | 'center' | 'right';
+  size?: 'sm' | 'md' | 'lg' | 'full'; // Discrete size preset; overrides width when set
+  frame?: 'none' | 'border' | 'shadow'; // Decorative frame treatment (default 'none')
+  rounded?: boolean;       // Rounded corners (default true)
+  captionVisible?: boolean; // Caption visible in the rendered state (default true)
+  crop?: ImageCrop;        // Non-destructive crop rectangle
+  alt?: string;            // Alt text for screen readers
+  fileName?: string;       // Original filename, when known
+  naturalWidth?: number;   // Intrinsic pixel width of the source (cached)
+  naturalHeight?: number;  // Intrinsic pixel height of the source (cached)
+}`,
+    saveDataExample: `{
+  "id": "img001",
+  "type": "image",
+  "data": {
+    "url": "https://example.com/image.png",
+    "caption": "A cat",
+    "alt": "A cat",
+    "alignment": "center"
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Image } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    image: {
+      class: Image,
+      config: {
+        uploader: {
+          async uploadByFile(file) {
+            const url = await myUpload(file);
+            return { url, fileName: file.name };
+          },
+        },
+      },
+    },
+  },
+});`,
   },
 
   {
     id: 'column_list',
     exportName: 'ColumnList',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Columns',
     description:
-      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Create columns from the toolbox, by dragging a block beside another, or by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
+      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
     importExample: `import { ColumnList } from '@jackuait/blok/tools';`,
     configOptions: [],
     saveDataShape: `interface ColumnListData {
@@ -667,7 +791,6 @@ const editor = new Blok({
     id: 'column',
     exportName: 'Column',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Column',
     description:
       'A single column inside a column list. Not user-insertable on its own — columns are created and managed by the parent `column_list` block. Child blocks are nested inside the column via `contentIds`. The optional `widthRatio` controls the column’s width relative to its siblings (applied as flex-grow); omit it for equal width.',
@@ -701,7 +824,6 @@ const editor = new Blok({
     id: 'embed',
     exportName: 'Embed',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Embed',
     description:
       'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s "Create embed". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL — only registry-matched URLs are ever embedded. Supports resizing, alignment (left/center/right), and an optional caption.',
@@ -747,7 +869,6 @@ const editor = new Blok({
     id: 'bookmark',
     exportName: 'Bookmark',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Bookmark',
     description:
       'A static OpenGraph card for a pasted link, like Notion’s "Create bookmark". Shows the page title, description, preview image, favicon, and domain. Metadata is fetched from a consumer-supplied unfurl endpoint (CORS makes a backend mandatory) — Blok ships only the contract.',
@@ -758,7 +879,7 @@ const editor = new Blok({
         type: 'string',
         default: '""',
         description:
-          'Consumer-supplied unfurl endpoint. Required. Called as `endpoint?url=<encoded>` and expected to return `{ success, link, meta: { title, description, image, favicon, domain } }`.',
+          'Consumer-supplied unfurl endpoint. Required. Called as `endpoint?url=<encoded>` and expected to return `{ success: 1, link, meta: { title, description, image: { url }, favicon, domain } }` (note `image` is an object, not a string).',
       },
       {
         option: 'headers',
@@ -806,7 +927,6 @@ const editor = new Blok({
     id: 'file',
     exportName: 'File',
     type: 'block',
-    badge: 'Block Tool',
     title: 'File',
     description:
       'An attachment card for any uploaded file. Shows a type icon, filename, human-readable size, a download action, and an optional caption. Files are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.',
@@ -820,16 +940,42 @@ const editor = new Blok({
           'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName?, size?, mimeType? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, files fall back to a blob URL or the pasted URL.',
       },
       {
+        option: 'endpoints',
+        type: 'string | { byFile?: string; byUrl?: string }',
+        default: 'undefined',
+        description:
+          'Upload endpoint(s) — Blok POSTs the upload itself (multipart/form-data for files, JSON `{ url }` for embedded URLs) and expects a `{ url, fileName?, size?, mimeType? }` body back. A string is used for both; an object targets each separately. An explicit `uploader` always takes precedence.',
+      },
+      {
+        option: 'field',
+        type: 'string',
+        default: '"file"',
+        description: 'Form-data field name carrying the uploaded file.',
+      },
+      {
+        option: 'additionalRequestHeaders',
+        type: 'Record<string, string>',
+        default: 'undefined',
+        description: 'Extra headers merged into endpoint upload requests.',
+      },
+      {
         option: 'types',
         type: 'string[]',
         default: 'undefined',
         description: 'Optional MIME allowlist. When omitted, files of any type are accepted.',
       },
       {
+        option: 'sources',
+        type: "'upload' | 'url' | 'both'",
+        default: "'both'",
+        description: 'Restrict how a file may be added — file upload only, URL only, or both.',
+      },
+      {
         option: 'maxSize',
-        type: 'number',
-        default: 'undefined',
-        description: 'Optional max file size in bytes. When omitted, files of any size are accepted.',
+        type: 'MaxSizeConfig',
+        default: '30 MiB',
+        description:
+          'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback. Pass Infinity for unlimited.',
       },
       {
         option: 'captionPlaceholder',
@@ -881,7 +1027,6 @@ const editor = new Blok({
     id: 'audio',
     exportName: 'Audio',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Audio',
     description:
       'A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and a caption. Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
@@ -904,7 +1049,7 @@ const editor = new Blok({
       {
         option: 'maxSize',
         type: 'MaxSizeConfig',
-        default: 'undefined',
+        default: '30 MiB',
         description:
           'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback.',
       },
@@ -923,7 +1068,7 @@ const editor = new Blok({
   artist?: string;         // Track artist
   coverUrl?: string;       // Cover art image URL
   loop?: boolean;          // Loop playback
-  width?: number;          // Rendered width in pixels (resize handle)
+  width?: number;          // Pass-through width value; not currently surfaced in the audio UI
   alignment?: 'left' | 'center' | 'right';
   fileName?: string;       // Original filename, when known
   mimeType?: string;       // MIME type
@@ -967,7 +1112,6 @@ const editor = new Blok({
     id: 'video',
     exportName: 'Video',
     type: 'block',
-    badge: 'Block Tool',
     title: 'Video',
     description:
       'A full-featured video player block. Renders an uploaded or linked video with a custom control bar (play/pause, scrubber with buffered range and hover preview, volume, playback speed, loop, picture-in-picture, theater and fullscreen modes), an optional caption, and an ambient glow behind the player. Videos are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
@@ -983,8 +1127,9 @@ const editor = new Blok({
       {
         option: 'types',
         type: 'string[]',
-        default: 'video/mp4, video/webm, video/ogg',
-        description: 'Accepted MIME allowlist for uploads.',
+        default: "['video/*']",
+        description:
+          'Accepted MIME allowlist for uploads. Entries may be exact (`video/mp4`) or family wildcards (`video/*`). Defaults to any video type.',
       },
       {
         option: 'maxSize',
@@ -1010,7 +1155,7 @@ const editor = new Blok({
   url: string;             // Video source URL — http(s) or blob:
   caption?: string;        // Plain-text caption
   captionVisible?: boolean; // Caption visible in the rendered state (default true)
-  width?: number;          // Rendered width in pixels (resize handle)
+  width?: number;          // Width as percent of the editor container, 10–100 (resize handle, default 100)
   alignment?: 'left' | 'center' | 'right';
   autoplay?: boolean;      // Autoplay on render
   loop?: boolean;          // Loop playback
@@ -1055,7 +1200,6 @@ const editor = new Blok({
     id: 'bold',
     exportName: 'Bold',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Bold',
     description:
       'Wraps selected text in `<strong>`. Activated with Cmd/Ctrl+B or by clicking the B button in the inline toolbar. Supports nested bold ranges and normalises overlapping markup on paste.',
@@ -1086,17 +1230,16 @@ const editor = new Blok({
     id: 'italic',
     exportName: 'Italic',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Italic',
     description:
-      'Wraps selected text in `<em>`. Activated with Cmd/Ctrl+I or by clicking the I button in the inline toolbar.',
+      'Wraps selected text in `<i>` (pasted `<em>` is also preserved). Activated with Cmd/Ctrl+I or by clicking the I button in the inline toolbar.',
     importExample: `import { Italic } from '@jackuait/blok/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
-// "Hello <em>world</em>"`,
+// "Hello <i>world</i>"`,
     saveDataExample: `{
   "type": "paragraph",
-  "data": { "text": "Hello <em>world</em>" }
+  "data": { "text": "Hello <i>world</i>" }
 }`,
     usageExample: `import { Blok } from '@jackuait/blok';
 import { Italic } from '@jackuait/blok/tools';
@@ -1112,7 +1255,6 @@ const editor = new Blok({
     id: 'link',
     exportName: 'Link',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Link',
     description:
       'Wraps selected text in `<a href="...">`. Activated with Cmd/Ctrl+K. Clicking the button on existing linked text opens the URL input allowing the link to be edited or removed.',
@@ -1140,10 +1282,9 @@ const editor = new Blok({
     id: 'marker',
     exportName: 'Marker',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Marker',
     description:
-      'Applies text colour or background colour to selected text using `<mark style="color:...">` or `<mark style="background-color:...">`. Opens a colour picker with preset colours and a custom hex input. Activated with Cmd/Ctrl+Shift+H.',
+      'Applies text colour or background colour to selected text using `<mark style="color:...">` or `<mark style="background-color:...">`. Opens a colour picker with preset text and background swatches plus a Default reset. Activated with Cmd/Ctrl+Shift+H.',
     importExample: `import { Marker } from '@jackuait/blok/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
@@ -1169,7 +1310,6 @@ const editor = new Blok({
     id: 'underline',
     exportName: 'Underline',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Underline',
     description:
       'Wraps selected text in `<u>`. Activated with Cmd/Ctrl+U or by clicking the U button in the inline toolbar.',
@@ -1195,7 +1335,6 @@ const editor = new Blok({
     id: 'strikethrough',
     exportName: 'Strikethrough',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Strikethrough',
     description:
       'Wraps selected text in `<s>`. Activated with Cmd/Ctrl+Shift+S or by clicking the S button in the inline toolbar.',
@@ -1221,7 +1360,6 @@ const editor = new Blok({
     id: 'inlineCode',
     exportName: 'InlineCode',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Inline Code',
     description:
       'Wraps selected text in `<code>`. Activated with Cmd/Ctrl+E or by clicking the code button in the inline toolbar. Useful for marking up variable names, function calls, and short code snippets within text.',
@@ -1247,7 +1385,6 @@ const editor = new Blok({
     id: 'equation',
     exportName: 'Equation',
     type: 'inline',
-    badge: 'Inline Tool',
     title: 'Equation',
     description:
       'Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The LaTeX source is kept in the `data-latex` attribute so the formula round-trips through save/load, while the rendered KaTeX markup is regenerated on load.',

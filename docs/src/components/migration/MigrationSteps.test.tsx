@@ -1,269 +1,143 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { I18nProvider } from '../../contexts/I18nContext';
+import { MemoryRouter } from 'react-router-dom';
 import { MigrationSteps } from './MigrationSteps';
+import {
+  CSS_MAPPINGS,
+  DIFF_CHANGES,
+  COMPATIBILITY_GROUPS,
+} from './migration-data';
+import { I18nProvider } from '../../contexts/I18nContext';
 import enJson from '../../i18n/en.json';
 
 const m = enJson.migration;
 
-const renderMigrationSteps = () =>
+const renderSteps = () =>
   render(
-    <I18nProvider>
-      <MigrationSteps />
-    </I18nProvider>
+    <MemoryRouter>
+      <I18nProvider>
+        <MigrationSteps />
+      </I18nProvider>
+    </MemoryRouter>
   );
 
 describe('MigrationSteps', () => {
-  it('should render the component', () => {
-    renderMigrationSteps();
+  describe('what changes (diff card)', () => {
+    it('should render a single diff card with one row per change', () => {
+      renderSteps();
 
-    expect(screen.getByTestId('migration-section')).toBeInTheDocument();
-  });
+      const rows = within(screen.getByTestId('changes-diff')).getAllByTestId('change-row');
+      expect(rows).toHaveLength(DIFF_CHANGES.length);
+    });
 
-  it('should render What Gets Transformed section heading', () => {
-    renderMigrationSteps();
+    it('should show before and after code in each row', () => {
+      renderSteps();
 
-    expect(screen.getByText(m.step2Title)).toBeInTheDocument();
-  });
+      const rows = screen.getAllByTestId('change-row');
+      expect(rows[0]).toHaveTextContent("import EditorJS from '@editorjs/editorjs';");
+      expect(rows[0]).toHaveTextContent("import { Blok } from '@jackuait/blok';");
+    });
 
-  it('should render the section description', () => {
-    renderMigrationSteps();
+    it('should anchor the section as #changes', () => {
+      renderSteps();
 
-    expect(screen.getByText(m.step2Description)).toBeInTheDocument();
-  });
-
-  it('should render 6 change cards', () => {
-    renderMigrationSteps();
-
-    const cards = screen.getAllByTestId('change-card');
-    expect(cards).toHaveLength(6);
-  });
-
-  it('should render Imports change card', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.changeImports)).toBeInTheDocument();
-  });
-
-  it('should render Tool Imports change card', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.changeToolImports)).toBeInTheDocument();
-  });
-
-  it('should render Types change card', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.changeTypes)).toBeInTheDocument();
-  });
-
-  it('should render CSS Selectors change card', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.changeCssSelectors)).toBeInTheDocument();
-  });
-
-  it('should render Default Holder change card', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.changeDefaultHolder)).toBeInTheDocument();
-  });
-
-  it('should render Data Attributes change card', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.changeDataAttributes)).toBeInTheDocument();
-  });
-
-  it('should render CSS Selector Reference section heading', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.step3Title)).toBeInTheDocument();
-  });
-
-  it('should render CSS reference description', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText(m.step3Description)).toBeInTheDocument();
-  });
-
-  it('should render the CSS mappings table headers', () => {
-    renderMigrationSteps();
-
-    const referenceCard = screen.getByTestId('migration-table');
-    expect(within(referenceCard).getByText(m.heroFromEditorJS)).toBeInTheDocument();
-    expect(within(referenceCard).getByText(m.heroBlok)).toBeInTheDocument();
-  });
-
-  it('should render .codex-editor mapping in table', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByText('.codex-editor')).toBeInTheDocument();
-  });
-
-  it('should render .ce-block mapping in table', () => {
-    renderMigrationSteps();
-
-    const table = screen.getByTestId('migration-table');
-    const withinTable = within(table);
-    expect(withinTable.getByText('.ce-block')).toBeInTheDocument();
-  });
-
-  it('should render [data-blok-element] mapping in table', () => {
-    renderMigrationSteps();
-
-    const table = screen.getByTestId('migration-table');
-    const withinTable = within(table);
-    expect(withinTable.getByText('[data-blok-element]')).toBeInTheDocument();
-  });
-
-  it('should render both migration sections', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByTestId('migration-section')).toBeInTheDocument();
-    expect(screen.getByTestId('css-reference-section')).toBeInTheDocument();
-  });
-
-  it('should render changes grid container', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByTestId('changes-grid')).toBeInTheDocument();
-  });
-
-  it('should render migration table', () => {
-    renderMigrationSteps();
-
-    expect(screen.getByTestId('migration-table')).toBeInTheDocument();
-  });
-
-  it('should render removed and added code diffs in each change card', () => {
-    renderMigrationSteps();
-
-    const cards = screen.getAllByTestId('change-card');
-    // Use Unicode minus sign (−) which is used in the component
-    const diffMarkers = screen.getAllByText('−');
-    const addMarkers = screen.getAllByText('+');
-
-    expect(cards).toHaveLength(6);
-    expect(diffMarkers.length).toBeGreaterThanOrEqual(6);
-    expect(addMarkers.length).toBeGreaterThanOrEqual(6);
-  });
-
-  it('should render code elements for each change', () => {
-    renderMigrationSteps();
-
-    const codeElements = screen.getAllByRole('code');
-
-    expect(codeElements.length).toBeGreaterThan(0);
-  });
-
-  it('should render each change card with title and diff', () => {
-    renderMigrationSteps();
-
-    const cards = screen.getAllByTestId('change-card');
-
-    cards.forEach((card) => {
-      const withinCard = within(card);
-      const heading = withinCard.queryByRole('heading', { level: 3 });
-      const codeElements = withinCard.getAllByRole('code');
-
-      expect(heading).toBeInTheDocument();
-      expect(codeElements.length).toBe(2);
+      expect(screen.getByTestId('changes-section')).toHaveAttribute('id', 'changes');
     });
   });
 
-  it('should render reference card with proper header legend', () => {
-    renderMigrationSteps();
+  describe('css selector reference', () => {
+    it('should render one row per CSS mapping', () => {
+      renderSteps();
 
-    const referenceCard = screen.getByTestId('migration-table');
+      const table = screen.getByTestId('migration-table');
+      CSS_MAPPINGS.forEach((mapping) => {
+        expect(within(table).getByText(mapping.editorjs)).toBeInTheDocument();
+        expect(within(table).getByText(mapping.blok)).toBeInTheDocument();
+      });
+    });
 
-    // Legend shows EditorJS → Blok transformation direction
-    expect(within(referenceCard).getByText(m.heroFromEditorJS)).toBeInTheDocument();
-    expect(within(referenceCard).getByText(m.heroBlok)).toBeInTheDocument();
-    // Count is interpolated: "{count} selectors" with CSS_MAPPINGS.length = 8
-    expect(within(referenceCard).getByText(m.selectorsCount.replace('{count}', '8'))).toBeInTheDocument();
+    it('should anchor the section as #css', () => {
+      renderSteps();
+
+      expect(screen.getByTestId('css-reference-section')).toHaveAttribute('id', 'css');
+    });
   });
 
-  it('should render the Custom Tools section heading and description', () => {
-    renderMigrationSteps();
+  describe('custom tools', () => {
+    it('should render the three custom-tool migration paths', () => {
+      renderSteps();
 
-    const section = screen.getByTestId('custom-tools-section');
-    expect(within(section).getByText(m.step4Title)).toBeInTheDocument();
-    expect(within(section).getByText(m.step4Description)).toBeInTheDocument();
+      expect(screen.getByText(m.customInlineToolTitle)).toBeInTheDocument();
+      expect(screen.getByText(m.customInlineToolFastPathTitle)).toBeInTheDocument();
+      expect(screen.getByText(m.customBlockToolTitle)).toBeInTheDocument();
+    });
+
+    it('should render the dropped-fields warning table', () => {
+      renderSteps();
+
+      const note = screen.getByTestId('dropped-fields-note');
+      expect(note).toHaveTextContent(m.droppedFieldsTitle);
+      expect(note).toHaveTextContent(m.droppedFieldsQuoteBlock);
+    });
+
+    it('should anchor the section as #tools', () => {
+      renderSteps();
+
+      expect(screen.getByTestId('custom-tools-section')).toHaveAttribute('id', 'tools');
+    });
   });
 
-  it('should render the inline-tool render → MenuConfig before/after sample', () => {
-    renderMigrationSteps();
+  describe('verify compatibility (grouped matrix)', () => {
+    it('should render the three compatibility groups with titles and hints', () => {
+      renderSteps();
 
-    const section = screen.getByTestId('custom-tools-section');
-    // Heading naming the inline-tool change
-    expect(within(section).getByText(m.customInlineToolTitle)).toBeInTheDocument();
-    // Before: returns an HTMLElement; After: returns a MenuConfig
-    expect(within(section).getByText(m.customInlineToolBefore)).toBeInTheDocument();
-    expect(within(section).getByText(m.customInlineToolAfter)).toBeInTheDocument();
+      const groups = screen.getAllByTestId('compatibility-group');
+      expect(groups).toHaveLength(COMPATIBILITY_GROUPS.length);
+      expect(screen.getByText(m.compatGroupDropIn)).toBeInTheDocument();
+      expect(screen.getByText(m.compatGroupAuto)).toBeInTheDocument();
+      expect(screen.getByText(m.compatGroupNotBundled)).toBeInTheDocument();
+      expect(screen.getByText(m.compatGroupAutoHint)).toBeInTheDocument();
+    });
+
+    it('should render every tool as a chip inside its group', () => {
+      renderSteps();
+
+      const groups = screen.getAllByTestId('compatibility-group');
+      COMPATIBILITY_GROUPS.forEach((group, index) => {
+        group.tools.forEach((tool) => {
+          expect(within(groups[index]).getByText(tool)).toBeInTheDocument();
+        });
+      });
+    });
+
+    it('should render the target line and stub notes', () => {
+      renderSteps();
+
+      expect(screen.getByText(m.supportedVersionsTarget)).toBeInTheDocument();
+      expect(screen.getByTestId('compatibility-stub-note')).toBeInTheDocument();
+    });
+
+    it('should anchor the section as #verify', () => {
+      renderSteps();
+
+      expect(screen.getByTestId('supported-versions-section')).toHaveAttribute('id', 'verify');
+    });
   });
 
-  it('should reassure that custom block tools port largely unchanged', () => {
-    renderMigrationSteps();
+  describe('upgrading within Blok (coda)', () => {
+    it('should not render the Blok → Blok upgrade coda', () => {
+      renderSteps();
 
-    const section = screen.getByTestId('custom-tools-section');
-    expect(within(section).getByText(m.customBlockToolTitle)).toBeInTheDocument();
-    expect(within(section).getByText(m.customBlockToolNote)).toBeInTheDocument();
-  });
+      expect(screen.queryByTestId('blok-upgrade-section')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('blok-upgrade-table')).not.toBeInTheDocument();
+      expect(screen.queryAllByTestId('blok-upgrade-row')).toHaveLength(0);
+    });
 
-  it('should render the drop-in EditorJS alias note', () => {
-    renderMigrationSteps();
+    it('should end on the verify step', () => {
+      renderSteps();
 
-    const note = screen.getByTestId('alias-note');
-    expect(within(note).getByText(m.aliasNoteTitle)).toBeInTheDocument();
-    expect(within(note).getByText(m.aliasNoteDescription)).toBeInTheDocument();
-    expect(within(note).getByText(m.aliasNoteCode)).toBeInTheDocument();
-  });
-
-  it('should render the wrapLegacyInlineTool fast-path card', () => {
-    renderMigrationSteps();
-
-    const section = screen.getByTestId('custom-tools-section');
-    expect(within(section).getByText(m.customInlineToolFastPathTitle)).toBeInTheDocument();
-    expect(within(section).getByText(m.customInlineToolFastPathNote)).toBeInTheDocument();
-    expect(within(section).getByText(m.customInlineToolFastPathCode)).toBeInTheDocument();
-  });
-
-  it('should render the dropped-fields warnings note', () => {
-    renderMigrationSteps();
-
-    const note = screen.getByTestId('dropped-fields-note');
-    expect(within(note).getByText(m.droppedFieldsTitle)).toBeInTheDocument();
-    expect(within(note).getByText(m.droppedFieldsWarning)).toBeInTheDocument();
-  });
-
-  it('should render the linkTool.meta.site_name dropped field row', () => {
-    renderMigrationSteps();
-
-    const note = screen.getByTestId('dropped-fields-note');
-    expect(within(note).getByText('linkTool')).toBeInTheDocument();
-    expect(within(note).getByText('meta.site_name')).toBeInTheDocument();
-  });
-
-  it('should render the supported Editor.js versions section', () => {
-    renderMigrationSteps();
-
-    const section = screen.getByTestId('supported-versions-section');
-    expect(within(section).getByText(m.supportedVersionsTitle)).toBeInTheDocument();
-    expect(within(section).getByText(m.supportedVersionsDescription)).toBeInTheDocument();
-    // Target line statement names the 2.x line
-    expect(within(section).getByText(m.supportedVersionsTarget)).toBeInTheDocument();
-  });
-
-  it('should render the compatibility matrix rows', () => {
-    renderMigrationSteps();
-
-    const matrix = screen.getByTestId('compatibility-matrix');
-    const rows = within(matrix).getAllByTestId('compatibility-row');
-    expect(rows.length).toBeGreaterThanOrEqual(8);
-    // Grounded rows: a drop-in tool, a runtime-migrated tool, and a not-bundled tool
-    expect(within(matrix).getByText('paragraph')).toBeInTheDocument();
-    expect(within(matrix).getByText('linkTool')).toBeInTheDocument();
-    expect(within(matrix).getByText('checklist')).toBeInTheDocument();
+      expect(screen.getByTestId('supported-versions-section')).toBeInTheDocument();
+      expect(screen.queryByText('Upgrading within Blok')).not.toBeInTheDocument();
+    });
   });
 });

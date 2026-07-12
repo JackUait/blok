@@ -73,5 +73,12 @@ docs/superpowers/
 # Scheduled tasks lock (local only)
 .claude/scheduled_tasks.lock
 
+# Local skill/agent tooling (local only)
+.agents/
+.claude/skills/
+skills-lock.json
+
 # stray ng-packagr staging artifact (real staging is dist/.angular-build)
 /.angular-build/
+
+.superpowers/

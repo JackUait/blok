@@ -1,323 +1,189 @@
-import { useMemo } from "react";
-import { CSS_MAPPINGS, VERSION_COMPATIBILITY } from "./migration-data";
+import {
+  COMPATIBILITY_GROUPS,
+  CSS_MAPPINGS,
+  DIFF_CHANGES,
+  MIGRATION_STEPS,
+} from "./migration-data";
+import { MigrationSectionHeader } from "./MigrationSectionHeader";
+import { Diff } from "./Diff";
 import { useI18n } from "../../contexts/I18nContext";
+import { Typo } from "../common/Typo";
 
+const stepNumber = (id: string): number =>
+  MIGRATION_STEPS.findIndex((step) => step.id === id) + 1;
+
+/** Shared chrome for every step section: chapter rule + consistent rhythm. */
+const SECTION_CLASS = "scroll-mt-28 border-t border-border pt-12 pb-16";
+
+/** Shared chrome for the bordered content shells inside each step. */
+const SHELL_CLASS = "overflow-hidden rounded-2xl border border-border bg-card shadow-card";
+
+/** Selector-mapping columns. The arrow gets its own track so the header labels
+ *  sit directly above the code they name. */
+const MAPPING_GRID =
+  "grid grid-cols-[minmax(0,1fr)_0.8125rem_minmax(0,1fr)] items-center gap-x-3";
+
+/** Steps 2–5 of the migration guide, plus the Blok → Blok upgrade coda. */
 export const MigrationSteps: React.FC = () => {
   const { t } = useI18n();
 
-  const changeItems = useMemo(() => [
-    {
-      icon: "1",
-      title: t('migration.changeImports'),
-      removed: "import EditorJS from '@editorjs/editorjs';",
-      added: "import { Blok } from '@jackuait/blok';",
-    },
-    {
-      icon: "2",
-      title: t('migration.changeToolImports'),
-      removed: "import Header from '@editorjs/header';",
-      added: "import { Header } from '@jackuait/blok/tools';",
-    },
-    {
-      icon: "3",
-      title: t('migration.changeTypes'),
-      removed: "import type { EditorConfig } from '@editorjs/editorjs';",
-      added: "import type { BlokConfig } from '@jackuait/blok';",
-    },
-    {
-      icon: "4",
-      title: t('migration.changeCssSelectors'),
-      removed: ".ce-block",
-      added: "[data-blok-element]",
-    },
-    {
-      icon: "5",
-      title: t('migration.changeDefaultHolder'),
-      removed: '<div id="editorjs"></div>',
-      added: '<div id="blok"></div>',
-    },
-    {
-      icon: "6",
-      title: t('migration.changeDataAttributes'),
-      removed: "data-id",
-      added: "data-blok-id",
-    },
-  ], [t]);
-
   return (
     <>
-      <section
-        className="migration-section migration-section--surface"
-        data-blok-testid="migration-section"
-      >
-        <div className="migration-section-header">
-          <span className="migration-section-badge">
-            {t('migration.step2Badge')}
-          </span>
-          <h2 className="migration-section-title">{t('migration.step2Title')}</h2>
-          <p className="migration-section-description">
-            {t('migration.step2Description')}
-          </p>
-        </div>
+      <section id="changes" className={SECTION_CLASS} data-blok-testid="changes-section">
+        <MigrationSectionHeader
+          step={stepNumber("changes")}
+          title={t('migration.sectionChangesTitle')}
+          description={t('migration.sectionChangesDescription')}
+        />
 
-        <div className="migration-note" data-blok-testid="alias-note">
-          <h3 className="migration-note-title">{t('migration.aliasNoteTitle')}</h3>
-          <p className="migration-note-description">
-            {t('migration.aliasNoteDescription')}
-          </p>
-          <code className="migration-note-code">{t('migration.aliasNoteCode')}</code>
+        <div className={SHELL_CLASS} data-blok-testid="changes-diff">
+          <div className="divide-y divide-border">
+            {DIFF_CHANGES.map((change) => (
+              <div
+                key={change.titleKey}
+                className="grid gap-2.5 px-4 py-4 transition-colors hover:bg-secondary/40 sm:grid-cols-[9rem_1fr] sm:gap-5 sm:px-5"
+                data-blok-testid="change-row"
+              >
+                <h3 className="pt-1.5 text-sm font-semibold tracking-tight text-foreground">
+                  <Typo>{t(change.titleKey)}</Typo>
+                </h3>
+                <Diff removed={change.removed} added={change.added} />
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <div className="changes-grid" data-blok-testid="changes-grid">
-          {changeItems.map((item, index) => (
-            <article
-              key={item.icon}
-              className="change-card"
-              data-blok-testid="change-card"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <div className="change-card-header">
-                <span className="change-card-icon">{item.icon}</span>
-                <h3 className="change-card-title">{item.title}</h3>
+      <section id="css" className={SECTION_CLASS} data-blok-testid="css-reference-section">
+        <MigrationSectionHeader
+          step={stepNumber("css")}
+          title={t('migration.sectionCssTitle')}
+          description={t('migration.sectionCssDescription')}
+        />
+
+        <div className={SHELL_CLASS} data-blok-testid="migration-table">
+          <div className={`${MAPPING_GRID} border-b border-border bg-secondary/50 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground`}>
+            <span><Typo>{t('migration.heroFromEditorJS')}</Typo></span>
+            <span aria-hidden />
+            <span className="text-foreground">{t('migration.heroBlok')}</span>
+          </div>
+          <div className="divide-y divide-border">
+            {CSS_MAPPINGS.map((mapping) => (
+              <div
+                key={mapping.editorjs}
+                className={`group ${MAPPING_GRID} px-5 py-3 transition-colors hover:bg-secondary/40`}
+              >
+                <code className="min-w-0 break-all font-mono text-xs text-muted-foreground">{mapping.editorjs}</code>
+                <svg className="text-muted-foreground/40 transition-colors group-hover:text-primary" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+                <code className="min-w-0 break-all font-mono text-xs font-medium text-foreground">{mapping.blok}</code>
               </div>
-              <div className="change-card-content">
-                <div className="diff-block">
-                  <div className="diff-removed">
-                    <span className="diff-accent-bar" aria-hidden="true" />
-                    <span className="diff-marker" aria-label={t('migration.removed')}>−</span>
-                    <code>{item.removed}</code>
-                  </div>
-                  <div className="diff-added">
-                    <span className="diff-accent-bar" aria-hidden="true" />
-                    <span className="diff-marker" aria-label={t('migration.added')}>+</span>
-                    <code>{item.added}</code>
-                  </div>
-                </div>
-              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="tools" className={SECTION_CLASS} data-blok-testid="custom-tools-section">
+        <MigrationSectionHeader
+          step={stepNumber("tools")}
+          title={t('migration.sectionToolsTitle')}
+          description={t('migration.sectionToolsDescription')}
+        />
+
+        <div className={SHELL_CLASS} data-blok-testid="custom-tools-grid">
+          <div className="divide-y divide-border">
+            <article className="px-5 py-5" data-blok-testid="custom-tool-card">
+              <h3 className="mb-3 text-sm font-bold tracking-tight text-foreground"><Typo>{t('migration.customInlineToolTitle')}</Typo></h3>
+              <Diff
+                removed={t('migration.customInlineToolBefore')}
+                added={t('migration.customInlineToolAfter')}
+              />
             </article>
-          ))}
-        </div>
-      </section>
 
-      <section
-        className="migration-section"
-        data-blok-testid="css-reference-section"
-      >
-        <div className="migration-section-header">
-          <span className="migration-section-badge">
-            {t('migration.step3Badge')}
-          </span>
-          <h2 className="migration-section-title">{t('migration.step3Title')}</h2>
-          <p className="migration-section-description">
-            {t('migration.step3Description')}
-          </p>
-        </div>
-
-        <div className="reference-card" data-blok-testid="migration-table">
-          <div className="reference-card-header">
-            <div className="reference-legend">
-              <div className="reference-legend-item reference-legend-item--old">
-                <span className="reference-legend-dot" />
-                <span>{t('migration.heroFromEditorJS')}</span>
-              </div>
-              <svg className="reference-legend-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-              <div className="reference-legend-item reference-legend-item--new">
-                <span className="reference-legend-dot" />
-                <span>{t('migration.heroBlok')}</span>
-              </div>
-            </div>
-            <span className="reference-count">{t('migration.selectorsCount').replace('{count}', String(CSS_MAPPINGS.length))}</span>
-          </div>
-          <div className="reference-mappings">
-            {CSS_MAPPINGS.map((mapping, index) => (
-              <div
-                key={index}
-                className="reference-mapping"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <div className="reference-mapping-old">
-                  <code>{mapping.editorjs}</code>
-                </div>
-                <div className="reference-mapping-connector">
-                  <span className="reference-mapping-line" />
-                  <svg className="reference-mapping-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </div>
-                <div className="reference-mapping-new">
-                  <code>{mapping.blok}</code>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="migration-section migration-section--surface"
-        data-blok-testid="custom-tools-section"
-      >
-        <div className="migration-section-header">
-          <span className="migration-section-badge">
-            {t('migration.step4Badge')}
-          </span>
-          <h2 className="migration-section-title">{t('migration.step4Title')}</h2>
-          <p className="migration-section-description">
-            {t('migration.step4Description')}
-          </p>
-        </div>
-
-        <div className="changes-grid" data-blok-testid="custom-tools-grid">
-          <article className="change-card" data-blok-testid="custom-tool-card">
-            <div className="change-card-header">
-              <span className="change-card-icon">@</span>
-              <h3 className="change-card-title">{t('migration.customInlineToolTitle')}</h3>
-            </div>
-            <div className="change-card-content">
-              <div className="diff-block">
-                <div className="diff-removed">
-                  <span className="diff-accent-bar" aria-hidden="true" />
-                  <span className="diff-marker" aria-label={t('migration.removed')}>−</span>
-                  <code>{t('migration.customInlineToolBefore')}</code>
-                </div>
-                <div className="diff-added">
-                  <span className="diff-accent-bar" aria-hidden="true" />
-                  <span className="diff-marker" aria-label={t('migration.added')}>+</span>
-                  <code>{t('migration.customInlineToolAfter')}</code>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <article className="change-card" data-blok-testid="custom-tool-card">
-            <div className="change-card-header">
-              <span className="change-card-icon">⚡</span>
-              <h3 className="change-card-title">{t('migration.customInlineToolFastPathTitle')}</h3>
-            </div>
-            <div className="change-card-content">
-              <p className="migration-section-description">
-                {t('migration.customInlineToolFastPathNote')}
+            <article className="px-5 py-5" data-blok-testid="custom-tool-card">
+              <h3 className="text-sm font-bold tracking-tight text-foreground"><Typo>{t('migration.customInlineToolFastPathTitle')}</Typo></h3>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                <Typo>{t('migration.customInlineToolFastPathNote')}</Typo>
               </p>
-              <code className="migration-note-code">{t('migration.customInlineToolFastPathCode')}</code>
-            </div>
-          </article>
+              <code className="mt-3 inline-block rounded-lg border border-border bg-secondary/60 px-3 py-2 font-mono text-xs text-foreground">{t('migration.customInlineToolFastPathCode')}</code>
+            </article>
 
-          <article className="change-card" data-blok-testid="custom-tool-card">
-            <div className="change-card-header">
-              <span className="change-card-icon">✓</span>
-              <h3 className="change-card-title">{t('migration.customBlockToolTitle')}</h3>
-            </div>
-            <div className="change-card-content">
-              <p className="migration-section-description">
-                {t('migration.customBlockToolNote')}
+            <article className="px-5 py-5" data-blok-testid="custom-tool-card">
+              <h3 className="text-sm font-bold tracking-tight text-foreground"><Typo>{t('migration.customBlockToolTitle')}</Typo></h3>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                <Typo>{t('migration.customBlockToolNote')}</Typo>
               </p>
-            </div>
-          </article>
+            </article>
+          </div>
         </div>
 
-        <div className="migration-note" data-blok-testid="dropped-fields-note">
-          <h3 className="migration-note-title">{t('migration.droppedFieldsTitle')}</h3>
-          <p className="migration-note-description">
-            {t('migration.droppedFieldsWarning')}
+        <div className="mt-10" data-blok-testid="dropped-fields-note">
+          <h3 className="text-sm font-bold tracking-tight text-foreground"><Typo>{t('migration.droppedFieldsTitle')}</Typo></h3>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            <Typo>{t('migration.droppedFieldsWarning')}</Typo>
           </p>
-          <div className="reference-mappings">
-            <div className="reference-mapping">
-              <div className="reference-mapping-old">
-                <code>{t('migration.droppedFieldsColBlock')}</code>
+          <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="divide-y divide-border">
+              <div className="grid grid-cols-[7rem_1fr] items-center gap-3 bg-secondary/50 px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground sm:grid-cols-[10rem_1fr]">
+                <span><Typo>{t('migration.droppedFieldsColBlock')}</Typo></span>
+                <span><Typo>{t('migration.droppedFieldsColFields')}</Typo></span>
               </div>
-              <div className="reference-mapping-new">
-                <code>{t('migration.droppedFieldsColFields')}</code>
-              </div>
-            </div>
-            <div className="reference-mapping">
-              <div className="reference-mapping-old">
-                <code>{t('migration.droppedFieldsQuoteBlock')}</code>
-              </div>
-              <div className="reference-mapping-new">
-                <code>{t('migration.droppedFieldsQuoteFields')}</code>
-              </div>
-            </div>
-            <div className="reference-mapping">
-              <div className="reference-mapping-old">
-                <code>{t('migration.droppedFieldsImageBlock')}</code>
-              </div>
-              <div className="reference-mapping-new">
-                <code>{t('migration.droppedFieldsImageFields')}</code>
-              </div>
-            </div>
-            <div className="reference-mapping">
-              <div className="reference-mapping-old">
-                <code>{t('migration.droppedFieldsLinkToolBlock')}</code>
-              </div>
-              <div className="reference-mapping-new">
-                <code>{t('migration.droppedFieldsLinkToolFields')}</code>
-              </div>
-            </div>
-            <div className="reference-mapping">
-              <div className="reference-mapping-old">
-                <code>{t('migration.droppedFieldsListBlock')}</code>
-              </div>
-              <div className="reference-mapping-new">
-                <code>{t('migration.droppedFieldsListFields')}</code>
-              </div>
+              {([
+                ['droppedFieldsQuoteBlock', 'droppedFieldsQuoteFields'],
+                ['droppedFieldsImageBlock', 'droppedFieldsImageFields'],
+                ['droppedFieldsLinkToolBlock', 'droppedFieldsLinkToolFields'],
+                ['droppedFieldsListBlock', 'droppedFieldsListFields'],
+              ] as const).map(([blockKey, fieldsKey]) => (
+                <div key={blockKey} className="grid grid-cols-[7rem_1fr] items-baseline gap-3 px-4 py-2.5 transition-colors hover:bg-secondary/40 sm:grid-cols-[10rem_1fr]">
+                  <code className="break-all font-mono text-xs text-foreground">{t(`migration.${blockKey}`)}</code>
+                  <span className="text-xs leading-5 text-muted-foreground"><Typo>{t(`migration.${fieldsKey}`)}</Typo></span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      <section
-        className="migration-section"
-        data-blok-testid="supported-versions-section"
-      >
-        <div className="migration-section-header">
-          <span className="migration-section-badge">
-            {t('migration.supportedVersionsBadge')}
-          </span>
-          <h2 className="migration-section-title">{t('migration.supportedVersionsTitle')}</h2>
-          <p className="migration-section-description">
-            {t('migration.supportedVersionsDescription')}
-          </p>
-        </div>
+      <section id="verify" className={SECTION_CLASS} data-blok-testid="supported-versions-section">
+        <MigrationSectionHeader
+          step={stepNumber("verify")}
+          title={t('migration.sectionVerifyTitle')}
+          description={t('migration.sectionVerifyDescription')}
+        />
 
-        <div className="migration-note" data-blok-testid="supported-versions-target">
-          <h3 className="migration-note-title">{t('migration.supportedVersionsTargetTitle')}</h3>
-          <p className="migration-note-description">
-            {t('migration.supportedVersionsTarget')}
+        <aside className="mb-6 rounded-2xl border border-border bg-secondary/50 p-5" data-blok-testid="supported-versions-target">
+          <h3 className="text-sm font-bold tracking-tight text-foreground"><Typo>{t('migration.supportedVersionsTargetTitle')}</Typo></h3>
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            <Typo>{t('migration.supportedVersionsTarget')}</Typo>
           </p>
-        </div>
+        </aside>
 
-        <div className="reference-card" data-blok-testid="compatibility-matrix">
-          <div className="reference-mappings">
-            {VERSION_COMPATIBILITY.map((row, index) => (
-              <div
-                key={index}
-                className="reference-mapping"
-                data-blok-testid="compatibility-row"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <div className="reference-mapping-old">
-                  <code>{row.tool}</code>
+        <div className={SHELL_CLASS} data-blok-testid="compatibility-matrix">
+          <div className="divide-y divide-border">
+            {COMPATIBILITY_GROUPS.map((group) => (
+              <div key={group.id} className="px-5 py-5" data-blok-testid="compatibility-group">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
+                  <h3 className="shrink-0 text-sm font-bold tracking-tight text-foreground"><Typo>{t(group.titleKey)}</Typo></h3>
+                  <p className="text-sm text-muted-foreground"><Typo>{t(group.hintKey)}</Typo></p>
                 </div>
-                <div className="reference-mapping-connector">
-                  <span className="reference-mapping-line" />
-                  <svg className="reference-mapping-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </div>
-                <div className="reference-mapping-new">
-                  <span>{t(row.statusKey)}</span>
-                </div>
+                <ul className="mt-3.5 flex flex-wrap gap-2">
+                  {group.tools.map((tool) => (
+                    <li key={tool}>
+                      <code className="inline-block rounded-full border border-border bg-secondary/40 px-2.5 py-1 font-mono text-xs text-foreground transition-colors hover:border-foreground/25">{tool}</code>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="migration-section-description" data-blok-testid="compatibility-stub-note">
-          {t('migration.supportedVersionsStubNote')}
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground" data-blok-testid="compatibility-stub-note">
+          <Typo>{t('migration.supportedVersionsStubNote')}</Typo>
         </p>
       </section>
+
     </>
   );
 };

@@ -1,13 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { MigrationPage } from './MigrationPage';
-import { I18nProvider } from '../contexts/I18nContext';
-import enJson from '../i18n/en.json';
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { MigrationPage, MigrationContent } from "./MigrationPage";
+import { I18nProvider } from "../contexts/I18nContext";
+import en from "../i18n/en.json";
 
-const m = enJson.migration;
+const m = en.migration;
 
-const renderMigrationPage = () =>
+const renderPage = () =>
   render(
     <MemoryRouter>
       <I18nProvider>
@@ -16,55 +16,43 @@ const renderMigrationPage = () =>
     </MemoryRouter>
   );
 
-describe('MigrationPage', () => {
-  it('should render the Nav component', () => {
-    renderMigrationPage();
-
-    const nav = screen.getByTestId('nav');
-    expect(nav).toBeInTheDocument();
+describe("MigrationPage", () => {
+  it("renders the Nav and main landmark", () => {
+    renderPage();
+    expect(screen.getByTestId("nav")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toBeInTheDocument();
   });
 
-  it('should render the migration hero title', () => {
-    renderMigrationPage();
-
-    // heroFromEditorJS appears in the hero title and also in the CSS reference legend
-    expect(screen.getAllByText(m.heroFromEditorJS).length).toBeGreaterThanOrEqual(1);
-    // Blok appears in the gradient span within the h1 title
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent(m.heroBlok);
+  it("leads with the outgrown-Editor.js hero", () => {
+    renderPage();
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1).toHaveTextContent(m.persuadeHeroPre);
+    expect(h1).toHaveTextContent(m.persuadeHeroBrand);
   });
 
-  it('should render the migration hero description', () => {
-    renderMigrationPage();
-
-    expect(screen.getByText(m.heroDescription)).toBeInTheDocument();
+  it("renders the walls, objection and move sections", () => {
+    renderPage();
+    const asRegex = (text: string) =>
+      new RegExp(text.split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+"));
+    expect(screen.getByRole("heading", { name: asRegex(m.wallsHeading) })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: asRegex(m.objectionHeading) })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: asRegex(m.moveHeading) })).toBeInTheDocument();
   });
 
-  it('should render the CodemodCard component', () => {
-    renderMigrationPage();
-
-    expect(screen.getByTestId('codemod-card')).toBeInTheDocument();
+  it("has no kicker/eyebrow label above the h1", () => {
+    renderPage();
+    expect(screen.getByRole("heading", { level: 1 }).previousElementSibling).toBeNull();
   });
 
-  it('should render the main element', () => {
-    renderMigrationPage();
-
-    const main = screen.getByRole('main');
-    expect(main).toBeInTheDocument();
-  });
-
-  it('should render the hero section with heading', () => {
-    renderMigrationPage();
-
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toBeInTheDocument();
-    expect(heading).toHaveTextContent(m.heroBlok);
-  });
-
-  it('should render navigation links', () => {
-    renderMigrationPage();
-
-    const nav = screen.getByTestId('nav');
-    expect(nav).toBeInTheDocument();
+  it("MigrationContent renders inline without a Nav (homepage embed)", () => {
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <MigrationContent inline />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+    expect(screen.queryByTestId("nav")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(m.persuadeHeroBrand);
   });
 });

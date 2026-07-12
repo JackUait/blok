@@ -1,150 +1,99 @@
 import { describe, it, expect } from 'vitest';
-import { search, getSearchIndex } from './search';
+import { buildSearchIndex, getSearchIndex, search } from './search';
 
 describe('search', () => {
-  describe('recipe search', () => {
-    it('should return recipe results when searching for "autosave"', () => {
+  it('should not index any recipe entries', () => {
+    const index = getSearchIndex();
+    const recipeItems = index.filter(item => item.category === 'recipe');
+    expect(recipeItems).toHaveLength(0);
+  });
+
+  it('should not include any /recipes paths', () => {
+    const index = getSearchIndex();
+    const recipePaths = index.filter(item => item.path === '/recipes');
+    expect(recipePaths).toHaveLength(0);
+  });
+
+  describe('result kind and section', () => {
+    it('tags every indexed item with a known kind', () => {
       const index = getSearchIndex();
-      const results = search('autosave', index);
+      const allowed = new Set(['method', 'property', 'option', 'section', 'page']);
 
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      const autosaveRecipe = recipeResults.find(r =>
-        r.title.toLowerCase().includes('autosave')
-      );
-      expect(autosaveRecipe).toBeDefined();
-      expect(autosaveRecipe?.title).toBe('Autosave with Debouncing');
-    });
-
-    it('should return recipe results when searching for "custom tool"', () => {
-      const index = getSearchIndex();
-      const results = search('custom tool', index);
-
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      const customToolRecipe = recipeResults.find(r =>
-        r.title.toLowerCase().includes('custom')
-      );
-      expect(customToolRecipe).toBeDefined();
-      expect(customToolRecipe?.title).toBe('Creating a Custom Tool');
-    });
-
-    it('should return recipe results when searching for "styling"', () => {
-      const index = getSearchIndex();
-      const results = search('styling', index);
-
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      const stylingRecipe = recipeResults.find(r =>
-        r.title.toLowerCase().includes('styling')
-      );
-      expect(stylingRecipe).toBeDefined();
-      expect(stylingRecipe?.title).toBe('Styling with Data Attributes');
-    });
-
-    it('should return recipe results when searching for "readonly" or "read-only"', () => {
-      const index = getSearchIndex();
-      const results = search('readonly', index);
-
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      const readonlyRecipe = recipeResults.find(r =>
-        r.title.toLowerCase().includes('read-only')
-      );
-      expect(readonlyRecipe).toBeDefined();
-      expect(readonlyRecipe?.title).toBe('Read-Only Mode');
-    });
-
-    it('should return recipe results when searching for "locale" or "localization"', () => {
-      const index = getSearchIndex();
-      const results = search('locale', index);
-
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      const localeRecipe = recipeResults.find(r =>
-        r.title.toLowerCase().includes('localization')
-      );
-      expect(localeRecipe).toBeDefined();
-      expect(localeRecipe?.title).toBe('Localization with Preloading');
-    });
-
-    it('should return recipe results when searching for "keyboard" or "shortcuts"', () => {
-      const index = getSearchIndex();
-      const results = search('keyboard', index);
-
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      const keyboardRecipe = recipeResults.find(r =>
-        r.title.toLowerCase().includes('keyboard')
-      );
-      expect(keyboardRecipe).toBeDefined();
-      expect(keyboardRecipe?.title).toBe('Keyboard Shortcuts');
-    });
-
-
-    it('should include all code recipes in search index', () => {
-      const index = getSearchIndex();
-      const recipeIndexItems = index.filter(item => item.category === 'recipe');
-
-      const expectedRecipes = [
-        'Autosave with Debouncing',
-        'Working with Events',
-        'Creating a Custom Tool',
-        'Styling with Data Attributes',
-        'Read-Only Mode',
-        'Localization with Preloading',
-      ];
-
-      for (const expectedTitle of expectedRecipes) {
-        const found = recipeIndexItems.some(item => item.title === expectedTitle);
-        expect(found).toBe(true);
+      expect(index.length).toBeGreaterThan(0);
+      for (const item of index) {
+        expect(allowed.has(item.kind)).toBe(true);
       }
     });
 
-    it('should categorize recipes with "recipe" category', () => {
-      const index = getSearchIndex();
-      const recipeIndexItems = index.filter(item => item.category === 'recipe');
+    it('tags method entries as "method" and gives them a parent section', () => {
+      const methods = getSearchIndex().filter(item => item.kind === 'method');
 
-      expect(recipeIndexItems.length).toBeGreaterThan(0);
-
-      for (const item of recipeIndexItems) {
-        expect(item.category).toBe('recipe');
-        expect(item.module).toBe('Recipes');
-        expect(item.path).toBe('/recipes');
+      expect(methods.length).toBeGreaterThan(0);
+      for (const method of methods) {
+        expect(method.section).toBeTruthy();
       }
     });
 
-    it('should search recipe descriptions for relevance', () => {
-      const index = getSearchIndex();
-      const results = search('debouncing', index);
+    it('tags config-option entries as "option" with their section', () => {
+      const options = getSearchIndex().filter(item => item.kind === 'option');
 
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
-
-      // The autosave recipe should match due to description mentioning debouncing
-      const autosaveRecipe = recipeResults.find(r =>
-        r.title === 'Autosave with Debouncing'
-      );
-      expect(autosaveRecipe).toBeDefined();
+      expect(options.length).toBeGreaterThan(0);
+      for (const option of options) {
+        expect(option.section).toBeTruthy();
+      }
     });
 
-    it('should search recipe content like "events" or "event handling"', () => {
-      const index = getSearchIndex();
-      const results = search('events', index);
+    it('tags property entries as "property"', () => {
+      const properties = getSearchIndex().filter(item => item.kind === 'property');
 
-      const recipeResults = results.filter(r => r.category === 'recipe');
-      expect(recipeResults.length).toBeGreaterThan(0);
+      expect(properties.length).toBeGreaterThan(0);
+    });
 
-      const eventsRecipe = recipeResults.find(r =>
-        r.title === 'Working with Events'
-      );
-      expect(eventsRecipe).toBeDefined();
+    it('tags top-level pages as "page"', () => {
+      const pages = getSearchIndex().filter(item => item.module === 'Page');
+
+      expect(pages.length).toBeGreaterThan(0);
+      for (const page of pages) {
+        expect(page.kind).toBe('page');
+      }
+    });
+
+    it('tags section overview entries as "section"', () => {
+      const sections = getSearchIndex().filter(item => item.kind === 'section');
+
+      expect(sections.length).toBeGreaterThan(0);
+    });
+
+    it('carries kind and section through search results', () => {
+      const results = search('block', getSearchIndex());
+
+      expect(results.length).toBeGreaterThan(0);
+      for (const result of results) {
+        expect(result.kind).toBeTruthy();
+      }
+    });
+  });
+
+  describe('search index routing', () => {
+    it('method results route to the module page with a deep anchor', () => {
+      const index = buildSearchIndex();
+      const focus = index.find((i) => i.kind === 'method' && i.title.startsWith('caret.focus'));
+      expect(focus?.path).toBe('/docs/caret-api');
+      expect(focus?.hash).toBe('caret-api-caret-focus');
+    });
+
+    it('section results route to the module page without a hash', () => {
+      const index = buildSearchIndex();
+      const caret = index.find((i) => i.kind === 'section' && i.id === 'caret-api');
+      expect(caret?.path).toBe('/docs/caret-api');
+      expect(caret?.hash).toBeUndefined();
+    });
+
+    it('config option result deep-links', () => {
+      const index = buildSearchIndex();
+      const holder = index.find((i) => i.kind === 'option' && i.title === 'holder');
+      expect(holder?.path).toBe('/docs/config');
+      expect(holder?.hash).toBe('config-holder');
     });
   });
 });

@@ -1,14 +1,15 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { Hero } from './Hero';
+import { Hero, SLOT_KINDS } from './Hero';
+import { LAYOUTS, CARD_KEYS } from './heroFormations';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 describe('Hero', () => {
   afterEach(() => {
     localStorage.removeItem('blok-docs-locale');
   });
-  it('should render the eyebrow text', () => {
+  it('should not render an eyebrow kicker', () => {
     render(
       <I18nProvider>
         <MemoryRouter>
@@ -17,7 +18,7 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    expect(screen.getByText('Open-Source Editor')).toBeInTheDocument();
+    expect(screen.queryByText('Open-Source Editor')).not.toBeInTheDocument();
   });
 
   it('should render the main title', () => {
@@ -57,7 +58,7 @@ describe('Hero', () => {
 
     const getStartedLink = screen.getByRole('link', { name: 'Get Started' });
     expect(getStartedLink).toBeInTheDocument();
-    expect(getStartedLink).toHaveAttribute('href', '#quick-start');
+    expect(getStartedLink).toHaveAttribute('href', '/docs');
   });
 
   it('should render the Try it out button with correct link', () => {
@@ -69,7 +70,9 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    const tryItOutLink = screen.getByRole('link', { name: /Try it out/ });
+    // Typo inserts a non-breaking space (U+00A0) into the prose ("it" binds
+    // forward), so the accessible name reads "Try it out". \s matches NBSP.
+    const tryItOutLink = screen.getByRole('link', { name: /Try\s+it\s+out/ });
     expect(tryItOutLink).toBeInTheDocument();
     expect(tryItOutLink).toHaveAttribute('href', '/demo');
   });
@@ -98,7 +101,24 @@ describe('Hero', () => {
     expect(screen.getByTestId('hero-demo')).toBeInTheDocument();
   });
 
-  it('should render the mascot image', () => {
+  it('never pins a single block kind to an always-present slot', () => {
+    // The slots present in EVERY formation (the intersection across all variants) show on
+    // every loop. If such a slot had a single-kind pool, that block would appear literally
+    // every loop — give those slots a varied pool so no one block type ever dominates.
+    const alwaysPresent = CARD_KEYS.filter((slot) =>
+      Object.values(LAYOUTS).every((counts) =>
+        Object.values(counts).every((variants) =>
+          variants.every((variant) => variant.some((entry) => entry.slot === slot))
+        )
+      )
+    );
+    expect(alwaysPresent.length).toBeGreaterThan(0);
+    for (const slot of alwaysPresent) {
+      expect(SLOT_KINDS[slot].length, `slot ${slot} is always on screen`).toBeGreaterThan(1);
+    }
+  });
+
+  it('should render four hero block cards', () => {
     render(
       <I18nProvider>
         <MemoryRouter>
@@ -107,9 +127,23 @@ describe('Hero', () => {
       </I18nProvider>
     );
 
-    const mascot = screen.getByAltText(/Blok mascot/);
-    expect(mascot).toBeInTheDocument();
-    expect(mascot).toHaveAttribute('src', '/mascot.png');
+    expect(screen.getAllByTestId('hero-card')).toHaveLength(4);
+  });
+
+  it('opens on the full four-card formation', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    // The opening pose is stack@4, so all four cards are on screen from the first paint.
+    const visible = screen
+      .getAllByTestId('hero-card')
+      .filter((card) => card.style.opacity !== '0');
+    expect(visible).toHaveLength(4);
   });
 
   it('should render Russian strings when locale is ru', () => {
@@ -121,6 +155,9 @@ describe('Hero', () => {
         </MemoryRouter>
       </I18nProvider>
     );
-    expect(screen.getByText('Редактор с открытым кодом')).toBeInTheDocument();
+    expect(screen.queryByText('Редактор с открытым кодом')).not.toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('Создавайте красивые'))
+    ).toBeInTheDocument();
   });
 });

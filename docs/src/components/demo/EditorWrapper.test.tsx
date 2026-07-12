@@ -81,6 +81,78 @@ describe('EditorWrapper', () => {
       expect(typeof editor.undo).toBe('function');
       expect(typeof editor.redo).toBe('function');
     });
+
+    it('registers every built-in block and inline tool the editor ships', async () => {
+      const { container } = renderEditor();
+
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="mock-blok-editor"]')).toBeInTheDocument();
+      });
+
+      const registered = (
+        container
+          .querySelector('[data-testid="mock-blok-editor"]')
+          ?.getAttribute('data-tool-names') ?? ''
+      ).split(',');
+
+      const expectedBlockTools = [
+        'paragraph', 'header', 'list', 'table', 'toggle', 'callout',
+        'database', 'database-row', 'divider', 'quote', 'code',
+        'image', 'file', 'video', 'audio', 'column_list', 'column',
+        'embed', 'bookmark',
+      ];
+      const expectedInlineTools = [
+        'bold', 'italic', 'underline', 'strikethrough',
+        'inlineCode', 'equation', 'link', 'marker',
+      ];
+
+      for (const tool of [...expectedBlockTools, ...expectedInlineTools]) {
+        expect(registered, `tool "${tool}" must be registered in the demo`).toContain(tool);
+      }
+    });
+
+    it('applies contentAlign from playground settings to the editor', async () => {
+      const { DEFAULT_EDITOR_SETTINGS } = await import('./editor-settings');
+      const { container } = renderEditor({
+        settings: { ...DEFAULT_EDITOR_SETTINGS, contentAlign: 'center' },
+      });
+
+      await waitFor(() => {
+        expect(container.querySelector('.blok-editor')).toHaveAttribute('data-blok-content-align', 'center');
+      });
+    });
+
+    it('hides the block toolbar via a CSS host class when hideToolbar is on', async () => {
+      const { DEFAULT_EDITOR_SETTINGS } = await import('./editor-settings');
+      const { container } = renderEditor({
+        settings: { ...DEFAULT_EDITOR_SETTINGS, hideToolbar: true },
+      });
+
+      await waitFor(() => {
+        expect(container.querySelector('.demo-toolbar-hidden')).toBeInTheDocument();
+      });
+    });
+
+    it('does not apply the toolbar-hiding class by default', async () => {
+      const { container } = renderEditor();
+
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="mock-blok-editor"]')).toBeInTheDocument();
+      });
+      expect(container.querySelector('.demo-toolbar-hidden')).not.toBeInTheDocument();
+    });
+
+    it('left-aligns block content so it starts under the Nav logo', async () => {
+      const { container } = renderEditor();
+
+      // The demo page's wrapper mirrors Nav's own max-w-6xl centering math, so
+      // the block content's left edge lines up with the Blok logo. That only
+      // holds if the content hugs the left edge of its holder (contentAlign:
+      // 'left') rather than self-centering within it.
+      await waitFor(() => {
+        expect(container.querySelector('.blok-editor')).toHaveAttribute('data-blok-content-align', 'left');
+      });
+    });
   });
 
   describe('error state', () => {

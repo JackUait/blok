@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { Sidebar, type SidebarSection } from './Sidebar';
 import { I18nProvider } from '../../contexts/I18nContext';
 
@@ -50,14 +51,6 @@ describe('Sidebar', () => {
       expect(aside.tagName.toLowerCase()).toBe('aside');
     });
 
-    it('should render the search input with api prefix', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      expect(searchInput).toBeInTheDocument();
-      expect(searchInput).toHaveAttribute('placeholder', 'Filter...');
-    });
-
     it('should apply active class to the active section', () => {
       renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
@@ -73,28 +66,12 @@ describe('Sidebar', () => {
     });
   });
 
-  describe('with recipes variant', () => {
-    it('should render an aside element with correct testid', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
+  describe('no search bar', () => {
+    it('should not render a search input', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 
-      const aside = screen.getByTestId('recipes-sidebar');
-      expect(aside).toBeInTheDocument();
-      expect(aside.tagName.toLowerCase()).toBe('aside');
-    });
-
-    it('should render the search input with recipes prefix', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
-
-      const searchInput = screen.getByTestId('recipes-sidebar-search-input');
-      expect(searchInput).toBeInTheDocument();
-      expect(searchInput).toHaveAttribute('placeholder', 'Filter...');
-    });
-
-    it('should apply active class to the active section', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="recipes" />);
-
-      const coreLink = screen.getByTestId('recipes-sidebar-link-core');
-      expect(coreLink).toHaveClass('active');
+      expect(screen.queryByTestId('api-sidebar-search')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('api-sidebar-search-input')).not.toBeInTheDocument();
     });
   });
 
@@ -134,155 +111,221 @@ describe('Sidebar', () => {
     });
   });
 
-  describe('search functionality', () => {
-    it('should filter links when typing in search input', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'caret' } });
-
-      // Caret should be visible
-      expect(screen.getByText('Caret')).toBeInTheDocument();
-      // Other links should be filtered out
-      expect(screen.queryByText('Blocks')).not.toBeInTheDocument();
-      expect(screen.queryByText('Quick Start')).not.toBeInTheDocument();
-    });
-
-    it('should show empty state when no results match', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'xyz123notfound' } });
-
-      expect(screen.getByTestId('api-sidebar-empty')).toBeInTheDocument();
-      expect(screen.getByText('No results')).toBeInTheDocument();
-    });
-
-    it('should show clear button when search has value', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'test' } });
-
-      const clearButton = screen.getByTestId('api-sidebar-search-clear');
-      expect(clearButton).toBeInTheDocument();
-    });
-
-    it('should clear search when clear button is clicked', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'caret' } });
-
-      // Should be filtered
-      expect(screen.queryByText('Blocks')).not.toBeInTheDocument();
-
-      // Click clear
-      const clearButton = screen.getByTestId('api-sidebar-search-clear');
-      fireEvent.click(clearButton);
-
-      // Should show all sections again
-      expect(screen.getByText('Blocks')).toBeInTheDocument();
-      expect(screen.getByText('Quick Start')).toBeInTheDocument();
-    });
-
-    it('should filter by section ID as well as label', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'blocks-api' } });
-
-      expect(screen.getByText('Blocks')).toBeInTheDocument();
-    });
-
-    it('should be case insensitive', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      fireEvent.change(searchInput, { target: { value: 'CARET' } });
-
-      expect(screen.getByText('Caret')).toBeInTheDocument();
-    });
-
-    it('should show keyboard shortcut with tooltip when search is empty', () => {
-      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const shortcut = screen.getByTestId('api-sidebar-search-shortcut');
-      expect(shortcut).toBeInTheDocument();
-      expect(shortcut).toHaveAttribute('title', 'Press / to focus search');
+  describe('route link mode', () => {
+    it('route mode renders router links to module pages', () => {
+      render(
+        <MemoryRouter>
+          <Sidebar
+            sections={MOCK_SECTIONS}
+            activeSection="caret-api"
+            variant="api"
+            linkMode="route"
+            buildHref={(id) => `/docs/${id}`}
+          />
+        </MemoryRouter>,
+        { wrapper: I18nWrapper },
+      );
+      const link = screen.getByTestId('api-sidebar-link-caret-api');
+      expect(link).toHaveAttribute('href', '/docs/caret-api');
+      expect(link).toHaveClass('active');
     });
   });
 
-  describe('filterLabel prop', () => {
-    it('should use custom filterLabel for aria-label', () => {
+  describe('collapsible groups', () => {
+    it('collapses every group by default except the one holding the active page', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      // 'core' lives in the 'Core' group, so it starts open; the rest collapsed.
+      expect(screen.getByRole('button', { name: /Core/i })).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('button', { name: /Guide/i })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByRole('button', { name: /API Modules/i })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+    });
+
+    it('hides the links of a collapsed group', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      const guideToggle = screen.getByRole('button', { name: /Guide/i });
+      const regionId = guideToggle.getAttribute('aria-controls');
+      const region = regionId ? document.getElementById(regionId) : null;
+      expect(region).not.toBeNull();
+      expect(region).toHaveAttribute('hidden');
+    });
+
+    it('expands a collapsed group when its header is clicked', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      const guideToggle = screen.getByRole('button', { name: /Guide/i });
+      expect(guideToggle).toHaveAttribute('aria-expanded', 'false');
+
+      fireEvent.click(guideToggle);
+
+      expect(guideToggle).toHaveAttribute('aria-expanded', 'true');
+      const regionId = guideToggle.getAttribute('aria-controls');
+      const region = regionId ? document.getElementById(regionId) : null;
+      expect(region).not.toHaveAttribute('hidden');
+    });
+  });
+
+  describe('header slot', () => {
+    it('renders a provided header inside the aside, above the nav', () => {
       renderWithI18n(
         <Sidebar
           sections={MOCK_SECTIONS}
           activeSection="core"
           variant="api"
-          filterLabel="Filter API sections"
-        />
+          header={<div data-blok-testid="sidebar-header-slot">slot</div>}
+        />,
       );
 
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      expect(searchInput).toHaveAttribute('aria-label', 'Filter API sections');
+      const aside = screen.getByTestId('api-sidebar');
+      const slot = screen.getByTestId('sidebar-header-slot');
+      const nav = screen.getByTestId('api-sidebar-nav');
+
+      // The header lives inside the sidebar, not as a detached sibling.
+      expect(aside).toContainElement(slot);
+      // And it precedes the navigation in document order.
+      expect(slot.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it('should use default filterLabel when not provided', () => {
+    it('renders no header wrapper when none is provided', () => {
       renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
-
-      const searchInput = screen.getByTestId('api-sidebar-search-input');
-      expect(searchInput).toHaveAttribute('aria-label', 'Filter sections');
+      expect(screen.queryByTestId('api-sidebar-header')).not.toBeInTheDocument();
     });
   });
 
-  describe('auto-scroll to active section', () => {
-    it('should scroll sidebar when activeSection changes and link is near edge', () => {
-      const { rerender } = renderWithI18n(
-        <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
-      );
+  describe('section icons', () => {
+    it('renders a section icon when provided', () => {
+      const withIcon: SidebarSection[] = [
+        {
+          title: 'Core',
+          icon: <svg data-blok-testid="core-icon" />,
+          links: [{ id: 'core', label: 'Blok Class' }],
+        },
+      ];
+      renderWithI18n(<Sidebar sections={withIcon} activeSection="core" variant="api" />);
 
-      const sidebar = screen.getByTestId('api-sidebar');
-      const scrollToSpy = vi.spyOn(sidebar, 'scrollTo');
+      const toggle = screen.getByRole('button', { name: /Core/i });
+      expect(toggle).toContainElement(screen.getByTestId('core-icon'));
+    });
+  });
 
-      // Mock getBoundingClientRect to simulate link near bottom edge
-      vi.spyOn(sidebar, 'getBoundingClientRect').mockReturnValue({
-        top: 100,
-        bottom: 500,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 400,
-        x: 0,
-        y: 100,
-        toJSON: () => ({}),
-      });
-      Object.defineProperty(sidebar, 'clientHeight', { value: 400, configurable: true });
-      Object.defineProperty(sidebar, 'scrollTop', { value: 0, configurable: true });
+  describe('active section header', () => {
+    const withIcons: SidebarSection[] = [
+      {
+        title: 'Guide',
+        icon: <svg data-blok-testid="guide-icon" />,
+        links: [{ id: 'quick-start', label: 'Quick Start' }],
+      },
+      {
+        title: 'Core',
+        icon: <svg data-blok-testid="core-icon" />,
+        links: [{ id: 'core', label: 'Blok Class' }],
+      },
+    ];
 
-      const eventsLink = screen.getByTestId('api-sidebar-link-events-api');
-      vi.spyOn(eventsLink, 'getBoundingClientRect').mockReturnValue({
-        top: 450,
-        bottom: 480,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 30,
-        x: 0,
-        y: 450,
-        toJSON: () => ({}),
-      });
+    it('makes the header of the group holding the active page bold and dark', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
 
-      // Change activeSection
-      rerender(<Sidebar sections={MOCK_SECTIONS} activeSection="events-api" variant="api" />);
-
-      // Verify scroll was called with auto behavior
-      expect(scrollToSpy).toHaveBeenCalled();
-      const scrollArgs = scrollToSpy.mock.calls[0][0] as ScrollToOptions;
-      expect(scrollArgs.behavior).toBe('auto');
+      const coreToggle = screen.getByRole('button', { name: /Core/i });
+      expect(coreToggle).toHaveClass('font-bold', 'text-foreground');
     });
 
-    it('should use auto scroll behavior', () => {
+    it('does not bold the headers of inactive groups', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      const guideToggle = screen.getByRole('button', { name: /Guide/i });
+      expect(guideToggle).not.toHaveClass('font-bold');
+    });
+
+    it('animates the icon of the active group only', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      // The icon's wrapper carries the entrance-animation class for the active group.
+      const activeIconWrapper = screen.getByTestId('core-icon').parentElement;
+      expect(activeIconWrapper).toHaveClass('sidebar-section-icon-active');
+
+      const inactiveIconWrapper = screen.getByTestId('guide-icon').parentElement;
+      expect(inactiveIconWrapper).not.toHaveClass('sidebar-section-icon-active');
+    });
+
+    it('replays the icon entrance animation each time the reader enters a new section', () => {
+      const { rerender } = renderWithI18n(
+        <Sidebar sections={withIcons} activeSection="quick-start" variant="api" />,
+      );
+
+      // On load the Guide group is active and carries an animation token.
+      const firstToken = screen
+        .getByTestId('guide-icon')
+        .parentElement?.getAttribute('data-blok-animate-token');
+      expect(firstToken).not.toBeNull();
+
+      // Navigate away to Core, then back to Guide — re-arriving must restart the
+      // animation, which we observe as a fresh token on the active icon.
+      rerender(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+      rerender(<Sidebar sections={withIcons} activeSection="quick-start" variant="api" />);
+
+      const secondToken = screen
+        .getByTestId('guide-icon')
+        .parentElement?.getAttribute('data-blok-animate-token');
+      expect(secondToken).not.toBeNull();
+      expect(secondToken).not.toEqual(firstToken);
+    });
+
+    it('does not put an animation token on inactive group icons', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      const inactiveIconWrapper = screen.getByTestId('guide-icon').parentElement;
+      expect(inactiveIconWrapper).not.toHaveAttribute('data-blok-animate-token');
+    });
+
+    it('applies the context-specific icon animation class to the active group only', () => {
+      const withContextIcons: SidebarSection[] = [
+        {
+          title: 'Getting started',
+          icon: <svg data-blok-testid="rocket-icon" />,
+          iconAnimation: 'gettingStarted',
+          links: [{ id: 'quick-start', label: 'Quick Start' }],
+        },
+        {
+          title: 'Core',
+          icon: <svg data-blok-testid="cube-icon" />,
+          iconAnimation: 'core',
+          links: [{ id: 'core', label: 'Blok Class' }],
+        },
+      ];
+      renderWithI18n(<Sidebar sections={withContextIcons} activeSection="core" variant="api" />);
+
+      // The active group's icon animates with its own contextual keyframes.
+      const activeIcon = screen.getByTestId('cube-icon').parentElement;
+      expect(activeIcon).toHaveClass('sidebar-section-icon-active', 'sidebar-icon-anim-core');
+
+      // Inactive groups carry no animation class at all — not the shared one,
+      // nor any context-specific one.
+      const inactiveIcon = screen.getByTestId('rocket-icon').parentElement;
+      expect(inactiveIcon).not.toHaveClass('sidebar-section-icon-active');
+      expect(inactiveIcon).not.toHaveClass('sidebar-icon-anim-gettingStarted');
+    });
+
+    it('fills and brand-colours the active icon glyph itself, with no backing chip', () => {
+      renderWithI18n(<Sidebar sections={withIcons} activeSection="core" variant="api" />);
+
+      // The icon's own wrapper recolours and fills the glyph — there is no
+      // separate container element styled as a chip.
+      const activeIcon = screen.getByTestId('core-icon').parentElement;
+      expect(activeIcon).toHaveClass('text-primary', '[&_svg]:fill-primary/20');
+      expect(activeIcon).not.toHaveClass('bg-primary/10');
+
+      const inactiveIcon = screen.getByTestId('guide-icon').parentElement;
+      expect(inactiveIcon).toHaveClass('text-muted-foreground');
+      expect(inactiveIcon).not.toHaveClass('[&_svg]:fill-primary/20');
+    });
+  });
+
+  describe('no auto-scroll on navigation', () => {
+    it('does not scroll the sidebar when activeSection changes', () => {
       const { rerender } = renderWithI18n(
         <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
       );
@@ -290,38 +333,82 @@ describe('Sidebar', () => {
       const sidebar = screen.getByTestId('api-sidebar');
       const scrollToSpy = vi.spyOn(sidebar, 'scrollTo');
 
-      // Mock getBoundingClientRect to simulate link near bottom edge
-      vi.spyOn(sidebar, 'getBoundingClientRect').mockReturnValue({
-        top: 100,
-        bottom: 500,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 400,
-        x: 0,
-        y: 100,
-        toJSON: () => ({}),
-      });
-      Object.defineProperty(sidebar, 'clientHeight', { value: 400, configurable: true });
-      Object.defineProperty(sidebar, 'scrollTop', { value: 0, configurable: true });
+      // Navigating to a different module must leave the menu's scroll position
+      // untouched — the user controls it.
+      rerender(<Sidebar sections={MOCK_SECTIONS} activeSection="events-api" variant="api" />);
 
-      const blocksLink = screen.getByTestId('api-sidebar-link-blocks-api');
-      vi.spyOn(blocksLink, 'getBoundingClientRect').mockReturnValue({
-        top: 450,
-        bottom: 480,
-        left: 0,
-        right: 200,
-        width: 200,
-        height: 30,
-        x: 0,
-        y: 450,
-        toJSON: () => ({}),
-      });
+      expect(scrollToSpy).not.toHaveBeenCalled();
+    });
+  });
 
-      rerender(<Sidebar sections={MOCK_SECTIONS} activeSection="blocks-api" variant="api" />);
+  describe('scroll containment', () => {
+    it('contains scroll within the sidebar so it does not chain to the page', () => {
+      renderWithI18n(
+        <Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />
+      );
 
-      // Verify auto scroll was used
-      expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }));
+      // Without this, scrolling past the sidebar's own top/bottom bounces the
+      // scroll onto the page behind it instead of just stopping.
+      expect(screen.getByTestId('api-sidebar')).toHaveClass('overscroll-contain');
+    });
+  });
+
+  describe('scroll haze (soft fade, not a hard cut)', () => {
+    // Simulate a menu that overflows: scrollHeight > clientHeight, and put the
+    // scroll position wherever the test needs.
+    const mockOverflow = (aside: HTMLElement, { scrollTop, clientHeight = 200, scrollHeight = 400 }: { scrollTop: number; clientHeight?: number; scrollHeight?: number }) => {
+      Object.defineProperty(aside, 'clientHeight', { value: clientHeight, configurable: true });
+      Object.defineProperty(aside, 'scrollHeight', { value: scrollHeight, configurable: true });
+      Object.defineProperty(aside, 'scrollTop', { value: scrollTop, configurable: true, writable: true });
+    };
+
+    // Implemented as a mask-image on the scroll container itself, not extra
+    // overlay elements: a sticky-positioned overlay was tried first and it
+    // shrank this component's CSS Grid column's intrinsic height by about a
+    // line, producing a phantom scrollbar with dead space below the last
+    // link — see "does not add extra DOM nodes" below, which guards against
+    // reintroducing that class of bug.
+    //
+    // The mask itself is asserted via data-blok-haze-* mirror attributes,
+    // not by parsing style.maskImage: jsdom's CSS parser can't handle a
+    // multi-stop gradient with calc() in it (silently drops the whole
+    // value), even though real browsers render it fine — verified live.
+
+    it('hides the top haze and shows the bottom haze at the very top of an overflowing menu', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      const aside = screen.getByTestId('api-sidebar');
+      mockOverflow(aside, { scrollTop: 0 });
+      fireEvent.scroll(aside);
+
+      expect(aside).toHaveAttribute('data-blok-haze-top', 'false');
+      expect(aside).toHaveAttribute('data-blok-haze-bottom', 'true');
+    });
+
+    it('shows the top haze once scrolled past the boundary, instead of a hard cut', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      const aside = screen.getByTestId('api-sidebar');
+      mockOverflow(aside, { scrollTop: 150, scrollHeight: 400, clientHeight: 200 });
+      fireEvent.scroll(aside);
+
+      expect(aside).toHaveAttribute('data-blok-haze-top', 'true');
+      expect(aside).toHaveAttribute('data-blok-haze-bottom', 'true');
+    });
+
+    it('hides both hazes when the menu does not overflow at all', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+      const aside = screen.getByTestId('api-sidebar');
+      mockOverflow(aside, { scrollTop: 0, clientHeight: 400, scrollHeight: 400 });
+      fireEvent.scroll(aside);
+
+      expect(aside).toHaveAttribute('data-blok-haze-top', 'false');
+      expect(aside).toHaveAttribute('data-blok-haze-bottom', 'false');
+    });
+
+    it('does not add extra DOM nodes for the haze — it must not affect this column\'s CSS Grid intrinsic sizing', () => {
+      renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
+
+      expect(screen.queryByTestId('api-sidebar-haze-top')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('api-sidebar-haze-bottom')).not.toBeInTheDocument();
     });
   });
 });

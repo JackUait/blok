@@ -7,7 +7,7 @@ interface LogoProps {
 export const Logo: React.FC<LogoProps> = ({ size = 32, className = "" }) => {
   return (
     <img
-      src="/mascot.png"
+      src="/logo-no-sign.png"
       alt="Blok"
       width={size}
       height={size}

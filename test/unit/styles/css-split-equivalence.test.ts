@@ -335,8 +335,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // Fluid image chrome: caption font, Alt/"..." toolbar buttons+svg, and resize
     // handles scale with the figure's width via container queries (cqw clamps) so
     // small images don't get oversized chrome. See image.css. ~0.6KB intentional growth.
+    // master merge: the docs/airbnb-redesign preflight rework (all resets moved
+    // into @layer base) landed alongside master's own CSS additions (inline-code
+    // surface, <mark> UA-highlight reset, table-cell font scale, fluid image
+    // chrome, etc.); combining both branches' growth pushes the imported bytes
+    // past the 1.365 ceiling, so the headroom multiplier is nudged to 1.372.
+    // ~2KB combined growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.365);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.372);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

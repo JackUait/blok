@@ -2,13 +2,13 @@ import { COLUMN_ATTR, COLUMNS_ATTR } from '../columns-shared';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 /**
- * How close (px) the dragged edge must get to a sibling block's bottom for the
+ * How close (px) the dragged edge must get to a sibling block's edge for the
  * guide to appear and the height to snap.
  */
 export const SNAP_THRESHOLD = 6;
 
 /**
- * Pick the sibling bottom closest to `edgeY`, or null when none is within
+ * Pick the sibling edge closest to `edgeY`, or null when none is within
  * SNAP_THRESHOLD.
  *
  * @param edgeY - viewport y of the edge being dragged
@@ -34,9 +34,9 @@ export const findSnapTarget = (edgeY: number, targets: number[]): number | null 
 const TEXT_COMPONENTS = new Set(['paragraph', 'header', 'quote']);
 
 /**
- * Whether a block holder is a text block with no text in it — the trailing
- * empty paragraph an Enter press leaves behind. Its bottom is an invisible
- * boundary, so offering it as an alignment target is noise.
+ * Whether a block holder is a text block with no text in it — the empty
+ * paragraph an Enter press leaves behind. It paints nothing, so its edges bound
+ * nothing the user can see and are noise as alignment targets.
  *
  * @param holder - a block holder element
  */
@@ -52,15 +52,25 @@ const isEmptyTextBlock = (holder: HTMLElement): boolean => {
 };
 
 /**
- * Viewport bottoms of every block sitting in the spacer's SIBLING columns —
- * the ends the user is trying to line their content up with. Two exclusions:
- * blocks in the spacer's own column (snapping to those would be snapping to
- * its own neighbours, which carries no alignment meaning), and empty text
- * blocks (no visible end to align with).
+ * Viewport edges of every VISIBLE block sitting in the spacer's SIBLING columns
+ * — the lines the user is trying to bring their content level with. Blocks in
+ * the spacer's own column are excluded: those move with the drag, so snapping to
+ * them carries no alignment meaning.
+ *
+ * BOTH edges of a visible block are offered, not just its bottom. Block holders
+ * stack flush, so an edge is shared: a block's top IS the bottom of whatever sits
+ * above it. Collecting only bottoms, then dropping empty text blocks, silently
+ * dropped the TOP of any visible block that happened to follow an empty paragraph
+ * — the shape of every column a user padded out by pressing Enter — leaving its
+ * content with no edge to line up with on the side the eye is drawn to.
+ *
+ * Empty text blocks contribute no edges of their own: a trailing empty paragraph
+ * bounds nothing visible. But the edge it SHARES with a real block below is still
+ * offered, because that block claims it as its own top.
  *
  * @param spacerElement - the rendered spacer wrapper
  */
-export const collectSiblingBlockBottoms = (spacerElement: HTMLElement): number[] => {
+export const collectSiblingBlockEdges = (spacerElement: HTMLElement): number[] => {
   const ownColumn = spacerElement.closest<HTMLElement>(`[${COLUMN_ATTR}]`);
   const columnList = ownColumn?.closest<HTMLElement>(`[${COLUMNS_ATTR}]`);
 
@@ -74,7 +84,11 @@ export const collectSiblingBlockBottoms = (spacerElement: HTMLElement): number[]
   return siblingColumns.flatMap((column) =>
     Array.from(column.querySelectorAll<HTMLElement>(`[${DATA_ATTR.element}]`))
       .filter((holder) => !isEmptyTextBlock(holder))
-      .map((holder) => holder.getBoundingClientRect().bottom)
+      .flatMap((holder) => {
+        const rect = holder.getBoundingClientRect();
+
+        return [rect.top, rect.bottom];
+      })
   );
 };
 
@@ -92,7 +106,7 @@ const GUIDE_Z_INDEX = '10';
 
 /**
  * The horizontal guideline drawn across the column list while a dragged spacer
- * edge is aligned with a sibling block's bottom. Lives on document.body (fixed
+ * edge is aligned with a sibling block's edge. Lives on document.body (fixed
  * positioning) so it can span columns without being clipped by any of them, and
  * so it never mutates the observed block subtree.
  */

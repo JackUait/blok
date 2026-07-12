@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   findSnapTarget,
-  collectSiblingBlockBottoms,
+  collectSiblingBlockEdges,
   AlignmentGuide,
   SNAP_THRESHOLD,
 } from '../../../../src/tools/spacer/alignment-guide';
@@ -24,7 +24,7 @@ const stubRect = (el: HTMLElement, rect: Partial<DOMRect>): void => {
  */
 const addBlock = (
   column: HTMLElement,
-  options: { bottom: number; component?: string; text?: string; html?: string }
+  options: { bottom: number; top?: number; component?: string; text?: string; html?: string }
 ): void => {
   const holder = document.createElement('div');
 
@@ -37,7 +37,9 @@ const addBlock = (
     holder.textContent = options.text ?? 'Block text';
   }
 
-  stubRect(holder, { bottom: options.bottom });
+  // Blocks stack flush, so a block's top is the previous block's bottom. Default
+  // to a 40px-tall block when a caller only cares about the bottom.
+  stubRect(holder, { top: options.top ?? options.bottom - 40, bottom: options.bottom });
   column.appendChild(holder);
 };
 
@@ -106,11 +108,12 @@ describe('spacer alignment guide', () => {
     });
   });
 
-  describe('collectSiblingBlockBottoms()', () => {
-    it('returns bottoms of block holders in the OTHER columns only', () => {
+  describe('collectSiblingBlockEdges()', () => {
+    it('offers both edges of block holders in the OTHER columns only', () => {
       const { spacer } = buildColumns([120, 260]);
 
-      expect(collectSiblingBlockBottoms(spacer)).toEqual([120, 260]);
+      // Blocks stubbed 40px tall: 80–120 and 220–260.
+      expect(collectSiblingBlockEdges(spacer)).toEqual([80, 120, 220, 260]);
     });
 
     it('returns empty when the spacer is not inside a column', () => {
@@ -119,47 +122,63 @@ describe('spacer alignment guide', () => {
       spacer.setAttribute('data-blok-spacer', '');
       document.body.appendChild(spacer);
 
-      expect(collectSiblingBlockBottoms(spacer)).toEqual([]);
+      expect(collectSiblingBlockEdges(spacer)).toEqual([]);
     });
 
-    it('skips empty text blocks — they have no visible end to align with', () => {
-      const { spacer, siblingColumn } = buildColumns([120]);
+    it('offers the top of a visible block buried under empty paragraphs', () => {
+      const { spacer, siblingColumn } = buildColumns([]);
 
-      // A trailing empty paragraph, as left behind by pressing Enter.
-      addBlock(siblingColumn, { bottom: 300, component: 'paragraph', text: '' });
+      // The shape of a column a user padded out by pressing Enter: two empty
+      // paragraphs, then the real content. The content's top edge (260) is only
+      // reachable through the empty block above it, so dropping empty blocks
+      // outright would leave the visible paragraph with no top to align to.
+      addBlock(siblingColumn, { top: 182, bottom: 220, text: '' });
+      addBlock(siblingColumn, { top: 221, bottom: 259, text: '' });
+      addBlock(siblingColumn, { top: 260, bottom: 346, text: 'Every column can hold any block.' });
 
-      expect(collectSiblingBlockBottoms(spacer)).toEqual([120]);
+      expect(collectSiblingBlockEdges(spacer)).toEqual([260, 346]);
+    });
+
+    it('skips a trailing empty text block — it has no visible edge to align with', () => {
+      const { spacer, siblingColumn } = buildColumns([]);
+
+      addBlock(siblingColumn, { top: 80, bottom: 120, text: 'Real text.' });
+      // A trailing empty paragraph, as left behind by pressing Enter. Its top is
+      // the real block's bottom (already offered); its own bottom is nothing.
+      addBlock(siblingColumn, { top: 120, bottom: 158, text: '' });
+
+      expect(collectSiblingBlockEdges(spacer)).toEqual([80, 120]);
     });
 
     it('skips empty text blocks holding only whitespace or a <br>', () => {
       const { spacer, siblingColumn } = buildColumns([]);
 
-      addBlock(siblingColumn, { bottom: 200, component: 'paragraph', html: '<br>' });
-      addBlock(siblingColumn, { bottom: 300, component: 'header', text: '   ' });
-      addBlock(siblingColumn, { bottom: 400, component: 'quote', text: '' });
+      addBlock(siblingColumn, { top: 160, bottom: 200, component: 'paragraph', html: '<br>' });
+      addBlock(siblingColumn, { top: 260, bottom: 300, component: 'header', text: '   ' });
+      addBlock(siblingColumn, { top: 360, bottom: 400, component: 'quote', text: '' });
 
-      expect(collectSiblingBlockBottoms(spacer)).toEqual([]);
+      expect(collectSiblingBlockEdges(spacer)).toEqual([]);
     });
 
     it('keeps text blocks that actually have text', () => {
       const { spacer, siblingColumn } = buildColumns([]);
 
-      addBlock(siblingColumn, { bottom: 200, component: 'paragraph', text: 'Real text.' });
-      addBlock(siblingColumn, { bottom: 300, component: 'header', text: 'Title' });
+      addBlock(siblingColumn, { top: 160, bottom: 200, component: 'paragraph', text: 'Real text.' });
+      addBlock(siblingColumn, { top: 260, bottom: 300, component: 'header', text: 'Title' });
 
-      expect(collectSiblingBlockBottoms(spacer)).toEqual([200, 300]);
+      expect(collectSiblingBlockEdges(spacer)).toEqual([160, 200, 260, 300]);
     });
 
     it('keeps non-text blocks that legitimately render no text', () => {
       const { spacer, siblingColumn } = buildColumns([]);
 
-      // A divider, an image and a spacer are textless but visible — their ends
+      // A divider, an image and a spacer are textless but visible — their edges
       // are real alignment targets.
-      addBlock(siblingColumn, { bottom: 200, component: 'divider', text: '' });
-      addBlock(siblingColumn, { bottom: 300, component: 'image', text: '' });
-      addBlock(siblingColumn, { bottom: 400, component: 'spacer', text: '' });
+      addBlock(siblingColumn, { top: 160, bottom: 200, component: 'divider', text: '' });
+      addBlock(siblingColumn, { top: 260, bottom: 300, component: 'image', text: '' });
+      addBlock(siblingColumn, { top: 360, bottom: 400, component: 'spacer', text: '' });
 
-      expect(collectSiblingBlockBottoms(spacer)).toEqual([200, 300, 400]);
+      expect(collectSiblingBlockEdges(spacer)).toEqual([160, 200, 260, 300, 360, 400]);
     });
   });
 

@@ -286,6 +286,72 @@ test.describe('Spacer block', () => {
     await expect(guide).toHaveCount(0);
   });
 
+  test('content pushed down by empty paragraphs still offers its top as a snap target', async ({ page }) => {
+    // The shape a user builds by pressing Enter to push a column's text down:
+    // the middle column's only visible block sits under two empty paragraphs, so
+    // its TOP edge is shared with an empty block. Dropping empty blocks from the
+    // targets used to take that edge with them, leaving the visible content with
+    // nothing to line up against on the side the eye is drawn to.
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2', 'c3'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1-a'] },
+        { id: 'c1-a', type: 'paragraph', data: { text: 'Plan text.' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['c2-e1', 'c2-e2', 'c2-p'] },
+        { id: 'c2-e1', type: 'paragraph', data: { text: '' }, parent: 'c2' },
+        { id: 'c2-e2', type: 'paragraph', data: { text: '' }, parent: 'c2' },
+        { id: 'c2-p', type: 'paragraph', data: { text: 'Build text.' }, parent: 'c2' },
+        { id: 'c3', type: 'column', data: {}, parent: 'cl1', content: ['sp1', 'c3-f'] },
+        { id: 'sp1', type: 'spacer', data: { height: 40 }, parent: 'c3' },
+        { id: 'c3-f', type: 'paragraph', data: { text: 'Ship footer.' }, parent: 'c3' },
+      ],
+    });
+
+    const middleContent = page.locator('[data-blok-id="c2-p"]');
+    const contentBox = await middleContent.boundingBox();
+
+    if (!contentBox) {
+      throw new Error('missing middle content bounding box');
+    }
+
+    // The alignment being hunted: where the middle column's visible content STARTS.
+    const targetY = contentBox.y;
+    const spacer = page.locator(SPACER);
+
+    await spacer.hover();
+    const gripBox = await page.locator(BOTTOM_GRIP).boundingBox();
+
+    if (!gripBox) {
+      throw new Error('missing grip bounding box');
+    }
+
+    const startX = gripBox.x + gripBox.width / 2;
+    const startY = gripBox.y + gripBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    // Land 4px shy of the alignment — inside the 6px snap threshold.
+    await page.mouse.move(startX, targetY - 4, { steps: 12 });
+
+    const guide = page.locator('[data-blok-spacer-guide]');
+
+    await expect(guide).toHaveCount(1);
+
+    const guideBox = await guide.boundingBox();
+    const snappedBox = await spacer.boundingBox();
+
+    if (!guideBox || !snappedBox) {
+      throw new Error('missing bounding boxes');
+    }
+
+    // The guideline sits on the content's top edge, and the spacer's dragged
+    // edge snapped onto it — so the footer below now starts level with it.
+    expect(Math.abs(guideBox.y - targetY)).toBeLessThanOrEqual(2);
+    expect(Math.abs(snappedBox.y + snappedBox.height - targetY)).toBeLessThanOrEqual(1);
+
+    await page.mouse.up();
+  });
+
   test('an empty text block in a sibling column offers no snap target', async ({ page }) => {
     await createBlok(page, {
       blocks: [

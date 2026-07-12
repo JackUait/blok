@@ -8,7 +8,7 @@ import type {
 import type { SpacerData } from './types';
 import { IconSpacer } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
-import { AlignmentGuide, collectSiblingBlockBottoms, findSnapTarget } from './alignment-guide';
+import { AlignmentGuide, collectSiblingBlockEdges, findSnapTarget } from './alignment-guide';
 import { COLUMNS_ATTR } from '../columns-shared';
 
 /**
@@ -220,8 +220,8 @@ export class SpacerTool implements BlockTool {
   }
 
   /**
-   * Snap the in-progress height so the dragged edge lands exactly on a sibling
-   * column's block end when it comes close, and draw the guideline there.
+   * Snap the in-progress height so the dragged edge lands exactly on the edge of
+   * a sibling column's block when it comes close, and draw the guideline there.
    * Returns the height to apply (unchanged when nothing is in range).
    *
    * The moving edge's viewport position is derived from the FIXED edge (the one
@@ -230,7 +230,7 @@ export class SpacerTool implements BlockTool {
    *
    * @param freeHeight - height the raw pointer delta asks for
    * @param edge - which edge is being dragged
-   * @param targets - sibling block bottoms captured at gesture start
+   * @param targets - sibling block edges captured at gesture start
    * @param columnList - the enclosing column list the guide spans; null outside columns
    */
   private applySnap(
@@ -309,7 +309,10 @@ export class SpacerTool implements BlockTool {
    */
   private showChrome(): void {
     this.element?.classList.add(...PINNED_OUTLINE_CLASSES);
-    [...this.grips, this.readout].forEach((node) => node?.classList.add('opacity-100'));
+    // Drop the hover gate rather than piling `opacity-100` on top of it: both are
+    // plain utilities of equal specificity, so which one wins is decided by the
+    // order Tailwind happens to emit them in, not by the class list.
+    [...this.grips, this.readout].forEach((node) => node?.classList.remove('opacity-0'));
   }
 
   /**
@@ -317,7 +320,7 @@ export class SpacerTool implements BlockTool {
    */
   private hideChrome(): void {
     this.element?.classList.remove(...PINNED_OUTLINE_CLASSES);
-    [...this.grips, this.readout].forEach((node) => node?.classList.remove('opacity-100'));
+    [...this.grips, this.readout].forEach((node) => node?.classList.add('opacity-0'));
   }
 
   /**
@@ -414,10 +417,10 @@ export class SpacerTool implements BlockTool {
       this.element?.setAttribute('data-blok-spacer-dragging', '');
       this.showChrome();
 
-      // Snapshot the sibling columns' block ends once, at gesture start: the
+      // Snapshot the sibling columns' block edges once, at gesture start: the
       // dragged edge pushes this column's own content around, but the blocks
       // we align against are in OTHER columns and hold still.
-      const snapTargets = this.element === null ? [] : collectSiblingBlockBottoms(this.element);
+      const snapTargets = this.element === null ? [] : collectSiblingBlockEdges(this.element);
       const columnList = this.element?.closest<HTMLElement>(`[${COLUMNS_ATTR}]`) ?? null;
 
       const onMove = (move: PointerEvent): void => {

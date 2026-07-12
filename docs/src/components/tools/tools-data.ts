@@ -542,6 +542,38 @@ const editor = new Blok({
   },
 
   {
+    id: 'spacer',
+    exportName: 'Spacer',
+    type: 'block',
+    title: 'Spacer',
+    description:
+      'An adjustable vertical gap. Drag either edge grip — or focus one and press ArrowUp/ArrowDown — to resize. Its main job is lining up content across sibling columns of unequal length, replacing piles of empty paragraphs. Invisible in read-only mode.',
+    importExample: `import { Spacer } from '@jackuait/blok/tools';`,
+    configOptions: [],
+    saveDataShape: `interface SpacerData {
+  height?: number; // Gap height in px, clamped to 38–600 (default 38)
+}`,
+    saveDataExample: `{
+  "id": "spc001",
+  "type": "spacer",
+  "data": {
+    "height": 120
+  }
+}`,
+    usageExample: `import { Blok } from '@jackuait/blok';
+import { Spacer } from '@jackuait/blok/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    spacer: {
+      class: Spacer,
+    },
+  },
+});`,
+  },
+
+  {
     id: 'quote',
     exportName: 'Quote',
     type: 'block',

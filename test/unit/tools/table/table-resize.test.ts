@@ -145,6 +145,61 @@ describe('TableResize', () => {
       expect(handles).toHaveLength(0);
     });
 
+    /**
+     * A double-click is two press-release cycles on the same handle with no
+     * drag between them. The pointerdown preventDefault suppresses the native
+     * dblclick, so the reset is detected from the pointer sequence instead.
+     */
+    const doubleClickHandle = (handle: HTMLElement): void => {
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+    };
+
+    it('double-clicking a resize handle triggers the width reset (Notion "Fit to page width")', () => {
+      grid = createGrid([300, 700]);
+      const onResetWidths = vi.fn();
+
+      new TableResize(grid, [300, 700], vi.fn(), undefined, undefined, false, onResetWidths);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      doubleClickHandle(handle);
+
+      expect(onResetWidths).toHaveBeenCalledTimes(1);
+    });
+
+    it('a single press-release on a handle does NOT reset widths', () => {
+      grid = createGrid([300, 700]);
+      const onResetWidths = vi.fn();
+
+      new TableResize(grid, [300, 700], vi.fn(), undefined, undefined, false, onResetWidths);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      expect(onResetWidths).not.toHaveBeenCalled();
+    });
+
+    it('a drag followed by a press does NOT reset widths (only a clean double-click does)', () => {
+      grid = createGrid([300, 700]);
+      const onResetWidths = vi.fn();
+
+      new TableResize(grid, [300, 700], vi.fn(), undefined, undefined, false, onResetWidths);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      // First cycle MOVES (a real resize), so the following press is not a dbl-click.
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 360 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 360, bubbles: true }));
+
+      expect(onResetWidths).not.toHaveBeenCalled();
+    });
+
     it('positions handles as direct children of the grid', () => {
       grid = createGrid([500, 500]);
       new TableResize(grid, [500, 500], vi.fn());
@@ -628,6 +683,77 @@ describe('TableResize', () => {
     });
   });
 
+  describe('pointercancel', () => {
+    /**
+     * With pointer capture set, the browser fires `pointercancel` INSTEAD of
+     * `pointerup` when the gesture is taken over (touch pan, browser gesture,
+     * device disruption). The mid-drag widths are already painted into the DOM,
+     * so the drag must COMMIT them — otherwise the model keeps the old widths
+     * while the DOM shows the new ones, and the next render silently reverts.
+     */
+    it('commits the mid-drag widths when the gesture is cancelled', () => {
+      grid = createGrid([300, 300]);
+      const onChange = vi.fn();
+
+      new TableResize(grid, [300, 300], onChange);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      document.dispatchEvent(new PointerEvent('pointercancel', {}));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+
+      const newWidths = onChange.mock.calls[0][0] as number[];
+
+      expect(newWidths[0]).toBe(400);
+      expect(newWidths[1]).toBe(300);
+    });
+
+    it('ends the drag on pointercancel — later pointermoves are ignored', () => {
+      grid = createGrid([300, 300]);
+      const onDrag = vi.fn();
+
+      new TableResize(grid, [300, 300], vi.fn(), undefined, onDrag);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      document.dispatchEvent(new PointerEvent('pointercancel', {}));
+
+      onDrag.mockClear();
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 900 }));
+
+      expect(onDrag).not.toHaveBeenCalled();
+
+      const firstCol = grid.querySelector('colgroup col') as HTMLElement;
+
+      expect(firstCol.style.width).toBe('400px');
+    });
+
+    it('restores the grid chrome on pointercancel', () => {
+      grid = createGrid([300, 300]);
+
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+
+      expect(grid.style.userSelect).toBe('none');
+
+      document.dispatchEvent(new PointerEvent('pointercancel', {}));
+
+      expect(grid.style.userSelect).toBe('');
+      expect(handle.style.opacity).toBe('0');
+    });
+  });
+
   describe('model-first width authority', () => {
     it('reports final widths through onChange that match applied DOM state', () => {
       grid = createGrid([300, 300]);
@@ -687,4 +813,77 @@ describe('TableResize', () => {
     });
   });
 
+  /**
+   * The grid lives inside an `overflow-x: auto` scroll container, so ANY
+   * absolutely-positioned child that pokes past the grid's right edge becomes
+   * scrollable overflow — a table that fits its container would grow a
+   * scrollbar and a right-edge haze. The last column's handle sits on the
+   * table's own right border, so it is the one at risk.
+   */
+  describe('handle overhang (scroll overflow)', () => {
+    const HANDLE_HIT_WIDTH = 16;
+
+    const handleRightEdges = (gridEl: HTMLElement): number[] =>
+      Array.from(gridEl.querySelectorAll<HTMLElement>('[data-blok-table-resize]'))
+        .map(handle => parseFloat(handle.style.left) + HANDLE_HIT_WIDTH);
+
+    it('no handle extends past the grid right edge', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const total = widths.reduce((sum, w) => sum + w, 0);
+
+      handleRightEdges(grid).forEach((right) => {
+        expect(right).toBeLessThanOrEqual(total);
+      });
+    });
+
+    it('the last handle still reaches the grid right border (stays grabbable)', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const total = widths.reduce((sum, w) => sum + w, 0);
+      const edges = handleRightEdges(grid);
+
+      expect(edges[edges.length - 1]).toBe(total);
+    });
+
+    it('interior handles stay centred on their column border', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const handles = grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]');
+
+      expect(parseFloat(handles[0].style.left)).toBe(200 - HANDLE_HIT_WIDTH / 2);
+      expect(parseFloat(handles[1].style.left)).toBe(500 - HANDLE_HIT_WIDTH / 2);
+    });
+
+    it('keeps the last handle inside the grid after a resize drag', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const handles = grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]');
+      const lastHandle = handles[2];
+
+      lastHandle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 700, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 800 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      const total = 200 + 300 + 300;
+      const edges = handleRightEdges(grid);
+
+      expect(edges[edges.length - 1]).toBe(total);
+      edges.forEach((right) => {
+        expect(right).toBeLessThanOrEqual(total);
+      });
+    });
+  });
 });

@@ -250,6 +250,7 @@ describe('BlockEvents', () => {
           clearSelection,
         } as unknown as BlokModules['BlockSelection'],
         BlockManager: {
+          blocks: [],
           deleteSelectedBlocksAndInsertReplacement,
         } as unknown as BlokModules['BlockManager'],
         Caret: {

@@ -84,3 +84,12 @@ describe('renderEmbedOverlay', () => {
     expect(overlay.querySelector('[data-action="copy-link"]')).toBeNull();
   });
 });
+
+describe('renderEmbedOverlay URL safety', () => {
+  it('never gives "open original" a javascript: href from stored source data', () => {
+    const overlay = renderEmbedOverlay(baseOptions({ source: 'javascript:alert(1)' }));
+    const anchor = overlay.querySelector<HTMLAnchorElement>('[data-action="open-original"]');
+
+    expect(anchor?.getAttribute('href') ?? '').not.toContain('javascript:');
+  });
+});

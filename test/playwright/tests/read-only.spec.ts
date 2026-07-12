@@ -404,6 +404,72 @@ test.describe('read-only mode', () => {
     await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
   });
 
+  test('hides the settings toggler beside an empty paragraph in read-only mode', async ({ page }) => {
+    // An empty paragraph paints nothing in read-only — there is no text to copy a
+    // link to, so a handle hovering next to the blank line just looks like a bug.
+    await createBlok(page, {
+      readOnly: true,
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Real text.' } },
+          { type: 'paragraph', data: { text: '' } },
+        ],
+      },
+    });
+
+    const emptyParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
+
+    await expect(emptyParagraph).toBeVisible();
+    await emptyParagraph.hover();
+
+    await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeHidden();
+
+    // The block that DOES paint something still offers its handle.
+    await page.locator(PARAGRAPH_SELECTOR).first().hover();
+    await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+  });
+
+  test('still shows the settings toggler beside an empty paragraph while editable', async ({ page }) => {
+    // The blank-block rule is read-only only: an empty paragraph is exactly where an
+    // editing user reaches for the handle, to add or drag a block.
+    await createBlok(page, {
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Real text.' } },
+          { type: 'paragraph', data: { text: '' } },
+        ],
+      },
+    });
+
+    const emptyParagraph = page.locator(PARAGRAPH_SELECTOR).nth(1);
+
+    await expect(emptyParagraph).toBeVisible();
+    await emptyParagraph.hover();
+
+    await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+    await expect(page.locator(PLUS_BUTTON_SELECTOR)).toBeVisible();
+  });
+
+  test('hides the settings toggler beside a spacer in read-only mode', async ({ page }) => {
+    // A read-only spacer is pure whitespace: no grips, no outline, nothing to see.
+    await createBlok(page, {
+      readOnly: true,
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Real text.' } },
+          { type: 'spacer', data: { height: 80 } },
+        ],
+      },
+    });
+
+    const spacer = page.locator('[data-blok-spacer]');
+
+    await expect(spacer).toBeVisible();
+    await spacer.hover();
+
+    await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeHidden();
+  });
+
   test('hides plus button on hover in read-only mode', async ({ page }) => {
     await createBlok(page, {
       readOnly: true,

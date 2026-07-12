@@ -316,8 +316,17 @@ test.describe('Cell Selection Pill and Popover', () => {
     await expect(getCellEditable(page, 2, 1)).toHaveText('B3');
     await expect(getCellEditable(page, 2, 2)).toHaveText('C3');
 
-    // Expected: selection is cleared (no selected attributes remain)
-    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(0);
+    /**
+     * The rectangle collapses to exactly the cell that now holds the caret.
+     * clearCellsContent deliberately keeps the caret in the table (cells[0], the
+     * top-left of the selection) rather than letting focus fall to <body>, and
+     * the cell box marks the cell holding the caret — the same single-cell box a
+     * click on that cell would paint.
+     */
+    const boxed = page.locator('[data-blok-table-cell-selected]');
+
+    await expect(boxed).toHaveCount(1);
+    await expect(getCell(page, 0, 0)).toHaveAttribute('data-blok-table-cell-selected', '');
   });
 
   test('clicking outside the table clears an active cell selection', async ({ page }) => {

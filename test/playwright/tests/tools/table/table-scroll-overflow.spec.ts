@@ -213,16 +213,12 @@ test.describe('Table Scroll Overflow', () => {
 
     await expect(table).toBeVisible();
 
-    // 2. Verify no overflow-x-auto on the scroll container initially (no colWidths set)
+    // 2. The scroll container is present from the first render — fluid tables can
+    // overflow too (their columns have a min-width floor), so the overflow class
+    // is on in both width modes and is a no-op while the table fits.
     const scrollContainer = table.locator('[data-blok-table-scroll]');
 
     await expect(scrollContainer).toBeAttached();
-
-    const hasOverflowAutoBefore = await scrollContainer.evaluate((el) => {
-      return el.classList.contains('overflow-x-auto');
-    });
-
-    expect(hasOverflowAutoBefore).toBe(false);
 
     // 3. Locate the first resize handle and drag it 200px to the right
      

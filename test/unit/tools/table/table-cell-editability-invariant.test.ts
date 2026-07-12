@@ -817,4 +817,201 @@ describe('Table cell editability invariant', () => {
       }
     }, FUZZ_TIMEOUT_MS);
   });
+
+  /**
+   * Scenario 16 — the MODEL side of the invariant.
+   *
+   * Scenarios 1-15 assert the DOM half: an empty `{ blocks: [] }` cell gets an
+   * editable target. This asserts the half that survives a save: the synthesized
+   * paragraph must also be RECORDED in the table model, so `save()` emits a real
+   * reference for that cell.
+   *
+   * Both halves are load-bearing and fail in opposite directions:
+   * - A DOM-only repair (holder mounted, model not updated) is lost on save: the
+   *   cell reverts to `{ blocks: [] }` and the block becomes a top-level orphan.
+   * - A model-only repair (id recorded, no holder) leaves a dangling reference
+   *   that resolves to nothing on reload.
+   *
+   * This is the assertion the e2e `table-migrated-cell-content-preserve` spec was
+   * groping at when it demanded an empty cell "stay empty" — which contradicts the
+   * editability invariant. An empty cell CANNOT stay `{ blocks: [] }` in edit mode;
+   * it must reference exactly ONE empty paragraph (its editable target), and no
+   * populated cell may lose a reference to it.
+   */
+  describe('Scenario 16 — the synthesized editable target is recorded in saved data', () => {
+    const TABLE_ID = 'table-invariant-test';
+
+    interface RegistryBlock {
+      id: string;
+      holder: HTMLElement;
+      parentId: string | null;
+      name: string;
+      preservedData: Record<string, unknown>;
+    }
+
+    /**
+     * A block registry the table's save() path can actually resolve.
+     *
+     * The shared harness stubs getById → null, which makes save() filter EVERY
+     * reference out (it keeps only ids whose block is parented to this table),
+     * so it cannot see the model. This registry mirrors BlockManager closely
+     * enough for the read-only mount (getBlockIndex/getBlockByIndex), the
+     * empty-cell repair (insert/setBlockParent) and save() (getById/parentId).
+     */
+    const createRegistryApi = (seedIds: string[]): {
+      overrides: Partial<Record<string, unknown>>;
+      blocks: RegistryBlock[];
+    } => {
+      const makeHolder = (id: string): HTMLElement => {
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-id', id);
+
+        const editable = document.createElement('div');
+
+        editable.setAttribute('contenteditable', 'true');
+        holder.appendChild(editable);
+
+        return holder;
+      };
+
+      // Seeded children are parented to the table, mirroring the real load: the
+      // Renderer's normalizeTableChildParents pre-step backfills `parent` on
+      // cell-referenced children before the tool renders (the read-only mount
+      // path itself deliberately never mutates block state).
+      const blocks: RegistryBlock[] = seedIds.map(id => ({
+        id,
+        holder: makeHolder(id),
+        parentId: TABLE_ID,
+        name: 'paragraph',
+        preservedData: { text: id },
+      }));
+
+      let counter = 0;
+
+      const overrides = {
+        blocks: {
+          insert: vi.fn().mockImplementation(() => {
+            counter += 1;
+
+            const block: RegistryBlock = {
+              id: `synth-${counter}`,
+              holder: makeHolder(`synth-${counter}`),
+              parentId: null,
+              name: 'paragraph',
+              preservedData: { text: '' },
+            };
+
+            blocks.push(block);
+
+            return block;
+          }),
+          getBlocksCount: vi.fn().mockImplementation(() => blocks.length),
+          getBlockIndex: vi.fn().mockImplementation((id: string) => {
+            const index = blocks.findIndex(block => block.id === id);
+
+            return index === -1 ? undefined : index;
+          }),
+          getBlockByIndex: vi.fn().mockImplementation((index: number) => blocks[index]),
+          getById: vi.fn().mockImplementation(
+            (id: string) => blocks.find(block => block.id === id) ?? null
+          ),
+          getChildren: vi.fn().mockImplementation(
+            (parentId: string) => blocks.filter(block => block.parentId === parentId)
+          ),
+          setBlockParent: vi.fn().mockImplementation((id: string, parentId: string) => {
+            const block = blocks.find(candidate => candidate.id === id);
+
+            if (block) {
+              block.parentId = parentId;
+            }
+          }),
+          delete: vi.fn(),
+          getCurrentBlockIndex: vi.fn().mockReturnValue(0),
+          transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+        },
+      };
+
+      return { overrides, blocks };
+    };
+
+    /** Every block id referenced by the saved content, in row-major order. */
+    const savedRefs = (content: CellContent[][]): string[] =>
+      content
+        .flat()
+        .flatMap(cell => (typeof cell === 'string' || !('blocks' in cell) ? [] : cell.blocks));
+
+    const MIXED_CONTENT = (): CellContent[][] => [
+      [{ blocks: ['m1', 'm2'] }, { blocks: ['m3'] }],
+      [{ blocks: [] }, { blocks: ['m4'] }],
+    ];
+
+    it('an empty cell saves exactly one reference, matching the mounted editable block', () => {
+      const { overrides } = createRegistryApi(['m1', 'm2', 'm3', 'm4']);
+      const table = new Table(createTableOptions({ content: MIXED_CONTENT() }, {}, overrides, true));
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setReadOnly(false);
+
+      assertEveryCellEditable(element);
+
+      const emptyCell = (table.save(element).content as CellContent[][])[1][0];
+
+      if (typeof emptyCell === 'string' || !('blocks' in emptyCell)) {
+        throw new Error('the repaired cell must save in the block-reference shape');
+      }
+
+      // Exactly one reference — the paragraph that makes the cell editable.
+      expect(emptyCell.blocks).toHaveLength(1);
+
+      // …and it is the block actually mounted in that cell's DOM, not a phantom id.
+      const mountedId = getCell(element, 1, 0)
+        .querySelector<HTMLElement>('[data-blok-id]')
+        ?.getAttribute('data-blok-id');
+
+      expect(mountedId).not.toBeNull();
+      expect(emptyCell.blocks[0]).toBe(mountedId);
+    });
+
+    it('repairing the empty cell does not drop references from the populated cells', () => {
+      const { overrides } = createRegistryApi(['m1', 'm2', 'm3', 'm4']);
+      const table = new Table(createTableOptions({ content: MIXED_CONTENT() }, {}, overrides, true));
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      table.setReadOnly(false);
+
+      const refs = savedRefs(table.save(element).content as CellContent[][]);
+
+      for (const populated of ['m1', 'm2', 'm3', 'm4']) {
+        expect(refs).toContain(populated);
+      }
+
+      // 4 populated + exactly 1 synthesized target for the empty cell.
+      expect(refs).toHaveLength(5);
+    });
+
+    it('a fresh edit-mode render records the empty cell reference too (no path drift)', () => {
+      const { overrides } = createRegistryApi(['m1', 'm2', 'm3', 'm4']);
+      const table = new Table(createTableOptions({ content: MIXED_CONTENT() }, {}, overrides, false));
+      const element = table.render();
+
+      container.appendChild(element);
+      table.rendered();
+
+      assertEveryCellEditable(element);
+
+      const refs = savedRefs(table.save(element).content as CellContent[][]);
+
+      expect(refs).toHaveLength(5);
+      for (const populated of ['m1', 'm2', 'm3', 'm4']) {
+        expect(refs).toContain(populated);
+      }
+    });
+  });
 });

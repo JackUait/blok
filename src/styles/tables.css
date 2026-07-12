@@ -16,6 +16,29 @@
   @apply py-0 mt-[2px] mb-[2px];
 }
 
+/*
+ * The cell's type scale (text-sm) is authoritative for every block inside it.
+ * Block tools apply host-configured font sizes as INLINE font-size — paragraph
+ * puts styles.size on its tool root, the list puts itemSize on each list item —
+ * which would beat the cell's inherited size and render that block's text
+ * larger than its neighbours in the same cell. Force cell block content to
+ * inherit the cell font so all cell text stays uniform regardless of any
+ * per-tool size config. !important is required to override the inline styles.
+ *
+ * NOTE: this invariant is mechanically guarded by
+ * test/unit/architecture/table-cell-font-scale-law.test.ts — a new block tool
+ * that sets an inline font-size on cell-reachable content must be covered here
+ * (or exempted there with a reason), or that test fails.
+ *
+ * The list marker (a fixed-size bullet) sets its own font-size on a child that
+ * is neither a [data-blok-tool] root nor a [role="listitem"], so it is left
+ * untouched here — matching its size behaviour outside cells.
+ */
+[data-blok-table-cell-blocks] [data-blok-tool],
+[data-blok-table-cell-blocks] [data-blok-tool="list"] [role="listitem"] {
+  font-size: inherit !important;
+}
+
 /* ─── Cell content placement ──────────────────────────────────── */
 
 [data-blok-cell-placement="top-center"] {
@@ -65,6 +88,22 @@
   transition-property: background-color, border-color, outline-color,
     text-decoration-color, fill, stroke, --tw-gradient-from,
     --tw-gradient-via, --tw-gradient-to;
+}
+
+/**
+ * Multi-line drag selection inside a cell: a run of adjacent selected
+ * line-blocks reads as one shape. Square the corners where two selected
+ * blocks touch so only the run's first-top and last-bottom corners stay
+ * rounded (StyleManager gives each selected content element rounded-[4px]).
+ */
+[data-blok-table-cell] [data-blok-selected="true"] + [data-blok-selected="true"] [data-blok-element-content] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+[data-blok-table-cell] [data-blok-selected="true"]:has(+ [data-blok-selected="true"]) [data-blok-element-content] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 /**

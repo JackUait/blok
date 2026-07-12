@@ -1,6 +1,7 @@
 import type { I18n } from '../../../types/api';
 import { twMerge } from '../../components/utils/tw';
 
+import type { CellColorMode } from './table-cell-color-picker';
 import { BORDER_WIDTH, CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
 import { collapseGrip, createGripDotsSvg, expandGrip, GRIP_HOVER_SIZE, setGripPillSize } from './table-grip-visuals';
 import { getCumulativeColEdges, TableRowColDrag } from './table-row-col-drag';
@@ -10,6 +11,8 @@ import type { PopoverState } from './table-row-col-popover';
 const GRIP_ATTR = 'data-blok-table-grip';
 const GRIP_COL_ATTR = 'data-blok-table-grip-col';
 const GRIP_ROW_ATTR = 'data-blok-table-grip-row';
+/** Present on grips whose row/column is locked in place by a merge. */
+export const GRIP_DRAG_DISABLED_ATTR = 'data-blok-table-grip-drag-disabled';
 const HIDE_DELAY_MS = 150;
 const COL_PILL_WIDTH = 24;
 const COL_PILL_HEIGHT = 4;
@@ -26,6 +29,8 @@ export type RowColAction =
   | { type: 'insert-col-right'; index: number }
   | { type: 'move-row'; fromIndex: number; toIndex: number }
   | { type: 'move-col'; fromIndex: number; toIndex: number }
+  | { type: 'duplicate-row'; index: number }
+  | { type: 'duplicate-col'; index: number }
   | { type: 'delete-row'; index: number }
   | { type: 'delete-col'; index: number }
   | { type: 'toggle-heading' }
@@ -40,9 +45,17 @@ export interface TableRowColControlsOptions {
   isHeadingRow: () => boolean;
   isHeadingColumn: () => boolean;
   onAction: (action: RowColAction) => void;
+  /** Wipe the content of every cell in the grip's row/column (colors survive). */
+  onClearContents: (type: 'row' | 'col', index: number) => void;
+  /** Paint every cell in the grip's row/column. */
+  onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode) => void;
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
   onGripClick?: (type: 'row' | 'col', index: number) => void;
   onGripPopoverClose?: () => void;
+  /** Can this row/column be dragged at all? See TableDragOptions.canDrag. */
+  canDrag?: (type: 'row' | 'col', index: number) => boolean;
+  /** Can the dragged row/column land here? See TableDragOptions.canDrop. */
+  canDrop?: (type: 'row' | 'col', fromIndex: number, toIndex: number) => boolean;
   i18n: I18n;
 }
 
@@ -92,6 +105,8 @@ export class TableRowColControls {
   private isHeadingRow: () => boolean;
   private isHeadingColumn: () => boolean;
   private onAction: (action: RowColAction) => void;
+  private onClearContents: (type: 'row' | 'col', index: number) => void;
+  private onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode) => void;
   private onGripClick: ((type: 'row' | 'col', index: number) => void) | undefined;
   private onGripPopoverClose: (() => void) | undefined;
   private i18n: I18n;
@@ -108,6 +123,7 @@ export class TableRowColControls {
   private rowResizeObserver: ResizeObserver | null = null;
 
   private drag: TableRowColDrag;
+  private canDrag: ((type: 'row' | 'col', index: number) => boolean) | undefined;
 
   private boundMouseOver: (e: MouseEvent) => void;
   private boundMouseLeave: (e: MouseEvent) => void;
@@ -123,8 +139,11 @@ export class TableRowColControls {
     this.isHeadingRow = options.isHeadingRow;
     this.isHeadingColumn = options.isHeadingColumn;
     this.onAction = options.onAction;
+    this.onClearContents = options.onClearContents;
+    this.onColorChange = options.onColorChange;
     this.onGripClick = options.onGripClick;
     this.onGripPopoverClose = options.onGripPopoverClose;
+    this.canDrag = options.canDrag;
     this.i18n = options.i18n;
 
     this.drag = new TableRowColDrag({
@@ -134,6 +153,8 @@ export class TableRowColControls {
         this.handleDragStateChange(isDragging, dragType);
         options.onDragStateChange?.(isDragging, dragType);
       },
+      canDrag: options.canDrag,
+      canDrop: options.canDrop,
     });
 
     this.boundMouseOver = this.handleMouseOver.bind(this);
@@ -341,6 +362,16 @@ export class TableRowColControls {
     grip.setAttribute(GRIP_ATTR, '');
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
+
+    // A row/column locked inside a merge cannot be reordered. Mark it so the
+    // drag affordance reads as disabled (not-allowed cursor) rather than
+    // inviting a drag that would snap back with no explanation. The grip still
+    // opens its menu on click — insert/delete remain valid there.
+    if (this.canDrag && !this.canDrag(type, index)) {
+      grip.setAttribute(GRIP_DRAG_DISABLED_ATTR, '');
+      grip.setAttribute('aria-disabled', 'true');
+      grip.style.cursor = 'not-allowed';
+    }
 
     const idleWidth = type === 'col' ? COL_PILL_WIDTH : ROW_PILL_WIDTH;
     const idleHeight = type === 'col' ? COL_PILL_HEIGHT : ROW_PILL_HEIGHT;
@@ -751,6 +782,8 @@ export class TableRowColControls {
         isHeadingRow: this.isHeadingRow,
         isHeadingColumn: this.isHeadingColumn,
         onAction: this.onAction,
+        onClearContents: this.onClearContents,
+        onColorChange: this.onColorChange,
         i18n: this.i18n,
       },
       {

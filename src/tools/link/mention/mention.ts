@@ -1,4 +1,5 @@
 import type { SanitizerConfig } from '../../../../types';
+import { setSafeLinkHref } from '../registry';
 
 /**
  * Class applied to the mention anchor element.
@@ -54,7 +55,7 @@ export function buildMentionElement(input: MentionInput): HTMLAnchorElement {
   const anchor = document.createElement('a');
 
   anchor.className = MENTION_CLASS;
-  anchor.setAttribute('href', input.url);
+  setSafeLinkHref(anchor, input.url);
   anchor.setAttribute('target', '_blank');
   anchor.setAttribute('rel', 'noreferrer nofollow');
 

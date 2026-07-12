@@ -53,6 +53,18 @@ export interface Blocks {
   importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData>;
 
   /**
+   * Serialize the current document to a Markdown string — the outbound twin of
+   * `importMarkdown`. Headings become `#`, lists `-`/`1.`, tables GFM pipe
+   * tables, and so on.
+   *
+   * Degradations (Markdown cannot express them): table `colspan`/`rowspan` and
+   * heading columns are dropped; a table with no heading row gets an empty
+   * header row, since GFM requires one.
+   * @returns The document as Markdown ('' when there is nothing to save)
+   */
+  exportMarkdown(): Promise<string>;
+
+  /**
    * Removes current Block
    * @param {number} index - index of a block to delete
    * @param {boolean} setCaret - whether to move the caret to the surviving current

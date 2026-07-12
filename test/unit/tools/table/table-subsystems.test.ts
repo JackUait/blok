@@ -79,6 +79,7 @@ const createSubsystems = (): {
     runTransactedStructuralOp: <T>(fn: () => T): T => fn(),
     ensureScrollContainer: (): HTMLDivElement => scrollContainer,
     rebuildTableBody: vi.fn(),
+    fitToPageWidth: vi.fn(),
   };
 
   return { subsystems: new TableSubsystems(host), gridEl, host };

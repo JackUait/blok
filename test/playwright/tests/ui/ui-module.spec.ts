@@ -382,6 +382,159 @@ test.describe('ui module', () => {
       expect(result.currentIndex).toBe(1);
       expect(result.lastBlockIsEmpty).toBe(true);
     });
+
+    /**
+     * Nested-block tools keep their children as real blocks at the TAIL of the same
+     * flat store. Reading that raw tail made the bottom zone see the table's
+     * bottom-right CELL paragraph — a default, empty block — so nothing was inserted
+     * and the caret landed INSIDE the cell. There was no escape hatch below a
+     * trailing table.
+     */
+    test('clicking the bottom zone below a trailing table appends a root paragraph, not a caret inside a cell', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'intro',
+              type: 'paragraph',
+              data: { text: 'Above the table' } },
+            {
+              id: 'trailing-table',
+              type: 'table',
+              data: {
+                withHeadings: false,
+                content: [['A', 'B'], ['C', 'D']],
+              },
+            },
+          ],
+        },
+      });
+
+      await expect(page.locator('[data-blok-tool="table"]')).toBeVisible();
+
+      await clickBottomZone(page);
+
+      await expect
+        .poll(async () => await page.evaluate(async () => {
+          const blok = window.blokInstance;
+
+          if (!blok) {
+            return 0;
+          }
+
+          const saved = await blok.save();
+
+          return saved.blocks.filter((block) => block.parent === undefined).length;
+        }))
+        .toBe(3);
+
+      const result = await page.evaluate(async () => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+
+        const saved = await blok.save();
+        const rootBlocks = saved.blocks.filter((block) => block.parent === undefined);
+        const lastRoot = rootBlocks[rootBlocks.length - 1];
+        const active = document.activeElement;
+
+        return {
+          rootTypes: rootBlocks.map((block) => block.type),
+          lastRootType: lastRoot?.type ?? null,
+          lastRootIsChild: lastRoot?.parent !== undefined,
+          caretInsideCell: active instanceof Element
+            ? active.closest('[data-blok-table-cell]') !== null
+            : false,
+        };
+      });
+
+      // A brand-new ROOT paragraph now sits after the table
+      expect(result.rootTypes).toEqual(['paragraph', 'table', 'paragraph']);
+      expect(result.lastRootType).toBe('paragraph');
+      expect(result.lastRootIsChild).toBe(false);
+      // ...and the caret is NOT trapped in the table's bottom-right cell
+      expect(result.caretInsideCell).toBe(false);
+    });
+
+    /**
+     * Same root cause for columns: the flat tail is the last column's child, so the
+     * appended block used to be adopted INTO that column (insert()'s
+     * column-inheritance rescue) instead of landing below the columns.
+     */
+    test('clicking the bottom zone below trailing columns appends a root paragraph, not a column child', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            { id: 'cl1',
+              type: 'column_list',
+              data: {},
+              content: ['c1', 'c2'] },
+            { id: 'c1',
+              type: 'column',
+              data: {},
+              parent: 'cl1',
+              content: ['p1'] },
+            { id: 'p1',
+              type: 'paragraph',
+              data: { text: 'Left' },
+              parent: 'c1' },
+            { id: 'c2',
+              type: 'column',
+              data: {},
+              parent: 'cl1',
+              content: ['p2'] },
+            { id: 'p2',
+              type: 'paragraph',
+              data: { text: 'Right' },
+              parent: 'c2' },
+          ],
+        },
+      });
+
+      await expect(page.getByTestId('column-list')).toBeVisible();
+
+      await clickBottomZone(page);
+
+      await expect
+        .poll(async () => await page.evaluate(async () => {
+          const blok = window.blokInstance;
+
+          if (!blok) {
+            return 0;
+          }
+
+          const saved = await blok.save();
+
+          return saved.blocks.filter((block) => block.parent === undefined).length;
+        }))
+        .toBe(2);
+
+      const result = await page.evaluate(async () => {
+        const blok = window.blokInstance;
+
+        if (!blok) {
+          throw new Error('Blok instance not found');
+        }
+
+        const saved = await blok.save();
+        const rootBlocks = saved.blocks.filter((block) => block.parent === undefined);
+        const lastRoot = rootBlocks[rootBlocks.length - 1];
+
+        return {
+          rootTypes: rootBlocks.map((block) => block.type),
+          lastRootParent: lastRoot?.parent ?? null,
+          // the appended paragraph must not have been adopted by a column
+          columnChildCounts: saved.blocks
+            .filter((block) => block.type === 'column')
+            .map((block) => block.content?.length ?? 0),
+        };
+      });
+
+      expect(result.rootTypes).toEqual(['column_list', 'paragraph']);
+      expect(result.lastRootParent).toBeNull();
+      expect(result.columnChildCounts).toEqual([1, 1]);
+    });
   });
 
   test.describe('extended hover zone', () => {

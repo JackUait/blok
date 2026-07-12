@@ -630,10 +630,14 @@
     /* Settings panel polish */
     #settings-panel {
       font-family: var(--pg-font);
-      box-shadow: -8px 0 24px -8px rgba(0,0,0,0.06), -1px 0 0 0 rgba(0,0,0,0.04);
+      box-shadow: 0 12px 32px -8px rgba(0,0,0,0.10), 0 2px 8px -2px rgba(0,0,0,0.04);
     }
     .dark-mode #settings-panel {
-      box-shadow: -8px 0 32px -8px rgba(0,0,0,0.4), -1px 0 0 0 rgba(255,255,255,0.05);
+      box-shadow: 0 12px 32px -8px rgba(0,0,0,0.5), 0 2px 8px -2px rgba(0,0,0,0.3);
+    }
+    /* Clear the viewport edge when closed, so the inset panel hides fully */
+    #settings-panel.translate-x-full {
+      transform: translateX(calc(100% + 12px));
     }
 
     .settings-section-label {
@@ -812,7 +816,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 <body class="m-0 text-black transition-colors duration-150" style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; font-size: 14px; line-height: 1.6;">
-  <div class="text-base transition-[margin] duration-200 ease-in-out" id="main-content">
+  <div class="text-base" id="main-content">
     <!-- Header -->
     <div class="playground-header relative flex items-center px-[30px] max-md:px-5 border-b border-[#ebebeb] dark-mode:border-[#2f2f2f] transition-colors duration-150">
       <span class="playground-wordmark text-inherit mr-7 select-none">
@@ -867,8 +871,8 @@
   </button>
 
   <!-- Settings side panel: drawer -->
-  <div id="settings-panel" class="fixed right-0 top-0 bottom-0 w-[300px] bg-white dark-mode:bg-[#191919] border-l border-[#ebebeb] dark-mode:border-[#2f2f2f] translate-x-full transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0.0,0.2,1)] z-10 overflow-y-auto" style="transform: translateX(100%)" aria-label="Settings panel">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f] mt-[80px]">
+  <div id="settings-panel" class="fixed right-3 top-[92px] bottom-3 w-[300px] bg-white dark-mode:bg-[#191919] border border-[#ebebeb] dark-mode:border-[#2f2f2f] rounded-2xl translate-x-full transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0.0,0.2,1)] z-10 overflow-y-auto" style="transform: translateX(calc(100% + 12px))" aria-label="Settings panel">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#ebebeb] settings-divider dark-mode:border-[#2f2f2f]">
       <span class="text-[15px] font-semibold tracking-tight dark-mode:text-[#ffffff]" style="letter-spacing: -0.015em;">Settings</span>
       <button id="settings-close" type="button" aria-label="Close settings panel" title="Close (Esc)">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
@@ -931,7 +935,7 @@
 
   <script type="module">
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -962,6 +966,7 @@
         callout: true,
         database: true,
         divider: true,
+        spacer: true,
         quote: true,
         code: true,
         image: true,
@@ -1871,6 +1876,7 @@
         tools['database-row'] = DatabaseRow;
       }
       if (state.tools.divider) tools.divider = Divider;
+      if (state.tools.spacer) tools.spacer = Spacer;
       if (state.tools.quote) tools.quote = { class: Quote, inlineToolbar: true };
       if (state.tools.code) tools.code = { class: Code, inlineToolbar: false };
       if (state.tools.image) tools.image = Image;
@@ -2044,20 +2050,17 @@
     const settingsTab = document.getElementById('settings-tab');
     const settingsPanel = document.getElementById('settings-panel');
     const settingsClose = document.getElementById('settings-close');
-    const mainContent = document.getElementById('main-content');
 
     function openSettingsPanel() {
       settingsPanel.style.transform = '';
       settingsPanel.classList.remove('translate-x-full');
       settingsTab.classList.add('hidden');
-      mainContent.style.marginRight = '300px';
     }
 
     function closeSettingsPanel() {
       settingsPanel.classList.add('translate-x-full');
       settingsTab.classList.remove('hidden');
       settingsTab.classList.remove('is-hidden');
-      mainContent.style.marginRight = '0';
     }
 
     function toggleSettingsPanel() {
@@ -2212,6 +2215,7 @@
       { key: 'callout', label: 'Callout', icon: Icons.IconCallout },
       { key: 'database', label: 'Database', icon: Icons.IconDatabase },
       { key: 'divider', label: 'Divider', icon: Icons.IconDivider },
+      { key: 'spacer', label: 'Spacer', icon: Icons.IconSpacer },
       { key: 'quote', label: 'Quote', icon: Icons.IconQuote },
     ];
 
@@ -2255,7 +2259,7 @@
       'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconMinus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronRightSmall', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine', 'IconMoreHorizontal', 'IconCloseThick', 'IconDice'],
       'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconEquation', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
-      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconDivider', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
+      'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconDivider', 'IconSpacer', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCaptionImage', 'IconCrop', 'IconCropImage', 'IconReplaceImage', 'IconExpandFullscreen', 'IconExpandFullscreenImage', 'IconCollapseFullscreen', 'IconPlayerFullscreenExit', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconDownloadImage', 'IconUpload'],
       'Toggle Headings': ['IconToggleH1', 'IconToggleH2', 'IconToggleH3'],
       'Table Actions': ['IconHeaderRow', 'IconHeaderColumn', 'IconInsertAbove', 'IconInsertBelow', 'IconInsertLeft', 'IconInsertRight', 'IconMoveUp', 'IconMoveDown', 'IconMoveLeft', 'IconMoveRight', 'IconMergeCells', 'IconSplitCell', 'IconPlacement'],
@@ -2525,6 +2529,17 @@
             { id: 'd-a', type: 'paragraph', data: { text: 'Above divider.' } },
             { id: 'd', type: 'divider', data: {} },
             { id: 'd-b', type: 'paragraph', data: { text: 'Below divider.' } },
+          ] },
+        ],
+      },
+      {
+        tool: 'spacer',
+        label: 'Spacer',
+        states: [
+          { label: 'Between paragraphs', blocks: [
+            { id: 'sp-a', type: 'paragraph', data: { text: 'Above spacer.' } },
+            { id: 'sp', type: 'spacer', data: { height: 64 } },
+            { id: 'sp-b', type: 'paragraph', data: { text: 'Below spacer.' } },
           ] },
         ],
       },
@@ -2855,6 +2870,7 @@
           database: Database,
           'database-row': DatabaseRow,
           divider: Divider,
+          spacer: Spacer,
           quote: Quote,
           code: Code,
           image: Image,

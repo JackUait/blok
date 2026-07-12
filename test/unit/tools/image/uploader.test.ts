@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+vi.mock('../../../../src/tools/image/compress', () => ({
+  compressImage: vi.fn(async () => null),
+}));
+
 import { Uploader } from '../../../../src/tools/image/uploader';
+import { compressImage } from '../../../../src/tools/image/compress';
+
+const compressImageMock = vi.mocked(compressImage);
 
 describe('Uploader', () => {
   beforeEach(() => {
@@ -214,6 +222,83 @@ describe('Uploader', () => {
       await u.handleUrl(DATA_URL, { onProgress });
       expect(uploadByFile).toHaveBeenCalledOnce();
       expect(onProgress).toHaveBeenCalledWith(40);
+    });
+  });
+
+  describe('compression', () => {
+    const makeFile = (size = 500 * 1024): File => {
+      const file = new File([new Uint8Array(8)], 'photo.jpg', { type: 'image/jpeg' });
+
+      Object.defineProperty(file, 'size', { value: size });
+
+      return file;
+    };
+
+    beforeEach(() => compressImageMock.mockResolvedValue(null));
+
+    it('uploads the compressed file instead of the original', async () => {
+      const smaller = new File([new Uint8Array(4)], 'photo.jpg', { type: 'image/jpeg' });
+
+      compressImageMock.mockResolvedValue(smaller);
+      const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/x.jpg' });
+
+      await new Uploader({ uploader: { uploadByFile } }).handleFile(makeFile());
+
+      expect(uploadByFile).toHaveBeenCalledWith(smaller, expect.any(Object));
+    });
+
+    it('uploads the original bytes untouched when compression declines', async () => {
+      const original = makeFile();
+      const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/x.jpg' });
+
+      await new Uploader({ uploader: { uploadByFile } }).handleFile(original);
+
+      expect(uploadByFile).toHaveBeenCalledWith(original, expect.any(Object));
+    });
+
+    it('passes the tool config through, so compress: false disables it', async () => {
+      await new Uploader({ compress: false }).handleFile(makeFile());
+
+      expect(compressImageMock).toHaveBeenCalledWith(expect.any(File), false);
+    });
+
+    it('passes an opt-in compression config through', async () => {
+      const compress = { format: 'webp' as const, quality: 0.7 };
+
+      await new Uploader({ compress }).handleFile(makeFile());
+
+      expect(compressImageMock).toHaveBeenCalledWith(expect.any(File), compress);
+    });
+
+    it('validates the original file, not the compressed one — maxSize stays predictable', async () => {
+      const uploadByFile = vi.fn();
+
+      await expect(new Uploader({ maxSize: 100, uploader: { uploadByFile } }).handleFile(makeFile()))
+        .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
+      expect(compressImageMock).not.toHaveBeenCalled();
+      expect(uploadByFile).not.toHaveBeenCalled();
+    });
+
+    it('reports the compressed size on the blob-URL fallback path too', async () => {
+      const smaller = new File([new Uint8Array(4)], 'photo.webp', { type: 'image/webp' });
+
+      compressImageMock.mockResolvedValue(smaller);
+
+      await expect(new Uploader({}).handleFile(makeFile()))
+        .resolves.toEqual({ url: 'blob:test', fileName: 'photo.webp' });
+      expect(URL.createObjectURL).toHaveBeenCalledWith(smaller);
+    });
+
+    it('compresses a pasted data: URL image that is routed to uploadByFile', async () => {
+      const smaller = new File([new Uint8Array(4)], 'pasted-image.webp', { type: 'image/webp' });
+
+      compressImageMock.mockResolvedValue(smaller);
+      const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/x.webp' });
+      const DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9ZmUkA0AAAAASUVORK5CYII=';
+
+      await new Uploader({ uploader: { uploadByFile } }).handleUrl(DATA_URL);
+
+      expect(uploadByFile).toHaveBeenCalledWith(smaller, expect.any(Object));
     });
   });
 

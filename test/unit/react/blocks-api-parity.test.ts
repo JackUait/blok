@@ -42,6 +42,10 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
   // import as the ADDITIVE, position-aware insertMarkdown (replace is composed
   // from clear() + insertMarkdown or the controlled `data` prop).
   importMarkdown: { kind: 'renamed', reactNames: ['insertMarkdown'] },
+  // The outbound twin of importMarkdown is a pure READ (it serializes the
+  // document), so there is no additive-vs-replace tension to model: the React
+  // surface exposes it under the same name.
+  exportMarkdown: { kind: 'exposed' },
   // React exposes id-relative removal; core's index-based delete is the engine.
   delete: { kind: 'renamed', reactNames: ['remove'] },
   move: { kind: 'exposed' },

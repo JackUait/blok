@@ -21,6 +21,7 @@ interface ListBlockOptions {
   style?: string;
   checked?: boolean;
   name?: string;
+  ownsChildren?: boolean;
 }
 
 const createListBlock = (options: ListBlockOptions): Block => {
@@ -47,6 +48,10 @@ const createListBlock = (options: ListBlockOptions): Block => {
     parentId: options.parentId ?? null,
     contentIds: [] as string[],
     selected: false,
+    tool: {
+      name: options.name ?? 'list',
+      ownsChildren: options.ownsChildren ?? false,
+    },
     save: vi.fn(() => Promise.resolve({
       id: options.id,
       tool: 'list',
@@ -144,6 +149,24 @@ describe('BlockSelectionKeys — Notion parity (M-8, M-9, m-12)', () => {
       expect(result).toBe(true);
       expect(setBlockParent).toHaveBeenCalledTimes(1);
       expect(setBlockParent).toHaveBeenCalledWith(b, 'a');
+    });
+
+    it('never nests the selection into a preceding sibling that owns its children (a table)', () => {
+      const table = createListBlock({ id: 'table', name: 'table', parentId: null, ownsChildren: true });
+      const b = createListBlock({ id: 'b', parentId: null });
+      const c = createListBlock({ id: 'c', parentId: null });
+      const { blok, setBlockParent } = createBlok([table, b, c], [b, c]);
+
+      const keys = new BlockSelectionKeys(blok);
+
+      keys.handleIndent(tabEvent(false));
+
+      // The table's contentIds are its cell blocks — it can never adopt selected
+      // blocks. With no eligible anchor above, the selection nests under its own
+      // first block, exactly like a selection at the top of a list.
+      expect(setBlockParent).not.toHaveBeenCalledWith(b, 'table');
+      expect(setBlockParent).not.toHaveBeenCalledWith(c, 'table');
+      expect(setBlockParent).toHaveBeenCalledWith(c, 'b');
     });
   });
 

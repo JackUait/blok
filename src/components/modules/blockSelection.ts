@@ -90,6 +90,26 @@ export class BlockSelection extends Module {
       ol: {},
       ul: {},
       li: {},
+      /**
+       * Table tags on the COPY side. Without them the sanitizer unwrapped a copied
+       * table into loose paragraphs, so pasting into Word / Google Docs lost the
+       * grid. This is NOT a tool `pasteConfig` (that map doubles as the tag→tool
+       * substitution registry — see the Paste attribute law); it is the clipboard
+       * whitelist for the outbound direction only.
+       */
+      table: {},
+      thead: {},
+      tbody: {},
+      tfoot: {},
+      tr: {},
+      th: {
+        colspan: true,
+        rowspan: true,
+      },
+      td: {
+        colspan: true,
+        rowspan: true,
+      },
       br: true,
       img: {
         src: true,

@@ -29,6 +29,7 @@ export { CalloutTool as Callout } from './callout';
 export { DatabaseTool as Database } from './database';
 export { DatabaseRowTool as DatabaseRow } from './database-row';
 export { DividerTool as Divider } from './divider';
+export { SpacerTool as Spacer } from './spacer';
 export { Quote } from './quote';
 export { CodeTool as Code } from './code';
 export { ImageTool as Image } from './image';
@@ -64,6 +65,7 @@ export const defaultBlockTools = {
   database: {},
   'database-row': {},
   divider: {},
+  spacer: {},
   quote: {},
   code: { inlineToolbar: false },
   image: {},

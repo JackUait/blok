@@ -264,16 +264,26 @@ export class PlusButtonHandler {
       : 0;
     const insertIndex = baseInsertIndex + (firstNonNestedOffset === -1 ? blocksAfterInsert.length : firstNonNestedOffset);
 
+    // When the hovered block is top-level, the new block must be inserted as a
+    // top-level sibling from the start (forceTopLevel). Inserting by flat index
+    // alone can transiently mount the holder inside a nested container (e.g. the
+    // last table cell, when the flat predecessor is a cell child) — nesting
+    // tools claim such blocks into their model synchronously on block-added, and
+    // a raw DOM hoist afterwards leaves that model entry stale. The stale entry
+    // then mis-claims the block created by a later replace (toolbox selection)
+    // into the cell.
+    const hoveredIsTopLevel = hoveredBlock === null || !isNested(hoveredBlock);
+
     // startsWithSlash is only true when isParagraph is true, which requires
     // hoveredBlock to be non-null. TypeScript narrows this correctly.
     const targetBlock: Block = startsWithSlash
       ? hoveredBlock
-      : (emptyBlockToReuse ?? BlockManager.insertDefaultBlockAtIndex(insertIndex, true));
+      : (emptyBlockToReuse ?? BlockManager.insertDefaultBlockAtIndex(insertIndex, true, false, hoveredIsTopLevel));
 
-    // The DOM insertion may place the new block's holder inside a nested
-    // container (e.g. a table cell) because the previous block in the array
-    // is inside another block's DOM. Move the holder to be a sibling after
-    // the hovered block so it becomes a top-level block.
+    // For a NESTED hovered block (e.g. inside a column), the new block belongs
+    // in the hovered block's container. The flat-index insertion may still have
+    // placed the holder inside a different nested container; move it to be a
+    // sibling after the hovered block.
     if (targetBlock !== hoveredBlock && emptyBlockToReuse === null && isNested(targetBlock)) {
       hoveredBlock?.holder.after(targetBlock.holder);
     }

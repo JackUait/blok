@@ -327,13 +327,22 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // with the thumb transparent at rest and revealed on hover/scroll; standard
     // scrollbar-width/color moved into Firefox-only @supports blocks because
     // they disable webkit scrollbar styling in Chromium. ~2KB intentional growth.
+    // Table-cell font scale: a `font-size: inherit !important` rule in tables.css
+    // forces cell blocks (any [data-blok-tool] root) and list items to honour the
+    // cell's text-sm scale instead of a tool's inline font-size (paragraph
+    // styles.size, list itemSize), so no block outsizes its neighbours inside a
+    // cell. Guarded by table-cell-font-scale-law.test.ts. ~0.4KB intentional growth.
+    // Fluid image chrome: caption font, Alt/"..." toolbar buttons+svg, and resize
+    // handles scale with the figure's width via container queries (cqw clamps) so
+    // small images don't get oversized chrome. See image.css. ~0.6KB intentional growth.
     // master merge: the docs/airbnb-redesign preflight rework (all resets moved
     // into @layer base) landed alongside master's own CSS additions (inline-code
-    // surface, <mark> UA-highlight reset, etc.); combining both branches' growth
-    // pushes the imported bytes past the 1.36 ceiling, so the headroom multiplier
-    // is nudged to 1.37. ~1.5KB combined growth.
+    // surface, <mark> UA-highlight reset, table-cell font scale, fluid image
+    // chrome, etc.); combining both branches' growth pushes the imported bytes
+    // past the 1.365 ceiling, so the headroom multiplier is nudged to 1.372.
+    // ~2KB combined growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.37);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.372);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

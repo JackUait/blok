@@ -78,7 +78,10 @@ describe('Table grip overlay', () => {
       expect(scrollContainer?.classList.contains('pl-[9px]')).toBe(false);
     });
 
-    it('scroll container defers overflow classes in percent mode (no colWidths)', () => {
+    it('scroll container carries the overflow classes in percent mode too', () => {
+      // Percent (fluid) tables have a per-column min-width floor, so a wide one
+      // must be able to scroll instead of squeezing its columns to slivers.
+      // overflow-x-auto shows no scrollbar while the table still fits.
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -87,8 +90,8 @@ describe('Table grip overlay', () => {
 
       const scrollContainer = element.querySelector('[data-blok-table-scroll]');
 
-      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(false);
-      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(false);
+      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(true);
+      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(true);
     });
   });
 

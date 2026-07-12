@@ -3,7 +3,7 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 
 import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
-import { BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } from './table-core';
+import { applyFluidMinWidth, equalWidths, BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableGrid } from './table-core';
 import type { CellContent, LegacyCellContent, TableData } from './types';
 import { isCellWithBlocks } from './types';
@@ -43,6 +43,8 @@ export const applyPixelWidths = (gridEl: HTMLElement, widths: number[]): void =>
   const grid: HTMLElement = gridEl;
 
   grid.style.width = `${totalWidth + BORDER_WIDTH}px`;
+  // Pixel mode carries its own explicit width; the fluid floor would fight it.
+  grid.style.minWidth = '';
 
   const colgroup = gridEl.querySelector('colgroup');
 
@@ -123,6 +125,34 @@ export const isColumnEmpty = (gridEl: HTMLElement, colIndex: number): boolean =>
 
 // ─── Percent-mode width redistribution ──────────────────────────────
 
+/**
+ * Return the grid to FLUID mode: percent columns summing to 100, `width: 100%`,
+ * no pinned pixel width, and the per-column floor that lets a wide table scroll.
+ *
+ * This is the only way back from pixel mode — the first resize drag pins the
+ * whole table to pixels forever otherwise (see Table.fitToPageWidth).
+ */
+export const applyFluidWidths = (gridEl: HTMLElement): void => {
+  const colgroup = gridEl.querySelector('colgroup');
+
+  if (!colgroup) {
+    return;
+  }
+
+  const cols = Array.from(colgroup.querySelectorAll('col')) as HTMLElement[];
+  const widths = equalWidths(cols.length);
+  const grid: HTMLElement = gridEl;
+
+  grid.style.width = '100%';
+  applyFluidMinWidth(grid, cols.length);
+
+  cols.forEach((col, i) => {
+    const el: HTMLElement = col;
+
+    el.style.width = `${widths[i]}%`;
+  });
+};
+
 export const redistributePercentWidths = (gridEl: HTMLElement): void => {
   const colgroup = gridEl.querySelector('colgroup');
 
@@ -131,6 +161,11 @@ export const redistributePercentWidths = (gridEl: HTMLElement): void => {
   }
 
   const cols = colgroup.querySelectorAll('col');
+
+  // The column COUNT changed (add/delete column in percent mode), so the fluid
+  // floor has to grow/shrink with it.
+  applyFluidMinWidth(gridEl, cols.length);
+
   const currentTotal = Array.from(cols).reduce(
     (sum, col) => sum + (parseFloat((col as HTMLElement).style.width) || 0),
     0,
@@ -177,6 +212,40 @@ export const syncColWidthsAfterDeleteColumn = (colWidths: number[] | undefined, 
   return widths.length > 0 ? widths : undefined;
 };
 
+/**
+ * Column widths around an insert, WITHOUT touching the DOM.
+ *
+ * `existing` are the widths of the columns that are already there, `inserted`
+ * is the width for the new column, and `next` is the resulting width list.
+ * Split out of computeInsertColumnWidths so a merged grid — which re-renders
+ * its <tbody> from the model instead of splicing a <td> per row — can reuse
+ * the exact same width arithmetic without the physical-index DOM insert.
+ */
+export interface InsertColumnWidthPlan {
+  existing: number[];
+  inserted: number;
+  next: number[];
+}
+
+export const planInsertColumnWidths = (
+  gridEl: HTMLElement,
+  index: number,
+  colWidths: number[] | undefined,
+  initialColWidth: number | undefined,
+): InsertColumnWidthPlan => {
+  const existing = colWidths ?? readPixelWidths(gridEl);
+
+  const inserted = initialColWidth !== undefined
+    ? Math.round((initialColWidth / 2) * 100) / 100
+    : computeHalfAvgWidth(existing);
+
+  const next = [...existing];
+
+  next.splice(index, 0, inserted);
+
+  return { existing, inserted, next };
+};
+
 export const computeInsertColumnWidths = (
   gridEl: HTMLElement,
   index: number,
@@ -184,19 +253,11 @@ export const computeInsertColumnWidths = (
   initialColWidth: number | undefined,
   grid: TableGrid,
 ): number[] => {
-  const widths = colWidths ?? readPixelWidths(gridEl);
+  const plan = planInsertColumnWidths(gridEl, index, colWidths, initialColWidth);
 
-  const halfWidth = initialColWidth !== undefined
-    ? Math.round((initialColWidth / 2) * 100) / 100
-    : computeHalfAvgWidth(widths);
+  grid.addColumn(gridEl, index, plan.existing, plan.inserted);
 
-  grid.addColumn(gridEl, index, widths, halfWidth);
-
-  const newWidths = [...widths];
-
-  newWidths.splice(index, 0, halfWidth);
-
-  return newWidths;
+  return plan.next;
 };
 
 export const computeHalfAvgWidth = (colWidths: number[]): number =>
@@ -544,14 +605,14 @@ export const parsePastedTable = (
 
 export const normalizeTableData = (
   data: TableData | Record<string, never>,
-  config: { withHeadings?: boolean; stretched?: boolean },
+  config: { withHeadings?: boolean; withHeadingColumn?: boolean; stretched?: boolean },
 ): TableData => {
   const isTableData = typeof data === 'object' && data !== null && 'content' in data;
 
   if (!isTableData) {
     return {
       withHeadings: config.withHeadings ?? false,
-      withHeadingColumn: false,
+      withHeadingColumn: config.withHeadingColumn ?? false,
       stretched: config.stretched ?? false,
       content: [],
     };
@@ -570,7 +631,7 @@ export const normalizeTableData = (
 
   return {
     withHeadings: tableData.withHeadings ?? config.withHeadings ?? false,
-    withHeadingColumn: tableData.withHeadingColumn ?? false,
+    withHeadingColumn: tableData.withHeadingColumn ?? config.withHeadingColumn ?? false,
     stretched: tableData.stretched ?? config.stretched ?? false,
     content,
     colWidths: validWidths,
@@ -584,25 +645,44 @@ export const setupKeyboardNavigation = (
   gridEl: HTMLElement,
   cellBlocks: TableCellBlocks | null,
 ): (() => void) => {
-  const handler = (event: KeyboardEvent): void => {
+  const resolvePosition = (event: KeyboardEvent): { row: number; col: number } | null => {
     const target = event.target as HTMLElement;
     const cell = target.closest<HTMLElement>(`[${CELL_ATTR}]`);
 
     if (!cell) {
-      return;
+      return null;
     }
 
-    const position = getCellPosition(gridEl, cell);
+    return getCellPosition(gridEl, cell);
+  };
+
+  const handler = (event: KeyboardEvent): void => {
+    const position = resolvePosition(event);
 
     if (position) {
       cellBlocks?.handleKeyDown(event, position);
     }
   };
 
+  /**
+   * Arrow navigation runs in the CAPTURE phase so it acts before core's
+   * block-level keydown (bound on each block holder in bubble phase), which
+   * otherwise exits the whole table at a cell boundary. See handleArrowNavigation.
+   */
+  const arrowHandler = (event: KeyboardEvent): void => {
+    const position = resolvePosition(event);
+
+    if (position) {
+      cellBlocks?.handleArrowNavigation(event, position);
+    }
+  };
+
   gridEl.addEventListener('keydown', handler);
+  gridEl.addEventListener('keydown', arrowHandler, true);
 
   return () => {
     gridEl.removeEventListener('keydown', handler);
+    gridEl.removeEventListener('keydown', arrowHandler, true);
   };
 };
 
@@ -704,8 +784,13 @@ export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadin
   if (withHeadingColumn) {
     const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
 
+    // Query by LOGICAL column, never by first PHYSICAL cell: a row whose
+    // column-0 slot is covered by a rowspan has no <td> for it (the origin
+    // above renders it), so its first physical cell belongs to a later column
+    // and would get the heading shading painted on the wrong cell.
+    // Same rule as applyCellColors.
     rows.forEach(row => {
-      const firstCell = row.querySelector(`[${CELL_ATTR}]`);
+      const firstCell = row.querySelector(`[${CELL_COL_ATTR}="0"]`);
 
       if (firstCell) {
         firstCell.setAttribute('data-blok-table-heading-col', '');

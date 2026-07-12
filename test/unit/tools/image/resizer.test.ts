@@ -297,6 +297,47 @@ describe('attachResizeHandle', () => {
     detach();
   });
 
+  it('resolves a function-form minWidthPx at drag start (context-dependent floor)', () => {
+    // The floor for an image depends on where it lives (e.g. inside a table cell),
+    // which is only known once mounted — so it's supplied as a thunk resolved on
+    // pointerdown, not a fixed number captured at attach time.
+    const parent = document.createElement('div');
+    const figure = document.createElement('div');
+    parent.appendChild(figure);
+    Object.defineProperty(parent, 'getBoundingClientRect', {
+      value: () => makeRect(1000, 0),
+    });
+    Object.defineProperty(figure, 'getBoundingClientRect', {
+      value: () => makeRect(500, 250),
+    });
+    const handle = document.createElement('div');
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    let resolvedAtDown = false;
+    const updates: number[] = [];
+    const detach = attachResizeHandle({
+      handle,
+      figure,
+      container: parent,
+      edge: 'right',
+      minWidthPx: () => { resolvedAtDown = true; return 300; }, // 30% floor on 1000px
+      onPreview: (p) => updates.push(p),
+      onCommit: () => undefined,
+    });
+
+    // Thunk is not consulted until a drag begins.
+    expect(resolvedAtDown).toBe(false);
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 750, bubbles: true }));
+    expect(resolvedAtDown).toBe(true);
+    // Yank far past the floor → pinned at 30%, not the global 10%.
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: -2000, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: -2000, bubbles: true }));
+    expect(updates[updates.length - 1]).toBe(30);
+    detach();
+  });
+
   it('left-edge grows symmetrically as pointer moves left (center default)', () => {
     const parent = document.createElement('div');
     const figure = document.createElement('div');

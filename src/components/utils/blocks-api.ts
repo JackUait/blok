@@ -52,6 +52,7 @@ export const EMPTY_API: UseBlocksApi = {
   insertMany: () => [],
   insertTree: () => null,
   insertMarkdown: async () => [],
+  exportMarkdown: async () => '',
   move: () => undefined,
   nest: () => undefined,
   unnest: () => undefined,
@@ -1322,6 +1323,13 @@ export const createBlocksApiForEditor = (
   const clear = (): Promise<void> => editor.blocks.clear();
 
   /**
+   * Serialize the document to Markdown — the read-side twin of
+   * {@link UseBlocksApi.insertMarkdown}. Pure delegation to core's async
+   * `exportMarkdown` (which lazy-loads the serializer).
+   */
+  const exportMarkdown = (): Promise<string> => editor.blocks.exportMarkdown();
+
+  /**
    * The LIVE Yjs-sync flag, read at call time (the api handle is memoized, so a
    * cached property would go stale). Pure delegation to core's read-only flag.
    */
@@ -1344,6 +1352,7 @@ export const createBlocksApiForEditor = (
     insertMany,
     insertTree,
     insertMarkdown,
+    exportMarkdown,
     move,
     nest,
     unnest,

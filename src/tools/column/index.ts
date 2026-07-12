@@ -20,16 +20,19 @@ export class Column implements BlockTool {
   private readonly blockId: string;
   private readonly block: BlockToolConstructorOptions<ColumnData>['block'];
   private childContainer: HTMLElement | null = null;
+  private readOnly: boolean;
+  private bottomZoneBound = false;
   // Latched once the column has ever held content (mounted children or a seed).
   // Distinguishes a fresh empty column (first render → seed) from one emptied
   // later by a drag-out (re-render → self-delete).
   private populated = false;
 
-  constructor({ data, api, block }: BlockToolConstructorOptions<ColumnData>) {
+  constructor({ data, api, block, readOnly }: BlockToolConstructorOptions<ColumnData>) {
     this.api = api;
     this._data = { ...data };
     this.blockId = block.id;
     this.block = block;
+    this.readOnly = readOnly;
   }
 
   public render(): HTMLElement {
@@ -65,6 +68,15 @@ export class Column implements BlockTool {
     // freely so the resizer has no min-width restriction.
     this.block.holder.style.minWidth = '0';
 
+    // Columns stretch to the tallest sibling, so a short column has dead space
+    // under its content. That space belongs to the holder (the flex item), not
+    // to the rendered wrapper — so the listener has to live on the holder.
+    // rendered() re-fires on every child mount; bind only once.
+    if (!this.bottomZoneBound) {
+      this.block.holder.addEventListener('click', this.handleHolderClick);
+      this.bottomZoneBound = true;
+    }
+
     const children = this.api.blocks.getChildren(this.blockId);
 
     if (children.length > 0) {
@@ -96,6 +108,59 @@ export class Column implements BlockTool {
     // never empty.
     this.seedParagraph();
     this.populated = true;
+  }
+
+  /**
+   * Click in the column's dead space below its content — the per-column echo of
+   * the editor's bottom zone: append an empty text block and focus it, so the
+   * space is writable instead of inert.
+   * @param event - the click that landed inside the column's holder
+   */
+  private readonly handleHolderClick = (event: MouseEvent): void => {
+    if (this.readOnly || this.childContainer === null) {
+      return;
+    }
+
+    // A click on a child block is the child's business, not ours.
+    if (event.target instanceof Node && this.childContainer.contains(event.target)) {
+      return;
+    }
+
+    // A drag-selection released in the dead space fires a click on the holder;
+    // creating a block would destroy the selection the user just made.
+    if (window.getSelection()?.isCollapsed === false) {
+      return;
+    }
+
+    const children = this.api.blocks.getChildren(this.blockId);
+    const lastChild = children[children.length - 1];
+
+    // Already ends in an empty paragraph — focus it instead of stacking another.
+    if (lastChild !== undefined && lastChild.isEmpty && lastChild.name === 'paragraph') {
+      this.api.caret.setToBlock(lastChild.id, 'end');
+
+      return;
+    }
+
+    const paragraph = this.api.blocks.insertInsideParent(this.blockId, this.subtreeEndIndex(this.blockId) + 1);
+
+    this.childContainer.appendChild(paragraph.holder);
+    this.api.caret.setToBlock(paragraph.id, 'start');
+  };
+
+  /**
+   * Highest flat-array index occupied by a block's subtree. insertInsideParent
+   * appends to the parent's contentIds but places the block at the given FLAT
+   * index, so appending to a column whose last child is itself a container (a
+   * toggle, a callout) must clear that container's descendants too.
+   * @param blockId - root of the subtree to measure
+   */
+  private subtreeEndIndex(blockId: string): number {
+    const index = this.api.blocks.getBlockIndex(blockId) ?? -1;
+
+    return this.api.blocks
+      .getChildren(blockId)
+      .reduce((max, child) => Math.max(max, this.subtreeEndIndex(child.id)), index);
   }
 
   /**
@@ -162,11 +227,14 @@ export class Column implements BlockTool {
   /**
    * A column is pure layout with no interactive chrome of its own (the resize
    * separators belong to the parent column_list), so the in-place read-only
-   * toggle needs no DOM changes. The method must still exist: the editor only
-   * takes the in-place toggle path (instead of a full save/clear/render) when
-   * EVERY registered tool implements setReadOnly.
+   * toggle needs no DOM changes beyond muting the bottom-zone click. The method
+   * must still exist: the editor only takes the in-place toggle path (instead of
+   * a full save/clear/render) when EVERY registered tool implements setReadOnly.
+   * @param state - true when the editor is entering read-only mode
    */
-  public setReadOnly(_state: boolean): void {}
+  public setReadOnly(state: boolean): void {
+    this.readOnly = state;
+  }
 
   public removed(): void {
     // removed() runs INSIDE blocksStore.remove, BEFORE this block is spliced

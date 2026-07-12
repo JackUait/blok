@@ -8,20 +8,29 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import type { ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
+import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
-import { IconTable } from '../../components/icons';
+import {
+  IconCollapseFullscreen,
+  IconExpandFullscreen,
+  IconHeaderColumn,
+  IconHeaderRow,
+  IconTable,
+} from '../../components/icons';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { twMerge } from '../../components/utils/tw';
 
 import { TableCellBlocks, CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import {
   isDefaultBlack,
+  placementFromAlignment,
   ALLOWED_MARK_STYLE_PROPS,
 } from './table-cell-clipboard';
 import { TableGrid, ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import {
   applyCellColors,
   applyCellPlacements,
+  applyFluidWidths,
   applyPixelWidths,
   computeInitialColWidth,
   getBlockIdsInColumn,
@@ -143,6 +152,7 @@ export class Table implements BlockTool {
       runTransactedStructuralOp: <T>(fn: () => T, discard?: boolean): T => self.runTransactedStructuralOp(fn, discard),
       ensureScrollContainer: (): HTMLDivElement => self.ensureScrollContainer(),
       rebuildTableBody: (): void => self.rebuildTableBody(),
+      fitToPageWidth: (): void => self.fitToPageWidth(),
     };
   }
 
@@ -371,6 +381,16 @@ export class Table implements BlockTool {
     return true;
   }
 
+  /**
+   * A table's child blocks ARE its cell contents — it places every one of them
+   * into a cell. Core must never let a user gesture nest an outside block into
+   * it: an adopted block becomes a rogue cell block and surfaces inside the
+   * first cell.
+   */
+  public static get ownsChildren(): boolean {
+    return true;
+  }
+
   public static get enableLineBreaks(): boolean {
     return true;
   }
@@ -476,22 +496,19 @@ export class Table implements BlockTool {
 
     this.gridElement = gridEl;
 
-    if (this.model.colWidths || !this.readOnly) {
-      const sc = document.createElement('div');
+    // Every table gets a scroll container, in BOTH width modes and in read-only.
+    // Percent (fluid) tables can overflow too — they carry a per-column
+    // min-width floor (see MIN_COL_WIDTH), so a 20-column table scrolls instead
+    // of squeezing its columns into unreadable slivers. Gating the overflow on
+    // colWidths is what left pasted/read-only wide tables with no scroll
+    // container at all. `overflow-x-auto` shows no scrollbar when the table fits.
+    const sc = document.createElement('div');
 
-      sc.setAttribute('data-blok-table-scroll', '');
-
-      const overflowClasses = this.model.colWidths ? SCROLL_OVERFLOW_CLASSES : [];
-
-      sc.classList.add(...overflowClasses);
-
-      sc.appendChild(gridEl);
-      wrapper.appendChild(sc);
-      this.scrollContainer = sc;
-    } else {
-      wrapper.appendChild(gridEl);
-      this.scrollContainer = null;
-    }
+    sc.setAttribute('data-blok-table-scroll', '');
+    sc.classList.add(...SCROLL_OVERFLOW_CLASSES);
+    sc.appendChild(gridEl);
+    wrapper.appendChild(sc);
+    this.scrollContainer = sc;
 
     if (!this.readOnly) {
       const overlay = document.createElement('div');
@@ -521,6 +538,101 @@ export class Table implements BlockTool {
     }
 
     return wrapper;
+  }
+
+  /**
+   * Block ☰ menu. Without this the table had NO tool-level settings at all:
+   * the header toggles were reachable only from the row-0 / col-0 grip, the
+   * `stretched` flag had no UI (its model setter had zero call sites), and a
+   * resized table could never get back to fluid width.
+   */
+  public renderSettings(): MenuConfig {
+    const i18n = this.api.i18n;
+
+    return [
+      {
+        icon: IconHeaderRow,
+        title: i18n.t('tools.table.headerRow'),
+        name: 'table-heading-row',
+        isActive: this.model.withHeadings,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleHeadingRow(),
+      },
+      {
+        icon: IconHeaderColumn,
+        title: i18n.t('tools.table.headerColumn'),
+        name: 'table-heading-column',
+        isActive: this.model.withHeadingColumn,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleHeadingColumn(),
+      },
+      {
+        icon: IconCollapseFullscreen,
+        title: i18n.t('tools.table.fitToPageWidth'),
+        name: 'table-fit-to-page-width',
+        closeOnActivate: true,
+        onActivate: (): void => this.fitToPageWidth(),
+      },
+      {
+        icon: IconExpandFullscreen,
+        title: i18n.t('tools.table.fullWidth'),
+        name: 'table-full-width',
+        isActive: this.model.stretched,
+        closeOnActivate: true,
+        onActivate: (): void => this.toggleFullWidth(),
+      },
+    ];
+  }
+
+  private toggleHeadingRow(): void {
+    const next = !this.model.withHeadings;
+
+    this.model.setWithHeadings(next);
+    updateHeadingStyles(this.gridElement, next);
+    this.block?.dispatchChange();
+  }
+
+  private toggleHeadingColumn(): void {
+    const next = !this.model.withHeadingColumn;
+
+    this.model.setWithHeadingColumn(next);
+    updateHeadingColumnStyles(this.gridElement, next);
+    this.block?.dispatchChange();
+  }
+
+  private toggleFullWidth(): void {
+    const next = !this.model.stretched;
+
+    this.model.setStretched(next);
+
+    // Only the core style manager renders full-width; the model just round-trips it.
+    if (this.block) {
+      this.block.stretched = next;
+    }
+
+    this.block?.dispatchChange();
+  }
+
+  /**
+   * Notion's "Fit to page width": drop the custom column widths and snap the
+   * table back to the page/column width.
+   *
+   * This is the ONLY way back to fluid mode. The first pointerdown on a resize
+   * handle pins the whole table to pixels (TableResize.applyWidths) and every
+   * later render keeps those pixels, so without this action a single resize was
+   * a permanent, irreversible conversion.
+   */
+  public fitToPageWidth(): void {
+    const gridEl = this.gridElement;
+
+    if (!gridEl) {
+      return;
+    }
+
+    this.model.setColWidths(undefined);
+    applyFluidWidths(gridEl);
+    this.subsystems.refreshResize(gridEl);
+    this.block?.dispatchChange();
   }
 
   public rendered(): void {
@@ -933,9 +1045,12 @@ export class Table implements BlockTool {
   }
 
   /**
-   * Extract background / text color overrides from a pasted cell's inline style.
+   * Extract background / text color and alignment overrides from a pasted
+   * cell's inline style. `text-align` / `vertical-align` map onto Blok's own
+   * 9-way cell placement — pasteConfig whitelists `style` on TD/TH so both
+   * survive the paste sanitizer; nothing used to read them.
    */
-  private static extractPastedCellColors(cell: Element): Partial<CellContent> {
+  private static extractPastedCellMetadata(cell: Element): Partial<CellContent> {
     const style = cell.getAttribute('style') ?? '';
     const entry: Partial<CellContent> = {};
 
@@ -951,6 +1066,15 @@ export class Table implements BlockTool {
       entry.textColor = mapToNearestPresetColor(textMatch[1].trim(), 'text');
     }
 
+    const placement = placementFromAlignment(
+      /(?<![a-z-])text-align\s*:\s*([^;]+)/i.exec(style)?.[1],
+      /vertical-align\s*:\s*([^;]+)/i.exec(style)?.[1],
+    );
+
+    if (placement !== undefined) {
+      entry.placement = placement;
+    }
+
     return entry;
   }
 
@@ -959,11 +1083,15 @@ export class Table implements BlockTool {
     const rows = content.querySelectorAll('tr');
     // Logical grid: spans are honoured, covered slots carry mergedInto and
     // colors sit at their logical (not physical) coordinates.
-    const tableContent = parsePastedTable(rows, Table.extractPastedCellColors);
+    const tableContent = parsePastedTable(rows, Table.extractPastedCellMetadata);
 
     const hasTheadHeadings = content.querySelector('thead') !== null;
     const hasThHeadings = rows[0]?.querySelector('th') !== null;
-    const withHeadings = hasTheadHeadings || hasThHeadings;
+    // Notion parity: pasted spreadsheet/HTML data treats its first row as the
+    // header by default. Explicit thead/th force it on; otherwise any multi-row
+    // paste heads its first row. A single-row paste has no body to head, so it
+    // stays plain (matches the "paste over a fully configured table" contract).
+    const withHeadings = hasTheadHeadings || hasThHeadings || rows.length >= 2;
 
     this.initialContent = tableContent;
     this.model.setWithHeadings(withHeadings);

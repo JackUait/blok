@@ -104,6 +104,130 @@ export function serializeCellsToClipboard(entries: CellEntry[]): TableCellsClipb
 }
 
 /**
+ * Escape a string for safe interpolation into clipboard HTML markup
+ * (attribute values and text content alike).
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * External-app rendering of one non-text block: markup for the `text/html`
+ * flavor plus its plain-text equivalent for the `text/plain` flavor.
+ */
+interface ExternalBlockRender {
+  html: string;
+  text: string;
+}
+
+/**
+ * First URL a block's data exposes (image `file.url`, embed `source`,
+ * bookmark `url`, …), or null when the block carries none.
+ */
+function extractBlockUrl(data: Record<string, unknown>): string | null {
+  const file = data.file;
+
+  if (typeof file === 'object' && file !== null) {
+    const fileUrl = (file as { url?: unknown }).url;
+
+    if (typeof fileUrl === 'string' && fileUrl.length > 0) {
+      return fileUrl;
+    }
+  }
+
+  for (const key of ['url', 'source', 'src', 'link', 'embed']) {
+    const value = data[key];
+
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Render a block that has no text representation (image, code, embed,
+ * bookmark, file…) for the external clipboard flavors. Returns null for
+ * ordinary text blocks — those go through {@link serializeCellBlocksToHtml}.
+ *
+ * Without this, every such block serialized to '' and the cell reached
+ * Word/Docs/Sheets as an EMPTY <td> even though the JSON payload carried it.
+ */
+export function renderNonTextBlock(block: ClipboardBlockData): ExternalBlockRender | null {
+  const { tool, data } = block;
+
+  if (typeof data.code === 'string' && tool === 'code') {
+    return {
+      html: `<pre><code>${escapeHtml(data.code)}</code></pre>`,
+      text: data.code,
+    };
+  }
+
+  const url = extractBlockUrl(data);
+
+  if (url === null) {
+    return null;
+  }
+
+  const caption = [data.caption, data.title].find(
+    (value): value is string => typeof value === 'string' && value.length > 0
+  ) ?? '';
+
+  if (tool === 'image') {
+    const alt = caption.length > 0 ? ` alt="${escapeHtml(caption)}"` : '';
+
+    return { html: `<img src="${escapeHtml(url)}"${alt}>`, text: caption.length > 0 ? caption : url };
+  }
+
+  const label = caption.length > 0 ? caption : url;
+
+  return { html: `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`, text: label };
+}
+
+/**
+ * Inline styles carrying a cell's 9-way placement into external apps
+ * (Word/Docs read text-align + vertical-align on the <td>).
+ */
+function placementStyles(placement: CellPlacement | undefined): string[] {
+  if (placement === undefined) {
+    return [];
+  }
+
+  const [vertical, horizontal] = placement.split('-');
+
+  return [`text-align: ${horizontal}`, `vertical-align: ${vertical}`];
+}
+
+/** Horizontal alignment keywords Blok's placement can express. */
+const HORIZONTAL_ALIGNMENTS = ['left', 'center', 'right'] as const;
+/** Vertical alignment keywords Blok's placement can express. */
+const VERTICAL_ALIGNMENTS = ['top', 'middle', 'bottom'] as const;
+
+/**
+ * Inverse of {@link placementStyles}: map a pasted cell's `text-align` /
+ * `vertical-align` onto Blok's per-cell placement. Returns undefined for the
+ * default (top-left) alignment and for keywords Blok cannot express (justify).
+ */
+export function placementFromAlignment(
+  textAlign: string | undefined,
+  verticalAlign: string | undefined,
+): CellPlacement | undefined {
+  const horizontal = HORIZONTAL_ALIGNMENTS.find(value => value === textAlign?.trim().toLowerCase()) ?? 'left';
+  const vertical = VERTICAL_ALIGNMENTS.find(value => value === verticalAlign?.trim().toLowerCase()) ?? 'top';
+
+  if (horizontal === 'left' && vertical === 'top') {
+    return undefined;
+  }
+
+  return `${vertical}-${horizontal}`;
+}
+
+/**
  * Extract the raw HTML content from a single block's data.
  *
  * Looks for `data.text` (string), then `data.items` (array of strings),
@@ -138,10 +262,56 @@ function stripHtmlTags(html: string): string {
 
 /**
  * Extract a plain-text representation from a single block's data.
- * HTML tags are stripped so only visible text remains.
+ * HTML tags are stripped so only visible text remains. Blocks with no text
+ * (image, code, embed…) contribute their caption / source / code instead of
+ * an empty string.
  */
 function extractBlockPlainText(block: ClipboardBlockData): string {
-  return stripHtmlTags(extractBlockHtml(block));
+  return renderNonTextBlock(block)?.text ?? stripHtmlTags(extractBlockHtml(block));
+}
+
+/**
+ * Render one clipboard cell's blocks as external-app HTML: text and list
+ * blocks go through the canonical serializer (so lists stay real <ul>/<ol>
+ * markup), and non-text blocks render as <img>/<pre><code>/<a> instead of
+ * collapsing to nothing.
+ */
+function renderCellBlocksHtml(blocks: ClipboardBlockData[]): string {
+  // Consecutive text blocks are grouped so the canonical serializer sees each
+  // run whole — a list run must stay inside ONE <ul>/<ol>.
+  type CellGroup = { external: string } | { textRun: ClipboardBlockData[] };
+
+  const groups: CellGroup[] = [];
+
+  for (const block of blocks) {
+    const external = renderNonTextBlock(block);
+
+    if (external !== null) {
+      groups.push({ external: external.html });
+
+      continue;
+    }
+
+    // Blocks without a string `text` (legacy items-array shapes) are
+    // normalized to paragraphs so the canonical serializer — which keeps
+    // list blocks as real <ul>/<ol> markup for external apps — can
+    // render every block.
+    const normalized = typeof block.data.text === 'string'
+      ? block
+      : { tool: 'paragraph', data: { text: extractBlockHtml(block) } };
+
+    const last = groups[groups.length - 1];
+
+    if (last !== undefined && 'textRun' in last) {
+      last.textRun.push(normalized);
+    } else {
+      groups.push({ textRun: [normalized] });
+    }
+  }
+
+  return groups
+    .map(group => 'external' in group ? group.external : serializeCellBlocksToHtml(group.textRun))
+    .join('');
 }
 
 /**
@@ -159,25 +329,24 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
   const rowsHtml = payload.cells
     .map((row) => {
       const cellsHtml = row
+        // A merge-covered position is NOT a cell: emitting a <td> for it would
+        // give external apps phantom cells and destroy the merge (which the
+        // colspan/rowspan below reconstructs).
+        .filter((cell) => cell.covered !== true)
         .map((cell) => {
-          // Blocks without a string `text` (legacy items-array shapes) are
-          // normalized to paragraphs so the canonical serializer — which keeps
-          // list blocks as real <ul>/<ol> markup for external apps — can
-          // render every block.
-          const text = serializeCellBlocksToHtml(
-            cell.blocks.map((block) =>
-              typeof block.data.text === 'string' ? block : { tool: 'paragraph', data: { text: extractBlockHtml(block) } }
-            )
-          );
+          const content = renderCellBlocksHtml(cell.blocks);
 
           const styles = [
             cell.color ? `background-color: ${cell.color}` : '',
             cell.textColor ? `color: ${cell.textColor}` : '',
+            ...placementStyles(cell.placement),
           ].filter(Boolean).join('; ');
 
           const styleAttr = styles ? ` style="${styles}"` : '';
+          const colspanAttr = (cell.colspan ?? 1) > 1 ? ` colspan="${cell.colspan}"` : '';
+          const rowspanAttr = (cell.rowspan ?? 1) > 1 ? ` rowspan="${cell.rowspan}"` : '';
 
-          return `<td${styleAttr}>${text}</td>`;
+          return `<td${styleAttr}${colspanAttr}${rowspanAttr}>${content}</td>`;
         })
         .join('');
 
@@ -193,11 +362,14 @@ export function buildClipboardHtml(payload: TableCellsClipboard): string {
  *
  * Cells are separated by tabs (`\t`), rows by newlines (`\n`).
  * Multiple blocks within a cell are joined with spaces.
+ * Merge-covered positions are skipped — they are not cells.
  */
 export function buildClipboardPlainText(payload: TableCellsClipboard): string {
   return payload.cells
     .map((row) =>
-      row.map((cell) => cell.blocks.map(extractBlockPlainText).join(' ')).join('\t')
+      row
+        .filter((cell) => cell.covered !== true)
+        .map((cell) => cell.blocks.map(extractBlockPlainText).join(' ')).join('\t')
     )
     .join('\n');
 }
@@ -456,6 +628,17 @@ function buildCellPayloadFromTd(td: Element): TableClipboardCell {
 
   if (cellTextColorMatch?.[1] && !isDefaultBlack(cellTextColorMatch[1].trim())) {
     cell.textColor = mapToNearestPresetColor(cellTextColorMatch[1].trim(), 'text');
+  }
+
+  // External apps express cell alignment as text-align / vertical-align — Blok
+  // stores exactly that as the 9-way placement.
+  const placement = placementFromAlignment(
+    /(?<![a-z-])text-align\s*:\s*([^;]+)/i.exec(tdStyle)?.[1],
+    /vertical-align\s*:\s*([^;]+)/i.exec(tdStyle)?.[1],
+  );
+
+  if (placement !== undefined) {
+    cell.placement = placement;
   }
 
   return cell;

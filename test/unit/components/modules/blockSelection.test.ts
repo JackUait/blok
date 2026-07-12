@@ -608,6 +608,37 @@ describe('BlockSelection', () => {
       expect(html).not.toContain('◦');
     });
 
+    it('bug: block-level copy of a TABLE keeps the table/tr/td grid in text/html', async () => {
+      // The copy-side sanitizer whitelist had no table tags, so pasting a copied
+      // table into Word / Google Docs unwrapped the grid into loose paragraphs.
+      const { blockSelection, blocks } = createBlockSelection();
+      const clipboardData = { setData: vi.fn() };
+      const clipboardEvent = {
+        preventDefault: vi.fn(),
+        clipboardData,
+      } as unknown as ClipboardEvent;
+
+      const table = blocks[0];
+
+      table.holder.innerHTML = '<table><tbody><tr><td colspan="2"><p>a</p></td><td><p>b</p></td></tr><tr><td><p>c</p></td><td><p>d</p></td></tr></tbody></table>';
+      (table as unknown as { id: string }).id = 'block-table';
+      (table as unknown as { name: string }).name = 'table';
+      (table as unknown as { preservedData: unknown }).preservedData = { withHeadings: true, content: [] };
+      table.selected = true;
+
+      await blockSelection.copySelectedBlocks(clipboardEvent);
+
+      const htmlCall = clipboardData.setData.mock.calls.find(([format]) => format === 'text/html');
+      const html = htmlCall?.[1] as string;
+
+      expect(html).toContain('<table>');
+      expect(html).toContain('<tr>');
+      expect(html).toContain('<td');
+      expect(html).toContain('colspan="2"');
+      expect(html).toContain('a');
+      expect(html).toContain('d');
+    });
+
     it('copySelectedBlocksAsMarkdown writes Markdown to the clipboard (Notion Cmd+Shift+C)', async () => {
       const { blockSelection, blocks } = createBlockSelection();
       const writeText = vi.fn().mockResolvedValue(undefined);

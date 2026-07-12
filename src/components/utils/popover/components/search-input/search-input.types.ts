@@ -62,17 +62,32 @@ const levenshteinDistance = (a: string, b: string): number => {
 
 /**
  * Checks if query characters appear in order in target (subsequence match).
+ *
+ * The match must be ANCHORED: the first query character has to sit at a word
+ * boundary of the target (start of string, or after space/hyphen/underscore).
+ * An unanchored subsequence buried mid-word — like "hea" inside
+ * "w(h)it(e)sp(a)ce" — is noise, not a match: it made the heading filter
+ * surface the Spacer tool.
  * @param target - string to search in
  * @param query - characters to find in order
- * @returns true if query is a subsequence of target
+ * @returns true if query is a subsequence of target starting at a word boundary
  */
 const isSubsequence = (target: string, query: string): boolean => {
-  const matched = [...target].reduce(
-    (qi, char) => (qi < query.length && char === query[qi] ? qi + 1 : qi),
-    0
-  );
+  if (query.length === 0) {
+    return true;
+  }
 
-  return matched === query.length;
+  const remainderMatchesFrom = (start: number): boolean =>
+    [...target.slice(start + 1)].reduce(
+      (qi, char) => (qi < query.length && char === query[qi] ? qi + 1 : qi),
+      1
+    ) === query.length;
+
+  return [...target].some((char, start) => {
+    const isWordBoundary = start === 0 || target[start - 1] === ' ' || target[start - 1] === '-' || target[start - 1] === '_';
+
+    return isWordBoundary && char === query[0] && remainderMatchesFrom(start);
+  });
 };
 
 /**

@@ -211,6 +211,26 @@ export class RectangleSelection extends Module {
     }
 
     /**
+     * The block toolbar hovers ABOVE block content — e.g. at the left edge of
+     * a line inside a table cell. A mousedown that lands on the toolbar while
+     * a nested-blocks container (a table cell's content) sits under the
+     * pointer is a text-selection gesture inside that cell, never a lasso;
+     * arming the lasso here made such a drag select (and a following
+     * Backspace delete) the whole table. Toolbar mousedowns over the page
+     * margin remain valid rubber-band starts.
+     */
+    if (startsInsideToolbar) {
+      const nestedBlocksSelector = createSelector(DATA_ATTR.nestedBlocks);
+      const startsOverNestedBlocks = document
+        .elementsFromPoint(pageX - scrollLeft, pointerY)
+        .some((el) => el.matches(nestedBlocksSelector));
+
+      if (startsOverNestedBlocks) {
+        return;
+      }
+    }
+
+    /**
      * Schedule toolbar close for the first mousemove (i.e. when the user actually drags).
      * Deferring prevents a plain click (e.g. on the plus button) from accidentally closing
      * the toolbar before its own click handler fires.
@@ -808,6 +828,18 @@ export class RectangleSelection extends Module {
     const expectedIndices = new Set<number>();
 
     blocks.forEach((block, i) => {
+      /**
+       * Only TOP-LEVEL blocks are lasso-selectable. Nested-block children (table
+       * cells, column children, toggle children) share the same flat array and
+       * their holders sit INSIDE their root's holder, so a band crossing a 3x3
+       * table used to select the table plus all nine cell paragraphs — and
+       * "Duplicate" then duplicated the table AND its cells again. The root
+       * block represents its whole subtree.
+       */
+      if (block.parentId !== null) {
+        return;
+      }
+
       const blockRect = block.holder.getBoundingClientRect();
       const blockContentEl = block.holder.querySelector<HTMLElement>('[data-blok-element-content]');
       const blockContentRect = (blockContentEl ?? block.holder).getBoundingClientRect();

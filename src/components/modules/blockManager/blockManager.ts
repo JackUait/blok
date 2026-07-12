@@ -79,11 +79,23 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Returns last Block
+   * Returns last Block of the DOCUMENT (last top-level block).
+   *
+   * Nested-block children (table cells, column children, toggle children) live
+   * at the tail of the same flat store and are skipped — see
+   * BlockRepository.lastBlock.
    * @returns {Block}
    */
   public get lastBlock(): Block | undefined {
     return this.repository.lastBlock;
+  }
+
+  /**
+   * Blocks that live at the document root (no parent container).
+   * @returns {Block[]}
+   */
+  public get topLevelBlocks(): Block[] {
+    return this.repository.topLevelBlocks;
   }
 
   /**

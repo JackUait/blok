@@ -120,6 +120,7 @@ export function injectBlocks(editor: Signal<Blok | null>): UseBlocksApi {
     insertMany: (specs) => bound().insertMany(specs),
     insertTree: (spec) => bound().insertTree(spec),
     insertMarkdown: (markdown, options) => bound().insertMarkdown(markdown, options),
+    exportMarkdown: () => bound().exportMarkdown(),
     move: (id, target) => bound().move(id, target),
     nest: (id, parentId) => bound().nest(id, parentId),
     unnest: (id) => bound().unnest(id),

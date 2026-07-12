@@ -875,6 +875,57 @@ describe('BlockOperations', () => {
       expect(newBlock).toBeDefined();
       expect(newBlock.name).toBe('header');
     });
+
+    it('does not demote a restricted tool inserted at index 0 of a document whose LAST block is inside a table cell', () => {
+      // Regression: index 0 has NO predecessor, but the guard asked the repository
+      // for index -1 — which is the legacy "give me the LAST block" shorthand. The
+      // last block of a document ending in a table is a cell child, so inserting a
+      // header / table / column_list at the very TOP silently demoted it to a
+      // paragraph. This is the model-level cause of a side-dropped table producing a
+      // paragraph instead of a column_list.
+      const tableCellContainer = document.createElement('div');
+
+      tableCellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      document.body.appendChild(tableCellContainer);
+
+      try {
+        const topBlock = createMockBlock({ id: 'top', name: 'paragraph' });
+        const tableBlock = createMockBlock({ id: 'table-block', name: 'table', contentIds: ['cell-para'] });
+        const cellParagraph = createMockBlock({ id: 'cell-para', name: 'paragraph', parentId: 'table-block' });
+
+        blocksStore = createBlocksStore([topBlock, tableBlock, cellParagraph]);
+
+        // The document's LAST block lives inside a table cell in the DOM.
+        tableCellContainer.appendChild(cellParagraph.holder);
+
+        repository = new BlockRepository();
+        repository.initialize(blocksStore);
+        hierarchy = new BlockHierarchy(repository);
+
+        const headerAdapter = createMockBlockToolAdapter('header');
+
+        (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+          .dependencies.tools.set('header', headerAdapter);
+
+        operations = new BlockOperations(
+          dependencies,
+          repository,
+          factory,
+          hierarchy,
+          blockDidMutatedSpy,
+          0
+        );
+        operations.setYjsSync(yjsSync);
+
+        // Insert at the TOP of the document: nothing precedes index 0, so no table
+        // cell context exists and the tool must survive intact.
+        const newBlock = operations.insert({ tool: 'header', index: 0, needToFocus: false }, blocksStore);
+
+        expect(newBlock.name).toBe('header');
+      } finally {
+        document.body.removeChild(tableCellContainer);
+      }
+    });
   });
 
   describe('insertDefaultBlockAtIndex', () => {
@@ -907,6 +958,39 @@ describe('BlockOperations', () => {
 
       expect(block).toBeDefined();
       expect(repository.length).toBe(4);
+    });
+
+    /**
+     * insertAtEnd means "append a block to the END OF THE DOCUMENT". Nested-block
+     * tools keep their children at the TAIL of the same flat store, so the raw
+     * predecessor of the append slot is a column child / table cell — and the
+     * column-inheritance rescue in insert() then adopted the appended block INTO
+     * the last column. The document-level "add a block below" gesture (bottom-zone
+     * click, Caret.setToTheLastBlock) silently wrote inside the columns instead.
+     */
+    it('appends a TOP-LEVEL block when the flat tail is a column child', () => {
+      const columnList = createMockBlock({ id: 'column_list', name: 'column_list', contentIds: ['column'] });
+      const column = createMockBlock({ id: 'column', name: 'column', parentId: 'column_list', contentIds: ['column-child'] });
+      const columnChild = createMockBlock({ id: 'column-child', name: 'paragraph', parentId: 'column' });
+
+      blocksStore = createBlocksStore([columnList, column, columnChild]);
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      hierarchy = new BlockHierarchy(repository);
+      operations = new BlockOperations(
+        dependencies,
+        repository,
+        factory,
+        hierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+      operations.setYjsSync(yjsSync);
+
+      const block = operations.insertAtEnd(blocksStore);
+
+      expect(block.parentId).toBeNull();
+      expect(column.contentIds).toEqual(['column-child']);
     });
   });
 

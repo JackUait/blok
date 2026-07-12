@@ -2083,4 +2083,87 @@ test.describe('Columns tool', () => {
       )
       .toBe(0);
   });
+
+  test('clicking the empty space below a short column appends a text block there', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1', 'p2', 'p3'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'Tall one' }, parent: 'c1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'Tall two' }, parent: 'c1' },
+        { id: 'p3', type: 'paragraph', data: { text: 'Tall three' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p4'] },
+        { id: 'p4', type: 'paragraph', data: { text: 'Short' }, parent: 'c2' },
+      ],
+    });
+
+    const shortColumn = page.locator('[data-blok-column]').nth(1);
+    const row = page.getByTestId('column-list');
+    const columnBox = await shortColumn.boundingBox();
+    const rowBox = await row.boundingBox();
+
+    if (!columnBox || !rowBox) {
+      throw new Error('missing bounding box for the column row');
+    }
+
+    // The dead space: inside the short column horizontally, near the bottom of
+    // the row — below its only paragraph, which the tall column holds open.
+    await page.mouse.click(columnBox.x + columnBox.width / 2, rowBox.y + rowBox.height - 6);
+
+    // A new empty paragraph joins the short column and takes the caret.
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const columns = Array.from(document.querySelectorAll('[data-blok-column]'));
+          const active = document.activeElement;
+
+          return active === null ? -1 : columns.findIndex(column => column.contains(active));
+        })
+      )
+      .toBe(1);
+
+    await page.keyboard.type('Typed below');
+
+    const saved = await saveBlok(page);
+    const typed = saved.blocks.find(block => (block.data as { text?: string }).text === 'Typed below');
+
+    expect(typed?.parent).toBe('c2');
+    expect(saved.blocks.find(block => block.id === 'c2')?.content?.at(-1)).toBe(typed?.id);
+  });
+
+  test('clicking below a column that already ends in an empty paragraph focuses it instead of adding another', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 800 });
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['p1', 'p2', 'p3'] },
+        { id: 'p1', type: 'paragraph', data: { text: 'Tall one' }, parent: 'c1' },
+        { id: 'p2', type: 'paragraph', data: { text: 'Tall two' }, parent: 'c1' },
+        { id: 'p3', type: 'paragraph', data: { text: 'Tall three' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p4', 'p5'] },
+        { id: 'p4', type: 'paragraph', data: { text: 'Short' }, parent: 'c2' },
+        { id: 'p5', type: 'paragraph', data: { text: '' }, parent: 'c2' },
+      ],
+    });
+
+    const shortColumn = page.locator('[data-blok-column]').nth(1);
+    const row = page.getByTestId('column-list');
+    const columnBox = await shortColumn.boundingBox();
+    const rowBox = await row.boundingBox();
+
+    if (!columnBox || !rowBox) {
+      throw new Error('missing bounding box for the column row');
+    }
+
+    await page.mouse.click(columnBox.x + columnBox.width / 2, rowBox.y + rowBox.height - 6);
+    await page.keyboard.type('Reused');
+
+    const saved = await saveBlok(page);
+    const columnChildren = saved.blocks.find(block => block.id === 'c2')?.content ?? [];
+
+    // The trailing empty paragraph took the text — no extra block was stacked.
+    expect(columnChildren).toHaveLength(2);
+    expect(saved.blocks.find(block => block.id === 'p5')?.data).toMatchObject({ text: 'Reused' });
+  });
 });

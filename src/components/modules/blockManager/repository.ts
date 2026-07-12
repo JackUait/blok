@@ -55,11 +55,32 @@ export class BlockRepository {
   }
 
   /**
-   * Returns last Block
+   * Blocks that live at the document root (no parent container).
+   *
+   * The flat store is NOT the document: nested-block tools (table, columns,
+   * toggle, callout) keep their children in the same array, appended at its
+   * TAIL. Anything that means "the document's blocks" must read this, never
+   * the raw array.
+   * @returns {Block[]} top-level blocks in document order
+   */
+  public get topLevelBlocks(): Block[] {
+    return this.blocksStore.array.filter((block) => block.parentId === null);
+  }
+
+  /**
+   * Returns the last TOP-LEVEL Block, i.e. the last block of the document.
+   *
+   * Deliberately NOT the tail of the flat store: a document ending in a table
+   * has that table's bottom-right cell paragraph as the flat tail, and every
+   * consumer of `lastBlock` (bottom-zone click, Caret.setToTheLastBlock,
+   * api.caret.setToLastBlock, the toolbar's trailing-paragraph guard) means the
+   * end of the DOCUMENT, not the end of the store.
    * @returns {Block | undefined}
    */
   public get lastBlock(): Block | undefined {
-    return this.blocksStore[this.blocksStore.length - 1];
+    const topLevel = this.topLevelBlocks;
+
+    return topLevel[topLevel.length - 1];
   }
 
   /**

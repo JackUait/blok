@@ -140,6 +140,18 @@ export interface BlockToolConstructable extends BaseToolConstructable {
   isReadOnlySupported?: boolean;
 
   /**
+   * Set to true when the Tool exclusively manages its own child blocks — its
+   * `contentIds` are the Tool's own machinery (a table's cell blocks, a
+   * column_list's columns), not blocks the user put there.
+   *
+   * Core then refuses to nest an outside block into it via a user gesture such
+   * as Tab-indent, which would otherwise create a rogue child that the Tool
+   * renders wherever its children go. Leave unset for Tools whose children are
+   * plain user content (toggle, callout, a nestable paragraph).
+   */
+  ownsChildren?: boolean;
+
+  /**
    * @constructor
    *
    * @param {BlockToolConstructorOptions} config - constructor parameters

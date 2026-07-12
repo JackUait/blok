@@ -16,12 +16,13 @@ const createMockAPI = (overrides: Partial<API> = {}): API => ({
 
 const createColumnOptions = (
   data: Partial<ColumnData> = {},
-  api: API = createMockAPI()
+  api: API = createMockAPI(),
+  readOnly = false
 ): BlockToolConstructorOptions<ColumnData> => ({
   data: { ...data } as ColumnData,
   config: {},
   api,
-  readOnly: false,
+  readOnly,
   block: { id: 'col-1', holder: document.createElement('div') } as never,
 });
 
@@ -302,6 +303,158 @@ describe('Column tool', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(remove).toHaveBeenCalledWith(1); // column_list index
+  });
+
+  describe('click on the empty space below the column content', () => {
+    /**
+     * Columns stretch to the height of the tallest one, so a short column has
+     * dead space under its last block. Clicking it must behave like the editor's
+     * bottom zone: append an empty text block and focus it.
+     */
+    const createTreeAPI = (
+      tree: { [parentId: string]: { id: string; name?: string; isEmpty?: boolean }[] },
+      indexes: { [blockId: string]: number },
+      inserted: { id: string; holder: HTMLElement } = { id: 'new-p', holder: document.createElement('div') }
+    ): { api: API; insertInsideParent: ReturnType<typeof vi.fn>; setToBlock: ReturnType<typeof vi.fn> } => {
+      const insertInsideParent = vi.fn().mockReturnValue(inserted);
+      const setToBlock = vi.fn();
+      const holders: { [blockId: string]: HTMLElement } = {};
+      const api = createMockAPI({
+        blocks: {
+          getChildren: vi.fn((parentId: string) => (tree[parentId] ?? []).map(child => ({
+            ...child,
+            holder: holders[child.id] ?? (holders[child.id] = document.createElement('div')),
+          }))),
+          getBlockIndex: vi.fn((blockId: string) => indexes[blockId]),
+          insertInsideParent,
+        },
+        caret: { setToBlock },
+      } as unknown as Partial<API>);
+
+      return { api,
+        insertInsideParent,
+        setToBlock };
+    };
+
+    const mountColumn = (
+      api: API,
+      readOnly = false
+    ): { column: Column; options: BlockToolConstructorOptions<ColumnData> } => {
+      const options = createColumnOptions({}, api, readOnly);
+      const column = new Column(options);
+
+      options.block.holder.appendChild(column.render());
+      column.rendered();
+
+      return { column,
+        options };
+    };
+
+    it('appends a paragraph at the end of the column and focuses it', () => {
+      const { api, insertInsideParent, setToBlock } = createTreeAPI(
+        { 'col-1': [{ id: 'p-1',
+          name: 'paragraph',
+          isEmpty: false }] },
+        { 'col-1': 3,
+          'p-1': 4 }
+      );
+      const { options } = mountColumn(api);
+
+      options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      // Inserted right after the column's last descendant, at the end of the column.
+      expect(insertInsideParent).toHaveBeenCalledWith('col-1', 5);
+      expect(setToBlock).toHaveBeenCalledWith('new-p', 'start');
+    });
+
+    it('inserts after the last descendant when the trailing child is itself a container', () => {
+      // A toggle at the bottom of the column owns the flat slots after it; the
+      // new paragraph must land after the toggle's whole subtree, not inside it.
+      const { api, insertInsideParent } = createTreeAPI(
+        {
+          'col-1': [{ id: 'toggle-1',
+            name: 'toggle',
+            isEmpty: false }],
+          'toggle-1': [{ id: 'nested-1',
+            name: 'paragraph',
+            isEmpty: false }],
+        },
+        { 'col-1': 3,
+          'toggle-1': 4,
+          'nested-1': 5 }
+      );
+      const { options } = mountColumn(api);
+
+      options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(insertInsideParent).toHaveBeenCalledWith('col-1', 6);
+    });
+
+    it('focuses the trailing empty paragraph instead of stacking another one', () => {
+      const { api, insertInsideParent, setToBlock } = createTreeAPI(
+        { 'col-1': [{ id: 'p-1',
+          name: 'paragraph',
+          isEmpty: true }] },
+        { 'col-1': 3,
+          'p-1': 4 }
+      );
+      const { options } = mountColumn(api);
+
+      options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(insertInsideParent).not.toHaveBeenCalled();
+      expect(setToBlock).toHaveBeenCalledWith('p-1', 'end');
+    });
+
+    it('ignores clicks that land on a child block', () => {
+      const { api, insertInsideParent } = createTreeAPI(
+        { 'col-1': [{ id: 'p-1',
+          name: 'paragraph',
+          isEmpty: false }] },
+        { 'col-1': 3,
+          'p-1': 4 }
+      );
+      const { options } = mountColumn(api);
+      const childBlock = options.block.holder.querySelector('[data-blok-nested-blocks]');
+
+      childBlock?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(insertInsideParent).not.toHaveBeenCalled();
+    });
+
+    it('ignores clicks in read-only mode', () => {
+      const { api, insertInsideParent } = createTreeAPI(
+        { 'col-1': [{ id: 'p-1',
+          name: 'paragraph',
+          isEmpty: false }] },
+        { 'col-1': 3,
+          'p-1': 4 }
+      );
+      const { options } = mountColumn(api, true);
+
+      options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(insertInsideParent).not.toHaveBeenCalled();
+    });
+
+    it('ignores the click that ends a text drag-selection', () => {
+      // Releasing a selection drag in the dead space fires a click on the holder;
+      // creating a block there would blow away the selection the user just made.
+      const { api, insertInsideParent } = createTreeAPI(
+        { 'col-1': [{ id: 'p-1',
+          name: 'paragraph',
+          isEmpty: false }] },
+        { 'col-1': 3,
+          'p-1': 4 }
+      );
+      const { options } = mountColumn(api);
+
+      vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: false } as Selection);
+
+      options.block.holder.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(insertInsideParent).not.toHaveBeenCalled();
+    });
   });
 
   describe('setReadOnly (in-place read-only toggle)', () => {

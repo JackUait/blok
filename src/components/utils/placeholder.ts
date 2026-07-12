@@ -135,6 +135,35 @@ const handleEmptyElement = (element: HTMLElement): void => {
 };
 
 /**
+ * Roles that support `aria-placeholder` (ARIA 1.2: it is supported only on
+ * textbox, searchbox and combobox — it is NOT a global attribute).
+ */
+const ARIA_PLACEHOLDER_ROLES = new Set(['textbox', 'searchbox', 'combobox']);
+
+/**
+ * Whether the host's role permits `aria-placeholder`.
+ *
+ * `contenteditable` does NOT give an element a textbox role: a `<div>`'s implicit
+ * role stays `generic`, which supports no ARIA attributes beyond the globals. So
+ * writing `aria-placeholder` onto a contenteditable div (paragraph, list item,
+ * heading, quote…) is invalid ARIA — assistive tech ignores it, and it raises a
+ * CRITICAL axe `aria-allowed-attr` violation. Only write it where the host
+ * actually declares a supporting role, or is a native text input.
+ *
+ * @param element - the placeholder host
+ * @returns true when `aria-placeholder` is a valid attribute on this element
+ */
+const supportsAriaPlaceholder = (element: HTMLElement): boolean => {
+  const role = element.getAttribute('role');
+
+  if (role !== null) {
+    return ARIA_PLACEHOLDER_ROLES.has(role.trim().toLowerCase());
+  }
+
+  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement;
+};
+
+/**
  * Set up placeholder behavior for a contenteditable element.
  * Adds a focus event listener to position the caret at the start
  * when the element is empty. Does NOT handle caret positioning on
@@ -157,9 +186,14 @@ export const setupPlaceholder = (
 
   // Always set the attribute, even if empty (for consistency and testing)
   element.setAttribute(attributeName, text);
+
   // Expose the placeholder to assistive tech — the CSS `::before` text is
-  // invisible to screen readers, so mirror it onto `aria-placeholder`.
-  element.setAttribute('aria-placeholder', text);
+  // invisible to screen readers, so mirror it onto `aria-placeholder`. Only on
+  // hosts whose role supports the attribute; see supportsAriaPlaceholder.
+  if (supportsAriaPlaceholder(element)) {
+    element.setAttribute('aria-placeholder', text);
+  }
+
   // Single visibility-policy vocabulary shared across every placeholder host.
   element.setAttribute('data-blok-placeholder-visible', visibility);
 

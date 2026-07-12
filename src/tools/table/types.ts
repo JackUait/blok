@@ -18,6 +18,14 @@ export type CellContent = {
   color?: string;
   textColor?: string;
   text?: string;
+  /**
+   * Structured block seeds for a cell whose content cannot be expressed as
+   * HTML text (image / code / embed blocks, or blocks carrying tunes).
+   * Consumed by TableCellBlocks.initializeCells — which replaces it with the
+   * created block ids — so it never reaches saved data. Seeding via `text`
+   * alone silently dropped every non-text block pasted into a new table.
+   */
+  blockData?: ClipboardBlockData[];
   /** Content placement within the cell (vertical + horizontal alignment). */
   placement?: CellPlacement;
   /** Number of columns this cell spans (default 1 when omitted). Only set on origin cells. */
@@ -73,6 +81,8 @@ export interface TableConfig {
   cols?: number;
   /** Whether to start with heading row enabled */
   withHeadings?: boolean;
+  /** Whether to start with heading column enabled */
+  withHeadingColumn?: boolean;
   /** Whether to start stretched */
   stretched?: boolean;
   /** Additional tool names to restrict from being inserted into table cells */

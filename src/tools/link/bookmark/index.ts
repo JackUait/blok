@@ -9,7 +9,7 @@ import type {
   ToolboxConfig,
 } from '../../../../types';
 import { IconLink } from '../../../components/icons';
-import { isHttpUrl } from '../registry';
+import { isHttpUrl, setSafeLinkHref } from '../registry';
 import {
   MetadataFetcher,
   type BookmarkConfig,
@@ -176,9 +176,7 @@ export class Bookmark implements BlockTool {
 
     // Only navigate http(s) URLs. Saved JSON or a compromised unfurl endpoint
     // could carry a javascript:/data: URL; leaving href unset prevents XSS.
-    if (isHttpUrl(this.data.url)) {
-      card.href = this.data.url;
-    }
+    setSafeLinkHref(card, this.data.url);
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
 

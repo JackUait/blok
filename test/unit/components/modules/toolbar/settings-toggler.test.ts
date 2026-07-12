@@ -54,8 +54,13 @@ describe('SettingsTogglerHandler', () => {
   let getBlok: () => BlokModules;
   let setHoveredBlockSpy: ReturnType<typeof vi.fn>;
   let cancelTrackingSpy: ReturnType<typeof vi.fn>;
+  let readOnlyEnabled: boolean;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
+    readOnlyEnabled = false;
+
     clickDragHandler = new ClickDragHandler();
 
     mockBlock = {
@@ -84,6 +89,11 @@ describe('SettingsTogglerHandler', () => {
       },
       DragManager: {
         cancelTracking: cancelTrackingSpy,
+      },
+      ReadOnly: {
+        get isEnabled(): boolean {
+          return readOnlyEnabled;
+        },
       },
       I18n: {
         t: vi.fn((key: string) => key),
@@ -153,6 +163,154 @@ describe('SettingsTogglerHandler', () => {
           { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);
+    });
+  });
+
+  describe('read-only tooltip', () => {
+    const emptyNodes = (): Parameters<SettingsTogglerHandler['make']>[0] => ({
+      wrapper: undefined,
+      content: undefined,
+      actions: undefined,
+      plusButton: undefined,
+      settingsToggler: undefined,
+    });
+
+    it('drops the drag line and the shortcut when read-only is enabled', async () => {
+      const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
+
+      readOnlyEnabled = true;
+
+      settingsTogglerHandler.make(emptyNodes());
+
+      expect(createTooltipContent).toHaveBeenCalledWith([
+        [
+          { text: 'blockSettings.clickAction', highlight: true },
+          { text: 'blockSettings.openMenuAction', highlight: false },
+        ],
+      ]);
+    });
+
+    it('re-binds the tooltip when read-only is toggled after creation', async () => {
+      const { createTooltipContent } = await import('../../../../../src/components/modules/toolbar/tooltip');
+      const { onHover } = await import('../../../../../src/components/utils/tooltip');
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      (createTooltipContent as Mock).mockClear();
+      (onHover as Mock).mockClear();
+
+      readOnlyEnabled = true;
+      settingsTogglerHandler.refreshTooltip();
+
+      expect(createTooltipContent).toHaveBeenCalledWith([
+        [
+          { text: 'blockSettings.clickAction', highlight: true },
+          { text: 'blockSettings.openMenuAction', highlight: false },
+        ],
+      ]);
+      expect(onHover).toHaveBeenCalledWith(settingsToggler, 'tooltip content', { delay: 500 });
+    });
+  });
+
+  describe('read-only cursor', () => {
+    const emptyNodes = (): Parameters<SettingsTogglerHandler['make']>[0] => ({
+      wrapper: undefined,
+      content: undefined,
+      actions: undefined,
+      plusButton: undefined,
+      settingsToggler: undefined,
+    });
+
+    const grabClasses = [
+      'active:cursor-grabbing',
+      'can-hover:hover:cursor-grab',
+      'group-data-[blok-dragging=true]:cursor-grabbing',
+    ];
+
+    it('keeps the grab cursors while editing', () => {
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(true);
+      });
+    });
+
+    it('drops the grab cursors when read-only is enabled', () => {
+      readOnlyEnabled = true;
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(false);
+      });
+    });
+
+    it('re-applies the cursors when read-only is toggled after creation', () => {
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      readOnlyEnabled = true;
+      settingsTogglerHandler.refreshCursor();
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(false);
+      });
+
+      readOnlyEnabled = false;
+      settingsTogglerHandler.refreshCursor();
+
+      grabClasses.forEach((className) => {
+        expect(settingsToggler.classList.contains(className)).toBe(true);
+      });
+    });
+  });
+
+  describe('read-only aria-label', () => {
+    const emptyNodes = (): Parameters<SettingsTogglerHandler['make']>[0] => ({
+      wrapper: undefined,
+      content: undefined,
+      actions: undefined,
+      plusButton: undefined,
+      settingsToggler: undefined,
+    });
+
+    it('announces the drag affordance while editing', () => {
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('a11y.dragHandle');
+      expect(settingsToggler.getAttribute('aria-roledescription')).toBe('a11y.dragHandleRole');
+    });
+
+    it('announces only the menu when read-only is enabled', () => {
+      readOnlyEnabled = true;
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('blockSettings.clickToOpenMenu');
+      expect(settingsToggler.hasAttribute('aria-roledescription')).toBe(false);
+      expect(settingsToggler.hasAttribute('aria-keyshortcuts')).toBe(false);
+    });
+
+    it('re-applies the labels when read-only is toggled after creation', async () => {
+      const { getUserOS } = await import('../../../../../src/components/utils');
+
+      (getUserOS as Mock).mockReturnValue({ mac: true, win: false, other: false });
+
+      const settingsToggler = settingsTogglerHandler.make(emptyNodes());
+
+      readOnlyEnabled = true;
+      settingsTogglerHandler.refreshAriaLabel();
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('blockSettings.clickToOpenMenu');
+      expect(settingsToggler.hasAttribute('aria-roledescription')).toBe(false);
+
+      readOnlyEnabled = false;
+      settingsTogglerHandler.refreshAriaLabel();
+
+      expect(settingsToggler.getAttribute('aria-label')).toBe('a11y.dragHandle');
+      expect(settingsToggler.getAttribute('aria-roledescription')).toBe('a11y.dragHandleRole');
+      expect(settingsToggler.getAttribute('aria-keyshortcuts')).toBe(
+        'Meta+Shift+ArrowUp Meta+Shift+ArrowDown'
+      );
     });
   });
 

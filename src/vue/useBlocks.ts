@@ -118,6 +118,7 @@ export function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi {
     insertMany: (specs) => bound.value.insertMany(specs),
     insertTree: (spec) => bound.value.insertTree(spec),
     insertMarkdown: (markdown, options) => bound.value.insertMarkdown(markdown, options),
+    exportMarkdown: () => bound.value.exportMarkdown(),
     move: (id, target) => bound.value.move(id, target),
     nest: (id, parentId) => bound.value.nest(id, parentId),
     unnest: (id) => bound.value.unnest(id),

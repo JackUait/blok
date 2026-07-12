@@ -77,11 +77,16 @@ const CROSS_BROWSER_TESTS = [
   '**/tools/columns.spec.ts', // responsive vertical-stack assertion is layout/engine-dependent
   '**/ui/toolbar-nested-list-positioning.spec.ts',
   '**/ui/toolbar-rubber-band-hover.spec.ts',
+  '**/tools/table-cell-multiline-selection.spec.ts',
+  '**/tools/nested-container-multiline-selection.spec.ts',
   '**/ui/toolbar-always-visible.spec.ts',
   '**/ui/settings-toggler-after-drag.spec.ts',
 
   // Toolbar focus preservation (mouse events - cross-browser)
   '**/modules/toolbar-focus.spec.ts',
+
+  // Image compression rides on each browser's own canvas encoders
+  '**/tools/image-compression.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium

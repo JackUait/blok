@@ -323,12 +323,10 @@ test.describe('Table block: full live-drag lifecycle in a column', () => {
     expect(textOf(findBlock(saved, 'tp-r1c1'))).toBe('Cell B2');
   });
 
-  test('REMOVE: deleting the table leaves its (now sole-child) column childless without reseed or unwrap', async ({ page }) => {
+  test('REMOVE: deleting the table collapses the emptied column and unwraps the layout', async ({ page }) => {
     await createBlok(page, dropFixture());
 
-    const { columnIds } = await sideDropTableBesideTarget(page);
-    const targetColumnId = columnIds[0];
-    const tableColumnId = columnIds[1];
+    await sideDropTableBesideTarget(page);
 
     // Delete the table via its flat index (mirrors the columns.spec pattern).
     await page.evaluate(async () => {
@@ -344,6 +342,14 @@ test.describe('Table block: full live-drag lifecycle in a column', () => {
       () => window.blokInstance !== undefined && window.blokInstance.blocks.getBlockIndex('table1') === undefined
     );
 
+    // Product rule (see unwrapColumnListIfCollapsed + remove-collapse-in-column.spec):
+    // deleting a column's SOLE child empties that column, which is removed; the list
+    // then holds a single column, so it dissolves and promotes the survivor. The
+    // unwrap is fire-and-forget async — poll until the scaffold is gone.
+    await expect
+      .poll(async () => (await saveBlok(page)).blocks.filter((b) => b.type === 'column_list').length, { timeout: 3000 })
+      .toBe(0);
+
     const saved = await saveBlok(page);
 
     // The table and its entire cell subtree are gone — no orphans dangling.
@@ -353,24 +359,27 @@ test.describe('Table block: full live-drag lifecycle in a column', () => {
     }
     expect(childrenOf(saved, 'table1')).toEqual([]);
 
-    // Product rule: deleting a column's SOLE child leaves the column CHILDLESS —
-    // no reseed, no unwrap. The column_list survives with both columns; the
-    // table's column is now empty, the target's column keeps its paragraph.
-    const listId = saved.blocks.find((b) => b.type === 'column_list')?.id;
-    expect(listId).toBeDefined();
-    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(2);
-    expect(childrenOf(saved, listId as string)).toEqual(columnIds);
-    expect(childrenOf(saved, tableColumnId)).toEqual([]);
-    expect(childrenOf(saved, targetColumnId)).toEqual(['target']);
+    // The columns scaffold dissolves entirely: no column_list, no column survives.
+    expect(saved.blocks.filter((b) => b.type === 'column_list')).toHaveLength(0);
+    expect(saved.blocks.filter((b) => b.type === 'column')).toHaveLength(0);
 
-    // LIVE DOM: two columns still render; the table is gone from the DOM.
-    await expect(page.locator('[data-blok-column]')).toHaveCount(2);
+    // The other column's target paragraph is promoted to ROOT, content intact.
+    expect(findBlock(saved, 'target')?.parent ?? null).toBeNull();
+    expect(textOf(findBlock(saved, 'target'))).toBe('Target');
+
+    // No orphaned blocks: every parent ref still resolves.
+    const allIds = new Set(saved.blocks.map((b) => b.id));
+    const orphans = saved.blocks.filter((b) => b.parent !== undefined && b.parent !== null && !allIds.has(b.parent));
+    expect(orphans).toEqual([]);
+
+    // LIVE DOM: the columns and the table are gone; the target survives.
+    await expect(page.locator('[data-blok-column]')).toHaveCount(0);
     await expect(page.locator('[data-blok-tool="table"]')).toHaveCount(0);
     await expect(page.getByText('Cell A1')).toHaveCount(0);
     await expect(page.getByText('Target')).toBeVisible();
 
     const placement = await domColumnIndexById(page, ['table1', 'target']);
     expect(placement['table1']).toBe(-2); // gone from DOM
-    expect(placement['target']).toBe(0); // target stays in its column
+    expect(placement['target']).toBe(-1); // promoted out of any column
   });
 });

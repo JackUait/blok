@@ -136,6 +136,55 @@ describe('createCellColorPicker', () => {
     }
   });
 
+  it('marks the cell\'s current background color as active and un-marks Default', () => {
+    const active = COLOR_PRESETS[1].bg;
+    const { element } = createCellColorPicker({
+      i18n: mockI18n,
+      onColorSelect: vi.fn(),
+      currentColors: { textColor: null, backgroundColor: active },
+    });
+
+    const activeSwatch = element.querySelector<HTMLElement>(
+      `[data-blok-testid="cell-color-swatch-backgroundColor-${COLOR_PRESETS[1].name}"]`
+    );
+    const defaultSwatch = element.querySelector<HTMLElement>(
+      '[data-blok-testid="cell-color-swatch-backgroundColor-default"]'
+    );
+
+    // The applied color's swatch carries the solid active ring; Default does not.
+    expect(activeSwatch?.classList.contains('ring-2')).toBe(true);
+    expect(defaultSwatch?.classList.contains('ring-2')).toBe(false);
+  });
+
+  it('marks the cell\'s current text color as active in the text section', () => {
+    const active = COLOR_PRESETS[2].text;
+    const { element } = createCellColorPicker({
+      i18n: mockI18n,
+      onColorSelect: vi.fn(),
+      currentColors: { textColor: active, backgroundColor: null },
+    });
+
+    const activeSwatch = element.querySelector<HTMLElement>(
+      `[data-blok-testid="cell-color-swatch-textColor-${COLOR_PRESETS[2].name}"]`
+    );
+
+    expect(activeSwatch?.classList.contains('ring-2')).toBe(true);
+  });
+
+  it('marks Default as active when the cell has no color set', () => {
+    const { element } = createCellColorPicker({
+      i18n: mockI18n,
+      onColorSelect: vi.fn(),
+      currentColors: { textColor: null, backgroundColor: null },
+    });
+
+    const bgDefault = element.querySelector<HTMLElement>(
+      '[data-blok-testid="cell-color-swatch-backgroundColor-default"]'
+    );
+
+    expect(bgDefault?.classList.contains('ring-2')).toBe(true);
+  });
+
   it('swatches in background section show background color', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,

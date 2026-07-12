@@ -1,9 +1,10 @@
 import type { Block } from '../../../block';
 import { SelectionUtils } from '../../../selection/index';
+import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
-import { getPrecedingSibling, getFollowingSiblings } from './structural-siblings';
+import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
 
 /**
  * BlockSelectionKeys Composer handles keyboard interactions when blocks are selected.
@@ -187,10 +188,10 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
-   * Nest the selection one level deeper. The anchor is the preceding sibling of
-   * the first selected block, or — when the first selected block has no preceding
-   * sibling (it is the first item of its list and cannot indent, Notion) — the
-   * first selected block itself. Every selected top-level block EXCEPT the anchor
+   * Nest the selection one level deeper. The anchor is the first selected block's
+   * indent target, or — when it has none (it is the first item of its list and
+   * cannot indent, Notion; or the sibling above owns its children and can never
+   * adopt it) — the first selected block itself. Every selected top-level block EXCEPT the anchor
    * is reparented under the anchor; their descendants follow automatically.
    *
    * So a selection that starts at the very top of a list still indents every item
@@ -206,8 +207,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return;
     }
 
-    const precedingSibling = getPrecedingSibling(BlockManager, first);
-    const anchor = precedingSibling ?? first;
+    const indentTarget = getIndentTarget(BlockManager, first);
+    const anchor = indentTarget ?? first;
     const originalParentId = first.parentId;
 
     for (const block of blocks) {
@@ -452,10 +453,14 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return false;
     }
 
+    const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+
     const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
     if (insertedBlock) {
       Caret.setToBlock(insertedBlock, Caret.positions.START);
+    } else {
+      this.scheduleCaretRestore(nestedContainer);
     }
 
     BlockSelection.clearSelection(event);
@@ -465,6 +470,20 @@ export class BlockSelectionKeys extends BlockEventComposer {
     event.stopPropagation();
 
     return true;
+  }
+
+  /**
+   * Restore the caret into the nested-blocks container (e.g. a table cell)
+   * that held the deleted selection, so focus does not fall onto <body>.
+   * @param container - the container the deleted blocks lived in, or null
+   */
+  private scheduleCaretRestore(container: HTMLElement | null): void {
+    const { BlockManager, Caret } = this.Blok;
+
+    scheduleCaretIntoNestedContainer(container, {
+      getBlock: (holder) => BlockManager.getBlock(holder),
+      setCaretToBlockStart: (block) => Caret.setToBlock(block, Caret.positions.START),
+    });
   }
 
   /**
@@ -494,10 +513,14 @@ export class BlockSelectionKeys extends BlockEventComposer {
     }
 
     BlockSelection.copySelectedBlocks(event).then(() => {
+      const nestedContainer = findCommonNestedContainer(BlockManager.blocks.filter((block) => block.selected));
+
       const insertedBlock = BlockManager.deleteSelectedBlocksAndInsertReplacement();
 
       if (insertedBlock) {
         Caret.setToBlock(insertedBlock, Caret.positions.START);
+      } else {
+        this.scheduleCaretRestore(nestedContainer);
       }
 
       BlockSelection.clearSelection(event);

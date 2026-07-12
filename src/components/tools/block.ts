@@ -80,6 +80,20 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * Returns true when the Tool exclusively manages its own child blocks, so the
+   * user may never nest an arbitrary block into it.
+   *
+   * A table's contentIds ARE its cell blocks; a column_list's ARE its columns.
+   * Adopting an outside block into one of those makes it a rogue child the tool
+   * then renders wherever its own children go (a table drops it into the first
+   * cell). Blocks whose children are plain user content — toggle, callout, a
+   * paragraph with nested blocks — are NOT tool-owned and stay nestable.
+   */
+  public get ownsChildren(): boolean {
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.OwnsChildren] === true;
+  }
+
+  /**
    * Returns true if Tool supports linebreaks
    */
   public get isLineBreaksEnabled(): boolean {

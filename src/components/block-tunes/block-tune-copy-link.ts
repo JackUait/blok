@@ -50,11 +50,19 @@ export class CopyLinkTune implements BlockTune {
    * Tune's appearance in block settings menu
    */
   public render(): MenuConfig {
+    /**
+     * Read-only never selects a block on its own, so the shortcut can only ever
+     * fire while this very menu is open. Advertising it there — in the visible
+     * label and in the aria-keyshortcuts the popover derives from it — promises
+     * a keystroke the user cannot reach from the page.
+     */
+    const secondaryLabel = this.api.readOnly.isEnabled ? undefined : beautifyShortcut('CTRL+CMD+L');
+
     return {
       icon: IconLink,
       title: this.api.i18n.t('blockSettings.copyLink'),
       name: 'copy-link',
-      secondaryLabel: beautifyShortcut('CTRL+CMD+L'),
+      secondaryLabel,
       onActivate: (): Promise<void> => this.handleClick(),
     };
   }

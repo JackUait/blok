@@ -122,6 +122,21 @@ describe('scoreSearchMatch', () => {
       expect(scoreSearchMatch({ title: 'Header' }, 'hdr')).toBeGreaterThan(0);
     });
 
+    it('should NOT match a subsequence that starts mid-word', () => {
+      // "hea" appears as a subsequence of "w(h)it(e)sp(a)ce", but the first
+      // matched character sits mid-word — that is noise, not a match. This is
+      // the regression where typing "hea" to filter headings also surfaced the
+      // Spacer tool via its "whitespace" alias.
+      expect(scoreSearchMatch({ title: 'Spacer', searchTerms: ['whitespace'] }, 'hea')).toBe(0);
+      expect(matchesSearchQuery({ title: 'Spacer', searchTerms: ['whitespace'] }, 'hea')).toBe(false);
+    });
+
+    it('should still match a subsequence anchored at a word boundary', () => {
+      // "hd" → "(H)elp (D)esk" and "(H)ol(d)er": first char at a word start.
+      expect(scoreSearchMatch({ title: 'Help Desk' }, 'hd')).toBeGreaterThan(0);
+      expect(scoreSearchMatch({ title: 'Holder' }, 'hd')).toBeGreaterThan(0);
+    });
+
     it('should score word-boundary subsequence higher than general subsequence', () => {
       // "hd" matches word boundary of "Header" (H at start) better context
       // Use a multi-word title to test word boundaries

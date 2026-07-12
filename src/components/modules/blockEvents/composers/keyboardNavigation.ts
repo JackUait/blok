@@ -8,7 +8,7 @@ import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_N
 import { keyCodeFromEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
-import { getPrecedingSibling, getFollowingSiblings } from './structural-siblings';
+import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
 
 /**
  * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
@@ -55,6 +55,23 @@ export class KeyboardNavigation extends BlockEventComposer {
     const currentBlock = this.Blok.BlockManager.currentBlock;
 
     return Boolean(currentBlock?.holder?.closest('[data-blok-table-cell-blocks]'));
+  }
+
+  /**
+   * Inside a table cell, a Shift+Arrow that starts from a plain caret belongs to
+   * the table's rectangular CELL selection (TableCellSelection), not to the core's
+   * cross-block selection — a CBS there would select the cell's child blocks and
+   * fight the cell rectangle for the same gesture.
+   *
+   * Deferral is limited to the "starting from a caret" case: once lines inside the
+   * cell are already block-selected (e.g. Cmd+A on a cell line), Shift+Arrow keeps
+   * extending that intra-cell selection exactly as before.
+   *
+   * Every core cross-block-selection entry point must consult this guard —
+   * enforced by test/unit/architecture/table-cell-keyboard-guard-law.test.ts.
+   */
+  private get shouldDeferSelectionToTableCell(): boolean {
+    return this.isCurrentBlockInsideTableCell && !this.Blok.BlockSelection.anyBlockSelected;
   }
 
   /**
@@ -201,17 +218,18 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /**
      * Notion's Tab nests the block as the LAST child of its preceding sibling
-     * (the nearest block before it at the same level). No preceding sibling —
-     * the block is the first child of its parent (or the first block) — means
-     * there is nothing to nest under, so this is a no-op.
+     * (the nearest block before it at the same level). No indent target — the
+     * block is the first child of its parent (or the first block), or the
+     * sibling above owns its children (a table, a column_list) and can never
+     * adopt it — means there is nothing to nest under, so this is a no-op.
      */
-    const precedingSibling = getPrecedingSibling(BlockManager, currentBlock);
+    const indentTarget = getIndentTarget(BlockManager, currentBlock);
 
-    if (precedingSibling === null) {
+    if (indentTarget === null) {
       return false;
     }
 
-    BlockManager.setBlockParent(currentBlock, precedingSibling.id);
+    BlockManager.setBlockParent(currentBlock, indentTarget.id);
 
     return true;
   }
@@ -1021,7 +1039,8 @@ export class KeyboardNavigation extends BlockEventComposer {
       (candidate): candidate is HTMLElement => candidate instanceof HTMLElement
     );
     const caretAtEnd = caretInput !== undefined ? isCaretAtEndOfInput(caretInput) : undefined;
-    const shouldEnableCBS = caretAtEnd || this.Blok.BlockSelection.anyBlockSelected;
+    const shouldEnableCBS =
+      (caretAtEnd || this.Blok.BlockSelection.anyBlockSelected) && !this.shouldDeferSelectionToTableCell;
 
     const isShiftDownKey = event.shiftKey && keyCode === keyCodes.DOWN;
 
@@ -1218,7 +1237,8 @@ export class KeyboardNavigation extends BlockEventComposer {
       (candidate): candidate is HTMLElement => candidate instanceof HTMLElement
     );
     const caretAtStart = caretInput !== undefined ? isCaretAtStartOfInput(caretInput) : undefined;
-    const shouldEnableCBS = caretAtStart || this.Blok.BlockSelection.anyBlockSelected;
+    const shouldEnableCBS =
+      (caretAtStart || this.Blok.BlockSelection.anyBlockSelected) && !this.shouldDeferSelectionToTableCell;
 
     const isShiftUpKey = event.shiftKey && keyCode === keyCodes.UP;
 

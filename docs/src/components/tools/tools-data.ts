@@ -660,6 +660,13 @@ const editor = new Blok({
         description: 'Placeholder text shown in the caption field.',
       },
       {
+        option: 'compress',
+        type: 'boolean | ImageCompressionConfig',
+        default: 'true',
+        description:
+          'Re-encode uploaded images before they reach the uploader. On by default in a deliberately safe mode: same format, quality 0.92, original dimensions, and the result is only used when it saves at least 10% — otherwise the original bytes are uploaded untouched. Pass an object to opt into smaller output: `format` (`\'original\'` | `\'jpeg\'` | `\'webp\'` | `\'avif\'` | `\'auto\'`), `quality` (0–1), `maxWidth` / `maxHeight`, `minSize` (skip files below it, default 100 KiB), `minSavings` (default 0.1), or `transform(file)` to plug in your own encoder. Set `false` to upload the exact original bytes. Compression never breaks an upload — when it cannot help, the original is used.',
+      },
+      {
         option: 'reloadAttempts',
         type: 'number',
         default: '5',

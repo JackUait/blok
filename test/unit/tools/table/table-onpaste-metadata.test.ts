@@ -403,6 +403,69 @@ describe('Table onPaste metadata reset', () => {
     pastedElement.parentNode?.removeChild(pastedElement);
   });
 
+  // ---------------------------------------------------------------------------
+  // Notion parity: a pasted multi-row table treats its first row as a header by
+  // default, even when the source markup carries no <thead> / <th>. A single-row
+  // paste has no body to head, so it stays headerless.
+  // ---------------------------------------------------------------------------
+
+  it('defaults the first row to a header for a multi-row plain-<td> paste', () => {
+    const options = createTableOptions({
+      withHeadings: false,
+      content: [['A', 'B'], ['C', 'D']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    // Plain body-only markup: no thead, no th anywhere.
+    const pasteHtml = '<tr><td>H1</td><td>H2</td></tr><tr><td>a</td><td>b</td></tr>';
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    expect(saved.withHeadings).toBe(true);
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
+  it('keeps a single-row plain-<td> paste headerless (no body to head)', () => {
+    const options = createTableOptions({
+      withHeadings: false,
+      content: [['A', 'B']],
+    });
+    const table = new Table(options);
+
+    const element = table.render();
+
+    document.body.appendChild(element);
+    table.rendered();
+
+    const pasteHtml = '<tr><td>only</td><td>row</td></tr>';
+
+    firePasteEvent(table, createPasteTable(pasteHtml));
+
+    const pastedElement = table.render();
+
+    table.rendered();
+
+    const saved = table.save(pastedElement);
+
+    expect(saved.withHeadings).toBe(false);
+
+    element.parentNode?.removeChild(element);
+    pastedElement.parentNode?.removeChild(pastedElement);
+  });
+
   it('does not carry stale metadata when pasting over a fully configured table', () => {
     // Create a table with ALL metadata set
     const options = createTableOptions({

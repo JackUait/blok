@@ -96,6 +96,19 @@ const createMockAPI = (overrides: Partial<API> = {}): API => {
       transactWithoutCapture: vi.fn((fn: () => void) => fn()),
       ...(blocksOverrides as Record<string, unknown>),
     },
+    // Production always provides `caret`; the table's deferred (rAF) caret
+    // restoration (focusClearedCell → api.caret.setToBlock) runs after the test
+    // body returns, so a missing stub surfaces as an unhandled rAF TypeError
+    // rather than a test failure.
+    caret: {
+      setToBlock: vi.fn(() => true),
+      setToFirstBlock: vi.fn(() => true),
+      setToLastBlock: vi.fn(() => true),
+      setToPreviousBlock: vi.fn(() => true),
+      setToNextBlock: vi.fn(() => true),
+      focus: vi.fn(() => true),
+      updateLastCaretAfterPosition: vi.fn(),
+    },
     events: {
       on: vi.fn(),
       off: vi.fn(),
@@ -646,6 +659,7 @@ describe('Table Tool', () => {
           setBlockParent,
           transactWithoutCapture: (fn: () => void) => fn(),
         },
+        caret: { setToBlock: vi.fn(() => true) },
         events: { on: vi.fn(), off: vi.fn() },
       } as unknown as API;
 
@@ -4589,8 +4603,8 @@ describe('Table Tool', () => {
   // ---------------------------------------------------------------------------
   // Bug #5: onClearContent should clear cell colors from model and DOM
   // ---------------------------------------------------------------------------
-  describe('onClearContent clears cell colors', () => {
-    it('removes cell colors from model and DOM when cells are cleared via Delete key', () => {
+  describe('onClearContent preserves cell colors (clears content, not formatting)', () => {
+    it('keeps cell colors in model and DOM when cells are cleared via Delete key', () => {
       const options = createTableOptions({
         content: [
           [
@@ -4634,27 +4648,27 @@ describe('Table Tool', () => {
 
       firstCell.dispatchEvent(deleteEvent);
 
-      // After clearing, row 0 cells should have no colors in model
+      // Clearing CONTENTS is not clearing FORMATTING: every colour survives.
       const savedAfter = table.save(element);
       const cell00 = savedAfter.content[0][0];
       const cell01 = savedAfter.content[0][1];
 
-      expect(isCellWithBlocks(cell00) && cell00.color).toBeUndefined();
-      expect(isCellWithBlocks(cell00) && cell00.textColor).toBeUndefined();
-      expect(isCellWithBlocks(cell01) && cell01.color).toBeUndefined();
+      expect(isCellWithBlocks(cell00) && cell00.color).toBe('#fbecdd');
+      expect(isCellWithBlocks(cell00) && cell00.textColor).toBe('#d44c47');
+      expect(isCellWithBlocks(cell01) && cell01.color).toBe('#e7f3f8');
 
-      // Row 1 should be unaffected
+      // Row 1 is untouched either way.
       const cell10 = savedAfter.content[1][0];
 
       expect(isCellWithBlocks(cell10) && cell10.textColor).toBe('#787774');
 
-      // DOM styles should also be cleared for row 0 cells
+      // ...and the DOM keeps painting them.
       const rows = element.querySelectorAll('[data-blok-table-row]');
       const row0Cells = rows[0].querySelectorAll('[data-blok-table-cell]');
 
-      expect((row0Cells[0] as HTMLElement).style.backgroundColor).toBe('');
-      expect((row0Cells[0] as HTMLElement).style.color).toBe('');
-      expect((row0Cells[1] as HTMLElement).style.backgroundColor).toBe('');
+      expect((row0Cells[0] as HTMLElement).style.backgroundColor).not.toBe('');
+      expect((row0Cells[0] as HTMLElement).style.color).not.toBe('');
+      expect((row0Cells[1] as HTMLElement).style.backgroundColor).not.toBe('');
 
       table.destroy();
       document.body.removeChild(element);

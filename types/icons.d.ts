@@ -67,6 +67,7 @@ export declare const IconQuote: string;
 export declare const IconCallout: string;
 export declare const IconPaintRoller: string;
 export declare const IconDivider: string;
+export declare const IconSpacer: string;
 export declare const IconCode: string;
 export declare const IconCodeBlock: string;
 export declare const IconEmojiStar: string;

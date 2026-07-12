@@ -84,6 +84,9 @@ const CROSS_BROWSER_TESTS = [
 
   // Toolbar focus preservation (mouse events - cross-browser)
   '**/modules/toolbar-focus.spec.ts',
+
+  // Image compression rides on each browser's own canvas encoders
+  '**/tools/image-compression.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium

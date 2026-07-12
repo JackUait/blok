@@ -74,6 +74,49 @@ export interface ImageUploader {
 }
 
 /**
+ * Output format for compressed images.
+ * - `original` — re-encode in the source format (default; safest).
+ * - `auto` — best format the browser can actually encode: AVIF → WebP → original.
+ */
+export type ImageCompressionFormat = 'original' | 'jpeg' | 'webp' | 'avif' | 'auto';
+
+/**
+ * Opt-in tuning for automatic image compression. Every field has a conservative
+ * default; passing `compress: true` (or omitting it) uses them all.
+ *
+ * Compression never breaks an upload: whenever it cannot help — an unsupported
+ * format, a result that isn't meaningfully smaller, a decode error — the original
+ * file is uploaded untouched.
+ */
+export interface ImageCompressionConfig {
+  /**
+   * Output format. Default `'original'`.
+   *
+   * Note that `'jpeg'` has no alpha channel, so a transparent PNG re-encoded as
+   * JPEG loses its transparency. `'webp'`, `'avif'` and `'auto'` preserve it.
+   */
+  format?: ImageCompressionFormat;
+  /** Encoder quality, 0–1. Default 0.92 (visually lossless). Ignored for PNG. */
+  quality?: number;
+  /** Downscale images wider than this (px). Default: no cap. */
+  maxWidth?: number;
+  /** Downscale images taller than this (px). Default: no cap. */
+  maxHeight?: number;
+  /** Skip files smaller than this (bytes). Default 100 KiB. */
+  minSize?: number;
+  /**
+   * Discard the result unless it saves at least this fraction of the original
+   * size. Default 0.1 (10%).
+   */
+  minSavings?: number;
+  /**
+   * Replace the built-in pipeline entirely — e.g. a WASM encoder. Return `null`
+   * to keep the original file.
+   */
+  transform?(file: File): Promise<File | Blob | null>;
+}
+
+/**
  * Tool configuration shape. Pass via Blok config:
  *   tools: { image: { class: Image, config: ImageConfig } }
  */
@@ -99,6 +142,14 @@ export interface ImageConfig {
    * Default true. Set false to keep GIFs as image blocks.
    */
   convertGifToVideo?: boolean;
+  /**
+   * Re-encode uploaded images before they reach the uploader. Default true —
+   * same format, quality 0.92, original dimensions, kept only when it saves at
+   * least 10%. Pass an object to opt into a smaller format, a lower quality or a
+   * dimension cap; pass false to upload the exact original bytes.
+   * See {@link ImageCompressionConfig}.
+   */
+  compress?: boolean | ImageCompressionConfig;
   /** Caption placeholder. Default "Write a caption…" */
   captionPlaceholder?: string;
   /**

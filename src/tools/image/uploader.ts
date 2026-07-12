@@ -1,6 +1,7 @@
 import type { ImageConfig } from '../../../types/tools/image';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
+import { compressImage } from './compress';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
 import { ImageError } from './errors';
 
@@ -57,12 +58,17 @@ export class Uploader {
   }
 
   public async handleFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
+    // Validate the bytes the user actually picked, so `maxSize` stays predictable
+    // and a hostile image is rejected before it is decoded.
     this.validateFile(file);
+
+    const uploaded = (await compressImage(file, this.config.compress)) ?? file;
+
     if (this.config.uploader?.uploadByFile) {
-      return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
+      return this.config.uploader.uploadByFile(uploaded, { onProgress: options.onProgress });
     }
 
-    return { url: URL.createObjectURL(file), fileName: file.name };
+    return { url: URL.createObjectURL(uploaded), fileName: uploaded.name };
   }
 
   private async handleDataUrl(raw: string, options: UploadOptions): Promise<UploadResult> {

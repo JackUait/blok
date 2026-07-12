@@ -8,7 +8,7 @@ import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_N
 import { keyCodeFromEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
-import { getPrecedingSibling, getFollowingSiblings } from './structural-siblings';
+import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
 
 /**
  * Checks if the keyboard event is a block movement shortcut (Cmd/Ctrl+Shift+Arrow)
@@ -218,17 +218,18 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     /**
      * Notion's Tab nests the block as the LAST child of its preceding sibling
-     * (the nearest block before it at the same level). No preceding sibling —
-     * the block is the first child of its parent (or the first block) — means
-     * there is nothing to nest under, so this is a no-op.
+     * (the nearest block before it at the same level). No indent target — the
+     * block is the first child of its parent (or the first block), or the
+     * sibling above owns its children (a table, a column_list) and can never
+     * adopt it — means there is nothing to nest under, so this is a no-op.
      */
-    const precedingSibling = getPrecedingSibling(BlockManager, currentBlock);
+    const indentTarget = getIndentTarget(BlockManager, currentBlock);
 
-    if (precedingSibling === null) {
+    if (indentTarget === null) {
       return false;
     }
 
-    BlockManager.setBlockParent(currentBlock, precedingSibling.id);
+    BlockManager.setBlockParent(currentBlock, indentTarget.id);
 
     return true;
   }

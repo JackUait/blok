@@ -4,7 +4,7 @@ import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../
 import { LIST_TOOL_NAME } from '../constants';
 
 import { BlockEventComposer } from './__base';
-import { getPrecedingSibling, getFollowingSiblings } from './structural-siblings';
+import { getIndentTarget, getFollowingSiblings } from './structural-siblings';
 
 /**
  * BlockSelectionKeys Composer handles keyboard interactions when blocks are selected.
@@ -188,10 +188,10 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
-   * Nest the selection one level deeper. The anchor is the preceding sibling of
-   * the first selected block, or — when the first selected block has no preceding
-   * sibling (it is the first item of its list and cannot indent, Notion) — the
-   * first selected block itself. Every selected top-level block EXCEPT the anchor
+   * Nest the selection one level deeper. The anchor is the first selected block's
+   * indent target, or — when it has none (it is the first item of its list and
+   * cannot indent, Notion; or the sibling above owns its children and can never
+   * adopt it) — the first selected block itself. Every selected top-level block EXCEPT the anchor
    * is reparented under the anchor; their descendants follow automatically.
    *
    * So a selection that starts at the very top of a list still indents every item
@@ -207,8 +207,8 @@ export class BlockSelectionKeys extends BlockEventComposer {
       return;
     }
 
-    const precedingSibling = getPrecedingSibling(BlockManager, first);
-    const anchor = precedingSibling ?? first;
+    const indentTarget = getIndentTarget(BlockManager, first);
+    const anchor = indentTarget ?? first;
     const originalParentId = first.parentId;
 
     for (const block of blocks) {

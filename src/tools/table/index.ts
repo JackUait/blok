@@ -380,6 +380,16 @@ export class Table implements BlockTool {
     return true;
   }
 
+  /**
+   * A table's child blocks ARE its cell contents — it places every one of them
+   * into a cell. Core must never let a user gesture nest an outside block into
+   * it: an adopted block becomes a rogue cell block and surfaces inside the
+   * first cell.
+   */
+  public static get ownsChildren(): boolean {
+    return true;
+  }
+
   public static get enableLineBreaks(): boolean {
     return true;
   }

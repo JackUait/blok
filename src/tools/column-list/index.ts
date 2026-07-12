@@ -177,6 +177,15 @@ export class ColumnList implements BlockTool {
   public static get isReadOnlySupported(): boolean {
     return true;
   }
+
+  /**
+   * A column_list's child blocks ARE its columns — it renders each one as a
+   * column of the row. An outside block nested into it would become a column
+   * that is not a `column`, so core must never let a user gesture adopt one.
+   */
+  public static get ownsChildren(): boolean {
+    return true;
+  }
 }
 
 export type { ColumnListData };

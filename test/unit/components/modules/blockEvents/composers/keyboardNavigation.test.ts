@@ -229,6 +229,43 @@ describe('KeyboardNavigation', () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
     });
 
+    it('is a strict no-op when the preceding sibling owns its children (a table)', () => {
+      const table = createBlock({
+        id: 'table',
+        name: 'table',
+        parentId: null,
+        tool: { name: 'table', ownsChildren: true } as unknown as Block['tool'],
+      });
+      const current = createBlock({ id: 'cur', parentId: null });
+      const blok = tabModules([table, current], current);
+      const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Tab', shiftKey: false });
+
+      keyboardNavigation.handleTab(event);
+
+      // A table's contentIds ARE its cell blocks. Adopting the paragraph would
+      // make it a rogue cell block, and the table renders it inside its first
+      // cell — the block visibly teleports into the table. Tab is a no-op here.
+      expect(setBlockParent).not.toHaveBeenCalled();
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    });
+
+    it('still nests under a preceding sibling that merely HAS children (a toggle)', () => {
+      const toggle = createBlock({ id: 'toggle', name: 'toggle', parentId: null, contentIds: ['kid'] });
+      const kid = createBlock({ id: 'kid', parentId: 'toggle' });
+      const current = createBlock({ id: 'cur', parentId: null });
+      const blok = tabModules([toggle, kid, current], current);
+      const setBlockParent = blok.BlockManager.setBlockParent as ReturnType<typeof vi.fn>;
+      const keyboardNavigation = new KeyboardNavigation(blok);
+
+      keyboardNavigation.handleTab(createKeyboardEvent({ key: 'Tab', shiftKey: false }));
+
+      // Only TOOL-OWNED children are off limits. Blocks whose children are plain
+      // user content (toggle, callout, paragraph) still accept a Tab-nested child.
+      expect(setBlockParent).toHaveBeenCalledWith(current, 'toggle');
+    });
+
     it('outdents to the grandparent and adopts following siblings on Shift+Tab', () => {
       const parent = createBlock({ id: 'p', parentId: null, contentIds: ['a', 'b', 'c'] });
       const a = createBlock({ id: 'a', parentId: 'p' });

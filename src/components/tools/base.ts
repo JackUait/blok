@@ -85,7 +85,12 @@ export enum InternalBlockToolSettings {
   /**
    * Tool paste config
    */
-  PasteConfig = 'pasteConfig'
+  PasteConfig = 'pasteConfig',
+  /**
+   * Tool exclusively manages its own child blocks (table cells, column_list
+   * columns) — no user gesture may nest an arbitrary block into it
+   */
+  OwnsChildren = 'ownsChildren'
 }
 
 /**

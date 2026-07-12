@@ -33,6 +33,33 @@ export const getPrecedingSibling = (BlockManager: BlockManager, block: Block): B
 };
 
 /**
+ * Returns the block a Tab-indent may nest `block` under: its preceding sibling,
+ * unless that sibling's tool owns its children.
+ *
+ * A tool-owned container's contentIds are its own machinery — a table's are its
+ * cell blocks, a column_list's are its columns. Reparenting an outside block
+ * into one makes it a rogue child, and the tool renders it wherever its children
+ * go: Tab a paragraph that follows a table and it lands INSIDE the table's first
+ * cell. Nesting is impossible there, so this returns null and Tab no-ops, the
+ * same as having no preceding sibling at all.
+ *
+ * Both indent gestures — single-block Tab (keyboardNavigation) and multi-select
+ * Tab (blockSelectionKeys) — resolve their target here, so the rule cannot be
+ * enforced in one and forgotten in the other.
+ * @param BlockManager - the BlockManager module
+ * @param block - the block being indented
+ */
+export const getIndentTarget = (BlockManager: BlockManager, block: Block): Block | null => {
+  const precedingSibling = getPrecedingSibling(BlockManager, block);
+
+  if (precedingSibling === null || precedingSibling.tool.ownsChildren) {
+    return null;
+  }
+
+  return precedingSibling;
+};
+
+/**
  * Returns `block`'s following siblings (same parent, after it in order), read
  * from the parent's contentIds so it is robust to interleaved descendants.
  * @param BlockManager - the BlockManager module

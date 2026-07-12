@@ -237,6 +237,7 @@ export class TableCellSelection {
   private boundCopyHandler: (e: ClipboardEvent) => void;
   private boundCutHandler: (e: ClipboardEvent) => void;
   private boundPreventDragStart: (e: Event) => void;
+  private boundFocusIn: (e: FocusEvent) => void;
 
   constructor(options: CellSelectionOptions) {
     this.grid = options.grid;
@@ -272,9 +273,22 @@ export class TableCellSelection {
     this.boundCopyHandler = this.handleCopy.bind(this);
     this.boundCutHandler = this.handleCut.bind(this);
     this.boundPreventDragStart = this.handleDragStart.bind(this);
+    this.boundFocusIn = this.handleFocusIn.bind(this);
 
     this.grid.addEventListener('pointerdown', this.boundPointerDown);
     this.grid.addEventListener('dragstart', this.boundPreventDragStart);
+    /**
+     * The box belongs to the cell that HOLDS THE CARET. Painting it only from
+     * pointerup made it pointer-only state: Tab, Shift+Tab and the arrow keys
+     * moved the caret to another cell and left the box behind on the last cell
+     * a pointer had touched, and tabbing OUT of the last cell left the table
+     * looking focused with the caret two blocks away. Focus is the one signal
+     * every caret path shares — pointer, keyboard, and programmatic moves alike.
+     *
+     * On `document`, not the grid: a grid-scoped listener can see the caret
+     * arrive but never see it leave.
+     */
+    document.addEventListener('focusin', this.boundFocusIn);
     /**
      * Capture phase: the core's cross-block selection, the inline-tool shortcut
      * manager and the block-duplication shortcut all listen on `document` in the
@@ -298,6 +312,7 @@ export class TableCellSelection {
     }
     this.grid.removeEventListener('pointerdown', this.boundPointerDown);
     this.grid.removeEventListener('dragstart', this.boundPreventDragStart);
+    document.removeEventListener('focusin', this.boundFocusIn);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
     document.removeEventListener('pointercancel', this.boundPointerUp);
@@ -539,6 +554,84 @@ export class TableCellSelection {
     this.isSelecting = false;
     this.anchorCell = null;
     this.extentCell = null;
+  }
+
+  /**
+   * The box belongs to the cell that HOLDS THE CARET — so it follows focus into
+   * a cell, and it goes away when focus leaves the table entirely.
+   *
+   * Deliberately inert while a pointer drag or a Shift+Arrow extension owns the
+   * selection: those paint a MULTI-cell rectangle whose caret sits in one of its
+   * cells, and collapsing to that one cell would destroy the rectangle the user
+   * is building. The pointer paths paint from pointerup and clear from a
+   * document pointerdown; this handler is what makes the KEYBOARD and
+   * programmatic caret moves behave the same way.
+   */
+  private handleFocusIn(e: FocusEvent): void {
+    if (this.isSelecting || this.anchorCell !== null || this.keyboardAnchor !== null) {
+      return;
+    }
+
+    const target = e.target;
+
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const cell = this.grid.contains(target)
+      ? target.closest<HTMLElement>(`[${CELL_ATTR}]`)
+      : null;
+
+    if (cell !== null) {
+      this.boxSingleCell(cell);
+
+      return;
+    }
+
+    if (this.keepsBoxWhileFocused(target)) {
+      return;
+    }
+
+    /**
+     * The caret left the table (Tab out of the last cell, arrow key past an
+     * edge, a click on another block). Nothing in the grid holds it, so nothing
+     * in the grid may look focused.
+     */
+    if (this.hasSelection) {
+      this.clearSelection();
+    }
+  }
+
+  /**
+   * The table's own chrome (grips, add buttons, resize handles, the pill) and
+   * the popovers it opens all take focus while the selection they act on must
+   * survive — a row grip paints a row and then hands focus to its menu.
+   */
+  private keepsBoxWhileFocused(target: HTMLElement): boolean {
+    const tableHolder = this.grid.closest('[data-blok-id]');
+
+    return (tableHolder !== null && tableHolder.contains(target)) ||
+      target.closest(`[${PILL_ATTR}]`) !== null ||
+      target.closest('[data-blok-popover-opened]') !== null;
+  }
+
+  private boxSingleCell(cell: HTMLElement): void {
+    /**
+     * Already the only boxed cell — repainting on every keystroke would tear
+     * down and rebuild the overlay for nothing. Compared by ELEMENT so a merged
+     * origin (one <td>, a multi-cell logical range) is recognised too.
+     */
+    if (this.hasSelection && this.selectedCells.length === 1 && this.selectedCells[0] === cell) {
+      return;
+    }
+
+    const coord = this.resolveCellCoord(cell);
+
+    if (coord === null) {
+      return;
+    }
+
+    this.showProgrammaticSelection(coord.row, coord.col, coord.row, coord.col);
   }
 
   private handleClearSelection(e: PointerEvent): void {

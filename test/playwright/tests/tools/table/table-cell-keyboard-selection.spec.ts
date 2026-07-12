@@ -166,6 +166,48 @@ test.describe('Table keyboard cell selection', () => {
     await expect(getCellEditable(page, 1, 0)).toHaveText('A1');
   });
 
+  /**
+   * The cell box belongs to the cell that holds the caret. It used to be
+   * painted only from pointerup, so it was pointer-only state: Tab moved the
+   * caret to the next cell and the box stayed behind on the clicked cell.
+   */
+  test('Tab moves the cell box along with the caret', async ({ page }) => {
+    await caretAtEndOf(page, 0, 0);
+
+    await expect(getCell(page, 0, 0)).toHaveAttribute('data-blok-table-cell-selected', '');
+
+    await page.keyboard.press('Tab');
+
+    await expect(getCell(page, 0, 1)).toHaveAttribute('data-blok-table-cell-selected', '');
+    await expect(page.locator(SELECTED_CELL_SELECTOR)).toHaveCount(1);
+    await expect(getCell(page, 0, 0)).not.toHaveAttribute('data-blok-table-cell-selected', '');
+  });
+
+  test('Shift+Tab moves the cell box back with the caret', async ({ page }) => {
+    await caretAtEndOf(page, 1, 1);
+
+    await page.keyboard.press('Shift+Tab');
+
+    await expect(getCell(page, 1, 0)).toHaveAttribute('data-blok-table-cell-selected', '');
+    await expect(page.locator(SELECTED_CELL_SELECTOR)).toHaveCount(1);
+  });
+
+  /**
+   * Tabbing out of the last cell moves the caret to the block below, so no cell
+   * holds it any more. The box used to stay painted on the last cell, leaving
+   * the table looking like it still owned the focus.
+   */
+  test('Tab out of the last cell leaves no box behind in the table', async ({ page }) => {
+    await caretAtEndOf(page, 2, 2);
+
+    await expect(page.locator(SELECTED_CELL_SELECTOR)).toHaveCount(1);
+
+    await page.keyboard.press('Tab');
+
+    await expect(page.locator(SELECTED_CELL_SELECTOR)).toHaveCount(0);
+    await expect(page.locator(`${TABLE_SELECTOR} [data-blok-table-selection-overlay]`)).toHaveCount(0);
+  });
+
   test('Shift+Arrow mid-text extends the TEXT selection, not the cell rectangle', async ({ page }) => {
     await getCellEditable(page, 0, 0).click();
     await page.keyboard.press('Home');

@@ -758,4 +758,77 @@ describe('TableResize', () => {
     });
   });
 
+  /**
+   * The grid lives inside an `overflow-x: auto` scroll container, so ANY
+   * absolutely-positioned child that pokes past the grid's right edge becomes
+   * scrollable overflow — a table that fits its container would grow a
+   * scrollbar and a right-edge haze. The last column's handle sits on the
+   * table's own right border, so it is the one at risk.
+   */
+  describe('handle overhang (scroll overflow)', () => {
+    const HANDLE_HIT_WIDTH = 16;
+
+    const handleRightEdges = (gridEl: HTMLElement): number[] =>
+      Array.from(gridEl.querySelectorAll<HTMLElement>('[data-blok-table-resize]'))
+        .map(handle => parseFloat(handle.style.left) + HANDLE_HIT_WIDTH);
+
+    it('no handle extends past the grid right edge', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const total = widths.reduce((sum, w) => sum + w, 0);
+
+      handleRightEdges(grid).forEach((right) => {
+        expect(right).toBeLessThanOrEqual(total);
+      });
+    });
+
+    it('the last handle still reaches the grid right border (stays grabbable)', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const total = widths.reduce((sum, w) => sum + w, 0);
+      const edges = handleRightEdges(grid);
+
+      expect(edges[edges.length - 1]).toBe(total);
+    });
+
+    it('interior handles stay centred on their column border', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const handles = grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]');
+
+      expect(parseFloat(handles[0].style.left)).toBe(200 - HANDLE_HIT_WIDTH / 2);
+      expect(parseFloat(handles[1].style.left)).toBe(500 - HANDLE_HIT_WIDTH / 2);
+    });
+
+    it('keeps the last handle inside the grid after a resize drag', () => {
+      const widths = [200, 300, 200];
+
+      grid = createGrid(widths);
+      new TableResize(grid, widths, vi.fn());
+
+      const handles = grid.querySelectorAll<HTMLElement>('[data-blok-table-resize]');
+      const lastHandle = handles[2];
+
+      lastHandle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 700, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 800 }));
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+
+      const total = 200 + 300 + 300;
+      const edges = handleRightEdges(grid);
+
+      expect(edges[edges.length - 1]).toBe(total);
+      edges.forEach((right) => {
+        expect(right).toBeLessThanOrEqual(total);
+      });
+    });
+  });
 });

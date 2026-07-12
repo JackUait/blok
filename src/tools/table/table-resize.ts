@@ -97,7 +97,6 @@ export class TableResize {
 
   private createHandle(colIndex: number): HTMLElement {
     const handle = document.createElement('div');
-    const leftPx = this.getHandleLeftPx(colIndex);
 
     handle.setAttribute(RESIZE_ATTR, '');
     handle.setAttribute('data-col', String(colIndex));
@@ -105,7 +104,7 @@ export class TableResize {
     handle.style.top = `-${BORDER_WIDTH}px`;
     handle.style.bottom = '0px';
     handle.style.width = `${HANDLE_HIT_WIDTH}px`;
-    handle.style.left = `${leftPx - HANDLE_HIT_WIDTH / 2}px`;
+    handle.style.left = `${this.getHandleOffsetPx(colIndex)}px`;
     handle.style.cursor = 'col-resize';
     handle.style.zIndex = '2';
     handle.style.background = 'linear-gradient(to right, transparent 7px, #3b82f6 7px, #3b82f6 9px, transparent 9px)';
@@ -132,12 +131,32 @@ export class TableResize {
     return this.colWidths.slice(0, colIndex + 1).reduce((sum, w) => sum + w, 0);
   }
 
+  /**
+   * `left` offset of a handle, clamped so the handle NEVER pokes outside the
+   * grid's own box.
+   *
+   * A handle is a HANDLE_HIT_WIDTH-wide hit area centred on the column border
+   * it controls. For the last column that border IS the table's right edge, so
+   * a centred handle would hang HANDLE_HIT_WIDTH / 2 px past the grid — and the
+   * grid lives inside an `overflow-x: auto` scroll container (every table has
+   * one, see Table.render), which counts that overhang as scrollable content.
+   * A table that fits its container would then grow a horizontal scrollbar and
+   * a right-edge haze. Clamping shifts the last handle inwards so its right
+   * edge lands exactly ON the border: still straddling/touching it, still
+   * grabbable, but contributing nothing to scrollWidth.
+   */
+  private getHandleOffsetPx(colIndex: number): number {
+    const centred = this.getHandleLeftPx(colIndex) - HANDLE_HIT_WIDTH / 2;
+    const gridWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
+
+    return Math.max(0, Math.min(centred, gridWidth - HANDLE_HIT_WIDTH));
+  }
+
   private updateHandlePositions(): void {
     this.handles.forEach((handle, i) => {
-      const leftPx = this.getHandleLeftPx(i);
       const handleEl: HTMLElement = handle;
 
-      handleEl.style.left = `${leftPx - HANDLE_HIT_WIDTH / 2}px`;
+      handleEl.style.left = `${this.getHandleOffsetPx(i)}px`;
     });
   }
 

@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.25.0](https://github.com/JackUait/blok/compare/v0.24.3...v0.25.0) (2026-07-13)
+
+### Features
+
+- **Spacer** — New adjustable-height spacer block. Drag either edge to resize (dual-edge grips), with a text-block-height floor, snap-to-sibling and snap-to-column alignment guidelines, an on-edge capsule resize pill, and accent hover cues. Fully invisible in read-only/published renders.
+- **Image** — Uploads are now automatically compressed and re-encoded (`compress`, on by default), with opt-in smaller output formats. In-cell images gain a resize floor and fluid chrome via container queries.
+- **Toolbar** — `Cmd`/`Ctrl+Slash` opens the block menu in read-only mode.
+
+### Bug Fixes
+
+- **Table** — Large batch of Notion-parity fixes: paste-header handling, the cell color picker, the cell menu, arrow-key navigation between cells, and column width reset. The cell box now follows the caret (instead of the pointer) and the resize handle no longer forces overflow. Focus stays inside a cell when its content is deleted, the caret stays put after clearing a multi-cell selection, multi-line cell selections merge into one rounded shape, drag-selecting several lines within a single cell works, and list items scale to the cell font instead of outsizing sibling paragraphs.
+- **Columns** — Stranded resize separators left behind by removing a column no longer render as a phantom column.
+- **Core** — Never Tab-indent a block into a tool-owned container.
+- **Toolbox** — Keep plus-button blocks on a table out of its cells, and anchor fuzzy search at word boundaries.
+- **Selection** — Stop hijacking intra-line text drags inside table cells.
+- **Embed** — Validate stored URLs at render time (stored-XSS guard).
+- **List** — Keep bullet markers non-editable so Enter never ghosts an item.
+- **Toolbar** — Read-only drag-handle refinements: announce it as a menu button, show a pointer cursor, and drop the `⌘/` and "Drag to move" hint lines; no read-only handle appears beside blocks that paint nothing.
+- **Tunes** — Hide the copy-link shortcut hint in read-only mode.
+- **Styles** — Right `contentAlign` no longer collapses into centering, and preflight resets are scoped to `@layer base` so Blok's own utilities win.
+- **React** — Guard against stale `dist` exports and a `StrictMode` readiness race.
+
+## [0.24.3](https://github.com/JackUait/blok/compare/v0.24.2...v0.24.3) (2026-07-10)
+
+### Features
+
+- **Header** — Opt-in `anchorIds` config derives stable heading anchor ids from heading text.
+
+### Bug Fixes
+
+- **Link** — Pad the edit-menu input wrapper so the focus ring isn't clipped, and enlarge the remove-link (trash) icon.
+
+### Maintenance
+
+- **CI** — Fetch mirror tags before pushing to avoid creating over an existing tag.
+
 ## [0.24.2](https://github.com/JackUait/blok/compare/v0.24.1...v0.24.2) (2026-07-09)
 
 ### Features

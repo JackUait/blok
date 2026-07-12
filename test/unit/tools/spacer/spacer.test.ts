@@ -33,28 +33,81 @@ const getGrip = (el: HTMLElement, edge: 'top' | 'bottom' = 'bottom'): HTMLElemen
 const getGrips = (el: HTMLElement): HTMLElement[] =>
   Array.from(el.querySelectorAll('[data-blok-spacer-grip]'));
 
-const stubRect = (el: HTMLElement, rect: Partial<DOMRect>): void => {
-  const value = Object.assign(
-    { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) },
-    rect
-  ) as DOMRect;
+/**
+ * How far the fake page is scrolled. Rects below are authored in document
+ * coordinates and read through this, so a scroll shifts the whole viewport frame
+ * at once while the layout underneath stays put — exactly as in a browser.
+ */
+let manualScroll = 0;
 
+/**
+ * Scroll the fake page, as the user (or the browser) may do mid-gesture
+ *
+ * @param by - pixels to scroll down by
+ */
+const scrollPage = (by: number): void => {
+  manualScroll += by;
+};
+
+/**
+ * Extra scroll the browser applies on its own; see mountInColumns
+ */
+let anchorScroll = (): number => 0;
+
+const pageScroll = (): number => manualScroll + anchorScroll();
+
+/**
+ * Stub a rect that is recomputed on every read, so it answers with the page's
+ * current scroll instead of a value frozen at mount time.
+ *
+ * @param el - element to stub
+ * @param box - the element's layout box, in document coordinates
+ */
+const stubLiveRect = (el: HTMLElement, box: () => Partial<DOMRect>): void => {
   Object.defineProperty(el, 'getBoundingClientRect', {
     configurable: true,
-    value: () => value,
+    value: () => {
+      const doc = box();
+
+      return Object.assign(
+        { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) },
+        doc,
+        { top: (doc.top ?? 0) - pageScroll(), bottom: (doc.bottom ?? 0) - pageScroll() }
+      ) as DOMRect;
+    },
   });
 };
 
 /**
- * Put the rendered spacer into the right column of a two-column list whose
- * left column holds blocks ending at the given viewport bottoms. The spacer's
- * own top is pinned at y=100 so drag maths in the tests are readable.
+ * Put the rendered spacer into the right column of a two-column list whose left
+ * column holds blocks ending at the given document bottoms. The column list sits
+ * at document y=0 and the spacer's own top is pinned at y=100 — a block's top is
+ * fixed by flow, so resizing only ever pushes its bottom down.
+ *
+ * With `scrollAnchoredBelow`, the mount also models what the browser does when the
+ * spacer has a block under it: that block becomes the scroll anchor, so growing the
+ * gap scrolls the page by the growth to hold the block still on screen.
+ *
+ * @param spacerElement - the rendered spacer wrapper
+ * @param siblingBlockBottoms - document bottoms of the left column's blocks
+ * @param options - opt into the scroll-anchoring behaviour described above
  */
-const mountInColumns = (spacerElement: HTMLElement, siblingBlockBottoms: number[]): void => {
+const mountInColumns = (
+  spacerElement: HTMLElement,
+  siblingBlockBottoms: number[],
+  options: { scrollAnchoredBelow?: boolean } = {}
+): void => {
+  manualScroll = 0;
+
+  const height = (): number => parseInt(spacerElement.style.height, 10);
+  const startHeight = height();
+
+  anchorScroll = options.scrollAnchoredBelow === true ? () => height() - startHeight : () => 0;
+
   const columns = document.createElement('div');
 
   columns.setAttribute('data-blok-columns', '');
-  stubRect(columns, { left: 10, right: 610, width: 600 });
+  stubLiveRect(columns, () => ({ top: 0, left: 10, right: 610, width: 600 }));
 
   const left = document.createElement('div');
 
@@ -63,7 +116,8 @@ const mountInColumns = (spacerElement: HTMLElement, siblingBlockBottoms: number[
     const holder = document.createElement('div');
 
     holder.setAttribute('data-blok-element', '');
-    stubRect(holder, { bottom });
+    // Blocks stack flush; 40px tall, so both edges are real alignment targets.
+    stubLiveRect(holder, () => ({ top: bottom - 40, bottom }));
     left.appendChild(holder);
   });
 
@@ -73,7 +127,7 @@ const mountInColumns = (spacerElement: HTMLElement, siblingBlockBottoms: number[
   const holder = document.createElement('div');
 
   holder.setAttribute('data-blok-element', '');
-  stubRect(spacerElement, { top: 100 });
+  stubLiveRect(spacerElement, () => ({ top: 100, bottom: 100 + height() }));
   holder.appendChild(spacerElement);
   right.appendChild(holder);
 
@@ -579,6 +633,63 @@ describe('SpacerTool', () => {
       window.dispatchEvent(new PointerEvent('pointerup', { clientY: 218, pointerId: 1 }));
 
       expect(document.querySelector('[data-blok-spacer-guide]')).toBeNull();
+    });
+
+    it('keeps snapping when the page scrolls mid-drag', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+
+      mountInColumns(el, [220]);
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 148, pointerId: 1, bubbles: true }));
+
+      // The page scrolls 60px between pointerdown and the move. Every viewport y
+      // shifts up by the same amount; the layout itself is untouched. Geometry read
+      // at pointerdown now describes a coordinate frame that no longer exists.
+      scrollPage(60);
+
+      // The pointer asks for the same height as before (48 + 70 = 118), and the
+      // sibling block's bottom is still 120px below the spacer's top — so the snap
+      // must still land, on the block's edge where it NOW is.
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 218, pointerId: 1 }));
+
+      expect(el.style.height).toBe('120px');
+
+      const guide = document.querySelector<HTMLElement>('[data-blok-spacer-guide]');
+
+      // Drawn on the block's post-scroll position (220 - 60), centred on it.
+      expect(guide?.style.top).toBe('159px');
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 218, pointerId: 1 }));
+    });
+
+    it('draws the guideline where the block sits AFTER the snapped height lands', async () => {
+      const { SpacerTool } = await import('../../../../src/tools/spacer');
+      const tool = new SpacerTool(createOptions({ height: 48 }));
+      const el = tool.render();
+
+      // Applying a height is itself what moves the page: the block under the spacer
+      // is the browser's scroll anchor, so growing the gap scrolls by the growth to
+      // hold that block still. Measure before the height lands and the guideline is
+      // painted onto a stale frame — a few px off the block it is meant to mark.
+      mountInColumns(el, [220], { scrollAnchoredBelow: true });
+      const grip = getGrip(el)!;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientY: 148, pointerId: 1, bubbles: true }));
+      window.dispatchEvent(new PointerEvent('pointermove', { clientY: 218, pointerId: 1 }));
+
+      expect(el.style.height).toBe('120px');
+
+      const guide = document.querySelector<HTMLElement>('[data-blok-spacer-guide]');
+      const siblingBottom = document.querySelector<HTMLElement>('[data-blok-column] [data-blok-element]')!;
+
+      // The line lands on the sibling block's edge as it stands once the gap has
+      // grown — not where it stood a layout ago.
+      expect(guide?.style.top).toBe(`${siblingBottom.getBoundingClientRect().bottom - 1}px`);
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientY: 218, pointerId: 1 }));
     });
 
     it('a spacer outside any column drags freely with no guideline', async () => {

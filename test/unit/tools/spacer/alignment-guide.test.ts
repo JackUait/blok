@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   findSnapTarget,
-  collectSiblingBlockEdges,
+  collectSiblingBlocks,
+  measureEdgeOffsets,
   AlignmentGuide,
   SNAP_THRESHOLD,
 } from '../../../../src/tools/spacer/alignment-guide';
@@ -108,12 +109,19 @@ describe('spacer alignment guide', () => {
     });
   });
 
-  describe('collectSiblingBlockEdges()', () => {
-    it('offers both edges of block holders in the OTHER columns only', () => {
-      const { spacer } = buildColumns([120, 260]);
+  /**
+   * The pair as the drag uses it: which blocks to align against (snapshotted) and
+   * where their edges are right now (measured live), as offsets inside the list.
+   */
+  const edgeOffsets = (spacer: HTMLElement, columns: HTMLElement): number[] => {
+    return measureEdgeOffsets(collectSiblingBlocks(spacer), columns.getBoundingClientRect().top);
+  };
 
-      // Blocks stubbed 40px tall: 80–120 and 220–260.
-      expect(collectSiblingBlockEdges(spacer)).toEqual([80, 120, 220, 260]);
+  describe('collectSiblingBlocks()', () => {
+    it('returns the block holders in the OTHER columns only', () => {
+      const { spacer, siblingColumn } = buildColumns([120, 260]);
+
+      expect(collectSiblingBlocks(spacer)).toEqual(Array.from(siblingColumn.children));
     });
 
     it('returns empty when the spacer is not inside a column', () => {
@@ -122,11 +130,46 @@ describe('spacer alignment guide', () => {
       spacer.setAttribute('data-blok-spacer', '');
       document.body.appendChild(spacer);
 
-      expect(collectSiblingBlockEdges(spacer)).toEqual([]);
+      expect(collectSiblingBlocks(spacer)).toEqual([]);
+    });
+
+    it('hands back elements, not numbers, so the drag can re-measure them', () => {
+      // Geometry captured up front goes stale the moment anything scrolls. The
+      // snapshot must be the STRUCTURE (which blocks), never the positions.
+      const { spacer } = buildColumns([120]);
+
+      collectSiblingBlocks(spacer).forEach((block) => expect(block).toBeInstanceOf(HTMLElement));
+    });
+  });
+
+  describe('measureEdgeOffsets()', () => {
+    it('offers both edges of every block, as offsets inside the column list', () => {
+      const { spacer, columns } = buildColumns([120, 260]);
+
+      // Blocks stubbed 40px tall: 80–120 and 220–260; the list's top is 0.
+      expect(edgeOffsets(spacer, columns)).toEqual([80, 120, 220, 260]);
+    });
+
+    it('is immune to the page scrolling — offsets are relative, not viewport ys', () => {
+      // The failure this guards: a spacer with a block under it makes that block the
+      // browser's scroll anchor, so growing the spacer scrolls the page on every
+      // pointermove. Viewport ys measured before the scroll describe a frame that no
+      // longer exists; offsets inside the list are unmoved by it.
+      const { spacer, columns, siblingColumn } = buildColumns([]);
+
+      addBlock(siblingColumn, { top: 80, bottom: 120, text: 'Left text.' });
+
+      const before = edgeOffsets(spacer, columns);
+
+      // The page scrolls 137px: every viewport rect shifts up by the same amount.
+      stubRect(columns, { top: -137, left: 10, right: 610, width: 600 });
+      stubRect(siblingColumn.children[0] as HTMLElement, { top: 80 - 137, bottom: 120 - 137 });
+
+      expect(edgeOffsets(spacer, columns)).toEqual(before);
     });
 
     it('offers the top of a visible block buried under empty paragraphs', () => {
-      const { spacer, siblingColumn } = buildColumns([]);
+      const { spacer, columns, siblingColumn } = buildColumns([]);
 
       // The shape of a column a user padded out by pressing Enter: two empty
       // paragraphs, then the real content. The content's top edge (260) is only
@@ -136,41 +179,41 @@ describe('spacer alignment guide', () => {
       addBlock(siblingColumn, { top: 221, bottom: 259, text: '' });
       addBlock(siblingColumn, { top: 260, bottom: 346, text: 'Every column can hold any block.' });
 
-      expect(collectSiblingBlockEdges(spacer)).toEqual([260, 346]);
+      expect(edgeOffsets(spacer, columns)).toEqual([260, 346]);
     });
 
     it('skips a trailing empty text block — it has no visible edge to align with', () => {
-      const { spacer, siblingColumn } = buildColumns([]);
+      const { spacer, columns, siblingColumn } = buildColumns([]);
 
       addBlock(siblingColumn, { top: 80, bottom: 120, text: 'Real text.' });
       // A trailing empty paragraph, as left behind by pressing Enter. Its top is
       // the real block's bottom (already offered); its own bottom is nothing.
       addBlock(siblingColumn, { top: 120, bottom: 158, text: '' });
 
-      expect(collectSiblingBlockEdges(spacer)).toEqual([80, 120]);
+      expect(edgeOffsets(spacer, columns)).toEqual([80, 120]);
     });
 
     it('skips empty text blocks holding only whitespace or a <br>', () => {
-      const { spacer, siblingColumn } = buildColumns([]);
+      const { spacer, columns, siblingColumn } = buildColumns([]);
 
       addBlock(siblingColumn, { top: 160, bottom: 200, component: 'paragraph', html: '<br>' });
       addBlock(siblingColumn, { top: 260, bottom: 300, component: 'header', text: '   ' });
       addBlock(siblingColumn, { top: 360, bottom: 400, component: 'quote', text: '' });
 
-      expect(collectSiblingBlockEdges(spacer)).toEqual([]);
+      expect(edgeOffsets(spacer, columns)).toEqual([]);
     });
 
     it('keeps text blocks that actually have text', () => {
-      const { spacer, siblingColumn } = buildColumns([]);
+      const { spacer, columns, siblingColumn } = buildColumns([]);
 
       addBlock(siblingColumn, { top: 160, bottom: 200, component: 'paragraph', text: 'Real text.' });
       addBlock(siblingColumn, { top: 260, bottom: 300, component: 'header', text: 'Title' });
 
-      expect(collectSiblingBlockEdges(spacer)).toEqual([160, 200, 260, 300]);
+      expect(edgeOffsets(spacer, columns)).toEqual([160, 200, 260, 300]);
     });
 
     it('keeps non-text blocks that legitimately render no text', () => {
-      const { spacer, siblingColumn } = buildColumns([]);
+      const { spacer, columns, siblingColumn } = buildColumns([]);
 
       // A divider, an image and a spacer are textless but visible — their edges
       // are real alignment targets.
@@ -178,7 +221,7 @@ describe('spacer alignment guide', () => {
       addBlock(siblingColumn, { top: 260, bottom: 300, component: 'image', text: '' });
       addBlock(siblingColumn, { top: 360, bottom: 400, component: 'spacer', text: '' });
 
-      expect(collectSiblingBlockEdges(spacer)).toEqual([160, 200, 260, 300, 360, 400]);
+      expect(edgeOffsets(spacer, columns)).toEqual([160, 200, 260, 300, 360, 400]);
     });
   });
 

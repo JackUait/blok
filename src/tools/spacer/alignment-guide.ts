@@ -52,25 +52,24 @@ const isEmptyTextBlock = (holder: HTMLElement): boolean => {
 };
 
 /**
- * Viewport edges of every VISIBLE block sitting in the spacer's SIBLING columns
- * — the lines the user is trying to bring their content level with. Blocks in
- * the spacer's own column are excluded: those move with the drag, so snapping to
- * them carries no alignment meaning.
+ * Every VISIBLE block sitting in the spacer's SIBLING columns — the ones the user
+ * is trying to bring their content level with. Blocks in the spacer's own column
+ * are excluded: those move with the drag, so snapping to them carries no
+ * alignment meaning.
  *
- * BOTH edges of a visible block are offered, not just its bottom. Block holders
- * stack flush, so an edge is shared: a block's top IS the bottom of whatever sits
- * above it. Collecting only bottoms, then dropping empty text blocks, silently
- * dropped the TOP of any visible block that happened to follow an empty paragraph
- * — the shape of every column a user padded out by pressing Enter — leaving its
- * content with no edge to line up with on the side the eye is drawn to.
+ * This returns the ELEMENTS, never their positions. Which blocks exist cannot
+ * change while a grip is held, so the drag snapshots this list once; where those
+ * blocks are can change on any frame, so it is measured live — see
+ * measureEdgeOffsets.
  *
- * Empty text blocks contribute no edges of their own: a trailing empty paragraph
- * bounds nothing visible. But the edge it SHARES with a real block below is still
- * offered, because that block claims it as its own top.
+ * Empty text blocks are left out: a trailing empty paragraph bounds nothing
+ * visible. The edge one SHARES with a real block below it is still offered,
+ * because that block claims it as its own top (holders stack flush, so an edge
+ * belongs to the blocks on both sides of it).
  *
  * @param spacerElement - the rendered spacer wrapper
  */
-export const collectSiblingBlockEdges = (spacerElement: HTMLElement): number[] => {
+export const collectSiblingBlocks = (spacerElement: HTMLElement): HTMLElement[] => {
   const ownColumn = spacerElement.closest<HTMLElement>(`[${COLUMN_ATTR}]`);
   const columnList = ownColumn?.closest<HTMLElement>(`[${COLUMNS_ATTR}]`);
 
@@ -84,12 +83,34 @@ export const collectSiblingBlockEdges = (spacerElement: HTMLElement): number[] =
   return siblingColumns.flatMap((column) =>
     Array.from(column.querySelectorAll<HTMLElement>(`[${DATA_ATTR.element}]`))
       .filter((holder) => !isEmptyTextBlock(holder))
-      .flatMap((holder) => {
-        const rect = holder.getBoundingClientRect();
-
-        return [rect.top, rect.bottom];
-      })
   );
+};
+
+/**
+ * Both edges of each block, as offsets DOWN FROM THE COLUMN LIST'S TOP rather
+ * than viewport ys.
+ *
+ * The frame matters. A spacer with a block under it makes that block the
+ * browser's scroll anchor: growing the spacer pushes the block down, and the
+ * browser scrolls by the same amount to hold it still. So the page scrolls on
+ * every pointermove of the gesture, and any viewport y measured earlier in the
+ * drag now describes a coordinate frame that no longer exists — the dragged edge
+ * appears frozen on screen while the blocks it should snap to slide past it.
+ * Offsets inside the list are unmoved by scrolling, so they stay true no matter
+ * what the page does underneath.
+ *
+ * Callers must measure `listTop` in the same synchronous read as these blocks, so
+ * the two cannot disagree.
+ *
+ * @param blocks - sibling blocks from collectSiblingBlocks
+ * @param listTop - viewport y of the column list, read in the same batch
+ */
+export const measureEdgeOffsets = (blocks: HTMLElement[], listTop: number): number[] => {
+  return blocks.flatMap((block) => {
+    const rect = block.getBoundingClientRect();
+
+    return [rect.top - listTop, rect.bottom - listTop];
+  });
 };
 
 /**

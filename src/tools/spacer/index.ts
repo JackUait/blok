@@ -8,7 +8,7 @@ import type {
 import type { SpacerData } from './types';
 import { IconSpacer } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
-import { AlignmentGuide, collectSiblingBlockEdges, findSnapTarget } from './alignment-guide';
+import { AlignmentGuide, collectSiblingBlocks, findSnapTarget, measureEdgeOffsets } from './alignment-guide';
 import { COLUMNS_ATTR } from '../columns-shared';
 
 /**
@@ -220,53 +220,78 @@ export class SpacerTool implements BlockTool {
   }
 
   /**
-   * Snap the in-progress height so the dragged edge lands exactly on the edge of
-   * a sibling column's block when it comes close, and draw the guideline there.
-   * Returns the height to apply (unchanged when nothing is in range).
+   * Work out the height to apply and, when the spacer's moving edge comes close to
+   * a sibling column's block, the alignment to mark. `target` is an offset DOWN
+   * FROM THE COLUMN LIST'S TOP, not a viewport y — the caller turns it into a line
+   * only after the height has landed (see onMove).
    *
-   * The moving edge's viewport position is derived from the FIXED edge (the one
-   * not being dragged), which does not move during the gesture: dragging the
-   * bottom keeps the top pinned, and vice versa.
+   * Two things keep this honest, and both were learned the hard way:
+   *
+   * Geometry is measured LIVE, in one synchronous batch, and kept as offsets inside
+   * the column list. Anything captured at pointerdown goes stale the instant the
+   * page scrolls — and a spacer with a block under it makes the page scroll on every
+   * single move, because that block becomes the browser's scroll anchor and the
+   * browser scrolls to hold it still as the gap grows.
+   *
+   * The moving edge is always the BOTTOM one, whichever grip is held. A block's top
+   * is pinned by flow: resizing can only push the bottom (and the content below it)
+   * down. Predicting that the top edge moves put the guideline on a line the spacer
+   * could never reach.
    *
    * @param freeHeight - height the raw pointer delta asks for
-   * @param edge - which edge is being dragged
-   * @param targets - sibling block edges captured at gesture start
-   * @param columnList - the enclosing column list the guide spans; null outside columns
+   * @param blocks - sibling blocks captured at gesture start (structure, not geometry)
+   * @param columnList - the enclosing column list; null outside columns
    */
-  private applySnap(
+  private resolveSnap(
     freeHeight: number,
-    edge: GripEdge,
-    targets: number[],
+    blocks: HTMLElement[],
     columnList: HTMLElement | null
-  ): number {
-    if (this.element === null || columnList === null || targets.length === 0) {
-      return freeHeight;
+  ): { height: number; target: number | null } {
+    if (this.element === null || columnList === null || blocks.length === 0) {
+      return { height: freeHeight, target: null };
     }
 
-    const rect = this.element.getBoundingClientRect();
-    const clamped = clampHeight(Math.round(freeHeight));
-    // Where the dragged edge would sit at the requested height.
-    const movingEdgeY = edge === 'bottom' ? rect.top + clamped : rect.bottom - clamped;
-    const target = findSnapTarget(movingEdgeY, targets);
+    const listTop = columnList.getBoundingClientRect().top;
+    const spacerTop = this.element.getBoundingClientRect().top - listTop;
+    const movingEdge = spacerTop + clampHeight(Math.round(freeHeight));
+    const target = findSnapTarget(movingEdge, measureEdgeOffsets(blocks, listTop));
 
     if (target === null) {
-      this.guide.hide();
-
-      return freeHeight;
+      return { height: freeHeight, target: null };
     }
 
-    const snappedHeight = edge === 'bottom' ? target - rect.top : rect.bottom - target;
+    const snappedHeight = Math.round(target - spacerTop);
+
     // Only honour the snap if the aligned height is a legal one; otherwise the
     // guide would promise an alignment the clamp then refuses.
-    if (snappedHeight !== clampHeight(Math.round(snappedHeight))) {
-      this.guide.hide();
-
-      return freeHeight;
+    if (snappedHeight !== clampHeight(snappedHeight)) {
+      return { height: freeHeight, target: null };
     }
 
-    this.guide.show(target, columnList.getBoundingClientRect(), columnList);
+    return { height: snappedHeight, target };
+  }
 
-    return snappedHeight;
+  /**
+   * Draw the guideline across the column list at the given offset, or clear it.
+   *
+   * Called only once the snapped height is in the layout: applying it can move the
+   * page (the block below the spacer is the browser's scroll anchor), so a line
+   * placed from a reading taken beforehand would sit a few px off the very block it
+   * is meant to be marking.
+   *
+   * @param target - alignment as an offset down from the column list's top
+   * @param columnList - the enclosing column list the guide spans
+   */
+  private paintGuide(target: number | null, columnList: HTMLElement | null): void {
+    if (target === null || columnList === null) {
+      this.guide.hide();
+
+      return;
+    }
+
+    const listRect = columnList.getBoundingClientRect();
+
+    this.guide.show(listRect.top + target, listRect, columnList);
   }
 
   /**
@@ -417,17 +442,18 @@ export class SpacerTool implements BlockTool {
       this.element?.setAttribute('data-blok-spacer-dragging', '');
       this.showChrome();
 
-      // Snapshot the sibling columns' block edges once, at gesture start: the
-      // dragged edge pushes this column's own content around, but the blocks
-      // we align against are in OTHER columns and hold still.
-      const snapTargets = this.element === null ? [] : collectSiblingBlockEdges(this.element);
+      // Snapshot WHICH blocks to align against, never where they are: the set of
+      // sibling blocks cannot change while the grip is held, but their positions
+      // can move on any frame (see applySnap). Geometry is measured per move.
+      const snapBlocks = this.element === null ? [] : collectSiblingBlocks(this.element);
       const columnList = this.element?.closest<HTMLElement>(`[${COLUMNS_ATTR}]`) ?? null;
 
       const onMove = (move: PointerEvent): void => {
         const freeHeight = startHeight + (move.clientY - startY) * direction;
-        const snapped = this.applySnap(freeHeight, edge, snapTargets, columnList);
+        const snap = this.resolveSnap(freeHeight, snapBlocks, columnList);
 
-        this.setHeight(snapped);
+        this.setHeight(snap.height);
+        this.paintGuide(snap.target, columnList);
       };
       const onUp = (): void => {
         window.removeEventListener('pointermove', onMove);

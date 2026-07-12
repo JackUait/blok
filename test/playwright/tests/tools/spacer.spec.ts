@@ -54,7 +54,7 @@ test.describe('Spacer block', () => {
 
     await expect(spacer).toHaveAttribute('data-blok-spacer-fresh', '');
     expect(await spacer.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('dashed');
-    expect(await page.locator(BOTTOM_GRIP).evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+    await expect(page.locator(BOTTOM_GRIP)).toHaveCSS('opacity', '1');
 
     // Typing elsewhere puts the chrome back behind the hover gate.
     await page.keyboard.type('next');
@@ -125,7 +125,9 @@ test.describe('Spacer block', () => {
 
     await expect(spacer).toHaveAttribute('data-blok-spacer-dragging', '');
     expect(await spacer.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('dashed');
-    expect(await page.locator(BOTTOM_GRIP).evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+    // The grip fades in over a transition, so this has to settle rather than be
+    // sampled once — a plain read races the animation and flakes under load.
+    await expect(page.locator(BOTTOM_GRIP)).toHaveCSS('opacity', '1');
 
     await page.mouse.up();
     await expect(spacer).not.toHaveAttribute('data-blok-spacer-dragging', '');
@@ -346,6 +348,152 @@ test.describe('Spacer block', () => {
 
     // The guideline sits on the content's top edge, and the spacer's dragged
     // edge snapped onto it — so the footer below now starts level with it.
+    expect(Math.abs(guideBox.y - targetY)).toBeLessThanOrEqual(2);
+    expect(Math.abs(snappedBox.y + snappedBox.height - targetY)).toBeLessThanOrEqual(1);
+
+    await page.mouse.up();
+  });
+
+  test('the guideline still finds its target when the page scrolls mid-drag', async ({ page }) => {
+    // A spacer with a block UNDER it makes that block the browser's scroll anchor:
+    // growing the spacer pushes it down, and the browser scrolls by the same amount
+    // to hold it still. So the page scrolls on every single pointermove — the whole
+    // viewport coordinate frame slides out from under the gesture. Any geometry the
+    // drag measured up front is wrong from the first move on.
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1-a', 'c1-b'] },
+        { id: 'c1-a', type: 'paragraph', data: { text: 'Left first line.' }, parent: 'c1' },
+        { id: 'c1-b', type: 'paragraph', data: { text: 'Left second line.' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['c2-p', 'sp1', 'c2-f'] },
+        { id: 'c2-p', type: 'paragraph', data: { text: 'Right text.' }, parent: 'c2' },
+        { id: 'sp1', type: 'spacer', data: { height: 40 }, parent: 'c2' },
+        { id: 'c2-f', type: 'paragraph', data: { text: 'Right footer.' }, parent: 'c2' },
+        // Enough content below to give the page somewhere to scroll to.
+        { id: 'tail', type: 'paragraph', data: { text: 'Tail. '.repeat(400) } },
+      ],
+    });
+
+    const spacer = page.locator(SPACER);
+
+    await spacer.hover();
+    const gripBox = await page.locator(BOTTOM_GRIP).boundingBox();
+
+    if (!gripBox) {
+      throw new Error('missing grip bounding box');
+    }
+
+    const startX = gripBox.x + gripBox.width / 2;
+    const startY = gripBox.y + gripBox.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, startY + 10);
+
+    // The page scrolls mid-gesture, exactly as the browser's scroll anchoring does.
+    const scrolled = await page.evaluate(() => {
+      const before = window.scrollY;
+
+      window.scrollBy(0, 150);
+
+      return window.scrollY - before;
+    });
+
+    expect(scrolled).toBeGreaterThan(0);
+
+    // Re-read the alignment we are hunting AFTER the scroll: the bottom of the last
+    // block in the left column, where it now sits on screen.
+    const leftLast = await page.getByText('Left second line.').boundingBox();
+    const spacerBox = await spacer.boundingBox();
+
+    if (!leftLast || !spacerBox) {
+      throw new Error('missing bounding boxes');
+    }
+
+    const targetY = leftLast.y + leftLast.height;
+    // The spacer's top is pinned by flow, so its bottom edge sits at top + height.
+    // Ask for the height that lands that edge 4px shy of the alignment — inside the
+    // 6px snap threshold — and drive the pointer there.
+    const wantedHeight = targetY - 4 - spacerBox.y;
+
+    await page.mouse.move(startX, startY + (wantedHeight - 40), { steps: 10 });
+
+    const guide = page.locator('[data-blok-spacer-guide]');
+
+    await expect(guide).toHaveCount(1);
+
+    const guideBox = await guide.boundingBox();
+    const snappedBox = await spacer.boundingBox();
+
+    if (!guideBox || !snappedBox) {
+      throw new Error('missing bounding boxes');
+    }
+
+    // Measured against where things are NOW, not where they were at pointerdown.
+    expect(Math.abs(guideBox.y - targetY)).toBeLessThanOrEqual(2);
+    expect(Math.abs(snappedBox.y + snappedBox.height - targetY)).toBeLessThanOrEqual(1);
+
+    await page.mouse.up();
+  });
+
+  test('dragging the top grip snaps the edge that actually moves', async ({ page }) => {
+    // Both grips resize the gap, but a block's top is pinned by flow: whichever grip
+    // you pull, the only edge that moves is the BOTTOM one. Predicting that the top
+    // edge moves puts the guideline on a line the spacer never reaches.
+    await createBlok(page, {
+      blocks: [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['c1-a', 'c1-b'] },
+        { id: 'c1-a', type: 'paragraph', data: { text: 'Left first line.' }, parent: 'c1' },
+        { id: 'c1-b', type: 'paragraph', data: { text: 'Left second line.' }, parent: 'c1' },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['c2-p', 'sp1', 'c2-f'] },
+        { id: 'c2-p', type: 'paragraph', data: { text: 'Right text.' }, parent: 'c2' },
+        { id: 'sp1', type: 'spacer', data: { height: 40 }, parent: 'c2' },
+        { id: 'c2-f', type: 'paragraph', data: { text: 'Right footer.' }, parent: 'c2' },
+      ],
+    });
+
+    const spacer = page.locator(SPACER);
+    const spacerBox = await spacer.boundingBox();
+    const leftLast = await page.getByText('Left second line.').boundingBox();
+
+    if (!spacerBox || !leftLast) {
+      throw new Error('missing bounding boxes');
+    }
+
+    const targetY = leftLast.y + leftLast.height;
+
+    await spacer.hover();
+    const gripBox = await page.locator(TOP_GRIP).boundingBox();
+
+    if (!gripBox) {
+      throw new Error('missing grip bounding box');
+    }
+
+    const startX = gripBox.x + gripBox.width / 2;
+    const startY = gripBox.y + gripBox.height / 2;
+    // Dragging the top grip UP grows the gap. Ask for the height that puts the
+    // bottom edge 4px shy of the alignment.
+    const wantedHeight = targetY - 4 - spacerBox.y;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, startY - (wantedHeight - 40), { steps: 12 });
+
+    const guide = page.locator('[data-blok-spacer-guide]');
+
+    await expect(guide).toHaveCount(1);
+
+    const guideBox = await guide.boundingBox();
+    const snappedBox = await spacer.boundingBox();
+
+    if (!guideBox || !snappedBox) {
+      throw new Error('missing bounding boxes');
+    }
+
+    // The guideline marks the alignment, and the spacer's bottom edge — the one that
+    // actually moved — landed on it.
     expect(Math.abs(guideBox.y - targetY)).toBeLessThanOrEqual(2);
     expect(Math.abs(snappedBox.y + snappedBox.height - targetY)).toBeLessThanOrEqual(1);
 

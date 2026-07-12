@@ -491,6 +491,18 @@ export class Toolbar extends Module<ToolbarNodes> {
 
     const targetBlock = this.resolveTableCellBlock(unresolvedBlock);
 
+    /**
+     * Read-only keeps the settings toggler so a reader can hover a block and copy a
+     * link to it. But a block that paints nothing has nothing to point at: the
+     * handle ends up floating in blank space, reading as a rendering glitch. Leave
+     * the toolbar shut for those.
+     */
+    if (this.Blok.ReadOnly.isEnabled && this.paintsNothing(targetBlock)) {
+      this.close({ setExplicitlyClosed: false });
+
+      return;
+    }
+
     /** Clean up draggable on previous block if any */
     if (this.hoveredBlock && this.hoveredBlock !== targetBlock) {
       this.hoveredBlock.cleanupDraggable();
@@ -899,6 +911,36 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Used to decide whether the plus button and settings toggler should be hidden.
    * Focus-based check distinguishes click (buttons hidden) from hover (buttons visible).
    */
+  /**
+   * Whether the block shows the reader nothing at all — no text and no decoration
+   * of its own to hang a handle beside.
+   *
+   * Only tools that draw purely their text qualify when that text is gone. A quote
+   * still rules its left border, a list still sets its marker, a callout still
+   * fills its background, an empty toggle heading still points its arrow — all of
+   * those remain visible blocks with a visible edge, so they keep their handle. A
+   * spacer is the one tool that renders nothing by design: read-only strips its
+   * grips and outline, leaving pure whitespace.
+   *
+   * @param block - the block the toolbar is about to open beside
+   */
+  private paintsNothing(block: Block): boolean {
+    if (block.name === 'spacer') {
+      return true;
+    }
+
+    if (block.name !== 'paragraph' && block.name !== 'header') {
+      return false;
+    }
+
+    // A toggle heading keeps its arrow with or without text.
+    if (block.holder.querySelector('[data-blok-toggle-arrow]') !== null) {
+      return false;
+    }
+
+    return block.isEmpty;
+  }
+
   /**
    * Checks whether the given block is the first child of a callout block.
    * Used to hide the plus button and prevent it from overlapping the callout emoji icon.

@@ -3,7 +3,7 @@ import type {
   BlockTool,
   BlockToolConstructorOptions,
 } from '../../../types';
-import { COLUMN_ATTR, unwrapColumnListIfCollapsed } from '../columns-shared';
+import { COLUMN_ATTR, rebuildColumnListResizers, unwrapColumnListIfCollapsed } from '../columns-shared';
 import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
@@ -250,11 +250,21 @@ export class Column implements BlockTool {
     queueMicrotask(() => {
       const parentId = this.block.parentId;
 
-      if (parentId !== null) {
-        // Pass blockId as excludeId so a not-yet-spliced self is excluded from
-        // the surviving-column count.
-        void unwrapColumnListIfCollapsed(this.api, parentId, this.blockId);
+      if (parentId === null) {
+        return;
       }
+
+      // Pass blockId as excludeId so a not-yet-spliced self is excluded from
+      // the surviving-column count.
+      void unwrapColumnListIfCollapsed(this.api, parentId, this.blockId).then(didUnwrap => {
+        // Unwrapped → the whole list dissolved, nothing left to re-separate.
+        // Otherwise the list survives with >= 2 columns but its separators are
+        // now stale (the removed column's separator lingers as a leading bar):
+        // rebuild them to match the surviving column set.
+        if (!didUnwrap) {
+          rebuildColumnListResizers(this.api, parentId);
+        }
+      });
     });
   }
 

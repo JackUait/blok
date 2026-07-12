@@ -311,6 +311,25 @@ export const resetColumnsToEvenWidth = (api: API, columnListId: string): void =>
 };
 
 /**
+ * Rebuild the resize separators of a live column_list after its column set
+ * changed OUTSIDE a fresh render (a column added or removed mid-life). The
+ * list's rendered() hook fires only once, so such a mutation never rebuilds the
+ * separators on its own — without this, a removed column leaves its separator
+ * behind as a stray LEADING bar (a full-height gutter at the row's left edge
+ * that reads as a phantom extra column), and an added column lands with no
+ * handle. Reach the row element (COLUMNS_ATTR) from any surviving column holder;
+ * a no-op when the list has no live holder (fully removed) or in read-only mode.
+ */
+export const rebuildColumnListResizers = (api: API, columnListId: string): void => {
+  const holders = api.blocks.getChildren(columnListId).map(column => column.holder);
+  const container = holders[0]?.closest(`[${COLUMNS_ATTR}]`);
+
+  if (container instanceof HTMLElement) {
+    buildColumnResizers(container, holders, api.readOnly.isEnabled, api, columnListId);
+  }
+};
+
+/**
  * Delete a block by id. `api.blocks.delete` is index-based and async, and any
  * preceding delete shifts the flat array, so the id is re-resolved to its
  * CURRENT index immediately before the call. Resolving by id (never a stale

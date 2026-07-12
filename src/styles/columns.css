@@ -93,6 +93,26 @@
   opacity: 0;
 }
 
+/*
+ * Structural backstop — a resize separator is ONLY ever valid BETWEEN two
+ * columns (buildColumnResizers inserts one before each column after the first).
+ * A separator that is the row's first or last child, or sits directly next to
+ * another separator, is therefore ALWAYS a stale artifact of a column-set change
+ * that didn't rebuild the separators (a removed column leaves its separator
+ * behind; a raw DOM mutation or undo/redo can restore a mismatched set). Such a
+ * separator must never render: as a 32px flex item it would push the columns
+ * across and flash a gray gutter bar at the row's edge — the "phantom extra
+ * column" users report. Collapsing it to display:none removes both the bar AND
+ * its width, so a misplaced separator is inert no matter how it got there. The
+ * live rebuild (rebuildColumnListResizers) still corrects the set for real
+ * resizing; this rule guarantees the VISUAL symptom can never appear regardless.
+ */
+[data-blok-columns] > [data-blok-column-resizer]:first-child,
+[data-blok-columns] > [data-blok-column-resizer]:last-child,
+[data-blok-columns] > [data-blok-column-resizer] + [data-blok-column-resizer] {
+  display: none;
+}
+
 /* Columns stack vertically below the breakpoint, so the gutter handle hides. */
 @media (max-width: 650px) {
   [data-blok-column-resizer] {

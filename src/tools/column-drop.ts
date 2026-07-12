@@ -5,28 +5,11 @@ import {
   playSiblingShift,
 } from '../components/modules/drag/utils/ColumnDropAnimation';
 import {
-  COLUMNS_ATTR,
   COLUMN_LIST_TOOL,
   COLUMN_TOOL,
-  buildColumnResizers,
+  rebuildColumnListResizers,
   resetColumnsToEvenWidth,
 } from './columns-shared';
-
-/**
- * Rebuild the resize separators of an already-rendered column_list. The list's
- * rendered() hook fires only once, so adding a column to a live list never
- * re-triggers it — the separators must be rebuilt here or the new column lands
- * without a handle. The columns row is the element carrying COLUMNS_ATTR; reach
- * it from any child column holder.
- */
-const rebuildColumnResizers = (api: API, columnListId: string): void => {
-  const holders = api.blocks.getChildren(columnListId).map(column => column.holder);
-  const container = holders[0]?.closest(`[${COLUMNS_ATTR}]`);
-
-  if (container instanceof HTMLElement) {
-    buildColumnResizers(container, holders, api.readOnly.isEnabled, api, columnListId);
-  }
-};
 
 export type ColumnDropSide = 'left' | 'right';
 
@@ -208,7 +191,7 @@ export const wrapBlocksInColumns = (
     // New list: rendered() already fired with zero children, so it never built
     // separators — rebuild the N-1 set and even the widths.
     resetColumnsToEvenWidth(api, list.id);
-    rebuildColumnResizers(api, list.id);
+    rebuildColumnListResizers(api, list.id);
   });
 
   return created.listId;
@@ -289,7 +272,7 @@ export const addColumnToList = (
 
     // The list was already rendered, so its rendered() hook won't fire again to
     // build a separator for the new column — rebuild the full N-1 set here.
-    rebuildColumnResizers(api, columnListId);
+    rebuildColumnListResizers(api, columnListId);
   });
 
   // Play the drop motion: existing columns glide from their pre-drop widths to

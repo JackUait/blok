@@ -1790,6 +1790,125 @@ describe('RectangleSelection', () => {
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
       });
 
+      /**
+       * Nested-block tools keep their children in the same flat block array, and
+       * every child holder is visually INSIDE its root's holder. A lasso that
+       * crosses the root therefore overlapped the root AND all of its children,
+       * selecting a 3x3 table as 1 + 9 + ... blocks. Duplicating that selection
+       * then duplicated the table AND its cell blocks again.
+       */
+      it('selects only the root block when the band crosses a table (not its cell blocks)', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        const paragraph = createBlockWithPosition('paragraph', 0, 50);
+        const table = createBlockWithPosition('table', 50, 150);
+        // Cell paragraphs live at the TAIL of the flat array, inside the table's box
+        const cell1 = createBlockWithPosition('cell-1', 60, 40, 'table');
+        const cell2 = createBlockWithPosition('cell-2', 100, 40, 'table');
+        const cell3 = createBlockWithPosition('cell-3', 140, 40, 'table');
+
+        blockManager.blocks.push(paragraph, table, cell1, cell2, cell3);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          anchorBlockIndex: number | null;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        // Band from the paragraph down through the whole table
+        internal.startY = 25;
+        internal.mouseY = 25;
+        internal.trySelectNextBlock(0);
+        internal.mouseY = 190;
+        internal.trySelectNextBlock(1);
+
+        expect(internal.stackOfSelected).toEqual([0, 1]);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(3);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
+      });
+
+      it('selects only the column_list root when the band crosses a column layout', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        const columnList = createBlockWithPosition('column_list', 0, 120);
+        const column = createBlockWithPosition('column', 0, 120, 'column_list');
+        const columnChild = createBlockWithPosition('column-child', 10, 40, 'column');
+
+        blockManager.blocks.push(columnList, column, columnChild);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        internal.startY = 5;
+        internal.mouseY = 5;
+        internal.trySelectNextBlock(0);
+        internal.mouseY = 115;
+        internal.trySelectNextBlock(0);
+
+        expect(internal.stackOfSelected).toEqual([0]);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+      });
+
+      it('selects the root table even when the lasso is anchored on a cell block', () => {
+        const {
+          rectangleSelection,
+          blockManager,
+          blockSelection,
+        } = createRectangleSelection();
+
+        const table = createBlockWithPosition('table', 0, 150);
+        const cell1 = createBlockWithPosition('cell-1', 10, 40, 'table');
+        const cell2 = createBlockWithPosition('cell-2', 60, 40, 'table');
+
+        blockManager.blocks.push(table, cell1, cell2);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          trySelectNextBlock: (index: number) => void;
+          stackOfSelected: number[];
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+
+        // genInfoForMouseSelection hands back the CELL index when the pointer is over a cell
+        internal.startY = 20;
+        internal.mouseY = 20;
+        internal.trySelectNextBlock(1);
+        internal.mouseY = 140;
+        internal.trySelectNextBlock(2);
+
+        expect(internal.stackOfSelected).toEqual([0]);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+      });
+
       it('excludes blocks that are visually outside the anchor-to-current range', () => {
         const {
           rectangleSelection,
@@ -1831,7 +1950,14 @@ describe('RectangleSelection', () => {
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
       });
 
-      it('includes toggle children that are visually within the selection range', () => {
+      /**
+       * Superseded by the top-level-only lasso law. Nested children's holders are
+       * mounted INSIDE their parent's holder (BlockHierarchy.setBlockParent), so a
+       * band that reaches a child always overlaps its root too — selecting both
+       * meant Duplicate duplicated the container AND its children again. The root
+       * block now represents its whole subtree.
+       */
+      it('selects the toggle root and not its children when the band reaches into a toggle', () => {
         const {
           rectangleSelection,
           blockManager,
@@ -1858,11 +1984,9 @@ describe('RectangleSelection', () => {
 
         internal.rectCrossesBlocks = true;
 
-        // Anchor at block 0, mouse moves to toggle child at index 3
-        // With old code: genInfoForMouseSelection would resolve to root (index 1),
-        // so trySelectNextBlock(1) selects [0, 1] — children not selected (BUG)
-        // With new code: genInfoForMouseSelection returns 3 directly,
-        // trySelectNextBlock(3) uses visual positions to select [0, 1, 2, 3]
+        // Anchor at block 0, mouse moves onto the toggle child at index 3.
+        // genInfoForMouseSelection still hands back the CHILD index (3) — the lasso
+        // must resolve that to the containing root rather than selecting the child.
         // block0: 0-50, block1: 50-80, block2: 80-130, block3: 130-180, block4: 180-230
         internal.startY = 25;   // anchor at block 0 center
         internal.mouseY = 25;
@@ -1872,8 +1996,9 @@ describe('RectangleSelection', () => {
 
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
         expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
-        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
-        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
+        // Toggle children are represented by their root — never selected alongside it
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(3);
         // Block 4 is outside the visual range
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
       });

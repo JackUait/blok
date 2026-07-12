@@ -114,9 +114,54 @@ describe('setupPlaceholder', () => {
     expect(element.getAttribute('data-placeholder')).toBe('My placeholder');
   });
 
-  it('mirrors the placeholder text onto aria-placeholder for screen readers', () => {
+  it('mirrors the placeholder text onto aria-placeholder for screen readers when the host role supports it', () => {
+    element.setAttribute('role', 'textbox');
+
     setupPlaceholder(element, 'My placeholder');
     expect(element.getAttribute('aria-placeholder')).toBe('My placeholder');
+  });
+
+  /**
+   * `aria-placeholder` is only supported on the textbox/searchbox/combobox roles.
+   * A `contenteditable` div does NOT get an implicit textbox role — its implicit
+   * role is `generic`, which allows no ARIA attributes beyond the globals. Writing
+   * aria-placeholder there produces a CRITICAL axe `aria-allowed-attr` violation
+   * (regression: table-rendering axe scan, whose cell paragraphs are placeholder
+   * hosts) while giving assistive tech nothing: the attribute is ignored on a
+   * generic host.
+   */
+  it('does NOT set aria-placeholder on a contenteditable host with no supporting role', () => {
+    element.contentEditable = 'true';
+
+    setupPlaceholder(element, 'My placeholder', 'data-blok-placeholder-active', 'focus');
+
+    expect(element.hasAttribute('aria-placeholder')).toBe(false);
+    // The visual placeholder channel is untouched.
+    expect(element.getAttribute('data-blok-placeholder-active')).toBe('My placeholder');
+  });
+
+  it('does NOT set aria-placeholder on a non-textbox role (e.g. a heading host)', () => {
+    const heading = document.createElement('h2');
+
+    document.body.appendChild(heading);
+
+    setupPlaceholder(heading, 'Heading');
+
+    expect(heading.hasAttribute('aria-placeholder')).toBe(false);
+
+    heading.remove();
+  });
+
+  it('sets aria-placeholder on native text inputs, whose role supports it', () => {
+    const input = document.createElement('input');
+
+    document.body.appendChild(input);
+
+    setupPlaceholder(input, 'Search');
+
+    expect(input.getAttribute('aria-placeholder')).toBe('Search');
+
+    input.remove();
   });
 
   it('stamps the unified data-blok-placeholder-visible visibility vocabulary (default "always")', () => {
@@ -130,7 +175,11 @@ describe('setupPlaceholder', () => {
   });
 
   it('cleanup removes aria-placeholder and data-blok-placeholder-visible', () => {
+    element.setAttribute('role', 'textbox');
+
     const cleanup = setupPlaceholder(element, 'My placeholder');
+
+    expect(element.getAttribute('aria-placeholder')).toBe('My placeholder');
 
     cleanup();
 

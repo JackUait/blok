@@ -184,6 +184,15 @@ export interface UseBlocksApi {
     markdown: string,
     options?: { parentId?: string | null; position?: InsertPosition; config?: MarkdownImportConfig }
   ): Promise<BlockNode[]>;
+  /**
+   * Serialize the WHOLE document to a Markdown string — the outbound twin of
+   * core's `blocks.exportMarkdown` (and the read-side counterpart of the
+   * additive {@link insertMarkdown}). Async: the serializer is lazy-loaded, like
+   * the importer. Markdown cannot express every block, so some structure is
+   * dropped (table `colspan`/`rowspan`, heading columns). Returns `''` for an
+   * empty document. Pre-ready: resolves to `''`.
+   */
+  exportMarkdown(): Promise<string>;
   move(id: string, target: MoveTarget): void;
   nest(id: string, parentId: string): void;
   unnest(id: string): void;

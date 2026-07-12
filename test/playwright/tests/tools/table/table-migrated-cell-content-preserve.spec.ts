@@ -312,10 +312,18 @@ test.describe('Migrated table cell content preservation', () => {
     expect(texts.filter(t => t === null || t === '')).toHaveLength(0);
   });
 
-  test('read-only → edit toggle → save keeps multi-child and single cells (empty stays empty)', async ({ page }) => {
+  test('read-only → edit toggle → save keeps multi-child and single cells (empty cell gains its editable target)', async ({ page }) => {
     // Covers shapes the deterministic migration emits beyond the simple 1-child
     // cell: a cell with multiple child blocks (a `<ul>`/`<ol>` cell) and an empty
     // cell, mixed with single-child cells — through the vulnerable read-only→edit path.
+    //
+    // The empty `{ blocks: [] }` cell does NOT stay empty, and must not: in edit
+    // mode every cell must own at least one block, otherwise it has no
+    // contenteditable target and the user cannot click into or type in it (see
+    // test/unit/tools/table/table-cell-editability-invariant.test.ts). So the
+    // toggle synthesizes exactly ONE empty paragraph for it. What matters for the
+    // data-loss regression this spec guards is that no POPULATED reference is lost
+    // or dangling.
     await createBlok(page, { tools: defaultTools, readOnly: true, data: mixedTableData() });
 
     await page.evaluate(async () => {
@@ -329,10 +337,22 @@ test.describe('Migrated table cell content preservation', () => {
     for (const expected of MIXED_BLOCK_TEXTS) {
       expect(texts).toContain(expected);
     }
-    // No populated reference resolved to empty/missing text.
-    expect(texts.filter(t => t === null || t === '')).toHaveLength(0);
-    // Exactly the 4 populated references survive (the empty cell adds none).
-    expect(texts).toHaveLength(MIXED_BLOCK_TEXTS.length);
+    // No reference dangles: every id in the saved content resolves to a real block.
+    expect(texts.filter(t => t === null)).toHaveLength(0);
+    // The 4 populated references + exactly ONE synthesized empty target.
+    expect(texts.filter(t => t === '')).toHaveLength(1);
+    expect(texts).toHaveLength(MIXED_BLOCK_TEXTS.length + 1);
+
+    // And that synthesized block is a real editable target in the empty cell —
+    // the whole point of creating it.
+    const emptyCellEditables = await page.evaluate(() => {
+      const cells = document.querySelectorAll('[data-blok-table-cell]');
+
+      // Row 1, col 0 — the `{ blocks: [] }` cell of mixedTableData().
+      return cells[2]?.querySelectorAll('[contenteditable="true"]').length ?? -1;
+    });
+
+    expect(emptyCellEditables).toBe(1);
   });
 });
 

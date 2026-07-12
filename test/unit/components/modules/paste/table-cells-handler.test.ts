@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import { buildClipboardHtml } from '../../../../../src/tools/table/table-cell-clipboard';
-import type { TableCellsClipboard } from '../../../../../src/tools/table/types';
+import type { CellContent, LegacyCellContent, TableCellsClipboard } from '../../../../../src/tools/table/types';
 import { TableCellsHandler } from '../../../../../src/components/modules/paste/handlers/table-cells-handler';
 import type { SanitizerConfigBuilder } from '../../../../../src/components/modules/paste/sanitizer-config';
 import type { ToolRegistry } from '../../../../../src/components/modules/paste/tool-registry';
@@ -766,6 +766,99 @@ describe('TableCellsHandler', () => {
 
       // Clean up
       document.body.removeChild(plainHolder);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Losses #1, #2, #4: the payload carries structured blocks, tunes and
+  // placement — buildCellContent used to rebuild cells from a flattened HTML
+  // string, dropping images/code/embeds, tunes and the 9-way placement.
+  // ---------------------------------------------------------------------------
+  describe('structured payload consumption', () => {
+    const contentOfInsertedTable = (): LegacyCellContent[][] => {
+      const insertMock = mockBlok.BlockManager.insert as ReturnType<typeof vi.fn>;
+      const callArgs = insertMock.mock.calls[0][0] as { data: { content: LegacyCellContent[][] } };
+
+      return callArgs.data.content;
+    };
+
+    const cellOf = (content: LegacyCellContent[][], row: number, col: number): CellContent => {
+      const cell = content[row]?.[col];
+
+      if (cell === undefined || typeof cell === 'string') {
+        throw new Error(`cell [${row}][${col}] is not structured CellContent (got ${JSON.stringify(cell)})`);
+      }
+
+      return cell;
+    };
+
+    it('keeps an image block as structured block data (regression: images pasted outside a table vanished)', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'image', data: { file: { url: 'https://cdn.test/cat.png' }, caption: 'A cat' } }],
+        }]],
+      };
+
+      await handler.handle(buildClipboardHtml(payload), context);
+
+      const cell = cellOf(contentOfInsertedTable(), 0, 0);
+
+      expect(cell.blockData).toEqual([
+        { tool: 'image', data: { file: { url: 'https://cdn.test/cat.png' }, caption: 'A cat' } },
+      ]);
+    });
+
+    it('keeps block tunes on the pasted cell blocks', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'paragraph', data: { text: 'tuned' }, tunes: { textAlign: { alignment: 'center' } } }],
+        }]],
+      };
+
+      await handler.handle(buildClipboardHtml(payload), context);
+
+      const cell = cellOf(contentOfInsertedTable(), 0, 0);
+
+      expect(cell.blockData?.[0].tunes).toEqual({ textAlign: { alignment: 'center' } });
+    });
+
+    it('keeps the cell placement', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'paragraph', data: { text: 'centered' } }],
+          placement: 'middle-center',
+        }]],
+      };
+
+      await handler.handle(buildClipboardHtml(payload), context);
+
+      expect(cellOf(contentOfInsertedTable(), 0, 0).placement).toBe('middle-center');
+    });
+
+    it('still uses the plain-string fast path for plain text cells', async () => {
+      await handler.handle(buildTableHtml([['Hello', 'World']]), context);
+
+      expect(contentOfInsertedTable()).toEqual([['Hello', 'World']]);
+    });
+
+    it('still serializes list blocks through the canonical HTML channel', async () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'list', data: { text: 'alpha', style: 'unordered', checked: false, depth: 0 } }],
+        }]],
+      };
+
+      await handler.handle(buildClipboardHtml(payload), context);
+
+      expect(contentOfInsertedTable()[0][0]).toBe('<ul><li aria-level="1">alpha</li></ul>');
     });
   });
 });

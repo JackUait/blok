@@ -1,4 +1,4 @@
-import type { API } from '../../../types';
+import type { API, BlockAPI } from '../../../types';
 
 import { TableAddControls } from './table-add-controls';
 import type { TableCellBlocks } from './table-cell-blocks';
@@ -12,6 +12,7 @@ import {
 } from './table-cell-clipboard';
 import type { CellColorMode } from './table-cell-color-picker';
 import { TableCellSelection } from './table-cell-selection';
+import type { CellMark, FillDirection, SelectionRange } from './table-cell-selection';
 import type { TableGrid } from './table-core';
 import { ROW_ATTR, CELL_ATTR, CELL_ROW_ATTR, CELL_COL_ATTR } from './table-core';
 import { TableCornerDrag } from './table-corner-drag';
@@ -35,6 +36,57 @@ import { TableRowColControls } from './table-row-col-controls';
 import type { RowColAction } from './table-row-col-controls';
 import { TableScrollHaze } from './table-scroll-haze';
 import type { CellPlacement, ClipboardBlockData, TableCellsClipboard } from './types';
+
+/**
+ * Tags each bulk-formattable mark produces. The first entry is what we WRITE;
+ * the rest are equivalents we still RECOGNISE (pasted `<b>`/`<em>` content).
+ * Kept in sync with each inline tool's `static get sanitize()`.
+ */
+const MARK_TAGS: Record<CellMark, string[]> = {
+  bold: ['strong', 'b'],
+  italic: ['i', 'em'],
+  underline: ['u'],
+  strikethrough: ['s'],
+  code: ['code'],
+};
+
+/**
+ * Child nodes that carry meaning (whitespace-only text nodes don't).
+ */
+const meaningfulNodes = (input: HTMLElement): ChildNode[] =>
+  Array.from(input.childNodes).filter(
+    node => !(node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() === '')
+  );
+
+/**
+ * True when the input's whole content already sits inside the mark's tag(s).
+ */
+const isFullyMarked = (input: HTMLElement, tags: string[]): boolean => {
+  const nodes = meaningfulNodes(input);
+
+  return nodes.length > 0 && nodes.every(
+    node => node instanceof HTMLElement && tags.includes(node.tagName.toLowerCase())
+  );
+};
+
+const wrapMark = (input: HTMLElement, tags: string[]): string => {
+  if (isFullyMarked(input, tags)) {
+    return input.innerHTML;
+  }
+
+  return `<${tags[0]}>${input.innerHTML}</${tags[0]}>`;
+};
+
+const unwrapMark = (input: HTMLElement, tags: string[]): string =>
+  Array.from(input.childNodes)
+    .map(node => {
+      if (node instanceof HTMLElement) {
+        return tags.includes(node.tagName.toLowerCase()) ? node.innerHTML : node.outerHTML;
+      }
+
+      return node.textContent ?? '';
+    })
+    .join('');
 
 /**
  * Shared table state and operations that the visual subsystems depend on but
@@ -462,7 +514,22 @@ export class TableSubsystems {
       isHeadingRow: () => this.host.model.withHeadings,
       isHeadingColumn: () => this.host.model.withHeadingColumn,
       i18n: this.host.api.i18n,
+      // Per-index merge guards, not a table-wide bail: a row/column clear of
+      // every merge stays draggable on a merged table, and one that a merge
+      // locks gets a disabled affordance instead of a silent snap-back.
+      canDrag: (type, index) => (
+        type === 'row'
+          ? this.host.model.isRowMovable(index)
+          : this.host.model.isColumnMovable(index)
+      ),
+      canDrop: (type, fromIndex, toIndex) => (
+        type === 'row'
+          ? this.host.model.canMoveRow(fromIndex, toIndex)
+          : this.host.model.canMoveColumn(fromIndex, toIndex)
+      ),
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
+      onClearContents: (type, index) => this.clearRangeContents(type, index),
+      onColorChange: (type, index, color, mode) => this.colorRange(type, index, color, mode),
       onDragStateChange: (isDragging: boolean) => {
         if (this.resize) {
           this.resize.enabled = !isDragging;
@@ -482,29 +549,192 @@ export class TableSubsystems {
           this.cellSelection?.selectColumn(index);
         }
       },
-      onGripPopoverClose: () => {
-        if (this.pendingHighlight) {
-          const { type, index } = this.pendingHighlight;
-
-          this.pendingHighlight = null;
-
-          // Lock the grip synchronously so the unlock listener is registered
-          // before any external click can race with a deferred RAF
-          this.rowColControls?.setActiveGrip(type, index);
-
-          // Wait for layout so newly inserted cells have dimensions
-          requestAnimationFrame(() => {
-            if (type === 'row') {
-              this.cellSelection?.selectRow(index);
-            } else {
-              this.cellSelection?.selectColumn(index);
-            }
-          });
-        } else {
-          this.cellSelection?.clearActiveSelection();
-        }
-      },
+      onGripPopoverClose: () => this.handleGripPopoverClose(),
     });
+  }
+
+  /**
+   * The grip popover closed. Re-highlight the row/column an action just
+   * created/moved, if there is one.
+   *
+   * It must NOT clear the cell selection. The grip popover closes for reasons
+   * that are not "the user dismissed the row": the PopoverRegistry's mutual
+   * exclusion hides it whenever ANY other root popover opens — including the
+   * selection pill's own menu, the only surface that used to carry row/column
+   * Color. Clearing here destroyed the pill (and its popover) mid-show, which is
+   * why Color was unreachable from a grip at all. Dropping the selection on a
+   * real outside click is already owned by TableCellSelection's own
+   * document-pointerdown handler, which correctly ignores clicks on the pill and
+   * inside open popovers.
+   */
+  private handleGripPopoverClose(): void {
+    if (!this.pendingHighlight) {
+      return;
+    }
+
+    const { type, index } = this.pendingHighlight;
+
+    this.pendingHighlight = null;
+
+    // Lock the grip synchronously so the unlock listener is registered
+    // before any external click can race with a deferred RAF
+    this.rowColControls?.setActiveGrip(type, index);
+
+    // Wait for layout so newly inserted cells have dimensions
+    requestAnimationFrame(() => {
+      if (type === 'row') {
+        this.cellSelection?.selectRow(index);
+      } else {
+        this.cellSelection?.selectColumn(index);
+      }
+    });
+  }
+
+  /**
+   * Every real <td> of a row/column, in order. Merge-covered coordinates have no
+   * <td> at all, so they simply do not appear (and a merge origin appears once).
+   */
+  private rangeCells(gridEl: HTMLElement, type: 'row' | 'col', index: number): HTMLElement[] {
+    const count = type === 'row'
+      ? this.host.grid.getColumnCount(gridEl)
+      : this.host.grid.getRowCount(gridEl);
+
+    return Array.from({ length: count }, (_, i) => (
+      type === 'row' ? this.cellAt(gridEl, index, i) : this.cellAt(gridEl, i, index)
+    )).filter((cell): cell is HTMLElement => cell !== null);
+  }
+
+  /**
+   * The <td> at a LOGICAL coordinate, or null when the coordinate is covered by
+   * a merge. Deliberately not TableGrid.getCell: that falls back to a physical
+   * index lookup, which resolves a covered coordinate to the wrong cell.
+   */
+  private cellAt(gridEl: HTMLElement, row: number, col: number): HTMLElement | null {
+    return gridEl.querySelector<HTMLElement>(`[${CELL_ROW_ATTR}="${row}"][${CELL_COL_ATTR}="${col}"]`);
+  }
+
+  /**
+   * Copy a row/column's content and formatting into the freshly inserted empty
+   * row/column beside it.
+   *
+   * The blocks are DEEP-copied — each cell's payload is re-inserted through the
+   * blocks API, so the copy owns brand-new block ids and its own data objects.
+   * Aliasing the source block ids would put one block in two cells, and editing
+   * either would silently rewrite the other.
+   *
+   * Merges are NOT copied: a coordinate covered by a merge has no cell on either
+   * side and is skipped, leaving the duplicate flat rather than inventing spans
+   * the model never sanctioned.
+   */
+  private duplicateRangeContent(
+    gridEl: HTMLElement,
+    type: 'row' | 'col',
+    sourceIndex: number,
+    targetIndex: number,
+  ): void {
+    const count = type === 'row'
+      ? this.host.grid.getColumnCount(gridEl)
+      : this.host.grid.getRowCount(gridEl);
+
+    Array.from({ length: count }, (_, i) => i).forEach((i) => {
+      const source = type === 'row' ? { row: sourceIndex, col: i } : { row: i, col: sourceIndex };
+      const target = type === 'row' ? { row: targetIndex, col: i } : { row: i, col: targetIndex };
+
+      const sourceCell = this.cellAt(gridEl, source.row, source.col);
+      const targetCell = this.cellAt(gridEl, target.row, target.col);
+
+      if (!sourceCell || !targetCell || sourceCell === targetCell) {
+        return;
+      }
+
+      const blocks = this.readCellBlocks(sourceCell).map(block => ({
+        ...block,
+        data: structuredClone(block.data),
+      }));
+
+      this.pasteCellPayload(targetCell, { blocks });
+      this.host.model.setCellBlocks(
+        target.row,
+        target.col,
+        this.host.cellBlocks?.getBlockIdsFromCells([targetCell]) ?? [],
+      );
+
+      const color = this.host.model.getCellColor(source.row, source.col);
+      const textColor = this.host.model.getCellTextColor(source.row, source.col);
+      const placement = this.host.model.getCellPlacement(source.row, source.col);
+
+      this.host.model.setCellColor(target.row, target.col, color);
+      this.host.model.setCellTextColor(target.row, target.col, textColor);
+      targetCell.style.backgroundColor = color ?? '';
+      targetCell.style.color = textColor ?? '';
+
+      this.host.model.setCellPlacement(target.row, target.col, placement);
+
+      const blocksContainer = targetCell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+      if (blocksContainer) {
+        if (placement === undefined) {
+          blocksContainer.removeAttribute('data-blok-cell-placement');
+        } else {
+          blocksContainer.setAttribute('data-blok-cell-placement', placement);
+        }
+      }
+    });
+  }
+
+  /**
+   * Clear the contents of a whole row/column from the grip menu.
+   */
+  private clearRangeContents(type: 'row' | 'col', index: number): void {
+    const gridEl = this.host.gridElement;
+
+    if (!gridEl || this.host.readOnly) {
+      return;
+    }
+
+    this.clearCellsContent(this.rangeCells(gridEl, type, index));
+  }
+
+  /**
+   * Paint a whole row/column from the grip menu's color submenu.
+   */
+  private colorRange(type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode): void {
+    const gridEl = this.host.gridElement;
+
+    if (!gridEl || this.host.readOnly) {
+      return;
+    }
+
+    this.handleCellColorChange(this.rangeCells(gridEl, type, index), color, mode);
+  }
+
+  /**
+   * Wipe the CONTENT of the given cells — and only the content.
+   *
+   * Colors and placement are formatting, not content: Notion's "Clear contents"
+   * leaves them in place, and so does this. (There is no "clear formatting"
+   * action; if one is ever added it must be its own explicitly-named operation.)
+   */
+  private clearCellsContent(cells: HTMLElement[]): void {
+    const cellBlocks = this.host.cellBlocks;
+
+    if (!cellBlocks || cells.length === 0) {
+      return;
+    }
+
+    // Keep the caret inside the table after clearing. cells[0] is the
+    // top-left cell of the selection (collected row-major).
+    const anchorCell = cells[0];
+
+    // ONLY the blocks are deleted. The cell-blocks mutation handler re-syncs the
+    // model and re-seeds every emptied cell with a fresh empty block; emptying
+    // the model's cell entries here would leave that handler with nothing to
+    // repair and the non-anchor cells with no editable at all.
+    this.host.runTransactedStructuralOp(() => {
+      cellBlocks.deleteBlocks(cellBlocks.getBlockIdsFromCells(cells));
+    });
+
+    cellBlocks.focusClearedCell(anchorCell);
   }
 
   private handleRowColAction(gridEl: HTMLElement, action: RowColAction): void {
@@ -526,6 +756,10 @@ export class TableSubsystems {
       // can remove the last merge, so a post-mutation read would miss that the
       // delete straddled a merge and the DOM needs a full rebuild.
       const hasMergesBeforeMutation = this.host.model.hasMerges();
+      // Same reason: the model's own move guard is consulted pre-mutation so
+      // the DOM half and the model half can never disagree about whether the
+      // move happened.
+      const moveAllowedBeforeMutation = this.isMoveAllowed(action);
 
       // Sync model structural operation before DOM changes
       const { blocksToDelete } = this.syncModelForAction(action);
@@ -541,6 +775,7 @@ export class TableSubsystems {
             withHeadingColumn: this.host.model.withHeadingColumn,
             initialColWidth: this.host.model.initialColWidth,
             hasMerges: hasMergesBeforeMutation,
+            moveAllowed: moveAllowedBeforeMutation,
           },
           cellBlocks: this.host.cellBlocks,
           blocksToDelete,
@@ -571,6 +806,12 @@ export class TableSubsystems {
         this.rowColControls?.refresh();
       }
 
+      if (action.type === 'duplicate-row') {
+        this.duplicateRangeContent(gridEl, 'row', action.index, action.index + 1);
+      } else if (action.type === 'duplicate-col') {
+        this.duplicateRangeContent(gridEl, 'col', action.index, action.index + 1);
+      }
+
       if (!result.moveSelection) {
         return;
       }
@@ -588,6 +829,23 @@ export class TableSubsystems {
     });
   }
 
+  /**
+   * Does the model accept this move? Non-move actions are always "allowed".
+   * Read from the PRE-mutation model and handed to the action handler so the
+   * DOM half never moves a row/column the model refused (and vice versa).
+   */
+  private isMoveAllowed(action: RowColAction): boolean {
+    if (action.type === 'move-row') {
+      return this.host.model.canMoveRow(action.fromIndex, action.toIndex);
+    }
+
+    if (action.type === 'move-col') {
+      return this.host.model.canMoveColumn(action.fromIndex, action.toIndex);
+    }
+
+    return true;
+  }
+
   private syncModelForAction(action: RowColAction): { blocksToDelete?: string[] } {
     switch (action.type) {
       case 'insert-row-above':
@@ -602,17 +860,22 @@ export class TableSubsystems {
       case 'insert-col-right':
         this.host.model.addColumn(action.index + 1);
         break;
+      case 'duplicate-row':
+        // The copy starts life as an empty row; its content is deep-copied in
+        // duplicateRangeContent() once the DOM half has rendered the new cells.
+        this.host.model.addRow(action.index + 1);
+        break;
+      case 'duplicate-col':
+        this.host.model.addColumn(action.index + 1);
+        break;
       case 'move-row':
-        // Skip on merged grids; the DOM move is blocked too, so moving the
-        // model here would desync them (see executeRowColAction).
-        if (!this.host.model.hasMerges()) {
-          this.host.model.moveRow(action.fromIndex, action.toIndex);
-        }
+        // The model refuses only the moves that would tear a merge, and the
+        // DOM half is gated on the same answer (ActionData.moveAllowed), so a
+        // row clear of every merge reorders normally even on a merged grid.
+        this.host.model.moveRow(action.fromIndex, action.toIndex);
         break;
       case 'move-col':
-        if (!this.host.model.hasMerges()) {
-          this.host.model.moveColumn(action.fromIndex, action.toIndex);
-        }
+        this.host.model.moveColumn(action.fromIndex, action.toIndex);
         break;
       case 'delete-row':
         return this.host.model.deleteRow(action.index);
@@ -625,6 +888,17 @@ export class TableSubsystems {
     }
 
     return {};
+  }
+
+  /**
+   * Re-create the resize handles after the width MODE changed underneath them
+   * (fit-to-page-width drops colWidths, so the resizer must go back to percent
+   * mode and stop pinning pixel widths on the next pointerdown).
+   */
+  public refreshResize(gridEl: HTMLElement): void {
+    this.initResize(gridEl);
+    this.rowColControls?.positionGrips();
+    this.addControls?.syncRowButtonWidth();
   }
 
   private initResize(gridEl: HTMLElement): void {
@@ -699,6 +973,114 @@ export class TableSubsystems {
     ]);
   }
 
+  /**
+   * Toggle an inline mark across every block of every selected cell.
+   *
+   * The cross-cell drag deliberately destroys the native Selection (a Range
+   * cannot span cells), so the core inline-format path has nothing to act on.
+   * We therefore apply the mark block-by-block on the blocks' own editables and
+   * let each block's mutation observer persist it — all inside ONE transaction,
+   * so a single undo reverts the whole rectangle.
+   */
+  private handleCellFormat(cells: HTMLElement[], mark: CellMark): void {
+    const cellBlocks = this.host.cellBlocks;
+
+    if (!cellBlocks || this.host.readOnly) {
+      return;
+    }
+
+    const targets = cellBlocks
+      .getBlockIdsFromCells(cells)
+      .map(id => this.host.api.blocks.getById(id))
+      .filter((block): block is BlockAPI => block !== null && block !== undefined)
+      .map(block => ({
+        block,
+        input: block.holder.querySelector<HTMLElement>('[contenteditable="true"]'),
+      }))
+      .filter((target): target is { block: BlockAPI; input: HTMLElement } =>
+        target.input !== null && (target.input.textContent ?? '').trim() !== '');
+
+    if (targets.length === 0) {
+      return;
+    }
+
+    const tags = MARK_TAGS[mark];
+    /**
+     * Notion-style toggle: only remove the mark when EVERY cell already carries
+     * it. A mixed rectangle gets marked, it does not get unmarked.
+     */
+    const shouldRemove = targets.every(({ input }) => isFullyMarked(input, tags));
+
+    this.host.runTransactedStructuralOp(() => {
+      targets.forEach((target) => {
+        const editable = target.input;
+
+        editable.innerHTML = shouldRemove ? unwrapMark(editable, tags) : wrapMark(editable, tags);
+        target.block.dispatchChange();
+      });
+    });
+  }
+
+  /**
+   * Fill the rectangle from its leftmost column (right) or its top row (down),
+   * as one undo step. Merge-covered coordinates have no cell and are skipped.
+   */
+  private handleCellFill(range: SelectionRange, direction: FillDirection): void {
+    const gridEl = this.host.gridElement;
+
+    if (!gridEl || this.host.readOnly) {
+      return;
+    }
+
+    const rows = Array.from({ length: range.maxRow - range.minRow + 1 }, (_, i) => range.minRow + i);
+    const cols = Array.from({ length: range.maxCol - range.minCol + 1 }, (_, i) => range.minCol + i);
+
+    this.host.runTransactedStructuralOp(() => {
+      rows.forEach(row => {
+        cols.forEach(col => {
+          const isSourceCell = direction === 'right' ? col === range.minCol : row === range.minRow;
+
+          if (isSourceCell) {
+            return;
+          }
+
+          const sourceCell = direction === 'right'
+            ? this.host.grid.getCell(gridEl, row, range.minCol)
+            : this.host.grid.getCell(gridEl, range.minRow, col);
+          const targetCell = this.host.grid.getCell(gridEl, row, col);
+
+          if (!sourceCell || !targetCell || sourceCell === targetCell) {
+            return;
+          }
+
+          this.pasteCellPayload(targetCell, { blocks: this.readCellBlocks(sourceCell) });
+
+          this.host.model.setCellBlocks(
+            row,
+            col,
+            this.host.cellBlocks?.getBlockIdsFromCells([targetCell]) ?? [],
+          );
+        });
+      });
+    });
+  }
+
+  /**
+   * Snapshot a cell's blocks as insertable payload data.
+   */
+  private readCellBlocks(cell: HTMLElement): ClipboardBlockData[] {
+    const ids = this.host.cellBlocks?.getBlockIdsFromCells([cell]) ?? [];
+
+    return ids
+      .map(id => this.host.api.blocks.getById(id))
+      .filter((block): block is BlockAPI => block !== null && block !== undefined)
+      .map(block => ({
+        tool: block.name,
+        data: block.preservedData,
+        ...(Object.keys(block.preservedTunes).length > 0 ? { tunes: block.preservedTunes } : {}),
+      }));
+  }
+
   private handleCellColorChange(cells: HTMLElement[], color: string | null, mode: CellColorMode): void {
     const gridEl = this.host.gridElement;
 
@@ -740,26 +1122,48 @@ export class TableSubsystems {
           continue;
         }
 
-        this.host.model.setCellPlacement(coord.row, coord.col, placement === 'top-left' ? undefined : placement);
-
-        const blocksContainer = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
-
-        if (!blocksContainer) {
-          continue;
-        }
-
-        if (placement === 'top-left') {
-          blocksContainer.removeAttribute('data-blok-cell-placement');
-        } else {
-          blocksContainer.setAttribute('data-blok-cell-placement', placement);
-        }
+        this.applyCellPlacement(cell, coord.row, coord.col, placement === 'top-left' ? undefined : placement);
       }
     });
   }
 
+  /**
+   * Write a cell's 9-way placement to the model and to the rendered container.
+   * `undefined` (or the default top-left) clears it.
+   */
+  private applyCellPlacement(
+    cell: HTMLElement,
+    row: number,
+    col: number,
+    placement: CellPlacement | undefined,
+  ): void {
+    this.host.model.setCellPlacement(row, col, placement);
+
+    const blocksContainer = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!blocksContainer) {
+      return;
+    }
+
+    if (placement === undefined) {
+      blocksContainer.removeAttribute('data-blok-cell-placement');
+    } else {
+      blocksContainer.setAttribute('data-blok-cell-placement', placement);
+    }
+  }
+
   private collectCellBlockData(
     cells: HTMLElement[],
-  ): Array<{ row: number; col: number; blocks: ClipboardBlockData[]; color?: string; textColor?: string; colspan?: number; rowspan?: number }> {
+  ): Array<{
+    row: number;
+    col: number;
+    blocks: ClipboardBlockData[];
+    color?: string;
+    textColor?: string;
+    placement?: CellPlacement;
+    colspan?: number;
+    rowspan?: number;
+  }> {
     const gridEl = this.host.gridElement;
 
     if (!gridEl) {
@@ -817,6 +1221,9 @@ export class TableSubsystems {
 
       const color = this.host.model.getCellColor(rowIndex, colIndex);
       const textColor = this.host.model.getCellTextColor(rowIndex, colIndex);
+      // The 9-way content placement is part of the cell, not of its blocks:
+      // omitting it here made the clipboard's `placement` field dead on arrival.
+      const placement = this.host.model.getCellPlacement(rowIndex, colIndex);
       // Record merge spans so paste can reconstruct the merge instead of
       // flattening it into a grid of real empty cells.
       const span = this.host.model.getCellSpan(rowIndex, colIndex);
@@ -827,6 +1234,7 @@ export class TableSubsystems {
         blocks,
         ...(color !== undefined ? { color } : {}),
         ...(textColor !== undefined ? { textColor } : {}),
+        ...(placement !== undefined ? { placement } : {}),
         ...(span.colspan > 1 ? { colspan: span.colspan } : {}),
         ...(span.rowspan > 1 ? { rowspan: span.rowspan } : {}),
       };
@@ -861,44 +1269,7 @@ export class TableSubsystems {
         this.rowColControls?.setGripsDisplay(true);
       },
       onClearContent: (cells) => {
-        const cellBlocks = this.host.cellBlocks;
-
-        if (!cellBlocks) {
-          return;
-        }
-
-        // Keep the caret inside the table after clearing. cells[0] is the
-        // top-left cell of the selection (collected row-major).
-        const anchorCell = cells[0];
-
-        this.host.runTransactedStructuralOp(() => {
-          const blockIds = cellBlocks.getBlockIdsFromCells(cells);
-
-          cellBlocks.deleteBlocks(blockIds);
-
-          const gridEl = this.host.gridElement;
-
-          if (!gridEl) {
-            return;
-          }
-
-          for (const cell of cells) {
-            const coord = getCellPosition(gridEl, cell);
-
-            if (!coord) {
-              continue;
-            }
-
-            this.host.model.setCellColor(coord.row, coord.col, undefined);
-            this.host.model.setCellTextColor(coord.row, coord.col, undefined);
-            cell.style.backgroundColor = '';
-            cell.style.color = '';
-          }
-        });
-
-        if (anchorCell) {
-          cellBlocks.focusClearedCell(anchorCell);
-        }
+        this.clearCellsContent(cells);
       },
       onCopy: (cells, clipboardData) => {
         this.handleCellCopy(cells, clipboardData);
@@ -925,6 +1296,9 @@ export class TableSubsystems {
         this.host.runTransactedStructuralOp(() => {
           this.host.model.mergeCells(range);
           this.host.rebuildTableBody();
+          // Merging locks the affected rows/columns in place, so the grips must
+          // be recreated to pick up their disabled drag affordance.
+          this.rowColControls?.refresh();
         });
       },
       isMergedCell: (row, col) => {
@@ -934,10 +1308,19 @@ export class TableSubsystems {
         this.host.runTransactedStructuralOp(() => {
           this.host.model.splitCell(row, col);
           this.host.rebuildTableBody();
+          // Splitting frees the rows/columns again — refresh so their grips
+          // become draggable.
+          this.rowColControls?.refresh();
         });
       },
       getCellSpan: (row, col) => {
         return this.host.model.getCellSpan(row, col);
+      },
+      onFormatCells: (cells, mark) => {
+        this.handleCellFormat(cells, mark);
+      },
+      onFillCells: (cells, range, direction) => {
+        this.handleCellFill(range, direction);
       },
     });
   }
@@ -1183,6 +1566,10 @@ export class TableSubsystems {
 
             this.host.model.setCellTextColor(destRow, destCol, cellPayload.textColor);
             cell.style.color = cellPayload.textColor ?? '';
+
+            // Restore the 9-way content placement (model + rendered container),
+            // mirroring the color restore above.
+            this.applyCellPlacement(cell, destRow, destCol, cellPayload.placement);
           }
         });
       });
@@ -1357,12 +1744,17 @@ export class TableSubsystems {
     }
 
     for (const blockData of payloadCell.blocks) {
+      // The 8th argument is the block's tunes: the payload collected them and
+      // this call used to omit them, so every copied cell lost its tunes.
       const block = this.host.api.blocks.insert(
         blockData.tool,
         blockData.data,
         {},
         this.host.api.blocks.getBlocksCount(),
         false,
+        false,
+        undefined,
+        blockData.tunes,
       );
 
       container.appendChild(block.holder);

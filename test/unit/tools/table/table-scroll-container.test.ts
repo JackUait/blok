@@ -148,7 +148,10 @@ describe('Table scroll container', () => {
       expect(rows?.length).toBe(2);
     });
 
-    it('scroll container does NOT have overflow-x-auto in percent mode', () => {
+    it('scroll container HAS the overflow classes in percent mode', () => {
+      // A percent table is not immune to overflow: its columns have a min-width
+      // floor, so a wide (e.g. pasted 20-column) table scrolls rather than
+      // collapsing. The class is a no-op while the table fits its container.
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],
       });
@@ -158,8 +161,8 @@ describe('Table scroll container', () => {
       const scrollContainer = element.querySelector('[data-blok-table-scroll]');
 
       expect(scrollContainer).not.toBeNull();
-      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(false);
-      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(false);
+      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(true);
+      expect(scrollContainer?.classList.contains('overflow-y-hidden')).toBe(true);
     });
 
     it('add-col button is NOT inside the scroll container (prevents unwanted horizontal scroll)', () => {
@@ -225,7 +228,10 @@ describe('Table scroll container', () => {
   });
 
   describe('without colWidths (readOnly)', () => {
-    it('grid is a direct child of wrapper (no scroll container)', () => {
+    it('still gets a scroll container so a wide fluid table can scroll', () => {
+      // Regression: read-only percent tables (every published article with a
+      // pasted table — onPaste clears colWidths) got NO scroll container at all,
+      // because the container was gated on colWidths.
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
         ...createTableOptions({ content: [['A', 'B'], ['C', 'D']] }),
         readOnly: true,
@@ -233,10 +239,12 @@ describe('Table scroll container', () => {
       const table = new Table(options);
       const element = table.render();
 
-      expect(element.querySelector('[data-blok-table-scroll]')).toBeNull();
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]');
 
-      const firstChild = element.firstElementChild as HTMLElement;
-      const rows = firstChild?.querySelectorAll('[data-blok-table-row]');
+      expect(scrollContainer).not.toBeNull();
+      expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(true);
+
+      const rows = scrollContainer?.querySelectorAll('[data-blok-table-row]');
 
       expect(rows?.length).toBe(2);
     });
@@ -255,11 +263,9 @@ describe('Table scroll container', () => {
       document.body.appendChild(element);
       table.rendered();
 
-      // In percent mode, scroll container has NO overflow classes
       const scrollContainer = element.querySelector('[data-blok-table-scroll]') as HTMLElement;
 
       expect(scrollContainer).not.toBeNull();
-      expect(scrollContainer.classList.contains('overflow-x-auto')).toBe(false);
 
       // Stub pointer capture APIs not available in jsdom
       HTMLElement.prototype.setPointerCapture = vi.fn();

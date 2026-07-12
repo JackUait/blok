@@ -274,18 +274,13 @@ test.describe('Table Corner Drag Handle', () => {
     // 1. Create a 2x2 table (starts in percent mode, no colWidths)
     await createTable(page, [['A', 'B'], ['C', 'D']]);
 
-    // 2. Verify scroll container starts without overflow classes (percent mode)
-    const scrollContainerBefore = await page.evaluate(() => {
-      const sc = document.querySelector('[data-blok-table-scroll]') as HTMLElement;
+    // 2. The scroll container exists from the first render in both width modes
+    // (a fluid table has a per-column min-width floor and can overflow too).
+    const scrollContainerBefore = await page.evaluate(() =>
+      document.querySelector('[data-blok-table-scroll]') !== null
+    );
 
-      return {
-        hasOverflowX: sc?.classList.contains('overflow-x-auto'),
-        hasOverflowY: sc?.classList.contains('overflow-y-hidden'),
-      };
-    });
-
-    expect(scrollContainerBefore.hasOverflowX).toBe(false);
-    expect(scrollContainerBefore.hasOverflowY).toBe(false);
+    expect(scrollContainerBefore).toBe(true);
 
     // 3. Start a corner drag and add columns
     const cornerHandle = page.locator(CORNER_DRAG_SELECTOR);

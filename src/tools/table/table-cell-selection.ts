@@ -5,7 +5,10 @@ import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 import { twMerge } from '../../components/utils/tw';
 
+import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../components/utils/caret';
+
 import { CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
+import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import { createCellColorPicker } from './table-cell-color-picker';
 import type { CellColorMode } from './table-cell-color-picker';
 import { createCellPlacementPicker } from './table-cell-placement-picker';
@@ -52,6 +55,91 @@ interface CellCoord {
 }
 
 /**
+ * Inline marks that can be toggled across a whole cell rectangle at once
+ * (Notion: "Format multiple cells at once"). Mirrors the shortcut-driven
+ * inline tools — link/equation/marker open menus and are excluded.
+ */
+export type CellMark = 'bold' | 'italic' | 'underline' | 'strikethrough' | 'code';
+
+/** Direction of a fill operation (Cmd/Ctrl+R = right, Cmd/Ctrl+D = down). */
+export type FillDirection = 'right' | 'down';
+
+type ArrowDirection = 'left' | 'right' | 'up' | 'down';
+
+const ARROW_DIRECTIONS: Record<string, ArrowDirection> = {
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  ArrowUp: 'up',
+  ArrowDown: 'down',
+};
+
+/**
+ * Resolve the plain (unmodified except Shift) arrow direction of a keydown.
+ * Cmd/Ctrl/Alt+Shift+Arrow are native or block-movement gestures and are left alone.
+ */
+const resolveArrowDirection = (e: KeyboardEvent): ArrowDirection | null => {
+  if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) {
+    return null;
+  }
+
+  return ARROW_DIRECTIONS[e.key] ?? null;
+};
+
+/**
+ * Map a Cmd/Ctrl(+Shift) keydown onto the inline mark it toggles.
+ * Keys mirror the inline tools' own `static shortcut` declarations.
+ */
+const resolveMarkShortcut = (e: KeyboardEvent): CellMark | null => {
+  if ((!e.metaKey && !e.ctrlKey) || e.altKey) {
+    return null;
+  }
+
+  const key = e.key.toLowerCase();
+
+  if (e.shiftKey) {
+    return key === 's' ? 'strikethrough' : null;
+  }
+
+  switch (key) {
+    case 'b':
+      return 'bold';
+    case 'i':
+      return 'italic';
+    case 'u':
+      return 'underline';
+    case 'e':
+      return 'code';
+    default:
+      return null;
+  }
+};
+
+/**
+ * Map a Cmd/Ctrl keydown onto a fill direction.
+ *
+ * NOTE: Cmd/Ctrl+D is also the editor-wide "duplicate block" shortcut
+ * (see src/components/modules/blockManager/shortcuts.ts). It is only shadowed
+ * here while a MULTI-cell rectangle is selected — a state in which duplicating
+ * the caret's cell-child block is meaningless. Single-cell selections and
+ * plain carets keep the global binding.
+ */
+const resolveFillShortcut = (e: KeyboardEvent): FillDirection | null => {
+  if ((!e.metaKey && !e.ctrlKey) || e.altKey || e.shiftKey) {
+    return null;
+  }
+
+  const key = e.key.toLowerCase();
+
+  if (key === 'r') {
+    return 'right';
+  }
+
+  return key === 'd' ? 'down' : null;
+};
+
+const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+
+/**
  * Check if a grip drag or resize is in progress by testing for known drag indicators.
  * Returns true if the grid has an active drag ghost or user-select is disabled.
  */
@@ -89,6 +177,10 @@ interface CellSelectionOptions {
   onSplitCell?: (row: number, col: number) => void;
   /** Returns the colspan and rowspan of the cell at (row, col). Used to expand the selection rect to full merged-cell spans. */
   getCellSpan?: (row: number, col: number) => { colspan: number; rowspan: number };
+  /** Toggle an inline mark across every block of every selected cell, as one undo step. */
+  onFormatCells?: (cells: HTMLElement[], mark: CellMark) => void;
+  /** Fill the leftmost column right / the top row down across the selected rectangle, as one undo step. */
+  onFillCells?: (cells: HTMLElement[], range: SelectionRange, direction: FillDirection) => void;
   i18n: I18n;
 }
 
@@ -122,8 +214,18 @@ export class TableCellSelection {
   private isMergedCell: ((row: number, col: number) => boolean) | undefined;
   private onSplitCell: ((row: number, col: number) => void) | undefined;
   private getCellSpan: ((row: number, col: number) => { colspan: number; rowspan: number }) | undefined;
+  private onFormatCells: ((cells: HTMLElement[], mark: CellMark) => void) | undefined;
+  private onFillCells: ((cells: HTMLElement[], range: SelectionRange, direction: FillDirection) => void) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
   private preExpansionWasSingleCell = false;
+
+  /**
+   * Anchor/extent of a KEYBOARD-driven rectangle. Kept separate from
+   * anchorCell/extentCell (which are pointer-drag scratch state, nulled on
+   * pointerup) so Shift+Arrow can keep extending from a stable origin.
+   */
+  private keyboardAnchor: CellCoord | null = null;
+  private keyboardExtent: CellCoord | null = null;
 
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
@@ -131,6 +233,7 @@ export class TableCellSelection {
   private boundClearSelection: (e: PointerEvent) => void;
   private boundCancelRectangle: (e: MouseEvent) => void;
   private boundKeyDown: (e: KeyboardEvent) => void;
+  private boundKeyDownCapture: (e: KeyboardEvent) => void;
   private boundCopyHandler: (e: ClipboardEvent) => void;
   private boundCutHandler: (e: ClipboardEvent) => void;
   private boundPreventDragStart: (e: Event) => void;
@@ -154,6 +257,8 @@ export class TableCellSelection {
     this.isMergedCell = options.isMergedCell;
     this.onSplitCell = options.onSplitCell;
     this.getCellSpan = options.getCellSpan;
+    this.onFormatCells = options.onFormatCells;
+    this.onFillCells = options.onFillCells;
     this.i18n = options.i18n;
     this.grid.style.position = 'relative';
 
@@ -163,12 +268,20 @@ export class TableCellSelection {
     this.boundClearSelection = this.handleClearSelection.bind(this);
     this.boundCancelRectangle = this.handleCancelRectangle.bind(this);
     this.boundKeyDown = this.handleKeyDown.bind(this);
+    this.boundKeyDownCapture = this.handleKeyDownCapture.bind(this);
     this.boundCopyHandler = this.handleCopy.bind(this);
     this.boundCutHandler = this.handleCut.bind(this);
     this.boundPreventDragStart = this.handleDragStart.bind(this);
 
     this.grid.addEventListener('pointerdown', this.boundPointerDown);
     this.grid.addEventListener('dragstart', this.boundPreventDragStart);
+    /**
+     * Capture phase: the core's cross-block selection, the inline-tool shortcut
+     * manager and the block-duplication shortcut all listen on `document` in the
+     * BUBBLE phase and were registered earlier. Only a capture-phase listener can
+     * claim a key before them (and stopPropagation() then keeps it from them).
+     */
+    document.addEventListener('keydown', this.boundKeyDownCapture, true);
     document.addEventListener('keydown', this.boundKeyDown);
     document.addEventListener('copy', this.boundCopyHandler);
     document.addEventListener('cut', this.boundCutHandler);
@@ -190,6 +303,7 @@ export class TableCellSelection {
     document.removeEventListener('pointercancel', this.boundPointerUp);
     document.removeEventListener('pointerdown', this.boundClearSelection);
     document.removeEventListener('mousemove', this.boundCancelRectangle, true);
+    document.removeEventListener('keydown', this.boundKeyDownCapture, true);
     document.removeEventListener('keydown', this.boundKeyDown);
     document.removeEventListener('copy', this.boundCopyHandler);
     document.removeEventListener('cut', this.boundCutHandler);
@@ -474,6 +588,234 @@ export class TableCellSelection {
     this.clearSelection();
   }
 
+  /**
+   * Capture-phase keyboard entry point into the rectangular cell selection.
+   *
+   * Owns three gestures that must never reach the core handlers:
+   * - Shift+Arrow  → create/extend the cell rectangle (instead of the core's
+   *                  cross-block selection, which would select cell-child blocks)
+   * - Cmd/Ctrl(+Shift)+mark → bulk-format every selected cell
+   * - Cmd/Ctrl+R / Cmd/Ctrl+D → fill right / fill down
+   *
+   * Everything it does not claim is left to propagate untouched.
+   */
+  private handleKeyDownCapture(e: KeyboardEvent): void {
+    if (isOtherInteractionActive(this.grid)) {
+      return;
+    }
+
+    const arrow = resolveArrowDirection(e);
+
+    if (arrow !== null) {
+      if (this.tryExtendKeyboardSelection(arrow)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      return;
+    }
+
+    /**
+     * Bulk formatting and fill only make sense across a real rectangle. With a
+     * single cell (or no selection) the normal inline-toolbar / duplicate-block
+     * shortcuts keep their meaning.
+     */
+    if (!this.hasSelection || this.selectedCells.length <= 1) {
+      return;
+    }
+
+    const mark = resolveMarkShortcut(e);
+
+    if (mark !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onFormatCells?.([...this.selectedCells], mark);
+
+      return;
+    }
+
+    const fill = resolveFillShortcut(e);
+
+    if (fill !== null && this.lastPaintedRange !== null) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onFillCells?.([...this.selectedCells], this.lastPaintedRange, fill);
+    }
+  }
+
+  /**
+   * Create or extend the keyboard rectangle in the given direction.
+   * Returns true when the gesture was claimed (caller prevents/stops the event).
+   */
+  private tryExtendKeyboardSelection(direction: ArrowDirection): boolean {
+    /**
+     * A block selection inside the grid (e.g. Cmd+A on a cell line) owns
+     * Shift+Arrow — it extends that intra-cell line selection. A whole-cell
+     * rectangle must not compete with it.
+     */
+    if (this.grid.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null) {
+      return false;
+    }
+
+    const origin = this.resolveKeyboardOrigin(direction);
+
+    if (origin === null) {
+      return false;
+    }
+
+    const { anchor, extent } = origin;
+    const range = this.lastPaintedRange ?? {
+      minRow: anchor.row,
+      maxRow: anchor.row,
+      minCol: anchor.col,
+      maxCol: anchor.col,
+    };
+    const next = this.nextExtent(anchor, extent, range, direction);
+
+    if (this.hasSelection && next.row === extent.row && next.col === extent.col) {
+      // Already clamped against the grid edge — swallow the key so the caret
+      // does not escape the table, but there is nothing to repaint.
+      return true;
+    }
+
+    /**
+     * The rectangle replaces the caret's text selection: a native Range cannot
+     * span cells, and leaving one behind would let a later inline-format act on
+     * a stale in-cell range. Same substrate rule as the pointer path.
+     */
+    window.getSelection()?.removeAllRanges();
+
+    this.showProgrammaticSelection(anchor.row, anchor.col, next.row, next.col);
+
+    // showProgrammaticSelection() clears selection state first (which resets the
+    // keyboard anchor), so record the new origin afterwards.
+    this.keyboardAnchor = anchor;
+    this.keyboardExtent = next;
+
+    return true;
+  }
+
+  /**
+   * Resolve the anchor/extent a keyboard extension starts from:
+   * - an existing keyboard rectangle keeps its anchor
+   * - an existing pointer rectangle is adopted (corner-to-corner)
+   * - otherwise the caret's cell, but only at the cell's text boundary
+   */
+  private resolveKeyboardOrigin(direction: ArrowDirection): { anchor: CellCoord; extent: CellCoord } | null {
+    if (this.hasSelection && this.keyboardAnchor !== null && this.keyboardExtent !== null) {
+      return { anchor: this.keyboardAnchor, extent: this.keyboardExtent };
+    }
+
+    /**
+     * Adopt a POINTER-made rectangle, but only a genuinely multi-cell one.
+     * A plain click into a cell also leaves a 1x1 selection painted while the
+     * caret sits in the text — extending from that would turn every mid-text
+     * Shift+Arrow into a cell-rectangle gesture. A 1x1 selection therefore falls
+     * through to the caret-boundary check below, exactly like a bare caret.
+     */
+    if (this.hasSelection && this.lastPaintedRange !== null && this.selectedCells.length > 1) {
+      const { minRow, minCol, maxRow, maxCol } = this.lastPaintedRange;
+
+      return {
+        anchor: { row: minRow, col: minCol },
+        extent: { row: maxRow, col: maxCol },
+      };
+    }
+
+    const caret = this.resolveCaretCell();
+
+    if (caret === null || !this.isCaretAtCellBoundary(caret.input, direction)) {
+      return null;
+    }
+
+    return { anchor: caret.coord, extent: caret.coord };
+  }
+
+  /**
+   * Resolve the cell (and editable input) the caret currently sits in,
+   * or null when the caret is not inside this grid.
+   */
+  private resolveCaretCell(): { coord: CellCoord; input: HTMLElement } | null {
+    const selection = window.getSelection();
+    const node = selection?.anchorNode ?? null;
+    const element = node instanceof HTMLElement ? node : node?.parentElement ?? null;
+
+    if (element === null || !this.grid.contains(element)) {
+      return null;
+    }
+
+    const input = element.closest<HTMLElement>('[contenteditable="true"]');
+    const coord = this.resolveCellCoord(element);
+
+    if (input === null || coord === null) {
+      return null;
+    }
+
+    return { coord, input };
+  }
+
+  /**
+   * True when the caret sits at the far edge of the whole CELL (not merely of
+   * its own block): the last block's end when moving right/down, the first
+   * block's start when moving left/up. Anywhere else, Shift+Arrow stays a normal
+   * text/line gesture inside the cell.
+   */
+  private isCaretAtCellBoundary(input: HTMLElement, direction: ArrowDirection): boolean {
+    const towardsEnd = direction === 'right' || direction === 'down';
+    const container = input.closest<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+    const blockHolder = input.closest<HTMLElement>('[data-blok-id]');
+
+    if (container !== null && blockHolder !== null) {
+      const holders = Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'));
+      const edgeHolder = towardsEnd ? holders[holders.length - 1] : holders[0];
+
+      if (edgeHolder !== blockHolder) {
+        return false;
+      }
+    }
+
+    return towardsEnd ? isCaretAtEndOfInput(input) : isCaretAtStartOfInput(input);
+  }
+
+  /**
+   * Compute the next extent cell, stepping off the CURRENT PAINTED RANGE rather
+   * than off the raw extent — the painted range already absorbed any merged
+   * spans, so a step always clears the whole merge instead of landing on a
+   * covered coordinate (which would be a visual no-op).
+   */
+  private nextExtent(
+    anchor: CellCoord,
+    extent: CellCoord,
+    range: SelectionRange,
+    direction: ArrowDirection,
+  ): CellCoord {
+    const maxRow = this.grid.querySelectorAll(`[${ROW_ATTR}]`).length - 1;
+    const maxCol = this.getLogicalColumnCount() - 1;
+
+    switch (direction) {
+      case 'right':
+        return {
+          row: extent.row,
+          col: clamp(extent.col >= anchor.col ? range.maxCol + 1 : range.minCol + 1, 0, maxCol),
+        };
+      case 'left':
+        return {
+          row: extent.row,
+          col: clamp(extent.col <= anchor.col ? range.minCol - 1 : range.maxCol - 1, 0, maxCol),
+        };
+      case 'down':
+        return {
+          row: clamp(extent.row >= anchor.row ? range.maxRow + 1 : range.minRow + 1, 0, maxRow),
+          col: extent.col,
+        };
+      case 'up':
+        return {
+          row: clamp(extent.row <= anchor.row ? range.minRow - 1 : range.maxRow - 1, 0, maxRow),
+          col: extent.col,
+        };
+    }
+  }
+
   private handleCopy(e: ClipboardEvent): void {
     if (!this.hasSelection || !e.clipboardData) {
       return;
@@ -527,6 +869,8 @@ export class TableCellSelection {
     this.hasSelection = false;
     this.lastPaintedRange = null;
     this.preExpansionWasSingleCell = false;
+    this.keyboardAnchor = null;
+    this.keyboardExtent = null;
 
     if (hadSelection) {
       this.onSelectionActiveChange?.(false);

@@ -1189,4 +1189,253 @@ describe('table-cell-clipboard', () => {
       expect(html).toContain('<td>plain</td>');
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Loss #1: non-text cell blocks (image / code / embed) copied out as EMPTY <td>
+  // ---------------------------------------------------------------------------
+  describe('buildClipboardHtml — non-text blocks in the external HTML flavor', () => {
+    it('renders an image block as an <img> instead of an empty cell', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'image', data: { file: { url: 'https://cdn.test/cat.png' }, caption: 'A cat' } }],
+        }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).not.toContain('<td></td>');
+      expect(html).toContain('<img src="https://cdn.test/cat.png"');
+      expect(html).toContain('alt="A cat"');
+    });
+
+    it('renders a code block as <pre><code> with escaped source', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'code', data: { code: 'if (a < b && c) {}' } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<pre><code>if (a &lt; b &amp;&amp; c) {}</code></pre>');
+    });
+
+    it('renders an embed block as an <a href>', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'embed', data: { source: 'https://youtu.be/abc', caption: 'Clip' } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<a href="https://youtu.be/abc">Clip</a>');
+    });
+
+    it('renders a bookmark block as an <a href>', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'bookmark', data: { url: 'https://example.com', title: 'Example' } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('<a href="https://example.com">Example</a>');
+    });
+
+    it('keeps paragraph and list runs around a non-text block', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [
+            { tool: 'paragraph', data: { text: 'Before' } },
+            { tool: 'image', data: { file: { url: 'https://cdn.test/x.png' } } },
+            { tool: 'list', data: { text: 'alpha', style: 'unordered', checked: false, depth: 0 } },
+          ],
+        }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain(
+        '<td>Before<img src="https://cdn.test/x.png"><ul><li aria-level="1">alpha</li></ul></td>'
+      );
+    });
+
+    it('carries non-text blocks in the plain-text flavor', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 2,
+        cells: [[
+          { blocks: [{ tool: 'image', data: { file: { url: 'https://cdn.test/cat.png' }, caption: 'A cat' } }] },
+          { blocks: [{ tool: 'code', data: { code: 'let x = 1;' } }] },
+        ]],
+      };
+
+      expect(buildClipboardPlainText(payload)).toBe('A cat\tlet x = 1;');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Loss #2: cell placement (9-way alignment) is a dead clipboard field
+  // ---------------------------------------------------------------------------
+  describe('buildClipboardHtml — cell placement', () => {
+    it('emits text-align / vertical-align for a placed cell', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'paragraph', data: { text: 'centered' } }],
+          placement: 'middle-center',
+        }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('text-align: center');
+      expect(html).toContain('vertical-align: middle');
+    });
+
+    it('emits bottom-right placement as right/bottom alignment', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{
+          blocks: [{ tool: 'paragraph', data: { text: 'br' } }],
+          placement: 'bottom-right',
+        }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).toContain('text-align: right');
+      expect(html).toContain('vertical-align: bottom');
+    });
+
+    it('reads alignment back off a generic external table into placement', () => {
+      const result = parseGenericHtmlTable(
+        '<table><tr>'
+        + '<td style="text-align: center; vertical-align: bottom">A</td>'
+        + '<td>B</td>'
+        + '</tr></table>'
+      );
+
+      expect(result?.cells[0][0].placement).toBe('bottom-center');
+      expect(result?.cells[0][1].placement).toBeUndefined();
+    });
+
+    it('round-trips placement through the external HTML flavor', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'x' } }], placement: 'middle-right' }]],
+      };
+
+      // Strip the private JSON attribute so only the external flavor is read back.
+      const external = buildClipboardHtml(payload).replace(/ data-blok-table-cells='[^']*'/, '');
+
+      expect(parseGenericHtmlTable(external)?.cells[0][0].placement).toBe('middle-right');
+    });
+
+    it('adds no alignment styles when the cell has no placement', () => {
+      const payload: TableCellsClipboard = {
+        rows: 1,
+        cols: 1,
+        cells: [[{ blocks: [{ tool: 'paragraph', data: { text: 'plain' } }] }]],
+      };
+
+      const html = buildClipboardHtml(payload);
+
+      expect(html).not.toContain('text-align');
+      expect(html).not.toContain('vertical-align');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Loss #3: clipboard HTML never emits colspan/rowspan, and merge-covered
+  // positions emit phantom empty <td>s (external apps lose the merge).
+  // ---------------------------------------------------------------------------
+  describe('buildClipboardHtml — merged cells', () => {
+    const mergedPayload = (): TableCellsClipboard => ({
+      rows: 2,
+      cols: 3,
+      cells: [
+        [
+          { blocks: [{ tool: 'paragraph', data: { text: 'merged' } }], colspan: 2, rowspan: 2 },
+          { blocks: [], covered: true },
+          { blocks: [{ tool: 'paragraph', data: { text: 'R0C2' } }] },
+        ],
+        [
+          { blocks: [], covered: true },
+          { blocks: [], covered: true },
+          { blocks: [{ tool: 'paragraph', data: { text: 'R1C2' } }] },
+        ],
+      ],
+    });
+
+    it('emits colspan/rowspan on the merge origin', () => {
+      const html = buildClipboardHtml(mergedPayload());
+
+      expect(html).toContain('colspan="2"');
+      expect(html).toContain('rowspan="2"');
+    });
+
+    it('skips merge-covered positions so external apps get no phantom cells', () => {
+      const html = buildClipboardHtml(mergedPayload());
+
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const rows = doc.querySelectorAll('tr');
+
+      expect(rows[0].querySelectorAll('td')).toHaveLength(2);
+      expect(rows[1].querySelectorAll('td')).toHaveLength(1);
+    });
+
+    it('skips merge-covered positions in the plain-text flavor', () => {
+      expect(buildClipboardPlainText(mergedPayload())).toBe('merged\tR0C2\nR1C2');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Round-trip property: everything a copied range carries must survive
+  // buildClipboardHtml -> parseClipboardHtml byte-for-byte.
+  // ---------------------------------------------------------------------------
+  describe('clipboard payload round-trip (image / code / list / merge / colors / placement / tunes)', () => {
+    it('round-trips a rich payload through the HTML flavor unchanged', () => {
+      const payload: TableCellsClipboard = {
+        rows: 2,
+        cols: 2,
+        cells: [
+          [
+            {
+              blocks: [{ tool: 'image', data: { file: { url: 'https://cdn.test/cat.png' }, caption: 'A cat' } }],
+              colspan: 2,
+              placement: 'middle-center',
+              color: '#fbecdd',
+            },
+            { blocks: [], covered: true },
+          ],
+          [
+            {
+              blocks: [
+                { tool: 'code', data: { code: 'const a = 1;' } },
+                { tool: 'list', data: { text: 'alpha', style: 'unordered', checked: false, depth: 0 } },
+              ],
+              textColor: '#d44c47',
+            },
+            {
+              blocks: [{ tool: 'paragraph', data: { text: 'tuned' }, tunes: { textAlign: { alignment: 'center' } } }],
+            },
+          ],
+        ],
+      };
+
+      const parsed = parseClipboardHtml(buildClipboardHtml(payload));
+
+      expect(parsed).toEqual(payload);
+    });
+  });
 });

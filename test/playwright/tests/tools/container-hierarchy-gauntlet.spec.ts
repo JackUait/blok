@@ -640,4 +640,50 @@ test.describe('Container hierarchy invariant gauntlet', () => {
       'p-c',
     ]);
   });
+
+  test('legacy string-cell table inside a column: the column tree survives a save round-trip', async ({ page }) => {
+    // `content: [['A','B'], …]` is the documented simple table shape, and every
+    // pre-block-cells document on disk uses it. One such table anywhere in the
+    // document used to flip the whole save into legacy mode, which stripped
+    // parent/content from every block it could not express — destroying the
+    // surrounding column layout on the next save.
+    const initial: OutputData = {
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'before' } },
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['t1'] },
+        {
+          id: 't1',
+          type: 'table',
+          parent: 'c1',
+          data: { withHeadings: false, content: [['A', 'B'], ['C', 'D']] },
+        },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['p3'] },
+        { id: 'p3', type: 'paragraph', data: { text: 'right' }, parent: 'c2' },
+        { id: 'p2', type: 'paragraph', data: { text: 'after' } },
+      ],
+    } as OutputData;
+
+    await createBlok(page, initial);
+
+    const saved = await saveAndAssertInvariant(page, 'legacy string-cell table inside a column');
+    const byId = new Map(saved.blocks.map(block => [block.id, block]));
+
+    expect(byId.get('cl1')?.content, 'column_list keeps its columns').toStrictEqual(['c1', 'c2']);
+    expect(byId.get('c1')?.parent, 'first column keeps its parent').toBe('cl1');
+    expect(byId.get('c2')?.parent, 'second column keeps its parent').toBe('cl1');
+    expect(byId.get('c1')?.content, 'first column still owns the table').toStrictEqual(['t1']);
+    expect(byId.get('t1')?.parent, 'table stays inside the column').toBe('c1');
+    expect(byId.get('p3')?.parent, 'sibling column content stays nested').toBe('c2');
+    expect(byId.get('p2')?.parent, 'root paragraph stays at root').toBeUndefined();
+
+    // The table's legacy string cells were migrated to cell blocks, which must
+    // be children of the table — not of the column, and not of the document.
+    const cellIds = byId.get('t1')?.content ?? [];
+
+    expect(cellIds.length, 'table owns its four cell blocks').toBe(4);
+    for (const cellId of cellIds) {
+      expect(byId.get(cellId)?.parent, `cell ${cellId} belongs to the table`).toBe('t1');
+    }
+  });
 });

@@ -628,6 +628,77 @@ describe('TableResize', () => {
     });
   });
 
+  describe('pointercancel', () => {
+    /**
+     * With pointer capture set, the browser fires `pointercancel` INSTEAD of
+     * `pointerup` when the gesture is taken over (touch pan, browser gesture,
+     * device disruption). The mid-drag widths are already painted into the DOM,
+     * so the drag must COMMIT them — otherwise the model keeps the old widths
+     * while the DOM shows the new ones, and the next render silently reverts.
+     */
+    it('commits the mid-drag widths when the gesture is cancelled', () => {
+      grid = createGrid([300, 300]);
+      const onChange = vi.fn();
+
+      new TableResize(grid, [300, 300], onChange);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      document.dispatchEvent(new PointerEvent('pointercancel', {}));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+
+      const newWidths = onChange.mock.calls[0][0] as number[];
+
+      expect(newWidths[0]).toBe(400);
+      expect(newWidths[1]).toBe(300);
+    });
+
+    it('ends the drag on pointercancel — later pointermoves are ignored', () => {
+      grid = createGrid([300, 300]);
+      const onDrag = vi.fn();
+
+      new TableResize(grid, [300, 300], vi.fn(), undefined, onDrag);
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400 }));
+      document.dispatchEvent(new PointerEvent('pointercancel', {}));
+
+      onDrag.mockClear();
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 900 }));
+
+      expect(onDrag).not.toHaveBeenCalled();
+
+      const firstCol = grid.querySelector('colgroup col') as HTMLElement;
+
+      expect(firstCol.style.width).toBe('400px');
+    });
+
+    it('restores the grid chrome on pointercancel', () => {
+      grid = createGrid([300, 300]);
+
+      new TableResize(grid, [300, 300], vi.fn());
+
+      const handle = grid.querySelector('[data-blok-table-resize]') as HTMLElement;
+
+      handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300,
+        bubbles: true }));
+
+      expect(grid.style.userSelect).toBe('none');
+
+      document.dispatchEvent(new PointerEvent('pointercancel', {}));
+
+      expect(grid.style.userSelect).toBe('');
+      expect(handle.style.opacity).toBe('0');
+    });
+  });
+
   describe('model-first width authority', () => {
     it('reports final widths through onChange that match applied DOM state', () => {
       grid = createGrid([300, 300]);

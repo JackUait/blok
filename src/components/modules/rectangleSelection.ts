@@ -828,6 +828,18 @@ export class RectangleSelection extends Module {
     const expectedIndices = new Set<number>();
 
     blocks.forEach((block, i) => {
+      /**
+       * Only TOP-LEVEL blocks are lasso-selectable. Nested-block children (table
+       * cells, column children, toggle children) share the same flat array and
+       * their holders sit INSIDE their root's holder, so a band crossing a 3x3
+       * table used to select the table plus all nine cell paragraphs — and
+       * "Duplicate" then duplicated the table AND its cells again. The root
+       * block represents its whole subtree.
+       */
+      if (block.parentId !== null) {
+        return;
+      }
+
       const blockRect = block.holder.getBoundingClientRect();
       const blockContentEl = block.holder.querySelector<HTMLElement>('[data-blok-element-content]');
       const blockContentRect = (blockContentEl ?? block.holder).getBoundingClientRect();

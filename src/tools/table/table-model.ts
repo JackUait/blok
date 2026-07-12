@@ -405,7 +405,10 @@ export class TableModel {
       return { type: 'move-row', index: from, toIndex: to };
     }
 
-    if (this.isRowInvolvedInMerge(from)) {
+    // Refuse only the moves that would tear a merge: the row itself being part
+    // of one, or landing inside a rowspan's footprint. Rows clear of every
+    // merge still reorder normally (the caller re-renders from this model).
+    if (!this.canMoveRow(from, to)) {
       return { type: 'move-row', index: from, toIndex: to };
     }
 
@@ -498,7 +501,8 @@ export class TableModel {
       return { type: 'move-column', index: from, toIndex: to };
     }
 
-    if (this.isColInvolvedInMerge(from)) {
+    // See moveRow: per-index guard, not a table-wide merge bail.
+    if (!this.canMoveColumn(from, to)) {
       return { type: 'move-column', index: from, toIndex: to };
     }
 
@@ -755,9 +759,115 @@ export class TableModel {
   }
 
   /**
+   * Can row `index` be picked up at all? False when the row is part of a merge
+   * that extends beyond it — relocating it would tear the merge apart.
+   * Drives the drag affordance, so the user sees the row is not draggable
+   * instead of watching it snap back.
+   */
+  isRowMovable(index: number): boolean {
+    return this.isRowInBounds(index) && !this.isRowInvolvedInMerge(index);
+  }
+
+  /** Column counterpart of isRowMovable. */
+  isColumnMovable(index: number): boolean {
+    return this.isColInBounds(index) && !this.isColInvolvedInMerge(index);
+  }
+
+  /**
+   * Can row `from` be dropped at `to`? Beyond `from` itself being movable, the
+   * landing slot must not fall INSIDE a merged span: inserting the row between
+   * two rows a rowspan covers would leave the merge non-contiguous.
+   * `to` is an insert position in the array AFTER `from` has been removed —
+   * the same index moveRow() splices at.
+   */
+  canMoveRow(from: number, to: number): boolean {
+    if (!this.isRowInBounds(from) || !this.isRowInBounds(to)) {
+      return false;
+    }
+
+    if (from === to) {
+      return true;
+    }
+
+    if (!this.isRowMovable(from)) {
+      return false;
+    }
+
+    return !this.moveSplitsSpan(this.collectRowSpans(), from, to);
+  }
+
+  /** Column counterpart of canMoveRow. */
+  canMoveColumn(from: number, to: number): boolean {
+    if (!this.isColInBounds(from) || !this.isColInBounds(to)) {
+      return false;
+    }
+
+    if (from === to) {
+      return true;
+    }
+
+    if (!this.isColumnMovable(from)) {
+      return false;
+    }
+
+    return !this.moveSplitsSpan(this.collectColSpans(), from, to);
+  }
+
+  /** Row ranges [start, end) covered by a rowspan origin. */
+  private collectRowSpans(): Array<[number, number]> {
+    const spans: Array<[number, number]> = [];
+
+    this.contentGrid.forEach((row, r) => {
+      row.forEach(cell => {
+        const rowspan = cell.rowspan ?? 1;
+
+        if (rowspan > 1) {
+          spans.push([r, r + rowspan]);
+        }
+      });
+    });
+
+    return spans;
+  }
+
+  /** Column ranges [start, end) covered by a colspan origin. */
+  private collectColSpans(): Array<[number, number]> {
+    const spans: Array<[number, number]> = [];
+
+    this.contentGrid.forEach(row => {
+      row.forEach((cell, c) => {
+        const colspan = cell.colspan ?? 1;
+
+        if (colspan > 1) {
+          spans.push([c, c + colspan]);
+        }
+      });
+    });
+
+    return spans;
+  }
+
+  /**
+   * Does relocating index `from` to insert position `to` land inside any span?
+   * The untouched indices keep their relative order, so a span survives unless
+   * the moved index is inserted strictly between its first and last member.
+   */
+  private moveSplitsSpan(spans: Array<[number, number]>, from: number, to: number): boolean {
+    // Position of an untouched index once `from` has been spliced out.
+    const posAfterRemoval = (index: number): number => (index > from ? index - 1 : index);
+
+    return spans.some(([start, end]) => {
+      const first = posAfterRemoval(start);
+      const last = posAfterRemoval(end - 1);
+
+      return to > first && to <= last;
+    });
+  }
+
+  /**
    * Returns true if the table contains ANY merged cell (a colspan/rowspan
-   * origin or a covered cell). Used to disable physical-index row/column
-   * reordering, which cannot stay consistent on a merged grid.
+   * origin or a covered cell). Structural ops on such a table must re-render
+   * the body from the model rather than mutate the DOM at physical indices.
    */
   hasMerges(): boolean {
     return this.contentGrid.some(row =>

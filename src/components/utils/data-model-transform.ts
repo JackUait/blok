@@ -1264,6 +1264,91 @@ const processRootListItem = (
 };
 
 /**
+ * Preserved-id set per collapse run, keyed by the run's blockMap. Primed by
+ * collapseToLegacy so the nested body collapse can ask "may I strip this
+ * block's hierarchy refs?" without threading the set through every helper.
+ */
+const preservedIdsByBlockMap = new WeakMap<Map<BlockId, OutputBlockData>, Set<BlockId>>();
+
+const getPreservedIds = (blockMap: Map<BlockId, OutputBlockData>): Set<BlockId> => {
+  const cached = preservedIdsByBlockMap.get(blockMap);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const computed = collectPreservedContainerSubtreeIds([...blockMap.values()]);
+
+  preservedIdsByBlockMap.set(blockMap, computed);
+
+  return computed;
+};
+
+/**
+ * Emit a hierarchy-only container (a table, a column list) that sits inside a
+ * legacy body, together with its whole descendant subtree, refs intact.
+ *
+ * The container's OWN `parent` ref is dropped — living in the body already
+ * encodes "child of this toggle/callout", and the load-side expansion
+ * (appendLegacyBodyBlocks) re-parents parent-less body roots. Descendants keep
+ * their `parent`/`content` because nothing else can express their nesting; they
+ * ride along inside the same body so they never dangle at the document root.
+ * @param container - preserved container block found in the body
+ * @param blockMap - id → block for the whole document
+ * @param processedIds - ids already emitted (mutated)
+ * @param result - body block list being built (mutated)
+ */
+const findUnprocessedChildren = (
+  parentId: BlockId | undefined,
+  blockMap: Map<BlockId, OutputBlockData>,
+  processedIds: Set<BlockId>
+): Array<{ id: BlockId; block: OutputBlockData }> => {
+  const children: Array<{ id: BlockId; block: OutputBlockData }> = [];
+
+  for (const candidate of blockMap.values()) {
+    const candidateId = candidate.id;
+    const isUnprocessedChild = candidate.parent === parentId &&
+      candidateId !== undefined &&
+      candidateId !== null &&
+      !processedIds.has(candidateId);
+
+    if (isUnprocessedChild && candidateId !== undefined && candidateId !== null) {
+      children.push({
+        id: candidateId,
+        block: candidate,
+      });
+    }
+  }
+
+  return children;
+};
+
+const appendPreservedSubtreeToBody = (
+  container: OutputBlockData,
+  blockMap: Map<BlockId, OutputBlockData>,
+  processedIds: Set<BlockId>,
+  result: OutputBlockData[]
+): void => {
+  markBlockAsProcessed(container.id, processedIds);
+
+  const { parent: _parent, ...containerWithoutParent } = container;
+
+  result.push(containerWithoutParent);
+
+  const queue: BlockId[] = container.id !== undefined && container.id !== null ? [container.id] : [];
+
+  while (queue.length > 0) {
+    const parentId = queue.shift();
+
+    for (const child of findUnprocessedChildren(parentId, blockMap, processedIds)) {
+      markBlockAsProcessed(child.id, processedIds);
+      result.push(child.block);
+      queue.push(child.id);
+    }
+  }
+};
+
+/**
  * Recursively collapse a container's body: routes each direct child through the
  * appropriate processRoot* helper based on its type so that grandchildren land in
  * the correct nested legacy shape instead of being ejected to the document root.
@@ -1274,6 +1359,7 @@ function collapseBodyBlocks(
   processedIds: Set<BlockId>
 ): OutputBlockData[] {
   const result: OutputBlockData[] = [];
+  const preservedIds = getPreservedIds(blockMap);
 
   for (const childId of contentIds) {
     if (processedIds.has(childId)) {
@@ -1282,6 +1368,11 @@ function collapseBodyBlocks(
     const childBlock = blockMap.get(childId);
 
     if (childBlock === undefined) {
+      continue;
+    }
+
+    if (preservedIds.has(childId)) {
+      appendPreservedSubtreeToBody(childBlock, blockMap, processedIds, result);
       continue;
     }
 
@@ -1559,8 +1650,86 @@ const collectRowRefChildIds = (row: unknown): string[] => {
 const collectTableRefChildIds = (content: unknown[]): string[] =>
   content.flatMap((row) => collectRowRefChildIds(row));
 
-const collectPreservedContainerSubtreeIds = (blocks: OutputBlockData[]): Set<BlockId> => {
+/**
+ * True when the legacy collapse can ABSORB this block's children into an inline
+ * legacy payload (list.items[], toggleList body, callout body). Only such a
+ * container may have its children's parent/content refs stripped — the nesting
+ * survives inside the collapsed payload.
+ *
+ * Every other container (column_list / column / table / any future container)
+ * has NO legacy representation, so stripping its refs does not collapse the
+ * containment — it destroys it.
+ * @param block - candidate container block
+ */
+const isLegacyAbsorbingContainer = (block: OutputBlockData): boolean =>
+  isFlatModelListBlock(block) ||
+  isFlatModelToggleBlock(block) ||
+  isToggleableHeaderBlock(block) ||
+  isFlatModelCalloutBlock(block);
+
+/**
+ * Ids of every block that participates in a containment the legacy model cannot
+ * express: a parent that is not a legacy-absorbing container, plus its whole
+ * descendant subtree. Those blocks keep their `parent`/`content` refs through
+ * the collapse instead of being flattened to root — the flat-with-references
+ * shape is the ONLY shape that can carry them.
+ * @param blocks - flat block array being collapsed
+ */
+const collectHierarchyOnlyContainerIds = (blocks: OutputBlockData[]): Set<BlockId> => {
+  const blockById = new Map<BlockId, OutputBlockData>();
+  const childIdsByParent = new Map<BlockId, BlockId[]>();
+
+  for (const block of blocks) {
+    if (block.id !== undefined && block.id !== null) {
+      blockById.set(block.id, block);
+    }
+  }
+
+  for (const block of blocks) {
+    const parentId = block.parent;
+
+    if (parentId === undefined || parentId === null || block.id === undefined || block.id === null) {
+      continue;
+    }
+
+    const siblings = childIdsByParent.get(parentId);
+
+    if (siblings === undefined) {
+      childIdsByParent.set(parentId, [block.id]);
+    } else {
+      siblings.push(block.id);
+    }
+  }
+
   const preserved = new Set<BlockId>();
+
+  const preserveSubtree = (id: BlockId): void => {
+    if (preserved.has(id)) {
+      return;
+    }
+    preserved.add(id);
+
+    for (const childId of childIdsByParent.get(id) ?? []) {
+      preserveSubtree(childId);
+    }
+  };
+
+  for (const [parentId, childIds] of childIdsByParent) {
+    const parent = blockById.get(parentId);
+
+    if (parent === undefined || isLegacyAbsorbingContainer(parent)) {
+      continue;
+    }
+
+    preserved.add(parentId);
+    childIds.forEach(preserveSubtree);
+  }
+
+  return preserved;
+};
+
+const collectPreservedContainerSubtreeIds = (blocks: OutputBlockData[]): Set<BlockId> => {
+  const preserved = collectHierarchyOnlyContainerIds(blocks);
 
   for (const block of blocks) {
     if (block.type !== 'table' || block.id === undefined || block.id === null) {
@@ -1628,9 +1797,14 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     }
   }
 
-  // Self-managing containers (tables) keep their child-block subtree flat
-  // instead of being stripped — see collectPreservedContainerSubtreeIds.
+  // Containers the legacy model cannot express (tables, columns) keep their
+  // child-block subtree flat instead of being stripped — see
+  // collectPreservedContainerSubtreeIds. Shared with the nested body collapse
+  // via the blockMap-keyed cache.
   const preservedIds = collectPreservedContainerSubtreeIds(reconciledBlocks);
+
+  preservedIdsByBlockMap.set(blockMap, preservedIds);
+
   const isPreserved = (block: OutputBlockData): boolean =>
     block.id !== undefined && block.id !== null && preservedIds.has(block.id);
 
@@ -1652,6 +1826,20 @@ export const collapseToLegacy = (blocks: OutputBlockData[]): OutputBlockData[] =
     const alreadyProcessed = block.id && processedIds.has(block.id);
 
     if (alreadyProcessed) {
+      continue;
+    }
+
+    /**
+     * A block inside a container the legacy model cannot express (columns, a
+     * table's cell subtree) is emitted verbatim, refs intact. Without this the
+     * per-type branches below either strip its `parent` (ejecting it from the
+     * container) or — for a list/toggle/callout item that is nested rather than
+     * root — match no branch at all and drop the block from the output entirely.
+     */
+    if (isPreserved(block)) {
+      result.push(block);
+      markBlockAsProcessed(block.id, processedIds);
+
       continue;
     }
 

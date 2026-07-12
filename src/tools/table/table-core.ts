@@ -13,6 +13,29 @@ export const CELL_COL_ATTR = 'data-blok-table-cell-col';
 export const BORDER_WIDTH = 1;
 const BORDER_STYLE = `${BORDER_WIDTH}px solid var(--blok-table-border)`;
 
+/**
+ * Floor for a single column, in pixels.
+ *
+ * Used twice, and both uses are load-bearing:
+ *  - a resize drag clamps the dragged column here (table-resize.ts);
+ *  - a FLUID (percent) table gets `min-width: cols * MIN_COL_WIDTH` so it
+ *    scrolls instead of squeezing its columns to nothing. Percent mode has no
+ *    other floor — `table-layout: fixed` + `width: 100%` + N equal percent
+ *    <col>s happily renders 20 columns at 5% each, and every pasted wide table
+ *    lands in exactly that regime (onPaste clears colWidths).
+ */
+export const MIN_COL_WIDTH = 50;
+
+/**
+ * Apply the fluid-mode floor. Percent tables only — pixel tables carry an
+ * explicit width, so applyPixelWidths clears this.
+ */
+export const applyFluidMinWidth = (table: HTMLElement, colCount: number): void => {
+  const el: HTMLElement = table;
+
+  el.style.minWidth = `${colCount * MIN_COL_WIDTH}px`;
+};
+
 const CELL_CLASSES = [
   'py-1',
   'px-2',
@@ -67,6 +90,10 @@ export class TableGrid {
 
     const widths = colWidths ?? equalWidths(cols);
 
+    if (!colWidths) {
+      applyFluidMinWidth(table, cols);
+    }
+
     // <colgroup> holds column widths
     const colgroup = document.createElement('colgroup');
 
@@ -112,6 +139,10 @@ export class TableGrid {
     // <colgroup>
     const colgroup = document.createElement('colgroup');
     const widths = model.colWidths ?? equalWidths(model.cols);
+
+    if (!model.colWidths) {
+      applyFluidMinWidth(table, model.cols);
+    }
 
     widths.forEach(w => colgroup.appendChild(this.createCol(w)));
     table.appendChild(colgroup);

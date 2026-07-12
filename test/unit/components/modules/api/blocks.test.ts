@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { BlocksAPI } from '../../../../../src/components/modules/api/blocks';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
@@ -79,7 +80,10 @@ type BlockManagerMock = {
   blocks: BlockStub[];
   currentBlockIndex: number;
   currentBlock: BlockStub | null;
-  getBlockByIndex: ReturnType<typeof vi.fn>;
+  // Typed with its real signature (not the bare `ReturnType<typeof vi.fn>`,
+  // which resolves to a non-callable `Mock<Procedure | Constructable>`) so the
+  // tests can CALL the mock directly to assert what core would read.
+  getBlockByIndex: Mock<(index: number) => BlockStub | undefined>;
   getBlockById: ReturnType<typeof vi.fn>;
   getBlockIndex: ReturnType<typeof vi.fn>;
   getBlock: ReturnType<typeof vi.fn>;
@@ -100,9 +104,9 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
     blocks: [ ...initialBlocks ],
     currentBlockIndex: 0,
     currentBlock: initialBlocks[0] ?? null,
-    getBlockByIndex: vi.fn((index: number) => {
+    getBlockByIndex: vi.fn((index: number): BlockStub | undefined => {
       return blockManager.blocks[index];
-    }) as ReturnType<typeof vi.fn>,
+    }),
     getBlockById: vi.fn((id: string) => {
       return blockManager.blocks.find((block) => block.id === id);
     }) as ReturnType<typeof vi.fn>,
@@ -395,6 +399,42 @@ describe('BlocksAPI', () => {
       const { blocksApi } = createBlocksApi({ blocks: initialBlocks });
 
       expect(blocksApi.getBlocksCount()).toBe(initialBlocks.length);
+    });
+
+    /**
+     * CONTRACT PIN — getBlocksCount() is the size of the FLAT index space, not the
+     * number of top-level blocks.
+     *
+     * Nested-block children (table cell paragraphs, column children, toggle
+     * children) live in the same flat array, so the count includes them. That is
+     * deliberate and must NOT be "fixed" by filtering: getBlocksCount() is paired
+     * with getBlockByIndex(index) / insert(…, index) / move(…, index), which all
+     * address the same flat index space. Table cells are literally created with
+     * `api.blocks.insert(tool, data, {}, api.blocks.getBlocksCount(), false)`
+     * (src/tools/table/table-cell-blocks.ts) — filtering the count would make that
+     * index point into the middle of the document.
+     *
+     * Consumers that want "the document's blocks" must derive the tree
+     * (`parentId === null`, see src/components/utils/blocks-tree.ts) — which is what
+     * the React/Vue/Angular useBlocks adapters already do.
+     */
+    it('counts the FLAT index space including nested children (paired with getBlockByIndex)', () => {
+      const paragraph = createBlockStub({ id: 'paragraph' });
+      const table = createBlockStub({ id: 'table', name: 'table' });
+      const cell1 = createBlockStub({ id: 'cell-1' });
+      const cell2 = createBlockStub({ id: 'cell-2' });
+      const blocks = [paragraph, table, cell1, cell2];
+
+      const { blocksApi, blockManager } = createBlocksApi({ blocks });
+
+      blockManager.getBlockByIndex.mockImplementation((index: number) => blocks[index]);
+
+      expect(blocksApi.getBlocksCount()).toBe(4);
+
+      // The last flat index must resolve — count and index space stay in lockstep
+      const lastIndex = blocksApi.getBlocksCount() - 1;
+
+      expect(blockManager.getBlockByIndex(lastIndex)).toBe(cell2);
     });
 
     it('returns current block index via getCurrentBlockIndex()', () => {
@@ -1031,6 +1071,35 @@ describe('BlocksAPI', () => {
       expect(result[0]).toHaveProperty('wrappedBlock');
     });
 
+    /**
+     * `insertMany(blocks)` with no index means "append to the document". The default
+     * used to be `blocks.length - 1` — the index BEFORE the flat tail. With a
+     * document ending in a table (whose cell paragraphs are the flat tail), that
+     * wedged the new blocks in between the table's cell blocks, breaking DFS
+     * contiguity. The adapters' `useBlocks().insertMany(specs)` append path
+     * (src/components/utils/blocks-api.ts) rides on this default.
+     */
+    it('appends at the end of the flat store when no index is given (past nested children)', () => {
+      const blocks = [
+        createBlockStub({ id: 'paragraph' }),
+        createBlockStub({ id: 'table',
+          name: 'table' }),
+        createBlockStub({ id: 'cell-1' }),
+        createBlockStub({ id: 'cell-2' }),
+      ];
+      const { blocksApi, blockManager } = createBlocksApi({ blocks });
+
+      blocksApi.methods.insertMany([{ id: 'new',
+        type: 'paragraph',
+        data: { text: 'appended' } }]);
+
+      expect(blockManager.insertMany).toHaveBeenCalledWith(
+        expect.arrayContaining([ expect.objectContaining({ id: 'new' }) ]),
+        4,
+        { notify: true }
+      );
+    });
+
     it('validates insertMany index type', () => {
       const { blocksApi } = createBlocksApi();
 
@@ -1362,6 +1431,47 @@ describe('BlocksAPI', () => {
       });
 
       holder.remove();
+    });
+
+    it('does not demote a restricted tool when no block is current and the LAST block sits in a table cell', () => {
+      // Regression: with nothing focused, currentBlockIndex is -1. Passing that to
+      // getBlockByIndex hits the repository's legacy "-1 = LAST block" shorthand, so
+      // the guard inspected the last block of the document. When the document ends
+      // with a table, that block is a cell child — and every restricted tool inserted
+      // with no explicit index was silently demoted to a paragraph.
+      const cellBlocks = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+
+      const holder = document.createElement('div');
+
+      cellBlocks.appendChild(holder);
+      document.body.appendChild(cellBlocks);
+
+      const lastBlockInCell: BlockStub = {
+        id: 'cell-child',
+        holder,
+        name: 'paragraph',
+        stretched: false,
+        data: {},
+      };
+
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blockManager.getBlockByIndex.mockReturnValue(lastBlockInCell);
+      blockManager.currentBlockIndex = -1;
+
+      const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
+        id: 'new-block',
+      } as BlockStub);
+
+      blocksApi.insert('header', { text: 'Hello' });
+
+      expect(insertSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ tool: 'header' })
+      );
+
+      cellBlocks.remove();
     });
   });
 });

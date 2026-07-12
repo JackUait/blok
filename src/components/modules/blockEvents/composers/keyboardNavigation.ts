@@ -58,6 +58,23 @@ export class KeyboardNavigation extends BlockEventComposer {
   }
 
   /**
+   * Inside a table cell, a Shift+Arrow that starts from a plain caret belongs to
+   * the table's rectangular CELL selection (TableCellSelection), not to the core's
+   * cross-block selection — a CBS there would select the cell's child blocks and
+   * fight the cell rectangle for the same gesture.
+   *
+   * Deferral is limited to the "starting from a caret" case: once lines inside the
+   * cell are already block-selected (e.g. Cmd+A on a cell line), Shift+Arrow keeps
+   * extending that intra-cell selection exactly as before.
+   *
+   * Every core cross-block-selection entry point must consult this guard —
+   * enforced by test/unit/architecture/table-cell-keyboard-guard-law.test.ts.
+   */
+  private get shouldDeferSelectionToTableCell(): boolean {
+    return this.isCurrentBlockInsideTableCell && !this.Blok.BlockSelection.anyBlockSelected;
+  }
+
+  /**
    * Resolve the table-cell-blocks container element that owns the given block,
    * or null if the block is not inside a table cell.
    */
@@ -1021,7 +1038,8 @@ export class KeyboardNavigation extends BlockEventComposer {
       (candidate): candidate is HTMLElement => candidate instanceof HTMLElement
     );
     const caretAtEnd = caretInput !== undefined ? isCaretAtEndOfInput(caretInput) : undefined;
-    const shouldEnableCBS = caretAtEnd || this.Blok.BlockSelection.anyBlockSelected;
+    const shouldEnableCBS =
+      (caretAtEnd || this.Blok.BlockSelection.anyBlockSelected) && !this.shouldDeferSelectionToTableCell;
 
     const isShiftDownKey = event.shiftKey && keyCode === keyCodes.DOWN;
 
@@ -1218,7 +1236,8 @@ export class KeyboardNavigation extends BlockEventComposer {
       (candidate): candidate is HTMLElement => candidate instanceof HTMLElement
     );
     const caretAtStart = caretInput !== undefined ? isCaretAtStartOfInput(caretInput) : undefined;
-    const shouldEnableCBS = caretAtStart || this.Blok.BlockSelection.anyBlockSelected;
+    const shouldEnableCBS =
+      (caretAtStart || this.Blok.BlockSelection.anyBlockSelected) && !this.shouldDeferSelectionToTableCell;
 
     const isShiftUpKey = event.shiftKey && keyCode === keyCodes.UP;
 

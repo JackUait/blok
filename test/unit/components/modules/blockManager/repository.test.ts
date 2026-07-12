@@ -80,6 +80,27 @@ const createBlocksStore = (blockCount: number): BlocksStore => {
 };
 
 /**
+ * Create a proxied BlocksStore from explicit blocks (used for hierarchy fixtures
+ * where children are appended at the TAIL of the flat store, as table cells,
+ * column children and toggle children really are).
+ */
+const createBlocksStoreFrom = (blocks: Block[]): BlocksStore => {
+  const workingArea = document.createElement('div');
+  const blocksStore = new Blocks(workingArea);
+
+  for (const block of blocks) {
+    blocksStore.push(block);
+  }
+
+  const handler: ProxyHandler<Blocks> = {
+    set: Blocks.set,
+    get: Blocks.get,
+  };
+
+  return new Proxy(blocksStore, handler) as unknown as BlocksStore;
+};
+
+/**
  * Create an empty proxied BlocksStore
  *
  * Type assertion note: Required for test infrastructure since the Blocks class
@@ -168,6 +189,63 @@ describe('BlockRepository', () => {
       repository.initialize(blocksStore);
 
       expect(repository.lastBlock).toBeUndefined();
+    });
+
+    /**
+     * Nested-block tools (table, columns, toggle, callout) keep their children in
+     * the SAME flat store, appended at the tail. "The last block of the document"
+     * must therefore mean the last TOP-LEVEL block, otherwise every consumer of
+     * lastBlock (bottom-zone click, Caret.setToTheLastBlock, api.caret.setToLastBlock,
+     * toolbar trailing-paragraph) reaches into a table cell / column child.
+     */
+    it('skips table cell children and returns the last top-level block', () => {
+      const paragraph = createMockBlock({ id: 'paragraph' });
+      const table = createMockBlock({ id: 'table', contentIds: ['cell-1', 'cell-2'] });
+      const cell1 = createMockBlock({ id: 'cell-1', parentId: 'table' });
+      const cell2 = createMockBlock({ id: 'cell-2', parentId: 'table' });
+
+      repository.initialize(createBlocksStoreFrom([paragraph, table, cell1, cell2]));
+
+      expect(repository.lastBlock?.id).toBe('table');
+    });
+
+    it('skips column children and returns the last top-level block', () => {
+      const columnList = createMockBlock({ id: 'column_list', contentIds: ['column'] });
+      const column = createMockBlock({ id: 'column', parentId: 'column_list', contentIds: ['column-child'] });
+      const columnChild = createMockBlock({ id: 'column-child', parentId: 'column' });
+
+      repository.initialize(createBlocksStoreFrom([columnList, column, columnChild]));
+
+      expect(repository.lastBlock?.id).toBe('column_list');
+    });
+
+    it('skips toggle children and returns the last top-level block', () => {
+      const toggle = createMockBlock({ id: 'toggle', contentIds: ['toggle-child'] });
+      const toggleChild = createMockBlock({ id: 'toggle-child', parentId: 'toggle' });
+
+      repository.initialize(createBlocksStoreFrom([toggle, toggleChild]));
+
+      expect(repository.lastBlock?.id).toBe('toggle');
+    });
+
+    it('returns undefined when the store holds only nested blocks (no top-level block)', () => {
+      const orphan = createMockBlock({ id: 'orphan', parentId: 'gone' });
+
+      repository.initialize(createBlocksStoreFrom([orphan]));
+
+      expect(repository.lastBlock).toBeUndefined();
+    });
+  });
+
+  describe('topLevelBlocks getter', () => {
+    it('returns only blocks that live at the document root', () => {
+      const paragraph = createMockBlock({ id: 'paragraph' });
+      const table = createMockBlock({ id: 'table', contentIds: ['cell-1'] });
+      const cell1 = createMockBlock({ id: 'cell-1', parentId: 'table' });
+
+      repository.initialize(createBlocksStoreFrom([paragraph, table, cell1]));
+
+      expect(repository.topLevelBlocks.map((block) => block.id)).toEqual(['paragraph', 'table']);
     });
   });
 

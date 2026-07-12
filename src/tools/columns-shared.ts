@@ -202,16 +202,23 @@ const startColumnResize = (
     updateResizerAria(resizer, leftEl, rightEl);
   };
 
-  const onUp = (upEvent: PointerEvent): void => {
-    resizer.releasePointerCapture(upEvent.pointerId);
+  // pointerup AND pointercancel: with pointer capture the browser fires
+  // pointercancel INSTEAD of pointerup when it takes the gesture over, and the
+  // widths are already live in the DOM by then — so the end handler must run on
+  // both, or the drag leaks its listeners and the flex-grow values are never
+  // persisted (the DOM would silently revert on the next render).
+  const onEnd = (endEvent: PointerEvent): void => {
+    resizer.releasePointerCapture(endEvent.pointerId);
     resizer.removeAttribute('data-dragging');
     resizer.removeEventListener('pointermove', onMove);
-    resizer.removeEventListener('pointerup', onUp);
+    resizer.removeEventListener('pointerup', onEnd);
+    resizer.removeEventListener('pointercancel', onEnd);
     persistColumnWidths(api, columnListId, [leftEl, rightEl]);
   };
 
   resizer.addEventListener('pointermove', onMove);
-  resizer.addEventListener('pointerup', onUp);
+  resizer.addEventListener('pointerup', onEnd);
+  resizer.addEventListener('pointercancel', onEnd);
 };
 
 const createColumnResizer = (

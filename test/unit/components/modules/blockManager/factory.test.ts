@@ -42,6 +42,7 @@ const createMockAPIMethods = (): APIInterface => ({
     render: vi.fn().mockResolvedValue(undefined),
     renderFromHTML: vi.fn().mockResolvedValue(undefined),
     importMarkdown: vi.fn().mockResolvedValue({ blocks: [] }),
+    exportMarkdown: vi.fn().mockResolvedValue(''),
     delete: vi.fn().mockResolvedValue(undefined),
     move: vi.fn(),
     getBlockByIndex: vi.fn(),

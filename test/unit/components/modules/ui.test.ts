@@ -12,8 +12,54 @@ import { SelectionUtils } from "../../../../src/components/selection/index";
 import type { BlokConfig } from "../../../../types";
 import type { API } from "../../../../types";
 import { ToggleShortcuts } from "../../../../src/tools/toggle/toggle-shortcuts";
+import { BlockRepository } from "../../../../src/components/modules/blockManager/repository";
+import { Blocks } from "../../../../src/components/blocks";
+import type { Block } from "../../../../src/components/block";
+import type { BlocksStore } from "../../../../src/components/modules/blockManager/types";
 
 const fakeCssContent = ".mock-style{}";
+
+/**
+ * Build a Block-shaped fixture for the real flat blocks store.
+ */
+const createStoreBlock = (options: {
+  id: string;
+  parentId?: string | null;
+  contentIds?: string[];
+  isDefault?: boolean;
+  isEmpty?: boolean;
+}): Block => {
+  const holder = document.createElement("div");
+
+  holder.setAttribute("data-blok-element", "");
+
+  return {
+    id: options.id,
+    holder,
+    inputs: [],
+    parentId: options.parentId ?? null,
+    contentIds: options.contentIds ?? [],
+    isEmpty: options.isEmpty ?? false,
+    tool: { isDefault: options.isDefault ?? true },
+    call: vi.fn(),
+  } as unknown as Block;
+};
+
+/**
+ * Proxied flat blocks store, matching the real BlockManager wiring.
+ */
+const createStore = (blocks: Block[]): BlocksStore => {
+  const blocksStore = new Blocks(document.createElement("div"));
+
+  for (const block of blocks) {
+    blocksStore.push(block);
+  }
+
+  return new Proxy(blocksStore, {
+    set: Blocks.set,
+    get: Blocks.get,
+  }) as unknown as BlocksStore;
+};
 
 vi.mock(
   "../../../../src/components/styles/main.css?inline",
@@ -1037,6 +1083,72 @@ describe("UI module", () => {
         blok.BlockManager.lastBlock
       );
       expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * Nested-block tools (table, columns, toggle) append their children at the
+     * TAIL of the same flat block store. Reading the raw tail made the bottom
+     * zone see the table's bottom-right CELL paragraph — default and empty — so
+     * nothing was inserted and the caret was dropped INSIDE the table cell.
+     * There was no way to escape below a trailing table.
+     */
+    it("inserts a new ROOT block when the flat store tail is a table cell paragraph", () => {
+      const { ui, blok, wrapper } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      wrapper.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      const repository = new BlockRepository();
+      const paragraph = createStoreBlock({ id: "paragraph" });
+      const table = createStoreBlock({ id: "table", isDefault: false, contentIds: ["cell"] });
+      const cell = createStoreBlock({ id: "cell", parentId: "table", isEmpty: true });
+
+      repository.initialize(createStore([paragraph, table, cell]));
+
+      Object.defineProperty(blok.BlockManager, "lastBlock", {
+        configurable: true,
+        get: () => repository.lastBlock,
+      });
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.click();
+
+      // The trailing table is not a default block → a root paragraph must be appended
+      expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalledWith(cell);
+    });
+
+    it("inserts a new ROOT block when the flat store tail is a column child", () => {
+      const { ui, blok, wrapper } = createUI();
+      const bottomZone = document.createElement("div");
+      bottomZone.setAttribute("data-blok-bottom-zone", "");
+      wrapper.appendChild(bottomZone);
+      (ui as { nodes: UI["nodes"] }).nodes.bottomZone = bottomZone;
+
+      const repository = new BlockRepository();
+      const columnList = createStoreBlock({ id: "column_list", isDefault: false, contentIds: ["column"] });
+      const column = createStoreBlock({ id: "column", isDefault: false, parentId: "column_list", contentIds: ["column-child"] });
+      const columnChild = createStoreBlock({ id: "column-child", parentId: "column", isEmpty: true });
+
+      repository.initialize(createStore([columnList, column, columnChild]));
+
+      Object.defineProperty(blok.BlockManager, "lastBlock", {
+        configurable: true,
+        get: () => repository.lastBlock,
+      });
+
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      bottomZone.click();
+
+      expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalledWith(columnChild);
     });
 
     it("does not fire when block selection is active", () => {

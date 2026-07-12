@@ -1,15 +1,20 @@
 import type { I18n } from '../../../types/api';
 import {
+  IconCopy,
+  IconCross,
   IconInsertAbove,
   IconInsertBelow,
   IconInsertLeft,
   IconInsertRight,
+  IconMarker,
   IconTrash,
   IconHeaderRow,
   IconHeaderColumn,
 } from '../../components/icons';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
 
+import { createCellColorPicker } from './table-cell-color-picker';
+import type { CellColorMode } from './table-cell-color-picker';
 import { GRIP_HOVER_SIZE } from './table-grip-visuals';
 import { createHeadingToggle } from './table-heading-toggle';
 import type { RowColAction } from './table-row-col-controls';
@@ -34,8 +39,75 @@ export interface PopoverMenuOptions {
   isHeadingRow: () => boolean;
   isHeadingColumn: () => boolean;
   onAction: (action: RowColAction) => void;
+  /** Wipe the content of every cell in the grip's row/column (colors survive). */
+  onClearContents: (type: 'row' | 'col', index: number) => void;
+  /** Paint every cell in the grip's row/column. */
+  onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode) => void;
   i18n: I18n;
 }
+
+/**
+ * The grip menu's Color entry.
+ *
+ * It lives INSIDE the grip popover as a nested submenu rather than on the
+ * drag-selection pill, which is a separate ROOT popover: opening the pill's
+ * menu triggers the registry's mutual exclusion, hiding the grip popover and
+ * firing its Closed handler while the colour menu is still being shown. A
+ * nested submenu is mounted inside its opener and never registers, so the grip
+ * popover stays open beneath it.
+ */
+const buildColorItem = (
+  type: 'row' | 'col',
+  index: number,
+  options: PopoverMenuOptions
+): PopoverItemParams => {
+  const { element } = createCellColorPicker({
+    i18n: options.i18n,
+    onColorSelect: (color, mode) => {
+      options.onColorChange(type, index, color, mode);
+    },
+  });
+
+  return {
+    icon: IconMarker,
+    title: options.i18n.t('tools.table.cellColor'),
+    name: 'cellColor',
+    children: {
+      items: [{
+        type: PopoverItemType.Html,
+        element,
+      }],
+      isFlippable: false,
+    },
+  };
+};
+
+/**
+ * Duplicate + Clear contents, shared by both menus. "Clear" reuses the
+ * selection pill's own label: it is the same operation on the same cells.
+ */
+const buildEditItems = (
+  type: 'row' | 'col',
+  index: number,
+  options: PopoverMenuOptions
+): PopoverItemParams[] => [
+  {
+    icon: IconCopy,
+    title: options.i18n.t(type === 'row' ? 'tools.table.duplicateRow' : 'tools.table.duplicateColumn'),
+    closeOnActivate: true,
+    onActivate: (): void => {
+      options.onAction({ type: type === 'row' ? 'duplicate-row' : 'duplicate-col', index });
+    },
+  },
+  {
+    icon: IconCross,
+    title: options.i18n.t('tools.table.clearSelection'),
+    closeOnActivate: true,
+    onActivate: (): void => {
+      options.onClearContents(type, index);
+    },
+  },
+];
 
 /**
  * Callbacks the popover needs from the controls class.
@@ -72,6 +144,7 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
     : [];
 
   const baseItems: PopoverItemParams[] = [
+    buildColorItem('col', colIndex, options),
     {
       icon: IconInsertLeft,
       title: options.i18n.t('tools.table.insertColumnLeft'),
@@ -88,6 +161,7 @@ export const buildColumnMenuItems = (colIndex: number, options: PopoverMenuOptio
         options.onAction({ type: 'insert-col-right', index: colIndex });
       },
     },
+    ...buildEditItems('col', colIndex, options),
   ];
 
   const canDelete = options.getColumnCount() > 1;
@@ -130,6 +204,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions)
     : [];
 
   const baseItems: PopoverItemParams[] = [
+    buildColorItem('row', rowIndex, options),
     {
       icon: IconInsertAbove,
       title: options.i18n.t('tools.table.insertRowAbove'),
@@ -146,6 +221,7 @@ export const buildRowMenuItems = (rowIndex: number, options: PopoverMenuOptions)
         options.onAction({ type: 'insert-row-below', index: rowIndex });
       },
     },
+    ...buildEditItems('row', rowIndex, options),
   ];
 
   const canDelete = options.getRowCount() > 1;

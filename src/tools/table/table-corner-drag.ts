@@ -50,6 +50,7 @@ export class TableCornerDrag {
   private readonly boundPointerDown: (e: PointerEvent) => void;
   private readonly boundPointerMove: (e: PointerEvent) => void;
   private readonly boundPointerUp: (e: PointerEvent) => void;
+  private readonly boundPointerCancel: () => void;
 
   constructor(options: TableCornerDragOptions) {
     this.wrapper = options.wrapper;
@@ -82,6 +83,7 @@ export class TableCornerDrag {
     this.boundPointerDown = this.handlePointerDown.bind(this);
     this.boundPointerMove = this.handlePointerMove.bind(this);
     this.boundPointerUp = this.handlePointerUp.bind(this);
+    this.boundPointerCancel = this.handlePointerCancel.bind(this);
 
     this.hitZone.addEventListener('mouseenter', this.boundMouseEnter);
     this.hitZone.addEventListener('mouseleave', this.boundMouseLeave);
@@ -144,6 +146,37 @@ export class TableCornerDrag {
     this.hitZone.setPointerCapture(e.pointerId);
     this.hitZone.addEventListener('pointermove', this.boundPointerMove);
     this.hitZone.addEventListener('pointerup', this.boundPointerUp);
+    // Pointer capture makes the browser fire pointercancel INSTEAD of pointerup
+    // when it takes the gesture over, so without this the drag state (and the
+    // body cursor/user-select overrides) would never be released.
+    this.hitZone.addEventListener('pointercancel', this.boundPointerCancel);
+  }
+
+  /**
+   * The gesture was taken away (touch pan, device disruption). Rows/columns
+   * added during the drag are already committed one by one, so this only tears
+   * the drag down — and, unlike pointerup, it must NOT fall into the
+   * "tap = add a row and a column" branch: the user never released the pointer.
+   */
+  private handlePointerCancel(): void {
+    if (this.dragState === null) {
+      return;
+    }
+
+    const { didDrag, pointerId } = this.dragState;
+
+    this.dragState = null;
+    hideTooltip();
+    this.hitZone.releasePointerCapture(pointerId);
+    this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
+    this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
+    this.hitZone.removeEventListener('pointercancel', this.boundPointerCancel);
+
+    if (didDrag) {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      this.onDragEnd();
+    }
   }
 
   private handlePointerMove(e: PointerEvent): void {
@@ -236,6 +269,7 @@ export class TableCornerDrag {
     this.hitZone.removeEventListener('pointerdown', this.boundPointerDown);
     this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
     this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
+    this.hitZone.removeEventListener('pointercancel', this.boundPointerCancel);
     if (this.dragState?.didDrag) {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';

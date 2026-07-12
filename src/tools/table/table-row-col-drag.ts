@@ -49,6 +49,19 @@ export interface TableDragOptions {
   grid: HTMLElement;
   onAction: (action: RowColAction) => void;
   onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
+  /**
+   * Can this row/column be picked up at all? False when it is part of a merge
+   * that extends beyond it. The gesture is then rejected on sight with a
+   * not-allowed cursor instead of running a full drag that silently snaps back.
+   */
+  canDrag?: (type: 'row' | 'col', index: number) => boolean;
+  /**
+   * Can the dragged row/column land at this index? False when the drop would
+   * cut through a merged span. Drives live feedback during the drag (the drop
+   * indicator hides and the cursor turns to not-allowed) and blocks the action
+   * on release.
+   */
+  canDrop?: (type: 'row' | 'col', fromIndex: number, toIndex: number) => boolean;
 }
 
 /**
@@ -59,6 +72,11 @@ export class TableRowColDrag {
   private grid: HTMLElement;
   private onAction: (action: RowColAction) => void;
   private onDragStateChange: ((isDragging: boolean, dragType: 'row' | 'col' | null) => void) | null;
+  private canDrag: ((type: 'row' | 'col', index: number) => boolean) | null;
+  private canDrop: ((type: 'row' | 'col', fromIndex: number, toIndex: number) => boolean) | null;
+
+  /** The grabbed row/column is locked in place (merge would tear) — reject the gesture. */
+  private isDragRejected = false;
 
   private isDragging = false;
   private dragType: 'row' | 'col' | null = null;
@@ -82,6 +100,8 @@ export class TableRowColDrag {
     this.grid = options.grid;
     this.onAction = options.onAction;
     this.onDragStateChange = options.onDragStateChange ?? null;
+    this.canDrag = options.canDrag ?? null;
+    this.canDrop = options.canDrop ?? null;
 
     this.boundDocPointerMove = this.handleDocPointerMove.bind(this);
     this.boundDocPointerUp = this.handleDocPointerUp.bind(this);
@@ -103,6 +123,7 @@ export class TableRowColDrag {
     this.dragFromIndex = index;
     this.dragStartX = startX;
     this.dragStartY = startY;
+    this.isDragRejected = this.canDrag !== null && !this.canDrag(type, index);
 
     document.addEventListener('pointermove', this.boundDocPointerMove);
     document.addEventListener('pointerup', this.boundDocPointerUp);
@@ -138,16 +159,58 @@ export class TableRowColDrag {
 
     this.onDragStateChange?.(false, null);
     this.isDragging = false;
+    this.isDragRejected = false;
     this.dragType = null;
     this.dragFromIndex = -1;
     this.resolveTracking = null;
   }
 
+  /**
+   * The index the row/column would land on, expressed the way the model splices
+   * it: an insert position in the array AFTER the source has been removed.
+   */
+  private toDropIndex(rawDropIndex: number): number {
+    return rawDropIndex > this.dragFromIndex ? rawDropIndex - 1 : rawDropIndex;
+  }
+
+  /**
+   * Would dropping here tear a merge? Reflected live: the drop indicator is
+   * hidden and the cursor turns not-allowed, and finishDrag refuses the move.
+   */
+  private isDropAllowed(rawDropIndex: number): boolean {
+    if (!this.canDrop || !this.dragType) {
+      return true;
+    }
+
+    return this.canDrop(this.dragType, this.dragFromIndex, this.toDropIndex(rawDropIndex));
+  }
+
+  /** Show/hide the drop indicator and the cursor for a (dis)allowed drop. */
+  private reflectDropAllowed(allowed: boolean): void {
+    if (this.dropIndicator) {
+      this.dropIndicator.style.display = allowed ? '' : 'none';
+    }
+
+    document.body.style.cursor = allowed ? 'grabbing' : 'not-allowed';
+  }
+
   private handleDocPointerMove(e: PointerEvent): void {
     const dx = Math.abs(e.clientX - this.dragStartX);
     const dy = Math.abs(e.clientY - this.dragStartY);
+    const passedThreshold = dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD;
 
-    if (!this.isDragging && (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD)) {
+    // A row/column locked by a merge never enters drag state — no ghost, no
+    // drop indicator. The not-allowed cursor is the feedback, so the user sees
+    // the move was refused instead of watching the row snap back silently.
+    if (this.isDragRejected) {
+      if (passedThreshold) {
+        document.body.style.cursor = 'not-allowed';
+      }
+
+      return;
+    }
+
+    if (!this.isDragging && passedThreshold) {
       this.isDragging = true;
       this.startDrag();
     }
@@ -167,7 +230,13 @@ export class TableRowColDrag {
       this.finishDrag(e);
       this.resolveTracking?.(true);
     } else {
-      this.resolveTracking?.(false);
+      // A rejected gesture that passed the threshold was still a DRAG attempt,
+      // not a click — resolving `true` keeps the grip popover from opening.
+      const wasRejectedDrag = this.isDragRejected
+        && (Math.abs(e.clientX - this.dragStartX) > DRAG_THRESHOLD
+          || Math.abs(e.clientY - this.dragStartY) > DRAG_THRESHOLD);
+
+      this.resolveTracking?.(wasRejectedDrag);
     }
 
     this.cleanup();
@@ -318,6 +387,7 @@ export class TableRowColDrag {
     const topPx = this.getRowDropTopPx(dropIndex);
 
     this.dropIndicator.style.top = `${topPx - 1.5}px`;
+    this.reflectDropAllowed(this.isDropAllowed(dropIndex));
   }
 
   private updateColIndicator(e: PointerEvent, gridRect: DOMRect): void {
@@ -330,6 +400,7 @@ export class TableRowColDrag {
     const edges = getCumulativeColEdges(this.grid);
 
     this.dropIndicator.style.left = `${(edges[dropIndex] ?? 0) - 1.5}px`;
+    this.reflectDropAllowed(this.isDropAllowed(dropIndex));
   }
 
   private finishDrag(e: PointerEvent): void {
@@ -349,9 +420,9 @@ export class TableRowColDrag {
   private finishRowDrag(e: PointerEvent, gridRect: DOMRect): void {
     const relativeY = e.clientY - gridRect.top;
     const rawDropIndex = this.getRowDropIndex(relativeY);
-    const dropIndex = rawDropIndex > this.dragFromIndex ? rawDropIndex - 1 : rawDropIndex;
+    const dropIndex = this.toDropIndex(rawDropIndex);
 
-    if (dropIndex !== this.dragFromIndex) {
+    if (dropIndex !== this.dragFromIndex && this.isDropAllowed(rawDropIndex)) {
       this.onAction({ type: 'move-row', fromIndex: this.dragFromIndex, toIndex: dropIndex });
     }
   }
@@ -359,9 +430,9 @@ export class TableRowColDrag {
   private finishColDrag(e: PointerEvent, gridRect: DOMRect): void {
     const relativeX = e.clientX - gridRect.left;
     const rawDropIndex = this.getColDropIndex(relativeX);
-    const dropIndex = rawDropIndex > this.dragFromIndex ? rawDropIndex - 1 : rawDropIndex;
+    const dropIndex = this.toDropIndex(rawDropIndex);
 
-    if (dropIndex !== this.dragFromIndex) {
+    if (dropIndex !== this.dragFromIndex && this.isDropAllowed(rawDropIndex)) {
       this.onAction({ type: 'move-col', fromIndex: this.dragFromIndex, toIndex: dropIndex });
     }
   }

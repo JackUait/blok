@@ -1,6 +1,7 @@
 import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
+import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
 import type { MarkdownImportConfig } from '../../../markdown/types';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { Module } from '../../__module';
@@ -38,6 +39,7 @@ export class BlocksAPI extends Module {
       render: (data: OutputData): Promise<void> => this.render(data),
       renderFromHTML: (data: string): Promise<void> => this.renderFromHTML(data),
       importMarkdown: (md: string, options?: MarkdownImportConfig): Promise<OutputData> => this.importMarkdown(md, options),
+      exportMarkdown: (): Promise<string> => this.exportMarkdown(),
       delete: (index?: number, setCaret?: boolean): Promise<void> => this.delete(index, setCaret),
       move: (toIndex: number, fromIndex?: number): void => this.move(toIndex, fromIndex),
       getBlockByIndex: (index: number): BlockAPIInterface | undefined => this.getBlockByIndex(index),
@@ -280,6 +282,60 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Export the current document as a Markdown string — the outbound twin of
+   * {@link importMarkdown}. Blocks are read through the Saver, so the output
+   * reflects the saved (validated) document rather than raw DOM.
+   *
+   * Blocks owned by a table cell are serialized INSIDE the pipe table and are not
+   * repeated as loose lines (see `blocksToMarkdown`).
+   * @returns the document as Markdown ('' when there is nothing to save)
+   */
+  public async exportMarkdown(): Promise<string> {
+    const output = await this.Blok.Saver.save();
+
+    if (output === undefined) {
+      return '';
+    }
+
+    const parentOf = new Map<string, string | null>();
+
+    for (const block of output.blocks) {
+      if (block.id !== undefined) {
+        parentOf.set(block.id, block.parent ?? null);
+      }
+    }
+
+    /**
+     * Structural nesting depth of a block (its parentId-chain length).
+     * @param id - block id
+     * @returns the depth, 0 for root-level blocks
+     */
+    const depthOf = (id: string | undefined, seen: Set<string> = new Set()): number => {
+      if (id === undefined || seen.has(id)) {
+        return 0;
+      }
+
+      const parent = parentOf.get(id);
+
+      if (typeof parent !== 'string') {
+        return 0;
+      }
+
+      seen.add(id);
+
+      return 1 + depthOf(parent, seen);
+    };
+
+    return blocksToMarkdown(output.blocks.map((block) => ({
+      id: block.id,
+      tool: block.type,
+      data: block.data,
+      parentId: block.parent ?? null,
+      indent: depthOf(block.id),
+    })));
+  }
+
+  /**
    * Insert new Block and returns it's API
    * @param {string} type — Tool name
    * @param {BlockToolData} data — Tool data to insert
@@ -307,7 +363,16 @@ export class BlocksAPI extends Module {
       }
 
       const targetIndex = index ?? this.Blok.BlockManager.currentBlockIndex;
-      const targetBlock = this.Blok.BlockManager.getBlockByIndex(targetIndex);
+      /**
+       * A negative index carries no table-cell context: `currentBlockIndex` is -1
+       * when nothing is focused, and `getBlockByIndex(-1)` is the repository's
+       * legacy "give me the LAST block" shorthand. Feeding it -1 made the guard
+       * inspect the document's last block, so a restricted tool inserted into a
+       * document that merely ENDS with a table was silently demoted to a paragraph.
+       */
+      const targetBlock = targetIndex >= 0
+        ? this.Blok.BlockManager.getBlockByIndex(targetIndex)
+        : undefined;
 
       if (targetBlock !== undefined && isInsideTableCell(targetBlock) && isRestrictedInTableCell(defaultTool)) {
         return 'paragraph';
@@ -412,12 +477,18 @@ export class BlocksAPI extends Module {
 
   /**
    * Inserts several Blocks to a specified index
+   *
+   * The default index appends PAST the end of the flat store. It used to be
+   * `length - 1` — the slot before the flat tail — which, for a document ending in
+   * a nested-block tool (table/columns/toggle keep their children at the tail of
+   * the same flat array), wedged the new blocks in between that container's
+   * children instead of appending them to the document.
    * @param blocks - blocks data to insert
-   * @param index - index to insert the blocks at
+   * @param index - index to insert the blocks at. Defaults to the end of the document.
    */
   private insertMany = (
     blocks: OutputBlockData[],
-    index: number = this.Blok.BlockManager.blocks.length - 1
+    index: number = this.Blok.BlockManager.blocks.length
   ): BlockAPIInterface[] => {
     this.validateIndex(index);
 

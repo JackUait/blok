@@ -850,9 +850,10 @@ test.describe('Table cell copy/paste', () => {
 
     const { html, plain } = await performCopyAndCapture(page);
 
-    // The clipboard payload now carries the merge footprint (1x2), so the
-    // plain-text projection is tab-separated like a spreadsheet would emit.
-    expect(plain).toBe('Merged\t');
+    // The payload carries the merge footprint (1x2), but a merge-covered
+    // position is NOT a cell: emitting a tab for it gave external apps a
+    // phantom column. The plain-text projection now skips covered positions.
+    expect(plain).toBe('Merged');
 
     // Target cell: model col 2 (DOM col 1, because merge consumes col 0-1)
     // Use attribute-based locator to find it by model coordinates
@@ -1138,5 +1139,83 @@ test.describe('Table cell copy/paste', () => {
     // The plain text captured by the intercepting handler should also be empty —
     // native copy is responsible for the actual clipboard content.
     expect(plain).toBe('');
+  });
+
+  test('copies a merged range with an image and pastes it back with full fidelity', async ({ page }) => {
+    // 1x1 transparent GIF — renders offline, no network in E2E.
+    const imageUrl = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    await createBlok(page, {
+      // The image tool comes from the fixture's default tool set.
+      tools: defaultTools,
+      data: {
+        blocks: [
+          {
+            type: 'table',
+            data: {
+              withHeadings: false,
+              content: [
+                [
+                  // Merged 2x2 origin holding an IMAGE block (no text representation).
+                  {
+                    blocks: [],
+                    blockData: [{ tool: 'image', data: { file: { url: imageUrl }, caption: 'cat' } }],
+                    colspan: 2,
+                    rowspan: 2,
+                  },
+                  { blocks: [], mergedInto: [0, 0] },
+                  'C1',
+                ],
+                [
+                  { blocks: [], mergedInto: [0, 0] },
+                  { blocks: [], mergedInto: [0, 0] },
+                  'C2',
+                ],
+                ['A3', 'B3', 'C3'],
+                ['A4', 'B4', 'C4'],
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+    await expect(page.locator(`${TABLE_SELECTOR} [data-blok-tool="image"]`)).toHaveCount(1);
+
+    // Select the merged origin plus the C1/C2 column (3 REAL cells over a 2x3 region).
+    await selectCells(page, 0, 0, 1, 0);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(3);
+
+    const { html, plain } = await performCopyAndCapture(page);
+
+    // The external text/html flavor must describe the merge (Google Docs / Word read
+    // colspan/rowspan) and must NOT emit phantom <td>s for merge-covered positions.
+    expect(html).toContain('colspan="2"');
+    expect(html).toContain('rowspan="2"');
+    expect(html.match(/<td/g) ?? []).toHaveLength(3);
+
+    // …and it must carry the image, not an empty cell.
+    expect(html).toContain(`<img src="${imageUrl}"`);
+
+    // Paste into the region below (logical origin row 2, col 0).
+    const targetEditable = getCellEditable(page, 2, 0);
+
+    await targetEditable.click();
+    await expect(targetEditable).toBeFocused();
+
+    await dispatchPasteEvent(page, html, plain);
+
+    // The merge is reconstructed at the destination…
+    const pastedOrigin = page.locator(
+      `${TABLE_SELECTOR} [data-blok-table-cell-row="2"][data-blok-table-cell-col="0"]`
+    );
+
+    await expect(pastedOrigin).toHaveAttribute('colspan', '2');
+    await expect(pastedOrigin).toHaveAttribute('rowspan', '2');
+
+    // …carrying the image block (it used to paste as an empty cell).
+    await expect(pastedOrigin.locator('[data-blok-tool="image"]')).toHaveCount(1);
+    await expect(page.locator(`${TABLE_SELECTOR} [data-blok-tool="image"]`)).toHaveCount(2);
   });
 });

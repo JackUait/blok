@@ -107,6 +107,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -132,6 +134,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -161,6 +165,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -192,6 +198,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -225,6 +233,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -251,6 +261,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -269,6 +281,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -288,6 +302,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -364,6 +380,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -466,6 +484,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -495,6 +515,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -516,6 +538,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -540,6 +564,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -572,6 +598,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -591,6 +619,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -613,6 +643,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -635,6 +667,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -656,6 +690,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -680,6 +716,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -701,6 +739,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -724,6 +764,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -745,6 +787,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -777,6 +821,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -802,6 +848,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -829,6 +877,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -868,6 +918,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -907,6 +959,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -947,6 +1001,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
         onGripClick: () => {
           // In the real app, onGripClick triggers cell selection which hides
@@ -989,6 +1045,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1019,6 +1077,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1053,6 +1113,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1087,6 +1149,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
         onGripClick: () => {
           // Simulate what the real app does: when a grip is clicked,
@@ -1127,6 +1191,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1173,6 +1239,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
         onGripClick: () => {
           // Simulate the real index.ts flow:
@@ -1216,6 +1284,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1255,6 +1325,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1291,6 +1363,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1333,6 +1407,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1352,6 +1428,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1436,6 +1514,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1464,6 +1544,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1491,6 +1573,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1522,6 +1606,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 
@@ -1548,6 +1634,8 @@ describe('TableRowColControls', () => {
         isHeadingRow: () => false,
         isHeadingColumn: () => false,
         onAction: vi.fn(),
+        onClearContents: vi.fn(),
+        onColorChange: vi.fn(),
         i18n: mockI18n,
       });
 

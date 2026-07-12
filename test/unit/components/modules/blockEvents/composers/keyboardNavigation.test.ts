@@ -3119,4 +3119,117 @@ describe('KeyboardNavigation', () => {
       expect(mockBlock.holder.closest('[data-blok-table-cell-blocks]')).toBeNull();
     });
   });
+
+  describe('cross-block selection is inert inside a table cell', () => {
+    /**
+     * Wraps a block's holder inside a table cell DOM structure,
+     * simulating a paragraph block rendered inside a table cell.
+     */
+    const wrapBlockInTableCell = (block: Block): void => {
+      const cellBlocks = document.createElement('div');
+
+      cellBlocks.setAttribute('data-blok-table-cell-blocks', '');
+
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell', '');
+      cell.appendChild(cellBlocks);
+      cellBlocks.appendChild(block.holder);
+    };
+
+    const setupInCell = (
+      caretAtBoundary: boolean,
+      anyBlockSelected: boolean
+    ): { toggleBlockSelectedState: ReturnType<typeof vi.fn>; keyboardNavigation: KeyboardNavigation } => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(caretAtBoundary);
+      vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(caretAtBoundary);
+
+      const mockBlock = createBlock();
+
+      wrapBlockInTableCell(mockBlock);
+
+      const toggleBlockSelectedState = vi.fn();
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: mockBlock,
+        } as unknown as BlokModules['BlockManager'],
+        BlockSelection: {
+          anyBlockSelected,
+        } as unknown as BlokModules['BlockSelection'],
+        CrossBlockSelection: {
+          toggleBlockSelectedState,
+        } as unknown as BlokModules['CrossBlockSelection'],
+        // Shift+Down / Shift+Up fall through to the inline toolbar when CBS is
+        // declined, so this path needs the real method surface.
+        InlineToolbar: {
+          close: vi.fn(),
+          tryToShow: vi.fn(),
+        } as unknown as BlokModules['InlineToolbar'],
+      });
+
+      return { toggleBlockSelectedState, keyboardNavigation: new KeyboardNavigation(blok) };
+    };
+
+    it.each([
+      ['ArrowDown', keyCodes.DOWN],
+      ['ArrowRight', keyCodes.RIGHT],
+    ] as const)(
+      'Shift+%s from a caret in a cell does not start a cross-block selection',
+      (key, keyCode) => {
+        const { toggleBlockSelectedState, keyboardNavigation } = setupInCell(true, false);
+
+        keyboardNavigation.handleArrowRightAndDown(
+          createKeyboardEvent({ keyCode, key, code: key, shiftKey: true })
+        );
+
+        expect(toggleBlockSelectedState).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([
+      ['ArrowUp', keyCodes.UP],
+      ['ArrowLeft', keyCodes.LEFT],
+    ] as const)(
+      'Shift+%s from a caret in a cell does not start a cross-block selection',
+      (key, keyCode) => {
+        const { toggleBlockSelectedState, keyboardNavigation } = setupInCell(true, false);
+
+        keyboardNavigation.handleArrowLeftAndUp(
+          createKeyboardEvent({ keyCode, key, code: key, shiftKey: true })
+        );
+
+        expect(toggleBlockSelectedState).not.toHaveBeenCalled();
+      }
+    );
+
+    it('still extends an EXISTING in-cell block (line) selection with Shift+ArrowUp', () => {
+      const { toggleBlockSelectedState, keyboardNavigation } = setupInCell(false, true);
+
+      keyboardNavigation.handleArrowLeftAndUp(
+        createKeyboardEvent({ keyCode: keyCodes.UP, key: 'ArrowUp', code: 'ArrowUp', shiftKey: true })
+      );
+
+      expect(toggleBlockSelectedState).toHaveBeenCalledWith(false);
+    });
+
+    it('still starts a cross-block selection OUTSIDE a table cell', () => {
+      vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
+      vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      const toggleBlockSelectedState = vi.fn();
+      const blok = createBlokModules({
+        CrossBlockSelection: {
+          toggleBlockSelectedState,
+        } as unknown as BlokModules['CrossBlockSelection'],
+      });
+      const keyboardNavigation = new KeyboardNavigation(blok);
+
+      keyboardNavigation.handleArrowRightAndDown(
+        createKeyboardEvent({ keyCode: keyCodes.DOWN, key: 'ArrowDown', code: 'ArrowDown', shiftKey: true })
+      );
+
+      expect(toggleBlockSelectedState).toHaveBeenCalled();
+    });
+  });
 });

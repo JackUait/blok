@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { analyzeDataFormat, expandToHierarchical, collapseToLegacy, normalizeTableChildParents, reclaimDetachedTableCells } from '../../../../src/components/utils/data-model-transform';
+import { validateHierarchy } from '../../../../src/components/utils/hierarchy-invariant';
 import type { OutputBlockData, BlockId } from '../../../../types';
 
 describe('data-model-transform', () => {
@@ -1252,6 +1253,153 @@ describe('data-model-transform', () => {
 
       expect(table?.parent).toBeUndefined();
       expect(table?.content).toBeUndefined();
+    });
+  });
+
+  describe('collapseToLegacy - hierarchy-only containers (columns)', () => {
+    // Columns have NO legacy representation: legacy output cannot express
+    // "these blocks sit side by side". Stripping parent/content from a column
+    // tree therefore does not "collapse" it — it DESTROYS it. A single legacy
+    // block anywhere in the document (e.g. a string-cell table) flips the whole
+    // save to legacy mode, so this is reachable from ordinary saved documents.
+    const columnTree = (): OutputBlockData[] => [
+      { id: 'p1', type: 'paragraph', data: { text: 'before' } },
+      { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['cp1'] },
+      { id: 'cp1', type: 'paragraph', data: { text: 'left' }, parent: 'c1' },
+      { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['cp2'] },
+      { id: 'cp2', type: 'paragraph', data: { text: 'right' }, parent: 'c2' },
+      { id: 'p2', type: 'paragraph', data: { text: 'after' } },
+    ];
+
+    const expectColumnTreeIntact = (result: OutputBlockData[]): void => {
+      const byId = new Map(result.map(b => [b.id, b]));
+
+      expect(byId.get('cl1')?.content).toEqual(['c1', 'c2']);
+      expect(byId.get('c1')?.parent).toBe('cl1');
+      expect(byId.get('c2')?.parent).toBe('cl1');
+      expect(byId.get('c1')?.content).toEqual(['cp1']);
+      expect(byId.get('cp1')?.parent).toBe('c1');
+      expect(byId.get('cp2')?.parent).toBe('c2');
+      // Root-level blocks stay root-level.
+      expect(byId.get('p1')?.parent).toBeUndefined();
+      expect(byId.get('p2')?.parent).toBeUndefined();
+    };
+
+    it('preserves a column subtree on the strip-all path', () => {
+      expectColumnTreeIntact(collapseToLegacy(columnTree()));
+    });
+
+    it('preserves a column subtree when a flat toggle forces the collapse loop', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'tog', type: 'toggle', data: { text: 'Toggle' }, content: ['tc'] },
+        { id: 'tc', type: 'paragraph', data: { text: 'toggle child' }, parent: 'tog' },
+        ...columnTree(),
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expectColumnTreeIntact(result);
+      // The toggle still collapses to its legacy shape.
+      expect(result.find(b => b.id === 'tog')?.type).toBe('toggleList');
+    });
+
+    it('keeps a table (with cell block refs) nested inside a column', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['t1'] },
+        {
+          id: 't1',
+          type: 'table',
+          parent: 'c1',
+          data: { withHeadings: false, content: [[{ blocks: ['cell1'] }]] },
+          content: ['cell1'],
+        },
+        { id: 'cell1', type: 'paragraph', data: { text: 'A' }, parent: 't1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+      const byId = new Map(result.map(b => [b.id, b]));
+
+      expect(byId.get('cl1')?.content).toEqual(['c1']);
+      expect(byId.get('c1')?.parent).toBe('cl1');
+      expect(byId.get('c1')?.content).toEqual(['t1']);
+      expect(byId.get('t1')?.parent).toBe('c1');
+      expect(byId.get('cell1')?.parent).toBe('t1');
+    });
+
+    it('does not drop list items nested inside a column', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['li1'] },
+        { id: 'li1', type: 'list', data: { text: 'item', style: 'unordered' }, parent: 'c1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+      const byId = new Map(result.map(b => [b.id, b]));
+
+      expect(byId.get('li1')).toBeDefined();
+      expect(byId.get('li1')?.parent).toBe('c1');
+      expect(byId.get('c1')?.content).toEqual(['li1']);
+    });
+
+    it('keeps a table subtree inside a toggle body instead of dangling its cells at root', () => {
+      // The toggle collapses to its legacy `toggleList` body. The table has no
+      // legacy inline form, so it must ride INSIDE that body together with its
+      // cell blocks — otherwise the cells stay at document root pointing at a
+      // parent that no longer exists in the block array.
+      const blocks: OutputBlockData[] = [
+        { id: 'tog', type: 'toggle', data: { text: 'T' }, content: ['t1'] },
+        {
+          id: 't1',
+          type: 'table',
+          parent: 'tog',
+          data: { withHeadings: false, content: [[{ blocks: ['cell1'] }]] },
+          content: ['cell1'],
+        },
+        { id: 'cell1', type: 'paragraph', data: { text: 'A' }, parent: 't1' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+
+      expect(validateHierarchy(result)).toEqual([]);
+      expect(result.find(b => b.id === 'cell1')).toBeUndefined();
+
+      const toggle = result.find(b => b.id === 'tog');
+      const bodyBlocks = (toggle?.data as { body?: { blocks?: OutputBlockData[] } }).body?.blocks ?? [];
+      const table = bodyBlocks.find(b => b.id === 't1');
+      const cell = bodyBlocks.find(b => b.id === 'cell1');
+
+      expect(table?.content).toEqual(['cell1']);
+      expect(cell?.parent).toBe('t1');
+    });
+
+    it('round-trips a column tree through collapse + expand', () => {
+      const collapsed = collapseToLegacy(columnTree());
+      const expanded = expandToHierarchical(collapsed);
+      const byId = new Map(expanded.map(b => [b.id, b]));
+
+      expect(byId.get('c1')?.parent).toBe('cl1');
+      expect(byId.get('cp1')?.parent).toBe('c1');
+      expect(byId.get('cp2')?.parent).toBe('c2');
+      expect(validateHierarchy(expanded)).toEqual([]);
+    });
+
+    it('preserves nested column lists (columns inside a column)', () => {
+      const blocks: OutputBlockData[] = [
+        { id: 'cl1', type: 'column_list', data: {}, content: ['c1'] },
+        { id: 'c1', type: 'column', data: {}, parent: 'cl1', content: ['cl2'] },
+        { id: 'cl2', type: 'column_list', data: {}, parent: 'c1', content: ['c2'] },
+        { id: 'c2', type: 'column', data: {}, parent: 'cl2', content: ['p'] },
+        { id: 'p', type: 'paragraph', data: { text: 'deep' }, parent: 'c2' },
+      ];
+
+      const result = collapseToLegacy(blocks);
+      const byId = new Map(result.map(b => [b.id, b]));
+
+      expect(byId.get('cl2')?.parent).toBe('c1');
+      expect(byId.get('c2')?.parent).toBe('cl2');
+      expect(byId.get('p')?.parent).toBe('c2');
     });
   });
 

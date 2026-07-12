@@ -1,7 +1,6 @@
-import { BORDER_WIDTH } from './table-core';
+import { BORDER_WIDTH, MIN_COL_WIDTH } from './table-core';
 
 const RESIZE_ATTR = 'data-blok-table-resize';
-const MIN_COL_WIDTH = 50;
 const HANDLE_HIT_WIDTH = 16;
 
 /**
@@ -28,6 +27,7 @@ export class TableResize {
   private boundPointerDown: (e: PointerEvent) => void;
   private boundPointerMove: (e: PointerEvent) => void;
   private boundPointerUp: (e: PointerEvent) => void;
+  private boundPointerCancel: (e: PointerEvent) => void;
 
   public get enabled(): boolean {
     return this._enabled;
@@ -55,7 +55,8 @@ export class TableResize {
 
     this.boundPointerDown = this.onPointerDown.bind(this);
     this.boundPointerMove = this.onPointerMove.bind(this);
-    this.boundPointerUp = this.onPointerUp.bind(this);
+    this.boundPointerUp = this.onPointerEnd.bind(this);
+    this.boundPointerCancel = this.onPointerEnd.bind(this);
 
     this.gridEl.style.position = 'relative';
 
@@ -72,6 +73,7 @@ export class TableResize {
     this.gridEl.removeEventListener('pointerdown', this.boundPointerDown);
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
+    document.removeEventListener('pointercancel', this.boundPointerCancel);
     this.dragColElements = null;
 
     this.handles.forEach(handle => handle.remove());
@@ -181,6 +183,12 @@ export class TableResize {
 
     document.addEventListener('pointermove', this.boundPointerMove);
     document.addEventListener('pointerup', this.boundPointerUp);
+    // With pointer capture the browser fires pointercancel INSTEAD of pointerup
+    // when it takes the gesture over (touch pan, device disruption). Without
+    // this listener the drag would stay "active" forever: dangling document
+    // listeners, userSelect:none stuck on the grid — and onChange never called,
+    // so the widths already painted into the DOM never reach the model.
+    document.addEventListener('pointercancel', this.boundPointerCancel);
   }
 
   private onPointerMove(e: PointerEvent): void {
@@ -198,7 +206,17 @@ export class TableResize {
     this.onDrag?.();
   }
 
-  private onPointerUp(): void {
+  /**
+   * End of a resize drag — pointerup AND pointercancel.
+   *
+   * A cancelled drag COMMITS rather than aborts: every pointermove has already
+   * written its widths into the <col> elements and the grid width, so bailing
+   * out without committing would leave the DOM resized while the model still
+   * holds the old widths — the table would silently snap back on the next
+   * render/save. Committing keeps model and DOM in agreement and keeps the
+   * result the user was looking at when the gesture was taken away.
+   */
+  private onPointerEnd(): void {
     if (!this.isDragging) {
       return;
     }
@@ -214,6 +232,7 @@ export class TableResize {
 
     document.removeEventListener('pointermove', this.boundPointerMove);
     document.removeEventListener('pointerup', this.boundPointerUp);
+    document.removeEventListener('pointercancel', this.boundPointerCancel);
     this.dragColElements = null;
 
     this.onChange([...this.colWidths]);
@@ -233,6 +252,8 @@ export class TableResize {
     const totalWidth = this.colWidths.reduce((sum, w) => sum + w, 0);
 
     this.gridEl.style.width = `${totalWidth + BORDER_WIDTH}px`;
+    // Leaving fluid mode: the percent-mode floor would fight the pinned width.
+    this.gridEl.style.minWidth = '';
 
     cols.forEach((colEl, i) => {
       if (i < this.colWidths.length) {

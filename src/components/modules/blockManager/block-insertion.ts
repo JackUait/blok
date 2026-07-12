@@ -119,9 +119,22 @@ export class BlockInsertion {
       // Using the block AT targetIndex for non-replace inserts is wrong because that
       // block may be a child paragraph inside a table cell that gets displaced, while
       // the new block actually lands at the top level.
+      //
+      // The predecessor lookup MUST be bounds-checked: `getBlockByIndex(-1)` is the
+      // repository's legacy "give me the LAST block" shorthand, not "no block". An
+      // insert at index 0 has no predecessor, so an unguarded `targetIndex - 1` asked
+      // about the last block in the document — and when the document ended with a
+      // table, that block is a cell child, so every restricted tool (header, table,
+      // column_list) inserted at the TOP of the document was silently demoted to a
+      // paragraph. That is how a table side-dropped beside a top block produced a
+      // paragraph instead of a column_list.
+      const predecessorBlock = targetIndex > 0
+        ? this.repository.getBlockByIndex(targetIndex - 1)
+        : undefined;
+
       const neighborBlock = replace
         ? this.repository.getBlockByIndex(targetIndex)
-        : (this.repository.getBlockByIndex(targetIndex - 1) ?? this.repository.getBlockByIndex(targetIndex));
+        : (predecessorBlock ?? this.repository.getBlockByIndex(targetIndex));
 
       if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
         return this.dependencies.config.defaultBlock ?? 'paragraph';
@@ -316,14 +329,24 @@ export class BlockInsertion {
   }
 
   /**
-   * Always inserts at the end
+   * Always inserts at the end of the DOCUMENT.
+   *
+   * `forceTopLevel` is mandatory here: nested-block tools keep their children at
+   * the TAIL of the flat store, so the raw predecessor of the append slot is a
+   * column child / table cell paragraph. Without it, insert()'s
+   * column-inheritance rescue adopts the appended block INTO the last column,
+   * and the store places its holder inside that container — i.e. "add a block
+   * below the document" would write inside the columns instead.
    * @param blocksStore - The blocks store to modify
    * @returns Inserted Block
    */
   public insertAtEnd(blocksStore: BlocksStore): Block {
     this.ctx.currentBlockIndexValue = this.repository.length - 1;
 
-    return this.ctx.insert({ appendToWorkingArea: true }, blocksStore);
+    return this.ctx.insert({
+      appendToWorkingArea: true,
+      forceTopLevel: true,
+    }, blocksStore);
   }
 
   /**

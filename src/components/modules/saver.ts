@@ -174,17 +174,25 @@ export class Saver extends Module {
       }
     }
 
-    const chainData: Array<Promise<SaverValidatedData>> = blocks.map((block: Block) => {
-      return this.getSavedData(
-        block,
-        childrenByParent.get(block.id) ?? [],
-        effectiveParentId.get(block.id) ?? null
-      );
-    });
-
     this.lastSaveError = undefined;
 
     try {
+      /**
+       * WYSIWYG order guard: the flat-array order of a container's children
+       * must match their DOM order (what the user sees). See
+       * {@link enforceDomOrderInvariant} for semantics — throws in dev/test,
+       * repairs the output to DOM order in production.
+       */
+      const orderedBlocks = this.enforceDomOrderInvariant(blocks, effectiveParentId, childrenByParent);
+
+      const chainData: Array<Promise<SaverValidatedData>> = orderedBlocks.map((block: Block) => {
+        return this.getSavedData(
+          block,
+          childrenByParent.get(block.id) ?? [],
+          effectiveParentId.get(block.id) ?? null
+        );
+      });
+
       const extractedData = await Promise.all(chainData);
       const sanitizedData = this.sanitizeExtractedData(
         extractedData,
@@ -209,6 +217,129 @@ export class Saver extends Module {
 
       return undefined;
     }
+  }
+
+  /**
+   * Parents whose children's DOM order legitimately diverges from the flat
+   * array: they render children through their own view layer (table cells by
+   * grid coordinates, database rows by the active view's grouping/sort), so
+   * the model order — not the DOM — is authoritative for them.
+   */
+  private static readonly DOM_ORDER_EXEMPT_PARENTS = new Set(['table', 'database']);
+
+  /**
+   * WYSIWYG order guard (regression family: "the image saved right under the
+   * column title moved to the very bottom of the column after saving").
+   *
+   * The saver derives each parent's content[] and the output array order from
+   * the FLAT blocks array, while the editor displays holders in DOM order. Any
+   * code path that moves a holder in the DOM without moving the block in the
+   * flat array (or vice versa) makes the saved document differ from what the
+   * user sees — silent content reordering. The plus-button's raw DOM hoist was
+   * one such path; this guard catches the whole class at the save boundary.
+   *
+   * For every parent whose children's holders are all connected and mounted
+   * inside the parent's own holder (and whose tool does not own its child DOM
+   * order — see {@link DOM_ORDER_EXEMPT_PARENTS}), the children's flat order
+   * must match their DOM document order. On divergence:
+   *   - test/dev: THROW so the offending mutation path is fixed before it ships.
+   *   - production: repair the OUTPUT to the DOM order — what the user actually
+   *     saw — and log an error. The live model is left untouched (save() is a
+   *     read path).
+   * @param blocks - live flat blocks snapshot
+   * @param effectiveParentId - per-block parent id used for output
+   * @param childrenByParent - derived children map; repaired in place in production
+   * @returns the block array to serialize (repaired copy in production, input otherwise)
+   */
+  private enforceDomOrderInvariant(
+    blocks: Block[],
+    effectiveParentId: Map<string, string | null>,
+    childrenByParent: Map<string, string[]>
+  ): Block[] {
+    const blockById = new Map(blocks.map(block => [block.id, block]));
+    const repairs = new Map<string, string[]>();
+
+    for (const [parentId, childIds] of childrenByParent) {
+      const parent = blockById.get(parentId);
+
+      if (parent === undefined || childIds.length < 2 || Saver.DOM_ORDER_EXEMPT_PARENTS.has(parent.name)) {
+        continue;
+      }
+
+      const parentHolder: unknown = parent.holder;
+
+      if (!(parentHolder instanceof HTMLElement) || !parentHolder.isConnected) {
+        continue;
+      }
+
+      const children = childIds.map(id => blockById.get(id));
+      const comparable = children.every((child): child is Block =>
+        child !== undefined &&
+        child.holder instanceof HTMLElement &&
+        child.holder.isConnected &&
+        parentHolder.contains(child.holder));
+
+      if (!comparable) {
+        continue;
+      }
+
+      const domSorted = [...children].sort((a, b) => {
+        if (a.holder === b.holder) {
+          return 0;
+        }
+
+        return (a.holder.compareDocumentPosition(b.holder) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 ? -1 : 1;
+      });
+      const domSortedIds = domSorted.map(child => child.id);
+
+      if (domSortedIds.some((id, index) => id !== childIds[index])) {
+        repairs.set(parentId, domSortedIds);
+      }
+    }
+
+    if (repairs.size === 0) {
+      return blocks;
+    }
+
+    const message =
+      `Saver: children of block(s) ${[...repairs.keys()].join(', ')} are saved in a different order than their DOM order — ` +
+      'a mutation path moved a holder in the DOM without moving the block in the flat array (or vice versa), ' +
+      'so the saved document would not match what the user sees.';
+    const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+
+    if (nodeEnv === 'test' || nodeEnv === 'development') {
+      throw new Error(message);
+    }
+
+    logLabeled(message, 'error');
+
+    // Production repair: within each affected parent, permute the children's
+    // flat positions to the DOM order. Only within-group order matters
+    // downstream (renderers mount children by per-parent flat filtering), so
+    // the group's positions in the array are reused as-is.
+    const repaired = [...blocks];
+
+    for (const [parentId, domSortedIds] of repairs) {
+      const groupPositions: number[] = [];
+
+      repaired.forEach((block, index) => {
+        if (effectiveParentId.get(block.id) === parentId) {
+          groupPositions.push(index);
+        }
+      });
+
+      groupPositions.forEach((position, k) => {
+        const block = blockById.get(domSortedIds[k]);
+
+        if (block !== undefined) {
+          repaired[position] = block;
+        }
+      });
+
+      childrenByParent.set(parentId, domSortedIds);
+    }
+
+    return repaired;
   }
 
   /**

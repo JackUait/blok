@@ -31,6 +31,11 @@ interface BlockMockOptions {
   contentIds?: string[];
   lastEditedAt?: number;
   lastEditedBy?: string | null;
+  /**
+   * Optional live DOM holder — required only by tests exercising the
+   * WYSIWYG order guard (flat-array vs DOM order of container children).
+   */
+  holder?: HTMLElement;
 }
 
 interface CreateSaverOptions {
@@ -54,12 +59,14 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
 
   const block = {
     id: options.id,
+    name: options.tool,
     save: saveMock,
     validate: validateMock,
     parentId: options.parentId ?? null,
     contentIds: options.contentIds ?? [],
     lastEditedAt: options.lastEditedAt,
     lastEditedBy: options.lastEditedBy ?? null,
+    ...(options.holder !== undefined ? { holder: options.holder } : {}),
   } as unknown as Block;
 
   return {
@@ -993,6 +1000,235 @@ describe('Saver module', () => {
       expect(saver.getLastSaveError()).toBeUndefined();
       expect(result?.blocks).toHaveLength(1);
       expect(result?.blocks[0]).not.toHaveProperty('parent');
+    });
+  });
+
+  describe('WYSIWYG order guard (flat-array vs DOM order of container children)', () => {
+    // Regression family: "the image saved right under the column title moved
+    // to the very bottom of the column after saving". Root cause was a code
+    // path (plus-button raw DOM hoist) that moved a block's holder in the DOM
+    // without moving its flat-array position — the editor displayed one order,
+    // the Saver (which derives each parent's content[] from the flat array)
+    // emitted another. This guard makes the saver the last line of defense:
+    // dev/test saves THROW on such divergence so any future path that desyncs
+    // DOM from the model is caught in CI; production saves repair the output
+    // to the DOM order (what the user actually saw) and log an error.
+
+    /**
+     * Builds a column with three children whose FLAT order is
+     * [heading, body, image] but whose DOM order inside the column's
+     * container is [heading, image, body] — the reported bug's shape.
+     */
+    const divergentColumnBlocks = (): { blocks: Block[]; cleanup: () => void } => {
+      const columnHolder = document.createElement('div');
+      const container = document.createElement('div');
+
+      columnHolder.appendChild(container);
+      document.body.appendChild(columnHolder);
+
+      const headingHolder = document.createElement('div');
+      const imageHolder = document.createElement('div');
+      const bodyHolder = document.createElement('div');
+
+      // DOM (what the user sees): heading, image, body.
+      container.append(headingHolder, imageHolder, bodyHolder);
+
+      const column = createBlockMock({
+        id: 'col1',
+        tool: 'column',
+        data: {},
+        contentIds: ['h1', 'body1', 'img1'],
+        holder: columnHolder,
+      });
+      const heading = createBlockMock({
+        id: 'h1',
+        tool: 'header',
+        data: { text: 'Title' },
+        parentId: 'col1',
+        holder: headingHolder,
+      });
+      const body = createBlockMock({
+        id: 'body1',
+        tool: 'paragraph',
+        data: { text: 'Body' },
+        parentId: 'col1',
+        holder: bodyHolder,
+      });
+      const image = createBlockMock({
+        id: 'img1',
+        tool: 'image',
+        data: { url: 'https://example.com/x.png' },
+        parentId: 'col1',
+        holder: imageHolder,
+      });
+
+      return {
+        // FLAT order (what a buggy path left behind): heading, body, image.
+        blocks: [column.block, heading.block, body.block, image.block],
+        cleanup: () => columnHolder.remove(),
+      };
+    };
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      document.body.innerHTML = '';
+    });
+
+    it('throws in test env when a column child\'s DOM order diverges from its flat-array order', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = divergentColumnBlocks();
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, header: {}, image: {}, column: {} },
+      });
+
+      await expect(saver.save()).resolves.toBeUndefined();
+      expect(saver.getLastSaveError()).toBeInstanceOf(Error);
+      expect((saver.getLastSaveError() as Error).message).toMatch(/DOM order/);
+
+      cleanup();
+    });
+
+    it('repairs the output to the DOM order (WYSIWYG) in production and logs an error', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = divergentColumnBlocks();
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, header: {}, image: {}, column: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(result).toBeDefined();
+      expect(saver.getLastSaveError()).toBeUndefined();
+
+      // The emitted content[] follows what the user SAW: heading, image, body.
+      const column = result?.blocks.find(b => b.id === 'col1');
+
+      expect(column?.content).toEqual(['h1', 'img1', 'body1']);
+
+      // The output ARRAY order matches too (the renderer mounts children by
+      // array order, so content[] alone is not enough).
+      const childIdsInArrayOrder = result?.blocks
+        .filter(b => b.parent === 'col1')
+        .map(b => b.id);
+
+      expect(childIdsInArrayOrder).toEqual(['h1', 'img1', 'body1']);
+
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/DOM order/), 'error');
+
+      cleanup();
+    });
+
+    it('does not interfere when flat order and DOM order agree', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const columnHolder = document.createElement('div');
+      const container = document.createElement('div');
+
+      columnHolder.appendChild(container);
+      document.body.appendChild(columnHolder);
+
+      const headingHolder = document.createElement('div');
+      const bodyHolder = document.createElement('div');
+
+      container.append(headingHolder, bodyHolder);
+
+      const column = createBlockMock({
+        id: 'col1',
+        tool: 'column',
+        data: {},
+        contentIds: ['h1', 'body1'],
+        holder: columnHolder,
+      });
+      const heading = createBlockMock({
+        id: 'h1',
+        tool: 'header',
+        data: { text: 'Title' },
+        parentId: 'col1',
+        holder: headingHolder,
+      });
+      const body = createBlockMock({
+        id: 'body1',
+        tool: 'paragraph',
+        data: { text: 'Body' },
+        parentId: 'col1',
+        holder: bodyHolder,
+      });
+
+      const { saver } = createSaver({
+        blocks: [column.block, heading.block, body.block],
+        toolSanitizeConfigs: { paragraph: {}, header: {}, column: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks.find(b => b.id === 'col1')?.content).toEqual(['h1', 'body1']);
+      expect(logLabeledSpy).not.toHaveBeenCalledWith(expect.stringMatching(/DOM order/), 'error');
+
+      columnHolder.remove();
+    });
+
+    it('skips self-managing containers whose DOM order legitimately diverges (database views)', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const dbHolder = document.createElement('div');
+      const container = document.createElement('div');
+
+      dbHolder.appendChild(container);
+      document.body.appendChild(dbHolder);
+
+      const rowAHolder = document.createElement('div');
+      const rowBHolder = document.createElement('div');
+
+      // DOM shows B before A (e.g. a board view grouped by status).
+      container.append(rowBHolder, rowAHolder);
+
+      const database = createBlockMock({
+        id: 'db1',
+        tool: 'database',
+        data: {},
+        contentIds: ['rowA', 'rowB'],
+        holder: dbHolder,
+      });
+      const rowA = createBlockMock({
+        id: 'rowA',
+        tool: 'database-row',
+        data: {},
+        parentId: 'db1',
+        holder: rowAHolder,
+      });
+      const rowB = createBlockMock({
+        id: 'rowB',
+        tool: 'database-row',
+        data: {},
+        parentId: 'db1',
+        holder: rowBHolder,
+      });
+
+      const { saver } = createSaver({
+        blocks: [database.block, rowA.block, rowB.block],
+        toolSanitizeConfigs: { database: {}, 'database-row': {} },
+      });
+
+      const result = await saver.save();
+
+      // No throw, no reorder: the database's flat order is authoritative.
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks.find(b => b.id === 'db1')?.content).toEqual(['rowA', 'rowB']);
+
+      dbHolder.remove();
     });
   });
 });

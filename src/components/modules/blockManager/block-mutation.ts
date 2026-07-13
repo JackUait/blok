@@ -450,9 +450,26 @@ export class BlockMutation {
        * api) still get the auto-heal — `isInMoveGroup` is only true while
        * DragController's `transactMoves` wrapper is open.
        */
+      /**
+       * SAME-parent nested reorder must ALSO re-run setBlockParent: the
+       * positional `blocksStore.move()` deliberately skips the DOM for nested
+       * holders (correct for table cells, which manage their own cell DOM),
+       * so a within-column / within-toggle reorder via block-settings
+       * "move up/down", keyboard shortcuts or the public api updates the flat
+       * array while the holders stay put — the user sees no change, but the
+       * saved order flips (the WYSIWYG divergence the Saver's DOM-order guard
+       * now rejects). Re-asserting the unchanged parent through
+       * `setBlockParent` re-mounts the holder at its flat-array position (the
+       * same trick DragController uses for in-toggle reorders); for table
+       * cells the anti-stealing container guard makes it a DOM no-op, so cell
+       * children remain untouched.
+       */
+      const isSameParentNestedReorder =
+        movedBlock.parentId === destinationParentId && destinationParentId !== null;
+
       if (
         !skipAutoHeal
-        && movedBlock.parentId !== destinationParentId
+        && (movedBlock.parentId !== destinationParentId || isSameParentNestedReorder)
         && !this.dependencies.YjsManager.isInMoveGroup
       ) {
         this.hierarchy.setBlockParent(movedBlock, destinationParentId);

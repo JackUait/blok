@@ -140,6 +140,21 @@ test.describe('flat move never crosses a columns boundary', () => {
 
     expect(await modelParent(page, 'm1'), 'm1 stays in c1').toBe('c1');
     expect(await contentOf(page, 'c1'), 'order flipped within c1').toEqual(['m1', 'h1']);
+
+    // The LIVE DOM reorders too: the positional store move skips nested
+    // holders, so the move pipeline must re-mount the holder at its new
+    // flat position — otherwise the user sees no change while the saved
+    // order flips (the WYSIWYG divergence the saver's DOM-order guard rejects).
+    const domOrder = await page.evaluate(() => {
+      const column = document.querySelector('[data-blok-column]');
+
+      return column === null
+        ? []
+        : Array.from(column.querySelectorAll('[data-blok-element][data-blok-id]'))
+          .map((el) => el.getAttribute('data-blok-id'));
+    });
+
+    expect(domOrder, 'DOM order matches the saved order').toEqual(['m1', 'h1']);
   });
 
   test('plain root reorder still works (not over-clamped)', async ({ page }) => {

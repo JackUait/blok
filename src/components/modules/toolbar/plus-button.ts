@@ -251,18 +251,27 @@ export class PlusButtonHandler {
       : BlockManager.currentBlockIndex;
     const baseInsertIndex = insertAbove ? hoveredBlockIndex : hoveredBlockIndex + 1;
 
-    // When inserting below, skip past any blocks nested inside another block's
-    // DOM (e.g. paragraph blocks inside table cells). The block array may
-    // interleave nested blocks from multiple parents, so check whether each
-    // block's holder lives inside any block-wrapper ancestor rather than only
-    // the hovered block's holder.
+    // When inserting below, skip past the hovered block's OWN nested children
+    // (e.g. paragraph blocks inside its table cells, which trail the table in
+    // the flat array) so "below" means below the hovered block's whole subtree.
+    //
+    // Only the hovered block's descendants may be skipped. Treating EVERY
+    // nested block as skippable (the previous behaviour) walked past the
+    // hovered block's follower siblings inside a column — and past the next
+    // columns' children too — landing the new block's FLAT index at the end of
+    // the layout while a raw DOM hoist made it LOOK right under the hovered
+    // block. The Saver derives each parent's content[] from the flat array, so
+    // the block then SAVED at the bottom of the (wrong) column even though the
+    // editor displayed it under the title.
     const blocksAfterInsert = BlockManager.blocks.slice(baseInsertIndex);
     const isNested = (block: Block): boolean =>
       block.holder.parentElement?.closest('[data-blok-testid="block-wrapper"]') !== null;
-    const firstNonNestedOffset = !insertAbove && hoveredBlock && blocksAfterInsert.length > 0
-      ? blocksAfterInsert.findIndex((block) => !isNested(block))
+    const isInHoveredSubtree = (block: Block): boolean =>
+      hoveredBlock !== null && hoveredBlock.holder.contains(block.holder);
+    const firstNonSubtreeOffset = !insertAbove && hoveredBlock && blocksAfterInsert.length > 0
+      ? blocksAfterInsert.findIndex((block) => !isInHoveredSubtree(block))
       : 0;
-    const insertIndex = baseInsertIndex + (firstNonNestedOffset === -1 ? blocksAfterInsert.length : firstNonNestedOffset);
+    const insertIndex = baseInsertIndex + (firstNonSubtreeOffset === -1 ? blocksAfterInsert.length : firstNonSubtreeOffset);
 
     // When the hovered block is top-level, the new block must be inserted as a
     // top-level sibling from the start (forceTopLevel). Inserting by flat index
@@ -280,12 +289,21 @@ export class PlusButtonHandler {
       ? hoveredBlock
       : (emptyBlockToReuse ?? BlockManager.insertDefaultBlockAtIndex(insertIndex, true, false, hoveredIsTopLevel));
 
-    // For a NESTED hovered block (e.g. inside a column), the new block belongs
-    // in the hovered block's container. The flat-index insertion may still have
-    // placed the holder inside a different nested container; move it to be a
-    // sibling after the hovered block.
-    if (targetBlock !== hoveredBlock && emptyBlockToReuse === null && isNested(targetBlock)) {
-      hoveredBlock?.holder.after(targetBlock.holder);
+    // For a NESTED hovered block (inside a column, toggle or callout), the new
+    // block belongs in the hovered block's container: reparent it through the
+    // model so parentId, the parent's contentIds AND the holder's DOM position
+    // stay consistent with the flat index. A raw `holder.after(...)` DOM hoist
+    // here (the previous behaviour) moved only the DOM — the model kept the
+    // stale flat position/parent, so the block visually sat under the hovered
+    // block but SAVED at the bottom of the layout.
+    if (
+      targetBlock !== hoveredBlock &&
+      emptyBlockToReuse === null &&
+      hoveredBlock !== null &&
+      hoveredBlock.parentId !== null &&
+      targetBlock.parentId !== hoveredBlock.parentId
+    ) {
+      BlockManager.setBlockParent(targetBlock, hoveredBlock.parentId);
     }
 
     /**

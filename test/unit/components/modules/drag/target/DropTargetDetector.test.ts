@@ -1725,16 +1725,18 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(columns);
     });
 
-    it('redirects a drop in the empty space below a column to the column\'s LAST child (into-column), not the column container', () => {
+    it('redirects a drop in the empty space below a column to a ROOT drop below the column_list, never nested into the column', () => {
       const source = createSideTestBlock({ id: 'source' });
-      const column = createSideTestBlock({ id: 'col-1', name: 'column' });
+      const list = createSideTestBlock({ id: 'cl-1', name: 'column_list' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column', parentId: 'cl-1' });
       const child1 = createSideTestBlock({ id: 'child-1', parentId: 'col-1' });
       const child2 = createSideTestBlock({ id: 'child-2', parentId: 'col-1' });
 
       // The column spans y 100..400, but its last block (child2) ends at y 240,
-      // leaving ~160px of EMPTY column space below it — the bug zone. A cursor in
-      // that gap resolves (via closest) to the column CONTAINER block, which used
-      // to give a container-bottom indicator AND a drop that spawned a new column.
+      // leaving ~160px of EMPTY column space below it — the "below the columns"
+      // zone. A cursor in that gap resolves (via closest) to the column CONTAINER
+      // block. The drop must go to page ROOT below the column_list, never adopt
+      // the block into the column (where it then looks permanently stuck).
       vi.spyOn(column.holder, 'getBoundingClientRect').mockReturnValue({
         top: 100, bottom: 400, left: 300, right: 500, width: 200, height: 300, x: 300, y: 100, toJSON: () => ({}),
       });
@@ -1761,14 +1763,60 @@ describe('DropTargetDetector', () => {
       wrapper.appendChild(emptyZone);
       document.body.appendChild(columns);
 
-      const bm = createSideBlockManager([column, child1, child2, source]);
+      const bm = createSideBlockManager([list, column, child1, child2, source]);
       const det = new DropTargetDetector(createSideUIAdapter(), bm);
       det.setSourceBlocks([source]);
 
-      // Cursor at x=400 (body center), y=320 (deep in the empty gap). The drop
-      // must land at the BOTTOM of the column's last child — one indicator that
-      // matches the drop (append into the column), never the container itself.
+      // Cursor at x=400 (body center), y=320 (deep in the empty gap, below the
+      // column's content bottom of 240). The drop resolves to the column_list
+      // with a bottom edge — a parent-less root drop below the whole layout.
       const result = det.determineDropTarget(emptyZone, 400, 320, source);
+
+      expect(result?.block).toBe(list);
+      expect(result?.edge).toBe('bottom');
+      expect(result?.parentId).toBeNull();
+
+      document.body.removeChild(columns);
+    });
+
+    it('keeps a drop OVER a column\'s real content an into-column reorder (stacks in, not rerouted to root)', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const list = createSideTestBlock({ id: 'cl-1', name: 'column_list' });
+      const column = createSideTestBlock({ id: 'col-1', name: 'column', parentId: 'cl-1' });
+      const child1 = createSideTestBlock({ id: 'child-1', parentId: 'col-1' });
+      const child2 = createSideTestBlock({ id: 'child-2', parentId: 'col-1' });
+
+      vi.spyOn(column.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 400, left: 300, right: 500, width: 200, height: 300, x: 300, y: 100, toJSON: () => ({}),
+      });
+      vi.spyOn(child2.holder, 'getBoundingClientRect').mockReturnValue({
+        top: 200, bottom: 240, left: 300, right: 500, width: 200, height: 40, x: 300, y: 200, toJSON: () => ({}),
+      });
+      const child2Content = document.createElement('div');
+      child2Content.setAttribute('data-blok-element-content', '');
+      child2.holder.appendChild(child2Content);
+      vi.spyOn(child2Content, 'getBoundingClientRect').mockReturnValue({
+        top: 200, bottom: 240, left: 300, right: 500, width: 200, height: 40, x: 300, y: 200, toJSON: () => ({}),
+      });
+
+      const columns = document.createElement('div');
+      columns.setAttribute('data-blok-columns', '');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-blok-column', '');
+      wrapper.append(child1.holder, child2.holder);
+      column.holder.appendChild(wrapper);
+      columns.appendChild(column.holder);
+      document.body.appendChild(columns);
+
+      const bm = createSideBlockManager([list, column, child1, child2, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm);
+      det.setSourceBlocks([source]);
+
+      // Cursor at y=232 — over child2's content (bottom half, above its 240
+      // content bottom). elementFromPoint would resolve to the child itself; the
+      // drop stacks into the column beside/after that content, NOT rerouted to
+      // root.
+      const result = det.determineDropTarget(child2.holder, 400, 232, source);
 
       expect(result?.block).toBe(child2);
       expect(result?.edge).toBe('bottom');
@@ -2065,23 +2113,24 @@ describe('DropTargetDetector', () => {
       });
     };
 
-    it('stacks a gutter drop into the column whose dead gap it lands in, instead of inserting a new column', () => {
+    it('routes a gutter drop in a column dead gap to a ROOT drop below the column_list, not into the column or a new column', () => {
       const source = createSideTestBlock({ id: 'source' });
-      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column' });
+      const list = createSideTestBlock({ id: 'cl', name: 'column_list' });
+      const leftColumn = createSideTestBlock({ id: 'col-left', name: 'column', parentId: 'cl' });
       const leftChild = createSideTestBlock({ id: 'left-child', parentId: 'col-left' });
-      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column' });
+      const rightColumn = createSideTestBlock({ id: 'col-right', name: 'column', parentId: 'cl' });
       const rightChild = createSideTestBlock({ id: 'right-child', parentId: 'col-right' });
 
       const { columns, resizer } = buildColumnRow(leftColumn, leftChild, rightColumn, rightChild);
 
       // Left column content ends at y160; right column content fills to y200. The
       // separator spans the full row (100..200), so its lower strip (160..200)
-      // overlaps the EMPTY gap below the left column — the bug zone where a drop
-      // used to insert a new column between the two.
+      // overlaps the EMPTY gap below the left column — the "below the columns"
+      // dead zone.
       stubChildContent(leftChild, 100, 160);
       stubChildContent(rightChild, 100, 200);
 
-      const bm = createSideBlockManager([leftColumn, leftChild, rightColumn, rightChild, source]);
+      const bm = createSideBlockManager([list, leftColumn, leftChild, rightColumn, rightChild, source]);
       const det = new DropTargetDetector(createSideUIAdapter(), bm);
       det.setSourceBlocks([source]);
 
@@ -2089,11 +2138,13 @@ describe('DropTargetDetector', () => {
 
       // Cursor on the separator at y180 — inside the left column's dead gap (its
       // content ended at 160) while the right column still has content. This must
-      // stack INTO the left column (bottom of its last child), NOT side-drop.
+      // go to page ROOT below the whole column_list, never nest into a column or
+      // spawn a new one.
       const inGap = det.determineDropTarget(resizer, 510, 180, source);
 
+      expect(inGap?.block).toBe(list);
       expect(inGap?.edge).toBe('bottom');
-      expect(inGap?.block).toBe(leftChild);
+      expect(inGap?.parentId).toBeNull();
 
       // Higher up (y130), both columns have content beside the separator — the
       // gutter still inserts a NEW column between them (unchanged behaviour).

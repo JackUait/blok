@@ -1827,12 +1827,14 @@ test.describe('Columns tool', () => {
     expect(membership['B one']).toBe(1);
   });
 
-  test('dropping a root block into the empty space below a short column stacks it inside that column (one position, no new column)', async ({ page }) => {
+  test('dropping a root block into the empty space below a short column drops it at ROOT below the columns (never nested into the column)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     // c1 holds two blocks (tall); c2 holds one (short). The column_list equalises
-    // row height, so c2's holder stretches BELOW "B one" — the empty gap that used
-    // to resolve to the column CONTAINER, showing a container-bottom indicator and
-    // spawning a NEW column instead of stacking into c2.
+    // row height, so c2's holder stretches BELOW "B one" — the empty "below the
+    // columns" gap. A drop there must land at page ROOT below the whole
+    // column_list, never adopt into c2 (which then looks permanently stuck, the
+    // reported bug). Aiming AT a real block's content is how you stack into a
+    // column; the empty dead space is always a root drop.
     await createBlok(page, {
       blocks: [
         { id: 'top', type: 'paragraph', data: { text: 'Loner root' } },
@@ -1897,23 +1899,30 @@ test.describe('Columns tool', () => {
     const saved = await saveBlok(page);
     const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
 
-    // No new column — the block joined c2 (the column whose gap it was dropped in).
+    // No new column, and the block did NOT join a column — it lands at page ROOT
+    // below the whole column_list.
     expect(columnOrder).toEqual(['c1', 'c2']);
-    expect(saved.blocks.find(b => b.id === 'top')?.parent).toBe('c2');
+    expect(saved.blocks.find(b => b.id === 'top')?.parent ?? null).toBeNull();
 
-    // LIVE DOM: "Loner root" mounts inside the SECOND column (index 1), beside B one.
+    const rootIds = saved.blocks
+      .filter(b => b.parent === undefined || b.parent === null)
+      .map(b => b.id);
+    expect(rootIds).toEqual(['cl1', 'top']);
+
+    // LIVE DOM: "Loner root" is NOT inside any column; B one stays in the second.
     const membership = await domColumnMembership(page);
-    expect(membership['Loner root']).toBe(1);
+    expect(membership['Loner root']).toBeUndefined();
     expect(membership['B one']).toBe(1);
   });
 
-  test('dropping on the separator in the empty gap below a short column stacks into that column (no new column)', async ({ page }) => {
+  test('dropping on the separator in the empty gap below a short column drops it at ROOT below the columns (no new column, no nesting)', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
     // c1 holds one block (short); c2 holds two (tall). The column_list equalises
     // row height, so the resize separator — which spans the FULL row — runs down
     // past the bottom of c1's only block, through c1's empty gap. A drop on that
-    // lower strip of the separator used to insert a NEW column between c1 and c2;
-    // it should instead stack into c1, the column whose gap it visually lands in.
+    // lower strip lands in the "below the columns" dead zone: it must go to page
+    // ROOT below the whole column_list — never insert a NEW column and never nest
+    // into c1 (the reported "stuck in the first column" bug).
     await createBlok(page, {
       blocks: [
         { id: 'top', type: 'paragraph', data: { text: 'Loner root' } },
@@ -1979,13 +1988,19 @@ test.describe('Columns tool', () => {
     const saved = await saveBlok(page);
     const columnOrder = saved.blocks.filter(b => b.type === 'column').map(b => b.id);
 
-    // No new column — the block joined c1 (the column whose gap it was dropped in).
+    // No new column, and the block did NOT join a column — it lands at page ROOT
+    // below the whole column_list.
     expect(columnOrder).toEqual(['c1', 'c2']);
-    expect(saved.blocks.find(b => b.id === 'top')?.parent).toBe('c1');
+    expect(saved.blocks.find(b => b.id === 'top')?.parent ?? null).toBeNull();
 
-    // LIVE DOM: "Loner root" mounts inside the FIRST column (index 0), beside A one.
+    const rootIds = saved.blocks
+      .filter(b => b.parent === undefined || b.parent === null)
+      .map(b => b.id);
+    expect(rootIds).toEqual(['cl1', 'top']);
+
+    // LIVE DOM: "Loner root" is NOT inside any column; A one stays in the first.
     const membership = await domColumnMembership(page);
-    expect(membership['Loner root']).toBe(0);
+    expect(membership['Loner root']).toBeUndefined();
     expect(membership['A one']).toBe(0);
   });
 

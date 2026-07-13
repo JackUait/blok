@@ -162,6 +162,22 @@ export class DropTargetDetector {
       return null;
     }
 
+    // A vertical drop in the EMPTY space below a column's content — the dead
+    // zone at the bottom of a shorter column beside a taller sibling, or the
+    // strip along the row's bottom edge — reads as "below the columns", not
+    // "into this column". Resolve it to a root-level drop below the enclosing
+    // column_list so the block lands AFTER the columns. Without this, the drop
+    // is silently adopted into the first column (matching the container's
+    // parentId), where it then looks permanently stuck: every subsequent drop
+    // near the columns re-adopts it the same way, so the user can never drag it
+    // back out. Runs before the container→last-child redirect below, which is
+    // reserved for genuine into-column drops over real content.
+    const belowColumns = this.belowColumnsRootTarget(resolved.block, clientY);
+
+    if (belowColumns && belowColumns.block !== sourceBlock) {
+      return belowColumns;
+    }
+
     // Empty space below a column's blocks resolves (via closest) to the column
     // CONTAINER block, whose holder is itself a [data-blok-element]. Left as-is,
     // a top/bottom drop on the container shows an indicator at the column's
@@ -520,6 +536,57 @@ export class DropTargetDetector {
   }
 
   /**
+   * When a drop resolves to a column CONTAINER (the pointer is in the column's
+   * body but not over any child block — i.e. the dead space below its content)
+   * AND that space lies below the column's last child content, returns a
+   * root-level drop below the enclosing column_list (bottom edge, no parent).
+   *
+   * This is the "below the columns" affordance: dropping in the empty lower area
+   * of a column must place the block AFTER the whole column_list at page root,
+   * never nest it inside the column. Returns null for a non-column target, a hit
+   * that still sits over the column's content (a legitimate into-column reorder,
+   * handled by {@link redirectColumnContainerTarget}), a column with no resolvable
+   * column_list parent, or when the column_list is itself being dragged.
+   */
+  /**
+   * A root-level drop below the column_list that owns `columnBlock` — bottom
+   * edge, no parent — so `resolveParentForDrop` lands the block AFTER the whole
+   * layout (page root, or the enclosing column when the list is itself nested).
+   * Null when the column has no resolvable column_list parent or that list is
+   * being dragged.
+   */
+  private columnListRootTarget(columnBlock: Block): DropTarget | null {
+    const columnListId = columnBlock.parentId;
+    const columnList = columnListId !== null
+      ? this.blockManager.getBlockById(columnListId)
+      : undefined;
+
+    if (columnList === undefined || this.sourceBlocks.includes(columnList)) {
+      return null;
+    }
+
+    return { block: columnList, edge: 'bottom', depth: 0, parentId: null };
+  }
+
+  private belowColumnsRootTarget(block: Block, clientY: number): DropTarget | null {
+    if (block.name !== 'column') {
+      return null;
+    }
+
+    // A hit over real content resolves to the child block, not the container, so
+    // a container hit is already in the dead space. Still confirm the pointer is
+    // below the column's last-child content (not a gap above it) before treating
+    // it as "below the columns".
+    const contentBottom = this.columnContentBottom(block);
+
+    if (contentBottom !== null && clientY <= contentBottom) {
+      return null;
+    }
+
+    return this.columnListRootTarget(block);
+  }
+
+  /**
    * Redirects a drop that resolved to a column CONTAINER block into the column
    * itself. The empty space below a column's blocks resolves (via closest) to the
    * column block, whose holder is a [data-blok-element]; a top/bottom drop there
@@ -585,10 +652,10 @@ export class DropTargetDetector {
     // The separator divides a left and a right column. If the cursor is in the
     // dead gap below the shorter one, redirect into it (stack at its end) rather
     // than between the two.
-    const gapStack = this.stackIntoGapColumn(resizer, clientY);
+    const gapRoot = this.belowColumnGapRootTarget(resizer, clientY);
 
-    if (gapStack !== null) {
-      return gapStack;
+    if (gapRoot !== null) {
+      return gapRoot;
     }
 
     // The separator sits between two column holders; the next one is the
@@ -611,13 +678,19 @@ export class DropTargetDetector {
   }
 
   /**
-   * When the cursor sits on a separator but in the empty gap below one of the two
-   * columns it divides, returns a bottom-edge target stacking into that (shorter)
-   * column's last child. Returns null when the cursor is beside content on BOTH
-   * sides (a real between-columns insertion), below/above both, or either column
-   * is unresolvable — letting the caller fall back to the between-columns drop.
+   * When the cursor sits on a separator but in the empty gap BELOW the shorter of
+   * the two columns it divides (or below both), returns a root-level drop below
+   * the enclosing column_list — the same "below the columns" affordance as the
+   * column-body path ({@link belowColumnsRootTarget}), so a drop in this dead
+   * strip lands after the whole layout instead of nesting into a column.
+   *
+   * The separator spans the FULL row height, so its lower strip overlaps the
+   * empty area past whichever column is shorter. Only its UPPER portion — where
+   * the cursor is beside BOTH columns' content — is a genuine between-columns
+   * insertion; that case returns null so the caller falls back to the
+   * between-columns side-drop. Returns null when either column is unresolvable.
    */
-  private stackIntoGapColumn(resizer: HTMLElement, clientY: number): DropTarget | null {
+  private belowColumnGapRootTarget(resizer: HTMLElement, clientY: number): DropTarget | null {
     const leftHolder = this.previousColumnHolder(resizer);
     const rightHolder = this.nextColumnHolder(resizer);
 
@@ -639,16 +712,14 @@ export class DropTargetDetector {
       return null;
     }
 
-    // Cursor past the left column's content but still beside the right's → in the
-    // left column's gap. The mirror case targets the right column.
-    if (clientY > leftBottom && clientY <= rightBottom) {
-      return this.stackIntoColumnTarget(leftColumn);
-    }
-    if (clientY > rightBottom && clientY <= leftBottom) {
-      return this.stackIntoColumnTarget(rightColumn);
+    // Below the shorter column's content (or below both) → the "below the
+    // columns" dead strip → root. Beside both columns' content (clientY at or
+    // above both bottoms) stays a between-columns insertion (null).
+    if (clientY <= Math.min(leftBottom, rightBottom)) {
+      return null;
     }
 
-    return null;
+    return this.columnListRootTarget(leftColumn);
   }
 
   /**
@@ -668,20 +739,6 @@ export class DropTargetDetector {
       : lastChild.holder.getBoundingClientRect();
 
     return rect.bottom;
-  }
-
-  /**
-   * A bottom-edge DropTarget that appends into a column (its last child). Null
-   * when the column has no usable last child or it is itself being dragged.
-   */
-  private stackIntoColumnTarget(columnBlock: Block): DropTarget | null {
-    const lastChild = this.lastChildOfColumn(columnBlock);
-
-    if (lastChild === undefined || this.sourceBlocks.includes(lastChild)) {
-      return null;
-    }
-
-    return { block: lastChild, edge: 'bottom', depth: 0, parentId: null };
   }
 
   /**

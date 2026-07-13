@@ -366,7 +366,18 @@ export class BlockHierarchy {
     // header escapes are handled by the [data-blok-toggle-children] block near
     // the top of this method; table cells manage their own DOM and block
     // cross-cell drops upstream — so this is scoped to columns only.
-    if (sanitizedParentId === null && block.holder.closest('[data-blok-column]') !== null) {
+    //
+    // Match BOTH the column wrapper ([data-blok-column]) AND the columns row
+    // ([data-blok-columns]) itself: a "drop below the columns" targets the
+    // column_list block with a bottom edge, which moves the block to the slot
+    // right after the list — a flat index that lands its holder directly in the
+    // columns row (a sibling of the columns), not inside any column wrapper.
+    // Without the row match, that holder strands in the row, rendering as a
+    // phantom extra column and shifting every real column's index.
+    if (
+      sanitizedParentId === null &&
+      block.holder.closest('[data-blok-column], [data-blok-columns]') !== null
+    ) {
       const allBlocks = this.repository.blocks;
       const blockIndex = allBlocks.indexOf(block);
       const isAtRoot = (b: Block): boolean => b.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) === null;

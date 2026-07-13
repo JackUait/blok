@@ -65,6 +65,20 @@ export class ColumnList implements BlockTool {
     const children = this.api.blocks.getChildren(this.blockId);
 
     if (children.length === 0) {
+      // NEVER seed while the editor is replaying Yjs history (undo/redo) or
+      // applying a remote change. During replay a re-added column_list fires
+      // rendered() BEFORE its restored columns' own add events land, so
+      // getChildren() is only TRANSIENTLY empty here — seeding now fabricates
+      // phantom columns AND displaces the real ones (which then arrive orphaned
+      // at root), the "2 columns silently became 4" corruption. Seeding is a
+      // one-shot CREATION action; only a genuine, local user creation may seed.
+      // The restored columns re-mount via their own setBlockParent during the
+      // replay. (Column solves the analogous re-seed hazard with its `populated`
+      // latch; a re-added list gets a fresh instance, so it needs this check.)
+      if (this.api.blocks.isSyncingFromYjs) {
+        return;
+      }
+
       // Drag-beside inserts the list and then fills it with explicit columns,
       // so it opts out of the default auto-seed via the transient noSeed flag.
       if (this._data.noSeed !== true) {

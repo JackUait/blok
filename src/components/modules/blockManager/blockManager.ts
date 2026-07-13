@@ -1072,15 +1072,34 @@ export class BlockManager extends Module {
     // Without this, blocks created via insertDefaultBlockAtIndex + setBlockParent (e.g.,
     // pressing Enter in a child paragraph) lose their parentId on redo because the
     // initial addBlock wrote to Yjs before setBlockParent was called.
-    // Skip during Yjs sync operations (undo/redo handler already has correct state).
-    if (this.yjsSync.isSyncingFromYjs) {
-      return;
-    }
-
     const yblock = this.Blok.YjsManager.getBlockById(block.id);
 
     if (yblock === undefined) {
       return;
+    }
+
+    // During a genuine undo/redo/remote REPLAY the Yjs record already carries the
+    // authoritative parentId (the replay handlers read it FROM the doc and call
+    // setBlockParent only to mirror it into memory), so re-writing would be
+    // redundant and could pollute the undo stack — skip it.
+    //
+    // But `isSyncingFromYjs` is ALSO elevated by the RENDERED-hook atomic wrapper
+    // (blockManager.renderBlocks / operations insert), under which a tool's
+    // rendered() may ESTABLISH a brand-new relationship the doc does not have yet
+    // — the canonical case is ColumnList.seedColumns → setBlockParent(column,
+    // column_list). Blanket-skipping there strands the columns parent-less IN THE
+    // DOC, so they re-materialise orphaned at root on the next undo/redo (the
+    // "2 columns became 4 / columns escaped their list" corruption). The precise
+    // discriminator is the doc itself: only skip when Yjs ALREADY agrees; if it
+    // does not, this is a new relationship that must be persisted. (A true replay
+    // always already agrees, so this stays a no-op there.)
+    if (this.yjsSync.isSyncingFromYjs) {
+      const yParent = yblock.get('parentId') as string | null | undefined;
+      const yParentNormalized = yParent === undefined ? null : yParent;
+
+      if (yParentNormalized === newParentId) {
+        return;
+      }
     }
 
     // Drag-reparent path: when a move group is open (DragController wraps

@@ -352,20 +352,33 @@ export class BlockMutation {
     const destinationParentId = neighborBlock !== undefined ? neighborBlock.parentId : null;
 
     /**
-     * Column-boundary clamp (keyboard / public-api move only).
+     * Structural-boundary clamp (keyboard / public-api move only).
      *
-     * A column's blocks sit contiguously in the flat array, immediately
-     * before the next sibling column's blocks. A naive flat move-down on the
-     * LAST block of a column (or move-up on the FIRST) lands it next to a
-     * block in the ADJACENT column; the cross-container auto-heal below would
-     * then re-parent it into that sibling column — ejecting it out of its own
-     * column. Block-settings "move down/up" and the keyboard shortcuts must
-     * reorder WITHIN the column only, never cross the column edge.
+     * `move()` is a FLAT reorder. When the flat index lands beside a block in a
+     * different container, the cross-container auto-heal below re-parents the
+     * moved block to that neighbour's parent. For a tool-owned structure
+     * (`column`/`column_list`, `table`) that is silent corruption, and it must
+     * be blocked SYMMETRICALLY — both directions of the boundary:
      *
-     * Clamp to a no-op when: the moving block lives in a `column`, and the
-     * destination neighbour belongs to a DIFFERENT parent (the move would
-     * cross the column boundary). Within-column reorders keep the same parent,
-     * so they are never clamped.
+     *   - EXIT: a column's own child flat-moved beside a block in the adjacent
+     *     column gets ejected into that sibling column (or a `column` moved out
+     *     of its list). Block-settings "move up/down" and the keyboard shortcuts
+     *     must reorder WITHIN the column only.
+     *   - ENTER: an OUTSIDE block (e.g. a root paragraph) flat-moved beside a
+     *     column's child gets adopted INTO that column (content jumps columns);
+     *     flat-moved beside a `column` itself gets adopted as a direct child of
+     *     the `column_list` — a rogue non-column child the list renders as a
+     *     PHANTOM extra column. `ownsChildren` names exactly the containers whose
+     *     contentIds are their own machinery (column_list, table), so entering
+     *     one via a flat reorder is never legitimate.
+     *
+     * Only fires when the move actually CROSSES a boundary
+     * (`destinationParentId !== movingBlock.parentId`), so within-container
+     * reorders (two children of the same column, reordering columns inside their
+     * list, plain root reordering) are never clamped. Clamp to a full no-op — NOT
+     * merely skipping the auto-heal — because a bare `blocksStore.move` would
+     * still strand the holder inside the foreign container (model says root, DOM
+     * says column: the phantom-column divergence), so the whole reorder is refused.
      *
      * Skipped while a Yjs move group is open (the drag path): DragController
      * legitimately drags blocks across columns and assigns the parent itself.
@@ -373,16 +386,24 @@ export class BlockMutation {
     if (
       movingBlock !== undefined
       && !this.dependencies.YjsManager.isInMoveGroup
+      && destinationParentId !== movingBlock.parentId
     ) {
       const movingParent = movingBlock.parentId !== null
         ? this.repository.getBlockById(movingBlock.parentId)
         : undefined;
+      const destinationParent = destinationParentId !== null
+        ? this.repository.getBlockById(destinationParentId)
+        : undefined;
 
-      if (
-        movingParent !== undefined
-        && movingParent.name === 'column'
-        && destinationParentId !== movingBlock.parentId
-      ) {
+      const exitsColumnStructure =
+        movingParent?.name === 'column' || movingParent?.name === 'column_list';
+      const entersOwnedStructure =
+        destinationParent !== undefined
+        && (destinationParent.name === 'column'
+          || destinationParent.name === 'column_list'
+          || destinationParent.tool.ownsChildren);
+
+      if (exitsColumnStructure || entersOwnedStructure) {
         return;
       }
     }

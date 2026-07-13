@@ -33,6 +33,18 @@ import { describe, expect, it } from 'vitest';
  *    that consults `ownsChildren`. Reaching for the raw `getPrecedingSibling`
  *    to nest is how the rule gets enforced in one gesture and forgotten in the
  *    other.
+ *
+ * 3. TOOLS DEFEND THEIR RENDER. The Tab-indent guard (halves 1-2) only stops
+ *    ONE adoption gesture. `setBlockParent` is called raw by ~30 other sites
+ *    (paste, drag, database, keyboard, the tool's own seeding) and none validate
+ *    child type, and a document can arrive ALREADY corrupted on disk. So an
+ *    ownsChildren tool must never blindly render every `getChildren()` result as
+ *    a structural slot: a rogue non-owned child would materialise as a phantom
+ *    slot (the shipped "2 columns silently became 4, content scrambled" bug).
+ *    Each ownsChildren tool must carry a render-side rogue-child defense —
+ *    either it renders ONLY children of its owned type, or it renders from its
+ *    own model and evicts children the model does not back. Registered per tool
+ *    in RENDER_DEFENSE so a NEW container tool cannot ship without one.
  */
 
 const SRC_ROOT = join(__dirname, '../../../src');
@@ -52,6 +64,29 @@ const EXEMPTIONS: Record<string, string> = {};
 const CLAIMS_EXISTING_CHILD = /setBlockParent\(\s*[^,)]+,\s*this\.[A-Za-z]*[Bb]lockId\b/;
 
 const OWNS_CHILDREN_DECLARATION = /static\s+get\s+ownsChildren\s*\(\s*\)\s*:\s*boolean\s*\{[^}]*return\s+true/;
+
+/**
+ * The render-side rogue-child defense each ownsChildren tool must carry, keyed by
+ * tool directory. `pattern` is a fingerprint of the defense in the tool's source;
+ * `mechanism` documents WHAT it is so a reviewer can verify the fingerprint still
+ * means what it claims. Adding a new ownsChildren tool WITHOUT an entry here fails
+ * the law — forcing the author to build (and name) the defense, not discover its
+ * absence in production.
+ */
+const RENDER_DEFENSE: Record<string, { pattern: RegExp; mechanism: string }> = {
+  'column-list': {
+    // rendered() mounts/resizes ONLY children whose tool name is `column`, so a
+    // rogue non-column child can never render as a phantom extra column.
+    pattern: /\.filter\(\s*\w+\s*=>\s*\w+\.name\s*===\s*COLUMN_TOOL\b/,
+    mechanism: 'rendered() renders only children whose name === COLUMN_TOOL',
+  },
+  table: {
+    // The grid renders from the model by coordinate; removeGhostChildren() then
+    // deletes any child the model does not place in a cell (findCellForBlock null).
+    pattern: /findCellForBlock\(\s*\w+\.id\s*\)\s*===\s*null/,
+    mechanism: 'removeGhostChildren() evicts children not referenced by any cell',
+  },
+};
 
 const collectSourceFiles = (dir: string, out: string[] = []): string[] => {
   for (const entry of readdirSync(dir)) {
@@ -150,5 +185,64 @@ describe('ARCHITECTURE LAW: tool-owned children are never an indent target', () 
 
       expect(source).toMatch(/getIndentTarget[\s\S]*ownsChildren/);
     });
+  });
+
+  describe('ownsChildren tools defend their render against a rogue child', () => {
+    // Every tool directory whose index.ts DECLARES ownsChildren — the precise
+    // trigger for needing a render defense (its children are rendered as slots).
+    const declaringDirs = (): string[] => {
+      const dirs = new Set<string>();
+
+      for (const file of collectSourceFiles(TOOLS_ROOT)) {
+        if (!file.endsWith('/index.ts')) {
+          continue;
+        }
+
+        if (!OWNS_CHILDREN_DECLARATION.test(readFileSync(file, 'utf8'))) {
+          continue;
+        }
+
+        const dir = toolDirOf(file);
+
+        if (dir !== null) {
+          dirs.add(dir);
+        }
+      }
+
+      return [...dirs].sort();
+    };
+
+    const ownsChildrenDirs = declaringDirs();
+
+    it('finds the known ownsChildren tools (the scan is not vacuous)', () => {
+      expect(ownsChildrenDirs).toEqual(['column-list', 'table']);
+    });
+
+    it.each(ownsChildrenDirs)(
+      '%s carries the render-side rogue-child defense registered in RENDER_DEFENSE',
+      (dir) => {
+        const defense = RENDER_DEFENSE[dir];
+
+        expect(
+          defense,
+          `${dir}/index.ts declares ownsChildren, so it renders its children as structural slots. ` +
+          'It MUST defend that render against a rogue non-owned child (render only the owned type, ' +
+          'or render from a model and evict children the model does not back) — otherwise a rogue ' +
+          'child adopted via raw setBlockParent, drag, paste, or a corrupt saved document renders as ' +
+          'a phantom slot. Register its defense fingerprint + mechanism in RENDER_DEFENSE.'
+        ).toBeDefined();
+
+        const source = collectSourceFiles(join(TOOLS_ROOT, dir))
+          .map((file) => stripComments(readFileSync(file, 'utf8')))
+          .join('\n');
+
+        expect(
+          defense.pattern.test(source),
+          `${dir}'s registered rogue-child defense (${defense.mechanism}) was not found in its ` +
+          'source — the render-side guard is missing or was refactored away. Restore it, or update ' +
+          'RENDER_DEFENSE to fingerprint the replacement defense.'
+        ).toBe(true);
+      }
+    );
   });
 });

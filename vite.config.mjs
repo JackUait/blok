@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import license from 'rollup-plugin-license';
 import unfurlPlugin from './scripts/unfurl/vite-plugin-unfurl.mjs';
+import scopeUtilitiesPlugin from './scripts/scope-utilities/vite-plugin-scope-utilities.mjs';
 
 import * as pkg from './package.json';
 
@@ -138,6 +139,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       unfurlPlugin(),
       tailwindcss(),
+      scopeUtilitiesPlugin(),
       cssInjectedByJsPlugin({
         jsAssetsFilterFunction: (outputChunk) => {
           // Only inject CSS into the main blok bundle, not locales or tools

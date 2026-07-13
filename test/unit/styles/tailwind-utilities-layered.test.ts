@@ -13,9 +13,18 @@ const css = readMainCss();
  * the host's `sm:text-4xl`, collapsing the host's responsive layout the moment
  * the editor mounts).
  *
- * The fix is to import Tailwind's utilities INTO the `utilities` cascade layer,
- * exactly as canonical `@import "tailwindcss"` does, so the host stays in
- * control of its own utilities. These tests lock that in.
+ * Importing Tailwind's utilities INTO the `utilities` cascade layer is HALF of
+ * the fix — it keeps a host Tailwind app in control of its own utilities. But a
+ * layered rule ALWAYS loses to an UN-LAYERED host reset (`* { margin: 0 }`,
+ * `h1 { font-size: inherit }`) that every non-Tailwind app ships, which would
+ * flatten editor content. The other half runs at build time
+ * (scripts/scope-utilities): the compiled `@layer utilities` block is hoisted
+ * out of the layer and each selector is scoped to Blok's interface roots — so
+ * the utilities beat un-layered host resets INSIDE the editor yet never match
+ * host elements OUTSIDE it. See scope-tailwind-utilities.test.ts.
+ *
+ * These tests lock in the authored `layer(utilities)` import, which is BOTH the
+ * host-cascade contract AND the marker the build-time scope transform keys off.
  */
 describe('Tailwind utilities are cascade-layered', () => {
   it('imports tailwindcss/utilities.css into @layer utilities', () => {

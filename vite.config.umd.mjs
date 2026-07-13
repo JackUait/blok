@@ -17,6 +17,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
+import scopeUtilitiesPlugin from './scripts/scope-utilities/vite-plugin-scope-utilities.mjs';
 import * as pkg from './package.json';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -60,6 +61,7 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
+      scopeUtilitiesPlugin(),
       cssInjectedByJsPlugin(),
     ],
   };

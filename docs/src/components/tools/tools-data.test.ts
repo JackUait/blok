@@ -95,4 +95,34 @@ describe('tools documentation coverage', () => {
     expect(audio!.default).toBe(`"${DEFAULT_CAPTION_PLACEHOLDER}"`);
     expect(audio!.default).toBe(video!.default);
   });
+
+  const uploaderCases = [
+    { toolId: 'audio', dts: 'types/tools/audio.d.ts' },
+    { toolId: 'video', dts: 'types/tools/video.d.ts' },
+  ];
+
+  for (const { toolId, dts } of uploaderCases) {
+    it(`${toolId} uploader description matches uploadByUrl's real return type`, () => {
+      // Root cause: the description claimed both methods resolve to `{ url, fileName? }`,
+      // but only uploadByFile does — uploadByUrl resolves to `{ url }`. Ground truth is the
+      // uploader type in ${dts}.
+      const typeSrc = readSource(dts);
+      const uploadByUrlLine = typeSrc.match(/uploadByUrl\?[^\n]*/)?.[0] ?? '';
+      expect(uploadByUrlLine).toContain('uploadByUrl');
+      expect(
+        uploadByUrlLine,
+        `${dts}: uploadByUrl unexpectedly declares fileName`,
+      ).not.toContain('fileName');
+
+      const uploader = TOOL_SECTIONS.find((s) => s.id === toolId)?.configOptions?.find(
+        (o) => o.option === 'uploader',
+      );
+      const desc = uploader?.description ?? '';
+      expect(desc).toContain('uploadByUrl');
+      expect(
+        desc,
+        `${toolId} uploader description claims uploadByUrl resolves to { url, fileName? }, but its type is { url }`,
+      ).not.toMatch(/each resolving to `\{ url, fileName\? \}`/);
+    });
+  }
 });

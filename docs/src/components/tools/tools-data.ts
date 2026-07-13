@@ -1037,7 +1037,7 @@ const editor = new Blok({
         type: 'AudioUploader',
         default: 'undefined',
         description:
-          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, audio falls back to a blob URL or the pasted URL.',
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, audio falls back to a blob URL or the pasted URL.',
       },
       {
         option: 'types',
@@ -1122,7 +1122,7 @@ const editor = new Blok({
         type: 'VideoUploader',
         default: 'undefined',
         description:
-          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the pasted URL.',
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the pasted URL.',
       },
       {
         option: 'types',

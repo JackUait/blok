@@ -191,7 +191,6 @@ editor.destroy();`,
         type: "InlineToolbar",
         description: "Inline toolbar API module",
       },
-      { name: "events", type: "Events", description: "Events API module" },
     ],
   },
   {
@@ -740,8 +739,8 @@ editor.blocks.stopBlockMutationWatching(0);
         description: "Save the block content and return its data.",
         example: `const block = editor.blocks.getById('block-123');
 const saved = await block.save();
-// saved resolves to a SavedData wrapper (or undefined if extraction fails):
-// { id: 'block-123', tool: 'paragraph', data: { text: 'Block content' }, tunes: {}, time: 1717000000000 }
+// saved resolves to a SavedData object (or undefined if extraction fails):
+// { id: 'block-123', tool: 'paragraph', data: { text: 'Block content' }, time: 1717000000000 }
 console.log(saved?.data); // { text: 'Block content' }`,
       },
       {
@@ -1686,12 +1685,12 @@ interface OutputData {
   "time": 1704067200000,
   "blocks": [
     {
-      "id": "block-abc123",
+      "id": "p6QK0Xz1Ab",
       "type": "paragraph",
       "data": { "text": "Hello, world!" }
     },
     {
-      "id": "block-def456",
+      "id": "hM3lTn9RdC",
       "type": "header",
       "data": { "text": "Title", "level": 2 }
     }
@@ -1738,13 +1737,13 @@ interface OutputBlockData {
 
 // Example blocks:
 const paragraphBlock: OutputBlockData = {
-  id: "block-abc123",
+  id: "p6QK0Xz1Ab",
   type: "paragraph",
   data: { "text": "Hello, world!" }
 };
 
 const headerBlock: OutputBlockData = {
-  id: "block-def456",
+  id: "hM3lTn9RdC",
   type: "header",
   data: { "text": "Chapter 1", "level": 1 }
 };
@@ -1752,7 +1751,7 @@ const headerBlock: OutputBlockData = {
 // Each list item is its own block — the list tool saves a single item,
 // not an items[] array
 const listItemBlock: OutputBlockData = {
-  id: "block-ghi789",
+  id: "wY7bV2sQ8e",
   type: "list",
   data: {
     "text": "Item 1",

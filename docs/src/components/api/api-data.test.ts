@@ -508,3 +508,74 @@ describe("API_SECTIONS", () => {
     });
   });
 });
+
+describe("docs accuracy against public type surface (root-cause guards)", () => {
+  it("Blok Class properties table lists only real public members of the Blok class", () => {
+    // Root cause: the properties table is hand-authored; every listed member must exist
+    // on the public Blok class in types/index.d.ts, or a TS consumer copying `editor.<prop>`
+    // gets "Property '<prop>' does not exist on type 'Blok'". Events are exposed via the
+    // on/off/emit methods, not an `events` property.
+    const dts = readSource("types/index.d.ts");
+    const classBody = dts.match(/export class Blok \{([\s\S]*?)\n\}/)?.[1] ?? "";
+    const publicMembers = new Set(
+      [...classBody.matchAll(/public\s+(\w+)/g)].map((m) => m[1])
+    );
+    expect(publicMembers.size).toBeGreaterThan(0);
+    const core = API_SECTIONS.find((s) => s.id === "core");
+    for (const prop of core?.properties ?? []) {
+      expect(
+        publicMembers.has(prop.name),
+        `Blok Class property "${prop.name}" is documented but is not a public member of the Blok class in types/index.d.ts`
+      ).toBe(true);
+    }
+  });
+
+  it("block.save() example only shows fields present on the public SavedData type", () => {
+    // Root cause: block.save() is publicly typed Promise<void|SavedData>; the illustrated
+    // object must not include fields absent from SavedData (types/data-formats/block-data.d.ts).
+    // `tunes` exists at runtime but is not part of the public SavedData return type.
+    const savedDataBody =
+      readSource("types/data-formats/block-data.d.ts").match(
+        /interface SavedData \{([\s\S]*?)\}/
+      )?.[1] ?? "";
+    const savedDataFields = new Set(
+      [...savedDataBody.matchAll(/(\w+)\s*:/g)].map((m) => m[1])
+    );
+    expect(savedDataFields.has("id")).toBe(true);
+    const saveMethod = API_SECTIONS.find((s) => s.id === "block-api")?.methods?.find(
+      (m) => m.name === "block.save()"
+    );
+    const example = saveMethod?.example ?? "";
+    if (!savedDataFields.has("tunes")) {
+      expect(
+        example,
+        "block.save() example illustrates a `tunes` field, but the public SavedData return type has no tunes property"
+      ).not.toContain("tunes");
+    }
+  });
+
+  it("OutputData / OutputBlockData example ids match the real serialized block-id format", () => {
+    // Root cause: these examples show what save() actually emits — 10-char nanoids per
+    // BLOCK_ID_PATTERN, never a hand-written "block-" prefix.
+    const patternSrc = readSource("src/components/utils/id-generator.ts").match(
+      /BLOCK_ID_PATTERN\s*=\s*(\/[^;]+\/)/
+    )?.[1];
+    expect(patternSrc, "could not read BLOCK_ID_PATTERN from source").toBeTruthy();
+    const blockIdPattern = new RegExp(patternSrc!.slice(1, -1));
+    const sections = API_SECTIONS.filter(
+      (s) => s.id === "output-data" || s.id === "block-data"
+    );
+    for (const s of sections) {
+      const ids = [...(s.example ?? "").matchAll(/\bid"?\s*:\s*"([^"]+)"/g)].map(
+        (m) => m[1]
+      );
+      expect(ids.length, `no example ids found in section "${s.id}"`).toBeGreaterThan(0);
+      for (const id of ids) {
+        expect(
+          blockIdPattern.test(id),
+          `Example block id "${id}" in section "${s.id}" does not match the real block-id format ${patternSrc}`
+        ).toBe(true);
+      }
+    }
+  });
+});

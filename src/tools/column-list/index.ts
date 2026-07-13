@@ -27,6 +27,7 @@ export class ColumnList implements BlockTool {
   private readonly blockId: string;
   private readOnly: boolean;
   private container: HTMLElement | null = null;
+  private evictionScheduled = false;
 
   constructor({ data, api, block, readOnly }: BlockToolConstructorOptions<ColumnListData>) {
     this.api = api;
@@ -88,8 +89,64 @@ export class ColumnList implements BlockTool {
       return;
     }
 
-    mountChildBlocks(this.container, children);
-    buildColumnResizers(this.container, children.map(child => child.holder), this.readOnly, this.api, this.blockId);
+    // STRUCTURAL INVARIANT (path-independent): a column_list renders EACH of its
+    // children as a column, so a NON-`column` child would materialise as a
+    // phantom extra column and shove the real columns sideways — the "2 columns
+    // silently became 4 / content scrambled" corruption. `setBlockParent` is
+    // called raw by ~30 sites (paste, drag, table, database, keyboard) and none
+    // validate the child type, and a document may ALREADY be corrupted on disk by
+    // the bug BEFORE this defense shipped. So render ONLY the genuine columns —
+    // the phantom is unreachable no matter HOW a rogue child entered the model.
+    const columnChildren = children.filter(child => child.name === COLUMN_TOOL);
+
+    mountChildBlocks(this.container, columnChildren);
+    buildColumnResizers(this.container, columnChildren.map(child => child.holder), this.readOnly, this.api, this.blockId);
+
+    // A rogue child is never a legitimate transient (a column_list's only valid
+    // children are columns; leaves parent to a `column`, never to the list), so
+    // evict it from the MODEL too — otherwise it lingers invisibly in saved data
+    // and the corruption survives every reload. Defer the eviction until the
+    // current operation settles (`isSyncingFromYjs` back to 0): mutating mid
+    // undo/redo replay is the RC2 hazard (it would write a stray parentId into
+    // Yjs). The render filter above already blocks the phantom synchronously, so
+    // deferring the model heal costs nothing visible.
+    if (columnChildren.length !== children.length) {
+      this.scheduleRogueEviction();
+    }
+  }
+
+  /**
+   * Evict every non-`column` direct child of this list once the editor is no
+   * longer replaying Yjs history, re-validating at eviction time (the block may
+   * have moved or been removed while we waited). Idempotent and self-terminating.
+   */
+  private scheduleRogueEviction(): void {
+    if (this.evictionScheduled) {
+      return;
+    }
+
+    this.evictionScheduled = true;
+
+    const run = (): void => {
+      // Still settling (load atomic wrapper or an in-flight undo/redo batch) —
+      // try again next frame rather than write into Yjs mid-replay.
+      if (this.api.blocks.isSyncingFromYjs) {
+        requestAnimationFrame(run);
+
+        return;
+      }
+
+      this.evictionScheduled = false;
+
+      // Re-read: the tree has settled, so anything that is STILL a non-column
+      // child of this list is genuine corruption, not a transient.
+      this.api.blocks
+        .getChildren(this.blockId)
+        .filter(child => child.name !== COLUMN_TOOL)
+        .forEach(child => this.api.blocks.setBlockParent(child.id, null));
+    };
+
+    requestAnimationFrame(run);
   }
 
   private seedColumns(): void {

@@ -108,7 +108,7 @@ describe('ColumnList tool', () => {
     const insert = vi.fn();
     const api = createMockAPI({
       blocks: {
-        getChildren: vi.fn().mockReturnValue([{ id: 'c1', holder: document.createElement('div') }]),
+        getChildren: vi.fn().mockReturnValue([{ id: 'c1', name: 'column', holder: document.createElement('div') }]),
         getBlockIndex: vi.fn().mockReturnValue(0),
         insert,
         setBlockParent: vi.fn(),
@@ -160,9 +160,9 @@ describe('ColumnList tool', () => {
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([
-          { id: 'c1', holder: h1 },
-          { id: 'c2', holder: h2 },
-          { id: 'c3', holder: h3 },
+          { id: 'c1', name: 'column', holder: h1 },
+          { id: 'c2', name: 'column', holder: h2 },
+          { id: 'c3', name: 'column', holder: h3 },
         ]),
         getBlockIndex: vi.fn().mockReturnValue(0),
         insert: vi.fn(),
@@ -184,12 +184,45 @@ describe('ColumnList tool', () => {
     expect(resizers[1].nextElementSibling).toBe(h3);
   });
 
+  it('renders ONLY column children — a rogue non-column child never becomes a phantom column', () => {
+    // Path-independent safety net: however a non-`column` block ended up as a
+    // direct child of the list (raw setBlockParent, corrupt saved data), it must
+    // NOT mount as a column. Interleave a paragraph between two real columns.
+    const h1 = document.createElement('div');
+    const rogue = document.createElement('div');
+    const h2 = document.createElement('div');
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([
+          { id: 'c1', name: 'column', holder: h1 },
+          { id: 'rogue', name: 'paragraph', holder: rogue },
+          { id: 'c2', name: 'column', holder: h2 },
+        ]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+
+    const list = new ColumnList(createColumnListOptions({}, api));
+    const container = list.render();
+    list.rendered();
+
+    // Only the two genuine columns are mounted; the rogue holder is not.
+    expect(container.contains(h1)).toBe(true);
+    expect(container.contains(h2)).toBe(true);
+    expect(container.contains(rogue)).toBe(false);
+
+    // Two columns -> exactly one separator (the rogue never got one).
+    expect(container.querySelectorAll('[data-blok-column-resizer]')).toHaveLength(1);
+  });
+
   it('does not insert resize separators in read-only mode', () => {
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([
-          { id: 'c1', holder: document.createElement('div') },
-          { id: 'c2', holder: document.createElement('div') },
+          { id: 'c1', name: 'column', holder: document.createElement('div') },
+          { id: 'c2', name: 'column', holder: document.createElement('div') },
         ]),
         getBlockIndex: vi.fn().mockReturnValue(0),
         insert: vi.fn(),
@@ -230,8 +263,8 @@ describe('ColumnList tool', () => {
     const api = createMockAPI({
       blocks: {
         getChildren: vi.fn().mockReturnValue([
-          { id: 'c1', holder: document.createElement('div') },
-          { id: 'c2', holder: document.createElement('div') },
+          { id: 'c1', name: 'column', holder: document.createElement('div') },
+          { id: 'c2', name: 'column', holder: document.createElement('div') },
         ]),
         getBlockIndex: vi.fn().mockReturnValue(0),
         insert: vi.fn(),
@@ -292,8 +325,8 @@ describe('ColumnList tool', () => {
       const api = createMockAPI({
         blocks: {
           getChildren: vi.fn().mockReturnValue([
-            { id: 'c1', holder: document.createElement('div') },
-            { id: 'c2', holder: document.createElement('div') },
+            { id: 'c1', name: 'column', holder: document.createElement('div') },
+            { id: 'c2', name: 'column', holder: document.createElement('div') },
           ]),
           getBlockIndex: vi.fn().mockReturnValue(0),
           insert: vi.fn(),

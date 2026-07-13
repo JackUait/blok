@@ -341,8 +341,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // chrome, etc.); combining both branches' growth pushes the imported bytes
     // past the 1.365 ceiling, so the headroom multiplier is nudged to 1.372.
     // ~2KB combined growth.
+    // Columns stranded-separator fix: a `display: none` rule hiding the
+    // leading/trailing/adjacent [data-blok-column-resizer] separators so a
+    // removed column no longer leaves a phantom resize bar; this nudges the
+    // imported bytes past the 1.372 ceiling, so the multiplier is bumped to
+    // 1.376. ~0.8KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.372);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.376);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -9,6 +9,19 @@
   transition: opacity 120ms ease-out, transform 120ms ease-out;
 }
 
+/*
+  Popover chrome restated UN-LAYERED. rounded-xl / bg-popover-bg come from
+  @layer utilities (host-Tailwind coexistence), but un-layered rules always beat
+  layered ones, so a consumer reset (div { border-radius: 0; background: none })
+  would strip the popover to a bare box. Scoped to Blok's own container (matches
+  nothing on the host). --blok-popover-bg is the runtime token; --color-popover-bg
+  is a Tailwind @theme inline alias not emitted as a runtime variable.
+*/
+[data-blok-popover-container] {
+  border-radius: var(--radius-xl);
+  background-color: var(--blok-popover-bg);
+}
+
 [data-blok-popover][data-blok-popover-open-top='true'] [data-blok-popover-container] {
   transform-origin: bottom left;
 }

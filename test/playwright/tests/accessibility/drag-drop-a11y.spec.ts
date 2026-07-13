@@ -361,10 +361,14 @@ test.describe('drag and drop accessibility', () => {
       // Release
       await page.mouse.up();
 
-      // Check announcement for successful drop
-      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /moved|position/i });
+      // Check announcement for successful drop. The success message ("Block
+      // moved to position N of M") is announced assertively; the polite region
+      // still holds the during-drag "Will drop at position …" text, so match on
+      // the unique "moved" token to target the completion announcement (and
+      // avoid a strict-mode match across both live regions).
+      const liveRegion = page.locator('[data-blok-announcer]', { hasText: /moved/i });
 
-      await expect(liveRegion).toContainText(/moved|position/i, { timeout: 2000 });
+      await expect(liveRegion).toContainText(/moved/i, { timeout: 2000 });
     });
   });
 });

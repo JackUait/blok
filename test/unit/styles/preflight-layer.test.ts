@@ -43,21 +43,22 @@ function splitTopLevelBlocks(css: string): TopLevelBlock[] {
     const ch = css[i];
 
     if (ch === '{') {
-      if (depth === 0) {
-        blockStart = i;
-      }
+      blockStart = depth === 0 ? i : blockStart;
       depth++;
-    } else if (ch === '}') {
-      depth--;
-      if (depth === 0 && blockStart !== -1) {
-        blocks.push({
-          prelude: css.slice(preludeStart, blockStart).trim(),
-          body: css.slice(blockStart + 1, i),
-        });
-        preludeStart = i + 1;
-        blockStart = -1;
-      }
+      continue;
     }
+
+    if (ch !== '}') continue;
+
+    depth--;
+    if (depth !== 0 || blockStart === -1) continue;
+
+    blocks.push({
+      prelude: css.slice(preludeStart, blockStart).trim(),
+      body: css.slice(blockStart + 1, i),
+    });
+    preludeStart = i + 1;
+    blockStart = -1;
   }
 
   return blocks;

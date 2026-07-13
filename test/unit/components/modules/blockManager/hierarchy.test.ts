@@ -1115,6 +1115,55 @@ describe('BlockHierarchy', () => {
       expect(before.holder.nextElementSibling).toBe(moving.holder);
     });
 
+    it('moves a root-escaping holder OUT of the columns row itself (not just a column wrapper)', () => {
+      // "Drop below the columns" targets the column_list with a bottom edge, so
+      // moveBlocks lands the block at the flat slot right after the list — a slot
+      // whose holder mounts directly in the [data-blok-columns] ROW (a sibling of
+      // the columns), NOT inside any [data-blok-column] wrapper. If the root-escape
+      // relocation only matched [data-blok-column], this holder would strand in the
+      // row as a phantom extra column that shoves the real columns sideways. It
+      // must be relocated to workingArea root after the column_list holder.
+      repository = createRepositoryWithBlocks([
+        { id: 'cl', parentId: null, contentIds: ['col'], name: 'column_list' },
+        { id: 'mover', parentId: null, contentIds: [] },
+        { id: 'col', parentId: 'cl', contentIds: ['cp'], name: 'column' },
+        { id: 'cp', parentId: 'col', contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const cl = requireBlock('cl');
+      const cp = requireBlock('cp');
+      const mover = requireBlock('mover');
+
+      const workingArea = document.createElement('div');
+
+      // column_list DOM: holder > [data-blok-columns][data-blok-nested-blocks] row
+      // > [data-blok-column] wrapper > [data-blok-nested-blocks] container > cp.
+      const row = document.createElement('div');
+      row.setAttribute('data-blok-columns', '');
+      row.setAttribute('data-blok-nested-blocks', '');
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-blok-column', '');
+      const columnContainer = document.createElement('div');
+      columnContainer.setAttribute('data-blok-nested-blocks', '');
+      wrapper.appendChild(columnContainer);
+      columnContainer.appendChild(cp.holder);
+      row.appendChild(wrapper);
+      cl.holder.appendChild(row);
+
+      workingArea.appendChild(cl.holder);
+      // STRAND: mover's holder mounted directly in the columns row (the bug state).
+      row.appendChild(mover.holder);
+
+      hierarchy.setBlockParent(mover, null);
+
+      // Relocated OUT of the row entirely, to workingArea root after the list.
+      expect(row.contains(mover.holder)).toBe(false);
+      expect(mover.holder.closest('[data-blok-columns]')).toBeNull();
+      expect(mover.holder.parentElement).toBe(workingArea);
+      expect(cl.holder.nextElementSibling).toBe(mover.holder);
+    });
+
     it('does NOT move block.holder when the new parent has no [data-blok-toggle-children] container', () => {
       repository = createRepositoryWithBlocks([
         { id: 'plain-parent', parentId: null, contentIds: [] },

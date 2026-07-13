@@ -91,6 +91,8 @@ export const COMPATIBILITY_GROUPS: CompatibilityGroup[] = [
     tools: [
       "list",
       "checklist",
+      "toggleList",
+      "callout",
       "image",
       "simple-image",
       "linkTool",

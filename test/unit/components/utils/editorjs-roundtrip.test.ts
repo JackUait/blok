@@ -4,6 +4,8 @@ import {
   expandToHierarchical,
   shouldExpandToHierarchical,
 } from '../../../../src/components/utils/data-model-transform';
+import { defaultBlockTools } from '../../../../src/tools/index';
+import { TOOL_ALIASES } from '../../../../src/components/modules/renderer';
 import type { OutputBlockData } from '../../../../types';
 
 /**
@@ -25,34 +27,20 @@ import type { OutputBlockData } from '../../../../types';
 /**
  * Canonical set of block types Blok renders WITHOUT a stub.
  *
- * Sourced from `defaultBlockTools` in src/tools/index.ts (the keys Blok
- * registers as `Tools.available` by default) PLUS the legacy aliases in
- * `TOOL_ALIASES` in src/components/modules/renderer.ts (delimiter -> divider),
- * which the renderer resolves transparently before deciding a tool is unknown.
+ * DERIVED, not hand-listed: the real `defaultBlockTools` registry
+ * (src/tools/index.ts — the keys Blok registers as `Tools.available` by
+ * default) PLUS the legacy aliases in `TOOL_ALIASES`
+ * (src/components/modules/renderer.ts, e.g. delimiter -> divider) which the
+ * renderer resolves transparently before deciding a tool is unknown. Sourcing
+ * from the live registry means a newly-added block tool can't silently make
+ * this set stale.
  *
  * Any migrated `type` outside this set would hit the renderer's
  * "Tool «X» is not found" branch and render as a Stub.
  */
 const RENDERABLE_BLOCK_TYPES = new Set<string>([
-  // defaultBlockTools keys (src/tools/index.ts)
-  'paragraph',
-  'header',
-  'list',
-  'table',
-  'toggle',
-  'callout',
-  'database',
-  'database-row',
-  'divider',
-  'quote',
-  'code',
-  'image',
-  'column_list',
-  'column',
-  'embed',
-  'bookmark',
-  // TOOL_ALIASES keys resolved by the renderer (src/components/modules/renderer.ts)
-  'delimiter',
+  ...Object.keys(defaultBlockTools),
+  ...Object.keys(TOOL_ALIASES),
 ]);
 
 /**

@@ -21,7 +21,7 @@ import { BlocksRendered } from '../events';
  * Map of legacy EditorJS tool names to their Blok equivalents.
  * Used during rendering to transparently migrate old article data.
  */
-const TOOL_ALIASES: Readonly<Record<string, string>> = {
+export const TOOL_ALIASES: Readonly<Record<string, string>> = {
   delimiter: 'divider',
 };
 

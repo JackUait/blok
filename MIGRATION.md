@@ -39,9 +39,11 @@ How each Editor.js block/tool is handled. "Auto-migrated at runtime" means the c
 |------------------------|------------------|-------|
 | `paragraph` | Drop-in unchanged | Bundled as `Blok.Paragraph` (the default block). |
 | `header` | Drop-in unchanged | Bundled as `Blok.Header`. |
-| `list` (nested **and** string-array items) | Auto-migrated at runtime | Each item expands to a flat `list` block. |
-| `checklist` (standalone tool) | Auto-migrated at runtime | Becomes `list` blocks with checklist style. Handled by the runtime only, not the codemod. |
-| `image`, `simple-image` | Auto-migrated at runtime **+** codemod | `file.url` (or `simple-image`'s flat `url`) → `url`; `withBorder` → `frame`, `stretched` → `size`. `withBackground` is dropped (warns). |
+| `list` (nested **and** string-array items) | Auto-migrated at runtime **+** codemod | Each item expands to a flat `list` block. |
+| `checklist` (standalone tool) | Auto-migrated at runtime **+** codemod | Becomes `list` blocks with checklist style. |
+| `toggleList` | Auto-migrated at runtime **+** codemod → `toggle` | Becomes a `toggle` block (or a toggle `header` when `titleVariant` is set); body blocks flatten into parented children. |
+| `callout` (legacy `body`/`variant` shape) | Auto-migrated at runtime **+** codemod | Legacy `{ body, variant, emoji }` → flat `{ emoji, textColor, backgroundColor }`; body blocks flatten into parented children. |
+| `image`, `simple-image` | Auto-migrated at runtime **+** codemod | `file.url` (or `simple-image`'s flat `url`) → `url`; `withBorder` → `frame`, `stretched: true` → `size: full`. `withBackground` is dropped (warns). |
 | `linkTool` | Auto-migrated at runtime **+** codemod → `bookmark` | `meta` flattens onto the bookmark shape; `meta.site_name` is dropped (warns). |
 | `delimiter` | Codemod renames type → `divider` | Data format is identical (`{}`). Also recognized at render, so existing data works without the rename. |
 | `quote` | Auto-migrated at runtime **+** codemod | `caption` becomes a trailing `paragraph` sibling; `alignment` is dropped (warns). The quote text/size render unchanged. |

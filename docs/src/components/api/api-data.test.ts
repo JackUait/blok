@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve, join } from "node:path";
 import { API_SECTIONS } from "./api-data";
+
+/** Repo root — docs/src/components/api → up four levels. */
+const BLOK_ROOT = resolve(__dirname, "..", "..", "..", "..");
+const readSource = (rel: string): string =>
+  readFileSync(join(BLOK_ROOT, rel), "utf8");
 
 describe("API_SECTIONS", () => {
   it("should have all defined sections", () => {
@@ -413,6 +420,91 @@ describe("API_SECTIONS", () => {
         "caret.setToBlock(blockOrIdOrIndex, position?, offset?)",
       );
       expect(method?.example).toMatch(/\/\/\s*→/);
+    });
+  });
+
+  describe("insertMany default index matches source", () => {
+    // Root cause: docs described the pre-fix implementation. Source now defaults
+    // the index to `blocks.length` (a true append past the flat tail), and
+    // validateIndex throws only on `index < 0` — so the empty-editor default (0)
+    // never errors. See src/components/modules/api/blocks.ts.
+    const findInsertMany = () =>
+      API_SECTIONS.find((s) => s.id === "blocks-api")?.methods?.find(
+        (m) => m.name === "blocks.insertMany(blocks, index?)",
+      );
+
+    it("source still appends (default = blocks.length, throws only when < 0)", () => {
+      const src = readSource("src/components/modules/api/blocks.ts");
+      expect(src).toMatch(/index:\s*number\s*=\s*this\.Blok\.BlockManager\.blocks\.length/);
+      expect(src).not.toMatch(/blocks\.length\s*-\s*1/);
+      // validateIndex throws only for negatives — the append default (0 on an
+      // empty editor) is always valid.
+      expect(src).toMatch(/if\s*\(\s*index < 0\s*\)/);
+    });
+
+    it("docs describe an append, not 'before the last block', and claim no negative-default error", () => {
+      const method = findInsertMany();
+      expect(method).toBeDefined();
+      const indexParam = method?.params?.find((p) => p.name === "index");
+      expect(indexParam?.default).not.toBe("blocks.length - 1");
+      expect(indexParam?.description).not.toMatch(/not an append/i);
+      expect(method?.description).not.toMatch(/-1 \(an error\)/);
+      expect(method?.description?.toLowerCase()).toMatch(/append|end of the document/);
+      // The fabricated "the default index errors on an empty editor" claim must
+      // be gone. Documenting a genuinely-passed negative index is still fine.
+      const badError = method?.errors?.some((e) =>
+        /empty editor|default/i.test(`${e.condition} ${e.message}`),
+      );
+      expect(badError ?? false).toBe(false);
+    });
+  });
+
+  describe("notifier cancelHandler fires for prompt too", () => {
+    // Root cause: docs claimed prompt() "never invokes" cancelHandler. Source
+    // wires makeCancelHandler(cancelHandler, …) in BOTH confirm and prompt draw
+    // paths. See src/components/utils/notifier/draw.ts.
+    it("source wires cancelHandler in both confirm and prompt", () => {
+      const src = readSource("src/components/utils/notifier/draw.ts");
+      const wired = src.match(/makeCancelHandler\(\s*cancelHandler/g) ?? [];
+      expect(wired.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("docs no longer claim prompt never invokes it", () => {
+      const section = API_SECTIONS.find((s) => s.id === "notifier-api");
+      const show = section?.methods?.find((m) => m.name === "notifier.show(options)");
+      const cancelHandler = show?.params?.find((p) => p.name === "options.cancelHandler");
+      expect(cancelHandler).toBeDefined();
+      expect(cancelHandler!.description).not.toMatch(/never invokes/i);
+      expect(cancelHandler!.description).not.toMatch(/confirm type only/i);
+      expect(cancelHandler!.description.toLowerCase()).toContain("prompt");
+    });
+  });
+
+  describe("block-data table covers every OutputBlockData field", () => {
+    // Root cause: block-data was hand-authored and drifted from the real type.
+    // Guard the WHOLE shape so future field additions can't silently go
+    // undocumented. See types/data-formats/output-data.d.ts.
+    it("every OutputBlockData field appears as a documented option", () => {
+      const dts = readSource("types/data-formats/output-data.d.ts");
+      // Skip the generic clause (<Type …, Data …>) up to the body's opening brace.
+      const body = dts.match(/export interface OutputBlockData[\s\S]*?\{([\s\S]*?)\n\}/)?.[1] ?? "";
+      const sourceFields = [...body.matchAll(/^ {2}(\w+)\??:/gm)].map((m) => m[1]);
+      expect(sourceFields).toContain("lastEditedAt");
+      expect(sourceFields).toContain("lastEditedBy");
+
+      const table = API_SECTIONS.find((s) => s.id === "block-data")?.table ?? [];
+      const documented = table.map((row) => row.option);
+      for (const field of sourceFields) {
+        expect(documented, `OutputBlockData.${field} is not documented in block-data table`).toContain(field);
+      }
+    });
+
+    it("listItem example omits depth when it is 0 (source never serializes depth: 0)", () => {
+      const listSave = readSource("src/tools/list/block-operations.ts");
+      // depth is only written when effectiveDepth > 0, so a top-level item has no depth key.
+      expect(listSave).toMatch(/effectiveDepth\s*>\s*0/);
+      const example = API_SECTIONS.find((s) => s.id === "block-data")?.example ?? "";
+      expect(example).not.toMatch(/"depth":\s*0/);
     });
   });
 });

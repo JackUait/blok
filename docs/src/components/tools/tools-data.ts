@@ -420,7 +420,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Database',
     description:
-      'A multi-view database block supporting board (Kanban), list, table, and gallery views. Stores a schema of typed properties (text, select, status, date, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, sorting, filtering, drag-and-drop reordering, inline editing, and an optional backend sync adapter.',
+      'A multi-view database block supporting board (Kanban), list, table, and gallery views. Stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, sorting, filtering, drag-and-drop reordering, inline editing, and an optional backend sync adapter.',
     importExample: `import { Database } from '@jackuait/blok/tools';`,
     configOptions: [
       {
@@ -1056,7 +1056,7 @@ const editor = new Blok({
       {
         option: 'captionPlaceholder',
         type: 'string',
-        default: 'undefined',
+        default: '"Write a caption…"',
         description: 'Placeholder text shown in the caption field.',
       },
     ],

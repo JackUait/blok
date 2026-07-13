@@ -552,7 +552,7 @@ const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undef
         name: "blocks.insertMany(blocks, index?)",
         returnType: "BlockAPI[]",
         description:
-          "Insert multiple blocks at once at the specified index. Always pass an explicit index — when omitted it defaults to before the last existing block, and resolves to -1 (an error) on an empty editor.",
+          "Insert multiple blocks at once. When the index is omitted, the blocks are appended at the end of the document.",
         example: `const blocksToInsert = [
   { id: '1', type: 'paragraph', data: { text: 'First' } },
   { id: '2', type: 'paragraph', data: { text: 'Second' } }
@@ -570,18 +570,16 @@ console.log('Inserted:', inserted.length, 'blocks');`,
             name: "index",
             type: "number",
             required: false,
-            default: "blocks.length - 1",
+            default: "end of document",
             description:
-              "Position to insert at. When omitted, defaults to the index of the last existing block (not an append).",
+              "Position to insert at. When omitted, defaults to appending at the end of the document.",
           },
         ],
         errors: [
           {
-            condition:
-              "The resolved `index` is negative (e.g. the default on an empty editor).",
+            condition: "The provided `index` is negative.",
             message: "Index should be greater than or equal to 0",
-            resolution:
-              "Always pass an explicit non-negative `index` rather than relying on the default.",
+            resolution: "Pass an `index` of 0 or greater, or omit it to append.",
           },
         ],
       },
@@ -1421,7 +1419,7 @@ editor.notifier.show({
             type: "(event: Event) => void",
             required: false,
             default: "undefined",
-            description: "Cancel/close callback (effective for confirm type only; prompt exposes it in the type but never invokes it).",
+            description: "Cancel/close callback. Invoked (when provided) before the dialog closes via the cancel button or dismiss/Escape — for both confirm and prompt types.",
           },
           {
             name: "options.inputType",
@@ -1734,6 +1732,8 @@ interface OutputBlockData {
   parent?: string;    // Id of the parent block (flat-with-references nesting)
   content?: string[]; // Ids of child blocks (flat-with-references nesting)
   indent?: number;    // Nesting/indent level
+  lastEditedAt?: number; // Timestamp (ms since epoch) of the last edit to this block
+  lastEditedBy?: string; // Id of the user who last edited this block (from user.id config)
 }
 
 // Example blocks:
@@ -1756,8 +1756,7 @@ const listItemBlock: OutputBlockData = {
   type: "list",
   data: {
     "text": "Item 1",
-    "style": "unordered",
-    "depth": 0
+    "style": "unordered"
   }
 };`,
     table: [
@@ -1802,6 +1801,18 @@ const listItemBlock: OutputBlockData = {
         type: "number (optional)",
         default: "—",
         description: "Nesting/indent level",
+      },
+      {
+        option: "lastEditedAt",
+        type: "number (optional)",
+        default: "—",
+        description: "Timestamp (ms since epoch) of the last edit to this block",
+      },
+      {
+        option: "lastEditedBy",
+        type: "string (optional)",
+        default: "—",
+        description: "Id of the user who last edited this block (from the user.id config)",
       },
     ],
   },

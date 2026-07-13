@@ -22,6 +22,10 @@
 
 const fs = require('fs');
 const path = require('path');
+// The Editor.js→Blok block-shape migration grammar is the SAME zero-dep module
+// the runtime uses (src/components/migration/legacy-grammar.cjs), so the codemod
+// and the runtime auto-migration can never disagree on how a legacy block maps.
+const { expandLegacyBlocks, createBlockIdGenerator } = require('../src/components/migration/legacy-grammar.cjs');
 
 // ============================================================================
 // Configuration
@@ -968,430 +972,76 @@ const BLOCK_TYPE_TRANSFORMS = {
   delimiter: 'divider',
 };
 
+
 /**
- * Migrate a single block object in-place semantics (returns a new object).
- * Currently handles the legacy image shape `{ type: "image", data: { file: { url } } }`
- * → `{ type: "image", data: { url, ...mapped } }`, mapping legacy editor.js
- * flags onto Blok's ImageData (types/tools/image.d.ts):
- *
- *   - `withBorder: true`  → `frame: 'border'` (false: drop, default is 'none')
- *   - `withBackground`    → drop entirely (no Blok equivalent)
- *   - `stretched: true`   → `size: 'full'`
- *   - `stretched: false`  → `size: 'lg'` (inherit non-stretched intent)
- *   - `stretched` absent  → `size: 'full'` (default)
- *   Explicit `size` in source data always wins.
- *
- * Unknown fields pass through untouched. Other block types pass through too;
- * type renames are handled separately.
- * @param {Object} block - block object with `type` and `data`
- * @returns {Object} possibly migrated block
+ * Rename any legacy `type` strings (e.g. delimiter → divider) anywhere in the
+ * tree. This is a pure type-string rename that does NOT touch block SHAPE — the
+ * runtime performs the same rename lazily at render (via TOOL_ALIASES); the
+ * codemod bakes it into the saved JSON. Shape migration is done separately by
+ * the shared grammar, before this pass runs.
+ * @param {*} node - any JSON value
+ * @returns {*} the value with legacy type strings renamed
  */
-function migrateLegacyBlockShape(block) {
-  if (!block || typeof block !== 'object' || Array.isArray(block)) {
-    return block;
+function renameLegacyTypeStrings(node) {
+  if (Array.isArray(node)) {
+    return node.map(renameLegacyTypeStrings);
   }
-  if (block.type === 'linkTool' && block.data && typeof block.data === 'object') {
-    return migrateLinkToolToBookmark(block);
-  }
-  if (block.type === 'raw' && block.data && typeof block.data === 'object') {
-    return migrateRawToCode(block);
-  }
-  if (block.type === 'attaches' && block.data && typeof block.data === 'object') {
-    return migrateAttachesToBookmark(block);
-  }
-  if (block.type !== 'image' || !block.data || typeof block.data !== 'object') {
-    return block;
-  }
-  const file = block.data.file;
-  const hasFileUrl = file && typeof file === 'object' && typeof file.url === 'string';
-  // @editorjs/simple-image stores the url flat (no `file` wrapper). Only treat a
-  // flat-url block as legacy when it still carries an editor.js-only flag —
-  // otherwise it is already in Blok-native shape and must be left alone.
-  const hasLegacySimpleImage =
-    typeof block.data.url === 'string' &&
-    ('withBorder' in block.data || 'withBackground' in block.data || 'stretched' in block.data);
+  if (node !== null && typeof node === 'object') {
+    const result = {};
 
-  if (!hasFileUrl && !hasLegacySimpleImage) {
-    return block;
-  }
-
-  const {
-    file: _file,
-    url: flatUrl,
-    withBorder,
-    withBackground: _withBackground,
-    stretched,
-    ...rest
-  } = block.data;
-
-  const inheritedSize = stretched === false ? 'lg' : 'full';
-
-  return {
-    ...block,
-    data: {
-      url: hasFileUrl ? file.url : flatUrl,
-      size: inheritedSize,
-      ...rest,
-      ...(withBorder === true ? { frame: 'border' } : {}),
-    },
-  };
-}
-
-/**
- * Migrate a legacy editor.js linkTool block to a Blok bookmark block.
- * Mirrors the runtime expansion in
- * src/components/utils/data-model-transform.ts (expandLinkToolToHierarchical):
- *
- *   { type: 'linkTool', data: { link, meta: { title?, description?,
- *       image: { url }? | string, favicon?, domain? } } }
- *   → { type: 'bookmark', data: { url: link, title?, description?,
- *       image?, favicon?, domain? } }
- *
- * `meta.image` is flattened to its `url` (object) or passed through (string).
- * `meta.site_name` and any field with no bookmark equivalent are dropped.
- * No meta → `{ url }` only.
- * @param {Object} block - linkTool block object with `data`
- * @returns {Object} bookmark block
- */
-function migrateLinkToolToBookmark(block) {
-  const meta = block.data.meta && typeof block.data.meta === 'object' ? block.data.meta : {};
-  const image = typeof meta.image === 'object' && meta.image !== null ? meta.image.url : meta.image;
-
-  return {
-    ...block,
-    type: 'bookmark',
-    data: {
-      url: block.data.link,
-      ...(meta.title !== undefined ? { title: meta.title } : {}),
-      ...(meta.description !== undefined ? { description: meta.description } : {}),
-      ...(typeof image === 'string' ? { image } : {}),
-      ...(meta.favicon !== undefined ? { favicon: meta.favicon } : {}),
-      ...(meta.domain !== undefined ? { domain: meta.domain } : {}),
-    },
-  };
-}
-
-// nanoid-compatible alphabet (URL-safe), matching the runtime's nanoid() ids.
-const BLOCK_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
-const BLOCK_ID_LENGTH = 10;
-
-/**
- * Generate a nanoid-compatible 10-character block id (A-Z, a-z, 0-9, _, -).
- * Mirrors the runtime generateBlockId() output format so statically-migrated
- * JSON carries ids in the same shape the runtime emits. No nanoid dependency
- * here (the codemod is a zero-dep standalone script), so ids are minted locally.
- * @returns {string} a 10-char block id
- */
-function generateBlockId() {
-  let id = '';
-
-  for (let i = 0; i < BLOCK_ID_LENGTH; i++) {
-    id += BLOCK_ID_ALPHABET[Math.floor(Math.random() * BLOCK_ID_ALPHABET.length)];
-  }
-
-  return id;
-}
-
-/**
- * Expand a legacy editor.js checklist block into per-item flat `list` blocks
- * with style 'checklist'. Mirrors the runtime expansion in
- * src/components/utils/data-model-transform.ts
- * (expandChecklistToHierarchical → expandListToHierarchical):
- *
- *   { type: 'checklist', data: { items: [{ text, checked }, ...] } }
- *   → [{ id, type: 'list', data: { text, checked, style: 'checklist' } }, ...]
- *
- * Blok has no dedicated checklist tool — checklist is a style of the List tool —
- * so each item becomes its own flat `list` block. One checklist expands to N
- * list blocks (N === items.length); an empty checklist expands to zero blocks.
- * The block's `tunes` (if any) are carried onto every expanded item, matching
- * the runtime which threads `block.tunes` through to each emitted list block.
- * @param {Object} block - checklist block object with `data.items`
- * @returns {Array<Object>} expanded list blocks
- */
-function migrateChecklistToList(block) {
-  const items = Array.isArray(block.data.items) ? block.data.items : [];
-
-  return items.map((item) => ({
-    id: generateBlockId(),
-    type: 'list',
-    data: {
-      text: item.text,
-      checked: item.checked,
-      style: 'checklist',
-    },
-    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
-  }));
-}
-
-/**
- * Returns true when the block is a legacy editor.js checklist block carrying an
- * `items` array. These need 1:N expansion (one checklist → N list blocks), which
- * happens at the array level rather than the generic 1:1 object transform.
- * @param {Object} block - candidate block object
- * @returns {boolean} whether the block is an editor.js checklist
- */
-function isLegacyChecklistBlock(block) {
-  return (
-    block !== null &&
-    typeof block === 'object' &&
-    !Array.isArray(block) &&
-    block.type === 'checklist' &&
-    block.data !== null &&
-    typeof block.data === 'object' &&
-    Array.isArray(block.data.items)
-  );
-}
-
-/**
- * Migrate a legacy editor.js raw block into a Blok code block. Blok has no raw
- * tool; the HTML is preserved as code text (source shown verbatim). Mirrors the
- * runtime expandRawToHierarchical.
- *
- *   { type: 'raw', data: { html } } → { type: 'code', data: { code: html } }
- * @param {Object} block - raw block object with `data.html`
- * @returns {Object} code block
- */
-function migrateRawToCode(block) {
-  const html = typeof block.data.html === 'string' ? block.data.html : '';
-
-  return {
-    ...block,
-    type: 'code',
-    data: { code: html },
-  };
-}
-
-/**
- * Migrate a legacy editor.js attaches block into a Blok bookmark. Blok has no
- * file-attachment tool, so the link is preserved as a bookmark; file metadata
- * (name/size/extension) has no bookmark equivalent and is dropped. Mirrors the
- * runtime expandAttachesToHierarchical.
- *
- *   { type: 'attaches', data: { file: { url }, title } }
- *   → { type: 'bookmark', data: { url, title? } }
- * @param {Object} block - attaches block object with `data.file`
- * @returns {Object} bookmark block
- */
-function migrateAttachesToBookmark(block) {
-  const file = block.data.file && typeof block.data.file === 'object' ? block.data.file : {};
-  const url = typeof file.url === 'string' ? file.url : '';
-  const title = typeof block.data.title === 'string' ? block.data.title : undefined;
-
-  return {
-    ...block,
-    type: 'bookmark',
-    data: {
-      url,
-      ...(title !== undefined ? { title } : {}),
-    },
-  };
-}
-
-/**
- * Returns true when the block is a legacy editor.js warning block. Warnings need
- * 1:N expansion (warning → callout + child paragraphs), handled at the array
- * level rather than the generic 1:1 object transform.
- * @param {Object} block - candidate block object
- * @returns {boolean} whether the block is an editor.js warning
- */
-function isLegacyWarningBlock(block) {
-  return (
-    block !== null &&
-    typeof block === 'object' &&
-    !Array.isArray(block) &&
-    block.type === 'warning' &&
-    block.data !== null &&
-    typeof block.data === 'object'
-  );
-}
-
-/**
- * Expand a legacy editor.js warning block into a Blok callout (⚠️ + orange) with
- * the title and message as child paragraph blocks. Mirrors the runtime
- * expandWarningToHierarchical (flat callout `{ emoji, textColor, backgroundColor }`
- * + `content[]` child refs). Empty title/message fields are skipped.
- *
- *   { type: 'warning', data: { title, message } }
- *   → [{ id, type: 'callout', data: {...}, content: [ids] }, ...childParagraphs]
- * @param {Object} block - warning block object with `data.title`/`data.message`
- * @returns {Array<Object>} callout block followed by child paragraph blocks
- */
-function migrateWarningToCallout(block) {
-  const calloutId = block.id || generateBlockId();
-  const title = typeof block.data.title === 'string' ? block.data.title : '';
-  const message = typeof block.data.message === 'string' ? block.data.message : '';
-
-  const children = [];
-
-  for (const text of [title, message]) {
-    if (text.length === 0) {
-      continue;
-    }
-    children.push({
-      id: generateBlockId(),
-      type: 'paragraph',
-      data: { text },
-      parent: calloutId,
-    });
-  }
-
-  const childIds = children.map((child) => child.id);
-
-  const callout = {
-    id: calloutId,
-    type: 'callout',
-    data: {
-      emoji: '⚠️',
-      textColor: null,
-      backgroundColor: 'orange',
-    },
-    ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
-    ...(childIds.length > 0 ? { content: childIds } : {}),
-  };
-
-  return [callout, ...children];
-}
-
-/**
- * Returns true when the block is a legacy editor.js table carrying HTML-string
- * cells. Such tables need 1:N expansion (table → table + child paragraphs),
- * since Blok tables reference cell text via child blocks, not inline strings.
- * @param {Object} block - candidate block object
- * @returns {boolean} whether the block is an editor.js string-cell table
- */
-function isLegacyTableBlock(block) {
-  if (
-    block === null ||
-    typeof block !== 'object' ||
-    Array.isArray(block) ||
-    block.type !== 'table' ||
-    block.data === null ||
-    typeof block.data !== 'object' ||
-    !Array.isArray(block.data.content)
-  ) {
-    return false;
-  }
-
-  return block.data.content.some(
-    (row) => Array.isArray(row) && row.some((cell) => typeof cell === 'string')
-  );
-}
-
-/**
- * Expand a legacy editor.js table (HTML-string cells) into a Blok-native table
- * whose cells reference child paragraph blocks by id, plus those paragraphs.
- * Mirrors the runtime expandTableToHierarchical: each non-empty cell becomes
- * `{ blocks: [<childId>] }` with a sibling paragraph (`parent === tableId`)
- * holding the text; empty cells become `{ blocks: [] }`; block-ref cells pass
- * through. Child ids are freshly generated so multiple tables never collide.
- *
- *   { type: 'table', data: { withHeadings, content: string[][] } }
- *   → [{ type: 'table', data: { ..., content: cellRefs } }, ...childParagraphs]
- * @param {Object} block - table block object with `data.content`
- * @returns {Array<Object>} table block followed by cell child paragraph blocks
- */
-function migrateTableToCellBlocks(block) {
-  const tableId = block.id || generateBlockId();
-  const data = block.data;
-  const rows = Array.isArray(data.content) ? data.content : [];
-  const children = [];
-
-  const newContent = rows.map((row) => {
-    if (!Array.isArray(row)) {
-      return row;
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'type' && typeof value === 'string' && BLOCK_TYPE_TRANSFORMS[value]) {
+        result[key] = BLOCK_TYPE_TRANSFORMS[value];
+      } else {
+        result[key] = renameLegacyTypeStrings(value);
+      }
     }
 
-    return row.map((cell) => {
-      if (cell !== null && typeof cell === 'object' && Array.isArray(cell.blocks)) {
-        return cell;
-      }
+    return result;
+  }
 
-      const text = typeof cell === 'string' ? cell : '';
-
-      if (text.length === 0) {
-        return { blocks: [] };
-      }
-
-      const cellId = generateBlockId();
-
-      children.push({
-        id: cellId,
-        type: 'paragraph',
-        data: { text },
-        parent: tableId,
-      });
-
-      return { blocks: [cellId] };
-    });
-  });
-
-  const { content: _content, withHeadings, withHeadingColumn, stretched, ...rest } = data;
-
-  const table = {
-    ...block,
-    id: tableId,
-    data: {
-      ...rest,
-      withHeadings: withHeadings === true,
-      withHeadingColumn: withHeadingColumn === true,
-      ...(stretched === true ? { stretched: true } : {}),
-      content: newContent,
-    },
-  };
-
-  return [table, ...children];
+  return node;
 }
 
 /**
  * Apply block type transforms to JSON article data.
- * Renames legacy EditorJS block types to their Blok equivalents.
+ *
+ * Migrates legacy Editor.js block SHAPES to their Blok equivalents using the
+ * SAME shared grammar the runtime auto-migration uses
+ * (src/components/migration/legacy-grammar.cjs), so codemod-migrated JSON is
+ * byte-for-byte what the runtime would produce at load — the two surfaces can't
+ * drift. Then renames any residual legacy type strings (delimiter → divider).
+ *
+ * Passthrough (non-migrated) blocks are left untouched — the codemod does not
+ * inject ids into blocks it didn't have to rewrite (see `stampMissingIds`).
  * @param {string} jsonString - JSON string containing article data
  * @returns {string} Transformed JSON string
  */
 function applyBlockTypeTransforms(jsonString) {
   try {
     const data = JSON.parse(jsonString);
-    const transformBlocks = (obj) => {
-      if (Array.isArray(obj)) {
-        // Expand checklist blocks (1 → N list blocks) before recursing into each
-        // element. The flatMap lets a single checklist become several siblings,
-        // mirroring the runtime's expandChecklistToHierarchical.
-        return obj.flatMap((item) => {
-          if (isLegacyChecklistBlock(item)) {
-            return migrateChecklistToList(item);
-          }
-          if (isLegacyWarningBlock(item)) {
-            return migrateWarningToCallout(item);
-          }
-          if (isLegacyTableBlock(item)) {
-            return migrateTableToCellBlocks(item);
-          }
+    // The codemod has no nanoid dependency, so it mints grammar ids locally.
+    const ctx = { generateId: createBlockIdGenerator(), warn: () => {}, stampMissingIds: false };
+    const expandArray = (arr) => expandLegacyBlocks(arr, ctx);
 
-          return [transformBlocks(item)];
-        });
-      }
-      if (obj !== null && typeof obj === 'object') {
-        // Migrate legacy block shapes (e.g. image { data: { file: { url } } })
-        // before recursing so the migrated shape is what children see.
-        const migrated = migrateLegacyBlockShape(obj);
-        const result = {};
+    let migrated;
 
-        for (const [key, value] of Object.entries(migrated)) {
-          if (key === 'type' && typeof value === 'string' && BLOCK_TYPE_TRANSFORMS[value]) {
-            result[key] = BLOCK_TYPE_TRANSFORMS[value];
-          } else {
-            result[key] = transformBlocks(value);
-          }
-        }
+    if (Array.isArray(data)) {
+      // A bare blocks array.
+      migrated = expandArray(data);
+    } else if (data !== null && typeof data === 'object' && Array.isArray(data.blocks)) {
+      // The standard `{ time?, blocks, version? }` article envelope.
+      migrated = { ...data, blocks: expandArray(data.blocks) };
+    } else if (data !== null && typeof data === 'object' && typeof data.type === 'string') {
+      // A single bare block object; unwrap when it stays 1:1.
+      const expanded = expandArray([data]);
 
-        return result;
-      }
+      migrated = expanded.length === 1 ? expanded[0] : expanded;
+    } else {
+      migrated = data;
+    }
 
-      return obj;
-    };
-
-    return JSON.stringify(transformBlocks(data), null, 2);
+    return JSON.stringify(renameLegacyTypeStrings(migrated), null, 2);
   } catch {
     // If not valid JSON, try regex-based replacement as fallback
     let result = jsonString;
@@ -1469,6 +1119,233 @@ function applyTransforms(content, transforms, fileName) {
   });
 
   return { result, changes };
+}
+
+// ============================================================================
+// AST-guided identifier renaming
+// ----------------------------------------------------------------------------
+// The regex identifier/type passes (TYPE_TRANSFORMS, the EditorJS parts of
+// CLASS_NAME_TRANSFORMS, and TEXT_TRANSFORMS' `EditorJS` rule) match raw source
+// text, so they rewrite `EditorJS`/`EditorConfig` inside comments, string prose,
+// and even the middle of unrelated identifiers (`MyEditorConfigLoader`). To only
+// touch real code, we parse the source with the CONSUMER'S OWN parser (resolved
+// from their node_modules — keeping this codemod dependency-free at rest) and
+// rewrite only identifier / type-name AST nodes, falling back to the old regex
+// behaviour (with a warning) when no parser is available.
+// ============================================================================
+
+// Exact node-name renames (never substring). Applied to Identifier / JSXIdentifier
+// / type-name nodes only.
+const AST_NAME_RENAMES = { EditorJS: 'Blok', EditorConfig: 'BlokConfig' };
+// Qualified names collapsed as a whole (e.g. `EditorJS.EditorConfig` -> `BlokConfig`).
+const AST_QUALIFIED_RENAMES = [{ left: 'EditorJS', right: 'EditorConfig', replacement: 'BlokConfig' }];
+
+// The regex passes this AST rename subsumes, used as the graceful fallback when
+// no parser can be resolved from the target project.
+const AST_FALLBACK_TRANSFORMS = [
+  ...TYPE_TRANSFORMS,
+  { pattern: /new\s+EditorJS\s*\(/g, replacement: 'new Blok(' },
+  { pattern: /:\s*EditorJS(?![a-zA-Z])/g, replacement: ': Blok' },
+  { pattern: /<EditorJS>/g, replacement: '<Blok>' },
+  { pattern: /EditorJS(?![a-zA-Z])/g, replacement: 'Blok' },
+];
+
+/**
+ * Resolve `@babel/parser` from the TARGET project first (so we use the consumer's
+ * own toolchain), then this codemod's own resolution paths. Returns null when
+ * nothing is installed — the caller then falls back to regex.
+ */
+function resolveSourceParser(cwd) {
+  const paths = [cwd, process.cwd(), __dirname].filter(Boolean);
+
+  try {
+    return require(require.resolve('@babel/parser', { paths }));
+  } catch (babelErr) {
+    return null;
+  }
+}
+
+function babelPluginsForExt(ext) {
+  const plugins = ['typescript', 'decorators-legacy', 'classProperties', 'classPrivateProperties', 'topLevelAwait'];
+
+  // `.ts` uses angle-bracket type assertions (`<T>x`), which conflict with jsx.
+  // Every other supported extension may legitimately contain JSX.
+  if (ext !== '.ts') {
+    plugins.push('jsx');
+  }
+
+  return plugins;
+}
+
+/**
+ * For .vue / .svelte, only the <script> block is JS/TS. Returns the script body
+ * plus the surrounding text so the caller can rename inside it and reassemble.
+ * Returns null when there is no script block.
+ */
+function extractScriptBlock(content) {
+  const match = content.match(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/i);
+
+  if (!match || match.index === undefined) {
+    return null;
+  }
+
+  const openTag = match[1];
+  const code = match[2];
+  const bodyStart = match.index + openTag.length;
+
+  return {
+    before: content.slice(0, bodyStart),
+    code,
+    after: content.slice(bodyStart + code.length),
+  };
+}
+
+/**
+ * Walk a Babel AST, visiting every node that carries a `type`. Skips positional
+ * / comment bookkeeping keys so we never descend into detached comment nodes.
+ */
+function walkAst(node, visit) {
+  if (!node || typeof node !== 'object') {
+    return;
+  }
+
+  if (Array.isArray(node)) {
+    node.forEach((child) => walkAst(child, visit));
+    return;
+  }
+
+  if (typeof node.type === 'string') {
+    visit(node);
+  }
+
+  for (const key of Object.keys(node)) {
+    if (key === 'loc' || key === 'start' || key === 'end' || key === 'range' ||
+        key === 'leadingComments' || key === 'trailingComments' || key === 'innerComments' || key === 'comments') {
+      continue;
+    }
+    walkAst(node[key], visit);
+  }
+}
+
+/**
+ * Collect the rename edits ({ start, end, text }) implied by an AST.
+ */
+function collectRenameEdits(ast) {
+  const edits = [];
+
+  walkAst(ast, (node) => {
+    // Collapse qualified type names: EditorJS.EditorConfig -> BlokConfig
+    if (node.type === 'TSQualifiedName' && node.left && node.right &&
+        node.left.type === 'Identifier' && node.right.type === 'Identifier') {
+      const rule = AST_QUALIFIED_RENAMES.find((r) => r.left === node.left.name && r.right === node.right.name);
+      if (rule) {
+        edits.push({ start: node.start, end: node.end, text: rule.replacement });
+        return;
+      }
+    }
+
+    // Collapse member expressions used as values: EditorJS.EditorConfig -> BlokConfig
+    if (node.type === 'MemberExpression' && !node.computed &&
+        node.object && node.object.type === 'Identifier' &&
+        node.property && node.property.type === 'Identifier') {
+      const rule = AST_QUALIFIED_RENAMES.find((r) => r.left === node.object.name && r.right === node.property.name);
+      if (rule) {
+        edits.push({ start: node.start, end: node.end, text: rule.replacement });
+        return;
+      }
+    }
+
+    if ((node.type === 'Identifier' || node.type === 'JSXIdentifier') &&
+        Object.prototype.hasOwnProperty.call(AST_NAME_RENAMES, node.name)) {
+      edits.push({ start: node.start, end: node.end, text: AST_NAME_RENAMES[node.name] });
+    }
+  });
+
+  return edits;
+}
+
+/**
+ * Apply edits to source, dropping any edit contained within a wider one (so a
+ * qualified-name collapse wins over the identifier renames nested inside it).
+ */
+function applyRenameEdits(code, edits) {
+  const sorted = edits.slice().sort((a, b) => a.start - b.start || b.end - a.end);
+  const kept = [];
+  let lastEnd = -1;
+
+  for (const edit of sorted) {
+    if (edit.start < lastEnd) {
+      continue; // contained in / overlapping the previous (wider) edit
+    }
+    kept.push(edit);
+    lastEnd = edit.end;
+  }
+
+  let out = code;
+  for (let i = kept.length - 1; i >= 0; i--) {
+    const edit = kept[i];
+    out = out.slice(0, edit.start) + edit.text + out.slice(edit.end);
+  }
+
+  return { out, count: kept.length };
+}
+
+/**
+ * Rename EditorJS / EditorConfig identifiers using the AST, never touching
+ * comments, strings, or unrelated identifiers. Falls back to the regex passes
+ * (with a one-time warning) when no parser is resolvable or parsing fails.
+ *
+ * @returns {{ result: string, changes: Array, usedAst: boolean }}
+ */
+function renameEditorJsIdentifiers(content, options = {}) {
+  const { filePath = '', cwd = process.cwd() } = options;
+  const ext = path.extname(filePath).toLowerCase();
+  const parser = resolveSourceParser(cwd);
+
+  const fallback = (reason) => {
+    const { result, changes } = applyTransforms(content, AST_FALLBACK_TRANSFORMS, filePath);
+    if (result !== content && reason) {
+      log(`⚠️  ${filePath || 'source'}: ${reason}; used regex fallback for EditorJS renames (install @babel/parser for precise AST rewriting).`);
+    }
+    return { result, changes, usedAst: false };
+  };
+
+  if (!parser) {
+    return fallback('no @babel/parser found');
+  }
+
+  // .vue / .svelte: rename only inside the <script> block.
+  const isScriptWrapped = ext === '.vue' || ext === '.svelte';
+  const scriptBlock = isScriptWrapped ? extractScriptBlock(content) : null;
+
+  if (isScriptWrapped && !scriptBlock) {
+    return { result: content, changes: [], usedAst: true };
+  }
+
+  const codeToParse = scriptBlock ? scriptBlock.code : content;
+
+  let ast;
+  try {
+    ast = parser.parse(codeToParse, {
+      sourceType: 'module',
+      allowReturnOutsideFunction: true,
+      allowImportExportEverywhere: true,
+      errorRecovery: true,
+      plugins: babelPluginsForExt(ext),
+    });
+  } catch (parseErr) {
+    return fallback(`could not parse (${parseErr.message.split('\n')[0]})`);
+  }
+
+  const edits = collectRenameEdits(ast);
+  const { out, count } = applyRenameEdits(codeToParse, edits);
+  const result = scriptBlock ? scriptBlock.before + out + scriptBlock.after : out;
+
+  const changes = count > 0
+    ? [{ pattern: 'ast:EditorJS/EditorConfig identifier rename', count }]
+    : [];
+
+  return { result, changes, usedAst: true };
 }
 
 /**
@@ -1667,18 +1544,15 @@ function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
     allChanges.push(...changes.map((c) => ({ ...c, category: 'imports' })));
   }
 
-  // Apply type transforms (JS/TS only)
+  // Rename EditorJS / EditorConfig identifiers + type names (JS/TS only).
+  // AST-guided so comments, string prose, and unrelated identifiers
+  // (e.g. `MyEditorConfigLoader`) are never touched. Subsumes the old
+  // TYPE_TRANSFORMS + CLASS_NAME_TRANSFORMS + TEXT_TRANSFORMS `EditorJS` regex
+  // passes; falls back to those regexes when no parser can be resolved.
   if (isJsFile) {
-    const { result, changes } = applyTransforms(transformed, TYPE_TRANSFORMS, filePath);
+    const { result, changes, usedAst } = renameEditorJsIdentifiers(transformed, { filePath, cwd: process.cwd() });
     transformed = result;
-    allChanges.push(...changes.map((c) => ({ ...c, category: 'types' })));
-  }
-
-  // Apply class name transforms (JS/TS only)
-  if (isJsFile) {
-    const { result, changes } = applyTransforms(transformed, CLASS_NAME_TRANSFORMS, filePath);
-    transformed = result;
-    allChanges.push(...changes.map((c) => ({ ...c, category: 'class-names' })));
+    allChanges.push(...changes.map((c) => ({ ...c, category: usedAst ? 'identifiers-ast' : 'identifiers-regex' })));
   }
 
   // Apply CSS class transforms (all files)
@@ -1741,11 +1615,20 @@ function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
     }
   }
 
-  // Apply text transforms (JS/TS/HTML) - replace "EditorJS" with "Blok"
-  if (isJsFile || isHtmlFile) {
-    const { result, changes } = applyTransforms(transformed, TEXT_TRANSFORMS, filePath);
-    transformed = result;
-    allChanges.push(...changes.map((c) => ({ ...c, category: 'text' })));
+  // Apply text transforms. For JS/TS the `EditorJS` rename is already handled by
+  // the AST pass above, so re-running it here would re-mangle the comments and
+  // string prose the AST deliberately spared — run only the string-targeted
+  // `#editorjs` rule. HTML (no AST pass) still gets the full set.
+  {
+    const textTransforms = isHtmlFile
+      ? TEXT_TRANSFORMS
+      : TEXT_TRANSFORMS.filter((t) => !t.pattern.source.startsWith('EditorJS'));
+
+    if ((isJsFile || isHtmlFile) && textTransforms.length > 0) {
+      const { result, changes } = applyTransforms(transformed, textTransforms, filePath);
+      transformed = result;
+      allChanges.push(...changes.map((c) => ({ ...c, category: 'text' })));
+    }
   }
 
   // Apply i18n transforms (JS/TS only)
@@ -2054,9 +1937,5 @@ module.exports = {
   TEXT_TRANSFORMS,
   BLOCK_TYPE_TRANSFORMS,
   applyBlockTypeTransforms,
-  migrateChecklistToList,
-  migrateRawToCode,
-  migrateAttachesToBookmark,
-  migrateWarningToCallout,
-  migrateTableToCellBlocks,
+  renameEditorJsIdentifiers,
 };

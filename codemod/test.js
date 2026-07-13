@@ -25,7 +25,13 @@ const {
   TOOL_CONFIG_TRANSFORMS,
   BLOCK_TYPE_TRANSFORMS,
   applyBlockTypeTransforms,
+  renameEditorJsIdentifiers,
+  transformFile,
 } = require('./migrate-editorjs-to-blok');
+
+const fs = require('fs');
+const os = require('os');
+const nodePath = require('path');
 
 // Test helper
 function test(name, fn) {
@@ -42,6 +48,12 @@ function test(name, fn) {
 function assertEqual(actual, expected, message = '') {
   if (actual !== expected) {
     throw new Error(`${message}\nExpected: ${expected}\nActual: ${actual}`);
+  }
+}
+
+function assert(condition, message = 'assertion failed') {
+  if (!condition) {
+    throw new Error(message);
   }
 }
 
@@ -1303,24 +1315,27 @@ test('drops withBackground: true without any Blok equivalent', () => {
   assertEqual(parsed.blocks[0].data.withBackground, undefined, 'withBackground must be dropped');
 });
 
-test('defaults legacy image to size: full when stretched is absent', () => {
+test('does not invent a size when stretched is absent (matches runtime)', () => {
+  // Parity with the runtime: only `stretched: true` maps to `size: 'full'`.
+  // A plain legacy image gets NO size — the codemod must not invent one the
+  // runtime auto-migration would never add (the old codemod-only divergence).
   const input = JSON.stringify({
     blocks: [{ type: 'image', data: { file: { url: 'u' }, caption: 'c' } }],
   }, null, 2);
   const result = applyBlockTypeTransforms(input);
   const parsed = JSON.parse(result);
   assertEqual(parsed.blocks[0].data.url, 'u');
-  assertEqual(parsed.blocks[0].data.size, 'full', 'size defaults to full');
+  assertEqual(parsed.blocks[0].data.size, undefined, 'no size is invented when stretched is absent');
 });
 
-test('inherits stretched: false as size: lg', () => {
+test('does not invent a size for stretched: false (matches runtime); drops stretched', () => {
   const input = JSON.stringify({
     blocks: [{ type: 'image', data: { file: { url: 'u' }, stretched: false } }],
   }, null, 2);
   const result = applyBlockTypeTransforms(input);
   const parsed = JSON.parse(result);
   assertEqual(parsed.blocks[0].data.url, 'u');
-  assertEqual(parsed.blocks[0].data.size, 'lg', 'stretched:false inherits as lg');
+  assertEqual(parsed.blocks[0].data.size, undefined, 'stretched:false adds no size');
   assertEqual(parsed.blocks[0].data.stretched, undefined, 'stretched must be dropped');
 });
 
@@ -1657,6 +1672,102 @@ test('leaves an already-Blok-native table (block-ref cells) untouched', () => {
 
   assertEqual(parsed.blocks.length, 1, 'no child paragraphs minted for native table');
   assertEqual(parsed.blocks[0].data.content[0][0].blocks[0], 'x', 'existing block-ref preserved');
+});
+
+// ============================================================================
+// AST-guided identifier renaming (does not touch comments / strings / unrelated identifiers)
+// ============================================================================
+
+console.log('\n🌳 AST-guided identifier renaming\n');
+
+test('does NOT rewrite EditorJS inside a line comment', () => {
+  const { result } = renameEditorJsIdentifiers(`// EditorJS was our previous editor\nconst x = 1;`, { filePath: 'a.ts' });
+  assertEqual(result, `// EditorJS was our previous editor\nconst x = 1;`, 'comment must be untouched');
+});
+
+test('does NOT rewrite EditorJS inside a string literal', () => {
+  const { result } = renameEditorJsIdentifiers(`const msg = "Migrated from EditorJS to our new stack";`, { filePath: 'a.ts' });
+  assertEqual(result, `const msg = "Migrated from EditorJS to our new stack";`, 'string prose must be untouched');
+});
+
+test('does NOT rename an unrelated identifier that merely contains EditorConfig', () => {
+  const { result } = renameEditorJsIdentifiers(`class MyEditorConfigLoader {}`, { filePath: 'a.ts' });
+  assertEqual(result, `class MyEditorConfigLoader {}`, 'substring match must not fire');
+});
+
+test('renames the EditorJS constructor identifier: new EditorJS( -> new Blok(', () => {
+  const { result } = renameEditorJsIdentifiers(`const e = new EditorJS({ holder: 'app' });`, { filePath: 'a.ts' });
+  assertEqual(result, `const e = new Blok({ holder: 'app' });`);
+});
+
+test('renames an EditorJS type annotation: : EditorJS -> : Blok', () => {
+  const { result } = renameEditorJsIdentifiers(`let e: EditorJS;`, { filePath: 'a.ts' });
+  assertEqual(result, `let e: Blok;`);
+});
+
+test('renames the EditorConfig type reference -> BlokConfig', () => {
+  const { result } = renameEditorJsIdentifiers(`const c: EditorConfig = {};`, { filePath: 'a.ts' });
+  assertEqual(result, `const c: BlokConfig = {};`);
+});
+
+test('collapses the qualified name EditorJS.EditorConfig -> BlokConfig', () => {
+  const { result } = renameEditorJsIdentifiers(`const c: EditorJS.EditorConfig = {};`, { filePath: 'a.ts' });
+  assertEqual(result, `const c: BlokConfig = {};`);
+});
+
+test('reports it used the AST path when a parser is resolvable', () => {
+  const { usedAst } = renameEditorJsIdentifiers(`const e = new EditorJS();`, { filePath: 'a.ts' });
+  assertEqual(usedAst, true, 'a resolvable parser should drive the AST path');
+});
+
+test('renames only inside the <script> block of a .vue file, not the template', () => {
+  const input = `<template>\n  <div>EditorJS docs</div>\n</template>\n<script lang="ts">\nconst e = new EditorJS();\nlet c: EditorConfig;\n</script>\n`;
+  const { result } = renameEditorJsIdentifiers(input, { filePath: 'App.vue' });
+  assert(result.includes('<div>EditorJS docs</div>'), 'template text left untouched');
+  assert(result.includes('const e = new Blok();'), 'script constructor migrated');
+  assert(/:\s*BlokConfig/.test(result), 'script type migrated');
+});
+
+// ============================================================================
+// End-to-end transformFile: real code migrates, comments/strings/unrelated stay
+// ============================================================================
+
+console.log('\n🔁 transformFile end-to-end (AST-guided)\n');
+
+test('transformFile migrates real EditorJS code but leaves comments, strings, and unrelated identifiers intact', () => {
+  // NOTE: this covers the JS/TS identifier + text passes only. The CSS-class
+  // pass (CSS_CLASS_TRANSFORMS) is still regex-based and out of this increment's
+  // scope, so class names in comments/strings are intentionally not asserted.
+  const input = [
+    `// We migrated away from EditorJS last year — that whole era is behind us.`,
+    `import EditorJS from '@editorjs/editorjs';`,
+    `class MyEditorConfigLoader {}`,
+    `const label = "Powered by EditorJS";`,
+    `const editor = new EditorJS({ holder: 'app' });`,
+    `let cfg: EditorConfig;`,
+    ``,
+  ].join('\n');
+
+  const dir = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'blok-codemod-'));
+  const file = nodePath.join(dir, 'sample.ts');
+  fs.writeFileSync(file, input, 'utf8');
+
+  try {
+    transformFile(file, false, false);
+    const out = fs.readFileSync(file, 'utf8');
+
+    // Preserved (would have been mangled by the old regex identifier/text passes):
+    assert(out.includes('// We migrated away from EditorJS last year'), 'comment text preserved');
+    assert(out.includes('class MyEditorConfigLoader'), 'unrelated identifier preserved');
+    assert(out.includes('"Powered by EditorJS"'), 'string prose preserved');
+
+    // Migrated (real code):
+    assert(out.includes('new Blok({'), 'constructor migrated to Blok');
+    assert(/:\s*BlokConfig/.test(out), 'EditorConfig type migrated to BlokConfig');
+    assert(!/from ['"]@editorjs\/editorjs['"]/.test(out), 'editorjs import rewritten');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 // ============================================================================

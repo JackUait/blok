@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-// @ts-expect-error - zero-dep CJS grammar module has a co-located .d.cts
-import { LEGACY_GRAMMAR } from '../../../src/components/migration/legacy-grammar.cjs';
+import { LEGACY_GRAMMAR } from '../../../src/components/migration/legacy-grammar.mjs';
 
 /**
  * The Editor.js→Blok migration compatibility matrix is documented in two

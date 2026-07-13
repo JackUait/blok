@@ -1,16 +1,20 @@
-'use strict';
-
 /**
  * Editor.js → Blok legacy migration grammar (single source of truth).
  *
  * This is the ONE authoritative description of how each legacy Editor.js block
  * shape maps to Blok's hierarchical flat-with-references model. It is authored
- * in zero-dependency CommonJS so it can be consumed unchanged by BOTH:
+ * in zero-dependency ESM so it can be consumed unchanged by BOTH:
  *
  *   - the ESM runtime (`src/components/utils/data-model-transform.ts`), which
  *     imports it and drives it with nanoid ids + `console.warn`, and
  *   - the standalone zero-dep codemod (`codemod/migrate-editorjs-to-blok.js`),
- *     which `require()`s it and drives it with locally-minted ids + no warnings.
+ *     which loads it via `require(esm)` (native on Node >= 20.19, the package's
+ *     engines floor) and drives it with locally-minted ids + no warnings.
+ *
+ * It MUST stay ESM: the published package ships `src/`, and a consumer's dev
+ * server (e.g. Vite serving a linked copy) loads this file with NO CommonJS
+ * interop — a `.cjs` grammar evaluates there with zero exports and every named
+ * import throws (see test/unit/architecture/esm-source-no-cjs-imports-law.test.ts).
  *
  * Because both consumers run the SAME `expandLegacyBlocks` code path over the
  * SAME `LEGACY_GRAMMAR` table, the two migration surfaces cannot drift: adding
@@ -853,7 +857,7 @@ function analyzeLegacyFormat(blocks) {
   };
 }
 
-module.exports = {
+export {
   LEGACY_GRAMMAR,
   expandLegacyBlocks,
   analyzeLegacyFormat,

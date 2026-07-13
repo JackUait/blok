@@ -23,9 +23,21 @@
 const fs = require('fs');
 const path = require('path');
 // The Editor.js→Blok block-shape migration grammar is the SAME zero-dep module
-// the runtime uses (src/components/migration/legacy-grammar.cjs), so the codemod
+// the runtime uses (src/components/migration/legacy-grammar.mjs), so the codemod
 // and the runtime auto-migration can never disagree on how a legacy block maps.
-const { expandLegacyBlocks, createBlockIdGenerator } = require('../src/components/migration/legacy-grammar.cjs');
+// The grammar is ESM (the runtime's source graph must be CJS-free — see
+// test/unit/architecture/esm-source-no-cjs-imports-law.test.ts); `require(esm)`
+// is native on Node >= 20.19, the package's engines floor.
+let expandLegacyBlocks, createBlockIdGenerator;
+try {
+  ({ expandLegacyBlocks, createBlockIdGenerator } = require('../src/components/migration/legacy-grammar.mjs'));
+} catch (error) {
+  if (error.code === 'ERR_REQUIRE_ESM' || error.code === 'ERR_REQUIRE_ASYNC_MODULE') {
+    console.error(`This codemod requires Node.js >= 20.19 (you are running ${process.version}).`);
+    process.exit(1);
+  }
+  throw error;
+}
 
 // ============================================================================
 // Configuration
@@ -1008,7 +1020,7 @@ function renameLegacyTypeStrings(node) {
  *
  * Migrates legacy Editor.js block SHAPES to their Blok equivalents using the
  * SAME shared grammar the runtime auto-migration uses
- * (src/components/migration/legacy-grammar.cjs), so codemod-migrated JSON is
+ * (src/components/migration/legacy-grammar.mjs), so codemod-migrated JSON is
  * byte-for-byte what the runtime would produce at load — the two surfaces can't
  * drift. Then renames any residual legacy type strings (delimiter → divider).
  *

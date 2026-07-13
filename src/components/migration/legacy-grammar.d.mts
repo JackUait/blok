@@ -1,6 +1,6 @@
 /**
  * Hand-authored types for the zero-dependency legacy migration grammar
- * (`legacy-grammar.cjs`). Co-located in `src/` — the published-types-no-src law
+ * (`legacy-grammar.mjs`). Co-located in `src/` — the published-types-no-src law
  * only constrains files under `types/`.
  */
 import type { OutputBlockData } from '../../../types';

@@ -9,7 +9,7 @@ import { generateBlockId } from '../utils';
 // The forward legacy→hierarchical expansion lives in ONE zero-dep grammar module
 // shared verbatim with the standalone codemod, so the two migration surfaces
 // cannot drift. The runtime drives it with nanoid ids + a deduping console.warn.
-import { expandLegacyBlocks, analyzeLegacyFormat } from '../migration/legacy-grammar.cjs';
+import { expandLegacyBlocks, analyzeLegacyFormat } from '../migration/legacy-grammar.mjs';
 
 /**
  * Build the per-pass lossy-field warning sink handed to the grammar interpreter.

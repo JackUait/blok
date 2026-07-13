@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { expandToHierarchical } from '../../../../src/components/utils/data-model-transform';
-// @ts-expect-error - zero-dep CJS grammar module has a co-located .d.cts
-import { LEGACY_GRAMMAR, expandLegacyBlocks } from '../../../../src/components/migration/legacy-grammar.cjs';
+import { LEGACY_GRAMMAR, expandLegacyBlocks } from '../../../../src/components/migration/legacy-grammar.mjs';
 import type { OutputBlockData } from '../../../../types';
 
 /**
@@ -69,11 +68,11 @@ const normalizeIds = (blocks: OutputBlockData[]): OutputBlockData[] => {
     if (data && Array.isArray(data.content)) {
       next.data = {
         ...block.data,
-        content: data.content.map((row) =>
+        content: data.content.map((row: unknown): unknown =>
           Array.isArray(row)
-            ? row.map((cell) =>
+            ? row.map((cell: unknown): unknown =>
               cell && typeof cell === 'object' && Array.isArray((cell as { blocks?: unknown }).blocks)
-                ? { ...(cell as object), blocks: (cell as { blocks: unknown[] }).blocks.map((b) => tok(b)) }
+                ? { ...(cell as Record<string, unknown>), blocks: (cell as { blocks: unknown[] }).blocks.map((b) => tok(b)) }
                 : cell
             )
             : row

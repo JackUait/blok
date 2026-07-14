@@ -440,19 +440,27 @@ export class LinkHoverCard {
     // without it the action buttons' hover background fills the card top-to-
     // bottom edge-to-edge. This padding gives the buttons vertical breathing
     // room so the hover reads as a snug pill, not a full-height block.
-    // The border color is a literal (not a token): @theme colors like
-    // --color-gray-text are absent from the cascade here, so a var() reference
-    // would resolve to currentColor (near-black); this faint neutral matches the
-    // hardcoded shadow tone below.
     wrapper.style.borderWidth = '1px';
     wrapper.style.borderStyle = 'solid';
-    wrapper.style.borderColor = 'rgba(13, 20, 33, 0.12)';
+    wrapper.style.borderColor = 'var(--blok-popover-border, rgba(13, 20, 33, 0.12))';
     wrapper.style.paddingTop = '0.25rem';
     wrapper.style.paddingBottom = '0.25rem';
     wrapper.style.paddingLeft = '0.625rem';
     wrapper.style.paddingRight = '0.375rem';
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
+    // The card is body-mounted, outside the editor root. Compiled Tailwind
+    // utilities and the preflight reset are scoped to
+    // `[data-blok-interface]`/`[data-blok-popover]` roots, so without this
+    // attribute EVERY utility above silently dies in consumer apps (the
+    // playground's own unscoped Tailwind masks it). It also resolves the
+    // popover color tokens (bg-popover-bg, dark theme) from colors.css.
+    // `data-blok-interface` deliberately, NOT `data-blok-popover`: the latter
+    // is also the Popover COMPONENT's styling hook, whose isolation rules
+    // (`font-size: initial`; `background: transparent` once [popover]-promoted)
+    // would clobber this card's root-level `text-sm` and `bg-popover-bg`.
+    // Enforced by body-mount-scope-law.test.ts.
+    wrapper.setAttribute('data-blok-interface', 'link-hover-card');
 
     const globe = document.createElement('span');
 

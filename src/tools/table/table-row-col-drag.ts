@@ -442,6 +442,12 @@ export class TableRowColDrag {
 
     ghost.setAttribute(GHOST_ATTR, '');
     ghost.setAttribute('contenteditable', 'false');
+    // The ghost is body-mounted and clones table cells that carry Tailwind
+    // utility classes (CELL_CLASSES: `py-1 px-2 text-sm …`). Compiled
+    // utilities are scoped to `[data-blok-interface]`/`[data-blok-popover]`
+    // roots, so without this bare attribute the cloned cells render unstyled
+    // in consumer apps. Enforced by body-mount-scope-law.test.ts.
+    ghost.setAttribute('data-blok-interface', 'table-drag-ghost');
 
     const style = ghost.style;
 

@@ -21,6 +21,12 @@ export class DragPreview {
     const preview = $.make('div', PREVIEW_STYLES.base);
 
     preview.setAttribute('data-blok-testid', 'drag-preview');
+    // The preview is body-mounted, outside the editor root. Compiled Tailwind
+    // utilities are scoped to `[data-blok-interface]`/`[data-blok-popover]`
+    // roots, so without this bare attribute the preview's own base styles
+    // (fixed positioning, opacity) and the cloned content's typography die in
+    // consumer apps. Enforced by body-mount-scope-law.test.ts.
+    preview.setAttribute('data-blok-interface', 'drag-preview');
     // The clone duplicates block content that already exists in the DOM, which
     // would otherwise enter the accessibility tree twice. Hide the ghost.
     preview.setAttribute('aria-hidden', 'true');
@@ -75,6 +81,8 @@ export class DragPreview {
     const preview = $.make('div', PREVIEW_STYLES.base);
 
     preview.setAttribute('data-blok-testid', 'drag-preview');
+    // Body-mounted: scope attribute required for scoped utilities — see createSingle.
+    preview.setAttribute('data-blok-interface', 'drag-preview');
     // The clones duplicate block content that already exists in the DOM, which
     // would otherwise enter the accessibility tree twice. Hide the ghost.
     preview.setAttribute('aria-hidden', 'true');

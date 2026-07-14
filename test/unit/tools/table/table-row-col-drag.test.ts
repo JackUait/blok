@@ -147,6 +147,29 @@ describe('TableRowColDrag', () => {
     });
   });
 
+  describe('drag ghost CSS scope', () => {
+    /**
+     * The ghost is appended to document.body and clones table cells that carry
+     * Tailwind utility classes (`py-1 px-2 text-sm …` from CELL_CLASSES).
+     * Compiled utilities are scoped to `[data-blok-interface]`/`[data-blok-popover]`
+     * roots, so without a bare scope attribute the ghost's cells render
+     * unstyled in consumer apps. See body-mount-scope-law.test.ts.
+     */
+    it('carries a bare scope attribute so cloned cell utilities apply outside the editor', () => {
+      grid = createGrid(3, 3);
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn() });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      const ghost = document.querySelector('[data-blok-table-drag-ghost]');
+
+      expect(ghost).not.toBeNull();
+      expect(ghost?.matches('[data-blok-interface], [data-blok-popover]')).toBe(true);
+
+      drag.cleanup();
+    });
+  });
+
   describe('source cell highlighting during column drag', () => {
     it('applies gray background to dragged column cells', () => {
       grid = createGrid(3, 3);

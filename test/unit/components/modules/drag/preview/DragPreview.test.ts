@@ -45,6 +45,20 @@ describe('DragPreview', () => {
       expect(dragPreview.exists()).toBe(true);
     });
 
+    /**
+     * The preview is appended to document.body, outside the editor root.
+     * Compiled Tailwind utilities (including the preview's own `fixed
+     * pointer-events-none opacity-80` base and the cloned block content's
+     * typography) are scoped to `[data-blok-interface]`/`[data-blok-popover]`
+     * roots, so without a bare scope attribute the preview renders unstyled
+     * and unpositioned in consumer apps. See body-mount-scope-law.test.ts.
+     */
+    it('carries a bare scope attribute so scoped utilities apply outside the editor', () => {
+      const preview = dragPreview.createSingle(document.createElement('div'), false);
+
+      expect(preview.matches('[data-blok-interface], [data-blok-popover]')).toBe(true);
+    });
+
     it('should not override fixed positioning when block has children', () => {
       const contentElement = document.createElement('div');
       const block = {
@@ -187,6 +201,21 @@ describe('DragPreview', () => {
       expect(preview.style.width).toBe('100px');
       expect(preview.style.height).toBe('110px'); // 50 + 60 (second block's top offset)
       expect(dragPreview.exists()).toBe(true);
+    });
+
+    /**
+     * Same scope requirement as createSingle — see body-mount-scope-law.test.ts.
+     */
+    it('carries a bare scope attribute so scoped utilities apply outside the editor', () => {
+      const block = createMockBlock('block-1', 100, 50, false);
+
+      mockBlockRects(block, {
+        left: 0, top: 0, width: 100, height: 60, right: 100, bottom: 60, x: 0, y: 0, toJSON: () => ({}) },
+        { left: 0, top: 0, width: 100, height: 50, right: 100, bottom: 50, x: 0, y: 0, toJSON: () => ({}) });
+
+      const preview = dragPreview.createMulti([block]);
+
+      expect(preview.matches('[data-blok-interface], [data-blok-popover]')).toBe(true);
     });
 
     it('should position blocks with correct offsets', () => {

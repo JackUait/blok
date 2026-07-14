@@ -426,6 +426,19 @@ describe('Notifier draw', () => {
       expect(wrapper.className).toContain('-translate-x-1/2');
     });
 
+    /**
+     * The wrapper is appended to document.body, outside the editor root.
+     * Compiled Tailwind utilities and the preflight reset are scoped to
+     * `[data-blok-interface]`/`[data-blok-popover]` roots, so without a bare
+     * scope attribute every toast utility (bg, padding, rounded, flex, …)
+     * dies in consumer apps. See body-mount-scope-law.test.ts.
+     */
+    it('carries a bare scope attribute so scoped utilities apply outside the editor', () => {
+      const wrapper = getWrapper();
+
+      expect(wrapper.matches('[data-blok-interface], [data-blok-popover]')).toBe(true);
+    });
+
     it('applies top-right placement via inline styles', () => {
       const wrapper = getWrapper('top-right');
 

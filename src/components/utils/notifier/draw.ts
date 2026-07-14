@@ -409,6 +409,14 @@ export const getWrapper = (position: NotifierPosition = DEFAULT_NOTIFIER_POSITIO
   wrapper.className = twJoin(CSS.wrapper, positionClasses);
   wrapper.setAttribute('data-blok-testid', 'notifier-container');
   wrapper.setAttribute('data-blok-position', position);
+  // The wrapper is body-mounted, outside the editor root. Compiled Tailwind
+  // utilities and the preflight reset are scoped to
+  // `[data-blok-interface]`/`[data-blok-popover]` roots, so without this bare
+  // attribute every toast utility (bg, padding, rounded, flex, …) silently
+  // dies in consumer apps. `data-blok-interface` (not `data-blok-popover`) so
+  // the keyboard controller's Escape-inside-popover handling does not grab
+  // Escape from the prompt input. Enforced by body-mount-scope-law.test.ts.
+  wrapper.setAttribute('data-blok-interface', 'notifier');
 
   // Re-assert corner placement inline so the Top-Layer `inset: auto` reset can't
   // clobber the utility classes above (see getPositionStyles).

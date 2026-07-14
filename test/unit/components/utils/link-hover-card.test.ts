@@ -168,6 +168,22 @@ describe('LinkHoverCard', () => {
     expect(getCard()).toBeNull();
   });
 
+  /**
+   * The card lives on document.body, outside the editor root. Compiled
+   * Tailwind utilities and the preflight reset are scoped to
+   * `[data-blok-interface]`/`[data-blok-popover]` roots, so without a bare
+   * scope attribute the card renders unstyled in consumer apps (the
+   * playground's own Tailwind masks this). See body-mount-scope-law.test.ts.
+   * It must be `data-blok-interface` specifically: `data-blok-popover` drags
+   * in the Popover COMPONENT's isolation rules (`font-size: initial`,
+   * `background: transparent` when [popover]-promoted), which clobber the
+   * card's own root-level utilities.
+   */
+  it('carries the data-blok-interface scope attribute so scoped utilities apply outside the editor', () => {
+    expect(getCard()?.matches('[data-blok-interface]')).toBe(true);
+    expect(getCard()?.matches('[data-blok-popover]')).toBe(false);
+  });
+
   it('removes the card element on destroy', () => {
     const anchor = createAnchor('https://youtube.com/');
 

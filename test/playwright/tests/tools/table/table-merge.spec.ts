@@ -349,6 +349,64 @@ test.describe('Table merge and split', () => {
 
     await expect(revealed).toContainText('TYPED');
   });
+
+  test('undoing a merge never mints duplicate cell blocks or strands orphan children', async ({ page }) => {
+    // Regression family: table-undo-setdata-duplication — a structural undo
+    // rewinds the table's data.content, triggering a setData rebuild while
+    // the cell blocks' holders still sit in the old detached grid. The merge
+    // undo is the merged-cell shape of that class.
+    await create3x3Table(page);
+
+    const auditSaved = async (): Promise<{ ids: string[]; orphans: string[]; dangling: string[] }> => {
+      return await page.evaluate(async () => {
+        if (!window.blokInstance) {
+          throw new Error('blokInstance is not initialized');
+        }
+
+        const saved = await window.blokInstance.save();
+        const table = saved.blocks.find(b => b.type === 'table');
+        const grid = (table?.data as { content?: Array<Array<{ blocks?: string[] }>> })?.content ?? [];
+        const refs = new Set(grid.flat().flatMap(cell => cell.blocks ?? []));
+        const ids = saved.blocks.map(b => b.id ?? '');
+        const idSet = new Set(ids);
+
+        return {
+          ids,
+          orphans: saved.blocks
+            .filter(b => (b as { parent?: string | null }).parent === table?.id && !refs.has(b.id ?? ''))
+            .map(b => b.id ?? ''),
+          dangling: [...refs].filter(id => !idSet.has(id)),
+        };
+      });
+    };
+
+    const initial = await auditSaved();
+
+    await mergeTopLeft2x2(page);
+
+    // Pace past the Yjs capture window (500ms) so the undo targets the merge alone.
+    const pace = async (): Promise<void> => {
+      await page.evaluate(async () => {
+        await new Promise<void>(resolve => {
+          window.setTimeout(resolve, 600);
+        });
+      });
+    };
+
+    await pace();
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
+    await pace();
+
+    const after = await auditSaved();
+    const initialIds = new Set(initial.ids);
+
+    expect(after.orphans, `orphan table children after merge undo: ${JSON.stringify(after.orphans)}`).toStrictEqual([]);
+    expect(after.dangling, `dangling grid refs after merge undo: ${JSON.stringify(after.dangling)}`).toStrictEqual([]);
+    expect(
+      after.ids.filter(id => !initialIds.has(id)),
+      'merge undo minted brand-new blocks'
+    ).toStrictEqual([]);
+  });
 });
 
 test.describe('Table structural ops through a merged region', () => {

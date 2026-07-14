@@ -428,6 +428,33 @@ export const IconToggleH3 = `
 </svg>
 `;
 
+// Toggle Heading 4 icon (H4 with toggle arrow)
+export const IconToggleH4 = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M2.5 7.9L5.7 10L2.5 12.1Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M7.97 6.25V13.75M12.92 6.25V13.75M7.97 9.9H12.92" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M16.85 9.3L14.2 13.35H17.65M16.85 11.2V15" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Toggle Heading 5 icon (H5 with toggle arrow)
+export const IconToggleH5 = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M2.5 7.9L5.7 10L2.5 12.1Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M7.97 6.25V13.75M12.92 6.25V13.75M7.97 9.9H12.92" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.25 9.4H14.7L14.45 12.05Q15.05 11.5 15.9 11.5Q17.45 11.5 17.45 13.2Q17.45 15 15.85 15Q14.5 15 14.4 13.6" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Toggle Heading 6 icon (H6 with toggle arrow)
+export const IconToggleH6 = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M2.5 7.9L5.7 10L2.5 12.1Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="M7.97 6.25V13.75M12.92 6.25V13.75M7.97 9.9H12.92" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.1 10.1Q16.8 9.3 15.85 9.3Q14.4 9.3 14.4 12.15Q14.4 15 15.9 15Q17.45 15 17.45 13.3Q17.45 11.65 15.95 11.65Q14.65 11.65 14.45 12.8" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Globe icon (URL link type)
 export const IconGlobe = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

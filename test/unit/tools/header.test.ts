@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/header';
-import { IconToggleH1, IconToggleH2, IconToggleH3 } from '../../../src/components/icons';
+import { IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../../src/components/icons';
 import { TOGGLE_ATTR } from '../../../src/tools/toggle/constants';
 import { clean } from '../../../src/components/utils/sanitizer';
 import type { API, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
@@ -969,22 +969,26 @@ describe('Header Tool - Custom Configurations', () => {
   });
 
   describe('static toolbox', () => {
-    it('includes toggle heading entries for levels 1-3', () => {
+    it('includes a toggle heading entry for every heading level (counts stay in sync)', () => {
       const toolbox = Header.toolbox;
 
       expect(Array.isArray(toolbox)).toBe(true);
 
       const entries = toolbox as Array<{ name: string; data: Record<string, unknown>; title: string }>;
 
+      const headingEntries = entries.filter(e => /^header-\d$/.test(e.name));
       const toggleEntries = entries.filter(e => e.name.startsWith('toggle-header-'));
 
-      expect(toggleEntries).toHaveLength(3);
-      expect(toggleEntries[0].name).toBe('toggle-header-1');
-      expect(toggleEntries[0].data).toEqual({ level: 1, isToggleable: true });
-      expect(toggleEntries[1].name).toBe('toggle-header-2');
-      expect(toggleEntries[1].data).toEqual({ level: 2, isToggleable: true });
-      expect(toggleEntries[2].name).toBe('toggle-header-3');
-      expect(toggleEntries[2].data).toEqual({ level: 3, isToggleable: true });
+      // The whole point: there is exactly one toggle heading per plain heading.
+      expect(toggleEntries).toHaveLength(headingEntries.length);
+      expect(toggleEntries).toHaveLength(6);
+
+      for (let level = 1; level <= 6; level++) {
+        const entry = toggleEntries[level - 1];
+
+        expect(entry.name).toBe(`toggle-header-${level}`);
+        expect(entry.data).toEqual({ level, isToggleable: true });
+      }
     });
 
     it('includes search terms for toggle heading entries', () => {
@@ -1000,13 +1004,13 @@ describe('Header Tool - Custom Configurations', () => {
       const toolbox = Header.toolbox;
       const entries = toolbox as Array<{ name: string; icon: string }>;
 
-      const toggleH1 = entries.find(e => e.name === 'toggle-header-1');
-      const toggleH2 = entries.find(e => e.name === 'toggle-header-2');
-      const toggleH3 = entries.find(e => e.name === 'toggle-header-3');
+      const iconByLevel = [IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6];
 
-      expect(toggleH1?.icon).toBe(IconToggleH1);
-      expect(toggleH2?.icon).toBe(IconToggleH2);
-      expect(toggleH3?.icon).toBe(IconToggleH3);
+      for (let level = 1; level <= 6; level++) {
+        const entry = entries.find(e => e.name === `toggle-header-${level}`);
+
+        expect(entry?.icon).toBe(iconByLevel[level - 1]);
+      }
     });
 
     it('toggle heading icons do not contain scale transforms', () => {

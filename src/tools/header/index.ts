@@ -19,7 +19,7 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
-import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3 } from '../../components/icons';
+import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
@@ -28,6 +28,19 @@ import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
 import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
+
+/**
+ * Toggle-heading icon per level. Keyed 1-6 so toggle headings stay one-to-one
+ * with the plain heading levels (H1-H6) everywhere they are offered.
+ */
+const TOGGLE_HEADING_ICONS: Record<number, string> = {
+  1: IconToggleH1,
+  2: IconToggleH2,
+  3: IconToggleH3,
+  4: IconToggleH4,
+  5: IconToggleH5,
+  6: IconToggleH6,
+};
 
 /**
  * Tool's input and output data format
@@ -543,10 +556,9 @@ export class Header implements BlockTool {
   private buildToggleConvertEntry(): MenuConfig {
     const level = this.currentLevel;
     const isToggle = this._data.isToggleable === true;
-    const toggleIcons: Record<number, string> = { 1: IconToggleH1, 2: IconToggleH2, 3: IconToggleH3 };
 
     return {
-      icon: toggleIcons[level.number] ?? IconToggleH3,
+      icon: TOGGLE_HEADING_ICONS[level.number] ?? IconToggleH3,
       title: this.api.i18n.t('tools.header.toggleHeading'),
       name: 'header-toggle-convert',
       closeOnActivate: true,
@@ -1484,16 +1496,9 @@ export class Header implements BlockTool {
       shortcut: '#'.repeat(level.number),
     }));
 
-    const toggleHeadingIcons: Record<number, string> = {
-      1: IconToggleH1,
-      2: IconToggleH2,
-      3: IconToggleH3,
-    };
-
     const toggleHeadingEntries = Header.DEFAULT_LEVELS
-      .filter(level => level.number <= 3)
       .map(level => ({
-        icon: toggleHeadingIcons[level.number],
+        icon: TOGGLE_HEADING_ICONS[level.number],
         title: `Toggle heading ${level.number}`,
         titleKey: `tools.header.toggleHeading${level.number}`,
         name: `toggle-header-${level.number}`,

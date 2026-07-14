@@ -1,0 +1,12 @@
+/*
+  Playground-only Tailwind entry (dev page chrome — header, nav, settings
+  panel, galleries). The playground used to rely on utilities leaking from
+  Blok's injected stylesheet; scripts/scope-utilities now confines those to
+  Blok's interface roots, so the page compiles its own copy here.
+
+  Deliberately UNLAYERED and UNSCOPED: this file is loaded only by index.html
+  (never shipped), and the scope transform keys off the styles/main.css module
+  id plus its layer(utilities) marker — neither applies here.
+*/
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/utilities.css';

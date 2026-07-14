@@ -495,10 +495,12 @@ test.describe('copy and paste', () => {
       await expect(quoteBlock).toHaveText('Wise words');
       // paste() dispatches the paste event and returns before the async insert
       // loop finishes; the quote (block 0) renders first while the two list
-      // blocks are still being awaited. Wait for BOTH lists before reading the
-      // saved model, or saveBlok races the loop and returns a truncated list
-      // (surfaced only on webkit's slower event loop — flaky elsewhere).
-      await expect(listBlocks).toHaveCount(2);
+      // blocks are still being awaited. Wait for both list items' TEXT (not just
+      // their presence — a block-wrapper is created before its content is
+      // populated), or saveBlok races the loop and reads a block whose text is
+      // still empty (surfaced only on webkit's slower event loop — flaky
+      // elsewhere).
+      await expect(listBlocks).toContainText(['alpha', 'beta']);
 
       const output = await saveBlok(page);
       const savedTypes = output.blocks.map((savedBlock) => savedBlock.type);

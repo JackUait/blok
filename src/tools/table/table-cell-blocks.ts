@@ -921,11 +921,24 @@ export class TableCellBlocks {
       // to a different owner (race window where another table has claimed it
       // via flat-list parent field but has not yet mounted its DOM), create a
       // duplicate with the same tool name and data rather than stealing.
+      //
+      // EXCEPTION — our own block stranded in a previous render's grid: a
+      // setData rebuild (undo/redo replay, remote sync) replaces the table
+      // element while the cell blocks' holders are still mounted in the OLD,
+      // detached grid's containers. Those blocks belong to THIS table
+      // (parentId === tableBlockId) and must be re-mounted, not duplicated —
+      // duplicating pointed the grid at fresh ids and left the originals as
+      // invisible orphan children that resurfaced under the table after a
+      // save → re-render round trip (regression: table-undo-setdata-duplication).
       const hasDifferentOwner = block.parentId != null
         && block.parentId !== ''
         && block.parentId !== this.tableBlockId;
+      const nestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
+      const strandedInPreviousRender = nestedContainer !== null
+        && !this.gridElement.contains(nestedContainer)
+        && block.parentId === this.tableBlockId;
 
-      if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) || hasDifferentOwner) {
+      if ((nestedContainer !== null && !strandedInPreviousRender) || hasDifferentOwner) {
         const duplicate = this.api.blocks.insert(
           block.name,
           block.preservedData,
@@ -980,11 +993,20 @@ export class TableCellBlocks {
     // parentId already points to a different owner (race window where another
     // table has claimed the block via flat-list parent field but has not yet
     // mounted its DOM). Without this, insertBefore would steal the DOM node.
+    //
+    // EXCEPTION — our own block stranded in a previous render's grid: after a
+    // setData rebuild the holder may still sit in the OLD, detached grid's
+    // container. It belongs to this table (parentId === tableBlockId), so
+    // reclaim it instead of skipping (regression: table-undo-setdata-duplication).
     const hasDifferentOwner = block.parentId != null
       && block.parentId !== ''
       && block.parentId !== this.tableBlockId;
+    const nestedContainer = block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`);
+    const strandedInPreviousRender = nestedContainer !== null
+      && !this.gridElement.contains(nestedContainer)
+      && block.parentId === this.tableBlockId;
 
-    if (block.holder.closest(`[${DATA_ATTR.nestedBlocks}]`) || hasDifferentOwner) {
+    if ((nestedContainer !== null && !strandedInPreviousRender) || hasDifferentOwner) {
       return;
     }
 

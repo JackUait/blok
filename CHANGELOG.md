@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0](https://github.com/JackUait/blok/compare/v0.25.0...v1.0.0) (2026-07-14)
+
+First stable release. The public API, block-tool contract, and framework adapters (React, Vue, Angular) are now considered stable and follow semantic versioning going forward.
+
+### Features
+
+- **Header** — Toggle headings are now offered at all six levels, staying in sync 1:1 with regular headings.
+
+### Bug Fixes
+
+- **Migration** — The legacy Editor.js grammar is now authored as ESM so consumer dev servers can load blok's source graph without a build step.
+- **Columns** — Blocks inserted via the plus button no longer save at the bottom of the column; saved order now matches the on-screen (WYSIWYG) order.
+- **Styles** — Injected utilities are scoped so a host application's CSS reset can't flatten the editor.
+
+### Maintenance
+
+- **Migration** — Single-source `LEGACY_GRAMMAR` shared by both the runtime and the codemod; the codemod's source rewrite is now AST-guided (via the consumer's `@babel/parser`) to avoid mangling comments, strings, and unrelated identifiers.
+- **CI** — Root-caused CI failures: scoped-utility drift on body-mounted UI, lint, and test flake fixes (webkit paste timing, six-level toggle-heading counts).
+
 ## [0.25.0](https://github.com/JackUait/blok/compare/v0.24.3...v0.25.0) (2026-07-13)
 
 ### Features

@@ -332,10 +332,10 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter to heading items
     await page.keyboard.type('head');
 
-    // Now should only show heading items (6 headings + 3 toggle headings)
+    // Now should only show heading items (6 headings + 6 toggle headings)
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
 
     // First filtered item should be focused
     const focusedItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name][data-blok-focused]');
@@ -363,16 +363,16 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter
     await page.keyboard.type('head');
 
-    // Verify filter applied - should show 9 heading items (6 headings + 3 toggle headings)
+    // Verify filter applied - should show 12 heading items (6 headings + 6 toggle headings)
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
 
     // Backspace to "hea"
     await page.keyboard.press('Backspace');
 
     // Should still show heading items
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
 
     // Backspace 3 more times to clear the filter
     await page.keyboard.press('Backspace');
@@ -462,7 +462,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Wait for filter to apply
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
 
     // Press ArrowDown to focus first heading item
     await page.keyboard.press('ArrowDown');
@@ -497,10 +497,10 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter to heading items only
     await page.keyboard.type('head');
 
-    // Verify only heading items are visible (6 headings + 3 toggle headings)
+    // Verify only heading items are visible (6 headings + 6 toggle headings)
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
 
     // Click on a Heading item by finding one with "Heading" in the text
     const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
@@ -535,7 +535,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Wait for filter to apply
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
 
     // Click on Heading 1
     const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
@@ -751,10 +751,10 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Type "head" to filter to heading items
     await page.keyboard.type('head');
 
-    // Wait for filter to show heading items (6 headings + 3 toggle headings)
+    // Wait for filter to show heading items (6 headings + 6 toggle headings)
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
 
     // Click on Heading 1
     const headingItem = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
@@ -946,7 +946,7 @@ test.describe('plus button opens toolbox on empty paragraph', () => {
     // Toolbox must filter by "head" - heading items visible, not "Nothing found".
     const visibleItems = page.locator('[data-blok-testid="toolbox-popover"] [data-blok-item-name]:not([data-blok-hidden])');
 
-    await expect(visibleItems).toHaveCount(9);
+    await expect(visibleItems).toHaveCount(12);
   });
 
   test('plus+slash regression: Escape still restores focus to pre-plus block', async ({ page }) => {

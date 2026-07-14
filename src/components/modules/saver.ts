@@ -202,12 +202,20 @@ export class Saver extends Module {
 
       const normalizedData = normalizeInlineImages(sanitizedData);
 
+      /**
+       * Table view-reference guard: every child of a table must be referenced
+       * by a grid cell and every grid reference must resolve. See
+       * {@link enforceTableViewReferenceInvariant} — throws in dev/test,
+       * repairs the output in production.
+       */
+      const guardedData = this.enforceTableViewReferenceInvariant(normalizedData);
+
       // Check destruction one more time after async block.save() operations
       if (this.isDestroyed) {
         return undefined;
       }
 
-      return this.makeOutput(normalizedData);
+      return this.makeOutput(guardedData);
     } catch (error: unknown) {
       this.lastSaveError = error;
 
@@ -340,6 +348,171 @@ export class Saver extends Module {
     }
 
     return repaired;
+  }
+
+  /**
+   * Table view-reference guard (regression family: "Cmd+Z in a table, then
+   * save → the table's text reappears line-by-line under the table").
+   *
+   * A table renders its children exclusively through its grid — `data.content`
+   * cells hold the block-id lists. Any child of a table that no cell
+   * references is INVISIBLE in the editor but still emitted by the saver, so
+   * it resurfaces below the table on the consumer's next render as an
+   * unremovable ghost paragraph. The inverse drift — a cell referencing a
+   * block that does not exist — renders as an unfillable hole. Both are the
+   * signature of a rebuild path (undo/redo replay, remote sync, readonly
+   * toggle) desyncing the grid from the flat model.
+   *
+   * The mount-side fix lives in TableCellBlocks (own blocks stranded in a
+   * previous render's grid are re-mounted, not duplicated); this guard is the
+   * save-boundary backstop that catches the WHOLE class, including future
+   * vectors:
+   *   - test/dev: THROW so the offending mutation path is fixed before it ships.
+   *   - production: repair the OUTPUT to what the user actually saw and log an
+   *     error. An orphan child whose holder is disconnected is invisible →
+   *     pruned; a connected orphan is visible somewhere → promoted to root so
+   *     it stays a normal, selectable block. Dangling grid references are
+   *     removed from the emitted table data. The live model is left untouched
+   *     (save() is a read path).
+   *
+   * Legacy string-cell tables are skipped — they carry no block references.
+   * @param extracted - saved data for all blocks, post-sanitization
+   * @returns the array to serialize (repaired copy in production, input otherwise)
+   */
+  /**
+   * Extracts the set of block ids referenced by a saved table's grid cells.
+   * Returns null when the table carries no validatable references — a
+   * malformed/absent grid or legacy string cells.
+   * @param item - a saved block whose tool is 'table'
+   */
+  private static tableGridRefs(item: SaverValidatedData): Set<string> | null {
+    const content = (item.data as { content?: unknown } | undefined)?.content;
+
+    if (!Array.isArray(content) || !content.every(row => Array.isArray(row))) {
+      return null;
+    }
+
+    const cells = (content as unknown[][]).flat();
+
+    // Legacy string cell → this table has no block references to validate.
+    if (cells.some(cell => typeof cell === 'string')) {
+      return null;
+    }
+
+    return new Set(cells.flatMap(cell => {
+      const blocks = (cell as { blocks?: unknown } | null)?.blocks;
+
+      return Array.isArray(blocks) ? blocks.filter((id): id is string => typeof id === 'string') : [];
+    }));
+  }
+
+  /**
+   * Production-repair helper for {@link enforceTableViewReferenceInvariant}:
+   * removes grid references to blocks missing from the saved output.
+   * @param item - the saved table block to repair
+   * @param savedIds - ids of all blocks present in the saved output
+   */
+  private static pruneDanglingGridRefs(item: SaverValidatedData, savedIds: Set<string>): SaverValidatedData {
+    const content = (item.data as { content?: unknown[][] }).content ?? [];
+    const pruneCell = (cell: unknown): unknown => {
+      const blocks = (cell as { blocks?: unknown } | null)?.blocks;
+
+      if (!Array.isArray(blocks)) {
+        return cell;
+      }
+
+      return {
+        ...(cell as Record<string, unknown>),
+        blocks: blocks.filter(id => typeof id === 'string' && savedIds.has(id)),
+      };
+    };
+
+    return {
+      ...item,
+      data: {
+        ...(item.data as Record<string, unknown>),
+        content: content.map(row => row.map(pruneCell)),
+      } as SaverValidatedData['data'],
+    };
+  }
+
+  private enforceTableViewReferenceInvariant(extracted: SaverValidatedData[]): SaverValidatedData[] {
+    const savedIds = new Set(extracted.map(item => item.id).filter((id): id is string => typeof id === 'string'));
+    const liveBlockById = new Map(this.Blok.BlockManager.blocks.map(block => [block.id, block]));
+    const problems: string[] = [];
+    /** Orphan child ids → whether their holder is still connected (visible). */
+    const orphanVisibility = new Map<string, boolean>();
+    /** Table item ids that carry at least one dangling grid reference. */
+    const tablesWithDanglingRefs = new Set<string>();
+
+    for (const item of extracted) {
+      if (item.tool !== 'table' || typeof item.id !== 'string') {
+        continue;
+      }
+
+      const refs = Saver.tableGridRefs(item);
+
+      if (refs === null) {
+        continue;
+      }
+
+      const danglingRefs = [...refs].filter(ref => !savedIds.has(ref));
+
+      if (danglingRefs.length > 0) {
+        problems.push(...danglingRefs.map(ref => `table ${item.id} grid references missing block ${ref}`));
+        tablesWithDanglingRefs.add(item.id);
+      }
+
+      const tableId = item.id;
+      const orphanIds = extracted
+        .filter(child => child.parentId === tableId)
+        .map(child => child.id)
+        .filter((id): id is string => typeof id === 'string')
+        .filter(id => !refs.has(id));
+
+      for (const orphanId of orphanIds) {
+        const liveHolder: unknown = liveBlockById.get(orphanId)?.holder;
+        const isVisible = liveHolder instanceof HTMLElement && liveHolder.isConnected;
+
+        problems.push(`block ${orphanId} is a child of table ${tableId} but is not referenced by any cell (${isVisible ? 'visible' : 'invisible'} ghost)`);
+        orphanVisibility.set(orphanId, isVisible);
+      }
+    }
+
+    if (problems.length === 0) {
+      return extracted;
+    }
+
+    const message =
+      `Saver: table children diverge from their grid references — a rebuild path desynced the table view from the flat model. ${problems.join('; ')}`;
+    const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+
+    if (nodeEnv === 'test' || nodeEnv === 'development') {
+      throw new Error(message);
+    }
+
+    logLabeled(message, 'error');
+
+    // Production repair — emit what the user actually saw.
+    const droppedIds = new Set(
+      [...orphanVisibility.entries()].filter(([, visible]) => !visible).map(([id]) => id)
+    );
+
+    return extracted
+      .filter(item => typeof item.id !== 'string' || !droppedIds.has(item.id))
+      .map(item => {
+        const isVisibleOrphan = typeof item.id === 'string' && orphanVisibility.get(item.id) === true;
+        const hasOrphanContentIds = item.contentIds !== undefined && item.contentIds.some(id => orphanVisibility.has(id));
+        const base: SaverValidatedData = {
+          ...item,
+          ...(isVisibleOrphan && { parentId: null }),
+          ...(hasOrphanContentIds && { contentIds: item.contentIds?.filter(id => !orphanVisibility.has(id)) }),
+        };
+
+        return typeof base.id === 'string' && tablesWithDanglingRefs.has(base.id)
+          ? Saver.pruneDanglingGridRefs(base, savedIds)
+          : base;
+      });
   }
 
   /**

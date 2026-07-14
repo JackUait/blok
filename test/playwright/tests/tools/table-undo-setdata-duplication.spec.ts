@@ -201,6 +201,26 @@ test.describe('Table undo setData duplication', () => {
     expectNoDuplicatesOrOrphans(initial, afterRedoUndo);
   });
 
+  test('read-only toggle round trip does not duplicate cell blocks or strand orphans', async ({ page }) => {
+    const initial = await summarizeSaved(page);
+
+    // The read-only round trip rebuilds the table view — the same rebuild
+    // class as the undo setData path, so it must obey the same invariant.
+    await page.evaluate(async () => {
+      if (!window.blokInstance) {
+        throw new Error('Blok instance not found');
+      }
+      await window.blokInstance.readOnly.toggle(true);
+      await window.blokInstance.readOnly.toggle(false);
+    });
+    await waitForDelay(page, 400);
+
+    const after = await summarizeSaved(page);
+
+    expectNoDuplicatesOrOrphans(initial, after);
+    expect([...after.cellTexts].sort()).toStrictEqual(['Alpha', 'Beta', 'Delta', 'Gamma']);
+  });
+
   test('undo/redo storm on a structural row insert keeps children == grid references', async ({ page }) => {
     const initial = await summarizeSaved(page);
 

@@ -1231,5 +1231,250 @@ describe('Saver module', () => {
       dbHolder.remove();
     });
   });
+
+  describe('table view-reference guard (children vs data.content grid)', () => {
+    // Regression family: "Cmd+Z in a table, then save → the table's text
+    // reappears line-by-line under the table". A rebuild path duplicated cell
+    // blocks and left the originals parented to the table but unreferenced by
+    // any grid cell — invisible in the editor, but emitted by the Saver and
+    // rendered below the table after a save → re-render round trip. This guard
+    // makes the saver the last line of defense for the WHOLE class: dev/test
+    // saves THROW when a table's children diverge from its grid references;
+    // production saves repair the output to what the user actually saw.
+
+    type TableFixtureOptions = {
+      /** Extra child of the table that no grid cell references. */
+      ghost?: { id: string; connected: boolean };
+      /** Grid cell reference pointing at a block that does not exist. */
+      danglingRef?: string;
+      /** Use legacy string cells instead of blocks-format cells. */
+      legacyCells?: boolean;
+    };
+
+    const tableFixture = (options: TableFixtureOptions = {}): { blocks: Block[]; cleanup: () => void } => {
+      const tableHolder = document.createElement('div');
+      const cellContainerA = document.createElement('div');
+      const cellContainerB = document.createElement('div');
+
+      tableHolder.append(cellContainerA, cellContainerB);
+      document.body.appendChild(tableHolder);
+
+      const cellAHolder = document.createElement('div');
+      const cellBHolder = document.createElement('div');
+
+      cellContainerA.appendChild(cellAHolder);
+      cellContainerB.appendChild(cellBHolder);
+
+      const cellARefs = ['cellA', ...(options.danglingRef !== undefined ? [options.danglingRef] : [])];
+      const content = options.legacyCells === true
+        ? [['Alpha', 'Beta']]
+        : [[{ blocks: cellARefs }, { blocks: ['cellB'] }]];
+
+      const contentIds = ['cellA', 'cellB', ...(options.ghost !== undefined ? [options.ghost.id] : [])];
+
+      const table = createBlockMock({
+        id: 'tbl1',
+        tool: 'table',
+        data: { withHeadings: false, content },
+        contentIds,
+        holder: tableHolder,
+      });
+      const cellA = createBlockMock({
+        id: 'cellA',
+        tool: 'paragraph',
+        data: { text: 'Alpha' },
+        parentId: 'tbl1',
+        holder: cellAHolder,
+      });
+      const cellB = createBlockMock({
+        id: 'cellB',
+        tool: 'paragraph',
+        data: { text: 'Beta' },
+        parentId: 'tbl1',
+        holder: cellBHolder,
+      });
+
+      const blocks = [table.block, cellA.block, cellB.block];
+
+      if (options.ghost !== undefined) {
+        const ghostHolder = document.createElement('div');
+
+        if (options.ghost.connected) {
+          document.body.appendChild(ghostHolder);
+        }
+
+        const ghost = createBlockMock({
+          id: options.ghost.id,
+          tool: 'paragraph',
+          data: { text: 'GHOST' },
+          parentId: 'tbl1',
+          holder: ghostHolder,
+        });
+
+        blocks.push(ghost.block);
+      }
+
+      return {
+        blocks,
+        cleanup: () => {
+          document.body.innerHTML = '';
+        },
+      };
+    };
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      document.body.innerHTML = '';
+    });
+
+    it('throws in test env when a table child is not referenced by any grid cell', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = tableFixture({ ghost: { id: 'ghost1', connected: false } });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      await expect(saver.save()).resolves.toBeUndefined();
+      expect(saver.getLastSaveError()).toBeInstanceOf(Error);
+      expect((saver.getLastSaveError() as Error).message).toMatch(/not referenced by any cell/);
+      expect((saver.getLastSaveError() as Error).message).toContain('ghost1');
+
+      cleanup();
+    });
+
+    it('throws in test env when a grid cell references a block missing from the document', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = tableFixture({ danglingRef: 'no-such-block' });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      await expect(saver.save()).resolves.toBeUndefined();
+      expect(saver.getLastSaveError()).toBeInstanceOf(Error);
+      expect((saver.getLastSaveError() as Error).message).toMatch(/references missing block/);
+      expect((saver.getLastSaveError() as Error).message).toContain('no-such-block');
+
+      cleanup();
+    });
+
+    it('production: prunes an invisible (disconnected) orphan child from the output', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = tableFixture({ ghost: { id: 'ghost1', connected: false } });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks.find(b => b.id === 'ghost1')).toBeUndefined();
+      expect(result?.blocks.find(b => b.id === 'tbl1')?.content).toEqual(['cellA', 'cellB']);
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/not referenced by any cell/), 'error');
+
+      cleanup();
+    });
+
+    it('production: promotes a visible (connected) orphan child to root in the output', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = tableFixture({ ghost: { id: 'ghost1', connected: true } });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+
+      const ghost = result?.blocks.find(b => b.id === 'ghost1');
+
+      expect(ghost).toBeDefined();
+      expect(ghost).not.toHaveProperty('parent');
+      expect(result?.blocks.find(b => b.id === 'tbl1')?.content).toEqual(['cellA', 'cellB']);
+
+      cleanup();
+    });
+
+    it('production: prunes a dangling grid reference from the emitted table data', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = tableFixture({ danglingRef: 'no-such-block' });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+
+      const tableData = result?.blocks.find(b => b.id === 'tbl1')?.data as {
+        content: Array<Array<{ blocks: string[] }>>;
+      };
+
+      expect(tableData.content[0][0].blocks).toEqual(['cellA']);
+      expect(tableData.content[0][1].blocks).toEqual(['cellB']);
+
+      cleanup();
+    });
+
+    it('does not throw for a consistent table', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = tableFixture();
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks.map(b => b.id)).toEqual(['tbl1', 'cellA', 'cellB']);
+
+      cleanup();
+    });
+
+    it('skips the check for legacy string-cell tables (no block references to validate)', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = tableFixture({
+        legacyCells: true,
+        ghost: { id: 'ghost1', connected: true },
+      });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks.find(b => b.id === 'ghost1')).toBeDefined();
+
+      cleanup();
+    });
+  });
 });
 

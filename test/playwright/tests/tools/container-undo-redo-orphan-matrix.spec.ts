@@ -286,6 +286,19 @@ test.describe('Container undo/redo orphan invariant matrix', () => {
 
         const after = await summarizeBlocks(page);
 
+        // No minted ids at ANY level: undo/redo may only remove or restore
+        // known blocks, never create duplicates. Child-level ghosts (blocks
+        // parented to the container but no longer referenced by its view —
+        // the "table text duplicated under the table after save" bug) are
+        // invisible to the top-level check below, but always carry fresh ids.
+        const initialIds = new Set(initial.map(b => b.id));
+        const mintedIds = after.filter(b => !initialIds.has(b.id)).map(b => b.id);
+
+        expect(
+          mintedIds,
+          `[${fixture.name}] undo/redo minted brand-new blocks: ${JSON.stringify(mintedIds)}`
+        ).toStrictEqual([]);
+
         const newTopLevel = after.filter(b => isTopLevel(b) && !initialTopLevelIds.has(b.id));
 
         expect(

@@ -41,6 +41,21 @@ function buildScopeWhere() {
   return where;
 }
 
+// CSS Level 1/2 pseudo-elements may be written with a single colon
+// (`:before`, `:after`, `:first-line`, `:first-letter`). Tailwind v4 compiles
+// the `before:` / `after:` variants to this legacy single-colon form, so
+// detecting pseudo-elements by the `::` prefix alone misses them — and a
+// misplaced scope (`:before:where(…)`) is an invalid selector the browser
+// drops entirely (this silently broke every placeholder). Match both forms.
+const LEGACY_PSEUDO_ELEMENTS = new Set([':before', ':after', ':first-line', ':first-letter']);
+
+function isPseudoElement(node) {
+  return (
+    node.type === 'pseudo' &&
+    (node.value.startsWith('::') || LEGACY_PSEUDO_ELEMENTS.has(node.value.toLowerCase()))
+  );
+}
+
 const scopeSelectorProcessor = selectorParser((root) => {
   root.each((selector) => {
     const nodes = selector.nodes;
@@ -52,12 +67,12 @@ const scopeSelectorProcessor = selectorParser((root) => {
     });
 
     // Insert the scope at the end of the subject compound, but BEFORE any
-    // pseudo-element (`::before`, `::placeholder`, …) — a compound selector
-    // must not continue past a pseudo-element.
+    // pseudo-element (`::before`, `:before`, `::placeholder`, …) — a compound
+    // selector must not continue past a pseudo-element.
     let insertIdx = nodes.length;
     for (let i = lastCombinator + 1; i < nodes.length; i++) {
       const node = nodes[i];
-      if (node.type === 'pseudo' && node.value.startsWith('::')) {
+      if (isPseudoElement(node)) {
         insertIdx = i;
         break;
       }

@@ -71,6 +71,19 @@ describe('EmojiPicker', () => {
     expect(el.className).not.toContain('absolute');
   });
 
+  it('marks the picker as a blok popover so its scoped utilities apply on document.body', async () => {
+    // The picker is appended to document.body (callout/index.ts), OUTSIDE
+    // [data-blok-interface]. Blok's compiled utilities are scoped to only
+    // match inside interface/popover roots, so without data-blok-popover its
+    // sizing utilities (w-[400px], fixed, …) silently stop applying and the
+    // picker collapses — throwing off its anchored position.
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+    const el = picker.getElement();
+
+    expect(el.hasAttribute('data-blok-popover')).toBe(true);
+  });
+
   it('builds a picker element with filter input and body', async () => {
     const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
     const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });

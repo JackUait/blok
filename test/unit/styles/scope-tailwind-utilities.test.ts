@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-// @ts-expect-error - plain .mjs build helper, no types
 import { scopeUtilitiesLayer, SCOPE_SELECTOR } from '../../../scripts/scope-utilities/scope-tailwind-utilities.mjs';
 
 /**
@@ -57,6 +56,36 @@ describe('scopeUtilitiesLayer', () => {
     expect(out).toContain(`.before\\:block:where(${scope})::before`);
     // Invalid: a compound selector must not continue after a pseudo-element.
     expect(out).not.toContain('::before:where(');
+  });
+
+  // Tailwind v4 compiles the `before:` / `after:` variants to LEGACY
+  // single-colon pseudo-elements (`:before`, `:after`), not `::before`.
+  // The scope must still land BEFORE them — a compound selector must not
+  // continue past a pseudo-element, so `:before:where(...)` is INVALID and
+  // the whole rule is dropped by the browser (this silently killed every
+  // placeholder, whose content comes from a `before:content-[...]` utility).
+  it.each([
+    ['before', ':before', "content: '';"],
+    ['after', ':after', "content: '';"],
+    ['first-line', ':first-line', 'font-weight: 700;'],
+    ['first-letter', ':first-letter', 'font-size: 2rem;'],
+  ])('inserts the scope BEFORE a single-colon %s pseudo-element', (name, pseudo, decl) => {
+    const out = scopeUtilitiesLayer(
+      `@layer utilities { .${name}\\:x${pseudo} { ${decl} } }`
+    );
+    expect(out).toContain(`.${name}\\:x:where(${scope})${pseudo}`);
+    // Invalid: nothing may follow a pseudo-element in a compound selector.
+    expect(out).not.toContain(`${pseudo}:where(`);
+  });
+
+  it('inserts the scope BEFORE a single-colon pseudo-element that follows a class + pseudo-class', () => {
+    // Mirrors Tailwind's real placeholder output:
+    // `.empty:before:content-[…]:empty:before { … }`
+    const out = scopeUtilitiesLayer(
+      '@layer utilities { .empty\\:before\\:x:empty:before { content: attr(data-blok-placeholder); } }'
+    );
+    expect(out).toContain(`.empty\\:before\\:x:empty:where(${scope}):before`);
+    expect(out).not.toContain(':before:where(');
   });
 
   it('appends the scope to the subject of a child/sibling-combinator utility', () => {

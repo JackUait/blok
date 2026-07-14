@@ -54,15 +54,23 @@ describe('Announcer', () => {
     expect(assertive?.getAttribute('aria-live')).toBe('assertive');
   });
 
-  it('preserves sr-only styling on the regions', async () => {
+  it('hides the regions with inline styles (independent of blok-scoped utilities)', async () => {
     const { registerAnnouncer } = await loadAnnouncer();
 
     registerAnnouncer();
 
     const polite = document.getElementById(POLITE_REGION_ID);
 
-    expect(polite?.className).toContain('overflow-hidden');
-    expect(polite?.className).toContain('w-px');
+    // The announcer is mounted on document.body — OUTSIDE Blok's interface
+    // roots — so it must not rely on the editor's scoped `.sr-only` utilities
+    // (which only match inside [data-blok-interface]/[data-blok-popover]).
+    // Hiding must be inline so it applies wherever the region lives.
+    expect(polite?.style.position).toBe('absolute');
+    expect(polite?.style.width).toBe('1px');
+    expect(polite?.style.height).toBe('1px');
+    expect(polite?.style.overflow).toBe('hidden');
+    expect(polite?.style.whiteSpace).toBe('nowrap');
+    expect(polite?.style.clip).toBe('rect(0px, 0px, 0px, 0px)');
   });
 
   it('routes polite and assertive announcements to their own regions without flipping aria-live', async () => {

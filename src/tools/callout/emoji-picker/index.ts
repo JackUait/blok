@@ -255,6 +255,13 @@ export class EmojiPicker {
     const el = document.createElement('div');
 
     el.setAttribute('data-blok-emoji-picker', '');
+    // The picker mounts on document.body (callout/index.ts), OUTSIDE Blok's
+    // interface roots. Blok's compiled Tailwind utilities are scoped to only
+    // match inside [data-blok-interface]/[data-blok-popover] (see
+    // scripts/scope-utilities), so mark this popover root — otherwise its
+    // sizing utilities (w-[400px], fixed, …) never apply and its anchored
+    // position collapses.
+    el.setAttribute('data-blok-popover', '');
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
     el.setAttribute('aria-label', this.i18n.t(EDIT_ICON_KEY));

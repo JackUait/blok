@@ -15,19 +15,26 @@ const ASSERTIVE_REGION_ID = 'blok-announcer-assertive';
 const MESSAGE_SETTLE_MS = 150;
 
 /**
- * Tailwind sr-only pattern for visually hiding content while keeping it accessible
+ * Visually-hidden (sr-only) styling, applied INLINE.
+ *
+ * The live region is mounted on document.body — OUTSIDE Blok's interface roots
+ * ([data-blok-interface] / [data-blok-popover]). Blok's compiled Tailwind
+ * utilities are scoped to only match inside those roots (see
+ * scripts/scope-utilities), so `.sr-only`-style utility CLASSES silently stop
+ * applying here and the region renders full-width. Inline styles carry the
+ * hiding with the element wherever it lives, independent of that scoping.
  */
-const SR_ONLY_CLASSES = [
-  'absolute',
-  'w-px',
-  'h-px',
-  'p-0',
-  '-m-px',
-  'overflow-hidden',
-  '[clip:rect(0,0,0,0)]',
-  'whitespace-nowrap',
-  'border-0',
-].join(' ');
+const SR_ONLY_STYLE: Partial<CSSStyleDeclaration> = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: '0',
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: '0',
+};
 
 type Politeness = 'polite' | 'assertive';
 
@@ -151,7 +158,7 @@ class Announcer {
     const region = document.createElement('div');
 
     region.id = id;
-    region.className = SR_ONLY_CLASSES;
+    Object.assign(region.style, SR_ONLY_STYLE);
     region.setAttribute('role', role);
     region.setAttribute('aria-live', politeness);
     region.setAttribute('aria-atomic', 'true');

@@ -342,6 +342,23 @@ describe('ApiSection', () => {
       expect(joined).not.toContain('@bloklabs/react');
     });
 
+    it('install command is core-only for vanilla', () => {
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const install = codes().find((c) => c.startsWith('yarn add')) ?? '';
+      expect(install).toBe('yarn add @bloklabs/core');
+    });
+
+    it.each([
+      ['react', '@bloklabs/react'],
+      ['vue', '@bloklabs/vue'],
+      ['angular', '@bloklabs/angular'],
+    ])('install command includes the %s adapter package', (framework, adapterPackage) => {
+      localStorage.setItem('blok-docs-framework', framework);
+      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
+      const install = codes().find((c) => c.startsWith('yarn add')) ?? '';
+      expect(install).toBe(`yarn add @bloklabs/core ${adapterPackage}`);
+    });
+
     it('shows the React adapter setup when React is selected', () => {
       localStorage.setItem('blok-docs-framework', 'react');
       render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);

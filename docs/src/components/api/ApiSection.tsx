@@ -101,16 +101,22 @@ const QuickStartContent: React.FC = () => {
 
   const { container, create, save } = QUICK_START_SNIPPETS[framework];
 
+  // The adapters are standalone packages peering on the core, so framework
+  // users install both in one command.
+  const installPackages = framework === "vanilla"
+    ? PACKAGE_NAME
+    : `${PACKAGE_NAME} @bloklabs/${framework}`;
+
   const getInstallCommand = (manager: PackageManager): string => {
     switch (manager) {
       case "yarn":
-        return `yarn add ${PACKAGE_NAME}`;
+        return `yarn add ${installPackages}`;
       case "npm":
-        return `npm install ${PACKAGE_NAME}`;
+        return `npm install ${installPackages}`;
       case "bun":
-        return `bun add ${PACKAGE_NAME}`;
+        return `bun add ${installPackages}`;
       default:
-        return `npm install ${PACKAGE_NAME}`;
+        return `npm install ${installPackages}`;
     }
   };
 
@@ -123,7 +129,7 @@ const QuickStartContent: React.FC = () => {
           code={getInstallCommand(packageManager)}
           language="bash"
           showPackageManagerToggle
-          packageName={PACKAGE_NAME}
+          packageName={installPackages}
           onPackageManagerChange={setPackageManager}
         />
       ),

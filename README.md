@@ -30,11 +30,19 @@ It's headless on purpose. Blok ships the editing engine and a set of tools; it d
 
 ## Installation
 
+> **Renamed from `@jackuait/blok`.** As of 1.1.1 the family lives under the `@bloklabs` scope, and the framework adapters are standalone packages: `@bloklabs/core`, `@bloklabs/react`, `@bloklabs/vue`, `@bloklabs/angular`, `@bloklabs/cli`. The core has **zero peer dependencies** — installing it never asks about frameworks you don't use. The bundled codemod (`npx -p @bloklabs/core migrate-from-editorjs`) rewrites old import specifiers and `package.json` entries for you.
+
 With a bundler (Vite, webpack, Rollup, etc.):
 
 ```bash
 npm install @bloklabs/core
 # or: yarn add @bloklabs/core / pnpm add @bloklabs/core
+```
+
+Using a framework? Add the adapter package alongside the core:
+
+```bash
+npm install @bloklabs/core @bloklabs/react    # or @bloklabs/vue / @bloklabs/angular
 ```
 
 ```js
@@ -57,7 +65,9 @@ new Blok({
 });
 ```
 
-### Other entry points
+### Framework adapters & other entry points
+
+The adapters are separate packages that peer on `@bloklabs/core`, so versions stay in lockstep and the editor engine is never bundled twice.
 
 - `@bloklabs/react` — React 18/19 adapter. The recommended entry point is `<BlokEditor>`, an all-in-one component that forwards a ref to the live `Blok` instance:
 
@@ -73,6 +83,8 @@ new Blok({
   Don't wrap `<BlokEditor>` in `styled()` or any HOC that reserves the `theme` prop — styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it through `className`.
 
   For advanced control (e.g., rendering outside a single container), use `useBlok` + `BlokContent` directly.
+- `@bloklabs/vue` — Vue 3 adapter: `<BlokEditor>` component plus `useBlok`/`useBlocks` composables and `createVueBlock` for authoring block tools as Vue components.
+- `@bloklabs/angular` — Angular adapter (APF partial-Ivy bundle): `BlokEditorComponent`, `injectBlocks`, and `createAngularBlock` for component-based block tools.
 - `@bloklabs/core/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.
 - `@bloklabs/core/locales` — locale data, if you'd rather load it yourself.
 

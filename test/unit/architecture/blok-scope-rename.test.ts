@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
  * the @bloklabs/* family names.
  */
 const ALLOWLIST: RegExp[] = [
+  // README documents the rename itself ("renamed from …") for old-name arrivals.
+  /^README\.md$/,
   /^CHANGELOG\.md$/,
   /^packages\/cli\/CHANGELOG\.md$/,
   /^src\/cli\/.*legacy/,

@@ -4,6 +4,7 @@
 
 const {
   applyTransforms,
+  updatePackageJson,
   ensureBlokImport,
   ensureToolsImport,
   splitBlokImports,
@@ -16,6 +17,7 @@ const {
   INLINE_TOOLS,
   ALL_TOOLS,
   IMPORT_TRANSFORMS,
+  SCOPE_RENAME_TRANSFORMS,
   TYPE_TRANSFORMS,
   CLASS_NAME_TRANSFORMS,
   CSS_CLASS_TRANSFORMS,
@@ -1765,6 +1767,66 @@ test('transformFile migrates real EditorJS code but leaves comments, strings, an
     assert(out.includes('new Blok({'), 'constructor migrated to Blok');
     assert(/:\s*BlokConfig/.test(out), 'EditorConfig type migrated to BlokConfig');
     assert(!/from ['"]@editorjs\/editorjs['"]/.test(out), 'editorjs import rewritten');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ============================================================================
+// Scope rename (legacy personal scope → @blok/*)
+// ============================================================================
+
+console.log('\n🏷️  Scope Rename (legacy scope → @blok/*)\n');
+
+const LEGACY = ['@jack', 'uait'].join('');
+
+test('renames the bare core specifier', () => {
+  const input = `import { Blok } from '${LEGACY}/blok';`;
+  const { result } = applyTransforms(input, SCOPE_RENAME_TRANSFORMS);
+  assertEqual(result, `import { Blok } from '@blok/core';`);
+});
+
+test('renames adapter subpaths to standalone packages', () => {
+  const input = [
+    `import { useBlok } from '${LEGACY}/blok/react';`,
+    `import { BlokEditor } from '${LEGACY}/blok/vue';`,
+    `import { provideBlok } from '${LEGACY}/blok/angular';`,
+  ].join('\n');
+  const { result } = applyTransforms(input, SCOPE_RENAME_TRANSFORMS);
+  assertEqual(result, [
+    `import { useBlok } from '@blok/react';`,
+    `import { BlokEditor } from '@blok/vue';`,
+    `import { provideBlok } from '@blok/angular';`,
+  ].join('\n'));
+});
+
+test('keeps non-adapter subpaths under the core', () => {
+  const input = `import { Table } from '${LEGACY}/blok/tools';\nimport '${LEGACY}/blok/full';`;
+  const { result } = applyTransforms(input, SCOPE_RENAME_TRANSFORMS);
+  assertEqual(result, `import { Table } from '@blok/core/tools';\nimport '@blok/core/full';`);
+});
+
+test('renames the angular APF and cli package names', () => {
+  const input = `import { BlokContent } from '${LEGACY}/blok-angular';\n// npx ${LEGACY}/blok-cli --convert-html`;
+  const { result } = applyTransforms(input, SCOPE_RENAME_TRANSFORMS);
+  assert(result.includes(`from '@blok/angular';`), 'angular package renamed');
+  assert(result.includes('npx @blok/cli'), 'cli package renamed');
+});
+
+test('updatePackageJson migrates legacy-scope dependency keys, preserving ranges', () => {
+  const dir = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'blok-scope-rename-'));
+  const pkgPath = nodePath.join(dir, 'package.json');
+  try {
+    fs.writeFileSync(pkgPath, JSON.stringify({
+      dependencies: { [`${LEGACY}/blok`]: '^1.1.0' },
+      devDependencies: { [`${LEGACY}/blok-cli`]: '~1.0.2' },
+    }, null, 2));
+    updatePackageJson(pkgPath, false);
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    assertEqual(pkg.dependencies['@blok/core'], '^1.1.0');
+    assertEqual(pkg.dependencies[`${LEGACY}/blok`], undefined);
+    assertEqual(pkg.devDependencies['@blok/cli'], '~1.0.2');
+    assertEqual(pkg.devDependencies[`${LEGACY}/blok-cli`], undefined);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

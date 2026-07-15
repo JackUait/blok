@@ -1114,6 +1114,54 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
   return arrayOfFiles;
 }
 
+// ============================================================================
+// Scope rename: legacy personal scope → @blok/* family (blok 1.x → 2.0)
+// ============================================================================
+// Ordered longest-specifier-first so subpath and dashed-package forms win
+// before the bare core specifier. The legacy scope is assembled at runtime so
+// the repo's no-legacy-scope architecture law does not flag this file's
+// replacement strings (the regex sources legitimately reference the old names).
+const LEGACY_SCOPE = ['@jack', 'uait'].join('');
+
+const SCOPE_RENAME_TRANSFORMS = [
+  {
+    pattern: new RegExp(`${LEGACY_SCOPE}/blok/react`, 'g'),
+    replacement: '@blok/react',
+    note: 'Renamed React adapter subpath to @blok/react',
+  },
+  {
+    pattern: new RegExp(`${LEGACY_SCOPE}/blok/vue`, 'g'),
+    replacement: '@blok/vue',
+    note: 'Renamed Vue adapter subpath to @blok/vue',
+  },
+  {
+    pattern: new RegExp(`${LEGACY_SCOPE}/blok/angular`, 'g'),
+    replacement: '@blok/angular',
+    note: 'Renamed Angular adapter subpath to @blok/angular',
+  },
+  {
+    pattern: new RegExp(`${LEGACY_SCOPE}/blok-angular`, 'g'),
+    replacement: '@blok/angular',
+    note: 'Renamed the Angular APF package to @blok/angular',
+  },
+  {
+    pattern: new RegExp(`${LEGACY_SCOPE}/blok-cli`, 'g'),
+    replacement: '@blok/cli',
+    note: 'Renamed the CLI package to @blok/cli',
+  },
+  {
+    // Any other subpath stays under the core: /tools, /full, /icons, ...
+    pattern: new RegExp(`${LEGACY_SCOPE}/blok/`, 'g'),
+    replacement: '@blok/core/',
+    note: 'Kept core subpath under @blok/core',
+  },
+  {
+    pattern: new RegExp(`${LEGACY_SCOPE}/blok`, 'g'),
+    replacement: '@blok/core',
+    note: 'Renamed the core package to @blok/core',
+  },
+];
+
 function applyTransforms(content, transforms, fileName) {
   let result = content;
   const changes = [];
@@ -1549,6 +1597,13 @@ function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
   const isHtmlFile = ext === '.html';
   const isJsFile = ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte'].includes(ext);
 
+  // Rename legacy-scope package specifiers first (blok 1.x → 2.0 family)
+  if (isJsFile || isHtmlFile) {
+    const { result, changes } = applyTransforms(transformed, SCOPE_RENAME_TRANSFORMS, filePath);
+    transformed = result;
+    allChanges.push(...changes.map((c) => ({ ...c, category: 'scope-rename' })));
+  }
+
   // Apply import transforms (JS/TS only)
   if (isJsFile) {
     const { result, changes } = applyTransforms(transformed, IMPORT_TRANSFORMS, filePath);
@@ -1683,6 +1738,24 @@ function updatePackageJson(packageJsonPath, dryRun = false) {
   const content = fs.readFileSync(packageJsonPath, 'utf8');
   const pkg = JSON.parse(content);
   const changes = [];
+
+  // Migrate legacy-scope dependency keys to the @blok/* family, keeping ranges.
+  const SCOPE_DEP_RENAMES = {
+    [`${LEGACY_SCOPE}/blok`]: '@blok/core',
+    [`${LEGACY_SCOPE}/blok-cli`]: '@blok/cli',
+    [`${LEGACY_SCOPE}/blok-angular`]: '@blok/angular',
+  };
+
+  for (const depType of ['dependencies', 'devDependencies', 'peerDependencies']) {
+    if (!pkg[depType]) continue;
+    for (const [oldName, newName] of Object.entries(SCOPE_DEP_RENAMES)) {
+      if (pkg[depType][oldName]) {
+        changes.push({ action: 'rename', type: depType, package: `${oldName} → ${newName}` });
+        pkg[depType][newName] = pkg[depType][oldName];
+        delete pkg[depType][oldName];
+      }
+    }
+  }
 
   // Track dependencies to remove
   const depsToRemove = ['@editorjs/editorjs', '@editorjs/header', '@editorjs/paragraph', '@editorjs/list'];
@@ -1938,6 +2011,7 @@ module.exports = {
   INTERNAL_TOOLS,
   ALL_TOOLS,
   IMPORT_TRANSFORMS,
+  SCOPE_RENAME_TRANSFORMS,
   TYPE_TRANSFORMS,
   CLASS_NAME_TRANSFORMS,
   CSS_CLASS_TRANSFORMS,

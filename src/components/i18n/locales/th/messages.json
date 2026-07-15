@@ -455,6 +455,7 @@
   "tools.audio.uploading": "กำลังอัปโหลด…",
   "tools.audio.errorUploadFailed": "อัปโหลดล้มเหลว",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "ลิงก์ Google Drive ไม่สามารถเล่นได้โดยตรง — ดาวน์โหลดไฟล์แล้วอัปโหลดที่นี่",
   "tools.audio.errorReplace": "แทนที่",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

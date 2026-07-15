@@ -466,6 +466,7 @@
   "tools.audio.uploading": "ກຳລັງອັບໂຫຼດ…",
   "tools.audio.errorUploadFailed": "ການອັບໂຫຼດບໍ່ສຳເລັດ",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "ລິ້ງ Google Drive ບໍ່ສາມາດຫຼິ້ນໂດຍກົງໄດ້ — ດາວໂຫລດໄຟລ໌ ແລ້ວອັບໂຫລດຢູ່ບ່ອນນີ້.",
   "tools.audio.errorReplace": "ແທນທີ່",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

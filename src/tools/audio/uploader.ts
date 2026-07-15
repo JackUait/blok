@@ -2,6 +2,7 @@ import type { AudioConfig } from '../../../types/tools/audio';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
+import { googleDriveDirectDownloadUrl } from './google-drive';
 
 export interface UploadResult {
   url: string;
@@ -35,8 +36,16 @@ export class Uploader {
 
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateUrl(raw);
+
+    // Drive rejects browser hotlinking, so a share link only works when a
+    // backend can fetch and re-host the normalized direct-download URL.
+    const driveUrl = googleDriveDirectDownloadUrl(raw);
+    if (driveUrl && !this.config.uploader?.uploadByUrl) {
+      throw new AudioUploadError('GOOGLE_DRIVE_NEEDS_UPLOADER', raw);
+    }
+
     if (this.config.uploader?.uploadByUrl) {
-      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
+      return this.config.uploader.uploadByUrl(driveUrl ?? raw, { onProgress: options.onProgress });
     }
 
     return { url: raw };

@@ -59,11 +59,22 @@ async function getDecodePeaksMock() {
   return mod.decodePeaks as ReturnType<typeof vi.fn>;
 }
 
+const uploaderInstances = vi.hoisted(
+  () => [] as Array<{ handleFile: ReturnType<typeof vi.fn>; handleUrl: ReturnType<typeof vi.fn> }>,
+);
+
 vi.mock('../../../../src/tools/audio/uploader', () => {
-  class AudioUploadError extends Error {}
+  class AudioUploadError extends Error {
+    constructor(public readonly code: string, public readonly detail?: string) {
+      super(code);
+    }
+  }
   class Uploader {
     handleFile = vi.fn().mockResolvedValue({ url: 'https://cdn/track.mp3', fileName: 'track.mp3' });
     handleUrl = vi.fn().mockResolvedValue({ url: 'https://cdn/track.mp3' });
+    constructor() {
+      uploaderInstances.push(this);
+    }
   }
   return { AudioUploadError, Uploader };
 });
@@ -95,6 +106,7 @@ const opts = (
 beforeEach(() => {
   vi.clearAllMocks();
   coverPickerCalls.length = 0;
+  uploaderInstances.length = 0;
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -165,6 +177,27 @@ describe('AudioTool', () => {
     await Promise.resolve();
     expect(tool.save().url).toBe('');
     expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('shows a Google Drive-specific error when the link needs an upload backend', async () => {
+    const { AudioUploadError } = await import('../../../../src/tools/audio/uploader');
+    const tool = new AudioTool(opts({ url: '' }, { sources: 'url' }));
+    const el = tool.render();
+    const uploader = uploaderInstances.at(-1);
+    if (!uploader) throw new Error('uploader instance not captured');
+    uploader.handleUrl.mockRejectedValue(new AudioUploadError('GOOGLE_DRIVE_NEEDS_UPLOADER'));
+
+    const urlInput = el.querySelector<HTMLInputElement>('input[type="url"]');
+    const submit = el.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
+    if (!urlInput || !submit) throw new Error('embed input not rendered');
+    urlInput.value = 'https://drive.google.com/file/d/1kEpLxTdbrbEFMCUNSIrMkxCixC20ELrM/view';
+    urlInput.dispatchEvent(new Event('input'));
+    submit.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const error = el.querySelector('[data-role="audio-error"]');
+    expect(error?.textContent).toContain('Google Drive');
   });
 
   it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {

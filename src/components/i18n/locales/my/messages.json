@@ -466,6 +466,7 @@
   "tools.audio.uploading": "အပ်လုဒ်တင်နေသည်…",
   "tools.audio.errorUploadFailed": "အပ်လုဒ်မအောင်မြင်",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive လင့်ခ်များကို တိုက်ရိုက်ဖွင့်၍မရပါ — ဖိုင်ကို ဒေါင်းလုဒ်လုပ်ပြီး ဤနေရာတွင် အပ်လုဒ်လုပ်ပါ။",
   "tools.audio.errorReplace": "အစားထိုး",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -455,6 +455,7 @@
   "tools.audio.uploading": "އަޕްލޯޑް ކުރަނީ…",
   "tools.audio.errorUploadFailed": "އަޕްލޯޑް ފެއިލްވީ",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive ލިންކުތައް ސީދާ ޕްލޭއެއް ނުކުރެވޭނެ — ފައިލް ޑައުންލޯޑްކޮށް މިތަނަށް އަޕްލޯޑްކުރައްވާ.",
   "tools.audio.errorReplace": "ބަދަލުކުރޭ",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

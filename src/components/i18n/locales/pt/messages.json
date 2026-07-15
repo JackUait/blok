@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Enviando…",
   "tools.audio.errorUploadFailed": "Falha no envio",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Os links do Google Drive não podem ser reproduzidos diretamente — baixe o arquivo e envie-o aqui.",
   "tools.audio.errorReplace": "Substituir",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

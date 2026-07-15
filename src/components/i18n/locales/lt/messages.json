@@ -466,6 +466,7 @@
   "tools.audio.uploading": "Įkeliama…",
   "tools.audio.errorUploadFailed": "Įkelti nepavyko",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive nuorodų negalima leisti tiesiogiai — atsisiųskite failą ir įkelkite jį čia.",
   "tools.audio.errorReplace": "Pakeisti",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

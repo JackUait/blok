@@ -455,6 +455,7 @@
   "tools.audio.uploading": "يۈكلىنىۋاتىدۇ…",
   "tools.audio.errorUploadFailed": "يۈكلەش مەغلۇپ بولدى",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive ئۇلانمىلىرىنى بىۋاسىتە قويغىلى بولمايدۇ — ھۆججەتنى چۈشۈرۈپ بۇ يەرگە يۈكلەڭ.",
   "tools.audio.errorReplace": "ئالماشتۇرۇش",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

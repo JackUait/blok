@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Nahrávání…",
   "tools.audio.errorUploadFailed": "Nahrávání selhalo",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Odkazy Google Drive nelze přehrát přímo — stáhněte soubor a nahrajte jej sem.",
   "tools.audio.errorReplace": "Nahradit",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

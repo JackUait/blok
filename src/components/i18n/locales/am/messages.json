@@ -455,6 +455,7 @@
   "tools.audio.uploading": "በመስቀል ላይ…",
   "tools.audio.errorUploadFailed": "መስቀል አልተሳካም",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "የGoogle Drive አገናኞች በቀጥታ ሊጫወቱ አይችሉም — ፋይሉን አውርደው እዚህ ይስቀሉት።",
   "tools.audio.errorReplace": "ተካ",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

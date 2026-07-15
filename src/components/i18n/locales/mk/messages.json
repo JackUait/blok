@@ -466,6 +466,7 @@
   "tools.audio.uploading": "Подигање…",
   "tools.audio.errorUploadFailed": "Подигањето не успеа",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Линковите од Google Drive не може да се репродуцираат директно — преземете ја датотеката и прикачете ја тука.",
   "tools.audio.errorReplace": "Замени",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -453,6 +453,7 @@
   "tools.audio.uploading": "Ladataan…",
   "tools.audio.errorUploadFailed": "Lataus epäonnistui",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive -linkkejä ei voi toistaa suoraan — lataa tiedosto ja lähetä se tähän.",
   "tools.audio.errorReplace": "Korvaa",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -455,6 +455,7 @@
   "tools.audio.uploading": "اپلوډ کیږي…",
   "tools.audio.errorUploadFailed": "اپلوډ ناکام",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "د Google Drive لینکونه مستقیم نه غږول کېږي — فایل ډاونلوډ کړئ او دلته یې پورته کړئ.",
   "tools.audio.errorReplace": "بدلول",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

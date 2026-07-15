@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Đang tải lên…",
   "tools.audio.errorUploadFailed": "Tải lên thất bại",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Không thể phát trực tiếp liên kết Google Drive — hãy tải tệp xuống rồi tải lên tại đây.",
   "tools.audio.errorReplace": "Thay thế",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

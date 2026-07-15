@@ -455,6 +455,7 @@
   "tools.audio.uploading": "កំពុងបញ្ជូន…",
   "tools.audio.errorUploadFailed": "ការបញ្ជូនបរាជ័យ",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "តំណ Google Drive មិនអាចចាក់ដោយផ្ទាល់បានទេ — ទាញយកឯកសារ ហើយផ្ទុកឡើងនៅទីនេះ។",
   "tools.audio.errorReplace": "ជំនួស",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

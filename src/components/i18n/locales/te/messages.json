@@ -455,6 +455,7 @@
   "tools.audio.uploading": "అప్‌లోడ్ అవుతోంది…",
   "tools.audio.errorUploadFailed": "అప్‌లోడ్ విఫలమైంది",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive లింక్‌లను నేరుగా ప్లే చేయలేము — ఫైల్‌ను డౌన్‌లోడ్ చేసి ఇక్కడ అప్‌లోడ్ చేయండి.",
   "tools.audio.errorReplace": "భర్తీ చేయి",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

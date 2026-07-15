@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Inapakia…",
   "tools.audio.errorUploadFailed": "Upakiaji umeshindikana",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Viungo vya Google Drive haviwezi kuchezwa moja kwa moja — pakua faili kisha uipakie hapa.",
   "tools.audio.errorReplace": "Badilisha",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Վերբեռնվում է…",
   "tools.audio.errorUploadFailed": "Վերբեռնումը ձախողվեց",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive հղումները հնարավոր չէ ուղղակիորեն նվագարկել — ներբեռնեք ֆայլը և վերբեռնեք այն այստեղ։",
   "tools.audio.errorReplace": "Փոխարինել",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

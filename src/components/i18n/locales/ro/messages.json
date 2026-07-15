@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Se încarcă…",
   "tools.audio.errorUploadFailed": "Încărcare eșuată",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Linkurile Google Drive nu pot fi redate direct — descărcați fișierul și încărcați-l aici.",
   "tools.audio.errorReplace": "Înlocuiește",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -316,6 +316,16 @@ export class AudioTool implements BlockTool {
   }
 
   private applyError(err?: unknown): void {
+    if (err instanceof AudioUploadError && err.code === 'GOOGLE_DRIVE_NEEDS_UPLOADER') {
+      this.errorMessage = tr(
+        this.api.i18n,
+        'tools.audio.errorGoogleDrive',
+        'Google Drive links can’t be played directly — download the file and upload it here instead.',
+      );
+      this.state = 'ERROR';
+      this.renderState();
+      return;
+    }
     this.errorMessage = err instanceof AudioUploadError
       ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
         tooLarge: 'tools.audio.errorFileTooLarge',

@@ -453,6 +453,7 @@
   "tools.audio.uploading": "અપલોડ થઈ રહ્યું છે…",
   "tools.audio.errorUploadFailed": "અપલોડ નિષ્ફળ",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive લિંક સીધી ચલાવી શકાતી નથી — ફાઇલ ડાઉનલોડ કરીને અહીં અપલોડ કરો.",
   "tools.audio.errorReplace": "બદલો",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -53,4 +53,21 @@ describe('Audio Uploader', () => {
     const u = new Uploader({});
     await expect(u.handleUrl('https://x/y.mp3')).resolves.toEqual({ url: 'https://x/y.mp3' });
   });
+
+  it('delegates a Google Drive share link to uploadByUrl with the direct-download URL', async () => {
+    const uploadByUrl = vi.fn().mockResolvedValue({ url: 'https://cdn/rehosted.wav' });
+    const u = new Uploader({ uploader: { uploadByUrl } });
+    await expect(u.handleUrl('https://drive.google.com/file/d/1kEpLxTdbrbEFMCUNSIrMkxCixC20ELrM/view?usp=drive_link'))
+      .resolves.toEqual({ url: 'https://cdn/rehosted.wav' });
+    expect(uploadByUrl).toHaveBeenCalledWith(
+      'https://drive.usercontent.google.com/download?id=1kEpLxTdbrbEFMCUNSIrMkxCixC20ELrM&export=download&confirm=t',
+      expect.anything(),
+    );
+  });
+
+  it('rejects a Google Drive share link when no uploadByUrl is configured', async () => {
+    const u = new Uploader({});
+    await expect(u.handleUrl('https://drive.google.com/file/d/1kEpLxTdbrbEFMCUNSIrMkxCixC20ELrM/view'))
+      .rejects.toMatchObject({ code: 'GOOGLE_DRIVE_NEEDS_UPLOADER' });
+  });
 });

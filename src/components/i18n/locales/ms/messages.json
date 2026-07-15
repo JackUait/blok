@@ -466,6 +466,7 @@
   "tools.audio.uploading": "Memuat naik…",
   "tools.audio.errorUploadFailed": "Muat naik gagal",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Pautan Google Drive tidak boleh dimainkan terus — muat turun fail dan muat naik di sini.",
   "tools.audio.errorReplace": "Ganti",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

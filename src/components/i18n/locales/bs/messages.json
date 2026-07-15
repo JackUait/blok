@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Slanje…",
   "tools.audio.errorUploadFailed": "Slanje nije uspjelo",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive linkovi se ne mogu reproducirati direktno — preuzmite datoteku i otpremite je ovdje.",
   "tools.audio.errorReplace": "Zamijeni",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

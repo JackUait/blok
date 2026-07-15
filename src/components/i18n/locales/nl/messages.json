@@ -455,6 +455,7 @@
   "tools.audio.uploading": "Uploaden…",
   "tools.audio.errorUploadFailed": "Uploaden mislukt",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive-links kunnen niet rechtstreeks worden afgespeeld — download het bestand en upload het hier.",
   "tools.audio.errorReplace": "Vervangen",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

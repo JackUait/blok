@@ -455,6 +455,7 @@
   "tools.audio.uploading": "アップロード中…",
   "tools.audio.errorUploadFailed": "アップロードに失敗しました",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
+  "tools.audio.errorGoogleDrive": "Google Drive のリンクは直接再生できません。ファイルをダウンロードして、ここにアップロードしてください。",
   "tools.audio.errorReplace": "置き換え",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

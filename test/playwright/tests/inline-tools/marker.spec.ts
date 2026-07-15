@@ -1021,6 +1021,83 @@ test.describe('inline tool marker', () => {
       expect(html).not.toContain('<mark');
       expect(html).toContain('Highlighted text');
     });
+
+    /**
+     * Exhaustive sweep over EVERY swatch in BOTH picker sections: after
+     * hovering each one (opening its tooltip), hit-test the center of every
+     * swatch with elementFromPoint and require the swatch itself to win.
+     * Unlike the single-click regression above, this guard is agnostic to
+     * WHICH overlay does the shielding — it fails if the tooltip regresses,
+     * but also if any future floating UI (hover card, badge, new tooltip
+     * implementation) ever covers any color's swatch with a click-eating
+     * surface. This is the "never again, for any color, under any overlay"
+     * contract.
+     */
+    test('no swatch is click-shielded while any other swatch tooltip is open', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: '<mark style="background-color: var(--blok-color-green-bg);">Highlighted text</mark>',
+          },
+        },
+      ]);
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'Highlighted text');
+      await openMarkerPicker(page);
+
+      // All 20 triggers: 2 sections × (default + 9 color presets). Kept in
+      // sync with COLOR_PRESETS by the count assertion below.
+      const sectionKeys = ['color', 'background-color'];
+      const swatchNames = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+      const swatchTestIds = sectionKeys.flatMap((section) => swatchNames.map((name) => `marker-swatch-${section}-${name}`));
+
+      // Guard the guard: if presets are ever added/renamed, fail loudly here
+      // instead of silently sweeping a stale list.
+      const renderedSwatchCount = await page.locator('[data-blok-testid^="marker-swatch-"]').count();
+
+      expect(renderedSwatchCount).toBe(swatchTestIds.length);
+
+      const tooltip = page.getByTestId('tooltip');
+
+      for (const hoveredId of swatchTestIds) {
+        await page.locator(`[data-blok-testid="${hoveredId}"]`).hover();
+        await expect(tooltip).toHaveAttribute('data-state', 'open');
+
+        // Hit-test every swatch center in one page-side pass: whatever
+        // element the browser would actually deliver a click to must be the
+        // swatch (or a descendant of it) — never an overlay.
+        const shielded = await page.evaluate((ids) => {
+          const offenders: string[] = [];
+
+          for (const id of ids) {
+            const swatch = document.querySelector(`[data-blok-testid="${id}"]`);
+
+            if (swatch === null) {
+              offenders.push(`${id}: swatch not found`);
+              continue;
+            }
+
+            const rect = swatch.getBoundingClientRect();
+            const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+
+            if (hit !== swatch && !swatch.contains(hit)) {
+              const hitDescription = hit === null
+                ? 'nothing'
+                : `<${hit.tagName.toLowerCase()} data-blok-testid="${hit.getAttribute('data-blok-testid') ?? ''}">`;
+
+              offenders.push(`${id}: shielded by ${hitDescription}`);
+            }
+          }
+
+          return offenders;
+        }, swatchTestIds);
+
+        expect(shielded, `while hovering ${hoveredId}`).toEqual([]);
+      }
+    });
   });
 
   test.describe('dark mode', () => {

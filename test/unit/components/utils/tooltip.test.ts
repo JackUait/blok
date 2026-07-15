@@ -244,6 +244,36 @@ describe('Tooltip utility', () => {
     expect(wrapper?.style.getPropertyPriority('pointer-events')).toBe('important');
   });
 
+  it('stays click-transparent across the full show/hide lifecycle', () => {
+    /**
+     * Companion to the click-transparency contract: prepare() sets the inline
+     * rule once, but hide()/reveal() rewrite other inline properties on the
+     * same style declaration (visibility via updateTooltipVisibility, left/top
+     * via applyPlacement). If any future refactor rewrites the declaration
+     * wholesale (e.g. `style.cssText = ...`) or re-creates the wrapper without
+     * the rule, the bubble silently becomes a click shield again — for EVERY
+     * tooltip trigger, not just the color picker. Pin the invariant at every
+     * lifecycle stage.
+     */
+    const expectTransparent = (stage: string): void => {
+      const wrapper = getTooltipWrapper();
+
+      expect(wrapper?.style.getPropertyValue('pointer-events'), stage).toBe('none');
+      expect(wrapper?.style.getPropertyPriority('pointer-events'), stage).toBe('important');
+    };
+
+    const target = createTargetElement();
+
+    show(target, 'lifecycle-check');
+    expectTransparent('after show');
+
+    hide();
+    expectTransparent('after hide');
+
+    show(target, 'lifecycle-check-again');
+    expectTransparent('after re-show');
+  });
+
   it('hides after the trigger is left even when the pointer lands on the bubble', () => {
     /**
      * Companion to the pointer-events contract: the old bubble-hover pinning

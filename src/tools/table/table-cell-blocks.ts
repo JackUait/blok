@@ -1246,13 +1246,28 @@ export class TableCellBlocks {
       this.stripPlaceholders(existingContainer);
     }
 
-    // Sync to model if holder landed in a cell but isn't tracked yet (e.g. toolbox conversion)
+    // Sync to model if holder landed in a cell but isn't tracked yet (e.g.
+    // toolbox conversion, or Enter at the start of a cell block where
+    // insertToDOM already placed the holder next to its sibling).
     const untrackedCell = existingContainer && !this.model.findCellForBlock(detail.target.id)
       ? existingContainer.closest<HTMLElement>(`[${CELL_ATTR}]`)
       : null;
 
-    if (untrackedCell) {
+    if (untrackedCell && this.gridElement.contains(untrackedCell)) {
       this.syncBlockToModel(untrackedCell, detail.target.id);
+
+      // Claim parentage too (mirrors claimBlockForCell). Without it the block
+      // is tracked by the model but save() filters it out of the cell — its
+      // parentId never points at this table — so visible cell content is
+      // silently unparented into a top-level orphan on save.
+      const blockApi = this.api.blocks.getById?.(detail.target.id);
+      const ownedElsewhere = blockApi?.parentId != null
+        && blockApi.parentId !== ''
+        && blockApi.parentId !== this.tableBlockId;
+
+      if (!ownedElsewhere) {
+        this.api.blocks.setBlockParent(detail.target.id, this.tableBlockId);
+      }
     }
 
     if (existingContainer) {
@@ -1269,18 +1284,6 @@ export class TableCellBlocks {
     // For those, check that the current block at the time of insertion belongs
     // to this table — indicating the user was editing inside a cell.
     if (!this.gridElement.contains(holder)) {
-      // If the holder is outside the table block's own wrapper (e.g. placed
-      // directly in the editor working area via appendToWorkingArea), it is
-      // a top-level block and must not be claimed into a cell.
-      const tableBlockIdx = this.api.blocks.getBlockIndex(this.tableBlockId);
-      const tableBlockApi = tableBlockIdx !== undefined
-        ? this.api.blocks.getBlockByIndex(tableBlockIdx)
-        : null;
-
-      if (tableBlockApi && !tableBlockApi.holder.contains(holder)) {
-        return;
-      }
-
       const currentIndex = this.api.blocks.getCurrentBlockIndex();
       const currentBlock = currentIndex >= 0
         ? this.api.blocks.getBlockByIndex(currentIndex)
@@ -1290,6 +1293,35 @@ export class TableCellBlocks {
         && this.getOwnedCellForBlock(currentBlock.id) !== null;
 
       if (!currentBlockInOurTable) {
+        return;
+      }
+
+      // If the holder is outside the table block's own wrapper (e.g. placed
+      // directly in the editor working area via appendToWorkingArea), it is
+      // a top-level block and must not be claimed into a cell.
+      //
+      // EXCEPTION — Enter at the start of a cell's FIRST block: the new
+      // block's flat predecessor is the TABLE block itself, so insertToDOM
+      // anchors the holder 'afterend' the whole table wrapper. It still
+      // belongs in the cell, right above the block the caret stayed on.
+      // Recognized precisely by "the next flat block IS the current cell
+      // block" — a plain insert below/next to the table never has that shape
+      // (there the caret moves to the new block itself). Without this claim
+      // the block is mounted into the cell later by setBlockParent's silent
+      // DOM move, the model never records it, and save() unparents the
+      // visible content into a top-level orphan (images-drift regression).
+      const tableBlockIdx = this.api.blocks.getBlockIndex(this.tableBlockId);
+      const tableBlockApi = tableBlockIdx !== undefined
+        ? this.api.blocks.getBlockByIndex(tableBlockIdx)
+        : null;
+
+      const holderOutsideWrapper = tableBlockApi != null && !tableBlockApi.holder.contains(holder);
+      const nextBlock = holderOutsideWrapper
+        ? this.api.blocks.getBlockByIndex(blockIndex + 1)
+        : undefined;
+      const isInsertAboveCurrentCellBlock = nextBlock != null && nextBlock.id === currentBlock.id;
+
+      if (holderOutsideWrapper && !isInsertAboveCurrentCellBlock) {
         return;
       }
 
@@ -1353,9 +1385,18 @@ export class TableCellBlocks {
       return;
     }
 
-    // If the holder is still inside our grid, the block was moved within
-    // this table — nothing to clean up.
+    // The holder is still inside our grid: the block was moved within this
+    // table. Re-sync the model to the holder's new cell AND position — the
+    // model order is what save() persists, so skipping this silently reverts
+    // the user's reorder on the next save (images-drift-to-cell-bottom
+    // regression).
     if (this.gridElement.contains(detail.target.holder)) {
+      const cell = detail.target.holder.closest<HTMLElement>(`[${CELL_ATTR}]`);
+
+      if (cell && this.gridElement.contains(cell)) {
+        this.syncBlockToModel(cell, blockId);
+      }
+
       return;
     }
 
@@ -1363,14 +1404,53 @@ export class TableCellBlocks {
   }
 
   /**
-   * Find the DOM cell's row/col position and add the block to the model.
+   * Find the DOM cell's row/col position and add the block to the model at
+   * the position the user actually sees (derived from the holder's DOM
+   * position within the cell). Appending instead would diverge model order
+   * from DOM order for any non-tail insert, and save() persists model order.
    */
   private syncBlockToModel(cell: HTMLElement, blockId: string): void {
     const pos = this.getCellPosition(cell);
 
     if (pos) {
-      this.model.addBlockToCell(pos.row, pos.col, blockId);
+      this.model.addBlockToCell(pos.row, pos.col, blockId, this.getModelInsertIndex(cell, pos, blockId));
     }
+  }
+
+  /**
+   * Compute the model insertion index for a block from its holder's DOM
+   * position: insert before the first already-tracked cell block whose holder
+   * comes after it in the DOM. Returns undefined (append) when the holder or
+   * container can't be resolved — e.g. transitional states where the DOM
+   * hasn't been mounted yet.
+   */
+  private getModelInsertIndex(cell: HTMLElement, pos: CellPosition, blockId: string): number | undefined {
+    const container = cell.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!container) {
+      return undefined;
+    }
+
+    const targetHolder = this.findHolderInContainer(container, blockId);
+
+    if (!targetHolder) {
+      return undefined;
+    }
+
+    const trackedIds = this.model.getCellBlocks(pos.row, pos.col).filter(id => id !== blockId);
+
+    const insertBeforeIndex = trackedIds.findIndex(id => {
+      const holder = this.findHolderInContainer(container, id);
+
+      return holder !== null
+        && (targetHolder.compareDocumentPosition(holder) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    });
+
+    return insertBeforeIndex === -1 ? undefined : insertBeforeIndex;
+  }
+
+  private findHolderInContainer(container: HTMLElement, blockId: string): HTMLElement | null {
+    return container.querySelector<HTMLElement>(`[data-blok-id="${CSS.escape(blockId)}"]`);
   }
 
   /**

@@ -838,10 +838,41 @@ export class Table implements BlockTool {
           return cell;
         }
 
+        const cellEl = gridEl?.querySelector<HTMLElement>(
+          `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
+        );
+        const container = cellEl?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`) ?? null;
+
         const filtered = cell.blocks.filter(blockId => {
           const block = this.api.blocks.getById?.(blockId);
 
-          return block != null && (block.parentId ?? '') === tableId;
+          if (block == null) {
+            return false;
+          }
+
+          const parentId = block.parentId ?? '';
+
+          if (parentId === tableId) {
+            return true;
+          }
+
+          // Ownership repair: the model references the block AND its holder
+          // is visibly mounted in this very cell, but the parent link was
+          // never (or no longer) set. Dropping the reference here silently
+          // unparents visible cell content into a top-level orphan that
+          // reloads at the bottom of / below the table (images-drift
+          // regression). Re-adopt it — unless another table owns it.
+          const mountedHere = container?.querySelector(
+            `[data-blok-id="${CSS.escape(blockId)}"]`
+          ) != null;
+
+          if (parentId === '' && mountedHere) {
+            this.api.blocks.setBlockParent(blockId, tableId);
+
+            return true;
+          }
+
+          return false;
         });
 
         // Recover from a stale model snapshot: if the model says this cell is
@@ -851,10 +882,6 @@ export class Table implements BlockTool {
         // attractor state that later undo presses revert to — see
         // table-undo-redo-orphans regression.
         if (filtered.length === 0 && gridEl) {
-          const cellEl = gridEl.querySelector<HTMLElement>(
-            `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
-          );
-          const container = cellEl?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
           const harvested = container
             ? Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'))
               .map(el => el.getAttribute('data-blok-id') ?? '')
@@ -873,11 +900,74 @@ export class Table implements BlockTool {
           }
         }
 
-        return { ...cell, blocks: filtered };
+        // WYSIWYG completeness: a block parented to this table and visibly
+        // mounted in this cell's container MUST be saved as part of the cell,
+        // even if the model never recorded it (a DOM move performed by core
+        // code without a block event). Dropping it lets the saver's
+        // view-reference guard unparent visible content into a top-level
+        // orphan. Skip ids tracked by the model in some cell — those are
+        // either already in `filtered` or deliberately elsewhere.
+        const mountedUntracked = container
+          ? Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]'))
+            .map(el => el.getAttribute('data-blok-id') ?? '')
+            .filter(id => {
+              if (!id || filtered.includes(id) || this.model.findCellForBlock(id) !== null) {
+                return false;
+              }
+
+              const block = this.api.blocks.getById?.(id);
+
+              return block != null && (block.parentId ?? '') === tableId;
+            })
+          : [];
+
+        const merged = [...filtered, ...mountedUntracked];
+
+        return { ...cell, blocks: this.reorderToDomOrder(merged, rowIndex, colIndex) };
       })
     );
 
     return data;
+  }
+
+  /**
+   * WYSIWYG backstop: reorder a cell's block ids to match the visible DOM
+   * order of their holders. The model is kept in sync on every insert/move,
+   * but if any path ever reorders the DOM without syncing the model, the
+   * DOM — what the user sees — must win at save time (images-drift-to-cell-
+   * bottom regression). Only applies when EVERY id resolves to a holder
+   * inside the cell's container; a partially-mounted cell (mid-rebuild
+   * transitional state) keeps the model order rather than guessing.
+   */
+  private reorderToDomOrder(blockIds: string[], rowIndex: number, colIndex: number): string[] {
+    if (blockIds.length < 2) {
+      return blockIds;
+    }
+
+    const cellEl = this.gridElement?.querySelector<HTMLElement>(
+      `[${CELL_ROW_ATTR}="${rowIndex}"][${CELL_COL_ATTR}="${colIndex}"]`
+    );
+    const container = cellEl?.querySelector<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`);
+
+    if (!container) {
+      return blockIds;
+    }
+
+    const positions = new Map<string, number>();
+
+    Array.from(container.querySelectorAll<HTMLElement>('[data-blok-id]')).forEach((holder, index) => {
+      const id = holder.getAttribute('data-blok-id');
+
+      if (id !== null && !positions.has(id)) {
+        positions.set(id, index);
+      }
+    });
+
+    if (!blockIds.every(id => positions.has(id))) {
+      return blockIds;
+    }
+
+    return [...blockIds].sort((a, b) => (positions.get(a) ?? 0) - (positions.get(b) ?? 0));
   }
 
   public validate(savedData: TableData): boolean {

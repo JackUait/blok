@@ -28,6 +28,7 @@ describe('TableCellBlocks block sync on merged grids', () => {
       isSyncingFromYjs: false,
       getBlockIndex: vi.fn(),
       getBlockByIndex: vi.fn(),
+      setBlockParent: vi.fn(),
     },
   });
 

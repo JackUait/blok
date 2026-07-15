@@ -174,9 +174,12 @@ export class TableModel {
   }
 
   /**
-   * Append a block to the given cell.
+   * Insert a block into the given cell at the given index (appends when
+   * omitted). The index MUST reflect the block's visible position: the model
+   * order is what save() persists, so an append where the DOM inserted at the
+   * top silently reorders the cell on every save (WYSIWYG regression).
    */
-  addBlockToCell(row: number, col: number, blockId: string): void {
+  addBlockToCell(row: number, col: number, blockId: string, index?: number): void {
     if (!this.isInBounds(row, col)) {
       return;
     }
@@ -194,7 +197,12 @@ export class TableModel {
       oldCell.blocks = oldCell.blocks.filter(id => id !== blockId);
     }
 
-    this.contentGrid[row][col].blocks.push(blockId);
+    const blocks = this.contentGrid[row][col].blocks;
+    const insertAt = index === undefined
+      ? blocks.length
+      : Math.max(0, Math.min(index, blocks.length));
+
+    blocks.splice(insertAt, 0, blockId);
     this.blockCellMap.set(blockId, { row, col });
   }
 

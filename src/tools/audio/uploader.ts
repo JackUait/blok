@@ -2,7 +2,7 @@ import type { AudioConfig } from '../../../types/tools/audio';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
-import { googleDriveDirectDownloadUrl } from './google-drive';
+import { normalizeAudioShareLink } from './share-links';
 
 export interface UploadResult {
   url: string;
@@ -37,18 +37,19 @@ export class Uploader {
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateUrl(raw);
 
-    // Drive rejects browser hotlinking, so a share link only works when a
-    // backend can fetch and re-host the normalized direct-download URL.
-    const driveUrl = googleDriveDirectDownloadUrl(raw);
-    if (driveUrl && !this.config.uploader?.uploadByUrl) {
+    // Share links from known services are rewritten to their direct-content
+    // form. Proxy-only services (Drive) reject browser hotlinking, so their
+    // link only works when a backend can fetch and re-host the direct URL.
+    const share = normalizeAudioShareLink(raw);
+    if (share?.requiresProxy && !this.config.uploader?.uploadByUrl) {
       throw new AudioUploadError('GOOGLE_DRIVE_NEEDS_UPLOADER', raw);
     }
 
     if (this.config.uploader?.uploadByUrl) {
-      return this.config.uploader.uploadByUrl(driveUrl ?? raw, { onProgress: options.onProgress });
+      return this.config.uploader.uploadByUrl(share?.url ?? raw, { onProgress: options.onProgress });
     }
 
-    return { url: raw };
+    return { url: share?.url ?? raw };
   }
 
   public async handleFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {

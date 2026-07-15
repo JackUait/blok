@@ -70,4 +70,27 @@ describe('Audio Uploader', () => {
     await expect(u.handleUrl('https://drive.google.com/file/d/1kEpLxTdbrbEFMCUNSIrMkxCixC20ELrM/view'))
       .rejects.toMatchObject({ code: 'GOOGLE_DRIVE_NEEDS_UPLOADER' });
   });
+
+  it('rewrites a Dropbox share link to the direct-content host without an uploader', async () => {
+    const u = new Uploader({});
+    await expect(u.handleUrl('https://www.dropbox.com/scl/fi/abc/song.mp3?rlkey=k&dl=0'))
+      .resolves.toEqual({ url: 'https://dl.dropboxusercontent.com/scl/fi/abc/song.mp3?rlkey=k' });
+  });
+
+  it('rewrites a GitHub blob link to the raw host without an uploader', async () => {
+    const u = new Uploader({});
+    await expect(u.handleUrl('https://github.com/user/repo/blob/main/song.mp3'))
+      .resolves.toEqual({ url: 'https://raw.githubusercontent.com/user/repo/main/song.mp3' });
+  });
+
+  it('passes the normalized direct link to uploadByUrl when configured', async () => {
+    const uploadByUrl = vi.fn().mockResolvedValue({ url: 'https://cdn/rehosted.mp3' });
+    const u = new Uploader({ uploader: { uploadByUrl } });
+    await expect(u.handleUrl('https://www.dropbox.com/s/abc/song.mp3?dl=0'))
+      .resolves.toEqual({ url: 'https://cdn/rehosted.mp3' });
+    expect(uploadByUrl).toHaveBeenCalledWith(
+      'https://dl.dropboxusercontent.com/s/abc/song.mp3',
+      expect.anything(),
+    );
+  });
 });

@@ -1029,7 +1029,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Audio',
     description:
-      'A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and a caption. Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
+      'A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and a caption. Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). Share links from Dropbox, OneDrive, GitHub, GitLab, Hugging Face, Google Cloud Storage, and the Internet Archive are rewritten to their direct-content form automatically; Google Drive links additionally require an `uploadByUrl` backend because Drive blocks browser hotlinking. An optional MIME allowlist and max size gate what is accepted.',
     importExample: `import { Audio } from '@jackuait/blok/tools';`,
     configOptions: [
       {

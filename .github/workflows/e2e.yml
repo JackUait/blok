@@ -79,7 +79,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.artifact-name }}
-          path: dist/
+          # Archive keeps repo-relative paths (dist/, packages/*/dist/); extract at root
+          # so the react-adapter fixture can load /packages/react/dist/index.mjs.
+          path: .
 
       - name: Mark Build as Available
         run: echo "BLOK_BUILT=true" >> $GITHUB_ENV

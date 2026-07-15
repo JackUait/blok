@@ -57,7 +57,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist
-          path: dist/
+          # Archive keeps repo-relative paths (dist/, packages/*/dist/); extract at root.
+          path: .
 
       - name: Build CLI
         run: yarn build:cli
@@ -91,11 +92,21 @@ jobs:
       - name: Build
         run: yarn build
 
+      # The adapters were extracted into packages/*/dist (they used to live under
+      # dist/). Downstream jobs (Unit's bundle-outputs test, E2E's react-adapter
+      # fixture) load those built adapter bundles, so they must travel in the
+      # artifact too. The common ancestor of these paths is the repo root, so the
+      # archive keeps each path at its repo-relative location — download steps
+      # therefore extract at the repo root (path: .), not into dist/.
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: |
+            dist/
+            packages/react/dist/
+            packages/vue/dist/
+            packages/angular/dist/
           retention-days: 1
 
   e2e-tests:

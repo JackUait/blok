@@ -2679,6 +2679,7 @@
             duration: 90,
             peaks: [0.2,0.28,0.33,0.3,0.26,0.22,0.19,0.24,0.31,0.36,0.8,0.82,0.85,0.83,0.86,0.84,0.82,0.85,0.88,0.86,0.93,0.95,0.97,0.92,0.94,0.96,0.98,0.95,0.97,0.91,0.94,0.97,0.93,0.95,0.98,0.96,0.89,0.92,0.96,0.94,0.98,0.93,0.96,0.99,0.95,0.94,0.97,0.95,0.93,0.96,0.98,0.94,0.92,0.97,0.96,0.99,0.95,0.93,0.98,1,0.96,0.95,0.97,0.82],
           } }] },
+          { label: 'Google Drive error', blocks: [{ id: 'au-drive-error', type: 'audio', data: { url: '' } }] },
         ],
       },
       {
@@ -2967,6 +2968,26 @@
           retry.textContent = 'Replace';
           wrap.append(msg, retry);
           videoErrRoot.appendChild(wrap);
+        }
+
+        // Force the audio "Google Drive error" state demo — the message shown
+        // when a Drive share link is pasted without an uploadByUrl backend.
+        const audioDriveErrRoot = holder.querySelector('[data-blok-id="au-drive-error"] [data-blok-tool="audio"]');
+        if (audioDriveErrRoot) {
+          audioDriveErrRoot.setAttribute('data-state', 'error');
+          audioDriveErrRoot.replaceChildren();
+          const wrap = document.createElement('div');
+          wrap.className = 'blok-audio-error-state';
+          wrap.setAttribute('data-role', 'audio-error');
+          const msg = document.createElement('span');
+          msg.textContent = 'Google Drive links can’t be played directly — download the file and upload it here instead.';
+          const retry = document.createElement('button');
+          retry.type = 'button';
+          retry.className = 'blok-audio-retry';
+          retry.setAttribute('data-action', 'replace');
+          retry.textContent = 'Replace';
+          wrap.append(msg, retry);
+          audioDriveErrRoot.appendChild(wrap);
         }
 
         // Force the transient file-upload loading state. The uploader resolves

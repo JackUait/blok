@@ -125,6 +125,21 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('audio entry', () => {
+    test('has an audio tab', () => {
+      expect(rawSpec).toContain("tool: 'audio'");
+    });
+
+    test('covers the "Google Drive error" state', () => {
+      expect(sectionFor('audio')).toContain("label: 'Google Drive error'");
+    });
+
+    test('the Google Drive error demo is force-rendered after mount', () => {
+      expect(html).toContain('[data-blok-id="au-drive-error"] [data-blok-tool="audio"]');
+      expect(html).toContain('blok-audio-error-state');
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');

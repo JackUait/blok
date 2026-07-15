@@ -346,8 +346,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // removed column no longer leaves a phantom resize bar; this nudges the
     // imported bytes past the 1.372 ceiling, so the multiplier is bumped to
     // 1.376. ~0.8KB intentional growth.
+    // Audio error-state callout: the audio tool's ERROR state (surfaced by the
+    // Google Drive link feature) previously rendered unstyled — audio.css only
+    // themed a `.blok-audio-inner` that renderError never creates. Added the
+    // flat soft-danger callout + retry button mirroring video.css, bumping the
+    // multiplier to 1.379. ~1.1KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.376);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.379);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

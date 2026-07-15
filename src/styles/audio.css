@@ -745,6 +745,41 @@
   background: color-mix(in srgb, var(--blok-color-danger) 4%, var(--blok-bg-primary));
 }
 
+/* ----- error state — flat soft-danger callout (mirrors video error) ----- */
+[data-blok-tool="audio"] .blok-audio-error-state {
+  padding: var(--blok-space-3);
+  background: color-mix(in srgb, var(--blok-color-danger) 6%, var(--blok-bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--blok-color-danger) 18%, var(--blok-border-subtle));
+  border-radius: var(--blok-radius-lg);
+  display: flex; gap: var(--blok-space-3); align-items: center;
+  color: var(--blok-text-primary);
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  text-align: left;
+}
+[data-blok-tool="audio"] .blok-audio-retry {
+  margin-left: auto;
+  flex-shrink: 0;
+  appearance: none;
+  padding: var(--blok-space-1-5) var(--blok-space-3);
+  border-radius: var(--blok-radius-md);
+  border: 1px solid var(--blok-border-subtle);
+  background: var(--blok-bg-primary);
+  color: var(--blok-text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--blok-duration-base) ease, border-color var(--blok-duration-base) ease;
+}
+[data-blok-tool="audio"] .blok-audio-retry:hover {
+  background: var(--blok-bg-hover);
+  border-color: var(--blok-border-primary);
+}
+[data-blok-tool="audio"] .blok-audio-retry:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blok-color-accent) 40%, transparent);
+}
+
 /* ----- hide caption in non-rendered states --------------- */
 [data-blok-tool="audio"]:not([data-state="rendered"]) .blok-audio-caption-row {
   display: none;

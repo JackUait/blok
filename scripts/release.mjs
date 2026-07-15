@@ -3,6 +3,8 @@ import { writeFileSync, unlinkSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
+import { FAMILY, prepareManifestForGpr } from './release-manifest.mjs';
+
 /**
  * Build the `npm publish` command that publishes a pre-packed tarball.
  *
@@ -113,10 +115,13 @@ if (isDirectRun) {
 
   let cleanupNpmrc = false;
 
-  const version = process.argv[2];
+  const args = process.argv.slice(2);
+  const isDryRun = args.includes('--dry-run');
+  const skipPreflight = args.includes('--skip-preflight');
+  const version = args.find((a) => !a.startsWith('--'));
 
   if (!version) {
-    console.error('Usage: yarn release <version>');
+    console.error('Usage: yarn release <version> [--dry-run] [--skip-preflight]');
     console.error('Examples:');
     console.error('  yarn release 1.0.0            # stable');
     console.error('  yarn release 1.0.0-beta.1     # beta (auto-detected)');
@@ -163,140 +168,114 @@ if (isDirectRun) {
 
   // --- Preflight ---
 
-  console.log(`\nReleasing ${version} (tag: ${tag})\n`);
+  console.log(`\nReleasing ${version} (tag: ${tag})${isDryRun ? ' [DRY RUN]' : ''}\n`);
 
-  run('yarn release:preflight');
+  if (!skipPreflight) {
+    run('yarn release:preflight');
+  }
 
-  // --- Bump version (package.json only, no git tag yet) ---
+  // --- Bump versions: root via npm, workspaces by manifest edit (lockstep) ---
 
   run(`npm version ${version} --no-git-tag-version`);
 
-  // --- Build once, pack twice (npm + GPR), publish both as tarballs ---
+  const WORKSPACE_MANIFESTS = [
+    'packages/react/package.json',
+    'packages/vue/package.json',
+    'packages/angular/package.json',
+    'packages/cli/package.json',
+  ];
+
+  for (const manifestPath of WORKSPACE_MANIFESTS) {
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+
+    manifest.version = version;
+
+    // Adapters peer on the core at the released version (lockstep family).
+    if (manifest.peerDependencies && '@blok/core' in manifest.peerDependencies
+      && manifest.peerDependencies['@blok/core'] !== '*') {
+      manifest.peerDependencies['@blok/core'] = `^${version}`;
+    }
+
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+  }
+
+  // --- Build once (root build chains every workspace), then the CLI ---
 
   run('yarn build');
-
-  // Pack @blok/core tarball for npm
-  const npmPackJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
-
-  run(gprPublishCommand({ packJson: npmPackJson, packDir: '/tmp', tag }));
-
-  // --- Cleanup temporary .npmrc ---
-
-  if (cleanupNpmrc) {
-    unlinkSync('.npmrc');
-  }
-
-  // --- Publish to GitHub Packages as @dodopizza/blok ---
-
-  const pkgJson = JSON.parse(readFileSync('package.json', 'utf-8'));
-
-  await publishPackagePair({
-    publishToNpm: () => {
-      // Already published above; nothing to do for npm in the GPR step
-    },
-    publishToGpr: () => {
-      // Rewrite name so the tarball contains @dodopizza/blok
-      pkgJson.name = '@dodopizza/blok';
-      writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
-
-      // Pack a second tarball under the @dodopizza name
-      const gprPackJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
-
-      const gprToken = process.env.BLOK_GITHUB_TOKEN;
-
-      if (gprToken) {
-        writeFileSync('.npmrc', [
-          '@dodopizza:registry=https://npm.pkg.github.com',
-          `//npm.pkg.github.com/:_authToken=${gprToken}`,
-          '',
-        ].join('\n'));
-      }
-
-      run(gprPublishCommand({ packJson: gprPackJson, packDir: '/tmp', tag }));
-      console.log('\nPublished @dodopizza/blok to GitHub Packages');
-    },
-    restoreName: () => {
-      pkgJson.name = '@blok/core';
-      writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
-
-      if (existsSync('.npmrc')) {
-        unlinkSync('.npmrc');
-      }
-    },
-  });
-
-  // --- Publish @blok/cli ---
-
-  const cliDir = join(fileURLToPath(new URL('.', import.meta.url)), '../packages/cli');
-  const cliPkgPath = join(cliDir, 'package.json');
-  const cliPkgJson = JSON.parse(readFileSync(cliPkgPath, 'utf-8'));
-
-  // Sync version from main package
-  cliPkgJson.version = version;
-  writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
-
-  // Build CLI
   run('node scripts/build-cli.mjs');
 
-  // Write npm .npmrc
-  if (npmToken) {
-    writeFileSync('.npmrc', `//registry.npmjs.org/:_authToken=${npmToken}\n`);
+  // --- Publish the whole family: npmjs @blok/* + GHP @dodopizza/* mirrors ---
+
+  const publishSuffix = isDryRun ? ' --dry-run' : '';
+
+  const writeNpmrc = () => {
+    if (npmToken) {
+      writeFileSync('.npmrc', `//registry.npmjs.org/:_authToken=${npmToken}\n`);
+    }
+  };
+
+  const writeGprNpmrc = () => {
+    const gprToken = process.env.BLOK_GITHUB_TOKEN;
+
+    if (gprToken) {
+      writeFileSync('.npmrc', [
+        '@dodopizza:registry=https://npm.pkg.github.com',
+        `//npm.pkg.github.com/:_authToken=${gprToken}`,
+        '',
+      ].join('\n'));
+    }
+  };
+
+  for (const entry of FAMILY) {
+    const originalManifest = readFileSync(entry.manifestPath, 'utf-8');
+
+    await publishPackagePair({
+      publishToNpm: () => {
+        writeNpmrc();
+
+        const packJson = runCapture(
+          'npm pack --ignore-scripts --pack-destination /tmp --json',
+          { cwd: entry.packDir },
+        );
+
+        run(gprPublishCommand({ packJson, packDir: '/tmp', tag }) + publishSuffix);
+        console.log(`\nPublished ${entry.npmName} to npm`);
+      },
+      publishToGpr: () => {
+        const gprManifest = prepareManifestForGpr(JSON.parse(originalManifest), entry);
+
+        writeFileSync(entry.manifestPath, JSON.stringify(gprManifest, null, 2) + '\n');
+        writeGprNpmrc();
+
+        const packJson = runCapture(
+          'npm pack --ignore-scripts --pack-destination /tmp --json',
+          { cwd: entry.packDir },
+        );
+
+        run(gprPublishCommand({ packJson, packDir: '/tmp', tag }) + publishSuffix);
+        console.log(`\nPublished ${entry.gprName} to GitHub Packages`);
+      },
+      restoreName: () => {
+        writeFileSync(entry.manifestPath, originalManifest);
+
+        if (existsSync('.npmrc')) {
+          unlinkSync('.npmrc');
+        }
+      },
+    });
   }
 
-  // Pack and publish to npm as @blok/cli
-  const cliNpmPackJson = runCapture(
-    'npm pack --ignore-scripts --pack-destination /tmp --json',
-    { cwd: cliDir }
-  );
-
-  run(gprPublishCommand({ packJson: cliNpmPackJson, packDir: '/tmp', tag }));
-  console.log('\nPublished @blok/cli to npm');
-
-  // Cleanup npm .npmrc
-  if (existsSync('.npmrc')) {
-    unlinkSync('.npmrc');
-  }
-
-  await publishPackagePair({
-    publishToNpm: () => {
-      // Already published above; nothing to do for npm in the GPR step
-    },
-    publishToGpr: () => {
-      // Publish to GitHub Packages as @dodopizza/blok-cli
-      cliPkgJson.name = '@dodopizza/blok-cli';
-      writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
-
-      const gprToken = process.env.BLOK_GITHUB_TOKEN;
-
-      if (gprToken) {
-        writeFileSync('.npmrc', [
-          '@dodopizza:registry=https://npm.pkg.github.com',
-          `//npm.pkg.github.com/:_authToken=${gprToken}`,
-          '',
-        ].join('\n'));
-      }
-
-      const cliGprPackJson = runCapture(
-        'npm pack --ignore-scripts --pack-destination /tmp --json',
-        { cwd: cliDir }
-      );
-
-      run(gprPublishCommand({ packJson: cliGprPackJson, packDir: '/tmp', tag }));
-      console.log('\nPublished @dodopizza/blok-cli to GitHub Packages');
-    },
-    restoreName: () => {
-      cliPkgJson.name = '@blok/cli';
-      writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
-
-      if (existsSync('.npmrc')) {
-        unlinkSync('.npmrc');
-      }
-    },
-  });
+  cleanupNpmrc = false; // the family loop always removes .npmrc in restoreName
 
   // --- Git: commit, tag, push ---
 
-  run('git add package.json packages/cli/package.json');
+  if (isDryRun) {
+    run('git checkout -- package.json ' + WORKSPACE_MANIFESTS.join(' '));
+    console.log(`\nDry run complete for ${version} — nothing was published.`);
+    process.exit(0);
+  }
+
+  run(`git add package.json ${WORKSPACE_MANIFESTS.join(' ')}`);
   run(`git commit -m "chore(release): ${version}"`);
   run(`git tag ${gitTag}`);
   run('git push');
@@ -309,7 +288,7 @@ if (isDirectRun) {
   const mainChangelog = existsSync('CHANGELOG.md')
     ? readFileSync('CHANGELOG.md', 'utf-8')
     : '';
-  const cliChangelogPath = join(cliDir, 'CHANGELOG.md');
+  const cliChangelogPath = join(fileURLToPath(new URL('.', import.meta.url)), '../packages/cli/CHANGELOG.md');
   const cliChangelog = existsSync(cliChangelogPath)
     ? readFileSync(cliChangelogPath, 'utf-8')
     : '';

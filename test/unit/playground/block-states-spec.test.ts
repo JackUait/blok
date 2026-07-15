@@ -140,6 +140,40 @@ describe('playground block states spec (index.html)', () => {
     });
   });
 
+  describe('restricted-source empty states are live tools', () => {
+    test.each([
+      ['image', 'im-empty-upload', 'upload'],
+      ['image', 'im-empty-link', 'url'],
+      ['video', 'vd-empty-upload', 'upload'],
+      ['video', 'vd-empty-link', 'url'],
+      ['audio', 'au-empty-upload', 'upload'],
+      ['audio', 'au-empty-link', 'url'],
+      ['file', 'fl-empty-upload', 'upload'],
+      ['file', 'fl-empty-link', 'url'],
+    ])('%s state %s declares a per-state sources override', (tool, blockId, mode) => {
+      const section = sectionFor(tool);
+      const stateStart = section.indexOf(`'${blockId}'`);
+
+      expect(stateStart, `state block id '${blockId}'`).toBeGreaterThan(-1);
+
+      const lineStart = section.lastIndexOf('{ label:', stateStart);
+      const state = section.slice(lineStart, stateStart);
+
+      expect(state).toContain(`toolConfig: { ${tool}: { sources: '${mode}' } }`);
+    });
+
+    test('the static empty-state swap hack is gone (tiles are functional)', () => {
+      expect(html).not.toContain('swapEmptyState');
+      expect(html).not.toContain('onUrl: noop');
+      expect(html).not.toContain('onFile: noop');
+    });
+
+    test('mountStatePreview applies per-segment toolConfig overrides', () => {
+      expect(html).toContain('function mountStatePreview({ container, segments })');
+      expect(html).toContain('toolConfig');
+    });
+  });
+
   describe('gallery preview tools', () => {
     test('mountStatePreview registers the embed tool', () => {
       expect(mountTools).toContain('embed: Embed');

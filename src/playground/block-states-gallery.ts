@@ -1,14 +1,20 @@
 import type { OutputBlockData } from '@/types/data-formats/output-data';
 
+export interface BlockStateSegment {
+  blocks: OutputBlockData[];
+  /** Per-editor tool config overrides (e.g. `{ audio: { sources: 'url' } }`). */
+  toolConfig?: Record<string, Record<string, unknown>>;
+}
+
 export interface BlockStatesSpec {
   tool: string;
   label: string;
-  blocks: OutputBlockData[];
+  segments: BlockStateSegment[];
 }
 
 export interface RenderBlockArgs {
   container: HTMLElement;
-  blocks: OutputBlockData[];
+  segments: BlockStateSegment[];
 }
 
 export interface RenderBlockStatesGalleryOptions {
@@ -53,7 +59,7 @@ function createPanel(spec: BlockStatesSpec, isActive: boolean, renderBlock: (arg
 
   panel.appendChild(preview);
 
-  renderBlock({ container: preview, blocks: spec.blocks });
+  renderBlock({ container: preview, segments: spec.segments });
 
   return panel;
 }

@@ -941,11 +941,6 @@
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
-    import { renderEmptyState as renderImageEmptyState } from './src/tools/image/empty-state.ts';
-    import { renderEmptyState as renderVideoEmptyState } from './src/tools/video/empty-state.ts';
-    import { renderEmptyState as renderAudioEmptyState } from './src/tools/audio/empty-state.ts';
-    import { renderEmptyState as renderFileEmptyState } from './src/tools/file/empty-state.ts';
-    import { LightweightI18n } from './src/components/i18n/lightweight-i18n.ts';
     import { version } from './package.json';
 
     document.getElementById('pg-version').textContent = `v${version}`;
@@ -2279,17 +2274,31 @@
     /**
      * Block states gallery - lazy init on first visit to /block-states
      */
+    // States sharing the default tool config are batched into one editor
+    // segment; a state with `toolConfig` gets its own segment (and thus its
+    // own editor instance) so tool-level options like `sources` can vary
+    // per state.
     function flattenStates(tool, label, states) {
-      const blocks = [];
+      const segments = [];
+      let current = null;
       states.forEach((state, i) => {
-        blocks.push({
+        const header = {
           id: `${tool}-label-${i}`,
           type: 'header',
           data: { text: state.label, level: 3 },
-        });
-        blocks.push(...state.blocks);
+        };
+        if (state.toolConfig) {
+          segments.push({ blocks: [header, ...state.blocks], toolConfig: state.toolConfig });
+          current = null;
+        } else {
+          if (!current) {
+            current = { blocks: [] };
+            segments.push(current);
+          }
+          current.blocks.push(header, ...state.blocks);
+        }
       });
-      return { tool, label, blocks };
+      return { tool, label, segments };
     }
 
     const BLOCK_STATES_RAW = [
@@ -2568,8 +2577,8 @@
         label: 'Image',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'im-empty', type: 'image', data: {} }] },
-          { label: 'Empty · upload only', blocks: [{ id: 'im-empty-upload', type: 'image', data: {} }] },
-          { label: 'Empty · link only', blocks: [{ id: 'im-empty-link', type: 'image', data: {} }] },
+          { label: 'Empty · upload only', toolConfig: { image: { sources: 'upload' } }, blocks: [{ id: 'im-empty-upload', type: 'image', data: {} }] },
+          { label: 'Empty · link only', toolConfig: { image: { sources: 'url' } }, blocks: [{ id: 'im-empty-link', type: 'image', data: {} }] },
           { label: 'Loaded', blocks: [{ id: 'im-loaded', type: 'image', data: {
             url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800',
             caption: 'Mountain vista',
@@ -2622,8 +2631,8 @@
         label: 'Video',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'vd-empty', type: 'video', data: {} }] },
-          { label: 'Empty · upload only', blocks: [{ id: 'vd-empty-upload', type: 'video', data: {} }] },
-          { label: 'Empty · link only', blocks: [{ id: 'vd-empty-link', type: 'video', data: {} }] },
+          { label: 'Empty · upload only', toolConfig: { video: { sources: 'upload' } }, blocks: [{ id: 'vd-empty-upload', type: 'video', data: {} }] },
+          { label: 'Empty · link only', toolConfig: { video: { sources: 'url' } }, blocks: [{ id: 'vd-empty-link', type: 'video', data: {} }] },
           { label: 'Loaded', blocks: [{ id: 'vd-loaded', type: 'video', data: {
             url: '/samples/big-buck-bunny.mp4',
             width: 80,
@@ -2658,8 +2667,8 @@
         label: 'Audio',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'au-empty', type: 'audio', data: { url: '' } }] },
-          { label: 'Empty · upload only', blocks: [{ id: 'au-empty-upload', type: 'audio', data: { url: '' } }] },
-          { label: 'Empty · link only', blocks: [{ id: 'au-empty-link', type: 'audio', data: { url: '' } }] },
+          { label: 'Empty · upload only', toolConfig: { audio: { sources: 'upload' } }, blocks: [{ id: 'au-empty-upload', type: 'audio', data: { url: '' } }] },
+          { label: 'Empty · link only', toolConfig: { audio: { sources: 'url' } }, blocks: [{ id: 'au-empty-link', type: 'audio', data: { url: '' } }] },
           { label: 'Loaded', blocks: [{ id: 'au-loaded', type: 'audio', data: {
             url: '/samples/soundhelix-song-1.mp3',
             fileName: 'soundhelix-song-1.mp3',
@@ -2687,8 +2696,8 @@
         label: 'File',
         states: [
           { label: 'Empty (upload)', blocks: [{ id: 'fl-empty', type: 'file', data: { url: '' } }] },
-          { label: 'Empty · upload only', blocks: [{ id: 'fl-empty-upload', type: 'file', data: { url: '' } }] },
-          { label: 'Empty · link only', blocks: [{ id: 'fl-empty-link', type: 'file', data: { url: '' } }] },
+          { label: 'Empty · upload only', toolConfig: { file: { sources: 'upload' } }, blocks: [{ id: 'fl-empty-upload', type: 'file', data: { url: '' } }] },
+          { label: 'Empty · link only', toolConfig: { file: { sources: 'url' } }, blocks: [{ id: 'fl-empty-link', type: 'file', data: { url: '' } }] },
           { label: 'Uploading', blocks: [{ id: 'fl-uploading', type: 'file', data: { url: '' } }] },
           { label: 'PDF (previewable)', blocks: [{ id: 'fl-pdf', type: 'file', data: {
             url: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf',
@@ -2856,13 +2865,14 @@
 
     const blockStatesInstances = [];
 
-    function mountStatePreview({ container, blocks }) {
+    function mountStatePreview({ container, segments }) {
+      segments.forEach((segment) => mountStateSegment(container, segment));
+    }
+
+    function mountStateSegment(container, { blocks, toolConfig = {} }) {
       const holder = document.createElement('div');
       container.appendChild(holder);
-      const instance = new Blok({
-        holder,
-        data: { blocks },
-        tools: {
+      const tools = {
           paragraph: { class: Paragraph, preserveBlank: true },
           header: Header,
           list: List,
@@ -2923,7 +2933,20 @@
           equation: Equation,
           marker: Marker,
           link: Link,
-        },
+      };
+
+      // Per-segment tool config overrides (e.g. `sources: 'url'`) merge on
+      // top of the base config so defaults like the uploader are kept.
+      Object.entries(toolConfig).forEach(([name, override]) => {
+        const entry = tools[name];
+        const base = typeof entry === 'function' ? { class: entry } : entry;
+        tools[name] = { ...base, config: { ...(base.config ?? {}), ...override } };
+      });
+
+      const instance = new Blok({
+        holder,
+        data: { blocks },
+        tools,
         minHeight: 0,
       });
       blockStatesInstances.push(instance);
@@ -3003,28 +3026,6 @@
           uploadingEl.setProgress(64);
           fileUploadingRoot.appendChild(uploadingEl);
         }
-
-        // Render the single-source empty states. `sources` is a tool-level
-        // config, so the gallery's shared editor can't vary it per block —
-        // swap each synthetic empty block's tool DOM for a real empty state
-        // rendered with the restricted `sources`.
-        const noop = () => {};
-        const fileEmptyI18n = new LightweightI18n();
-        const swapEmptyState = (blockId, tool, el) => {
-          const root = holder.querySelector(`[data-blok-id="${blockId}"] [data-blok-tool="${tool}"]`);
-          if (root) {
-            root.replaceChildren();
-            root.appendChild(el);
-          }
-        };
-        swapEmptyState('im-empty-upload', 'image', renderImageEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
-        swapEmptyState('im-empty-link', 'image', renderImageEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
-        swapEmptyState('vd-empty-upload', 'video', renderVideoEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
-        swapEmptyState('vd-empty-link', 'video', renderVideoEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
-        swapEmptyState('au-empty-upload', 'audio', renderAudioEmptyState({ sources: 'upload', onFile: noop, onUrl: noop }));
-        swapEmptyState('au-empty-link', 'audio', renderAudioEmptyState({ sources: 'url', onFile: noop, onUrl: noop }));
-        swapEmptyState('fl-empty-upload', 'file', renderFileEmptyState({ sources: 'upload', acceptTypes: [], i18n: fileEmptyI18n, onFile: noop, onUrl: noop }));
-        swapEmptyState('fl-empty-link', 'file', renderFileEmptyState({ sources: 'url', acceptTypes: [], i18n: fileEmptyI18n, onFile: noop, onUrl: noop }));
       });
     }
 

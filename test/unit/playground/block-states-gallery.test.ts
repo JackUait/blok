@@ -5,19 +5,34 @@ const buildSpec = (): BlockStatesSpec[] => [
   {
     tool: 'paragraph',
     label: 'Paragraph',
-    blocks: [
-      { id: 'p-label-empty', type: 'header', data: { text: 'Empty', level: 4 } },
-      { id: 'p-empty', type: 'paragraph', data: { text: '' } },
-      { id: 'p-label-filled', type: 'header', data: { text: 'Filled', level: 4 } },
-      { id: 'p-filled', type: 'paragraph', data: { text: 'Hello' } },
+    segments: [
+      {
+        blocks: [
+          { id: 'p-label-empty', type: 'header', data: { text: 'Empty', level: 4 } },
+          { id: 'p-empty', type: 'paragraph', data: { text: '' } },
+          { id: 'p-label-filled', type: 'header', data: { text: 'Filled', level: 4 } },
+          { id: 'p-filled', type: 'paragraph', data: { text: 'Hello' } },
+        ],
+      },
+      {
+        blocks: [
+          { id: 'p-label-restricted', type: 'header', data: { text: 'Restricted', level: 4 } },
+          { id: 'p-restricted', type: 'paragraph', data: { text: 'Override' } },
+        ],
+        toolConfig: { paragraph: { preserveBlank: false } },
+      },
     ],
   },
   {
     tool: 'header',
     label: 'Header',
-    blocks: [
-      { id: 'h-label', type: 'header', data: { text: 'H1', level: 4 } },
-      { id: 'h-1', type: 'header', data: { text: 'Title', level: 1 } },
+    segments: [
+      {
+        blocks: [
+          { id: 'h-label', type: 'header', data: { text: 'H1', level: 4 } },
+          { id: 'h-1', type: 'header', data: { text: 'Title', level: 1 } },
+        ],
+      },
     ],
   },
 ];
@@ -107,7 +122,7 @@ describe('playground block states gallery', () => {
     expect(panels[1].querySelectorAll('.block-states-preview').length).toBe(1);
   });
 
-  test('calls renderBlock once per tool with all flattened blocks', () => {
+  test('calls renderBlock once per tool with the tool segments', () => {
     const renderBlock = vi.fn();
     const spec = buildSpec();
 
@@ -119,11 +134,11 @@ describe('playground block states gallery', () => {
 
     expect(renderBlock).toHaveBeenNthCalledWith(1, {
       container: previews[0],
-      blocks: spec[0].blocks,
+      segments: spec[0].segments,
     });
     expect(renderBlock).toHaveBeenNthCalledWith(2, {
       container: previews[1],
-      blocks: spec[1].blocks,
+      segments: spec[1].segments,
     });
   });
 

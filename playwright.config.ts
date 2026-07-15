@@ -128,6 +128,7 @@ const LOGIC_TESTS = [
   '**/error-handling.spec.ts',
   '**/i18n.spec.ts',
   '**/read-only.spec.ts',
+  '**/read-only-hide-controls.spec.ts',
   '**/sanitisation.spec.ts',
   '**/ui/initialization.spec.ts',
   '**/ui/configuration.spec.ts',

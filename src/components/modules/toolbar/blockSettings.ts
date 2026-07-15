@@ -175,6 +175,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     options?: { placeLeftOfAnchor?: boolean }
   ): Promise<void> {
     /**
+     * readOnly: { hideControls: true } — no block settings popover at all
+     * (covers keyboard shortcut paths; the settings toggler is already gone)
+     */
+    if (this.Blok.ReadOnly.isControlsHidden) {
+      return;
+    }
+
+    /**
      * Split the anchor: an element is used as the trigger (and, on dismissal,
      * the focus return target); anything else is a virtual DOMRect that
      * positions the popover at an explicit point. We branch on `HTMLElement`

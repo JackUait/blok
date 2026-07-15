@@ -35,6 +35,15 @@ export class InlineSelectionValidator {
    */
   public canShow(options: { allowCollapsed?: boolean } = {}): SelectionValidationResult {
     /**
+     * readOnly: { hideControls: true } — pure document view, no inline toolbar.
+     * Checked first: the contenteditable check below matches contenteditable="false"
+     * targets too, so later gates would be bypassed.
+     */
+    if (this.getBlok().ReadOnly.isControlsHidden) {
+      return { allowed: false, reason: 'Editor controls are hidden in read-only mode' };
+    }
+
+    /**
      * Tags conflicts with window.selection function.
      * Ex. IMG tag returns null (Firefox) or Redactors wrapper (Chrome)
      */

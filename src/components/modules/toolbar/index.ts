@@ -406,6 +406,14 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.settingsTogglerHandler.refreshTooltip();
     this.settingsTogglerHandler.refreshCursor();
     this.settingsTogglerHandler.refreshAriaLabel();
+
+    /**
+     * readOnly: { hideControls: true } — a toolbar left open by a runtime
+     * toggle must disappear along with the rest of the controls
+     */
+    if (readOnlyEnabled && this.Blok.ReadOnly.isControlsHidden) {
+      this.close();
+    }
   }
 
   /**
@@ -435,6 +443,13 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (this.toolboxInstance === null)  {
       log('Can\'t open Toolbar since Blok initialization is not finished yet', 'warn');
 
+      return;
+    }
+
+    /**
+     * readOnly: { hideControls: true } — pure document view, no hover toolbar
+     */
+    if (this.Blok.ReadOnly.isControlsHidden) {
       return;
     }
 
@@ -695,6 +710,13 @@ export class Toolbar extends Module<ToolbarNodes> {
    * @param block - optional block to position the toolbar at (defaults to first selected block)
    */
   public moveAndOpenForMultipleBlocks(block?: Block): void {
+    /**
+     * readOnly: { hideControls: true } — pure document view, no hover toolbar
+     */
+    if (this.Blok.ReadOnly.isControlsHidden) {
+      return;
+    }
+
     /**
      * Do not move toolbar if Block Settings is opened or opening.
      * The settings menu should remain anchored to where the user opened it.

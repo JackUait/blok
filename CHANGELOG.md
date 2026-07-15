@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0](https://github.com/JackUait/blok/compare/v1.0.0...v1.1.0) (2026-07-15)
+
+### Features
+
+- **Audio** — Share links from seven more services — Dropbox, OneDrive, GitHub, GitLab, Hugging Face, Google Cloud Storage, and Internet Archive — are recognized and rewritten to their direct-content form, so they play in the browser with no backend. Google Drive share links (hotlink-blocked server-side) are normalized and routed through the consumer's `uploadByUrl` backend, with a Drive-specific error message when none is configured. The error state gets a styled callout with a retry button.
+- **Read-only** — `readOnly` now accepts an object form: `{ hideControls: true }` enables read-only mode and suppresses the toolbar, block settings, and inline toolbar. Exposed via `isControlsHidden`, normalized across the React, Vue, and Angular adapters, and `ReadOnlyModeConfig` is exported from the types root.
+- **Image** — `compress: { format: 'avif' }` now produces real AVIF via WebCodecs when the canvas encoder cannot, and a new `fallbackFormat` option (e.g. `'webp'`) covers browsers with no AV1 encoder instead of silently uploading the original bytes.
+
+### Bug Fixes
+
+- **Audio** — Audio inserted by URL is now enriched like uploads: waveform, title/artist metadata, and cover art, failing soft to a plain scrubber when the host blocks the CORS fetch.
+- **Table** — Undo inside a table no longer duplicates cell blocks into invisible ghosts that reappear under the table after save; blocks placed at the top of a cell no longer drift to the bottom or become orphans on save. The Saver gains save-boundary guards for cell membership and cell block order (throw in dev/test, repair the emitted output in production).
+- **Tooltip** — The tooltip bubble is click-transparent, so it never swallows clicks on controls it covers (e.g. color-picker swatches under a bottom-row tooltip).
+- **Popover** — Nested popovers no longer collapse to their padding in WebKit; the marker color picker rendered as a 12px sliver in Safari.
+- **Styles** — Body-mounted UI (link hover card, notifier toasts, drag previews) now carries the scope attribute, so its styles survive in consumer apps; a new architecture test enforces the invariant for every `document.body` mount.
+- **Angular** — The ng-packagr build stages the readonly-config module, fixing a CI-only TS2307; an architecture test now walks the adapter's import graph to catch unstaged modules.
+
+### Maintenance
+
+- **Playground** — Gallery empty states run the real tool per state (with per-state tool config) instead of static mockups, including a live Google Drive error demo.
+- **Tests** — Adversarial table undo probes (merge undo, insert undo/redo), tooltip click-transparency lifecycle guards, and an exhaustive swatch hit-test sweep.
+
 ## [1.0.0](https://github.com/JackUait/blok/compare/v0.25.0...v1.0.0) (2026-07-14)
 
 First stable release. The public API, block-tool contract, and framework adapters (React, Vue, Angular) are now considered stable and follow semantic versioning going forward.

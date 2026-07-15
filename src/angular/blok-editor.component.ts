@@ -16,8 +16,8 @@ import {
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 import { BlokContentDirective } from './blok-content.directive';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
-import { deepEqual } from '../shared/deep-equal';
-import { normalizeReadOnlyConfig } from '../components/utils/readonly-config';
+import { deepEqual } from '@blok/core/adapters';
+import { normalizeReadOnlyConfig } from '@blok/core/adapters';
 import type {
   API,
   Blok,

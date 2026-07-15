@@ -14,23 +14,21 @@ import {
   type VNodeChild,
 } from 'vue';
 
-import type { BlockAPI } from '../../types/api';
+import type { BlockAPI } from '@/types/api';
 import type {
   BlockToolConstructorOptions,
   BlockToolData,
   ToolboxConfig,
-} from '../../types/tools';
-import { DATA_ATTR } from '../components/constants/data-attributes';
-import { deepEqual } from '../shared/deep-equal';
-import { fillDefaults, type PropSchema } from '../shared/prop-schema';
-import { mountChildBlocks } from '../tools/nested-blocks';
+} from '@/types/tools';
+import { DATA_ATTR , deepEqual , mountChildBlocks } from '@blok/core/adapters';
+import { fillDefaults, type PropSchema } from '@blok/core/adapters';
 
 import {
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
   type BlockPortalRegistry,
 } from './block-portal-registry';
 
-export type { PropSchema, PropSchemaEntry } from '../shared/prop-schema';
+export type { PropSchema, PropSchemaEntry } from '@blok/core/adapters';
 
 /** Context handed to a Vue block's `setup` (the only data write path is `commit`). */
 export interface VueBlockRenderProps<Data> {

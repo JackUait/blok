@@ -1,12 +1,12 @@
 // src/angular/createAngularBlock.ts
 import { signal, type Type, type WritableSignal } from '@angular/core';
 
-import type { BlockAPI } from '../../types/api';
-import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig } from '../../types/tools';
-import { DATA_ATTR } from '../components/constants/data-attributes';
-import { deepEqual } from '../shared/deep-equal';
-import { fillDefaults, type PropSchema } from '../shared/prop-schema';
-import { mountChildBlocks } from '../tools/nested-blocks';
+import type { BlockAPI } from '@/types/api';
+import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig } from '@/types/tools';
+import { DATA_ATTR } from '@blok/core/adapters';
+import { deepEqual } from '@blok/core/adapters';
+import { fillDefaults, type PropSchema } from '@blok/core/adapters';
+import { mountChildBlocks } from '@blok/core/adapters';
 
 import type { AngularBlockRenderContext } from './block-context';
 import { BLOK_PORTAL_REGISTRY_CONFIG_KEY, type BlockPortalRegistry } from './block-portal-registry';

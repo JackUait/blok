@@ -9,10 +9,9 @@ import {
   type MaybeRefOrGetter,
   type Ref,
 } from 'vue';
-import { Blok as BlokRuntime } from '../blok';
+import { Blok as BlokRuntime } from '@blok/core';
 import { setHolder, removeHolder } from './holder-map';
-import { deepEqual } from '../shared/deep-equal';
-import { normalizeReadOnlyConfig } from '../components/utils/readonly-config';
+import { deepEqual , normalizeReadOnlyConfig } from '@blok/core/adapters';
 import { BLOK_DEFAULT_CONFIG, mergeBlokDefaults } from './provide-blok';
 import {
   createBlockPortalRegistry,

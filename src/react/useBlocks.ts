@@ -1,8 +1,8 @@
 // src/react/useBlocks.ts
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 
-import type { Blok } from '../../types';
-import { createBlocksApiForEditor, EMPTY_API } from '../components/utils/blocks-api';
+import type { Blok } from '@/types';
+import { createBlocksApiForEditor, EMPTY_API } from '@blok/core/adapters';
 
 import type { UseBlocksApi } from './blocks-snapshot';
 

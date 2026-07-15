@@ -75,6 +75,10 @@
       "import": "./dist/markdown.mjs",
       "require": "./dist/markdown.cjs"
     },
+    "./adapters": {
+      "import": "./dist/adapters.mjs",
+      "require": "./dist/adapters.cjs"
+    },
     "./icons": {
       "types": "./types/icons.d.ts",
       "import": "./dist/icons.mjs",

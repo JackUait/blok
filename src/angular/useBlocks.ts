@@ -1,8 +1,8 @@
 // src/angular/useBlocks.ts
 import { DestroyRef, effect, inject, signal, type Signal } from '@angular/core';
 
-import type { Blok } from '../../types';
-import { createBlocksApiForEditor, EMPTY_API } from '../components/utils/blocks-api';
+import type { Blok } from '@/types';
+import { createBlocksApiForEditor, EMPTY_API } from '@blok/core/adapters';
 
 import type { UseBlocksApi } from './blocks-snapshot';
 

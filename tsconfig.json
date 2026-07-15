@@ -19,6 +19,8 @@
     "baseUrl": "./",
     "paths": {
       "@/types": [ "./types/", "./docs/src/types" ],
+      "@blok/core": [ "./src/blok.ts" ],
+      "@blok/core/adapters": [ "./src/adapters.ts" ],
       "@/types/*": [ "./types/*", "./docs/src/types/*" ],
       "@/*": [ "./docs/src/*" ],
       "@editorjs/editorjs": [ "./types" ],

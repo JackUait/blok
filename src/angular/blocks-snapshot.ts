@@ -14,4 +14,4 @@ export type {
   TreeInsertSpec,
   MoveTarget,
   UseBlocksApi,
-} from '../components/utils/blocks-tree';
+} from '@blok/core/adapters';

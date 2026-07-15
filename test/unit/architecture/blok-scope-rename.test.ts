@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Legacy-name law: after the @blok/* rebrand, the only places allowed to
- * mention @jackuait/* are migration artifacts (the legacy grammar the codemod
- * rewrites FROM, codemod fixtures), historical changelogs, and the release
- * deprecation runbook. Everything else must use the @blok/* family names.
+ * mention the legacy personal scope are migration artifacts (the legacy
+ * grammar the codemod rewrites FROM, codemod fixtures), historical
+ * changelogs, and the release deprecation runbook. Everything else must use
+ * the @blok/* family names.
  */
 const ALLOWLIST: RegExp[] = [
   /^CHANGELOG\.md$/,
@@ -27,11 +28,13 @@ describe('@blok scope rename', () => {
     expect(pkg.name).toBe('@blok/core');
   });
 
-  it('has no stray @jackuait/ references outside the allowlist', () => {
+  it('has no stray legacy-scope references outside the allowlist', () => {
+    // Assembled at runtime so this file does not match its own search.
+    const legacyScope = ['@jack', 'uait/'].join('');
     let files: string[] = [];
 
     try {
-      files = execFileSync('git', ['grep', '-l', '@jackuait/'], { encoding: 'utf-8' })
+      files = execFileSync('git', ['grep', '-l', legacyScope], { encoding: 'utf-8' })
         .split('\n')
         .filter(Boolean);
     } catch {

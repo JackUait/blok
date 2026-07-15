@@ -1,7 +1,7 @@
 // src/angular/block-context.ts
 import { InjectionToken, type Signal } from '@angular/core';
 
-import type { BlockAPI } from '../../types/api';
+import type { BlockAPI } from '@/types/api';
 
 /**
  * Context handed to a `createAngularBlock` component. Delivered via DI (the

@@ -8,8 +8,8 @@ import {
   type MaybeRefOrGetter,
 } from 'vue';
 
-import type { Blok } from '../../types';
-import { createBlocksApiForEditor, EMPTY_API } from '../components/utils/blocks-api';
+import type { Blok } from '@/types';
+import { createBlocksApiForEditor, EMPTY_API } from '@blok/core/adapters';
 
 import type { UseBlocksApi } from './blocks-snapshot';
 

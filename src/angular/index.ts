@@ -7,7 +7,7 @@ export { BLOK_BLOCK_CONTEXT } from './block-context';
 export type { BlokAngularConfig } from './types';
 export type { AngularBlockRenderContext } from './block-context';
 export type { CreateAngularBlockSpec } from './createAngularBlock';
-export type { PropSchema, PropSchemaEntry } from '../shared/prop-schema';
+export type { PropSchema, PropSchemaEntry } from '@blok/core/adapters';
 export type {
   UseBlocksApi,
   BlockNode,

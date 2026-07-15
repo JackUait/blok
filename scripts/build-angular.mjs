@@ -136,6 +136,9 @@ const rewriteTypeImports = (filePath) => {
   const TYPE_PATTERNS = [
     /^import type \{([^}]+)\} from ['"](?:\.\.\/)*types(?:\/[^'"]+)?['"];?\n?/gm,
     /^import type \{([^}]+)\} from ['"](?:\.\.\/)*markdown\/types['"];?\n?/gm,
+    // The adapters import repo-root types via the `@/types` alias; fold those
+    // into the staged flat `@blok/core` declaration too.
+    /^import type \{([^}]+)\} from ['"]@\/types(?:\/[^'"]+)?['"];?\n?/gm,
   ];
   const symbols = [];
   for (const re of TYPE_PATTERNS) {
@@ -195,6 +198,31 @@ copyAndRewrite('src/components/utils/blocks-api.ts',          'components/utils/
 copyAndRewrite('src/components/errors/tool-not-found.ts',     'components/errors/tool-not-found.ts');
 copyAndRewrite('src/components/constants/data-attributes.ts', 'components/constants/data-attributes.ts');
 copyAndRewrite('src/tools/nested-blocks.ts',                  'tools/nested-blocks.ts');
+
+// The adapter sources import shared core utilities via the public
+// `@blok/core/adapters` specifier (see src/adapters.ts). ng-packagr would
+// externalize that bare specifier, but the utils are meant to be bundled here
+// (mirroring the staged copies above), so rewrite the specifier to a staged
+// contract module that re-exports the staged copies.
+writeFileSync(
+  path.resolve(stagingDir, 'adapters-contract.ts'),
+  [
+    `export * from './components/utils/blocks-api';`,
+    `export * from './components/utils/blocks-tree';`,
+    `export * from './components/utils/readonly-config';`,
+    `export * from './shared/deep-equal';`,
+    `export * from './shared/prop-schema';`,
+    `export * from './tools/nested-blocks';`,
+    `export { DATA_ATTR } from './components/constants/data-attributes';`,
+  ].join('\n') + '\n',
+  'utf8'
+);
+for (const entry of readdirSync(path.resolve(stagingDir, 'angular'), { withFileTypes: true })) {
+  if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
+  const staged = path.resolve(stagingDir, 'angular', entry.name);
+  const src = readFileSync(staged, 'utf8');
+  writeFileSync(staged, src.replace(/from '@blok\/core\/adapters'/g, `from '../adapters-contract'`), 'utf8');
+}
 // Also rewrite staged angular/ files that import from '../../types/...'.
 rewriteTypeImports(path.resolve(stagingDir, 'angular/useBlocks.ts'));
 rewriteTypeImports(path.resolve(stagingDir, 'angular/block-context.ts'));

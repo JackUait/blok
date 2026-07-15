@@ -66,125 +66,125 @@ console.log('\n📦 Import Transformations\n');
 test('transforms @editorjs/editorjs default import to named import', () => {
   const input = `import EditorJS from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok } from '@blok/core';`);
 });
 
 test('transforms @editorjs/editorjs aliased default import', () => {
   const input = `import Editor from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok as Editor } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok as Editor } from '@blok/core';`);
 });
 
 test('transforms require statement', () => {
   const input = `const EditorJS = require('@editorjs/editorjs');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const EditorJS = require('@jackuait/blok').Blok;`);
+  assertEqual(result, `const EditorJS = require('@blok/core').Blok;`);
 });
 
 test('transforms namespace import to named import', () => {
   const input = `import * as EditorJS from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok as EditorJS } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok as EditorJS } from '@blok/core';`);
 });
 
 test('transforms destructured default require', () => {
   const input = `const { default: EditorJS } = require('@editorjs/editorjs');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { Blok: EditorJS } = require('@jackuait/blok');`);
+  assertEqual(result, `const { Blok: EditorJS } = require('@blok/core');`);
 });
 
 test('transforms dynamic import', () => {
   const input = `const Editor = await import('@editorjs/editorjs');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const Editor = await import('@jackuait/blok').then(m => ({ default: m.Blok }));`);
+  assertEqual(result, `const Editor = await import('@blok/core').then(m => ({ default: m.Blok }));`);
 });
 
 test('transforms dynamic import with .then(m => m.default) pattern', () => {
   const input = `import('@editorjs/editorjs').then(m => m.default);`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import('@jackuait/blok').then(m => m.Blok);`);
+  assertEqual(result, `import('@blok/core').then(m => m.Blok);`);
 });
 
 test('transforms type-only default import', () => {
   const input = `import type EditorJS from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import type { Blok as EditorJS } from '@jackuait/blok';`);
+  assertEqual(result, `import type { Blok as EditorJS } from '@blok/core';`);
 });
 
 test('transforms @editorjs/header import to named import', () => {
   const input = `import Header from '@editorjs/header';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Header } from '@jackuait/blok';\n`);
+  assertEqual(result, `import { Header } from '@blok/core';\n`);
 });
 
 test('transforms @editorjs/paragraph import to named import', () => {
   const input = `import Paragraph from '@editorjs/paragraph';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Paragraph } from '@jackuait/blok';\n`);
+  assertEqual(result, `import { Paragraph } from '@blok/core';\n`);
 });
 
 test('transforms @editorjs/list import to named import', () => {
   const input = `import List from '@editorjs/list';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { List } from '@jackuait/blok';\n`);
+  assertEqual(result, `import { List } from '@blok/core';\n`);
 });
 
 // Combined default + named import tests
 test('transforms combined default + named import', () => {
   const input = `import EditorJS, { EditorConfig } from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok, EditorConfig } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok, EditorConfig } from '@blok/core';`);
 });
 
 test('transforms aliased combined default + named import', () => {
   const input = `import Editor, { EditorConfig } from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok as Editor, EditorConfig } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok as Editor, EditorConfig } from '@blok/core';`);
 });
 
 // Re-export tests
 test('transforms default re-export as named', () => {
   const input = `export { default as Editor } from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `export { Blok as Editor } from '@jackuait/blok';`);
+  assertEqual(result, `export { Blok as Editor } from '@blok/core';`);
 });
 
 test('transforms default re-export', () => {
   const input = `export { default } from '@editorjs/editorjs';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `export { Blok } from '@jackuait/blok';`);
+  assertEqual(result, `export { Blok } from '@blok/core';`);
 });
 
 // Dynamic import with destructuring
 test('transforms destructured dynamic import', () => {
   const input = `const { default: Editor } = await import('@editorjs/editorjs');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { Blok: Editor } = await import('@jackuait/blok');`);
+  assertEqual(result, `const { Blok: Editor } = await import('@blok/core');`);
 });
 
 // Tool require statements
 test('transforms Header require statement', () => {
   const input = `const Header = require('@editorjs/header');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { Header } = require('@jackuait/blok');`);
+  assertEqual(result, `const { Header } = require('@blok/core');`);
 });
 
 test('transforms aliased Header require statement', () => {
   const input = `const MyHeader = require('@editorjs/header');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { Header: MyHeader } = require('@jackuait/blok');`);
+  assertEqual(result, `const { Header: MyHeader } = require('@blok/core');`);
 });
 
 test('transforms Paragraph require statement', () => {
   const input = `const Paragraph = require('@editorjs/paragraph');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { Paragraph } = require('@jackuait/blok');`);
+  assertEqual(result, `const { Paragraph } = require('@blok/core');`);
 });
 
 test('transforms List require statement', () => {
   const input = `const List = require('@editorjs/list');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { List } = require('@jackuait/blok');`);
+  assertEqual(result, `const { List } = require('@blok/core');`);
 });
 
 // ============================================================================
@@ -473,7 +473,7 @@ const editor = new EditorJS({
   result = applyTransforms(result, TOOL_CONFIG_TRANSFORMS).result;
 
   // Check key transformations
-  if (!result.includes("from '@jackuait/blok'")) {
+  if (!result.includes("from '@blok/core'")) {
     throw new Error('Import not transformed');
   }
   if (!result.includes('new Blok(')) {
@@ -507,7 +507,7 @@ test('adds Header import when Header is used with no existing import', () => {
 });`;
   const { result, changed } = ensureBlokImport(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes("import { Header } from '@jackuait/blok';"), true, 'Should add Header import');
+  assertEqual(result.includes("import { Header } from '@blok/core';"), true, 'Should add Header import');
 });
 
 test('adds tool imports after existing imports', () => {
@@ -520,13 +520,13 @@ const editor = new Blok({
   const { result, changed } = ensureBlokImport(input);
   assertEqual(changed, true, 'Should indicate change');
   // Check that import is added after existing imports
-  const headerImportIndex = result.indexOf("import { Header } from '@jackuait/blok';");
+  const headerImportIndex = result.indexOf("import { Header } from '@blok/core';");
   const lastReactImportIndex = result.indexOf("import { useState } from 'react';");
   assertEqual(headerImportIndex > lastReactImportIndex, true, 'Header import should be after existing imports');
 });
 
-test('adds missing tools to existing @jackuait/blok import', () => {
-  const input = `import { Blok } from '@jackuait/blok';
+test('adds missing tools to existing @blok/core import', () => {
+  const input = `import { Blok } from '@blok/core';
 
 const editor = new Blok({
   tools: { header: Header }
@@ -537,7 +537,7 @@ const editor = new Blok({
 });
 
 test('adds multiple missing tools to existing import', () => {
-  const input = `import { Blok } from '@jackuait/blok';
+  const input = `import { Blok } from '@blok/core';
 
 const editor = new Blok({
   tools: { header: Header, paragraph: Paragraph }
@@ -549,7 +549,7 @@ const editor = new Blok({
 });
 
 test('does not modify when tools are already imported', () => {
-  const input = `import { Blok, Header } from '@jackuait/blok';
+  const input = `import { Blok, Header } from '@blok/core';
 
 const editor = new Blok({
   tools: { header: Header }
@@ -560,7 +560,7 @@ const editor = new Blok({
 });
 
 test('does not modify when no bundled tools are used', () => {
-  const input = `import { Blok } from '@jackuait/blok';
+  const input = `import { Blok } from '@blok/core';
 
 const editor = new Blok({});`;
   const { result, changed } = ensureBlokImport(input);
@@ -574,7 +574,7 @@ test('detects Paragraph usage', () => {
 });`;
   const { result, changed } = ensureBlokImport(input);
   assertEqual(changed, true, 'Should detect Paragraph');
-  assertEqual(result.includes("import { Paragraph } from '@jackuait/blok';"), true, 'Should add Paragraph import');
+  assertEqual(result.includes("import { Paragraph } from '@blok/core';"), true, 'Should add Paragraph import');
 });
 
 test('detects List usage', () => {
@@ -583,7 +583,7 @@ test('detects List usage', () => {
 });`;
   const { result, changed } = ensureBlokImport(input);
   assertEqual(changed, true, 'Should detect List');
-  assertEqual(result.includes("import { List } from '@jackuait/blok';"), true, 'Should add List import');
+  assertEqual(result.includes("import { List } from '@blok/core';"), true, 'Should add List import');
 });
 
 test('handles multiple tool usage', () => {
@@ -624,8 +624,8 @@ const editor = new EditorJS({
   result = applyTransforms(result, TOOL_CONFIG_TRANSFORMS).result;
   result = ensureBlokImport(result).result;
 
-  // After transformation, should have @jackuait/blok imports
-  assertEqual(result.includes("from '@jackuait/blok'"), true, 'Should have @jackuait/blok import');
+  // After transformation, should have @blok/core imports
+  assertEqual(result.includes("from '@blok/core'"), true, 'Should have @blok/core import');
   // With named exports, tools are imported directly, not as Blok.Header
   assertEqual(result.includes('class: Header'), true, 'Should use Header (named import)');
   assertEqual(result.includes('class: Paragraph'), true, 'Should use Paragraph (named import)');
@@ -971,92 +971,92 @@ test('removeI18nMessages does not change content without i18n', () => {
 console.log('\n🔄 Blok Default Import → Named Import Transformations\n');
 
 test('transforms Blok default import to named import', () => {
-  const input = `import Blok from '@jackuait/blok';`;
+  const input = `import Blok from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok } from '@blok/core';`);
 });
 
 test('transforms aliased Blok default import to named import with alias', () => {
-  const input = `import Editor from '@jackuait/blok';`;
+  const input = `import Editor from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok as Editor } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok as Editor } from '@blok/core';`);
 });
 
 test('transforms combined Blok default + named import', () => {
-  const input = `import Blok, { BlokConfig } from '@jackuait/blok';`;
+  const input = `import Blok, { BlokConfig } from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok, BlokConfig } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok, BlokConfig } from '@blok/core';`);
 });
 
 test('transforms aliased combined Blok default + named import', () => {
-  const input = `import Editor, { BlokConfig } from '@jackuait/blok';`;
+  const input = `import Editor, { BlokConfig } from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok as Editor, BlokConfig } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok as Editor, BlokConfig } from '@blok/core';`);
 });
 
 test('transforms type-only Blok default import', () => {
-  const input = `import type Blok from '@jackuait/blok';`;
+  const input = `import type Blok from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import type { Blok } from '@jackuait/blok';`);
+  assertEqual(result, `import type { Blok } from '@blok/core';`);
 });
 
 test('transforms type-only aliased Blok default import', () => {
-  const input = `import type Editor from '@jackuait/blok';`;
+  const input = `import type Editor from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import type { Blok as Editor } from '@jackuait/blok';`);
+  assertEqual(result, `import type { Blok as Editor } from '@blok/core';`);
 });
 
-test('transforms namespace import from @jackuait/blok', () => {
-  const input = `import * as Blok from '@jackuait/blok';`;
+test('transforms namespace import from @blok/core', () => {
+  const input = `import * as Blok from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok } from '@blok/core';`);
 });
 
-test('transforms aliased namespace import from @jackuait/blok', () => {
-  const input = `import * as Editor from '@jackuait/blok';`;
+test('transforms aliased namespace import from @blok/core', () => {
+  const input = `import * as Editor from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `import { Blok as Editor } from '@jackuait/blok';`);
+  assertEqual(result, `import { Blok as Editor } from '@blok/core';`);
 });
 
-test('transforms destructured dynamic import from @jackuait/blok', () => {
-  const input = `const { default: Editor } = await import('@jackuait/blok');`;
+test('transforms destructured dynamic import from @blok/core', () => {
+  const input = `const { default: Editor } = await import('@blok/core');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { Blok: Editor } = await import('@jackuait/blok');`);
+  assertEqual(result, `const { Blok: Editor } = await import('@blok/core');`);
 });
 
-test('transforms require().default from @jackuait/blok', () => {
-  const input = `const Blok = require('@jackuait/blok').default;`;
+test('transforms require().default from @blok/core', () => {
+  const input = `const Blok = require('@blok/core').default;`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const Blok = require('@jackuait/blok').Blok;`);
+  assertEqual(result, `const Blok = require('@blok/core').Blok;`);
 });
 
-test('transforms destructured require default from @jackuait/blok', () => {
-  const input = `const { default: Editor } = require('@jackuait/blok');`;
+test('transforms destructured require default from @blok/core', () => {
+  const input = `const { default: Editor } = require('@blok/core');`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `const { Blok: Editor } = require('@jackuait/blok');`);
+  assertEqual(result, `const { Blok: Editor } = require('@blok/core');`);
 });
 
-test('transforms re-export default as named from @jackuait/blok', () => {
-  const input = `export { default as Editor } from '@jackuait/blok';`;
+test('transforms re-export default as named from @blok/core', () => {
+  const input = `export { default as Editor } from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `export { Blok as Editor } from '@jackuait/blok';`);
+  assertEqual(result, `export { Blok as Editor } from '@blok/core';`);
 });
 
-test('transforms re-export default from @jackuait/blok', () => {
-  const input = `export { default } from '@jackuait/blok';`;
+test('transforms re-export default from @blok/core', () => {
+  const input = `export { default } from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
-  assertEqual(result, `export { Blok } from '@jackuait/blok';`);
+  assertEqual(result, `export { Blok } from '@blok/core';`);
 });
 
-test('does not transform subpath imports from @jackuait/blok/tools', () => {
-  const input = `import Header from '@jackuait/blok/tools';`;
+test('does not transform subpath imports from @blok/core/tools', () => {
+  const input = `import Header from '@blok/core/tools';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
   // Should not match because of the /tools path
   assertEqual(result, input);
 });
 
-test('does not transform named imports from @jackuait/blok', () => {
-  const input = `import { Blok, BlokConfig } from '@jackuait/blok';`;
+test('does not transform named imports from @blok/core', () => {
+  const input = `import { Blok, BlokConfig } from '@blok/core';`;
   const { result } = applyTransforms(input, IMPORT_TRANSFORMS);
   // Named imports should not be transformed by the default import transforms
   assertEqual(result, input);
@@ -1079,45 +1079,45 @@ test('ALL_TOOLS contains block and inline tools', () => {
 });
 
 test('splitBlokImports splits combined import with Blok and Header', () => {
-  const input = `import { Blok, Header } from '@jackuait/blok';`;
+  const input = `import { Blok, Header } from '@blok/core';`;
   const { result, changed } = splitBlokImports(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes("from '@jackuait/blok';"), true, 'Should have core import');
-  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should have tools import');
+  assertEqual(result.includes("from '@blok/core';"), true, 'Should have core import');
+  assertEqual(result.includes("from '@blok/core/tools';"), true, 'Should have tools import');
   assertEqual(result.includes('Blok'), true, 'Should include Blok');
   assertEqual(result.includes('Header'), true, 'Should include Header');
 });
 
 test('splitBlokImports splits combined import with multiple tools', () => {
-  const input = `import { Blok, Header, Paragraph, Bold } from '@jackuait/blok';`;
+  const input = `import { Blok, Header, Paragraph, Bold } from '@blok/core';`;
   const { result, changed } = splitBlokImports(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes("import { Blok } from '@jackuait/blok';"), true, 'Should have core-only import');
-  assertEqual(result.includes("import { Header, Paragraph, Bold } from '@jackuait/blok/tools';"), true, 'Should have tools import');
+  assertEqual(result.includes("import { Blok } from '@blok/core';"), true, 'Should have core-only import');
+  assertEqual(result.includes("import { Header, Paragraph, Bold } from '@blok/core/tools';"), true, 'Should have tools import');
 });
 
 test('splitBlokImports handles tools-only import', () => {
-  const input = `import { Header, Paragraph } from '@jackuait/blok';`;
+  const input = `import { Header, Paragraph } from '@blok/core';`;
   const { result, changed } = splitBlokImports(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes("import { Header, Paragraph } from '@jackuait/blok/tools';"), true, 'Should move to tools');
-  assertEqual(result.includes("from '@jackuait/blok';") && !result.includes("/tools"), false, 'Should not have empty core import');
+  assertEqual(result.includes("import { Header, Paragraph } from '@blok/core/tools';"), true, 'Should move to tools');
+  assertEqual(result.includes("from '@blok/core';") && !result.includes("/tools"), false, 'Should not have empty core import');
 });
 
 test('splitBlokImports does not change core-only import', () => {
-  const input = `import { Blok, BlokConfig } from '@jackuait/blok';`;
+  const input = `import { Blok, BlokConfig } from '@blok/core';`;
   const { result, changed } = splitBlokImports(input);
   assertEqual(changed, false, 'Should not indicate change');
   assertEqual(result, input, 'Content should be unchanged');
 });
 
 test('splitBlokImports handles aliased imports', () => {
-  const input = `import { Blok, Header as MyHeader } from '@jackuait/blok';`;
+  const input = `import { Blok, Header as MyHeader } from '@blok/core';`;
   const { result, changed } = splitBlokImports(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes("import { Blok } from '@jackuait/blok';"), true, 'Should have core import');
+  assertEqual(result.includes("import { Blok } from '@blok/core';"), true, 'Should have core import');
   assertEqual(result.includes("Header as MyHeader"), true, 'Should preserve alias');
-  assertEqual(result.includes("@jackuait/blok/tools"), true, 'Should have tools import');
+  assertEqual(result.includes("@blok/core/tools"), true, 'Should have tools import');
 });
 
 test('ensureToolsImport adds tools import when no import exists', () => {
@@ -1126,11 +1126,11 @@ test('ensureToolsImport adds tools import when no import exists', () => {
 });`;
   const { result, changed } = ensureToolsImport(input);
   assertEqual(changed, true, 'Should indicate change');
-  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should add tools import');
+  assertEqual(result.includes("from '@blok/core/tools';"), true, 'Should add tools import');
 });
 
 test('ensureToolsImport adds to existing /tools import', () => {
-  const input = `import { Header } from '@jackuait/blok/tools';
+  const input = `import { Header } from '@blok/core/tools';
 
 const editor = new Blok({
   tools: { header: Header, paragraph: Paragraph }
@@ -1138,11 +1138,11 @@ const editor = new Blok({
   const { result, changed } = ensureToolsImport(input);
   assertEqual(changed, true, 'Should indicate change');
   assertEqual(result.includes('Paragraph'), true, 'Should add Paragraph');
-  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should use tools path');
+  assertEqual(result.includes("from '@blok/core/tools';"), true, 'Should use tools path');
 });
 
 test('ensureToolsImport does not duplicate when tools are in main import', () => {
-  const input = `import { Blok, Header } from '@jackuait/blok';
+  const input = `import { Blok, Header } from '@blok/core';
 
 const editor = new Blok({
   tools: { header: Header }
@@ -1160,7 +1160,7 @@ test('ensureToolsImport detects inline tools', () => {
   assertEqual(changed, true, 'Should detect inline tools');
   assertEqual(result.includes('Bold'), true, 'Should add Bold');
   assertEqual(result.includes('Italic'), true, 'Should add Italic');
-  assertEqual(result.includes("from '@jackuait/blok/tools';"), true, 'Should use tools path');
+  assertEqual(result.includes("from '@blok/core/tools';"), true, 'Should use tools path');
 });
 
 test('transforms Blok.Bold to Bold', () => {
@@ -1194,7 +1194,7 @@ test('transforms standalone inline tool references', () => {
 });
 
 test('full modular migration: old Blok import to new structure', () => {
-  const input = `import { Blok, Header, Paragraph, Bold, Italic } from '@jackuait/blok';
+  const input = `import { Blok, Header, Paragraph, Bold, Italic } from '@blok/core';
 
 const editor = new Blok({
   holder: 'blok',
@@ -1212,8 +1212,8 @@ const editor = new Blok({
   const { result: splitResult, changed } = splitBlokImports(input);
 
   assertEqual(changed, true, 'Should split imports');
-  assertEqual(splitResult.includes("import { Blok } from '@jackuait/blok';"), true, 'Should have core import');
-  assertEqual(splitResult.includes("import { Header, Paragraph, Bold, Italic } from '@jackuait/blok/tools';"), true, 'Should have tools import');
+  assertEqual(splitResult.includes("import { Blok } from '@blok/core';"), true, 'Should have core import');
+  assertEqual(splitResult.includes("import { Header, Paragraph, Bold, Italic } from '@blok/core/tools';"), true, 'Should have tools import');
 });
 
 // ============================================================================

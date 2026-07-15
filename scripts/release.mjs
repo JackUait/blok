@@ -175,7 +175,7 @@ if (isDirectRun) {
 
   run('yarn build');
 
-  // Pack @jackuait/blok tarball for npm
+  // Pack @blok/core tarball for npm
   const npmPackJson = runCapture('npm pack --ignore-scripts --pack-destination /tmp --json');
 
   run(gprPublishCommand({ packJson: npmPackJson, packDir: '/tmp', tag }));
@@ -216,7 +216,7 @@ if (isDirectRun) {
       console.log('\nPublished @dodopizza/blok to GitHub Packages');
     },
     restoreName: () => {
-      pkgJson.name = '@jackuait/blok';
+      pkgJson.name = '@blok/core';
       writeFileSync('package.json', JSON.stringify(pkgJson, null, 2) + '\n');
 
       if (existsSync('.npmrc')) {
@@ -225,7 +225,7 @@ if (isDirectRun) {
     },
   });
 
-  // --- Publish @jackuait/blok-cli ---
+  // --- Publish @blok/cli ---
 
   const cliDir = join(fileURLToPath(new URL('.', import.meta.url)), '../packages/cli');
   const cliPkgPath = join(cliDir, 'package.json');
@@ -243,14 +243,14 @@ if (isDirectRun) {
     writeFileSync('.npmrc', `//registry.npmjs.org/:_authToken=${npmToken}\n`);
   }
 
-  // Pack and publish to npm as @jackuait/blok-cli
+  // Pack and publish to npm as @blok/cli
   const cliNpmPackJson = runCapture(
     'npm pack --ignore-scripts --pack-destination /tmp --json',
     { cwd: cliDir }
   );
 
   run(gprPublishCommand({ packJson: cliNpmPackJson, packDir: '/tmp', tag }));
-  console.log('\nPublished @jackuait/blok-cli to npm');
+  console.log('\nPublished @blok/cli to npm');
 
   // Cleanup npm .npmrc
   if (existsSync('.npmrc')) {
@@ -285,7 +285,7 @@ if (isDirectRun) {
       console.log('\nPublished @dodopizza/blok-cli to GitHub Packages');
     },
     restoreName: () => {
-      cliPkgJson.name = '@jackuait/blok-cli';
+      cliPkgJson.name = '@blok/cli';
       writeFileSync(cliPkgPath, JSON.stringify(cliPkgJson, null, 2) + '\n');
 
       if (existsSync('.npmrc')) {

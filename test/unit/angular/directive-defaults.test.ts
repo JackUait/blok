@@ -22,7 +22,7 @@ const mock = vi.hoisted(() => {
   return { MockBlok, ctorConfigs };
 });
 
-vi.mock('@jackuait/blok', () => ({ Blok: mock.MockBlok }));
+vi.mock('@blok/core', () => ({ Blok: mock.MockBlok }));
 
 import { BlokContentDirective } from '../../../src/angular/blok-content.directive';
 import { provideBlok } from '../../../src/angular/provide-blok';

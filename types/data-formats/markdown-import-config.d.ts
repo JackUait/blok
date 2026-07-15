@@ -8,7 +8,7 @@ import type { OutputBlockData } from './output-data';
  * Maps an mdast node type to a Blok tool.
  *
  * Lives in `types/` (not `src/`) so it can be referenced from the public
- * `Blocks` API surface — reachable from the bare `@jackuait/blok` type entry —
+ * `Blocks` API surface — reachable from the bare `@blok/core` type entry —
  * without that entry's declaration closure re-exporting from `src/`.
  */
 export interface ToolMapEntry {

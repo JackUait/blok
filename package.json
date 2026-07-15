@@ -1,5 +1,5 @@
 {
-  "name": "@jackuait/blok",
+  "name": "@blok/core",
   "version": "1.1.0",
   "description": "Blok — headless, highly extensible rich text editor built for developers who need to implement a block-based editing experience (similar to Notion) without building it from scratch",
   "module": "dist/blok.mjs",
@@ -68,7 +68,7 @@
     },
     "./angular": {
       "types": "./dist/angular/index.d.ts",
-      "default": "./dist/angular/fesm2022/jackuait-blok-angular.mjs"
+      "default": "./dist/angular/fesm2022/blok-angular.mjs"
     },
     "./markdown": {
       "types": "./types/markdown.d.ts",

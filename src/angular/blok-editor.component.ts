@@ -30,7 +30,7 @@ import type {
   OutputData,
   ResolvedTheme,
   ThemeMode,
-} from '@jackuait/blok';
+} from '@blok/core';
 import type { BlokAngularConfig } from './types';
 
 /**

@@ -5,7 +5,7 @@ import { vi } from 'vitest';
  *
  * Usage in a test file:
  * ```ts
- * vi.mock('@jackuait/blok', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
+ * vi.mock('@blok/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
  * import { blokRegistry } from './_mock-blok';
  * ```
  * The async `vi.mock` factory and the test's top-level import resolve to the

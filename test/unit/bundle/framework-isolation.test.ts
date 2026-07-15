@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 /**
  * Framework-weight isolation guard.
  *
- * Each framework adapter ships from its own package entry (`@jackuait/blok`,
+ * Each framework adapter ships from its own package entry (`@blok/core`,
  * `/react`, `/vue`, `/angular`, `/tools`, `/full`, `/markdown`). A consumer who
  * imports one entry must never pull in another framework's code. We prove this
  * at the source level by walking each entry's static + dynamic import graph and
@@ -194,7 +194,7 @@ describe('framework-weight isolation', () => {
     // And a clean graph trips nothing.
     const clean: Graph = {
       srcFiles: new Set([path.join(SRC, 'blok.ts')]),
-      bareImports: new Set(['@jackuait/blok', 'js-cookie']),
+      bareImports: new Set(['@blok/core', 'js-cookie']),
     };
     expect(frameworkDirsTouched(clean)).toEqual([]);
     expect(frameworkRuntimesImported(clean)).toEqual([]);

@@ -21,7 +21,7 @@
  * @example
  * <!-- Pin a version and add Subresource Integrity in production. -->
  * <script
- *   src="https://unpkg.com/@jackuait/blok@0.15.1/dist/blok.umd.js"
+ *   src="https://unpkg.com/@blok/core@0.15.1/dist/blok.umd.js"
  *   integrity="sha384-..."
  *   crossorigin="anonymous"
  * ></script>

@@ -26,7 +26,7 @@ const mock = vi.hoisted(() => {
   return { MockBlok, ctorConfigs, destroySpies };
 });
 
-vi.mock('@jackuait/blok', () => ({ Blok: mock.MockBlok }));
+vi.mock('@blok/core', () => ({ Blok: mock.MockBlok }));
 
 import { BlokContentDirective } from '../../../src/angular/blok-content.directive';
 

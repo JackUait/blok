@@ -55,7 +55,7 @@ function externalsInSource(source: string): string[] {
 }
 
 // The Angular adapter (`dist/angular`) is a self-contained APF sub-package with
-// its OWN package.json declaring `@angular/*` + `@jackuait/blok` as peers. The
+// its OWN package.json declaring `@angular/*` + `@blok/core` as peers. The
 // root-package externals guards reason about the root manifest, so they must not
 // scan into it (otherwise the Angular peers read as undeclared root externals).
 const angularDist = resolve(dist, 'angular')
@@ -155,7 +155,7 @@ function danglingRefsInDeclaration(dts: string, publishedRoots: Set<string>): st
  * following only relative `.d.ts` imports, and collect every relative
  * specifier that resolves into `src/`.
  *
- * A consumer that does a bare `import ... from '@jackuait/blok'` resolves to
+ * A consumer that does a bare `import ... from '@blok/core'` resolves to
  * `types/index.d.ts`. TypeScript follows that file's imports; `skipLibCheck`
  * skips other `.d.ts` files, but any reference that resolves to a raw `src/*.ts`
  * module pulls that source into the consumer's program and type-checks it under
@@ -390,7 +390,7 @@ describe('published package is self-contained (install footprint)', () => {
   })
 
   it('the bare-import type entry is self-contained (drags no raw src into consumers)', () => {
-    // The default `import { Blok } from '@jackuait/blok'` resolves to
+    // The default `import { Blok } from '@blok/core'` resolves to
     // types/index.d.ts. Its declaration closure must not re-export from `src/*.ts`,
     // or consumers with stricter flags (noUncheckedIndexedAccess) inherit type
     // errors from Blok's raw source they never wrote.
@@ -418,7 +418,7 @@ describe('Angular adapter package.json wiring', () => {
     // Angular libraries are ESM-only (no CJS `require` condition); the APF bundle
     // is partial-Ivy so the consumer's AOT compiler links it.
     expect(exportsMap['./angular']?.['default']).toBe(
-      './dist/angular/fesm2022/jackuait-blok-angular.mjs',
+      './dist/angular/fesm2022/blok-angular.mjs',
     )
   })
 
@@ -433,7 +433,7 @@ describe('Angular adapter package.json wiring', () => {
 
 describe('Angular adapter APF output', () => {
   const angularPkgPath = resolve(angularDist, 'package.json')
-  const fesm = resolve(angularDist, 'fesm2022/jackuait-blok-angular.mjs')
+  const fesm = resolve(angularDist, 'fesm2022/blok-angular.mjs')
 
   it('emits the FESM2022 bundle and flattened declarations', () => {
     expect(existsSync(fesm)).toBe(true)
@@ -449,17 +449,17 @@ describe('Angular adapter APF output', () => {
 
   it('externalizes the Blok core instead of bundling it', () => {
     const code = readFileSync(fesm, 'utf-8')
-    expect(code).toMatch(/from ['"]@jackuait\/blok['"]/)
+    expect(code).toMatch(/from ['"]@blok\/core['"]/)
     // The core editor must never be inlined into the adapter bundle.
     expect(code).not.toMatch(/class BlockManager\b/)
   })
 
-  it('declares @jackuait/blok as an exact-version peer in its own manifest', () => {
+  it('declares @blok/core as an exact-version peer in its own manifest', () => {
     const manifest = JSON.parse(readFileSync(angularPkgPath, 'utf-8')) as {
       version: string
       peerDependencies?: Record<string, string>
     }
-    expect(manifest.peerDependencies?.['@jackuait/blok']).toBe(packageJson.version)
+    expect(manifest.peerDependencies?.['@blok/core']).toBe(packageJson.version)
     expect(manifest.peerDependencies?.['@angular/core']).toBeDefined()
   })
 })

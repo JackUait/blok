@@ -1,7 +1,7 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('@jackuait/blok', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
+vi.mock('@blok/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
 
 import { blokRegistry } from './_mock-blok';
 import { BlokEditorComponent } from '../../../src/angular/blok-editor.component';

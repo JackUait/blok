@@ -4,7 +4,7 @@
  * Use this for batteries-included setup (same as pre-modularization behavior).
  *
  * @example
- * import { Blok, defaultTools, defaultInlineTools } from '@jackuait/blok/full';
+ * import { Blok, defaultTools, defaultInlineTools } from '@blok/core/full';
  *
  * new Blok({
  *   holder: 'editor',

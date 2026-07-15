@@ -1,5 +1,5 @@
 /**
- * Type definitions for @jackuait/blok/tools entry point
+ * Type definitions for @blok/core/tools entry point
  * Re-exports all built-in tools for easy importing
  */
 

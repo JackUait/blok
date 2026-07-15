@@ -33,22 +33,22 @@ It's headless on purpose. Blok ships the editing engine and a set of tools; it d
 With a bundler (Vite, webpack, Rollup, etc.):
 
 ```bash
-npm install @jackuait/blok
-# or: yarn add @jackuait/blok / pnpm add @jackuait/blok
+npm install @blok/core
+# or: yarn add @blok/core / pnpm add @blok/core
 ```
 
 ```js
 // ESM
-import Blok from '@jackuait/blok';
+import Blok from '@blok/core';
 
 // CommonJS
-const { Blok } = require('@jackuait/blok');
+const { Blok } = require('@blok/core');
 ```
 
-The core package ships the engine but no tools, so you choose what to load. Import individual tools from `@jackuait/blok/tools`, or grab the batteries-included bundle:
+The core package ships the engine but no tools, so you choose what to load. Import individual tools from `@blok/core/tools`, or grab the batteries-included bundle:
 
 ```js
-import { Blok, defaultTools, defaultInlineTools } from '@jackuait/blok/full';
+import { Blok, defaultTools, defaultInlineTools } from '@blok/core/full';
 
 new Blok({
   holder: 'editor',
@@ -59,7 +59,7 @@ new Blok({
 
 ### Other entry points
 
-- `@jackuait/blok/react` — React 18/19 adapter. The recommended entry point is `<BlokEditor>`, an all-in-one component that forwards a ref to the live `Blok` instance:
+- `@blok/react` — React 18/19 adapter. The recommended entry point is `<BlokEditor>`, an all-in-one component that forwards a ref to the live `Blok` instance:
 
   ```tsx
   const [data, setData] = useState(initialData);
@@ -73,14 +73,14 @@ new Blok({
   Don't wrap `<BlokEditor>` in `styled()` or any HOC that reserves the `theme` prop — styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it through `className`.
 
   For advanced control (e.g., rendering outside a single container), use `useBlok` + `BlokContent` directly.
-- `@jackuait/blok/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.
-- `@jackuait/blok/locales` — locale data, if you'd rather load it yourself.
+- `@blok/core/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.
+- `@blok/core/locales` — locale data, if you'd rather load it yourself.
 
 ### CDN (no bundler)
 
 ```html
-<script src="https://unpkg.com/@jackuait/blok/dist/blok.iife.js"></script>
-<!-- or jsDelivr: https://cdn.jsdelivr.net/npm/@jackuait/blok/dist/blok.iife.js -->
+<script src="https://unpkg.com/@blok/core/dist/blok.iife.js"></script>
+<!-- or jsDelivr: https://cdn.jsdelivr.net/npm/@blok/core/dist/blok.iife.js -->
 
 <script>
   const editor = new BlokEditor.Blok({ holder: 'editor' });

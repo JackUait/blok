@@ -4,7 +4,7 @@
  *
  * @example
  * // Import specific tools
- * import { Paragraph, Header, List, Toggle, Bold, Italic, Link, Marker } from '@jackuait/blok/tools';
+ * import { Paragraph, Header, List, Toggle, Bold, Italic, Link, Marker } from '@blok/core/tools';
  *
  * // Use in Blok configuration (flat config style)
  * new Blok({

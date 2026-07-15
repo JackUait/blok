@@ -30,8 +30,6 @@ It's headless on purpose. Blok ships the editing engine and a set of tools; it d
 
 ## Installation
 
-> **Renamed from `@jackuait/blok`.** As of 1.1.1 the family lives under the `@bloklabs` scope, and the framework adapters are standalone packages: `@bloklabs/core`, `@bloklabs/react`, `@bloklabs/vue`, `@bloklabs/angular`, `@bloklabs/cli`. The core has **zero peer dependencies** — installing it never asks about frameworks you don't use. The bundled codemod (`npx -p @bloklabs/core migrate-from-editorjs`) rewrites old import specifiers and `package.json` entries for you.
-
 With a bundler (Vite, webpack, Rollup, etc.):
 
 ```bash

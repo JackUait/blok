@@ -23,7 +23,11 @@ export const css = {
   // distortion can read item offsetTop values in container coordinates.
   // pt-1.5/pb-1.5 put the before-first and after-last gaps inside the scroll area so
   // they scroll with the list and sit within the reel clip (the outer container has none).
-  items: 'relative flex-1 min-h-0 overflow-y-auto overscroll-contain pt-1.5 pb-1.5',
+  // flex-auto (basis auto), NOT flex-1 (basis 0%): WebKit resolves a 0% basis inside an
+  // auto-height absolutely-positioned container against the containing block's definite
+  // height, collapsing nested popovers (e.g. the marker color picker inside the inline
+  // toolbar, whose root has an explicit ~38px height) to their padding.
+  items: 'relative flex-auto min-h-0 overflow-y-auto overscroll-contain pt-1.5 pb-1.5',
 };
 
 /**

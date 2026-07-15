@@ -857,6 +857,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@blok/cli@workspace:packages/cli":
+  version: 0.0.0-use.local
+  resolution: "@blok/cli@workspace:packages/cli"
+  dependencies:
+    jsdom: "npm:28.1.0"
+  bin:
+    blok-cli: bin/blok-cli.mjs
+  languageName: unknown
+  linkType: soft
+
 "@blok/core@workspace:.":
   version: 0.0.0-use.local
   resolution: "@blok/core@workspace:."
@@ -953,18 +963,22 @@ __metadata:
     yjs: "npm:13.6.30"
     zone.js: "npm:0.15.1"
   peerDependencies:
-    react: ^18.0.0 || ^19.0.0
-    react-dom: ^18.0.0 || ^19.0.0
     vue: ^3.5.0
   peerDependenciesMeta:
-    react:
-      optional: true
-    react-dom:
-      optional: true
     vue:
       optional: true
   bin:
     migrate-from-editorjs: ./codemod/migrate-editorjs-to-blok.js
+  languageName: unknown
+  linkType: soft
+
+"@blok/react@workspace:packages/react":
+  version: 0.0.0-use.local
+  resolution: "@blok/react@workspace:packages/react"
+  peerDependencies:
+    "@blok/core": ^1.1.0
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
   languageName: unknown
   linkType: soft
 

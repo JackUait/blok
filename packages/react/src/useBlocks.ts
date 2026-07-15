@@ -1,4 +1,4 @@
-// src/react/useBlocks.ts
+// packages/react/src/useBlocks.ts
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import type { Blok } from '@/types';

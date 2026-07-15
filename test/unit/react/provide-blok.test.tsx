@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act } from '@testing-library/react';
 import React from 'react';
-import { useBlok } from '../../../src/react/useBlok';
-import { BlokProvider } from '../../../src/react/provide-blok';
-import type { UseBlokConfig } from '../../../src/react/types';
+import { useBlok } from '../../../packages/react/src/useBlok';
+import { BlokProvider } from '../../../packages/react/src/provide-blok';
+import type { UseBlokConfig } from '../../../packages/react/src/types';
 
 interface MockInstance {
   isReady: Promise<void>;

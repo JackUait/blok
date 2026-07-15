@@ -1439,7 +1439,7 @@ export default defineConfig(
   },
   // React hooks rules for the React adapter
   {
-    files: ['src/react/**/*.{ts,tsx}', 'test/unit/react/**/*.{ts,tsx}'],
+    files: ['packages/react/src/**/*.{ts,tsx}', 'test/unit/react/**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': reactHooks,
     },

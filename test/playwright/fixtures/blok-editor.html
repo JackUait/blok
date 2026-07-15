@@ -7,6 +7,8 @@
   {
     "imports": {
       "react": "/test/playwright/fixtures/vendor/react.mjs",
+      "@blok/core": "/dist/blok.mjs?_v=1",
+      "@blok/core/adapters": "/dist/adapters.mjs?_v=1",
       "react-dom/client": "/test/playwright/fixtures/vendor/react-dom-client.mjs",
       "react/jsx-runtime": "/test/playwright/fixtures/vendor/react-jsx-runtime.mjs"
     }
@@ -25,7 +27,7 @@
     import React, { useState, useRef, useCallback, useEffect } from 'react';
     import { createRoot } from 'react-dom/client';
     import { jsx, jsxs } from 'react/jsx-runtime';
-    import { BlokEditor } from '/dist/react.mjs?_v=1';
+    import { BlokEditor } from '/packages/react/dist/index.mjs?_v=1';
     const { Paragraph, Header } = await import('/dist/tools.mjs?_v=1');
 
     function App() {

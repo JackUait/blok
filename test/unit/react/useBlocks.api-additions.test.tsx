@@ -10,8 +10,8 @@
 // triggers (guards against the O(k·n) re-enumeration regression).
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useBlocks } from '../../../src/react/useBlocks';
-import type { BlockNode } from '../../../src/react/blocks-snapshot';
+import { useBlocks } from '../../../packages/react/src/useBlocks';
+import type { BlockNode } from '../../../packages/react/src/blocks-snapshot';
 import type { Blok } from '../../../types';
 
 interface Row {

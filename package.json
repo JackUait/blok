@@ -19,9 +19,6 @@
       "locales": [
         "./types/locales.d.ts"
       ],
-      "react": [
-        "./types/react.d.ts"
-      ],
       "vue": [
         "./types/vue.d.ts"
       ],
@@ -55,11 +52,6 @@
     "./locales": {
       "types": "./types/locales.d.ts",
       "import": "./dist/locales.mjs"
-    },
-    "./react": {
-      "types": "./types/react.d.ts",
-      "import": "./dist/react.mjs",
-      "require": "./dist/react.cjs"
     },
     "./vue": {
       "types": "./types/vue.d.ts",
@@ -102,6 +94,9 @@
     "access": "public"
   },
   "packageManager": "yarn@4.9.4",
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=20.19.0"
   },
@@ -121,10 +116,10 @@
   "scripts": {
     "serve": "vite --no-open",
     "serve:docs": "cd docs && vite --port 8080",
-    "build": "node scripts/generate-fonts.mjs && vite build --mode production && vite build --config vite.config.iife.mjs --mode production && vite build --config vite.config.umd.mjs --mode production && node scripts/build-locales.mjs && yarn build:angular",
+    "build": "node scripts/generate-fonts.mjs && vite build --mode production && vite build --config vite.config.iife.mjs --mode production && vite build --config vite.config.umd.mjs --mode production && node scripts/build-locales.mjs && yarn build:angular && yarn workspace @blok/react build",
     "build:angular": "node scripts/build-angular.mjs",
     "build:cli": "node scripts/build-cli.mjs",
-    "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && vite build --config vite.config.umd.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs && node scripts/build-vue-vendor.mjs && node scripts/build-angular.mjs && node scripts/build-angular-vendor.mjs",
+    "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && vite build --config vite.config.umd.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs && node scripts/build-vue-vendor.mjs && node scripts/build-angular.mjs && node scripts/build-angular-vendor.mjs && yarn workspace @blok/react build",
     "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
@@ -272,17 +267,9 @@
     "lodash-es": "^4.18.0"
   },
   "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0",
     "vue": "^3.5.0"
   },
   "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    },
     "vue": {
       "optional": true
     }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import * as ReactApi from '../../../src/react/index';
+import * as ReactApi from '../../../packages/react/src/index';
 
 describe('@blok/react exports', () => {
   it('exports useBlok, BlokContent, and BlokEditor', () => {

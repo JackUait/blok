@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { setHolder, getHolder, removeHolder } from '../../../src/react/holder-map';
+import { setHolder, getHolder, removeHolder } from '../../../packages/react/src/holder-map';
 
 describe('holder-map', () => {
   let mockEditor: Record<string, unknown>;

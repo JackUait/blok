@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { snapshotNodes, resolveInsertIndex, resolveMoveIndex, type BlocksReader, type IndexReader } from '../../../src/react/blocks-snapshot';
+import { snapshotNodes, resolveInsertIndex, resolveMoveIndex, type BlocksReader, type IndexReader } from '../../../packages/react/src/blocks-snapshot';
 
 /** Build a BlocksReader over a fixed flat list of {id,name,parentId}. */
 const readerOf = (

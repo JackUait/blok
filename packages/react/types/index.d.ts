@@ -1,7 +1,7 @@
-import type { BlokConfig, BlockToolData, OutputBlockData, OutputData } from './index';
-import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from './index';
-import type { BlockTuneData } from './block-tunes/block-tune-data';
-import type { MarkdownImportConfig } from './markdown';
+import type { BlokConfig, BlockToolData, OutputBlockData, OutputData } from '@blok/core';
+import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from '@blok/core';
+import type { BlockTuneData } from '@blok/core';
+import type { MarkdownImportConfig } from '@blok/core/markdown';
 import type React from 'react';
 
 /**

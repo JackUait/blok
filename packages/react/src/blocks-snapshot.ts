@@ -1,4 +1,4 @@
-// src/react/blocks-snapshot.ts
+// packages/react/src/blocks-snapshot.ts
 //
 // The block-tree connection types and pure resolution helpers are
 // framework-agnostic and now live in a shared core module so the React, Vue,

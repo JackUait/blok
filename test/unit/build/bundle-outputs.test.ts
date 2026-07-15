@@ -226,8 +226,8 @@ describe('CJS bundle outputs', () => {
     expect(existsSync(resolve(dist, 'full.cjs'))).toBe(true)
   })
 
-  it('produces react.cjs', () => {
-    expect(existsSync(resolve(dist, 'react.cjs'))).toBe(true)
+  it('produces the @blok/react workspace bundle (index.cjs)', () => {
+    expect(existsSync(resolve(dist, '../packages/react/dist/index.cjs'))).toBe(true)
   })
 
   it('produces markdown.cjs', () => {
@@ -297,8 +297,8 @@ describe('package.json exports include require conditions', () => {
     expect((packageJson.exports['./full'] as Record<string, string>)['require']).toBe('./dist/full.cjs')
   })
 
-  it('"./react" export has "require" condition', () => {
-    expect((packageJson.exports['./react'] as Record<string, string>)['require']).toBe('./dist/react.cjs')
+  it('core no longer exports "./react" (moved to the @blok/react package)', () => {
+    expect(packageJson.exports['./react' as keyof typeof packageJson.exports]).toBeUndefined()
   })
 
   it('"./markdown" export has "require" condition', () => {

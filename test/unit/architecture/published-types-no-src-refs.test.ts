@@ -37,6 +37,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 const TYPES_DIR = join(REPO_ROOT, 'types');
 const SRC_DIR = join(REPO_ROOT, 'src');
+const PACKAGES_DIR = join(REPO_ROOT, 'packages');
 const ICONS_SOURCE = join(SRC_DIR, 'components', 'icons', 'index.ts');
 const ICONS_DTS = join(TYPES_DIR, 'icons.d.ts');
 
@@ -93,8 +94,31 @@ function extractExportedConstNames(source: string): string[] {
   return names;
 }
 
+/** `types/` directories of every workspace package under `packages/`. */
+function collectWorkspaceTypesDirs(): string[] {
+  const dirs: string[] = [];
+
+  const isDir = (dir: string): boolean => {
+    try {
+      return statSync(dir).isDirectory();
+    } catch {
+      return false; // workspace without a types/ dir (e.g. cli) — nothing to scan
+    }
+  };
+
+  for (const entry of readdirSync(PACKAGES_DIR)) {
+    const typesDir = join(PACKAGES_DIR, entry, 'types');
+
+    if (isDir(typesDir)) {
+      dirs.push(typesDir);
+    }
+  }
+
+  return dirs;
+}
+
 describe('published types never reference src/', () => {
-  const declarationFiles = collectDeclarationFiles(TYPES_DIR);
+  const declarationFiles = [TYPES_DIR, ...collectWorkspaceTypesDirs()].flatMap(collectDeclarationFiles);
 
   it('finds declaration files to scan (guards against a broken glob)', () => {
     expect(declarationFiles.length).toBeGreaterThan(0);
@@ -111,8 +135,13 @@ describe('published types never reference src/', () => {
         }
 
         const resolved = resolve(dirname(file), specifier);
+        // Both the core `src/` tree and any workspace's own `src/` are raw
+        // implementation source — published declarations may reference neither.
+        const isSrc = resolved === SRC_DIR
+          || resolved.startsWith(SRC_DIR + sep)
+          || /[\\/]packages[\\/][^\\/]+[\\/]src([\\/]|$)/.test(resolved);
 
-        if (resolved === SRC_DIR || resolved.startsWith(SRC_DIR + sep)) {
+        if (isSrc) {
           offenders.push(specifier);
         }
       }

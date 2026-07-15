@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, renderHook, act } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
-import type { UseBlokConfig } from '../../../src/react/types';
+import type { UseBlokConfig } from '../../../packages/react/src/types';
 
 /**
  * Mock shape matching the real Blok public API used by useBlok
@@ -85,14 +85,14 @@ vi.mock('../../../src/blok', () => {
   };
 });
 
-vi.mock('../../../src/react/holder-map', () => ({
+vi.mock('../../../packages/react/src/holder-map', () => ({
   setHolder: vi.fn(),
   getHolder: vi.fn(),
   removeHolder: vi.fn(),
 }));
 
-import { useBlok } from '../../../src/react/useBlok';
-import { setHolder, removeHolder } from '../../../src/react/holder-map';
+import { useBlok } from '../../../packages/react/src/useBlok';
+import { setHolder, removeHolder } from '../../../packages/react/src/holder-map';
 
 /**
  * Helper: flush microtasks and advance fake timers to settle React state updates.

@@ -14,7 +14,7 @@ vi.mock('../../../src/markdown/index', () => ({
   markdownToBlocks: markdownToBlocksMock,
 }));
 
-import { useBlocks } from '../../../src/react/useBlocks';
+import { useBlocks } from '../../../packages/react/src/useBlocks';
 import { ToolNotFoundError } from '../../../src/components/errors/tool-not-found';
 import type { Blok } from '../../../types';
 

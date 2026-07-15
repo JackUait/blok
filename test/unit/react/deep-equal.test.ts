@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deepEqual } from '../../../src/react/deep-equal';
+import { deepEqual } from '../../../packages/react/src/deep-equal';
 
 describe('deepEqual', () => {
   it('treats identical references as equal', () => {

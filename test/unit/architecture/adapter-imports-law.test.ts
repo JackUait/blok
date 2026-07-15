@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
  * extractable into its own workspace package with `@blok/core` externalized.
  */
 describe('adapter import law', () => {
-  it.each(['src/react', 'src/vue', 'src/angular'])(
+  it.each(['packages/react/src', 'src/vue', 'src/angular'])(
     '%s has no relative imports into core source',
     (dir) => {
       // git grep exits 1 when there are no matches — that's the passing case

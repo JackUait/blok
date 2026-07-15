@@ -2,8 +2,8 @@
  * Type-level conformance test for the published React adapter surface.
  * Run via `tsc --noEmit` (part of `yarn lint:types`). NOT executed — only compiled.
  *
- * Each assertion forces a compile error if the published `types/react.d.ts`
- * drifts from the source implementation in `src/react`.
+ * Each assertion forces a compile error if the published `packages/react/types/index.d.ts`
+ * drifts from the source implementation in `packages/react/src`.
  */
 import type {
   UseBlokConfig as PublishedUseBlokConfig,
@@ -16,10 +16,10 @@ import type {
   TreeInsertSpec as PublishedTreeInsertSpec,
   MoveTarget as PublishedMoveTarget,
   UseBlocksApi as PublishedUseBlocksApi,
-} from '../../../types/react';
-import type { UseBlokConfig as SourceUseBlokConfig } from '../../../src/react/types';
-import type { BlokEditorProps as SourceBlokEditorProps } from '../../../src/react/BlokEditor';
-import type { BlokContentProps as SourceBlokContentProps } from '../../../src/react/types';
+} from '../../../packages/react/types/index';
+import type { UseBlokConfig as SourceUseBlokConfig } from '../../../packages/react/src/types';
+import type { BlokEditorProps as SourceBlokEditorProps } from '../../../packages/react/src/BlokEditor';
+import type { BlokContentProps as SourceBlokContentProps } from '../../../packages/react/src/types';
 import type {
   BlockNode as SourceBlockNode,
   CaretTarget as SourceCaretTarget,
@@ -28,7 +28,7 @@ import type {
   TreeInsertSpec as SourceTreeInsertSpec,
   MoveTarget as SourceMoveTarget,
   UseBlocksApi as SourceUseBlocksApi,
-} from '../../../src/react/blocks-snapshot';
+} from '../../../packages/react/src/blocks-snapshot';
 
 /** Compile error unless A and B are mutually assignable. */
 type AssertEqual<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
@@ -48,7 +48,7 @@ const _contentProps: AssertEqual<PublishedBlokContentProps, SourceBlokContentPro
 const _editorProps: AssertEqual<PublishedBlokEditorProps, SourceBlokEditorProps> = true;
 
 // useBlocks block-creation surface — the published declarations must not drift
-// from the source of truth in src/react/blocks-snapshot.ts.
+// from the source of truth in packages/react/src/blocks-snapshot.ts.
 const _blockNode: AssertExact<PublishedBlockNode, SourceBlockNode> = true;
 // CaretTarget is otherwise only reachable indirectly (InsertSpec.caret /
 // convert options); assert it directly so a missing-optional drift on the caret

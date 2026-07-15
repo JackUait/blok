@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { setHolder } from '../../../src/react/holder-map';
+import { setHolder } from '../../../packages/react/src/holder-map';
 
-import { BlokContent } from '../../../src/react/BlokContent';
+import { BlokContent } from '../../../packages/react/src/BlokContent';
 
 describe('BlokContent', () => {
   let mockEditor: Record<string, unknown>;

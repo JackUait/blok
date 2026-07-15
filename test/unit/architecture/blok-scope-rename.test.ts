@@ -28,6 +28,30 @@ describe('@blok scope rename', () => {
     expect(pkg.name).toBe('@blok/core');
   });
 
+  it('core has no react peers or adapter exports; @blok/react is a workspace with hard peers', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf-8')) as {
+      peerDependencies?: Record<string, string>;
+      exports: Record<string, unknown>;
+    };
+
+    expect(pkg.peerDependencies?.react).toBeUndefined();
+    expect(pkg.exports['./react']).toBeUndefined();
+
+    const reactPkg = JSON.parse(readFileSync('packages/react/package.json', 'utf-8')) as {
+      name: string;
+      peerDependencies?: Record<string, string>;
+      peerDependenciesMeta?: unknown;
+    };
+
+    expect(reactPkg.name).toBe('@blok/react');
+    expect(reactPkg.peerDependencies).toMatchObject({
+      'react': expect.any(String) as string,
+      'react-dom': expect.any(String) as string,
+      '@blok/core': expect.any(String) as string,
+    });
+    expect(reactPkg.peerDependenciesMeta).toBeUndefined();
+  });
+
   it('has no stray legacy-scope references outside the allowlist', () => {
     // Assembled at runtime so this file does not match its own search.
     const legacyScope = ['@jack', 'uait/'].join('');

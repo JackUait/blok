@@ -17,9 +17,9 @@
 //     members are NOT leaked. So a classification that lies also fails.
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useBlocks } from '../../../src/react/useBlocks';
+import { useBlocks } from '../../../packages/react/src/useBlocks';
 import type { Blocks } from '../../../types/api/blocks';
-import type { UseBlocksApi } from '../../../src/react/blocks-snapshot';
+import type { UseBlocksApi } from '../../../packages/react/src/blocks-snapshot';
 
 type Classification =
   // Present on UseBlocksApi under the SAME name.

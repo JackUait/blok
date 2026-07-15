@@ -276,6 +276,29 @@ test("format 'avif' re-encodes a PNG upload into a real, decodable AVIF", async 
   await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toHaveAttribute('data-state', 'rendered');
 });
 
+test("fallbackFormat serves WebP to browsers that cannot produce the preferred AVIF", async ({ page }) => {
+  const avifSupported = (await canEncodeAvifCanvas(page)) || (await canEncodeAv1(page));
+  const webpSupported = await canEncodeWebp(page);
+
+  await createBlok(page, { format: 'avif', fallbackFormat: 'webp' });
+  await awaitEmptyCard(page);
+  await uploadGeneratedImage(page, { mimeType: 'image/png', fileName: 'shot.png' });
+
+  const uploaded = await uploadedFile(page);
+  const original = await originalSize(page);
+
+  // Every current engine encodes at least one of the two — the chain's whole
+  // point is that no user with a modern browser is stuck with the original.
+  const fallbackType = webpSupported ? 'image/webp' : 'image/png';
+  const expectedType = avifSupported ? 'image/avif' : fallbackType;
+
+  expect(uploaded.type).toBe(expectedType);
+  expect(uploaded.size).toBeLessThan(expectedType === 'image/png' ? original + 1 : original * 0.9);
+  expect(uploaded.width).toBe(SOURCE_WIDTH);
+  expect(uploaded.height).toBe(SOURCE_HEIGHT);
+  await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toHaveAttribute('data-state', 'rendered');
+});
+
 test('a dimension cap downscales the upload, preserving aspect ratio', async ({ page }) => {
   await createBlok(page, { maxWidth: 400 });
   await awaitEmptyCard(page);

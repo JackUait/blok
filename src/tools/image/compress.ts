@@ -23,6 +23,7 @@ const EXTENSION_BY_MIME: Record<string, string> = {
 
 interface Resolved {
   format: ImageCompressionFormat;
+  fallbackFormat: ImageCompressionFormat;
   quality: number;
   maxWidth?: number;
   maxHeight?: number;
@@ -37,6 +38,7 @@ function resolveConfig(config: boolean | ImageCompressionConfig | undefined): Re
 
   return {
     format: raw.format ?? 'original',
+    fallbackFormat: raw.fallbackFormat ?? 'original',
     quality: raw.quality ?? DEFAULT_QUALITY,
     maxWidth: raw.maxWidth,
     maxHeight: raw.maxHeight,
@@ -47,14 +49,17 @@ function resolveConfig(config: boolean | ImageCompressionConfig | undefined): Re
 }
 
 /**
- * Encode targets to try, in order. A browser that cannot encode a type silently
- * returns a PNG instead of failing, so each candidate is verified after encoding
- * and the next one is tried on a mismatch — the source format is always last.
+ * Encode targets to try, in order: the preferred format, then the user's
+ * fallback, then the source format. A browser that cannot encode a type
+ * silently returns a PNG instead of failing, so each candidate is verified
+ * after encoding and the next one is tried on a mismatch — the source format
+ * is always last.
  */
-function encodeTargets(format: ImageCompressionFormat, sourceType: string): string[] {
-  const preferred = preferredTargets(format);
+function encodeTargets(cfg: Resolved, sourceType: string): string[] {
+  const preferred = [...preferredTargets(cfg.format), ...preferredTargets(cfg.fallbackFormat)];
+  const deduped = preferred.filter((mime, index) => preferred.indexOf(mime) === index);
 
-  return [...preferred.filter((mime) => mime !== sourceType), sourceType];
+  return [...deduped.filter((mime) => mime !== sourceType), sourceType];
 }
 
 function preferredTargets(format: ImageCompressionFormat): string[] {
@@ -172,7 +177,7 @@ async function encodeFirstSupported(
   sourceType: string,
   cfg: Resolved,
 ): Promise<Blob | null> {
-  for (const type of encodeTargets(cfg.format, sourceType)) {
+  for (const type of encodeTargets(cfg, sourceType)) {
     const blob = (await encodeCanvas(bitmap, size, type, cfg.quality))
       // No browser's canvas can encode AVIF, but WebCodecs' AV1 encoder can
       // produce a real one where available — try it before giving up on AVIF.

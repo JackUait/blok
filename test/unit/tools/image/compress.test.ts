@@ -222,6 +222,79 @@ describe('compressImage', () => {
     });
   });
 
+  describe('fallbackFormat — a user-chosen stop between the preferred format and the original', () => {
+    it('re-encodes into the fallback when the browser cannot produce the preferred format', async () => {
+      installCanvas();
+      encodable.delete('image/avif');
+      encodedSizes.set('image/webp', 80 * 1024);
+
+      const result = await compressImage(
+        makeFile({ size: 500 * 1024 }),
+        { format: 'avif', fallbackFormat: 'webp' },
+      );
+
+      expect(encodeCalls.map((c) => c.type)).toEqual(['image/avif', 'image/webp']);
+      expect(result?.type).toBe('image/webp');
+      expect(result?.name).toBe('photo.webp');
+    });
+
+    it('is not consulted when the preferred format encodes fine', async () => {
+      installCanvas();
+      encodable.add('image/avif');
+      encodedSizes.set('image/avif', 60 * 1024);
+
+      const result = await compressImage(
+        makeFile({ size: 500 * 1024 }),
+        { format: 'avif', fallbackFormat: 'webp' },
+      );
+
+      expect(encodeCalls.map((c) => c.type)).toEqual(['image/avif']);
+      expect(result?.type).toBe('image/avif');
+    });
+
+    it('still lands on the source format when the fallback cannot encode either', async () => {
+      installCanvas();
+      encodable.delete('image/avif');
+      encodable.delete('image/webp');
+      encodedSizes.set('image/jpeg', 100 * 1024);
+
+      const result = await compressImage(
+        makeFile({ size: 500 * 1024 }),
+        { format: 'avif', fallbackFormat: 'webp' },
+      );
+
+      expect(encodeCalls.map((c) => c.type)).toEqual(['image/avif', 'image/webp', 'image/jpeg']);
+      expect(result?.type).toBe('image/jpeg');
+    });
+
+    it("treats fallbackFormat 'original' the same as no fallback", async () => {
+      installCanvas();
+      encodable.delete('image/avif');
+      encodedSizes.set('image/jpeg', 100 * 1024);
+
+      const result = await compressImage(
+        makeFile({ size: 500 * 1024 }),
+        { format: 'avif', fallbackFormat: 'original' },
+      );
+
+      expect(encodeCalls.map((c) => c.type)).toEqual(['image/avif', 'image/jpeg']);
+      expect(result?.type).toBe('image/jpeg');
+    });
+
+    it('never asks the canvas for the same target twice', async () => {
+      installCanvas();
+      encodable.delete('image/webp');
+      encodedSizes.set('image/jpeg', 100 * 1024);
+
+      await compressImage(
+        makeFile({ size: 500 * 1024 }),
+        { format: 'webp', fallbackFormat: 'webp' },
+      );
+
+      expect(encodeCalls.map((c) => c.type)).toEqual(['image/webp', 'image/jpeg']);
+    });
+  });
+
   describe('WebCodecs AVIF fallback — canvas cannot encode AVIF anywhere', () => {
     const avifBlob = (size: number): Blob =>
       new Blob([new Uint8Array(size)], { type: 'image/avif' });
@@ -275,6 +348,19 @@ describe('compressImage', () => {
       const result = await compressImage(makeFile({ size: 500 * 1024 }), { format: 'auto' });
 
       expect(result?.type).toBe('image/avif');
+    });
+
+    it('is preferred over a configured fallbackFormat', async () => {
+      installCanvas();
+      encodeAvifWithVideoEncoderMock.mockResolvedValue(avifBlob(60 * 1024));
+
+      const result = await compressImage(
+        makeFile({ size: 500 * 1024 }),
+        { format: 'avif', fallbackFormat: 'webp' },
+      );
+
+      expect(result?.type).toBe('image/avif');
+      expect(encodeCalls.map((c) => c.type)).toEqual(['image/avif']);
     });
 
     it('still applies the worth-it check to WebCodecs output', async () => {

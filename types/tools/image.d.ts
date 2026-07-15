@@ -101,6 +101,15 @@ export interface ImageCompressionConfig {
    * JPEG loses its transparency. `'webp'`, `'avif'` and `'auto'` preserve it.
    */
   format?: ImageCompressionFormat;
+  /**
+   * Format to try when the browser cannot encode `format`, before giving up
+   * and re-encoding in the source format. Default: none — a browser without
+   * the preferred encoder goes straight to the source format.
+   *
+   * `{ format: 'avif', fallbackFormat: 'webp' }` uploads AVIF where the
+   * browser can produce it and WebP everywhere else.
+   */
+  fallbackFormat?: ImageCompressionFormat;
   /** Encoder quality, 0–1. Default 0.92 (visually lossless). Ignored for PNG. */
   quality?: number;
   /** Downscale images wider than this (px). Default: no cap. */

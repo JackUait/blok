@@ -5,10 +5,10 @@ import { flushPromises, mount } from '@vue/test-utils';
 vi.mock('../../../src/blok', async () => await import('./mock-blok'));
 
 import { blokRegistry } from './mock-blok';
-import { useBlok } from '../../../src/vue/useBlok';
-import { BlokContent } from '../../../src/vue/BlokContent';
-import { provideBlok, useBlokDefaults } from '../../../src/vue/provide-blok';
-import type { UseBlokConfig } from '../../../src/vue/types';
+import { useBlok } from '../../../packages/vue/src/useBlok';
+import { BlokContent } from '../../../packages/vue/src/BlokContent';
+import { provideBlok, useBlokDefaults } from '../../../packages/vue/src/provide-blok';
+import type { UseBlokConfig } from '../../../packages/vue/src/types';
 
 /**
  * Mounts a child that uses the raw `useBlok` composable (the escape hatch — NOT

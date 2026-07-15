@@ -31,7 +31,6 @@ export default defineConfig(({ mode }) => {
           blok: path.resolve(__dirname, 'src', 'blok.ts'),
           tools: path.resolve(__dirname, 'src', 'tools', 'index.ts'),
           full: path.resolve(__dirname, 'src', 'full.ts'),
-          vue: path.resolve(__dirname, 'src', 'vue', 'index.ts'),
           markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
           adapters: path.resolve(__dirname, 'src', 'adapters.ts'),
           icons: path.resolve(__dirname, 'src', 'icons', 'index.ts'),
@@ -39,9 +38,7 @@ export default defineConfig(({ mode }) => {
         formats: ['es', 'cjs'],
       },
       rollupOptions: {
-        external: [
-          'vue',
-        ],
+        external: [],
         output: [
           {
             format: 'es',

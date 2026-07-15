@@ -5,8 +5,8 @@ import { mount, flushPromises } from '@vue/test-utils';
 vi.mock('../../../src/blok', async () => await import('./mock-blok'));
 
 import { blokRegistry } from './mock-blok';
-import { useBlok } from '../../../src/vue/useBlok';
-import type { UseBlokConfig } from '../../../src/vue/types';
+import { useBlok } from '../../../packages/vue/src/useBlok';
+import type { UseBlokConfig } from '../../../packages/vue/src/types';
 import type { OutputData } from '@/types';
 
 async function mountReady(initial: UseBlokConfig): Promise<{ config: UseBlokConfig }> {

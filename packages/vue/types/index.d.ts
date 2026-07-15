@@ -12,9 +12,9 @@ import type {
   OutputData,
   ResolvedTheme,
   ToolboxConfig,
-} from './index';
-import type { BlockTuneData } from './block-tunes/block-tune-data';
-import type { MarkdownImportConfig } from './markdown';
+} from '@blok/core';
+import type { BlockTuneData } from '@blok/core';
+import type { MarkdownImportConfig } from '@blok/core/markdown';
 
 /**
  * Configuration for the `useBlok` composable and `<BlokEditor>`.

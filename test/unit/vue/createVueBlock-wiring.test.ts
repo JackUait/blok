@@ -5,13 +5,13 @@ import { mount, flushPromises } from '@vue/test-utils';
 vi.mock('../../../src/blok', async () => await import('./mock-blok'));
 
 import { blokRegistry } from './mock-blok';
-import { useBlok } from '../../../src/vue/useBlok';
-import { BlokContent } from '../../../src/vue/BlokContent';
-import { createVueBlock } from '../../../src/vue/createVueBlock';
-import { getRegistry } from '../../../src/vue/registry-map';
-import { createBlockPortalRegistry } from '../../../src/vue/block-portal-registry';
-import { setHolder } from '../../../src/vue/holder-map';
-import type { UseBlokConfig } from '../../../src/vue/types';
+import { useBlok } from '../../../packages/vue/src/useBlok';
+import { BlokContent } from '../../../packages/vue/src/BlokContent';
+import { createVueBlock } from '../../../packages/vue/src/createVueBlock';
+import { getRegistry } from '../../../packages/vue/src/registry-map';
+import { createBlockPortalRegistry } from '../../../packages/vue/src/block-portal-registry';
+import { setHolder } from '../../../packages/vue/src/holder-map';
+import type { UseBlokConfig } from '../../../packages/vue/src/types';
 import type { Blok } from '../../../types';
 
 const VueBlock = createVueBlock({
@@ -96,7 +96,7 @@ describe('createVueBlock end-to-end wiring', () => {
 
     setHolder(editor, holder);
     // Associate a registry as useBlok would.
-    const { setRegistry } = await import('../../../src/vue/registry-map');
+    const { setRegistry } = await import('../../../packages/vue/src/registry-map');
 
     setRegistry(editor, registry);
 

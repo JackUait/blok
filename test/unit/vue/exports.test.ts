@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
-import * as VueApi from '../../../src/vue/index';
-import { BlokContent } from '../../../src/vue/index';
+import * as VueApi from '../../../packages/vue/src/index';
+import { BlokContent } from '../../../packages/vue/src/index';
 
 describe('@blok/vue exports', () => {
   it('exports BlokEditor, BlokContent, useBlok, provideBlok, useBlokDefaults, BLOK_DEFAULT_CONFIG', () => {

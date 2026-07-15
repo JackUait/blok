@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { h, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 
-import { createVueBlock } from '../../../src/vue/createVueBlock';
-import { createBlockPortalRegistry, type BlockPortalRegistry } from '../../../src/vue/block-portal-registry';
-import { BlockPortalHost } from '../../../src/vue/BlockPortalHost';
+import { createVueBlock } from '../../../packages/vue/src/createVueBlock';
+import { createBlockPortalRegistry, type BlockPortalRegistry } from '../../../packages/vue/src/block-portal-registry';
+import { BlockPortalHost } from '../../../packages/vue/src/BlockPortalHost';
 import type { BlockAPI } from '../../../types/api';
 import type { API } from '../../../types';
 

@@ -5,9 +5,9 @@ import { flushPromises, mount } from '@vue/test-utils';
 vi.mock('../../../src/blok', async () => await import('./mock-blok'));
 
 import { blokRegistry } from './mock-blok';
-import { BlokEditor } from '../../../src/vue/BlokEditor';
-import { provideBlok } from '../../../src/vue/provide-blok';
-import type { UseBlokConfig } from '../../../src/vue/types';
+import { BlokEditor } from '../../../packages/vue/src/BlokEditor';
+import { provideBlok } from '../../../packages/vue/src/provide-blok';
+import type { UseBlokConfig } from '../../../packages/vue/src/types';
 
 /** Mounts BlokEditor under a parent that provides app-wide defaults. */
 async function mountWithDefaults(

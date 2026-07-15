@@ -4,7 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 vi.mock('../../../src/blok', async () => await import('./mock-blok'));
 
 import { blokRegistry } from './mock-blok';
-import { BlokEditor } from '../../../src/vue/BlokEditor';
+import { BlokEditor } from '../../../packages/vue/src/BlokEditor';
 import type { OutputData } from '@/types';
 
 /** The config object core was constructed with (after useBlok's wrapping). */

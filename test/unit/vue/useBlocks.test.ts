@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { defineComponent, h, computed, nextTick, type Ref, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 
-import { useBlocks } from '../../../src/vue/useBlocks';
-import type { UseBlocksApi } from '../../../src/vue/blocks-snapshot';
+import { useBlocks } from '../../../packages/vue/src/useBlocks';
+import type { UseBlocksApi } from '../../../packages/vue/src/blocks-snapshot';
 import type { Blok } from '../../../types';
 
 /**

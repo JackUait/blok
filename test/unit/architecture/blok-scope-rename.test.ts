@@ -52,6 +52,31 @@ describe('@blok scope rename', () => {
     expect(reactPkg.peerDependenciesMeta).toBeUndefined();
   });
 
+  it('core declares zero peer dependencies; @blok/vue is a workspace with hard peers', () => {
+    const pkg = JSON.parse(readFileSync('package.json', 'utf-8')) as {
+      peerDependencies?: unknown;
+      peerDependenciesMeta?: unknown;
+      exports: Record<string, unknown>;
+    };
+
+    expect(pkg.peerDependencies).toBeUndefined();
+    expect(pkg.peerDependenciesMeta).toBeUndefined();
+    expect(pkg.exports['./vue']).toBeUndefined();
+
+    const vuePkg = JSON.parse(readFileSync('packages/vue/package.json', 'utf-8')) as {
+      name: string;
+      peerDependencies?: Record<string, string>;
+      peerDependenciesMeta?: unknown;
+    };
+
+    expect(vuePkg.name).toBe('@blok/vue');
+    expect(vuePkg.peerDependencies).toMatchObject({
+      'vue': expect.any(String) as string,
+      '@blok/core': expect.any(String) as string,
+    });
+    expect(vuePkg.peerDependenciesMeta).toBeUndefined();
+  });
+
   it('has no stray legacy-scope references outside the allowlist', () => {
     // Assembled at runtime so this file does not match its own search.
     const legacyScope = ['@jack', 'uait/'].join('');

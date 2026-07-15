@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { setHolder } from '../../../src/vue/holder-map';
-import { BlokContent } from '../../../src/vue/BlokContent';
+import { setHolder } from '../../../packages/vue/src/holder-map';
+import { BlokContent } from '../../../packages/vue/src/BlokContent';
 import type { Blok } from '@/types';
 
 /** A plain object stands in for a Blok instance (only used as a WeakMap key). */

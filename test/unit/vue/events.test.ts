@@ -4,7 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 vi.mock('../../../src/blok', async () => await import('./mock-blok'));
 
 import { blokRegistry } from './mock-blok';
-import { BlokEditor } from '../../../src/vue/BlokEditor';
+import { BlokEditor } from '../../../packages/vue/src/BlokEditor';
 
 /** Returns the handler registered for a core event via editor.on(name, handler). */
 function registeredHandler(name: string): ((payload?: unknown) => void) | undefined {

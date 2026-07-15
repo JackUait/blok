@@ -16,8 +16,8 @@ const collectFiles = (dir: string): string[] =>
   });
 
 describe('Vue adapter no-SFC invariant', () => {
-  it('contains zero .vue files under src/vue', () => {
-    const vueDir = join(process.cwd(), 'src', 'vue');
+  it('contains zero .vue files under packages/vue/src', () => {
+    const vueDir = join(process.cwd(), 'packages', 'vue', 'src');
     const sfcFiles = collectFiles(vueDir).filter((f) => f.endsWith('.vue'));
 
     expect(sfcFiles).toEqual([]);

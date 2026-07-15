@@ -26,7 +26,7 @@ const SRC = path.join(REPO, 'src');
 
 const FRAMEWORK_DIRS = {
   react: path.join(REPO, 'packages', 'react', 'src'),
-  vue: path.join(SRC, 'vue'),
+  vue: path.join(REPO, 'packages', 'vue', 'src'),
   angular: path.join(SRC, 'angular'),
 } as const;
 
@@ -150,7 +150,7 @@ const ENTRIES: EntrySpec[] = [
   { name: 'full (./full)', file: path.join(SRC, 'full.ts'), owns: null },
   { name: 'markdown (./markdown)', file: path.join(SRC, 'markdown', 'index.ts'), owns: null },
   { name: 'react (@blok/react)', file: path.join(REPO, 'packages', 'react', 'src', 'index.ts'), owns: 'react' },
-  { name: 'vue (./vue)', file: path.join(SRC, 'vue', 'index.ts'), owns: 'vue' },
+  { name: 'vue (@blok/vue)', file: path.join(REPO, 'packages', 'vue', 'src', 'index.ts'), owns: 'vue' },
   { name: 'angular (./angular)', file: path.join(SRC, 'angular', 'index.ts'), owns: 'angular' },
 ];
 

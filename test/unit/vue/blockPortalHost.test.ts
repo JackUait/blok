@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { defineComponent, h, inject, nextTick, reactive } from 'vue';
 import { mount } from '@vue/test-utils';
 
-import { createBlockPortalRegistry } from '../../../src/vue/block-portal-registry';
-import { BlockPortalHost } from '../../../src/vue/BlockPortalHost';
+import { createBlockPortalRegistry } from '../../../packages/vue/src/block-portal-registry';
+import { BlockPortalHost } from '../../../packages/vue/src/BlockPortalHost';
 
 const makeHost = (): HTMLElement => {
   const el = document.createElement('div');

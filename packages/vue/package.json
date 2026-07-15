@@ -1,0 +1,39 @@
+{
+  "name": "@blok/vue",
+  "version": "1.1.0",
+  "description": "Vue 3 bindings for the Blok editor",
+  "license": "Apache-2.0",
+  "author": "JackUait",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JackUait/blok.git",
+    "directory": "packages/vue"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "types",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "yarn run -T vite build --mode production"
+  },
+  "peerDependencies": {
+    "@blok/core": "^1.1.0",
+    "vue": "^3.5.0"
+  }
+}

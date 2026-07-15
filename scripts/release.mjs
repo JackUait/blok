@@ -3,7 +3,9 @@ import { writeFileSync, unlinkSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 
-import { FAMILY, prepareManifestForGpr } from './release-manifest.mjs';
+import { readdirSync } from 'fs';
+
+import { FAMILY, prepareManifestForGpr, rewriteSpecifiersForGpr } from './release-manifest.mjs';
 
 /**
  * Build the `npm publish` command that publishes a pre-packed tarball.
@@ -226,8 +228,30 @@ if (isDirectRun) {
     }
   };
 
+  /** Collect the rewritable bundle files for a family entry's GPR tarball. */
+  const distFilesForRewrite = (entry) => {
+    const files = [];
+
+    for (const dir of entry.distRewriteDirs ?? []) {
+      const abs = join(entry.packDir, dir);
+
+      if (!existsSync(abs)) continue;
+
+      for (const name of readdirSync(abs)) {
+        if (/\.(mjs|cjs|js|d\.ts)$/.test(name)) {
+          files.push(join(abs, name));
+        }
+      }
+    }
+
+    return files;
+  };
+
   for (const entry of FAMILY) {
     const originalManifest = readFileSync(entry.manifestPath, 'utf-8');
+    const originalDistFiles = new Map(
+      distFilesForRewrite(entry).map((file) => [file, readFileSync(file, 'utf-8')]),
+    );
 
     await publishPackagePair({
       publishToNpm: () => {
@@ -245,6 +269,13 @@ if (isDirectRun) {
         const gprManifest = prepareManifestForGpr(JSON.parse(originalManifest), entry);
 
         writeFileSync(entry.manifestPath, JSON.stringify(gprManifest, null, 2) + '\n');
+
+        // Adapter bundles import the core by npm name; the mirror tarball must
+        // import the mirror's core name (see release-manifest.mjs).
+        for (const [file, source] of originalDistFiles) {
+          writeFileSync(file, rewriteSpecifiersForGpr(source));
+        }
+
         writeGprNpmrc();
 
         const packJson = runCapture(
@@ -257,6 +288,10 @@ if (isDirectRun) {
       },
       restoreName: () => {
         writeFileSync(entry.manifestPath, originalManifest);
+
+        for (const [file, source] of originalDistFiles) {
+          writeFileSync(file, source);
+        }
 
         if (existsSync('.npmrc')) {
           unlinkSync('.npmrc');

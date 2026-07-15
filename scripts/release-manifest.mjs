@@ -21,12 +21,16 @@ export const FAMILY = [
     gprName: '@dodopizza/blok-react',
     manifestPath: 'packages/react/package.json',
     packDir: 'packages/react',
+    // Bundled adapter code imports the core by its npm name; the GPR tarball
+    // must import the mirror's core name instead (see rewriteSpecifiersForGpr).
+    distRewriteDirs: ['dist'],
   },
   {
     npmName: '@bloklabs/vue',
     gprName: '@dodopizza/blok-vue',
     manifestPath: 'packages/vue/package.json',
     packDir: 'packages/vue',
+    distRewriteDirs: ['dist'],
   },
   {
     // The publishable Angular artifact is the ng-packagr APF output — its
@@ -35,6 +39,7 @@ export const FAMILY = [
     gprName: '@dodopizza/blok-angular',
     manifestPath: 'packages/angular/dist/package.json',
     packDir: 'packages/angular/dist',
+    distRewriteDirs: ['fesm2022', '.'],
   },
   {
     npmName: '@bloklabs/cli',
@@ -54,6 +59,20 @@ export const FAMILY = [
  * @param {{ gprName: string }} entry - The FAMILY entry for this package
  * @returns {object} The rewritten manifest object
  */
+/**
+ * Rewrite `@bloklabs/core` specifiers inside bundled adapter code to the
+ * GitHub Packages mirror's core name, so a GHP-only consumer resolves the
+ * peer they actually installed (`@dodopizza/blok`) instead of a package
+ * from a registry they may not use. Subpaths (`/adapters`, `/markdown`, …)
+ * are preserved because the substring match keeps everything after the name.
+ *
+ * @param {string} source - Bundle source code (.mjs/.cjs/.d.ts)
+ * @returns {string}
+ */
+export function rewriteSpecifiersForGpr(source) {
+  return source.replaceAll('@bloklabs/core', '@dodopizza/blok');
+}
+
 export function prepareManifestForGpr(pkgJson, entry) {
   const out = { ...pkgJson, name: entry.gprName };
 

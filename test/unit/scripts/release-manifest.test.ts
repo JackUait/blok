@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FAMILY, prepareManifestForGpr } from '../../../scripts/release-manifest.mjs';
+import { FAMILY, prepareManifestForGpr, rewriteSpecifiersForGpr } from '../../../scripts/release-manifest.mjs';
 
 const findEntry = (npmName: string): (typeof FAMILY)[number] => {
   const entry = FAMILY.find((p) => p.npmName === npmName);
@@ -44,6 +44,26 @@ describe('release family manifest', () => {
     expect(out.peerDependencies['@dodopizza/blok']).toBe('^2.0.0');
     expect(out.peerDependencies['@bloklabs/core']).toBeUndefined();
     expect(out.peerDependencies.react).toBe('^19.0.0');
+  });
+
+  it('rewrites core specifiers inside bundled code for GPR tarballs', () => {
+    const code = [
+      'import { Blok } from "@bloklabs/core";',
+      'import { createBlocksApiForEditor } from "@bloklabs/core/adapters";',
+      "const dyn = await import('@bloklabs/core/markdown');",
+    ].join('\n');
+    const out = rewriteSpecifiersForGpr(code);
+
+    expect(out).toContain('from "@dodopizza/blok"');
+    expect(out).toContain('from "@dodopizza/blok/adapters"');
+    expect(out).toContain("import('@dodopizza/blok/markdown')");
+    expect(out).not.toContain('@bloklabs');
+  });
+
+  it('marks exactly the adapter entries for dist rewriting', () => {
+    const rewriting = FAMILY.filter((p) => (p.distRewriteDirs ?? []).length > 0).map((p) => p.npmName);
+
+    expect(rewriting).toEqual(['@bloklabs/react', '@bloklabs/vue', '@bloklabs/angular']);
   });
 
   it('leaves manifests without a core peer untouched apart from the name', () => {

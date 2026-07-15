@@ -121,7 +121,7 @@ export class AudioTool implements BlockTool {
     const sources = this.config.sources;
     if (event.type === 'pattern') {
       if (sources === 'upload') return;
-      this.applyResult({ url: (event as PatternPasteEvent).detail.data });
+      this.startUrl((event as PatternPasteEvent).detail.data);
       return;
     }
     if (event.type === 'file') {
@@ -279,40 +279,65 @@ export class AudioTool implements BlockTool {
     this.renderState();
     this.block.dispatchChange();
 
-    // Asynchronous enrichment from a real File upload (not URL paste).
+    // Asynchronous enrichment needs the raw bytes: an upload has them in
+    // hand; a URL insert fetches them (subject to CORS — hosts that block
+    // the fetch just keep the plain scrubber).
     if (file) {
-      // Metadata: title, artist, cover
-      void readTrackMetadata(file)
-        .then(async (meta) => {
-          if (this.destroyed) return;
-          const dirty = { value: false };
-          if (meta.title) { this.data.title = meta.title; dirty.value = true; }
-          if (meta.artist) { this.data.artist = meta.artist; dirty.value = true; }
-          if (meta.cover) {
-            const coverUrl = await resolveCover(meta.cover, this.config.uploader).catch(() => undefined);
-            if (coverUrl) { this.data.coverUrl = coverUrl; dirty.value = true; }
-          }
-          if (this.destroyed) return;
-          if (dirty.value) {
-            this.renderState();
-            this.block.dispatchChange();
-          }
-        })
-        .catch(() => { /* leave player working without metadata */ });
-
-      // Waveform peaks + duration
-      void decodePeaks(file)
-        .then((decoded) => {
-          if (this.destroyed) return;
-          if (decoded && decoded.peaks.length) {
-            this.data.peaks = decoded.peaks;
-            this.data.duration = decoded.duration;
-            this.renderState();
-            this.block.dispatchChange();
-          }
-        })
-        .catch(() => { /* leave player working without waveform */ });
+      this.enrich(file, result.url);
+    } else {
+      void this.fetchForEnrichment(result.url);
     }
+  }
+
+  private async fetchForEnrichment(url: string): Promise<void> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return;
+      const blob = await response.blob();
+      if (this.destroyed || this.data.url !== url) return;
+      this.enrich(new File([blob], this.data.fileName ?? 'audio', { type: blob.type }), url);
+    } catch { /* CORS or network failure — leave the player without a waveform */ }
+  }
+
+  /**
+   * Decodes waveform peaks and reads track metadata from the audio bytes.
+   * `forUrl` guards against a replace racing the async work: results are
+   * dropped when the block no longer plays the URL they were decoded for.
+   */
+  private enrich(file: File, forUrl: string): void {
+    const stale = (): boolean => this.destroyed || this.data.url !== forUrl;
+
+    // Metadata: title, artist, cover
+    void readTrackMetadata(file)
+      .then(async (meta) => {
+        if (stale()) return;
+        const dirty = { value: false };
+        if (meta.title) { this.data.title = meta.title; dirty.value = true; }
+        if (meta.artist) { this.data.artist = meta.artist; dirty.value = true; }
+        if (meta.cover) {
+          const coverUrl = await resolveCover(meta.cover, this.config.uploader).catch(() => undefined);
+          if (coverUrl) { this.data.coverUrl = coverUrl; dirty.value = true; }
+        }
+        if (stale()) return;
+        if (dirty.value) {
+          this.renderState();
+          this.block.dispatchChange();
+        }
+      })
+      .catch(() => { /* leave player working without metadata */ });
+
+    // Waveform peaks + duration
+    void decodePeaks(file)
+      .then((decoded) => {
+        if (stale()) return;
+        if (decoded && decoded.peaks.length) {
+          this.data.peaks = decoded.peaks;
+          this.data.duration = decoded.duration;
+          this.renderState();
+          this.block.dispatchChange();
+        }
+      })
+      .catch(() => { /* leave player working without waveform */ });
   }
 
   private applyError(err?: unknown): void {

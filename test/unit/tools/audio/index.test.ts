@@ -270,6 +270,94 @@ describe('AudioTool', () => {
     expect(tool.save().duration).toBe(8);
   });
 
+  describe('URL-insert enrichment (waveform + metadata from fetched bytes)', () => {
+    const insertUrl = (tool: AudioTool): void => {
+      tool.onPaste({ type: 'pattern', detail: { data: 'https://x/y.mp3' } } as never);
+    };
+
+    it('fetches the resolved URL and caches decoded peaks and duration', async () => {
+      const decodePeaksMock = await getDecodePeaksMock();
+      decodePeaksMock.mockResolvedValueOnce({ peaks: [0.2, 0.8], duration: 12 });
+      const blob = new Blob([new Uint8Array(4)], { type: 'audio/mpeg' });
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const tool = new AudioTool(opts({ url: '' }));
+      tool.render();
+      insertUrl(tool);
+
+      await vi.waitFor(() => expect(tool.save().peaks).toEqual([0.2, 0.8]));
+      expect(tool.save().duration).toBe(12);
+      expect(fetchMock).toHaveBeenCalledWith('https://cdn/track.mp3');
+      const decoded = decodePeaksMock.mock.calls[0]?.[0] as File;
+      expect(decoded.type).toBe('audio/mpeg');
+    });
+
+    it('extracts title and artist from the fetched bytes', async () => {
+      const metadata = await import('../../../../src/tools/audio/metadata');
+      (metadata.readTrackMetadata as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ title: 'Song', artist: 'Band' });
+      const blob = new Blob([new Uint8Array(4)], { type: 'audio/mpeg' });
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) }));
+
+      const tool = new AudioTool(opts({ url: '' }));
+      tool.render();
+      insertUrl(tool);
+
+      await vi.waitFor(() => expect(tool.save().title).toBe('Song'));
+      expect(tool.save().artist).toBe('Band');
+    });
+
+    it('fails soft when the fetch is blocked (CORS): player stays, no peaks, no error state', async () => {
+      const block = createMockBlock();
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+      const tool = new AudioTool(opts({ url: '' }, {}, block));
+      const root = tool.render();
+      insertUrl(tool);
+
+      await vi.waitFor(() => expect(tool.save().url).toBe('https://cdn/track.mp3'));
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(tool.save().peaks).toBeUndefined();
+      expect(root.querySelector('[data-role="audio-media"]')).not.toBeNull();
+      expect(root.querySelector('[data-role="audio-error"]')).toBeNull();
+      expect((block.dispatchChange as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+    });
+
+    it('discards a stale fetch result when the audio was replaced meanwhile', async () => {
+      const decodePeaksMock = await getDecodePeaksMock();
+      decodePeaksMock.mockResolvedValue({ peaks: [0.9], duration: 3 });
+      let resolveFirst: (v: { ok: boolean; blob: () => Promise<Blob> }) => void = () => {};
+      const firstFetch = new Promise((r) => { resolveFirst = r; });
+      const fetchMock = vi.fn().mockReturnValueOnce(firstFetch);
+      vi.stubGlobal('fetch', fetchMock);
+
+      const tool = new AudioTool(opts({ url: '' }));
+      tool.render();
+      insertUrl(tool);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Replace the audio before the first fetch resolves
+      const uploader = uploaderInstances.at(-1);
+      uploader?.handleUrl.mockResolvedValue({ url: 'https://cdn/other.mp3' });
+      fetchMock.mockRejectedValueOnce(new TypeError('no bytes for the second'));
+      insertUrl(tool);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      resolveFirst({ ok: true, blob: () => Promise.resolve(new Blob([new Uint8Array(2)], { type: 'audio/mpeg' })) });
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(tool.save().url).toBe('https://cdn/other.mp3');
+      expect(tool.save().peaks).toBeUndefined();
+    });
+  });
+
   it('caption round-trip: blur on [data-role="audio-caption"] updates save().caption', () => {
     const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: '' }));
     const root = tool.render();

@@ -31,7 +31,7 @@ export const TOOL_SECTIONS: ToolSection[] = [
     title: 'Paragraph',
     description:
       'The default text block. Supports rich inline formatting (bold, italic, links, colour). Empty paragraphs are excluded from saved output unless `preserveBlank` is enabled.',
-    importExample: `import { Paragraph } from '@jackuait/blok/tools';`,
+    importExample: `import { Paragraph } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'placeholder',
@@ -82,8 +82,8 @@ export const TOOL_SECTIONS: ToolSection[] = [
     "text": "Hello <b>world</b>"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Paragraph } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Paragraph } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -103,7 +103,7 @@ const editor = new Blok({
     title: 'Header',
     description:
       'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) for H1–H3.',
-    importExample: `import { Header } from '@jackuait/blok/tools';`,
+    importExample: `import { Header } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'placeholder',
@@ -160,8 +160,8 @@ const editor = new Blok({
     "level": 2
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Header } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Header } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -182,7 +182,7 @@ const editor = new Blok({
     title: 'List',
     description:
       'Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default — one for each style — and items can be converted between styles via the block settings menu.',
-    importExample: `import { List } from '@jackuait/blok/tools';`,
+    importExample: `import { List } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'defaultStyle',
@@ -231,8 +231,8 @@ const editor = new Blok({
     "depth": 0
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { List } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { List } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -251,7 +251,7 @@ const editor = new Blok({
     title: 'Table',
     description:
       'A full-featured table block. Each cell contains its own block editor (supporting any block type). Supports heading rows, heading columns, column resizing, cell background/text colours, row/column add and delete controls, and copy/paste.',
-    importExample: `import { Table } from '@jackuait/blok/tools';`,
+    importExample: `import { Table } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'rows',
@@ -314,8 +314,8 @@ interface CellContent {
     ]
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Table } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Table } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -336,7 +336,7 @@ const editor = new Blok({
     title: 'Toggle',
     description:
       'A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when collapsed. Toggling is controlled by clicking the arrow icon. The open/collapsed state is persisted via `isOpen` and restored on reload; toggles default to open.',
-    importExample: `import { Toggle } from '@jackuait/blok/tools';`,
+    importExample: `import { Toggle } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'placeholder',
@@ -356,8 +356,8 @@ const editor = new Blok({
     "text": "Click to expand"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Toggle } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Toggle } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -377,7 +377,7 @@ const editor = new Blok({
     title: 'Callout',
     description:
       'A container block for highlighted content with an emoji icon. Supports customisable text and background colours via a colour picker. Child blocks are nested inside the callout. Useful for tips, warnings, notes, and other call-to-action content.',
-    importExample: `import { Callout } from '@jackuait/blok/tools';`,
+    importExample: `import { Callout } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'emojiPicker',
@@ -401,8 +401,8 @@ const editor = new Blok({
     "backgroundColor": "yellow"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Callout } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Callout } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -421,7 +421,7 @@ const editor = new Blok({
     title: 'Database',
     description:
       'A multi-view database block supporting board (Kanban), list, table, and gallery views. Stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, sorting, filtering, drag-and-drop reordering, inline editing, and an optional backend sync adapter.',
-    importExample: `import { Database } from '@jackuait/blok/tools';`,
+    importExample: `import { Database } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'adapter',
@@ -461,8 +461,8 @@ const editor = new Blok({
     "activeViewId": "v1"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Database } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Database } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -480,7 +480,7 @@ const editor = new Blok({
     title: 'Database Row',
     description:
       'An internal block tool that stores a single database row. Not user-insertable — rows are created and managed by the parent Database block. Each row stores property values conforming to the parent database schema and a position string for ordering.',
-    importExample: `import { DatabaseRow } from '@jackuait/blok/tools';`,
+    importExample: `import { DatabaseRow } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface DatabaseRowData {
   properties: Record<string, PropertyValue>; // Column values keyed by property ID
@@ -500,7 +500,7 @@ const editor = new Blok({
 }`,
     usageExample: `// DatabaseRow is not inserted directly — it is created by the Database tool.
 // Access row data via the saved output:
-import { Database, DatabaseRow } from '@jackuait/blok/tools';
+import { Database, DatabaseRow } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -518,7 +518,7 @@ const editor = new Blok({
     title: 'Divider',
     description:
       'A horizontal line separator. Renders a semantic `<hr>` element. Has no editable content or settings. Can be inserted via the toolbox or by typing `---` in an empty paragraph.',
-    importExample: `import { Divider } from '@jackuait/blok/tools';`,
+    importExample: `import { Divider } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface DividerData {
   // Empty — dividers have no configurable properties.
@@ -528,8 +528,8 @@ const editor = new Blok({
   "type": "divider",
   "data": {}
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Divider } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Divider } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -548,7 +548,7 @@ const editor = new Blok({
     title: 'Spacer',
     description:
       'An adjustable vertical gap. Drag either edge grip — or focus one and press ArrowUp/ArrowDown — to resize. Its main job is lining up content across sibling columns of unequal length, replacing piles of empty paragraphs. Invisible in read-only mode.',
-    importExample: `import { Spacer } from '@jackuait/blok/tools';`,
+    importExample: `import { Spacer } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface SpacerData {
   height?: number; // Gap height in px, clamped to 38–600 (default 38)
@@ -560,8 +560,8 @@ const editor = new Blok({
     "height": 120
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Spacer } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Spacer } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -580,7 +580,7 @@ const editor = new Blok({
     title: 'Quote',
     description:
       'A blockquote with a left border accent. Supports two sizes (default and large) switchable via the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block.',
-    importExample: `import { Quote } from '@jackuait/blok/tools';`,
+    importExample: `import { Quote } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface QuoteData {
   text: string;                  // Quote HTML content
@@ -594,8 +594,8 @@ const editor = new Blok({
     "size": "default"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Quote } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Quote } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -614,7 +614,7 @@ const editor = new Blok({
     title: 'Code',
     description:
       'A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. Supports 30+ languages via Prism. LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block.',
-    importExample: `import { Code } from '@jackuait/blok/tools';`,
+    importExample: `import { Code } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface CodeData {
   code: string;          // Raw code text (not HTML)
@@ -630,8 +630,8 @@ const editor = new Blok({
     "lineNumbers": true
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Code } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Code } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -650,7 +650,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Image',
     description: 'Embed an image via URL upload or file paste.',
-    importExample: "import { Image } from '@jackuait/blok/tools';",
+    importExample: "import { Image } from '@blok/core/tools';",
     configOptions: [
       {
         option: 'uploader',
@@ -731,8 +731,8 @@ const editor = new Blok({
     "alignment": "center"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Image } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Image } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -759,7 +759,7 @@ const editor = new Blok({
     title: 'Columns',
     description:
       'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
-    importExample: `import { ColumnList } from '@jackuait/blok/tools';`,
+    importExample: `import { ColumnList } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface ColumnListData {
   // No persisted fields. The structure lives in the block's contentIds,
@@ -772,8 +772,8 @@ const editor = new Blok({
   "data": {},
   "contentIds": ["column1", "column2"]
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { ColumnList, Column } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { ColumnList, Column } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -794,7 +794,7 @@ const editor = new Blok({
     title: 'Column',
     description:
       'A single column inside a column list. Not user-insertable on its own — columns are created and managed by the parent `column_list` block. Child blocks are nested inside the column via `contentIds`. The optional `widthRatio` controls the column’s width relative to its siblings (applied as flex-grow); omit it for equal width.',
-    importExample: `import { Column } from '@jackuait/blok/tools';`,
+    importExample: `import { Column } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface ColumnData {
   widthRatio?: number; // Width relative to siblings (flex-grow). Omitted = equal width.
@@ -809,7 +809,7 @@ const editor = new Blok({
   "contentIds": ["block1", "block2"]
 }`,
     usageExample: `// Column is not inserted directly — it is created by the ColumnList tool.
-import { ColumnList, Column } from '@jackuait/blok/tools';
+import { ColumnList, Column } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -827,7 +827,7 @@ const editor = new Blok({
     title: 'Embed',
     description:
       'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s "Create embed". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL — only registry-matched URLs are ever embedded. Supports resizing, alignment (left/center/right), and an optional caption.',
-    importExample: `import { Embed } from '@jackuait/blok/tools';`,
+    importExample: `import { Embed } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `interface EmbedData {
   service: string;        // Registry service key, e.g. "youtube"
@@ -853,8 +853,8 @@ const editor = new Blok({
     "height": 320
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Embed } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Embed } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -872,7 +872,7 @@ const editor = new Blok({
     title: 'Bookmark',
     description:
       'A static OpenGraph card for a pasted link, like Notion’s "Create bookmark". Shows the page title, description, preview image, favicon, and domain. Metadata is fetched from a consumer-supplied unfurl endpoint (CORS makes a backend mandatory) — Blok ships only the contract.',
-    importExample: `import { Bookmark } from '@jackuait/blok/tools';`,
+    importExample: `import { Bookmark } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'endpoint',
@@ -908,8 +908,8 @@ const editor = new Blok({
     "domain": "example.com"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Bookmark } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Bookmark } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -930,7 +930,7 @@ const editor = new Blok({
     title: 'File',
     description:
       'An attachment card for any uploaded file. Shows a type icon, filename, human-readable size, a download action, and an optional caption. Files are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.',
-    importExample: `import { File } from '@jackuait/blok/tools';`,
+    importExample: `import { File } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'uploader',
@@ -1002,8 +1002,8 @@ const editor = new Blok({
     "mimeType": "application/pdf"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { File } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { File } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1030,7 +1030,7 @@ const editor = new Blok({
     title: 'Audio',
     description:
       'A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and a caption. Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). Share links from Dropbox, OneDrive, GitHub, GitLab, Hugging Face, Google Cloud Storage, and the Internet Archive are rewritten to their direct-content form automatically; Google Drive links additionally require an `uploadByUrl` backend because Drive blocks browser hotlinking. An optional MIME allowlist and max size gate what is accepted.',
-    importExample: `import { Audio } from '@jackuait/blok/tools';`,
+    importExample: `import { Audio } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'uploader',
@@ -1087,8 +1087,8 @@ const editor = new Blok({
     "alignment": "center"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Audio } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Audio } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1115,7 +1115,7 @@ const editor = new Blok({
     title: 'Video',
     description:
       'A full-featured video player block. Renders an uploaded or linked video with a custom control bar (play/pause, scrubber with buffered range and hover preview, volume, playback speed, loop, picture-in-picture, theater and fullscreen modes), an optional caption, and an ambient glow behind the player. Videos are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.',
-    importExample: `import { Video } from '@jackuait/blok/tools';`,
+    importExample: `import { Video } from '@blok/core/tools';`,
     configOptions: [
       {
         option: 'uploader',
@@ -1174,8 +1174,8 @@ const editor = new Blok({
     "alignment": "center"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Video } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Video } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1203,7 +1203,7 @@ const editor = new Blok({
     title: 'Bold',
     description:
       'Wraps selected text in `<strong>`. Activated with Cmd/Ctrl+B or by clicking the B button in the inline toolbar. Supports nested bold ranges and normalises overlapping markup on paste.',
-    importExample: `import { Bold } from '@jackuait/blok/tools';`,
+    importExample: `import { Bold } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// No separate data shape — Bold is stored as HTML inside the block's text field.
 // Example HTML stored in a paragraph:
@@ -1214,8 +1214,8 @@ const editor = new Blok({
   "type": "paragraph",
   "data": { "text": "Hello <strong>world</strong>" }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Bold } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Bold } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1233,7 +1233,7 @@ const editor = new Blok({
     title: 'Italic',
     description:
       'Wraps selected text in `<i>` (pasted `<em>` is also preserved). Activated with Cmd/Ctrl+I or by clicking the I button in the inline toolbar.',
-    importExample: `import { Italic } from '@jackuait/blok/tools';`,
+    importExample: `import { Italic } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
 // "Hello <i>world</i>"`,
@@ -1241,8 +1241,8 @@ const editor = new Blok({
   "type": "paragraph",
   "data": { "text": "Hello <i>world</i>" }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Italic } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Italic } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1258,7 +1258,7 @@ const editor = new Blok({
     title: 'Link',
     description:
       'Wraps selected text in `<a href="...">`. Activated with Cmd/Ctrl+K. Clicking the button on existing linked text opens the URL input allowing the link to be edited or removed.',
-    importExample: `import { Link } from '@jackuait/blok/tools';`,
+    importExample: `import { Link } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
 // '<a href="https://example.com">Example</a>'`,
@@ -1268,8 +1268,8 @@ const editor = new Blok({
     "text": "Visit <a href=\\"https://example.com\\">Example</a>"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Link } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Link } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1285,7 +1285,7 @@ const editor = new Blok({
     title: 'Marker',
     description:
       'Applies text colour or background colour to selected text using `<mark style="color:...">` or `<mark style="background-color:...">`. Opens a colour picker with preset text and background swatches plus a Default reset. Activated with Cmd/Ctrl+Shift+H.',
-    importExample: `import { Marker } from '@jackuait/blok/tools';`,
+    importExample: `import { Marker } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
 // Text colour:       '<mark style="color:#e03e2d">red text</mark>'
@@ -1296,8 +1296,8 @@ const editor = new Blok({
     "text": "<mark style=\\"background-color:#ffd966\\">highlighted text</mark>"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Marker } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Marker } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1313,7 +1313,7 @@ const editor = new Blok({
     title: 'Underline',
     description:
       'Wraps selected text in `<u>`. Activated with Cmd/Ctrl+U or by clicking the U button in the inline toolbar.',
-    importExample: `import { Underline } from '@jackuait/blok/tools';`,
+    importExample: `import { Underline } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
 // "Hello <u>world</u>"`,
@@ -1321,8 +1321,8 @@ const editor = new Blok({
   "type": "paragraph",
   "data": { "text": "Hello <u>world</u>" }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Underline } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Underline } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1338,7 +1338,7 @@ const editor = new Blok({
     title: 'Strikethrough',
     description:
       'Wraps selected text in `<s>`. Activated with Cmd/Ctrl+Shift+S or by clicking the S button in the inline toolbar.',
-    importExample: `import { Strikethrough } from '@jackuait/blok/tools';`,
+    importExample: `import { Strikethrough } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
 // "Hello <s>world</s>"`,
@@ -1346,8 +1346,8 @@ const editor = new Blok({
   "type": "paragraph",
   "data": { "text": "Hello <s>world</s>" }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Strikethrough } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Strikethrough } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1363,7 +1363,7 @@ const editor = new Blok({
     title: 'Inline Code',
     description:
       'Wraps selected text in `<code>`. Activated with Cmd/Ctrl+E or by clicking the code button in the inline toolbar. Useful for marking up variable names, function calls, and short code snippets within text.',
-    importExample: `import { InlineCode } from '@jackuait/blok/tools';`,
+    importExample: `import { InlineCode } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
 // "Call <code>getData()</code> to fetch results"`,
@@ -1371,8 +1371,8 @@ const editor = new Blok({
   "type": "paragraph",
   "data": { "text": "Call <code>getData()</code> to fetch results" }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { InlineCode } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { InlineCode } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -1388,7 +1388,7 @@ const editor = new Blok({
     title: 'Equation',
     description:
       'Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The LaTeX source is kept in the `data-latex` attribute so the formula round-trips through save/load, while the rendered KaTeX markup is regenerated on load.',
-    importExample: `import { Equation } from '@jackuait/blok/tools';`,
+    importExample: `import { Equation } from '@blok/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
 // The LaTeX source lives in the data-latex attribute:
@@ -1399,8 +1399,8 @@ const editor = new Blok({
     "text": "Einstein wrote <span data-latex=\\"E = mc^2\\"></span>"
   }
 }`,
-    usageExample: `import { Blok } from '@jackuait/blok';
-import { Equation } from '@jackuait/blok/tools';
+    usageExample: `import { Blok } from '@blok/core';
+import { Equation } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',

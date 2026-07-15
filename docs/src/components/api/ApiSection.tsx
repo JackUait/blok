@@ -31,7 +31,7 @@ const tdClass = "px-4 py-3 align-top text-sm text-muted-foreground";
 const codeClass =
   "rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[0.8125rem] text-foreground";
 
-const PACKAGE_NAME = "@jackuait/blok";
+const PACKAGE_NAME = "@blok/core";
 
 // Same repo the Footer's GitHub link points at — reused here rather than a
 // new constant so both links always agree on where the source lives.

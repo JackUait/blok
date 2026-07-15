@@ -1233,7 +1233,7 @@
     "heroDescription": "Один codemod переписывает импорты, типы, селекторы и конфигурацию. Сохранённый контент загружается как есть — всё, чему нет эквивалента в Blok, попадает в лог, а не теряется молча.",
     "aliasNoteTitle": "Псевдоним EditorJS для прямой замены",
     "aliasNoteDescription": "Blok также экспортируется под псевдонимом EditorJS — поменяйте путь импорта и оставьте прежнее имя переменной.",
-    "aliasNoteCode": "import { EditorJS } from '@jackuait/blok'; // new EditorJS({ ... }) остаётся без изменений",
+    "aliasNoteCode": "import { EditorJS } from '@blok/core'; // new EditorJS({ ... }) остаётся без изменений",
     "customInlineToolTitle": "Инлайн-инструмент render() → MenuConfig",
     "customInlineToolBefore": "render() { /* returns an HTMLElement button */ }",
     "customInlineToolAfter": "render() { return { icon, name, onActivate, isActive }; }",

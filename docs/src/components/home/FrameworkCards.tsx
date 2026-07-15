@@ -148,7 +148,7 @@ const FRAMEWORKS: FrameworkEntry[] = [
     id: "vanilla",
     key: "vanilla",
     language: "javascript",
-    code: `import { Blok, defaultTools } from '@jackuait/blok/full';
+    code: `import { Blok, defaultTools } from '@blok/core/full';
 
 new Blok({
   holder: 'editor',
@@ -162,8 +162,8 @@ new Blok({
     id: "react",
     key: "react",
     language: "jsx",
-    code: `import { useBlok, BlokContent } from '@jackuait/blok/react';
-import { defaultTools } from '@jackuait/blok/full';
+    code: `import { useBlok, BlokContent } from '@blok/react';
+import { defaultTools } from '@blok/core/full';
 
 function Editor() {
   const editor = useBlok({ tools: defaultTools });
@@ -178,8 +178,8 @@ function Editor() {
     key: "vue",
     language: "vue",
     code: `<script setup>
-import { useBlok, BlokContent } from '@jackuait/blok/vue';
-import { defaultTools } from '@jackuait/blok/full';
+import { useBlok, BlokContent } from '@blok/vue';
+import { defaultTools } from '@blok/core/full';
 
 const editor = useBlok({ tools: defaultTools });
 </script>
@@ -196,8 +196,8 @@ const editor = useBlok({ tools: defaultTools });
     key: "angular",
     language: "typescript",
     code: `import { Component } from '@angular/core';
-import { BlokEditorComponent } from '@jackuait/blok/angular';
-import { defaultTools } from '@jackuait/blok/full';
+import { BlokEditorComponent } from '@blok/angular';
+import { defaultTools } from '@blok/core/full';
 
 @Component({
   selector: 'app-editor',
@@ -220,7 +220,7 @@ export class EditorComponent {
     // package.json) rather than the unpinned default, so a future release can't
     // silently change what this copy-pasted snippet loads.
     code: `<div id="editor"></div>
-<script src="https://unpkg.com/@jackuait/blok@${BLOK_VERSION}/dist/blok.iife.js"></script>
+<script src="https://unpkg.com/@blok/core@${BLOK_VERSION}/dist/blok.iife.js"></script>
 <script>
   new BlokEditor.Blok({ holder: 'editor' });
 </script>`,

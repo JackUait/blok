@@ -104,21 +104,21 @@ describe('FrameworkCards', () => {
     const reactRow = screen.getByTestId('framework-card-react');
     // useBlok returns the instance; BlokContent receives it via `editor`.
     expect(reactRow).toHaveTextContent('useBlok');
-    expect(reactRow).toHaveTextContent('@jackuait/blok/react');
+    expect(reactRow).toHaveTextContent('@blok/react');
     expect(reactRow).toHaveTextContent('<BlokContent editor={editor} />');
   });
 
   it('shows the real Vue adapter API in the Vue row', () => {
     renderCards();
     const vueRow = screen.getByTestId('framework-card-vue');
-    expect(vueRow).toHaveTextContent('@jackuait/blok/vue');
+    expect(vueRow).toHaveTextContent('@blok/vue');
     expect(vueRow).toHaveTextContent('<BlokContent :editor="editor" />');
   });
 
   it('shows the real Angular adapter API in the Angular row', () => {
     renderCards();
     const angularRow = screen.getByTestId('framework-card-angular');
-    expect(angularRow).toHaveTextContent('@jackuait/blok/angular');
+    expect(angularRow).toHaveTextContent('@blok/angular');
     expect(angularRow).toHaveTextContent('BlokEditorComponent');
     expect(angularRow).toHaveTextContent('<blok-editor [tools]="tools" />');
   });
@@ -126,7 +126,7 @@ describe('FrameworkCards', () => {
   it('shows the vanilla core import', () => {
     renderCards();
     const vanillaRow = screen.getByTestId('framework-card-vanilla');
-    expect(vanillaRow).toHaveTextContent('@jackuait/blok/full');
+    expect(vanillaRow).toHaveTextContent('@blok/core/full');
   });
 
   it('shows the CDN global usage', () => {

@@ -1,7 +1,7 @@
 export const CODEMOD_DRY_RUN_COMMAND =
-  "npx -p @jackuait/blok migrate-from-editorjs ./src --dry-run";
+  "npx -p @blok/core migrate-from-editorjs ./src --dry-run";
 export const CODEMOD_APPLY_COMMAND =
-  "npx -p @jackuait/blok migrate-from-editorjs ./src";
+  "npx -p @blok/core migrate-from-editorjs ./src";
 
 export interface MigrationStep {
   /** Section anchor id, also used by the step rail scroll-spy. */
@@ -32,17 +32,17 @@ export const DIFF_CHANGES: DiffChange[] = [
   {
     titleKey: "migration.changeImports",
     removed: "import EditorJS from '@editorjs/editorjs';",
-    added: "import { Blok } from '@jackuait/blok';",
+    added: "import { Blok } from '@blok/core';",
   },
   {
     titleKey: "migration.changeToolImports",
     removed: "import Header from '@editorjs/header';",
-    added: "import { Header } from '@jackuait/blok/tools';",
+    added: "import { Header } from '@blok/core/tools';",
   },
   {
     titleKey: "migration.changeTypes",
     removed: "import type { EditorConfig } from '@editorjs/editorjs';",
-    added: "import type { BlokConfig } from '@jackuait/blok';",
+    added: "import type { BlokConfig } from '@blok/core';",
   },
   {
     titleKey: "migration.changeCssSelectors",

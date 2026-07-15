@@ -76,7 +76,7 @@ export const Footer: React.FC = () => {
                 {t("footer.github")}
               </a>
               <a
-                href="https://www.npmjs.com/package/@jackuait/blok"
+                href="https://www.npmjs.com/package/@blok/core"
                 className={linkClass}
                 target="_blank"
                 rel="noopener noreferrer"

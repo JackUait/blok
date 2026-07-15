@@ -11,7 +11,7 @@ import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { EMBED_SERVICES, type EmbedService } from "./embed-services";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
-// Repo root = the @jackuait/blok package; its version is the build-time fallback
+// Repo root = the @blok/core package; its version is the build-time fallback
 // for the live npm lookup below (vite's server.fs.allow includes "..").
 import rootPkg from "../../../../package.json";
 
@@ -222,7 +222,7 @@ const BlockHandle: React.FC = () => (
 // We look it up from the npm registry (the source of truth for "latest") on
 // mount, falling back to the version this build was cut from when the lookup is
 // unavailable — so the field is always real, never a hand-typed string.
-const BLOK_PACKAGE = "@jackuait/blok";
+const BLOK_PACKAGE = "@blok/core";
 
 const useLatestBlokVersion = (): string => {
   const [version, setVersion] = useState<string>(rootPkg.version);

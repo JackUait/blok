@@ -1233,7 +1233,7 @@
     "heroDescription": "One codemod rewrites imports, types, selectors and configuration. Saved content loads as-is — anything without a Blok equivalent is logged, never silently lost.",
     "aliasNoteTitle": "Drop-in EditorJS alias",
     "aliasNoteDescription": "Blok is also exported under an EditorJS alias — change the import path and keep your existing variable name.",
-    "aliasNoteCode": "import { EditorJS } from '@jackuait/blok'; // new EditorJS({ ... }) stays unchanged",
+    "aliasNoteCode": "import { EditorJS } from '@blok/core'; // new EditorJS({ ... }) stays unchanged",
     "customInlineToolTitle": "Inline tool render() → MenuConfig",
     "customInlineToolBefore": "render() { /* returns an HTMLElement button */ }",
     "customInlineToolAfter": "render() { return { icon, name, onActivate, isActive }; }",

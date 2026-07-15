@@ -27,6 +27,6 @@ describe("MigrationObjections", () => {
 
   it("shows the EditorJS alias code snippet", () => {
     renderObjections();
-    expect(screen.getByText(/@jackuait\/blok/)).toBeInTheDocument();
+    expect(screen.getByText(/@blok\/core/)).toBeInTheDocument();
   });
 });

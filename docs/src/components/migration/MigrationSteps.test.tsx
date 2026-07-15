@@ -35,7 +35,7 @@ describe('MigrationSteps', () => {
 
       const rows = screen.getAllByTestId('change-row');
       expect(rows[0]).toHaveTextContent("import EditorJS from '@editorjs/editorjs';");
-      expect(rows[0]).toHaveTextContent("import { Blok } from '@jackuait/blok';");
+      expect(rows[0]).toHaveTextContent("import { Blok } from '@blok/core';");
     });
 
     it('should anchor the section as #changes', () => {

@@ -22,8 +22,8 @@ console.log(data);
 const RENDER_CODE = `// On the next page load, hand the same object back:
 await editor.render(data);`;
 
-const TOOLS_CODE = `import { Blok } from '@jackuait/blok';
-import { Header, List } from '@jackuait/blok/tools';
+const TOOLS_CODE = `import { Blok } from '@blok/core';
+import { Header, List } from '@blok/core/tools';
 
 const editor = new Blok({
   holder: 'editor',

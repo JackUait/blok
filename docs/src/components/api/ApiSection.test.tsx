@@ -45,7 +45,7 @@ const mockConfigSection: ApiSectionType = {
   id: 'config',
   title: 'Configuration',
   description: 'Configuration options',
-  example: `import { Blok, type BlokConfig } from '@jackuait/blok';
+  example: `import { Blok, type BlokConfig } from '@blok/core';
 
 const config: BlokConfig = {
   holder: 'editor',
@@ -339,25 +339,25 @@ describe('ApiSection', () => {
       render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
       const joined = codes().join('\n');
       expect(joined).toContain('new Blok(');
-      expect(joined).not.toContain('@jackuait/blok/react');
+      expect(joined).not.toContain('@blok/react');
     });
 
     it('shows the React adapter setup when React is selected', () => {
       localStorage.setItem('blok-docs-framework', 'react');
       render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
-      expect(codes().join('\n')).toContain('@jackuait/blok/react');
+      expect(codes().join('\n')).toContain('@blok/react');
     });
 
     it('shows the Vue adapter setup when Vue is selected', () => {
       localStorage.setItem('blok-docs-framework', 'vue');
       render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
-      expect(codes().join('\n')).toContain('@jackuait/blok/vue');
+      expect(codes().join('\n')).toContain('@blok/vue');
     });
 
     it('switches the configuration example to the selected framework', () => {
       localStorage.setItem('blok-docs-framework', 'angular');
       render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
-      expect(codes().join('\n')).toContain('@jackuait/blok/angular');
+      expect(codes().join('\n')).toContain('@blok/angular');
     });
 
     it('shows the editor-access note on sections that document instance methods', () => {

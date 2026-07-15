@@ -17,8 +17,6 @@ const ALLOWLIST: RegExp[] = [
   /^packages\/cli\/(test\/)?fixtures\//,
   /^docs\/superpowers\//,
   /^scripts\/deprecate-legacy\.mjs$/,
-  // Dropped to specific migration-doc paths in the final rebrand task:
-  /^docs\//,
 ];
 
 describe('@blok scope rename', () => {

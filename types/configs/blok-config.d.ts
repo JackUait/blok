@@ -70,6 +70,20 @@ export interface LinkTransformResult {
   attributes?: Record<string, string>;
 }
 
+/**
+ * Object form of the `readOnly` option. Passing this object enables read-only mode.
+ */
+export interface ReadOnlyModeConfig {
+  /**
+   * When true, all editor controls are hidden while read-only is active:
+   * the hover toolbar (settings toggler), the block settings popover and the
+   * inline toolbar. Text selection and content-level UI keep working.
+   * Config-time only — not mutable at runtime.
+   * @default false
+   */
+  hideControls?: boolean;
+}
+
 export interface BlokConfig {
   /**
    * Element where Blok will be appended
@@ -181,9 +195,14 @@ export interface BlokConfig {
   logLevel?: LogLevels;
 
   /**
-   * Enable read-only mode
+   * Enable read-only mode.
+   *
+   * Pass `true` for the default Notion-style read-only (block settings toggler
+   * and read-only-capable inline tools stay available), or an object to enable
+   * read-only with additional options. Passing an object always enables
+   * read-only mode.
    */
-  readOnly?: boolean;
+  readOnly?: boolean | ReadOnlyModeConfig;
 
   /**
    * Internalization config

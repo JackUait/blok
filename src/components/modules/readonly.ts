@@ -1,5 +1,6 @@
 import { Module } from '../__module';
 import { CriticalError } from '../errors/critical';
+import { normalizeReadOnlyConfig } from '../utils/readonly-config';
 
 /**
  * @module ReadOnly
@@ -32,6 +33,15 @@ export class ReadOnly extends Module {
    */
   public get isEnabled(): boolean {
     return this.readOnlyEnabled;
+  }
+
+  /**
+   * True while read-only is active AND the config requested hiding all
+   * editor controls (readOnly: { hideControls: true }). UI modules gate the
+   * hover toolbar, block settings popover and inline toolbar on this.
+   */
+  public get isControlsHidden(): boolean {
+    return this.readOnlyEnabled && normalizeReadOnlyConfig(this.config.readOnly).hideControls;
   }
 
   /**
@@ -69,11 +79,13 @@ export class ReadOnly extends Module {
     this.toolsDontSupportReadOnly = toolsDontSupportReadOnly;
     this.inPlaceToggleChecked = true;
 
-    if (this.config.readOnly === true && toolsDontSupportReadOnly.length > 0) {
+    const { enabled: readOnlyRequested } = normalizeReadOnlyConfig(this.config.readOnly);
+
+    if (readOnlyRequested && toolsDontSupportReadOnly.length > 0) {
       this.throwCriticalError();
     }
 
-    await this.toggle(this.config.readOnly, true);
+    await this.toggle(readOnlyRequested, true);
   }
 
   /**

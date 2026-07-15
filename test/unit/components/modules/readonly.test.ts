@@ -445,6 +445,70 @@ describe('ReadOnly module', () => {
       expect(() => (mocks.toolbar as unknown as { moveAndOpen: () => void }).moveAndOpen()).not.toThrow();
     });
   });
+
+  describe('readOnly object config form', () => {
+    it('enables read-only mode when config.readOnly is an object', async () => {
+      const { readOnly } = createReadOnly({ config: { readOnly: { hideControls: true } } });
+
+      await readOnly.prepare();
+
+      expect(readOnly.isEnabled).toBe(true);
+    });
+
+    it('keeps isEnabled a strict boolean (not the config object)', async () => {
+      const { readOnly } = createReadOnly({ config: { readOnly: { hideControls: true } } });
+
+      await readOnly.prepare();
+
+      expect(typeof readOnly.isEnabled).toBe('boolean');
+    });
+
+    it('throws a critical error for unsupported tools with object config', async () => {
+      const { readOnly } = createReadOnly({
+        config: { readOnly: { hideControls: true } },
+        blockTools: [ ['legacy', { isReadOnlySupported: false } ] ],
+      });
+
+      await expect(readOnly.prepare()).rejects.toThrow(CriticalError);
+    });
+
+    describe('isControlsHidden', () => {
+      it('is false by default', () => {
+        const { readOnly } = createReadOnly();
+
+        expect(readOnly.isControlsHidden).toBe(false);
+      });
+
+      it('is false for plain readOnly: true', async () => {
+        const { readOnly } = createReadOnly({ config: { readOnly: true } });
+
+        await readOnly.prepare();
+
+        expect(readOnly.isControlsHidden).toBe(false);
+      });
+
+      it('is true when config requests hideControls and read-only is active', async () => {
+        const { readOnly } = createReadOnly({ config: { readOnly: { hideControls: true } } });
+
+        await readOnly.prepare();
+
+        expect(readOnly.isControlsHidden).toBe(true);
+      });
+
+      it('turns false when read-only is toggled off, and back on when re-enabled', async () => {
+        const { readOnly } = createReadOnly({ config: { readOnly: { hideControls: true } } });
+
+        await readOnly.prepare();
+        await readOnly.toggle(false);
+
+        expect(readOnly.isControlsHidden).toBe(false);
+
+        await readOnly.toggle(true);
+
+        expect(readOnly.isControlsHidden).toBe(true);
+      });
+    });
+  });
 });
 
 

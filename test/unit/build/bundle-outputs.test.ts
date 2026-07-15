@@ -55,7 +55,7 @@ function externalsInSource(source: string): string[] {
 }
 
 // The Angular adapter (`dist/angular`) is a self-contained APF sub-package with
-// its OWN package.json declaring `@angular/*` + `@blok/core` as peers. The
+// its OWN package.json declaring `@angular/*` + `@bloklabs/core` as peers. The
 // root-package externals guards reason about the root manifest, so they must not
 // scan into it (otherwise the Angular peers read as undeclared root externals).
 const angularDist = resolve(dist, '..', 'packages', 'angular', 'dist')
@@ -155,7 +155,7 @@ function danglingRefsInDeclaration(dts: string, publishedRoots: Set<string>): st
  * following only relative `.d.ts` imports, and collect every relative
  * specifier that resolves into `src/`.
  *
- * A consumer that does a bare `import ... from '@blok/core'` resolves to
+ * A consumer that does a bare `import ... from '@bloklabs/core'` resolves to
  * `types/index.d.ts`. TypeScript follows that file's imports; `skipLibCheck`
  * skips other `.d.ts` files, but any reference that resolves to a raw `src/*.ts`
  * module pulls that source into the consumer's program and type-checks it under
@@ -226,7 +226,7 @@ describe('CJS bundle outputs', () => {
     expect(existsSync(resolve(dist, 'full.cjs'))).toBe(true)
   })
 
-  it('produces the @blok/react workspace bundle (index.cjs)', () => {
+  it('produces the @bloklabs/react workspace bundle (index.cjs)', () => {
     expect(existsSync(resolve(dist, '../packages/react/dist/index.cjs'))).toBe(true)
   })
 
@@ -297,7 +297,7 @@ describe('package.json exports include require conditions', () => {
     expect((packageJson.exports['./full'] as Record<string, string>)['require']).toBe('./dist/full.cjs')
   })
 
-  it('core no longer exports "./react" (moved to the @blok/react package)', () => {
+  it('core no longer exports "./react" (moved to the @bloklabs/react package)', () => {
     expect(packageJson.exports['./react' as keyof typeof packageJson.exports]).toBeUndefined()
   })
 
@@ -390,7 +390,7 @@ describe('published package is self-contained (install footprint)', () => {
   })
 
   it('the bare-import type entry is self-contained (drags no raw src into consumers)', () => {
-    // The default `import { Blok } from '@blok/core'` resolves to
+    // The default `import { Blok } from '@bloklabs/core'` resolves to
     // types/index.d.ts. Its declaration closure must not re-export from `src/*.ts`,
     // or consumers with stricter flags (noUncheckedIndexedAccess) inherit type
     // errors from Blok's raw source they never wrote.
@@ -414,7 +414,7 @@ describe('Angular adapter package.json wiring', () => {
     typesVersions?: Record<string, Record<string, string[]>>
   }).typesVersions
 
-  it('core no longer exports "./angular" (moved to the @blok/angular package)', () => {
+  it('core no longer exports "./angular" (moved to the @bloklabs/angular package)', () => {
     expect(exportsMap['./angular']).toBeUndefined()
     expect(typesVersions?.['*']?.['angular']).toBeUndefined()
   })
@@ -422,7 +422,7 @@ describe('Angular adapter package.json wiring', () => {
 
 describe('Angular adapter APF output', () => {
   const angularPkgPath = resolve(angularDist, 'package.json')
-  const fesm = resolve(angularDist, 'fesm2022/blok-angular.mjs')
+  const fesm = resolve(angularDist, 'fesm2022/bloklabs-angular.mjs')
 
   it('emits the FESM2022 bundle and flattened declarations', () => {
     expect(existsSync(fesm)).toBe(true)
@@ -438,17 +438,17 @@ describe('Angular adapter APF output', () => {
 
   it('externalizes the Blok core instead of bundling it', () => {
     const code = readFileSync(fesm, 'utf-8')
-    expect(code).toMatch(/from ['"]@blok\/core['"]/)
+    expect(code).toMatch(/from ['"]@bloklabs\/core['"]/)
     // The core editor must never be inlined into the adapter bundle.
     expect(code).not.toMatch(/class BlockManager\b/)
   })
 
-  it('declares @blok/core as an exact-version peer in its own manifest', () => {
+  it('declares @bloklabs/core as an exact-version peer in its own manifest', () => {
     const manifest = JSON.parse(readFileSync(angularPkgPath, 'utf-8')) as {
       version: string
       peerDependencies?: Record<string, string>
     }
-    expect(manifest.peerDependencies?.['@blok/core']).toBe(packageJson.version)
+    expect(manifest.peerDependencies?.['@bloklabs/core']).toBe(packageJson.version)
     expect(manifest.peerDependencies?.['@angular/core']).toBeDefined()
   })
 })

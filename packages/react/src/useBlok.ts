@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo, useContext, type DependencyList } from 'react';
-import { Blok as BlokRuntime } from '@blok/core';
+import { Blok as BlokRuntime } from '@bloklabs/core';
 import { setHolder, removeHolder } from './holder-map';
 import { deepEqual } from './deep-equal';
 import { BlokDefaultsContext, mergeBlokDefaults } from './provide-blok';
-import { normalizeReadOnlyConfig } from '@blok/core/adapters';
+import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
 

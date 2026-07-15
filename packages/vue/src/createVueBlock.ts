@@ -20,15 +20,15 @@ import type {
   BlockToolData,
   ToolboxConfig,
 } from '@/types/tools';
-import { DATA_ATTR , deepEqual , mountChildBlocks } from '@blok/core/adapters';
-import { fillDefaults, type PropSchema } from '@blok/core/adapters';
+import { DATA_ATTR , deepEqual , mountChildBlocks } from '@bloklabs/core/adapters';
+import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
 
 import {
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
   type BlockPortalRegistry,
 } from './block-portal-registry';
 
-export type { PropSchema, PropSchemaEntry } from '@blok/core/adapters';
+export type { PropSchema, PropSchemaEntry } from '@bloklabs/core/adapters';
 
 /** Context handed to a Vue block's `setup` (the only data write path is `commit`). */
 export interface VueBlockRenderProps<Data> {

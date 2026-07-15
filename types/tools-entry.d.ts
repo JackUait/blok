@@ -1,5 +1,5 @@
 /**
- * Type definitions for @blok/core/tools entry point
+ * Type definitions for @bloklabs/core/tools entry point
  * Re-exports all built-in tools for easy importing
  */
 

@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 /**
  * Framework-weight isolation guard.
  *
- * Each framework adapter ships from its own package entry (`@blok/core`,
+ * Each framework adapter ships from its own package entry (`@bloklabs/core`,
  * `/react`, `/vue`, `/angular`, `/tools`, `/full`, `/markdown`). A consumer who
  * imports one entry must never pull in another framework's code. We prove this
  * at the source level by walking each entry's static + dynamic import graph and
@@ -149,9 +149,9 @@ const ENTRIES: EntrySpec[] = [
   { name: 'tools (./tools)', file: path.join(SRC, 'tools', 'index.ts'), owns: null },
   { name: 'full (./full)', file: path.join(SRC, 'full.ts'), owns: null },
   { name: 'markdown (./markdown)', file: path.join(SRC, 'markdown', 'index.ts'), owns: null },
-  { name: 'react (@blok/react)', file: path.join(REPO, 'packages', 'react', 'src', 'index.ts'), owns: 'react' },
-  { name: 'vue (@blok/vue)', file: path.join(REPO, 'packages', 'vue', 'src', 'index.ts'), owns: 'vue' },
-  { name: 'angular (@blok/angular)', file: path.join(REPO, 'packages', 'angular', 'src', 'index.ts'), owns: 'angular' },
+  { name: 'react (@bloklabs/react)', file: path.join(REPO, 'packages', 'react', 'src', 'index.ts'), owns: 'react' },
+  { name: 'vue (@bloklabs/vue)', file: path.join(REPO, 'packages', 'vue', 'src', 'index.ts'), owns: 'vue' },
+  { name: 'angular (@bloklabs/angular)', file: path.join(REPO, 'packages', 'angular', 'src', 'index.ts'), owns: 'angular' },
 ];
 
 describe('framework-weight isolation', () => {
@@ -194,7 +194,7 @@ describe('framework-weight isolation', () => {
     // And a clean graph trips nothing.
     const clean: Graph = {
       srcFiles: new Set([path.join(SRC, 'blok.ts')]),
-      bareImports: new Set(['@blok/core', 'js-cookie']),
+      bareImports: new Set(['@bloklabs/core', 'js-cookie']),
     };
     expect(frameworkDirsTouched(clean)).toEqual([]);
     expect(frameworkRuntimesImported(clean)).toEqual([]);

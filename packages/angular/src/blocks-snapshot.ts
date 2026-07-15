@@ -14,4 +14,4 @@ export type {
   TreeInsertSpec,
   MoveTarget,
   UseBlocksApi,
-} from '@blok/core/adapters';
+} from '@bloklabs/core/adapters';

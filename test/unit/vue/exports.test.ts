@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import * as VueApi from '../../../packages/vue/src/index';
 import { BlokContent } from '../../../packages/vue/src/index';
 
-describe('@blok/vue exports', () => {
+describe('@bloklabs/vue exports', () => {
   it('exports BlokEditor, BlokContent, useBlok, provideBlok, useBlokDefaults, BLOK_DEFAULT_CONFIG', () => {
     expect(VueApi.BlokEditor).toBeDefined();
     expect(VueApi.BlokContent).toBeDefined();

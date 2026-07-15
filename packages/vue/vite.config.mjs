@@ -14,7 +14,7 @@ export default defineConfig({
     },
     rollupOptions: {
       // The core and the framework are peers — never bundled into the adapter.
-      external: ['vue', '@blok/core', '@blok/core/adapters'],
+      external: ['vue', '@bloklabs/core', '@bloklabs/core/adapters'],
       output: [
         { format: 'es', entryFileNames: 'index.mjs' },
         { format: 'cjs', entryFileNames: 'index.cjs' },
@@ -25,8 +25,8 @@ export default defineConfig({
     // Type-resolution only: rollup `external` wins for emitted specifiers.
     alias: {
       '@/types': path.resolve(dirname, '../../types'),
-      '@blok/core/adapters': path.resolve(dirname, '../../src/adapters.ts'),
-      '@blok/core': path.resolve(dirname, '../../src/blok.ts'),
+      '@bloklabs/core/adapters': path.resolve(dirname, '../../src/adapters.ts'),
+      '@bloklabs/core': path.resolve(dirname, '../../src/blok.ts'),
     },
   },
 });

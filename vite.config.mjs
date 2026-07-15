@@ -118,7 +118,7 @@ export default defineConfig(({ mode }) => {
       // crawls every *.html in the project, including the Playwright adapter E2E
       // fixtures under test/playwright/fixtures/ — static, import-map-driven pages
       // (served by `npx serve`, not Vite) whose bare specifiers (the Angular
-      // fixture's `@blok/angular` and the APF FESM's `@blok/core`)
+      // fixture's `@bloklabs/angular` and the APF FESM's `@bloklabs/core`)
       // resolve only via the page import map, never from node_modules. Crawling
       // them aborts the scan ("dependencies … could not be resolved") and disables
       // pre-bundling for the whole dev server.

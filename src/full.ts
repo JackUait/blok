@@ -4,7 +4,7 @@
  * Use this for batteries-included setup (same as pre-modularization behavior).
  *
  * @example
- * import { Blok, defaultTools, defaultInlineTools } from '@blok/core/full';
+ * import { Blok, defaultTools, defaultInlineTools } from '@bloklabs/core/full';
  *
  * new Blok({
  *   holder: 'editor',

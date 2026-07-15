@@ -313,7 +313,7 @@ export default Blok;
 
 /**
  * Per-tune persisted data, keyed by tune name. Exposed publicly so the
- * standalone adapter packages (@blok/react, @blok/vue, @blok/angular) can
+ * standalone adapter packages (@bloklabs/react, @bloklabs/vue, @bloklabs/angular) can
  * type block tunes without deep-importing into the types tree.
  */
 export type { BlockTuneData } from './block-tunes/block-tune-data';

@@ -20,7 +20,7 @@
  * it reaches must be one of:
  *   - inside `src/angular/` or `src/shared/` (staged wholesale), or
  *   - under the repo-root `types/` tree or `src/markdown/` (the build script
- *     rewrites those imports to the flattened `@blok/core` alias), or
+ *     rewrites those imports to the flattened `@bloklabs/core` alias), or
  *   - explicitly named in `scripts/build-angular.mjs` by its repo-relative path.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -103,7 +103,7 @@ function checkFileImports(file: string, buildScript: string, violations: string[
       continue;
     }
 
-    // Rewritten by the build script to the flattened `@blok/core` alias.
+    // Rewritten by the build script to the flattened `@bloklabs/core` alias.
     if (isUnder(TYPES_DIR, target) || isUnder(MARKDOWN_DIR, target)) {
       continue;
     }

@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('@blok/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
+vi.mock('@bloklabs/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
 
 import { blokRegistry } from './_mock-blok';
 import { BlokContentDirective } from '../../../packages/angular/src/blok-content.directive';

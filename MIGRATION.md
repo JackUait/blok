@@ -66,7 +66,7 @@ How each Editor.js block/tool is handled. "Auto-migrated at runtime" means the c
 
 ```diff
 - import EditorJS from '@editorjs/editorjs';
-+ import Blok from '@blok/core';
++ import Blok from '@bloklabs/core';
 
 - const editor = new EditorJS({ ... });
 + const editor = new Blok({ ... });
@@ -76,7 +76,7 @@ How each Editor.js block/tool is handled. "Auto-migrated at runtime" means the c
 
 ```diff
 - import EditorJS from '@editorjs/editorjs';
-+ import { EditorJS } from '@blok/core';
++ import { EditorJS } from '@bloklabs/core';
 
   const editor = new EditorJS({ ... }); // unchanged
 ```
@@ -104,7 +104,7 @@ const editor = new Blok({
 
 ```diff
 - import type { EditorConfig, OutputData } from '@editorjs/editorjs';
-+ import type { BlokConfig, OutputData } from '@blok/core';
++ import type { BlokConfig, OutputData } from '@bloklabs/core';
 ```
 
 ---
@@ -255,7 +255,7 @@ Blok includes Header and Paragraph tools. No external packages needed:
 - import Header from '@editorjs/header';
 - import Paragraph from '@editorjs/paragraph';
 
-+ import Blok from '@blok/core';
++ import Blok from '@bloklabs/core';
 
 const editor = new Blok({
   tools: {
@@ -274,7 +274,7 @@ Both bundled tools accept configuration options:
 #### HeaderConfig
 
 ```typescript
-import type { HeaderConfig } from '@blok/core';
+import type { HeaderConfig } from '@bloklabs/core';
 
 const editor = new Blok({
   tools: {
@@ -299,7 +299,7 @@ const editor = new Blok({
 #### ParagraphConfig
 
 ```typescript
-import type { ParagraphConfig } from '@blok/core';
+import type { ParagraphConfig } from '@bloklabs/core';
 
 const editor = new Blok({
   tools: {
@@ -397,7 +397,7 @@ You have two paths:
 To keep an existing EditorJS inline tool working without a rewrite, wrap its class:
 
 ```typescript
-import { wrapLegacyInlineTool } from '@blok/core';
+import { wrapLegacyInlineTool } from '@bloklabs/core';
 import MarkerTool from './marker-tool'; // your existing EditorJS inline tool
 
 const editor = new Blok({
@@ -448,7 +448,7 @@ class MarkerTool {
 #### After (Blok)
 
 ```typescript
-import type { InlineTool, MenuConfig } from '@blok/core';
+import type { InlineTool, MenuConfig } from '@bloklabs/core';
 
 class MarkerTool implements InlineTool {
   static isInline = true;
@@ -649,7 +649,7 @@ Update your test selectors to use Blok's `data-blok-testid` attributes:
 ## Quick Checklist
 
 - [ ] Replace `new EditorJS` with `new Blok`
-- [ ] Update imports from `@editorjs/*` to `@blok/core`
+- [ ] Update imports from `@editorjs/*` to `@bloklabs/core`
 - [ ] Change holder from `editorjs` to `blok` (or specify explicitly)
 - [ ] Use bundled tools: `Blok.Header`, `Blok.Paragraph`
 - [ ] Replace `@editorjs/delimiter` with built-in `Blok.Divider`

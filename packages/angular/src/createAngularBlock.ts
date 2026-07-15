@@ -3,10 +3,10 @@ import { signal, type Type, type WritableSignal } from '@angular/core';
 
 import type { BlockAPI } from '@/types/api';
 import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig } from '@/types/tools';
-import { DATA_ATTR } from '@blok/core/adapters';
-import { deepEqual } from '@blok/core/adapters';
-import { fillDefaults, type PropSchema } from '@blok/core/adapters';
-import { mountChildBlocks } from '@blok/core/adapters';
+import { DATA_ATTR } from '@bloklabs/core/adapters';
+import { deepEqual } from '@bloklabs/core/adapters';
+import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
+import { mountChildBlocks } from '@bloklabs/core/adapters';
 
 import type { AngularBlockRenderContext } from './block-context';
 import { BLOK_PORTAL_REGISTRY_CONFIG_KEY, type BlockPortalRegistry } from './block-portal-registry';

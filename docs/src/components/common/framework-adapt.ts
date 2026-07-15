@@ -106,7 +106,7 @@ const adaptApiCall = (code: string, framework: Framework): Snippet => {
 
 interface ParsedSetup {
   leadingComment: string[];
-  /** Import lines that are NOT the core `@blok/core` import. */
+  /** Import lines that are NOT the core `@bloklabs/core` import. */
   toolImports: string[];
   /** Body of `new Blok({ … })` with the `holder` line removed (2-space indent). */
   configWithoutHolder: string;
@@ -128,7 +128,7 @@ const parseSetup = (code: string): ParsedSetup => {
 
   const toolImports = lines.filter(
     (line) =>
-      line.trim().startsWith('import ') && !/from ['"]@blok\/core['"]/.test(line),
+      line.trim().startsWith('import ') && !/from ['"]@bloklabs\/core['"]/.test(line),
   );
 
   const blokIndex = code.search(/\bnew Blok\s*\(/);
@@ -153,7 +153,7 @@ const parseSetup = (code: string): ParsedSetup => {
 const buildReactSetup = (parsed: ParsedSetup): Snippet => {
   const code = [
     ...parsed.leadingComment,
-    "import { useBlok, BlokContent } from '@blok/react';",
+    "import { useBlok, BlokContent } from '@bloklabs/react';",
     ...parsed.toolImports,
     '',
     'export function Editor() {',
@@ -171,7 +171,7 @@ const buildVueSetup = (parsed: ParsedSetup): Snippet => {
   const code = [
     '<script setup lang="ts">',
     ...parsed.leadingComment,
-    "import { useBlok, BlokContent } from '@blok/vue';",
+    "import { useBlok, BlokContent } from '@bloklabs/vue';",
     ...parsed.toolImports,
     '',
     'const editor = useBlok({',
@@ -198,7 +198,7 @@ const buildAngularSetup = (parsed: ParsedSetup): Snippet => {
   const code = [
     ...parsed.leadingComment,
     "import { Component } from '@angular/core';",
-    "import { BlokEditorComponent } from '@blok/angular';",
+    "import { BlokEditorComponent } from '@bloklabs/angular';",
     ...parsed.toolImports,
     '',
     '@Component({',

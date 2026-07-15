@@ -45,10 +45,10 @@ describe("blok version consistency", () => {
   });
 
   it("no user-visible blok version literal diverges from package.json", () => {
-    // `@blok/core@X.Y.Z` in CDN snippets and `version: 'X.Y.Z'` / "version": "X.Y.Z"
+    // `@bloklabs/core@X.Y.Z` in CDN snippets and `version: 'X.Y.Z'` / "version": "X.Y.Z"
     // in save() output examples are the drift-prone spots. Any match must be current.
     const patterns = [
-      /@blok\/core@(\d+\.\d+\.\d+[\w.-]*)/g,
+      /@bloklabs\/core@(\d+\.\d+\.\d+[\w.-]*)/g,
       /["']?version["']?\s*:\s*["'](\d+\.\d+\.\d+[\w.-]*)["']/g,
     ];
     const offenders: string[] = [];

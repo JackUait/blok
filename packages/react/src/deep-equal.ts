@@ -4,4 +4,4 @@
  * (shared with the Angular adapter); this module is kept for back-compat with
  * existing `./deep-equal` importers in the React adapter.
  */
-export { deepEqual } from '@blok/core/adapters';
+export { deepEqual } from '@bloklabs/core/adapters';

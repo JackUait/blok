@@ -1,5 +1,5 @@
 /**
- * Type definitions for @blok/core/full entry point
+ * Type definitions for @bloklabs/core/full entry point
  * Full bundle with Blok core + all built-in tools
  */
 

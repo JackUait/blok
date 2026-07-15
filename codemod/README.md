@@ -6,25 +6,25 @@ Automatically migrate your codebase from EditorJS to Blok.
 
 ### Using npx (recommended)
 
-The codemod is bundled with the `@blok/core` package.
+The codemod is bundled with the `@bloklabs/core` package.
 
 ```bash
 # Dry run (preview changes without modifying files)
-npx -p @blok/core migrate-from-editorjs ./src --dry-run
+npx -p @bloklabs/core migrate-from-editorjs ./src --dry-run
 
 # Apply changes
-npx -p @blok/core migrate-from-editorjs ./src
+npx -p @bloklabs/core migrate-from-editorjs ./src
 
 # Process entire project
-npx -p @blok/core migrate-from-editorjs .
+npx -p @bloklabs/core migrate-from-editorjs .
 
 # Verbose output
-npx -p @blok/core migrate-from-editorjs ./src --verbose
+npx -p @bloklabs/core migrate-from-editorjs ./src --verbose
 ```
 
-### If you have @blok/core installed locally
+### If you have @bloklabs/core installed locally
 
-If you've already installed `@blok/core` in your project, you can run the codemod directly:
+If you've already installed `@bloklabs/core` in your project, you can run the codemod directly:
 
 ```bash
 npx migrate-from-editorjs ./src --dry-run
@@ -37,34 +37,34 @@ npx migrate-from-editorjs ./src --dry-run
 **EditorJS → Blok:**
 ```diff
 - import EditorJS from '@editorjs/editorjs';
-+ import { Blok } from '@blok/core';
++ import { Blok } from '@bloklabs/core';
 
 - import EditorJS, { EditorConfig } from '@editorjs/editorjs';
-+ import { Blok, BlokConfig } from '@blok/core';
++ import { Blok, BlokConfig } from '@bloklabs/core';
 
 - import Header from '@editorjs/header';
 - import Paragraph from '@editorjs/paragraph';
 - import List from '@editorjs/list';
-+ import { Header, Paragraph, List } from '@blok/core/tools';
++ import { Header, Paragraph, List } from '@bloklabs/core/tools';
 ```
 
 **Blok default imports → named imports** (Blok only exports named exports):
 ```diff
-- import Blok from '@blok/core';
-+ import { Blok } from '@blok/core';
+- import Blok from '@bloklabs/core';
++ import { Blok } from '@bloklabs/core';
 
-- import Editor from '@blok/core';
-+ import { Blok as Editor } from '@blok/core';
+- import Editor from '@bloklabs/core';
++ import { Blok as Editor } from '@bloklabs/core';
 
-- import Blok, { BlokConfig } from '@blok/core';
-+ import { Blok, BlokConfig } from '@blok/core';
+- import Blok, { BlokConfig } from '@bloklabs/core';
++ import { Blok, BlokConfig } from '@bloklabs/core';
 ```
 
 ### Type Transformations
 
 ```diff
 - import type { EditorConfig } from '@editorjs/editorjs';
-+ import type { BlokConfig } from '@blok/core';
++ import type { BlokConfig } from '@bloklabs/core';
 ```
 
 ### Class Name Transformations
@@ -126,9 +126,9 @@ tools: {
 
 Combined Blok imports are split into core and tools:
 ```diff
-- import { Blok, Header, Paragraph, List } from '@blok/core';
-+ import { Blok } from '@blok/core';
-+ import { Header, Paragraph, List } from '@blok/core/tools';
+- import { Blok, Header, Paragraph, List } from '@bloklabs/core';
++ import { Blok } from '@bloklabs/core';
++ import { Header, Paragraph, List } from '@bloklabs/core/tools';
 ```
 
 ### package.json Updates
@@ -140,7 +140,7 @@ Combined Blok imports are split into core and tools:
 -   "@editorjs/header": "^2.8.0",
 -   "@editorjs/paragraph": "^2.11.0",
 -   "@editorjs/list": "^1.9.0",
-+   "@blok/core": "latest"
++   "@bloklabs/core": "latest"
   }
 }
 ```
@@ -159,7 +159,7 @@ Combined Blok imports are split into core and tools:
 If your EditorJS project had custom translations, the codemod will by default convert them to Blok's flat format. However, Blok now ships with built-in translations for 36 languages. If you prefer to use these library translations instead of maintaining your own, use the `--use-library-i18n` flag:
 
 ```bash
-npx -p @blok/core migrate-from-editorjs ./src --use-library-i18n
+npx -p @bloklabs/core migrate-from-editorjs ./src --use-library-i18n
 ```
 
 This will remove the `messages` property from your i18n config, allowing Blok to auto-detect the user's locale from the browser and use the appropriate built-in translations.

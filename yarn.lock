@@ -857,20 +857,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@blok/angular@workspace:packages/angular":
+"@bloklabs/angular@workspace:packages/angular":
   version: 0.0.0-use.local
-  resolution: "@blok/angular@workspace:packages/angular"
+  resolution: "@bloklabs/angular@workspace:packages/angular"
   peerDependencies:
     "@angular/common": ">=20 <23"
     "@angular/core": ">=20 <23"
     "@angular/forms": ">=20 <23"
-    "@blok/core": "*"
+    "@bloklabs/core": "*"
   languageName: unknown
   linkType: soft
 
-"@blok/cli@workspace:packages/cli":
+"@bloklabs/cli@workspace:packages/cli":
   version: 0.0.0-use.local
-  resolution: "@blok/cli@workspace:packages/cli"
+  resolution: "@bloklabs/cli@workspace:packages/cli"
   dependencies:
     jsdom: "npm:28.1.0"
   bin:
@@ -878,9 +878,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blok/core@workspace:.":
+"@bloklabs/core@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@blok/core@workspace:."
+  resolution: "@bloklabs/core@workspace:."
   dependencies:
     "@aiden0z/pptx-renderer": "npm:^1.1.0"
     "@analogjs/vite-plugin-angular": "npm:2.6.1"
@@ -978,21 +978,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blok/react@workspace:packages/react":
+"@bloklabs/react@workspace:packages/react":
   version: 0.0.0-use.local
-  resolution: "@blok/react@workspace:packages/react"
+  resolution: "@bloklabs/react@workspace:packages/react"
   peerDependencies:
-    "@blok/core": ^1.1.0
+    "@bloklabs/core": ^1.1.0
     react: ^18.0.0 || ^19.0.0
     react-dom: ^18.0.0 || ^19.0.0
   languageName: unknown
   linkType: soft
 
-"@blok/vue@workspace:packages/vue":
+"@bloklabs/vue@workspace:packages/vue":
   version: 0.0.0-use.local
-  resolution: "@blok/vue@workspace:packages/vue"
+  resolution: "@bloklabs/vue@workspace:packages/vue"
   peerDependencies:
-    "@blok/core": ^1.1.0
+    "@bloklabs/core": ^1.1.0
     vue: ^3.5.0
   languageName: unknown
   linkType: soft

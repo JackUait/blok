@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as AngularApi from '../../../packages/angular/src/index';
 
-describe('@blok/angular exports', () => {
+describe('@bloklabs/angular exports', () => {
   it('exports BlokEditorComponent, BlokContentDirective, provideBlok, and BLOK_DEFAULT_CONFIG', () => {
     expect(AngularApi.BlokEditorComponent).toBeDefined();
     expect(AngularApi.BlokContentDirective).toBeDefined();

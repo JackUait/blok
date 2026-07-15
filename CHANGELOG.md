@@ -4,23 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased — 2.0.0]
 
-### ⚠ BREAKING CHANGES — the `@blok/*` scope rebrand
+### ⚠ BREAKING CHANGES — the `@bloklabs/*` scope rebrand
 
 The package family moved from the personal `@jackuait` scope to the dedicated `@blok` npm scope, and the framework adapters became standalone packages:
 
 | Old | New |
 | --- | --- |
-| `@jackuait/blok` | `@blok/core` |
-| `@jackuait/blok/react` | `@blok/react` |
-| `@jackuait/blok/vue` | `@blok/vue` |
-| `@jackuait/blok/angular` / `@jackuait/blok-angular` | `@blok/angular` |
-| `@jackuait/blok-cli` | `@blok/cli` |
-| `@jackuait/blok/tools` (and other subpaths) | `@blok/core/tools` (unchanged subpaths) |
+| `@jackuait/blok` | `@bloklabs/core` |
+| `@jackuait/blok/react` | `@bloklabs/react` |
+| `@jackuait/blok/vue` | `@bloklabs/vue` |
+| `@jackuait/blok/angular` / `@jackuait/blok-angular` | `@bloklabs/angular` |
+| `@jackuait/blok-cli` | `@bloklabs/cli` |
+| `@jackuait/blok/tools` (and other subpaths) | `@bloklabs/core/tools` (unchanged subpaths) |
 
-- **`@blok/core` has zero peer dependencies.** The react/react-dom/vue optional peers are gone — installs no longer warn about frameworks you don't use, and the GitHub Packages `peerDependenciesMeta`-stripping bug (which forced Yarn Berry consumers to add a `packageExtensions` workaround) no longer applies. Delete that `.yarnrc.yml` entry after upgrading.
-- **Adapters declare hard, accurate peers**: each requires its framework plus `@blok/core` at the matching version.
+- **`@bloklabs/core` has zero peer dependencies.** The react/react-dom/vue optional peers are gone — installs no longer warn about frameworks you don't use, and the GitHub Packages `peerDependenciesMeta`-stripping bug (which forced Yarn Berry consumers to add a `packageExtensions` workaround) no longer applies. Delete that `.yarnrc.yml` entry after upgrading.
+- **Adapters declare hard, accurate peers**: each requires its framework plus `@bloklabs/core` at the matching version.
 - **GitHub Packages mirrors**: `@dodopizza/blok` remains the core mirror; adapters mirror as `@dodopizza/blok-react`, `@dodopizza/blok-vue`, `@dodopizza/blok-angular`; the CLI stays `@dodopizza/blok-cli`.
-- **Migration**: the bundled codemod (`npx -p @blok/core migrate-from-editorjs`) now also rewrites legacy `@jackuait/*` import specifiers and `package.json` dependency keys to the new names.
+- **Migration**: the bundled codemod (`npx -p @bloklabs/core migrate-from-editorjs`) now also rewrites legacy `@jackuait/*` import specifiers and `package.json` dependency keys to the new names.
 
 ## [1.1.0](https://github.com/JackUait/blok/compare/v1.0.0...v1.1.0) (2026-07-15)
 

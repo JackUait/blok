@@ -2,7 +2,7 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import type { Blok } from '@/types';
-import { createBlocksApiForEditor, EMPTY_API } from '@blok/core/adapters';
+import { createBlocksApiForEditor, EMPTY_API } from '@bloklabs/core/adapters';
 
 import type { UseBlocksApi } from './blocks-snapshot';
 

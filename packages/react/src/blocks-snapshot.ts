@@ -12,7 +12,7 @@ export {
   resolveMoveIndex,
   parentMap,
   isDescendantOf,
-} from '@blok/core/adapters';
+} from '@bloklabs/core/adapters';
 
 export type {
   BlockNode,
@@ -24,4 +24,4 @@ export type {
   BlocksReader,
   IndexReader,
   UseBlocksApi,
-} from '@blok/core/adapters';
+} from '@bloklabs/core/adapters';

@@ -197,8 +197,8 @@ editor.destroy();`,
     id: "config",
     title: "Configuration",
     description: "The configuration object passed to the Blok constructor.",
-    example: `import { Blok, type BlokConfig } from '@blok/core';
-import { Paragraph, Header } from '@blok/core/tools';
+    example: `import { Blok, type BlokConfig } from '@bloklabs/core';
+import { Paragraph, Header } from '@bloklabs/core/tools';
 
 const config: BlokConfig = {
   holder: 'editor',

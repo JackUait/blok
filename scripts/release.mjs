@@ -191,9 +191,9 @@ if (isDirectRun) {
     manifest.version = version;
 
     // Adapters peer on the core at the released version (lockstep family).
-    if (manifest.peerDependencies && '@blok/core' in manifest.peerDependencies
-      && manifest.peerDependencies['@blok/core'] !== '*') {
-      manifest.peerDependencies['@blok/core'] = `^${version}`;
+    if (manifest.peerDependencies && '@bloklabs/core' in manifest.peerDependencies
+      && manifest.peerDependencies['@bloklabs/core'] !== '*') {
+      manifest.peerDependencies['@bloklabs/core'] = `^${version}`;
     }
 
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
@@ -204,7 +204,7 @@ if (isDirectRun) {
   run('yarn build');
   run('node scripts/build-cli.mjs');
 
-  // --- Publish the whole family: npmjs @blok/* + GHP @dodopizza/* mirrors ---
+  // --- Publish the whole family: npmjs @bloklabs/* + GHP @dodopizza/* mirrors ---
 
   const publishSuffix = isDryRun ? ' --dry-run' : '';
 

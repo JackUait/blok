@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as ReactApi from '../../../packages/react/src/index';
 
-describe('@blok/react exports', () => {
+describe('@bloklabs/react exports', () => {
   it('exports useBlok, BlokContent, and BlokEditor', () => {
     expect(typeof ReactApi.useBlok).toBe('function');
     expect(ReactApi.BlokContent).toBeDefined();

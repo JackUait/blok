@@ -89,10 +89,10 @@ export default defineConfig({
       // The Angular adapter imports the Blok runtime via the package's own public
       // specifier (so ng-packagr externalizes it as a peer for consumers). In-repo
       // tests resolve it to the core source; unit tests mock it via vi.mock.
-      '@blok/react': path.resolve(__dirname, './packages/react/src/index.ts'),
-      '@blok/vue': path.resolve(__dirname, './packages/vue/src/index.ts'),
-      '@blok/core/adapters': path.resolve(__dirname, './src/adapters.ts'),
-      '@blok/core': path.resolve(__dirname, './src/blok.ts')
+      '@bloklabs/react': path.resolve(__dirname, './packages/react/src/index.ts'),
+      '@bloklabs/vue': path.resolve(__dirname, './packages/vue/src/index.ts'),
+      '@bloklabs/core/adapters': path.resolve(__dirname, './src/adapters.ts'),
+      '@bloklabs/core': path.resolve(__dirname, './src/blok.ts')
     }
   }
 });

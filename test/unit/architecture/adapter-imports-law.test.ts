@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Adapter import law: framework adapters may only reach the core through its
- * public specifiers (`@blok/core`, `@blok/core/adapters`, `@/types`), never
+ * public specifiers (`@bloklabs/core`, `@bloklabs/core/adapters`, `@/types`), never
  * through relative paths into core source. This is what makes each adapter
- * extractable into its own workspace package with `@blok/core` externalized.
+ * extractable into its own workspace package with `@bloklabs/core` externalized.
  */
 describe('adapter import law', () => {
   it.each(['packages/react/src', 'packages/vue/src', 'packages/angular/src'])(

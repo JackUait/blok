@@ -13,7 +13,7 @@ const mockSection: ToolSectionType = {
   type: 'block',
   title: 'Test Tool',
   description: 'A test tool description.',
-  importExample: `import { TestTool } from '@blok/core/tools';`,
+  importExample: `import { TestTool } from '@bloklabs/core/tools';`,
   configOptions: [
     { option: 'foo', type: 'string', default: '""', description: 'Foo option' },
   ],

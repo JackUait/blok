@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Legacy-name law: after the @blok/* rebrand, the only places allowed to
+ * Legacy-name law: after the @bloklabs/* rebrand, the only places allowed to
  * mention the legacy personal scope are migration artifacts (the legacy
  * grammar the codemod rewrites FROM, codemod fixtures), historical
  * changelogs, and the release deprecation runbook. Everything else must use
- * the @blok/* family names.
+ * the @bloklabs/* family names.
  */
 const ALLOWLIST: RegExp[] = [
   /^CHANGELOG\.md$/,
@@ -20,13 +20,13 @@ const ALLOWLIST: RegExp[] = [
 ];
 
 describe('@blok scope rename', () => {
-  it('root package is @blok/core', () => {
+  it('root package is @bloklabs/core', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf-8')) as { name: string };
 
-    expect(pkg.name).toBe('@blok/core');
+    expect(pkg.name).toBe('@bloklabs/core');
   });
 
-  it('core has no react peers or adapter exports; @blok/react is a workspace with hard peers', () => {
+  it('core has no react peers or adapter exports; @bloklabs/react is a workspace with hard peers', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf-8')) as {
       peerDependencies?: Record<string, string>;
       exports: Record<string, unknown>;
@@ -41,16 +41,16 @@ describe('@blok scope rename', () => {
       peerDependenciesMeta?: unknown;
     };
 
-    expect(reactPkg.name).toBe('@blok/react');
+    expect(reactPkg.name).toBe('@bloklabs/react');
     expect(reactPkg.peerDependencies).toMatchObject({
       'react': expect.any(String) as string,
       'react-dom': expect.any(String) as string,
-      '@blok/core': expect.any(String) as string,
+      '@bloklabs/core': expect.any(String) as string,
     });
     expect(reactPkg.peerDependenciesMeta).toBeUndefined();
   });
 
-  it('core declares zero peer dependencies; @blok/vue is a workspace with hard peers', () => {
+  it('core declares zero peer dependencies; @bloklabs/vue is a workspace with hard peers', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf-8')) as {
       peerDependencies?: unknown;
       peerDependenciesMeta?: unknown;
@@ -67,15 +67,15 @@ describe('@blok scope rename', () => {
       peerDependenciesMeta?: unknown;
     };
 
-    expect(vuePkg.name).toBe('@blok/vue');
+    expect(vuePkg.name).toBe('@bloklabs/vue');
     expect(vuePkg.peerDependencies).toMatchObject({
       'vue': expect.any(String) as string,
-      '@blok/core': expect.any(String) as string,
+      '@bloklabs/core': expect.any(String) as string,
     });
     expect(vuePkg.peerDependenciesMeta).toBeUndefined();
   });
 
-  it('@blok/angular is a workspace with hard peers; core has no ./angular export', () => {
+  it('@bloklabs/angular is a workspace with hard peers; core has no ./angular export', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf-8')) as {
       exports: Record<string, unknown>;
     };
@@ -88,10 +88,10 @@ describe('@blok scope rename', () => {
       peerDependenciesMeta?: unknown;
     };
 
-    expect(ngPkg.name).toBe('@blok/angular');
+    expect(ngPkg.name).toBe('@bloklabs/angular');
     expect(ngPkg.peerDependencies).toMatchObject({
       '@angular/core': expect.any(String) as string,
-      '@blok/core': expect.any(String) as string,
+      '@bloklabs/core': expect.any(String) as string,
     });
     expect(ngPkg.peerDependenciesMeta).toBeUndefined();
   });

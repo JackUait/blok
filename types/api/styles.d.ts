@@ -8,7 +8,7 @@
  * element.classList.add(api.styles.block);
  *
  * // Combine with other classes using tailwind-merge
- * import { twMerge } from '@blok/core/utils/tw';
+ * import { twMerge } from '@bloklabs/core/utils/tw';
  * element.className = twMerge(api.styles.block, 'my-4 bg-gray-100');
  */
 export interface Styles {

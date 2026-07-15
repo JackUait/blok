@@ -14,11 +14,11 @@ const findEntry = (npmName: string): (typeof FAMILY)[number] => {
 describe('release family manifest', () => {
   it('covers all five packages with correct npm + mirror names in publish order', () => {
     expect(FAMILY.map((p) => [p.npmName, p.gprName])).toEqual([
-      ['@blok/core', '@dodopizza/blok'],
-      ['@blok/react', '@dodopizza/blok-react'],
-      ['@blok/vue', '@dodopizza/blok-vue'],
-      ['@blok/angular', '@dodopizza/blok-angular'],
-      ['@blok/cli', '@dodopizza/blok-cli'],
+      ['@bloklabs/core', '@dodopizza/blok'],
+      ['@bloklabs/react', '@dodopizza/blok-react'],
+      ['@bloklabs/vue', '@dodopizza/blok-vue'],
+      ['@bloklabs/angular', '@dodopizza/blok-angular'],
+      ['@bloklabs/cli', '@dodopizza/blok-cli'],
     ]);
   });
 
@@ -29,26 +29,26 @@ describe('release family manifest', () => {
     }
   });
 
-  it('rewrites name AND the @blok/core peer for GPR tarballs', () => {
-    const entry = findEntry('@blok/react');
+  it('rewrites name AND the @bloklabs/core peer for GPR tarballs', () => {
+    const entry = findEntry('@bloklabs/react');
     const out = prepareManifestForGpr(
       {
-        name: '@blok/react',
+        name: '@bloklabs/react',
         version: '2.0.0',
-        peerDependencies: { '@blok/core': '^2.0.0', react: '^19.0.0' },
+        peerDependencies: { '@bloklabs/core': '^2.0.0', react: '^19.0.0' },
       },
       entry,
     ) as { name: string; peerDependencies: Record<string, string> };
 
     expect(out.name).toBe('@dodopizza/blok-react');
     expect(out.peerDependencies['@dodopizza/blok']).toBe('^2.0.0');
-    expect(out.peerDependencies['@blok/core']).toBeUndefined();
+    expect(out.peerDependencies['@bloklabs/core']).toBeUndefined();
     expect(out.peerDependencies.react).toBe('^19.0.0');
   });
 
   it('leaves manifests without a core peer untouched apart from the name', () => {
-    const entry = findEntry('@blok/core');
-    const input = { name: '@blok/core', version: '2.0.0' };
+    const entry = findEntry('@bloklabs/core');
+    const input = { name: '@bloklabs/core', version: '2.0.0' };
     const out = prepareManifestForGpr(input, entry) as {
       name: string;
       peerDependencies?: Record<string, string>;
@@ -57,6 +57,6 @@ describe('release family manifest', () => {
     expect(out.name).toBe('@dodopizza/blok');
     expect(out.peerDependencies).toBeUndefined();
     // pure function: the input object is not mutated
-    expect(input.name).toBe('@blok/core');
+    expect(input.name).toBe('@bloklabs/core');
   });
 });

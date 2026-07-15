@@ -10,14 +10,14 @@
     "jsx": "preserve",
     // vitest/globals = describe/it/expect in specs; node kept for safety.
     "types": ["vitest/globals", "node"],
-    // Resolve the public `@blok/core` specifier (used by the adapter for the
+    // Resolve the public `@bloklabs/core` specifier (used by the adapter for the
     // runtime import) to the published declaration, so ngc type-checks against the
     // package's own types instead of descending into core source. `paths` replaces
     // the inherited set, so re-declare `@/types`.
     "paths": {
       "@/types": ["./types/", "./docs/src/types"],
       "@/types/*": ["./types/*", "./docs/src/types/*"],
-      "@blok/core": ["./types/index.d.ts"]
+      "@bloklabs/core": ["./types/index.d.ts"]
     }
   },
   "angularCompilerOptions": {

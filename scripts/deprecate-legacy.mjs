@@ -1,6 +1,6 @@
 /**
  * Release-day runbook: deprecate the legacy @jackuait/* packages on npmjs
- * after the first @blok/* family release ships.
+ * after the first @bloklabs/* family release ships.
  *
  * Refuses to run without --yes so it can never fire accidentally from CI or
  * an exploratory shell. Requires the same npm auth as a release
@@ -14,9 +14,9 @@ import { execFileSync } from 'child_process';
 
 const MESSAGE_BY_PACKAGE = {
   '@jackuait/blok':
-    'Renamed to @blok/core (adapters: @blok/react, @blok/vue, @blok/angular) — see https://github.com/JackUait/blok/blob/master/CHANGELOG.md',
+    'Renamed to @bloklabs/core (adapters: @bloklabs/react, @bloklabs/vue, @bloklabs/angular) — see https://github.com/JackUait/blok/blob/master/CHANGELOG.md',
   '@jackuait/blok-cli':
-    'Renamed to @blok/cli — see https://github.com/JackUait/blok/blob/master/CHANGELOG.md',
+    'Renamed to @bloklabs/cli — see https://github.com/JackUait/blok/blob/master/CHANGELOG.md',
 };
 
 const confirmed = process.argv.includes('--yes');

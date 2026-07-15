@@ -1,4 +1,4 @@
-import type { BlokConfig, EditorWidth } from '@blok/core';
+import type { BlokConfig, EditorWidth } from '@bloklabs/core';
 
 /**
  * Configuration for the Angular adapter. Same as `BlokConfig` but without

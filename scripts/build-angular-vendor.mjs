@@ -38,8 +38,8 @@ mkdirSync(outDir, { recursive: true });
 const APP_SOURCE = `
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { BlokEditorComponent, createAngularBlock, BLOK_BLOCK_CONTEXT } from '@blok/angular';
-import { Paragraph, Header } from '@blok/core/tools';
+import { BlokEditorComponent, createAngularBlock, BLOK_BLOCK_CONTEXT } from '@bloklabs/angular';
+import { Paragraph, Header } from '@bloklabs/core/tools';
 
 @Component({
   selector: 'ng-counter-block',
@@ -172,9 +172,9 @@ await Promise.all([
       '@angular/common',
       '@angular/forms',
       '@angular/platform-browser',
-      '@blok/core',
-      '@blok/core/tools',
-      '@blok/angular',
+      '@bloklabs/core',
+      '@bloklabs/core/tools',
+      '@bloklabs/angular',
       ...SHARED,
     ],
     tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } },

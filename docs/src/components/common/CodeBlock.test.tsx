@@ -159,12 +159,12 @@ describe('CodeBlock', () => {
         code="irrelevant"
         language="bash"
         showPackageManagerToggle
-        packageName="@blok/core"
+        packageName="@bloklabs/core"
       />
     );
     await waitFor(() => {
       expect(mockCodeToHtml).toHaveBeenCalledWith(
-        'yarn add @blok/core',
+        'yarn add @bloklabs/core',
         expect.anything()
       );
     });

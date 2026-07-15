@@ -15,7 +15,7 @@ describe('classifyExample', () => {
   });
 
   it('treats an import-only / config-fragment snippet as agnostic', () => {
-    expect(classifyExample(`import { Bold } from '@blok/core/tools';`)).toBe('agnostic');
+    expect(classifyExample(`import { Bold } from '@bloklabs/core/tools';`)).toBe('agnostic');
   });
 });
 
@@ -119,8 +119,8 @@ describe('adaptExample — agnostic', () => {
 });
 
 describe('adaptExample — setup', () => {
-  const setup = `import { Blok } from '@blok/core';
-import { Paragraph } from '@blok/core/tools';
+  const setup = `import { Blok } from '@bloklabs/core';
+import { Paragraph } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -139,8 +139,8 @@ const editor = new Blok({
   it('builds a react component using the react adapter entry point', () => {
     const { code, language } = adaptExample(setup, 'react');
     expect(language).toBe('tsx');
-    expect(code).toContain("import { useBlok, BlokContent } from '@blok/react';");
-    expect(code).toContain("import { Paragraph } from '@blok/core/tools';");
+    expect(code).toContain("import { useBlok, BlokContent } from '@bloklabs/react';");
+    expect(code).toContain("import { Paragraph } from '@bloklabs/core/tools';");
     expect(code).toContain('const editor = useBlok({');
     expect(code).toContain('<BlokContent editor={editor} />');
     // The adapter manages the mount point, so the `holder` id is dropped.
@@ -154,7 +154,7 @@ const editor = new Blok({
     const { code, language } = adaptExample(setup, 'vue');
     expect(language).toBe('vue');
     expect(code).toContain('<script setup lang="ts">');
-    expect(code).toContain("import { useBlok, BlokContent } from '@blok/vue';");
+    expect(code).toContain("import { useBlok, BlokContent } from '@bloklabs/vue';");
     expect(code).toContain('const editor = useBlok({');
     expect(code).toContain('<BlokContent :editor="editor" />');
     expect(code).not.toMatch(/holder:\s*'editor'/);
@@ -163,7 +163,7 @@ const editor = new Blok({
   it('builds an angular component, lifting tools to a class field', () => {
     const { code, language } = adaptExample(setup, 'angular');
     expect(language).toBe('typescript');
-    expect(code).toContain("import { BlokEditorComponent } from '@blok/angular';");
+    expect(code).toContain("import { BlokEditorComponent } from '@bloklabs/angular';");
     expect(code).toContain('@Component({');
     expect(code).toContain('[tools]="tools"');
     expect(code).toContain('tools = {');
@@ -174,7 +174,7 @@ const editor = new Blok({
 
   it('preserves a leading comment and a tool-only import (no core Blok import)', () => {
     const noCore = `// DatabaseRow is created by the Database tool.
-import { Database, DatabaseRow } from '@blok/core/tools';
+import { Database, DatabaseRow } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -185,14 +185,14 @@ const editor = new Blok({
 });`;
     const react = adaptExample(noCore, 'react').code;
     expect(react).toContain('// DatabaseRow is created by the Database tool.');
-    expect(react).toContain("import { Database, DatabaseRow } from '@blok/core/tools';");
-    expect(react).toContain("import { useBlok, BlokContent } from '@blok/react';");
+    expect(react).toContain("import { Database, DatabaseRow } from '@bloklabs/core/tools';");
+    expect(react).toContain("import { useBlok, BlokContent } from '@bloklabs/react';");
     expect(react).toContain("'database-row': { class: DatabaseRow },");
   });
 
   it('preserves a nested async uploader config verbatim across frameworks', () => {
-    const withUploader = `import { Blok } from '@blok/core';
-import { File } from '@blok/core/tools';
+    const withUploader = `import { Blok } from '@bloklabs/core';
+import { File } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor',

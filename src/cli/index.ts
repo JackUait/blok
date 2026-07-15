@@ -11,13 +11,13 @@ Options:
   --help               Show this help message
 
 Examples:
-  npx @blok/cli --convert-html < article.html
-  npx @blok/cli --convert-html < article.html --output article.json
-  npx @blok/cli --convert-gdocs < gdocs-export.html
-  npx @blok/cli --convert-gdocs < gdocs-export.html --output doc.json
-  npx @blok/cli --migration
-  npx @blok/cli --migration | pbcopy
-  npx @blok/cli --migration --output migration-guide.md
+  npx @bloklabs/cli --convert-html < article.html
+  npx @bloklabs/cli --convert-html < article.html --output article.json
+  npx @bloklabs/cli --convert-gdocs < gdocs-export.html
+  npx @bloklabs/cli --convert-gdocs < gdocs-export.html --output doc.json
+  npx @bloklabs/cli --migration
+  npx @bloklabs/cli --migration | pbcopy
+  npx @bloklabs/cli --migration --output migration-guide.md
 `;
 
 const parseArgs = (argv: string[]): { command: string | null; output?: string } => {

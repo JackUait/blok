@@ -281,7 +281,7 @@ export class Tools extends Module {
    * - convertTo: inline tool for converting blocks between types
    *
    * Other tools (paragraph, header, list, bold, italic, link) are optional
-   * and should be imported from '@blok/core/tools' or '@blok/core/full'.
+   * and should be imported from '@bloklabs/core/tools' or '@bloklabs/core/full'.
    */
   private get internalTools(): { [toolName: string]: ToolConstructable | ToolSettings & { isInternal?: boolean } } {
     return {

@@ -1,5 +1,5 @@
 {
-  "name": "@blok/vue",
+  "name": "@bloklabs/vue",
   "version": "1.1.0",
   "description": "Vue 3 bindings for the Blok editor",
   "license": "Apache-2.0",
@@ -33,7 +33,7 @@
     "build": "yarn run -T vite build --mode production"
   },
   "peerDependencies": {
-    "@blok/core": "^1.1.0",
+    "@bloklabs/core": "^1.1.0",
     "vue": "^3.5.0"
   }
 }

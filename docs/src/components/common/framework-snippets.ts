@@ -40,8 +40,8 @@ export const QUICK_START_SNIPPETS: Record<Framework, QuickStartSnippet> = {
     },
     create: {
       language: 'typescript',
-      code: `import { Blok } from '@blok/core';
-import { Header, Paragraph, List } from '@blok/core/tools';
+      code: `import { Blok } from '@bloklabs/core';
+import { Header, Paragraph, List } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
@@ -67,8 +67,8 @@ console.log(data.blocks);`,
       language: 'tsx',
       // <BlokEditor> is the recommended all-in-one React component: it wires
       // useBlok + BlokContent for you and takes all config as props.
-      code: `import { BlokEditor } from '@blok/react';
-import { Header, Paragraph, List } from '@blok/core/tools';
+      code: `import { BlokEditor } from '@bloklabs/react';
+import { Header, Paragraph, List } from '@bloklabs/core/tools';
 
 export function Editor() {
   return (
@@ -88,8 +88,8 @@ export function Editor() {
       // on every change, so `data` always mirrors the editor — no manual
       // save() polling needed.
       code: `import { useState } from 'react';
-import { BlokEditor } from '@blok/react';
-import type { OutputData } from '@blok/core';
+import { BlokEditor } from '@bloklabs/react';
+import type { OutputData } from '@bloklabs/core';
 
 export function Editor() {
   // onSave fires with the latest content on every change — no manual save().
@@ -110,8 +110,8 @@ export function Editor() {
       // <BlokEditor> is the blessed all-in-one component for embedding Blok in
       // Vue: it wires useBlok + BlokContent and takes config through props/emits.
       code: `<script setup lang="ts">
-import { BlokEditor } from '@blok/vue';
-import { Header, Paragraph, List } from '@blok/core/tools';
+import { BlokEditor } from '@bloklabs/vue';
+import { Header, Paragraph, List } from '@bloklabs/core/tools';
 
 const tools = {
   paragraph: Paragraph,
@@ -131,8 +131,8 @@ const tools = {
       // manual save() polling needed.
       code: `<script setup lang="ts">
 import { ref } from 'vue';
-import { BlokEditor } from '@blok/vue';
-import type { OutputData } from '@blok/core';
+import { BlokEditor } from '@bloklabs/vue';
+import type { OutputData } from '@bloklabs/core';
 
 const data = ref<OutputData>();
 </script>
@@ -148,8 +148,8 @@ const data = ref<OutputData>();
     create: {
       language: 'typescript',
       code: `import { Component } from '@angular/core';
-import { BlokEditorComponent } from '@blok/angular';
-import { Header, Paragraph, List } from '@blok/core/tools';
+import { BlokEditorComponent } from '@bloklabs/angular';
+import { Header, Paragraph, List } from '@bloklabs/core/tools';
 
 @Component({
   selector: 'app-editor',
@@ -168,7 +168,7 @@ export class EditorComponent {
     save: {
       language: 'typescript',
       // The component streams every save through its (save) output.
-      code: `import type { OutputData } from '@blok/core';
+      code: `import type { OutputData } from '@bloklabs/core';
 
 // template: <blok-editor [tools]="tools" (save)="onSave($event)" />
 onSave(data: OutputData) {
@@ -186,7 +186,7 @@ onSave(data: OutputData) {
 export const CONFIG_SNIPPETS: Record<Framework, Snippet> = {
   vanilla: {
     language: 'typescript',
-    code: `import { Blok, type BlokConfig } from '@blok/core';
+    code: `import { Blok, type BlokConfig } from '@bloklabs/core';
 
 const config: BlokConfig = {
   holder: 'editor',
@@ -200,7 +200,7 @@ const editor = new Blok(config);`,
   },
   react: {
     language: 'tsx',
-    code: `import { BlokEditor } from '@blok/react';
+    code: `import { BlokEditor } from '@bloklabs/react';
 
 export function Editor() {
   // Config options map straight to props; the mount point is managed for you,
@@ -217,7 +217,7 @@ export function Editor() {
   vue: {
     language: 'vue',
     code: `<script setup lang="ts">
-import { BlokEditor } from '@blok/vue';
+import { BlokEditor } from '@bloklabs/vue';
 </script>
 
 <template>
@@ -232,7 +232,7 @@ import { BlokEditor } from '@blok/vue';
   angular: {
     language: 'typescript',
     code: `import { Component } from '@angular/core';
-import { BlokEditorComponent } from '@blok/angular';
+import { BlokEditorComponent } from '@bloklabs/angular';
 
 @Component({
   selector: 'app-editor',
@@ -260,7 +260,7 @@ export class EditorComponent {}`,
 export const TUTORIAL_MOUNT_SNIPPETS: Record<Framework, Snippet> = {
   vanilla: {
     language: 'typescript',
-    code: `import { Blok } from '@blok/core';
+    code: `import { Blok } from '@bloklabs/core';
 
 const editor = new Blok({
   holder: 'editor', // the id of a <div> on your page
@@ -270,7 +270,7 @@ await editor.isReady;`,
   },
   react: {
     language: 'tsx',
-    code: `import { BlokEditor } from '@blok/react';
+    code: `import { BlokEditor } from '@bloklabs/react';
 
 export function Editor() {
   // <BlokEditor> mounts the editor for you — no holder id, and it manages
@@ -281,7 +281,7 @@ export function Editor() {
   vue: {
     language: 'vue',
     code: `<script setup lang="ts">
-import { BlokEditor } from '@blok/vue';
+import { BlokEditor } from '@bloklabs/vue';
 </script>
 
 <template>
@@ -292,7 +292,7 @@ import { BlokEditor } from '@blok/vue';
   angular: {
     language: 'typescript',
     code: `import { Component } from '@angular/core';
-import { BlokEditorComponent } from '@blok/angular';
+import { BlokEditorComponent } from '@bloklabs/angular';
 
 @Component({
   selector: 'app-editor',

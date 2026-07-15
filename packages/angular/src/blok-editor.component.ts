@@ -16,8 +16,8 @@ import {
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 import { BlokContentDirective } from './blok-content.directive';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
-import { deepEqual } from '@blok/core/adapters';
-import { normalizeReadOnlyConfig } from '@blok/core/adapters';
+import { deepEqual } from '@bloklabs/core/adapters';
+import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
 import type {
   API,
   Blok,
@@ -30,7 +30,7 @@ import type {
   OutputData,
   ResolvedTheme,
   ThemeMode,
-} from '@blok/core';
+} from '@bloklabs/core';
 import type { BlokAngularConfig } from './types';
 
 /**

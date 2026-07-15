@@ -1,5 +1,5 @@
 {
-  "name": "@blok/cli",
+  "name": "@bloklabs/cli",
   "version": "1.1.0",
   "description": "CLI tools for Blok — convert HTML to Blok JSON, generate migration guides",
   "bin": {

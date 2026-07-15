@@ -7,7 +7,7 @@
  * It transforms imports, class names, selectors, data attributes, and text references.
  *
  * Usage:
- *   npx -p @blok/core migrate-from-editorjs [path] [options]
+ *   npx -p @bloklabs/core migrate-from-editorjs [path] [options]
  *
  * Options:
  *   --dry-run    Show changes without modifying files
@@ -15,9 +15,9 @@
  *   --help       Show help
  *
  * Examples:
- *   npx -p @blok/core migrate-from-editorjs ./src
- *   npx -p @blok/core migrate-from-editorjs ./src --dry-run
- *   npx -p @blok/core migrate-from-editorjs .
+ *   npx -p @bloklabs/core migrate-from-editorjs ./src
+ *   npx -p @bloklabs/core migrate-from-editorjs ./src --dry-run
+ *   npx -p @bloklabs/core migrate-from-editorjs .
  */
 
 const fs = require('fs');
@@ -410,85 +410,85 @@ const IMPORT_TRANSFORMS = [
   // (Blok only exports named exports, not a default export)
   // ============================================================================
 
-  // Combined default + named imports from @blok/core: import Blok, { BlokConfig } from '@blok/core'
-  // → import { Blok, BlokConfig } from '@blok/core'
+  // Combined default + named imports from @bloklabs/core: import Blok, { BlokConfig } from '@bloklabs/core'
+  // → import { Blok, BlokConfig } from '@bloklabs/core'
   // IMPORTANT: Must come before regular default import patterns to avoid partial matching
   {
-    pattern: /import\s+Blok\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"](?:@jackuait\/blok|@blok\/core)['"]/g,
-    replacement: "import { Blok, $1 } from '@blok/core'",
+    pattern: /import\s+Blok\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"]/g,
+    replacement: "import { Blok, $1 } from '@bloklabs/core'",
     note: 'Converted combined default + named import to named import',
   },
-  // Aliased combined: import Editor, { BlokConfig } from '@blok/core'
+  // Aliased combined: import Editor, { BlokConfig } from '@bloklabs/core'
   {
-    pattern: /import\s+(\w+)\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"](?:@jackuait\/blok|@blok\/core)['"]/g,
-    replacement: "import { Blok as $1, $2 } from '@blok/core'",
+    pattern: /import\s+(\w+)\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"]/g,
+    replacement: "import { Blok as $1, $2 } from '@bloklabs/core'",
     note: 'Converted aliased combined default + named import to named import',
   },
-  // Default import: import Blok from '@blok/core' → import { Blok } from '@blok/core'
+  // Default import: import Blok from '@bloklabs/core' → import { Blok } from '@bloklabs/core'
   {
-    pattern: /import\s+Blok\s+from\s+['"](?:@jackuait\/blok|@blok\/core)['"]/g,
-    replacement: "import { Blok } from '@blok/core'",
+    pattern: /import\s+Blok\s+from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"]/g,
+    replacement: "import { Blok } from '@bloklabs/core'",
     note: 'Converted default import to named import',
   },
-  // Aliased default import: import Editor from '@blok/core' → import { Blok as Editor } from '@blok/core'
+  // Aliased default import: import Editor from '@bloklabs/core' → import { Blok as Editor } from '@bloklabs/core'
   // Must check it's not followed by /tools or /types to avoid matching subpath imports
   {
-    pattern: /import\s+(\w+)\s+from\s+['"](?:@jackuait\/blok|@blok\/core)['"](?!\/)/g,
-    replacement: "import { Blok as $1 } from '@blok/core'",
+    pattern: /import\s+(\w+)\s+from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"](?!\/)/g,
+    replacement: "import { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted aliased default import to named import',
   },
-  // Type-only default import: import type Blok from '@blok/core'
+  // Type-only default import: import type Blok from '@bloklabs/core'
   {
-    pattern: /import\s+type\s+Blok\s+from\s+['"](?:@jackuait\/blok|@blok\/core)['"]/g,
-    replacement: "import type { Blok } from '@blok/core'",
+    pattern: /import\s+type\s+Blok\s+from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"]/g,
+    replacement: "import type { Blok } from '@bloklabs/core'",
     note: 'Converted type-only default import to named import',
   },
-  // Type-only aliased default import: import type Editor from '@blok/core'
+  // Type-only aliased default import: import type Editor from '@bloklabs/core'
   {
-    pattern: /import\s+type\s+(\w+)\s+from\s+['"](?:@jackuait\/blok|@blok\/core)['"](?!\/)/g,
-    replacement: "import type { Blok as $1 } from '@blok/core'",
+    pattern: /import\s+type\s+(\w+)\s+from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"](?!\/)/g,
+    replacement: "import type { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted type-only aliased default import to named import',
   },
-  // Namespace import: import * as Blok from '@blok/core' → import { Blok } from '@blok/core'
+  // Namespace import: import * as Blok from '@bloklabs/core' → import { Blok } from '@bloklabs/core'
   {
-    pattern: /import\s+\*\s+as\s+Blok\s+from\s+['"](?:@jackuait\/blok|@blok\/core)['"]/g,
-    replacement: "import { Blok } from '@blok/core'",
+    pattern: /import\s+\*\s+as\s+Blok\s+from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"]/g,
+    replacement: "import { Blok } from '@bloklabs/core'",
     note: 'Converted namespace import to named import',
   },
-  // Aliased namespace import: import * as Editor from '@blok/core'
+  // Aliased namespace import: import * as Editor from '@bloklabs/core'
   {
-    pattern: /import\s+\*\s+as\s+(\w+)\s+from\s+['"](?:@jackuait\/blok|@blok\/core)['"](?!\/)/g,
-    replacement: "import { Blok as $1 } from '@blok/core'",
+    pattern: /import\s+\*\s+as\s+(\w+)\s+from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"](?!\/)/g,
+    replacement: "import { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted namespace import to named import with alias',
   },
-  // Dynamic import with destructuring: const { default: Editor } = await import('@blok/core')
+  // Dynamic import with destructuring: const { default: Editor } = await import('@bloklabs/core')
   {
-    pattern: /\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*await\s+import\s*\(\s*['"](?:@jackuait\/blok|@blok\/core)['"]\s*\)/g,
-    replacement: "{ Blok: $1 } = await import('@blok/core')",
+    pattern: /\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*await\s+import\s*\(\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"]\s*\)/g,
+    replacement: "{ Blok: $1 } = await import('@bloklabs/core')",
     note: 'Converted destructured dynamic import',
   },
-  // Re-export default as named: export { default as Editor } from '@blok/core'
+  // Re-export default as named: export { default as Editor } from '@bloklabs/core'
   {
-    pattern: /export\s+\{\s*default\s+as\s+(\w+)\s*\}\s*from\s+['"](?:@jackuait\/blok|@blok\/core)['"]/g,
-    replacement: "export { Blok as $1 } from '@blok/core'",
+    pattern: /export\s+\{\s*default\s+as\s+(\w+)\s*\}\s*from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"]/g,
+    replacement: "export { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted default re-export to named export',
   },
-  // Re-export default: export { default } from '@blok/core'
+  // Re-export default: export { default } from '@bloklabs/core'
   {
-    pattern: /export\s+\{\s*default\s*\}\s*from\s+['"](?:@jackuait\/blok|@blok\/core)['"]/g,
-    replacement: "export { Blok } from '@blok/core'",
+    pattern: /export\s+\{\s*default\s*\}\s*from\s+['"](?:@jackuait\/blok|@bloklabs\/core)['"]/g,
+    replacement: "export { Blok } from '@bloklabs/core'",
     note: 'Converted default re-export',
   },
-  // Require with .default access: require('@blok/core').default
+  // Require with .default access: require('@bloklabs/core').default
   {
-    pattern: /require\s*\(\s*['"](?:@jackuait\/blok|@blok\/core)['"]\s*\)\.default/g,
-    replacement: "require('@blok/core').Blok",
+    pattern: /require\s*\(\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"]\s*\)\.default/g,
+    replacement: "require('@bloklabs/core').Blok",
     note: 'Converted require().default to require().Blok',
   },
-  // Destructured require with default: const { default: Editor } = require('@blok/core')
+  // Destructured require with default: const { default: Editor } = require('@bloklabs/core')
   {
-    pattern: /const\s+\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*require\s*\(\s*['"](?:@jackuait\/blok|@blok\/core)['"]\s*\)/g,
-    replacement: "const { Blok: $1 } = require('@blok/core')",
+    pattern: /const\s+\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*require\s*\(\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"]\s*\)/g,
+    replacement: "const { Blok: $1 } = require('@bloklabs/core')",
     note: 'Converted destructured default require to named require',
   },
 
@@ -496,163 +496,163 @@ const IMPORT_TRANSFORMS = [
   // EditorJS → Blok transformations
   // ============================================================================
 
-  // EditorJS subpath imports (e.g., @editorjs/editorjs/types -> @blok/core/types)
+  // EditorJS subpath imports (e.g., @editorjs/editorjs/types -> @bloklabs/core/types)
   {
     pattern: /from\s+['"]@editorjs\/editorjs\/([^'"]+)['"]/g,
-    replacement: "from '@blok/core/$1'",
+    replacement: "from '@bloklabs/core/$1'",
   },
   {
     pattern: /require\s*\(\s*['"]@editorjs\/editorjs\/([^'"]+)['"]\s*\)/g,
-    replacement: "require('@blok/core/$1')",
+    replacement: "require('@bloklabs/core/$1')",
   },
   // Combined default + named imports: import EditorJS, { EditorConfig } from '@editorjs/editorjs'
-  // → import { Blok, EditorConfig } from '@blok/core' (EditorConfig → BlokConfig handled by TYPE_TRANSFORMS)
+  // → import { Blok, EditorConfig } from '@bloklabs/core' (EditorConfig → BlokConfig handled by TYPE_TRANSFORMS)
   // IMPORTANT: Must come before regular default import patterns to avoid partial matching
   {
     pattern: /import\s+EditorJS\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "import { Blok, $1 } from '@blok/core'",
+    replacement: "import { Blok, $1 } from '@bloklabs/core'",
     note: 'Converted combined default + named import',
   },
   // Aliased combined: import Editor, { EditorConfig } from '@editorjs/editorjs'
   {
     pattern: /import\s+(\w+)\s*,\s*\{\s*([^}]+?)\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "import { Blok as $1, $2 } from '@blok/core'",
+    replacement: "import { Blok as $1, $2 } from '@bloklabs/core'",
     note: 'Converted aliased combined default + named import',
   },
   // Main EditorJS default import -> Blok named import
-  // e.g., import EditorJS from '@editorjs/editorjs' -> import { Blok } from '@blok/core'
+  // e.g., import EditorJS from '@editorjs/editorjs' -> import { Blok } from '@bloklabs/core'
   {
     pattern: /import\s+EditorJS\s+from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "import { Blok } from '@blok/core'",
+    replacement: "import { Blok } from '@bloklabs/core'",
     note: 'Converted default import to named import',
   },
   // EditorJS default import with alias -> Blok named import with alias
-  // e.g., import Editor from '@editorjs/editorjs' -> import { Blok as Editor } from '@blok/core'
+  // e.g., import Editor from '@editorjs/editorjs' -> import { Blok as Editor } from '@bloklabs/core'
   {
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "import { Blok as $1 } from '@blok/core'",
+    replacement: "import { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted default import to named import with alias',
   },
   // Destructured require with default: const { default: EditorJS } = require(...)
   // IMPORTANT: Must come before generic require pattern to avoid partial matching
   {
     pattern: /const\s+\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*require\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
-    replacement: "const { Blok: $1 } = require('@blok/core')",
+    replacement: "const { Blok: $1 } = require('@bloklabs/core')",
     note: 'Converted destructured default require to named require',
   },
   {
     pattern: /require\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
-    replacement: "require('@blok/core').Blok",
+    replacement: "require('@bloklabs/core').Blok",
   },
   // Namespace import: import * as EditorJS from '@editorjs/editorjs'
   // → convert to named import (namespace pattern no longer needed with named exports)
   {
     pattern: /import\s+\*\s+as\s+(\w+)\s+from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "import { Blok as $1 } from '@blok/core'",
+    replacement: "import { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted namespace import to named import (namespace no longer needed)',
   },
   // Dynamic import with .then chaining that expects default (must come before generic dynamic import)
   {
     pattern: /import\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)\s*\.then\s*\(\s*(\w+)\s*=>\s*\1\.default\s*\)/g,
-    replacement: "import('@blok/core').then($1 => $1.Blok)",
+    replacement: "import('@bloklabs/core').then($1 => $1.Blok)",
     note: 'Converted dynamic import .then(m => m.default) pattern',
   },
   // Dynamic import with destructuring: const { default: Editor } = await import('@editorjs/editorjs')
   // IMPORTANT: Must come before generic dynamic import to avoid partial matching
   {
     pattern: /\{\s*default\s*:\s*(\w+)\s*\}\s*=\s*await\s+import\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
-    replacement: "{ Blok: $1 } = await import('@blok/core')",
+    replacement: "{ Blok: $1 } = await import('@bloklabs/core')",
     note: 'Converted destructured dynamic import',
   },
   // Dynamic import: import('@editorjs/editorjs')
   {
     pattern: /import\s*\(\s*['"]@editorjs\/editorjs['"]\s*\)/g,
-    replacement: "import('@blok/core').then(m => ({ default: m.Blok }))",
+    replacement: "import('@bloklabs/core').then(m => ({ default: m.Blok }))",
     note: 'Converted dynamic import (wraps named export as default for compatibility)',
   },
   // Type-only default import: import type EditorJS from '@editorjs/editorjs'
   {
     pattern: /import\s+type\s+(\w+)\s+from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "import type { Blok as $1 } from '@blok/core'",
+    replacement: "import type { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted type-only default import to named import',
   },
   // Re-export default as named: export { default as Editor } from '@editorjs/editorjs'
   {
     pattern: /export\s+\{\s*default\s+as\s+(\w+)\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "export { Blok as $1 } from '@blok/core'",
+    replacement: "export { Blok as $1 } from '@bloklabs/core'",
     note: 'Converted default re-export to named export',
   },
   // Re-export default: export { default } from '@editorjs/editorjs'
   {
     pattern: /export\s+\{\s*default\s*\}\s*from\s+['"]@editorjs\/editorjs['"]/g,
-    replacement: "export { Blok } from '@blok/core'",
+    replacement: "export { Blok } from '@bloklabs/core'",
     note: 'Converted default re-export',
   },
-  // Header tool (now bundled) - import directly from @blok/core
+  // Header tool (now bundled) - import directly from @bloklabs/core
   {
     pattern: /import\s+Header\s+from\s+['"]@editorjs\/header['"];?\n?/g,
-    replacement: "import { Header } from '@blok/core';\n",
+    replacement: "import { Header } from '@bloklabs/core';\n",
     note: 'Header tool is now bundled with Blok',
   },
   {
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/header['"];?\n?/g,
-    replacement: "import { Header as $1 } from '@blok/core';\n",
+    replacement: "import { Header as $1 } from '@bloklabs/core';\n",
     note: 'Header tool is now bundled with Blok (aliased)',
   },
-  // Paragraph tool (now bundled) - import directly from @blok/core
+  // Paragraph tool (now bundled) - import directly from @bloklabs/core
   {
     pattern: /import\s+Paragraph\s+from\s+['"]@editorjs\/paragraph['"];?\n?/g,
-    replacement: "import { Paragraph } from '@blok/core';\n",
+    replacement: "import { Paragraph } from '@bloklabs/core';\n",
     note: 'Paragraph tool is now bundled with Blok',
   },
   {
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/paragraph['"];?\n?/g,
-    replacement: "import { Paragraph as $1 } from '@blok/core';\n",
+    replacement: "import { Paragraph as $1 } from '@bloklabs/core';\n",
     note: 'Paragraph tool is now bundled with Blok (aliased)',
   },
-  // List tool (now bundled) - import directly from @blok/core
+  // List tool (now bundled) - import directly from @bloklabs/core
   {
     pattern: /import\s+List\s+from\s+['"]@editorjs\/list['"];?\n?/g,
-    replacement: "import { List } from '@blok/core';\n",
+    replacement: "import { List } from '@bloklabs/core';\n",
     note: 'List tool is now bundled with Blok',
   },
   {
     pattern: /import\s+(\w+)\s+from\s+['"]@editorjs\/list['"];?\n?/g,
-    replacement: "import { List as $1 } from '@blok/core';\n",
+    replacement: "import { List as $1 } from '@bloklabs/core';\n",
     note: 'List tool is now bundled with Blok (aliased)',
   },
   // Tool require statements (CommonJS)
   // Header require: const Header = require('@editorjs/header')
   {
     pattern: /const\s+Header\s*=\s*require\s*\(\s*['"]@editorjs\/header['"]\s*\)/g,
-    replacement: "const { Header } = require('@blok/core')",
+    replacement: "const { Header } = require('@bloklabs/core')",
     note: 'Header tool is now bundled with Blok',
   },
   {
     pattern: /const\s+(\w+)\s*=\s*require\s*\(\s*['"]@editorjs\/header['"]\s*\)/g,
-    replacement: "const { Header: $1 } = require('@blok/core')",
+    replacement: "const { Header: $1 } = require('@bloklabs/core')",
     note: 'Header tool is now bundled with Blok (aliased)',
   },
   // Paragraph require
   {
     pattern: /const\s+Paragraph\s*=\s*require\s*\(\s*['"]@editorjs\/paragraph['"]\s*\)/g,
-    replacement: "const { Paragraph } = require('@blok/core')",
+    replacement: "const { Paragraph } = require('@bloklabs/core')",
     note: 'Paragraph tool is now bundled with Blok',
   },
   {
     pattern: /const\s+(\w+)\s*=\s*require\s*\(\s*['"]@editorjs\/paragraph['"]\s*\)/g,
-    replacement: "const { Paragraph: $1 } = require('@blok/core')",
+    replacement: "const { Paragraph: $1 } = require('@bloklabs/core')",
     note: 'Paragraph tool is now bundled with Blok (aliased)',
   },
   // List require
   {
     pattern: /const\s+List\s*=\s*require\s*\(\s*['"]@editorjs\/list['"]\s*\)/g,
-    replacement: "const { List } = require('@blok/core')",
+    replacement: "const { List } = require('@bloklabs/core')",
     note: 'List tool is now bundled with Blok',
   },
   {
     pattern: /const\s+(\w+)\s*=\s*require\s*\(\s*['"]@editorjs\/list['"]\s*\)/g,
-    replacement: "const { List: $1 } = require('@blok/core')",
+    replacement: "const { List: $1 } = require('@bloklabs/core')",
     note: 'List tool is now bundled with Blok (aliased)',
   },
 ];
@@ -841,7 +841,7 @@ const HOLDER_TRANSFORMS = [
   { pattern: /getElementById\s*\(\s*['"]editorjs['"]\s*\)/g, replacement: "getElementById('blok')" },
 ];
 
-// Bundled tools - these are now in a separate entry point (@blok/core/tools)
+// Bundled tools - these are now in a separate entry point (@bloklabs/core/tools)
 const BUNDLED_TOOLS = ['Header', 'Paragraph', 'List'];
 
 // Inline tools - also in the tools entry point
@@ -850,11 +850,11 @@ const INLINE_TOOLS = ['Bold', 'Italic', 'Link'];
 // Internal tools - these are bundled with core and don't need to be imported
 const INTERNAL_TOOLS = ['Convert', 'Delete'];
 
-// All tools that should be imported from @blok/core/tools
+// All tools that should be imported from @bloklabs/core/tools
 const ALL_TOOLS = [...BUNDLED_TOOLS, ...INLINE_TOOLS];
 
 // Tool configuration transformations
-// Note: With named exports, tools are imported directly (e.g., { Header } from '@blok/core/tools')
+// Note: With named exports, tools are imported directly (e.g., { Header } from '@bloklabs/core/tools')
 // so the tool class references don't need the Blok. prefix anymore
 const TOOL_CONFIG_TRANSFORMS = [
   // Convert old Blok.Header style to direct Header reference (for existing Blok users upgrading)
@@ -890,30 +890,30 @@ const INTERNAL_TOOL_REMOVAL_TRANSFORMS = [
 
 /**
  * Transforms for migrating old Blok imports to the new modular structure.
- * After Strategy 3/4, tools are in a separate entry point (@blok/core/tools).
+ * After Strategy 3/4, tools are in a separate entry point (@bloklabs/core/tools).
  *
  * Detects and transforms patterns like:
- *   import { Blok, Header, Paragraph } from '@blok/core'
+ *   import { Blok, Header, Paragraph } from '@bloklabs/core'
  * To:
- *   import { Blok } from '@blok/core';
- *   import { Header, Paragraph } from '@blok/core/tools';
+ *   import { Blok } from '@bloklabs/core';
+ *   import { Header, Paragraph } from '@bloklabs/core/tools';
  */
 const BLOK_MODULAR_IMPORT_TRANSFORMS = [
-  // Transform tool imports from old @blok/core to @blok/core/tools
+  // Transform tool imports from old @bloklabs/core to @bloklabs/core/tools
   // These patterns match tools being imported from the main entry point
   // The actual splitting is done in splitBlokImports() function below
 ];
 
 /**
- * Splits a combined @blok/core import that contains both core exports and tools
+ * Splits a combined @bloklabs/core import that contains both core exports and tools
  * into separate imports from the correct entry points.
  *
  * @param {string} content - The file content
  * @returns {{result: string, changed: boolean}} Transformed content and change flag
  */
 function splitBlokImports(content) {
-  // Pattern to find @blok/core named imports
-  const blokImportPattern = /import\s*\{\s*([^}]+)\s*\}\s*from\s*['"](?:@jackuait\/blok|@blok\/core)['"];?/g;
+  // Pattern to find @bloklabs/core named imports
+  const blokImportPattern = /import\s*\{\s*([^}]+)\s*\}\s*from\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"];?/g;
   let result = content;
   let changed = false;
 
@@ -956,11 +956,11 @@ function splitBlokImports(content) {
       let newImports = '';
 
       if (coreImports.length > 0) {
-        newImports += `import { ${coreImports.join(', ')} } from '@blok/core';\n`;
+        newImports += `import { ${coreImports.join(', ')} } from '@bloklabs/core';\n`;
       }
 
       if (toolImports.length > 0) {
-        newImports += `import { ${toolImports.join(', ')} } from '@blok/core/tools';`;
+        newImports += `import { ${toolImports.join(', ')} } from '@bloklabs/core/tools';`;
       }
 
       // Preserve trailing newline if original had one
@@ -1115,7 +1115,7 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
 }
 
 // ============================================================================
-// Scope rename: legacy personal scope → @blok/* family (blok 1.x → 2.0)
+// Scope rename: legacy personal scope → @bloklabs/* family (blok 1.x → 2.0)
 // ============================================================================
 // Ordered longest-specifier-first so subpath and dashed-package forms win
 // before the bare core specifier. The legacy scope is assembled at runtime so
@@ -1126,39 +1126,39 @@ const LEGACY_SCOPE = ['@jack', 'uait'].join('');
 const SCOPE_RENAME_TRANSFORMS = [
   {
     pattern: new RegExp(`${LEGACY_SCOPE}/blok/react`, 'g'),
-    replacement: '@blok/react',
-    note: 'Renamed React adapter subpath to @blok/react',
+    replacement: '@bloklabs/react',
+    note: 'Renamed React adapter subpath to @bloklabs/react',
   },
   {
     pattern: new RegExp(`${LEGACY_SCOPE}/blok/vue`, 'g'),
-    replacement: '@blok/vue',
-    note: 'Renamed Vue adapter subpath to @blok/vue',
+    replacement: '@bloklabs/vue',
+    note: 'Renamed Vue adapter subpath to @bloklabs/vue',
   },
   {
     pattern: new RegExp(`${LEGACY_SCOPE}/blok/angular`, 'g'),
-    replacement: '@blok/angular',
-    note: 'Renamed Angular adapter subpath to @blok/angular',
+    replacement: '@bloklabs/angular',
+    note: 'Renamed Angular adapter subpath to @bloklabs/angular',
   },
   {
     pattern: new RegExp(`${LEGACY_SCOPE}/blok-angular`, 'g'),
-    replacement: '@blok/angular',
-    note: 'Renamed the Angular APF package to @blok/angular',
+    replacement: '@bloklabs/angular',
+    note: 'Renamed the Angular APF package to @bloklabs/angular',
   },
   {
     pattern: new RegExp(`${LEGACY_SCOPE}/blok-cli`, 'g'),
-    replacement: '@blok/cli',
-    note: 'Renamed the CLI package to @blok/cli',
+    replacement: '@bloklabs/cli',
+    note: 'Renamed the CLI package to @bloklabs/cli',
   },
   {
     // Any other subpath stays under the core: /tools, /full, /icons, ...
     pattern: new RegExp(`${LEGACY_SCOPE}/blok/`, 'g'),
-    replacement: '@blok/core/',
-    note: 'Kept core subpath under @blok/core',
+    replacement: '@bloklabs/core/',
+    note: 'Kept core subpath under @bloklabs/core',
   },
   {
     pattern: new RegExp(`${LEGACY_SCOPE}/blok`, 'g'),
-    replacement: '@blok/core',
-    note: 'Renamed the core package to @blok/core',
+    replacement: '@bloklabs/core',
+    note: 'Renamed the core package to @bloklabs/core',
   },
 ];
 
@@ -1412,11 +1412,11 @@ function renameEditorJsIdentifiers(content, options = {}) {
  * Ensures that bundled tools (Header, Paragraph, List) are properly imported when used.
  * Since Blok now uses named exports, tools are imported directly.
  *
- * @deprecated Use ensureToolsImport instead, which imports from @blok/core/tools
+ * @deprecated Use ensureToolsImport instead, which imports from @bloklabs/core/tools
  *
  * Handles the following scenarios:
- * 1. Tool used without import -> adds `import { Header, Paragraph, List } from '@blok/core'`
- * 2. Existing @blok/core import without tools -> adds tools to named imports
+ * 1. Tool used without import -> adds `import { Header, Paragraph, List } from '@bloklabs/core'`
+ * 2. Existing @bloklabs/core import without tools -> adds tools to named imports
  */
 function ensureBlokImport(content) {
   // Check which bundled tools are used in the content
@@ -1430,8 +1430,8 @@ function ensureBlokImport(content) {
     return { result: content, changed: false };
   }
 
-  // Check for existing @blok/core import
-  const namedImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:@jackuait\/blok|@blok\/core)['"];?/;
+  // Check for existing @bloklabs/core import
+  const namedImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"];?/;
   const namedMatch = content.match(namedImportPattern);
 
   let result = content;
@@ -1449,16 +1449,16 @@ function ensureBlokImport(content) {
       const newImports = `${missingTools.join(', ')}, ${existingImports.trim()}`;
       result = content.replace(
         namedImportPattern,
-        `import { ${newImports} } from '@blok/core';`
+        `import { ${newImports} } from '@bloklabs/core';`
       );
       return { result, changed: true };
     }
     return { result: content, changed: false };
   }
 
-  // No @blok/core import at all -> add new import
+  // No @bloklabs/core import at all -> add new import
   const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
-  const newImport = `import { ${usedTools.join(', ')} } from '@blok/core';`;
+  const newImport = `import { ${usedTools.join(', ')} } from '@bloklabs/core';`;
 
   if (importStatements && importStatements.length > 0) {
     const lastImport = importStatements[importStatements.length - 1];
@@ -1482,12 +1482,12 @@ function ensureBlokImport(content) {
 }
 
 /**
- * Ensures that tools are properly imported from @blok/core/tools when used.
+ * Ensures that tools are properly imported from @bloklabs/core/tools when used.
  * This is the modern approach after Strategy 3/4 where tools are in a separate entry point.
  *
  * Handles the following scenarios:
- * 1. Tool used without import -> adds `import { Header, ... } from '@blok/core/tools'`
- * 2. Existing @blok/core/tools import without tools -> adds tools to named imports
+ * 1. Tool used without import -> adds `import { Header, ... } from '@bloklabs/core/tools'`
+ * 2. Existing @bloklabs/core/tools import without tools -> adds tools to named imports
  */
 function ensureToolsImport(content) {
   // Check which tools are used in the content
@@ -1501,12 +1501,12 @@ function ensureToolsImport(content) {
     return { result: content, changed: false };
   }
 
-  // Check for existing @blok/core/tools import
-  const toolsImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:(?:@jackuait\/blok|@blok\/core)\/tools|@blok\/core\/tools)['"];?/;
+  // Check for existing @bloklabs/core/tools import
+  const toolsImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:(?:@jackuait\/blok|@bloklabs\/core)\/tools|@bloklabs\/core\/tools)['"];?/;
   const toolsMatch = content.match(toolsImportPattern);
 
-  // Also check for @blok/core import (legacy, will be split later)
-  const mainImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:@jackuait\/blok|@blok\/core)['"];?/;
+  // Also check for @bloklabs/core import (legacy, will be split later)
+  const mainImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"];?/;
   const mainMatch = content.match(mainImportPattern);
 
   let result = content;
@@ -1524,7 +1524,7 @@ function ensureToolsImport(content) {
       const newImports = `${existingToolsImports.trim()}, ${missingTools.join(', ')}`;
       result = content.replace(
         toolsImportPattern,
-        `import { ${newImports} } from '@blok/core/tools';`
+        `import { ${newImports} } from '@bloklabs/core/tools';`
       );
       return { result, changed: true };
     }
@@ -1555,16 +1555,16 @@ function ensureToolsImport(content) {
       const newImports = `${missingTools.join(', ')}, ${existingMainImports.trim()}`;
       result = content.replace(
         mainImportPattern,
-        `import { ${newImports} } from '@blok/core';`
+        `import { ${newImports} } from '@bloklabs/core';`
       );
       return { result, changed: true };
     }
     return { result: content, changed: false };
   }
 
-  // No @blok/core or @blok/core/tools import -> add new /tools import
+  // No @bloklabs/core or @bloklabs/core/tools import -> add new /tools import
   const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
-  const newImport = `import { ${usedTools.join(', ')} } from '@blok/core/tools';`;
+  const newImport = `import { ${usedTools.join(', ')} } from '@bloklabs/core/tools';`;
 
   if (importStatements && importStatements.length > 0) {
     const lastImport = importStatements[importStatements.length - 1];
@@ -1669,16 +1669,16 @@ function transformFile(filePath, dryRun = false, useLibraryI18n = false) {
     const { result, changed } = ensureToolsImport(transformed);
     if (changed) {
       transformed = result;
-      allChanges.push({ category: 'imports', pattern: 'ensureToolsImport', count: 1, note: 'Added tools import from @blok/core/tools' });
+      allChanges.push({ category: 'imports', pattern: 'ensureToolsImport', count: 1, note: 'Added tools import from @bloklabs/core/tools' });
     }
   }
 
-  // Split combined @blok/core imports into core and tools (JS/TS only)
+  // Split combined @bloklabs/core imports into core and tools (JS/TS only)
   if (isJsFile) {
     const { result, changed } = splitBlokImports(transformed);
     if (changed) {
       transformed = result;
-      allChanges.push({ category: 'imports', pattern: 'splitBlokImports', count: 1, note: 'Split tools into separate @blok/core/tools import' });
+      allChanges.push({ category: 'imports', pattern: 'splitBlokImports', count: 1, note: 'Split tools into separate @bloklabs/core/tools import' });
     }
   }
 
@@ -1739,11 +1739,11 @@ function updatePackageJson(packageJsonPath, dryRun = false) {
   const pkg = JSON.parse(content);
   const changes = [];
 
-  // Migrate legacy-scope dependency keys to the @blok/* family, keeping ranges.
+  // Migrate legacy-scope dependency keys to the @bloklabs/* family, keeping ranges.
   const SCOPE_DEP_RENAMES = {
-    [`${LEGACY_SCOPE}/blok`]: '@blok/core',
-    [`${LEGACY_SCOPE}/blok-cli`]: '@blok/cli',
-    [`${LEGACY_SCOPE}/blok-angular`]: '@blok/angular',
+    [`${LEGACY_SCOPE}/blok`]: '@bloklabs/core',
+    [`${LEGACY_SCOPE}/blok-cli`]: '@bloklabs/cli',
+    [`${LEGACY_SCOPE}/blok-angular`]: '@bloklabs/angular',
   };
 
   for (const depType of ['dependencies', 'devDependencies', 'peerDependencies']) {
@@ -1770,10 +1770,10 @@ function updatePackageJson(packageJsonPath, dryRun = false) {
       }
     });
 
-    // Add @blok/core if not present
-    if (!pkg.dependencies['@blok/core']) {
-      changes.push({ action: 'add', type: 'dependencies', package: '@blok/core' });
-      pkg.dependencies['@blok/core'] = 'latest';
+    // Add @bloklabs/core if not present
+    if (!pkg.dependencies['@bloklabs/core']) {
+      changes.push({ action: 'add', type: 'dependencies', package: '@bloklabs/core' });
+      pkg.dependencies['@bloklabs/core'] = 'latest';
     }
   }
 
@@ -1805,7 +1805,7 @@ function printHelp() {
 EditorJS to Blok Codemod
 
 Usage:
-  npx -p @blok/core migrate-from-editorjs [path] [options]
+  npx -p @bloklabs/core migrate-from-editorjs [path] [options]
 
 Arguments:
   path          Directory or file to transform (default: current directory)
@@ -1817,19 +1817,19 @@ Options:
   --help              Show this help message
 
 Examples:
-  npx -p @blok/core migrate-from-editorjs ./src
-  npx -p @blok/core migrate-from-editorjs ./src --dry-run
-  npx -p @blok/core migrate-from-editorjs . --verbose
+  npx -p @bloklabs/core migrate-from-editorjs ./src
+  npx -p @bloklabs/core migrate-from-editorjs ./src --dry-run
+  npx -p @bloklabs/core migrate-from-editorjs . --verbose
 
 What this codemod does:
 
   EditorJS Migration:
   • Transforms EditorJS imports to Blok named imports:
-    - import EditorJS from '@editorjs/editorjs' → import { Blok } from '@blok/core'
-    - import Editor from '@editorjs/editorjs' → import { Blok as Editor } from '@blok/core'
+    - import EditorJS from '@editorjs/editorjs' → import { Blok } from '@bloklabs/core'
+    - import Editor from '@editorjs/editorjs' → import { Blok as Editor } from '@bloklabs/core'
   • Updates bundled tool imports (Header, Paragraph, List):
-    - import Header from '@editorjs/header' → import { Header } from '@blok/core/tools'
-    - import List from '@editorjs/list' → import { List } from '@blok/core/tools'
+    - import Header from '@editorjs/header' → import { Header } from '@bloklabs/core/tools'
+    - import List from '@editorjs/list' → import { List } from '@bloklabs/core/tools'
   • Updates type names (EditorConfig → BlokConfig)
   • Replaces 'new EditorJS()' with 'new Blok()'
   • Converts CSS class selectors to data attributes:
@@ -1861,9 +1861,9 @@ What this codemod does:
 
   Old Blok → Modular Blok Migration:
   • Splits combined imports into core and tools:
-    - import { Blok, Header } from '@blok/core'
-    → import { Blok } from '@blok/core';
-      import { Header } from '@blok/core/tools';
+    - import { Blok, Header } from '@bloklabs/core'
+    → import { Blok } from '@bloklabs/core';
+      import { Header } from '@bloklabs/core/tools';
   • Transforms static property access to direct references:
     - Blok.Header → Header (with import added)
     - Blok.Paragraph → Paragraph
@@ -1872,7 +1872,7 @@ What this codemod does:
   • Removes internal tools configuration (Convert and Delete are now bundled with core):
     - convertTo: { class: Convert } → removed (automatically available)
     - delete: { class: Delete } → removed (automatically available)
-  • Ensures tools are imported from @blok/core/tools when used
+  • Ensures tools are imported from @bloklabs/core/tools when used
 
 Note: After running, you may need to manually:
   • Update any custom tool implementations

@@ -10,7 +10,7 @@ import { Module } from '../../__module';
  *
  * They can also be extended using tailwind-merge:
  * @example
- * import { twMerge } from '@blok/core/utils/tw';
+ * import { twMerge } from '@bloklabs/core/utils/tw';
  * const customBlock = twMerge(api.styles.block, 'my-4 bg-gray-100');
  */
 export class StylesAPI extends Module {

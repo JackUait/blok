@@ -12,8 +12,8 @@ const repoRoot = resolve(__dirname, '../../../')
  * fixtures under `test/playwright/fixtures/` — but those are static,
  * importmap-driven pages served by `npx serve` (see playwright.config.ts), not
  * part of Vite's app graph. The Angular fixture's `app.mjs` imports the adapter
- * bare (`@blok/angular`), and the Angular APF FESM it points at imports
- * the core bare (`@blok/core`); both resolve ONLY via the page's import map,
+ * bare (`@bloklabs/angular`), and the Angular APF FESM it points at imports
+ * the core bare (`@bloklabs/core`); both resolve ONLY via the page's import map,
  * never from `node_modules` (this repo is not self-installed). Crawling them made
  * the scanner abort with "The following dependencies are imported but could not
  * be resolved", which disabled pre-bundling for the whole dev server.

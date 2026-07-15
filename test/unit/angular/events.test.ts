@@ -3,7 +3,7 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { BlockRenderedPayload, BlocksRenderedPayload } from '@/types';
 
-vi.mock('@blok/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
+vi.mock('@bloklabs/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
 
 import { blokRegistry, type MockBlokRecord } from './_mock-blok';
 import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';

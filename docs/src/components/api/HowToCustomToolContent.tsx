@@ -34,8 +34,8 @@ export class CalloutTool {
   }
 }`;
 
-const REGISTER_CODE = `import { Blok } from '@blok/core';
-import { Paragraph } from '@blok/core/tools';
+const REGISTER_CODE = `import { Blok } from '@bloklabs/core';
+import { Paragraph } from '@bloklabs/core/tools';
 import { CalloutTool } from './callout-tool';
 
 const editor = new Blok({
@@ -81,7 +81,7 @@ export class TextColorTune {
 }`;
 
 // Setup half: adapted to the active framework like the step snippets above.
-const TUNES_REGISTER_CODE = `import { Blok } from '@blok/core';
+const TUNES_REGISTER_CODE = `import { Blok } from '@bloklabs/core';
 import { CalloutTool } from './callout-tool';
 import { TextColorTune } from './text-color-tune';
 

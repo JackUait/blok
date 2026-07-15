@@ -2,7 +2,7 @@ import type { NavLink } from '@/types/navigation';
 import rootPkg from '../../../package.json';
 
 /**
- * The published @blok/core version, derived from the root package.json so
+ * The published @bloklabs/core version, derived from the root package.json so
  * doc snippets (CDN pins, save() output examples) can't silently drift stale.
  */
 export const BLOK_VERSION: string = rootPkg.version;

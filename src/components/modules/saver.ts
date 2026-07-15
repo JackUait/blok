@@ -210,12 +210,20 @@ export class Saver extends Module {
        */
       const guardedData = this.enforceTableViewReferenceInvariant(normalizedData);
 
+      /**
+       * Table cell order guard: within each grid cell, the saved block order
+       * must match the visible DOM order of the mounted holders. See
+       * {@link enforceTableCellOrderInvariant} — throws in dev/test, repairs
+       * the output in production.
+       */
+      const orderGuardedData = this.enforceTableCellOrderInvariant(guardedData);
+
       // Check destruction one more time after async block.save() operations
       if (this.isDestroyed) {
         return undefined;
       }
 
-      return this.makeOutput(guardedData);
+      return this.makeOutput(orderGuardedData);
     } catch (error: unknown) {
       this.lastSaveError = error;
 
@@ -513,6 +521,139 @@ export class Saver extends Module {
           ? Saver.pruneDanglingGridRefs(base, savedIds)
           : base;
       });
+  }
+
+  /**
+   * Table cell order guard (regression family: "images inserted at the top of
+   * a table cell moved to the bottom of the cell after saving").
+   *
+   * A table's per-cell block lists (`data.content[row][col].blocks`) are the
+   * saved order, but they live in the tool's own model — invisible to
+   * {@link enforceDomOrderInvariant} (tables are DOM_ORDER_EXEMPT) and to
+   * {@link enforceTableViewReferenceInvariant} (which checks membership, not
+   * order). Table.save() repairs its own order divergence, but silently — a
+   * future regression there would ship unseen. This guard is the independent
+   * save-boundary backstop for the ORDER half of the invariant:
+   *   - test/dev: THROW so the offending mutation path is fixed before it ships.
+   *   - production: repair the emitted cell order to the DOM order — what the
+   *     user actually saw — and log an error. The live model is untouched.
+   *
+   * A cell is only comparable when EVERY referenced holder is connected and
+   * mounted inside the same cell-blocks container; transitional states (block
+   * mid-insert, detached grid) keep the model order.
+   * @param extracted - saved data for all blocks, post view-reference guard
+   * @returns the array to serialize (repaired copy in production, input otherwise)
+   */
+  private enforceTableCellOrderInvariant(extracted: SaverValidatedData[]): SaverValidatedData[] {
+    const liveBlockById = new Map(this.Blok.BlockManager.blocks.map(block => [block.id, block]));
+
+    /**
+     * Returns the cell's block ids sorted by the DOM order of their mounted
+     * holders, or null when the cell is not comparable (any holder missing,
+     * disconnected, or mounted in a different cell container).
+     */
+    const domOrderOf = (blockIds: string[]): string[] | null => {
+      const holders = blockIds.map(id => {
+        const holder: unknown = liveBlockById.get(id)?.holder;
+
+        return holder instanceof HTMLElement && holder.isConnected ? holder : null;
+      });
+
+      if (holders.some(holder => holder === null)) {
+        return null;
+      }
+
+      const containers = holders.map(holder => (holder as HTMLElement).closest('[data-blok-table-cell-blocks]'));
+
+      if (containers[0] === null || containers.some(container => container !== containers[0])) {
+        return null;
+      }
+
+      return blockIds
+        .map((id, index) => ({ id, holder: holders[index] as HTMLElement }))
+        .sort((a, b) => {
+          if (a.holder === b.holder) {
+            return 0;
+          }
+
+          return (a.holder.compareDocumentPosition(b.holder) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 ? -1 : 1;
+        })
+        .map(entry => entry.id);
+    };
+
+    const problems: string[] = [];
+    /** table item id → per-cell repairs keyed by "row:col". */
+    const repairsByTable = new Map<string, Map<string, string[]>>();
+
+    for (const item of extracted) {
+      if (item.tool !== 'table' || typeof item.id !== 'string' || Saver.tableGridRefs(item) === null) {
+        continue;
+      }
+
+      const tableId = item.id;
+      const content = (item.data as { content?: unknown[][] }).content ?? [];
+
+      content.forEach((row, rowIndex) => row.forEach((cell, colIndex) => {
+        const blocks = (cell as { blocks?: unknown } | null)?.blocks;
+
+        if (!Array.isArray(blocks) || blocks.length < 2 || !blocks.every((id): id is string => typeof id === 'string')) {
+          return;
+        }
+
+        const domSorted = domOrderOf(blocks);
+
+        if (domSorted === null || domSorted.every((id, index) => id === blocks[index])) {
+          return;
+        }
+
+        problems.push(`table ${tableId} cell [${rowIndex},${colIndex}] saves order [${blocks.join(', ')}] but the DOM shows [${domSorted.join(', ')}]`);
+
+        const cellRepairs = repairsByTable.get(tableId) ?? new Map<string, string[]>();
+
+        cellRepairs.set(`${rowIndex}:${colIndex}`, domSorted);
+        repairsByTable.set(tableId, cellRepairs);
+      }));
+    }
+
+    if (problems.length === 0) {
+      return extracted;
+    }
+
+    const message =
+      `Saver: table cell block order diverges from the DOM order — a mutation path changed a cell's visible order without updating the table model, so the saved document would not match what the user sees. ${problems.join('; ')}`;
+    const nodeEnv = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+
+    if (nodeEnv === 'test' || nodeEnv === 'development') {
+      throw new Error(message);
+    }
+
+    logLabeled(message, 'error');
+
+    // Production repair — emit each diverged cell in the order the user saw.
+    return extracted.map(item => {
+      const cellRepairs = typeof item.id === 'string' ? repairsByTable.get(item.id) : undefined;
+
+      if (cellRepairs === undefined) {
+        return item;
+      }
+
+      const content = (item.data as { content?: unknown[][] }).content ?? [];
+      const repairedContent = content.map((row, rowIndex) => row.map((cell, colIndex) => {
+        const repairedBlocks = cellRepairs.get(`${rowIndex}:${colIndex}`);
+
+        return repairedBlocks === undefined
+          ? cell
+          : { ...(cell as Record<string, unknown>), blocks: repairedBlocks };
+      }));
+
+      return {
+        ...item,
+        data: {
+          ...(item.data as Record<string, unknown>),
+          content: repairedContent,
+        } as SaverValidatedData['data'],
+      };
+    });
   }
 
   /**

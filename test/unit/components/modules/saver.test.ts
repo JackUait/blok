@@ -1476,5 +1476,170 @@ describe('Saver module', () => {
       cleanup();
     });
   });
+
+  describe('table cell order guard (cell.blocks vs DOM order inside the cell)', () => {
+    // Regression family: "images inserted at the top of a table cell moved to
+    // the bottom of the cell after saving". The table keeps its own per-cell
+    // block-id lists (data.content[row][col].blocks) which the flat-order
+    // WYSIWYG guard cannot see (tables are DOM_ORDER_EXEMPT). Table.save()
+    // repairs divergence itself, but silently — so a future regression there
+    // would ship unnoticed. This guard is the independent save-boundary
+    // backstop: dev/test saves THROW when a cell's saved order diverges from
+    // the visible DOM order of its mounted holders; production saves repair
+    // the emitted table data to what the user actually saw.
+
+    type CellOrderFixtureOptions = {
+      /** Saved cell.blocks order (default: reversed vs DOM). */
+      savedOrder?: string[];
+      /** Ids whose holders are NOT mounted in the cell container. */
+      unmounted?: string[];
+    };
+
+    const cellOrderFixture = (options: CellOrderFixtureOptions = {}): { blocks: Block[]; cleanup: () => void } => {
+      const tableHolder = document.createElement('div');
+      const cellContainer = document.createElement('div');
+
+      cellContainer.setAttribute('data-blok-table-cell-blocks', '');
+      tableHolder.appendChild(cellContainer);
+      document.body.appendChild(tableHolder);
+
+      const ids = ['b1', 'b2', 'b3'];
+      const unmounted = new Set(options.unmounted ?? []);
+      const holders = new Map<string, HTMLElement>();
+
+      // DOM order is b1, b2, b3 — the order the user sees.
+      for (const id of ids) {
+        const holder = document.createElement('div');
+
+        holder.setAttribute('data-blok-id', id);
+
+        if (!unmounted.has(id)) {
+          cellContainer.appendChild(holder);
+        }
+
+        holders.set(id, holder);
+      }
+
+      const savedOrder = options.savedOrder ?? ['b3', 'b1', 'b2'];
+
+      const table = createBlockMock({
+        id: 'tbl1',
+        tool: 'table',
+        data: { withHeadings: false, content: [[{ blocks: savedOrder }]] },
+        contentIds: ids,
+        holder: tableHolder,
+      });
+
+      const blocks = [
+        table.block,
+        ...ids.map(id => createBlockMock({
+          id,
+          tool: 'paragraph',
+          data: { text: id },
+          parentId: 'tbl1',
+          holder: holders.get(id),
+        }).block),
+      ];
+
+      return {
+        blocks,
+        cleanup: () => {
+          document.body.innerHTML = '';
+        },
+      };
+    };
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      document.body.innerHTML = '';
+    });
+
+    it('throws in test env when a cell\'s saved block order diverges from the DOM order', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = cellOrderFixture();
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      await expect(saver.save()).resolves.toBeUndefined();
+      expect(saver.getLastSaveError()).toBeInstanceOf(Error);
+      expect((saver.getLastSaveError() as Error).message).toMatch(/cell.*order|order.*cell/i);
+      expect((saver.getLastSaveError() as Error).message).toContain('tbl1');
+
+      cleanup();
+    });
+
+    it('production: repairs the emitted cell order to the DOM order (WYSIWYG) and logs an error', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = cellOrderFixture();
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+
+      const tableData = result?.blocks.find(b => b.id === 'tbl1')?.data as {
+        content: Array<Array<{ blocks: string[] }>>;
+      };
+
+      expect(tableData.content[0][0].blocks).toEqual(['b1', 'b2', 'b3']);
+      expect(logLabeledSpy).toHaveBeenCalledWith(expect.stringMatching(/cell.*order|order.*cell/i), 'error');
+
+      cleanup();
+    });
+
+    it('does not throw when the saved cell order matches the DOM order', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = cellOrderFixture({ savedOrder: ['b1', 'b2', 'b3'] });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+      expect(result?.blocks.map(b => b.id)).toEqual(['tbl1', 'b1', 'b2', 'b3']);
+
+      cleanup();
+    });
+
+    it('skips cells with an unmounted holder (transitional state) and keeps the model order', async () => {
+      vi.stubEnv('NODE_ENV', 'test');
+      vi.spyOn(sanitizer, 'sanitizeBlocks').mockImplementation((blocks) => blocks);
+      vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      const { blocks, cleanup } = cellOrderFixture({ unmounted: ['b3'] });
+      const { saver } = createSaver({
+        blocks,
+        toolSanitizeConfigs: { paragraph: {}, table: {} },
+      });
+
+      const result = await saver.save();
+
+      expect(saver.getLastSaveError()).toBeUndefined();
+
+      const tableData = result?.blocks.find(b => b.id === 'tbl1')?.data as {
+        content: Array<Array<{ blocks: string[] }>>;
+      };
+
+      expect(tableData.content[0][0].blocks).toEqual(['b3', 'b1', 'b2']);
+
+      cleanup();
+    });
+  });
 });
 

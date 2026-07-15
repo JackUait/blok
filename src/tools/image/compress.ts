@@ -1,4 +1,5 @@
 import type { ImageCompressionConfig, ImageCompressionFormat } from '../../../types/tools/image';
+import { encodeAvifWithVideoEncoder } from './avif-webcodecs';
 
 const DEFAULT_QUALITY = 0.92;
 const DEFAULT_MIN_SIZE = 100 * 1024;
@@ -172,7 +173,10 @@ async function encodeFirstSupported(
   cfg: Resolved,
 ): Promise<Blob | null> {
   for (const type of encodeTargets(cfg.format, sourceType)) {
-    const blob = await encodeCanvas(bitmap, size, type, cfg.quality);
+    const blob = (await encodeCanvas(bitmap, size, type, cfg.quality))
+      // No browser's canvas can encode AVIF, but WebCodecs' AV1 encoder can
+      // produce a real one where available — try it before giving up on AVIF.
+      ?? (type === 'image/avif' ? await encodeAvifWithVideoEncoder(bitmap, size, cfg.quality) : null);
 
     if (blob) return blob;
   }

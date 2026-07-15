@@ -77,6 +77,11 @@ export interface ImageUploader {
  * Output format for compressed images.
  * - `original` — re-encode in the source format (default; safest).
  * - `auto` — best format the browser can actually encode: AVIF → WebP → original.
+ *
+ * AVIF is encoded through the canvas where the browser supports it, and through
+ * WebCodecs' AV1 encoder otherwise (Chromium). Browsers with neither fall back
+ * to the next target. The WebCodecs path skips images with transparency — they
+ * fall through to a format with an alpha channel instead of losing it.
  */
 export type ImageCompressionFormat = 'original' | 'jpeg' | 'webp' | 'avif' | 'auto';
 

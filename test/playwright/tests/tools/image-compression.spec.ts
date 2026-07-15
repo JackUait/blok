@@ -106,8 +106,11 @@ const awaitEmptyCard = async (page: Page): Promise<void> => {
  * no encoder can improve on, so a compressor would (correctly) decline it and
  * the test would prove nothing about real uploads.
  */
-const uploadGeneratedJpeg = async (page: Page): Promise<void> => {
-  const jpegBytes = await page.evaluate(async ({ width, height }) => {
+const uploadGeneratedImage = async (
+  page: Page,
+  { mimeType, fileName }: { mimeType: string; fileName: string },
+): Promise<void> => {
+  const imageBytes = await page.evaluate(async ({ width, height, mime }) => {
     const canvas = document.createElement('canvas');
 
     canvas.width = width;
@@ -131,7 +134,7 @@ const uploadGeneratedJpeg = async (page: Page): Promise<void> => {
     ctx.putImageData(pixels, 0, 0);
 
     const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, 'image/jpeg', 1);
+      canvas.toBlob(resolve, mime, 1);
     });
 
     if (!blob) throw new Error('encode failed');
@@ -140,13 +143,16 @@ const uploadGeneratedJpeg = async (page: Page): Promise<void> => {
     window.__originalSize = bytes.byteLength;
 
     return Array.from(bytes);
-  }, { width: SOURCE_WIDTH, height: SOURCE_HEIGHT });
+  }, { width: SOURCE_WIDTH, height: SOURCE_HEIGHT, mime: mimeType });
 
   await page
     .locator(IMAGE_BLOCK_SELECTOR)
     .getByTestId('file-input')
-    .setInputFiles({ name: 'photo.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(jpegBytes) });
+    .setInputFiles({ name: fileName, mimeType, buffer: Buffer.from(imageBytes) });
 };
+
+const uploadGeneratedJpeg = (page: Page): Promise<void> =>
+  uploadGeneratedImage(page, { mimeType: 'image/jpeg', fileName: 'photo.jpg' });
 
 const uploadedFile = async (page: Page): Promise<UploadedFile> => {
   await page.waitForFunction(() => window.__uploaded !== undefined);
@@ -206,6 +212,67 @@ test('opting into WebP re-encodes the upload, or falls back to the source format
   // rather than ship the PNG their canvas hands back instead.
   expect(uploaded.type).toBe(webpSupported ? 'image/webp' : 'image/jpeg');
   expect(uploaded.name).toBe(webpSupported ? 'photo.webp' : 'photo.jpg');
+  await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toHaveAttribute('data-state', 'rendered');
+});
+
+/**
+ * No browser's canvas can encode AVIF — the only native path is WebCodecs'
+ * AV1 encoder in quantizer mode (Chromium). This mirrors the runtime check
+ * the compressor itself performs.
+ */
+const canEncodeAv1 = (page: Page): Promise<boolean> =>
+  page.evaluate(async () => {
+    if (typeof VideoEncoder !== 'function') return false;
+    try {
+      const { supported } = await VideoEncoder.isConfigSupported({
+        codec: 'av01.0.08M.08',
+        width: 800,
+        height: 600,
+        bitrateMode: 'quantizer',
+        latencyMode: 'quality',
+      });
+
+      return supported === true;
+    } catch {
+      // WebKit throws on configs it does not recognise instead of reporting
+      // supported: false — the compressor treats that the same way.
+      return false;
+    }
+  });
+
+/** Some WebKit builds can encode AVIF straight from the canvas. */
+const canEncodeAvifCanvas = (page: Page): Promise<boolean> =>
+  page.evaluate(async () => {
+    const canvas = new OffscreenCanvas(4, 4);
+
+    canvas.getContext('2d');
+    const blob = await canvas.convertToBlob({ type: 'image/avif' });
+
+    return blob.type === 'image/avif';
+  });
+
+test("format 'avif' re-encodes a PNG upload into a real, decodable AVIF", async ({ page }) => {
+  const avifSupported = (await canEncodeAvifCanvas(page)) || (await canEncodeAv1(page));
+
+  await createBlok(page, { format: 'avif' });
+  await awaitEmptyCard(page);
+  await uploadGeneratedImage(page, { mimeType: 'image/png', fileName: 'shot.png' });
+
+  const uploaded = await uploadedFile(page);
+  const original = await originalSize(page);
+
+  expect(original).toBeGreaterThan(100 * 1024);
+
+  // Browsers without any AVIF encoder must keep the original PNG untouched
+  // rather than ship a corrupt or pointlessly re-encoded file.
+  expect(uploaded.type).toBe(avifSupported ? 'image/avif' : 'image/png');
+  expect(uploaded.name).toBe(avifSupported ? 'shot.avif' : 'shot.png');
+  expect(uploaded.size).toBeLessThan(avifSupported ? original * 0.9 : original + 1);
+  // The uploader probes the file with an <img> — matching natural dimensions
+  // prove the (possibly hand-muxed) AVIF actually decodes, not merely carries the MIME.
+  expect(uploaded.width).toBe(SOURCE_WIDTH);
+  expect(uploaded.height).toBe(SOURCE_HEIGHT);
+
   await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toHaveAttribute('data-state', 'rendered');
 });
 

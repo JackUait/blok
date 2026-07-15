@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+const { encodeAvifWithVideoEncoderMock } = vi.hoisted(() => ({
+  encodeAvifWithVideoEncoderMock: vi.fn<() => Promise<Blob | null>>(async () => null),
+}));
+
+vi.mock('../../../../src/tools/image/avif-webcodecs', () => ({
+  encodeAvifWithVideoEncoder: encodeAvifWithVideoEncoderMock,
+}));
+
 import { compressImage } from '../../../../src/tools/image/compress';
 
 interface FakeBitmap { width: number; height: number; close: () => void; }
@@ -211,6 +219,71 @@ describe('compressImage', () => {
       await compressImage(makeFile({ size: 500 * 1024 }), { quality: 0.6 });
 
       expect(encodeCalls[0].quality).toBe(0.6);
+    });
+  });
+
+  describe('WebCodecs AVIF fallback — canvas cannot encode AVIF anywhere', () => {
+    const avifBlob = (size: number): Blob =>
+      new Blob([new Uint8Array(size)], { type: 'image/avif' });
+
+    beforeEach(() => {
+      encodeAvifWithVideoEncoderMock.mockResolvedValue(null);
+    });
+
+    it('encodes real AVIF through the AV1 video encoder when canvas hands back a PNG', async () => {
+      installCanvas();
+      encodeAvifWithVideoEncoderMock.mockResolvedValue(avifBlob(60 * 1024));
+
+      const png = makeFile({ size: 500 * 1024, type: 'image/png', name: 'shot.png' });
+      const result = await compressImage(png, { format: 'avif', maxWidth: 1920, maxHeight: 1080 });
+
+      expect(result?.type).toBe('image/avif');
+      expect(result?.name).toBe('shot.avif');
+      expect(encodeAvifWithVideoEncoderMock).toHaveBeenCalledWith(
+        expect.anything(),
+        { width: 1440, height: 1080 }, // 4000×3000 capped to the 1080 side
+        0.92,
+      );
+    });
+
+    it('is not consulted when the canvas can already encode AVIF', async () => {
+      installCanvas();
+      encodable.add('image/avif');
+      encodedSizes.set('image/avif', 60 * 1024);
+
+      const result = await compressImage(makeFile({ size: 500 * 1024 }), { format: 'avif' });
+
+      expect(result?.type).toBe('image/avif');
+      expect(encodeAvifWithVideoEncoderMock).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the source format when WebCodecs cannot help either', async () => {
+      installCanvas();
+      encodeAvifWithVideoEncoderMock.mockResolvedValue(null);
+      encodedSizes.set('image/jpeg', 100 * 1024);
+
+      const result = await compressImage(makeFile({ size: 500 * 1024 }), { format: 'avif' });
+
+      expect(encodeCalls.map((c) => c.type)).toEqual(['image/avif', 'image/jpeg']);
+      expect(result?.type).toBe('image/jpeg');
+    });
+
+    it("serves the format 'auto' AVIF preference before WebP", async () => {
+      installCanvas();
+      encodeAvifWithVideoEncoderMock.mockResolvedValue(avifBlob(60 * 1024));
+
+      const result = await compressImage(makeFile({ size: 500 * 1024 }), { format: 'auto' });
+
+      expect(result?.type).toBe('image/avif');
+    });
+
+    it('still applies the worth-it check to WebCodecs output', async () => {
+      installCanvas(1000, 800); // below any cap → not resized
+      encodeAvifWithVideoEncoderMock.mockResolvedValue(avifBlob(480 * 1024));
+
+      const result = await compressImage(makeFile({ size: 500 * 1024 }), { format: 'avif' });
+
+      expect(result).toBeNull();
     });
   });
 

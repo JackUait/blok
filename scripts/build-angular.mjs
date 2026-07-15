@@ -167,6 +167,7 @@ const copyAndRewrite = (relSrc, relDest) => {
 };
 
 copyAndRewrite('src/components/utils/blocks-tree.ts',         'components/utils/blocks-tree.ts');
+copyAndRewrite('src/components/utils/readonly-config.ts',     'components/utils/readonly-config.ts');
 copyAndRewrite('src/components/utils/blocks-api.ts',          'components/utils/blocks-api.ts');
 // id-generator.ts imports `nanoid` (a bare specifier). ng-packagr/rollup
 // externalizes ALL bare specifiers, so it cannot be bundled. Replace the

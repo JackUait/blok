@@ -28,7 +28,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
-const ANGULAR_DIR = join(REPO_ROOT, 'src', 'angular');
+const ANGULAR_DIR = join(REPO_ROOT, 'packages', 'angular', 'src');
 const SHARED_DIR = join(REPO_ROOT, 'src', 'shared');
 const TYPES_DIR = join(REPO_ROOT, 'types');
 const MARKDOWN_DIR = join(REPO_ROOT, 'src', 'markdown');

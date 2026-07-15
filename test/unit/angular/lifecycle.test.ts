@@ -37,7 +37,7 @@ const mock = vi.hoisted(() => {
 
 vi.mock('@blok/core', () => ({ Blok: mock.MockBlok }));
 
-import { BlokContentDirective } from '../../../src/angular/blok-content.directive';
+import { BlokContentDirective } from '../../../packages/angular/src/blok-content.directive';
 
 @Component({
   standalone: true,

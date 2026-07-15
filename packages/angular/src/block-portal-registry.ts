@@ -1,4 +1,4 @@
-// src/angular/block-portal-registry.ts
+// packages/angular/src/block-portal-registry.ts
 import {
   ApplicationRef,
   createComponent,

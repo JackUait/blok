@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import { setRegistry, getRegistry, removeRegistry } from '../../../src/angular/registry-map';
-import type { BlockPortalRegistry } from '../../../src/angular/block-portal-registry';
+import { setRegistry, getRegistry, removeRegistry } from '../../../packages/angular/src/registry-map';
+import type { BlockPortalRegistry } from '../../../packages/angular/src/block-portal-registry';
 
 const stub = (): BlockPortalRegistry =>
   ({ register: vi.fn(), unregister: vi.fn(), flush: vi.fn(), destroyAll: vi.fn() } as never);

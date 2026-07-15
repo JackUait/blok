@@ -857,6 +857,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@blok/angular@workspace:packages/angular":
+  version: 0.0.0-use.local
+  resolution: "@blok/angular@workspace:packages/angular"
+  peerDependencies:
+    "@angular/common": ">=20 <23"
+    "@angular/core": ">=20 <23"
+    "@angular/forms": ">=20 <23"
+    "@blok/core": "*"
+  languageName: unknown
+  linkType: soft
+
 "@blok/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@blok/cli@workspace:packages/cli"

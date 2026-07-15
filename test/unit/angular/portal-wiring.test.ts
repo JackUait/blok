@@ -5,10 +5,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('@blok/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
 
 import { blokRegistry } from './_mock-blok';
-import { BlokContentDirective } from '../../../src/angular/blok-content.directive';
-import { createAngularBlock } from '../../../src/angular/createAngularBlock';
-import { BLOK_BLOCK_CONTEXT } from '../../../src/angular/block-context';
-import { getRegistry } from '../../../src/angular/registry-map';
+import { BlokContentDirective } from '../../../packages/angular/src/blok-content.directive';
+import { createAngularBlock } from '../../../packages/angular/src/createAngularBlock';
+import { BLOK_BLOCK_CONTEXT } from '../../../packages/angular/src/block-context';
+import { getRegistry } from '../../../packages/angular/src/registry-map';
 
 // Assert BLOK_BLOCK_CONTEXT is defined (keeps the public surface honest)
 void BLOK_BLOCK_CONTEXT;

@@ -1,4 +1,4 @@
-// src/angular/block-context.ts
+// packages/angular/src/block-context.ts
 import { InjectionToken, type Signal } from '@angular/core';
 
 import type { BlockAPI } from '@/types/api';

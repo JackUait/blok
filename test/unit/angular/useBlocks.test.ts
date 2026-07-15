@@ -2,8 +2,8 @@ import { EnvironmentInjector, runInInjectionContext, signal } from '@angular/cor
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { injectBlocks } from '../../../src/angular/useBlocks';
-import type { UseBlocksApi } from '../../../src/angular/blocks-snapshot';
+import { injectBlocks } from '../../../packages/angular/src/useBlocks';
+import type { UseBlocksApi } from '../../../packages/angular/src/blocks-snapshot';
 import type { Blok } from '../../../types';
 
 const ALL_METHODS = [

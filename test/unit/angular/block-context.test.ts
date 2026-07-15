@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../src/angular/block-context';
+import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../packages/angular/src/block-context';
 
 describe('BLOK_BLOCK_CONTEXT', () => {
   beforeEach(() => vi.clearAllMocks());

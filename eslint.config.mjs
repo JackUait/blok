@@ -1086,7 +1086,7 @@ export default defineConfig(
       // Angular sources are excluded from tsconfig.json (they clash with the root
       // React-JSX program) and are type-checked separately via `yarn lint:angular`
       // (ngc). eslint's typed parser can't resolve them, so keep them out here too.
-      'src/angular/**',
+      'packages/angular/src/**',
       'test/unit/angular/**',
       'dist',
       'public/assets/**',

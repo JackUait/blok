@@ -1,9 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { createAngularBlock } from '../../../src/angular/createAngularBlock';
-import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../src/angular/block-context';
-import type { BlockPortalRegistry } from '../../../src/angular/block-portal-registry';
+import { createAngularBlock } from '../../../packages/angular/src/createAngularBlock';
+import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../packages/angular/src/block-context';
+import type { BlockPortalRegistry } from '../../../packages/angular/src/block-portal-registry';
 import type { BlockAPI } from '../../../types/api';
 import type { API, BlockToolConstructorOptions, BlockToolData } from '../../../types';
 

@@ -1,4 +1,4 @@
-// src/angular/useBlocks.ts
+// packages/angular/src/useBlocks.ts
 import { DestroyRef, effect, inject, signal, type Signal } from '@angular/core';
 
 import type { Blok } from '@/types';

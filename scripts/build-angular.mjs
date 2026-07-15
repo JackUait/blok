@@ -38,9 +38,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 
 const stagingDir = path.resolve(root, 'dist/.angular-build');
-const destDir = path.resolve(root, 'dist/angular');
+const destDir = path.resolve(root, 'packages/angular/dist');
 const rootPkg = JSON.parse(readFileSync(path.resolve(root, 'package.json'), 'utf8'));
-const adapterPkg = JSON.parse(readFileSync(path.resolve(root, 'src/angular/package.json'), 'utf8'));
+const adapterPkg = JSON.parse(readFileSync(path.resolve(root, 'packages/angular/package.json'), 'utf8'));
 
 // Clean staging + previous output.
 rmSync(stagingDir, { recursive: true, force: true });
@@ -66,7 +66,7 @@ await bundle.close();
 //    import helpers from outside `src/angular/` and `src/shared/` — stage only
 //    the specific modules they need so the relative paths (which mirror the
 //    original `src/` layout) resolve correctly under `rootDir`.
-cpSync(path.resolve(root, 'src/angular'), path.resolve(stagingDir, 'angular'), {
+cpSync(path.resolve(root, 'packages/angular/src'), path.resolve(stagingDir, 'angular'), {
   recursive: true,
   filter: (src) => !src.endsWith('.json'),
 });
@@ -295,7 +295,7 @@ writeFileSync(
   JSON.stringify(
     {
       $schema: '../../node_modules/ng-packagr/ng-package.schema.json',
-      dest: '../angular',
+      dest: '../../packages/angular/dist',
       lib: { entryFile: 'index.ts' },
       allowedNonPeerDependencies: ['.'],
     },

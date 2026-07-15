@@ -58,7 +58,7 @@ function externalsInSource(source: string): string[] {
 // its OWN package.json declaring `@angular/*` + `@blok/core` as peers. The
 // root-package externals guards reason about the root manifest, so they must not
 // scan into it (otherwise the Angular peers read as undeclared root externals).
-const angularDist = resolve(dist, 'angular')
+const angularDist = resolve(dist, '..', 'packages', 'angular', 'dist')
 
 function collectDistExternals(): Set<string> {
   const externals = new Set<string>()
@@ -414,20 +414,9 @@ describe('Angular adapter package.json wiring', () => {
     typesVersions?: Record<string, Record<string, string[]>>
   }).typesVersions
 
-  it('"./angular" export resolves to the APF FESM bundle', () => {
-    // Angular libraries are ESM-only (no CJS `require` condition); the APF bundle
-    // is partial-Ivy so the consumer's AOT compiler links it.
-    expect(exportsMap['./angular']?.['default']).toBe(
-      './dist/angular/fesm2022/blok-angular.mjs',
-    )
-  })
-
-  it('"./angular" export carries its flattened type declarations', () => {
-    expect(exportsMap['./angular']?.['types']).toBe('./dist/angular/index.d.ts')
-  })
-
-  it('typesVersions maps the "angular" subpath for node10 module resolution', () => {
-    expect(typesVersions?.['*']?.['angular']).toEqual(['./dist/angular/index.d.ts'])
+  it('core no longer exports "./angular" (moved to the @blok/angular package)', () => {
+    expect(exportsMap['./angular']).toBeUndefined()
+    expect(typesVersions?.['*']?.['angular']).toBeUndefined()
   })
 })
 

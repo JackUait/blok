@@ -1,4 +1,4 @@
-// src/angular/blocks-snapshot.ts
+// packages/angular/src/blocks-snapshot.ts
 //
 // The block-tree data types AND the `UseBlocksApi` connection contract are
 // framework-agnostic and live in the shared core module. The Angular

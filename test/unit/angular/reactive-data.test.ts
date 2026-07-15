@@ -5,7 +5,7 @@ import type { OutputData } from '@/types';
 vi.mock('@blok/core', async () => ({ Blok: (await import('./_mock-blok')).MockBlok }));
 
 import { blokRegistry } from './_mock-blok';
-import { BlokEditorComponent } from '../../../src/angular/blok-editor.component';
+import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';
 
 function doc(text: string): OutputData {
   return { time: 0, version: '0', blocks: [{ id: '1', type: 'paragraph', data: { text } }] };

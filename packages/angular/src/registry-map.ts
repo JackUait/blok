@@ -1,4 +1,4 @@
-// src/angular/registry-map.ts
+// packages/angular/src/registry-map.ts
 import type { BlockPortalRegistry } from './block-portal-registry';
 
 /**

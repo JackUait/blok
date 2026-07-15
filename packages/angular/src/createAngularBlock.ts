@@ -1,4 +1,4 @@
-// src/angular/createAngularBlock.ts
+// packages/angular/src/createAngularBlock.ts
 import { signal, type Type, type WritableSignal } from '@angular/core';
 
 import type { BlockAPI } from '@/types/api';

@@ -11,8 +11,8 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../src/angular/block-context';
-import { createBlockPortalRegistry } from '../../../src/angular/block-portal-registry';
+import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../packages/angular/src/block-context';
+import { createBlockPortalRegistry } from '../../../packages/angular/src/block-portal-registry';
 
 @Component({
   standalone: true,

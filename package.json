@@ -19,9 +19,6 @@
       "locales": [
         "./types/locales.d.ts"
       ],
-      "angular": [
-        "./dist/angular/index.d.ts"
-      ],
       "markdown": [
         "./types/markdown.d.ts"
       ],
@@ -49,10 +46,6 @@
     "./locales": {
       "types": "./types/locales.d.ts",
       "import": "./dist/locales.mjs"
-    },
-    "./angular": {
-      "types": "./dist/angular/index.d.ts",
-      "default": "./dist/angular/fesm2022/blok-angular.mjs"
     },
     "./markdown": {
       "types": "./types/markdown.d.ts",

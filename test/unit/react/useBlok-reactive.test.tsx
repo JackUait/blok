@@ -80,6 +80,13 @@ describe('useBlok reactive theme/width', () => {
     expect(instances[0].theme.set).toHaveBeenLastCalledWith('dark');
   });
 
+  it('normalizes object readOnly config to a boolean for readOnly.set', async () => {
+    render(<Harness config={{ readOnly: { hideControls: true } }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances[0].readOnly.set).toHaveBeenLastCalledWith(true);
+  });
+
   it('syncs width via editor.width.set without recreating', async () => {
     const { rerender } = render(<Harness config={{ width: 'narrow' }} />);
     await act(async () => { await Promise.resolve(); });

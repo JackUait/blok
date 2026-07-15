@@ -3,6 +3,7 @@ import { Blok as BlokRuntime } from '../blok';
 import { setHolder, removeHolder } from './holder-map';
 import { deepEqual } from './deep-equal';
 import { BlokDefaultsContext, mergeBlokDefaults } from './provide-blok';
+import { normalizeReadOnlyConfig } from '../components/utils/readonly-config';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
 
@@ -210,14 +211,14 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     };
   }, [depsToken]);
 
-  // Reactive: readOnly
-  const { readOnly } = config;
+  // Reactive: readOnly (object form normalized so the effect dep is a stable boolean)
+  const readOnlyEnabled = normalizeReadOnlyConfig(config.readOnly).enabled;
   useEffect(() => {
     if (editor === null) {
       return;
     }
-    void editor.readOnly.set(readOnly ?? false);
-  }, [editor, readOnly]);
+    void editor.readOnly.set(readOnlyEnabled);
+  }, [editor, readOnlyEnabled]);
 
   // Reactive: autofocus
   const { autofocus } = config;

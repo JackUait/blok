@@ -17,6 +17,7 @@ import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 import { BlokContentDirective } from './blok-content.directive';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
 import { deepEqual } from '../shared/deep-equal';
+import { normalizeReadOnlyConfig } from '../components/utils/readonly-config';
 import type {
   API,
   Blok,
@@ -308,7 +309,7 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
       const readOnly = this.readOnly$();
 
       if (editor) {
-        void editor.readOnly.set(readOnly ?? false);
+        void editor.readOnly.set(readOnly ?? normalizeReadOnlyConfig(this.config?.readOnly).enabled);
       }
     });
 

@@ -12,6 +12,7 @@ import {
 import { Blok as BlokRuntime } from '../blok';
 import { setHolder, removeHolder } from './holder-map';
 import { deepEqual } from '../shared/deep-equal';
+import { normalizeReadOnlyConfig } from '../components/utils/readonly-config';
 import { BLOK_DEFAULT_CONFIG, mergeBlokDefaults } from './provide-blok';
 import {
   createBlockPortalRegistry,
@@ -200,10 +201,10 @@ export function useBlok(
   // `theme`/`width`/`placeholder` guard on `=== undefined` (NOT falsiness) so a
   // real `placeholder: false` (clear) still propagates.
   watch(
-    [editor, () => mergedConfig().readOnly],
-    ([ed, readOnly]) => {
+    [editor, () => normalizeReadOnlyConfig(mergedConfig().readOnly).enabled],
+    ([ed, readOnlyEnabled]) => {
       if (ed) {
-        void ed.readOnly.set(readOnly ?? false);
+        void ed.readOnly.set(readOnlyEnabled);
       }
     },
     { immediate: true }

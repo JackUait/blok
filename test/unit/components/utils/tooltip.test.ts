@@ -219,6 +219,61 @@ describe('Tooltip utility', () => {
     expect(classes).not.toContain('absolute');
   });
 
+  it('never intercepts pointer events (click-transparency contract)', () => {
+    /**
+     * Regression: the bubble used to receive pointer events so the pointer
+     * could travel onto it without dismissing (hoverable-bubble design). But
+     * all blok tooltips carry static text, and a hoverable bubble placed over
+     * dense control grids (color picker swatch rows) swallowed single clicks
+     * on the controls it covered — users could not change an existing
+     * highlight color because the active swatch's tooltip covered the
+     * Default swatch above it. Text-only tooltips must be click-transparent.
+     *
+     * The rule must be an INLINE `!important` style — a `pointer-events-none`
+     * utility class is wiped by the Top-Layer reset
+     * (`[data-blok-top-layer][popover] { all: initial !important }`), just
+     * like the visibility handling in updateTooltipVisibility().
+     */
+    const target = createTargetElement();
+
+    show(target, 'pointer-check');
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.style.getPropertyValue('pointer-events')).toBe('none');
+    expect(wrapper?.style.getPropertyPriority('pointer-events')).toBe('important');
+  });
+
+  it('hides after the trigger is left even when the pointer lands on the bubble', () => {
+    /**
+     * Companion to the pointer-events contract: the old bubble-hover pinning
+     * (mouseenter on the wrapper cancelling the grace hide) kept the tooltip
+     * open indefinitely under the pointer, turning it into a persistent click
+     * shield. With a click-transparent bubble the wrapper receives no mouse
+     * events, so a mouseenter dispatched at it must NOT cancel the pending
+     * grace hide.
+     */
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    onHover(target, 'grace-check');
+    target.dispatchEvent(new Event('mouseenter'));
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('data-state')).toBe('open');
+
+    // Pointer leaves the trigger and "lands on" the bubble.
+    target.dispatchEvent(new Event('mouseleave'));
+    wrapper?.dispatchEvent(new Event('mouseenter'));
+
+    // After the grace period the tooltip must hide regardless.
+    vi.advanceTimersByTime(1000);
+
+    expect(wrapper?.getAttribute('data-state')).toBe('closed');
+  });
+
   it('has no transition or transform animation classes on the wrapper', () => {
     const target = createTargetElement();
 
@@ -957,44 +1012,6 @@ describe('Tooltip utility', () => {
     hide();
   });
 
-  it('does not apply pointer-events-none so the bubble itself is hoverable (WCAG 1.4.13)', () => {
-    const target = createTargetElement();
-
-    show(target, 'hoverable', { delay: 0 });
-
-    const wrapper = getTooltipWrapper();
-    const classes = Array.from(wrapper?.classList ?? []);
-
-    expect(classes).not.toContain('pointer-events-none');
-  });
-
-  it('keeps the tooltip open when the pointer moves from the target onto the bubble within the grace window', () => {
-    vi.useFakeTimers();
-
-    const target = createTargetElement();
-
-    onHover(target, 'grace', { delay: 0 });
-
-    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
-      bubbles: true }));
-    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    // Leaving the target schedules a grace hide instead of hiding immediately.
-    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    // Moving onto the bubble before the grace window elapses cancels the hide.
-    wrapper?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-
-    vi.advanceTimersByTime(300);
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    hide();
-  });
-
   it('hides the tooltip after the grace window when the pointer leaves the target without entering the bubble', () => {
     vi.useFakeTimers();
 
@@ -1132,35 +1149,6 @@ describe('Tooltip utility', () => {
     const keydownRegistered = addEventListenerSpy.mock.calls.some(([ type ]) => type === 'keydown');
 
     expect(keydownRegistered).toBe(false);
-  });
-
-  it('hides after the grace period when the pointer leaves the tooltip bubble itself', () => {
-    vi.useFakeTimers();
-
-    const target = createTargetElement();
-
-    onHover(target, 'bubble leave', { delay: 0 });
-
-    target.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse',
-      bubbles: true }));
-    target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-
-    const wrapper = getTooltipWrapper();
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    // Travel: leave the trigger, land on the bubble — it stays open.
-    target.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    wrapper?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    vi.advanceTimersByTime(300);
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
-
-    // Leaving the bubble itself arms the grace hide, which then elapses.
-    wrapper?.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    vi.advanceTimersByTime(150);
-
-    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('promotes the wrapper to the Top Layer even on the delayed show path', () => {

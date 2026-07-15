@@ -24,8 +24,9 @@ const DEFAULT_OFFSET = 10;
 const SKIP_DELAY_DURATION = 300;
 /**
  * Grace period (ms) between the pointer leaving the trigger and the tooltip
- * hiding. It gives the pointer time to travel onto the (now hoverable) bubble
- * without the tooltip vanishing — the "hoverable" half of WCAG 1.4.13.
+ * hiding. Smooths brief exits/re-entries of the trigger so the bubble does
+ * not flicker; the bubble itself is click-transparent (`pointer-events-none`),
+ * so this timer — not bubble hover — is the only thing keeping it open.
  */
 const GRACE_HIDE_DURATION = 100;
 /**
@@ -78,10 +79,11 @@ class Tooltip {
         'fixed z-overlay top-0 left-0',
         'bg-tooltip-bg opacity-0',
         /**
-         * `pointer-events-none` is deliberately omitted: the bubble must be
-         * hoverable so the pointer can travel onto it without dismissing the
-         * tooltip (WCAG 1.4.13 "hoverable"). While hidden the wrapper carries
-         * `visibility: hidden`, which already blocks pointer interaction.
+         * Click-transparency is applied as an inline `pointer-events: none
+         * !important` in prepare() — NOT as a `pointer-events-none` utility —
+         * because the Top-Layer reset (`[data-blok-top-layer][popover]
+         * { all: initial !important }`) would override any class-based rule,
+         * exactly like the `visibility` case in updateTooltipVisibility().
          */
         'select-none',
         'rounded-lg shadow-tooltip',
@@ -133,9 +135,9 @@ class Tooltip {
   private showingTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * Deferred-hide timer armed when the pointer leaves the trigger. Cleared if
-   * the pointer reaches the bubble within {@link GRACE_HIDE_DURATION} so the
-   * bubble stays hoverable (WCAG 1.4.13).
+   * Deferred-hide timer armed when the pointer leaves the trigger. Cleared by
+   * a re-show within {@link GRACE_HIDE_DURATION} so quick trigger re-entries
+   * and sweeps to adjacent triggers do not flicker.
    */
   private graceHideTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -454,8 +456,8 @@ class Tooltip {
 
   /**
    * Arm the grace timer that hides the tooltip after {@link GRACE_HIDE_DURATION}.
-   * Called when the pointer leaves either the trigger or the bubble, so the
-   * pointer has time to travel between them without the tooltip vanishing.
+   * Called when the pointer leaves the trigger; a re-show within the window
+   * cancels it so brief exits do not flicker the bubble.
    */
   private scheduleGraceHide(): void {
     this.cancelGraceHide();
@@ -467,7 +469,7 @@ class Tooltip {
   }
 
   /**
-   * Cancel a pending grace hide (e.g. the pointer reached the bubble in time).
+   * Cancel a pending grace hide (e.g. a re-show arrived within the window).
    */
   private cancelGraceHide(): void {
     if (this.graceHideTimeout) {
@@ -542,7 +544,7 @@ class Tooltip {
 
       revealFor(options);
     };
-    // Defer the hide so the pointer can travel onto the hoverable bubble.
+    // Defer the hide so brief trigger exits/re-entries do not flicker.
     const handleMouseLeave = (): void => this.scheduleGraceHide();
     /**
      * Keyboard focus must also surface the tooltip (WCAG 1.4.13). Focus-driven
@@ -648,32 +650,25 @@ class Tooltip {
 
     if (this.nodes.wrapper && this.nodes.content) {
       this.nodes.wrapper.setAttribute('data-state', 'closed');
+
       /**
-       * Hoverable bubble (WCAG 1.4.13): moving the pointer onto the tooltip
-       * itself keeps it open (cancels the pending grace hide); leaving the
-       * bubble re-arms the grace hide.
+       * Click-transparency is load-bearing: every blok tooltip carries static
+       * text, and the bubble often renders over other interactive controls
+       * (e.g. a color-picker swatch's tooltip covers the swatch row above
+       * it). A bubble that received pointer events swallowed single clicks
+       * on the controls it covered — users could not change an existing
+       * highlight color because the active swatch's tooltip sat over the
+       * Default swatch. Inline `!important` is required so the rule survives
+       * the Top-Layer `all: initial !important` reset (inline !important >
+       * author !important), same as the visibility handling in
+       * updateTooltipVisibility().
        */
-      this.nodes.wrapper.addEventListener('mouseenter', this.handleBubbleEnter);
-      this.nodes.wrapper.addEventListener('mouseleave', this.handleBubbleLeave);
+      this.nodes.wrapper.style.setProperty('pointer-events', 'none', 'important');
       this.append(this.nodes.wrapper, this.nodes.content);
       this.append(document.body, this.nodes.wrapper);
       this.ensureTooltipAttributes();
     }
   }
-
-  /**
-   * Pointer entered the bubble — keep it open by cancelling the grace hide.
-   */
-  private handleBubbleEnter = (): void => {
-    this.cancelGraceHide();
-  };
-
-  /**
-   * Pointer left the bubble — arm the grace hide.
-   */
-  private handleBubbleLeave = (): void => {
-    this.scheduleGraceHide();
-  };
 
   /**
    * Update tooltip visibility based on shown state

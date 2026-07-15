@@ -938,6 +938,91 @@ test.describe('inline tool marker', () => {
     });
   });
 
+  test.describe('tooltip does not block swatch clicks', () => {
+    /**
+     * Regression: the swatch grid wraps into two rows per section, and every
+     * swatch shows a tooltip with placement "top". The tooltip bubble used to
+     * receive pointer events (hoverable-bubble design), so hovering a
+     * bottom-row swatch opened a tooltip directly over the row above, and a
+     * subsequent click on the covered swatch landed on the tooltip instead of
+     * the button — silently doing nothing. This is exactly how users became
+     * unable to change/remove an existing highlight color: the active color's
+     * tooltip covered the Default swatch above it.
+     */
+    test('clicking a swatch covered by another swatch tooltip still applies', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: '<mark style="background-color: var(--blok-color-green-bg);">Highlighted text</mark>',
+          },
+        },
+      ]);
+
+      const paragraph = page.locator(PARAGRAPH_SELECTOR);
+
+      await selectText(paragraph, 'Highlighted text');
+      await openMarkerPicker(page);
+
+      // Hover the green background swatch (bottom row) — its tooltip renders
+      // above it, covering the Default background swatch in the row above.
+      const greenSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-green"]');
+
+      await greenSwatch.hover();
+
+      const tooltip = page.getByTestId('tooltip');
+
+      await expect(tooltip).toHaveAttribute('data-state', 'open');
+
+      // Sanity-check the trap geometry: the tooltip bubble must overlap the
+      // Default swatch, otherwise this test is not exercising the regression.
+      const defaultSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-default"]');
+      const defaultBox = await defaultSwatch.boundingBox();
+      const tooltipBox = await tooltip.boundingBox();
+
+      if (defaultBox === null || tooltipBox === null) {
+        throw new Error('Failed to measure swatch/tooltip geometry');
+      }
+
+      const intersection = {
+        left: Math.max(tooltipBox.x, defaultBox.x),
+        top: Math.max(tooltipBox.y, defaultBox.y),
+        right: Math.min(tooltipBox.x + tooltipBox.width, defaultBox.x + defaultBox.width),
+        bottom: Math.min(tooltipBox.y + tooltipBox.height, defaultBox.y + defaultBox.height),
+      };
+
+      expect(intersection.right).toBeGreaterThan(intersection.left);
+      expect(intersection.bottom).toBeGreaterThan(intersection.top);
+
+      // Move the pointer in one hop to a Default-swatch point that the
+      // tooltip bubble provably covers, and click ONCE with the raw mouse
+      // (locator.click would auto-retry around the obstruction and mask the
+      // bug). This is the real user gesture: aiming at the visible swatch,
+      // unaware an invisible-to-them bubble is in front of it.
+      await page.mouse.move(
+        (intersection.left + intersection.right) / 2,
+        (intersection.top + intersection.bottom) / 2
+      );
+      await page.mouse.down();
+      await page.mouse.up();
+
+      // The single click must reach the swatch and remove the highlight.
+      await page.waitForFunction(
+        ({ selector }) => {
+          const el = document.querySelector(selector);
+
+          return el !== null && el.querySelector('mark') === null;
+        },
+        { selector: PARAGRAPH_SELECTOR }
+      );
+
+      const html = await paragraph.innerHTML();
+
+      expect(html).not.toContain('<mark');
+      expect(html).toContain('Highlighted text');
+    });
+  });
+
   test.describe('dark mode', () => {
     test.use({ colorScheme: 'dark' });
 

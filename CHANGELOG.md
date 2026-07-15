@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased — 2.0.0]
+## [1.1.1](https://github.com/JackUait/blok/compare/v1.1.0...v1.1.1) (2026-07-15)
 
 ### ⚠ BREAKING CHANGES — the `@bloklabs/*` scope rebrand
 

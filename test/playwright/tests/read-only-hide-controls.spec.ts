@@ -228,8 +228,11 @@ test.describe('read-only hideControls', () => {
 
     await selectText(headerBlock, 'Read me');
 
-    // negative assertion — give the inline toolbar a moment to (not) appear
-    await page.waitForTimeout(400);
+    // negative assertion — flush the selectionchange handlers and any
+    // rAF-scheduled UI work before asserting the toolbar did not appear
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
 
     await expect(page.locator(`${INLINE_TOOL_SELECTOR}[data-blok-item-name="read-only-inline"]`)).toHaveCount(0);
   });

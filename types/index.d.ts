@@ -77,6 +77,7 @@ export {
 export {BlockTune, BlockTuneConstructable, BlockTuneRenderContext} from './block-tunes';
 export {
   BlokConfig,
+  ReadOnlyModeConfig,
   SanitizerConfig,
   SanitizerRule,
   ToolSanitizerConfig,

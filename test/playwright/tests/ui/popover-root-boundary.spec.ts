@@ -80,6 +80,10 @@ test.describe('root popover boundary', () => {
     const menu = page.locator(MENU_SELECTOR);
 
     await expect(menu).toBeVisible();
+    // The container opens from scale(0.98) over 120ms. Bounding boxes during
+    // that transition differ by a few pixels across engines, so wait for the
+    // geometry-affecting transform to settle before asserting placement.
+    await expect(menu).toHaveCSS('transform', 'none');
     const menuBox = await menu.boundingBox();
 
     if (menuBox === null) {

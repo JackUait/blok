@@ -17,7 +17,7 @@
 
 **Step 1: Write the failing tests**
 
-Use the existing public `positionAnchored` API. Add cases for `document.body` and `document.documentElement` whose mocked rectangles are scrolled completely above the viewport. Set `window.scrollY = 1800`, use a 298×368 content box and an anchor at viewport `top=468, bottom=492`, then assert root boundaries behave exactly like the live 1024×720 viewport. Add a non-root element case proving its own rectangle remains the boundary.
+Use the existing public `positionAnchored` API. Add cases for `document.body` and `document.documentElement` whose mocked rectangles are scrolled completely above the viewport. Set `window.scrollY = 1800`, use a 298×368 content box and an anchor at viewport `top=468, bottom=492`, then use horizontal/centered placement (the same cross-axis behavior as block settings) to assert root boundaries behave exactly like the live 1024×720 viewport. Add a non-root element case proving its own rectangle remains the boundary.
 
 ```ts
 it.each([
@@ -33,10 +33,9 @@ it.each([
   );
 
   const anchor = rect({ top: 468, bottom: 492, left: 24, right: 42, width: 18, height: 24 });
-  const resolved = positionAnchored(content, anchor, { side: 'bottom', boundary: getBoundary() });
+  const resolved = positionAnchored(content, anchor, { side: 'left', boundary: getBoundary() });
 
-  expect(resolved.side).toBe('top');
-  expect(resolved.top - window.scrollY).toBe(92);
+  expect(resolved.top - window.scrollY).toBe(296);
 });
 ```
 
@@ -50,7 +49,7 @@ Run:
 yarn vitest run --project=unit test/unit/utils/anchored-position-boundary.test.ts
 ```
 
-Expected: the body/html cases fail because their off-screen CSS boxes are used. Existing explicit-boundary cases remain green.
+Expected: the body/html cases fail with viewport-relative top `8` because their off-screen CSS boxes are used. Existing explicit-boundary cases remain green.
 
 **Step 3: Commit the failing tests**
 

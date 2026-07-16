@@ -84,15 +84,26 @@ function measureContent(content: HTMLElement): { width: number; height: number }
 }
 
 /**
- * Resolves the boundary rect: an explicit Element/DOMRect, or the viewport.
+ * Resolves the boundary rect used for collision detection.
+ *
+ * The document roots are aliases for the live viewport, not ordinary element
+ * boundaries. Host pages may give body/html a definite viewport-sized box
+ * while their descendants overflow and the document scrolls. Their element
+ * rects then move above the viewport and would clamp an anchored surface to a
+ * stale first-page boundary. Explicit non-root elements keep their own live
+ * rect so callers can still constrain content to an editor or dialog region.
  * @param boundary - explicit boundary
  * @param viewportSize - current viewport size
  */
-function resolveBoundaryRect(
+export function resolveBoundaryRect(
   boundary: Element | DOMRect | undefined,
   viewportSize: { width: number; height: number }
 ): DOMRect {
-  if (boundary !== undefined) {
+  if (
+    boundary !== undefined
+    && boundary !== document.body
+    && boundary !== document.documentElement
+  ) {
     return toRect(boundary);
   }
 

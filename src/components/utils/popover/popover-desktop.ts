@@ -13,7 +13,7 @@ import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
 import { clampNestedPopoverTop, resolveNestedPopoverSide } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
-import { createPositionTracker, type PositionTracker } from './anchored-position';
+import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from './anchored-position';
 import { stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
 
@@ -510,12 +510,14 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   private applyNonTriggerPosition(measuredSize: { height: number; width: number }): void {
     const containerRect = this.nodes.popoverContainer.getBoundingClientRect();
+    const viewportSize = { width: window.innerWidth, height: window.innerHeight };
+    const scopeBounds = resolveBoundaryRect(this.scopeElement, viewportSize);
     // offset: 0 because the visual gap is handled by CSS calc (0.5rem), not pixel positioning
     const { openTop, openLeft } = resolvePosition({
       anchor: containerRect,
       popoverSize: measuredSize,
-      scopeBounds: this.scopeElement.getBoundingClientRect(),
-      viewportSize: { width: window.innerWidth, height: window.innerHeight },
+      scopeBounds,
+      viewportSize,
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 0,
     });
@@ -576,12 +578,14 @@ export class PopoverDesktop extends PopoverAbstract {
     const leftAlignRect = explicitPosition === undefined
       ? this.leftAlignElement?.getBoundingClientRect()
       : undefined;
+    const viewportSize = { width: window.innerWidth, height: window.innerHeight };
+    const scopeBounds = resolveBoundaryRect(this.scopeElement, viewportSize);
 
     return resolvePosition({
       anchor: rect,
       popoverSize: this.size,
-      scopeBounds: this.scopeElement.getBoundingClientRect(),
-      viewportSize: { width: window.innerWidth, height: window.innerHeight },
+      scopeBounds,
+      viewportSize,
       scrollOffset: { x: window.scrollX, y: window.scrollY },
       offset: 8,
       leftAlignRect,

@@ -21,23 +21,62 @@ const stubSize = (el: HTMLElement, width: number, height: number): void => {
 describe('positionAnchored — horizontal boundary handling', () => {
   let originalInnerWidth: number;
   let originalInnerHeight: number;
+  let originalScrollY: number;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     originalInnerWidth = window.innerWidth;
     originalInnerHeight = window.innerHeight;
+    originalScrollY = window.scrollY;
 
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024, writable: true });
-    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768, writable: true });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 720, writable: true });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0, writable: true });
   });
 
   afterEach(() => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: originalScrollY, writable: true });
 
     document.body.innerHTML = '';
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ['body', () => document.body],
+    ['document element', () => document.documentElement],
+  ] as const)('treats the %s boundary as the live viewport', (_label, getBoundary) => {
+    const content = document.createElement('div');
+
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 1800, writable: true });
+    stubSize(content, 298, 368);
+    document.body.appendChild(content);
+    vi.spyOn(getBoundary(), 'getBoundingClientRect').mockReturnValue(
+      rect({ top: -1800, bottom: -1080, left: 0, right: 1024, width: 1024, height: 720 })
+    );
+
+    const anchor = rect({ top: 468, bottom: 492, left: 24, right: 42, width: 18, height: 24 });
+    const resolved = positionAnchored(content, anchor, { side: 'left', boundary: getBoundary() });
+
+    expect(resolved.top - window.scrollY).toBe(296);
+  });
+
+  it('preserves an explicit non-root element as the collision boundary', () => {
+    const content = document.createElement('div');
+    const boundary = document.createElement('section');
+
+    stubSize(content, 100, 300);
+    document.body.append(content, boundary);
+    vi.spyOn(boundary, 'getBoundingClientRect').mockReturnValue(
+      rect({ top: 100, bottom: 400, left: 0, right: 1024, width: 1024, height: 300 })
+    );
+
+    const anchor = rect({ top: 250, bottom: 350, left: 50, right: 150, width: 100, height: 100 });
+    const resolved = positionAnchored(content, anchor, { side: 'right', align: 'center', boundary });
+
+    expect(resolved.top - window.scrollY).toBe(108);
   });
 
   it('flips to the left when the content overflows the boundary right edge even though the window has room', () => {

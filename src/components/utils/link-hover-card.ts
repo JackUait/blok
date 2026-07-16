@@ -1,5 +1,6 @@
 import { IconCopy, IconGlobe } from '../icons';
 
+import { createPositionTracker, type PositionTracker } from './popover/anchored-position';
 import { promoteToTopLayer, removeFromTopLayer } from './top-layer';
 import { twJoin } from './tw';
 
@@ -167,6 +168,9 @@ export class LinkHoverCard {
    */
   private exitTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  /** Keeps the fixed card attached to an anchor that moves during scrolling. */
+  private positionTracker: PositionTracker | null = null;
+
   /**
    * Whether the card is currently visible.
    */
@@ -246,6 +250,13 @@ export class LinkHoverCard {
     this.shown = true;
     promoteToTopLayer(this.nodes.wrapper);
     this.position(anchor, cursor);
+    this.positionTracker?.detach();
+    this.positionTracker = createPositionTracker(this.nodes.wrapper, () => {
+      if (this.shown && this.currentAnchor === anchor) {
+        this.position(anchor, cursor);
+      }
+    });
+    this.positionTracker.attach();
 
     // Entrance: fade + rise once positioned. Guarded so re-showing over the
     // same target doesn't restart the animation mid-hover.
@@ -313,6 +324,8 @@ export class LinkHoverCard {
 
     this.shown = false;
     this.currentAnchor = null;
+    this.positionTracker?.detach();
+    this.positionTracker = null;
 
     // Flip to the closed state so the fade+rise transition plays in reverse,
     // then detach only after it finishes. Kept in the Top Layer for the
@@ -351,6 +364,8 @@ export class LinkHoverCard {
     this.cancelShow();
     this.cancelEnterFrame();
     this.cancelExit();
+    this.positionTracker?.detach();
+    this.positionTracker = null;
     removeFromTopLayer(this.nodes.wrapper);
     this.nodes.wrapper.remove();
     this.currentAnchor = null;
@@ -367,11 +382,16 @@ export class LinkHoverCard {
    */
   private position(anchor: HTMLAnchorElement, cursor: CursorPosition | null): void {
     const width = this.nodes.wrapper.offsetWidth;
+    const height = this.nodes.wrapper.offsetHeight;
+    const rect = anchor.getBoundingClientRect();
+    const gap = cursor ? LINK_GAP_Y : OFFSET_TOP;
+    const belowPlacement = rect.bottom + gap;
+    const overflowsBottom = belowPlacement + height > window.innerHeight - VIEWPORT_MARGIN;
+    const desiredTop = overflowsBottom ? rect.top - gap - height : belowPlacement;
+    const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - height - VIEWPORT_MARGIN);
+    const top = Math.max(VIEWPORT_MARGIN, Math.min(desiredTop, maxTop));
 
     if (cursor) {
-      const height = this.nodes.wrapper.offsetHeight;
-      const rect = anchor.getBoundingClientRect();
-
       // Center on the cursor; the clamp shifts it left or right when a viewport
       // edge is too close to keep it centered.
       const centeredLeft = cursor.x - width / 2;
@@ -380,20 +400,13 @@ export class LinkHoverCard {
       // Keep a fixed gap between the link and the card by anchoring vertically to
       // the link's bottom edge; flip above the link when it would spill past the
       // bottom edge of the viewport.
-      const belowPlacement = rect.bottom + LINK_GAP_Y;
-      const overflowsBottom = belowPlacement + height > window.innerHeight - VIEWPORT_MARGIN;
-      const desiredTop = overflowsBottom ? rect.top - LINK_GAP_Y - height : belowPlacement;
-      const top = Math.max(VIEWPORT_MARGIN, desiredTop);
-
       this.nodes.wrapper.style.left = `${left}px`;
       this.nodes.wrapper.style.top = `${top}px`;
 
       return;
     }
 
-    const rect = anchor.getBoundingClientRect();
     const left = Math.max(VIEWPORT_MARGIN, Math.min(rect.left, window.innerWidth - width - VIEWPORT_MARGIN));
-    const top = rect.bottom + OFFSET_TOP;
 
     this.nodes.wrapper.style.left = `${left}px`;
     this.nodes.wrapper.style.top = `${top}px`;

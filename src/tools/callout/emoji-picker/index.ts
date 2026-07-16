@@ -4,6 +4,7 @@ import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMO
 import { loadEmojiLocale, type EmojiLocaleData } from './emoji-locale';
 import { onHover } from '../../../components/utils/tooltip';
 import { getTabbables } from '../../../components/utils/modal-dialog';
+import { createPositionTracker, type PositionTracker } from '../../../components/utils/popover/anchored-position';
 import {
   REMOVE_EMOJI_KEY, FILTER_EMOJIS_KEY, CALLOUT_EMOJI_CATEGORY_KEY, NO_EMOJIS_FOUND_KEY, EMOJI_SEARCH_RESULTS_KEY, PICK_RANDOM_KEY, SKIN_TONE_KEY,
   EDIT_ICON_KEY,
@@ -117,6 +118,7 @@ export class EmojiPicker {
   private _previouslyFocused: HTMLElement | null = null;
   private _backdrop: HTMLElement | null = null;
   private _savedOverflow = '';
+  private _positionTracker: PositionTracker | null = null;
 
   /** Maps category id -> nav button for active-state management. */
   private _navButtons = new Map<string, HTMLButtonElement>();
@@ -220,6 +222,13 @@ export class EmojiPicker {
     this._element.style.animation = 'none';
     this._element.hidden = false;
     this.position(anchor);
+    this._positionTracker?.detach();
+    this._positionTracker = createPositionTracker(this._element, () => {
+      if (this._open && this._anchorEl !== null) {
+        this.position(this._anchorEl);
+      }
+    });
+    this._positionTracker.attach();
 
     // Replay the opening animation
     void this._element.offsetHeight;
@@ -233,6 +242,8 @@ export class EmojiPicker {
 
   public close(): void {
     this._open = false;
+    this._positionTracker?.detach();
+    this._positionTracker = null;
     this._element.hidden = true;
     document.removeEventListener('keydown', this._onDocumentKeydown, true);
     this.closeSkinTonePopover();

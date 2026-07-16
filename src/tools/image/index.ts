@@ -648,7 +648,7 @@ export class ImageTool implements BlockTool {
     if (!this.root) return;
     const r = this.root;
     r.setAttribute('data-state', this.state.toLowerCase());
-    r.setAttribute('data-size', this.data.size ?? 'md');
+    r.setAttribute('data-size', this.data.size ?? 'full');
     r.setAttribute('data-align', this.data.alignment ?? 'center');
     r.setAttribute('data-frame', this.data.frame ?? 'none');
     r.setAttribute('data-rounded', this.data.rounded === false ? 'off' : 'on');
@@ -771,7 +771,7 @@ export class ImageTool implements BlockTool {
         state: {
           alignment: this.data.alignment ?? 'center',
           captionVisible: this.data.captionVisible !== false,
-          size: this.data.size ?? 'md',
+          size: this.data.size ?? 'full',
         },
         onAlign: (next) => this.setAlignment(next),
         onSize: (next) => this.setSize(next),

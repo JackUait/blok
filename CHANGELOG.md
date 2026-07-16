@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [1.2.1](https://github.com/JackUait/blok/compare/v1.2.0...v1.2.1) (2026-07-16)
 
+### Features
+
+- **Image** — Images now display at the full width of the article by default. Previously an image without an explicit size preset rendered at the medium (520px) preset; the default is now the `full` preset. Images with an explicitly saved `size` are unaffected.
+
 ### Bug Fixes
 
 - **Popover** — The search input's focus ring was clipped along its bottom edge by the context label's opaque background painting over it; the search wrapper now renders in the positioned paint layer so the full ring is visible. The gap between the search field and the context label was also widened slightly.

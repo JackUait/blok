@@ -756,7 +756,7 @@ describe('ImageTool — data attributes on root', () => {
     const tool = new ImageTool(createOptions({ url: 'https://x/y.png' }));
     const root = tool.render();
     expect(root.getAttribute('data-state')).toBe('rendered');
-    expect(root.getAttribute('data-size')).toBe('md');
+    expect(root.getAttribute('data-size')).toBe('full');
     expect(root.getAttribute('data-align')).toBe('center');
     expect(root.getAttribute('data-frame')).toBe('none');
     expect(root.getAttribute('data-rounded')).toBe('on');

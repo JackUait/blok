@@ -212,7 +212,7 @@ class Tooltip {
   private constructor() {
     this.prepare();
 
-    window.addEventListener('scroll', this.handleWindowScroll, { passive: true });
+    window.addEventListener('scroll', this.handleWindowScroll, { capture: true, passive: true });
   }
 
   /**
@@ -623,7 +623,7 @@ class Tooltip {
       this.nodes.wrapper.remove();
     }
 
-    window.removeEventListener('scroll', this.handleWindowScroll);
+    window.removeEventListener('scroll', this.handleWindowScroll, { capture: true });
 
     Tooltip.instance = null;
   }

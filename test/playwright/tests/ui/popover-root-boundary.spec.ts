@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const BOOKMARK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="bookmark"]`;
 const SETTINGS_TRIGGER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const MENU_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
 
@@ -26,9 +26,9 @@ test.describe('root popover boundary', () => {
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
-  test('keeps block settings beside a deep block when body is only 100vh tall', async ({ page }) => {
+  test('keeps the published bookmark menu beside its deep block when body is only 100vh tall', async ({ page }) => {
     /**
-     * This is the consumer's actual scroll geometry: body has a definite
+     * This is the consumer's actual published-article geometry: body has a definite
      * viewport height while its descendants overflow far below it. Once the
      * document scrolls, body.getBoundingClientRect() is entirely above the
      * viewport and cannot serve as a collision boundary.
@@ -44,12 +44,22 @@ test.describe('root popover boundary', () => {
 
       const blok = new window.Blok({
         holder: 'blok',
+        readOnly: true,
         data: {
           blocks: [
             {
-              id: 'deep-block',
-              type: 'paragraph',
-              data: { text: 'Deep target' },
+              id: 'recipes-heading',
+              type: 'header',
+              data: { text: 'Рецепты прямоугольной пиццы кусочками', level: 2 },
+            },
+            {
+              id: 'deep-bookmark',
+              type: 'bookmark',
+              data: {
+                url: 'https://drive.google.com/file/d/example/preview',
+                title: 'drive.google.com',
+              },
+              lastEditedAt: Date.UTC(2026, 5, 30, 12, 4),
             },
           ],
         },
@@ -59,11 +69,11 @@ test.describe('root popover boundary', () => {
       await blok.isReady;
     });
 
-    const block = page.locator(BLOCK_SELECTOR);
+    const bookmark = page.locator(BOOKMARK_SELECTOR);
 
-    await block.scrollIntoViewIfNeeded();
+    await bookmark.scrollIntoViewIfNeeded();
     await page.evaluate(() => window.scrollBy(0, -120));
-    await block.click();
+    await bookmark.hover();
 
     const trigger = page.locator(SETTINGS_TRIGGER_SELECTOR);
 

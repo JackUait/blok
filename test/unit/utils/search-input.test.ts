@@ -43,6 +43,18 @@ describe('SearchInput', () => {
     expect(input.placeholder).toBe('Filter actions');
   });
 
+  it('positions the wrapper so its focus ring paints above sibling backgrounds', () => {
+    // The focus-within ring is a box-shadow that extends 2px below the wrapper.
+    // The popover's context label sits flush underneath with an opaque
+    // bg-popover-bg, and a later sibling's background paints over a static
+    // sibling's shadow — clipping the ring's bottom edge. `relative` lifts the
+    // wrapper into the positioned paint layer, above sibling backgrounds.
+    const searchInput = createSearchInput();
+    const element = searchInput.getElement();
+
+    expect(element.classList.contains('relative')).toBe(true);
+  });
+
   it('exposes the input as an ARIA combobox with an accessible label', () => {
     const searchInput = createSearchInput({ label: 'Search actions', controlsId: 'popover-items-1' });
     const input = getInput(searchInput);

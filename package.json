@@ -101,7 +101,7 @@
   "scripts": {
     "serve": "vite --no-open",
     "serve:docs": "cd docs && vite --port 8080",
-    "build": "node scripts/generate-fonts.mjs && vite build --mode production && vite build --config vite.config.iife.mjs --mode production && vite build --config vite.config.umd.mjs --mode production && node scripts/build-locales.mjs && yarn build:angular && yarn workspace @bloklabs/react build && yarn workspace @bloklabs/vue build",
+    "build": "node scripts/build-all.mjs",
     "build:angular": "node scripts/build-angular.mjs",
     "build:cli": "node scripts/build-cli.mjs",
     "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && vite build --config vite.config.umd.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs && node scripts/build-vue-vendor.mjs && node scripts/build-angular.mjs && node scripts/build-angular-vendor.mjs && yarn workspace @bloklabs/react build && yarn workspace @bloklabs/vue build",
@@ -142,7 +142,7 @@
     "validate:spec-coverage": "node scripts/validate-spec-file-coverage.mjs",
     "ci:timing": "node scripts/ci-timing-probe.mjs",
     "release": "node scripts/release.mjs",
-    "release:preflight": "yarn lint && yarn test",
+    "release:preflight": "node scripts/release-preflight.mjs",
     "unused-css": "node scripts/unused-css-finder/cli.mjs"
   },
   "author": "JackUait",

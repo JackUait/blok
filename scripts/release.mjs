@@ -201,10 +201,9 @@ if (isDirectRun) {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   }
 
-  // --- Build once (root build chains every workspace), then the CLI ---
+  // --- Build the whole family + CLI as one parallel task graph ---
 
-  run('yarn build');
-  run('node scripts/build-cli.mjs');
+  run('node scripts/build-all.mjs --with-cli');
 
   // --- Publish the whole family: npmjs @bloklabs/* + GHP @dodopizza/* mirrors ---
 

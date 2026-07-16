@@ -7,6 +7,10 @@ import {
   ratioFromPointer,
 } from '../../../../src/tools/video/controls';
 
+// Mounts without an explicit storage stub fall back to jsdom's real localStorage,
+// which persists across tests — clear it so persisted rate/loop/volume can't leak.
+beforeEach(() => localStorage.clear());
+
 const fakeRanges = (pairs: [number, number][]): TimeRanges => ({
   length: pairs.length,
   start: (i: number): number => pairs[i][0],
@@ -1794,7 +1798,7 @@ describe('video controls — persistence', () => {
     };
   };
   interface VideoStorageLike { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void }
-  const mountWith = (storage: VideoStorageLike): Harness => {
+  const mountWith = (storage: VideoStorageLike, opts: Partial<Parameters<typeof attachControls>[0]> = {}): Harness => {
     const figure = document.createElement('figure');
     const video = document.createElement('video');
     setProp(video, 'play', vi.fn().mockResolvedValue(undefined));
@@ -1803,7 +1807,7 @@ describe('video controls — persistence', () => {
     const slot = document.createElement('div');
     slot.appendChild(figure);
     document.body.appendChild(slot);
-    const handle = attachControls({ video, figure, storage });
+    const handle = attachControls({ video, figure, storage, ...opts });
     figure.appendChild(handle.element);
     return { figure, slot, video, controls: handle.element, setTheater: handle.setTheater, destroy: handle.destroy };
   };
@@ -1838,6 +1842,49 @@ describe('video controls — persistence', () => {
     b.video.dispatchEvent(new Event('loadedmetadata'));
     expect(b.video.currentTime).toBe(40);
     b.destroy();
+  });
+
+  it('persists the playback rate and restores it on a new mount', () => {
+    const { data, storage } = makeStore();
+    const a = mountWith(storage);
+    q(a.figure, '[data-action="speed-1.5"]').click();
+    expect(data['blok:video:rate']).toBe('1.5');
+    a.destroy();
+
+    const b = mountWith(storage);
+    expect(b.video.playbackRate).toBe(1.5);
+    expect(q<HTMLInputElement>(b.figure, '[data-role="speed-slider"]').value).toBe('1.5');
+    b.destroy();
+  });
+
+  it('ignores a corrupt stored playback rate', () => {
+    const { storage } = makeStore();
+    storage.setItem('blok:video:rate', 'not-a-number');
+    const a = mountWith(storage);
+    expect(a.video.playbackRate).toBe(1);
+    a.destroy();
+  });
+
+  it('persists loop toggles and restores them on a new mount', () => {
+    const { data, storage } = makeStore();
+    const a = mountWith(storage);
+    q(a.figure, '[data-action="loop"]').click();
+    expect(data['blok:video:loop']).toBe('true');
+    a.destroy();
+
+    const b = mountWith(storage);
+    expect(b.video.loop).toBe(true);
+    expect(q(b.figure, '[data-action="loop"]').getAttribute('aria-checked')).toBe('true');
+    b.destroy();
+  });
+
+  it('stored loop preference overrides the initial loop option', () => {
+    const { storage } = makeStore();
+    storage.setItem('blok:video:loop', 'false');
+    const a = mountWith(storage, { loop: true });
+    expect(a.video.loop).toBe(false);
+    expect(q(a.figure, '[data-action="loop"]').getAttribute('aria-checked')).toBe('false');
+    a.destroy();
   });
 
   it('does not throw when storage access fails', () => {

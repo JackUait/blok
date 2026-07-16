@@ -18,7 +18,12 @@ const memoryStorage = () => {
   };
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Attaches without an explicit storage stub fall back to jsdom's real
+  // localStorage, which persists across tests — clear it to avoid leakage.
+  localStorage.clear();
+});
 afterEach(() => vi.restoreAllMocks());
 
 describe('attachControls', () => {
@@ -151,5 +156,59 @@ describe('attachControls', () => {
     attachControls({ media, figure, data: { url: 'u' }, storage });
     media.dispatchEvent(new Event('loadedmetadata'));
     expect(media.currentTime).toBe(0);
+  });
+
+  it('persists the playback speed and restores it on a new attach', () => {
+    const storage = memoryStorage();
+    const a = makeMedia();
+    const ha = attachControls({ media: a, figure: document.createElement('figure'), data: { url: 'u' }, storage });
+    const chips = ha.element.querySelectorAll('.blok-audio-controls__speed-chip');
+    (chips[2] as HTMLButtonElement).click(); // 1.5× preset
+    expect(storage.getItem('blok:audio:rate')).toBe('1.5');
+    ha.destroy();
+
+    const b = makeMedia();
+    const hb = attachControls({ media: b, figure: document.createElement('figure'), data: { url: 'u' }, storage });
+    expect(b.playbackRate).toBe(1.5);
+    const slider = hb.element.querySelector('.blok-audio-controls__speed-slider') as HTMLInputElement;
+    expect(slider.value).toBe('1.5');
+    hb.destroy();
+  });
+
+  it('ignores a corrupt stored playback speed', () => {
+    const storage = memoryStorage();
+    storage.setItem('blok:audio:rate', 'not-a-number');
+    const media = makeMedia();
+    const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' }, storage });
+    expect(media.playbackRate).toBe(1);
+    h.destroy();
+  });
+
+  it('persists loop toggles and restores them on a new attach without notifying onLoopChange', () => {
+    const storage = memoryStorage();
+    const a = makeMedia();
+    const ha = attachControls({ media: a, figure: document.createElement('figure'), data: { url: 'u' }, storage });
+    (ha.element.querySelector('[data-role="audio-loop"]') as HTMLButtonElement).click();
+    expect(storage.getItem('blok:audio:loop')).toBe('true');
+    ha.destroy();
+
+    const b = makeMedia();
+    const onLoopChange = vi.fn();
+    const hb = attachControls({ media: b, figure: document.createElement('figure'), data: { url: 'u' }, storage, onLoopChange });
+    expect(b.loop).toBe(true);
+    expect(hb.element.querySelector('[data-role="audio-loop"]')!.getAttribute('aria-pressed')).toBe('true');
+    expect(onLoopChange).not.toHaveBeenCalled();
+    hb.destroy();
+  });
+
+  it('stored loop=false overrides a media element seeded with loop on', () => {
+    const storage = memoryStorage();
+    storage.setItem('blok:audio:loop', 'false');
+    const media = makeMedia();
+    media.loop = true;
+    const h = attachControls({ media, figure: document.createElement('figure'), data: { url: 'u' }, storage });
+    expect(media.loop).toBe(false);
+    expect(h.element.querySelector('[data-role="audio-loop"]')!.getAttribute('aria-pressed')).toBe('false');
+    h.destroy();
   });
 });

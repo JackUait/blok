@@ -162,7 +162,10 @@ export function attachControls({
   };
 
   // ----- persistence -----
+  // Volume, rate and loop are shared across every audio block; position is per-track.
   const VOL_KEY = 'blok:audio:volume';
+  const RATE_KEY = 'blok:audio:rate';
+  const LOOP_KEY = 'blok:audio:loop';
   const posKey = (): string => `blok:audio:pos:${media.currentSrc || data.url}`;
 
   const persistVolume = (): void => {
@@ -268,7 +271,12 @@ export function attachControls({
     speedSlider.style.setProperty('--blok-audio-speed-pct', speedFillPct(next));
     speedDec.disabled = next <= SPEED_MIN;
     speedInc.disabled = next >= SPEED_MAX;
+    safeSet(RATE_KEY, String(next));
   };
+
+  // Restore the shared playback speed through setRate so the menu UI stays in sync.
+  const storedRate = Number(safeGet(RATE_KEY) ?? NaN);
+  if (Number.isFinite(storedRate) && storedRate > 0) setRate(storedRate);
 
   const onSpeedSliderInput = (): void => setRate(Number(speedSlider.value));
   speedSlider.addEventListener('input', onSpeedSliderInput);
@@ -331,6 +339,10 @@ export function attachControls({
   gearBtn.addEventListener('click', onGearClick);
 
   // ----- loop -----
+  // The shared stored preference wins over any seed on the element; restoring is
+  // not a user toggle, so it does not notify onLoopChange (block data untouched).
+  const storedLoop = safeGet(LOOP_KEY);
+  if (storedLoop !== null) media.loop = storedLoop === 'true';
   const loopBtn = button('audio-loop', i18nLabel('loop', 'Loop'), IconPlayerLoop);
   loopBtn.setAttribute('aria-pressed', String(media.loop));
 
@@ -364,6 +376,7 @@ export function attachControls({
   const onLoopClick = (): void => {
     media.loop = !media.loop;
     loopBtn.setAttribute('aria-pressed', String(media.loop));
+    safeSet(LOOP_KEY, String(media.loop));
     onLoopChange?.(media.loop);
   };
 

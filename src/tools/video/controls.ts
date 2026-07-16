@@ -794,11 +794,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   loopSpacer.className = 'blok-video-controls__menu-chevron';
   loopSpacer.setAttribute('aria-hidden', 'true');
   loopRow.append(menuIcon(IconPlayerLoop), loopLabel, loopValue, loopSpacer);
-  loopRow.addEventListener('click', () => {
-    media.loop = !media.loop;
-    loopRow.setAttribute('aria-checked', String(media.loop));
-    loopValue.textContent = media.loop ? i18nLabel('on', 'On') : i18nLabel('off', 'Off');
-  });
+  // setLoop lives in the persistence section below (it also stores the shared
+  // preference); the listener only fires after attach, so the late const is safe.
+  loopRow.addEventListener('click', () => setLoop(!media.loop));
 
   mainPane.append(speedNav, loopRow);
 
@@ -907,6 +905,9 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     speedSlider.style.setProperty('--blok-speed-pct', speedFillPct(next));
     speedDec.disabled = next <= SPEED_MIN;
     speedInc.disabled = next >= SPEED_MAX;
+    // RATE_KEY/safeSet live in the persistence section below; setRate only runs
+    // on interaction or the restore call there, both after those consts exist.
+    safeSet(RATE_KEY, String(next));
   };
   // Clicking a preset applies the rate instantly (setRate, above) but glides the thumb +
   // fill from the old position into place rather than teleporting. A native range thumb
@@ -1305,15 +1306,18 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     document.addEventListener('mousedown', onCtxOutside);
     document.addEventListener('keydown', onCtxKeydown);
   };
-  ctxLoop.addEventListener('click', () => { media.loop = !media.loop; ctxLoop.setAttribute('aria-checked', String(media.loop)); closeCtxMenu(); });
+  ctxLoop.addEventListener('click', () => { setLoop(!media.loop); ctxLoop.setAttribute('aria-checked', String(media.loop)); closeCtxMenu(); });
   ctxCopy.addEventListener('click', () => { clipboardWrite(video.currentSrc); closeCtxMenu(); });
   ctxCopyAt.addEventListener('click', () => { clipboardWrite(`${video.currentSrc}#t=${Math.floor(video.currentTime)}`); closeCtxMenu(); });
   ctxStats.addEventListener('click', () => { toggleStats(); closeCtxMenu(); });
   video.addEventListener('contextmenu', onContextMenu);
 
-  // ----- volume + position persistence -----
+  // ----- volume / rate / loop / position persistence -----
+  // Volume, rate and loop are shared across every video block; position is per-source.
   const store: VideoStorage | null = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
   const VOL_KEY = 'blok:video:volume';
+  const RATE_KEY = 'blok:video:rate';
+  const LOOP_KEY = 'blok:video:loop';
   const posKey = (): string | null => (video.currentSrc ? `blok:video:pos:${video.currentSrc}` : null);
   const safeGet = (key: string): string | null => { try { return store?.getItem(key) ?? null; } catch { return null; } };
   const safeSet = (key: string, value: string): void => { try { store?.setItem(key, value); } catch { /* private mode / quota */ } };
@@ -1339,6 +1343,19 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
       if (Number.isFinite(target) && target > 0 && (dur === 0 || target < dur - 5)) media.currentTime = target;
     }
   };
+  const setLoop = (next: boolean): void => {
+    media.loop = next;
+    loopRow.setAttribute('aria-checked', String(next));
+    loopValue.textContent = next ? i18nLabel('on', 'On') : i18nLabel('off', 'Off');
+    safeSet(LOOP_KEY, String(next));
+  };
+  // Rate and loop restore immediately on attach (they don't depend on metadata).
+  // Rate goes through setRate so the gear menu UI stays in sync; the stored loop
+  // preference wins over the block's Loop tune seed.
+  const storedRate = Number(safeGet(RATE_KEY) ?? NaN);
+  if (Number.isFinite(storedRate) && storedRate > 0) setRate(storedRate);
+  const storedLoop = safeGet(LOOP_KEY);
+  if (storedLoop !== null) setLoop(storedLoop === 'true');
 
   playToggle.addEventListener('click', togglePlay);
   centerPlay.addEventListener('click', () => { void media.play(); });

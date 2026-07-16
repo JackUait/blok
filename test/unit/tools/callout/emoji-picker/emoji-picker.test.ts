@@ -71,6 +71,42 @@ describe('EmojiPicker', () => {
     expect(el.className).not.toContain('absolute');
   });
 
+  it('follows its anchor when a nested scroll container scrolls', async () => {
+    const { EmojiPicker } = await import('../../../../../src/tools/callout/emoji-picker');
+    const anchor = document.createElement('button');
+    const anchorRect = vi.fn(() => ({
+      top: 100, bottom: 120, left: 40, right: 80,
+      width: 40, height: 20, x: 40, y: 100, toJSON: () => ({}),
+    } as DOMRect));
+
+    anchor.getBoundingClientRect = anchorRect;
+    container.appendChild(anchor);
+
+    const picker = new EmojiPicker({ onSelect: vi.fn(), onRemove: vi.fn(), i18n: { t: (k: string) => k } as never, locale: 'en' });
+    const element = picker.getElement();
+
+    element.getBoundingClientRect = vi.fn(() => ({
+      top: 0, bottom: 300, left: 0, right: 400,
+      width: 400, height: 300, x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect));
+    document.body.appendChild(element);
+    await picker.open(anchor);
+
+    expect(element.style.top).toBe('124px');
+
+    anchorRect.mockReturnValue({
+      top: 60, bottom: 80, left: 40, right: 80,
+      width: 40, height: 20, x: 40, y: 60, toJSON: () => ({}),
+    } as DOMRect);
+    // Scroll does not bubble; the picker must observe it during capture.
+    container.dispatchEvent(new Event('scroll'));
+
+    expect(element.style.top).toBe('84px');
+
+    picker.close();
+    element.remove();
+  });
+
   it('marks the picker as a blok popover so its scoped utilities apply on document.body', async () => {
     // The picker is appended to document.body (callout/index.ts), OUTSIDE
     // [data-blok-interface]. Blok's compiled utilities are scoped to only

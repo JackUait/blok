@@ -1040,6 +1040,18 @@ describe('PopoverDesktop', () => {
       expect(restoredOrder).toEqual(originalOrder);
     });
 
+    it('pads the contextLabel top so it keeps a comfortable gap from the search input above', () => {
+      const popover = createPopover({
+        contextLabel: 'Text',
+        items: [
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+      });
+      const contextLabelEl = popover.getElement().querySelector('[data-blok-testid="popover-context-label"]');
+
+      expect(contextLabelEl?.classList.contains('pt-2')).toBe(true);
+    });
+
     it('hides contextLabel when filter query is non-empty and restores it when cleared', () => {
       const popover = createPopover({
         contextLabel: 'Text',

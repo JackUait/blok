@@ -985,7 +985,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       ? (() => {
         const el = document.createElement('div');
 
-        el.className = 'shrink-0 pl-2 pr-3 pt-1 pb-1.5 text-xs font-medium text-gray-text/50 cursor-default bg-popover-bg';
+        el.className = 'shrink-0 pl-2 pr-3 pt-2 pb-1.5 text-xs font-medium text-gray-text/50 cursor-default bg-popover-bg';
         el.setAttribute('role', 'status');
         el.setAttribute('data-blok-testid', 'popover-context-label');
         el.textContent = this.params.contextLabel;

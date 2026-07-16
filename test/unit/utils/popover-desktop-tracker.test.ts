@@ -190,10 +190,10 @@ describe('PopoverDesktop position tracker wiring', () => {
     nestedPopover.destroy();
   });
 
-  it('moves an explicit virtual anchor by its live trigger context delta', () => {
+  it('moves an explicit virtual anchor by an explicitly supplied trigger context delta', () => {
     const caretRect = createRect({ top: 110, bottom: 126, left: 80, right: 80, width: 0, height: 16 });
 
-    popover.updatePosition(caretRect);
+    popover.updatePosition(caretRect, trigger);
     popover.show();
 
     expect(popover.getElement().style.top).toBe('134px');
@@ -204,6 +204,24 @@ describe('PopoverDesktop position tracker wiring', () => {
     window.dispatchEvent(new Event('scroll'));
 
     expect(popover.getElement().style.top).toBe('94px');
+  });
+
+  it('dismisses a context-free virtual anchor when a nested scroller moves', () => {
+    const scroller = document.createElement('div');
+    const positionedPopover = new PopoverDesktop({
+      items: createDefaultItems(),
+      position: createRect({ top: 100, bottom: 140, left: 50, right: 250, width: 200, height: 40 }),
+    });
+
+    document.body.appendChild(scroller);
+    positionedPopover.show();
+
+    expect(positionedPopover.getElement().hasAttribute('data-blok-popover-opened')).toBe(true);
+
+    scroller.dispatchEvent(new Event('scroll'));
+
+    expect(positionedPopover.getElement().hasAttribute('data-blok-popover-opened')).toBe(false);
+    positionedPopover.destroy();
   });
 
   it('moves an explicit virtual anchor by its dedicated position context', () => {

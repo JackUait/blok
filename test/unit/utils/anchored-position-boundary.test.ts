@@ -21,6 +21,7 @@ const stubSize = (el: HTMLElement, width: number, height: number): void => {
 describe('positionAnchored — horizontal boundary handling', () => {
   let originalInnerWidth: number;
   let originalInnerHeight: number;
+  let originalScrollX: number;
   let originalScrollY: number;
 
   beforeEach(() => {
@@ -28,16 +29,19 @@ describe('positionAnchored — horizontal boundary handling', () => {
 
     originalInnerWidth = window.innerWidth;
     originalInnerHeight = window.innerHeight;
+    originalScrollX = window.scrollX;
     originalScrollY = window.scrollY;
 
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024, writable: true });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 720, writable: true });
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: 0, writable: true });
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 0, writable: true });
   });
 
   afterEach(() => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: originalScrollX, writable: true });
     Object.defineProperty(window, 'scrollY', { configurable: true, value: originalScrollY, writable: true });
 
     document.body.innerHTML = '';
@@ -61,6 +65,68 @@ describe('positionAnchored — horizontal boundary handling', () => {
     const resolved = positionAnchored(content, anchor, { side: 'left', boundary: getBoundary() });
 
     expect(resolved.top - window.scrollY).toBe(296);
+  });
+
+  it.each([
+    ['omitted', () => undefined],
+    ['body', () => document.body],
+    ['document element', () => document.documentElement],
+  ] as const)(
+    'normalizes the %s root boundary across every side and both scroll axes',
+    (_label, getBoundary) => {
+      Object.defineProperty(window, 'scrollX', { configurable: true, value: 120, writable: true });
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 1800, writable: true });
+
+      const root = getBoundary();
+      const rootRectSpy = root === undefined
+        ? undefined
+        : vi.spyOn(root, 'getBoundingClientRect').mockReturnValue(
+          rect({ top: -1800, bottom: -1080, left: -120, right: 904, width: 1024, height: 720 })
+        );
+      const anchor = rect({ top: 400, bottom: 440, left: 500, right: 540, width: 40, height: 40 });
+      const expectedViewportCoordinates = {
+        bottom: { top: 448, left: 500 },
+        top: { top: 448, left: 500 },
+        left: { top: 340, left: 304 },
+        right: { top: 340, left: 536 },
+      } as const;
+
+      (['bottom', 'top', 'left', 'right'] as const).forEach((side) => {
+        const content = document.createElement('div');
+
+        stubSize(content, 200, 160);
+        document.body.appendChild(content);
+
+        const resolved = positionAnchored(content, anchor, { side, boundary: root });
+        const expected = expectedViewportCoordinates[side];
+
+        expect(resolved.top - window.scrollY, `${side} top`).toBe(expected.top);
+        expect(resolved.left - window.scrollX, `${side} left`).toBe(expected.left);
+      });
+
+      // Root CSS boxes are deliberately stale and must never participate in
+      // collision math; they are aliases for the live viewport.
+      expect(rootRectSpy?.mock.calls.length ?? 0).toBe(0);
+    }
+  );
+
+  it('preserves an explicit DOMRect boundary under two-axis document scroll', () => {
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: 120, writable: true });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 1800, writable: true });
+
+    const content = document.createElement('div');
+
+    stubSize(content, 300, 250);
+    document.body.appendChild(content);
+
+    const anchor = rect({ top: 500, bottom: 540, left: 650, right: 700, width: 50, height: 40 });
+    const boundary = rect({ top: 100, bottom: 600, left: 200, right: 800, width: 600, height: 500 });
+    const resolved = positionAnchored(content, anchor, { side: 'bottom', boundary });
+
+    expect(resolved.side).toBe('top');
+    expect(resolved.align).toBe('end');
+    expect(resolved.top - window.scrollY).toBe(242);
+    expect(resolved.left - window.scrollX).toBe(400);
   });
 
   it('preserves an explicit non-root element as the collision boundary', () => {

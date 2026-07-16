@@ -757,6 +757,53 @@ describe('PopoverDesktop', () => {
         Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
       }
     });
+
+    it('keeps a body-scoped menu centered on its hidden trigger after deep document scrolling', () => {
+      const originalInnerWidth = window.innerWidth;
+      const originalInnerHeight = window.innerHeight;
+      const originalScrollX = window.scrollX;
+      const originalScrollY = window.scrollY;
+
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024, writable: true });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 720, writable: true });
+      Object.defineProperty(window, 'scrollX', { configurable: true, value: 0, writable: true });
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 1800, writable: true });
+
+      try {
+        const trigger = document.createElement('button');
+        const liveRectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+          createRect({ top: 468, bottom: 492, left: 24, right: 42, width: 18, height: 24 })
+        );
+
+        document.body.appendChild(trigger);
+        vi.spyOn(document.body, 'getBoundingClientRect').mockReturnValue(
+          createRect({ top: -1800, bottom: -1080, left: 0, right: 1024, width: 1024, height: 720 })
+        );
+
+        const popover = new PopoverDesktop({
+          trigger,
+          items: createDefaultItems(),
+          placeLeftOfAnchor: true,
+          viewportMargin: 50,
+        });
+        const instance = popover as unknown as PopoverDesktopInternal;
+
+        vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 368, width: 298 });
+
+        // BlockSettings hides its dots trigger as soon as the menu opens. The
+        // construction-time rect remains the anchor while the root boundary
+        // must still describe the current viewport, not body's 100vh CSS box.
+        liveRectSpy.mockReturnValue(createRect({}));
+        popover.show();
+
+        expect(parseFloat(popover.getElement().style.top) - window.scrollY).toBe(296);
+      } finally {
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+        Object.defineProperty(window, 'scrollX', { configurable: true, value: originalScrollX, writable: true });
+        Object.defineProperty(window, 'scrollY', { configurable: true, value: originalScrollY, writable: true });
+      }
+    });
   });
 
   describe('hide', () => {

@@ -66,7 +66,7 @@ describe('DatabasePropertyTypePopover', () => {
       vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(
         rect({ top: 700, bottom: 740, left: 50, right: 90, width: 40, height: 40 })
       );
-      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function getOffsetHeight() {
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function getOffsetHeight(this: HTMLElement): number {
         return this.hasAttribute('data-blok-database-property-type-popover') ? 200 : 0;
       });
 

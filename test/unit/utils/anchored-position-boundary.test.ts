@@ -68,9 +68,9 @@ describe('positionAnchored — horizontal boundary handling', () => {
   });
 
   it.each([
-    ['omitted', () => undefined],
-    ['body', () => document.body],
-    ['document element', () => document.documentElement],
+    ['omitted', (): undefined => undefined],
+    ['body', (): HTMLElement => document.body],
+    ['document element', (): HTMLElement => document.documentElement],
   ] as const)(
     'normalizes the %s root boundary across every side and both scroll axes',
     (_label, getBoundary) => {

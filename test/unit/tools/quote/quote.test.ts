@@ -386,12 +386,29 @@ describe('Quote Tool', () => {
       expect((sanitize as Record<string, Record<string, unknown>>).text.br).toBe(true);
     });
 
-    it('sanitize config preserves style attribute on mark elements', async () => {
+    it('sanitize config preserves color styles on mark elements through save', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
-      const sanitize = Quote.sanitize;
-      const markRule = (sanitize as Record<string, Record<string, unknown>>).text.mark;
+      const { sanitizeBlocks } = await import('../../../../src/components/utils/sanitizer');
 
-      expect(markRule).toEqual(expect.objectContaining({ style: true }));
+      const text = '<mark style="color: var(--blok-color-orange-text); background-color: transparent;"><strong>Dodo Alarms</strong></mark> is an app';
+      const [result] = sanitizeBlocks([{ tool: 'quote', data: { text } }], () => Quote.sanitize);
+
+      expect((result.data as { text: string }).text).toContain('color: var(--blok-color-orange-text)');
+      expect((result.data as { text: string }).text).toContain('<strong>Dodo Alarms</strong>');
+    });
+
+    it('keeps link href/target/rel through save sanitize (regression: dead Marketplace link)', async () => {
+      const { Quote } = await import('../../../../src/tools/quote');
+      const { sanitizeBlocks } = await import('../../../../src/components/utils/sanitizer');
+
+      const text = 'download from our <a href="https://marketplace.dodois.io/11ef75b45a71c14f83f7a34801da4c7c" target="_blank" rel="noreferrer">Marketplace</a> (for a fee)';
+      const [result] = sanitizeBlocks([{ tool: 'quote', data: { text } }], () => Quote.sanitize);
+
+      const cleaned = (result.data as { text: string }).text;
+
+      expect(cleaned).toContain('href="https://marketplace.dodois.io/11ef75b45a71c14f83f7a34801da4c7c"');
+      expect(cleaned).toContain('target="_blank"');
+      expect(cleaned).toContain('rel="noreferrer"');
     });
   });
 });

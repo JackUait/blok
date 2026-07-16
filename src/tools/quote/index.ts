@@ -12,6 +12,7 @@ import type {
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
 import { IconQuote } from '../../components/icons';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { stripFakeBackgroundElements } from '../../components/utils';
 import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
@@ -241,13 +242,7 @@ export class Quote implements BlockTool {
   public static get sanitize(): ToolSanitizerConfig {
     return {
       text: {
-        br: true,
-        b: true,
-        i: true,
-        a: true,
-        mark: {
-          style: true,
-        },
+        ...INLINE_TEXT_SANITIZE,
       },
     };
   }

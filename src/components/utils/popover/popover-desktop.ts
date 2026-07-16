@@ -44,6 +44,58 @@ if (typeof document !== 'undefined' && !(document as unknown as Record<string, u
   (document as unknown as Record<string, unknown>)[POINTER_TRACKER_KEY] = true;
 }
 
+interface AnchorSnapshot {
+  rect: DOMRect;
+  scrollOffset: { x: number; y: number };
+  contextElement?: Element;
+  contextRect?: DOMRect;
+}
+
+const isMeasurableRect = (rect: DOMRect | undefined): rect is DOMRect =>
+  rect !== undefined && (rect.width > 0 || rect.height > 0);
+
+const shiftRect = (rect: DOMRect, deltaX: number, deltaY: number): DOMRect => ({
+  x: rect.left + deltaX,
+  y: rect.top + deltaY,
+  top: rect.top + deltaY,
+  bottom: rect.bottom + deltaY,
+  left: rect.left + deltaX,
+  right: rect.right + deltaX,
+  width: rect.width,
+  height: rect.height,
+  toJSON: () => ({}),
+});
+
+const captureAnchorSnapshot = (rect: DOMRect, contextElement?: Element): AnchorSnapshot => {
+  const contextRect = contextElement?.getBoundingClientRect();
+
+  return {
+    rect: shiftRect(rect, 0, 0),
+    scrollOffset: { x: window.scrollX, y: window.scrollY },
+    ...(contextElement !== undefined && isMeasurableRect(contextRect)
+      ? { contextElement, contextRect: shiftRect(contextRect, 0, 0) }
+      : {}),
+  };
+};
+
+const resolveAnchorSnapshot = (snapshot: AnchorSnapshot): DOMRect => {
+  const liveContextRect = snapshot.contextElement?.getBoundingClientRect();
+
+  if (isMeasurableRect(liveContextRect) && snapshot.contextRect !== undefined) {
+    return shiftRect(
+      snapshot.rect,
+      liveContextRect.left - snapshot.contextRect.left,
+      liveContextRect.top - snapshot.contextRect.top
+    );
+  }
+
+  return shiftRect(
+    snapshot.rect,
+    snapshot.scrollOffset.x - window.scrollX,
+    snapshot.scrollOffset.y - window.scrollY
+  );
+};
+
 
 /**
  * Desktop popover.
@@ -164,7 +216,14 @@ export class PopoverDesktop extends PopoverAbstract {
    * `display:none`). Prevents the popover from rendering at the viewport's
    * top-left corner when the trigger is no longer measurable.
    */
-  private capturedTriggerRect: DOMRect | undefined;
+  private capturedTriggerAnchor: AnchorSnapshot | undefined;
+
+  /**
+   * Snapshot backing an explicit virtual position. The optional trigger (or a
+   * measurable ancestor) supplies movement deltas so a caret/context rect keeps
+   * following its content through nested scrolling and layout movement.
+   */
+  private explicitPositionAnchor: AnchorSnapshot | undefined;
 
   /**
    * Optional element whose left edge is used for horizontal positioning
@@ -242,9 +301,16 @@ export class PopoverDesktop extends PopoverAbstract {
 
       const initialRect = params.trigger.getBoundingClientRect();
 
-      if (initialRect.width > 0 || initialRect.height > 0) {
-        this.capturedTriggerRect = initialRect;
+      if (isMeasurableRect(initialRect)) {
+        this.capturedTriggerAnchor = captureAnchorSnapshot(
+          initialRect,
+          this.findMeasurableAncestor(params.trigger)
+        );
       }
+    }
+
+    if (params.position !== undefined) {
+      this.explicitPositionAnchor = this.captureExplicitPosition(params.position);
     }
 
     if (params.leftAlignElement) {
@@ -387,16 +453,61 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
+   * Root popovers may be anchored by a live element, a virtual DOMRect, or
+   * both. Inline/nested popovers have neither and stay in their local wrapper.
+   */
+  private hasRootAnchor(): boolean {
+    return this.trigger !== undefined || this.params.position !== undefined;
+  }
+
+  /**
+   * Finds the nearest ancestor that remains measurable if a trigger is hidden.
+   * Its movement supplies the delta for the captured trigger rect during
+   * nested scrolling and layout shifts.
+   * @param trigger - trigger whose ancestor chain is inspected
+   */
+  private findMeasurableAncestor(trigger: HTMLElement): HTMLElement | undefined {
+    const parent = trigger.parentElement;
+
+    if (parent === null) {
+      return undefined;
+    }
+
+    return isMeasurableRect(parent.getBoundingClientRect())
+      ? parent
+      : this.findMeasurableAncestor(parent);
+  }
+
+  /**
+   * Captures an explicit virtual rect together with the nearest live movement
+   * reference available at that moment.
+   * @param position - viewport-relative virtual anchor
+   */
+  private captureExplicitPosition(position: DOMRect): AnchorSnapshot {
+    if (this.trigger === undefined) {
+      return captureAnchorSnapshot(position);
+    }
+
+    const triggerRect = this.trigger.getBoundingClientRect();
+    const context = isMeasurableRect(triggerRect)
+      ? this.trigger
+      : this.findMeasurableAncestor(this.trigger);
+
+    return captureAnchorSnapshot(position, context);
+  }
+
+  /**
    * Open popover
    */
   public show(): void {
     const mountTarget = this.getMountElement();
+    const hasAnchor = this.hasRootAnchor();
 
-    if (this.trigger && mountTarget) {
+    if (hasAnchor && mountTarget) {
       document.body.appendChild(mountTarget);
     }
 
-    if (this.trigger) {
+    if (hasAnchor) {
       const { top, left, openTop, openLeft } = this.calculatePosition();
       this.nodes.popover.style.position = 'absolute';
       this.nodes.popover.style.top = `${top}px`;
@@ -417,7 +528,7 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nodes.popover.style.setProperty('--width', width + 'px');
     }
 
-    if (!this.trigger) {
+    if (!hasAnchor) {
       this.applyNonTriggerPosition(measuredSize);
     }
 
@@ -426,7 +537,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // strand it away from the trigger. Only trigger-based (root, body-mounted)
     // popovers track — nested submenus follow their parent, and non-trigger
     // inline popovers scroll with their owning wrapper.
-    if (this.trigger) {
+    if (hasAnchor) {
       this.positionTracker?.detach();
       this.positionTracker = createPositionTracker(this.nodes.popover, () => this.reposition());
       this.positionTracker.attach();
@@ -475,6 +586,7 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   public updatePosition(position: DOMRect): void {
     this.params.position = position;
+    this.explicitPositionAnchor = this.captureExplicitPosition(position);
 
     // Recalculate and apply position if already shown
     if (this.nodes.popover.hasAttribute('data-blok-popover-opened')) {
@@ -539,7 +651,7 @@ export class PopoverDesktop extends PopoverAbstract {
    * popover is open, so it stays anchored to a trigger that moved.
    */
   private reposition(): void {
-    if (this.trigger === undefined || !this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
+    if (!this.hasRootAnchor() || !this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpened)) {
       return;
     }
 
@@ -554,13 +666,15 @@ export class PopoverDesktop extends PopoverAbstract {
    * Calculates position for the popover
    */
   private calculatePosition(): { top: number; left: number; openTop: boolean; openLeft: boolean } {
-    const explicitPosition = this.params.position;
+    const explicitPosition = this.params.position === undefined
+      ? undefined
+      : resolveAnchorSnapshot(
+        this.explicitPositionAnchor ?? this.captureExplicitPosition(this.params.position)
+      );
     const liveRect = this.trigger?.getBoundingClientRect();
-    const isLiveRectCollapsed = liveRect !== undefined
-      && liveRect.width === 0
-      && liveRect.height === 0;
-    const fallbackRect = isLiveRectCollapsed && this.capturedTriggerRect !== undefined
-      ? this.capturedTriggerRect
+    const isLiveRectCollapsed = liveRect !== undefined && !isMeasurableRect(liveRect);
+    const fallbackRect = isLiveRectCollapsed && this.capturedTriggerAnchor !== undefined
+      ? resolveAnchorSnapshot(this.capturedTriggerAnchor)
       : liveRect;
     const rect = explicitPosition ?? fallbackRect;
 
@@ -625,6 +739,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // cannot render the popover at an unexpected location if it ever becomes
     // visible before calculatePosition() runs again.
     this.params.position = undefined;
+    this.explicitPositionAnchor = undefined;
     this.nodes.popover.style.top = '';
     this.nodes.popover.style.left = '';
   }

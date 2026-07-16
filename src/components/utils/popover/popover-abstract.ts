@@ -152,7 +152,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     //     inside their owning wrapper rather than `<body>`; promotion
     //     would leave that wrapper empty and zero-sized).
     const isRoot = (this.params.nestingLevel ?? 0) === 0;
-    const isBodyMounted = this.params.trigger !== undefined;
+    const isBodyMounted = this.params.trigger !== undefined || this.params.position !== undefined;
 
     if (mountTarget !== null && isRoot && isBodyMounted && supportsPopoverAPI()) {
       promoteToTopLayer(mountTarget);

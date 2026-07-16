@@ -3,6 +3,11 @@ import { IconBoard, IconList, IconPencil, IconCopy, IconTrash, IconPlus } from '
 import { DatabaseViewPopover } from './database-view-popover';
 import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
+import {
+  createPositionTracker,
+  positionFixedAnchored,
+  type PositionTracker,
+} from '../../components/utils/popover/anchored-position';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { startInlineRename } from '../../components/utils/inline-rename';
 import type { API } from '../../../types';
@@ -40,6 +45,7 @@ export class DatabaseTabBar {
   private contextPopover: PopoverDesktop | null = null;
 
   private overflowDropdownEl: HTMLElement | null = null;
+  private overflowPositionTracker: PositionTracker | null = null;
   private boundOverflowClose: ((e: MouseEvent) => void) | null = null;
   private moreBtnEl: HTMLElement | null = null;
 
@@ -362,12 +368,7 @@ export class DatabaseTabBar {
     const dropdown = document.createElement('div');
     dropdown.setAttribute('data-blok-popover', '');
     dropdown.setAttribute('data-blok-database-tab-overflow-dropdown', '');
-    dropdown.style.position = 'fixed';
     dropdown.style.zIndex = '1000';
-
-    const rect = anchor.getBoundingClientRect();
-    dropdown.style.top = `${rect.bottom + 4}px`;
-    dropdown.style.left = `${rect.left}px`;
 
     const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
 
@@ -417,6 +418,14 @@ export class DatabaseTabBar {
     document.body.appendChild(dropdown);
     this.overflowDropdownEl = dropdown;
 
+    const reposition = (): void => {
+      positionFixedAnchored(dropdown, anchor, { side: 'bottom', offset: 4 });
+    };
+
+    reposition();
+    this.overflowPositionTracker = createPositionTracker(dropdown, reposition);
+    this.overflowPositionTracker.attach();
+
     this.boundOverflowClose = (e: MouseEvent): void => {
       const target = e.target as HTMLElement;
       if (!dropdown.contains(target) && !anchor.contains(target)) {
@@ -428,6 +437,9 @@ export class DatabaseTabBar {
   }
 
   private closeOverflowDropdown(): void {
+    this.overflowPositionTracker?.detach();
+    this.overflowPositionTracker = null;
+
     if (this.overflowDropdownEl !== null) {
       this.overflowDropdownEl.remove();
       this.overflowDropdownEl = null;

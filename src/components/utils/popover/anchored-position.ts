@@ -282,6 +282,29 @@ export function positionAnchored(
 }
 
 /**
+ * Positions a viewport-fixed surface through the shared document-coordinate
+ * engine, then converts the result back to viewport coordinates exactly once.
+ * This adapter prevents fixed callers from omitting or double-counting window
+ * scroll offsets while retaining the shared boundary, flip, and clamp rules.
+ * @param content - fixed element being positioned
+ * @param anchor - anchor element or virtual rect
+ * @param options - placement options (fixed placement always applies styles)
+ */
+export function positionFixedAnchored(
+  content: HTMLElement,
+  anchor: Element | DOMRect,
+  options: Omit<AnchoredPositionOptions, 'apply'> = {}
+): ResolvedAnchoredPosition {
+  const resolved = positionAnchored(content, anchor, { ...options, apply: false });
+
+  content.style.setProperty('position', 'fixed');
+  content.style.setProperty('top', `${resolved.top - window.scrollY}px`);
+  content.style.setProperty('left', `${resolved.left - window.scrollX}px`);
+
+  return resolved;
+}
+
+/**
  * Keeps an anchored element positioned while it is open by re-running a
  * `reposition` callback whenever the page scrolls or resizes or the content
  * itself changes size. Adapts the floating-ui `autoUpdate` contract.

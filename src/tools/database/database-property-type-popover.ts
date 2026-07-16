@@ -9,6 +9,11 @@ import {
 } from '../../components/icons';
 import type { I18n } from '../../../types';
 import type { PropertyType } from './types';
+import {
+  createPositionTracker,
+  positionFixedAnchored,
+  type PositionTracker,
+} from '../../components/utils/popover/anchored-position';
 
 interface PropertyTypeOption {
   type: PropertyType;
@@ -36,6 +41,7 @@ export class DatabasePropertyTypePopover {
   private readonly i18n: I18n | undefined;
   private popoverEl: HTMLElement | null = null;
   private boundOutsideClick: ((e: MouseEvent) => void) | null = null;
+  private positionTracker: PositionTracker | null = null;
 
   constructor(options: PropertyTypePopoverOptions) {
     this.onSelect = options.onSelect;
@@ -49,12 +55,7 @@ export class DatabasePropertyTypePopover {
     popover.setAttribute('data-blok-popover', '');
     popover.setAttribute('data-blok-popover-opened', '');
     popover.setAttribute('data-blok-database-property-type-popover', '');
-    popover.style.position = 'fixed';
     popover.style.zIndex = '1000';
-
-    const rect = anchor.getBoundingClientRect();
-    popover.style.top = `${rect.bottom + 4}px`;
-    popover.style.left = `${rect.left}px`;
 
     const heading = document.createElement('div');
     heading.setAttribute('data-blok-database-property-type-heading', '');
@@ -85,6 +86,14 @@ export class DatabasePropertyTypePopover {
     document.body.appendChild(popover);
     this.popoverEl = popover;
 
+    const reposition = (): void => {
+      positionFixedAnchored(popover, anchor, { side: 'bottom', offset: 4 });
+    };
+
+    reposition();
+    this.positionTracker = createPositionTracker(popover, reposition);
+    this.positionTracker.attach();
+
     this.boundOutsideClick = (e: MouseEvent): void => {
       const target = e.target as HTMLElement;
       if (!popover.contains(target) && !anchor.contains(target)) {
@@ -96,6 +105,9 @@ export class DatabasePropertyTypePopover {
   }
 
   close(): void {
+    this.positionTracker?.detach();
+    this.positionTracker = null;
+
     if (this.popoverEl !== null) {
       this.popoverEl.remove();
       this.popoverEl = null;

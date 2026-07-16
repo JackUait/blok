@@ -1,5 +1,5 @@
 import { openModalDialog } from '../../components/utils/modal-dialog';
-import { positionAnchored, createPositionTracker } from '../../components/utils/popover/anchored-position';
+import { positionFixedAnchored, createPositionTracker } from '../../components/utils/popover/anchored-position';
 import { tr } from './i18n';
 import type { I18nInstance } from '../../components/utils/tools';
 
@@ -128,16 +128,10 @@ export function openAltPopover(opts: OpenAltPopoverOptions): () => void {
       return;
     }
 
-    // The popover is `position: fixed`, so translate the engine's document
-    // coordinates back into viewport coordinates.
-    const resolved = positionAnchored(popover, opts.anchor, {
+    positionFixedAnchored(popover, opts.anchor, {
       side: 'bottom',
       offset: 8,
-      apply: false,
     });
-
-    popover.style.top = `${resolved.top - window.scrollY}px`;
-    popover.style.left = `${resolved.left - window.scrollX}px`;
   }
 
   textarea.addEventListener('keydown', (event: KeyboardEvent) => {

@@ -37,6 +37,8 @@ const AMOUNT_OF_LOCAL_WORKERS = 3;
 const CROSS_BROWSER_TESTS = [
   // Custom popover scrollbar must render identically on every engine
   '**/ui/popover-scrollbar.spec.ts',
+  // Root-boundary and top-layer scroll geometry differs across engines
+  '**/ui/popover-root-boundary.spec.ts',
   // Browser-specific event handling
   '**/drag-drop.spec.ts',
   '**/copy-paste.spec.ts',

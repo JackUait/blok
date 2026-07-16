@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0](https://github.com/JackUait/blok/compare/v1.1.1...v1.2.0) (2026-07-16)
+
+### Features
+
+- **Media** — Playback speed and loop preferences now persist across audio and video blocks. They are stored in `localStorage` under shared per-media-type keys (`blok:audio:rate`/`loop`, `blok:video:rate`/`loop`), joining the existing shared volume and per-source position keys, and are restored when a player attaches — without dirtying block data.
+
+### Bug Fixes
+
+- **Quote** — Saving a quote block no longer strips `href`/`target`/`rel` from links (leaving dead anchors in stored content) or unwraps bold/italic marks. Quote now uses the same inline-text sanitize rules as paragraph and header, so links, formatting, and color styles survive save and conversion.
+- **Audio** — OneDrive share links from SPO-migrated accounts (the new `/u/c/<cid>` form) can't be resolved anonymously and produced a silently dead player; they now surface a clear "needs an uploader backend" error instead.
+- **Toolbar** — The plus button and drag handle no longer stay stuck at the wrong offset after the slash-command popover opens or closes; the toolbar repositions on toolbox open/close instead of relying on a resize side effect.
+
+### Maintenance
+
+- **CI** — The build artifact now ships the extracted `packages/*/dist` adapter bundles alongside `dist/`, fixing downstream unit and E2E jobs; `yarn.lock` was synced to the `^1.1.1` core peer range.
+- **Docs** — README and the docs site updated for the `@bloklabs/*` package family; the rename notice was subsequently dropped from the README.
+
 ## [1.1.1](https://github.com/JackUait/blok/compare/v1.1.0...v1.1.1) (2026-07-15)
 
 ### ⚠ BREAKING CHANGES — the `@bloklabs/*` scope rebrand

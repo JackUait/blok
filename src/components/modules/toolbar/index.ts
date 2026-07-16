@@ -1291,6 +1291,16 @@ export class Toolbar extends Module<ToolbarNodes> {
         : null;
 
       this.toolboxInstance?.setCalloutBackground(calloutBg);
+
+      /**
+       * Opening the toolbox in slash mode stamps the slash-search pill styling
+       * (margin/padding) onto the block's contenteditable, shifting the block's
+       * inner geometry without necessarily resizing its holder — so the resize
+       * observer cannot be relied on to follow it. Recompute the toolbar
+       * position explicitly so the plus button / settings toggler stay centered
+       * on the pill while the popover is open.
+       */
+      this.repositionToolbar();
     });
 
     this.toolboxInstance.on(ToolboxEvent.Closed, () => {
@@ -1302,6 +1312,17 @@ export class Toolbar extends Module<ToolbarNodes> {
        * Reflect the collapsed state on the plus button (menu-button contract).
        */
       this.nodes.plusButton?.setAttribute('aria-expanded', 'false');
+
+      /**
+       * Closing the toolbox removes the slash-search pill styling (see the
+       * Opened handler above), restoring the block's pre-slash geometry. The
+       * holder's outer size usually does not change, so the resize observer
+       * never fires — without an explicit reposition the toolbar stays stuck
+       * at the pill-era offset (controls misaligned after open/close).
+       * The pill attribute is removed synchronously before this event is
+       * emitted, so the recomputation reads the restored geometry.
+       */
+      this.repositionToolbar();
 
       /**
        * If the toolbox was opened via the plus button and the user dismissed

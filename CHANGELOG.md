@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1](https://github.com/JackUait/blok/compare/v1.2.0...v1.2.1) (2026-07-16)
+
+### Bug Fixes
+
+- **Popover** — The search input's focus ring was clipped along its bottom edge by the context label's opaque background painting over it; the search wrapper now renders in the positioned paint layer so the full ring is visible. The gap between the search field and the context label was also widened slightly.
+
 ## [1.2.0](https://github.com/JackUait/blok/compare/v1.1.1...v1.2.0) (2026-07-16)
 
 ### Features

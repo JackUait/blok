@@ -3,22 +3,24 @@ import { LinkHoverCard } from '../../../../src/components/utils/link-hover-card'
 
 const CARD_SELECTOR = '[data-blok-testid="link-hover-card"]';
 
+const makeRect = (top: number, bottom: number, left = 10, right = 110): DOMRect => ({
+  left,
+  right,
+  top,
+  bottom,
+  width: right - left,
+  height: bottom - top,
+  x: left,
+  y: top,
+  toJSON: () => ({}),
+} as DOMRect);
+
 const createAnchor = (href: string): HTMLAnchorElement => {
   const anchor = document.createElement('a');
 
   anchor.href = href;
   anchor.textContent = 'link text';
-  anchor.getBoundingClientRect = vi.fn(() => ({
-    left: 10,
-    right: 110,
-    top: 20,
-    bottom: 40,
-    width: 100,
-    height: 20,
-    x: 10,
-    y: 20,
-    toJSON: () => ({}),
-  })) as unknown as HTMLElement['getBoundingClientRect'];
+  anchor.getBoundingClientRect = vi.fn(() => makeRect(20, 40)) as unknown as HTMLElement['getBoundingClientRect'];
 
   document.body.appendChild(anchor);
 
@@ -193,6 +195,22 @@ describe('LinkHoverCard', () => {
     expect(getCard()).toBeNull();
   });
 
+  it('follows its anchor when a nested scroll container scrolls', () => {
+    const scrollContainer = document.createElement('div');
+    const anchor = createAnchor('https://youtube.com/');
+
+    scrollContainer.appendChild(anchor);
+    document.body.appendChild(scrollContainer);
+    showCard(card, anchor);
+
+    expect(getCard()?.style.top).toBe('46px');
+
+    vi.mocked(anchor.getBoundingClientRect).mockReturnValue(makeRect(60, 80));
+    scrollContainer.dispatchEvent(new Event('scroll'));
+
+    expect(getCard()?.style.top).toBe('86px');
+  });
+
   describe('cursor-relative positioning', () => {
     let originalOffsetWidth: PropertyDescriptor | undefined;
     let originalOffsetHeight: PropertyDescriptor | undefined;
@@ -256,6 +274,16 @@ describe('LinkHoverCard', () => {
       const shown = getCard();
 
       expect(shown?.style.left).toBe('4px');
+    });
+
+    it('flips anchor-relative placement above when below would overflow', () => {
+      const anchor = createAnchor('https://youtube.com/');
+
+      vi.mocked(anchor.getBoundingClientRect).mockReturnValue(makeRect(770, 790));
+      showCard(card, anchor);
+
+      // anchor.top - fallback gap - card height = 770 - 6 - 40
+      expect(getCard()?.style.top).toBe('724px');
     });
   });
 });

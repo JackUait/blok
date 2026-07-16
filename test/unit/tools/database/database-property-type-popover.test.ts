@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabasePropertyTypePopover } from '../../../../src/tools/database/database-property-type-popover';
 import type { PropertyType } from '../../../../src/tools/database/types';
 
+const rect = (overrides: Partial<DOMRect>): DOMRect => ({
+  x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
+  toJSON: () => ({}),
+  ...overrides,
+});
+
 describe('DatabasePropertyTypePopover', () => {
   let onSelect: ReturnType<typeof vi.fn<(type: PropertyType) => void>>;
   let popover: DatabasePropertyTypePopover;
@@ -32,6 +38,42 @@ describe('DatabasePropertyTypePopover', () => {
       popover.open(anchor);
       const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
       expect(el.style.position).toBe('fixed');
+    });
+
+    it('stays attached when a nested ancestor scrolls after opening', () => {
+      const scrollHost = document.createElement('div');
+
+      scrollHost.appendChild(anchor);
+      document.body.appendChild(scrollHost);
+      const anchorRectSpy = vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(
+        rect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+
+      popover.open(anchor);
+      const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
+
+      expect(el.style.top).toBe('144px');
+
+      anchorRectSpy.mockReturnValue(
+        rect({ top: 60, bottom: 100, left: 50, right: 90, width: 40, height: 40 })
+      );
+      scrollHost.dispatchEvent(new Event('scroll'));
+
+      expect(el.style.top).toBe('104px');
+    });
+
+    it('flips above the anchor instead of overflowing the viewport bottom', () => {
+      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue(
+        rect({ top: 700, bottom: 740, left: 50, right: 90, width: 40, height: 40 })
+      );
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function getOffsetHeight() {
+        return this.hasAttribute('data-blok-database-property-type-popover') ? 200 : 0;
+      });
+
+      popover.open(anchor);
+      const el = document.querySelector('[data-blok-database-property-type-popover]') as HTMLElement;
+
+      expect(el.style.top).toBe('496px');
     });
 
     it('renders all 7 user-addable property types', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   positionAnchored,
+  positionFixedAnchored,
   createPositionTracker,
 } from '../../../src/components/utils/popover/anchored-position';
 
@@ -24,20 +25,28 @@ const stubSize = (el: HTMLElement, width: number, height: number): void => {
 describe('anchored-position', () => {
   let originalInnerWidth: number;
   let originalInnerHeight: number;
+  let originalScrollX: number;
+  let originalScrollY: number;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     originalInnerWidth = window.innerWidth;
     originalInnerHeight = window.innerHeight;
+    originalScrollX = window.scrollX;
+    originalScrollY = window.scrollY;
 
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024, writable: true });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768, writable: true });
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: 0, writable: true });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0, writable: true });
   });
 
   afterEach(() => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: originalScrollX, writable: true });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: originalScrollY, writable: true });
 
     document.body.innerHTML = '';
     vi.restoreAllMocks();
@@ -140,6 +149,25 @@ describe('anchored-position', () => {
 
       expect(resolved.side).toBe('left');
       expect(content.dataset.side).toBe('left');
+    });
+  });
+
+  describe('positionFixedAnchored', () => {
+    it('converts the shared document result back to fixed viewport coordinates exactly once', () => {
+      const content = document.createElement('div');
+
+      stubSize(content, 200, 150);
+      document.body.appendChild(content);
+      Object.defineProperty(window, 'scrollX', { configurable: true, value: 120, writable: true });
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 600, writable: true });
+
+      const anchor = rect({ top: 100, bottom: 140, left: 50, right: 250, width: 200, height: 40 });
+      const resolved = positionFixedAnchored(content, anchor, { side: 'bottom', offset: 8 });
+
+      expect(resolved.top).toBe(748);
+      expect(resolved.left).toBe(170);
+      expect(content.style.top).toBe('148px');
+      expect(content.style.left).toBe('50px');
     });
   });
 

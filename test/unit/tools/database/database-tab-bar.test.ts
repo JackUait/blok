@@ -124,6 +124,12 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
 
+const rect = (overrides: Partial<DOMRect>): DOMRect => ({
+  x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
+  toJSON: () => ({}),
+  ...overrides,
+});
+
 const makeView = (overrides: Partial<DatabaseViewConfig> = {}): DatabaseViewConfig => ({
   id: `view-${Math.random().toString(36).slice(2, 6)}`,
   name: 'Board',
@@ -572,6 +578,41 @@ describe('DatabaseTabBar', () => {
 
       bar.destroy();
       el.remove();
+    });
+
+    it('keeps the overflow dropdown attached during nested scrolling', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const bar = createTabBar(views, 'v0');
+      const scrollHost = document.createElement('div');
+      const el = bar.render();
+
+      scrollHost.appendChild(el);
+      document.body.appendChild(scrollHost);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
+      const anchorRectSpy = vi.spyOn(moreBtn, 'getBoundingClientRect').mockReturnValue(
+        rect({ top: 100, bottom: 140, left: 50, right: 90, width: 40, height: 40 })
+      );
+
+      moreBtn.click();
+      const dropdown = document.querySelector('[data-blok-database-tab-overflow-dropdown]') as HTMLElement;
+
+      expect(dropdown.style.top).toBe('144px');
+
+      anchorRectSpy.mockReturnValue(
+        rect({ top: 60, bottom: 100, left: 50, right: 90, width: 40, height: 40 })
+      );
+      scrollHost.dispatchEvent(new Event('scroll'));
+
+      expect(dropdown.style.top).toBe('104px');
+
+      bar.destroy();
+      scrollHost.remove();
     });
   });
 

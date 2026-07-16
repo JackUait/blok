@@ -454,6 +454,7 @@
   "tools.audio.errorUploadFailed": "Nabigo ang pag-upload",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Hindi direktang mapapatugtog ang mga link ng Google Drive — i-download ang file at i-upload ito rito.",
+  "tools.audio.errorOneDrive": "Hindi direktang mapapatugtog ang mga link ng OneDrive — i-download ang file at i-upload ito rito.",
   "tools.audio.errorReplace": "Palitan",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

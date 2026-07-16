@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "ატვირთვა ვერ მოხერხდა",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive-ის ბმულების პირდაპირ დაკვრა შეუძლებელია — ჩამოტვირთეთ ფაილი და ატვირთეთ აქ.",
+  "tools.audio.errorOneDrive": "OneDrive-ის ბმულების პირდაპირ დაკვრა შეუძლებელია — ჩამოტვირთეთ ფაილი და ატვირთეთ აქ.",
   "tools.audio.errorReplace": "ჩანაცვლება",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

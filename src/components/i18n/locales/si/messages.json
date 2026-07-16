@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "උඩුගත කිරීම අසාර්ථකයි",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive සබැඳි කෙලින්ම වාදනය කළ නොහැක — ගොනුව බාගත කර මෙහි උඩුගත කරන්න.",
+  "tools.audio.errorOneDrive": "OneDrive සබැඳි කෙලින්ම වාදනය කළ නොහැක — ගොනුව බාගත කර මෙහි උඩුගත කරන්න.",
   "tools.audio.errorReplace": "ප්‍රතිස්ථාපනය",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

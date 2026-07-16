@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Nahrávanie zlyhalo",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Odkazy Google Drive nemožno prehrať priamo — stiahnite súbor a nahrajte ho sem.",
+  "tools.audio.errorOneDrive": "Odkazy OneDrive nemožno prehrať priamo — stiahnite súbor a nahrajte ho sem.",
   "tools.audio.errorReplace": "Nahradiť",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

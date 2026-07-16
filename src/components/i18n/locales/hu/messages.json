@@ -454,6 +454,7 @@
   "tools.audio.errorUploadFailed": "A feltöltés sikertelen",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "A Google Drive-linkek nem játszhatók le közvetlenül — töltse le a fájlt, és töltse fel ide.",
+  "tools.audio.errorOneDrive": "A OneDrive-linkek nem játszhatók le közvetlenül — töltse le a fájlt, és töltse fel ide.",
   "tools.audio.errorReplace": "Csere",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

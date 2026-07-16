@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Не вдалося завантажити",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Посилання Google Drive не можна відтворити напряму — завантажте файл і додайте його тут.",
+  "tools.audio.errorOneDrive": "Посилання OneDrive не можна відтворити напряму — завантажте файл і додайте його тут.",
   "tools.audio.errorReplace": "Замінити",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

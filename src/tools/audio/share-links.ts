@@ -59,7 +59,11 @@ function dropbox(url: URL): NormalizedShareLink | null {
 
 /**
  * The OneDrive shares API accepts any share URL encoded as a base64url
- * token: `u!<token>/root/content` 302-redirects to the file bytes.
+ * token: `u!<token>/root/content` 302-redirects to the file bytes — but
+ * only for pre-SharePoint-Online accounts. Migrated consumer accounts
+ * (new `/u/c/<cid>/<shareId>` links, `migratedtospo=true` on redirect)
+ * get 401 from anonymous redemption even for public shares, so the URL
+ * is only useful to a backend that redeems it with Graph credentials.
  */
 function onedrive(url: URL): NormalizedShareLink | null {
   if (url.hostname !== '1drv.ms' && url.hostname !== 'onedrive.live.com') return null;
@@ -69,7 +73,7 @@ function onedrive(url: URL): NormalizedShareLink | null {
   return {
     url: `https://api.onedrive.com/v1.0/shares/u!${token}/root/content`,
     service: 'onedrive',
-    requiresProxy: false,
+    requiresProxy: true,
   };
 }
 

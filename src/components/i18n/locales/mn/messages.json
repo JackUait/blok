@@ -467,6 +467,7 @@
   "tools.audio.errorUploadFailed": "Байршуулахад алдаа гарлаа",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive холбоосыг шууд тоглуулах боломжгүй — файлыг татаж аваад энд байршуулна уу.",
+  "tools.audio.errorOneDrive": "OneDrive холбоосыг шууд тоглуулах боломжгүй — файлыг татаж аваад энд байршуулна уу.",
   "tools.audio.errorReplace": "Солих",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

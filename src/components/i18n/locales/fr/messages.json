@@ -454,6 +454,7 @@
   "tools.audio.errorUploadFailed": "Échec de l’envoi",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Les liens Google Drive ne peuvent pas être lus directement — téléchargez le fichier puis importez-le ici.",
+  "tools.audio.errorOneDrive": "Les liens OneDrive ne peuvent pas être lus directement — téléchargez le fichier puis importez-le ici.",
   "tools.audio.errorReplace": "Remplacer",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

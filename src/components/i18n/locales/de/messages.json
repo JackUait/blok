@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Upload fehlgeschlagen",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google-Drive-Links können nicht direkt abgespielt werden — Datei herunterladen und hier hochladen.",
+  "tools.audio.errorOneDrive": "OneDrive-Links können nicht direkt abgespielt werden — Datei herunterladen und hier hochladen.",
   "tools.audio.errorReplace": "Ersetzen",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -38,11 +38,14 @@ export class Uploader {
     this.validateUrl(raw);
 
     // Share links from known services are rewritten to their direct-content
-    // form. Proxy-only services (Drive) reject browser hotlinking, so their
-    // link only works when a backend can fetch and re-host the direct URL.
+    // form. Proxy-only services (Drive, OneDrive) reject browser hotlinking,
+    // so their link only works when a backend can fetch and re-host it.
     const share = normalizeAudioShareLink(raw);
     if (share?.requiresProxy && !this.config.uploader?.uploadByUrl) {
-      throw new AudioUploadError('GOOGLE_DRIVE_NEEDS_UPLOADER', raw);
+      throw new AudioUploadError(
+        share.service === 'onedrive' ? 'ONEDRIVE_NEEDS_UPLOADER' : 'GOOGLE_DRIVE_NEEDS_UPLOADER',
+        raw,
+      );
     }
 
     if (this.config.uploader?.uploadByUrl) {

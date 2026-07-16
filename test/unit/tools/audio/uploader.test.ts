@@ -71,6 +71,23 @@ describe('Audio Uploader', () => {
       .rejects.toMatchObject({ code: 'GOOGLE_DRIVE_NEEDS_UPLOADER' });
   });
 
+  it('rejects a OneDrive share link when no uploadByUrl is configured', async () => {
+    const u = new Uploader({});
+    await expect(u.handleUrl('https://1drv.ms/u/c/17750f2933f7e87c/IQBN_hw867fDQrdv3T1itaFiAetZng_WW2PVYK_wQnKWQu4?e=qV4QbE'))
+      .rejects.toMatchObject({ code: 'ONEDRIVE_NEEDS_UPLOADER' });
+  });
+
+  it('delegates a OneDrive share link to uploadByUrl with the shares API URL', async () => {
+    const uploadByUrl = vi.fn().mockResolvedValue({ url: 'https://cdn/rehosted.mp3' });
+    const u = new Uploader({ uploader: { uploadByUrl } });
+    await expect(u.handleUrl('https://1drv.ms/u/s!AkY3x0examp1e'))
+      .resolves.toEqual({ url: 'https://cdn/rehosted.mp3' });
+    expect(uploadByUrl).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/api\.onedrive\.com\/v1\.0\/shares\/u!.+\/root\/content$/),
+      expect.anything(),
+    );
+  });
+
   it('rewrites a Dropbox share link to the direct-content host without an uploader', async () => {
     const u = new Uploader({});
     await expect(u.handleUrl('https://www.dropbox.com/scl/fi/abc/song.mp3?rlkey=k&dl=0'))

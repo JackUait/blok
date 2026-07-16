@@ -454,6 +454,7 @@
   "tools.audio.errorUploadFailed": "بارگذاری ناموفق بود",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "پیوندهای Google Drive مستقیماً پخش نمی‌شوند — فایل را دانلود کرده و اینجا بارگذاری کنید.",
+  "tools.audio.errorOneDrive": "پیوندهای OneDrive مستقیماً پخش نمی‌شوند — فایل را دانلود کرده و اینجا بارگذاری کنید.",
   "tools.audio.errorReplace": "جایگزین",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

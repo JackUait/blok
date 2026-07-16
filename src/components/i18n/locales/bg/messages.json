@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Качването е неуспешно",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Връзките от Google Drive не могат да се възпроизвеждат директно — изтеглете файла и го качете тук.",
+  "tools.audio.errorOneDrive": "Връзките от OneDrive не могат да се възпроизвеждат директно — изтеглете файла и го качете тук.",
   "tools.audio.errorReplace": "Замяна",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

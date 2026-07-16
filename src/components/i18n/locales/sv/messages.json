@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Uppladdningen misslyckades",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive-länkar kan inte spelas upp direkt — ladda ner filen och ladda upp den här.",
+  "tools.audio.errorOneDrive": "OneDrive-länkar kan inte spelas upp direkt — ladda ner filen och ladda upp den här.",
   "tools.audio.errorReplace": "Ersätt",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

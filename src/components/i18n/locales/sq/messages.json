@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Ngarkimi dështoi",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Lidhjet e Google Drive nuk mund të luhen drejtpërdrejt — shkarkoni skedarin dhe ngarkojeni këtu.",
+  "tools.audio.errorOneDrive": "Lidhjet e OneDrive nuk mund të luhen drejtpërdrejt — shkarkoni skedarin dhe ngarkojeni këtu.",
   "tools.audio.errorReplace": "Zëvendëso",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

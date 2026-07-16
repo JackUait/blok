@@ -467,6 +467,7 @@
   "tools.audio.errorUploadFailed": "업로드 실패",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive 링크는 직접 재생할 수 없습니다. 파일을 다운로드한 후 여기에 업로드하세요.",
+  "tools.audio.errorOneDrive": "OneDrive 링크는 직접 재생할 수 없습니다. 파일을 다운로드한 후 여기에 업로드하세요.",
   "tools.audio.errorReplace": "교체",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

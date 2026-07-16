@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Η μεταφόρτωση απέτυχε",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Οι σύνδεσμοι Google Drive δεν αναπαράγονται απευθείας — κατεβάστε το αρχείο και ανεβάστε το εδώ.",
+  "tools.audio.errorOneDrive": "Οι σύνδεσμοι OneDrive δεν αναπαράγονται απευθείας — κατεβάστε το αρχείο και ανεβάστε το εδώ.",
   "tools.audio.errorReplace": "Αντικατάσταση",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

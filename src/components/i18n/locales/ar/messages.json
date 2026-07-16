@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "فشل الرفع",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "لا يمكن تشغيل روابط Google Drive مباشرة — نزّل الملف ثم ارفعه هنا.",
+  "tools.audio.errorOneDrive": "لا يمكن تشغيل روابط OneDrive مباشرة — نزّل الملف ثم ارفعه هنا.",
   "tools.audio.errorReplace": "استبدال",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

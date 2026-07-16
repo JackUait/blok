@@ -454,6 +454,7 @@
   "tools.audio.errorUploadFailed": "ההעלאה נכשלה",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "לא ניתן לנגן קישורי Google Drive ישירות — הורידו את הקובץ והעלו אותו כאן.",
+  "tools.audio.errorOneDrive": "לא ניתן לנגן קישורי OneDrive ישירות — הורידו את הקובץ והעלו אותו כאן.",
   "tools.audio.errorReplace": "החלף",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

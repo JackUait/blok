@@ -454,6 +454,7 @@
   "tools.audio.errorUploadFailed": "Error al subir",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Los enlaces de Google Drive no se pueden reproducir directamente: descarga el archivo y súbelo aquí.",
+  "tools.audio.errorOneDrive": "Los enlaces de OneDrive no se pueden reproducir directamente: descarga el archivo y súbelo aquí.",
   "tools.audio.errorReplace": "Sustituir",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

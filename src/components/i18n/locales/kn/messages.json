@@ -467,6 +467,7 @@
   "tools.audio.errorUploadFailed": "ಅಪ್‌ಲೋಡ್ ವಿಫಲವಾಗಿದೆ",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive ಲಿಂಕ್‌ಗಳನ್ನು ನೇರವಾಗಿ ಪ್ಲೇ ಮಾಡಲಾಗುವುದಿಲ್ಲ — ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ ಇಲ್ಲಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
+  "tools.audio.errorOneDrive": "OneDrive ಲಿಂಕ್‌ಗಳನ್ನು ನೇರವಾಗಿ ಪ್ಲೇ ಮಾಡಲಾಗುವುದಿಲ್ಲ — ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ ಇಲ್ಲಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
   "tools.audio.errorReplace": "ಬದಲಿಸಿ",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

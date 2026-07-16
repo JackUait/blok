@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "上传失败",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive 链接无法直接播放——请下载文件后在此上传。",
+  "tools.audio.errorOneDrive": "OneDrive 链接无法直接播放——请下载文件后在此上传。",
   "tools.audio.errorReplace": "替换",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -467,6 +467,7 @@
   "tools.audio.errorUploadFailed": "بارکردن سەرکەوتوو نەبوو",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Lînkên Google Drive rasterast nayên lêdan — pelê dakêşe û li vir bar bike.",
+  "tools.audio.errorOneDrive": "Lînkên OneDrive rasterast nayên lêdan — pelê dakêşe û li vir bar bike.",
   "tools.audio.errorReplace": "گۆڕین",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

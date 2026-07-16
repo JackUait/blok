@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Отпремање није успело",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Линкови Google Drive не могу да се репродукују директно — преузмите датотеку и отпремите је овде.",
+  "tools.audio.errorOneDrive": "Линкови OneDrive не могу да се репродукују директно — преузмите датотеку и отпремите је овде.",
   "tools.audio.errorReplace": "Замени",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

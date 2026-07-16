@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Nalaganje ni uspelo",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Povezav Google Drive ni mogoče predvajati neposredno — prenesite datoteko in jo naložite sem.",
+  "tools.audio.errorOneDrive": "Povezav OneDrive ni mogoče predvajati neposredno — prenesite datoteko in jo naložite sem.",
   "tools.audio.errorReplace": "Zamenjaj",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

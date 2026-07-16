@@ -467,6 +467,7 @@
   "tools.audio.errorUploadFailed": "Augšupielāde neizdevās",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive saites nevar atskaņot tieši — lejupielādējiet failu un augšupielādējiet to šeit.",
+  "tools.audio.errorOneDrive": "OneDrive saites nevar atskaņot tieši — lejupielādējiet failu un augšupielādējiet to šeit.",
   "tools.audio.errorReplace": "Aizstāt",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

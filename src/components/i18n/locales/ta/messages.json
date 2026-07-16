@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "பதிவேற்றம் தோல்வி",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive இணைப்புகளை நேரடியாக இயக்க முடியாது — கோப்பைப் பதிவிறக்கி இங்கே பதிவேற்றவும்.",
+  "tools.audio.errorOneDrive": "OneDrive இணைப்புகளை நேரடியாக இயக்க முடியாது — கோப்பைப் பதிவிறக்கி இங்கே பதிவேற்றவும்.",
   "tools.audio.errorReplace": "மாற்று",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

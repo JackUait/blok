@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Yükleme başarısız",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive bağlantıları doğrudan oynatılamaz — dosyayı indirip buraya yükleyin.",
+  "tools.audio.errorOneDrive": "OneDrive bağlantıları doğrudan oynatılamaz — dosyayı indirip buraya yükleyin.",
   "tools.audio.errorReplace": "Değiştir",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "Unggahan gagal",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Tautan Google Drive tidak dapat diputar langsung — unduh berkas lalu unggah di sini.",
+  "tools.audio.errorOneDrive": "Tautan OneDrive tidak dapat diputar langsung — unduh berkas lalu unggah di sini.",
   "tools.audio.errorReplace": "Ganti",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

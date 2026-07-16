@@ -351,6 +351,16 @@ export class AudioTool implements BlockTool {
       this.renderState();
       return;
     }
+    if (err instanceof AudioUploadError && err.code === 'ONEDRIVE_NEEDS_UPLOADER') {
+      this.errorMessage = tr(
+        this.api.i18n,
+        'tools.audio.errorOneDrive',
+        'OneDrive links can’t be played directly — download the file and upload it here instead.',
+      );
+      this.state = 'ERROR';
+      this.renderState();
+      return;
+    }
     this.errorMessage = err instanceof AudioUploadError
       ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
         tooLarge: 'tools.audio.errorFileTooLarge',

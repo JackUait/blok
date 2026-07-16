@@ -49,13 +49,13 @@ describe('normalizeAudioShareLink', () => {
     });
   });
 
-  describe('onedrive (direct)', () => {
+  describe('onedrive (proxy-only)', () => {
     it('wraps a 1drv.ms short link in the shares API content URL', () => {
       const raw = 'https://1drv.ms/u/s!AkY3x0examp1e';
       const result = normalizeAudioShareLink(raw);
 
       expect(result?.service).toBe('onedrive');
-      expect(result?.requiresProxy).toBe(false);
+      expect(result?.requiresProxy).toBe(true);
       expect(result?.url).toMatch(/^https:\/\/api\.onedrive\.com\/v1\.0\/shares\/u!/);
       expect(result?.url).toMatch(/\/root\/content$/);
       // base64url alphabet only (no +, /, or padding)
@@ -68,6 +68,15 @@ describe('normalizeAudioShareLink', () => {
     it('wraps an onedrive.live.com link too', () => {
       expect(normalizeAudioShareLink('https://onedrive.live.com/?cid=ABC&id=ABC%21123&authkey=%21AAA')?.service)
         .toBe('onedrive');
+    });
+
+    // SPO-migrated accounts (new /u/c/<cid>/<shareId> links) 401 on the anonymous
+    // shares API, so every OneDrive link must go through an upload backend.
+    it('marks a new-format /u/c/ link as proxy-only', () => {
+      const result = normalizeAudioShareLink('https://1drv.ms/u/c/17750f2933f7e87c/IQBN_hw867fDQrdv3T1itaFiAetZng_WW2PVYK_wQnKWQu4?e=qV4QbE');
+
+      expect(result?.service).toBe('onedrive');
+      expect(result?.requiresProxy).toBe(true);
     });
   });
 

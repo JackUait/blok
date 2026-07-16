@@ -454,6 +454,7 @@
   "tools.audio.errorUploadFailed": "Prijenos nije uspio",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive poveznice ne mogu se reproducirati izravno — preuzmite datoteku i prenesite je ovdje.",
+  "tools.audio.errorOneDrive": "OneDrive poveznice ne mogu se reproducirati izravno — preuzmite datoteku i prenesite je ovdje.",
   "tools.audio.errorReplace": "Zamijeni",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "اپ لوڊ ناڪام",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive جون لنڪس سڌو نٿيون هلائي سگهجن — فائل ڊائونلوڊ ڪري هتي اپلوڊ ڪريو.",
+  "tools.audio.errorOneDrive": "OneDrive جون لنڪس سڌو نٿيون هلائي سگهجن — فائل ڊائونلوڊ ڪري هتي اپلوڊ ڪريو.",
   "tools.audio.errorReplace": "بدلايو",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

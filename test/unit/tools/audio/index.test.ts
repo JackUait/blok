@@ -200,6 +200,27 @@ describe('AudioTool', () => {
     expect(error?.textContent).toContain('Google Drive');
   });
 
+  it('shows a OneDrive-specific error when the link needs an upload backend', async () => {
+    const { AudioUploadError } = await import('../../../../src/tools/audio/uploader');
+    const tool = new AudioTool(opts({ url: '' }, { sources: 'url' }));
+    const el = tool.render();
+    const uploader = uploaderInstances.at(-1);
+    if (!uploader) throw new Error('uploader instance not captured');
+    uploader.handleUrl.mockRejectedValue(new AudioUploadError('ONEDRIVE_NEEDS_UPLOADER'));
+
+    const urlInput = el.querySelector<HTMLInputElement>('input[type="url"]');
+    const submit = el.querySelector<HTMLButtonElement>('[data-action="submit-url"]');
+    if (!urlInput || !submit) throw new Error('embed input not rendered');
+    urlInput.value = 'https://1drv.ms/u/c/17750f2933f7e87c/IQBN_hw867fDQrdv3T1itaFiAetZng_WW2PVYK_wQnKWQu4';
+    urlInput.dispatchEvent(new Event('input'));
+    submit.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const error = el.querySelector('[data-role="audio-error"]');
+    expect(error?.textContent).toContain('OneDrive');
+  });
+
   it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {
     const tool = new AudioTool(opts({ url: '' }, { sources: 'upload' }));
     tool.render();

@@ -456,6 +456,7 @@
   "tools.audio.errorUploadFailed": "আপলোড ব্যর্থ",
   "tools.audio.errorFileTooLarge": "Audio is too large. {size} exceeds the {max} limit.",
   "tools.audio.errorGoogleDrive": "Google Drive লিঙ্ক সরাসরি চালানো যায় না — ফাইলটি ডাউনলোড করে এখানে আপলোড করুন।",
+  "tools.audio.errorOneDrive": "OneDrive লিঙ্ক সরাসরি চালানো যায় না — ফাইলটি ডাউনলোড করে এখানে আপলোড করুন।",
   "tools.audio.errorReplace": "প্রতিস্থাপন",
   "tools.audio.titlePlaceholder": "Track title",
   "tools.audio.artistPlaceholder": "Artist",

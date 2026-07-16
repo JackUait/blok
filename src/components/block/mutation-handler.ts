@@ -45,6 +45,15 @@ export class MutationHandler {
    * Start watching for mutations via the blok event bus
    */
   public watch(): void {
+    /**
+     * Idempotency guard: a second watch() without an unwatch() in between
+     * would subscribe a duplicate callback to the event bus, making every
+     * mutation fire didMutated twice for this block.
+     */
+    if (this.redactorDomChangedCallback !== null) {
+      return;
+    }
+
     this.redactorDomChangedCallback = (payload) => {
       const { mutations } = payload;
       const toolElement = this.getToolElement();

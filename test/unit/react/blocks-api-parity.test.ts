@@ -67,6 +67,10 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
     kind: 'internal',
     reason: 'block-replace internal; not a consumer-facing creation primitive',
   },
+  startBlockMutationWatching: {
+    kind: 'internal',
+    reason: 'counterpart of stopBlockMutationWatching (toolbox re-arms watching on close); not a consumer-facing creation primitive',
+  },
   splitBlock: { kind: 'exposed' },
   insertInsideParent: { kind: 'exposed' },
   transact: { kind: 'exposed' },

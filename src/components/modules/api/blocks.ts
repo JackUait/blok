@@ -56,6 +56,7 @@ export class BlocksAPI extends Module {
       convert: this.convert,
       setBlockParent: (blockId: string, parentId: string | null): void => this.setBlockParent(blockId, parentId),
       stopBlockMutationWatching: (index: number): void => this.stopBlockMutationWatching(index),
+      startBlockMutationWatching: (blockId: string): void => this.startBlockMutationWatching(blockId),
       splitBlock: this.splitBlock,
       insertInsideParent: this.insertInsideParent,
       transact: (fn: () => void): void => this.transact(fn),
@@ -579,6 +580,18 @@ export class BlocksAPI extends Module {
     if (block !== undefined) {
       block.unwatchBlockMutations();
     }
+  }
+
+  /**
+   * Re-arms mutation watching on a block previously silenced via
+   * stopBlockMutationWatching. Takes an id (not an index) because inserts
+   * and replacements between the stop and the start shift indexes; a block
+   * that no longer exists (e.g. replaced in place) is silently skipped —
+   * its successor was constructed with its own watcher.
+   * @param blockId - id of the block to resume watching
+   */
+  private startBlockMutationWatching(blockId: string): void {
+    this.Blok.BlockManager.getBlockById(blockId)?.watchBlockMutations();
   }
 
   /**

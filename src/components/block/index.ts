@@ -901,6 +901,22 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }
 
   /**
+   * Re-arm block mutation watching after a temporary unwatchBlockMutations()
+   * (e.g. the Toolbox suppresses mutation events while its popover is open and
+   * must restore them on close — otherwise the block never emits didMutated
+   * again and consumers like toolbar positioning go permanently stale).
+   * No-op in read-only mode (setReadOnly manages watching there) and when
+   * already watching (the handler is idempotent).
+   */
+  public watchBlockMutations(): void {
+    if (this.readOnly) {
+      return;
+    }
+
+    this.mutationHandler.watch();
+  }
+
+  /**
    * Refreshes the reference to the tool's root element by inspecting the block content.
    * Call this after operations (like onPaste) that might cause the tool to replace its element,
    * especially when mutation observers haven't been set up yet.

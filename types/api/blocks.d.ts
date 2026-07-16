@@ -199,6 +199,16 @@ export interface Blocks {
   stopBlockMutationWatching(index: number): void;
 
   /**
+   * Re-arms mutation watching on a block previously silenced via
+   * stopBlockMutationWatching. Identified by id (not index) because inserts
+   * and replacements between the stop and the start shift indexes; ids of
+   * removed blocks are silently skipped.
+   *
+   * @param blockId - id of the block to resume watching
+   */
+  startBlockMutationWatching(blockId: string): void;
+
+  /**
    * Atomically splits a block by updating the current block's data and inserting a new block.
    * Both operations are grouped into a single undo entry.
    *

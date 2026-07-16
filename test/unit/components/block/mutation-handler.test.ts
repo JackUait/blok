@@ -119,6 +119,35 @@ describe('MutationHandler', () => {
       expect(onMutation).not.toHaveBeenCalled();
     });
 
+    it('watch is idempotent — a second watch() without unwatch() does not double-subscribe', () => {
+      const onSpy = vi.spyOn(eventBus, 'on');
+
+      createMutationHandler();
+      mutationHandler.watch();
+      mutationHandler.watch();
+
+      expect(onSpy).toHaveBeenCalledTimes(1);
+
+      eventBus.emit(RedactorDomChanged, {
+        mutations: [createMutationRecord()],
+      } as RedactorDomChangedPayload);
+
+      expect(onMutation).toHaveBeenCalledTimes(1);
+    });
+
+    it('watch re-arms after unwatch', () => {
+      createMutationHandler();
+      mutationHandler.watch();
+      mutationHandler.unwatch();
+      mutationHandler.watch();
+
+      eventBus.emit(RedactorDomChanged, {
+        mutations: [createMutationRecord()],
+      } as RedactorDomChangedPayload);
+
+      expect(onMutation).toHaveBeenCalledTimes(1);
+    });
+
     it('unwatch removes event subscription', () => {
       const offSpy = vi.spyOn(eventBus, 'off');
 

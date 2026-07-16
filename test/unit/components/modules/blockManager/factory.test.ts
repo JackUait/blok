@@ -58,6 +58,7 @@ const createMockAPIMethods = (): APIInterface => ({
     update: vi.fn().mockResolvedValue(createMockBlockAPI()),
     convert: vi.fn().mockResolvedValue(createMockBlockAPI()),
     stopBlockMutationWatching: vi.fn(),
+    startBlockMutationWatching: vi.fn(),
     splitBlock: vi.fn().mockReturnValue(createMockBlockAPI()),
     setBlockParent: vi.fn(),
     insertInsideParent: vi.fn().mockReturnValue(createMockBlockAPI()),

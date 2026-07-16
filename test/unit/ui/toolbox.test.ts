@@ -161,6 +161,7 @@ describe('Toolbox', () => {
             setBlockParent: vi.fn(),
             transact: vi.fn((fn: () => void) => fn()),
             stopBlockMutationWatching: vi.fn(),
+            startBlockMutationWatching: vi.fn(),
           },
           caret: { setToBlock: vi.fn() },
           toolbar: { close: vi.fn() },
@@ -245,6 +246,7 @@ describe('Toolbox', () => {
         setBlockParent: vi.fn(),
         transact: vi.fn((fn: () => void) => fn()),
         stopBlockMutationWatching: vi.fn(),
+        startBlockMutationWatching: vi.fn(),
       },
       caret: {
         setToBlock: vi.fn(),
@@ -673,6 +675,50 @@ describe('Toolbox', () => {
   });
 
   describe('close', () => {
+    it('re-arms mutation watching on the block that open() silenced', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+      expect(mocks.api.blocks.stopBlockMutationWatching).toHaveBeenCalledWith(0);
+
+      toolbox.close();
+
+      expect(mocks.api.blocks.startBlockMutationWatching).toHaveBeenCalledWith('test-block-id');
+    });
+
+    it('does not re-arm mutation watching when the toolbox was never opened', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.close();
+
+      expect(mocks.api.blocks.startBlockMutationWatching).not.toHaveBeenCalled();
+    });
+
+    it('re-arms mutation watching only once per open/close cycle', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      toolbox.open();
+      toolbox.close();
+      toolbox.close();
+
+      expect(mocks.api.blocks.startBlockMutationWatching).toHaveBeenCalledTimes(1);
+    });
+
     it('should close popover and set opened to false', () => {
       const toolbox = new Toolbox({
         api: mocks.api,

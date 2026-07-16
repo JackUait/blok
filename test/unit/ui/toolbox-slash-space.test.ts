@@ -154,6 +154,7 @@ describe('Toolbox "/ " (slash + space) dismissal — Notion parity', () => {
         setBlockParent: vi.fn(),
         transact: vi.fn((fn: () => void) => fn()),
         stopBlockMutationWatching: vi.fn(),
+            startBlockMutationWatching: vi.fn(),
       },
       caret: { setToBlock: vi.fn() },
       toolbar: { close: vi.fn() },

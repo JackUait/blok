@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - **Quote** — Saving a quote block no longer strips `href`/`target`/`rel` from links (leaving dead anchors in stored content) or unwraps bold/italic marks. Quote now uses the same inline-text sanitize rules as paragraph and header, so links, formatting, and color styles survive save and conversion.
 - **Audio** — OneDrive share links from SPO-migrated accounts (the new `/u/c/<cid>` form) can't be resolved anonymously and produced a silently dead player; they now surface a clear "needs an uploader backend" error instead.
 - **Toolbar** — The plus button and drag handle no longer stay stuck at the wrong offset after the slash-command popover opens or closes; the toolbar repositions on toolbox open/close instead of relying on a resize side effect.
+- **Toolbox** — Opening the toolbox silenced the current block's mutation watching and never re-armed it, leaving the block permanently deaf to later content changes until re-render. Watching is now re-armed on both close paths, and the toolbar follows any inner-geometry change that doesn't resize the block holder.
 
 ### Maintenance
 

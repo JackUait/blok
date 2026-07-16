@@ -515,6 +515,7 @@ describe('Toolbox', () => {
       );
 
       const caretRect = new DOMRect(260, 350, 100, 20);
+      const holder = document.createElement('div');
 
       mockSelectionRect.value = caretRect;
 
@@ -522,6 +523,7 @@ describe('Toolbox', () => {
       const nestedBlock = {
         ...mocks.blockAPI,
         parentId: 'parent-toggle-id',
+        holder,
       };
 
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nestedBlock as unknown as typeof mocks.blockAPI);
@@ -536,7 +538,7 @@ describe('Toolbox', () => {
 
       toolbox.open();
 
-      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect);
+      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect, holder);
     });
 
     it('anchors slash-search popover at the slash-search pill rect (not caret) so gap matches plus-search', () => {

@@ -459,10 +459,18 @@ describe('BlockSettings', () => {
     await blockSettings.open(block, rect);
 
     const popover = getLastPopover();
-    const params = popover?.params as { position?: DOMRect; trigger?: HTMLElement; placeLeftOfAnchor?: boolean };
+    const params = popover?.params as {
+      position?: DOMRect;
+      positionContext?: HTMLElement;
+      trigger?: HTMLElement;
+      placeLeftOfAnchor?: boolean;
+    };
 
     // The rect is forwarded as the explicit `position`, not as the trigger.
     expect(params?.position).toBe(rect);
+    // The virtual rect came from this block. Its live holder supplies motion
+    // deltas when a nested container scrolls, independently of the toolbar.
+    expect(params?.positionContext).toBe(block.holder);
     // The trigger falls back to the settings wrapper element (never the rect).
     expect(params?.trigger).toBe(blockSettings.getElement());
     // A cursor/holder-anchored menu opens at the anchor (down/right), not to

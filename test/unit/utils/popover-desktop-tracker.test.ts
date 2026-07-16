@@ -206,6 +206,35 @@ describe('PopoverDesktop position tracker wiring', () => {
     expect(popover.getElement().style.top).toBe('94px');
   });
 
+  it('moves an explicit virtual anchor by its dedicated position context', () => {
+    const positionContext = document.createElement('div');
+    const positionContextRectSpy = vi.spyOn(positionContext, 'getBoundingClientRect').mockReturnValue(
+      createRect({ top: 90, bottom: 290, left: 40, right: 440, width: 400, height: 200 })
+    );
+    const caretRect = createRect({ top: 110, bottom: 126, left: 80, right: 80, width: 0, height: 16 });
+    const contextPopover = new PopoverDesktop({
+      items: createDefaultItems(),
+      trigger,
+      position: caretRect,
+      positionContext,
+    } as PopoverParams & { positionContext: HTMLElement });
+
+    document.body.appendChild(positionContext);
+    contextPopover.show();
+
+    expect(contextPopover.getElement().style.top).toBe('134px');
+
+    // The toolbar trigger stays fixed, but the content that produced the
+    // virtual caret rect moves inside its own scroller.
+    positionContextRectSpy.mockReturnValue(
+      createRect({ top: 50, bottom: 250, left: 40, right: 440, width: 400, height: 200 })
+    );
+    positionContext.dispatchEvent(new Event('scroll'));
+
+    expect(contextPopover.getElement().style.top).toBe('94px');
+    contextPopover.destroy();
+  });
+
   it('treats a position-only popover as a tracked root anchor', () => {
     const positionedPopover = new PopoverDesktop({
       items: createDefaultItems(),

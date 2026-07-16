@@ -626,6 +626,25 @@ describe('Tooltip utility', () => {
     expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
   });
 
+  it('hides the tooltip when a nested scroll container scrolls', () => {
+    const scrollContainer = document.createElement('div');
+    const target = createTargetElement();
+
+    scrollContainer.appendChild(target);
+    document.body.appendChild(scrollContainer);
+    show(target, 'nested scroll', { delay: 0 });
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('false');
+
+    // Native scroll events do not bubble. The global listener must observe
+    // them during capture or a fixed tooltip remains detached from its anchor.
+    scrollContainer.dispatchEvent(new Event('scroll'));
+
+    expect(wrapper?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('destroy removes DOM nodes and allows reinitialization', () => {
     const target = createTargetElement();
 

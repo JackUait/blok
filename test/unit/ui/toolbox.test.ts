@@ -503,7 +503,9 @@ describe('Toolbox', () => {
 
       toolbox.open();
 
-      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect, holder);
+      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect, {
+        positionContext: holder,
+      });
     });
 
     it('positions popover at caret rect when current block is inside a nested block (has parentId)', () => {
@@ -543,7 +545,9 @@ describe('Toolbox', () => {
 
       toolbox.open();
 
-      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect, holder);
+      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect, {
+        positionContext: holder,
+      });
     });
 
     it('anchors slash-search popover at the slash-search pill rect (not caret) so gap matches plus-search', () => {

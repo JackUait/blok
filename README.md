@@ -78,9 +78,24 @@ The adapters are separate packages that peer on `@bloklabs/core`, so versions st
 
   Reactive props (`readOnly`, `theme`, `width`, `autofocus`) sync without remounting. When structural config like `tools` needs to change, pass a `deps` array — the editor is destroyed and recreated whenever any dep value changes. Keep each value inside `deps` referentially stable: pass primitives or `useMemo`-stable objects, since a dep value whose identity changes every render recreates the editor each time. (The individual values are compared, not the array wrapper, so a fresh `[a, b]` literal each render is fine when `a` and `b` are stable; omitting `deps` creates the editor once.)
 
+  **Functions inside tool configs are live** and never belong in `deps`: the adapter re-binds every function anywhere in a tool's config (including nested ones like `uploader.uploadByFile`) to the latest render's closure, so you can pass plain inline callbacks that read current props/state — no editor recreation, no freezing identities in a `useState` initializer.
+
+  **Author block tools as React components** with `createReactBlock`: the component renders inside your app's tree via portals, so context (theme providers, stores, routers) flows into block tools with no bridging. Declare a `propSchema` for the saved data shape and receive `{ data, commit, block, readOnly, BlockChildren }` as props:
+
+  ```tsx
+  const Callout = createReactBlock({
+    type: 'callout',
+    toolbox: { title: 'Callout', icon: '<svg>…</svg>' },
+    propSchema: { text: { default: '' } },
+    component: ({ data, commit }) => (
+      <input value={data.text} onChange={(e) => commit({ text: e.target.value })} />
+    ),
+  });
+  ```
+
   Don't wrap `<BlokEditor>` in `styled()` or any HOC that reserves the `theme` prop — styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it through `className`.
 
-  For advanced control (e.g., rendering outside a single container), use `useBlok` + `BlokContent` directly.
+  For advanced control (e.g., rendering outside a single container), use `useBlok` + `BlokContent` directly; `useBlocks` gives a reactive snapshot of the block tree with insert/move/convert helpers.
 - `@bloklabs/vue` — Vue 3 adapter: `<BlokEditor>` component plus `useBlok`/`useBlocks` composables and `createVueBlock` for authoring block tools as Vue components.
 - `@bloklabs/angular` — Angular adapter (APF partial-Ivy bundle): `BlokEditorComponent`, `injectBlocks`, and `createAngularBlock` for component-based block tools.
 - `@bloklabs/core/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.

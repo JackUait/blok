@@ -43,6 +43,12 @@ export interface BlokEditorProps
    * When any value changes, the editor is destroyed and recreated. Keep each
    * value referentially stable (primitives or useMemo-stable objects) — a dep
    * whose identity changes every render recreates the editor each time.
+   *
+   * FUNCTIONS inside tool configs do NOT belong here: the adapter re-binds
+   * every tool-config function to the latest render's closure automatically,
+   * so an inline `uploadByFile`/callback with a fresh identity each render
+   * reaches the editor live, without recreation and without freezing its
+   * identity in a `useState` initializer.
    */
   deps?: DependencyList;
   /** Test id forwarded to the editor container element (via data-testid). */

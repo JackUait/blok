@@ -16,4 +16,11 @@ describe('@bloklabs/react exports', () => {
   it('exports useBlocks', () => {
     expect(typeof ReactApi.useBlocks).toBe('function');
   });
+
+  it('exports the block-authoring surface (createReactBlock + portal host)', () => {
+    expect(typeof ReactApi.createReactBlock).toBe('function');
+    expect(typeof ReactApi.createBlockPortalRegistry).toBe('function');
+    expect(typeof ReactApi.BlockPortalHost).toBe('function');
+    expect(ReactApi.BLOK_PORTAL_REGISTRY_CONFIG_KEY).toBe('__blokPortalRegistry');
+  });
 });

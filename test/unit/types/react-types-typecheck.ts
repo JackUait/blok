@@ -16,7 +16,25 @@ import type {
   TreeInsertSpec as PublishedTreeInsertSpec,
   MoveTarget as PublishedMoveTarget,
   UseBlocksApi as PublishedUseBlocksApi,
+  ReactBlockRenderProps as PublishedReactBlockRenderProps,
+  CreateReactBlockSpec as PublishedCreateReactBlockSpec,
+  PropSchema as PublishedPropSchema,
+  PropSchemaEntry as PublishedPropSchemaEntry,
+  BlockPortalEntry as PublishedBlockPortalEntry,
+  BlockPortalRegistry as PublishedBlockPortalRegistry,
+  BlockPortalHostProps as PublishedBlockPortalHostProps,
 } from '../../../packages/react/types/index';
+import type {
+  ReactBlockRenderProps as SourceReactBlockRenderProps,
+  CreateReactBlockSpec as SourceCreateReactBlockSpec,
+  PropSchema as SourcePropSchema,
+  PropSchemaEntry as SourcePropSchemaEntry,
+} from '../../../packages/react/src/createReactBlock';
+import type {
+  BlockPortalEntry as SourceBlockPortalEntry,
+  BlockPortalRegistry as SourceBlockPortalRegistry,
+} from '../../../packages/react/src/block-portal-registry';
+import type { BlockPortalHostProps as SourceBlockPortalHostProps } from '../../../packages/react/src/BlockPortalHost';
 import type { UseBlokConfig as SourceUseBlokConfig } from '../../../packages/react/src/types';
 import type { BlokEditorProps as SourceBlokEditorProps } from '../../../packages/react/src/BlokEditor';
 import type { BlokContentProps as SourceBlokContentProps } from '../../../packages/react/src/types';
@@ -60,7 +78,27 @@ const _treeInsertSpec: AssertExact<PublishedTreeInsertSpec, SourceTreeInsertSpec
 const _moveTarget: AssertEqual<PublishedMoveTarget, SourceMoveTarget> = true;
 const _useBlocksApi: AssertExact<PublishedUseBlocksApi, SourceUseBlocksApi> = true;
 
+// Block-authoring surface (createReactBlock + portal host) — published
+// declarations must not drift from the source of truth.
+const _renderProps: AssertExact<
+  PublishedReactBlockRenderProps<{ text: string }>,
+  SourceReactBlockRenderProps<{ text: string }>
+> = true;
+const _blockSpec: AssertExact<PublishedCreateReactBlockSpec, SourceCreateReactBlockSpec> = true;
+const _propSchema: AssertEqual<PublishedPropSchema, SourcePropSchema> = true;
+const _propSchemaEntry: AssertExact<PublishedPropSchemaEntry, SourcePropSchemaEntry> = true;
+const _portalEntry: AssertExact<PublishedBlockPortalEntry, SourceBlockPortalEntry> = true;
+const _portalRegistry: AssertExact<PublishedBlockPortalRegistry, SourceBlockPortalRegistry> = true;
+const _portalHostProps: AssertExact<PublishedBlockPortalHostProps, SourceBlockPortalHostProps> = true;
+
 void _useBlokConfig;
+void _renderProps;
+void _blockSpec;
+void _propSchema;
+void _propSchemaEntry;
+void _portalEntry;
+void _portalRegistry;
+void _portalHostProps;
 void _contentProps;
 void _editorProps;
 void _blockNode;

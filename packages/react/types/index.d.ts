@@ -1,4 +1,5 @@
 import type { BlokConfig, BlockToolData, OutputBlockData, OutputData } from '@bloklabs/core';
+import type { BlockAPI, BlockToolConstructable, ToolboxConfig } from '@bloklabs/core';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from '@bloklabs/core';
 import type { BlockTuneData } from '@bloklabs/core';
 import type { MarkdownImportConfig } from '@bloklabs/core/markdown';
@@ -536,3 +537,114 @@ export interface UseBlocksApi {
  * @param editor - the Blok instance from useBlok, or null before it is ready
  */
 export declare function useBlocks(editor: Blok | null): UseBlocksApi;
+
+// ---------------------------------------------------------------------------
+// Block authoring (createReactBlock + portal host)
+// ---------------------------------------------------------------------------
+
+/** One field of a {@link CreateReactBlockSpec.propSchema}. */
+export interface PropSchemaEntry {
+  default: unknown;
+  values?: readonly unknown[];
+}
+
+/**
+ * Declarative data shape. Its keys are EXACTLY the keys `save()` returns to Yjs
+ * (a cleared field is written as its default, never dropped).
+ */
+export type PropSchema = Record<string, PropSchemaEntry>;
+
+/** Props handed to a React block's `component` (the only data write path is `commit`). */
+export interface ReactBlockRenderProps<Data> {
+  /** Frozen snapshot of the block data. Re-rendered with a new value on change; never mutate. */
+  data: Readonly<Data>;
+  /** The ONLY data write path: merge a partial patch and sync once. */
+  commit: (patch: Partial<Data>) => void;
+  /** This block's per-block API. */
+  block: BlockAPI;
+  /**
+   * Read-only flag. Toggled IN PLACE by core's read-only switch (no remount,
+   * ephemeral state survives). Honor it — a block that ignores it stays
+   * interactive when the editor is read-only.
+   */
+  readOnly: boolean;
+  /** Engine-owned child slot — render `<BlockChildren />` for a container block. */
+  BlockChildren: React.ComponentType;
+}
+
+/** Spec for {@link createReactBlock}. */
+export interface CreateReactBlockSpec<Data extends BlockToolData = BlockToolData> {
+  type: string;
+  toolbox?: ToolboxConfig;
+  propSchema: PropSchema;
+  component: React.ComponentType<ReactBlockRenderProps<Data>>;
+  onRendered?: (block: BlockAPI) => void;
+  onMoved?: (block: BlockAPI) => void;
+  onRemoved?: (block: BlockAPI) => void;
+}
+
+/**
+ * Author a first-party React block: returns a `BlockToolConstructable`
+ * registered exactly like a vanilla tool (`tools: { type: createReactBlock(...) }`).
+ * Every block renders through the editor's shared portal host INSIDE the React
+ * tree that renders `BlokContent`/`BlokEditor`, so app-level context (themes,
+ * design-system providers, stores) reaches block components with no bridge, and
+ * fresh render closures reach them with no editor recreation.
+ *
+ * @example
+ * ```tsx
+ * const Callout = createReactBlock<{ text: string }>({
+ *   type: 'callout',
+ *   propSchema: { text: { default: '' } },
+ *   component: ({ data, commit }) => (
+ *     <aside onClick={() => commit({ text: 'hi' })}>{data.text}</aside>
+ *   ),
+ * });
+ * ```
+ */
+export declare function createReactBlock<Data extends BlockToolData = BlockToolData>(
+  spec: CreateReactBlockSpec<Data>
+): BlockToolConstructable;
+
+/**
+ * Tool-config key carrying the editor's portal registry into a
+ * `createReactBlock` tool. Injected automatically by `useBlok`; exposed for
+ * advanced setups that construct tools outside `useBlok`.
+ */
+export declare const BLOK_PORTAL_REGISTRY_CONFIG_KEY: '__blokPortalRegistry';
+
+/** One mounted React block in the portal registry. */
+export interface BlockPortalEntry {
+  hostEl: HTMLElement;
+  component: React.ComponentType<Record<string, unknown>>;
+  props: Record<string, unknown>;
+}
+
+/**
+ * Per-editor registry of React blocks, shaped as an external store
+ * (`subscribe`/`getSnapshot`) consumed by `BlockPortalHost` via
+ * `useSyncExternalStore`. Snapshots are immutable and referentially stable
+ * between mutations.
+ */
+export interface BlockPortalRegistry {
+  register(id: string, entry: BlockPortalEntry): void;
+  unregister(id: string): void;
+  setProps(id: string, props: Record<string, unknown>): void;
+  subscribe(listener: () => void): () => void;
+  getSnapshot(): ReadonlyMap<string, BlockPortalEntry>;
+}
+
+/** Create a fresh portal registry (one per editor instance). */
+export declare function createBlockPortalRegistry(): BlockPortalRegistry;
+
+/** Props for {@link BlockPortalHost}. */
+export interface BlockPortalHostProps {
+  registry: BlockPortalRegistry;
+}
+
+/**
+ * The single shared render tree that portals each registered React block into
+ * its Blok-owned host element. Mounted automatically by `BlokContent`; exposed
+ * for advanced setups that manage the registry themselves.
+ */
+export declare function BlockPortalHost(props: BlockPortalHostProps): React.ReactElement;

@@ -3,6 +3,13 @@ import { Blok as BlokRuntime } from '@bloklabs/core';
 import { setHolder, removeHolder } from './holder-map';
 import { deepEqual } from './deep-equal';
 import { BlokDefaultsContext, mergeBlokDefaults } from './provide-blok';
+import {
+  createBlockPortalRegistry,
+  BLOK_PORTAL_REGISTRY_CONFIG_KEY,
+  type BlockPortalRegistry,
+} from './block-portal-registry';
+import { setRegistry, removeRegistry } from './registry-map';
+import { bindLiveToolConfigFunctions } from './live-tool-config';
 import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
@@ -17,6 +24,45 @@ interface EditorInstanceState {
   /** Opaque token identifying which deps cycle created this editor */
   depsToken: Record<string, unknown> | null;
 }
+
+/**
+ * Inject the editor's portal registry into every `createReactBlock` tool's
+ * config (vanilla tools are left untouched), returning a NEW tools object so
+ * the consumer's config is never mutated. A react-block tool is constructed by
+ * CORE, outside any React render, so it cannot read context — this config
+ * bridge is how the tool reaches its editor-scoped registry.
+ */
+const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): unknown => {
+  if (tools === null || typeof tools !== 'object') {
+    return tools;
+  }
+
+  const result: Record<string, unknown> = {};
+
+  for (const [name, entry] of Object.entries(tools as Record<string, unknown>)) {
+    const toolClass = typeof entry === 'function' ? entry : (entry as { class?: unknown })?.class;
+    const isReactBlock =
+      typeof toolClass === 'function' &&
+      (toolClass as { __isBlokReactBlock?: boolean }).__isBlokReactBlock === true;
+
+    if (!isReactBlock) {
+      result[name] = entry;
+
+      continue;
+    }
+
+    const base: Record<string, unknown> =
+      typeof entry === 'function' ? { class: entry } : { ...(entry as Record<string, unknown>) };
+
+    base.config = {
+      ...((base.config as Record<string, unknown> | undefined) ?? {}),
+      [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry,
+    };
+    result[name] = base;
+  }
+
+  return result;
+};
 
 /**
  * React hook that manages a Blok editor instance lifecycle.
@@ -115,6 +161,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     // Destroy leftover editor from a previous deps cycle
     if (state.editor !== null && !state.isDestroyed) {
       removeHolder(state.editor);
+      removeRegistry(state.editor);
       try {
         state.editor.destroy();
       } catch {
@@ -136,8 +183,25 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
 
     // Wrap callbacks via ref so they never go stale
     const currentConfig = configRef.current;
+
+    // Per-editor portal registry for `createReactBlock` tools: injected into
+    // each react-block tool's config (so the core-constructed tool can reach
+    // it) and associated with the editor below (so BlokContent can mount the
+    // shared portal host). Tool-config FUNCTIONS are first re-bound to stable
+    // wrappers that always call the latest render's closure — so consumers
+    // never need to freeze identities or recreate the editor to update them.
+    const registry = createBlockPortalRegistry();
+    const liveTools =
+      currentConfig.tools === undefined
+        ? undefined
+        : injectPortalRegistry(
+            bindLiveToolConfigFunctions(currentConfig.tools, () => configRef.current.tools),
+            registry
+          );
+
     const blokConfig = {
       ...currentConfig,
+      ...(liveTools === undefined ? {} : { tools: liveTools as UseBlokConfig['tools'] }),
       holder,
       onReady: (...args: Parameters<NonNullable<UseBlokConfig['onReady']>>): void => {
         configRef.current.onReady?.(...args);
@@ -182,6 +246,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     // tell a genuine post-construction change from the construction value itself.
     constructedDataRef.current = currentConfig.data;
     setHolder(blok, holder);
+    setRegistry(blok, registry);
 
     void blok.isReady
       .then(() => {
@@ -193,6 +258,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       .catch(() => {
         if (state.editor === blok && !state.isDestroyed) {
           removeHolder(blok);
+          removeRegistry(blok);
           try {
             blok.destroy();
           } catch {
@@ -348,6 +414,7 @@ function deferDestroy(
   state.destroyTimeout = setTimeout(() => {
     if (state.editor !== null) {
       removeHolder(state.editor);
+      removeRegistry(state.editor);
       try {
         state.editor.destroy();
       } catch {

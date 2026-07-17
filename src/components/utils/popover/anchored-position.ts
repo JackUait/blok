@@ -323,16 +323,18 @@ export interface PositionTracker {
 /**
  * Creates a {@link PositionTracker} for `content`.
  * @param content - element whose position must be kept in sync
- * @param reposition - callback that re-computes and applies the position
+ * @param reposition - callback that re-computes and applies the position;
+ *   receives the originating event for scroll so consumers can fail closed
+ *   when a virtual anchor has no live nested-scroll context
  */
-export function createPositionTracker(content: Element, reposition: () => void): PositionTracker {
+export function createPositionTracker(content: Element, reposition: (event?: Event) => void): PositionTracker {
   const state: { attached: boolean; resizeObserver: ResizeObserver | null } = {
     attached: false,
     resizeObserver: null,
   };
 
   const scrollOptions: AddEventListenerOptions = { capture: true, passive: true };
-  const onScroll = (): void => reposition();
+  const onScroll = (event: Event): void => reposition(event);
   const onResize = (): void => reposition();
 
   return {

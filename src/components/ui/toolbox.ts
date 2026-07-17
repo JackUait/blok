@@ -496,7 +496,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       });
 
       if (anchorRect !== undefined) {
-        this.popover.updatePosition(anchorRect);
+        this.popover.updatePosition(anchorRect, currentBlock?.holder);
       }
     }
 

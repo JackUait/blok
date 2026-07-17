@@ -289,6 +289,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         autoFocusFirstItem: false,
         minWidth: '220px',
         position: anchorRect,
+        positionContext: anchorRect === undefined ? undefined : block.holder,
         /**
          * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
          * anchor going down/right; the dots-button menu opens to the LEFT of

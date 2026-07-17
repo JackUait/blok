@@ -219,11 +219,18 @@ export class PopoverDesktop extends PopoverAbstract {
   private capturedTriggerAnchor: AnchorSnapshot | undefined;
 
   /**
-   * Snapshot backing an explicit virtual position. The optional trigger (or a
-   * measurable ancestor) supplies movement deltas so a caret/context rect keeps
+   * Snapshot backing an explicit virtual position. Its dedicated
+   * `positionContext` supplies movement deltas so a caret/context rect keeps
    * following its content through nested scrolling and layout movement.
    */
   private explicitPositionAnchor: AnchorSnapshot | undefined;
+
+  /**
+   * Live element that owns an explicit virtual position. This is deliberately
+   * independent of `trigger`: toolbars often open at a caret/pointer rect while
+   * their button remains elsewhere, so trigger movement is not a safe proxy.
+   */
+  private positionContext: HTMLElement | undefined;
 
   /**
    * Optional element whose left edge is used for horizontal positioning
@@ -308,6 +315,8 @@ export class PopoverDesktop extends PopoverAbstract {
         );
       }
     }
+
+    this.positionContext = params.positionContext;
 
     if (params.position !== undefined) {
       this.explicitPositionAnchor = this.captureExplicitPosition(params.position);
@@ -484,16 +493,22 @@ export class PopoverDesktop extends PopoverAbstract {
    * @param position - viewport-relative virtual anchor
    */
   private captureExplicitPosition(position: DOMRect): AnchorSnapshot {
-    if (this.trigger === undefined) {
-      return captureAnchorSnapshot(position);
+    if (this.positionContext !== undefined) {
+      return captureAnchorSnapshot(position, this.positionContext);
     }
 
-    const triggerRect = this.trigger.getBoundingClientRect();
-    const context = isMeasurableRect(triggerRect)
-      ? this.trigger
-      : this.findMeasurableAncestor(this.trigger);
+    return captureAnchorSnapshot(position);
+  }
 
-    return captureAnchorSnapshot(position, context);
+  /**
+   * Whether the current virtual anchor has a live, measurable movement owner.
+   * A declared context can later collapse or detach, so checking the parameter
+   * alone is insufficient when a nested scroll occurs.
+   */
+  private hasMeasurablePositionContext(): boolean {
+    const context = this.explicitPositionAnchor?.contextElement;
+
+    return context !== undefined && isMeasurableRect(context.getBoundingClientRect());
   }
 
   /**
@@ -534,12 +549,31 @@ export class PopoverDesktop extends PopoverAbstract {
 
     // Keep the popover anchored to its trigger while it is open: a page scroll,
     // a viewport resize, or the popover's own size changing would otherwise
-    // strand it away from the trigger. Only trigger-based (root, body-mounted)
-    // popovers track — nested submenus follow their parent, and non-trigger
-    // inline popovers scroll with their owning wrapper.
+    // strand it away from the trigger. Root anchors track; virtual roots either
+    // follow their declared position context or fail closed on nested scroll.
+    // Nested submenus follow their parent, and inline popovers scroll with
+    // their owning wrapper.
     if (hasAnchor) {
       this.positionTracker?.detach();
-      this.positionTracker = createPositionTracker(this.nodes.popover, () => this.reposition());
+      this.positionTracker = createPositionTracker(this.nodes.popover, (event?: Event) => {
+        const nestedScrollerMoved = event?.type === 'scroll' && event.target instanceof Element;
+        const hasUntrackableVirtualAnchor = this.params.position !== undefined
+          && !this.hasMeasurablePositionContext();
+
+        /**
+         * A DOMRect is a snapshot, so nested scrolling is impossible to infer
+         * without a declared live owner. Keeping the menu open would silently
+         * detach it from its content. Root window/document scrolling remains
+         * resolvable from scroll offsets and continues to reposition normally.
+         */
+        if (nestedScrollerMoved && hasUntrackableVirtualAnchor) {
+          this.hide();
+
+          return;
+        }
+
+        this.reposition();
+      });
       this.positionTracker.attach();
     }
 
@@ -583,9 +617,11 @@ export class PopoverDesktop extends PopoverAbstract {
    * Updates the popover position dynamically.
    * Used when the trigger position changes or when positioning at caret location.
    * @param position - new DOMRect position for the popover
+   * @param positionContext - live element that produced/owns the virtual rect
    */
-  public updatePosition(position: DOMRect): void {
+  public updatePosition(position: DOMRect, positionContext?: HTMLElement): void {
     this.params.position = position;
+    this.positionContext = positionContext ?? this.positionContext;
     this.explicitPositionAnchor = this.captureExplicitPosition(position);
 
     // Recalculate and apply position if already shown
@@ -740,6 +776,7 @@ export class PopoverDesktop extends PopoverAbstract {
     // visible before calculatePosition() runs again.
     this.params.position = undefined;
     this.explicitPositionAnchor = undefined;
+    this.positionContext = undefined;
     this.nodes.popover.style.top = '';
     this.nodes.popover.style.left = '';
   }

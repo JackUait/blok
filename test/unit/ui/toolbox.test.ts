@@ -478,6 +478,7 @@ describe('Toolbox', () => {
 
     it('positions popover at caret rect when trigger element is off-screen above viewport', () => {
       const triggerElement = document.createElement('div');
+      const holder = document.createElement('div');
 
       // Simulate a trigger element whose bottom is above the visible viewport (negative bottom)
       vi.spyOn(triggerElement, 'getBoundingClientRect').mockReturnValue(
@@ -487,6 +488,10 @@ describe('Toolbox', () => {
       const caretRect = new DOMRect(60, 320, 100, 20);
 
       mockSelectionRect.value = caretRect;
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
+        ...mocks.blockAPI,
+        holder,
+      } as unknown as typeof mocks.blockAPI);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -498,7 +503,7 @@ describe('Toolbox', () => {
 
       toolbox.open();
 
-      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect);
+      expect(mockPopoverInstance.updatePosition).toHaveBeenCalledWith(caretRect, holder);
     });
 
     it('positions popover at caret rect when current block is inside a nested block (has parentId)', () => {

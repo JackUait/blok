@@ -218,6 +218,23 @@ describe('Floating Positioning Law', () => {
     expect(discovered).toEqual(POPOVER_DESKTOP_CONSUMERS);
   });
 
+  it('keeps virtual anchors tied to live context or fail-closed on nested scroll', () => {
+    const popoverSource = stripComments(sources.get('components/utils/popover/popover-desktop.ts') ?? '');
+    const blockSettingsSource = stripComments(sources.get('components/modules/toolbar/blockSettings.ts') ?? '');
+    const toolboxSource = stripComments(sources.get('components/ui/toolbox.ts') ?? '');
+
+    expect(popoverSource).toMatch(/hasMeasurablePositionContext\s*\(\s*\)/);
+    expect(popoverSource).toMatch(
+      /nestedScrollerMoved[\s\S]*hasUntrackableVirtualAnchor[\s\S]*this\.hide\s*\(\s*\)/
+    );
+    expect(blockSettingsSource).toMatch(
+      /positionContext\s*:\s*anchorRect\s*===\s*undefined\s*\?\s*undefined\s*:\s*block\.holder/
+    );
+    expect(toolboxSource).toMatch(
+      /updatePosition\s*\(\s*anchorRect\s*,\s*currentBlock\?\.holder\s*\)/
+    );
+  });
+
   it('never reads body/html CSS geometry as a collision viewport', () => {
     const violations = [...sources].flatMap(([relPath, source]) => {
       const geometryReads = stripComments(source).match(/document\.(?:body|documentElement)\.getBoundingClientRect\s*\(/g) ?? [];

@@ -78,6 +78,13 @@ export interface PopoverParams {
   position?: DOMRect;
 
   /**
+   * Live element whose movement should be applied to a virtual `position`.
+   * Supply this when the rect came from a caret, pointer, or block inside a
+   * nested scroll container and the `trigger` is a separate toolbar control.
+   */
+  positionContext?: HTMLElement;
+
+  /**
    * True if popover should contain search field
    */
   searchable?: boolean;

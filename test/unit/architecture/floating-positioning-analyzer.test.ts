@@ -113,6 +113,16 @@ describe('floating-positioning AST analyzer', () => {
       .not.toContain('coordinate-write');
   });
 
+  it('conservatively reviews dynamic style payloads as possible coordinate writes', () => {
+    const fixtures = [
+      `menu.style.cssText = styleText;`,
+      `menu.setAttribute('style', styleText);`,
+      `Object.assign(menu.style, styleMap);`,
+    ];
+
+    fixtures.forEach((source) => expectKinds(source, ['coordinate-write']));
+  });
+
   it('rejects dynamic property access on known root and style aliases', () => {
     expectKinds(`
       const root = document.body;
@@ -161,6 +171,49 @@ describe('floating-positioning AST analyzer', () => {
 
     expect(ordinary).toContain('popover-desktop-construction');
     expect(ordinary).not.toContain('unclassified-virtual-position');
+  });
+
+  it('follows PopoverDesktop constructor aliases and updatePosition lifecycle objects', () => {
+    expectKinds(`
+      const PopoverClass = mobile ? PopoverMobile : PopoverDesktop;
+      new PopoverClass({ items, trigger });
+    `, ['popover-desktop-construction']);
+
+    expectKinds(`
+      popover.updatePosition(caretRect, { positionContext: holder });
+    `, ['tracked-virtual-position']);
+    expectKinds(`
+      popover.updatePosition(caretRect, {
+        positionLifecycle: 'dismiss-on-nested-scroll',
+      });
+    `, ['dismissible-virtual-position']);
+    expectKinds(`
+      popover.updatePosition(caretRect);
+    `, ['unclassified-virtual-position']);
+  });
+
+  it('classifies typed or helper-returned virtual-position object literals', () => {
+    expectKinds(`
+      const params: PopoverParams = { items, position, positionContext };
+    `, ['tracked-virtual-position']);
+    expectKinds(`
+      const virtualParams = {
+        position,
+        positionLifecycle: 'dismiss-on-nested-scroll',
+      };
+    `, ['dismissible-virtual-position']);
+  });
+
+  it('detects capture-phase scroll listeners used as dismissal contracts', () => {
+    expectKinds(`
+      window.addEventListener('scroll', hide, { capture: true, passive: true });
+    `, ['capture-scroll-listener']);
+    expectKinds(`
+      window.addEventListener('scroll', hide, true);
+    `, ['capture-scroll-listener']);
+
+    expect(evidenceKinds(`window.addEventListener('scroll', hide);`))
+      .not.toContain('capture-scroll-listener');
   });
 
   it('parses TSX without hiding executable root mounts', () => {

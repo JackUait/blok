@@ -13,6 +13,7 @@ export type FloatingEvidenceKind =
   | 'tracked-virtual-position'
   | 'dismissible-virtual-position'
   | 'unclassified-virtual-position'
+  | 'capture-scroll-listener'
   | 'dynamic-root-style-access';
 
 export interface FloatingEvidence {
@@ -196,6 +197,7 @@ export const analyzeFloatingSource = (
   const documentAliases = new Set(['document']);
   const rootAliases = new Set<string>();
   const styleAliases = new Set<string>();
+  const popoverConstructorAliases = new Set(['PopoverDesktop']);
 
   const isDocumentExpression = (expression: ts.Expression): boolean => {
     const unwrapped = unwrapExpression(expression);
@@ -236,6 +238,22 @@ export const analyzeFloatingSource = (
     }
 
     return memberAccess(unwrapped)?.name === 'style';
+  };
+
+  const includesPopoverConstructor = (expression: ts.Expression): boolean => {
+    const unwrapped = unwrapExpression(expression);
+    const name = identifierText(unwrapped);
+
+    if (name !== undefined && popoverConstructorAliases.has(name)) {
+      return true;
+    }
+
+    if (ts.isConditionalExpression(unwrapped)) {
+      return includesPopoverConstructor(unwrapped.whenTrue)
+        || includesPopoverConstructor(unwrapped.whenFalse);
+    }
+
+    return false;
   };
 
   const collectBindingAliases = (
@@ -289,6 +307,13 @@ export const analyzeFloatingSource = (
       if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
         changed = collectBindingAliases(node.name, node.initializer) || changed;
 
+        if (
+          ts.isIdentifier(node.name)
+          && includesPopoverConstructor(node.initializer)
+        ) {
+          changed = addName(popoverConstructorAliases, node.name.text) || changed;
+        }
+
         return;
       }
 
@@ -307,6 +332,7 @@ export const analyzeFloatingSource = (
           (isDocumentExpression(node.right) && addName(documentAliases, name))
           || (isRootExpression(node.right) && addName(rootAliases, name))
           || (isStyleExpression(node.right) && addName(styleAliases, name))
+          || (includesPopoverConstructor(node.right) && addName(popoverConstructorAliases, name))
           || changed
         );
       }
@@ -492,12 +518,6 @@ export const analyzeFloatingSource = (
 
       if (value !== undefined) {
         addStyleTextEvidence(node, value);
-      } else {
-        addEvidence(
-          'dynamic-root-style-access',
-          node,
-          'cssText is assigned from a dynamic value'
-        );
       }
 
       return;
@@ -565,9 +585,9 @@ export const analyzeFloatingSource = (
 
     if (value === undefined) {
       addEvidence(
-        'dynamic-root-style-access',
+        'coordinate-write',
         node,
-        'style attribute is assigned from a dynamic value'
+        'dynamic style attribute may write top/left coordinates'
       );
 
       return;
@@ -591,8 +611,19 @@ export const analyzeFloatingSource = (
 
     node.arguments.slice(1)
       .map(unwrapExpression)
-      .filter(ts.isObjectLiteralExpression)
-      .forEach((object) => inspectObjectLiteralStyle(object, node));
+      .forEach((argument) => {
+        if (ts.isObjectLiteralExpression(argument)) {
+          inspectObjectLiteralStyle(argument, node);
+
+          return;
+        }
+
+        addEvidence(
+          'coordinate-write',
+          node,
+          'dynamic Object.assign payload may write top/left coordinates'
+        );
+      });
   };
 
   const inspectMemberCall = (
@@ -676,6 +707,132 @@ export const analyzeFloatingSource = (
     inspectMountHelperCall(node, name);
   };
 
+  const objectProperties = (
+    object: ts.ObjectLiteralExpression
+  ): Map<string, ts.ObjectLiteralElementLike> => {
+    const properties = new Map<string, ts.ObjectLiteralElementLike>();
+
+    object.properties.forEach((property) => {
+      if (ts.isSpreadAssignment(property)) {
+        return;
+      }
+
+      const name = propertyNameText(property.name);
+
+      if (name !== undefined) {
+        properties.set(name, property);
+      }
+    });
+
+    return properties;
+  };
+
+  const propertyStringValue = (
+    property: ts.ObjectLiteralElementLike | undefined
+  ): string | undefined => property !== undefined && ts.isPropertyAssignment(property)
+    ? literalText(unwrapExpression(property.initializer))
+    : undefined;
+
+  const classifyVirtualObject = (
+    object: ts.ObjectLiteralExpression,
+    owner: ts.Node
+  ): boolean => {
+    const properties = objectProperties(object);
+    const hasPosition = properties.has('position');
+    const hasContext = properties.has('positionContext');
+    const lifecycle = propertyStringValue(properties.get('positionLifecycle'));
+
+    if (hasContext) {
+      addEvidence(
+        'tracked-virtual-position',
+        owner,
+        hasPosition
+          ? 'virtual position declares a live positionContext'
+          : 'position update declares a live positionContext'
+      );
+
+      return true;
+    }
+
+    if (lifecycle === 'dismiss-on-nested-scroll') {
+      addEvidence(
+        'dismissible-virtual-position',
+        owner,
+        hasPosition
+          ? 'virtual position explicitly dismisses on nested scroll'
+          : 'position update explicitly dismisses on nested scroll'
+      );
+
+      return true;
+    }
+
+    return false;
+  };
+
+  const hasCaptureOption = (node: ts.Expression | undefined): boolean => {
+    if (node === undefined) {
+      return false;
+    }
+
+    const unwrapped = unwrapExpression(node);
+
+    if (unwrapped.kind === ts.SyntaxKind.TrueKeyword) {
+      return true;
+    }
+
+    if (!ts.isObjectLiteralExpression(unwrapped)) {
+      return false;
+    }
+
+    const capture = objectProperties(unwrapped).get('capture');
+
+    return capture !== undefined
+      && ts.isPropertyAssignment(capture)
+      && unwrapExpression(capture.initializer).kind === ts.SyntaxKind.TrueKeyword;
+  };
+
+  const inspectCaptureScrollListener = (node: ts.CallExpression): void => {
+    if (
+      callTargetName(node.expression) !== 'addEventListener'
+      || literalText(node.arguments[0] === undefined
+        ? undefined
+        : unwrapExpression(node.arguments[0])) !== 'scroll'
+      || !hasCaptureOption(node.arguments[2])
+    ) {
+      return;
+    }
+
+    addEvidence(
+      'capture-scroll-listener',
+      node,
+      'observes non-bubbling scroll events in capture phase'
+    );
+  };
+
+  const inspectUpdatePosition = (node: ts.CallExpression): void => {
+    if (callTargetName(node.expression) !== 'updatePosition') {
+      return;
+    }
+
+    const update = node.arguments[1] === undefined
+      ? undefined
+      : unwrapExpression(node.arguments[1]);
+
+    if (update !== undefined && ts.isObjectLiteralExpression(update)) {
+      if (classifyVirtualObject(update, node)) {
+        return;
+      }
+    } else if (update !== undefined) {
+      return;
+    }
+
+    addEvidence(
+      'unclassified-virtual-position',
+      node,
+      'updatePosition omits a live context and dismissal policy'
+    );
+  };
+
   nodes.forEach((node) => {
     if (ts.isElementAccessExpression(node)) {
       const access = memberAccess(node);
@@ -702,9 +859,18 @@ export const analyzeFloatingSource = (
 
     if (ts.isCallExpression(node)) {
       inspectCall(node);
+      inspectCaptureScrollListener(node);
+      inspectUpdatePosition(node);
     }
 
-    if (!ts.isNewExpression(node) || callTargetName(node.expression) !== 'PopoverDesktop') {
+    if (ts.isObjectLiteralExpression(node)) {
+      classifyVirtualObject(node, node);
+    }
+
+    if (
+      !ts.isNewExpression(node)
+      || !includesPopoverConstructor(node.expression)
+    ) {
       return;
     }
 
@@ -721,44 +887,13 @@ export const analyzeFloatingSource = (
       return;
     }
 
-    const properties = new Map<string, ts.ObjectLiteralElementLike>();
-
-    params.properties.forEach((property) => {
-      if (!ts.isSpreadAssignment(property)) {
-        const name = propertyNameText(property.name);
-
-        if (name !== undefined) {
-          properties.set(name, property);
-        }
-      }
-    });
+    const properties = objectProperties(params);
 
     if (!properties.has('position')) {
       return;
     }
 
-    if (properties.has('positionContext')) {
-      addEvidence(
-        'tracked-virtual-position',
-        node,
-        'virtual position declares a live positionContext'
-      );
-
-      return;
-    }
-
-    const lifecycle = properties.get('positionLifecycle');
-    const lifecycleValue = lifecycle !== undefined && ts.isPropertyAssignment(lifecycle)
-      ? literalText(unwrapExpression(lifecycle.initializer))
-      : undefined;
-
-    if (lifecycleValue === 'dismiss-on-nested-scroll') {
-      addEvidence(
-        'dismissible-virtual-position',
-        node,
-        'virtual position explicitly dismisses on nested scroll'
-      );
-
+    if (classifyVirtualObject(params, node)) {
       return;
     }
 

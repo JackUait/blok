@@ -26,18 +26,18 @@ import { describe, expect, it } from 'vitest';
 
 const SRC_DIR = resolve(__dirname, '../../../src');
 
-const collectTsFiles = (dir: string): string[] => readdirSync(dir).flatMap((entry) => {
+const collectSourceFiles = (dir: string): string[] => readdirSync(dir).flatMap((entry) => {
   const fullPath = join(dir, entry);
 
   if (statSync(fullPath).isDirectory()) {
-    return collectTsFiles(fullPath);
+    return collectSourceFiles(fullPath);
   }
 
-  return fullPath.endsWith('.ts') && !fullPath.endsWith('.stories.ts') ? [fullPath] : [];
+  return /\.tsx?$/.test(fullPath) && !/\.stories\.tsx?$/.test(fullPath) ? [fullPath] : [];
 });
 
 const sources = new Map(
-  collectTsFiles(SRC_DIR)
+  collectSourceFiles(SRC_DIR)
     .map((file) => [relative(SRC_DIR, file), readFileSync(file, 'utf8')] as const)
     .filter(([relPath]) => !relPath.startsWith('playground/') && !relPath.startsWith('stories/'))
 );

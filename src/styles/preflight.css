@@ -170,6 +170,16 @@
     height: auto;
   }
 
+  /*
+   * Constrain other replaced elements to the parent width too, so a fixed
+   * width="…" attribute (e.g. an <iframe> from an external embed snippet)
+   * can never overflow its block/column and paint over siblings. No
+   * `height: auto` here — it would collapse attribute-sized iframes.
+   */
+  :where([data-blok-interface], [data-blok-popover]) :is(iframe, embed, object) {
+    max-width: 100%;
+  }
+
   /* Inherit font styles in all browsers for form elements. */
   :where([data-blok-interface], [data-blok-popover]) :is(button, input, select, optgroup, textarea, ::file-selector-button) {
     font: inherit;

@@ -1,9 +1,10 @@
-import type { BlockId, BlockToolData, OutputBlockData } from '../../../types';
+import type { BlockId, BlockToolData, OutputBlockData, SanitizerConfig } from '../../../types';
 import type { StubData } from '../../tools/stub';
 import { Module } from '../__module';
 import type { Block } from '../block';
 import type { BlockToolAdapter } from '../tools/block';
 import { generateBlockId, log, logLabeled } from '../utils';
+import { sanitizeBlocks } from '../utils/sanitizer';
 import {
   analyzeDataFormat,
   expandToHierarchical,
@@ -251,7 +252,20 @@ export class Renderer extends Module {
         }
       };
 
-      return buildBlock(availabilityResult.tool, availabilityResult.data);
+      /**
+       * Stored data is untrusted: it may come from a legacy editor, an older
+       * tool version, or hand-edited JSON that never round-tripped through
+       * save(). Apply the same tool sanitize config the Saver applies, so
+       * markup disallowed at save time (e.g. a raw <iframe> inside paragraph
+       * text) can never reach a tool's innerHTML sink at render time.
+       * Stub blocks are skipped — their data wraps the original payload for
+       * restoring once the missing tool is registered.
+       */
+      const renderData = availabilityResult.tool === Tools.stubTool
+        ? availabilityResult.data
+        : this.sanitizeToolData(availabilityResult.tool, availabilityResult.data);
+
+      return buildBlock(availabilityResult.tool, renderData);
     });
 
     /**
@@ -269,6 +283,26 @@ export class Renderer extends Module {
     }
 
     return blocks.length;
+  }
+
+  /**
+   * Clean stored block data with the tool's sanitize config (plus the global
+   * sanitizer) before it reaches the tool's render sink — mirror of the
+   * Saver's sanitizeExtractedData pass. Tools without a sanitize config get
+   * their data back unchanged (same as on save).
+   * @param tool - resolved tool name the block will be rendered with
+   * @param data - stored block data
+   */
+  private sanitizeToolData(tool: string, data: BlockToolData): BlockToolData {
+    const { Tools } = this.Blok;
+
+    const [sanitized] = sanitizeBlocks(
+      [{ tool, data }],
+      (name) => Tools.blockTools.get(name)?.sanitizeConfig,
+      this.config.sanitizer as SanitizerConfig
+    );
+
+    return sanitized.data;
   }
 
   /**

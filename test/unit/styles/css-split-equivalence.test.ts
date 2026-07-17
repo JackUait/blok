@@ -351,8 +351,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // themed a `.blok-audio-inner` that renderError never creates. Added the
     // flat soft-danger callout + retry button mirroring video.css, bumping the
     // multiplier to 1.379. ~1.1KB intentional growth.
+    // Replaced-element width cap: preflight gains a `max-width: 100%` rule for
+    // iframe/embed/object (img/video were already capped) so a fixed
+    // width="…" attribute — e.g. a Google Drive <iframe width="640"> snippet
+    // stored in block data — can never overflow its column and overlap
+    // siblings. Bumps the multiplier to 1.381. ~0.4KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.379);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.381);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

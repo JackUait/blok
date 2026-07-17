@@ -5,6 +5,7 @@ import { Renderer } from '../../../../src/components/modules/renderer';
 import { BlocksRendered } from '../../../../src/components/events';
 import type { OutputBlockData } from '../../../../types';
 import type { StubData } from '../../../../src/tools/stub';
+import { Paragraph } from '../../../../src/tools/paragraph';
 import * as utils from '../../../../src/components/utils';
 
 type RendererBlok = Renderer['Blok'];
@@ -25,6 +26,7 @@ interface MockBlockManager {
 interface MockTools {
   available: Map<string, unknown>;
   unavailable: Map<string, { toolbox?: Array<{ title?: string }> }>;
+  blockTools: Map<string, { sanitizeConfig?: Record<string, unknown> }>;
   stubTool: string;
 }
 
@@ -81,6 +83,7 @@ const createRenderer = (
   const defaultTools: MockTools = {
     available: new Map<string, unknown>(),
     unavailable: new Map<string, { toolbox?: Array<{ title?: string }> }>(),
+    blockTools: new Map<string, { sanitizeConfig?: Record<string, unknown> }>(),
     stubTool: 'stub-tool',
   };
 
@@ -231,6 +234,48 @@ describe('Renderer module', () => {
       }),
     ]);
     expect(blockManager.insert).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes stored block data with the tool sanitize config before composing', async () => {
+    // Regression: stored paragraph text carrying a raw Google Drive
+    // <iframe width="640"> was rendered verbatim (render path never
+    // sanitized), overflowing its column and overlapping the neighbor.
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('paragraph', {});
+    tools.blockTools.set('paragraph', { sanitizeConfig: Paragraph.sanitize as unknown as Record<string, unknown> });
+
+    const storedIframe = '<iframe src="https://drive.google.com/file/d/x/preview" width="640" height="480"></iframe>';
+
+    await renderer.render([
+      {
+        id: 'block-1',
+        type: 'paragraph',
+        data: { text: `before ${storedIframe} after` },
+      },
+    ]);
+
+    expect(blockManager.composeBlock).toHaveBeenCalledTimes(1);
+
+    const composed = blockManager.composeBlock.mock.calls[0]?.[0] as { data: { text: string } };
+
+    expect(composed.data.text).not.toContain('<iframe');
+    expect(composed.data.text).toContain('before');
+    expect(composed.data.text).toContain('after');
+  });
+
+  it('keeps stored data untouched when the tool has no sanitize config', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('image', {});
+
+    const data = { url: 'https://example.com/pic.png', caption: '<figure>raw</figure>' };
+
+    await renderer.render([{ id: 'block-1', type: 'image', data }]);
+
+    const composed = blockManager.composeBlock.mock.calls[0]?.[0] as { data: unknown };
+
+    expect(composed.data).toBe(data);
   });
 
   it('replaces missing tools with stub blocks and logs a warning', async () => {

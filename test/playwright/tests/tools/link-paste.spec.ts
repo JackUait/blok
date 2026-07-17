@@ -6,6 +6,9 @@ import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
+const NESTED_SCROLL_HOST_ID = 'link-paste-scroll-host';
+
+type BoundingBox = { x: number; y: number; width: number; height: number };
 
 declare global {
   interface Window {
@@ -85,6 +88,39 @@ const pasteText = async (locator: Locator, text: string): Promise<void> => {
 const firstEditable = (page: Page): Locator =>
   page.locator(`${BLOCK_SELECTOR}:nth-of-type(1) [contenteditable]`).first();
 
+const requireBoundingBox = async (locator: Locator, label: string): Promise<BoundingBox> => {
+  const box = await locator.boundingBox();
+
+  expect(box, `${label} has no bounding box`).not.toBeNull();
+
+  return box as BoundingBox;
+};
+
+const moveEditorIntoNestedScrollHost = async (page: Page): Promise<void> => {
+  await page.evaluate(({ holderId, hostId }) => {
+    const holder = document.getElementById(holderId);
+
+    if (holder === null || holder.parentElement === null) {
+      throw new Error('Blok holder not found');
+    }
+
+    const host = document.createElement('div');
+
+    host.id = hostId;
+    Object.assign(host.style, {
+      height: '420px',
+      margin: '80px 40px',
+      overflow: 'auto',
+      transform: 'translateZ(0)',
+    });
+    holder.parentElement.insertBefore(host, holder);
+    host.appendChild(holder);
+    holder.style.paddingTop = '900px';
+    holder.style.paddingBottom = '900px';
+    host.scrollTop = 700;
+  }, { holderId: HOLDER_ID, hostId: NESTED_SCROLL_HOST_ID });
+};
+
 /** Pick a view from the paste menu that a URL paste always opens. */
 const pickMenu = async (page: Page, action: 'embed' | 'bookmark' | 'plain'): Promise<void> => {
   const item = page.locator(`[data-blok-item-name="paste-menu-${action}"]`);
@@ -160,6 +196,112 @@ test.describe('Link paste', () => {
     }
     expect(menuBox.y).toBeGreaterThanOrEqual(linkBox.y - 1);
     expect(menuBox.x).toBeGreaterThanOrEqual(linkBox.x);
+  });
+
+  test('does not open the link hover card when paste inserts a link under a stationary pointer', async ({ page }) => {
+    await createBlok(page);
+    const editable = firstEditable(page);
+    const editableBox = await requireBoundingBox(editable, 'Empty editable');
+
+    await editable.focus();
+    await page.evaluate(() => {
+      const selection = window.getSelection();
+      const editableElement = document.querySelector<HTMLElement>(
+        '[data-blok-testid="block-wrapper"]:nth-of-type(1) [contenteditable]'
+      );
+
+      if (selection === null || editableElement === null) {
+        throw new Error('Unable to place the caret in the empty editable');
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(editableElement);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+
+    // Move over the place where the pasted anchor will appear, then leave the
+    // pointer still. Chromium re-runs hit testing after the DOM mutation and
+    // emits a synthesized mouseover even though there was no hover intent.
+    await page.mouse.move(editableBox.x + 8, editableBox.y + editableBox.height / 2);
+    await pasteText(editable, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+
+    const menuItem = page.locator('[data-blok-item-name="paste-menu-embed"]');
+    const link = page.getByRole('link', {
+      name: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      exact: true,
+    });
+
+    await expect(menuItem).toBeVisible();
+    await expect(link).toBeVisible();
+
+    // Model Chromium's post-layout hit test explicitly so the recurrence test
+    // is deterministic on every browser and machine: mouseover without any
+    // preceding pointer movement is not hover intent.
+    await link.dispatchEvent('mouseover', {
+      clientX: editableBox.x + 8,
+      clientY: editableBox.y + editableBox.height / 2,
+    });
+    const hoverCardOpened = await page.getByTestId('link-hover-card')
+      .waitFor({ state: 'attached', timeout: 500 })
+      .then(() => true)
+      .catch(() => false);
+
+    expect(hoverCardOpened).toBe(false);
+    await menuItem.click();
+    await expect(page.locator('[data-blok-testid="embed-frame"]')).toBeVisible();
+  });
+
+  test('keeps the menu attached to the link inside a transformed nested scroller', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await createBlok(page);
+    await moveEditorIntoNestedScrollHost(page);
+
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://example.com/article');
+
+    const link = page.getByRole('link', { name: 'https://example.com/article', exact: true });
+    const menu = page.locator(
+      '[data-blok-popover-opened] [data-blok-testid="popover-container"]'
+    ).last();
+
+    await expect(link).toBeVisible();
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveCSS('transform', 'none');
+
+    const linkBox = await requireBoundingBox(link, 'Link before nested scroll');
+    const menuBox = await requireBoundingBox(menu, 'Paste menu before nested scroll');
+
+    expect(await page.evaluate(
+      (hostId) => document.getElementById(hostId)?.scrollTop ?? 0,
+      NESTED_SCROLL_HOST_ID
+    )).toBeGreaterThan(500);
+
+    await page.evaluate(
+      (hostId) => document.getElementById(hostId)?.scrollBy(0, 80),
+      NESTED_SCROLL_HOST_ID
+    );
+
+    await expect(menu).toBeVisible();
+    await expect.poll(async () => {
+      const movedLink = await requireBoundingBox(link, 'Link after nested scroll');
+      const movedMenu = await requireBoundingBox(menu, 'Paste menu after nested scroll');
+      const linkDelta = movedLink.y - linkBox.y;
+      const menuDelta = movedMenu.y - menuBox.y;
+
+      return Math.abs(linkDelta - menuDelta);
+    }).toBeLessThanOrEqual(2);
+
+    const movedMenu = await requireBoundingBox(menu, 'Contained paste menu');
+
+    expect(movedMenu.x).toBeGreaterThanOrEqual(0);
+    expect(movedMenu.x + movedMenu.width).toBeLessThanOrEqual(1280);
+    expect(movedMenu.y).toBeGreaterThanOrEqual(0);
+    expect(movedMenu.y + movedMenu.height).toBeLessThanOrEqual(720);
   });
 
   test('pasting a generic URL opens the menu, and Bookmark inserts a card', async ({ page }) => {

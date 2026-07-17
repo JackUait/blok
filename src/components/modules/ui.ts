@@ -497,9 +497,9 @@ export class UI extends Module<UINodes> {
    * wrappers) so they can be bound to the read-only-insensitive listener set:
    * the card must appear on hover in both edit and read-only modes.
    */
-  private anchorMouseOverListener = (event: Event): void => {
+  private anchorMouseMoveListener = (event: Event): void => {
     if (event instanceof MouseEvent) {
-      this.handleAnchorMouseOver(event);
+      this.handleAnchorMouseMove(event);
     }
   };
 
@@ -772,13 +772,15 @@ export class UI extends Module<UINodes> {
     this.listeners.on(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
 
     /**
-     * Link hover card — show it while the pointer rests on a link, hide it once
-     * the pointer leaves both the link and the card. mouseover/mouseout bubble,
-     * so a single delegated pair covers every anchor in the redactor. Bound here
-     * (read-only-insensitive) so the card also appears in read-only mode, where
-     * it omits its edit affordance (see the hover card's canEdit).
+     * Link hover card — show it after the pointer genuinely moves over a link,
+     * hide it once the pointer leaves both the link and the card. Requiring a
+     * mousemove prevents post-layout synthesized mouseover events from opening
+     * the card over newly inserted links beneath a stationary pointer. Both
+     * events bubble, so one delegated pair covers every anchor in the redactor.
+     * Bound here (read-only-insensitive) so the card also appears in read-only
+     * mode, where it omits its edit affordance (see the hover card's canEdit).
      */
-    this.listeners.on(this.nodes.redactor, 'mouseover', this.anchorMouseOverListener);
+    this.listeners.on(this.nodes.redactor, 'mousemove', this.anchorMouseMoveListener);
     this.listeners.on(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
   }
 
@@ -790,7 +792,7 @@ export class UI extends Module<UINodes> {
     this.listeners.off(this.nodes.redactor, 'mousedown', this.documentTouchedListener);
     this.listeners.off(this.nodes.redactor, 'touchstart', this.documentTouchedListener);
     this.listeners.off(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
-    this.listeners.off(this.nodes.redactor, 'mouseover', this.anchorMouseOverListener);
+    this.listeners.off(this.nodes.redactor, 'mousemove', this.anchorMouseMoveListener);
     this.listeners.off(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
 
     /**
@@ -1038,10 +1040,13 @@ export class UI extends Module<UINodes> {
   }
 
   /**
-   * Show the link hover card when the pointer enters an anchor.
-   * @param event - mouseover event delegated from the redactor
+   * Show the link hover card when the pointer genuinely moves over an anchor.
+   * Using mousemove instead of mouseover is intentional: Chromium emits a
+   * synthesized mouseover when a DOM mutation inserts a link beneath a
+   * stationary pointer, which is not hover intent.
+   * @param event - mousemove event delegated from the redactor
    */
-  private handleAnchorMouseOver(event: MouseEvent): void {
+  private handleAnchorMouseMove(event: MouseEvent): void {
     const target = event.target as Element | null;
     const anchor = target?.closest?.('a');
 

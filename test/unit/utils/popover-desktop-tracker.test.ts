@@ -253,6 +253,27 @@ describe('PopoverDesktop position tracker wiring', () => {
     contextPopover.destroy();
   });
 
+  it('dismisses a virtual anchor when its declared context becomes unmeasurable', () => {
+    const positionContext = document.createElement('div');
+    const positionContextRectSpy = vi.spyOn(positionContext, 'getBoundingClientRect').mockReturnValue(
+      createRect({ top: 90, bottom: 290, left: 40, right: 440, width: 400, height: 200 })
+    );
+    const contextPopover = new PopoverDesktop({
+      items: createDefaultItems(),
+      position: createRect({ top: 110, bottom: 126, left: 80, right: 80, width: 0, height: 16 }),
+      positionContext,
+    } as PopoverParams & { positionContext: HTMLElement });
+
+    document.body.appendChild(positionContext);
+    contextPopover.show();
+
+    positionContextRectSpy.mockReturnValue(createRect({}));
+    positionContext.dispatchEvent(new Event('scroll'));
+
+    expect(contextPopover.getElement().hasAttribute('data-blok-popover-opened')).toBe(false);
+    contextPopover.destroy();
+  });
+
   it('treats a position-only popover as a tracked root anchor', () => {
     const positionedPopover = new PopoverDesktop({
       items: createDefaultItems(),

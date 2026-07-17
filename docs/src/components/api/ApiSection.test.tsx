@@ -389,6 +389,15 @@ describe('ApiSection', () => {
       expect(note.textContent).toContain('editor.value');
     });
 
+    it('omits the editor-access note on the useBlocks page (its methods run on the hook handle, not the editor)', () => {
+      render(
+        <Providers>
+          <ApiSection section={{ ...mockSection, id: 'use-blocks' }} />
+        </Providers>,
+      );
+      expect(screen.queryByTestId('editor-access-note')).toBeNull();
+    });
+
     it('omits the editor-access note on sections without methods', () => {
       render(<Providers><ApiSection section={mockConfigSection} /></Providers>);
       expect(screen.queryByTestId('editor-access-note')).toBeNull();

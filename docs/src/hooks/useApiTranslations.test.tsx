@@ -65,7 +65,7 @@ describe('useApiTranslations', () => {
     const sectionTitles = result.current.sidebarSections.map(s => s.title);
     expect(sectionTitles).toEqual([
       'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
-      'Block Tools', 'Inline Tools',
+      'Framework adapters', 'Block Tools', 'Inline Tools',
     ]);
   });
 
@@ -241,7 +241,7 @@ describe('useApiTranslations sidebar groups', () => {
     const titles = result.current.sidebarSections.map((s) => s.title);
     expect(titles).toEqual([
       'Getting started', 'Core', 'Editing', 'Interface', 'Extending & system', 'Data types',
-      'Block Tools', 'Inline Tools',
+      'Framework adapters', 'Block Tools', 'Inline Tools',
     ]);
     expect(result.current.sidebarSections[2].links.map((l) => l.id))
       .toEqual(['caret-api', 'selection-api', 'styles-api', 'history-api']);

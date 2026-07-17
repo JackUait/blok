@@ -59,7 +59,8 @@
       "editing": "Editing",
       "interface": "Interface",
       "extending": "Extending & system",
-      "dataTypes": "Data types"
+      "dataTypes": "Data types",
+      "adapters": "Framework adapters"
     },
     "links": {
       "quickStart": "Quick Start",
@@ -87,7 +88,9 @@
       "blockData": "BlockData",
       "everythingIsABlock": "Everything is a block",
       "tutorial": "Build your first editor",
-      "customBlockTool": "Create a custom block tool"
+      "customBlockTool": "Create a custom block tool",
+      "blokEditor": "BlokEditor component",
+      "useBlocks": "useBlocks"
     },
     "quickStart": {
       "title": "Quick Start",
@@ -718,6 +721,16 @@
       "title": "BlockData",
       "badge": "Data",
       "description": "The structure of each block in the blocks array."
+    },
+    "blokEditor": {
+      "title": "BlokEditor component",
+      "badge": "Adapters",
+      "description": "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. It accepts every editor config option as a prop, forwards unknown props to the container div, and exposes the live Blok instance via ref/onReady. The props below cover the adapter-specific surface; everything else matches the Configuration options."
+    },
+    "useBlocks": {
+      "title": "useBlocks",
+      "badge": "Adapters",
+      "description": "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters: the useBlocks(editor) hook in @bloklabs/react, the useBlocks(editor) composable in @bloklabs/vue, and injectBlocks() in @bloklabs/angular. Reads re-render reactively as the document changes; writers are atomic (one undo step) and safe to call before the editor is ready (they no-op). Returned BlockNode objects ({ id, type, parentId, contentIds }) are fresh-snapshot volatile — read them now, don't stash them in dep arrays."
     },
     "pagination": {
       "label": "Pagination",

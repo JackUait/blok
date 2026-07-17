@@ -320,10 +320,14 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
       {section.methods && section.methods.length > 0 && (
         <div className="mt-10">
           {/* The method examples below call into a live editor instance; show
-              how the active framework hands you that reference. */}
-          <div className="mb-6">
-            <EditorAccessNote />
-          </div>
+              how the active framework hands you that reference. Skipped for
+              useBlocks — its methods run on the hook's api handle, not the
+              editor, so the note would mislead. */}
+          {section.id !== "use-blocks" && (
+            <div className="mb-6">
+              <EditorAccessNote />
+            </div>
+          )}
           <h2 className={blockTitleClass}>{t('api.methods')}</h2>
           <div className="flex flex-col gap-4">
             {section.methods.map((method, index) => (

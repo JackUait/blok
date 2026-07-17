@@ -64,6 +64,14 @@ export const SECTION_ICONS: Record<string, ReactNode> = {
       <path d="M16 21h1a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" />
     </svg>
   ),
+  // Framework adapters — layers
+  adapters: (
+    <svg {...iconProps}>
+      <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+      <path d="m2 17 10 5 10-5" />
+      <path d="m2 12 10 5 10-5" />
+    </svg>
+  ),
   // Block tools — grid of blocks
   blockTools: (
     <svg {...iconProps}>

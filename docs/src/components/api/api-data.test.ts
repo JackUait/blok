@@ -37,6 +37,8 @@ describe("API_SECTIONS", () => {
       "tools-api",
       "output-data",
       "block-data",
+      "blok-editor",
+      "use-blocks",
     ];
 
     const actualIds = API_SECTIONS.map((s) => s.id);
@@ -86,6 +88,12 @@ describe("API_SECTIONS", () => {
     };
 
     API_SECTIONS.forEach((section) => {
+      // The adapter surface reuses core method names (clear(), render(data))
+      // but runs on the hook's api handle, not the editor instance — its
+      // examples are asserted separately in the useBlocks describe below.
+      if (section.id === "use-blocks") {
+        return;
+      }
       section.methods?.forEach((method) => {
         if (
           Object.prototype.hasOwnProperty.call(meaningfulExamples, method.name)
@@ -394,6 +402,96 @@ describe("API_SECTIONS", () => {
       const section = API_SECTIONS.find((s) => s.id === "block-api");
       expect(section).toBeDefined();
       expect(section!.methods || section!.properties).toBeDefined();
+    });
+  });
+
+  describe("BlokEditor component (framework adapters)", () => {
+    it("documents the key props as a table", () => {
+      const section = API_SECTIONS.find((s) => s.id === "blok-editor");
+      expect(section).toBeDefined();
+
+      const options = section!.table!.map((row) => row.option);
+      const expectedProps = [
+        "tools",
+        "data",
+        "onSave",
+        "onChange",
+        "onReady",
+        "deps",
+        "readOnly",
+        "theme",
+        "width",
+        "autofocus",
+        "placeholder",
+        "onBlocksRendered",
+        "onBlockRendered",
+      ];
+      expectedProps.forEach((prop) => {
+        expect(options).toContain(prop);
+      });
+    });
+
+    it("deps row warns that tool-config functions do not belong in deps", () => {
+      const section = API_SECTIONS.find((s) => s.id === "blok-editor");
+      const depsRow = section!.table!.find((row) => row.option === "deps");
+      expect(depsRow!.description).toMatch(/function/i);
+    });
+
+    it("has a usage example showing the controlled data + onSave pair", () => {
+      const section = API_SECTIONS.find((s) => s.id === "blok-editor");
+      expect(section!.example).toContain("<BlokEditor");
+      expect(section!.example).toContain("onSave");
+    });
+  });
+
+  describe("useBlocks (framework adapters)", () => {
+    it("documents the block-tree API methods", () => {
+      const section = API_SECTIONS.find((s) => s.id === "use-blocks");
+      expect(section).toBeDefined();
+
+      const methodNames = section!.methods!.map((m) => m.name);
+      const expectedMethods = [
+        "getById(id)",
+        "getChildren(parentId)",
+        "insert(spec?)",
+        "insertMany(specs)",
+        "insertTree(spec)",
+        "insertMarkdown(markdown, options?)",
+        "exportMarkdown()",
+        "move(id, target)",
+        "nest(id, parentId)",
+        "unnest(id)",
+        "remove(id)",
+        "update(id, data?, tunes?)",
+        "convert(id, newType, dataOverrides?, options?)",
+        "transact(fn)",
+        "transactWithoutCapture(fn)",
+        "splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex)",
+        "insertInsideParent(parentId, insertIndex, childData?)",
+        "insertOutputData(blocks, options?)",
+        "render(data)",
+        "renderFromHTML(html)",
+        "clear()",
+        "getBlocksCount()",
+        "getCurrentBlockIndex()",
+        "getBlockByIndex(index)",
+        "getBlockIndex(id)",
+        "getBlockData(id)",
+        "getBlockByElement(element)",
+        "composeBlockData(toolName)",
+        "isSyncingFromYjs()",
+      ];
+      expectedMethods.forEach((method) => {
+        expect(methodNames).toContain(method);
+      });
+    });
+
+    it("every useBlocks method example calls the hook's api handle", () => {
+      const section = API_SECTIONS.find((s) => s.id === "use-blocks");
+      section!.methods!.forEach((method) => {
+        expect(method.example).toBeDefined();
+        expect(method.example).toMatch(/blocks\./);
+      });
     });
   });
 

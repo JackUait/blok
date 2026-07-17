@@ -1833,6 +1833,398 @@ const listItemBlock: OutputBlockData = {
       },
     ],
   },
+  {
+    id: "blok-editor",
+    badge: "Adapters",
+    title: "BlokEditor component",
+    lastUpdated: "2026-07-17",
+    description:
+      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. It accepts every editor config option as a prop, forwards unknown props to the container div, and exposes the live Blok instance via ref/onReady. The props below cover the adapter-specific surface; everything else matches the Configuration options.",
+    example: `import { useState } from 'react';
+import { BlokEditor } from '@bloklabs/react';
+import { Header, Paragraph, List } from '@bloklabs/core/tools';
+import type { OutputData } from '@bloklabs/core';
+
+export function Editor() {
+  const [data, setData] = useState<OutputData>();
+
+  // data + onSave form a controlled component: onSave fires (debounced)
+  // with the serialized document; echoing it back is deduped and
+  // caret-stable, while genuine external data changes re-render in place.
+  return (
+    <BlokEditor
+      tools={{ paragraph: Paragraph, header: Header, list: List }}
+      data={data}
+      onSave={setData}
+      theme="auto"
+      className="my-editor"
+    />
+  );
+}`,
+    table: [
+      {
+        option: "tools",
+        type: "Record<string, ToolConstructable | ToolSettings>",
+        default: "—",
+        description:
+          "Block tools to register. Functions anywhere inside a tool's config (e.g. an uploader callback) are re-bound to the latest render automatically — pass inline closures freely; only tool classes changing requires a deps entry.",
+      },
+      {
+        option: "data",
+        type: "OutputData",
+        default: "—",
+        description:
+          "Editor content (reactive). Seeds the initial document; after mount, new content re-renders in place. Updates are deep-equal–deduped, so echoing the editor's own output back never clobbers the caret.",
+      },
+      {
+        option: "onSave",
+        type: "(data: OutputData, api: API) => void",
+        default: "—",
+        description:
+          "The output half of the controlled component: fires (debounced) with the full serialized document on every content change — no manual save() polling. Wiring onSave={setData} is safe and recursion-free.",
+      },
+      {
+        option: "onChange",
+        type: "(api: API, event: CustomEvent) => void",
+        default: "—",
+        description:
+          "Low-level mutation events (block added/changed/moved/removed), for when you need per-mutation granularity instead of serialized output.",
+      },
+      {
+        option: "onReady",
+        type: "(editor: Blok) => void",
+        default: "—",
+        description:
+          "Called once with the live Blok instance. Fires after the forwarded ref commits, so ref.current is also populated at this point.",
+      },
+      {
+        option: "deps",
+        type: "DependencyList",
+        default: "[]",
+        description:
+          "Values that destroy and recreate the editor when their identity changes (for structural config like tool classes). Keep each value referentially stable. Functions inside tool configs do NOT belong here — they are re-bound to the latest render automatically.",
+      },
+      {
+        option: "readOnly",
+        type: "boolean | ReadOnlyModeConfig",
+        default: "false",
+        description: "Read-only mode. Reactive: toggles in place after mount, without remounting.",
+      },
+      {
+        option: "theme",
+        type: "'light' | 'dark' | 'auto'",
+        default: "'auto'",
+        description:
+          "Color theme (reactive). Don't wrap the component in styled() or any HOC that reserves the theme prop — it would never reach the editor.",
+      },
+      {
+        option: "onThemeChange",
+        type: "(resolvedTheme: 'light' | 'dark') => void",
+        default: "—",
+        description: "Called with the resolved theme whenever it changes (e.g. when 'auto' follows the OS).",
+      },
+      {
+        option: "width",
+        type: "'narrow' | 'full'",
+        default: "'narrow'",
+        description: "Content width mode (reactive). Synced after mount via editor.width.set().",
+      },
+      {
+        option: "autofocus",
+        type: "boolean",
+        default: "false",
+        description: "Focus the editor after it mounts.",
+      },
+      {
+        option: "placeholder",
+        type: "string | false",
+        default: "—",
+        description: "Placeholder shown in the first empty block.",
+      },
+      {
+        option: "onBlocksRendered",
+        type: "(payload: BlocksRenderedPayload) => void",
+        default: "—",
+        description:
+          "Called after a batch render completes (core blocks:rendered event) — the declarative analog of editor.on('blocks:rendered', …).",
+      },
+      {
+        option: "onBlockRendered",
+        type: "(payload: BlockRenderedPayload) => void",
+        default: "—",
+        description: "Called for each block rendered into the DOM (core block:rendered event).",
+      },
+      {
+        option: "ref",
+        type: "Ref<Blok | null>",
+        default: "—",
+        description:
+          "Forwarded to the live Blok instance for imperative calls (save, render, blocks, caret, …). Null until the editor mounts.",
+      },
+      {
+        option: "className, id, …",
+        type: "HTMLAttributes<HTMLDivElement>",
+        default: "—",
+        description:
+          "Any prop that is not an editor config option is forwarded to the container div. Style the editor through className (style keeps its editor-config meaning).",
+      },
+    ],
+  },
+  {
+    id: "use-blocks",
+    badge: "Adapters",
+    title: "useBlocks",
+    lastUpdated: "2026-07-17",
+    description:
+      "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters: the useBlocks(editor) hook in @bloklabs/react, the useBlocks(editor) composable in @bloklabs/vue, and injectBlocks() in @bloklabs/angular. Reads re-render reactively as the document changes; writers are atomic (one undo step) and safe to call before the editor is ready (they no-op). Returned BlockNode objects ({ id, type, parentId, contentIds }) are fresh-snapshot volatile — read them now, don't stash them in dep arrays.",
+    example: `import { useBlok, BlokContent, useBlocks } from '@bloklabs/react';
+
+export function Outline() {
+  const editor = useBlok({ tools });
+  const blocks = useBlocks(editor);
+
+  // Reactive: re-renders whenever the document changes.
+  const rootBlocks = blocks.getChildren(null);
+
+  return (
+    <>
+      <BlokContent editor={editor} />
+      <ol>{rootBlocks.map((b) => <li key={b.id}>{b.type}</li>)}</ol>
+    </>
+  );
+}`,
+    methods: [
+      {
+        name: "getById(id)",
+        returnType: "BlockNode | null",
+        description: "The block with the given id as a snapshot node, or null when unknown.",
+        example: `const node = blocks.getById('x9k2f1');
+// → { id: 'x9k2f1', type: 'paragraph', parentId: null, contentIds: [] }`,
+      },
+      {
+        name: "getChildren(parentId)",
+        returnType: "BlockNode[]",
+        description:
+          "The direct children of a parent block, in document order. Pass null for the root blocks.",
+        example: `const rootBlocks = blocks.getChildren(null);
+const rowBlocks = blocks.getChildren(databaseBlockId);`,
+      },
+      {
+        name: "insert(spec?)",
+        returnType: "BlockNode | null",
+        description:
+          "Insert one block (type, data, parentId, position, focus/caret). Returns the created node, or null when rejected (unknown tool, dangling parentId). An explicit id that already exists is insert-if-absent. Atomic — one undo step.",
+        example: `const node = blocks.insert({
+  type: 'header',
+  data: { text: 'New section', level: 2 },
+  position: 'end',
+  focus: true,
+});
+// → node.id is the new block's id (or null if rejected)`,
+      },
+      {
+        name: "insertMany(specs)",
+        returnType: "BlockNode[]",
+        description:
+          "Insert several blocks atomically, in array order, as ONE undo step. Specs that fail are dropped; returns the successfully created nodes.",
+        example: `const nodes = blocks.insertMany([
+  { type: 'header', data: { text: 'Title' } },
+  { type: 'paragraph', data: { text: 'Body' } },
+]);`,
+      },
+      {
+        name: "insertTree(spec)",
+        returnType: "BlockNode | null",
+        description:
+          "Insert a pre-built NESTED subtree in one atomic operation. Children are inserted under their enclosing node recursively; placement options apply to the root only. Returns the root node, or null on a rejected/colliding id.",
+        example: `const root = blocks.insertTree({
+  type: 'toggle',
+  data: { text: 'Details' },
+  children: [
+    { type: 'paragraph', data: { text: 'Hidden content' } },
+  ],
+});`,
+      },
+      {
+        name: "insertMarkdown(markdown, options?)",
+        returnType: "Promise<BlockNode[]>",
+        description:
+          "Convert a Markdown string to blocks and insert them ADDITIVELY (without clearing the document). Async — the converter is lazy-loaded. Returns all created nodes in document order; empty input or a dangling parentId returns [].",
+        example: `const nodes = await blocks.insertMarkdown(
+  '# Title\\n\\n- one\\n- two',
+  { position: 'end' },
+);`,
+      },
+      {
+        name: "exportMarkdown()",
+        returnType: "Promise<string>",
+        description:
+          "Serialize the WHOLE document to Markdown (async, lazy-loaded serializer). Structure Markdown can't express (e.g. merged table cells) is dropped.",
+        example: `const md = await blocks.exportMarkdown();`,
+      },
+      {
+        name: "move(id, target)",
+        returnType: "void",
+        description:
+          "Move a block to a flat slot: { before }, { after }, or { toIndex }. The block adopts the parent of wherever it lands — use nest/unnest to change the parent without picking a sibling slot.",
+        example: `blocks.move(nodeId, { after: otherId });
+blocks.move(nodeId, { toIndex: 0 });`,
+      },
+      {
+        name: "nest(id, parentId)",
+        returnType: "void",
+        description: "Make a block a child of another block.",
+        example: `blocks.nest(childId, toggleId);`,
+      },
+      {
+        name: "unnest(id)",
+        returnType: "void",
+        description: "Move a nested block up one level (out of its parent).",
+        example: `blocks.unnest(childId);`,
+      },
+      {
+        name: "remove(id)",
+        returnType: "void",
+        description: "Remove a block (and its subtree).",
+        example: `blocks.remove(nodeId);`,
+      },
+      {
+        name: "update(id, data?, tunes?)",
+        returnType: "void",
+        description:
+          "Update a block's data and/or tunes by id. Delegates to core's async blocks.update (its own undo step); unknown ids are a silent no-op.",
+        example: `blocks.update(nodeId, { text: 'Edited' });`,
+      },
+      {
+        name: "convert(id, newType, dataOverrides?, options?)",
+        returnType: "void",
+        description:
+          "Convert a block to another type (\"turn into\"). Both tools must define conversionConfig; a non-convertible block is a graceful no-op. options.caret places the caret in the converted block.",
+        example: `blocks.convert(nodeId, 'header', { level: 2 });`,
+      },
+      {
+        name: "transact(fn)",
+        returnType: "void",
+        description:
+          "Run several mutations as ONE atomic undo step.",
+        example: `blocks.transact(() => {
+  blocks.remove(oldId);
+  blocks.insert({ type: 'paragraph', data: { text: 'Replacement' } });
+});`,
+      },
+      {
+        name: "transactWithoutCapture(fn)",
+        returnType: "void",
+        description:
+          "Like transact, but the operation is NOT captured in undo history — for silent auto-repair/normalization that CMD+Z should never step through.",
+        example: `blocks.transactWithoutCapture(() => {
+  blocks.update(nodeId, { text: normalized });
+});`,
+      },
+      {
+        name: "splitBlock(currentBlockId, currentBlockData, newBlockType, newBlockData, insertIndex)",
+        returnType: "BlockNode | null",
+        description:
+          "Atomically split a block: update the current block and insert a new one at an absolute flat index, as ONE undo step.",
+        example: `const newNode = blocks.splitBlock(
+  nodeId, { text: 'First half' },
+  'paragraph', { text: 'Second half' },
+  blocks.getBlockIndex(nodeId)! + 1,
+);`,
+      },
+      {
+        name: "insertInsideParent(parentId, insertIndex, childData?)",
+        returnType: "BlockNode | null",
+        description:
+          "Insert a single child under a parent at a flat index, atomically (creation AND parent assignment in ONE undo step) — prefer over insert() + nest(), which is two steps.",
+        example: `const child = blocks.insertInsideParent(toggleId, 3);`,
+      },
+      {
+        name: "insertOutputData(blocks, options?)",
+        returnType: "BlockNode[]",
+        description:
+          "Insert a flat array of already-serialized OutputBlockData (the save() shape) directly, honoring parent/content links. One atomic undo step.",
+        example: `const nodes = blocks.insertOutputData(savedFragment.blocks);`,
+      },
+      {
+        name: "render(data)",
+        returnType: "Promise<void>",
+        description:
+          "Replace the WHOLE document with blocks from saved OutputData — a document-LOAD primitive that clears existing content first (unlike the additive inserters).",
+        example: `await blocks.render(savedData);`,
+      },
+      {
+        name: "renderFromHTML(html)",
+        returnType: "Promise<void>",
+        description:
+          "Replace the WHOLE document with blocks parsed from an HTML string (clears existing content first).",
+        example: `await blocks.renderFromHTML('<h1>Imported</h1><p>Body</p>');`,
+      },
+      {
+        name: "clear()",
+        returnType: "Promise<void>",
+        description: "Remove every block from the document.",
+        example: `await blocks.clear();`,
+      },
+      {
+        name: "getBlocksCount()",
+        returnType: "number",
+        description: "The current block count (reactive).",
+        example: `const count = blocks.getBlocksCount();`,
+      },
+      {
+        name: "getCurrentBlockIndex()",
+        returnType: "number",
+        description: "The flat index of the block holding the caret, or -1 when none.",
+        example: `const index = blocks.getCurrentBlockIndex();`,
+      },
+      {
+        name: "getBlockByIndex(index)",
+        returnType: "BlockNode | null",
+        description: "The block at a flat index as a snapshot node, or null.",
+        example: `const first = blocks.getBlockByIndex(0);`,
+      },
+      {
+        name: "getBlockIndex(id)",
+        returnType: "number | null",
+        description: "The absolute flat index of a block by id, or null when unknown.",
+        example: `const index = blocks.getBlockIndex(nodeId);`,
+      },
+      {
+        name: "getBlockData(id)",
+        returnType: "{ data, tunes } | null",
+        description:
+          "Read a block's current data and tunes by id without mutating anything — makes a client-side duplicate composable: read a node, then insert({ type, data, tunes }).",
+        example: `const saved = blocks.getBlockData(nodeId);
+if (saved) {
+  blocks.insert({ type: 'paragraph', data: saved.data, position: { after: nodeId } });
+}`,
+      },
+      {
+        name: "getBlockByElement(element)",
+        returnType: "BlockNode | null",
+        description:
+          "The block whose holder contains/equals a DOM element — maps an event target back to a block.",
+        example: `const node = blocks.getBlockByElement(event.target as HTMLElement);`,
+      },
+      {
+        name: "composeBlockData(toolName)",
+        returnType: "Promise<BlockToolData>",
+        description:
+          "Read a tool's default empty data without inserting anything. Rejects for an unknown tool.",
+        example: `const defaults = await blocks.composeBlockData('header');`,
+      },
+      {
+        name: "isSyncingFromYjs()",
+        returnType: "boolean",
+        description:
+          "Whether a Yjs sync (undo/redo) is in progress — use it to skip cleanup that would fight undo state.",
+        example: `if (!blocks.isSyncingFromYjs()) {
+  blocks.update(nodeId, { text: cleaned });
+}`,
+      },
+    ],
+  },
 ];
 
 export interface SidebarSection {

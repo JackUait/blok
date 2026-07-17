@@ -18,7 +18,10 @@ const renderPage = () =>
     </MemoryRouter>
   );
 
-describe('ToolsPage', () => {
+// The first test in the file pays the full-page jsdom render (all tool
+// sections + the docs sidebar, which now includes the framework-adapter API
+// group) — legitimately ~5-7s, over the default 5s budget on slower runs.
+describe('ToolsPage', { timeout: 15_000 }, () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

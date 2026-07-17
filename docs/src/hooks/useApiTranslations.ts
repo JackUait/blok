@@ -37,6 +37,8 @@ const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'tools-api': 'api.toolsApi',
   'output-data': 'api.outputData',
   'block-data': 'api.blockData',
+  'blok-editor': 'api.blokEditor',
+  'use-blocks': 'api.useBlocks',
 };
 
 const SIDEBAR_LINK_KEYS: Record<string, string> = {
@@ -66,6 +68,8 @@ const SIDEBAR_LINK_KEYS: Record<string, string> = {
   'tools-api': 'api.links.tools',
   'output-data': 'api.links.outputData',
   'block-data': 'api.links.blockData',
+  'blok-editor': 'api.links.blokEditor',
+  'use-blocks': 'api.links.useBlocks',
 };
 
 /**

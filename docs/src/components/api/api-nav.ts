@@ -7,6 +7,7 @@ export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }>
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api'] },
   { key: 'extending', moduleIds: ['tools-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api'] },
   { key: 'dataTypes', moduleIds: ['output-data', 'block-data'] },
+  { key: 'adapters', moduleIds: ['blok-editor', 'use-blocks'] },
 ];
 
 export const MODULE_ORDER: string[] = SIDEBAR_GROUPS.flatMap((g) => g.moduleIds);
@@ -18,6 +19,7 @@ export const GROUP_TITLES_EN: Record<string, string> = {
   interface: 'Interface',
   extending: 'Extending & system',
   dataTypes: 'Data types',
+  adapters: 'Framework adapters',
 };
 
 export const MODULE_LABELS_EN: Record<string, string> = {
@@ -47,6 +49,8 @@ export const MODULE_LABELS_EN: Record<string, string> = {
   'saver-api': 'Saver',
   'output-data': 'OutputData',
   'block-data': 'BlockData',
+  'blok-editor': 'BlokEditor component',
+  'use-blocks': 'useBlocks',
 };
 
 /**

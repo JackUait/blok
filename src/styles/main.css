@@ -341,6 +341,15 @@
 }
 
 /**
+ * Editor gutter — host-overridable space for the floating plus/drag controls,
+ * which render outside the content column. Logical props keep RTL correct.
+ */
+[data-blok-redactor] {
+  padding-inline-start: var(--blok-editor-gutter-start, 0px);
+  padding-inline-end: var(--blok-editor-gutter-end, 0px);
+}
+
+/**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation
  */

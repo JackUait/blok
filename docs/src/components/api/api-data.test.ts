@@ -116,6 +116,22 @@ describe("API_SECTIONS", () => {
     });
   });
 
+  describe("Styles API", () => {
+    it("documents the host customization CSS custom properties", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // Public --blok-* hooks that let hosts customize layout and chrome
+      // without targeting Blok internals via test IDs / data attributes.
+      const example = stylesSection!.example ?? "";
+      expect(example).toContain("--blok-content-max-width");
+      expect(example).toContain("--blok-editor-gutter-start");
+      expect(example).toContain("--blok-editor-gutter-end");
+      expect(example).toContain("--blok-list-padding-start");
+      expect(example).toContain("--blok-search-input-placeholder");
+    });
+  });
+
   describe("Blocks API", () => {
     it("should have all Blocks API methods documented", () => {
       const blocksSection = API_SECTIONS.find((s) => s.id === "blocks-api");

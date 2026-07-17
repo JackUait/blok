@@ -356,8 +356,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // width="…" attribute — e.g. a Google Drive <iframe width="640"> snippet
     // stored in block data — can never overflow its column and overlap
     // siblings. Bumps the multiplier to 1.381. ~0.4KB intentional growth.
+    // Host customization tokens: public --blok-* hooks (search-input
+    // placeholder color, content max-width override, list start padding,
+    // redactor gutters) replacing hosts' internal-selector hacks; see
+    // host-customization-tokens.test.ts. Bumps the multiplier to 1.383.
+    // ~0.5KB intentional growth.
     const PRE_SPLIT_BYTES = 407500;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.381);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.383);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

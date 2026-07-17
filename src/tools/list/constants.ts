@@ -18,8 +18,10 @@ export const ORDERED_INDENT_PER_LEVEL = 26;
  * Base styles for list wrapper
  *
  * Matches paragraph spacing: py-[7px] from blok-block + mt-[2px] mb-px
+ * Start padding is a host-overridable custom property (defaults to 0) so
+ * embedding apps can indent lists without targeting [data-list-style].
  */
-export const BASE_STYLES = 'outline-hidden py-[7px] mt-[2px] mb-px';
+export const BASE_STYLES = 'outline-hidden py-[7px] mt-[2px] mb-px ps-[var(--blok-list-padding-start,0px)]';
 
 /**
  * Styles for standard list items (unordered, ordered)

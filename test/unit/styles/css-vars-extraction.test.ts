@@ -267,6 +267,11 @@ describe('R2 — repeated length literals in themeable properties must be tokeni
 const DANGLING_VAR_ALLOWLIST = new Set([
   // Consumer-supplied font-family; falls back to --blok-font-sans.
   '--blok-font-family',
+  // Consumer-supplied content column cap; falls back to --max-width-content.
+  '--blok-content-max-width',
+  // Consumer-supplied editor gutters for the floating block controls; fall back to 0px.
+  '--blok-editor-gutter-start',
+  '--blok-editor-gutter-end',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {

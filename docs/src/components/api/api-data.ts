@@ -1151,8 +1151,26 @@ editor.selection.restore();`,
     badge: "Styles",
     title: "Styles API",
     description:
-      "Access CSS class names for styling custom tools and UI elements.",
-    example: `// Access CSS class names for styling custom tools
+      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties.",
+    example: `// Customize the editor from your host app via CSS custom properties —
+// no need to target Blok's internal test IDs or data attributes.
+.my-editor-container {
+  /* Cap the content column at a custom width (default: 720px) */
+  --blok-content-max-width: 650px;
+
+  /* Reserve space inside the editor for the floating +/⠿ block
+     controls so they never overflow your container (default: 0px) */
+  --blok-editor-gutter-start: 56px;
+  --blok-editor-gutter-end: 16px;
+
+  /* Extra start padding on list blocks (default: 0px) */
+  --blok-list-padding-start: 18px;
+
+  /* Placeholder color of popover search inputs */
+  --blok-search-input-placeholder: rgba(112, 118, 132, 0.8);
+}
+
+// Access CSS class names for styling custom tools
 const styles = editor.styles;
 
 // Use class names in your custom tool

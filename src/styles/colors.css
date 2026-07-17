@@ -41,6 +41,7 @@
   --color-search-input-bg: var(--blok-search-input-bg);
   --color-search-input-border: var(--blok-search-input-border);
   --color-search-input-focus-border: var(--blok-search-input-focus-border);
+  --color-search-input-placeholder: var(--blok-search-input-placeholder);
   --color-link-input-border: var(--blok-link-input-border);
   --color-popover-icon-bg: var(--blok-popover-icon-bg);
   --color-popover-icon-active-bg: var(--blok-popover-icon-active-bg);
@@ -57,7 +58,8 @@
 
 @layer utilities {
   .max-w-blok-content {
-    max-width: var(--max-width-content);
+    /* Host-overridable content column cap, no width='full' needed. */
+    max-width: var(--blok-content-max-width, var(--max-width-content));
   }
 }
 
@@ -107,6 +109,8 @@
   --blok-search-input-bg: #f8f8f8;
   --blok-search-input-border: rgba(226, 226, 229, 0.2);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
+  /* Tracks the cascaded --blok-gray-text, so dark themes inherit it. */
+  --blok-search-input-placeholder: color-mix(in oklab, var(--blok-gray-text) 80%, transparent);
   --blok-link-input-border: rgba(226, 226, 229, 0.2);
 
   /* Popover icon container */

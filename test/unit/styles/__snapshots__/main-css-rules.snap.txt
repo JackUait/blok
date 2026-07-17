@@ -1060,7 +1060,7 @@
 }
 
 [@layer utilities] .max-w-blok-content {
-  max-width: var(--max-width-content);
+  max-width: var(--blok-content-max-width, var(--max-width-content));
 }
 
 [data-blok-interface], [data-blok-popover], [data-blok-top-layer] {
@@ -1104,6 +1104,7 @@
   --blok-search-input-bg: #f8f8f8;
   --blok-search-input-border: rgba(226, 226, 229, 0.2);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
+  --blok-search-input-placeholder: color-mix(in oklab, var(--blok-gray-text) 80%, transparent);
   --blok-link-input-border: rgba(226, 226, 229, 0.2);
   --blok-popover-icon-bg: rgba(55, 53, 47, 0.06);
   --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.1);
@@ -1833,6 +1834,11 @@
 
 [data-blok-width="full"] [data-blok-element-content] {
   max-width: none;
+}
+
+[data-blok-redactor] {
+  padding-inline-start: var(--blok-editor-gutter-start, 0px);
+  padding-inline-end: var(--blok-editor-gutter-end, 0px);
 }
 
 [data-blok-dragging-multi="true"] [data-blok-selected="true"] {

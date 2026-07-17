@@ -60,10 +60,10 @@ describe('release family manifest', () => {
     expect(out).not.toContain('@bloklabs');
   });
 
-  it('marks exactly the adapter entries for dist rewriting', () => {
-    const rewriting = FAMILY.filter((p) => (p.distRewriteDirs ?? []).length > 0).map((p) => p.npmName);
-
-    expect(rewriting).toEqual(['@bloklabs/react', '@bloklabs/vue', '@bloklabs/angular']);
+  it('derives rewrite coverage instead of keeping per-package directory lists', () => {
+    for (const entry of FAMILY) {
+      expect('distRewriteDirs' in entry, entry.npmName).toBe(false);
+    }
   });
 
   it('leaves manifests without a core peer untouched apart from the name', () => {

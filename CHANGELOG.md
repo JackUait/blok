@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2](https://github.com/JackUait/blok/compare/v1.2.1...v1.2.2) (2026-07-17)
+
+### Features
+
+- **Theming** — New public `--blok-*` custom properties let host apps customize editor layout without reaching into internals: `--blok-content-max-width` (content column cap), `--blok-editor-gutter-start`/`--blok-editor-gutter-end` (space reserved for the floating block controls, RTL-correct), `--blok-list-padding-start` (list indent), and `--blok-search-input-placeholder` (popover search placeholder color). Defaults preserve current behavior; documented in the docs-site Styles API section.
+- **React** — First-class block authoring: `createReactBlock` renders block tools authored as React components through a shared portal host inside the host app's React tree, so app-level context (providers, themes, stores) reaches block components directly — no more `createRoot` per block or context bridges. Every function in a tool's config (including nested ones like `uploader.uploadByFile`) is now re-bound to the latest render's closure, so inline closures work without freezing identities or recreating the editor.
+
+### Bug Fixes
+
+- **Floating UI** — A hardening sweep across every floating surface: popovers anchored inside nested scroll containers no longer drift or detach on scroll (snapshot anchors, virtual selection anchors, and fixed-position menus all track correctly); tooltips dismiss on nested scroll; the emoji picker and link hover card follow moving anchors; root boundary calculation is normalized for scrolled and 100vh host bodies. An architecture test now enforces that all floating UI goes through the central positioning module.
+- **Renderer** — Stored block data is now sanitized on render with the same per-tool sanitize config the Saver applies, closing stored-HTML injection for legacy data that never round-tripped through save (e.g. a raw `<iframe width>` baked into paragraph text overflowing its column). Fixed-width iframes/embeds are additionally capped at `max-width: 100%`.
+- **Link** — The hover card now requires actual pointer motion before opening, so it no longer opens when a link merely renders or scrolls under a stationary cursor.
+
+### Maintenance
+
+- **Release** — Preflight (eslint ∥ tsc ∥ vitest) and build pipelines were parallelized (~2× faster wall clock), with per-step timeouts so a hung build can no longer stall a release. GitHub Packages mirror tarballs now rewrite `@bloklabs/core` specifiers in every shipped file (previously react/vue `types/index.d.ts` still referenced the npm scope, breaking consumer `tsc` on GHP-only installs).
+
 ## [1.2.1](https://github.com/JackUait/blok/compare/v1.2.0...v1.2.1) (2026-07-16)
 
 ### Features

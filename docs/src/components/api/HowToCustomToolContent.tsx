@@ -94,6 +94,75 @@ const editor = new Blok({
   },
 });`;
 
+// Framework-native alternative to the class: each adapter ships a factory that
+// turns a component into a `BlockToolConstructable`. Shown only when the
+// framework toggle is on an adapter (vanilla has no factory to show).
+const COMPONENT_AUTHORING_CODE: Partial<Record<string, { code: string; language: string }>> = {
+  react: {
+    language: 'tsx',
+    code: `import { createReactBlock } from '@bloklabs/react';
+
+export const CalloutTool = createReactBlock({
+  type: 'callout',
+  toolbox: { title: 'Callout', icon: '💡' },
+  // Declares the saved data shape and its defaults — this IS your save() schema.
+  propSchema: { text: { default: '' } },
+  component: ({ data, commit }) => (
+    <input
+      className="callout"
+      value={data.text}
+      onChange={(e) => commit({ text: e.target.value })}
+    />
+  ),
+});`,
+  },
+  vue: {
+    language: 'typescript',
+    code: `import { h } from 'vue';
+import { createVueBlock } from '@bloklabs/vue';
+
+export const CalloutTool = createVueBlock<{ text: string }>({
+  type: 'callout',
+  toolbox: { title: 'Callout', icon: '💡' },
+  // Declares the saved data shape and its defaults — this IS your save() schema.
+  propSchema: { text: { default: '' } },
+  setup: ({ data, commit }) => () =>
+    h('input', {
+      class: 'callout',
+      value: data.value.text,
+      onInput: (event: Event) =>
+        commit({ text: (event.target as HTMLInputElement).value }),
+    }),
+});`,
+  },
+  angular: {
+    language: 'typescript',
+    code: `import { Component, inject } from '@angular/core';
+import { createAngularBlock, BLOK_BLOCK_CONTEXT } from '@bloklabs/angular';
+
+@Component({
+  standalone: true,
+  template: \`<input
+    class="callout"
+    [value]="ctx.data().text"
+    (input)="ctx.commit({ text: $any($event.target).value })"
+  />\`,
+})
+export class CalloutComponent {
+  // Per-block context: data() signal, commit(), readOnly(), block API.
+  ctx = inject(BLOK_BLOCK_CONTEXT);
+}
+
+export const CalloutTool = createAngularBlock<{ text: string }>({
+  type: 'callout',
+  toolbox: { title: 'Callout', icon: '💡' },
+  // Declares the saved data shape and its defaults — this IS your save() schema.
+  propSchema: { text: { default: '' } },
+  component: CalloutComponent,
+});`,
+  },
+};
+
 interface HowToStep {
   key: string;
   /** Raw vanilla example, adapted to the active framework at render time. */
@@ -151,6 +220,28 @@ export const HowToCustomToolContent: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Component authoring — adapter frameworks only */}
+      {(() => {
+        const snippet = COMPONENT_AUTHORING_CODE[framework];
+        if (snippet === undefined) {
+          return null;
+        }
+        return (
+          <div className="flex flex-col gap-4 border-t border-border pt-8">
+            <h2 className={headingClass}>
+              <Typo>{t('api.howToCustomTool.component.title')}</Typo>
+            </h2>
+            <p className={proseClass}>
+              {renderInline(t(`api.howToCustomTool.component.body.${framework}`))}
+            </p>
+            <CodeBlock code={snippet.code} language={snippet.language} />
+            <p className={proseClass}>
+              {renderInline(t('api.howToCustomTool.component.registerNote'))}
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Going further */}
       <div className="flex flex-col gap-4 border-t border-border pt-8">

@@ -859,6 +859,15 @@
           "body": "Open the `/` menu, pick Callout, type into the box, and call `save()`. Your block appears in the output alongside the built-in ones."
         }
       },
+      "component": {
+        "title": "Or write it as a component",
+        "body": {
+          "react": "`createReactBlock` from `@bloklabs/react` turns a React component into a block tool — no class needed. The component renders through your app's own tree, so context from providers above the editor (theme, stores, router) reaches the block directly. `propSchema` declares the saved data shape, `data` is the current frozen snapshot, and `commit()` is the only write path. Functions anywhere in a tool's config also stay live across renders — inline callbacks always see the latest props and state, with no `deps` entry and no memoization.",
+          "vue": "`createVueBlock` from `@bloklabs/vue` turns a Vue component into a block tool — no class needed. The component teleports through your app's own tree, so `provide`/`inject` context from above the editor reaches the block directly. `propSchema` declares the saved data shape, `data` is a reactive frozen snapshot (read `data.value`), and `commit()` is the only write path.",
+          "angular": "`createAngularBlock` from `@bloklabs/angular` turns a standalone Angular component into a block tool — no class needed. Each block instance injects its context via `inject(BLOK_BLOCK_CONTEXT)`: `data()` is a signal holding the frozen snapshot, `commit()` is the only write path, and `readOnly()` mirrors the editor's read-only state."
+        },
+        "registerNote": "Register the result exactly like the class from step 2 — `tools: { callout: CalloutTool }`. Saving, validation, and lifecycle all round-trip the same way; the factory implements the `BlockTool` contract for you."
+      },
       "further": {
         "title": "Going further",
         "body": "Add a `validate()` method to drop empty blocks, a settings menu through `renderSettings()`, or paste handling with `onPaste`. The `BlockTool` interface covers the full lifecycle — `rendered()`, `updated()`, `moved()`, and `removed()`.",

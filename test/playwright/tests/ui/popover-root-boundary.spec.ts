@@ -225,4 +225,48 @@ test.describe('root popover boundary', () => {
       return Math.abs(menuDelta - bookmarkDelta);
     }).toBeLessThanOrEqual(2);
   });
+
+  test('keeps a virtual context-menu anchor attached during nested scrolling', async ({ page }) => {
+    await createBookmarkFixture(page, { nestedScroll: true });
+
+    const bookmark = page.locator(BOOKMARK_SELECTOR);
+
+    await bookmark.scrollIntoViewIfNeeded();
+    // Keep the virtual point comfortably away from the viewport edge so this
+    // test isolates anchor tracking instead of intentionally crossing the
+    // collision engine's above/below flip threshold during the 80px scroll.
+    await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 240), SCROLL_HOST_ID);
+
+    // Use a plain child so the native right-click path is not intentionally
+    // excluded as an interactive link/media context menu.
+    await bookmark.evaluate((element) => {
+      const target = document.createElement('span');
+
+      target.dataset.virtualAnchorTarget = 'true';
+      target.textContent = 'Open block context menu';
+      target.style.display = 'block';
+      element.appendChild(target);
+    });
+
+    await bookmark.locator('[data-virtual-anchor-target]').click({ button: 'right' });
+
+    const menu = page.locator(MENU_SELECTOR);
+
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveCSS('transform', 'none');
+
+    const menuBox = await requireBoundingBox(menu, 'Virtual-anchor menu before nested scroll');
+    const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark before virtual-anchor nested scroll');
+
+    await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 80), SCROLL_HOST_ID);
+
+    await expect.poll(async () => {
+      const movedMenu = await requireBoundingBox(menu, 'Virtual-anchor menu after nested scroll');
+      const movedBookmark = await requireBoundingBox(bookmark, 'Bookmark after virtual-anchor nested scroll');
+      const menuDelta = movedMenu.y - menuBox.y;
+      const bookmarkDelta = movedBookmark.y - bookmarkBox.y;
+
+      return Math.abs(menuDelta - bookmarkDelta);
+    }).toBeLessThanOrEqual(2);
+  });
 });

@@ -1,4 +1,5 @@
 import { PopoverDesktop } from '../../../components/utils/popover';
+import type { PopoverVirtualPositionParams } from '../../../../types/utils/popover/popover';
 import { PopoverEvent } from '../../../../types/utils/popover/popover-event';
 
 import { buildPasteMenuItems, type PasteMenuI18n } from './items';
@@ -39,6 +40,27 @@ const LIVE_ACTIONS: ReadonlySet<PasteMenuActionType> = new Set<PasteMenuActionTy
   'embed',
 ]);
 
+const virtualPositionParams = (
+  position: DOMRect | null,
+  positionContext?: HTMLElement
+): PopoverVirtualPositionParams => {
+  if (position === null) {
+    return {};
+  }
+
+  if (positionContext !== undefined) {
+    return {
+      position,
+      positionContext,
+    };
+  }
+
+  return {
+    position,
+    positionLifecycle: 'dismiss-on-nested-scroll',
+  };
+};
+
 /**
  * Notion-style popover shown on URL paste. Builds the applicable options, renders
  * them via the editor Popover at the caret, and reports the user's choice.
@@ -73,7 +95,7 @@ export class PasteMenuController implements LinkPasteMenu {
       items,
       flippable: true,
       ...(params.trigger ? { trigger: params.trigger } : {}),
-      ...(params.position ? { position: params.position } : {}),
+      ...virtualPositionParams(params.position, params.trigger),
     });
 
     this.popover = popover;

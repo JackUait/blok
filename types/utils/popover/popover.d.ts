@@ -53,7 +53,7 @@ export interface Flipper {
 /**
  * Params required to render popover
  */
-export interface PopoverParams {
+export interface PopoverParamsBase {
   /**
    * Popover items config
    */
@@ -69,20 +69,6 @@ export interface PopoverParams {
    * Element relative to which the popover should be positioned
    */
   trigger?: HTMLElement;
-
-  /**
-   * Optional position (DOMRect) to use for positioning instead of trigger element.
-   * When provided, this takes precedence over trigger's getBoundingClientRect().
-   * Useful for positioning at caret location or other dynamic positions.
-   */
-  position?: DOMRect;
-
-  /**
-   * Live element whose movement should be applied to a virtual `position`.
-   * Supply this when the rect came from a caret, pointer, or block inside a
-   * nested scroll container and the `trigger` is a separate toolbar control.
-   */
-  positionContext?: HTMLElement;
 
   /**
    * True if popover should contain search field
@@ -190,6 +176,67 @@ export interface PopoverParams {
    */
   listboxId?: string;
 }
+
+/**
+ * Explicit invalidation policy for a virtual position that has no live
+ * element from which movement can be measured.
+ */
+export type PopoverPositionLifecycle = 'dismiss-on-nested-scroll';
+
+type PopoverWithoutVirtualPosition = {
+  /** No virtual position: placement uses a live trigger or inline container. */
+  position?: never;
+  positionContext?: never;
+  positionLifecycle?: never;
+};
+
+type PopoverTrackedVirtualPosition = {
+  /**
+   * Viewport-relative virtual anchor captured from a caret, pointer, or other
+   * geometry source.
+   */
+  position: DOMRect;
+  /** Live element whose movement is applied to the virtual anchor. */
+  positionContext: HTMLElement;
+  positionLifecycle?: never;
+};
+
+type PopoverDismissibleVirtualPosition = {
+  /**
+   * Viewport-relative virtual anchor whose nested-scroll movement cannot be
+   * measured after capture.
+   */
+  position: DOMRect;
+  positionContext?: never;
+  /** Close instead of leaving a stale menu behind when a nested scroller moves. */
+  positionLifecycle: PopoverPositionLifecycle;
+};
+
+/**
+ * Params required to render a popover.
+ *
+ * A virtual `position` must either name the live element that owns it or
+ * explicitly opt into fail-closed dismissal on nested scrolling.
+ */
+export type PopoverVirtualPositionParams =
+  | PopoverWithoutVirtualPosition
+  | PopoverTrackedVirtualPosition
+  | PopoverDismissibleVirtualPosition;
+
+export type PopoverParams = PopoverParamsBase & PopoverVirtualPositionParams;
+
+/**
+ * Lifecycle choice required when replacing a popover's virtual position.
+ */
+export type PopoverPositionUpdate =
+  | {
+    positionContext: HTMLElement;
+    positionLifecycle?: never;
+  }
+  | {
+    positionContext?: never;
+    positionLifecycle: PopoverPositionLifecycle;
+  };
 
 
 /**

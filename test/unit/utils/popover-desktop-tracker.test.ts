@@ -193,7 +193,7 @@ describe('PopoverDesktop position tracker wiring', () => {
   it('moves an explicit virtual anchor by an explicitly supplied trigger context delta', () => {
     const caretRect = createRect({ top: 110, bottom: 126, left: 80, right: 80, width: 0, height: 16 });
 
-    popover.updatePosition(caretRect, trigger);
+    popover.updatePosition(caretRect, { positionContext: trigger });
     popover.show();
 
     expect(popover.getElement().style.top).toBe('134px');
@@ -211,6 +211,7 @@ describe('PopoverDesktop position tracker wiring', () => {
     const positionedPopover = new PopoverDesktop({
       items: createDefaultItems(),
       position: createRect({ top: 100, bottom: 140, left: 50, right: 250, width: 200, height: 40 }),
+      positionLifecycle: 'dismiss-on-nested-scroll',
     });
 
     document.body.appendChild(scroller);
@@ -235,7 +236,7 @@ describe('PopoverDesktop position tracker wiring', () => {
       trigger,
       position: caretRect,
       positionContext,
-    } as PopoverParams & { positionContext: HTMLElement });
+    });
 
     document.body.appendChild(positionContext);
     contextPopover.show();
@@ -262,7 +263,7 @@ describe('PopoverDesktop position tracker wiring', () => {
       items: createDefaultItems(),
       position: createRect({ top: 110, bottom: 126, left: 80, right: 80, width: 0, height: 16 }),
       positionContext,
-    } as PopoverParams & { positionContext: HTMLElement });
+    });
 
     document.body.appendChild(positionContext);
     contextPopover.show();
@@ -274,10 +275,11 @@ describe('PopoverDesktop position tracker wiring', () => {
     contextPopover.destroy();
   });
 
-  it('treats a position-only popover as a tracked root anchor', () => {
+  it('treats an explicitly dismissible virtual position as a root anchor', () => {
     const positionedPopover = new PopoverDesktop({
       items: createDefaultItems(),
       position: createRect({ top: 100, bottom: 140, left: 50, right: 250, width: 200, height: 40 }),
+      positionLifecycle: 'dismiss-on-nested-scroll',
     });
 
     positionedPopover.show();

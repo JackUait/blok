@@ -15,6 +15,7 @@ import { translateToolTitle, type I18nInstance } from '../utils/tools';
 import { getBlockColorToolboxEntries, type BlockColorData } from '../shared/block-color';
 
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
+import type { PopoverPositionUpdate } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { DATA_ATTR } from '../constants';
 
@@ -496,7 +497,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       });
 
       if (anchorRect !== undefined) {
-        this.popover.updatePosition(anchorRect, currentBlock?.holder);
+        const positionUpdate: PopoverPositionUpdate = currentBlock === undefined
+          ? { positionLifecycle: 'dismiss-on-nested-scroll' }
+          : { positionContext: currentBlock.holder };
+
+        this.popover.updatePosition(anchorRect, positionUpdate);
       }
     }
 

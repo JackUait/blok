@@ -5,7 +5,11 @@ vi.mock('../../../src/components/icons', () => ({
 }));
 
 import { PopoverAbstract } from '../../../src/components/utils/popover/popover-abstract';
-import type { PopoverParams, PopoverNodes } from '@/types/utils/popover/popover';
+import type {
+  PopoverParams,
+  PopoverParamsBase,
+  PopoverNodes,
+} from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import {
   PopoverItemDefault,
@@ -98,7 +102,7 @@ const createDefaultItems = (): PopoverItemParams[] => [
 ];
 
 const createPopover = (
-  params: Partial<PopoverParams> = {},
+  params: Partial<PopoverParamsBase> = {},
   itemsRenderParams?: PopoverItemRenderParamsMap
 ): TestPopover => {
   const resolvedParams: PopoverParams = {

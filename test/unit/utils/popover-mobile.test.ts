@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { PopoverParams, PopoverMobileNodes } from '@/types/utils/popover/popover';
+import type {
+  PopoverParams,
+  PopoverParamsBase,
+  PopoverMobileNodes,
+} from '@/types/utils/popover/popover';
 import type { PopoverItemDefaultParams, PopoverItemParams } from '@/types/utils/popover/popover-item';
 import type { PopoverHeaderParams } from '../../../src/components/utils/popover/components/popover-header';
 import { PopoverItemDefault } from '../../../src/components/utils/popover/components/popover-item';
@@ -106,7 +110,7 @@ const getPrivateApi = (popover: PopoverMobile): {
   showNestedItems: (item: PopoverItemDefault) => void;
 };
 
-const createPopoverParams = (overrides: Partial<PopoverParams> = {}): PopoverParams => ({
+const createPopoverParams = (overrides: Partial<PopoverParamsBase> = {}): PopoverParams => ({
   items: [
     {
       title: 'First item',
@@ -122,7 +126,7 @@ const createPopoverParams = (overrides: Partial<PopoverParams> = {}): PopoverPar
 
 const createdPopovers: PopoverMobile[] = [];
 
-const createPopover = (overrides?: Partial<PopoverParams>): { popover: PopoverMobile; params: PopoverParams } => {
+const createPopover = (overrides?: Partial<PopoverParamsBase>): { popover: PopoverMobile; params: PopoverParams } => {
   const params = createPopoverParams(overrides);
   const popover = new PopoverMobile(params);
 

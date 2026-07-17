@@ -5,7 +5,7 @@ import type { PopoverItemSeparator } from '../../../src/components/utils/popover
 import { PopoverDesktop } from '../../../src/components/utils/popover/popover-desktop';
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
-import type { PopoverParams } from '@/types/utils/popover/popover';
+import type { PopoverParams, PopoverParamsBase } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 // Mock dependencies that are not directly under test
@@ -39,7 +39,7 @@ describe('PopoverInline', () => {
   const OFFSET_LEFT_VALUE = 50;
 
   // Helper to create a real PopoverInline instance with test data
-  const createPopoverInline = (params?: Partial<PopoverParams>): PopoverInline => {
+  const createPopoverInline = (params?: Partial<PopoverParamsBase>): PopoverInline => {
     const defaultParams: PopoverParams = {
       items: [
         {

@@ -188,7 +188,7 @@ const getMockSearchInput = (index = 0): MockSearchInputShape => {
 
 import { PopoverDesktop } from '../../../src/components/utils/popover/popover-desktop';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import type { PopoverParams } from '@/types/utils/popover/popover';
+import type { PopoverParams, PopoverParamsBase } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { CSSVariables } from '../../../src/components/utils/popover/popover.const';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
@@ -260,7 +260,7 @@ const createDefaultItems = (): PopoverParams['items'] => [
   },
 ];
 
-const createPopover = (params: Partial<PopoverParams> = {}): PopoverDesktop => {
+const createPopover = (params: Partial<PopoverParamsBase> = {}): PopoverDesktop => {
   const scopeElement = params.scopeElement ?? document.createElement('div');
 
   document.body.appendChild(scopeElement);
@@ -1480,7 +1480,7 @@ describe('PopoverDesktop', () => {
 
       const caretRect = createRect({ top: 110, bottom: 126, left: 500, right: 500, width: 0, height: 16 });
 
-      popover.updatePosition(caretRect);
+      popover.updatePosition(caretRect, { positionLifecycle: 'dismiss-on-nested-scroll' });
       popover.show();
 
       // Horizontal position should follow the explicit caret rect (500),
@@ -1515,7 +1515,7 @@ describe('PopoverDesktop', () => {
 
       const caretRect = createRect({ top: 110, bottom: 126, left: 500, right: 500, width: 0, height: 16 });
 
-      popover.updatePosition(caretRect);
+      popover.updatePosition(caretRect, { positionLifecycle: 'dismiss-on-nested-scroll' });
       popover.show();
       expect(popover.getElement().style.left).toBe(`${500 + window.scrollX}px`);
 
@@ -1556,7 +1556,7 @@ describe('PopoverDesktop', () => {
 
       const caretRect = createRect({ top: 110, bottom: 126, left: 900, right: 900, width: 0, height: 16 });
 
-      popover.updatePosition(caretRect);
+      popover.updatePosition(caretRect, { positionLifecycle: 'dismiss-on-nested-scroll' });
       popover.show();
 
       const leftPx = popover.getElement().style.left;
@@ -1587,13 +1587,15 @@ describe('PopoverDesktop', () => {
       });
 
       popover.updatePosition(
-        createRect({ top: 110, bottom: 126, left: 300, right: 300, width: 0, height: 16 })
+        createRect({ top: 110, bottom: 126, left: 300, right: 300, width: 0, height: 16 }),
+        { positionLifecycle: 'dismiss-on-nested-scroll' }
       );
       popover.show();
       expect(popover.getElement().style.left).toBe(`${300 + window.scrollX}px`);
 
       popover.updatePosition(
-        createRect({ top: 110, bottom: 126, left: 700, right: 700, width: 0, height: 16 })
+        createRect({ top: 110, bottom: 126, left: 700, right: 700, width: 0, height: 16 }),
+        { positionLifecycle: 'dismiss-on-nested-scroll' }
       );
       expect(popover.getElement().style.left).toBe(`${700 + window.scrollX}px`);
 

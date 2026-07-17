@@ -17,7 +17,11 @@ import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from
 import { stripPopoverAttribute } from '../top-layer';
 import { twMerge } from '../tw';
 
-import type { PopoverParams, Flipper as FlipperHandle } from '@/types/utils/popover/popover';
+import type {
+  PopoverParams,
+  PopoverPositionUpdate,
+  Flipper as FlipperHandle,
+} from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 
 
@@ -617,11 +621,13 @@ export class PopoverDesktop extends PopoverAbstract {
    * Updates the popover position dynamically.
    * Used when the trigger position changes or when positioning at caret location.
    * @param position - new DOMRect position for the popover
-   * @param positionContext - live element that produced/owns the virtual rect
+   * @param update - explicit live context or fail-closed dismissal policy
    */
-  public updatePosition(position: DOMRect, positionContext?: HTMLElement): void {
+  public updatePosition(position: DOMRect, update: PopoverPositionUpdate): void {
     this.params.position = position;
-    this.positionContext = positionContext ?? this.positionContext;
+    // Optional chaining preserves the runtime fail-closed contract for
+    // untyped JavaScript that still calls the old one-argument form.
+    this.positionContext = update?.positionContext;
     this.explicitPositionAnchor = this.captureExplicitPosition(position);
 
     // Recalculate and apply position if already shown

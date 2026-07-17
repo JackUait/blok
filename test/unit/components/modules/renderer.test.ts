@@ -257,7 +257,9 @@ describe('Renderer module', () => {
 
     expect(blockManager.composeBlock).toHaveBeenCalledTimes(1);
 
-    const composed = blockManager.composeBlock.mock.calls[0]?.[0] as { data: { text: string } };
+    const composed = blockManager.composeBlock.mock.calls[0]?.[0] as unknown as {
+      data: { text: string };
+    };
 
     expect(composed.data.text).not.toContain('<iframe');
     expect(composed.data.text).toContain('before');
@@ -821,4 +823,3 @@ describe('Renderer module', () => {
     });
   });
 });
-

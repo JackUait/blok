@@ -131,7 +131,7 @@ describe('useBlok live tool-config functions (no frozen identities, no recreatio
 
   it('falls back to the construction-time function when the latest config drops it', async () => {
     const { rerender, unmount } = renderHook((props: { config: UseBlokConfig }) => useBlok(props.config), {
-      initialProps: { config: { tools: makeTools('v1') } },
+      initialProps: { config: { tools: makeTools('v1') } } as { config: UseBlokConfig },
     });
 
     await flushReady();

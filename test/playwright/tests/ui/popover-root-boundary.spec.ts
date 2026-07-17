@@ -29,22 +29,52 @@ const requireBoundingBox = async (locator: Locator, label: string): Promise<Boun
 
 const createBookmarkFixture = async (
   page: Page,
-  options: { rootCss?: string; nestedScroll?: boolean } = {}
+  options: {
+    rootCss?: string;
+    nestedScroll?: boolean;
+    transformedHost?: boolean;
+    horizontalScroll?: boolean;
+  } = {}
 ): Promise<void> => {
-  const { rootCss = '', nestedScroll = false } = options;
+  const {
+    rootCss = '',
+    nestedScroll = false,
+    transformedHost = false,
+    horizontalScroll = false,
+  } = options;
+  const transformCss = transformedHost ? 'transform: translate3d(0, 0, 0);' : '';
+  const documentCss = horizontalScroll
+    ? `
+      html, body { margin: 0 }
+      ${rootCss}
+      body { min-width: 4000px }
+      #blok {
+        width: 1200px;
+        margin-left: 2200px;
+        padding-top: 900px;
+        padding-bottom: 1200px;
+      }
+    `
+    : `
+      html, body { margin: 0 }
+      ${rootCss}
+      #blok { padding-top: 2200px; padding-bottom: 1200px }
+    `;
 
   await page.addStyleTag({
     content: nestedScroll
       ? `
         html, body { margin: 0 }
-        #${SCROLL_HOST_ID} { height: 520px; margin: 80px 40px; overflow: auto; border: 1px solid transparent }
+        #${SCROLL_HOST_ID} {
+          height: 520px;
+          margin: 80px 40px;
+          overflow: auto;
+          border: 1px solid transparent;
+          ${transformCss}
+        }
         #blok { padding-top: 1400px; padding-bottom: 1000px }
       `
-      : `
-        html, body { margin: 0 }
-        ${rootCss}
-        #blok { padding-top: 2200px; padding-bottom: 1200px }
-      `,
+      : documentCss,
   });
 
   await page.evaluate(async ({ hostId, useNestedScroll }) => {
@@ -151,6 +181,8 @@ const expectMenuBesideTrigger = (menuBox: BoundingBox, triggerBox: BoundingBox):
   const menuCenterY = menuBox.y + menuBox.height / 2;
 
   expect(Math.abs(menuCenterY - triggerCenterY)).toBeLessThanOrEqual(2);
+  expect(menuBox.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(1280);
   expect(menuBox.y).toBeGreaterThanOrEqual(0);
   expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(720);
 };
@@ -159,6 +191,11 @@ const rootCssCases = [
   { name: 'body', css: 'body { height: 100vh }' },
   { name: 'html', css: 'html { height: 100vh }' },
   { name: 'html and body', css: 'html, body { height: 100vh }' },
+] as const;
+
+const nestedHostCases = [
+  { name: 'ordinary overflow host', transformedHost: false },
+  { name: 'transformed overflow host', transformedHost: true },
 ] as const;
 
 test.describe('root popover boundary', () => {
@@ -205,68 +242,95 @@ test.describe('root popover boundary', () => {
     }).toBeLessThanOrEqual(2);
   });
 
-  test('keeps the menu attached when a nested scroll container moves its anchor after opening', async ({ page }) => {
-    await createBookmarkFixture(page, { nestedScroll: true });
+  test('keeps the menu attached during horizontal document scrolling', async ({ page }) => {
+    await createBookmarkFixture(page, {
+      rootCss: 'html, body { height: 100vh }',
+      horizontalScroll: true,
+    });
 
-    const { bookmark, menu, menuBox } = await openBookmarkMenu(page, true);
-    const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark before nested scroll');
+    const { bookmark, menu, triggerBox, menuBox } = await openBookmarkMenu(page);
+    const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark before horizontal scroll');
 
-    expect(await page.evaluate((hostId) => document.getElementById(hostId)?.scrollTop ?? 0, SCROLL_HOST_ID))
+    expect(await page.evaluate(() => window.scrollX))
       .toBeGreaterThan(1000);
+    expectMenuBesideTrigger(menuBox, triggerBox);
 
-    await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 80), SCROLL_HOST_ID);
+    await page.evaluate(() => window.scrollBy(80, 0));
 
     await expect.poll(async () => {
-      const movedMenu = await requireBoundingBox(menu, 'Menu after nested scroll');
-      const movedBookmark = await requireBoundingBox(bookmark, 'Bookmark after nested scroll');
-      const menuDelta = movedMenu.y - menuBox.y;
-      const bookmarkDelta = movedBookmark.y - bookmarkBox.y;
+      const movedMenu = await requireBoundingBox(menu, 'Menu after horizontal scroll');
+      const movedBookmark = await requireBoundingBox(bookmark, 'Bookmark after horizontal scroll');
+      const menuDelta = movedMenu.x - menuBox.x;
+      const bookmarkDelta = movedBookmark.x - bookmarkBox.x;
 
       return Math.abs(menuDelta - bookmarkDelta);
     }).toBeLessThanOrEqual(2);
   });
 
-  test('keeps a virtual context-menu anchor attached during nested scrolling', async ({ page }) => {
-    await createBookmarkFixture(page, { nestedScroll: true });
+  nestedHostCases.forEach(({ name, transformedHost }) => {
+    test(`keeps the menu attached when its ${name} moves after opening`, async ({ page }) => {
+      await createBookmarkFixture(page, { nestedScroll: true, transformedHost });
 
-    const bookmark = page.locator(BOOKMARK_SELECTOR);
+      const { bookmark, menu, menuBox } = await openBookmarkMenu(page, true);
+      const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark before nested scroll');
 
-    await bookmark.scrollIntoViewIfNeeded();
-    // Keep the virtual point comfortably away from the viewport edge so this
-    // test isolates anchor tracking instead of intentionally crossing the
-    // collision engine's above/below flip threshold during the 80px scroll.
-    await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 240), SCROLL_HOST_ID);
+      expect(await page.evaluate((hostId) => document.getElementById(hostId)?.scrollTop ?? 0, SCROLL_HOST_ID))
+        .toBeGreaterThan(1000);
 
-    // Use a plain child so the native right-click path is not intentionally
-    // excluded as an interactive link/media context menu.
-    await bookmark.evaluate((element) => {
-      const target = document.createElement('span');
+      await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 80), SCROLL_HOST_ID);
 
-      target.dataset.virtualAnchorTarget = 'true';
-      target.textContent = 'Open block context menu';
-      target.style.display = 'block';
-      element.appendChild(target);
+      await expect.poll(async () => {
+        const movedMenu = await requireBoundingBox(menu, 'Menu after nested scroll');
+        const movedBookmark = await requireBoundingBox(bookmark, 'Bookmark after nested scroll');
+        const menuDelta = movedMenu.y - menuBox.y;
+        const bookmarkDelta = movedBookmark.y - bookmarkBox.y;
+
+        return Math.abs(menuDelta - bookmarkDelta);
+      }).toBeLessThanOrEqual(2);
     });
 
-    await bookmark.locator('[data-virtual-anchor-target]').click({ button: 'right' });
+    test(`keeps a virtual context-menu anchor attached in its ${name}`, async ({ page }) => {
+      await createBookmarkFixture(page, { nestedScroll: true, transformedHost });
 
-    const menu = page.locator(MENU_SELECTOR);
+      const bookmark = page.locator(BOOKMARK_SELECTOR);
 
-    await expect(menu).toBeVisible();
-    await expect(menu).toHaveCSS('transform', 'none');
+      await bookmark.scrollIntoViewIfNeeded();
+      // Keep the virtual point comfortably away from the viewport edge so this
+      // test isolates anchor tracking instead of intentionally crossing the
+      // collision engine's above/below flip threshold during the 80px scroll.
+      await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 240), SCROLL_HOST_ID);
 
-    const menuBox = await requireBoundingBox(menu, 'Virtual-anchor menu before nested scroll');
-    const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark before virtual-anchor nested scroll');
+      // Use a plain child so the native right-click path is not intentionally
+      // excluded as an interactive link/media context menu.
+      await bookmark.evaluate((element) => {
+        const target = document.createElement('span');
 
-    await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 80), SCROLL_HOST_ID);
+        target.dataset.virtualAnchorTarget = 'true';
+        target.textContent = 'Open block context menu';
+        target.style.display = 'block';
+        element.appendChild(target);
+      });
 
-    await expect.poll(async () => {
-      const movedMenu = await requireBoundingBox(menu, 'Virtual-anchor menu after nested scroll');
-      const movedBookmark = await requireBoundingBox(bookmark, 'Bookmark after virtual-anchor nested scroll');
-      const menuDelta = movedMenu.y - menuBox.y;
-      const bookmarkDelta = movedBookmark.y - bookmarkBox.y;
+      await bookmark.locator('[data-virtual-anchor-target]').click({ button: 'right' });
 
-      return Math.abs(menuDelta - bookmarkDelta);
-    }).toBeLessThanOrEqual(2);
+      const menu = page.locator(MENU_SELECTOR);
+
+      await expect(menu).toBeVisible();
+      await expect(menu).toHaveCSS('transform', 'none');
+
+      const menuBox = await requireBoundingBox(menu, 'Virtual-anchor menu before nested scroll');
+      const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark before virtual-anchor nested scroll');
+
+      await page.evaluate((hostId) => document.getElementById(hostId)?.scrollBy(0, 80), SCROLL_HOST_ID);
+
+      await expect.poll(async () => {
+        const movedMenu = await requireBoundingBox(menu, 'Virtual-anchor menu after nested scroll');
+        const movedBookmark = await requireBoundingBox(bookmark, 'Bookmark after virtual-anchor nested scroll');
+        const menuDelta = movedMenu.y - menuBox.y;
+        const bookmarkDelta = movedBookmark.y - bookmarkBox.y;
+
+        return Math.abs(menuDelta - bookmarkDelta);
+      }).toBeLessThanOrEqual(2);
+    });
   });
 });

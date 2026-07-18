@@ -232,7 +232,8 @@ const editor = new Blok(config);`,
         option: "tools",
         type: "Record<string, ToolConstructable | ToolSettings>",
         default: "{}",
-        description: "Available block and inline tools",
+        description:
+          "Available block and inline tools. Per-tool `toolbox: false` keeps a tool registered (existing blocks still render, blocks.insert() still works) while removing it from every user-insertion path — the + / slash menu, the convert menu, and its keyboard shortcut. Useful for permission gating.",
       },
       {
         option: "placeholder",
@@ -262,9 +263,10 @@ const editor = new Blok(config);`,
       },
       {
         option: "readOnly",
-        type: "boolean",
+        type: "boolean | { hideControls: boolean }",
         default: "false",
-        description: "Enable read-only mode",
+        description:
+          "Enable read-only mode. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings, and inline toolbar.",
       },
       {
         option: "onChange",
@@ -305,7 +307,8 @@ const editor = new Blok(config);`,
         option: "i18n",
         type: "I18nConfig",
         default: "undefined",
-        description: "Internationalization config (locale + message dictionary)",
+        description:
+          "Internationalization config (locale + message dictionary). Custom tool titles are localizable by registration name — e.g. a `fileLink` tool via `messages: { 'toolNames.fileLink': '…' }` — or via a `titleKey` in the tool's toolbox entry.",
       },
       {
         option: "theme",

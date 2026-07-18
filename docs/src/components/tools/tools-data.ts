@@ -683,7 +683,7 @@ const editor = new Blok({
         option: 'convertGifToVideo',
         type: 'boolean',
         default: 'true',
-        description: 'Auto-convert animated GIFs to a looping WebM video block on insert. Set false to keep GIFs as image blocks.',
+        description: 'Auto-convert animated GIFs to a looping WebM video block on insert. Only applies when a video tool is registered — without one, GIFs stay image blocks. Set false to always keep GIFs as image blocks.',
       },
       {
         option: 'captionPlaceholder',

@@ -11,7 +11,7 @@ import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
-import { clampNestedPopoverTop, resolveNestedPopoverSide } from './popover-nested-position';
+import { clampNestedPopoverTop } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
 import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from './anchored-position';
 import { stripPopoverAttribute } from '../top-layer';
@@ -1243,8 +1243,6 @@ export class PopoverDesktop extends PopoverAbstract {
     const queriedPopoverEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popover}]`);
     const actualPopoverEl: HTMLElement = queriedPopoverEl instanceof HTMLElement ? queriedPopoverEl : nestedPopoverEl;
 
-    const parentPrefersLeft = this.nodes.popover.hasAttribute(DATA_ATTR.popoverOpenLeft);
-
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
@@ -1253,44 +1251,24 @@ export class PopoverDesktop extends PopoverAbstract {
     // (0.25rem = 4px).
     const overlap = 4;
 
-    // Decide the side based on measured space, not just the parent's flag.
-    // The flag can be truthy for very different reasons (open-left after a
-    // right-edge flip vs. placeLeftOfAnchor) — mirroring it blindly used to
-    // push the nested popover off-screen when the parent itself hugged the
-    // viewport's left edge (e.g. BlockSettings on the leftmost block).
-    //
-    // Uses the same pure geometry primitives as the shared `positionAnchored`
-    // engine (resolveNestedPopoverSide + clampNestedPopoverTop); the resulting
-    // offset is resolved to explicit pixels — the former nesting-level CSS-var
-    // `calc()` branch has been removed. The nested container stays positioned
-    // relative to its parent popover root (its offset parent), so the resolved
-    // viewport coordinates are converted into that local coordinate space.
+    // Submenus ALWAYS open on the right of their parent, regardless of the
+    // parent's own side or the space available — a side that flips with
+    // geometry made the same menu open left or right on different blocks.
+    // The nested container stays positioned relative to its parent popover
+    // root (its offset parent), so the viewport coordinate is converted into
+    // that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
     const parentRootRect = this.nodes.popover.getBoundingClientRect();
-    const nestedMeasuredWidth = this.nestedPopover?.size.width ?? this.nodes.popoverContainer.offsetWidth;
-    const { openLeft: openNestedLeft } = resolveNestedPopoverSide({
-      parentRect: {
-        left: parentRect.left,
-        right: parentRect.right,
-        width: parentRect.width,
-      },
-      nestedWidth: nestedMeasuredWidth,
-      viewportWidth: window.innerWidth,
-      parentPrefersLeft,
-      overlap,
-    });
 
     // Horizontal: place the submenu beside the parent, overlapping its trailing
     // edge by `overlap` px, then convert to parent-root-relative pixels.
-    const viewportLeft = openNestedLeft
-      ? parentRect.left - nestedMeasuredWidth + overlap
-      : parentRect.right - overlap;
+    const viewportLeft = parentRect.right - overlap;
 
     nestedContainer.style.left = `${viewportLeft - parentRootRect.left}px`;
 
     // Stamp the resolved side/align so CSS/animation can key off it, mirroring
     // the root popover's data-side/data-align contract.
-    actualPopoverEl.setAttribute('data-side', openNestedLeft ? 'left' : 'right');
+    actualPopoverEl.setAttribute('data-side', 'right');
     actualPopoverEl.setAttribute('data-align', 'center');
 
     // Center nested popover vertically on the trigger item, then clamp

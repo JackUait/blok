@@ -953,6 +953,44 @@ describe('PopoverDesktop', () => {
       expect(instance.nestedPopover).toBeFalsy();
     });
 
+    it('opens the nested popover to the right even when the parent popover opened to the left', () => {
+      vi.useFakeTimers();
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      // A left-opened parent (right-aligned trigger) used to pull its submenu
+      // to the left; submenus must ALWAYS open on the right.
+      instance.nodes.popover.setAttribute('data-blok-popover-open-left', 'true');
+
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      const hoverOnParent = {
+        composedPath: () => (parentElement ? [parentElement] : []),
+      } as unknown as Event;
+
+      instance.handleHover(hoverOnParent);
+      vi.advanceTimersByTime(100);
+
+      const nested = instance.nestedPopover;
+
+      expect(nested).toBeInstanceOf(PopoverDesktop);
+      expect(nested?.getElement().getAttribute('data-side')).toBe('right');
+    });
+
     it('closes the nested popover when the pointer moves onto container chrome that is no item', () => {
       vi.useFakeTimers();
       const popover = createPopover({

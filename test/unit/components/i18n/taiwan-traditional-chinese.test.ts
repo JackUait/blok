@@ -16,6 +16,56 @@ const extractPlaceholders = (value: string): string[] =>
     .filter((placeholder): placeholder is string => placeholder !== undefined)
     .sort();
 
+const UNIVERSAL_IDENTICAL_KEYS = [
+  'blockSettings.menuShortcutMac',
+  'blockSettings.menuShortcutWin',
+  'tools.database.propertyTypeUrl',
+  'tools.image.cropRatio16to9',
+  'tools.image.cropRatio1to1',
+  'tools.image.cropRatio4to3',
+];
+
+const GUIDELINE_EXPECTATIONS: Messages = {
+  'blockSettings.clickToOpenMenu': '按一下以開啟選單',
+  'blockSettings.clickAction': '按一下',
+  'toolbox.addBelow': '按一下以在下方新增',
+  'toolbox.optionAddAbove': '按住 ⌥ 並按一下，即可在上方新增',
+  'toolbox.ctrlAddAbove': '按住 Ctrl 並按一下，即可在上方新增',
+  'tools.toggle.bodyPlaceholder': '空白的收合區塊。按一下或將區塊拖曳至此。',
+  'tools.table.clickToAddRow': '按一下以新增一列',
+  'tools.table.clickToAddColumn': '按一下以新增一欄',
+  'tools.table.fitToPageWidth': '配合頁面寬度',
+  'blockSettings.lastEditedBy': '上次由 {name} 編輯',
+  'a11y.dragHandle': '拖曳以移動，或按一下以開啟選單',
+  'searchTerms.delimiter': '分隔標記',
+  'searchTerms.unordered': '無編號清單',
+  'searchTerms.ordered': '編號清單',
+  'toolNames.equation': '方程式',
+  'tools.equation.placeholder': '輸入 LaTeX 方程式…',
+  'tools.image.converting': '轉換中…',
+  'tools.image.errorFileTooLarge': '圖片大小為 {size}，上限為 {max}。',
+  'tools.image.errorSourceOffline': '來源可能已移動或離線。',
+  'tools.file.errorFileTooLarge': '檔案大小為 {size}，上限為 {max}。',
+  'tools.file.previewRender': '預覽',
+  'tools.video.loop': '重複播放',
+  'tools.video.errorFileTooLarge': '影片大小為 {size}，上限為 {max}。',
+  'tools.audio.loop': '重複播放',
+  'tools.audio.errorFileTooLarge': '音訊大小為 {size}，上限為 {max}。',
+  'tools.audio.titlePlaceholder': '曲目名稱',
+  'tools.audio.artistPlaceholder': '藝人',
+  'tools.audio.coverChange': '更換封面',
+  'tools.audio.coverSet': '設定封面圖片',
+  'tools.audio.coverRemove': '移除封面',
+  'tools.audio.coverErrorType': '請選擇圖片檔案',
+  'tools.audio.coverErrorTooLarge': '圖片太大',
+  'tools.audio.coverAdd': '新增封面',
+  'tools.audio.coverSourceAria': '封面來源',
+  'tools.database.titlePlaceholder': '新資料庫',
+  'tools.database.viewTypeBoardDescription': '以多欄看板呈現內容',
+  'tools.database.viewTypeListDescription': '依序顯示內容',
+  'tools.video.ctxCopyUrlAtTime': '複製目前時間點的影片網址',
+};
+
 describe('Taiwan Traditional Chinese translations', () => {
   const english = loadMessages('en');
   const simplified = loadMessages('zh');
@@ -44,6 +94,36 @@ describe('Taiwan Traditional Chinese translations', () => {
     expect(mismatches).toEqual([]);
   });
 
+  it('matches English only for universal notation', () => {
+    const identicalKeys = Object.keys(english)
+      .filter((key) => taiwan[key] === english[key])
+      .sort();
+
+    expect(identicalKeys).toEqual(UNIVERSAL_IDENTICAL_KEYS);
+  });
+
+  it('keeps every tool name short and localized', () => {
+    const offenders = Object.entries(taiwan).flatMap(([key, value]) => {
+      if (!key.startsWith('toolNames.')) {
+        return [];
+      }
+
+      return /[A-Za-z]/u.test(value) || Array.from(value).length > 6
+        ? [`${key}: "${value}"`]
+        : [];
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('uses natural Taiwan wording in each audited UI context', () => {
+    const mismatches = Object.entries(GUIDELINE_EXPECTATIONS).flatMap(([key, expected]) =>
+      taiwan[key] === expected ? [] : [`${key}: expected "${expected}", received "${taiwan[key]}"`]
+    );
+
+    expect(mismatches).toEqual([]);
+  });
+
   it('is a distinct localization rather than the Simplified Chinese dictionary', () => {
     const differingValues = Object.keys(taiwan).filter((key) => taiwan[key] !== simplified[key]);
 
@@ -52,7 +132,7 @@ describe('Taiwan Traditional Chinese translations', () => {
 
   it('uses established Taiwan product terminology', () => {
     expect(taiwan['blockSettings.dragToMove']).toBe('拖曳以移動');
-    expect(taiwan['toolbox.addBelow']).toBe('點擊以在下方新增');
+    expect(taiwan['toolbox.addBelow']).toBe('按一下以在下方新增');
     expect(taiwan['popover.search']).toBe('搜尋');
     expect(taiwan['blockSettings.delete']).toBe('刪除');
     expect(taiwan['toolNames.file']).toBe('檔案');

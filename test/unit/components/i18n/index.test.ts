@@ -124,6 +124,17 @@ describe('I18n Module', () => {
       expect(i18n.t('blockSettings.dragToMove')).toBe('拖动以移动');
     });
 
+    it('sets locale to Taiwan Traditional Chinese and loads its dictionary', async () => {
+      const i18n = createI18nModule();
+
+      await i18n.prepare();
+      await i18n.setLocale('zh-TW');
+
+      expect(i18n.getLocale()).toBe('zh-TW');
+      expect(i18n.t('blockSettings.dragToMove')).toBe('拖曳以移動');
+      expect(i18n.t('popover.search')).toBe('搜尋');
+    });
+
     it('sets locale to English and loads English dictionary', async () => {
       const i18n = createI18nModule();
 
@@ -209,6 +220,46 @@ describe('I18n Module', () => {
 
       expect(result).toBe('en');
     });
+
+    it.each(['zh-TW', 'zh-tw', 'zh-Hant', 'zh-Hant-TW'])(
+      'maps the browser language tag %s to Taiwan Traditional Chinese',
+      async (languageTag) => {
+        Object.defineProperty(global, 'navigator', {
+          value: {
+            languages: [languageTag, 'en'],
+            language: languageTag,
+          },
+          configurable: true,
+        });
+
+        const i18n = createI18nModule();
+
+        await i18n.prepare();
+
+        expect(i18n.getLocale()).toBe('zh-TW');
+        expect(i18n.t('popover.search')).toBe('搜尋');
+      }
+    );
+
+    it.each(['zh', 'zh-CN', 'zh-SG', 'zh-Hans', 'zh-Hans-CN', 'zh-Hans-SG'])(
+      'keeps the browser language tag %s on Simplified Chinese',
+      async (languageTag) => {
+        Object.defineProperty(global, 'navigator', {
+          value: {
+            languages: [languageTag, 'en'],
+            language: languageTag,
+          },
+          configurable: true,
+        });
+
+        const i18n = createI18nModule();
+
+        await i18n.prepare();
+
+        expect(i18n.getLocale()).toBe('zh');
+        expect(i18n.t('blockSettings.dragToMove')).toBe('拖动以移动');
+      }
+    );
   });
 
 
@@ -288,6 +339,12 @@ describe('I18n Module', () => {
 
       expect(i18n.getDirectionForLocale('de')).toBe('ltr');
     });
+
+    it('returns ltr for Taiwan Traditional Chinese', () => {
+      const i18n = createI18nModule();
+
+      expect(i18n.getDirectionForLocale('zh-TW')).toBe('ltr');
+    });
   });
 
   describe('locale loading', () => {
@@ -312,8 +369,10 @@ describe('I18n Module', () => {
   });
 
   describe('locale system', () => {
-    it('ALL_LOCALE_CODES contains all 68 supported locales', () => {
-      expect(ALL_LOCALE_CODES.length).toBe(68);
+    it('ALL_LOCALE_CODES contains all 69 supported locale variants exactly once', () => {
+      expect(ALL_LOCALE_CODES).toContain('zh-TW');
+      expect(new Set(ALL_LOCALE_CODES).size).toBe(ALL_LOCALE_CODES.length);
+      expect(ALL_LOCALE_CODES.length).toBe(69);
     });
 
     it('loadLocale loads a specific locale', async () => {

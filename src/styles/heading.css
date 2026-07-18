@@ -7,55 +7,63 @@
   Known limit: the text-size class copied for placeholder alignment
   (header/index.ts:1073) keeps the Tailwind default — cosmetic only.
 
-  line-height uses a single shared unitless fallback (1.3, matching the
-  BASE_STYLES leading that used to render it) instead of per-level rem
-  values. BASE_STYLES no longer sets `leading-[1.3]!` at all: that class
-  compiled to a layered `!important` declaration, which always beats an
-  unlayered non-important one — so the per-level rem fallbacks here were
-  dead on arrival and never the real rendered line-height. Being unlayered
-  and non-important is enough for this rule to beat the layered, non-important
-  line-height that ships bundled with each level's text-size utility
-  (e.g. `text-3xl`), so no `!important` is needed here either. Unitless is
-  also what keeps line-height correctly scaling with levelOverrides.size and
-  with font-size:inherit table-cell contexts.
+  Per-level rules key on [data-blok-heading-level="N"] (stamped by
+  getTag() in src/tools/header/index.ts) rather than on the rendered
+  tag name (hN). A level can be remapped to any tag via
+  levelOverrides[n].tag (types/tools/header.d.ts) — keying on tag would
+  make such a heading match no per-level rule (or, if remapped to
+  another heading tag, match THAT tag's rule instead of its own level's).
+  Keying on the level attribute keeps the specificity the same
+  (0,2,0, unlayered) so it still beats the @layer utilities classes
+  regardless of which tag renders.
+
+  line-height lives in the shared rule below (not per-level) and uses a
+  single shared unitless fallback (1.3, matching the BASE_STYLES leading
+  that used to render it). BASE_STYLES no longer sets `leading-[1.3]!` at
+  all: that class compiled to a layered `!important` declaration, which
+  always beats an unlayered non-important one — so per-level rem values
+  here would be dead on arrival and never the real rendered line-height.
+  Being unlayered and non-important is enough for this rule to beat the
+  layered, non-important line-height that ships bundled with each level's
+  text-size utility (e.g. `text-3xl`), so no `!important` is needed here
+  either. Unitless is also what keeps line-height correctly scaling with
+  levelOverrides.size and with font-size:inherit table-cell contexts.
+  Living in the shared, tag-agnostic rule (rather than duplicated six
+  times) also means it still applies when a level is rendered with a
+  custom tag that matches no per-level rule.
 */
 [data-blok-tool="header"] {
   font-weight: var(--blok-heading-font-weight, 600);
   margin-bottom: var(--blok-heading-margin-bottom, 1px);
+  line-height: var(--blok-heading-line-height, 1.3);
 }
 
-h1[data-blok-tool="header"] {
+[data-blok-tool="header"][data-blok-heading-level="1"] {
   font-size: var(--blok-heading-1-font-size, 1.875rem);
-  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 2rem);
 }
 
-h2[data-blok-tool="header"] {
+[data-blok-tool="header"][data-blok-heading-level="2"] {
   font-size: var(--blok-heading-2-font-size, 1.5rem);
-  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 26px);
 }
 
-h3[data-blok-tool="header"] {
+[data-blok-tool="header"][data-blok-heading-level="3"] {
   font-size: var(--blok-heading-3-font-size, 1.25rem);
-  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 1.25rem);
 }
 
-h4[data-blok-tool="header"] {
+[data-blok-tool="header"][data-blok-heading-level="4"] {
   font-size: var(--blok-heading-4-font-size, 1.125rem);
-  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }
 
-h5[data-blok-tool="header"] {
+[data-blok-tool="header"][data-blok-heading-level="5"] {
   font-size: var(--blok-heading-5-font-size, 1rem);
-  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }
 
-h6[data-blok-tool="header"] {
+[data-blok-tool="header"][data-blok-heading-level="6"] {
   font-size: var(--blok-heading-6-font-size, 0.875rem);
-  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }

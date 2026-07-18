@@ -43,6 +43,10 @@ export const DATA_ATTR = {
   depth: 'data-blok-depth',
   /** Flat list-nesting indentation level (0 = root); tool-agnostic, mirrors list depth */
   indent: 'data-blok-indent',
+  /** Header tool's heading level (1-6). Public styling hook — keyed by level rather
+   *  than by tag name, so a level remapped to a custom tag via `levelOverrides[n].tag`
+   *  (types/tools/header.d.ts) still matches its level's typography rules. */
+  headingLevel: 'data-blok-heading-level',
 
   // ============================================
   // Global States

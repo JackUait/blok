@@ -1005,6 +1005,14 @@ export class Header implements BlockTool {
     tag.setAttribute(DATA_ATTR.tool, 'header');
 
     /**
+     * Stamp the heading level as its own attribute (independent of the tag
+     * name) so the CSS in src/styles/heading.css can key per-level rules on
+     * level rather than tag — a level remapped to a custom tag via
+     * levelOverrides[n].tag would otherwise match no per-level rule.
+     */
+    tag.setAttribute(DATA_ATTR.headingLevel, String(this.currentLevel.number));
+
+    /**
      * Make tag editable
      */
     tag.contentEditable = this.readOnly ? 'false' : 'true';

@@ -140,21 +140,22 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       [6, '0.875rem', '0.75rem'],
     ];
 
-    it.each(LEVELS)('drives h%i typography from per-level tokens', (level, fontSize, marginTop) => {
-      const body = findRuleBody(css, `h${level}[data-blok-tool="header"]`);
+    it.each(LEVELS)('drives level %i typography from per-level tokens keyed on data-blok-heading-level', (level, fontSize, marginTop) => {
+      const body = findRuleBody(css, `[data-blok-tool="header"][data-blok-heading-level="${level}"]`);
 
       expect(body).not.toBeNull();
       expect(body).toContain(`font-size: var(--blok-heading-${level}-font-size, ${fontSize})`);
-      expect(body).toContain('line-height: var(--blok-heading-line-height, 1.3)');
+      expect(body).not.toContain('line-height');
       expect(body).toContain(`margin-top: var(--blok-heading-margin-top, ${marginTop})`);
     });
 
-    it('drives heading weight and bottom margin from shared tokens', () => {
+    it('drives heading weight, bottom margin, and the shared line-height from shared tokens', () => {
       const body = findRuleBody(css, '[data-blok-tool="header"]');
 
       expect(body).not.toBeNull();
       expect(body).toContain('font-weight: var(--blok-heading-font-weight, 600)');
       expect(body).toContain('margin-bottom: var(--blok-heading-margin-bottom, 1px)');
+      expect(body).toContain('line-height: var(--blok-heading-line-height, 1.3)');
     });
   });
 

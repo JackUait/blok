@@ -362,6 +362,34 @@ describe('Header Tool - Custom Configurations', () => {
     });
   });
 
+  describe('data-blok-heading-level attribute', () => {
+    it('stamps the level regardless of a custom tag override', () => {
+      const options = createHeaderOptions(
+        { text: 'Test', level: 1 },
+        { levelOverrides: { 1: { tag: 'div' } } }
+      );
+      const header = new Header(options);
+      const element = header.render();
+
+      expect(element).toHaveAttribute('data-blok-heading-level', '1');
+    });
+
+    it('updates the level attribute after a level change', () => {
+      const options = createHeaderOptions({ text: 'Test', level: 2 });
+      const header = new Header(options);
+      const element = header.render();
+
+      const container = document.createElement('div');
+      container.appendChild(element);
+
+      header.data = { text: 'Test', level: 4 };
+
+      const newElement = container.querySelector('[data-blok-tool="header"]');
+
+      expect(newElement).toHaveAttribute('data-blok-heading-level', '4');
+    });
+  });
+
   describe('toggle heading (isToggleable)', () => {
     beforeEach(() => {
       vi.clearAllMocks();

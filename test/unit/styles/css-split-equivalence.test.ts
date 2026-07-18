@@ -368,8 +368,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // heading.css line-height rule can actually win the cascade) and expanded the
     // heading.css doc comment explaining the cascade-layer mechanics; ~0.6KB
     // intentional growth. Bumps the multiplier to 1.39.
+    // 2026-07-18: final-review round 2 — re-keyed the six per-level heading.css rules
+    // from `hN[data-blok-tool="header"]` to `[data-blok-tool="header"][data-blok-heading-level="N"]`
+    // (so a level remapped to a custom tag via levelOverrides[n].tag still matches its
+    // level's rule) and moved the shared line-height into the single `[data-blok-tool="header"]`
+    // rule; the longer attribute selectors and expanded doc comment add ~0.4KB. Bumps the
+    // multiplier to 1.392.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.39);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.392);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

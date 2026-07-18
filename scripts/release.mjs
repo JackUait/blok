@@ -199,6 +199,10 @@ if (isDirectRun) {
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   }
 
+  // yarn.lock records the workspaces' peer ranges; without this sync the
+  // release commit fails CI's `yarn install --immutable` with YN0028.
+  run('yarn install --mode=update-lockfile');
+
   // --- Build the whole family + CLI as one parallel task graph ---
 
   run('node scripts/build-all.mjs --with-cli');
@@ -284,12 +288,12 @@ if (isDirectRun) {
   // --- Git: commit, tag, push ---
 
   if (isDryRun) {
-    run('git checkout -- package.json ' + WORKSPACE_MANIFESTS.join(' '));
+    run('git checkout -- package.json yarn.lock ' + WORKSPACE_MANIFESTS.join(' '));
     console.log(`\nDry run complete for ${version} — nothing was published.`);
     process.exit(0);
   }
 
-  run(`git add package.json ${WORKSPACE_MANIFESTS.join(' ')}`);
+  run(`git add package.json yarn.lock ${WORKSPACE_MANIFESTS.join(' ')}`);
   run(`git commit -m "chore(release): ${version}"`);
   run(`git tag ${gitTag}`);
   run('git push');

@@ -4,6 +4,11 @@
   tokens) but scoped to [data-blok-tool="embed"].
 */
 
+/* Host-overridable spacing above the embed block (default 0 = unchanged). */
+[data-blok-tool="embed"] {
+  margin-top: var(--blok-embed-margin-top, 0px);
+}
+
 [data-blok-tool="embed"] [data-role="embed-figure"] {
   position: relative;
 }

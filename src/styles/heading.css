@@ -1,0 +1,49 @@
+/*
+  Host-overridable typography hooks for the header tool.
+
+  Fallbacks replicate the Tailwind classes declared in HEADER_LEVELS
+  (src/tools/header/index.ts) so default rendering is byte-identical.
+  Unlayered on purpose: it must beat the @layer utilities classes.
+  Known limit: the text-size class copied for placeholder alignment
+  (header/index.ts:1073) keeps the Tailwind default — cosmetic only.
+*/
+[data-blok-tool="header"] {
+  font-weight: var(--blok-heading-font-weight, 600);
+  margin-bottom: var(--blok-heading-margin-bottom, 1px);
+}
+
+h1[data-blok-tool="header"] {
+  font-size: var(--blok-heading-1-font-size, 1.875rem);
+  line-height: var(--blok-heading-line-height, 2.25rem);
+  margin-top: var(--blok-heading-margin-top, 2rem);
+}
+
+h2[data-blok-tool="header"] {
+  font-size: var(--blok-heading-2-font-size, 1.5rem);
+  line-height: var(--blok-heading-line-height, 2rem);
+  margin-top: var(--blok-heading-margin-top, 26px);
+}
+
+h3[data-blok-tool="header"] {
+  font-size: var(--blok-heading-3-font-size, 1.25rem);
+  line-height: var(--blok-heading-line-height, 1.75rem);
+  margin-top: var(--blok-heading-margin-top, 1.25rem);
+}
+
+h4[data-blok-tool="header"] {
+  font-size: var(--blok-heading-4-font-size, 1.125rem);
+  line-height: var(--blok-heading-line-height, 1.75rem);
+  margin-top: var(--blok-heading-margin-top, 0.75rem);
+}
+
+h5[data-blok-tool="header"] {
+  font-size: var(--blok-heading-5-font-size, 1rem);
+  line-height: var(--blok-heading-line-height, 1.5rem);
+  margin-top: var(--blok-heading-margin-top, 0.75rem);
+}
+
+h6[data-blok-tool="header"] {
+  font-size: var(--blok-heading-6-font-size, 0.875rem);
+  line-height: var(--blok-heading-line-height, 1.25rem);
+  margin-top: var(--blok-heading-margin-top, 0.75rem);
+}

@@ -128,4 +128,39 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(css).not.toMatch(/^\[data-blok-interface\],\n\[data-blok-popover\],\n\[data-blok-top-layer\] \{/m);
     });
   });
+
+  describe('heading typography tokens', () => {
+    const LEVELS: Array<[number, string, string, string]> = [
+      // [level, font-size fallback, line-height fallback, margin-top fallback]
+      [1, '1.875rem', '2.25rem', '2rem'],
+      [2, '1.5rem', '2rem', '26px'],
+      [3, '1.25rem', '1.75rem', '1.25rem'],
+      [4, '1.125rem', '1.75rem', '0.75rem'],
+      [5, '1rem', '1.5rem', '0.75rem'],
+      [6, '0.875rem', '1.25rem', '0.75rem'],
+    ];
+
+    it.each(LEVELS)('drives h%i typography from per-level tokens', (level, fontSize, lineHeight, marginTop) => {
+      const body = findRuleBody(css, `h${level}[data-blok-tool="header"]`);
+
+      expect(body).not.toBeNull();
+      expect(body).toContain(`font-size: var(--blok-heading-${level}-font-size, ${fontSize})`);
+      expect(body).toContain(`line-height: var(--blok-heading-line-height, ${lineHeight})`);
+      expect(body).toContain(`margin-top: var(--blok-heading-margin-top, ${marginTop})`);
+    });
+
+    it('drives heading weight and bottom margin from shared tokens', () => {
+      const body = findRuleBody(css, '[data-blok-tool="header"]');
+
+      expect(body).not.toBeNull();
+      expect(body).toContain('font-weight: var(--blok-heading-font-weight, 600)');
+      expect(body).toContain('margin-bottom: var(--blok-heading-margin-bottom, 1px)');
+    });
+  });
+
+  describe('embed spacing token', () => {
+    it('drives the embed top margin from --blok-embed-margin-top', () => {
+      expect(css).toMatch(/\[data-blok-tool="embed"\]\s*\{[^}]*margin-top:\s*var\(--blok-embed-margin-top,\s*0px\)/);
+    });
+  });
 });

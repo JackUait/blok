@@ -272,6 +272,19 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // Consumer-supplied editor gutters for the floating block controls; fall back to 0px.
   '--blok-editor-gutter-start',
   '--blok-editor-gutter-end',
+  // Consumer-supplied heading typography; fall back to the HEADER_LEVELS Tailwind defaults.
+  '--blok-heading-1-font-size',
+  '--blok-heading-2-font-size',
+  '--blok-heading-3-font-size',
+  '--blok-heading-4-font-size',
+  '--blok-heading-5-font-size',
+  '--blok-heading-6-font-size',
+  '--blok-heading-line-height',
+  '--blok-heading-font-weight',
+  '--blok-heading-margin-top',
+  '--blok-heading-margin-bottom',
+  // Consumer-supplied spacing above embed blocks; falls back to 0px.
+  '--blok-embed-margin-top',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {

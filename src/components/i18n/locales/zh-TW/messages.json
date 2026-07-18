@@ -237,7 +237,7 @@
   "searchTerms.code": "程式碼",
   "searchTerms.snippet": "程式碼片段",
   "searchTerms.program": "程式",
-  "searchTerms.pre": "pre",
+  "searchTerms.pre": "預先格式化",
   "toolNames.image": "圖片",
   "blockSettings.blocksSelected": "已選取 {count} 個區塊",
   "blockSettings.copyLinkSuccess": "已將連結複製到剪貼簿",

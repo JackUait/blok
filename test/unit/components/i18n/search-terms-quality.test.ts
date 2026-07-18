@@ -152,6 +152,7 @@ const NON_LATIN_LOCALES = new Set([
   'ja',                                           // Japanese
   'ko',                                           // Korean
   'zh',                                           // Chinese
+  'zh-TW',                                        // Taiwan Traditional Chinese
 ]);
 
 /**

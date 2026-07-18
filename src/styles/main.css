@@ -335,9 +335,11 @@
  * --max-width-content constraint so content fills its container. The default
  * 'narrow' mode leaves the attribute absent and keeps the max-w-blok-content
  * Tailwind utility intact. Unlayered selector overrides the @layer utilities rule.
+ * The --blok-content-max-width token stays authoritative in both modes; full mode
+ * only swaps the fallback from --max-width-content to none.
  */
 [data-blok-width="full"] [data-blok-element-content] {
-  max-width: none;
+  max-width: var(--blok-content-max-width, none);
 }
 
 /**

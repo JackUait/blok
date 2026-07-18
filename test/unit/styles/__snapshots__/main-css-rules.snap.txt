@@ -1833,7 +1833,7 @@
 }
 
 [data-blok-width="full"] [data-blok-element-content] {
-  max-width: none;
+  max-width: var(--blok-content-max-width, none);
 }
 
 [data-blok-redactor] {

@@ -59,6 +59,13 @@ describe('Host customization tokens (public --blok-* contract)', () => {
         /max-width:\s*var\(--blok-content-max-width,\s*var\(--max-width-content\)\)/
       );
     });
+
+    it('lets --blok-content-max-width override the cap even in width="full" mode', () => {
+      const body = findRuleBody(css, '[data-blok-width="full"] [data-blok-element-content]');
+
+      expect(body).not.toBeNull();
+      expect(body).toMatch(/max-width:\s*var\(--blok-content-max-width,\s*none\)/);
+    });
   });
 
   describe('list wrapper indentation', () => {

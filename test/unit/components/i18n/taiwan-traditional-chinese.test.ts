@@ -21,8 +21,8 @@ describe('Taiwan Traditional Chinese translations', () => {
   const simplified = loadMessages('zh');
   const taiwan = loadMessages('zh-TW');
 
-  it('has exactly the English source key set with no empty values', () => {
-    expect(Object.keys(taiwan).sort()).toEqual(Object.keys(english).sort());
+  it('has exactly the English source keys in source order with no empty values', () => {
+    expect(Object.keys(taiwan)).toEqual(Object.keys(english));
 
     const empty = Object.entries(taiwan)
       .filter(([, value]) => value.trim() === '')

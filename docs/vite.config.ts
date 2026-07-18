@@ -11,11 +11,42 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Plugin to handle external /dist imports during dev
 const externalDistPlugin = (): Plugin => {
   const parentDistDir = resolve(__dirname, "..", "dist");
+  const parentPackagesDir = resolve(__dirname, "..", "packages");
+  const reactAdapterEntry = resolve(parentPackagesDir, "react", "dist", "index.mjs");
+  const docsIndexHtml = resolve(__dirname, "index.html");
 
   return {
     name: "external-dist",
     enforce: "pre",
-    resolveId(id) {
+    async resolveId(id, importer) {
+      // The workspace adapter bundle lives OUTSIDE the docs project, so its bare
+      // `react`/`react-dom` imports would resolve from the repo-root
+      // node_modules — a second physical React alongside docs/node_modules/react.
+      // Two React copies crash hooks at runtime ("Cannot read properties of null
+      // (reading 'useContext')"), and resolve.dedupe is not honored here, so
+      // re-resolve every react import from outside the docs dir as if the docs
+      // app itself imported it (which also keeps dev-server CJS interop:
+      // require.resolve would bypass the dep optimizer and lose named exports).
+      if (
+        importer?.startsWith(parentPackagesDir) &&
+        (id === "react" || id === "react-dom" || id.startsWith("react/") || id.startsWith("react-dom/"))
+      ) {
+        return this.resolve(id, docsIndexHtml, { skipSelf: true });
+      }
+      // The React adapter moved to its own workspace package; the root build no
+      // longer emits dist/react.mjs. Keep the /dist/react.mjs import stable for
+      // the demo (and its vitest mock) by aliasing it to the workspace bundle.
+      if (id === "/dist/react.mjs") {
+        return { id: reactAdapterEntry };
+      }
+      // The workspace bundle externalizes core as bare specifiers; resolve them
+      // to the built dist so the docs bundle shares one core with tools.mjs.
+      if (id === "@bloklabs/core") {
+        return { id: resolve(parentDistDir, "blok.mjs") };
+      }
+      if (id === "@bloklabs/core/adapters") {
+        return { id: resolve(parentDistDir, "adapters.mjs") };
+      }
       if (id.startsWith("/dist/")) {
         return { id: resolve(parentDistDir, id.slice("/dist/".length)) };
       }

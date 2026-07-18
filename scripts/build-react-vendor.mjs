@@ -7,6 +7,7 @@
  *
  * Output:
  *   test/playwright/fixtures/vendor/react.mjs          → React core + all named exports
+ *   test/playwright/fixtures/vendor/react-dom.mjs      → createPortal, flushSync
  *   test/playwright/fixtures/vendor/react-dom-client.mjs → createRoot, hydrateRoot
  *   test/playwright/fixtures/vendor/react-jsx-runtime.mjs → jsx, jsxs, Fragment
  *
@@ -37,6 +38,7 @@ await build({
   stdin: {
     contents: `
 import React from 'react';
+import * as ReactDOM from 'react-dom';
 import ReactDOMClient from 'react-dom/client';
 import * as JsxRuntime from 'react/jsx-runtime';
 
@@ -53,6 +55,10 @@ export const {
   version,
 } = React;
 export { React as default };
+
+// react-dom top-level exports (the @bloklabs/react bundle imports these bare)
+export const createPortal = ReactDOM.createPortal;
+export const flushSync = ReactDOM.flushSync;
 
 // react-dom/client exports
 export const createRoot = ReactDOMClient.createRoot;
@@ -90,6 +96,13 @@ writeFileSync(
   useRef, useState, useSyncExternalStore, useTransition,
   version } from './_react-bundle.mjs';
 `,
+  'utf8'
+);
+
+// react-dom.mjs — exports createPortal, flushSync
+writeFileSync(
+  path.resolve(outDir, 'react-dom.mjs'),
+  `export { createPortal, flushSync } from './_react-bundle.mjs';\n`,
   'utf8'
 );
 

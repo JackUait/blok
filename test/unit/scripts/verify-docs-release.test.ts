@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { FAMILY } from '../../../scripts/release-manifest.mjs';
 
 const loadVerifier = async () => import('../../../scripts/verify-docs-release.mjs');
 
@@ -31,13 +32,8 @@ describe('docs release verification', () => {
   it('covers every package published by the lockstep release', async () => {
     const { RELEASE_PACKAGES } = await loadVerifier();
 
-    expect(RELEASE_PACKAGES.map(({ name }: { name: string }) => name)).toEqual([
-      '@bloklabs/core',
-      '@bloklabs/react',
-      '@bloklabs/vue',
-      '@bloklabs/angular',
-      '@bloklabs/cli',
-    ]);
+    expect(RELEASE_PACKAGES.map(({ name }: { name: string }) => name))
+      .toEqual(FAMILY.map(({ npmName }) => npmName));
   });
 
   it('retries registry propagation before accepting the package release', async () => {

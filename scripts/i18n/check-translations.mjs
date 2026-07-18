@@ -57,12 +57,24 @@ function extractKeys(obj, prefix = '') {
  * Loads the raw and parsed forms of a JSON translation file.
  *
  * @param {string} locale - Locale code (e.g., 'en', 'ru')
- * @returns {{raw: string, translation: object}} Raw and parsed JSON content
+ * @returns {{
+ *   raw: string,
+ *   translation: Record<string, unknown>,
+ *   invalidRoot: boolean
+ * }} Raw JSON, safe dictionary, and root validation result
  */
 function loadTranslationFile(locale) {
   const filePath = join(LOCALES_DIR, locale, 'messages.json');
   const raw = readFileSync(filePath, 'utf-8');
-  return { raw, translation: JSON.parse(raw) };
+  const parsed = JSON.parse(raw);
+  const invalidRoot =
+    parsed === null || typeof parsed !== 'object' || Array.isArray(parsed);
+
+  return {
+    raw,
+    translation: invalidRoot ? {} : parsed,
+    invalidRoot,
+  };
 }
 
 /**
@@ -154,12 +166,7 @@ export function findLocaleIntegrityIssues(sourceTranslation, translation) {
     leading: value.match(/^\s*/u)?.[0] ?? '',
     trailing: value.match(/\s*$/u)?.[0] ?? '',
   });
-  const keys = new Set([
-    ...Object.keys(sourceTranslation),
-    ...Object.keys(translation),
-  ]);
-
-  for (const key of keys) {
+  for (const key of Object.keys(translation)) {
     const sourceValue = sourceTranslation[key];
     const value = translation[key];
 
@@ -442,9 +449,16 @@ function main() {
   let integrityErrors = false;
 
   for (const locale of availableLocales) {
-    const { raw, translation } = localeFiles.get(locale);
+    const { raw, translation, invalidRoot } = localeFiles.get(locale);
     const duplicateKeys = findDuplicateJsonKeys(raw);
     const integrityIssues = findLocaleIntegrityIssues(sourceTranslation, translation);
+
+    if (invalidRoot) {
+      integrityErrors = true;
+      console.log(
+        `${colors.red}✗${colors.reset} ${locale}:<root>: invalid-root`
+      );
+    }
 
     for (const key of duplicateKeys) {
       integrityErrors = true;

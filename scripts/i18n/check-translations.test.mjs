@@ -104,6 +104,42 @@ describe('translation checker CLI integrity reporting', () => {
     assert.match(output, /en:message\.value: non-string/);
     assert.doesNotMatch(output, /TypeError/);
   });
+
+  for (const [description, localeRaw] of [
+    ['an array', '[]'],
+    ['null', 'null'],
+    ['a primitive', '42'],
+  ]) {
+    it(`reports ${description} as an invalid target root and continues safe phases`, () => {
+      const sourceRaw = `{
+        "message.value": "Value"
+      }`;
+
+      const result = runCheckerFixture(sourceRaw, localeRaw);
+      const output = `${result.stdout}${result.stderr}`;
+
+      assert.equal(result.status, 1);
+      assert.match(output, /fr:<root>: invalid-root/);
+      assert.match(output, /Source coverage check passed!/);
+      assert.match(output, /Encoding quality check passed!/);
+      assert.doesNotMatch(output, /TypeError/);
+    });
+  }
+
+  it('reports an invalid source root and continues safe phases', () => {
+    const localeRaw = `{
+      "message.value": "Valeur"
+    }`;
+
+    const result = runCheckerFixture('null', localeRaw);
+    const output = `${result.stdout}${result.stderr}`;
+
+    assert.equal(result.status, 1);
+    assert.match(output, /en:<root>: invalid-root/);
+    assert.match(output, /Source coverage check passed!/);
+    assert.match(output, /Encoding quality check passed!/);
+    assert.doesNotMatch(output, /TypeError/);
+  });
 });
 
 describe('extractPlaceholders', () => {
@@ -171,6 +207,19 @@ describe('findLocaleIntegrityIssues', () => {
         { 'message.key': 'Supprimer', 'extra.key': 42 }
       ),
       [{ key: 'extra.key', kind: 'non-string', value: 42 }]
+    );
+  });
+
+  it('does not report absent target keys as integrity issues', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        {
+          'present.key': 'Delete',
+          'missing.key': 'Search',
+        },
+        { 'present.key': 'Supprimer' }
+      ),
+      []
     );
   });
 

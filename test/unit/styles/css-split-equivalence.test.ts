@@ -374,8 +374,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // level's rule) and moved the shared line-height into the single `[data-blok-tool="header"]`
     // rule; the longer attribute selectors and expanded doc comment add ~0.4KB. Bumps the
     // multiplier to 1.392.
+    // 2026-07-18: final-review round 3 — wrapped all seven heading.css selectors in
+    // :where(...) so the unlayered per-level rules drop to (0,0,0) specificity; without
+    // this, headings nested under [data-blok-toggle-children] (callouts/toggles) lost the
+    // main.css `mt-px` override and regained root-level margin-top. ~0.1KB from the
+    // `:where(...)` wrapper text plus expanded doc comment. Bumps the multiplier to 1.393.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.392);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.393);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

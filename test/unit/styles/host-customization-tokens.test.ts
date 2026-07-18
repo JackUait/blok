@@ -141,7 +141,7 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     ];
 
     it.each(LEVELS)('drives level %i typography from per-level tokens keyed on data-blok-heading-level', (level, fontSize, marginTop) => {
-      const body = findRuleBody(css, `[data-blok-tool="header"][data-blok-heading-level="${level}"]`);
+      const body = findRuleBody(css, `:where([data-blok-tool="header"][data-blok-heading-level="${level}"])`);
 
       expect(body).not.toBeNull();
       expect(body).toContain(`font-size: var(--blok-heading-${level}-font-size, ${fontSize})`);
@@ -150,7 +150,7 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     });
 
     it('drives heading weight, bottom margin, and the shared line-height from shared tokens', () => {
-      const body = findRuleBody(css, '[data-blok-tool="header"]');
+      const body = findRuleBody(css, ':where([data-blok-tool="header"])');
 
       expect(body).not.toBeNull();
       expect(body).toContain('font-weight: var(--blok-heading-font-weight, 600)');

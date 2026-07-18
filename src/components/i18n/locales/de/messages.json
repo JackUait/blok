@@ -81,6 +81,7 @@
   "tools.table.dragToAddRemoveColumns": "Ziehen, um Spalten hinzuzufügen oder zu entfernen",
   "tools.table.fitToPageWidth": "An Seitenbreite anpassen",
   "tools.table.fullWidth": "Volle Breite",
+  "tools.table.textSize": "Textgröße",
   "tools.table.compactText": "Kompakter Text",
   "tools.table.comfortableText": "Komfortabler Text",
   "blockSettings.delete": "Löschen",

@@ -104,6 +104,7 @@
   "tools.table.dragToAddRemoveColumns": "ลากเพื่อเพิ่มหรือลบคอลัมน์",
   "tools.table.fitToPageWidth": "พอดีกับความกว้างหน้า",
   "tools.table.fullWidth": "ความกว้างเต็ม",
+  "tools.table.textSize": "ขนาดข้อความ",
   "tools.table.compactText": "ข้อความกะทัดรัด",
   "tools.table.comfortableText": "ข้อความสบายตา",
   "blockSettings.convertWithChildrenWarning": "บล็อกนี้มี {count} บล็อกที่ซ้อนอยู่ การแปลงจะย้ายบล็อกเหล่านั้นขึ้นสู่ระดับบนสุด ต้องการดำเนินการต่อไหม?",

@@ -104,6 +104,7 @@
   "tools.table.dragToAddRemoveColumns": "برای افزودن یا حذف ستون‌ها بکشید",
   "tools.table.fitToPageWidth": "متناسب با عرض صفحه",
   "tools.table.fullWidth": "عرض کامل",
+  "tools.table.textSize": "اندازه متن",
   "tools.table.compactText": "متن فشرده",
   "tools.table.comfortableText": "متن راحت",
   "blockSettings.convertWithChildrenWarning": "این بلوک دارای {count} بلوک تو در تو است. تبدیل آن، بلوک‌های تو در تو را به سطح اصلی منتقل می‌کند. آیا می‌خواهید ادامه دهید؟",

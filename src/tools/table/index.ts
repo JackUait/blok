@@ -587,20 +587,29 @@ export class Table implements BlockTool {
         onActivate: (): void => this.toggleFullWidth(),
       },
       {
-        icon: IconTextSizeSmall,
-        title: i18n.t('tools.table.compactText'),
-        name: 'table-text-compact',
-        isActive: this.model.textSize === 'compact',
-        closeOnActivate: true,
-        onActivate: (): void => this.setTextSize('compact'),
-      },
-      {
         icon: IconTextSizeLarge,
-        title: i18n.t('tools.table.comfortableText'),
-        name: 'table-text-comfortable',
-        isActive: this.model.textSize === 'comfortable',
-        closeOnActivate: true,
-        onActivate: (): void => this.setTextSize('comfortable'),
+        title: i18n.t('tools.table.textSize'),
+        name: 'table-text-size',
+        children: {
+          items: [
+            {
+              icon: IconTextSizeSmall,
+              title: i18n.t('tools.table.compactText'),
+              name: 'table-text-compact',
+              isActive: this.model.textSize === 'compact',
+              closeOnActivate: true,
+              onActivate: (): void => this.setTextSize('compact'),
+            },
+            {
+              icon: IconTextSizeLarge,
+              title: i18n.t('tools.table.comfortableText'),
+              name: 'table-text-comfortable',
+              isActive: this.model.textSize === 'comfortable',
+              closeOnActivate: true,
+              onActivate: (): void => this.setTextSize('comfortable'),
+            },
+          ],
+        },
       },
     ];
   }

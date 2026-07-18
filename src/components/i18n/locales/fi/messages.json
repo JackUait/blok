@@ -104,6 +104,7 @@
   "tools.table.dragToAddRemoveColumns": "Vedä lisätäksesi tai poistaaksesi sarakkeita",
   "tools.table.fitToPageWidth": "Sovita sivun leveyteen",
   "tools.table.fullWidth": "Koko leveys",
+  "tools.table.textSize": "Tekstin koko",
   "tools.table.compactText": "Tiivis teksti",
   "tools.table.comfortableText": "Väljä teksti",
   "blockSettings.convertWithChildrenWarning": "Tässä lohkossa on {count} sisäkkäistä lohkoa. Muuntaminen siirtää ne ylimmälle tasolle. Jatketaanko?",

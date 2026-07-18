@@ -79,6 +79,7 @@
   "tools.table.dragToAddRemoveColumns": "ကော်လံထည့်ရန် သို့မဟုတ် ဖယ်ရန် ဆွဲယူပါ",
   "tools.table.fitToPageWidth": "စာမျက်နှာအကျယ်နှင့် ကိုက်ညီအောင်ချိန်ရန်",
   "tools.table.fullWidth": "အကျယ်အပြည့်",
+  "tools.table.textSize": "စာသားအရွယ်အစား",
   "tools.table.compactText": "ကျစ်လစ်သော စာသား",
   "tools.table.comfortableText": "သက်တောင့်သက်သာ စာသား",
   "blockSettings.delete": "ဖျက်ရန်",

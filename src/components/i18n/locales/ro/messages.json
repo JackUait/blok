@@ -104,6 +104,7 @@
   "tools.table.dragToAddRemoveColumns": "Trageți pentru a adăuga sau elimina coloane",
   "tools.table.fitToPageWidth": "Potrivire la lățimea paginii",
   "tools.table.fullWidth": "Lățime completă",
+  "tools.table.textSize": "Dimensiunea textului",
   "tools.table.compactText": "Text compact",
   "tools.table.comfortableText": "Text confortabil",
   "blockSettings.convertWithChildrenWarning": "Acest bloc are {count} blocuri incluse. Convertirea le va promova la nivelul principal. Continuați?",

@@ -115,6 +115,7 @@
   "tools.table.dragToAddRemoveColumns": "Vilkite norėdami pridėti arba pašalinti stulpelius",
   "tools.table.fitToPageWidth": "Pritaikyti prie puslapio pločio",
   "tools.table.fullWidth": "Visas plotis",
+  "tools.table.textSize": "Teksto dydis",
   "tools.table.compactText": "Kompaktiškas tekstas",
   "tools.table.comfortableText": "Patogus tekstas",
   "blockSettings.convertWithChildrenWarning": "Šiame bloke yra {count} įdėtinių blokų. Konvertavus jie bus perkelti į aukščiausią lygį. Tęsti?",

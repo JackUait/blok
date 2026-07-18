@@ -13,6 +13,7 @@ interface SettingsItem {
   title: string;
   isActive?: boolean;
   onActivate: () => void;
+  children?: { items: SettingsItem[] };
 }
 
 const createMockAPI = (): API => {
@@ -232,31 +233,50 @@ describe('Table block settings menu', () => {
   });
 
   describe('text size', () => {
-    it('exposes compact and comfortable text entries with i18n titles', () => {
-      const { tool } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+    const getTextSizeChild = (tool: Table, name: string): SettingsItem => {
+      const submenu = getSettingsItem(tool, 'table-text-size');
+      const item = submenu.children?.items.find(entry => entry.name === name);
 
-      expect(getSettingsItem(tool, 'table-text-compact').title).toBe('tools.table.compactText');
-      expect(getSettingsItem(tool, 'table-text-comfortable').title).toBe('tools.table.comfortableText');
+      expect(item, `text size submenu child "${name}" should exist`).toBeDefined();
+
+      return item as SettingsItem;
+    };
+
+    it('exposes a text size submenu holding compact and comfortable entries', () => {
+      const { tool } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+      const submenu = getSettingsItem(tool, 'table-text-size');
+
+      expect(submenu.title).toBe('tools.table.textSize');
+      expect(getTextSizeChild(tool, 'table-text-compact').title).toBe('tools.table.compactText');
+      expect(getTextSizeChild(tool, 'table-text-comfortable').title).toBe('tools.table.comfortableText');
+    });
+
+    it('does not expose compact/comfortable as top-level menu items', () => {
+      const { tool } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+      const names = getSettings(tool).map(item => item.name);
+
+      expect(names).not.toContain('table-text-compact');
+      expect(names).not.toContain('table-text-comfortable');
     });
 
     it('compact is active by default and comfortable is not', () => {
       const { tool } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
 
-      expect(getSettingsItem(tool, 'table-text-compact').isActive).toBe(true);
-      expect(getSettingsItem(tool, 'table-text-comfortable').isActive).toBe(false);
+      expect(getTextSizeChild(tool, 'table-text-compact').isActive).toBe(true);
+      expect(getTextSizeChild(tool, 'table-text-comfortable').isActive).toBe(false);
     });
 
     it('switching to comfortable marks the grid and persists through save()', () => {
       const { tool, element } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
 
-      getSettingsItem(tool, 'table-text-comfortable').onActivate();
+      getTextSizeChild(tool, 'table-text-comfortable').onActivate();
 
       const grid = element.querySelector('table');
 
       expect(grid?.getAttribute('data-blok-table-text-size')).toBe('comfortable');
       expect(tool.save(element).textSize).toBe('comfortable');
-      expect(getSettingsItem(tool, 'table-text-comfortable').isActive).toBe(true);
-      expect(getSettingsItem(tool, 'table-text-compact').isActive).toBe(false);
+      expect(getTextSizeChild(tool, 'table-text-comfortable').isActive).toBe(true);
+      expect(getTextSizeChild(tool, 'table-text-compact').isActive).toBe(false);
     });
 
     it('switching back to compact removes the marker and omits textSize from save()', () => {
@@ -265,13 +285,13 @@ describe('Table block settings menu', () => {
         content: [['A', 'B'], ['C', 'D']],
       });
 
-      getSettingsItem(tool, 'table-text-compact').onActivate();
+      getTextSizeChild(tool, 'table-text-compact').onActivate();
 
       const grid = element.querySelector('table');
 
       expect(grid?.hasAttribute('data-blok-table-text-size')).toBe(false);
       expect(tool.save(element).textSize).toBeUndefined();
-      expect(getSettingsItem(tool, 'table-text-compact').isActive).toBe(true);
+      expect(getTextSizeChild(tool, 'table-text-compact').isActive).toBe(true);
     });
 
     it('renders the comfortable marker when loaded from saved data', () => {
@@ -283,7 +303,7 @@ describe('Table block settings menu', () => {
       const grid = element.querySelector('table');
 
       expect(grid?.getAttribute('data-blok-table-text-size')).toBe('comfortable');
-      expect(getSettingsItem(tool, 'table-text-comfortable').isActive).toBe(true);
+      expect(getTextSizeChild(tool, 'table-text-comfortable').isActive).toBe(true);
     });
   });
 

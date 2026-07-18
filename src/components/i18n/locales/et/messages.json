@@ -81,6 +81,7 @@
   "tools.table.dragToAddRemoveColumns": "Lohista veergude lisamiseks või eemaldamiseks",
   "tools.table.fitToPageWidth": "Sobita lehe laiusega",
   "tools.table.fullWidth": "Täislaius",
+  "tools.table.textSize": "Teksti suurus",
   "tools.table.compactText": "Kompaktne tekst",
   "tools.table.comfortableText": "Mugav tekst",
   "blockSettings.delete": "Kustuta",

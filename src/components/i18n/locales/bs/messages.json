@@ -102,6 +102,7 @@
   "tools.table.dragToAddRemoveColumns": "Prevucite za dodavanje ili uklanjanje kolona",
   "tools.table.fitToPageWidth": "Prilagodi širini stranice",
   "tools.table.fullWidth": "Puna širina",
+  "tools.table.textSize": "Veličina teksta",
   "tools.table.compactText": "Kompaktan tekst",
   "tools.table.comfortableText": "Udoban tekst",
   "blockSettings.convertWithChildrenWarning": "Ovaj blok sadrži {count} ugniježđenih blokova. Konverzijom će biti premješteni na najviši nivo. Nastaviti?",

@@ -104,6 +104,7 @@
   "tools.table.dragToAddRemoveColumns": "Sütun eklemek veya kaldırmak için sürükle",
   "tools.table.fitToPageWidth": "Sayfa genişliğine sığdır",
   "tools.table.fullWidth": "Tam genişlik",
+  "tools.table.textSize": "Metin boyutu",
   "tools.table.compactText": "Sıkışık metin",
   "tools.table.comfortableText": "Rahat metin",
   "blockSettings.convertWithChildrenWarning": "Bu bloğun {count} iç içe bloğu var. Dönüştürmek, bunları en üst düzeye taşıyacak. Devam edilsin mi?",

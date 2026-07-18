@@ -81,6 +81,7 @@
   "tools.table.dragToAddRemoveColumns": "ドラッグして列を追加・削除",
   "tools.table.fitToPageWidth": "ページ幅に合わせる",
   "tools.table.fullWidth": "全幅",
+  "tools.table.textSize": "テキストサイズ",
   "tools.table.compactText": "コンパクトなテキスト",
   "tools.table.comfortableText": "ゆったりしたテキスト",
   "blockSettings.delete": "削除",

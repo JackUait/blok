@@ -104,6 +104,7 @@
   "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen",
   "tools.table.fitToPageWidth": "Aanpassen aan paginabreedte",
   "tools.table.fullWidth": "Volledige breedte",
+  "tools.table.textSize": "Tekstgrootte",
   "tools.table.compactText": "Compacte tekst",
   "tools.table.comfortableText": "Comfortabele tekst",
   "blockSettings.convertWithChildrenWarning": "Dit blok bevat {count} geneste blokken. Door het te converteren worden ze naar het hoogste niveau verplaatst. Wil je doorgaan?",

@@ -81,6 +81,7 @@
   "tools.table.dragToAddRemoveColumns": "드래그하여 열 추가 또는 제거",
   "tools.table.fitToPageWidth": "페이지 너비에 맞추기",
   "tools.table.fullWidth": "전체 너비",
+  "tools.table.textSize": "텍스트 크기",
   "tools.table.compactText": "촘촘한 텍스트",
   "tools.table.comfortableText": "여유로운 텍스트",
   "blockSettings.delete": "삭제",

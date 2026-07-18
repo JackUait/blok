@@ -104,6 +104,7 @@
   "tools.table.dragToAddRemoveColumns": "Перетягніть, щоб додати або видалити колонки",
   "tools.table.fitToPageWidth": "За шириною сторінки",
   "tools.table.fullWidth": "Повна ширина",
+  "tools.table.textSize": "Розмір тексту",
   "tools.table.compactText": "Компактний текст",
   "tools.table.comfortableText": "Комфортний текст",
   "blockSettings.convertWithChildrenWarning": "Цей блок містить {count} вкладених блоків. Під час конвертації вони будуть переміщені на верхній рівень. Продовжити?",

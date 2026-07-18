@@ -102,6 +102,7 @@
   "tools.table.dragToAddRemoveColumns": "አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
   "tools.table.fitToPageWidth": "ከገጹ ስፋት ጋር አስማማ",
   "tools.table.fullWidth": "ሙሉ ስፋት",
+  "tools.table.textSize": "የጽሑፍ መጠን",
   "tools.table.compactText": "የታመቀ ጽሑፍ",
   "tools.table.comfortableText": "ምቹ ጽሑፍ",
   "blockSettings.convertWithChildrenWarning": "ይህ ብሎክ {count} የተካተቱ ብሎኮች አሉት። ሲቀይሩ ወደ ከፍተኛ ደረጃ ይዛወራሉ። መቀጠል ይፈልጋሉ?",

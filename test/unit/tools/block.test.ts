@@ -30,6 +30,7 @@ import { BlockToolAdapter } from '../../../src/components/tools/block';
 import { InlineToolAdapter } from '../../../src/components/tools/inline';
 import { ToolsCollection } from '../../../src/components/tools/collection';
 import { InternalBlockToolSettings } from '../../../src/components/tools/base';
+import { getConvertibleToolsForBlock } from '../../../src/components/utils/blocks';
 
 type BlockToolAdapterOptions = ConstructorParameters<typeof BlockToolAdapter>[0];
 
@@ -587,6 +588,35 @@ describe('BlockToolAdapter', () => {
       });
 
       expect(tool.toolbox).toBeUndefined();
+    });
+
+    /**
+     * Regression lock: `toolbox: false` is the "render but never user-insert" contract.
+     * It must exclude the tool from the convert menu too (which skips tools whose
+     * toolbox getter is undefined), not only from the + / slash toolbox. Shortcuts
+     * follow the same getter via Toolbox.toolsToBeDisplayed.
+     */
+    it('excludes a toolbox:false tool from the convert menu while it stays registered', async () => {
+      const { options } = createBlockTool();
+
+      const tool = new BlockToolAdapter({
+        ...options,
+        config: {
+          ...options.config,
+          toolbox: false,
+        },
+      });
+
+      const block = {
+        name: 'paragraph',
+        save: async () => ({ data: { text: 'hi' } }),
+      } as unknown as BlockAPI;
+
+      const convertible = await getConvertibleToolsForBlock(block, [ tool ]);
+
+      expect(convertible).toHaveLength(0);
+      // Still a fully registered tool — existing blocks render through it
+      expect(tool.isBlock()).toBe(true);
     });
 
     it('returns undefined when constructable toolbox config is false', () => {

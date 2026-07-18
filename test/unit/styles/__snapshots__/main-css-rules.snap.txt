@@ -1841,6 +1841,10 @@
   padding-inline-end: var(--blok-editor-gutter-end, 0px);
 }
 
+:where([data-blok-readonly]) [data-blok-redactor] {
+  padding-inline: 0;
+}
+
 [data-blok-dragging-multi="true"] [data-blok-selected="true"] {
 
 }

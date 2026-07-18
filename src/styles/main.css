@@ -351,6 +351,17 @@
   padding-inline-end: var(--blok-editor-gutter-end, 0px);
 }
 
+/*
+ * The gutter exists solely to house the edit-mode +/⠿ controls, so it
+ * collapses automatically in read-only mode. :where() keeps the wrapper
+ * part at zero specificity so any host rule (e.g.
+ * `.host [data-blok-redactor] { padding-inline-start: 56px }`) can
+ * restore a read-only gutter.
+ */
+:where([data-blok-readonly]) [data-blok-redactor] {
+  padding-inline: 0;
+}
+
 /**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation

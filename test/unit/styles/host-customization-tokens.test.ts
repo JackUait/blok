@@ -96,6 +96,13 @@ describe('Host customization tokens (public --blok-* contract)', () => {
         /padding-inline-end:\s*var\(--blok-editor-gutter-end,\s*0px\)/
       );
     });
+
+    it('auto-collapses the gutter in read-only mode with an overridable rule', () => {
+      const body = findRuleBody(css, ':where([data-blok-readonly]) [data-blok-redactor]');
+
+      expect(body).not.toBeNull();
+      expect(body).toMatch(/padding-inline:\s*0/);
+    });
   });
 
   describe('zero-specificity theme declarations', () => {

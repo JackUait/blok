@@ -361,7 +361,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // redactor gutters) replacing hosts' internal-selector hacks; see
     // host-customization-tokens.test.ts. Bumps the multiplier to 1.383.
     // ~0.5KB intentional growth.
-    const PRE_SPLIT_BYTES = 407500;
+    const PRE_SPLIT_BYTES = 407853;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.383);
     const actual = localImportedByteBudget(ENTRY);
 

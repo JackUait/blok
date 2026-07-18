@@ -4,7 +4,7 @@ import { BlokMobileLayoutToggled } from '../events';
 import { SelectionUtils } from '../selection';
 import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
-import { beautifyShortcut, capitalize, isMobileScreen } from '../utils';
+import { beautifyShortcut, isMobileScreen } from '../utils';
 import { getCaretOffset } from '../utils/caret/selection';
 import { EventsDispatcher } from '../utils/events';
 import { Listeners } from '../utils/listeners';
@@ -807,7 +807,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
       return {
         icon: toolboxItem.icon,
-        title: translateToolTitle(this.i18n, toolboxItem, capitalize(tool.name)),
+        title: translateToolTitle(this.i18n, toolboxItem, tool.name),
         name: toolboxItem.name ?? tool.name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);

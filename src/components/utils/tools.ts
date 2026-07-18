@@ -1,5 +1,6 @@
 import type { BlockToolAdapter } from '../tools/block';
 import { isFunction, isString } from '../utils';
+import { capitalize } from './string';
 
 import type { ToolboxConfigEntry } from '@/types';
 
@@ -50,9 +51,9 @@ const tryTranslate = (i18n: I18nInstance, key: string): string | undefined => {
  * Priority:
  * 1. If titleKey is set, look up toolNames.{titleKey}
  * 2. If title is set, look up toolNames.{title} (for external tools without titleKey)
- * 3. Look up toolNames.{fallback} (tool name — lets consumers localize custom tools
- *    by their registration name instead of the brittle raw-English-title key)
- * 4. Return the first available string: title or fallback
+ * 3. Look up toolNames.{fallback} (raw tool name — lets consumers localize custom
+ *    tools by their registration name instead of the brittle raw-English-title key)
+ * 4. Return the title, or the capitalized tool name as a last resort
  *
  * @param i18n - I18n instance
  * @param entry - Toolbox config entry with title and optional titleKey
@@ -74,10 +75,10 @@ export const translateToolTitle = (i18n: I18nInstance, entry: ToolboxConfigEntry
     return titleTranslation;
   }
 
-  // Try fallback (tool name) as translation key before settling on the raw title
+  // Try fallback (raw tool name) as translation key before settling on the raw title
   const fallbackTranslation = fallback ? tryTranslate(i18n, fallback) : undefined;
 
-  return fallbackTranslation ?? entry.title ?? fallback;
+  return fallbackTranslation ?? entry.title ?? capitalize(fallback);
 };
 
 /**

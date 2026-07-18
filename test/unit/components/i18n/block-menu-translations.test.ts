@@ -100,6 +100,20 @@ describe('Block menu tool titles on non-English locale', () => {
     expect(translateToolTitle(i18n, customEntry, 'fileLink')).toBe('File Link');
   });
 
+  it('capitalizes the raw tool name when no translation and no title exist (toolbox display fallback)', async () => {
+    // The toolbox previously passed capitalize(tool.name) as the fallback,
+    // which broke toolNames.<toolName> lookups (key became 'toolNames.FileLink').
+    // Call sites now pass the raw tool name; translateToolTitle capitalizes
+    // only when the name is displayed verbatim.
+    const i18n = createI18nModule();
+
+    await i18n.prepare();
+
+    const entryWithoutTitle: ToolboxConfigEntry = { icon: '<svg/>' };
+
+    expect(translateToolTitle(i18n, entryWithoutTitle, 'fileLink')).toBe('FileLink');
+  });
+
   it('resolves translations when user provides partial messages override on English locale', async () => {
     // User stays on English locale but supplies partial custom messages,
     // e.g. only the search placeholder is Russified. Base English dict still

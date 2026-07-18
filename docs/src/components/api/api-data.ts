@@ -1154,7 +1154,7 @@ editor.selection.restore();`,
     badge: "Styles",
     title: "Styles API",
     description:
-      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties.",
+      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. Theme overrides need only a single plain selector — Blok's own palette is declared at zero specificity via `:where()`, so `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order; popovers portal to `document.body`, so put theme overrides in a global stylesheet targeting `[data-blok-interface], [data-blok-popover], [data-blok-top-layer]`. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. The wrapper carries `data-blok-readonly` while read-only is active and the gutter collapses automatically, so set `--blok-editor-gutter-start` once and never toggle it from JS. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config.",
     example: `// Customize the editor from your host app via CSS custom properties —
 // no need to target Blok's internal test IDs or data attributes.
 .my-editor-container {
@@ -1174,7 +1174,37 @@ editor.selection.restore();`,
 
   /* Placeholder color of popover search inputs */
   --blok-search-input-placeholder: rgba(112, 118, 132, 0.8);
+
+  /* Heading typography (defaults mirror the built-in scale) */
+  --blok-heading-1-font-size: 32px;
+  --blok-heading-font-weight: 600;
+  --blok-heading-margin-top: 16px;
+  --blok-heading-margin-bottom: 16px;
+
+  /* Space above embed blocks (default: 0px) */
+  --blok-embed-margin-top: 16px;
 }
+
+// Theme overrides only need a plain host selector — Blok's palette is
+// declared at zero specificity via :where(), so this always wins.
+// Popovers/menus portal to document.body, so target them explicitly too.
+[data-blok-interface],
+[data-blok-popover],
+[data-blok-top-layer] {
+  --blok-popover-bg: #1a1a1a;
+}
+
+// The wrapper carries data-blok-readonly while read-only is active, and
+// the gutter collapses automatically — no JS toggling needed.
+[data-blok-readonly] {
+  --blok-editor-gutter-start: 0px;
+}
+
+// Center the content column instead of left-aligning it (default: 'left')
+const editor = new Blok({
+  holder: 'editor',
+  style: { contentAlign: 'center' },
+});
 
 // Access CSS class names for styling custom tools
 const styles = editor.styles;

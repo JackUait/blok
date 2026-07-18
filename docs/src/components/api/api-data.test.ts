@@ -138,6 +138,22 @@ describe("API_SECTIONS", () => {
       expect(example).toContain("--blok-list-padding-start");
       expect(example).toContain("--blok-list-gap");
       expect(example).toContain("--blok-search-input-placeholder");
+      expect(example).toContain("--blok-heading-1-font-size");
+      expect(example).toContain("--blok-heading-font-weight");
+      expect(example).toContain("--blok-heading-margin-top");
+      expect(example).toContain("--blok-heading-margin-bottom");
+      expect(example).toContain("--blok-embed-margin-top");
+    });
+
+    it("documents the zero-specificity theming, content-max-width authority, and readonly gutter facts", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain(":where()");
+      expect(description).toContain("data-blok-readonly");
+      expect(description.toLowerCase()).toContain("width='full'".toLowerCase());
+      expect(description).toContain("style.contentAlign");
     });
   });
 

@@ -1166,6 +1166,9 @@ editor.selection.restore();`,
   /* Extra start padding on list blocks (default: 0px) */
   --blok-list-padding-start: 18px;
 
+  /* Gap between a list marker/checkbox and its content (default: 0px) */
+  --blok-list-gap: 6px;
+
   /* Placeholder color of popover search inputs */
   --blok-search-input-placeholder: rgba(112, 118, 132, 0.8);
 }

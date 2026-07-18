@@ -25,13 +25,16 @@ export const BASE_STYLES = 'outline-hidden py-[7px] mt-[2px] mb-px ps-[var(--blo
 
 /**
  * Styles for standard list items (unordered, ordered)
+ *
+ * The marker-to-content gap is a host-overridable custom property (defaults
+ * to 0) so embedding apps can space markers without targeting [data-list-style].
  */
-export const ITEM_STYLES = 'outline-hidden pl-0.5 leading-[1.5] items-start';
+export const ITEM_STYLES = 'outline-hidden pl-0.5 leading-[1.5] items-start gap-[var(--blok-list-gap,0px)]';
 
 /**
  * Styles for checklist items
  */
-export const CHECKLIST_ITEM_STYLES = 'flex items-start pl-0.5';
+export const CHECKLIST_ITEM_STYLES = 'flex items-start pl-0.5 gap-[var(--blok-list-gap,0px)]';
 
 /**
  * Styles for checkbox input

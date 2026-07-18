@@ -18,7 +18,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { css as searchInputCss } from '../../../src/components/utils/popover/components/search-input/search-input.const';
-import { BASE_STYLES } from '../../../src/tools/list/constants';
+import { BASE_STYLES, CHECKLIST_ITEM_STYLES, ITEM_STYLES } from '../../../src/tools/list/constants';
 
 import { readMainCss } from './helpers/read-main-css';
 
@@ -64,6 +64,16 @@ describe('Host customization tokens (public --blok-* contract)', () => {
   describe('list wrapper indentation', () => {
     it('drives the wrapper start padding from --blok-list-padding-start', () => {
       expect(BASE_STYLES).toContain('ps-[var(--blok-list-padding-start,0px)]');
+    });
+  });
+
+  describe('list marker-to-content gap', () => {
+    it('drives the item row gap from --blok-list-gap on standard items', () => {
+      expect(ITEM_STYLES).toContain('gap-[var(--blok-list-gap,0px)]');
+    });
+
+    it('drives the item row gap from --blok-list-gap on checklist items', () => {
+      expect(CHECKLIST_ITEM_STYLES).toContain('gap-[var(--blok-list-gap,0px)]');
     });
   });
 

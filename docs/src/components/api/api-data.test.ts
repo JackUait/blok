@@ -136,6 +136,7 @@ describe("API_SECTIONS", () => {
       expect(example).toContain("--blok-editor-gutter-start");
       expect(example).toContain("--blok-editor-gutter-end");
       expect(example).toContain("--blok-list-padding-start");
+      expect(example).toContain("--blok-list-gap");
       expect(example).toContain("--blok-search-input-placeholder");
     });
   });

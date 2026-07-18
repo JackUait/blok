@@ -50,7 +50,8 @@ const tryTranslate = (i18n: I18nInstance, key: string): string | undefined => {
  * Priority:
  * 1. If titleKey is set, look up toolNames.{titleKey}
  * 2. If title is set, look up toolNames.{title} (for external tools without titleKey)
- * 3. If fallback is set, look up toolNames.{fallback} (for tools without title)
+ * 3. Look up toolNames.{fallback} (tool name — lets consumers localize custom tools
+ *    by their registration name instead of the brittle raw-English-title key)
  * 4. Return the first available string: title or fallback
  *
  * @param i18n - I18n instance
@@ -73,14 +74,10 @@ export const translateToolTitle = (i18n: I18nInstance, entry: ToolboxConfigEntry
     return titleTranslation;
   }
 
-  if (entry.title) {
-    return entry.title;
-  }
-
-  // Try fallback as translation key (for tools without title)
+  // Try fallback (tool name) as translation key before settling on the raw title
   const fallbackTranslation = fallback ? tryTranslate(i18n, fallback) : undefined;
 
-  return fallbackTranslation ?? fallback;
+  return fallbackTranslation ?? entry.title ?? fallback;
 };
 
 /**

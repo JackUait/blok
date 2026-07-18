@@ -63,6 +63,43 @@ describe('Block menu tool titles on non-English locale', () => {
     expect(translateToolTitle(i18n, headerEntry, 'header')).toBe('Заголовок 1');
   });
 
+  it('localizes a custom tool title via toolNames.<toolName> when the tool has no titleKey', async () => {
+    // A consumer registers a custom tool (e.g. `fileLink`) whose toolbox entry
+    // only sets a raw English title. Localization must be possible by the tool
+    // name — `toolNames.fileLink` — instead of the brittle raw-title key
+    // ('toolNames.File Link', where spaces/casing must match exactly).
+    const i18n = createI18nModule({
+      i18n: {
+        messages: {
+          'toolNames.fileLink': 'Ссылка на файл',
+        },
+      },
+    });
+
+    await i18n.prepare();
+
+    const customEntry: ToolboxConfigEntry = {
+      icon: '<svg/>',
+      title: 'File Link',
+    };
+
+    // Fallback mimics toolbox.ts path: raw tool.name from the Blok config.
+    expect(translateToolTitle(i18n, customEntry, 'fileLink')).toBe('Ссылка на файл');
+  });
+
+  it('keeps returning the raw title when neither raw-title key nor tool-name key is translated', async () => {
+    const i18n = createI18nModule();
+
+    await i18n.prepare();
+
+    const customEntry: ToolboxConfigEntry = {
+      icon: '<svg/>',
+      title: 'File Link',
+    };
+
+    expect(translateToolTitle(i18n, customEntry, 'fileLink')).toBe('File Link');
+  });
+
   it('resolves translations when user provides partial messages override on English locale', async () => {
     // User stays on English locale but supplies partial custom messages,
     // e.g. only the search placeholder is Russified. Base English dict still

@@ -1696,7 +1696,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     const insert = vi.fn();
     const api = createMockApi();
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 2, insert };
-    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
     const tool = new ImageTool({ ...createOptions(), api });
     tool.render();
     pasteGif(tool);
@@ -1714,7 +1714,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     const insert = vi.fn();
     const api = createMockApi();
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
-    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
     const tool = new ImageTool({ ...createOptions(), api });
     const root = tool.render();
     pasteGif(tool);
@@ -1724,11 +1724,51 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(root.querySelector('img')).not.toBeNull();
   });
 
+  it('keeps a pasted GIF file as an image when no video tool is registered', async () => {
+    mockConvert.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
+    (api as unknown as { tools: unknown }).tools = {
+      getToolsConfig: () => ({ tools: {} }),
+      getBlockTools: () => [{ name: 'paragraph' }, { name: 'image' }],
+    };
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+    pasteGif(tool);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockConvert).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+    // GIF is uploaded through the normal image path instead
+    expect(root.querySelector('img')).not.toBeNull();
+  });
+
+  it('keeps a pasted GIF URL as an image when no video tool is registered', async () => {
+    mockConvert.mockResolvedValue(new Blob([new Uint8Array([1])], { type: 'video/webm' }));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) })));
+    const insert = vi.fn();
+    const api = createMockApi();
+    (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
+    (api as unknown as { tools: unknown }).tools = {
+      getToolsConfig: () => ({ tools: {} }),
+      getBlockTools: () => [],
+    };
+    const tool = new ImageTool({ ...createOptions(), api });
+    const root = tool.render();
+    const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/cat.gif' } }) as PatternPasteEvent;
+    Object.defineProperty(event, 'type', { value: 'pattern' });
+    tool.onPaste(event);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockConvert).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+    expect(root.querySelector('img')?.getAttribute('src')).toBe('https://x/cat.gif');
+  });
+
   it('does not convert when convertGifToVideo is false', async () => {
     const insert = vi.fn();
     const api = createMockApi();
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
-    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
     const tool = new ImageTool({ ...createOptions({}, { convertGifToVideo: false }), api });
     tool.render();
     pasteGif(tool);
@@ -1746,6 +1786,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert };
     (api as unknown as { tools: unknown }).tools = {
       getToolsConfig: () => ({ tools: { video: { config: { uploader: { uploadByFile } } } } }),
+      getBlockTools: () => [{ name: 'video' }],
     };
     const tool = new ImageTool({ ...createOptions(), api });
     const root = tool.render();
@@ -1762,7 +1803,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     mockConvert.mockImplementation(() => new Promise<Blob>(() => { /* never resolves */ }));
     const api = createMockApi();
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert: vi.fn() };
-    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
     const tool = new ImageTool({ ...createOptions(), api });
     const root = tool.render();
     pasteGif(tool);
@@ -1781,7 +1822,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     const insert = vi.fn();
     const api = createMockApi();
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 1, insert };
-    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
     const tool = new ImageTool({ ...createOptions(), api });
     tool.render();
     const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/cat.gif' } }) as PatternPasteEvent;
@@ -1797,7 +1838,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     const insert = vi.fn();
     const api = createMockApi();
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 1, insert };
-    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
     const tool = new ImageTool({ ...createOptions(), api });
     const root = tool.render();
     const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/cat.gif' } }) as PatternPasteEvent;
@@ -1815,7 +1856,7 @@ describe('ImageTool — GIF auto-conversion', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) })));
     const api = createMockApi();
     (api as unknown as { blocks: unknown }).blocks = { getBlockIndex: () => 0, insert: vi.fn() };
-    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }) };
+    (api as unknown as { tools: unknown }).tools = { getToolsConfig: () => ({ tools: {} }), getBlockTools: () => [{ name: 'video' }] };
     const tool = new ImageTool({ ...createOptions(), api });
     const root = tool.render();
     const event = new CustomEvent('paste', { detail: { key: 'image', data: 'https://x/anim.gif' } }) as PatternPasteEvent;

@@ -214,7 +214,15 @@ export class ImageTool implements BlockTool {
   }
 
   private shouldConvertGif(mimeType: string): boolean {
-    return this.config.convertGifToVideo !== false && mimeType === 'image/gif';
+    return this.config.convertGifToVideo !== false && mimeType === 'image/gif' && this.isVideoToolRegistered();
+  }
+
+  /**
+   * Conversion targets the 'video' block type; without a registered video tool
+   * the insert would throw ToolNotFoundError, so keep the GIF as an image.
+   */
+  private isVideoToolRegistered(): boolean {
+    return this.api.tools.getBlockTools().some((tool) => tool.name === 'video');
   }
 
   /**
@@ -287,7 +295,7 @@ export class ImageTool implements BlockTool {
   }
 
   private shouldConvertGifUrl(url: string): boolean {
-    return this.config.convertGifToVideo !== false && /\.gif(\?|#|$)/i.test(url);
+    return this.config.convertGifToVideo !== false && /\.gif(\?|#|$)/i.test(url) && this.isVideoToolRegistered();
   }
 
   private async convertGifUrlToVideoBlock(url: string): Promise<boolean> {

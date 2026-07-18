@@ -30,7 +30,7 @@ const buildConfig = (code: SupportedLocale, dictionary: I18nDictionary): LocaleC
 });
 
 /**
- * All supported locale codes (68 languages).
+ * All supported locale codes (69 locale variants).
  *
  * All locales are available for lazy loading by default - no preset restrictions.
  *
@@ -43,7 +43,7 @@ export const ALL_LOCALE_CODES: readonly SupportedLocale[] = [
   'fa', 'fi', 'fil', 'fr', 'gu', 'he', 'hi', 'hr', 'hu', 'hy', 'id', 'it', 'ja', 'ka',
   'km', 'kn', 'ko', 'ku', 'lo', 'lt', 'lv', 'mk', 'ml', 'mn', 'mr', 'ms', 'my', 'ne',
   'nl', 'no', 'pa', 'pl', 'ps', 'pt', 'ro', 'ru', 'sd', 'si', 'sk', 'sl', 'sq', 'sr',
-  'sv', 'sw', 'ta', 'te', 'th', 'tr', 'ug', 'uk', 'ur', 'vi', 'yi', 'zh',
+  'sv', 'sw', 'ta', 'te', 'th', 'tr', 'ug', 'uk', 'ur', 'vi', 'yi', 'zh', 'zh-TW',
 ] as const;
 
 /**
@@ -153,6 +153,7 @@ const localeImporters: Record<SupportedLocale, () => Promise<{ default: I18nDict
   vi: () => import('./vi/messages.json'),
   yi: () => import('./yi/messages.json'),
   zh: () => import('./zh/messages.json'),
+  'zh-TW': () => import('./zh-TW/messages.json'),
 };
 
 /**
@@ -228,4 +229,3 @@ export const buildRegistry = async (codes: readonly SupportedLocale[]): Promise<
  * @internal
  */
 export { enMessages };
-

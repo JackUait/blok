@@ -14,7 +14,7 @@ import { I18nDictionary } from './i18n-dictionary';
  *
  * TypeScript will error if localeImporters is missing any code from this type.
  */
-export type SupportedLocale = 'am' | 'ar' | 'az' | 'bg' | 'bn' | 'bs' | 'cs' | 'da' | 'de' | 'dv' | 'el' | 'en' | 'es' | 'et' | 'fa' | 'fi' | 'fil' | 'fr' | 'gu' | 'he' | 'hi' | 'hr' | 'hu' | 'hy' | 'id' | 'it' | 'ja' | 'ka' | 'km' | 'kn' | 'ko' | 'ku' | 'lo' | 'lt' | 'lv' | 'mk' | 'ml' | 'mn' | 'mr' | 'ms' | 'my' | 'ne' | 'nl' | 'no' | 'pa' | 'pl' | 'ps' | 'pt' | 'ro' | 'ru' | 'sd' | 'si' | 'sk' | 'sl' | 'sq' | 'sr' | 'sv' | 'sw' | 'ta' | 'te' | 'th' | 'tr' | 'ug' | 'uk' | 'ur' | 'vi' | 'yi' | 'zh';
+export type SupportedLocale = 'am' | 'ar' | 'az' | 'bg' | 'bn' | 'bs' | 'cs' | 'da' | 'de' | 'dv' | 'el' | 'en' | 'es' | 'et' | 'fa' | 'fi' | 'fil' | 'fr' | 'gu' | 'he' | 'hi' | 'hr' | 'hu' | 'hy' | 'id' | 'it' | 'ja' | 'ka' | 'km' | 'kn' | 'ko' | 'ku' | 'lo' | 'lt' | 'lv' | 'mk' | 'ml' | 'mn' | 'mr' | 'ms' | 'my' | 'ne' | 'nl' | 'no' | 'pa' | 'pl' | 'ps' | 'pt' | 'ro' | 'ru' | 'sd' | 'si' | 'sk' | 'sl' | 'sq' | 'sr' | 'sv' | 'sw' | 'ta' | 'te' | 'th' | 'tr' | 'ug' | 'uk' | 'ur' | 'vi' | 'yi' | 'zh' | 'zh-TW';
 
 /**
  * Configuration for a single locale including its dictionary and text direction.
@@ -35,14 +35,14 @@ export type LocaleRegistry = Partial<Record<SupportedLocale, LocaleConfig>>;
 /**
  * I18n configuration options.
  *
- * All 68 supported locales are available for lazy loading by default.
+ * All 69 supported locales are available for lazy loading by default.
  *
  * @see README.md#localization for usage examples
  */
 export interface I18nConfig {
   /**
    * Active locale code ('en', 'ru', etc.) or 'auto' to detect from browser.
-   * All 68 locales are supported and will be loaded on-demand.
+   * All 69 locales are supported and will be loaded on-demand.
    * @default 'auto'
    */
   locale?: SupportedLocale | 'auto';

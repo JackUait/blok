@@ -110,7 +110,7 @@ export class I18n extends Module {
 
   /**
    * Set the active locale, loading it if necessary.
-   * All 68 supported locales are available for loading.
+   * All 69 supported locales are available for loading.
    *
    * @param locale - Locale code to set
    * @returns Promise that resolves when locale is loaded and set
@@ -275,7 +275,7 @@ export class I18n extends Module {
 
   /**
    * Check if a locale code is supported.
-   * All 68 locales in ALL_LOCALE_CODES are supported.
+   * All 69 locales in ALL_LOCALE_CODES are supported.
    */
   private isLocaleSupported(locale: string): locale is SupportedLocale {
     return ALL_LOCALE_CODES.includes(locale as SupportedLocale);
@@ -308,12 +308,17 @@ export class I18n extends Module {
 
   /**
    * Match a browser language tag to a supported locale.
-   * All 68 locales are supported.
+   * All 69 locales are supported.
    *
    * @param languageTag - BCP 47 language tag (e.g., 'en-US', 'ru')
    */
   private matchLanguageTag(languageTag: string): SupportedLocale | null {
     const normalized = languageTag.toLowerCase();
+    const chineseLocale = this.matchChineseLanguageTag(normalized);
+
+    if (chineseLocale !== null) {
+      return chineseLocale;
+    }
 
     // Try exact match (e.g., 'ru')
     if (this.isLocaleSupported(normalized)) {
@@ -328,5 +333,22 @@ export class I18n extends Module {
     }
 
     return null;
+  }
+
+  /**
+   * Preserve Chinese script and Taiwan region information before base-language fallback.
+   */
+  private matchChineseLanguageTag(normalized: string): SupportedLocale | null {
+    const parts = normalized.split('-');
+
+    if (parts[0] !== 'zh') {
+      return null;
+    }
+
+    if (parts.includes('tw') || parts.includes('hant')) {
+      return 'zh-TW';
+    }
+
+    return 'zh';
   }
 }

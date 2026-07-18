@@ -97,11 +97,12 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       );
     });
 
-    it('auto-collapses the gutter in read-only mode with an overridable rule', () => {
-      const body = findRuleBody(css, ':where([data-blok-readonly]) [data-blok-redactor]');
+    it('auto-collapses the gutter in read-only mode by redeclaring the gutter tokens', () => {
+      const body = findRuleBody(css, ':where([data-blok-readonly])');
 
       expect(body).not.toBeNull();
-      expect(body).toMatch(/padding-inline:\s*0/);
+      expect(body).toMatch(/--blok-editor-gutter-start:\s*0px/);
+      expect(body).toMatch(/--blok-editor-gutter-end:\s*0px/);
     });
   });
 
@@ -141,7 +142,7 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     ];
 
     it.each(LEVELS)('drives level %i typography from per-level tokens keyed on data-blok-heading-level', (level, fontSize, marginTop) => {
-      const body = findRuleBody(css, `:where([data-blok-tool="header"][data-blok-heading-level="${level}"])`);
+      const body = findRuleBody(css, `:where([data-blok-tool="header"])[data-blok-heading-level="${level}"]`);
 
       expect(body).not.toBeNull();
       expect(body).toContain(`font-size: var(--blok-heading-${level}-font-size, ${fontSize})`);
@@ -150,7 +151,7 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     });
 
     it('drives heading weight, bottom margin, and the shared line-height from shared tokens', () => {
-      const body = findRuleBody(css, ':where([data-blok-tool="header"])');
+      const body = findRuleBody(css, '[data-blok-tool="header"]');
 
       expect(body).not.toBeNull();
       expect(body).toContain('font-weight: var(--blok-heading-font-weight, 600)');

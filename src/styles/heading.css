@@ -3,7 +3,6 @@
 
   Fallbacks replicate the Tailwind classes declared in HEADER_LEVELS
   (src/tools/header/index.ts) so default rendering is byte-identical.
-  Unlayered on purpose: it must beat the @layer utilities classes.
   Known limit: the text-size class copied for placeholder alignment
   (header/index.ts:1073) keeps the Tailwind default — cosmetic only.
 
@@ -14,16 +13,29 @@
   make such a heading match no per-level rule (or, if remapped to
   another heading tag, match THAT tag's rule instead of its own level's).
 
-  Every selector below is wrapped in :where(...). Unlayered declarations
-  beat @layer utilities classes regardless of specificity, so :where()
-  costs nothing against those defaults — but it keeps these hooks at
-  (0,0,0) so contextual overrides (e.g. the toggle-children `mt-px` rule
-  in main.css for headings nested under [data-blok-toggle-children]) and
-  any host rule still win without a specificity fight. Same contract as
-  the :where()-wrapped theme palette selectors elsewhere in this file set.
-  Without :where(), these rules sit at (0,2,0)/(0,1,0), which out-competes
-  the (0,1,1) toggle-children override and reintroduces the root-level
-  margin-top inside callouts/toggles.
+  Specificity contract — (0,1,0), deliberately NOT (0,0,0):
+  In dev, Tailwind utility classes live inside `@layer utilities`, so any
+  unlayered declaration beats them regardless of specificity — a
+  :where()-wrapped (0,0,0) rule would have been enough there. But
+  `@layer utilities` is a dev-only artifact: the production build (Vite +
+  lightningcss) flattens it away entirely, and the Tailwind utilities that
+  would otherwise style a heading (e.g. `text-3xl`) get re-emitted scoped
+  and unlayered at (0,1,0) (`.text-3xl:where([data-blok-interface], ...)`).
+  A (0,0,0) heading rule loses that fight in production — verified live
+  against the built bundle: the tokens were completely inert. Matching the
+  utilities' own (0,1,0) ties the specificity fight, so the winner is
+  decided by source order instead: heading.css is injected after the
+  compiled Tailwind utilities in both environments, so these rules land
+  later in the sheet and win the tie.
+  The shared rule's selector is left as a plain `[data-blok-tool="header"]`
+  ((0,1,0) on its own); each per-level selector wraps ONLY the tool-name
+  part in :where() — `:where([data-blok-tool="header"])[data-blok-heading-level="N"]`
+  — so the tool-attr contributes zero and the level-attr alone supplies the
+  needed (0,1,0).
+  This still stays BELOW the contextual override for headings nested under
+  a toggle/callout, `[data-blok-toggle-children] :is(h1, h2, h3, h4, h5, h6)`
+  in main.css, which sits at (0,1,1) — one attribute higher — so that rule
+  keeps winning and callout/toggle heading margin parity is unaffected.
 
   line-height lives in the shared rule below (not per-level) and uses a
   single shared unitless fallback (1.3, matching the BASE_STYLES leading
@@ -31,47 +43,47 @@
   all: that class compiled to a layered `!important` declaration, which
   always beats an unlayered non-important one — so per-level rem values
   here would be dead on arrival and never the real rendered line-height.
-  Being unlayered and non-important is enough for this rule to beat the
-  layered, non-important line-height that ships bundled with each level's
-  text-size utility (e.g. `text-3xl`), so no `!important` is needed here
-  either. Unitless is also what keeps line-height correctly scaling with
-  levelOverrides.size and with font-size:inherit table-cell contexts.
-  Living in the shared, tag-agnostic rule (rather than duplicated six
-  times) also means it still applies when a level is rendered with a
-  custom tag that matches no per-level rule.
+  Matching the utilities' (0,1,0) and winning by source order is enough
+  for this rule to beat the non-important line-height that ships bundled
+  with each level's text-size utility (e.g. `text-3xl`), so no
+  `!important` is needed here either. Unitless is also what keeps
+  line-height correctly scaling with levelOverrides.size and with
+  font-size:inherit table-cell contexts. Living in the shared, tag-agnostic
+  rule (rather than duplicated six times) also means it still applies when
+  a level is rendered with a custom tag that matches no per-level rule.
 */
-:where([data-blok-tool="header"]) {
+[data-blok-tool="header"] {
   font-weight: var(--blok-heading-font-weight, 600);
   margin-bottom: var(--blok-heading-margin-bottom, 1px);
   line-height: var(--blok-heading-line-height, 1.3);
 }
 
-:where([data-blok-tool="header"][data-blok-heading-level="1"]) {
+:where([data-blok-tool="header"])[data-blok-heading-level="1"] {
   font-size: var(--blok-heading-1-font-size, 1.875rem);
   margin-top: var(--blok-heading-margin-top, 2rem);
 }
 
-:where([data-blok-tool="header"][data-blok-heading-level="2"]) {
+:where([data-blok-tool="header"])[data-blok-heading-level="2"] {
   font-size: var(--blok-heading-2-font-size, 1.5rem);
   margin-top: var(--blok-heading-margin-top, 26px);
 }
 
-:where([data-blok-tool="header"][data-blok-heading-level="3"]) {
+:where([data-blok-tool="header"])[data-blok-heading-level="3"] {
   font-size: var(--blok-heading-3-font-size, 1.25rem);
   margin-top: var(--blok-heading-margin-top, 1.25rem);
 }
 
-:where([data-blok-tool="header"][data-blok-heading-level="4"]) {
+:where([data-blok-tool="header"])[data-blok-heading-level="4"] {
   font-size: var(--blok-heading-4-font-size, 1.125rem);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }
 
-:where([data-blok-tool="header"][data-blok-heading-level="5"]) {
+:where([data-blok-tool="header"])[data-blok-heading-level="5"] {
   font-size: var(--blok-heading-5-font-size, 1rem);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }
 
-:where([data-blok-tool="header"][data-blok-heading-level="6"]) {
+:where([data-blok-tool="header"])[data-blok-heading-level="6"] {
   font-size: var(--blok-heading-6-font-size, 0.875rem);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }

@@ -353,13 +353,26 @@
 
 /*
  * The gutter exists solely to house the edit-mode +/⠿ controls, so it
- * collapses automatically in read-only mode. :where() keeps the wrapper
- * part at zero specificity so any host rule (e.g.
- * `.host [data-blok-redactor] { padding-inline-start: 56px }`) can
- * restore a read-only gutter.
+ * collapses automatically in read-only mode. This redeclares the gutter
+ * tokens (rather than overriding padding-inline directly) because
+ * lightningcss lowers the base rule's `padding-inline-start` into a
+ * `:lang()`-guarded physical-property rule in the production build,
+ * pushing it to (0,2,0) — a `:where(...) [data-blok-redactor] { padding-
+ * inline: 0 }` override at (0,1,0) loses that fight in production (verified
+ * live against the built bundle: the read-only editor kept its gutter).
+ * Custom-property declarations are immune to logical-property lowering and
+ * layer flattening, so redeclaring the tokens here always wins by normal
+ * CSS inheritance: this wrapper sits closer to the redactor than any host
+ * container that set the tokens further out, and inheritance resolves from
+ * the nearest ancestor regardless of selector specificity.
+ * A host that wants a gutter to persist in read-only mode declares the
+ * token on the wrapper itself at >= (0,1,1) (one level closer than this
+ * rule's (0,0,0)), e.g.
+ * `.host [data-blok-interface] { --blok-editor-gutter-start: 56px }`.
  */
-:where([data-blok-readonly]) [data-blok-redactor] {
-  padding-inline: 0;
+:where([data-blok-readonly]) {
+  --blok-editor-gutter-start: 0px;
+  --blok-editor-gutter-end: 0px;
 }
 
 /**

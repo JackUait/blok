@@ -1197,9 +1197,10 @@ editor.selection.restore();`,
 // The wrapper carries data-blok-readonly while read-only is active, and
 // the gutter collapses automatically then — no JS toggling of the token
 // needed. To opt back into the reserved gutter space while read-only
-// (e.g. you still show a static +/⠿ affordance), target the redactor:
-.my-editor-container [data-blok-redactor] {
-  padding-inline-start: 56px;
+// (e.g. you still show a static +/⠿ affordance), redeclare the token on
+// the wrapper itself (not the redactor, and not a plain container rule):
+.my-editor-container [data-blok-interface] {
+  --blok-editor-gutter-start: 56px;
 }
 
 // Center the content column instead of left-aligning it (default: 'left')

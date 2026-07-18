@@ -379,8 +379,17 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // this, headings nested under [data-blok-toggle-children] (callouts/toggles) lost the
     // main.css `mt-px` override and regained root-level margin-top. ~0.1KB from the
     // `:where(...)` wrapper text plus expanded doc comment. Bumps the multiplier to 1.393.
+    // 2026-07-18: production-cascade fix (round 4) — live CSSOM inspection of the built
+    // bundle found the heading tokens and the read-only gutter collapse were both dead in
+    // production (Tailwind utilities compile unlayered/scoped at (0,1,0) in prod; `@layer
+    // utilities` only exists in dev). Re-keyed heading.css to (0,1,0) (plain shared
+    // selector; :where() wraps only the tool-attr on per-level selectors) so it ties prod
+    // utilities and wins by source order, and replaced the gutter-collapse padding override
+    // with a `:where([data-blok-readonly])` token redeclaration (custom properties are
+    // immune to logical-property lowering). Expanded doc comments in both files account for
+    // most of the ~1.8KB growth. Bumps the multiplier to 1.397.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.393);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.397);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

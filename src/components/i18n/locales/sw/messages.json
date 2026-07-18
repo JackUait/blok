@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "Buruta ili kuongeza au kuondoa safu wima",
   "tools.table.fitToPageWidth": "Linganisha na upana wa ukurasa",
   "tools.table.fullWidth": "Upana kamili",
+  "tools.table.compactText": "Maandishi madogo",
+  "tools.table.comfortableText": "Maandishi ya kawaida",
   "blockSettings.delete": "Futa",
   "blockSettings.duplicate": "Rudufu",
   "blockSettings.copyLink": "Nakili kiungo cha kizuizi",

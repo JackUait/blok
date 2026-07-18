@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "اسحب لإضافة أو إزالة أعمدة",
   "tools.table.fitToPageWidth": "ملاءمة عرض الصفحة",
   "tools.table.fullWidth": "عرض كامل",
+  "tools.table.compactText": "نص مضغوط",
+  "tools.table.comfortableText": "نص مريح",
   "blockSettings.delete": "حذف",
   "blockSettings.duplicate": "تكرار",
   "blockSettings.copyLink": "نسخ رابط الكتلة",

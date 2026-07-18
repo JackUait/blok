@@ -5,7 +5,7 @@ import type { TableCellBlocks } from './table-cell-blocks';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
 import { applyFluidMinWidth, equalWidths, BORDER_WIDTH, ROW_ATTR, CELL_ATTR, CELL_COL_ATTR } from './table-core';
 import type { TableGrid } from './table-core';
-import type { CellContent, LegacyCellContent, TableData } from './types';
+import type { CellContent, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
 
 // ─── Pure DOM helpers ───────────────────────────────────────────────
@@ -636,6 +636,7 @@ export const normalizeTableData = (
     content,
     colWidths: validWidths,
     initialColWidth: tableData.initialColWidth,
+    textSize: tableData.textSize,
   };
 };
 
@@ -707,6 +708,24 @@ export const updateHeadingStyles = (gridEl: HTMLElement | null, withHeadings: bo
 
   if (withHeadings && rows.length > 0) {
     rows[0].setAttribute('data-blok-table-heading', '');
+  }
+};
+
+/**
+ * Marker attribute for the comfortable (regular-size) text density.
+ * Absent in compact mode — the cells' own text-sm is the compact scale.
+ */
+export const TEXT_SIZE_ATTR = 'data-blok-table-text-size';
+
+export const updateTextSizeStyles = (gridEl: HTMLElement | null, textSize: TableTextSize): void => {
+  if (!gridEl) {
+    return;
+  }
+
+  if (textSize === 'comfortable') {
+    gridEl.setAttribute(TEXT_SIZE_ATTR, 'comfortable');
+  } else {
+    gridEl.removeAttribute(TEXT_SIZE_ATTR);
   }
 };
 

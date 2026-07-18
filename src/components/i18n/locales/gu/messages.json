@@ -102,6 +102,8 @@
   "tools.table.dragToAddRemoveColumns": "કૉલમ ઉમેરવા અથવા દૂર કરવા ખેંચો",
   "tools.table.fitToPageWidth": "પૃષ્ઠની પહોળાઈમાં ફિટ કરો",
   "tools.table.fullWidth": "પૂર્ણ પહોળાઈ",
+  "tools.table.compactText": "કોમ્પેક્ટ ટેક્સ્ટ",
+  "tools.table.comfortableText": "આરામદાયક ટેક્સ્ટ",
   "blockSettings.convertWithChildrenWarning": "આ બ્લૉકમાં {count} નેસ્ટેડ બ્લૉક છે. રૂપાંતરિત કરવાથી તે ટોચના સ્તરે આવી જશે. આગળ વધવું છે?",
   "toolNames.underline": "અન્ડરલાઇન",
   "toolNames.strikethrough": "સ્ટ્રાઇકથ્રૂ",

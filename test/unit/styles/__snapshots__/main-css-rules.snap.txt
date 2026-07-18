@@ -1906,6 +1906,10 @@
   font-size: inherit !important;
 }
 
+[data-blok-table-text-size="comfortable"] [data-blok-table-cell] {
+  font-size: 1rem;
+}
+
 [data-blok-cell-placement="top-center"] {
   align-items: center;
 }

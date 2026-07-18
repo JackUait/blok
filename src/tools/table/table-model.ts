@@ -1,4 +1,4 @@
-import type { CellContent, CellPlacement, LegacyCellContent, TableData } from './types';
+import type { CellContent, CellPlacement, LegacyCellContent, TableData, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
 
 export interface SelectionRect {
@@ -61,6 +61,7 @@ export class TableModel {
   private stretchedValue: boolean;
   private colWidthsValue: number[] | undefined;
   private initialColWidthValue: number | undefined;
+  private textSizeValue: TableTextSize;
 
   /** O(1) reverse lookup: blockId -> { row, col } */
   private blockCellMap: Map<string, { row: number; col: number }>;
@@ -71,6 +72,7 @@ export class TableModel {
     this.stretchedValue = data?.stretched ?? false;
     this.colWidthsValue = data?.colWidths ? [...data.colWidths] : undefined;
     this.initialColWidthValue = data?.initialColWidth;
+    this.textSizeValue = data?.textSize ?? 'compact';
 
     this.contentGrid = this.normalizeContent(data?.content);
     this.blockCellMap = new Map();
@@ -107,6 +109,10 @@ export class TableModel {
 
   get initialColWidth(): number | undefined {
     return this.initialColWidthValue;
+  }
+
+  get textSize(): TableTextSize {
+    return this.textSizeValue;
   }
 
   // ─── Snapshot ───────────────────────────────────────────────────
@@ -159,6 +165,10 @@ export class TableModel {
 
     if (this.initialColWidthValue !== undefined) {
       base.initialColWidth = this.initialColWidthValue;
+    }
+
+    if (this.textSizeValue !== 'compact') {
+      base.textSize = this.textSizeValue;
     }
 
     return base;
@@ -543,6 +553,7 @@ export class TableModel {
     this.stretchedValue = data.stretched ?? false;
     this.colWidthsValue = data.colWidths ? [...data.colWidths] : undefined;
     this.initialColWidthValue = data.initialColWidth;
+    this.textSizeValue = data.textSize ?? 'compact';
 
     this.contentGrid = this.normalizeContent(data.content);
     this.blockCellMap.clear();
@@ -959,6 +970,10 @@ export class TableModel {
 
   setInitialColWidth(value: number | undefined): void {
     this.initialColWidthValue = value;
+  }
+
+  setTextSize(value: TableTextSize): void {
+    this.textSizeValue = value;
   }
 
   // ─── Invariant validation ───────────────────────────────────────

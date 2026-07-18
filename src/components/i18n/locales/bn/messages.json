@@ -102,6 +102,8 @@
   "tools.table.dragToAddRemoveColumns": "কলাম যোগ বা সরাতে টানুন",
   "tools.table.fitToPageWidth": "পৃষ্ঠার প্রস্থে ফিট করুন",
   "tools.table.fullWidth": "সম্পূর্ণ প্রস্থ",
+  "tools.table.compactText": "কমপ্যাক্ট টেক্সট",
+  "tools.table.comfortableText": "আরামদায়ক টেক্সট",
   "blockSettings.convertWithChildrenWarning": "এই ব্লকে {count}টি নেস্টেড ব্লক রয়েছে। রূপান্তর করলে সেগুলি শীর্ষ স্তরে চলে আসবে। চালিয়ে যাবেন?",
   "toolNames.underline": "আন্ডারলাইন",
   "toolNames.strikethrough": "স্ট্রাইকথ্রু",

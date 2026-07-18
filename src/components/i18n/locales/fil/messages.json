@@ -79,6 +79,8 @@
   "tools.table.dragToAddRemoveColumns": "I-drag para magdagdag o magtanggal ng mga kolum",
   "tools.table.fitToPageWidth": "Iakma sa lapad ng pahina",
   "tools.table.fullWidth": "Buong lapad",
+  "tools.table.compactText": "Siksik na teksto",
+  "tools.table.comfortableText": "Maluwag na teksto",
   "blockSettings.delete": "Burahin",
   "blockSettings.duplicate": "Gumawa ng kopya",
   "blockSettings.copyLink": "Kopyahin ang link sa block",

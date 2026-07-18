@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "Arrastra para añadir o eliminar columnas",
   "tools.table.fitToPageWidth": "Ajustar al ancho de la página",
   "tools.table.fullWidth": "Ancho completo",
+  "tools.table.compactText": "Texto compacto",
+  "tools.table.comfortableText": "Texto cómodo",
   "blockSettings.delete": "Eliminar",
   "blockSettings.duplicate": "Duplicar",
   "blockSettings.copyLink": "Copiar enlace al bloque",

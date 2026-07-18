@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "स्तंभ जोड़ने या हटाने के लिए खींचें",
   "tools.table.fitToPageWidth": "पृष्ठ की चौड़ाई में फ़िट करें",
   "tools.table.fullWidth": "पूरी चौड़ाई",
+  "tools.table.compactText": "सघन टेक्स्ट",
+  "tools.table.comfortableText": "आरामदायक टेक्स्ट",
   "blockSettings.convertWithChildrenWarning": "इस ब्लॉक में {count} नेस्टेड ब्लॉक हैं। रूपांतरित करने पर वे शीर्ष स्तर पर आ जाएँगे। जारी रखें?",
   "toolNames.underline": "अंडरलाइन",
   "toolNames.strikethrough": "स्ट्राइकथ्रू",

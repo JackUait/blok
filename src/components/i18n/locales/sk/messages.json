@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "Potiahnutím pridáte alebo odoberiete stĺpce",
   "tools.table.fitToPageWidth": "Prispôsobiť šírke stránky",
   "tools.table.fullWidth": "Celá šírka",
+  "tools.table.compactText": "Kompaktný text",
+  "tools.table.comfortableText": "Pohodlný text",
   "blockSettings.convertWithChildrenWarning": "Tento blok obsahuje {count} vnorených blokov. Po konverzii budú presunuté na najvyššiu úroveň. Pokračovať?",
   "toolNames.underline": "Podčiarknuté",
   "toolNames.strikethrough": "Prečiarknuté",

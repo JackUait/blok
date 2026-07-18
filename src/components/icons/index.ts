@@ -220,6 +220,20 @@ export const IconText = `
 </svg>
 `;
 
+// Compact text size — small "A"
+export const IconTextSizeSmall = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M7.25 13.5L10 7L12.75 13.5M8.3 11.25h3.4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
+// Comfortable text size — large "A"
+export const IconTextSizeLarge = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M5.5 15.5L10 4.5L14.5 15.5M7.2 11.5h5.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Warning icon
 export const IconWarning = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

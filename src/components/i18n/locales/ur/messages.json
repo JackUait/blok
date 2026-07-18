@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "کالم شامل یا حذف کرنے کے لیے گھسیٹیں",
   "tools.table.fitToPageWidth": "صفحے کی چوڑائی کے مطابق کریں",
   "tools.table.fullWidth": "پوری چوڑائی",
+  "tools.table.compactText": "کمپیکٹ متن",
+  "tools.table.comfortableText": "آرام دہ متن",
   "blockSettings.convertWithChildrenWarning": "اس بلاک میں {count} نیسٹڈ بلاکس ہیں۔ اسے تبدیل کرنے سے وہ اعلیٰ سطح پر آ جائیں گے۔ کیا آپ جاری رکھنا چاہتے ہیں؟",
   "toolNames.underline": "خط کشیدہ",
   "toolNames.strikethrough": "کٹا ہوا",

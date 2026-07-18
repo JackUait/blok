@@ -250,7 +250,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Table',
     description:
-      'A full-featured table block. Each cell contains its own block editor (supporting any block type). Supports heading rows, heading columns, column resizing, cell background/text colours, row/column add and delete controls, and copy/paste.',
+      'A full-featured table block. Each cell contains its own block editor (supporting any block type). Supports heading rows, heading columns, column resizing, cell background/text colours, row/column add and delete controls, copy/paste, and a text density switch (compact or comfortable) in the block settings menu.',
     importExample: `import { Table } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -290,6 +290,7 @@ const editor = new Blok({
   stretched?: boolean;
   content: CellContent[][];    // 2D array of cell content
   colWidths?: number[];        // Column widths in pixels
+  textSize?: 'compact' | 'comfortable'; // Cell text density; omitted = 'compact' (small text)
 }
 
 // Each cell:

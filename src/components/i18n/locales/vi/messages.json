@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "Kéo để thêm hoặc xóa cột",
   "tools.table.fitToPageWidth": "Vừa với chiều rộng trang",
   "tools.table.fullWidth": "Toàn bộ chiều rộng",
+  "tools.table.compactText": "Văn bản thu gọn",
+  "tools.table.comfortableText": "Văn bản thoải mái",
   "blockSettings.delete": "Xóa",
   "blockSettings.duplicate": "Nhân bản",
   "blockSettings.copyLink": "Sao chép liên kết đến khối",

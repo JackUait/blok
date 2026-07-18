@@ -231,6 +231,62 @@ describe('Table block settings menu', () => {
     });
   });
 
+  describe('text size', () => {
+    it('exposes compact and comfortable text entries with i18n titles', () => {
+      const { tool } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+
+      expect(getSettingsItem(tool, 'table-text-compact').title).toBe('tools.table.compactText');
+      expect(getSettingsItem(tool, 'table-text-comfortable').title).toBe('tools.table.comfortableText');
+    });
+
+    it('compact is active by default and comfortable is not', () => {
+      const { tool } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+
+      expect(getSettingsItem(tool, 'table-text-compact').isActive).toBe(true);
+      expect(getSettingsItem(tool, 'table-text-comfortable').isActive).toBe(false);
+    });
+
+    it('switching to comfortable marks the grid and persists through save()', () => {
+      const { tool, element } = mountTable({ content: [['A', 'B'], ['C', 'D']] });
+
+      getSettingsItem(tool, 'table-text-comfortable').onActivate();
+
+      const grid = element.querySelector('table');
+
+      expect(grid?.getAttribute('data-blok-table-text-size')).toBe('comfortable');
+      expect(tool.save(element).textSize).toBe('comfortable');
+      expect(getSettingsItem(tool, 'table-text-comfortable').isActive).toBe(true);
+      expect(getSettingsItem(tool, 'table-text-compact').isActive).toBe(false);
+    });
+
+    it('switching back to compact removes the marker and omits textSize from save()', () => {
+      const { tool, element } = mountTable({
+        textSize: 'comfortable',
+        content: [['A', 'B'], ['C', 'D']],
+      });
+
+      getSettingsItem(tool, 'table-text-compact').onActivate();
+
+      const grid = element.querySelector('table');
+
+      expect(grid?.hasAttribute('data-blok-table-text-size')).toBe(false);
+      expect(tool.save(element).textSize).toBeUndefined();
+      expect(getSettingsItem(tool, 'table-text-compact').isActive).toBe(true);
+    });
+
+    it('renders the comfortable marker when loaded from saved data', () => {
+      const { tool, element } = mountTable({
+        textSize: 'comfortable',
+        content: [['A', 'B'], ['C', 'D']],
+      });
+
+      const grid = element.querySelector('table');
+
+      expect(grid?.getAttribute('data-blok-table-text-size')).toBe('comfortable');
+      expect(getSettingsItem(tool, 'table-text-comfortable').isActive).toBe(true);
+    });
+  });
+
   describe('config', () => {
     it('withHeadingColumn config presets the heading column flag', () => {
       // Saved data has no withHeadingColumn yet (fresh table) — same contract as

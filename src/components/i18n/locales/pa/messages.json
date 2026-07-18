@@ -102,6 +102,8 @@
   "tools.table.dragToAddRemoveColumns": "ਕਾਲਮ ਜੋੜਨ ਜਾਂ ਹਟਾਉਣ ਲਈ ਖਿੱਚੋ",
   "tools.table.fitToPageWidth": "ਪੰਨੇ ਦੀ ਚੌੜਾਈ ਅਨੁਸਾਰ ਫਿੱਟ ਕਰੋ",
   "tools.table.fullWidth": "ਪੂਰੀ ਚੌੜਾਈ",
+  "tools.table.compactText": "ਕੰਪੈਕਟ ਟੈਕਸਟ",
+  "tools.table.comfortableText": "ਆਰਾਮਦਾਇਕ ਟੈਕਸਟ",
   "blockSettings.convertWithChildrenWarning": "ਇਸ ਬਲਾਕ ਵਿੱਚ {count} ਨੇਸਟਡ ਬਲਾਕ ਹਨ। ਬਦਲਣ ਨਾਲ ਇਹ ਸਿਖਰ ਪੱਧਰ 'ਤੇ ਆ ਜਾਣਗੇ। ਕੀ ਜਾਰੀ ਰੱਖਣਾ ਹੈ?",
   "toolNames.underline": "ਅੰਡਰਲਾਈਨ",
   "toolNames.strikethrough": "ਸਟ੍ਰਾਈਕਥਰੂ",

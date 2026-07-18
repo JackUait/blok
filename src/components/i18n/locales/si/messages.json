@@ -102,6 +102,8 @@
   "tools.table.dragToAddRemoveColumns": "තීරු එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
   "tools.table.fitToPageWidth": "පිටුවේ පළලට සරිලන ලෙස",
   "tools.table.fullWidth": "සම්පූර්ණ පළල",
+  "tools.table.compactText": "සංයුක්ත පෙළ",
+  "tools.table.comfortableText": "පහසු පෙළ",
   "blockSettings.convertWithChildrenWarning": "මෙම බ්ලොක් එකේ {count} කූඩු කළ බ්ලොක් ඇත. පරිවර්තනය කිරීමෙන් ඒවා ඉහළ මට්ටමට ගෙන යනු ලැබේ. ඉදිරියට යන්නද?",
   "toolNames.underline": "යටිරේඛනය",
   "toolNames.strikethrough": "හරස් ඉරි",

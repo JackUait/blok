@@ -113,6 +113,8 @@
   "tools.table.dragToAddRemoveColumns": "स्तम्भ थप्न वा हटाउन तान्नुहोस्",
   "tools.table.fitToPageWidth": "पृष्ठको चौडाइमा मिलाउनुहोस्",
   "tools.table.fullWidth": "पूर्ण चौडाइ",
+  "tools.table.compactText": "सघन पाठ",
+  "tools.table.comfortableText": "आरामदायक पाठ",
   "blockSettings.convertWithChildrenWarning": "यस ब्लकमा {count} नेस्टेड ब्लकहरू छन्। रूपान्तरण गर्दा ती शीर्ष स्तरमा आउनेछन्। जारी राख्ने?",
   "toolNames.underline": "अधोरेखा",
   "toolNames.strikethrough": "स्ट्राइकथ्रु",

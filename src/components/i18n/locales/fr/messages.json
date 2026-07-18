@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes",
   "tools.table.fitToPageWidth": "Ajuster à la largeur de la page",
   "tools.table.fullWidth": "Pleine largeur",
+  "tools.table.compactText": "Texte compact",
+  "tools.table.comfortableText": "Texte confortable",
   "blockSettings.convertWithChildrenWarning": "Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer ?",
   "toolNames.underline": "Souligné",
   "toolNames.strikethrough": "Barré",

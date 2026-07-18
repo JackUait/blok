@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
   "tools.table.fitToPageWidth": "ޞަފްޙާގެ ފުޅާމިނަށް ފައްތާ",
   "tools.table.fullWidth": "ފުރިހަމަ ފުޅާމިން",
+  "tools.table.compactText": "ކުޑަ ލިޔުން",
+  "tools.table.comfortableText": "އާދައިގެ ލިޔުން",
   "blockSettings.convertWithChildrenWarning": "މި ބްލޮކްގައި {count} ނެސްޓެޑް ބްލޮކް އެބަހުއްޓެވެ. ބަދަލު ކުރުމުން ނެސްޓެޑް ބްލޮކްތައް އެންމެ މަތީ ލެވެލަށް ގެނެވޭނެ. ކުރިޔަށް ދާންވީތަ?",
   "toolNames.underline": "އަންޑަރލައިން",
   "toolNames.strikethrough": "ސްޓްރައިކްތުރޫ",

@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "Повлечете за додавање или отстранување колони",
   "tools.table.fitToPageWidth": "Прилагоди на ширината на страницата",
   "tools.table.fullWidth": "Целосна ширина",
+  "tools.table.compactText": "Компактен текст",
+  "tools.table.comfortableText": "Удобен текст",
   "blockSettings.delete": "Избриши",
   "blockSettings.duplicate": "Дуплирај",
   "blockSettings.copyLink": "Копирај врска до блок",

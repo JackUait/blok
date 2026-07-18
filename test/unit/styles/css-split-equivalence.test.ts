@@ -388,8 +388,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // with a `:where([data-blok-readonly])` token redeclaration (custom properties are
     // immune to logical-property lowering). Expanded doc comments in both files account for
     // most of the ~1.8KB growth. Bumps the multiplier to 1.397.
+    // 2026-07-18: table text density — tables.css gained the
+    // [data-blok-table-text-size="comfortable"] cell rule plus its doc comment
+    // (~0.6KB) for the new compact/comfortable switch in the table settings
+    // menu. Bumps the multiplier to 1.399.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.397);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.399);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

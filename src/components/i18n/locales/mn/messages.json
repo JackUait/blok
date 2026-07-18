@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "Багана нэмэх эсвэл хасахын тулд чирнэ үү",
   "tools.table.fitToPageWidth": "Хуудасны өргөнд тааруулах",
   "tools.table.fullWidth": "Бүтэн өргөн",
+  "tools.table.compactText": "Авсаархан текст",
+  "tools.table.comfortableText": "Тухтай текст",
   "blockSettings.delete": "Устгах",
   "blockSettings.duplicate": "Хувилах",
   "blockSettings.copyLink": "Блокийн холбоосыг хуулах",

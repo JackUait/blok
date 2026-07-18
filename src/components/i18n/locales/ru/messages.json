@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "Тяните, чтобы добавить или удалить столбцы",
   "tools.table.fitToPageWidth": "По ширине страницы",
   "tools.table.fullWidth": "Полная ширина",
+  "tools.table.compactText": "Компактный текст",
+  "tools.table.comfortableText": "Комфортный текст",
   "blockSettings.delete": "Удалить",
   "blockSettings.duplicate": "Дублировать",
   "blockSettings.copyLink": "Копировать ссылку на блок",

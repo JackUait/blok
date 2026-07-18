@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "גרור להוספה או הסרה של עמודות",
   "tools.table.fitToPageWidth": "התאמה לרוחב הדף",
   "tools.table.fullWidth": "רוחב מלא",
+  "tools.table.compactText": "טקסט קומפקטי",
+  "tools.table.comfortableText": "טקסט נוח",
   "blockSettings.delete": "מחק",
   "blockSettings.duplicate": "שכפול",
   "blockSettings.copyLink": "העתק קישור לבלוק",

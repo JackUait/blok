@@ -79,6 +79,8 @@
   "tools.table.dragToAddRemoveColumns": "കോളങ്ങൾ ചേർക്കാനോ നീക്കാനോ വലിച്ചിടുക",
   "tools.table.fitToPageWidth": "പേജിന്റെ വീതിക്ക് അനുയോജ്യമാക്കുക",
   "tools.table.fullWidth": "പൂർണ്ണ വീതി",
+  "tools.table.compactText": "ഒതുക്കമുള്ള ടെക്സ്റ്റ്",
+  "tools.table.comfortableText": "സൗകര്യപ്രദമായ ടെക്സ്റ്റ്",
   "blockSettings.delete": "ഇല്ലാതാക്കുക",
   "blockSettings.duplicate": "തനിപ്പകർപ്പ്",
   "blockSettings.copyLink": "ബ്ലോക്കിലേക്കുള്ള ലിങ്ക് പകർത്തുക",

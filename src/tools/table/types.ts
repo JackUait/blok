@@ -43,6 +43,12 @@ export type CellContent = {
 export type LegacyCellContent = string | CellContent;
 
 /**
+ * Cell text density. 'compact' is the default small table text;
+ * 'comfortable' matches the regular editor text size.
+ */
+export type TableTextSize = 'compact' | 'comfortable';
+
+/**
  * Type guard to check if legacy cell content has been migrated to blocks format.
  * Used during data loading to identify cells that need migration.
  */
@@ -69,6 +75,8 @@ export interface TableData extends BlockToolData {
   colWidths?: number[];
   /** Original per-column width in pixels, set once at creation. New columns = initialColWidth / 2. */
   initialColWidth?: number;
+  /** Cell text density. Omitted means 'compact' (the default small text). */
+  textSize?: TableTextSize;
 }
 
 /**

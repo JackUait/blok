@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "Քաշեք սյունակներ ավելացնելու կամ հեռացնելու",
   "tools.table.fitToPageWidth": "Հարմարեցնել էջի լայնությանը",
   "tools.table.fullWidth": "Ամբողջ լայնություն",
+  "tools.table.compactText": "Սեղմ տեքստ",
+  "tools.table.comfortableText": "Հարմարավետ տեքստ",
   "blockSettings.convertWithChildrenWarning": "Այս բլոկն ունի {count} ներդրված բլոկ: Փոխարկելու դեպքում դրանք կտեղափոխվեն բարձրագույն մակարդակ: Շարունակե՞լ:",
   "toolNames.underline": "Ընդգծում",
   "toolNames.strikethrough": "Վրագծում",

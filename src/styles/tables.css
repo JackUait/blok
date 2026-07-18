@@ -39,6 +39,18 @@
   font-size: inherit !important;
 }
 
+/*
+ * Comfortable text density: bump the cell type scale from the compact
+ * default (text-sm on each cell) to the regular editor size. Cell block
+ * content inherits this via the font-size:inherit rule above, so one
+ * attribute on the <table> retypes every cell. Attribute + descendant
+ * gives (0,2,0), which outranks the cells' text-sm utility in both the
+ * dev (@layer) and flattened production cascades.
+ */
+[data-blok-table-text-size="comfortable"] [data-blok-table-cell] {
+  font-size: 1rem;
+}
+
 /* ─── Cell content placement ──────────────────────────────────── */
 
 [data-blok-cell-placement="top-center"] {

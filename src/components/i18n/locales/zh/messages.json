@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "拖动以添加或删除列",
   "tools.table.fitToPageWidth": "适应页面宽度",
   "tools.table.fullWidth": "全宽",
+  "tools.table.compactText": "紧凑文本",
+  "tools.table.comfortableText": "舒适文本",
   "blockSettings.convertWithChildrenWarning": "此内容块包含 {count} 个嵌套块。转换后，这些嵌套块将被提升至顶层。是否继续？",
   "toolNames.underline": "下划线",
   "toolNames.strikethrough": "删除线",

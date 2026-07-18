@@ -81,6 +81,8 @@
   "tools.table.dragToAddRemoveColumns": "Povuci za dodavanje ili uklanjanje stupaca",
   "tools.table.fitToPageWidth": "Prilagodi širini stranice",
   "tools.table.fullWidth": "Puna širina",
+  "tools.table.compactText": "Kompaktan tekst",
+  "tools.table.comfortableText": "Udoban tekst",
   "blockSettings.delete": "Obriši",
   "blockSettings.duplicate": "Dupliciraj",
   "blockSettings.copyLink": "Kopiraj poveznicu na blok",

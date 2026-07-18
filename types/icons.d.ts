@@ -35,6 +35,8 @@ export declare const IconH5: string;
 export declare const IconH6: string;
 export declare const IconHeading: string;
 export declare const IconText: string;
+export declare const IconTextSizeSmall: string;
+export declare const IconTextSizeLarge: string;
 export declare const IconWarning: string;
 export declare const IconToggleList: string;
 export declare const IconListBulleted: string;

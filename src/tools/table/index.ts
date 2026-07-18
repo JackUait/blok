@@ -16,6 +16,8 @@ import {
   IconHeaderColumn,
   IconHeaderRow,
   IconTable,
+  IconTextSizeLarge,
+  IconTextSizeSmall,
 } from '../../components/icons';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { twMerge } from '../../components/utils/tw';
@@ -44,12 +46,13 @@ import {
   setupKeyboardNavigation,
   updateHeadingColumnStyles,
   updateHeadingStyles,
+  updateTextSizeStyles,
 } from './table-operations';
 import { TableModel } from './table-model';
 import { registerAdditionalRestrictedTools } from './table-restrictions';
 import { TableSubsystems } from './table-subsystems';
 import type { TableHost } from './table-subsystems';
-import type { CellContent, LegacyCellContent, TableData, TableConfig } from './types';
+import type { CellContent, LegacyCellContent, TableData, TableConfig, TableTextSize } from './types';
 import { isCellWithBlocks } from './types';
 
 const DEFAULT_ROWS = 3;
@@ -532,6 +535,8 @@ export class Table implements BlockTool {
       updateHeadingColumnStyles(this.gridElement, this.model.withHeadingColumn);
     }
 
+    updateTextSizeStyles(this.gridElement, this.model.textSize);
+
     if (!this.readOnly) {
       this.initCellBlocks(gridEl);
       this.keyboardNavCleanup = setupKeyboardNavigation(gridEl, this.cellBlocks);
@@ -581,6 +586,22 @@ export class Table implements BlockTool {
         closeOnActivate: true,
         onActivate: (): void => this.toggleFullWidth(),
       },
+      {
+        icon: IconTextSizeSmall,
+        title: i18n.t('tools.table.compactText'),
+        name: 'table-text-compact',
+        isActive: this.model.textSize === 'compact',
+        closeOnActivate: true,
+        onActivate: (): void => this.setTextSize('compact'),
+      },
+      {
+        icon: IconTextSizeLarge,
+        title: i18n.t('tools.table.comfortableText'),
+        name: 'table-text-comfortable',
+        isActive: this.model.textSize === 'comfortable',
+        closeOnActivate: true,
+        onActivate: (): void => this.setTextSize('comfortable'),
+      },
     ];
   }
 
@@ -597,6 +618,16 @@ export class Table implements BlockTool {
 
     this.model.setWithHeadingColumn(next);
     updateHeadingColumnStyles(this.gridElement, next);
+    this.block?.dispatchChange();
+  }
+
+  private setTextSize(size: TableTextSize): void {
+    if (this.model.textSize === size) {
+      return;
+    }
+
+    this.model.setTextSize(size);
+    updateTextSizeStyles(this.gridElement, size);
     this.block?.dispatchChange();
   }
 

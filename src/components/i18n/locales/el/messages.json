@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "Σύρετε για προσθήκη ή αφαίρεση στηλών",
   "tools.table.fitToPageWidth": "Προσαρμογή στο πλάτος σελίδας",
   "tools.table.fullWidth": "Πλήρες πλάτος",
+  "tools.table.compactText": "Συμπαγές κείμενο",
+  "tools.table.comfortableText": "Άνετο κείμενο",
   "blockSettings.convertWithChildrenWarning": "Αυτό το μπλοκ έχει {count} ένθετα μπλοκ. Η μετατροπή του θα τα μετακινήσει στο ανώτατο επίπεδο. Να συνεχιστεί;",
   "toolNames.underline": "Υπογράμμιση",
   "toolNames.strikethrough": "Διαγράμμιση",

@@ -104,6 +104,8 @@
   "tools.table.dragToAddRemoveColumns": "გადაიტანეთ სვეტების დასამატებლად ან წასაშლელად",
   "tools.table.fitToPageWidth": "გვერდის სიგანეზე მორგება",
   "tools.table.fullWidth": "სრული სიგანე",
+  "tools.table.compactText": "კომპაქტური ტექსტი",
+  "tools.table.comfortableText": "კომფორტული ტექსტი",
   "blockSettings.convertWithChildrenWarning": "ამ ბლოკს აქვს {count} ჩადგმული ბლოკი. კონვერტაცია მათ მთავარ დონეზე გადაიტანს. გაგრძელება?",
   "toolNames.underline": "ხაზგასმა",
   "toolNames.strikethrough": "გადახაზვა",

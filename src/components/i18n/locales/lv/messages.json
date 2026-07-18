@@ -115,6 +115,8 @@
   "tools.table.dragToAddRemoveColumns": "Velciet, lai pievienotu vai noņemtu kolonnas",
   "tools.table.fitToPageWidth": "Pielāgot lapas platumam",
   "tools.table.fullWidth": "Pilns platums",
+  "tools.table.compactText": "Kompakts teksts",
+  "tools.table.comfortableText": "Ērts teksts",
   "blockSettings.convertWithChildrenWarning": "Šim blokam ir {count} iekļauti bloki. Pārvēršot to, tie tiks pārvietoti uz augšējo līmeni. Turpināt?",
   "toolNames.underline": "Pasvītrojums",
   "toolNames.strikethrough": "Pārsvītrojums",

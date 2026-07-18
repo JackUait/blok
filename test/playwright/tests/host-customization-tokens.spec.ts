@@ -57,6 +57,7 @@ interface CreateOptions {
   data?: OutputData;
   readOnly?: boolean;
   containerStyle?: Record<string, string>;
+  styleTokens?: Record<string, string>;
 }
 
 const createBlok = async (page: Page, options: CreateOptions = {}): Promise<void> => {
@@ -76,17 +77,18 @@ const createBlok = async (page: Page, options: CreateOptions = {}): Promise<void
   }
 
   await page.evaluate(
-    async ({ holder, initialData, readOnly }) => {
+    async ({ holder, initialData, readOnly, styleTokens }) => {
       const blok = new window.Blok({
         holder,
         ...(initialData ? { data: initialData } : {}),
         ...(readOnly !== undefined ? { readOnly } : {}),
+        ...(styleTokens ? { style: { tokens: styleTokens } } : {}),
       });
 
       window.blokInstance = blok;
       await blok.isReady;
     },
-    { holder: HOLDER_ID, initialData: options.data ?? null, readOnly: options.readOnly }
+    { holder: HOLDER_ID, initialData: options.data ?? null, readOnly: options.readOnly, styleTokens: options.styleTokens }
   );
 };
 
@@ -215,4 +217,42 @@ test('a single plain-selector palette override wins in production', async ({ pag
   const value = await wrapper.evaluate((el) => getComputedStyle(el).getPropertyValue('--blok-selection').trim());
 
   expect(value).toBe('rgb(9, 99, 9)');
+});
+
+test('style.tokens override is applied to body-mounted popover UI', async ({ page }) => {
+  await createBlok(page, {
+    styleTokens: { '--blok-popover-bg': 'rgb(1, 2, 3)' },
+    data: { blocks: [{ type: 'paragraph', data: { text: '' } }] },
+  });
+
+  const paragraphBlock = page.locator(
+    `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`
+  );
+
+  await expect(paragraphBlock).toHaveCount(1);
+
+  const editable = paragraphBlock.locator('[contenteditable]');
+
+  await editable.click();
+  await editable.fill('');
+  await editable.focus();
+
+  // Open the toolbox via the "/" shortcut, which portals its popover to document.body.
+  await page.keyboard.type('/');
+
+  const popover = page.locator('body > [data-blok-popover]').first();
+
+  await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+  // Assert visibility on the inner container rather than the native `popover`
+  // host itself: Chromium's checkVisibility() (which Playwright's toBeVisible
+  // relies on) does not reliably reflect the top-layer `:popover-open` state
+  // on the element that owns the `popover` attribute.
+  const popoverContainer = popover.locator('[data-blok-testid="popover-container"]');
+
+  await expect(popoverContainer).toBeVisible();
+
+  const value = await popover.evaluate((el) => getComputedStyle(el).getPropertyValue('--blok-popover-bg').trim());
+
+  expect(value).toBe('rgb(1, 2, 3)');
 });

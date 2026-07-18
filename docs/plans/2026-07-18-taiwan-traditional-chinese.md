@@ -126,8 +126,7 @@ Required representative values:
   "blockSettings.delete": "刪除",
   "toolNames.link": "連結",
   "toolNames.file": "檔案",
-  "toolNames.video": "影片",
-  "blockSettings.undo": "復原"
+  "toolNames.video": "影片"
 }
 ```
 

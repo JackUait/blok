@@ -112,13 +112,13 @@ describe('CSS Top Layer reset (src/styles/main.css)', () => {
      */
     it('light-theme scope includes [data-blok-top-layer] so promoted elements inherit tokens', () => {
       expect(css).toMatch(
-        /\[data-blok-interface\][\s\S]*?\[data-blok-popover\][\s\S]*?\[data-blok-top-layer\]\s*\{[\s\S]*?--blok-image-lightbox-backdrop/
+        /:where\(\[data-blok-interface\]\)[\s\S]*?:where\(\[data-blok-popover\]\)[\s\S]*?:where\(\[data-blok-top-layer\]\)\s*\{[\s\S]*?--blok-image-lightbox-backdrop/
       );
     });
 
     it('explicit-dark-theme scope also includes [data-blok-top-layer]', () => {
       expect(css).toMatch(
-        /\[data-blok-theme="dark"\]\s+\[data-blok-interface\][\s\S]*?\[data-blok-theme="dark"\]\s+\[data-blok-top-layer\]/
+        /:where\(\[data-blok-theme="dark"\]\s+\[data-blok-interface\]\)[\s\S]*?:where\(\[data-blok-theme="dark"\]\s+\[data-blok-top-layer\]\)/
       );
     });
   });

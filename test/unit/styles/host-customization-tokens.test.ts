@@ -90,4 +90,28 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       );
     });
   });
+
+  describe('zero-specificity theme declarations', () => {
+    it('declares the light palette via :where() so a host single-attribute selector always wins', () => {
+      expect(css).toMatch(
+        /:where\(\[data-blok-interface\]\),\s*:where\(\[data-blok-popover\]\),\s*:where\(\[data-blok-top-layer\]\)\s*\{[^}]*--blok-selection:/
+      );
+    });
+
+    it('declares the dark system-preference palette via :where()', () => {
+      expect(css).toMatch(
+        /:where\(:root:not\(\[data-blok-theme="light"\]\) \[data-blok-interface\]\)/
+      );
+    });
+
+    it('declares the dark attribute palette via :where()', () => {
+      expect(css).toMatch(
+        /:where\(\[data-blok-theme="dark"\] \[data-blok-interface\]\)/
+      );
+    });
+
+    it('keeps no bare-specificity light palette selector', () => {
+      expect(css).not.toMatch(/^\[data-blok-interface\],\n\[data-blok-popover\],\n\[data-blok-top-layer\] \{/m);
+    });
+  });
 });

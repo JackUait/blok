@@ -1063,7 +1063,7 @@
   max-width: var(--blok-content-max-width, var(--max-width-content));
 }
 
-[data-blok-interface], [data-blok-popover], [data-blok-top-layer] {
+:where([data-blok-interface]), :where([data-blok-popover]), :where([data-blok-top-layer]) {
   --blok-selection: #e1f2ff;
   --blok-selection-inline: #d4ecff;
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
@@ -1345,7 +1345,7 @@
   --blok-video-focus-ring: color-mix(in srgb, var(--blok-video-accent) 30%, transparent);
 }
 
-[@media (prefers-color-scheme: dark)] :root:not([data-blok-theme="light"]) [data-blok-interface], :root:not([data-blok-theme="light"]) [data-blok-popover], :root:not([data-blok-theme="light"]) [data-blok-top-layer] {
+[@media (prefers-color-scheme: dark)] :where(:root:not([data-blok-theme="light"]) [data-blok-interface]), :where(:root:not([data-blok-theme="light"]) [data-blok-popover]), :where(:root:not([data-blok-theme="light"]) [data-blok-top-layer]) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);
@@ -1489,7 +1489,7 @@
   --blok-database-card-actions-divider: rgba(255, 255, 255, 0.4);
 }
 
-[data-blok-theme="dark"] [data-blok-interface], [data-blok-theme="dark"] [data-blok-popover], [data-blok-theme="dark"] [data-blok-top-layer] {
+:where([data-blok-theme="dark"] [data-blok-interface]), :where([data-blok-theme="dark"] [data-blok-popover]), :where([data-blok-theme="dark"] [data-blok-top-layer]) {
   --blok-selection: rgba(35, 131, 226, 0.2);
   --blok-selection-inline: rgba(35, 131, 226, 0.3);
   --blok-selection-highlight: rgba(35, 131, 226, 0.25);

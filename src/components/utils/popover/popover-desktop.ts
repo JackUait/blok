@@ -154,8 +154,13 @@ export class PopoverDesktop extends PopoverAbstract {
    * as synthesized, while a mouseover at different coordinates is a
    * genuine hover triggered by real pointer motion and passes through.
    *
-   * Cleared after one animation frame as a safety net in case no
-   * mouseover arrives at all.
+   * Cleared on the first REAL pointer motion after `show()` — not on a
+   * timer. The hit test is not bound to any frame budget: on a slow
+   * machine it can arrive long after `show()` and after other hover
+   * events, so a time-based window would let it slip through and steal
+   * hover state (this made a nested-popover E2E fail CI-only). Only when
+   * no pointer position has ever been observed (nothing to compare
+   * against) does a short rAF-bounded window apply instead.
    */
   private suppressSyncHover = false;
 
@@ -818,12 +823,34 @@ export class PopoverDesktop extends PopoverAbstract {
       ? { x: pointerTracker.x, y: pointerTracker.y }
       : null;
 
-    this.suppressSyncHoverRaf = window.requestAnimationFrame(() => {
+    if (this.suppressSyncHoverPointer === null) {
+      // No pointer motion has ever been observed, so there is no resting point
+      // to compare against — fall back to a short rAF-bounded window, matching
+      // the pre-fix behavior for the very first popover in a fresh page.
       this.suppressSyncHoverRaf = window.requestAnimationFrame(() => {
-        this.disarmSuppressSyncHover();
+        this.suppressSyncHoverRaf = window.requestAnimationFrame(() => {
+          this.disarmSuppressSyncHover();
+        });
       });
-    });
+
+      return;
+    }
+
+    // With a resting point captured, stay armed until the pointer ACTUALLY
+    // moves. The post-paint hit test is not bound to any frame budget — on a
+    // slow machine it can arrive long after show() (and after other hover
+    // events), so a time-based window would let it slip through and steal
+    // hover state from whatever item sits under the parked pointer.
+    document.addEventListener('mousemove', this.onRealPointerMove, { capture: true, once: true });
   }
+
+  /**
+   * Disarms the synthesized-hover suppression on the first real pointer
+   * motion after show(). Bound so it can be removed on disarm/hide.
+   */
+  private readonly onRealPointerMove = (): void => {
+    this.disarmSuppressSyncHover();
+  };
 
   /**
    * True when the given mouseover event looks like Chromium's post-paint
@@ -856,6 +883,8 @@ export class PopoverDesktop extends PopoverAbstract {
       window.cancelAnimationFrame(this.suppressSyncHoverRaf);
       this.suppressSyncHoverRaf = null;
     }
+
+    document.removeEventListener('mousemove', this.onRealPointerMove, true);
   }
 
   /**
@@ -900,19 +929,25 @@ export class PopoverDesktop extends PopoverAbstract {
    */
   protected handleHover(event: Event): void {
     // Swallow the synthesized hit test Chromium fires when the element
-    // enters the CSS Top Layer. That hit test reports the same clientX/Y
-    // the pointer was sitting at when `show()` ran; a genuine hover
-    // triggered by real pointer motion reports different coordinates.
-    // A matching event is discarded; a non-matching event disarms the
-    // suppressor and passes through as normal. See `suppressSyncHover`.
+    // enters the CSS Top Layer (or on any later relayout under a parked
+    // pointer). That hit test reports the same clientX/Y the pointer was
+    // sitting at when `show()` ran; a genuine hover triggered by real
+    // pointer motion reports different coordinates. Matching events are
+    // discarded for as long as the pointer has not actually moved;
+    // non-matching events pass through. See `suppressSyncHover`.
     if (this.suppressSyncHover) {
       if (event instanceof MouseEvent && this.isLikelySynthesizedHover(event)) {
-        this.disarmSuppressSyncHover();
-
+        // Swallowed WITHOUT disarming: the hit test can fire more than once
+        // (any relayout under the parked pointer re-triggers it), and each
+        // occurrence must be ignored until the pointer genuinely moves.
         return;
       }
 
-      this.disarmSuppressSyncHover();
+      // A hover at other coordinates is genuine-looking — process it, but stay
+      // armed: until a real mousemove arrives, a late post-paint hit test at
+      // the resting point can still follow and must not steal hover state
+      // (e.g. cancel this event's nested-open intent). Disarming happens on
+      // the first real pointer motion (see armSuppressSyncHover).
     }
 
     const item = this.getTargetItem(event);

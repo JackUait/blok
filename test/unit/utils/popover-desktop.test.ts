@@ -905,6 +905,101 @@ describe('PopoverDesktop', () => {
       expect(destroyNestedSpy).toHaveBeenCalledTimes(1);
       expect(showNestedSpy).toHaveBeenCalledTimes(1);
     });
+
+    it('a late synthesized hover at the resting pointer position does not cancel a pending nested-open intent', () => {
+      vi.useFakeTimers();
+      // The pointer last moved to (50, 60) — e.g. the click that opened the popover.
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 60 }));
+
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const plainItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && !item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+      const plainElement = plainItem?.getElement();
+
+      expect(parentElement).not.toBeNull();
+      expect(plainElement).not.toBeNull();
+
+      // A hover on the submenu trigger at coordinates that do NOT match the
+      // resting pointer (e.g. a dispatched event, or genuine motion) schedules
+      // the deferred nested open.
+      const hoverOnParent = new MouseEvent('mouseover', { clientX: 0, clientY: 0 });
+
+      Object.defineProperty(hoverOnParent, 'composedPath', { value: () => (parentElement ? [parentElement] : []) });
+      instance.handleHover(hoverOnParent);
+
+      // Chromium's post-paint hit test fires at the resting pointer
+      // coordinates, targeting whatever item happens to sit under the parked
+      // pointer. It reflects no real motion and must not steal the pending
+      // open-intent from the trigger item.
+      const synthesizedHover = new MouseEvent('mouseover', { clientX: 50, clientY: 60 });
+
+      Object.defineProperty(synthesizedHover, 'composedPath', { value: () => (plainElement ? [plainElement] : []) });
+      instance.handleHover(synthesizedHover);
+
+      vi.advanceTimersByTime(100);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+      expect(instance.nestedPopoverTriggerItem).toBe(parentItem);
+    });
+
+    it('real pointer motion after show() re-enables hover at the previously resting coordinates', () => {
+      vi.useFakeTimers();
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 60 }));
+
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      popover.show();
+
+      // The pointer genuinely moves after the popover opened — hover events at
+      // any coordinates (including the old resting point) are real again.
+      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 51, clientY: 61 }));
+
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      const hoverOnParent = new MouseEvent('mouseover', { clientX: 50, clientY: 60 });
+
+      Object.defineProperty(hoverOnParent, 'composedPath', { value: () => (parentElement ? [parentElement] : []) });
+      instance.handleHover(hoverOnParent);
+
+      vi.advanceTimersByTime(100);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
   });
 
   describe('search', () => {

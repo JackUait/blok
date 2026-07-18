@@ -941,9 +941,11 @@
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
-    import { version } from './package.json';
+    // Default import only — the json-as-string vite plugin rewrites JSON
+    // modules to a lone default export, so named JSON imports throw on load.
+    import pkg from './package.json';
 
-    document.getElementById('pg-version').textContent = `v${version}`;
+    document.getElementById('pg-version').textContent = `v${pkg.version}`;
 
     /**
      * Playground state - drives editor configuration

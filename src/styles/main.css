@@ -352,6 +352,19 @@
 }
 
 /*
+ * Default gutter: Blok owns the width its floating +/⠿ block controls
+ * need (56px), so hosts no longer hardcode a magic number. Declared at
+ * zero specificity so any host declaration on the wrapper or an ancestor
+ * (e.g. `.host [data-blok-interface] { --blok-editor-gutter-start: 0px }`)
+ * wins. Must stay source-ordered BEFORE the read-only collapse below:
+ * both rules are (0,0,0) on the same wrapper element, so the later one
+ * wins in read-only mode.
+ */
+:where([data-blok-interface]) {
+  --blok-editor-gutter-start: 56px;
+}
+
+/*
  * The gutter exists solely to house the edit-mode +/⠿ controls, so it
  * collapses automatically in read-only mode. This redeclares the gutter
  * tokens (rather than overriding padding-inline directly) because

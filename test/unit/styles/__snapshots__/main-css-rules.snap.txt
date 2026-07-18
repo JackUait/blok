@@ -1841,6 +1841,10 @@
   padding-inline-end: var(--blok-editor-gutter-end, 0px);
 }
 
+:where([data-blok-interface]) {
+  --blok-editor-gutter-start: 56px;
+}
+
 :where([data-blok-readonly]) {
   --blok-editor-gutter-start: 0px;
   --blok-editor-gutter-end: 0px;

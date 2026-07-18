@@ -269,8 +269,8 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   '--blok-font-family',
   // Consumer-supplied content column cap; falls back to --max-width-content.
   '--blok-content-max-width',
-  // Consumer-supplied editor gutters for the floating block controls; fall back to 0px.
-  '--blok-editor-gutter-start',
+  // Consumer-supplied end-side editor gutter; falls back to 0px. (The start
+  // side is declared in main.css with a 56px default.)
   '--blok-editor-gutter-end',
   // Consumer-supplied heading typography; fall back to the HEADER_LEVELS Tailwind defaults.
   '--blok-heading-1-font-size',
@@ -314,6 +314,22 @@ describe('R3 — every var() reference resolves to a declared token', () => {
 // ---------------------------------------------------------------------------
 // R4 — No --blok-* var is redefined outside the known palette blocks.
 // ---------------------------------------------------------------------------
+
+describe('editor gutter default', () => {
+  it('declares --blok-editor-gutter-start: 56px on :where([data-blok-interface])', () => {
+    expect(css).toMatch(
+      /:where\(\[data-blok-interface\]\)\s*\{[^}]*--blok-editor-gutter-start:\s*56px/,
+    );
+  });
+
+  it('declares the default before the read-only collapse so read-only still wins', () => {
+    const defaultIdx = css.search(/:where\(\[data-blok-interface\]\)\s*\{[^}]*--blok-editor-gutter-start:\s*56px/);
+    const readonlyIdx = css.search(/:where\(\[data-blok-readonly\]\)\s*\{[^}]*--blok-editor-gutter-start:\s*0px/);
+    expect(defaultIdx).toBeGreaterThan(-1);
+    expect(readonlyIdx).toBeGreaterThan(-1);
+    expect(defaultIdx).toBeLessThan(readonlyIdx);
+  });
+});
 
 describe('R4 — var redefinitions restricted to palette blocks', () => {
   it('no --blok-* declaration appears outside palette / token blocks', () => {

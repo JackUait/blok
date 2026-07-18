@@ -392,8 +392,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // [data-blok-table-text-size="comfortable"] cell rule plus its doc comment
     // (~0.6KB) for the new compact/comfortable switch in the table settings
     // menu. Bumps the multiplier to 1.399.
+    // 2026-07-19: editor gutter default — main.css gained the
+    // :where([data-blok-interface]) { --blok-editor-gutter-start: 56px }
+    // rule plus its doc comment so Blok owns the 56px floating-controls
+    // gutter instead of hosts hardcoding it. Bumps the multiplier to 1.4.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.399);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

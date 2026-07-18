@@ -21,11 +21,15 @@ A locale may be marked `verified` only when all of the following are true:
 
 1. Every current entry in its `messages.json` has been inspected in its real UI
    context against the guideline's requirements for natural, concise,
-   action-oriented, user-centred wording; appropriate tool-name,
+   action-oriented, user-centered wording; appropriate tool-name,
    accessibility, and error-message length; avoidance of slang,
    transliteration, and unnecessary jargon; and correct language-specific
    capitalization, grammar, register, punctuation, shortcuts, gender, number,
-   and established product terminology.
+   and established product terminology. When an exhaustive caller search finds
+   no production consumer, the entry must instead be inventoried as
+   source-only or localization-bypassed and reviewed against its documented
+   namespace, key, intended role, and any equivalent hardcoded UI context.
+   Absence of a caller never waives the wording requirements.
 2. Its flat JSON shape and key set match the English source; every value is a
    non-empty string; duplicate keys, encoding defects, and Unicode
    normalization defects are absent; and every placeholder name and occurrence
@@ -72,7 +76,7 @@ The three result columns have the exact domain
 | `Register` | `to-audit` until selected; before first-pass completion, replace it with a non-empty explicit register description suitable for the locale. |
 | `First reviewer`, `Second reviewer` | Exactly `—` while unassigned, otherwise a stable non-empty reviewer identifier. The two identifiers must differ before second-pass completion. |
 | Three result columns | Exactly `pending`, `open`, or `pass`, with the meanings and dimension-specific guards below. |
-| `Finding IDs` | Exactly `—` when no finding has ever been recorded, otherwise a comma-separated list of existing `F-<locale>-NNN` rows. Verified findings remain listed as history. |
+| `Finding IDs` | Exactly `—` when no locale-specific finding has ever been recorded, otherwise a comma-separated list of existing `F-<locale>-NNN` rows. Verified findings remain listed as history. A global `F-global-NNN` finding is recorded once in the finding table and is not duplicated into every affected locale row. |
 | `Final status` | Exactly `pending`, `first-pass-complete`, `second-pass-complete`, or `verified`; transitions may not be skipped. |
 | Finding-table `Status` | Exactly `open` or `verified`; a new finding starts `open`. |
 
@@ -84,8 +88,13 @@ The result values mean:
   current failure or unresolved finding. It blocks every final-status
   transition beyond `pending`.
 - `pass`: all requirements for that dimension have current evidence and no
-  related finding is `open`. A result of `pass` is necessary but does not by
-  itself advance final status.
+  related locale-specific finding is `open`. A result of `pass` is necessary
+  but does not by itself advance final status.
+
+A global finding does not block an individual locale's result or first- or
+second-pass transition. It tracks aggregate work across locales and blocks
+every terminal `verified` transition until the global finding itself is
+verified.
 
 Dimension-specific guards are:
 
@@ -98,9 +107,11 @@ Dimension-specific guards are:
 - **Semantic/style result:** `pass` requires every current entry to have been
   checked in UI context for meaning, naturalness, brevity, action wording,
   terminology, accessibility wording, grammar, register, punctuation, and all
-  other applicable guideline rules at the completed review stage. Any known
-  defect or unresolved language judgment makes it `open`; incomplete or
-  invalidated review makes it `pending`.
+  other applicable guideline rules at the completed review stage. An entry
+  with no production consumer must have the explicit source-only disposition
+  required by completion rule 1. Any known defect or unresolved language
+  judgment makes the result `open`; incomplete or invalidated review makes it
+  `pending`.
 - **Exact-English retention result:** `pass` requires a current exact-match
   inventory, no pending-translation exemption, and one allowed category,
   locale-specific justification, and source for every retained match. Any
@@ -129,19 +140,23 @@ row to `pending`; a row must then traverse the progression again.
 
 1. `pending -> first-pass-complete` requires a selected register, a first
    reviewer identifier, `—` for the second reviewer, a complete first review of
-   every current entry, all three results at `pass`, every first-pass finding
-   `verified`, and every current exact-English retention recorded.
+   every current entry, all three results at `pass`, every locale-specific
+   first-pass finding `verified`, and every current exact-English retention
+   recorded.
 2. `first-pass-complete -> second-pass-complete` requires a different second
    reviewer identifier, that reviewer's independent inspection of every current
    entry and the first-pass diff, all three results at `pass` after that review,
-   every finding `verified`, and every retention still justified.
+   every locale-specific finding `verified`, and every retention still
+   justified.
 3. `second-pass-complete -> verified` requires all repository-wide completion
    gates, focused and full i18n checks, current evidence validation, and the
-   independent final review to pass with all three results still at `pass`.
+   independent final review to pass with all three results still at `pass` and
+   every global finding `verified`.
 
-No result of `pending` or `open`, no finding of `open`, no missing reviewer
-identifier required by the target transition, and no identical reviewer
-identifiers may coexist with an advanced final status.
+No result of `pending` or `open`, no open locale-specific finding, no missing
+reviewer identifier required by the target transition, and no identical
+reviewer identifiers may coexist with a first- or second-pass final status.
+No open finding of any kind may coexist with terminal `verified`.
 
 ## Evidence Reset Rules
 
@@ -243,7 +258,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `de` | German | Latin | ltr | to-audit | — | — | pending | pending | pending | — | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | — | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | — | pending |
-| `en` | English | Latin | ltr | to-audit | — | — | pending | pending | pending | — | pending |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-en-pass1-2026-07-19 | — | pass | pass | pass | `F-en-001`, `F-en-002`, `F-en-003`, `F-en-004`, `F-en-005`, `F-en-006`, `F-en-007`, `F-en-008`, `F-en-009`, `F-en-010`, `F-en-011`, `F-en-012`, `F-en-013`, `F-en-014`, `F-en-015`, `F-en-016`, `F-en-017`, `F-en-018`, `F-en-019`, `F-en-020`, `F-en-021`, `F-en-022`, `F-en-023`, `F-en-024`, `F-en-025`, `F-en-026`, `F-en-027`, `F-en-028`, `F-en-029`, `F-en-030`, `F-en-031`, `F-en-032`, `F-en-033`, `F-en-034`, `F-en-035` | first-pass-complete |
 | `es` | Spanish | Latin | ltr | to-audit | — | — | pending | pending | pending | — | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | — | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | — | pending |
@@ -302,17 +317,119 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `zh` | Chinese (Simplified) | Simplified Han | ltr | to-audit | — | — | pending | pending | pending | — | pending |
 | `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | to-audit | — | — | pending | pending | pending | — | pending |
 
+## English Source Audit Evidence
+
+The first English pass inspected all 538 values in their rendered,
+accessibility, or explicitly documented source-only contexts. Coverage was
+disjoint and exhaustive:
+
+- 168 values across block settings, toolbox, popover, notifier,
+  accessibility, tool names, search terms, link, marker, and color-picker
+  namespaces;
+- 153 image, file, and video values;
+- 51 audio values;
+- 46 database values;
+- 41 table and columns values;
+- 79 remaining bookmark, callout, code, embed, equation, header, list,
+  paragraph, quote, spacer, stub, and toggle values.
+
+The selected source register is concise US English with sentence-case product
+labels. This resolves an internal guideline conflict explicitly: the
+Grammar & Style parenthetical says English title-cases UI labels, while Core
+Principles 1–2 prioritize natural, common UI patterns and the same document's
+concrete approved examples use sentence case (“Bulleted list,” “Drag to move,”
+“Click to add below,” and “Insert block”). The English dictionary introduced
+with that guideline in commit `c2facbd5` also used sentence case throughout.
+For this audit, the core principles and concrete context examples take
+precedence over the contradictory parenthetical; proper names and acronyms
+retain their normal capitalization.
+
+Every placeholder-bearing value was checked against its caller and number
+range. All 44 search aliases are distinct and useful for their registered
+targets. Exhaustive caller tracing classified these 29 dictionary values as
+source-only or localization-bypassed rather than pretending that they render
+through the locale API:
+
+- `blockSettings.convertWithChildrenWarning`, `popover.actions`,
+  `tools.columns.turnInto`, `tools.code.autoDetected`, and
+  `tools.code.plainText`;
+- `tools.link.keepTyping`, `tools.link.emailAddress`,
+  `tools.link.jumpToSection`, and `tools.link.webLink`;
+- `tools.image.size`, `tools.image.sizeSmall`, `tools.image.sizeMedium`,
+  `tools.image.sizeLarge`, `tools.image.sizeFull`,
+  `tools.image.captionPlaceholder`, and `tools.image.errorUnavailable`;
+- `tools.file.captionPlaceholder` and `tools.file.preview`;
+- `tools.video.toggleCaption` and `tools.video.moreOptions`;
+- `tools.database.close`, `tools.database.defaultStatusDone`,
+  `tools.database.defaultStatusInProgress`,
+  `tools.database.defaultStatusNotStarted`,
+  `tools.database.defaultStatusProperty`,
+  `tools.database.defaultTitleProperty`, `tools.database.defaultViewBoard`,
+  `tools.database.emptyColumn`, and `tools.database.titlePlaceholder`.
+
+Each was reviewed against its key contract and the equivalent feature or
+hardcoded source context. The W3C WAI
+[Media Seek Slider Example](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/)
+uses “Seek” as the equivalent control's accessible name, so
+`tools.video.seek` is intentionally retained rather than changed on stylistic
+preference alone.
+
+This evidence found and corrected the 35 source-copy defects below. The 35
+exact regression cases and their machine-checked ledger synchronization pass,
+as do all 69 locale corpus cases, all 77 checker tests, and the live structural
+checker. English has no exact-English retention inventory by definition. Its
+current first pass is complete. Hardcoded source text outside locale
+dictionaries remains outside the approved scope of this translation-value
+audit.
+
 ## Findings
 
 Add one row for every structural, semantic, style, register, terminology,
 punctuation, accessibility, placeholder, encoding, or other guideline defect.
 Preserve line breaks inside values as escaped text so each finding occupies one
 Markdown row. Create it as `open` and use `verified` only after the correction
-and its evidence satisfy the closure rules above.
+and its evidence satisfy the closure rules above. Locale-specific IDs use
+`F-<locale>-NNN`. A cross-locale source dependency uses `F-global-NNN` and
+follows the global transition rule above.
 
 | Finding ID | Locale | Key | Category | Old | Expected | Evidence | Status |
 |---|---|---|---|---|---|---|---|
-| `F-<locale>-NNN` | `<locale>` | `<key>` | category | old | expected | evidence | status |
+| `F-en-001` | `en` | `blockSettings.openMenuAction` | grammar | `" to open menu"` | `" to open the menu"` | `settings-toggler.ts` composes the fragment into “Click … to open the menu”; preserve its leading U+0020. | verified |
+| `F-en-002` | `en` | `blockSettings.convertWithChildrenWarning` | terminology / number | `This block has {count} nested blocks. Converting it will promote them to the top level. Continue?` | `Nested blocks: {count}. Converting this block will move them to the top level. Continue?` | Source-only warning contract (no current production caller); removes implementation-oriented “promote” and makes the count phrase grammatical for one or many. | verified |
+| `F-en-003` | `en` | `tools.marker.textColor` | terminology | `Text` | `Text color` | Shared color-picker labels and slash commands require the explicit mode name; “Red Text” is ambiguous. | verified |
+| `F-en-004` | `en` | `tools.toggle.bodyPlaceholder` | hint clarity | `Empty toggle. Click or drop blocks inside.` | `Empty toggle. Click to add a block, or drag blocks here.` | The placeholder click creates a child block and its container accepts dragged blocks; the replacement names both actions. | verified |
+| `F-en-005` | `en` | `tools.table.insertColumnLeft` | capitalization | `Insert Column Left` | `Insert column left` | Row/column popover actions follow the explicitly resolved sentence-case UI convention. | verified |
+| `F-en-006` | `en` | `tools.table.insertColumnRight` | capitalization | `Insert Column Right` | `Insert column right` | Row/column popover actions follow the explicitly resolved sentence-case UI convention. | verified |
+| `F-en-007` | `en` | `tools.table.insertRowAbove` | capitalization | `Insert Row Above` | `Insert row above` | Row/column popover actions follow the explicitly resolved sentence-case UI convention. | verified |
+| `F-en-008` | `en` | `tools.table.insertRowBelow` | capitalization | `Insert Row Below` | `Insert row below` | Row/column popover actions follow the explicitly resolved sentence-case UI convention. | verified |
+| `F-en-009` | `en` | `tools.table.placement` | terminology | `Placement` | `Alignment` | The picker controls horizontal and vertical alignment of content inside selected cells; “placement” exposes the model term. | verified |
+| `F-en-010` | `en` | `tools.table.placementTopLeft` | capitalization | `Top Left` | `Top left` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-011` | `en` | `tools.table.placementTopCenter` | capitalization | `Top Center` | `Top center` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-012` | `en` | `tools.table.placementTopRight` | capitalization | `Top Right` | `Top right` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-013` | `en` | `tools.table.placementMiddleLeft` | capitalization | `Middle Left` | `Middle left` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-014` | `en` | `tools.table.placementMiddleRight` | capitalization | `Middle Right` | `Middle right` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-015` | `en` | `tools.table.placementBottomLeft` | capitalization | `Bottom Left` | `Bottom left` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-016` | `en` | `tools.table.placementBottomCenter` | capitalization | `Bottom Center` | `Bottom center` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-017` | `en` | `tools.table.placementBottomRight` | capitalization | `Bottom Right` | `Bottom right` | The cell-alignment picker follows the explicitly resolved sentence-case convention. | verified |
+| `F-en-018` | `en` | `a11y.dropCancelled` | locale spelling | `Drag cancelled` | `Drag canceled` | US spelling matches the dictionary's “Color,” “Gray,” and “Center” choices. | verified |
+| `F-en-019` | `en` | `a11y.atTop` | grammar / accessibility | `Block is at the top, cannot move up` | `Block is at the top and cannot move up` | Removes a comma splice from the keyboard boundary announcement. | verified |
+| `F-en-020` | `en` | `a11y.atBottom` | grammar / accessibility | `Block is at the bottom, cannot move down` | `Block is at the bottom and cannot move down` | Removes a comma splice from the keyboard boundary announcement. | verified |
+| `F-en-021` | `en` | `a11y.searchResults` | number / accessibility | `{count} results` | `Search results: {count}` | Toolbox, block-settings, and code-language-search live regions can announce a count of one. | verified |
+| `F-en-022` | `en` | `a11y.allBlocksSelected` | number / accessibility | `All blocks selected, {count} blocks` | `All blocks selected. Total: {count}` | Select-all can run in a one-block document; the replacement is count-neutral and avoids repetition. | verified |
+| `F-en-023` | `en` | `tools.callout.addEmoji` | terminology | `Add emoji` | `Add icon` | The callout UI consistently presents the chosen emoji as its editable/removable icon. | verified |
+| `F-en-024` | `en` | `tools.callout.filterEmojis` | search clarity | `Filter…` | `Search emojis…` | The value is the visible placeholder and accessible name of an emoji searchbox. | verified |
+| `F-en-025` | `en` | `tools.callout.pickRandom` | action clarity | `Random` | `Pick a random emoji` | The dice icon's tooltip and accessible name need an explicit, grammatical action. | verified |
+| `F-en-026` | `en` | `tools.code.searchLanguage` | punctuation / clarity | `Search language...` | `Search languages…` | The searchable list contains many languages and the corpus uses the single ellipsis character. | verified |
+| `F-en-027` | `en` | `tools.link.linkTitle` | terminology | `Link title` | `Link text` | The edit field changes the anchor's visible text, not title metadata. | verified |
+| `F-en-028` | `en` | `tools.image.altDescription` | accessibility / brevity | `Add alt text to describe this image. This makes your page more accessible to people who are vision-impaired or blind.` | `Describe this image for people who can’t see it.` | The alt-text dialog already supplies its purpose; the replacement is shorter, direct, and user-centered. | verified |
+| `F-en-029` | `en` | `tools.file.previewError` | punctuation | `Couldn't load preview` | `Couldn’t load preview` | Other English contractions use the typographic apostrophe; this visible error was the sole straight-apostrophe outlier. | verified |
+| `F-en-030` | `en` | `tools.database.viewTypeListDescription` | terminology / clarity | `A simple linear view` | `Show items in a simple list` | The subtitle beneath the List option should describe the familiar result instead of using abstract “linear view” terminology. | verified |
+| `F-en-031` | `en` | `tools.bookmark.loading` | progress punctuation | `Loading link preview` | `Loading link preview…` | The rendered in-progress placeholder should match other ongoing loading states. | verified |
+| `F-en-032` | `en` | `tools.embed.empty` | context | `Paste a link to embed` | `No embed link` | This key is rendered only for an empty embed in read-only mode, where pasting is impossible. | verified |
+| `F-en-033` | `en` | `tools.video.toggleTimeDisplay` | accessibility / jargon | `Toggle time display` | `Switch between elapsed and remaining time` | The accessible button name now states both actual states instead of exposing “toggle.” | verified |
+| `F-en-034` | `en` | `tools.video.ctxStats` | slang / terminology | `Stats for nerds` | `Playback statistics` | The context-menu item opens technical playback data; the replacement removes prohibited slang. | verified |
+| `F-en-035` | `en` | `tools.callout.emojiSearchResults` | number / accessibility | `{count} emojis found` | `Emoji matches: {count}` | The live-region template can receive one; the replacement is count-neutral. | verified |
+| `F-global-001` | all non-English | 35 changed English source keys | source dependency | Localized values have not been re-reviewed against the corrected source. | Re-audit the corresponding value in all 68 localized dictionaries and correct it where required. | English-source changes invalidate dependent semantic evidence; Tasks 6–12 inspect every affected value during each complete locale pass. | open |
 
 ## Exact-English Retentions
 

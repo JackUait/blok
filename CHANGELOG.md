@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4](https://github.com/JackUait/blok/compare/v1.2.3...v1.2.4) (2026-07-18)
+
+### Bug Fixes
+
+- **i18n** — Capitalized `toolNames` keys (e.g. `toolNames.TestTool`) resolve again in the toolbox: the lookup now tries the raw tool name first, then the capitalized key, restoring the published contract that 1.2.3's raw-name lookup silently dropped. An empty toolbox title no longer short-circuits the fallback chain and renders a blank slash-menu item — it is treated as absent and falls back to the capitalized tool name.
+
+### Maintenance
+
+- **CI** — The docs site now deploys only on package releases, and the deploy is gated by a verifier that checks the published packages (tied to the release version family) before the site goes live.
+
+## [1.2.3](https://github.com/JackUait/blok/compare/v1.2.2...v1.2.3) (2026-07-18)
+
+### Features
+
+- **Theming** — More host customization hooks: heading tokens (keyed off `data-blok-heading-level`) and embed tokens, a `--blok-list-gap` token for list spacing, and palette tokens declared at zero specificity via `:where()` so host overrides always win. `--blok-content-max-width` is now authoritative when the editor is in `width: 'full'` mode.
+- **Read-only** — The editor wrapper is stamped with `data-blok-readonly` as a public styling hook, and the block-controls gutter auto-collapses in read-only mode so content uses the full column.
+- **Adapters** — The three React-integration workarounds were removed by fixing their root causes in core.
+
+### Bug Fixes
+
+- **i18n** — Custom tool titles now localize via `toolNames.<toolName>` dictionary keys.
+- **Image** — GIF→video auto-conversion is skipped when no video tool is registered, instead of failing the upload.
+
+### Maintenance
+
+- **Build** — `dist/` output is now minified and JSON data is emitted as `JSON.parse` strings, cutting published bundle weight.
+- **Docs** — Documented the theming hooks, `data-blok-readonly` attribute, `contentAlign`, `toolbox: false` gating, the GIF guard, the `readOnly` object form, and `toolNames` keys.
+
 ## [1.2.2](https://github.com/JackUait/blok/compare/v1.2.1...v1.2.2) (2026-07-17)
 
 ### Features

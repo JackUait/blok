@@ -136,6 +136,7 @@ describe("API_SECTIONS", () => {
       expect(example).toContain("--blok-editor-gutter-start");
       expect(example).toContain("--blok-editor-gutter-end");
       expect(example).toContain("--blok-list-padding-start");
+      expect(example).toContain("--blok-checklist-padding-start");
       expect(example).toContain("--blok-list-gap");
       expect(example).toContain("--blok-search-input-placeholder");
       expect(example).toContain("--blok-heading-1-font-size");
@@ -154,6 +155,26 @@ describe("API_SECTIONS", () => {
       expect(description).toContain("data-blok-readonly");
       expect(description.toLowerCase()).toContain("width='full'".toLowerCase());
       expect(description).toContain("style.contentAlign");
+    });
+
+    it("documents style.tokens as the primary theming method reaching body-mounted popovers", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("style.tokens");
+
+      const example = stylesSection!.example ?? "";
+      expect(example).toContain("style: {");
+      expect(example).toContain("tokens: {");
+    });
+
+    it("documents the gutter as an automatic default with an overridable token", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("56px");
     });
   });
 

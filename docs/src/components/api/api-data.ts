@@ -1154,20 +1154,25 @@ editor.selection.restore();`,
     badge: "Styles",
     title: "Styles API",
     description:
-      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. Theme overrides need only a single plain selector — Blok's own palette is declared at zero specificity via `:where()`, so `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order; popovers portal to `document.body`, so put theme overrides in a global stylesheet targeting `[data-blok-interface], [data-blok-popover], [data-blok-top-layer]`. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. The wrapper carries `data-blok-readonly` while read-only is active and the gutter collapses automatically, so set `--blok-editor-gutter-start` once and never toggle it from JS. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config.",
+      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active, collapsing the gutter to 0 automatically. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config.",
     example: `// Customize the editor from your host app via CSS custom properties —
 // no need to target Blok's internal test IDs or data attributes.
 .my-editor-container {
   /* Cap the content column at a custom width (default: 720px) */
   --blok-content-max-width: 650px;
 
-  /* Reserve space inside the editor for the floating +/⠿ block
-     controls so they never overflow your container (default: 0px) */
+  /* Blok reserves 56px automatically in edit mode for the floating +/⠿
+     block controls, collapsing to 0 in read-only. Override to resize it
+     or set 0px to remove it entirely: */
   --blok-editor-gutter-start: 56px;
   --blok-editor-gutter-end: 16px;
 
   /* Extra start padding on list blocks (default: 0px) */
   --blok-list-padding-start: 18px;
+
+  /* Checklists follow --blok-list-padding-start unless this is set —
+     use it to indent checklists independently of other list styles */
+  --blok-checklist-padding-start: 0px;
 
   /* Gap between a list marker/checkbox and its content (default: 0px) */
   --blok-list-gap: 6px;
@@ -1185,8 +1190,21 @@ editor.selection.restore();`,
   --blok-embed-margin-top: 16px;
 }
 
-// Theme overrides only need a plain host selector — Blok's palette is
-// declared at zero specificity via :where(), so this always wins.
+// Primary way to override theme tokens: style.tokens in the constructor
+// config. Blok injects a per-instance stylesheet that reaches the editor
+// AND UI portaled to document.body (popovers, tooltips, top-layer
+// elements) automatically — no manual selector targeting needed.
+new Blok({
+  style: {
+    tokens: {
+      '--blok-selection': 'rgba(35, 131, 226, 0.28)',
+      '--blok-popover-bg': '#1f1f1f',
+    },
+  },
+});
+
+// CSS-only alternative: a plain host selector works too — Blok's palette
+// is declared at zero specificity via :where(), so this always wins.
 // Popovers/menus portal to document.body, so target them explicitly too.
 [data-blok-interface],
 [data-blok-popover],

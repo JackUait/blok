@@ -17,6 +17,7 @@ import { SelectionUtils as Selection } from '../selection/index';
 import { debounce, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { LinkHoverCard } from '../utils/link-hover-card';
+import { log } from '../utils/logger';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 
 // Controllers and handlers
@@ -95,6 +96,9 @@ export class UI extends Module<UINodes> {
 
   /** Unique style tag ID for this instance's font override, derived from the holder element */
   private fontStyleTagId: string | null = null;
+
+  /** Unique style tag ID for this instance's theme token overrides, derived from the holder element */
+  private themeTokenStyleTagId: string | null = null;
 
   /**
    * Reset the block hover state (used after drag cancellation to allow toolbar to show again)
@@ -180,6 +184,7 @@ export class UI extends Module<UINodes> {
      */
     this.loadStyles();
     this.loadFontStyles();
+    this.loadThemeTokenStyles();
 
     /**
      * Register this Blok instance with the accessibility announcer
@@ -473,6 +478,14 @@ export class UI extends Module<UINodes> {
       }
     }
 
+    // Remove the per-instance theme token style tag to prevent leaks in SPAs
+    if (this.themeTokenStyleTagId !== null) {
+      const themeTokenStyleTag = $.get(this.themeTokenStyleTagId);
+      if (themeTokenStyleTag) {
+        themeTokenStyleTag.remove();
+      }
+    }
+
     // Clean up accessibility announcer
     destroyAnnouncer();
   }
@@ -742,6 +755,61 @@ export class UI extends Module<UINodes> {
       `}`,
       `[data-blok-popover]:not([data-blok-popover-inline]) {`,
       vars,
+      `}`,
+    ].join('\n');
+
+    const tag = $.make('style', null, {
+      id: styleTagId,
+      textContent: css,
+    });
+
+    if (this.config.style?.nonce) {
+      tag.setAttribute('nonce', this.config.style.nonce);
+    }
+
+    $.prepend(document.head, tag);
+  }
+
+  /**
+   * Injects a per-instance stylesheet for config.style.tokens overrides.
+   * Targets the portal scopes too ([data-blok-popover], [data-blok-top-layer])
+   * because body-mounted UI cannot inherit custom properties from the holder.
+   * Wins over the built-in palette, which is declared at zero specificity
+   * via :where() in colors.css.
+   */
+  private loadThemeTokenStyles(): void {
+    const tokens = this.config.style?.tokens;
+
+    if (tokens === undefined || Object.keys(tokens).length === 0) {
+      return;
+    }
+
+    const varLines: string[] = [];
+
+    for (const [name, value] of Object.entries(tokens)) {
+      if (!/^--blok-[\w-]+$/.test(name) || /[;{}]/.test(value)) {
+        log(`style.tokens entry "${name}" skipped — keys must match --blok-* and values must not contain ; { }`, 'warn');
+        continue;
+      }
+      varLines.push(`  ${name}: ${value};`);
+    }
+
+    if (varLines.length === 0) {
+      return;
+    }
+
+    const holderId = this.nodes.holder.id !== '' ? this.nodes.holder.id : (this.nodes.wrapper.dataset['blokInterface'] ?? 'default');
+    const styleTagId = `blok-theme-tokens-${holderId}`;
+
+    this.themeTokenStyleTagId = styleTagId;
+
+    if ($.get(styleTagId)) {
+      return;
+    }
+
+    const css = [
+      `[data-blok-interface], [data-blok-popover], [data-blok-top-layer] {`,
+      varLines.join('\n'),
       `}`,
     ].join('\n');
 

@@ -406,6 +406,16 @@ export interface BlokConfig {
      * @default 'left'
      */
     contentAlign?: 'left' | 'center' | 'right';
+
+    /**
+     * Theme token overrides applied to the editor AND to UI portaled to
+     * document.body (popovers, tooltips, top-layer elements) — the piece a
+     * host stylesheet scoped to the wrapper cannot reach.
+     * Keys must be `--blok-*` custom property names; invalid entries are
+     * skipped with a warning.
+     * @example { '--blok-selection': 'rgba(35, 131, 226, 0.28)' }
+     */
+    tokens?: Record<string, string>;
   }
 
   /**

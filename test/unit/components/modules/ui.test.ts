@@ -1715,6 +1715,217 @@ describe("UI module", () => {
     });
   });
 
+  describe("loadThemeTokenStyles", () => {
+    it("does not inject a style tag when config.style.tokens is not set", () => {
+      const { ui } = createUI({ configOverrides: { style: {} } });
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tags = Array.from(document.head.querySelectorAll("style")).filter(
+        (tag) => tag.id.startsWith("blok-theme-tokens-"),
+      );
+
+      expect(tags).toHaveLength(0);
+    });
+
+    it("injects a style tag targeting interface, popover and top-layer scopes", () => {
+      const holder = document.createElement("div");
+      holder.id = "tokens-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { tokens: { "--blok-selection": "rgba(35, 131, 226, 0.28)" } },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tag = document.getElementById("blok-theme-tokens-tokens-editor");
+      expect(tag).not.toBeNull();
+      expect(tag?.textContent).toContain(
+        "[data-blok-interface], [data-blok-popover], [data-blok-top-layer]",
+      );
+      expect(tag?.textContent).toContain(
+        "--blok-selection: rgba(35, 131, 226, 0.28);",
+      );
+    });
+
+    it("skips keys that are not --blok-* custom properties", () => {
+      const holder = document.createElement("div");
+      holder.id = "invalid-keys-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: {
+            tokens: { color: "red", "--evil": "x", "--blok-bg": "#fff" },
+          },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tag = document.getElementById("blok-theme-tokens-invalid-keys-editor");
+      expect(tag?.textContent).toContain("--blok-bg: #fff;");
+      expect(tag?.textContent).not.toContain("color: red");
+      expect(tag?.textContent).not.toContain("--evil");
+    });
+
+    it("skips values that could break out of the declaration block", () => {
+      const holder = document.createElement("div");
+      holder.id = "invalid-values-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: {
+            tokens: {
+              "--blok-bg": "red; } body { background: lime",
+              "--blok-selection": "blue",
+            },
+          },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tag = document.getElementById("blok-theme-tokens-invalid-values-editor");
+      expect(tag?.textContent).not.toContain("lime");
+      expect(tag?.textContent).toContain("--blok-selection: blue;");
+    });
+
+    it("sets the nonce attribute when config.style.nonce is provided", () => {
+      const holder = document.createElement("div");
+      holder.id = "tokens-nonce-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: {
+            tokens: { "--blok-selection": "blue" },
+            nonce: "abc-nonce-123",
+          },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tag = document.getElementById("blok-theme-tokens-tokens-nonce-editor");
+      expect(tag?.getAttribute("nonce")).toBe("abc-nonce-123");
+    });
+
+    it("removes the injected style tag on destroy", () => {
+      const holder = document.createElement("div");
+      holder.id = "tokens-destroy-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { tokens: { "--blok-selection": "blue" } },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      expect(document.getElementById("blok-theme-tokens-tokens-destroy-editor")).not.toBeNull();
+
+      ui.destroy();
+
+      expect(document.getElementById("blok-theme-tokens-tokens-destroy-editor")).toBeNull();
+    });
+  });
+
   describe("contentAlign data attribute", () => {
     it("sets data-blok-content-align to 'left' by default when contentAlign is not specified", () => {
       const { ui } = createUI({ attachNodes: false });

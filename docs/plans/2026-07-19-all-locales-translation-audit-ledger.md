@@ -147,15 +147,18 @@ identifiers may coexist with an advanced final status.
 
 These rules prevent a machine or reviewer from retaining stale completion:
 
-1. **Localized value edit:** any edit to a locale's `messages.json` value after
-   review resets that locale's three results and final status to `pending`,
-   clears both reviewer cells to `—`, and requires both complete passes again.
-   Reopen every finding whose key, rationale, or evidence depends on the edited
-   value.
+1. **Localized dictionary content change:** any content change to a localized
+   `messages.json` after review resets that locale's three results and final
+   status to `pending`, clears both reviewer cells to `—`, and requires both
+   complete passes again. This includes keys added, removed, or renamed; value
+   edits; structural changes; duplicate-key changes; raw encoding, Unicode
+   normalization, or whitespace changes; and formatting changes that can affect
+   raw-integrity evidence. Reopen every finding whose key, value, rationale,
+   disposition, or evidence depends on the changed content.
 2. **English source change:** any English wording, key, or placeholder change
    resets English and every affected localized dictionary exactly as in rule 1,
-   and opens all dependent findings. If the complete affected set cannot be
-   proven, reset all 69 locales.
+   and reopens all affected or dependent findings. If the complete affected set
+   cannot be proven, reset all 69 locales.
 3. **Validation or guideline change:** reset each affected result to `pending`,
    reset each affected locale's final status to `pending`, clear both reviewer
    cells to `—`, and repeat both review passes for the changed criterion.
@@ -163,13 +166,34 @@ These rules prevent a machine or reviewer from retaining stale completion:
    style-rule changes affect semantic/style; exact-match policy changes affect
    exact-English retention. If scope is uncertain, reset every possibly
    affected result and locale.
-4. **Recurrence:** recurrence of a defect reopens its finding and sets its
-   corresponding result to `open`; it also resets final status and reviewers as
-   required by the applicable value, source, or validation-change rule above.
-5. **Ledger-only correction:** a factual correction confined to this ledger
-   need not reset evidence when it changes no dictionary, guideline,
-   validation, review conclusion, finding disposition, or cited evidence.
-   Otherwise the applicable reset rule is mandatory.
+4. **Recurrence:** recurrence of a defect always reopens its finding. If a
+   dictionary content change caused the recurrence, rule 1 or rule 2 resets all
+   three results, final status, and reviewers. Otherwise set every result
+   affected by the recurrence to `open`, reset final status to `pending`, clear
+   the reviewer cells for the affected pass or passes, and repeat both passes
+   for every affected criterion; clear both reviewer cells when the conclusion
+   spans both passes or its scope cannot be isolated.
+5. **Substantive ledger-evidence change:** once evidence has supported a
+   `pass`, a `verified` finding, or a locale status beyond `pending`, any change
+   to reviewer identity or conclusion, a result, finding status or disposition,
+   retention classification, retention justification or source, cited
+   evidence, or an evidence reference invalidates every conclusion that relied
+   on its former content. Reset the affected result or results and final status
+   to `pending`, clear the relevant reviewer cells, reopen all relevant
+   findings, and repeat both passes for every affected criterion. Clear both
+   reviewer cells conservatively when the changed conclusion or evidence spans
+   both passes. If the affected locales or criteria cannot be proven, reset all
+   three results and final status to `pending` for all 69 locales, clear all
+   reviewer cells, reopen every potentially affected finding, and repeat both
+   passes.
+6. **Pure clerical or procedural wording change:** a ledger-only spelling,
+   layout, or process-description correction needs no reset only when it
+   provably changes no audit evidence, evidence reference, reviewer identity or
+   conclusion, result, finding status or disposition, retention classification
+   or justification, cited source, or completion claim. Recording evidence for
+   the first time while the row remains `pending` is evidence collection, not a
+   change to evidence previously used for completion. If either condition
+   cannot be proven, rule 5 governs.
 
 ## Evidence Sources
 

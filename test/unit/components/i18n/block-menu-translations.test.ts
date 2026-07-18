@@ -114,6 +114,35 @@ describe('Block menu tool titles on non-English locale', () => {
     expect(translateToolTitle(i18n, entryWithoutTitle, 'fileLink')).toBe('FileLink');
   });
 
+  it('resolves toolNames.<CapitalizedToolName> when the raw-name key is missing (pre-1.2.3 contract)', async () => {
+    // Before the raw-name lookup landed, consumers localized custom tools via
+    // the capitalized tool name (toolNames.TestTool). That published contract
+    // must keep resolving alongside the raw-name key.
+    const i18n = createI18nModule({
+      i18n: {
+        messages: {
+          'toolNames.TestTool': 'ТестТул',
+        },
+      },
+    });
+
+    await i18n.prepare();
+
+    const entryWithEmptyTitle: ToolboxConfigEntry = { icon: '<svg/>', title: '' };
+
+    expect(translateToolTitle(i18n, entryWithEmptyTitle, 'testTool')).toBe('ТестТул');
+  });
+
+  it('falls back to the capitalized tool name when the title is an empty string', async () => {
+    const i18n = createI18nModule();
+
+    await i18n.prepare();
+
+    const entryWithEmptyTitle: ToolboxConfigEntry = { icon: '<svg/>', title: '' };
+
+    expect(translateToolTitle(i18n, entryWithEmptyTitle, 'testTool')).toBe('TestTool');
+  });
+
   it('resolves translations when user provides partial messages override on English locale', async () => {
     // User stays on English locale but supplies partial custom messages,
     // e.g. only the search placeholder is Russified. Base English dict still

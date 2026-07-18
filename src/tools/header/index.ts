@@ -273,7 +273,7 @@ export class Header implements BlockTool {
   /**
    * Base styles for all header levels
    */
-  private static readonly BASE_STYLES = 'py-[7px] px-[2px] m-0 leading-[1.3]! outline-hidden [&_p]:p-0! [&_p]:m-0! [&_div]:p-0! [&_div]:m-0!';
+  private static readonly BASE_STYLES = 'py-[7px] px-[2px] m-0 outline-hidden [&_p]:p-0! [&_p]:m-0! [&_div]:p-0! [&_div]:m-0!';
 
   /**
    * Styles
@@ -1056,7 +1056,9 @@ export class Header implements BlockTool {
    * height is identical at every heading level. To sit on the FIRST line of a
    * (possibly multi-line) heading its CENTER is anchored there, not its box sized
    * to it: top-[calc(7px+0.65em)] = the heading's py-[7px] top padding plus half a
-   * line (leading-[1.3]), and -translate-y-1/2 pulls the fixed pill up so its own
+   * line (the heading's rendered line-height is 1.3, set via the
+   * --blok-heading-line-height token in src/styles/heading.css, not a Tailwind
+   * class on this element), and -translate-y-1/2 pulls the fixed pill up so its own
    * center lands on that point. The `em` must resolve against the heading font-size
    * — which the arrow (a sibling of the heading, not a child) does not inherit — so
    * we copy the level's text-size class onto it; this keeps alignment correct at

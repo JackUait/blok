@@ -4,9 +4,11 @@
   tokens) but scoped to [data-blok-tool="embed"].
 */
 
-/* Host-overridable spacing above the embed block (default 0 = unchanged). */
+/* Host-overridable spacing above the embed block (default matches the
+   layered `my-2` Tailwind class the tool renders, so default rendering
+   is unchanged: 0.5rem = 8px). */
 [data-blok-tool="embed"] {
-  margin-top: var(--blok-embed-margin-top, 0px);
+  margin-top: var(--blok-embed-margin-top, 0.5rem);
 }
 
 [data-blok-tool="embed"] [data-role="embed-figure"] {

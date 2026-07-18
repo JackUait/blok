@@ -363,8 +363,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // ~0.5KB intentional growth.
     // 2026-07-18: read-only gutter auto-collapse rule (:where([data-blok-readonly]) [data-blok-redactor]) in main.css adds 353 bytes of intentional growth (407500 → 407853).
     // 2026-07-18: heading/embed host-customization tokens (heading.css) add ~1.9KB intentional growth. Bumps the multiplier to 1.388.
+    // 2026-07-18: code-review fix — revived the dead --blok-heading-line-height token
+    // (removed the layered `leading-[1.3]!` from header BASE_STYLES so the unlayered
+    // heading.css line-height rule can actually win the cascade) and expanded the
+    // heading.css doc comment explaining the cascade-layer mechanics; ~0.6KB
+    // intentional growth. Bumps the multiplier to 1.39.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.388);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.39);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -6,6 +6,18 @@
   Unlayered on purpose: it must beat the @layer utilities classes.
   Known limit: the text-size class copied for placeholder alignment
   (header/index.ts:1073) keeps the Tailwind default — cosmetic only.
+
+  line-height uses a single shared unitless fallback (1.3, matching the
+  BASE_STYLES leading that used to render it) instead of per-level rem
+  values. BASE_STYLES no longer sets `leading-[1.3]!` at all: that class
+  compiled to a layered `!important` declaration, which always beats an
+  unlayered non-important one — so the per-level rem fallbacks here were
+  dead on arrival and never the real rendered line-height. Being unlayered
+  and non-important is enough for this rule to beat the layered, non-important
+  line-height that ships bundled with each level's text-size utility
+  (e.g. `text-3xl`), so no `!important` is needed here either. Unitless is
+  also what keeps line-height correctly scaling with levelOverrides.size and
+  with font-size:inherit table-cell contexts.
 */
 [data-blok-tool="header"] {
   font-weight: var(--blok-heading-font-weight, 600);
@@ -14,36 +26,36 @@
 
 h1[data-blok-tool="header"] {
   font-size: var(--blok-heading-1-font-size, 1.875rem);
-  line-height: var(--blok-heading-line-height, 2.25rem);
+  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 2rem);
 }
 
 h2[data-blok-tool="header"] {
   font-size: var(--blok-heading-2-font-size, 1.5rem);
-  line-height: var(--blok-heading-line-height, 2rem);
+  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 26px);
 }
 
 h3[data-blok-tool="header"] {
   font-size: var(--blok-heading-3-font-size, 1.25rem);
-  line-height: var(--blok-heading-line-height, 1.75rem);
+  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 1.25rem);
 }
 
 h4[data-blok-tool="header"] {
   font-size: var(--blok-heading-4-font-size, 1.125rem);
-  line-height: var(--blok-heading-line-height, 1.75rem);
+  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }
 
 h5[data-blok-tool="header"] {
   font-size: var(--blok-heading-5-font-size, 1rem);
-  line-height: var(--blok-heading-line-height, 1.5rem);
+  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }
 
 h6[data-blok-tool="header"] {
   font-size: var(--blok-heading-6-font-size, 0.875rem);
-  line-height: var(--blok-heading-line-height, 1.25rem);
+  line-height: var(--blok-heading-line-height, 1.3);
   margin-top: var(--blok-heading-margin-top, 0.75rem);
 }

@@ -60,6 +60,10 @@ export const DATA_ATTR = {
   stretched: 'data-blok-stretched',
   /** Editor or element is empty */
   empty: 'data-blok-empty',
+  /** Present on the editor wrapper while read-only mode is active.
+   *  Public styling hook — lets hosts (and Blok's own CSS, e.g. the
+   *  gutter auto-collapse) key rules off the editing state without JS. */
+  readonly: 'data-blok-readonly',
 
   // ============================================
   // Editor Modes

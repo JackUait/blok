@@ -561,6 +561,17 @@ describe("UI module", () => {
       expect(bottomZone.style.minHeight).toBe("120px");
     });
 
+    it("stamps data-blok-readonly on the wrapper in read-only mode and removes it when editing", () => {
+      const { ui } = createUI();
+      const wrapper = (ui as { nodes: UI["nodes"] }).nodes.wrapper;
+
+      ui.toggleReadOnly(true);
+      expect(wrapper.hasAttribute("data-blok-readonly")).toBe(true);
+
+      ui.toggleReadOnly(false);
+      expect(wrapper.hasAttribute("data-blok-readonly")).toBe(false);
+    });
+
     it("does not make a block's non-editable marker element editable when toggling to read-write", () => {
       // Regression: a list item's holder has a bullet/marker element that is
       // explicitly contenteditable="false" and sits BEFORE the real content

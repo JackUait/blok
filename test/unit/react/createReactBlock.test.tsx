@@ -245,6 +245,95 @@ describe('createReactBlock (React authoring factory)', () => {
     unmount();
   });
 
+  it('commit is idempotent: a patch that changes nothing neither dispatches nor re-renders', () => {
+    const { registry, unmount } = mountHost();
+    const blockApi = makeBlockApi();
+    const renders = vi.fn();
+
+    function Counter({ data, commit }: ReactBlockRenderProps<CounterData>): ReactElement {
+      renders();
+
+      return (
+        <button className="echo" onClick={() => commit({ count: data.count })}>
+          {data.count}
+        </button>
+      );
+    }
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: Counter,
+    });
+
+    const tool = new Tool({
+      data: { count: 4 },
+      block: blockApi,
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    const rendersBefore = renders.mock.calls.length;
+
+    act(() => {
+      fireEvent.click(host.querySelector('.echo') as Element);
+    });
+
+    expect(blockApi.dispatchChange).not.toHaveBeenCalled();
+    expect(renders.mock.calls.length).toBe(rendersBefore);
+    expect(tool.save()).toEqual({ count: 4, label: 'n' });
+
+    unmount();
+  });
+
+  it('commit idempotence breaks effect-echo loops (no guard needed in the component)', () => {
+    const { registry, unmount } = mountHost();
+    const blockApi = makeBlockApi();
+    const effectRuns = vi.fn();
+
+    // The consumer pattern from the field: an effect that echoes the current
+    // value back through commit on every data change. Without commit-side
+    // dedup this loops forever (commit → new data prop → effect → commit).
+    function Echo({ data, commit }: ReactBlockRenderProps<CounterData>): ReactElement {
+      React.useEffect(() => {
+        effectRuns();
+        commit({ count: data.count });
+      }, [data, commit]);
+
+      return <span className="view">{data.count}</span>;
+    }
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: Echo,
+    });
+
+    const tool = new Tool({
+      data: { count: 9 },
+      block: blockApi,
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    // One effect pass; the echoed commit is a no-op, so the loop never starts
+    // and no change is dispatched for a value the block already holds.
+    expect(effectRuns).toHaveBeenCalledTimes(1);
+    expect(blockApi.dispatchChange).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
   it('removed() unregisters the block so its subtree unmounts', () => {
     const { registry, unmount } = mountHost();
 
@@ -271,6 +360,51 @@ describe('createReactBlock (React authoring factory)', () => {
       tool.removed();
     });
     expect(host.querySelector('.view')).toBeNull();
+
+    unmount();
+  });
+
+  it('hands the tool config to the component as a `config` prop (internal keys stripped)', () => {
+    const { registry, unmount } = mountHost();
+
+    interface GoodsConfig {
+      canManageGoods: boolean;
+      cdnUrl: string;
+    }
+
+    const seen: { config: Readonly<Partial<GoodsConfig>> | null } = { config: null };
+
+    const Tool = createReactBlock<CounterData, GoodsConfig>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ config }: ReactBlockRenderProps<CounterData, GoodsConfig>) => {
+        seen.config = config;
+
+        return <span className="view">{config.cdnUrl}</span>;
+      },
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: {
+        [REGISTRY_CONFIG_KEY]: registry,
+        __blokToolName: 'goods',
+        canManageGoods: true,
+        cdnUrl: 'https://cdn.example',
+      },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    // Host props flow through the tool's `config` — no hand-rolled context
+    // provider needed. Adapter-internal keys never leak to the component.
+    expect(seen.config).toEqual({ canManageGoods: true, cdnUrl: 'https://cdn.example' });
+    expect(host.querySelector('.view')?.textContent).toBe('https://cdn.example');
 
     unmount();
   });

@@ -39,6 +39,48 @@ const resolveAtPath = (root: unknown, path: readonly (string | number)[]): unkno
   }, root);
 
 /**
+ * Build the component-facing `config` for a react block from the LATEST render's
+ * raw config, preferring the stable live wrapper from `wrappedConfig` wherever
+ * both sides hold a function at the same path. The result carries the newest
+ * non-function VALUES while keeping function identities stable across renders
+ * (wrappers already delegate to the latest closure), so a deep-equal dedupe of
+ * successive results only fires when a value genuinely changed.
+ */
+export const buildLiveBlockConfig = (
+  wrappedConfig: unknown,
+  latestConfig: unknown
+): Record<string, unknown> => {
+  const merge = (latest: unknown, wrapped: unknown): unknown => {
+    if (typeof latest === 'function') {
+      return typeof wrapped === 'function' ? wrapped : latest;
+    }
+
+    if (Array.isArray(latest)) {
+      const wrappedArray = Array.isArray(wrapped) ? wrapped : [];
+
+      return latest.map((item, index) => merge(item, wrappedArray[index]));
+    }
+
+    if (isPlainObject(latest)) {
+      const wrappedObject = isPlainObject(wrapped) ? wrapped : {};
+      const result: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(latest)) {
+        result[key] = merge(value, wrappedObject[key]);
+      }
+
+      return result;
+    }
+
+    return latest;
+  };
+
+  const merged = merge(latestConfig, wrappedConfig);
+
+  return isPlainObject(merged) ? merged : {};
+};
+
+/**
  * Return a copy of `tools` where every function inside a tool's `config` is
  * replaced by a stable wrapper that calls the function found at the same path
  * in `getLatestTools()` (falling back to the construction-time original when

@@ -280,6 +280,13 @@ export function createVueBlock<Data = BlockToolData>(
         ...(patch as Record<string, unknown>),
       });
 
+      // Idempotent: a patch that changes nothing is a full no-op — no reactive
+      // swap, no dispatchChange — so a watcher echoing the current value back
+      // through commit can never loop.
+      if (deepEqual(next, this.mirror)) {
+        return;
+      }
+
       this.mirror = next;
       this.lastRendered = next;
       this.dataRef.value = next;

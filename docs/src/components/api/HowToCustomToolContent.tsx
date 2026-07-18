@@ -102,14 +102,17 @@ const COMPONENT_AUTHORING_CODE: Partial<Record<string, { code: string; language:
     language: 'tsx',
     code: `import { createReactBlock } from '@bloklabs/react';
 
-export const CalloutTool = createReactBlock({
+export const CalloutTool = createReactBlock<{ text: string }, { accent: string }>({
   type: 'callout',
   toolbox: { title: 'Callout', icon: '💡' },
   // Declares the saved data shape and its defaults — this IS your save() schema.
   propSchema: { text: { default: '' } },
-  component: ({ data, commit }) => (
+  // \`config\` is the tool's config from your \`tools\` map — host props
+  // (permissions, URLs…) flow in here, live, no context provider needed.
+  component: ({ data, commit, config }) => (
     <input
       className="callout"
+      style={{ borderColor: config.accent }}
       value={data.text}
       onChange={(e) => commit({ text: e.target.value })}
     />

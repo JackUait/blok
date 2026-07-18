@@ -193,6 +193,34 @@ describe('createAngularBlock — commit + drag-deferred dispatch', () => {
     expect(registry.flush).toHaveBeenCalled();
   });
 
+  it('commit() is idempotent: a patch that changes nothing neither dispatches nor flushes', () => {
+    const registry = makeRegistry();
+    const block = makeBlockApi();
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+    });
+    const tool = new Tool({
+      data: { count: 1 } as BlockToolData,
+      block,
+      api: makeApi(false),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    } as BlockToolConstructorOptions);
+
+    tool.render();
+    const ctx = (registry.register as ReturnType<typeof vi.fn>).mock.calls[0][1]
+      .context as AngularBlockRenderContext<CounterData>;
+
+    (registry.flush as ReturnType<typeof vi.fn>).mockClear();
+    ctx.commit({ count: 1 });
+
+    expect(block.dispatchChange).not.toHaveBeenCalled();
+    expect(registry.flush).not.toHaveBeenCalled();
+    expect(tool.save()).toEqual({ count: 1, label: 'n' });
+  });
+
   it('commit() defers dispatchChange while a pointer drag is active', () => {
     const registry = makeRegistry();
     const block = makeBlockApi();

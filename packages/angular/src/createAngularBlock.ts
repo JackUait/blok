@@ -224,6 +224,13 @@ export function createAngularBlock<Data = BlockToolData>(
         ...(patch as Record<string, unknown>),
       });
 
+      // Idempotent: a patch that changes nothing is a full no-op — no signal
+      // swap, no CD flush, no dispatchChange — so an effect echoing the current
+      // value back through commit can never loop.
+      if (deepEqual(next, this.mirror)) {
+        return;
+      }
+
       this.mirror = next;
       this.lastRendered = next;
       this.dataSig.set(next);

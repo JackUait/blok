@@ -229,6 +229,51 @@ describe('createVueBlock (Vue authoring factory)', () => {
     unmount();
   });
 
+  it('commit is idempotent: a patch that changes nothing neither dispatches nor re-renders', async () => {
+    const { registry, unmount } = mountHost();
+    const block = makeBlockApi();
+    const renders = vi.fn();
+
+    const Tool = createVueBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      setup({ data, commit }) {
+        return () => {
+          renders();
+
+          return h(
+            'button',
+            { class: 'echo', onClick: () => commit({ count: data.value.count }) },
+            String(data.value.count)
+          );
+        };
+      },
+    });
+
+    const tool = new Tool({
+      data: { count: 4 },
+      block,
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+    const host = tool.render();
+
+    document.body.appendChild(host);
+    await nextTick();
+
+    const rendersBefore = renders.mock.calls.length;
+
+    host.querySelector<HTMLButtonElement>('.echo')?.click();
+    await nextTick();
+
+    expect(block.dispatchChange).not.toHaveBeenCalled();
+    expect(renders.mock.calls.length).toBe(rendersBefore);
+    expect(tool.save()).toEqual({ count: 4, label: 'n' });
+
+    unmount();
+  });
+
   it('removed() unregisters the block so its subtree unmounts', async () => {
     const { registry, unmount } = mountHost();
 

@@ -44,11 +44,13 @@ export interface BlokEditorProps
    * value referentially stable (primitives or useMemo-stable objects) — a dep
    * whose identity changes every render recreates the editor each time.
    *
-   * FUNCTIONS inside tool configs do NOT belong here: the adapter re-binds
-   * every tool-config function to the latest render's closure automatically,
-   * so an inline `uploadByFile`/callback with a fresh identity each render
-   * reaches the editor live, without recreation and without freezing its
-   * identity in a `useState` initializer.
+   * Tool configs do NOT belong here — reserve deps for true identity changes
+   * (e.g. the document id). FUNCTIONS inside tool configs are re-bound to the
+   * latest render's closure automatically (an inline `uploadByFile` with a
+   * fresh identity each render reaches the editor live), and non-function
+   * config VALUES of `createReactBlock` tools (permissions, URLs, locale…) are
+   * pushed to mounted blocks in place when they change. Neither requires
+   * recreation or `useState` identity-freezing.
    */
   deps?: DependencyList;
   /** Test id forwarded to the editor container element (via data-testid). */

@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { DATA_ATTR, deepEqual, fillDefaults, mountChildBlocks, type PropSchema } from '@bloklabs/core/adapters';
 import {
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
+  BLOK_TOOL_NAME_CONFIG_KEY,
   type BlockPortalRegistry,
 } from './block-portal-registry';
 import type { BlockAPI } from '@/types/api';
@@ -10,8 +11,14 @@ import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig } from '
 
 export type { PropSchema, PropSchemaEntry } from '@bloklabs/core/adapters';
 
+/** Adapter-internal config keys, stripped before the config reaches the component. */
+const INTERNAL_CONFIG_KEYS: readonly string[] = [
+  BLOK_PORTAL_REGISTRY_CONFIG_KEY,
+  BLOK_TOOL_NAME_CONFIG_KEY,
+];
+
 /** Props handed to a React block's `component` (the only data write path is `commit`). */
-export interface ReactBlockRenderProps<Data> {
+export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   /** Frozen snapshot of the block data. Re-rendered with a new value on change; never mutate. */
   data: Readonly<Data>;
   /** The ONLY data write path: merge a partial patch and sync once. */
@@ -26,12 +33,21 @@ export interface ReactBlockRenderProps<Data> {
    * the editor is read-only (same contract as a vanilla tool's `setReadOnly`).
    */
   readOnly: boolean;
+  /**
+   * The tool's `config` from the consumer's `tools` map (adapter-internal keys
+   * stripped) — the first-class channel for host props (permissions, CDN/upload
+   * URLs, locale…). No context provider needed. Under `useBlok`/`BlokEditor`
+   * this prop is LIVE: functions always call the latest render's closure, and
+   * changed non-function values are pushed to mounted blocks in place — so
+   * config values never belong in `deps`.
+   */
+  config: Readonly<Partial<Config>>;
   /** Engine-owned child slot — render `<BlockChildren />` for a container block. */
   BlockChildren: ComponentType;
 }
 
 /** Spec for {@link createReactBlock}. */
-export interface CreateReactBlockSpec<Data = BlockToolData> {
+export interface CreateReactBlockSpec<Data = BlockToolData, Config = Record<string, unknown>> {
   /** Tool type name (registered key). */
   type: string;
   /** Optional toolbox entry. */
@@ -39,7 +55,7 @@ export interface CreateReactBlockSpec<Data = BlockToolData> {
   /** Declarative defaults that also define the exact `save()` key set. */
   propSchema: PropSchema;
   /** The component rendered for each block instance. */
-  component: ComponentType<ReactBlockRenderProps<Data>>;
+  component: ComponentType<ReactBlockRenderProps<Data, Config>>;
   /** Optional lifecycle callbacks mapped from Blok's block hooks. */
   onRendered?: (block: BlockAPI) => void;
   onMoved?: (block: BlockAPI) => void;
@@ -64,8 +80,8 @@ export interface CreateReactBlockSpec<Data = BlockToolData> {
  * - `commit()` merges a patch and fires `dispatchChange` exactly once.
  * - `removed()`/`destroy()` unregister the portal (deterministic unmount).
  */
-export function createReactBlock<Data = BlockToolData>(
-  spec: CreateReactBlockSpec<Data>
+export function createReactBlock<Data = BlockToolData, Config = Record<string, unknown>>(
+  spec: CreateReactBlockSpec<Data, Config>
 ): (new (options: BlockToolConstructorOptions) => {
   render(): HTMLElement;
   save(): BlockToolData;
@@ -100,6 +116,10 @@ export function createReactBlock<Data = BlockToolData>(
 
     private readonly blockApi: BlockAPI;
     private readonly registry: BlockPortalRegistry | undefined;
+    /** Name this tool is registered under in the consumer's `tools` map. */
+    private readonly toolName: string | undefined;
+    /** The consumer's tool config with adapter-internal keys stripped. */
+    private readonly toolConfig: Readonly<Partial<Config>>;
     private readonly pointerDrag: () => boolean;
     private readonly childrenComponent: ComponentType;
     private mirror: Readonly<Data>;
@@ -117,6 +137,18 @@ export function createReactBlock<Data = BlockToolData>(
       const config = (options.config ?? {}) as Record<string, unknown>;
 
       this.registry = config[BLOK_PORTAL_REGISTRY_CONFIG_KEY] as BlockPortalRegistry | undefined;
+      const toolName = config[BLOK_TOOL_NAME_CONFIG_KEY];
+
+      this.toolName = typeof toolName === 'string' ? toolName : undefined;
+
+      const publicConfig: Record<string, unknown> = {};
+
+      for (const [key, value] of Object.entries(config)) {
+        if (!INTERNAL_CONFIG_KEYS.includes(key)) {
+          publicConfig[key] = value;
+        }
+      }
+      this.toolConfig = Object.freeze(publicConfig) as Readonly<Partial<Config>>;
 
       // Read the LIVE pointer-drag flag so a mid-drag commit can be deferred
       // (core silently drops a dispatchChange while a drag is active).
@@ -160,6 +192,7 @@ export function createReactBlock<Data = BlockToolData>(
         hostEl: host,
         component: spec.component as unknown as ComponentType<Record<string, unknown>>,
         props: this.buildProps(),
+        toolName: this.toolName,
       });
 
       // Returned synchronously; React flushes the portal on its next commit.
@@ -224,11 +257,12 @@ export function createReactBlock<Data = BlockToolData>(
 
     /** The full entry props handed to the component on (re-)register. */
     private buildProps(): Record<string, unknown> {
-      const props: ReactBlockRenderProps<Data> = {
+      const props: ReactBlockRenderProps<Data, Config> = {
         data: this.mirror,
         commit: this.commit,
         block: this.blockApi,
         readOnly: this.readOnly,
+        config: this.toolConfig,
         BlockChildren: this.childrenComponent,
       };
 
@@ -261,6 +295,14 @@ export function createReactBlock<Data = BlockToolData>(
         ...(this.mirror as Record<string, unknown>),
         ...(patch as Record<string, unknown>),
       });
+
+      // Idempotent: a patch that changes nothing is a full no-op — no props
+      // push, no dispatchChange. This is what makes an effect that echoes the
+      // current value back through commit safe without a consumer-side guard
+      // (an unguarded echo would otherwise loop commit → render → effect).
+      if (deepEqual(next, this.mirror)) {
+        return;
+      }
 
       this.mirror = next;
       this.lastRendered = next;

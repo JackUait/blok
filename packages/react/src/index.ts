@@ -15,6 +15,7 @@ export type {
 export {
   createBlockPortalRegistry,
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
+  BLOK_TOOL_NAME_CONFIG_KEY,
 } from './block-portal-registry';
 export type { BlockPortalRegistry, BlockPortalEntry } from './block-portal-registry';
 export { BlockPortalHost } from './BlockPortalHost';

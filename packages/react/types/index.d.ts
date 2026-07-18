@@ -39,7 +39,7 @@ export interface BlokContentProps extends React.HTMLAttributes<HTMLDivElement> {
  * React hook that creates and manages a Blok editor instance.
  *
  * @param config - Editor configuration (all BlokConfig props except `holder`)
- * @param deps - Optional dependency array. When any dep changes, the editor is destroyed and recreated. Keep each value referentially stable (primitives or useMemo-stable objects) so the editor isn't recreated every render.
+ * @param deps - Optional dependency array. When any dep changes, the editor is destroyed and recreated. Keep each value referentially stable (primitives or useMemo-stable objects) so the editor isn't recreated every render. Reserve it for true identity changes (e.g. the document id): tool-config functions are re-bound to the latest render's closure automatically, and non-function config values of `createReactBlock` tools are pushed to mounted blocks in place — neither belongs in deps.
  * @returns The Blok editor instance, or null during SSR / before initialization.
  *
  * @example
@@ -81,6 +81,8 @@ export interface BlokEditorProps
    * When any value changes, the editor is destroyed and recreated. Keep each
    * value referentially stable (primitives or useMemo-stable objects) — a dep
    * whose identity changes every render recreates the editor each time.
+   * Reserve it for true identity changes (e.g. the document id): tool-config
+   * functions and `createReactBlock` config values stay live without it.
    */
   deps?: React.DependencyList;
   /** Test id forwarded to the editor container element (via data-testid). */
@@ -555,10 +557,14 @@ export interface PropSchemaEntry {
 export type PropSchema = Record<string, PropSchemaEntry>;
 
 /** Props handed to a React block's `component` (the only data write path is `commit`). */
-export interface ReactBlockRenderProps<Data> {
+export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   /** Frozen snapshot of the block data. Re-rendered with a new value on change; never mutate. */
   data: Readonly<Data>;
-  /** The ONLY data write path: merge a partial patch and sync once. */
+  /**
+   * The ONLY data write path: merge a partial patch and sync once. Idempotent —
+   * a patch that changes nothing is a full no-op (no re-render, no change
+   * event), so effects may safely echo current values without a guard.
+   */
   commit: (patch: Partial<Data>) => void;
   /** This block's per-block API. */
   block: BlockAPI;
@@ -568,16 +574,27 @@ export interface ReactBlockRenderProps<Data> {
    * interactive when the editor is read-only.
    */
   readOnly: boolean;
+  /**
+   * The tool's `config` from the consumer's `tools` map (adapter-internal keys
+   * stripped) — the first-class channel for host props (permissions, CDN/upload
+   * URLs, locale…). LIVE under `useBlok`/`BlokEditor`: functions always call
+   * the latest render's closure, and changed non-function values are pushed to
+   * mounted blocks in place — config values never belong in `deps`.
+   */
+  config: Readonly<Partial<Config>>;
   /** Engine-owned child slot — render `<BlockChildren />` for a container block. */
   BlockChildren: React.ComponentType;
 }
 
 /** Spec for {@link createReactBlock}. */
-export interface CreateReactBlockSpec<Data extends BlockToolData = BlockToolData> {
+export interface CreateReactBlockSpec<
+  Data extends BlockToolData = BlockToolData,
+  Config = Record<string, unknown>
+> {
   type: string;
   toolbox?: ToolboxConfig;
   propSchema: PropSchema;
-  component: React.ComponentType<ReactBlockRenderProps<Data>>;
+  component: React.ComponentType<ReactBlockRenderProps<Data, Config>>;
   onRendered?: (block: BlockAPI) => void;
   onMoved?: (block: BlockAPI) => void;
   onRemoved?: (block: BlockAPI) => void;
@@ -602,9 +619,10 @@ export interface CreateReactBlockSpec<Data extends BlockToolData = BlockToolData
  * });
  * ```
  */
-export declare function createReactBlock<Data extends BlockToolData = BlockToolData>(
-  spec: CreateReactBlockSpec<Data>
-): BlockToolConstructable;
+export declare function createReactBlock<
+  Data extends BlockToolData = BlockToolData,
+  Config = Record<string, unknown>
+>(spec: CreateReactBlockSpec<Data, Config>): BlockToolConstructable;
 
 /**
  * Tool-config key carrying the editor's portal registry into a
@@ -613,11 +631,20 @@ export declare function createReactBlock<Data extends BlockToolData = BlockToolD
  */
 export declare const BLOK_PORTAL_REGISTRY_CONFIG_KEY: '__blokPortalRegistry';
 
+/**
+ * Tool-config key carrying the name a react-block tool is registered under in
+ * the consumer's `tools` map. Injected automatically by `useBlok`; routes live
+ * tool-config updates to the tool's mounted blocks.
+ */
+export declare const BLOK_TOOL_NAME_CONFIG_KEY: '__blokToolName';
+
 /** One mounted React block in the portal registry. */
 export interface BlockPortalEntry {
   hostEl: HTMLElement;
   component: React.ComponentType<Record<string, unknown>>;
   props: Record<string, unknown>;
+  /** Name the tool is registered under — routes per-tool live config updates. */
+  toolName?: string;
 }
 
 /**
@@ -630,6 +657,11 @@ export interface BlockPortalRegistry {
   register(id: string, entry: BlockPortalEntry): void;
   unregister(id: string): void;
   setProps(id: string, props: Record<string, unknown>): void;
+  /**
+   * Replace the `config` prop of every entry registered under `toolName`, and
+   * remember it so entries registered later start from the latest config.
+   */
+  setToolConfig(toolName: string, config: Record<string, unknown>): void;
   subscribe(listener: () => void): () => void;
   getSnapshot(): ReadonlyMap<string, BlockPortalEntry>;
 }

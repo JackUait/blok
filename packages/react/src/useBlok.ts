@@ -6,10 +6,11 @@ import { BlokDefaultsContext, mergeBlokDefaults } from './provide-blok';
 import {
   createBlockPortalRegistry,
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
+  BLOK_TOOL_NAME_CONFIG_KEY,
   type BlockPortalRegistry,
 } from './block-portal-registry';
 import { setRegistry, removeRegistry } from './registry-map';
-import { bindLiveToolConfigFunctions } from './live-tool-config';
+import { bindLiveToolConfigFunctions, buildLiveBlockConfig } from './live-tool-config';
 import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
@@ -32,6 +33,15 @@ interface EditorInstanceState {
  * CORE, outside any React render, so it cannot read context — this config
  * bridge is how the tool reaches its editor-scoped registry.
  */
+const isReactBlockEntry = (entry: unknown): boolean => {
+  const toolClass = typeof entry === 'function' ? entry : (entry as { class?: unknown })?.class;
+
+  return (
+    typeof toolClass === 'function' &&
+    (toolClass as { __isBlokReactBlock?: boolean }).__isBlokReactBlock === true
+  );
+};
+
 const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): unknown => {
   if (tools === null || typeof tools !== 'object') {
     return tools;
@@ -40,12 +50,7 @@ const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): un
   const result: Record<string, unknown> = {};
 
   for (const [name, entry] of Object.entries(tools as Record<string, unknown>)) {
-    const toolClass = typeof entry === 'function' ? entry : (entry as { class?: unknown })?.class;
-    const isReactBlock =
-      typeof toolClass === 'function' &&
-      (toolClass as { __isBlokReactBlock?: boolean }).__isBlokReactBlock === true;
-
-    if (!isReactBlock) {
+    if (!isReactBlockEntry(entry)) {
       result[name] = entry;
 
       continue;
@@ -57,6 +62,7 @@ const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): un
     base.config = {
       ...((base.config as Record<string, unknown> | undefined) ?? {}),
       [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry,
+      [BLOK_TOOL_NAME_CONFIG_KEY]: name,
     };
     result[name] = base;
   }
@@ -122,6 +128,12 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // success baseline — so a failed render can't strand the baseline on content
   // the editor never actually showed.
   const pendingDataRef = useRef<UseBlokConfig['data']>(undefined);
+  // Live block-config channel (see the sync effect below): the current editor's
+  // portal registry, its construction-time wrapped tools (stable function
+  // wrappers), and the last config pushed per tool name (dedupe baseline).
+  const liveRegistryRef = useRef<BlockPortalRegistry | null>(null);
+  const wrappedToolsRef = useRef<unknown>(undefined);
+  const pushedBlockConfigsRef = useRef<Map<string, Record<string, unknown>>>(new Map());
 
   // Main lifecycle effect
   useEffect(() => {
@@ -191,13 +203,17 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     // wrappers that always call the latest render's closure — so consumers
     // never need to freeze identities or recreate the editor to update them.
     const registry = createBlockPortalRegistry();
-    const liveTools =
+    const wrappedTools =
       currentConfig.tools === undefined
         ? undefined
-        : injectPortalRegistry(
-            bindLiveToolConfigFunctions(currentConfig.tools, () => configRef.current.tools),
-            registry
-          );
+        : bindLiveToolConfigFunctions(currentConfig.tools, () => configRef.current.tools);
+    const liveTools = wrappedTools === undefined ? undefined : injectPortalRegistry(wrappedTools, registry);
+
+    // Reset the live block-config channel for this editor: the sync effect below
+    // reads these to push changed non-function config VALUES to mounted blocks.
+    liveRegistryRef.current = registry;
+    wrappedToolsRef.current = wrappedTools;
+    pushedBlockConfigsRef.current = new Map();
 
     const blokConfig = {
       ...currentConfig,
@@ -276,6 +292,58 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       deferDestroy(state, setEditor);
     };
   }, [depsToken]);
+
+  // Live tool-config VALUES for react blocks. Function slots are already live
+  // via the stable wrappers, but non-function values (permissions, URLs,
+  // locale…) were snapshotted at construction — which forced consumers to put
+  // them in `deps` and recreate the whole editor to change them. Instead, this
+  // effect runs on every render, rebuilds each react-block tool's
+  // component-facing config from the LATEST render's values (keeping wrapper
+  // identities for functions), and pushes it through the portal registry when
+  // it genuinely changed — mounted blocks re-render in place, future blocks
+  // start from the latest config.
+  useEffect(() => {
+    const registry = liveRegistryRef.current;
+    const state = stateRef.current;
+
+    if (registry === null || state.editor === null || state.isDestroyed) {
+      return;
+    }
+
+    const latestTools = configRef.current.tools as Record<string, unknown> | undefined;
+
+    if (latestTools === null || typeof latestTools !== 'object') {
+      return;
+    }
+
+    const wrappedTools = wrappedToolsRef.current as Record<string, unknown> | undefined;
+
+    for (const [name, entry] of Object.entries(latestTools)) {
+      if (!isReactBlockEntry(entry)) {
+        continue;
+      }
+
+      const latestConfig =
+        typeof entry === 'function' ? {} : ((entry as { config?: unknown }).config ?? {});
+      const wrappedEntry = wrappedTools?.[name];
+      const wrappedConfig =
+        wrappedEntry !== null && typeof wrappedEntry === 'object'
+          ? (wrappedEntry as { config?: unknown }).config
+          : undefined;
+
+      const candidate = buildLiveBlockConfig(wrappedConfig, latestConfig);
+      const pushed = pushedBlockConfigsRef.current.get(name);
+
+      if (pushed !== undefined && deepEqual(candidate, pushed)) {
+        continue;
+      }
+
+      const frozen = Object.freeze(candidate);
+
+      pushedBlockConfigsRef.current.set(name, frozen);
+      registry.setToolConfig(name, frozen);
+    }
+  });
 
   // Reactive: readOnly (object form normalized so the effect dep is a stable boolean)
   const readOnlyEnabled = normalizeReadOnlyConfig(config.readOnly).enabled;

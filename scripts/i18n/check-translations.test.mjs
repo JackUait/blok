@@ -1,18 +1,285 @@
 #!/usr/bin/env node
 /**
- * Tests for the source key coverage phase of check-translations.mjs
+ * Tests for check-translations.mjs
  */
 import { strict as assert } from 'node:assert';
+import { spawnSync } from 'node:child_process';
 import { describe, it } from 'node:test';
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   extractKeysFromSource,
+  extractPlaceholders,
+  findDuplicateJsonKeys,
+  findLocaleIntegrityIssues,
   scanSourceKeys,
   detectDoubleEncoding,
   findUntranslatedKeys,
 } from './check-translations.mjs';
+
+function runCheckerFixture(sourceRaw, localeRaw) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'blok-i18n-checker-')));
+  const scriptDir = join(root, 'scripts/i18n');
+  const localesDir = join(root, 'src/components/i18n/locales');
+  const scriptPath = join(scriptDir, 'check-translations.mjs');
+
+  try {
+    mkdirSync(scriptDir, { recursive: true });
+    mkdirSync(join(localesDir, 'en'), { recursive: true });
+    mkdirSync(join(localesDir, 'fr'), { recursive: true });
+    writeFileSync(
+      scriptPath,
+      readFileSync(new URL('./check-translations.mjs', import.meta.url), 'utf8')
+    );
+    writeFileSync(join(localesDir, 'en/messages.json'), sourceRaw);
+    writeFileSync(join(localesDir, 'fr/messages.json'), localeRaw);
+
+    return spawnSync(process.execPath, [scriptPath], { encoding: 'utf8' });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+describe('translation checker CLI integrity reporting', () => {
+  it('reports source and target findings as errors without crashing on non-strings', () => {
+    const sourceRaw = `{
+      "message.placeholder": "Move {count}",
+      "message.type": "Malformed",
+      "message.source": "Source",
+      "message.source": "Source"
+    }`;
+    const localeRaw = `{
+      "message.placeholder": "Move",
+      "message.placeholder": "Move",
+      "message.type": ["é", 42],
+      "message.source": "Source traduite"
+    }`;
+
+    const result = runCheckerFixture(sourceRaw, localeRaw);
+    const output = `${result.stdout}${result.stderr}`;
+
+    assert.equal(result.status, 1);
+    assert.match(output, /en:message\.source: duplicate-json-key/);
+    assert.match(output, /fr:message\.placeholder: duplicate-json-key/);
+    assert.match(output, /fr:message\.placeholder: placeholder-mismatch/);
+    assert.match(output, /fr:message\.type: non-string/);
+    assert.doesNotMatch(output, /TypeError/);
+  });
+
+  it('exits successfully for clean locale files', () => {
+    const sourceRaw = `{
+      "message.value": "Move {count}"
+    }`;
+    const localeRaw = `{
+      "message.value": "Déplacer {count}"
+    }`;
+
+    const result = runCheckerFixture(sourceRaw, localeRaw);
+    const output = `${result.stdout}${result.stderr}`;
+
+    assert.equal(result.status, 0);
+    assert.match(output, /Locale integrity check passed!/);
+  });
+
+  it('reports non-string source values without crashing on later locales', () => {
+    const sourceRaw = `{
+      "message.value": ["é", 42]
+    }`;
+    const localeRaw = `{
+      "message.value": "Valeur"
+    }`;
+
+    const result = runCheckerFixture(sourceRaw, localeRaw);
+    const output = `${result.stdout}${result.stderr}`;
+
+    assert.equal(result.status, 1);
+    assert.match(output, /en:message\.value: non-string/);
+    assert.doesNotMatch(output, /TypeError/);
+  });
+});
+
+describe('extractPlaceholders', () => {
+  it('returns a sorted placeholder multiset', () => {
+    assert.deepEqual(
+      extractPlaceholders('{total}: {position} / {total}'),
+      ['position', 'total', 'total']
+    );
+  });
+
+  it('returns an empty array when a value has no placeholders', () => {
+    assert.deepEqual(extractPlaceholders('Delete'), []);
+  });
+});
+
+describe('findDuplicateJsonKeys', () => {
+  it('returns each duplicate flat JSON key once', () => {
+    const raw = `{
+      "popover.search": "Search",
+      "toolNames.text": "Text",
+      "popover.search": "Find",
+      "popover.search": "Lookup"
+    }`;
+
+    assert.deepEqual(findDuplicateJsonKeys(raw), ['popover.search']);
+  });
+
+  it('returns no duplicates for clean flat JSON', () => {
+    const raw = `{
+      "popover.search": "Search",
+      "toolNames.text": "Text"
+    }`;
+
+    assert.deepEqual(findDuplicateJsonKeys(raw), []);
+  });
+
+  it('finds duplicate keys in compact flat JSON', () => {
+    const raw = '{"popover.search":"Search","popover.search":"Find"}';
+
+    assert.deepEqual(findDuplicateJsonKeys(raw), ['popover.search']);
+  });
+
+  it('compares decoded JSON keys', () => {
+    const raw = '{"a":"First","\\u0061":"Second"}';
+
+    assert.deepEqual(findDuplicateJsonKeys(raw), ['a']);
+  });
+});
+
+describe('findLocaleIntegrityIssues', () => {
+  it('reports non-string values', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': 'Delete' },
+        { 'message.key': 42 }
+      ),
+      [{ key: 'message.key', kind: 'non-string', value: 42 }]
+    );
+  });
+
+  it('reports intrinsic issues on extra translation keys', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': 'Delete' },
+        { 'message.key': 'Supprimer', 'extra.key': 42 }
+      ),
+      [{ key: 'extra.key', kind: 'non-string', value: 42 }]
+    );
+  });
+
+  it('reports whitespace-only values', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': '   ' },
+        { 'message.key': '   ' }
+      ),
+      [{ key: 'message.key', kind: 'empty', value: '   ' }]
+    );
+  });
+
+  it('reports a lost placeholder', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': 'Move {count}' },
+        { 'message.key': 'Move' }
+      ),
+      [{ key: 'message.key', kind: 'placeholder-mismatch', value: 'Move' }]
+    );
+  });
+
+  it('reports an added placeholder', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': 'Move' },
+        { 'message.key': 'Move {count}' }
+      ),
+      [{ key: 'message.key', kind: 'placeholder-mismatch', value: 'Move {count}' }]
+    );
+  });
+
+  it('reports placeholder duplicate-count drift', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': '{count} of {count}' },
+        { 'message.key': '{count}' }
+      ),
+      [{ key: 'message.key', kind: 'placeholder-mismatch', value: '{count}' }]
+    );
+  });
+
+  it('reports boundary whitespace drift', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': ' or ' },
+        { 'message.key': 'or' }
+      ),
+      [{ key: 'message.key', kind: 'boundary-whitespace', value: 'or' }]
+    );
+  });
+
+  it('reports non-NFC values', () => {
+    const decomposed = 'Cafe\u0301';
+
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': 'Café' },
+        { 'message.key': decomposed }
+      ),
+      [{ key: 'message.key', kind: 'non-nfc', value: decomposed }]
+    );
+  });
+
+  it('reports Unicode replacement characters', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': 'Merge' },
+        { 'message.key': 'Mer\uFFFDge' }
+      ),
+      [{ key: 'message.key', kind: 'replacement-character', value: 'Mer\uFFFDge' }]
+    );
+  });
+
+  for (const codePoint of [...Array(0x20).keys(), 0x7f]) {
+    const label = `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`;
+
+    it(`reports ${label} control characters`, () => {
+      const value = `Mer${String.fromCodePoint(codePoint)}ge`;
+
+      assert.deepEqual(
+        findLocaleIntegrityIssues(
+          { 'message.key': 'Merge' },
+          { 'message.key': value }
+        ),
+        [{ key: 'message.key', kind: 'control-character', value }]
+      );
+    });
+  }
+
+  it('returns no issues for clean translated values', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        {
+          action: 'Move {count}',
+          spaced: ' or ',
+          clean: 'Merge',
+        },
+        {
+          action: 'Déplacer {count}',
+          spaced: ' ou ',
+          clean: 'Fusionner',
+        }
+      ),
+      []
+    );
+  });
+});
 
 describe('extractKeysFromSource', () => {
   it('extracts single-quoted static keys', () => {
@@ -115,6 +382,16 @@ describe('detectDoubleEncoding', () => {
     };
     const issues = detectDoubleEncoding(translation);
     assert.equal(issues.length, 0);
+  });
+
+  it('ignores non-string values', () => {
+    const translation = {
+      array: ['é', 42],
+      object: { nested: 'é' },
+      number: 42,
+    };
+
+    assert.deepEqual(detectDoubleEncoding(translation), []);
   });
 
   it('does not false-positive on multi-byte non-Latin scripts', () => {

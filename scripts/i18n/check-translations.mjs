@@ -3,8 +3,8 @@
 /**
  * Translation completeness checker
  *
- * Validates that all locale translation files have the same keys as the English source of truth.
- * Reports missing keys (error) and extra keys (warning).
+ * Validates locale completeness and structural integrity against the English source of truth.
+ * Reports missing keys and integrity findings as errors, and extra keys as warnings.
  *
  * Usage: node scripts/i18n/check-translations.mjs
  */
@@ -54,14 +54,15 @@ function extractKeys(obj, prefix = '') {
 }
 
 /**
- * Loads and parses a JSON translation file
+ * Loads the raw and parsed forms of a JSON translation file.
+ *
  * @param {string} locale - Locale code (e.g., 'en', 'ru')
- * @returns {object} Parsed JSON content
+ * @returns {{raw: string, translation: object}} Raw and parsed JSON content
  */
-function loadTranslation(locale) {
+function loadTranslationFile(locale) {
   const filePath = join(LOCALES_DIR, locale, 'messages.json');
-  const content = readFileSync(filePath, 'utf-8');
-  return JSON.parse(content);
+  const raw = readFileSync(filePath, 'utf-8');
+  return { raw, translation: JSON.parse(raw) };
 }
 
 /**
@@ -75,6 +76,135 @@ function getAvailableLocales() {
 }
 
 /**
+ * Extracts a sorted multiset of curly-brace placeholders from a message.
+ *
+ * @param {string} value - Translation message
+ * @returns {string[]} Sorted placeholder names, including duplicates
+ */
+export function extractPlaceholders(value) {
+  return [...value.matchAll(/\{([^{}]+)\}/g)]
+    .map((match) => match[1])
+    .filter((placeholder) => placeholder !== undefined)
+    .sort();
+}
+
+/**
+ * Finds duplicate keys in a flat locale JSON object.
+ *
+ * @param {string} raw - Raw JSON file contents
+ * @returns {string[]} Duplicate keys
+ */
+export function findDuplicateJsonKeys(raw) {
+  const counts = new Map();
+  let depth = 0;
+
+  for (let index = 0; index < raw.length; index++) {
+    const character = raw[index];
+
+    if (character === '"') {
+      const start = index;
+      let escaped = false;
+
+      for (index += 1; index < raw.length; index++) {
+        const stringCharacter = raw[index];
+
+        if (escaped) {
+          escaped = false;
+        } else if (stringCharacter === '\\') {
+          escaped = true;
+        } else if (stringCharacter === '"') {
+          break;
+        }
+      }
+
+      let next = index + 1;
+      while (/\s/u.test(raw[next] ?? '')) next += 1;
+
+      if (depth === 1 && raw[next] === ':') {
+        const key = JSON.parse(raw.slice(start, index + 1));
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+
+      continue;
+    }
+
+    if (character === '{') {
+      depth += 1;
+    } else if (character === '}') {
+      depth -= 1;
+    }
+  }
+
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([key]) => key);
+}
+
+/**
+ * Finds structural integrity issues in a locale relative to the source locale.
+ *
+ * @param {Record<string, string>} sourceTranslation - Source key-values
+ * @param {Record<string, unknown>} translation - Target locale key-values
+ * @returns {Array<{key: string, kind: string, value: unknown}>} Detected issues
+ */
+export function findLocaleIntegrityIssues(sourceTranslation, translation) {
+  const issues = [];
+  const controls = /[\u0000-\u001F\u007F]/u;
+  const edgeWhitespace = (value) => ({
+    leading: value.match(/^\s*/u)?.[0] ?? '',
+    trailing: value.match(/\s*$/u)?.[0] ?? '',
+  });
+  const keys = new Set([
+    ...Object.keys(sourceTranslation),
+    ...Object.keys(translation),
+  ]);
+
+  for (const key of keys) {
+    const sourceValue = sourceTranslation[key];
+    const value = translation[key];
+
+    if (typeof value !== 'string') {
+      issues.push({ key, kind: 'non-string', value });
+      continue;
+    }
+
+    if (value.trim() === '') {
+      issues.push({ key, kind: 'empty', value });
+    }
+
+    if (typeof sourceValue === 'string') {
+      if (
+        JSON.stringify(extractPlaceholders(value)) !==
+        JSON.stringify(extractPlaceholders(sourceValue))
+      ) {
+        issues.push({ key, kind: 'placeholder-mismatch', value });
+      }
+
+      if (
+        JSON.stringify(edgeWhitespace(value)) !==
+        JSON.stringify(edgeWhitespace(sourceValue))
+      ) {
+        issues.push({ key, kind: 'boundary-whitespace', value });
+      }
+    }
+
+    if (value !== value.normalize('NFC')) {
+      issues.push({ key, kind: 'non-nfc', value });
+    }
+
+    if (value.includes('\uFFFD')) {
+      issues.push({ key, kind: 'replacement-character', value });
+    }
+
+    if (controls.test(value)) {
+      issues.push({ key, kind: 'control-character', value });
+    }
+  }
+
+  return issues;
+}
+
+/**
  * Detects double-encoded UTF-8 values in a translation object.
  *
  * Double-encoding occurs when UTF-8 bytes are misinterpreted as Latin-1 and
@@ -83,13 +213,15 @@ function getAvailableLocales() {
  * Uses round-trip verification: decode as latin1 → re-encode as utf8 → compare
  * to original. Only true double-encoding round-trips cleanly.
  *
- * @param {Record<string, string>} translation - Flat key-value translation object
+ * @param {Record<string, unknown>} translation - Flat key-value translation object
  * @returns {Array<{key: string, value: string, corrected: string}>} Detected issues
  */
 export function detectDoubleEncoding(translation) {
   const issues = [];
 
   for (const [key, value] of Object.entries(translation)) {
+    if (typeof value !== 'string') continue;
+
     // Only check values with characters above ASCII (potential multi-byte)
     if (!/[^\x00-\x7F]/.test(value)) continue;
 
@@ -187,7 +319,7 @@ export function scanSourceKeys(dir) {
 }
 
 /**
- * Phase 2: Verifies that all static i18n keys used in source code exist in en/messages.json.
+ * Phase 3: Verifies that all static i18n keys used in source code exist in en/messages.json.
  *
  * @param {Set<string>} sourceKeys - Keys defined in en/messages.json
  * @returns {boolean} True if errors were found
@@ -239,21 +371,24 @@ function main() {
   console.log(`\n${colors.dim}Checking translation completeness...${colors.reset}\n`);
   console.log(`${colors.dim}Source of truth: ${SOURCE_LOCALE}/messages.json${colors.reset}\n`);
 
-  // Load source translation
-  const sourceTranslation = loadTranslation(SOURCE_LOCALE);
+  const availableLocales = getAvailableLocales();
+  const localeFiles = new Map(
+    availableLocales.map((locale) => [locale, loadTranslationFile(locale)])
+  );
+  const sourceTranslation = localeFiles.get(SOURCE_LOCALE).translation;
   const sourceKeys = extractKeys(sourceTranslation);
 
   console.log(`${colors.dim}Found ${sourceKeys.size} keys in source${colors.reset}\n`);
 
   // --- Phase 1: locale completeness ---
 
-  const locales = getAvailableLocales().filter((locale) => locale !== SOURCE_LOCALE);
+  const locales = availableLocales.filter((locale) => locale !== SOURCE_LOCALE);
 
   let hasErrors = false;
   let hasWarnings = false;
 
   for (const locale of locales) {
-    const translation = loadTranslation(locale);
+    const translation = localeFiles.get(locale).translation;
     const translationKeys = extractKeys(translation);
 
     const missingKeys = [...sourceKeys].filter((key) => !translationKeys.has(key));
@@ -299,7 +434,43 @@ function main() {
     console.log(`${colors.green}All translations are complete!${colors.reset}\n`);
   }
 
-  // --- Phase 2: source key coverage ---
+  // --- Phase 2: locale integrity ---
+
+  console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}\n`);
+  console.log(`${colors.dim}Checking locale integrity...${colors.reset}\n`);
+
+  let integrityErrors = false;
+
+  for (const locale of availableLocales) {
+    const { raw, translation } = localeFiles.get(locale);
+    const duplicateKeys = findDuplicateJsonKeys(raw);
+    const integrityIssues = findLocaleIntegrityIssues(sourceTranslation, translation);
+
+    for (const key of duplicateKeys) {
+      integrityErrors = true;
+      console.log(
+        `${colors.red}✗${colors.reset} ${locale}:${key}: duplicate-json-key`
+      );
+    }
+
+    for (const issue of integrityIssues) {
+      integrityErrors = true;
+      console.log(
+        `${colors.red}✗${colors.reset} ${locale}:${issue.key}: ${issue.kind}`
+      );
+    }
+  }
+
+  if (integrityErrors) {
+    console.log(
+      `\n${colors.red}Locale integrity check failed.${colors.reset} Fix the reported locale values.\n`
+    );
+    hasErrors = true;
+  } else {
+    console.log(`${colors.green}Locale integrity check passed!${colors.reset}\n`);
+  }
+
+  // --- Phase 3: source key coverage ---
 
   console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}\n`);
   console.log(`${colors.dim}Checking source key coverage...${colors.reset}\n`);
@@ -315,7 +486,7 @@ function main() {
     console.log(`${colors.green}Source coverage check passed!${colors.reset}\n`);
   }
 
-  // --- Phase 3: encoding quality ---
+  // --- Phase 4: encoding quality ---
 
   console.log(`${colors.dim}${'─'.repeat(60)}${colors.reset}\n`);
   console.log(`${colors.dim}Checking encoding quality...${colors.reset}\n`);
@@ -324,7 +495,7 @@ function main() {
   let untranslatedWarnings = false;
 
   for (const locale of locales) {
-    const translation = loadTranslation(locale);
+    const translation = localeFiles.get(locale).translation;
 
     // Check for double-encoded values
     const doubleEncoded = detectDoubleEncoding(translation);

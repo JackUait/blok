@@ -240,9 +240,14 @@ test('style.tokens override is applied to body-mounted popover UI', async ({ pag
   // Open the toolbox via the "/" shortcut, which portals its popover to document.body.
   await page.keyboard.type('/');
 
-  const popover = page.locator('body > [data-blok-popover]').first();
+  const popover = page.locator('[data-blok-popover]').first();
 
   await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+  // Prove the popover is actually portaled to document.body (the point of this test).
+  const isBodyChild = await popover.evaluate((el) => el.parentElement === document.body);
+
+  expect(isBodyChild).toBe(true);
 
   // Assert visibility on the inner container rather than the native `popover`
   // host itself: Chromium's checkVisibility() (which Playwright's toBeVisible

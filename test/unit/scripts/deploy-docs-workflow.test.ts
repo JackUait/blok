@@ -9,7 +9,9 @@ interface Workflow {
     if?: string;
     needs?: string | string[];
     steps?: Array<{
+      env?: Record<string, unknown>;
       name?: string;
+      run?: string;
       uses?: string;
       with?: Record<string, unknown>;
     }>;
@@ -34,8 +36,22 @@ describe('docs deployment workflow', () => {
   });
 
   it('restricts the Pages build to published release events', () => {
+    expect(workflow.jobs['verify-release'].if).toBe("github.event_name == 'release'");
     expect(workflow.jobs.build.if).toBe("github.event_name == 'release'");
-    expect(workflow.jobs.build.needs).toBe('docs-tests');
+    expect(workflow.jobs.build.needs).toEqual(['docs-tests', 'verify-release']);
+  });
+
+  it('verifies the package family before building the docs release', () => {
+    const verification = workflow.jobs['verify-release'].steps?.find(
+      (step) => step.name === 'Verify published package family',
+    );
+
+    expect(verification).toMatchObject({
+      run: 'node scripts/verify-docs-release.mjs "$RELEASE_TAG"',
+      env: {
+        RELEASE_TAG: '${{ github.event.release.tag_name }}',
+      },
+    });
   });
 
   it('builds the source selected by the published release tag', () => {

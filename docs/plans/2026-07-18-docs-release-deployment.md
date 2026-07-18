@@ -215,3 +215,94 @@ Expected: exit 0 with no output.
 
 Inspect the final workflow and commits to prove every requirement from the
 approved design is represented.
+
+### Task 4: Correct production review findings
+
+**Files:**
+- Create: `scripts/verify-docs-release.mjs`
+- Create: `test/unit/scripts/verify-docs-release.test.ts`
+- Modify: `.github/workflows/deploy-docs.yml`
+- Modify: `test/unit/scripts/deploy-docs-workflow.test.ts`
+- Modify: `docs/plans/2026-07-18-docs-release-deployment-design.md`
+
+Production review found that `release.published` is only a GitHub event proxy,
+not proof of package publication, and that the live `github-pages` environment
+allows only the `master` branch even though release events use tag refs.
+
+**Step 1: Add failing package-verification tests**
+
+Cover canonical stable and prerelease tags, mismatched lockstep manifests, the
+five-package release family, npm propagation retries, and rejection when any
+package version is absent.
+
+Extend the workflow regression to require a release-only verification job and
+make the build depend on both docs tests and package verification.
+
+Run:
+
+```bash
+yarn vitest run --project=unit test/unit/scripts/deploy-docs-workflow.test.ts test/unit/scripts/verify-docs-release.test.ts
+```
+
+Expected: FAIL because the verifier and workflow job do not exist.
+
+**Step 2: Implement the package-release verifier**
+
+Create `scripts/verify-docs-release.mjs` so it:
+
+- accepts only canonical `v<semver>` release tags;
+- reads the core, React, Vue, Angular, and CLI source manifests;
+- requires every manifest to match the tag version;
+- queries npm for that exact version of all five packages; and
+- retries registry checks six times at ten-second intervals.
+
+**Step 3: Gate the build on verification**
+
+Add a release-only `verify-release` job that checks out the release tag and
+runs:
+
+```bash
+node scripts/verify-docs-release.mjs "$RELEASE_TAG"
+```
+
+Make `build.needs` equal `[docs-tests, verify-release]`.
+
+**Step 4: Verify locally**
+
+Run:
+
+```bash
+yarn vitest run --project=unit test/unit/scripts/deploy-docs-workflow.test.ts test/unit/scripts/verify-docs-release.test.ts
+node scripts/verify-docs-release.mjs v1.2.3
+actionlint .github/workflows/deploy-docs.yml
+```
+
+Expected: all tests pass, the real package family verifies, and the workflow
+linter exits 0.
+
+**Step 5: Update the live environment policy**
+
+Create a custom `github-pages` deployment policy with name `v*` and type `tag`.
+Keep the existing `master` branch policy to avoid disrupting any unrelated
+deployment path.
+
+Read the policies back through the GitHub API and verify that both:
+
+```json
+{"name":"master","type":"branch"}
+{"name":"v*","type":"tag"}
+```
+
+are present.
+
+**Step 6: Commit and push**
+
+Stage only the verifier, workflow, regression tests, and corrected design
+records. Commit:
+
+```bash
+git commit -m "fix(docs): verify packages before deploy"
+```
+
+Push `master` before enabling the tag policy so the strict verification gate is
+live when tag deployments become allowed.

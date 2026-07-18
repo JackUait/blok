@@ -2,6 +2,8 @@ import { build } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import jsonAsStringPlugin from './vite-plugin-json-as-string.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const mode = process.argv[2] || 'production';
 
@@ -25,7 +27,13 @@ async function buildLocales() {
         formats: ['es'],
         fileName: () => 'locales.mjs',
       },
+      rollupOptions: {
+        output: {
+          minify: true,
+        },
+      },
     },
+    plugins: [jsonAsStringPlugin()],
     define: {
       'NODE_ENV': JSON.stringify(mode),
       'process.env.NODE_ENV': JSON.stringify(mode),

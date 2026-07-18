@@ -408,6 +408,66 @@ describe('published package is self-contained (install footprint)', () => {
   })
 })
 
+describe('dist weight (consumer parse cost)', () => {
+  // Consumers that bundle this package (Vite/Rollup) parse EVERY reachable dist
+  // module — dynamic imports included. Two things blew that cost up to the point
+  // of OOMing consumer CI builds at Node's default heap:
+  //   1. JSON locale data (emoji CLDR annotations, UI messages, emoji-mart set)
+  //      compiled into giant JS object literals — thousands of AST nodes each
+  //      instead of one string literal.
+  //   2. Fully unminified chunk output (~28 MB of ES modules).
+  // These guards keep both root causes fixed.
+
+  const esFiles = listJsFiles(dist).filter(
+    (file) => file.endsWith('.mjs') && !file.startsWith(angularDist),
+  )
+
+  it('emits UI message locales as JSON.parse strings, not object literals', () => {
+    const messageFiles = readdirSync(dist).filter(
+      (name) => name.startsWith('messages-') && name.endsWith('.mjs'),
+    )
+    expect(messageFiles.length).toBeGreaterThan(0)
+    const objectLiteralLocales = messageFiles.filter(
+      (name) => !readFileSync(join(dist, name), 'utf-8').includes('JSON.parse('),
+    )
+    expect(objectLiteralLocales).toEqual([])
+  })
+
+  it('emits the emoji-mart native data chunk as a JSON.parse string', () => {
+    const chunkDir = join(dist, 'chunks')
+    const nativeChunks = readdirSync(chunkDir).filter(
+      (name) => name.startsWith('native-') && name.endsWith('.mjs'),
+    )
+    expect(nativeChunks.length).toBeGreaterThan(0)
+    for (const name of nativeChunks) {
+      expect(readFileSync(join(chunkDir, name), 'utf-8')).toContain('JSON.parse(')
+    }
+  })
+
+  it('keeps the non-data ES code surface under the parse-cost budget', () => {
+    // JSON.parse data chunks are one cheap string node each; the expensive part
+    // for a consumer's bundler is real code. Unminified output put code at
+    // ~12 MB; minified it lands around 7 MB. Raising the budget needs a reason.
+    const codeBytes = esFiles
+      .filter((file) => !readFileSync(file, 'utf-8').slice(0, 200).includes('JSON.parse('))
+      .reduce((sum, file) => sum + readFileSync(file).byteLength, 0)
+    expect(codeBytes).toBeLessThan(9 * 1024 * 1024)
+  })
+
+  it('emits minified chunks (no indented multi-line output)', () => {
+    // Unminified lib output averages ~40-70 chars per line; minified output is a
+    // handful of very long lines. Guard every substantial code chunk.
+    const bloated = esFiles.filter((file) => {
+      const code = readFileSync(file, 'utf-8')
+      if (code.length < 100 * 1024 || code.slice(0, 200).includes('JSON.parse(')) {
+        return false
+      }
+      return code.length / code.split('\n').length < 200
+    })
+    expect(bloated).toEqual([])
+  })
+})
+
 describe('Angular adapter package.json wiring', () => {
   const exportsMap = packageJson.exports as Record<string, Record<string, string>>
   const typesVersions = (packageJson as unknown as {

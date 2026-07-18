@@ -7,6 +7,7 @@ import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import license from 'rollup-plugin-license';
 import unfurlPlugin from './scripts/unfurl/vite-plugin-unfurl.mjs';
 import scopeUtilitiesPlugin from './scripts/scope-utilities/vite-plugin-scope-utilities.mjs';
+import jsonAsStringPlugin from './scripts/vite-plugin-json-as-string.mjs';
 
 import * as pkg from './package.json';
 
@@ -44,11 +45,13 @@ export default defineConfig(({ mode }) => {
             format: 'es',
             entryFileNames: '[name].mjs',
             chunkFileNames: 'chunks/[name]-[hash].mjs',
+            minify: true,
           },
           {
             format: 'cjs',
             entryFileNames: '[name].cjs',
             chunkFileNames: 'chunks/[name]-[hash].cjs',
+            minify: true,
           },
         ],
         plugins: [
@@ -133,6 +136,7 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [
+      jsonAsStringPlugin(),
       unfurlPlugin(),
       tailwindcss(),
       scopeUtilitiesPlugin(),

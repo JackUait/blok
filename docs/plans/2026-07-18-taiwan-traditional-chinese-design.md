@@ -3,7 +3,7 @@
 ## Problem
 
 Blok does not currently provide a Taiwan Traditional Chinese locale. Its only
-Chinese locale is `zh`, whose 535 UI messages and emoji annotations use
+Chinese locale is `zh`, whose 537 UI messages and emoji annotations use
 Simplified Chinese. Browser detection lowercases a language tag and then falls
 back to its base language, so `zh-TW`, `zh-Hant`, and `zh-Hant-TW` all select
 the Simplified `zh` dictionary.
@@ -31,7 +31,7 @@ browser matching is case-insensitive, as BCP 47 requires.
 
 ## Translation Data
 
-Create `src/components/i18n/locales/zh-TW/messages.json` with all 535 English
+Create `src/components/i18n/locales/zh-TW/messages.json` with all 537 English
 source keys. Use the existing Simplified Chinese dictionary as a semantic
 starting point, convert it to Taiwan Traditional orthography, and review product
 terminology rather than shipping a character-only conversion.

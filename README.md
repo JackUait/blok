@@ -21,7 +21,7 @@ It's headless on purpose. Blok ships the editing engine and a set of tools; it d
 | **Slash menu & markdown** | Type `/` in an empty block to search and insert, or type markdown (`#`, `-`, `1.`, `[]`, `>`) and it converts on space. |
 | **Drag and drop** | Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks, hold Alt to duplicate while dragging, auto-scrolls near edges. Keyboard works too. |
 | **Undo/redo on Yjs** | History is CRDT-backed: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`. |
-| **68 locales, RTL** | Reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly. |
+| **69 locales, RTL** | Reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly. |
 | **Plugin system** | Three extension points — block tools, inline tools, block tunes — with lifecycle hooks, paste handling, and conversion rules. Tools reach the editor through 18 API namespaces (`blocks`, `caret`, `selection`, …). |
 | **Smart paste** | A handler chain keeps block structure intact on internal paste, strips Google Docs HTML noise, and lets tools claim specific file types or patterns. |
 | **Block conversion** | Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time. |

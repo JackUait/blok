@@ -2,7 +2,7 @@
  * Public entry point for locale imports.
  *
  * Lazy Loading:
- * Only English is bundled by default. All 68 supported locales are available
+ * Only English is bundled by default. All 69 supported locale variants are available
  * for on-demand loading, reducing initial bundle size while providing full
  * language support.
  *
@@ -14,7 +14,7 @@
  * @example
  * // Get all supported locale codes
  * import { ALL_LOCALE_CODES } from '@aspect/blok/locales';
- * console.log(ALL_LOCALE_CODES); // Array of all 68 locale codes
+ * console.log(ALL_LOCALE_CODES); // Array of all 69 locale codes
  *
  * @see README.md#localization for usage examples
  */

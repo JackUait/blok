@@ -66,7 +66,7 @@ const ROWS: ComparisonRow[] = [
   },
   {
     labelKey: "rowI18n",
-    blok: "68 languages",
+    blok: "69 locales",
     editorjs: "Manual",
     tiptap: "Manual",
     lexical: "Manual",

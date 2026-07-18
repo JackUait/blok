@@ -112,7 +112,7 @@ existing non-Chinese behavior and keeps Simplified Chinese tags on `zh`.
 **Step 3: Add the complete Taiwan dictionary**
 
 Create `src/components/i18n/locales/zh-TW/messages.json` with exactly the same
-535 keys and ordering as `en/messages.json`. Derive semantics from the existing
+537 keys and ordering as `en/messages.json`. Derive semantics from the existing
 `zh` locale, convert every message to Traditional Chinese, then review it for
 Taiwan product terminology.
 
@@ -347,7 +347,7 @@ git commit -m "docs(i18n): advertise 69 locale variants"
 yarn i18n:check
 ```
 
-Expected: exit 0, with `zh-TW: All 535 keys present`.
+Expected: exit 0, with `zh-TW: All 537 keys present`.
 
 **Step 2: Run all i18n and emoji tests**
 

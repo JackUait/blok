@@ -1,6 +1,6 @@
 /**
  * Public entry point for locale imports.
- * Only English is bundled by default - all 68 other locales are loaded on-demand.
+ * Only English is bundled by default; the other 68 locale variants load on demand.
  * @see README.md#localization for usage examples
  */
 
@@ -13,7 +13,7 @@ import type { LocaleConfig, LocaleRegistry, SupportedLocale } from './configs/i1
 /** Default locale code ('en') */
 export declare const DEFAULT_LOCALE: SupportedLocale;
 
-/** All supported locale codes (68 languages) - all available for lazy loading */
+/** All 69 supported locale codes, available for lazy loading */
 export declare const ALL_LOCALE_CODES: readonly SupportedLocale[];
 
 // ============================================================================

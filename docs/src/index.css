@@ -1609,7 +1609,7 @@
   55%, 100% { transform: translateX(280%); }
 }
 
-/* The headline 68 shimmers along its gradient. */
+/* The headline 69 shimmers along its gradient. */
 @keyframes bento-shimmer {
   to { background-position: 200% 50%; }
 }

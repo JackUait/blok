@@ -1005,12 +1005,12 @@
         }
       },
       "languages": {
-        "title": "68 languages, RTL-ready",
-        "description": "Lazy-loaded translations for 68 locales with right-to-left support. Only your language ships to the browser.",
+        "title": "69 locales, RTL-ready",
+        "description": "Lazy-loaded translations for 69 locales with right-to-left support. Only your locale ships to the browser.",
         "learnMore": "Learn more about internationalization",
         "details": {
           "summary": "The editor's own interface is translated, so your users see Blok in their language.",
-          "benefit1": "68 bundled locales",
+          "benefit1": "69 bundled locales",
           "benefit2": "Right-to-left layout (Arabic, Hebrew, Farsi…)",
           "benefit3": "Lazy-loaded for a minimal base bundle",
           "benefit4": "Override any string"
@@ -1283,7 +1283,7 @@
     "codemodOptionsTitle": "Options",
     "codemodDryRunDescription": "Preview changes without modifying files",
     "codemodVerboseDescription": "Show detailed output for each file processed",
-    "codemodI18nDescription": "Use Blok's built-in translations (68 languages)",
+    "codemodI18nDescription": "Use Blok's built-in translations (69 locales)",
     "changeImports": "Imports",
     "changeToolImports": "Tool imports",
     "changeTypes": "Types",

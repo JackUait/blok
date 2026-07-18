@@ -1,5 +1,5 @@
 /**
- * Tests that all 68 locales contain the Quote tool's i18n keys.
+ * Tests that all 69 locale variants contain the Quote tool's i18n keys.
  *
  * The Quote tool uses these keys:
  *   - toolNames.quote           (toolbox title)

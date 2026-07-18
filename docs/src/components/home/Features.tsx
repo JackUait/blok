@@ -1654,10 +1654,10 @@ const ShortcutBadge: React.FC<{
   </span>
 );
 
-// The whole tile is a live editor field that rolls a phrase through all 68
-// supported locales (src/components/i18n/locales) — the editor speaking every
-// language. At rest it says hello; hovering switches to a casual "What's up?",
-// still in all 68 tongues. RTL is read from the same canonical set, so those
+// The whole tile is a live editor field that rolls a phrase through all 69
+// supported locale variants (src/components/i18n/locales) — the editor speaking
+// every language. At rest it says hello; hovering switches to a casual "What's
+// up?", still in all 69 variants. RTL is read from the same canonical set, so those
 // lines flip and the caret lands on the right edge — "RTL-ready" made watchable.
 // Each entry is [code, hello, what's-up]; both share the locale's direction.
 const RTL_GREET = new Set(["ar", "dv", "fa", "he", "ku", "ps", "sd", "ug", "ur", "yi"]);
@@ -1686,6 +1686,7 @@ const PHRASES = (
     ["th", "สวัสดี", "เป็นไงบ้าง?"], ["tr", "Merhaba", "Ne haber?"], ["ug", "سالام", "قانداق؟"],
     ["uk", "Привіт", "Як справи?"], ["ur", "سلام", "کیا حال ہے؟"], ["vi", "Xin chào", "Dạo này sao?"],
     ["yi", "העלא", "וואָס מאַכסטו?"], ["zh", "你好", "怎么样？"],
+    ["zh-TW", "你好", "最近好嗎？"],
   ] as [string, string, string][]
 ).map(([code, hello, whatsup]) => ({ code, hello, whatsup, rtl: RTL_GREET.has(code) }));
 
@@ -1698,7 +1699,7 @@ const pickPhrase = (i: number, hover: boolean): Greeting => {
 };
 
 // Every sign gets an EQUAL chance to appear: a plain uniform draw over all
-// entries, so each language — the current one included — has exactly a 1/N (1/68)
+// entries, so each locale — the current one included — has exactly a 1/N (1/69)
 // chance each cycle. No exclusion, no weighting; rng is injectable for testing.
 export const LANGUAGE_COUNT = PHRASES.length;
 export const pickLocaleIndex = (rng: () => number = Math.random): number =>
@@ -1780,7 +1781,7 @@ const LanguagesViz: React.FC = () => {
   }, [reduce]);
 
   // Typewriter: type the active word char-by-char, hold, delete it, advance to the
-  // next locale, and type that — looping all 68 in whichever field hover selects.
+  // next locale, and type that — looping all 69 in whichever field hover selects.
   // RTL words type from the right with the caret on their leading edge. One self-
   // rescheduling timer; the active word only swaps at count 0, so deletes never
   // visibly jump text. hoverRef is read live so a mid-cycle hover takes effect at

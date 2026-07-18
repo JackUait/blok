@@ -92,15 +92,15 @@ describe('Features', () => {
     expect(codeWrap?.className).toMatch(/sm:justify-center/);
   });
 
-  // The "68 languages" tile rolls a greeting through every supported locale. Each
-  // sign must have an EQUAL chance to appear — exactly 1/68 — so the locale picker
+  // The "69 locales" tile rolls a greeting through every supported locale. Each
+  // sign must have an EQUAL chance to appear — exactly 1/69 — so the locale picker
   // is a plain uniform draw over all entries, never one that excludes the current.
   describe('language sign picker', () => {
-    it('offers exactly 68 languages so each draw is 1/68', () => {
-      expect(LANGUAGE_COUNT).toBe(68);
+    it('offers exactly 69 locales so each draw is 1/69', () => {
+      expect(LANGUAGE_COUNT).toBe(69);
     });
 
-    it('gives every language an equal 1/68 share across the random range', () => {
+    it('gives every locale an equal 1/69 share across the random range', () => {
       // Sweep the picker across evenly-spaced inputs over [0, 1). With one sample
       // per 1/(N·k) slice, every language must land in exactly the same number of
       // buckets — a uniform 1/N distribution, no language favored or starved.
@@ -108,16 +108,18 @@ describe('Features', () => {
       const samples = LANGUAGE_COUNT * PER_BUCKET;
       const counts = new Array(LANGUAGE_COUNT).fill(0);
       for (let i = 0; i < samples; i++) {
-        counts[pickLocaleIndex(() => i / samples)]++;
+        // Sample each equal-width slice at its midpoint. Exact boundaries can
+        // round into a neighbor when LANGUAGE_COUNT is not binary-friendly.
+        counts[pickLocaleIndex(() => (i + 0.5) / samples)]++;
       }
       expect(counts.every((c) => c > 0)).toBe(true); // every language reachable
       expect(new Set(counts).size).toBe(1); // and all equally likely
       expect(counts[0]).toBe(PER_BUCKET);
     });
 
-    it('can return the current language again — a true 1/68 draw, not 1/67', () => {
-      // Excluding the current sign would make others 1/67 and the current 0, which
-      // is not equal. A genuine 1/68 draw must be able to repeat the same sign.
+    it('can return the current locale again — a true 1/69 draw, not 1/68', () => {
+      // Excluding the current sign would make others 1/68 and the current 0, which
+      // is not equal. A genuine 1/69 draw must be able to repeat the same sign.
       const current = 10;
       expect(pickLocaleIndex(() => current / LANGUAGE_COUNT)).toBe(current);
     });
@@ -190,7 +192,7 @@ describe('Features', () => {
     expect(screen.getByText('Spreadsheet-grade tables')).toBeInTheDocument();
     expect(screen.getByText('Embed 100+ services')).toBeInTheDocument();
     expect(screen.getByText('Conflict-free undo & redo')).toBeInTheDocument();
-    expect(screen.getByText('68 languages, RTL-ready')).toBeInTheDocument();
+    expect(screen.getByText('69 locales, RTL-ready')).toBeInTheDocument();
     expect(screen.getByText('Image, video & audio')).toBeInTheDocument();
 
     // The wordy descriptions that made the section feel crowded are gone.

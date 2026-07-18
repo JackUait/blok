@@ -348,7 +348,7 @@ describe('I18n Module', () => {
   });
 
   describe('locale loading', () => {
-    it('loads any of the 68 supported locales', async () => {
+    it('loads any supported locale', async () => {
       const i18n = createI18nModule();
 
       await i18n.prepare();

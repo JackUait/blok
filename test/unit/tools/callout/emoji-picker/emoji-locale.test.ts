@@ -28,6 +28,14 @@ describe('emoji-locale', () => {
     expect(data).toEqual(MOCK_FR_DATA);
   });
 
+  it('loadEmojiLocale returns Traditional Chinese names and keywords for Taiwan', async () => {
+    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const data = await loadEmojiLocale('zh-TW');
+
+    expect(data?.['😀']?.n).toBe('笑臉');
+    expect(data?.['🔍']?.k).toContain('搜尋');
+  });
+
   it('loadEmojiLocale returns null for English', async () => {
     const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
     const data = await loadEmojiLocale('en');

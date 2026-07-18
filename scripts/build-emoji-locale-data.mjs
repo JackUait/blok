@@ -44,8 +44,12 @@ const BLOK_LOCALES = [
   'ku', 'lo', 'lt', 'lv', 'mk', 'ml', 'mn', 'mr', 'ms', 'my',
   'ne', 'nl', 'no', 'pa', 'pl', 'ps', 'pt', 'ro', 'ru', 'sd',
   'si', 'sk', 'sl', 'sq', 'sr', 'sv', 'sw', 'ta', 'te', 'th',
-  'tr', 'ug', 'uk', 'ur', 'vi', 'yi', 'zh',
+  'tr', 'ug', 'uk', 'ur', 'vi', 'yi', 'zh', 'zh-TW',
 ];
+
+const CLDR_LOCALE_OVERRIDES = {
+  'zh-TW': 'zh-Hant',
+};
 
 /* ------------------------------------------------------------------ */
 /*  3. Process each locale                                            */
@@ -58,7 +62,7 @@ mkdirSync(OUTPUT_DIR, { recursive: true });
 const report = [];
 
 for (const locale of BLOK_LOCALES) {
-  const cldrLocale = locale;
+  const cldrLocale = CLDR_LOCALE_OVERRIDES[locale] ?? locale;
   const cldrPath = join(
     ROOT,
     'node_modules/cldr-annotations-full/annotations',

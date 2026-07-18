@@ -21,7 +21,7 @@ const cache = new Map<string, EmojiLocaleData>();
 
 /**
  * Dynamic importers for each locale JSON file.
- * Only includes locales that have generated files (65 locales — all Blok locales except dv and yi).
+ * 66 non-English locale files; English needs no data, while CLDR lacks dv and yi.
  */
 const importers: Record<string, () => Promise<{ default: EmojiLocaleData }>> = {
   am: () => import('./locales/am.json'),
@@ -89,6 +89,7 @@ const importers: Record<string, () => Promise<{ default: EmojiLocaleData }>> = {
   ur: () => import('./locales/ur.json'),
   vi: () => import('./locales/vi.json'),
   zh: () => import('./locales/zh.json'),
+  'zh-TW': () => import('./locales/zh-TW.json'),
 };
 
 /**

@@ -1854,6 +1854,14 @@
 
 }
 
+[data-list-style] {
+  --_blok-list-pad: var(--blok-list-padding-start, 0px);
+}
+
+[data-list-style="checklist"] {
+  --_blok-list-pad: var(--blok-checklist-padding-start, var(--blok-list-padding-start, 0px));
+}
+
 [data-blok-selected="true"] [data-blok-element-content]:has([data-list-style]) {
 
 }

@@ -69,8 +69,8 @@ describe('Host customization tokens (public --blok-* contract)', () => {
   });
 
   describe('list wrapper indentation', () => {
-    it('drives the wrapper start padding from --blok-list-padding-start', () => {
-      expect(BASE_STYLES).toContain('ps-[var(--blok-list-padding-start,0px)]');
+    it('drives the wrapper start padding through the --_blok-list-pad indirection (backed by --blok-list-padding-start / --blok-checklist-padding-start in main.css)', () => {
+      expect(BASE_STYLES).toContain('ps-[var(--_blok-list-pad,0px)]');
     });
   });
 

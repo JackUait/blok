@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { INDENT_PER_LEVEL, ORDERED_INDENT_PER_LEVEL, ITEM_STYLES } from '../../../../src/tools/list/constants';
+import { INDENT_PER_LEVEL, ORDERED_INDENT_PER_LEVEL, ITEM_STYLES, BASE_STYLES } from '../../../../src/tools/list/constants';
 
 describe('list constants (Notion alignment)', () => {
   it('uses 27px indent per level to match Notion bullet indent (1.7em × 16px = 27.2px)', () => {
@@ -12,5 +12,12 @@ describe('list constants (Notion alignment)', () => {
 
   it('uses unitless leading-[1.5] to match Notion line-height', () => {
     expect(ITEM_STYLES).toContain('leading-[1.5]');
+  });
+});
+
+describe('list BASE_STYLES', () => {
+  it('pads via the --_blok-list-pad indirection, not the public token directly', () => {
+    expect(BASE_STYLES).toContain('ps-[var(--_blok-list-pad,0px)]');
+    expect(BASE_STYLES).not.toContain('--blok-list-padding-start');
   });
 });

@@ -285,6 +285,10 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   '--blok-heading-margin-bottom',
   // Consumer-supplied spacing above embed blocks; falls back to 0px.
   '--blok-embed-margin-top',
+  // Consumer-supplied list indents; fall back to 0px. Checklist token falls
+  // back to the general list token so checklists follow it unless overridden.
+  '--blok-list-padding-start',
+  '--blok-checklist-padding-start',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {
@@ -328,6 +332,17 @@ describe('editor gutter default', () => {
     expect(defaultIdx).toBeGreaterThan(-1);
     expect(readonlyIdx).toBeGreaterThan(-1);
     expect(defaultIdx).toBeLessThan(readonlyIdx);
+  });
+});
+
+describe('list padding indirection', () => {
+  it('routes list padding through --_blok-list-pad with a checklist-specific override', () => {
+    expect(css).toMatch(
+      /\[data-list-style\]\s*\{[^}]*--_blok-list-pad:\s*var\(--blok-list-padding-start,\s*0px\)/,
+    );
+    expect(css).toMatch(
+      /\[data-list-style=['"]checklist['"]\]\s*\{[^}]*--_blok-list-pad:\s*var\(--blok-checklist-padding-start,\s*var\(--blok-list-padding-start,\s*0px\)\)/,
+    );
   });
 });
 

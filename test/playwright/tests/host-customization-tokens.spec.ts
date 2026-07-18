@@ -219,6 +219,43 @@ test('a single plain-selector palette override wins in production', async ({ pag
   expect(value).toBe('rgb(9, 99, 9)');
 });
 
+test('checklist padding token separates checklist indent from list indent', async ({ page }) => {
+  await createBlok(page, {
+    containerStyle: {
+      '--blok-list-padding-start': '18px',
+      '--blok-checklist-padding-start': '0px',
+    },
+    data: {
+      blocks: [
+        { type: 'list', data: { text: 'Bulleted item', style: 'unordered' } },
+        { type: 'list', data: { text: 'Checklist item', style: 'checklist' } },
+      ],
+    },
+  });
+
+  const unordered = page.locator('[data-list-style="unordered"]').first();
+  const checklist = page.locator('[data-list-style="checklist"]').first();
+
+  await expect(unordered).toBeVisible();
+  await expect(checklist).toBeVisible();
+  await expect(unordered).toHaveCSS('padding-inline-start', '18px');
+  await expect(checklist).toHaveCSS('padding-inline-start', '0px');
+});
+
+test('checklist follows --blok-list-padding-start when no checklist token is set', async ({ page }) => {
+  await createBlok(page, {
+    containerStyle: { '--blok-list-padding-start': '18px' },
+    data: {
+      blocks: [{ type: 'list', data: { text: 'Checklist item', style: 'checklist' } }],
+    },
+  });
+
+  const checklist = page.locator('[data-list-style="checklist"]').first();
+
+  await expect(checklist).toBeVisible();
+  await expect(checklist).toHaveCSS('padding-inline-start', '18px');
+});
+
 test('style.tokens override is applied to body-mounted popover UI', async ({ page }) => {
   await createBlok(page, {
     styleTokens: { '--blok-popover-bg': 'rgb(1, 2, 3)' },

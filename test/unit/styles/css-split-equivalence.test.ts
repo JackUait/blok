@@ -396,8 +396,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // :where([data-blok-interface]) { --blok-editor-gutter-start: 56px }
     // rule plus its doc comment so Blok owns the 56px floating-controls
     // gutter instead of hosts hardcoding it. Bumps the multiplier to 1.4.
+    // 2026-07-19: checklist padding token — main.css gained the
+    // [data-list-style] / [data-list-style="checklist"] --_blok-list-pad
+    // indirection rules plus their doc comment so hosts can indent
+    // checklists independently of bulleted/ordered lists. Bumps the
+    // multiplier to 1.402.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.402);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

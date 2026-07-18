@@ -396,6 +396,24 @@
   @apply opacity-40 transition-opacity duration-200;
 }
 
+/*
+ * List start-padding indirection. Hosts set the public tokens once at any
+ * ancestor: --blok-list-padding-start indents every list style;
+ * --blok-checklist-padding-start overrides it for checklists only (so a
+ * host can indent bulleted/ordered lists without indenting checklists).
+ * Redeclaring a custom property (rather than overriding padding) is immune
+ * to the production @layer flattening + logical-property lowering that
+ * makes selector-specificity overrides unreliable (see the read-only
+ * gutter comment above).
+ */
+[data-list-style] {
+  --_blok-list-pad: var(--blok-list-padding-start, 0px);
+}
+
+[data-list-style="checklist"] {
+  --_blok-list-pad: var(--blok-checklist-padding-start, var(--blok-list-padding-start, 0px));
+}
+
 /**
  * List item selection styles
  * Applies selection background to the list item itself (not the content wrapper)

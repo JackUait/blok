@@ -188,24 +188,10 @@ export class PopoverDesktop extends PopoverAbstract {
   private static readonly NESTED_OPEN_INTENT_DELAY_MS = 100;
 
   /**
-   * Grace period (ms) an open nested submenu survives after the pointer leaves
-   * it, before it is torn down. Canceled when the pointer re-enters the nested
-   * popover, so a brief excursion across the gap between parent and submenu
-   * does not close it.
-   */
-  private static readonly NESTED_CLOSE_GRACE_DELAY_MS = 300;
-
-  /**
    * Pending pointer open-intent timer (see {@link NESTED_OPEN_INTENT_DELAY_MS}).
    * Null when no open is pending.
    */
   private nestedOpenIntentTimer: number | null = null;
-
-  /**
-   * Pending close-grace timer (see {@link NESTED_CLOSE_GRACE_DELAY_MS}). Null
-   * when no deferred close is pending.
-   */
-  private nestedCloseGraceTimer: number | null = null;
 
   /**
    * Element of the page that creates 'scope' of the popover.
@@ -766,7 +752,6 @@ export class PopoverDesktop extends PopoverAbstract {
     this.positionTracker = undefined;
 
     this.cancelNestedOpenIntent();
-    this.cancelNestedCloseGrace();
 
     this.cleanupPromotedItems();
 
@@ -914,9 +899,8 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     // The keyboard path opens synchronously — abandon any pending pointer-driven
-    // open/close intent so a stale hover timer cannot fight the keyboard.
+    // open intent so a stale hover timer cannot fight the keyboard.
     this.cancelNestedOpenIntent();
-    this.cancelNestedCloseGrace();
 
     this.nestedPopoverTriggerItem = item;
 
@@ -950,15 +934,9 @@ export class PopoverDesktop extends PopoverAbstract {
       // the first real pointer motion (see armSuppressSyncHover).
     }
 
-    const item = this.getTargetItem(event);
-
-    if (item === undefined) {
-      return;
-    }
-
     /**
      * If the pointer moved into the nested popover (e.g. user is about to click
-     * an item in the sub-menu), keep it open and cancel any pending close.
+     * an item in the sub-menu), keep it open.
      */
     if (
       this.nestedPopover !== undefined &&
@@ -966,7 +944,20 @@ export class PopoverDesktop extends PopoverAbstract {
       event.target instanceof Node &&
       this.nestedPopover.hasNode(event.target)
     ) {
-      this.cancelNestedCloseGrace();
+      return;
+    }
+
+    const item = this.getTargetItem(event);
+
+    /**
+     * Pointer is over the popover's own chrome (padding, separators, search
+     * field…) — over neither the trigger item nor the submenu, so no submenu
+     * may be visible or about to appear.
+     */
+    if (item === undefined) {
+      this.cancelNestedOpenIntent();
+      this.destroyNestedPopoverIfExists(false);
+      this.previouslyHoveredItem = null;
 
       return;
     }
@@ -983,24 +974,22 @@ export class PopoverDesktop extends PopoverAbstract {
     this.cancelNestedOpenIntent();
 
     /**
-     * If a nested popover is already open, only swap it when the pointer moves
-     * onto a *different* trigger item — and even then defer the swap so a
-     * diagonal path that clips a sibling on the way to the current submenu does
-     * not tear it down. Hovering plain items or re-hovering the current trigger
-     * keeps the submenu open.
+     * A nested popover is visible only while the pointer is on its trigger
+     * item or inside the submenu itself (the submenu overlaps the parent by
+     * `--nested-popover-overlap`, so there is no dead gap between them).
+     * Moving onto any other item closes it right away; another trigger item
+     * additionally opens its own submenu after the open-intent delay.
      */
     if (this.nestedPopover !== undefined && this.nestedPopover !== null) {
       if (item === this.nestedPopoverTriggerItem) {
-        this.cancelNestedCloseGrace();
-
         return;
       }
 
-      if (!item.hasChildren) {
-        return;
-      }
+      this.destroyNestedPopoverIfExists(false);
 
-      this.scheduleNestedOpenIntent(item);
+      if (item.hasChildren) {
+        this.scheduleNestedOpenIntent(item);
+      }
 
       return;
     }
@@ -1016,8 +1005,9 @@ export class PopoverDesktop extends PopoverAbstract {
 
   /**
    * Handles mouse leaving the popover container.
-   * Defers destroying the nested popover (close-grace) unless the mouse moved
-   * into it; a `pointerenter` on the nested popover cancels the deferred close.
+   * Closes the open nested popover unless the mouse moved into it — the
+   * submenu overlaps the parent, so entering it fires before this leave
+   * resolves to anywhere else.
    * @param event - mouseleave event
    */
   protected handleMouseLeave(event: Event): void {
@@ -1030,20 +1020,13 @@ export class PopoverDesktop extends PopoverAbstract {
       this.nestedPopover !== null &&
       this.nestedPopover.hasNode(relatedTarget)
     ) {
-      this.cancelNestedCloseGrace();
-
       return;
     }
 
     // Leaving the popover abandons any submenu that was about to open.
     this.cancelNestedOpenIntent();
 
-    if (this.nestedPopover !== undefined && this.nestedPopover !== null) {
-      this.scheduleNestedCloseGrace();
-
-      return;
-    }
-
+    this.destroyNestedPopoverIfExists(false);
     this.previouslyHoveredItem = null;
   }
 
@@ -1072,38 +1055,12 @@ export class PopoverDesktop extends PopoverAbstract {
   }
 
   /**
-   * Schedules a deferred close of the open nested submenu. Any previously-
-   * scheduled close is canceled first.
-   */
-  private scheduleNestedCloseGrace(): void {
-    this.cancelNestedCloseGrace();
-
-    this.nestedCloseGraceTimer = window.setTimeout(() => {
-      this.nestedCloseGraceTimer = null;
-      this.destroyNestedPopoverIfExists(false);
-      this.previouslyHoveredItem = null;
-    }, PopoverDesktop.NESTED_CLOSE_GRACE_DELAY_MS);
-  }
-
-  /**
-   * Cancels a pending close-grace, if any.
-   */
-  private cancelNestedCloseGrace(): void {
-    if (this.nestedCloseGraceTimer !== null) {
-      window.clearTimeout(this.nestedCloseGraceTimer);
-      this.nestedCloseGraceTimer = null;
-    }
-  }
-
-  /**
    * Opens the nested submenu for a pointer-hovered item once its open-intent
    * delay has elapsed, tearing down any submenu currently open for a different
    * item first.
    * @param item - trigger-with-children item to open a submenu for
    */
   private openNestedForHoveredItem(item: PopoverItem): void {
-    this.cancelNestedCloseGrace();
-
     // No-op when no submenu is open; tears down a submenu open for another item.
     this.destroyNestedPopoverIfExists(false);
 
@@ -1258,11 +1215,10 @@ export class PopoverDesktop extends PopoverAbstract {
       }
     });
 
-    // Entering the submenu cancels both the close-grace (so it stays open) and
-    // any pending open-intent for a sibling clipped on the diagonal path in.
+    // Entering the submenu abandons any pending open-intent for a sibling
+    // clipped on the diagonal path in.
     this.listeners.on(nestedPopoverEl, 'pointerenter', () => {
       this.cancelNestedOpenIntent();
-      this.cancelNestedCloseGrace();
     });
 
     this.nestedPopover.show();

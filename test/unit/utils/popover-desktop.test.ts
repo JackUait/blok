@@ -906,6 +906,181 @@ describe('PopoverDesktop', () => {
       expect(showNestedSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('closes the nested popover immediately when the pointer moves onto a plain sibling item', () => {
+      vi.useFakeTimers();
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const plainItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && !item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+      const plainElement = plainItem?.getElement();
+
+      expect(parentElement).not.toBeNull();
+      expect(plainElement).not.toBeNull();
+
+      const hoverOnParent = {
+        composedPath: () => (parentElement ? [parentElement] : []),
+      } as unknown as Event;
+
+      instance.handleHover(hoverOnParent);
+      vi.advanceTimersByTime(100);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      // The submenu is visible only while the pointer is on its trigger or
+      // inside the submenu itself — hovering a plain sibling closes it at once.
+      const hoverOnPlain = {
+        composedPath: () => (plainElement ? [plainElement] : []),
+      } as unknown as Event;
+
+      instance.handleHover(hoverOnPlain);
+
+      expect(instance.nestedPopover).toBeFalsy();
+    });
+
+    it('closes the nested popover when the pointer moves onto container chrome that is no item', () => {
+      vi.useFakeTimers();
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      const hoverOnParent = {
+        composedPath: () => (parentElement ? [parentElement] : []),
+      } as unknown as Event;
+
+      instance.handleHover(hoverOnParent);
+      vi.advanceTimersByTime(100);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      // Pointer moves onto the container's own chrome (padding, separator…) —
+      // over neither the trigger item nor the submenu, so the submenu closes.
+      const hoverOnChrome = {
+        target: instance.nodes.popoverContainer,
+        composedPath: () => [instance.nodes.popoverContainer],
+      } as unknown as Event;
+
+      instance.handleHover(hoverOnChrome);
+
+      expect(instance.nestedPopover).toBeFalsy();
+    });
+
+    it('hovering container chrome abandons a pending submenu open intent', () => {
+      vi.useFakeTimers();
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+
+      const hoverOnParent = {
+        composedPath: () => (parentElement ? [parentElement] : []),
+      } as unknown as Event;
+      const hoverOnChrome = {
+        target: instance.nodes.popoverContainer,
+        composedPath: () => [instance.nodes.popoverContainer],
+      } as unknown as Event;
+
+      // Hover the trigger, then leave for chrome before the intent delay
+      // elapses — the submenu must not appear under a pointer that is no
+      // longer on the trigger.
+      instance.handleHover(hoverOnParent);
+      instance.handleHover(hoverOnChrome);
+      vi.advanceTimersByTime(100);
+
+      expect(instance.nestedPopover).toBeFalsy();
+    });
+
+    it('re-hovering the trigger after a plain-sibling detour reopens the submenu', () => {
+      vi.useFakeTimers();
+      const popover = createPopover({
+        items: [
+          ...createDefaultItems(),
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+      const plainItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && !item.hasChildren
+      );
+      const parentElement = parentItem?.getElement();
+      const plainElement = plainItem?.getElement();
+
+      const hoverOnParent = {
+        composedPath: () => (parentElement ? [parentElement] : []),
+      } as unknown as Event;
+      const hoverOnPlain = {
+        composedPath: () => (plainElement ? [plainElement] : []),
+      } as unknown as Event;
+
+      instance.handleHover(hoverOnParent);
+      vi.advanceTimersByTime(100);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+
+      // A detour over a plain sibling closes the submenu (strict hover
+      // visibility) …
+      instance.handleHover(hoverOnPlain);
+
+      expect(instance.nestedPopover).toBeFalsy();
+
+      // … and returning to the trigger reopens it after the open intent delay.
+      instance.handleHover(hoverOnParent);
+      vi.advanceTimersByTime(100);
+
+      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
+    });
+
     it('a late synthesized hover at the resting pointer position does not cancel a pending nested-open intent', () => {
       vi.useFakeTimers();
       // The pointer last moved to (50, 60) — e.g. the click that opened the popover.
@@ -1912,11 +2087,8 @@ describe('PopoverDesktop', () => {
 
       instance.handleMouseLeave(mouseLeaveEvent);
 
-      // Close is deferred by the grace window, then fires.
-      expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
-
-      vi.advanceTimersByTime(300);
-
+      // The pointer is over neither the trigger nor the submenu — it closes
+      // at once.
       expect(instance.nestedPopover).toBeNull();
       expect(instance.nestedPopoverTriggerItem).toBeNull();
 
@@ -2077,7 +2249,7 @@ describe('PopoverDesktop', () => {
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
     });
 
-    it('cancels the close-grace when the pointer re-enters the nested popover', () => {
+    it('keeps the nested popover open when the mouse leaves the container into the nested popover', () => {
       vi.useFakeTimers();
 
       const { instance, parentItem } = createPopoverWithParentAndSibling();
@@ -2091,23 +2263,14 @@ describe('PopoverDesktop', () => {
         throw new Error('Expected nested popover to be open');
       }
 
-      // Pointer leaves toward an unrelated element -> close grace scheduled.
-      const outside = document.createElement('div');
-
-      document.body.appendChild(outside);
+      // The submenu overlaps the parent, so crossing into it resolves the
+      // parent's mouseleave with the nested popover as the related target.
       instance.handleMouseLeave(new MouseEvent('mouseleave', {
-        relatedTarget: outside,
+        relatedTarget: openNested.getElement(),
         bubbles: false,
       }));
 
-      // Pointer re-enters the nested popover before the grace elapses.
-      vi.advanceTimersByTime(150);
-      openNested.getElement().dispatchEvent(new Event('pointerenter'));
-
-      vi.advanceTimersByTime(300);
       expect(instance.nestedPopover).toBeInstanceOf(PopoverDesktop);
-
-      outside.remove();
     });
   });
 

@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/cli",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "CLI tools for Blok — convert HTML to Blok JSON, generate migration guides",
   "bin": {
     "blok-cli": "bin/blok-cli.mjs"

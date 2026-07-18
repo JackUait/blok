@@ -361,6 +361,7 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // redactor gutters) replacing hosts' internal-selector hacks; see
     // host-customization-tokens.test.ts. Bumps the multiplier to 1.383.
     // ~0.5KB intentional growth.
+    // 2026-07-18: read-only gutter auto-collapse rule (:where([data-blok-readonly]) [data-blok-redactor]) in main.css adds 353 bytes of intentional growth (407500 → 407853).
     const PRE_SPLIT_BYTES = 407853;
     const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.383);
     const actual = localImportedByteBudget(ENTRY);

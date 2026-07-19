@@ -28,7 +28,7 @@ export class DatabaseView {
 
     wrapper.setAttribute('data-blok-tool', 'database');
     wrapper.setAttribute('role', 'region');
-    wrapper.setAttribute('aria-label', 'Kanban board');
+    wrapper.setAttribute('aria-label', this.i18n.t('tools.database.kanbanBoard'));
     wrapper.style.display = 'flex';
 
     const boardArea = document.createElement('div');

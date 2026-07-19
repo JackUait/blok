@@ -11,18 +11,7 @@ import type {
   SelectOption,
   ViewType,
 } from './types';
-
-/**
- * Default labels for the Status select options. Kept as a lookup table so the
- * literal strings do not appear inline in a string literal grep — user-facing
- * translation happens at render time via the i18n keys
- * `tools.database.defaultStatus{NotStarted,InProgress,Done}`.
- */
-const DEFAULT_STATUS_LABELS = {
-  notStarted: ['Not', 'started'].join(' '),
-  inProgress: ['In', 'progress'].join(' '),
-  done: ['Do', 'ne'].join(''),
-} as const;
+import { DATABASE_DEFAULT_TEXT } from './database-localization';
 
 export class DatabaseModel {
   private schema: PropertyDefinition[];
@@ -203,14 +192,37 @@ export class DatabaseModel {
 
   private static createDefaultSchema(): PropertyDefinition[] {
     return [
-      { id: nanoid(), name: 'Title', type: 'title', position: 'a0' },
       {
-        id: nanoid(), name: 'Status', type: 'select', position: 'a1',
+        id: nanoid(),
+        name: DATABASE_DEFAULT_TEXT.titleProperty,
+        type: 'title',
+        position: 'a0',
+      },
+      {
+        id: nanoid(),
+        name: DATABASE_DEFAULT_TEXT.statusProperty,
+        type: 'select',
+        position: 'a1',
         config: {
           options: [
-            { id: nanoid(), label: DEFAULT_STATUS_LABELS.notStarted, color: 'gray', position: 'a0' },
-            { id: nanoid(), label: DEFAULT_STATUS_LABELS.inProgress, color: 'blue', position: 'a1' },
-            { id: nanoid(), label: DEFAULT_STATUS_LABELS.done, color: 'green', position: 'a2' },
+            {
+              id: nanoid(),
+              label: DATABASE_DEFAULT_TEXT.statusNotStarted,
+              color: 'gray',
+              position: 'a0',
+            },
+            {
+              id: nanoid(),
+              label: DATABASE_DEFAULT_TEXT.statusInProgress,
+              color: 'blue',
+              position: 'a1',
+            },
+            {
+              id: nanoid(),
+              label: DATABASE_DEFAULT_TEXT.statusDone,
+              color: 'green',
+              position: 'a2',
+            },
           ],
         },
       },
@@ -219,8 +231,14 @@ export class DatabaseModel {
 
   private static createDefaultView(groupByPropertyId?: string): DatabaseViewConfig {
     return {
-      id: nanoid(), name: 'Board', type: 'board', position: 'a0',
-      groupBy: groupByPropertyId, sorts: [], filters: [], visibleProperties: [],
+      id: nanoid(),
+      name: DATABASE_DEFAULT_TEXT.viewBoard,
+      type: 'board',
+      position: 'a0',
+      groupBy: groupByPropertyId,
+      sorts: [],
+      filters: [],
+      visibleProperties: [],
     };
   }
 }

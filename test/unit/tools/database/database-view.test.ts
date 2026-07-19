@@ -281,12 +281,16 @@ describe('DatabaseView', () => {
   });
 
   describe('accessibility', () => {
-    it('board element has role="region" and aria-label="Kanban board"', () => {
+    it('uses the localized Kanban board label for the board region', () => {
+      i18n.t = vi.fn((key: string) =>
+        key === 'tools.database.kanbanBoard' ? 'Kanban-Tafel' : key
+      );
       const view = new DatabaseView({ readOnly: false, i18n });
       const board = view.createBoard([], () => []);
 
       expect(board.getAttribute('role')).toBe('region');
-      expect(board.getAttribute('aria-label')).toBe('Kanban board');
+      expect(board.getAttribute('aria-label')).toBe('Kanban-Tafel');
+      expect(i18n.t).toHaveBeenCalledWith('tools.database.kanbanBoard');
     });
 
     it('each column element has role="group"', () => {

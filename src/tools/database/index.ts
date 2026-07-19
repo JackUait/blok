@@ -21,6 +21,12 @@ import { PopoverDesktop } from '../../components/utils/popover';
 import { PopoverItemType } from '../../components/utils/popover/components/popover-item';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { nanoid } from 'nanoid';
+import {
+  DATABASE_DEFAULT_TEXT,
+  localizeDatabaseSchema,
+  localizeDatabaseSelectOptions,
+  localizeDatabaseViews,
+} from './database-localization';
 
 /**
  * DatabaseTool — a multi-view Kanban board block tool for Blok.
@@ -143,7 +149,7 @@ export class DatabaseTool implements BlockTool {
     titleEl.style.wordBreak = 'break-word';
 
     titleEl.className = getPlaceholderClasses('always').join(' ');
-    setupPlaceholder(titleEl, 'New database');
+    setupPlaceholder(titleEl, this.api.i18n.t('tools.database.titlePlaceholder'));
 
     if (!this.readOnly) {
       titleEl.setAttribute('contenteditable', 'true');
@@ -388,7 +394,9 @@ export class DatabaseTool implements BlockTool {
 
   addView(type: ViewType): void {
     const statusProp = this.model.getSchema().find((p) => p.type === 'select');
-    const defaultName = type === 'list' ? 'List' : 'Board';
+    const defaultName = type === 'list'
+      ? DATABASE_DEFAULT_TEXT.viewTypeList
+      : DATABASE_DEFAULT_TEXT.viewTypeBoard;
     const newView = this.model.addView(defaultName, type, {
       groupBy: type === 'board' ? statusProp?.id : undefined,
     });
@@ -506,7 +514,7 @@ export class DatabaseTool implements BlockTool {
 
   private createTabBar(): DatabaseTabBar {
     return new DatabaseTabBar({
-      views: this.model.getViews(),
+      views: localizeDatabaseViews(this.model.getViews(), this.api.i18n),
       activeViewId: this.activeViewId,
       onTabClick: (viewId) => this.switchView(viewId),
       onAddView: (type) => this.addView(type),
@@ -514,6 +522,7 @@ export class DatabaseTool implements BlockTool {
       onDuplicate: (viewId) => this.duplicateView(viewId),
       onDelete: (viewId) => this.deleteView(viewId),
       onReorder: (viewId, newPosition) => this.reorderView(viewId, newPosition),
+      api: this.api,
       readOnly: this.readOnly,
     });
   }
@@ -536,7 +545,9 @@ export class DatabaseTool implements BlockTool {
   }
 
   private renderBoardView(titlePropId: string, groupByPropId: string | undefined): HTMLDivElement {
-    const options = groupByPropId !== undefined ? this.model.getSelectOptions(groupByPropId) : [];
+    const options = groupByPropId !== undefined
+      ? localizeDatabaseSelectOptions(this.model.getSelectOptions(groupByPropId), this.api.i18n)
+      : [];
     const groups: Map<string, DatabaseRow[]> = groupByPropId !== undefined ? this.model.getRowsGroupedBy(groupByPropId) : new Map<string, DatabaseRow[]>();
 
     this.view = new DatabaseBoardView({
@@ -557,10 +568,13 @@ export class DatabaseTool implements BlockTool {
   }
 
   private renderListView(titlePropId: string, groupByPropId: string | undefined, viewConfig: DatabaseViewConfig): HTMLDivElement {
-    const schema = this.model.getSchema();
+    const schema = localizeDatabaseSchema(this.model.getSchema(), this.api.i18n);
 
     if (groupByPropId !== undefined) {
-      const options = this.model.getSelectOptions(groupByPropId);
+      const options = localizeDatabaseSelectOptions(
+        this.model.getSelectOptions(groupByPropId),
+        this.api.i18n
+      );
       const groups = this.model.getRowsGroupedBy(groupByPropId);
 
       this.view = new DatabaseListView({
@@ -897,7 +911,7 @@ export class DatabaseTool implements BlockTool {
         toolsConfig: this.api.tools.getToolsConfig(),
         titlePropertyId: titlePropId,
         descriptionPropertyId: descriptionPropId,
-        schema: this.model.getSchema(),
+        schema: localizeDatabaseSchema(this.model.getSchema(), this.api.i18n),
         onTitleChange: (rowId, title) => {
           this.updateRowBlock(rowId, { [titlePropId]: title });
           const currentView = this.boardContainer?.querySelector<HTMLElement>('[data-blok-database-board]')
@@ -924,7 +938,9 @@ export class DatabaseTool implements BlockTool {
             type: prop.type,
             position: prop.position,
           });
-          this.cardDrawer?.refreshSchema(this.model.getSchema());
+          this.cardDrawer?.refreshSchema(
+            localizeDatabaseSchema(this.model.getSchema(), this.api.i18n)
+          );
         },
       });
     }

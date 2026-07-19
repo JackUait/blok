@@ -109,7 +109,10 @@ const createMockAPI = (childBlocks: BlockAPI[] = []): API => ({
     settingsButton: 'blok-settings-button',
     settingsButtonActive: 'blok-settings-button--active',
   },
-  i18n: { t: (key: string) => key },
+  i18n: {
+    t: (key: string) =>
+      key === 'tools.database.titlePlaceholder' ? 'New database' : key,
+  },
   events: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
   blocks: {
     getCurrentBlockIndex: vi.fn().mockReturnValue(0),
@@ -259,6 +262,89 @@ describe('DatabaseTool', () => {
       const titleEl = queryByData(element, 'data-blok-database-title');
 
       expect(titleEl?.getAttribute('data-placeholder')).toBe('New database');
+    });
+
+    it('localizes canonical defaults for display without changing saved data', () => {
+      const childBlocks = [
+        createMockRowBlock({
+          id: 'row-1',
+          properties: {
+            'prop-title': 'Task 1',
+            'prop-status': 'opt-progress',
+          },
+          position: 'a0',
+        }),
+      ];
+      const options = createDatabaseOptions({
+        schema: [
+          { id: 'prop-title', name: 'Title', type: 'title', position: 'a0' },
+          {
+            id: 'prop-status',
+            name: 'Status',
+            type: 'select',
+            position: 'a1',
+            config: {
+              options: [
+                { id: 'opt-not-started', label: 'Not started', color: 'gray', position: 'a0' },
+                { id: 'opt-progress', label: 'In progress', color: 'blue', position: 'a1' },
+                { id: 'opt-done', label: 'Done', color: 'green', position: 'a2' },
+              ],
+            },
+          },
+        ],
+      }, {}, { childBlocks });
+      const translations: Record<string, string> = {
+        'tools.database.titlePlaceholder': 'Neue Datenbank',
+        'tools.database.defaultTitleProperty': 'Titel',
+        'tools.database.defaultStatusProperty': 'Status DE',
+        'tools.database.defaultStatusNotStarted': 'Nicht begonnen',
+        'tools.database.defaultStatusInProgress': 'In Arbeit',
+        'tools.database.defaultStatusDone': 'Erledigt',
+        'tools.database.defaultViewBoard': 'Tafel',
+      };
+      const translate = vi.fn((key: string) => translations[key] ?? key);
+
+      options.api.i18n.t = translate;
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.rendered();
+
+      const titleEl = queryByData(element, 'data-blok-database-title');
+      const viewName = queryByData(element, 'data-blok-database-tab-name');
+      const columnTitles = queryAllByData(element, 'data-blok-database-column-title');
+      const card = queryByData(element, 'data-blok-database-card');
+
+      card?.click();
+
+      const propertyLabel = queryByData(element, 'data-blok-database-drawer-prop-label');
+      const selectedStatus = queryByData(element, 'data-blok-database-drawer-prop-pill');
+
+      expect(titleEl?.getAttribute('data-placeholder')).toBe('Neue Datenbank');
+      expect(viewName?.textContent).toBe('Tafel');
+      expect(columnTitles.map((column) => column.textContent)).toEqual([
+        'Nicht begonnen',
+        'In Arbeit',
+        'Erledigt',
+      ]);
+      expect(propertyLabel?.textContent).toBe('Status DE');
+      expect(selectedStatus?.textContent).toContain('In Arbeit');
+      expect(translate).toHaveBeenCalledWith('tools.database.defaultTitleProperty');
+
+      const saved = tool.save(document.createElement('div'));
+      const statusProperty = saved.schema.find((property) => property.id === 'prop-status');
+
+      expect(saved.schema.find((property) => property.id === 'prop-title')?.name).toBe('Title');
+      expect(statusProperty?.name).toBe('Status');
+      expect(statusProperty?.config?.options.map((option) => option.label)).toEqual([
+        'Not started',
+        'In progress',
+        'Done',
+      ]);
+      expect(saved.views[0].name).toBe('Board');
+
+      tool.destroy();
     });
 
     it('renders title before the tab bar', () => {
@@ -1082,6 +1168,33 @@ describe('DatabaseTool', () => {
       const element = tool.render();
 
       expect(queryByData(element, 'data-blok-database-tab-bar')).not.toBeNull();
+    });
+
+    it('localizes newly added view names without persisting translated names', () => {
+      const options = createDatabaseOptions();
+      const translations: Record<string, string> = {
+        'tools.database.defaultViewBoard': 'Tafel',
+        'tools.database.viewTypeList': 'Liste',
+      };
+
+      options.api.i18n.t = vi.fn((key: string) => translations[key] ?? key);
+
+      const tool = new DatabaseTool(options);
+      const element = tool.render();
+
+      tool.addView('list');
+      tool.addView('board');
+
+      const viewNames = queryAllByData(element, 'data-blok-database-tab-name');
+
+      expect(viewNames.map((name) => name.textContent)).toEqual(['Tafel', 'Liste', 'Tafel']);
+      expect(tool.save(element).views.map((view) => view.name)).toEqual([
+        'Board',
+        'List',
+        'Board',
+      ]);
+
+      tool.destroy();
     });
 
     it('renders one tab for the default view', () => {

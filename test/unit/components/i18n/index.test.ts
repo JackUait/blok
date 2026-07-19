@@ -46,6 +46,14 @@ describe('I18n Module', () => {
       expect(i18n.t('tools.link.addLink')).toBe('Ajouter un lien');
     });
 
+    it('uses the action-oriented placeholder copy for the popover search field', async () => {
+      const i18n = createI18nModule();
+
+      await i18n.prepare();
+
+      expect(i18n.t('popover.search')).toBe('Find an action…');
+    });
+
     it('returns the key when translation is missing', async () => {
       const i18n = createI18nModule();
 

@@ -936,7 +936,7 @@
   <script type="module">
     import './src/playground/playground.css';
     import { Blok } from './src/blok.ts';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
@@ -1854,14 +1854,15 @@
      */
     function buildConfig() {
       const tools = {
+        marker: Marker,
         bold: Bold,
         italic: Italic,
-        marker: Marker,
         underline: Underline,
+        clearFormat: ClearFormat,
+        link: Link,
         strikethrough: Strikethrough,
         inlineCode: InlineCode,
         equation: Equation,
-        link: Link,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
       if (state.tools.header) tools.header = { class: Header };
@@ -2255,7 +2256,7 @@
      */
     const iconGroups = {
       'UI & Navigation': ['IconCheck', 'IconWand', 'IconCross', 'IconMenu', 'IconPlus', 'IconMinus', 'IconChevronLeft', 'IconChevronRight', 'IconChevronRightSmall', 'IconChevronDown', 'IconSearch', 'IconArrowUp', 'IconArrowDownLine', 'IconMoreHorizontal', 'IconCloseThick', 'IconDice'],
-      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconEquation', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
+      'Inline Formatting': ['IconBold', 'IconItalic', 'IconUnderline', 'IconStrikethrough', 'IconClearFormat', 'IconLink', 'IconBookmark', 'IconLinkExternal', 'IconLinkCopy', 'IconMarker', 'IconEquation', 'IconReplace', 'IconGlobe', 'IconMail', 'IconHash', 'IconCode'],
       'Headings': ['IconHeading', 'IconH1', 'IconH2', 'IconH3', 'IconH4', 'IconH5', 'IconH6'],
       'Block Tools': ['IconText', 'IconListBulleted', 'IconListNumbered', 'IconListChecklist', 'IconTable', 'IconToggleList', 'IconCallout', 'IconDatabase', 'IconBoard', 'IconGallery', 'IconList', 'IconSelect', 'IconMultiSelect', 'IconDivider', 'IconSpacer', 'IconQuote', 'IconCodeBlock', 'IconColumns', 'IconCalendar'],
       'Media': ['IconImage', 'IconImageBroken', 'IconUploadFailed', 'IconImageAlignLeft', 'IconImageAlignCenter', 'IconImageAlignRight', 'IconAlignLeft', 'IconAlignCenter', 'IconAlignRight', 'IconCaption', 'IconCaptionImage', 'IconCrop', 'IconCropImage', 'IconReplaceImage', 'IconExpandFullscreen', 'IconExpandFullscreenImage', 'IconCollapseFullscreen', 'IconPlayerFullscreenExit', 'IconPlayerPlay', 'IconPlayerPause', 'IconPlayerBackward', 'IconPlayerForward', 'IconPlayerVolume', 'IconPlayerVolumeMute', 'IconPlayerSettings', 'IconPlayerSpeed', 'IconPlayerLoop', 'IconPlayerPip', 'IconPlayerTheater', 'IconZoomIn', 'IconZoomOut', 'IconDownload', 'IconDownloadImage', 'IconUpload'],
@@ -2927,14 +2928,15 @@
           column: Column,
           embed: Embed,
           bookmark: { class: Bookmark, config: { endpoint: '/unfurl' } },
+          marker: Marker,
           bold: Bold,
           italic: Italic,
           underline: Underline,
+          clearFormat: ClearFormat,
+          link: Link,
           strikethrough: Strikethrough,
           inlineCode: InlineCode,
           equation: Equation,
-          marker: Marker,
-          link: Link,
       };
 
       // Per-segment tool config overrides (e.g. `sources: 'url'`) merge on

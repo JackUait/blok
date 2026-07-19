@@ -52,6 +52,7 @@ export { UnderlineInlineTool as Underline } from '../components/inline-tools/inl
 export { StrikethroughInlineTool as Strikethrough } from '../components/inline-tools/inline-tool-strikethrough';
 export { CodeInlineTool as InlineCode } from '../components/inline-tools/inline-tool-code';
 export { EquationInlineTool as Equation } from '../components/inline-tools/inline-tool-equation';
+export { ClearFormatInlineTool as ClearFormat } from '../components/inline-tools/inline-tool-clear-format';
 
 // Default tools configuration for convenience
 // Note: inlineToolbar defaults to true, so it doesn't need to be specified
@@ -79,13 +80,15 @@ export const defaultBlockTools = {
 } as const;
 
 export const defaultInlineTools = {
-  // Contiguous toggle group (Notion parity), then Link, then Color (marker) last.
+  // Grid toolbar order: row 1 = color, bold, italic, underline, clear format;
+  // row 2 = link, strikethrough, inline code, equation.
+  marker: {},
   bold: {},
   italic: {},
   underline: {},
+  clearFormat: {},
+  link: {},
   strikethrough: {},
   inlineCode: {},
   equation: {},
-  link: {},
-  marker: {},
 } as const;

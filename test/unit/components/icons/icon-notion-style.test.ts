@@ -74,21 +74,18 @@ describe('notion-style heading / list / toggle icons', () => {
       IconToggleH3,
     };
 
-    it.each(Object.entries(toggles))('%s should lead with a solid triangle followed by stroked glyphs', (_name, icon) => {
+    it.each(Object.entries(toggles))('%s should be a letterform-height chevron plus the heading digit', (_name, icon) => {
+      // mirrors the heading icon structure — [big glyph + subscript digit] —
+      // with a stroked disclosure chevron where the heading has its H
       const all = paths(icon);
 
-      expect(all.length).toBe(3);
+      expect(all.length).toBe(2);
 
-      // triangle marker: filled, rounded corners via stroke join
-      expect(all[0].getAttribute('fill')).toBe('currentColor');
-      expect(all[0].getAttribute('stroke-linejoin')).toBe('round');
-      expect(all[0].getAttribute('d')).toContain('Z');
-
-      // letterforms: stroked line-art, no fill
-      expect(all[1].getAttribute('stroke')).toBe('currentColor');
-      expect(all[1].getAttribute('fill')).toBeNull();
-      expect(all[2].getAttribute('stroke')).toBe('currentColor');
-      expect(all[2].getAttribute('fill')).toBeNull();
+      for (const p of all) {
+        expect(p.getAttribute('stroke')).toBe('currentColor');
+        expect(p.getAttribute('fill')).toBeNull();
+        expect(p.getAttribute('stroke-linecap')).toBe('round');
+      }
     });
 
     it.each(Object.entries(toggles))('%s should not keep the old trailing chevron', (_name, icon) => {

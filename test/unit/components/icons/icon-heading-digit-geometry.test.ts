@@ -15,6 +15,10 @@ import {
   IconListBulleted,
   IconListNumbered,
   IconListChecklist,
+  IconBold,
+  IconEquation,
+  IconUnderline,
+  IconClearFormat,
 } from '../../../../src/components/icons';
 
 /**
@@ -106,12 +110,14 @@ describe('heading digit skeleton geometry', () => {
   });
 
   it.each(Object.entries(toggles))(
-    '%s digit sits in the single toggle digit cell (cap 9.2, baseline 14.04)',
-    (_name, icon) => {
-      const ys = yValues(digitPath(icon));
+    '%s digit is byte-identical to its heading icon digit',
+    (name, icon) => {
+      // the toggle heading mirrors the heading icon structure — [big glyph +
+      // subscript digit] — with a disclosure chevron in the H slot; the digit
+      // path is shared verbatim so the two families can never drift apart
+      const headingIcon = headings[name.replace('Toggle', '')];
 
-      expect(Math.min(...ys)).toBeGreaterThanOrEqual(9.2);
-      expect(Math.max(...ys)).toBeLessThanOrEqual(14.04);
+      expect(digitPath(icon)).toBe(digitPath(headingIcon));
     },
   );
 
@@ -124,6 +130,63 @@ describe('heading digit skeleton geometry', () => {
       const xs = (p.getAttribute('d') ?? '').match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
 
       expect(Math.max(...xs)).toBeLessThanOrEqual(17);
+    }
+  });
+
+  it.each(Object.entries(toggles))('%s leads with a letterform-height stroked chevron in the H slot', (_name, icon) => {
+    // two glyphs only — a chevron as tall as the heading H, stroked at the same
+    // hairline as every letterform; no fills, no small accent markers
+    const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
+    const paths = Array.from(doc.querySelectorAll('path'));
+
+    expect(paths.length).toBe(2);
+
+    const chevron = paths[0];
+
+    expect(chevron.getAttribute('fill')).toBeNull();
+    expect(chevron.getAttribute('stroke')).toBe('currentColor');
+
+    const ys = (chevron.getAttribute('d') ?? '').match(/-?\d+(?:\.\d+)?/g)?.filter((_v, i) => i % 2 === 1).map(Number) ?? [];
+
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(8.5);
+  });
+});
+
+describe('inline formatting glyph hygiene', () => {
+  it('IconBold is grid-snapped with a single-drawn stem', () => {
+    // the legacy B was two CLOSED shapes carrying 24-grid conversion leftovers
+    // (4.9231, .8787…) — the shared stem stroked twice and coordinates off-grid
+    expect(IconBold).not.toMatch(/\d\.\d{3}/);
+    expect(IconBold).not.toMatch(/Z/i);
+  });
+
+  it('IconBold carries semantic bold weight', () => {
+    // a Bold glyph drawn at the 1.25 hairline does not read as "bold" — the B
+    // is the one glyph whose MEANING is weight, so it renders heavier (like
+    // every production toolbar); it is deliberately outside the menu-weight family
+    expect(IconBold).toContain('stroke-width="1.9"');
+  });
+
+  it('IconUnderline rule hugs the U bowl width', () => {
+    // the old rule ran 11 units under an 8-unit bowl — reads misaligned
+    expect(IconUnderline).toContain('M5.5 16.5h9');
+  });
+
+  it('IconEquation x sits centered under the radical bar', () => {
+    expect(IconEquation).toContain('M10.2 9.8');
+  });
+
+  it('IconClearFormat is a hairline T with a strike-out x', () => {
+    // clear-format (Tx): T letterform + small x, house 20/1.25 spec
+    const doc = new DOMParser().parseFromString(IconClearFormat, 'image/svg+xml');
+    const paths = Array.from(doc.querySelectorAll('path'));
+
+    expect(paths.length).toBeGreaterThanOrEqual(2);
+
+    for (const p of paths) {
+      expect(p.getAttribute('stroke')).toBe('currentColor');
+      expect(p.getAttribute('fill')).toBeNull();
+      expect(Number(p.getAttribute('stroke-width'))).toBeLessThanOrEqual(1.25);
     }
   });
 });

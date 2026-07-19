@@ -23,6 +23,7 @@ import { UnderlineInlineTool as Underline } from './components/inline-tools/inli
 import { StrikethroughInlineTool as Strikethrough } from './components/inline-tools/inline-tool-strikethrough';
 import { CodeInlineTool as InlineCode } from './components/inline-tools/inline-tool-code';
 import { EquationInlineTool as Equation } from './components/inline-tools/inline-tool-equation';
+import { ClearFormatInlineTool as ClearFormat } from './components/inline-tools/inline-tool-clear-format';
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
@@ -47,6 +48,7 @@ export {
   Strikethrough,
   InlineCode,
   Equation,
+  ClearFormat,
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
@@ -82,12 +84,13 @@ export const allTools = {
   callout: { class: Callout, inlineToolbar: true },
   code: { class: Code, inlineToolbar: false },
   toggle: { class: Toggle, inlineToolbar: true },
+  marker: { class: Marker },
   bold: { class: Bold },
   italic: { class: Italic },
-  marker: { class: Marker },
   underline: { class: Underline },
+  clearFormat: { class: ClearFormat },
+  link: { class: Link },
   strikethrough: { class: Strikethrough },
   inlineCode: { class: InlineCode },
   equation: { class: Equation },
-  link: { class: Link },
 } as const;

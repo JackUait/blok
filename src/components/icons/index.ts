@@ -23,9 +23,9 @@ export const IconCross = `
 export const IconBold = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M6 10h4.9231c.6528 0 1.2789-.3161 1.7405-.8787.4617-.56259.721-1.32565.721-2.1213 0-.79565-.2593-1.55871-.721-2.12132C12.202 4.31607 11.5759 4 10.9231 4H6v6Zm0 0h5.5385c.6528 0 1.2789.3161 1.7405.8787.4617.5626.721 1.3257.721 2.1213 0 .7956-.2593 1.5587-.721 2.1213-.4616.5626-1.0877.8787-1.7405.8787H6v-6Z"
+    d="M6.5 4V16M6.5 4H10.8C12.3 4 13.5 5.3 13.5 6.9C13.5 8.5 12.3 9.8 10.8 9.8H6.5M6.5 9.8H11.4C12.9 9.8 14.1 11.2 14.1 12.9C14.1 14.6 12.9 16 11.4 16H6.5"
     stroke="currentColor"
-    stroke-width="1.25"
+    stroke-width="1.9"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
@@ -66,7 +66,15 @@ export const IconMarker = `
 export const IconEquation = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M3.25 10.5 5 14l2.75-8h8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M11.25 9.75 14.5 13M14.5 9.75 11.25 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M10.2 9.8 13.4 13M13.4 9.8 10.2 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+</svg>
+`;
+
+// Clear format icon (T with strike-out x)
+export const IconClearFormat = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M4 4.5H12M8 4.5V15.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.7 11.3 16.1 14.7M16.1 11.3 12.7 14.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
@@ -74,7 +82,7 @@ export const IconEquation = `
 export const IconUnderline = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M6 3.5V10a4 4 0 0 0 8 0V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4.5 16.5h11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M5.5 16.5h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
@@ -418,54 +426,48 @@ export const IconDotsHorizontal = `
 // Toggle Heading 1 icon (H1 with toggle arrow)
 export const IconToggleH1 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.05 8.4L5.15 10L3.05 11.6Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.42 5.97V14.04M12.73 5.97V14.04M7.42 9.88H12.73" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14.54 10.17L15.77 9.2V14.04" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.1 5.9L10.5 10.25L6.1 14.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13.3 10.45L14.75 9.3V15" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Toggle Heading 2 icon (H2 with toggle arrow)
 export const IconToggleH2 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.05 8.4L5.15 10L3.05 11.6Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.42 5.97V14.04M12.73 5.97V14.04M7.42 9.88H12.73" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14.24 10.17C14.37 9.58 14.88 9.2 15.56 9.2C16.36 9.2 16.87 9.66 16.87 10.38C16.87 11.02 16.49 11.53 15.68 12.3L14.15 14.04H16.96" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.1 5.9L10.5 10.25L6.1 14.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.95 10.45C13.1 9.75 13.7 9.3 14.5 9.3C15.45 9.3 16.05 9.85 16.05 10.7C16.05 11.45 15.6 12.05 14.65 12.95L12.85 15H16.15" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Toggle Heading 3 icon (H3 with toggle arrow)
 export const IconToggleH3 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.05 8.4L5.15 10L3.05 11.6Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.42 5.97V14.04M12.73 5.97V14.04M7.42 9.88H12.73" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14.24 10.09C14.41 9.54 14.92 9.2 15.56 9.2C16.32 9.2 16.79 9.62 16.79 10.3C16.79 11.02 16.28 11.45 15.47 11.45C16.32 11.45 16.87 11.92 16.87 12.68C16.87 13.49 16.28 14.04 15.51 14.04C14.83 14.04 14.32 13.7 14.15 13.11" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.1 5.9L10.5 10.25L6.1 14.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.95 10.35C13.15 9.7 13.75 9.3 14.5 9.3C15.4 9.3 15.95 9.8 15.95 10.6C15.95 11.45 15.35 11.95 14.4 11.95C15.4 11.95 16.05 12.5 16.05 13.4C16.05 14.35 15.35 15 14.45 15C13.65 15 13.05 14.6 12.85 13.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Toggle Heading 4 icon (H4 with toggle arrow)
 export const IconToggleH4 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.05 8.4L5.15 10L3.05 11.6Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.42 5.97V14.04M12.73 5.97V14.04M7.42 9.88H12.73" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M16.36 9.2L14.03 12.68H17M16.36 9.2V14.04" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.1 5.9L10.5 10.25L6.1 14.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.45 9.3L12.7 13.4H16.2M15.45 9.3V15" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Toggle Heading 5 icon (H5 with toggle arrow)
 export const IconToggleH5 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.05 8.4L5.15 10L3.05 11.6Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.42 5.97V14.04M12.73 5.97V14.04M7.42 9.88H12.73" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M16.7 9.2H14.49L14.28 11.45C14.62 11.11 15.09 10.94 15.56 10.94C16.4 10.94 16.96 11.53 16.96 12.43C16.96 13.36 16.36 14.04 15.47 14.04C14.79 14.04 14.32 13.7 14.15 13.11" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.1 5.9L10.5 10.25L6.1 14.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.85 9.3H13.25L13 11.95C13.4 11.55 13.95 11.35 14.5 11.35C15.5 11.35 16.15 12.05 16.15 13.1C16.15 14.2 15.45 15 14.4 15C13.6 15 13.05 14.6 12.85 13.9" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
 // Toggle Heading 6 icon (H6 with toggle arrow)
 export const IconToggleH6 = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.05 8.4L5.15 10L3.05 11.6Z" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
-  <path d="M7.42 5.97V14.04M12.73 5.97V14.04M7.42 9.88H12.73" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M16.49 9.71C16.24 9.36 15.85 9.2 15.43 9.2C14.62 9.2 14.15 10.13 14.15 11.62C14.15 13.15 14.62 14.04 15.51 14.04C16.32 14.04 16.87 13.49 16.87 12.64C16.87 11.83 16.32 11.28 15.56 11.28C14.83 11.28 14.28 11.75 14.15 12.43" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6.1 5.9L10.5 10.25L6.1 14.6" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15.6 9.9C15.3 9.5 14.85 9.3 14.35 9.3C13.4 9.3 12.85 10.4 12.85 12.15C12.85 13.95 13.4 15 14.45 15C15.4 15 16.05 14.35 16.05 13.35C16.05 12.4 15.4 11.75 14.5 11.75C13.65 11.75 13 12.3 12.85 13.1" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

@@ -81,6 +81,12 @@ The three result columns have the exact domain
 | `Final status` | Exactly `pending`, `first-pass-complete`, `second-pass-complete`, or `verified`; transitions may not be skipped. |
 | Finding-table `Status` | Exactly `open` or `verified`; a new finding starts `open`. |
 
+For collaboration-task reviewers, the ledger uses a slash-safe form of the
+canonical task path: remove the leading `/` and replace each remaining `/`
+with `-`. The bound artifact retains the canonical path, so, for example,
+artifact reviewer `/root/danish_546_first_pass` is recorded here as
+`root-danish_546_first_pass`.
+
 The reviewed-dictionary digest table contains a row only for a locale whose
 final status has advanced beyond `pending`. Its first-pass reviewer must match
 the locale row, and its `sha256:<64 lowercase hex digits>` value must match the
@@ -258,19 +264,19 @@ These rules prevent a machine or reviewer from retaining stale completion:
 
 | Locale | Language/variant | Primary script | Direction | Register | First reviewer | Second reviewer | Structural result | Semantic/style result | Exact-English retention result | Finding IDs | Final status |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | — | — | pending | pending | pending | `F-am-001`–`F-am-078` | pending |
-| `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | — | — | pending | pending | pending | `F-ar-001`–`F-ar-075` | pending |
-| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-102` | pending |
-| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | — | — | pending | pending | pending | `F-bg-001`–`F-bg-095` | pending |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-018`, `F-bn-020`–`F-bn-061` | pending |
-| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | — | — | pending | pending | pending | `F-bs-001`–`F-bs-178` | pending |
-| `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
-| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | — | — | pending | pending | pending | `F-da-001`–`F-da-083` | pending |
-| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-089` | pending |
+| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | — | — | pending | pending | pending | `F-am-001`–`F-am-088` | pending |
+| `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-ar-546-first-final` | — | pass | pass | pass | `F-ar-001`–`F-ar-075` | first-pass-complete |
+| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-az-546-first-final` | — | pass | pass | pass | `F-az-001`–`F-az-104` | first-pass-complete |
+| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-068` | pending |
+| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-danish_546_first_pass` | — | pass | pass | pass | `F-bs-001`–`F-bs-181` | first-pass-complete |
+| `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
+| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-da-546-first-restart` | — | pass | pass | pass | `F-da-001`–`F-da-085` | first-pass-complete |
+| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-080` | pending |
-| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
+| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-098` | pending |
@@ -283,7 +289,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
-| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | — | — | pending | pending | pending | `F-it-001`–`F-it-093` | pending |
+| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | — | pass | pass | pass | `F-it-001`–`F-it-095` | first-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | to-audit | — | — | pending | pending | pending | `F-ja-001` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
@@ -365,8 +371,8 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `R-ar-006` | `ar` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Arabic product terminology. | [Microsoft — عنوان](https://support.microsoft.com/ar-sa/topic/%D8%B9%D9%86%D9%88%D8%A7%D9%86-9450e8fd-09a7-4007-ba12-d5cab244b1bb) |
 | `R-am-001` | `am` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is nonlexical macOS shortcut notation; no Amharic lexical localization applies to the platform key symbol or slash key. | [Apple — Mac keyboard shortcuts](https://support.apple.com/102650) |
 | `R-am-002` | `am` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is nonlexical Windows shortcut notation; the Ethiopian ICT glossary retains `Ctrl` in Amharic key combinations. | [Ethiopian ICT terminology glossary](https://oromianeconomist.com/wp-content/uploads/2017/08/ict-glossary-in-afaan-oromoo-amharic-and-tigarinya.pdf) |
-| `R-am-003` | `am` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholder tokens and spacing; it has no English lexical material to translate. | [`color-picker.ts` runtime composition](../../src/components/ui/color-picker.ts) |
-| `R-am-004` | `am` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only runtime placeholder tokens and spacing; it has no English lexical material to translate. | [`color-picker.ts` runtime composition](../../src/components/ui/color-picker.ts) |
+| `R-am-003` | `am` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholder tokens and spacing; it has no English lexical material to translate. | [`color-picker.ts` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-am-004` | `am` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only runtime placeholder tokens and spacing; it has no English lexical material to translate. | [`color-picker.ts` runtime composition](../../src/components/shared/color-picker.ts) |
 | `R-am-005` | `am` | `tools.image.altButton` | acronym | `Alt` is the established compact accessibility token; longer Amharic controls spell out `ተለዋጭ ጽሑፍ`. | [CSU Stanislaus — Amharic alternative-text guidance](https://am.csustan.edu/access-for-all/guidelines-resources/alternative-text) |
 | `R-am-006` | `am` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent ratio notation compatible with Ethiopic layout's Arabic-numeral convention. | [W3C — Ethiopic Layout Style Guide](https://w3c.github.io/elreq/style-guide/) |
 | `R-am-007` | `am` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent ratio notation compatible with Ethiopic layout's Arabic-numeral convention. | [W3C — Ethiopic Layout Style Guide](https://w3c.github.io/elreq/style-guide/) |
@@ -384,6 +390,8 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `R-az-010` | `az` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Azerbaijani product terminology. | [Microsoft Azerbaijani privacy statement](https://www.microsoft.com/az-latn-az/privacy/privacystatement/) |
 | `R-az-011` | `az` | `tools.database.defaultStatusProperty` | established loanword | `Status` is the established unchanged Azerbaijani workflow noun. | [AZLEKS — status](https://azleks.az/dictionary/status) |
 | `R-az-012` | `az` | `notifier.ok` | acronym | `OK` is the conventional unchanged Azerbaijani confirmation-button label. | [Chromium Azerbaijani resources](https://chromium.googlesource.com/chromium/src/+/6323bc1de1ca35b6b8e671b5442e9b530712cde1/chrome/app/resources/generated_resources_az.xtb) |
+| `R-az-013` | `az` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholder tokens and spacing; Azerbaijani modifier-before-noun order independently requires the same token order as English, but there is no English lexical material to translate. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-az-014` | `az` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only runtime placeholder tokens and spacing; Azerbaijani modifier-before-noun order independently requires the same token order as English, but there is no English lexical material to translate. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
 
 ## Reviewed Dictionary Digests
 
@@ -393,6 +401,16 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
+| `ar` | `root-ar-546-first-final` | `sha256:4ca1701da68e8ec214b28f1174e87ec6cfa7e57b45c090701e9e5c4b4619588d` | — | — |
+| `az` | `root-az-546-first-final` | `sha256:38d2ab7bbda7564efef6a56e99ff3fdc0f3a3479b39fe58fd507e5d8e1a6351a` | — | — |
+| `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
+| `bs` | `root-danish_546_first_pass` | `sha256:e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc` | — | — |
+| `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
+| `da` | `root-da-546-first-restart` | `sha256:ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f` | — | — |
+| `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
+| `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
+| `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
+| `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | — | — |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -582,7 +600,7 @@ source-coverage checker passes. This closes the aggregate dependency finding;
 it does not substitute for either complete 545-entry locale pass required by
 the locale rows.
 
-## English Source Audit Evidence — second pass complete
+## English Source Audit Evidence — current 546-key second pass complete
 
 A caller-cardinality trace proved that `a11y.atTop`, `a11y.atBottom`,
 `a11y.movedUp`, and `a11y.movedDown` are shared by single-block and
@@ -780,9 +798,42 @@ complete before the migration; it is not current evidence for the 539-key
 corpus. Hardcoded source text outside locale dictionaries remains outside the
 approved scope of this translation-value audit.
 
+Reviewer `root-en-546-first-final` subsequently re-read all 546/546 current
+English values in insertion order and checked each rendered, accessible,
+built-compatible, source-only, or dormant contract. The review revalidated
+all 80 findings covering 78 current unique keys, all 38 placeholder-bearing
+values and 54 occurrences, all 44 aliases, all 117 provider compositions, the
+12 source-only contracts, and the complete 533+12+1 caller/source-only/dormant
+partition. Relative to the fully reviewed 545-key baseline, the only
+dictionary changes are `F-en-078` through `F-en-080`: the new recently-used
+label, action-oriented popover placeholder, and generic catch-all link label.
+
+Commit `5b5713be` then made 20 block-color command compositions visible in the
+slash menu without changing the dictionary. All 20 final English titles were
+checked in that caller, including `Red text color`, `Default text color`,
+`Red background`, and `Default background`; no residual was found. Fresh
+structural and guideline gates pass. The current raw dictionary SHA-256 is
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`.
+That checkpoint established `first-pass-complete` on those bytes and required
+a distinct complete second pass.
+
+Distinct reviewer `root-en-546-second-independent` then restarted at entry 1
+and reread all 546 current values on the same raw bytes. The second pass
+independently rechecked the 80 findings covering 78 current keys, all 38
+placeholder-bearing values and 54 occurrences, all 44 aliases in 14 groups,
+all 117 provider compositions, all 20 block-color command titles, and the
+complete 533+12+1 caller/source-only/dormant partition. It found no residual
+structural, semantic, style, punctuation, accessibility, or caller-context
+defect. The second-pass artifact is
+`/tmp/blok-en-546-second-pass.json` with SHA-256
+`49a72a16b39281b7bd71a8382f823104bea07d8c0f85bf01204e1de5098f370f`.
+Both reviews bind to raw dictionary SHA-256
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`;
+English is `second-pass-complete`.
+
 ## Localized First-Pass Evidence
 
-### Amharic (`am`) — current first pass complete
+### Amharic (`am`) — pending after current second-pass residuals
 
 Reviewer `wire-database-am-first-545` initially inspected all 545
 English/Amharic pairs in source order, the complete 532+12+1
@@ -813,7 +864,60 @@ non-string, empty, non-NFC, semantic, register, punctuation, accessibility,
 count, or provider-composition defect. The current first pass binds to raw
 SHA-256
 `0e243c7a9f95c19901726d50e8600c8aa5c23fe29ab52736a27303652e32336e`.
-The distinct complete second pass remains pending.
+That 545-key digest is historical. Reviewer `root-am-546-first-final`
+restarted at entry 1 and read all 546 current English/Amharic pairs on the
+final bytes. It revalidated all 78 findings, the exact nine-retention
+inventory, all 38 placeholder-bearing values and 54 occurrences, 44 aliases
+in 14 groups, 117 provider compositions, the three later dictionary
+migrations, all 20 newly live block-color command titles, and the complete
+533+12+1 caller partition. The inline-code title, numbered-list `ቁጥር` query
+alias, and image-navigation ARIA group were separately challenged and retained
+on Amharic caller and terminology grounds. No residual was found. The current
+first-pass artifact is `/tmp/blok-am-546-first-pass.json`; the raw dictionary
+SHA-256 is
+`591b765cbf26a0cddabdc9053d78bfdcf228b87ba8ede1f00f0edb8abe6a3e3f`.
+
+A distinct complete second pass then found seven caller-backed residuals.
+`toolNames.inlineCode` collided with the separate code-block title and now
+uses the Ethiopian ICT glossary’s inline term, `መስመር ውስጥ ኮድ`. The video and
+audio settings each exposed three direction-only nouns even though every item
+is an action; `F-am-080` through `F-am-085` reuse the already-reviewed image
+alignment imperatives for the same left, center, and right operations.
+Focused tests failed on exactly those seven values before remediation and pass
+afterward. The review also found and corrected the stale source paths in
+`R-am-003` and `R-am-004`.
+
+The residual-review artifact is `/tmp/blok-am-546-second-pass.json` with
+SHA-256
+`bfcd481bc2577c9376569c8196a152e4930ca21bd8abe0cd6076b10534522207`.
+The corrected dictionary SHA-256 is
+`58d02aa08baf36b7ba26928f871d1852b4c6b0344e42beb6fc48ab58f5fbba86`.
+Because those bytes differ from both completed-review boundaries, the evidence
+reset rule returned Amharic to `pending` until both complete passes restarted.
+Reviewer `root-danish_546_first_pass` has now restarted at entry 1 and directly
+reread all 546 corrected English/Amharic pairs in English insertion order. The
+pass revalidated all 85 findings, the exact nine-retention inventory, 38
+placeholder-bearing values with 54 occurrences, 44 aliases in 14 caller
+groups, all 117 provider compositions, all 20 live block-color command titles,
+the three later dictionary migrations, and the complete 533+12+1
+caller/source-only/dormant partition. It separately replayed the inline-code
+resolution chain and all six action-only video/audio alignment callers. No
+additional residual or documentation gap survived the reread. The artifact is
+`/tmp/blok-am-546-first-pass-final.json` with SHA-256
+`bd664aecceb43a2947aa68ebfb3871cbcb1ed84b22fc30be046fc4c9d268938a`.
+This pass binds to corrected raw dictionary SHA-256
+`58d02aa08baf36b7ba26928f871d1852b4c6b0344e42beb6fc48ab58f5fbba86`;
+Amharic reached `first-pass-complete` pending a distinct complete second pass.
+That second pass then found three residuals. `F-am-086` and `F-am-088`
+normalize the image and bookmark preview labels to the official open
+`ቅድመ ዕይታ` spelling already used by their sibling callers; `F-am-087`
+restores the concrete `ፋይል` object to the audio-file drop target. All three
+focused expectations failed before remediation and pass afterward. The
+corrected dictionary SHA-256 is
+`5946d7591bcb6ac05971a9725f923bedd20336dab1ca447fc43e2e48d0ed41f0`.
+Because the bytes changed again, the completed first-pass evidence and digest
+were removed; Amharic is `pending` until both complete passes restart on this
+new SHA.
 
 ### Arabic (`ar`) — current first pass complete
 
@@ -845,50 +949,122 @@ control-character, replacement-character, boundary-whitespace, semantic,
 register, punctuation, accessibility, count, or provider-composition defect.
 The current first pass binds to raw SHA-256
 `c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a`.
-The distinct complete second pass remains pending.
+That 545-key digest is historical. Reviewer `root-ar-546-first-final`
+restarted at entry 1 and read all 546 current English/Arabic pairs on the
+final bytes. It revalidated all 75 findings, the exact six-retention
+inventory, RTL and Arabic punctuation flow, all 38 placeholder-bearing values
+and 54 occurrences, 44 aliases in 14 groups, 117 provider compositions, the
+three later dictionary migrations, all 20 newly live block-color command
+titles, and the complete 533+12+1 caller partition. The `رقم` numbered-list
+query alias, distinct inline-code title, and image-navigation ARIA group were
+separately challenged and retained. No residual was found. The current
+first-pass artifact is `/tmp/blok-ar-546-first-pass.json`; the raw dictionary
+SHA-256 is
+`4ca1701da68e8ec214b28f1174e87ec6cfa7e57b45c090701e9e5c4b4619588d`.
+Arabic is `first-pass-complete`; a distinct complete second pass remains
+pending.
+
+### Azerbaijani (`az`) — current first pass complete
+
+Reviewer `root-az-546-first-final` restarted at entry 1 and directly read all
+546 current English/Azerbaijani pairs in English insertion order. The pass
+revalidated all 102 historical findings, the recently-used, action-search,
+and generic-link migrations, all 38 placeholder-bearing values and 54
+occurrences, 44 aliases in 14 groups, 117 provider compositions, the exact
+retention inventory, and the complete 533 caller/built + 12 source-only + 1
+dormant-notifier partition.
+
+The newly live block-color commands exposed two residual template-order
+defects. The former templates rendered predicate-like bare sequences such as
+`Mətn rəngi Qırmızı` and `Arxa fon Standart`; `F-az-103` and `F-az-104`
+restore Azerbaijani modifier-before-noun order, producing `Qırmızı mətn
+rəngi`, `Standart mətn rəngi`, `Qırmızı arxa fon`, and `Standart arxa fon`.
+Focused caller regressions failed on exactly both old values and pass after
+the correction.
+
+A distinct narrow proposal reviewer inspected the runtime formatter and
+slash-menu caller, replayed all 20 final color titles, and accepted both
+corrections unchanged. It also confirmed that the two corrected templates now
+match English only because both contain invariant placeholders; `R-az-013`
+and `R-az-014` extend the exact-English inventory from 12 to 14 without
+retaining any lexical English.
+
+The final dictionary SHA-256 is
+`38d2ab7bbda7564efef6a56e99ff3fdc0f3a3479b39fe58fd507e5d8e1a6351a`.
+The complete first-pass artifact is `/tmp/blok-az-546-first-pass.json` with
+SHA-256
+`cb04ac2619aa712a1c1db9605af387371a771820481a80ac368e1e12dad83256`;
+the proposal-challenge artifact is
+`/tmp/blok-az-546-proposal-challenge.json` with SHA-256
+`154f74acfd8b08fad005e693e9dd18e83c9f901dd8b402deb37ada25370f4dfe`.
+A distinct complete second pass remains required.
 
 ### Bulgarian (`bg`) — current second pass complete
 
-The initial current-byte review inspected all 545 English/Bulgarian pairs and
-recorded 75 defects in addition to the historical clear-format finding.
-Independent proposal review accepted 72 replacements unchanged and amended
-the nested-content warning, list-view description, and current-position video
-URL action. After that correction set passed, a skeptical complete reread
-retained 19 further objective defects: compact commands expressed as
-nominalizations, one incomplete search hint, two accessibility announcements
-that did not report completed events, and an ambiguous database view name.
-All 95 findings are now applied and exact.
+Reviewer `root-bg-546-first-final` restarted at entry 1 and read all 546
+current English/Bulgarian pairs on the final corpus. The pass revalidated all
+95 historical findings, the recently-used, action-search, and generic-link
+migrations, all 38 placeholder-bearing values and 54 occurrences, 44 aliases
+in 14 caller groups, 117 provider compositions, all 20 newly live block-color
+command titles, the exact eight-retention inventory, and the complete
+533 caller/built + 12 source-only + 1 dormant-notifier partition.
 
-Reviewer `codex-bg-first-final-reread` restarted at entry 1 on the final bytes
-and reread all 545/545 English/Bulgarian pairs in source order without finding
-a residual. The pass reconciled all 38 placeholder-bearing values and 54
-occurrences, 44 unique search aliases across 14 groups, all 117 provider
-compositions, 77 English dependency rows covering 75 current keys, and the
-complete 532 caller/built + 12 source-only + 1 localization-bypassed caller
-partition.
+That current-byte review found three caller-context residuals. The inline
+formatter still shared the generic `Код` title with the code block and now
+uses `Вграден код`; the numbered-list-only query alias `число` now uses the
+editor operation `номериране`; and the previous/next image control group now
+states navigation *between* images with `Навигация между изображенията`.
+Focused tests failed on exactly those three values before the correction and
+pass on all three afterward. Findings `F-bg-096` through `F-bg-098` record the
+changes.
 
-The final dictionary has 545 unique, non-empty NFC string values with no
-missing, extra, duplicate, control, replacement-character, boundary-space, or
-placeholder defect. Its exact-English inventory is exactly the eight sourced
-shortcut, compact accessibility, ratio, acronym, and confirmation-label
-retentions recorded as `R-bg-001` through `R-bg-008`. The live checker, 81
-checker cases, 97 focused finding/structural/ledger cases, the exact-retention
-case, three search-quality cases, and 31 provider/paste-menu cases pass.
+Distinct reviewer `root-bg-546-second-final` then directly reread all 546
+final pairs in English insertion order before consulting the first-pass
+artifact. It independently accepted the three new findings in their callers
+and rechecked all 98 findings, eight retentions, placeholder and alias
+inventories, provider outputs, 20 color titles, and the `533+12+1` caller
+disposition without a residual.
 
-The current first pass binds to raw SHA-256
-`dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a`.
-Distinct reviewer `root-bg-second-final-545` then independently reread all
-545/545 final pairs in source order. That pass rechecked every current caller
-or documented source-only contract, all 95 findings, all 77 dependency rows,
-the exact eight retentions, every placeholder and alias, all provider
-compositions, and the complete caller disposition. It separately challenged
-the destination announcements, physical-key naming, caption toggles, media
-controls, and copy-failure wording without finding a semantic, grammatical, or
-register residual. Fresh structural, finding, ledger, retention, and
-dictionary-integrity gates pass, and a final rehash reproduces the same bound
-digest for both reviews. The terminal repository-wide gates remain pending.
+Both reviews bind to dictionary SHA-256
+`01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f`.
+The first-pass artifact is `/tmp/blok-bg-546-first-pass.json` with SHA-256
+`7c8f3e2a1e80fe8d3a750a1925634deaf16c9e46b05cfcda4933f274d7ffcf1f`;
+the independent second-pass artifact is
+`/tmp/blok-bg-546-second-pass.json` with SHA-256
+`bcfa2bd4ae234dc571bbc2fcb274f4dee14413d1902d25e587d73a6caa7eaf1e`.
+Fresh translation-guideline, block-color, and live translation-checker gates
+pass. The terminal repository-wide gates remain pending.
 
-### German (`de`) — current first pass complete
+### Bosnian (`bs`) — corrected-byte first pass complete
+
+The current 546-key review found three caller-context residuals after the
+earlier Bosnian corpus work. The inline formatter still shared the generic
+`Kod` title with the separate code-block tool and now uses `Umetnuti kod`;
+the previous/next image control group now states `Navigacija između slika`;
+and the video seek slider now exposes its state as `Pozicija reprodukcije`
+instead of an action-like label. Findings `F-bs-179` through `F-bs-181`
+record the corrections, and focused expectations failed on exactly those
+three old values before passing after remediation.
+
+A distinct proposal challenge accepted all three replacements. Its artifact
+is `/tmp/blok-bs-546-proposal-challenge.json` with SHA-256
+`5e4b97b99207be2401f80be04d7e182c1396b068947f7cf79eb6c14e5bbae0ba`.
+Reviewer `root-danish_546_first_pass` then restarted at entry 1 and directly
+reread all 546 corrected English/Bosnian pairs in English insertion order.
+The pass revalidated all 181 findings, the exact nine-retention inventory,
+38 placeholder-bearing values with 54 occurrences, 44 aliases in 14 caller
+groups and 48 references, all 117 provider compositions, all 20 live
+block-color command titles, the three later dictionary migrations, and the
+complete 533+12+1 caller/source-only/dormant partition. No residual survived.
+
+The complete first-pass artifact is
+`/tmp/blok-bs-546-first-pass-final.json` with SHA-256
+`49481d94e3096aaf178db11daf6702532b6ed67323c995e4bbece39aaee75710`.
+This pass binds to corrected raw dictionary SHA-256
+`e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc`;
+Bosnian is `first-pass-complete` pending a distinct complete second pass.
+
+### German (`de`) — current second pass complete
 
 The first reviewer inspected and, after applying the reviewed corrections,
 re-read 538/538 current German values in eight top-level namespace passes and
@@ -998,7 +1174,42 @@ ledger contract (91/91 selected cases). The current raw dictionary SHA-256 is
 `5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba`.
 The distinct complete second pass remains pending.
 
-### Czech (`cs`) — pending after second-pass residuals
+Reviewer `root-de-546-first-final` subsequently restarted at entry 1 on the
+current 546-key corpus and re-read every English/German pair in source order.
+The pass revalidated all 89 German findings, 38 placeholder-bearing values and
+54 occurrences, 44 aliases in 14 caller groups, all 117 provider
+compositions, all 27 current exact-English retentions, the 12 source-only
+contracts, and the complete 533+12+1 caller/source-only/dormant partition.
+The two new exact-English values since the older evidence—`notifier.ok` and
+the generic catch-all `tools.link.webLink`—are documented by `R-de-026` and
+`R-de-027`.
+
+Commit `5b5713be` made 20 localized block-color command titles visible in the
+slash menu. All 20 German compositions were checked, including
+`Textfarbe: Rot`, `Textfarbe: Standard`, `Hintergrund: Orange`, and
+`Hintergrund: Standard`; no residual was found. Fresh artifact, checker, and
+focused block-color validation passes. The current raw dictionary SHA-256 is
+`66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2`.
+At that stage German was `first-pass-complete` and still required a distinct
+complete second pass.
+
+Distinct reviewer `root-de-546-second-final` then directly reread all 546
+final English/German pairs in English insertion order before consulting the
+prior evidence. It independently revalidated all 89 findings, the exact 27
+retentions, 38 placeholder-bearing values and 54 occurrences, 44 aliases in
+14 groups, 117 provider compositions, all 20 block-color titles, the three
+later migrations, and the complete 533+12+1 caller partition. The reviewer
+separately challenged `Inline-Code`, the numbered-list `Nummer` alias, and the
+image-navigation group in their concrete callers and found no residual.
+
+Both passes bind to raw dictionary SHA-256
+`66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2`.
+The second-pass artifact is `/tmp/blok-de-546-second-pass.json` with SHA-256
+`ecf169e0fc26673dc4440d1672d7ce3b61b1d0133d743747c1c867c35ec7305d`.
+Independent validation passed 98 assertions, and the live checker and
+block-color suite pass. German is `second-pass-complete`.
+
+### Czech (`cs`) — current 546-key second pass complete
 
 The current-byte reviewer read all 539 English/Czech pairs in source order,
 including all 450 retained values, after the 89-value correction set recorded
@@ -1047,7 +1258,34 @@ their complete runtime scope. The source-level emoji correction independently
 resets all Czech pass evidence under rule 2; no reviewer or digest may be
 recorded until both exhaustive passes repeat on the corrected final bytes.
 
-### Danish (`da`) — current second pass complete
+Reviewer `root-cs-546-first-final` subsequently restarted at entry 1 and
+re-read all 546/546 current English/Czech pairs in source order. The pass
+revalidated all 122 Czech findings, all 38 placeholder-bearing values and 54
+placeholder occurrences, all 44 aliases in 14 caller groups, all 117 provider
+compositions, the 12 source-only contracts, and the complete 533+12+1
+caller/source-only/dormant partition. After commit `5b5713be` made 20
+localized block-color compositions visible in the slash menu, the reviewer
+checked every rendered Czech title; all are natural and preserve the reviewed
+label/value relationship.
+
+The exact-English inventory is now exactly 12 values. `R-cs-001` through
+`R-cs-011` remain valid, and `R-cs-012` records the newly added conventional
+`OK` confirmation label. Fresh checker, focused block-color/toolbox, finding,
+placeholder, alias, retention, and structural gates pass with no residual.
+The current raw dictionary SHA-256 is
+`afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807`.
+Distinct reviewer `root-cs-546-second-final` then restarted at entry 1 and
+independently reread all 546 pairs on those same bytes. It revalidated all 122
+findings, all 12 retentions, 38 placeholder-bearing values with 54
+occurrences, 44 aliases in 14 groups and 48 references, all 117 provider
+compositions, all 20 block-color titles, and the complete 533+12+1 caller
+partition. Its independent validator passed 1,664 assertions and found no
+residual or documentation gap. The artifact is
+`/tmp/blok-cs-546-second-pass.json` with SHA-256
+`6e5e4ae8553eaf21f6917ad19ba3e1e84d39c4569d3680608fbfb1642de11878`.
+Czech is `second-pass-complete`.
+
+### Danish (`da`) — corrected-byte first pass complete
 
 The current 545-entry corpus supersedes the historical 539-key review.
 Reviewer `codex-da-first-final-545` restarted at entry 1 on the final bytes
@@ -1085,7 +1323,51 @@ without finding a residual. Fresh structural, finding, ledger, retention, and
 dictionary-integrity gates pass, and a final rehash reproduces the same bound
 digest for both reviews. The terminal repository-wide gates remain pending.
 
-### Spanish (`es`) — current 539-key second pass complete
+That 545-key conclusion is historical. Commit `5b5713be` made the localized
+swatch templates visible as 20 slash-menu block-color command titles. A
+current 546-key source-order first pass found that the retained exact-English
+`{default} {mode}` template rendered the invalid spaced Danish compounds
+`Standard tekstfarve` and `Standard baggrund`. `F-da-084` removes the space
+between the invariant placeholders so the caller produces
+`Standardtekstfarve` and `Standardbaggrund`; the obsolete `R-da-005`
+retention is removed. The correction is applied. Reviewer
+`root-da-546-first-final` then re-read all 546/546 final pairs in source order,
+all 20 block-color command titles, all 84 findings, 38 placeholder-bearing
+values with 54 occurrences, 44 aliases in 14 caller groups, 117 provider
+compositions, all 29 retained exact-English values, and the 533+12+1
+caller/source-only/dormant partition. No residual was found. The final raw
+dictionary SHA-256 is
+`cea13b65cc8af531b40f033ee33315c3da133a17d0ec728b747ef40777db2c83`.
+
+A distinct complete 546-key second pass then found one semantic residual:
+`toolNames.inlineCode` still used `Kode`, identical to the separate code-block
+title. Its caller is the inline formatter, and official Danish Notion guidance
+uses `inline-kode` for that format. `F-da-085` therefore changes the value to
+`Inline-kode`; the focused caller test failed once before the correction and
+passes afterward. The corrected raw dictionary SHA-256 is
+`ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f`.
+
+The residual-review artifact is `/tmp/blok-da-546-second-pass.json` with
+SHA-256
+`4a53a2e7342c34d438286484fa570deb8d2f35e08ede19b9168861a229517c1e`.
+Because the dictionary bytes changed, the evidence-reset rule returns Danish
+to `pending`: both complete passes must restart on the corrected bytes before
+the locale can be promoted again. Reviewer `root-da-546-first-restart` has now
+restarted at entry 1 and directly reread all 546 corrected English/Danish
+pairs in English insertion order. It revalidated all 85 findings, the exact
+29-retention inventory, 38 placeholder-bearing values with 54 occurrences, 44
+aliases in 14 caller groups and 48 references, all 117 provider compositions,
+all 20 live block-color command titles, the three later dictionary migrations,
+and the complete 533+12+1 caller/source-only/dormant partition. The corrected
+`Inline-kode` title and concatenated default-swatch compounds were separately
+replayed in their actual callers; no residual survived. The artifact is
+`/tmp/blok-da-546-first-pass-final.json` with SHA-256
+`df586663ec0708a612bac05102a6782a8883c1709d70a2938fc3928978d2e9fc`.
+This pass binds to corrected raw dictionary SHA-256
+`ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f`;
+Danish is `first-pass-complete` pending a distinct complete second pass.
+
+### Spanish (`es`) — current 546-key second pass complete
 
 The current-byte first reviewer inspected and, after applying the closed
 correction set, independently re-read 539/539 Spanish values in source order
@@ -1153,6 +1435,31 @@ contracts, and the 509+29+1 caller partition without finding a residual. The
 live checker, 1,712 locale-contract cases, the focused Spanish retention
 case, 386 caller cases, and the checker’s 81-case suite pass. Spanish is
 therefore `second-pass-complete` on the bound 539-key digest.
+
+That 539-key conclusion is historical. A current 546-key source-order first
+pass, followed by an independent caller-context challenge, exposed four
+residuals in otherwise retained values. `F-es-100` distinguishes the inline
+code formatter from the separate code-block tool using Notion Spain's
+established `Código integrado`; `F-es-101` and `F-es-102` give the lightbox
+toolbar and previous/next group purpose-specific accessible names; and
+`F-es-103` replaces the generic numeric noun `número` with the numbered-list
+formatting term `numeración`. The four reviewed corrections are applied. A
+complete current-byte replay then re-read all 546/546 final pairs in English
+insertion order and revalidated all 103 findings, 38 placeholder-bearing
+values with 54 occurrences, 44 aliases in 14 caller groups, 117 provider
+compositions, 20 block-color command compositions, the 12 exact-English
+retentions, and the 533+12+1 caller/source-only/dormant partition. No residual
+was found. The final raw dictionary SHA-256 is
+`862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58`.
+Distinct reviewer `root-es-546-second-final` then restarted at entry 1 and
+reread all 546 final pairs on those same bytes. It independently revalidated
+all 103 findings, the exact 12-retention inventory, all 38 placeholder-bearing
+values and 54 occurrences, 44 aliases in 14 groups, 117 provider
+compositions, all 20 block-color commands, and the complete 533+12+1 caller
+partition without finding a residual. The live translation checker also
+passes. Its artifact is `/tmp/blok-es-546-second-pass.json` with SHA-256
+`4c199de6f5dca7d264943f0c82fcb50ccc46154f9b08a99afd1243f32c49c71b`.
+Spanish is `second-pass-complete`.
 
 ### French (`fr`) — current 539-key first pass complete
 
@@ -1323,7 +1630,7 @@ the registered Finnish tool name. The locale remains `pending`, with no
 reviewer or digest evidence, until that correction is followed by two new
 complete passes.
 
-### Italian (`it`) — current 539-key first pass complete
+### Italian (`it`) — current 546-key first pass complete
 
 The first reviewer inspected 538/538 current Italian values in the shipped
 dictionary. This pre-correction inspection covered all eight top-level
@@ -1504,6 +1811,34 @@ search, quote, video, caller, retention, and live-checker gates pass with no
 residual finding. Both reviews bind to raw SHA-256
 `8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668`;
 Italian is therefore `second-pass-complete`.
+
+That 539-key conclusion is historical. On the current 546-key corpus, a root
+source-order read and distinct proposal challenge found two residuals.
+`F-it-094` distinguishes the inline formatter from the separate code-block
+tool by replacing `Codice` with `Codice in linea`, and `F-it-095` normalizes
+the action-search placeholder to the native curly apostrophe in
+`Cerca un’azione…`. Focused expectations failed on exactly those two old
+values before passing after remediation, and the 68-locale executable
+action-search matrix passes with the corrected placeholder.
+
+The proposal-challenge artifact is
+`/tmp/blok-it-546-proposal-challenge.json` with SHA-256
+`758b57f7c7123e98769ceeb066d8e8fa6884cafc7d7c4f3f179fc9c9b523732c`.
+Reviewer `root-czech_546_first_pass` then restarted at entry 1 and directly
+reread all 546 corrected English/Italian pairs in English insertion order.
+The pass revalidated all 95 findings, the exact 22-retention inventory, 38
+placeholder-bearing values with 54 occurrences, 44 aliases in 14 caller
+groups and 48 references, all 117 provider compositions, all 20 block-color
+command titles, the three later dictionary migrations, and the complete
+533+12+1 caller/source-only/dormant partition. The 99 focused expectations
+and 464 runtime tests passed, and no residual or documentation gap survived.
+
+The complete first-pass artifact is
+`/tmp/blok-it-546-first-pass-final.json` with SHA-256
+`3c7765fddc6f28799c37d27a5579b7adf2e5dacda9f5f1926dbba3d5b8649700`.
+This pass binds to corrected raw dictionary SHA-256
+`2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e`;
+Italian is `first-pass-complete` pending a distinct complete second pass.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -2981,6 +3316,16 @@ follows the global transition rule above.
 | `F-am-076` | `am` | `tools.video.ctxCopyUrlAtTime` | media semantics | `"የቪዲዮ URL በአሁኑ ሰዓት ቅዳ"` | `"በአሁኑ የማጫወቻ ጊዜ የቪዲዮ URL ቅዳ"` | The copied URL targets the current playback time; the current wording suggests the clock time or hour. | verified |
 | `F-am-077` | `am` | `tools.colorPicker.color.purple` | color terminology | `"ወይን ጠጅ"` | `"ሐምራዊ"` | The shared swatch is purple; the current value denotes wine or red wine. | verified |
 | `F-am-078` | `am` | `tools.callout.colorPurple` | color terminology | `"ወይን ጠጅ"` | `"ሐምራዊ"` | The callout swatch is purple; the current value denotes wine or red wine. | verified |
+| `F-am-079` | `am` | `toolNames.inlineCode` | tool distinction / established terminology | `"ኮድ"` | `"መስመር ውስጥ ኮድ"` | The inline formatter shared the generic code-block title. Entry 1516 of the [Ethiopian ICT terminology glossary](https://oromianeconomist.com/wp-content/uploads/2017/08/ict-glossary-in-afaan-oromoo-amharic-and-tigarinya.pdf) gives `መስመር ውስጥ` for “inline,” so the replacement distinguishes the inline format from the block tool. | verified |
+| `F-am-080` | `am` | `tools.video.alignmentLeft` | action terminology / caller context | `"ግራ"` | `"ወደ ግራ አሰልፍ"` | The video settings child performs alignment and has no separate action label; the replacement reuses the reviewed image control’s “align left” imperative. | verified |
+| `F-am-081` | `am` | `tools.video.alignmentCenter` | action terminology / caller context | `"መሃል"` | `"ወደ መሃል አሰልፍ"` | The direction-only noun does not name the centering action. The replacement matches the equivalent reviewed image-control command. | verified |
+| `F-am-082` | `am` | `tools.video.alignmentRight` | action terminology / caller context | `"ቀኝ"` | `"ወደ ቀኝ አሰልፍ"` | The video settings item is an action-only control, so it needs the same explicit align-right imperative as the equivalent image control. | verified |
+| `F-am-083` | `am` | `tools.audio.alignmentLeft` | action terminology / caller context | `"ግራ"` | `"ወደ ግራ አሰልፍ"` | The audio settings child has the same action contract as video and must identify alignment rather than expose a direction alone. | verified |
+| `F-am-084` | `am` | `tools.audio.alignmentCenter` | action terminology / caller context | `"መሃል"` | `"ወደ መሃል አሰልፍ"` | The audio centering item performs an action; the explicit imperative is consistent with the equivalent image and video controls. | verified |
+| `F-am-085` | `am` | `tools.audio.alignmentRight` | action terminology / caller context | `"ቀኝ"` | `"ወደ ቀኝ አሰልፍ"` | The audio settings item must expose the align-right action rather than only the destination direction. | verified |
+| `F-am-086` | `am` | `tools.image.preview` | native orthography / terminology consistency | `"የምስል ቅድመ-ዕይታ"` | `"የምስል ቅድመ ዕይታ"` | The image-preview label used a nonstandard hyphenated compound. Official [Google Amharic product guidance](https://support.google.com/googleplay/android-developer/answer/16909972?hl=am) uses the open form `ቅድመ ዕይታ`, matching this dictionary’s already-reviewed preview controls and loading states. | verified |
+| `F-am-087` | `am` | `tools.audio.emptyOrDropHere` | drop-target object clarity | `"ወይም ኦዲዮ እዚህ ይጣሉ"` | `"ወይም ኦዲዮ ፋይል እዚህ ይጣሉ"` | The drop target accepts a file, not abstract audio. Official [YouTube Amharic format guidance](https://support.google.com/youtube/troubleshooter/2888402?hl=am) uses the concrete term `የኦዲዮ ፋይሎች`; the replacement restores the source object while preserving the selected polite imperative. | verified |
+| `F-am-088` | `am` | `tools.bookmark.error` | native orthography / terminology consistency | `"የአገናኝ ቅድመ-እይታ መጫን አልተቻለም"` | `"የአገናኝ ቅድመ ዕይታ መጫን አልተቻለም"` | The error used both a nonstandard hyphen and the wrong initial Ethiopic character for the established preview term. The replacement exactly matches the adjacent bookmark-loading label and official Google usage. | verified |
 | `F-ar-001` | `ar` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"مسح التنسيق"` | Microsoft’s Arabic editor UI uses the exact concise command [مسح التنسيق](https://support.microsoft.com/ar-SA/Excel/format-text-in-cells). | verified |
 | `F-ar-002` | `ar` | `toolbox.optionAddAbove` | shortcut / action clarity | `"⌥ — إضافة أعلى"` | `"انقر مع الضغط على ⌥ للإضافة في الأعلى"` | The plus-button tooltip requires an Option-modified click; the current key-plus-label fragment omits the click gesture. | verified |
 | `F-ar-003` | `ar` | `toolbox.ctrlAddAbove` | shortcut / action clarity | `"Ctrl — إضافة أعلى"` | `"انقر مع الضغط على Ctrl للإضافة في الأعلى"` | The plus-button tooltip requires a Ctrl-modified click; the current key-plus-label fragment omits the click gesture. | verified |
@@ -3158,6 +3503,8 @@ follows the global transition rule above.
 | `F-az-100` | `az` | `tools.video.pause` | media-control action terminology | `"Fasilə"` | `"Fasilə ver"` | This control performs an action, so the bare noun `Fasilə` is incomplete; official Azerbaijani Google media guidance uses `Fasilə ver`. [YouTube TV help](https://support.google.com/youtubetv/answer/7529864?hl=az) | verified |
 | `F-az-101` | `az` | `tools.audio.play` | media-control action terminology | `"Oynat"` | `"Oxut"` | The audio control has the same action contract as video; official Azerbaijani media terminology uses `Oxut`. [YouTube TV help](https://support.google.com/youtubetv/answer/7529864?hl=az) | verified |
 | `F-az-102` | `az` | `tools.audio.pause` | media-control action terminology | `"Fasilə"` | `"Fasilə ver"` | The audio control has the same action contract as video; `Fasilə ver` is the established imperative and avoids the current bare noun. [YouTube TV help](https://support.google.com/youtubetv/answer/7529864?hl=az) | verified |
+| `F-az-103` | `az` | `tools.colorPicker.defaultSwatchLabel` | word order / live block-color composition | `"{mode} {default}"` | `"{default} {mode}"` | The newly live slash-menu command titles are standalone noun phrases. Azerbaijani modifiers precede the noun phrase, so the old template produced the predicate-like `Mətn rəngi Standart`; the replacement produces `Standart mətn rəngi` and `Standart arxa fon` while preserving both runtime placeholders. [Azerbaijani red-text-color usage](https://code.mu/az/javascript/book/prime/inbuilt/string/substring-replacement/) | verified |
+| `F-az-104` | `az` | `tools.colorPicker.colorSwatchLabel` | word order / live block-color composition | `"{mode} {color}"` | `"{color} {mode}"` | The same live composition contract applies to every named swatch. Placing the color modifier first yields natural titles such as `Qırmızı mətn rəngi` and `Qırmızı arxa fon`; the old bare sequence lacked the copular clause required for a predicate reading. [Azerbaijani red-text-color usage](https://code.mu/az/javascript/book/prime/inbuilt/string/substring-replacement/) | verified |
 | `F-bg-001` | `bg` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Изчисти форматирането"` | Microsoft’s Bulgarian Word UI uses the exact command [Изчисти форматирането](https://support.microsoft.com/bg-BG/Word/format-your-word-document). | verified |
 | `F-bg-002` | `bg` | `blockSettings.convertWithChildrenWarning` | confirmation register / caller context | `"Вложени блокове: {count}. Преобразуването на този блок ще премести вложеното съдържание на най-горното ниво. Продължи?"` | `"Вложени блокове: {count}. Преобразуването на този блок ще премести вложеното съдържание на най-горното ниво. Искате ли да продължите?"` | The source-only confirmation must retain the selected polite plural register. Independent review selected Microsoft’s standard Bulgarian confirmation pattern `Искате ли да продължите?` and preserved `{count}` exactly. | verified |
 | `F-bg-003` | `bg` | `popover.convertTo` | terminology / caller context | `"Конвертирай в"` | `"Преобразувай в"` | The complete 545-entry first-pass caller review found the current Bulgarian wording inaccurate, incomplete, untranslated, ungrammatical, or inconsistent with the selected register in this UI contract; the replacement preserves every runtime placeholder. | verified |
@@ -3253,6 +3600,9 @@ follows the global transition rule above.
 | `F-bg-093` | `bg` | `a11y.navigationModeExited` | event state / accessibility | `"Излизане от режима на навигация"` | `"Излязохте от режима на навигация"` | The assertive live-region message reports a completed mode exit; the existing verbal noun can sound like an in-progress action. | verified |
 | `F-bg-094` | `bg` | `a11y.navigatedToBlock` | event state / accessibility | `"Придвижване до блок"` | `"Преминахте към блок"` | The live-region message confirms completed navigation to the focused block rather than naming an abstract movement. | verified |
 | `F-bg-095` | `bg` | `tools.database.listView` | view terminology / disambiguation | `"Списък"` | `"Списъчен изглед"` | This value names the rendered database view mode, so the explicit `изглед` distinguishes it from a generic list or the separate view-type label. | verified |
+| `F-bg-096` | `bg` | `toolNames.inlineCode` | tool distinction / established terminology | `"Код"` | `"Вграден код"` | `inline-tool-code.ts` renders this title for inline formatting while the separate code-block tool already uses the generic `Код`; `Вграден код` preserves that caller distinction in established Bulgarian technical wording. | verified |
+| `F-bg-097` | `bg` | `searchTerms.number` | search alias / numbered-list semantics | `"число"` | `"номериране"` | `style-config.ts` attaches the alias only to the numbered-list entry. `номериране` names the editor operation, while `число` means generic numeric data and can misroute search intent. | verified |
+| `F-bg-098` | `bg` | `tools.image.navigationControls` | accessibility / navigation relationship | `"Навигация на изображения"` | `"Навигация между изображенията"` | The ARIA group contains previous-image and next-image controls, so the label must state navigation between images rather than an underspecified relation to images. | verified |
 | `F-bn-001` | `bn` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"বিন্যাস অপসারণ"` | LibreOffice’s Bengali product UI supplies the exact Clear formatting translation [বিন্যাস অপসারণ](https://github.com/LibreOffice/translations/blob/master/source/bn/svx/messages.po#L6302-L6303). | verified |
 | `F-bn-002` | `bn` | `blockSettings.convertWithChildrenWarning` | natural terminology | `"নেস্টেড ব্লকের সংখ্যা: {count}। এই ব্লক রূপান্তর করলে নেস্টেড কনটেন্ট শীর্ষ স্তরে চলে যাবে। চালিয়ে যাবেন?"` | `"ভেতরে থাকা ব্লকের সংখ্যা: {count}। এই ব্লকটি রূপান্তর করলে ভেতরের বিষয়বস্তু শীর্ষ স্তরে চলে যাবে। চালিয়ে যাবেন?"` | Removes avoidable transliteration and fixes the object grammar. Caller evidence: C0; EN-002. | verified |
 | `F-bn-003` | `bn` | `toolNames.italic` | established terminology | `"বাঁকা"` | `"তির্যক"` | “বাঁকা” means crooked/bent; LibreOffice’s Bengali UI uses `তির্যক` for Italic. [Source](https://github.com/LibreOffice/translations/blob/master/source/bn/officecfg/registry/data/org/openoffice/Office/UI.po#L19200-L19204) Caller evidence: C1; established UI. | verified |
@@ -3271,6 +3621,7 @@ follows the global transition rule above.
 | `F-bn-016` | `bn` | `tools.callout.pickRandom` | truncated action | `"এলোমেলো"` | `"একটি এলোমেলো ইমোজি বেছে নিন"` | Current adjective omits both the action and object. Caller evidence: C8; EN-025. | verified |
 | `F-bn-017` | `bn` | `tools.database.cardMenuLabel` | accessibility grammar | `"কার্ড বিকল্প"` | `"কার্ডের বিকল্প"` | Adds the required possessive relationship for the card menu label. Caller evidence: C9; CTX. | verified |
 | `F-bn-018` | `bn` | `tools.database.cardTitlePlaceholder` | consistency | `"খালি পাতা"` | `"খালি পৃষ্ঠা"` | Identical English `rowTitlePlaceholder` already uses `খালি পৃষ্ঠা`. Caller evidence: C9; INT. | verified |
+| `F-bn-019` | `bn` | `toolNames.inlineCode` | tool distinction / established technical terminology | `"কোড"` | `"ইনলাইন কোড"` | The inline formatter and separate code-block tool exposed the same title. Bengali Markdown guidance explicitly contrasts [`ইনলাইন কোড`](https://www.markdownlang.com/bn/cheatsheet/#কোড) with `কোড ব্লক`, so the replacement preserves the caller distinction. | verified |
 | `F-bn-020` | `bn` | `toolNames.equation` | untranslated | `"Equation"` | `"সমীকরণ"` | Visible tool name remains English. Caller evidence: C10; EX. | verified |
 | `F-bn-021` | `bn` | `tools.equation.placeholder` | untranslated | `"Enter a LaTeX formula…"` | `"একটি LaTeX সূত্র লিখুন…"` | Visible input placeholder remains English; `LaTeX` is correctly retained. Caller evidence: C10; EX. | verified |
 | `F-bn-022` | `bn` | `tools.code.searchLanguage` | punctuation | `"ভাষা খুঁজুন..."` | `"ভাষা খুঁজুন…"` | Replaces three periods with the corpus-standard ellipsis character. Caller evidence: C10; EN-026. | verified |
@@ -3313,6 +3664,13 @@ follows the global transition rule above.
 | `F-bn-059` | `bn` | `tools.video.ctxStats` | terminology | `"বিস্তারিত পরিসংখ্যান"` | `"প্লেব্যাকের পরিসংখ্যান"` | Menu opens playback diagnostics, not unspecified detailed statistics. Caller evidence: C21; EN-034. | verified |
 | `F-bn-060` | `bn` | `tools.database.checkboxChecked` | state terminology | `"চেক করা"` | `"টিক দেওয়া আছে"` | Current hybrid construction is unnatural as a checkbox state. Caller evidence: C22; CTX. | verified |
 | `F-bn-061` | `bn` | `tools.database.checkboxUnchecked` | state terminology | `"চেক করা নেই"` | `"টিক দেওয়া নেই"` | Current negated hybrid construction is unnatural. Caller evidence: C22; CTX. | verified |
+| `F-bn-062` | `bn` | `tools.colorPicker.defaultSwatchLabel` | caller composition / accessible label-value relation | `"{mode} {default}"` | `"{mode}: {default}"` | The now-live formatter produced ambiguous bare adjacency such as `লেখার রঙ ডিফল্ট`. The colon creates a clear mode/value label and follows the locale’s existing count-neutral UI label pattern. | verified |
+| `F-bn-063` | `bn` | `tools.colorPicker.colorSwatchLabel` | caller composition / accessible label-value relation | `"{mode} {color}"` | `"{mode}: {color}"` | All 18 named-color commands need the same explicit relationship; the replacement produces standalone labels such as `লেখার রঙ: লাল` while preserving both runtime placeholders. | verified |
+| `F-bn-064` | `bn` | `searchTerms.number` | search alias / numbered-list semantics | `"সংখ্যা"` | `"সংখ্যায়ন"` | This alias belongs only to the numbered-list search group. `সংখ্যা` is a generic number noun, while official [LibreOffice Bengali list guidance](https://help.libreoffice.org/latest/bn/text/swriter/guide/using_numbering.html) uses `সংখ্যায়ন` for the editor operation. | verified |
+| `F-bn-065` | `bn` | `tools.image.alignmentCenterAria` | action terminology / sibling consistency | `"মাঝে সারিবদ্ধ করুন"` | `"মাঝখানে সারিবদ্ধ করুন"` | The image and embed control performs the same center-alignment action as the already-reviewed video and audio callers; the replacement makes all three live actions consistent. | verified |
+| `F-bn-066` | `bn` | `tools.image.downloadOriginal` | action grammar / object clarity | `"মূল ডাউনলোড"` | `"আসল ছবি ডাউনলোড করুন"` | The old noun fragment could mean a primary download and omitted what is downloaded. The replacement is a complete imperative naming the uncropped original image. | verified |
+| `F-bn-067` | `bn` | `tools.image.navigationControls` | accessibility / navigation relationship | `"ছবি নেভিগেশন"` | `"ছবিগুলোর মধ্যে নেভিগেশন"` | The ARIA group contains previous-image and next-image controls. `ছবিগুলোর মধ্যে` states navigation among multiple images and matches the locale’s reviewed block-navigation construction. | verified |
+| `F-bn-068` | `bn` | `tools.audio.emptyOrDropHere` | drop-target object clarity | `"অথবা এখানে অডিও ফেলুন"` | `"অথবা এখানে অডিও ফাইল ফেলুন"` | The drop target accepts a file, not abstract audio. Official [Files by Google Bengali help](https://support.google.com/files/answer/10018943?hl=bn) uses the exact product term `অডিও ফাইল`. | verified |
 | `F-bs-001` | `bs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti formatiranje"` | LibreOffice’s Bosnian product UI supplies the exact Clear formatting translation [Očisti formatiranje](https://github.com/LibreOffice/translations/blob/master/source/bs/svx/messages.po#L6304-L6305). | verified |
 | `F-bs-002` | `bs` | `blockSettings.convertWithChildrenWarning` | semantic accuracy / locale style | `"Ugniježđeni blokovi: {count}. Konverzijom ovog bloka ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | `"Ugniježđeni blokovi: {count}. Ako pretvorite ovaj blok, ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | Avoid technical nominalization while preserving the count-neutral warning. Frozen 545-key audit index 8; independent disposition: accept-original-proposal. | verified |
 | `F-bs-003` | `bs` | `toolbox.optionAddAbove` | semantic accuracy / locale style | `"Option-klik za dodavanje iznad"` | `"Držite tipku Option i kliknite za dodavanje iznad"` | Replaces the awkward compound and explicitly tells the user to hold Option while clicking. Frozen 545-key audit index 10; independent disposition: adjust. | verified |
@@ -3491,6 +3849,9 @@ follows the global transition rule above.
 | `F-bs-176` | `bs` | `tools.video.ctxStats` | semantic accuracy / locale style | `"Statistika za znatiželjne"` | `"Statistika reprodukcije"` | Match current “Playback statistics” rather than stale slang. Frozen 545-key audit index 534; independent disposition: accept-original-proposal. | verified |
 | `F-bs-177` | `bs` | `tools.audio.pause` | semantic accuracy / locale style | `"Pauza"` | `"Pauziraj"` | Match the action-oriented control context. Frozen 545-key audit index 536; independent disposition: accept-original-proposal. | verified |
 | `F-bs-178` | `bs` | `tools.callout.emojiSearchResults` | action semantics / locale style | `"Pronađeno {count} emojija"` | `"Podudaranja emojija: {count}"` | Avoid count inflection and preserve that these are matches. Frozen 545-key audit index 543; independent disposition: accept-original-proposal. | verified |
+| `F-bs-179` | `bs` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Kod"` | `"Umetnuti kod"` | The inline formatter and separate code-block tool exposed the same title. The official [WordPress Bosnian translation catalog](https://translate.wordpress.org/projects/wp/dev/bs/default/export-translations/?format=json) translates “Inline code” as `Umetnuti kod`, which distinguishes the two tools while retaining a two-word toolbox label. | verified |
+| `F-bs-180` | `bs` | `tools.image.navigationControls` | accessibility / navigation relationship | `"Navigacija slikama"` | `"Navigacija između slika"` | This ARIA group contains previous-image and next-image controls. `između slika` states movement among images directly instead of leaving the relationship underspecified. | verified |
+| `F-bs-181` | `bs` | `tools.video.seek` | accessibility / media-control semantics | `"Premotavanje"` | `"Pozicija reprodukcije"` | The value labels a range whose value is the current playback position, not a rewind operation. The [W3C seek-slider pattern](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/) defines that caller contract, and University of Zagreb/SRCE media guidance uses [`pozicija reprodukcije`](https://www.srce.unizg.hr/sites/default/files/edu/multimedia/r701_polaznik.pdf) for the same concept. | verified |
 | `F-cs-001` | `cs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Vymazat formátování"` | Microsoft’s Czech Word instructions name the concise command [Vymazat formátování](https://support.microsoft.com/cs-cz/office/form%C3%A1tov%C3%A1n%C3%AD-dokumentu-aplikace-word-fb9ef2d6-e2ad-4721-abc1-55f88864617f). | verified |
 | `F-cs-002` | `cs` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Tento blok obsahuje {count} vnořených bloků. Po převodu budou přesunuty na nejvyšší úroveň. Pokračovat?"` | `"Počet vnořených bloků: {count}. Při převodu tohoto bloku se vnořený obsah přesune na nejvyšší úroveň. Pokračovat?"` | The source count can be singular or plural; label-before-count wording avoids Czech numeral agreement and names the moved content. | verified |
 | `F-cs-003` | `cs` | `tools.marker.textColor` | terminology / source synchronization | `"Písmo"` | `"Barva písma"` | The shared color picker must distinguish font color from the adjacent background mode. | verified |
@@ -3627,6 +3988,8 @@ follows the global transition rule above.
 | `F-da-081` | `da` | `tools.image.cropCancel` | established product terminology / consistency | `"Annullér"` | `"Annuller"` | Current Microsoft and Apple Danish interfaces use unaccented `Annuller`; the image-crop action should match the rest of the cancellation family. | verified |
 | `F-da-082` | `da` | `tools.file.cancelUpload` | established product terminology / consistency | `"Annullér upload"` | `"Annuller upload"` | Current Microsoft and Apple Danish interfaces use unaccented `Annuller`; the file-upload action should match the image-upload and notifier actions. | verified |
 | `F-da-083` | `da` | `tools.image.altEdit` | established product terminology / consistency | `"Redigér alt-tekst"` | `"Rediger alt-tekst"` | Microsoft’s Danish alternative-text UI uses unaccented `Rediger`, matching the existing callout, database, and link edit actions. | verified |
+| `F-da-084` | `da` | `tools.colorPicker.defaultSwatchLabel` | caller context / compound orthography | `"{default} {mode}"` | `"{default}{mode}"` | The newly live slash-menu caller exposed `Standard tekstfarve` and `Standard baggrund`; Danish uses `standard` as the first element of a [compound](https://ordnet.dk/ddo/ordbog/standard), so concatenating the preserved placeholders produces `Standardtekstfarve` and `Standardbaggrund`. | verified |
+| `F-da-085` | `da` | `toolNames.inlineCode` | tool distinction / established terminology | `"Kode"` | `"Inline-kode"` | `inline-tool-code.ts` renders the inline formatting title, while the separate code-block tool already uses `Kode`. Official Danish Notion guidance calls the text format [`inline-kode`](https://www.notion.com/da/help/writing-and-editing-basics), so the replacement preserves the caller distinction without changing the established block title. | verified |
 | `F-de-073` | `de` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Formatierung löschen"` | Microsoft’s German editor UI uses the exact command [Formatierung löschen](https://support.microsoft.com/de-DE/PowerPoint/clear-all-text-formatting). | verified |
 | `F-de-074` | `de` | `blockSettings.clickAction` | caller composition / naturalness | `"Klicken"` | `"Mit einem Klick"` | The fragment is composed by the settings toggler with `openMenuAction`; the replacement produces the natural instruction `Mit einem Klick [oder ⌘/] das Menü öffnen`. | verified |
 | `F-de-075` | `de` | `blockSettings.openMenuAction` | caller composition / naturalness | `" zum Öffnen des Menüs"` | `" das Menü öffnen"` | The leading-space fragment must compose with `clickAction` and an optional shortcut; the current pair recreates the stilted wording already rejected by `F-de-002`. | verified |
@@ -3659,6 +4022,10 @@ follows the global transition rule above.
 | `F-es-097` | `es` | `tools.linkPaste.embed` | action grammar / source-only contract | `"Crear inserción"` | `"Insertar contenido"` | The paste-menu item must name a natural action; `Crear inserción` is an awkward nominal calque, while `Insertar contenido` matches the locale’s established embed terminology. | verified |
 | `F-es-098` | `es` | `a11y.navigationModeEntered` | platform terminology / accessibility | `"Modo de navegación. Usa las teclas de flecha para moverte entre bloques, Enter para editar y Escape para salir."` | `"Modo de navegación. Usa las teclas de flecha para moverte entre bloques, Intro para editar y Esc para salir."` | The assertive screen-reader instruction must use Spain Spanish key names; [Notion Spain](https://www.notion.com/es-es/help/keyboard-shortcuts) consistently labels these keys `Intro` and `Esc`. | verified |
 | `F-es-099` | `es` | `tools.file.toggleCaption` | grammar / terminology consistency | `"Mostrar u ocultar leyenda"` | `"Mostrar u ocultar la leyenda"` | The live file-settings action refers to the file’s specific caption and must retain the definite article used by the image and video sibling actions. | verified |
+| `F-es-100` | `es` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Código"` | `"Código integrado"` | The inline formatter had the same title as the separate code-block tool; [Notion Spain](https://www.notion.com/es-es/help/customize-and-style-your-content?position=1) uses `código integrado` for this inline formatting command. | verified |
+| `F-es-101` | `es` | `tools.image.previewControls` | accessibility / object context | `"Controles de vista previa"` | `"Controles de vista previa de la imagen"` | This value is the accessible name of the lightbox image-preview toolbar, so it must identify the controlled image object rather than a generic preview. | verified |
+| `F-es-102` | `es` | `tools.image.navigationControls` | accessibility / navigation relationship | `"Navegación de imágenes"` | `"Navegación entre imágenes"` | The group contains previous/next controls for moving among gallery images; `entre imágenes` states that relationship unambiguously. | verified |
+| `F-es-103` | `es` | `searchTerms.number` | search alias / established list terminology | `"número"` | `"numeración"` | The alias is consumed only by the numbered-list toolbox entry; [Microsoft Word Spain](https://support.microsoft.com/es-es/office/crear-una-lista-numerada-o-con-vi%C3%B1etas-9ff81241-58a8-4d88-8d8c-acab3006a23e) uses `Numeración` for the formatting function, while `número` is a generic numeric noun. | verified |
 | `F-et-001` | `et` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Eemalda vorming"` | Microsoft’s Estonian Word UI uses the exact command [Eemalda vorming](https://support.microsoft.com/et-ee/word/format-your-word-document). | verified |
 | `F-fa-001` | `fa` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"پاک کردن قالب‌بندی"` | LibreOffice’s Persian product UI supplies the exact Clear formatting translation [پاک کردن قالب‌بندی](https://github.com/LibreOffice/translations/blob/master/source/fa/svx/messages.po#L6368-L6369). | verified |
 | `F-fi-001` | `fi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Poista muotoilu"` | Microsoft’s Finnish OneNote UI uses the exact concise command [Poista muotoilu](https://support.microsoft.com/fi-fi/office/tekstin-korostaminen-onenoten-verkkoversio-5dadd21f-311c-42a3-8094-281f7bb7e127) for removing inline text styling. | verified |
@@ -3784,6 +4151,8 @@ follows the global transition rule above.
 | `F-it-091` | `it` | `tools.audio.errorGoogleDrive` | native punctuation / consistency | `"L'audio da Google Drive non può essere riprodotto direttamente. Scarica il file e caricalo qui."` | `"L’audio da Google Drive non può essere riprodotto direttamente. Scarica il file e caricalo qui."` | The sentence is otherwise natural and source-complete, but its straight apostrophe conflicts with the dictionary's established Italian typography. The exact regression passes after correction. | verified |
 | `F-it-092` | `it` | `tools.audio.errorOneDrive` | native punctuation / consistency | `"L'audio da OneDrive non può essere riprodotto direttamente. Scarica il file e caricalo qui."` | `"L’audio da OneDrive non può essere riprodotto direttamente. Scarica il file e caricalo qui."` | The sentence is otherwise natural and source-complete, but its straight apostrophe conflicts with the dictionary's established Italian typography. The exact regression passes after correction. | verified |
 | `F-it-093` | `it` | `tools.image.errorSourceOffline` | natural error copy / source synchronization | `"Il file di origine potrebbe essere stato spostato o essere offline."` | `"Il file di origine potrebbe essere stato spostato o non essere disponibile."` | In Italian, a file is not naturally described as `offline`; the replacement expresses the source's unavailable/offline condition without an awkward English calque. The exact regression passes after correction. | verified |
+| `F-it-094` | `it` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Codice"` | `"Codice in linea"` | The inline formatter shared the separate code-block tool’s generic title. Official [Microsoft Teams Italian Markdown guidance](https://support.microsoft.com/it-it/office/usa-la-formattazione-markdown-in-microsoft-teams-4d10bd65-55e2-4b2d-a1f3-2bebdcd2c772) distinguishes `codice in linea` from `blocco di codice`, so the replacement preserves the actual caller distinction. | verified |
+| `F-it-095` | `it` | `popover.search` | native punctuation / consistency | `"Cerca un'azione…"` | `"Cerca un’azione…"` | The newly localized action-search placeholder was the sole remaining ASCII apostrophe in the Italian dictionary. The U+2019 apostrophe matches every other reviewed Italian elision and the established punctuation findings `F-it-038`, `F-it-042`, `F-it-044`, `F-it-064`, and `F-it-090`–`F-it-092`. | verified |
 | `F-ja-001` | `ja` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"文字書式をクリア"` | Google Docs’ Japanese shortcut action uses the exact character-formatting command [文字書式をクリア](https://support.google.com/docs/answer/179738?hl=ja). | verified |
 | `F-ka-001` | `ka` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"პირდაპირი დაფორმატების გასუფთავება"` | LibreOffice’s Georgian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ka/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-km-001` | `km` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ជម្រះទ្រង់ទ្រាយ"` | LibreOffice’s exact short Clear formatting entry is `ជម្រះ​ទ្រង់ទ្រាយ`; the invisible separator is omitted to match this JSON corpus. An independent pass rejected the longer direct-formatting proposal as needless technical scope. | verified |
@@ -4385,6 +4754,7 @@ locale and UI context.
 | Retention ID | Locale | Key | Category | Justification | Source |
 |---|---|---|---|---|---|
 | `R-<locale>-NNN` | `<locale>` | `<key>` | category | justification | source |
+| `R-cs-012` | `cs` | `notifier.ok` | established loanword | `OK` is the conventional unchanged Czech confirmation-button label. | [LibreOffice Czech Help — dialog buttons](https://help.libreoffice.org/latest/cs/text/shared/optionen/01000000.html) |
 | `R-bg-001` | `bg` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Bulgarian Apple guidance retains symbolic modifier notation. | [Apple — Клавишни комбинации](https://support.apple.com/bg-bg/126616) |
 | `R-bg-002` | `bg` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Bulgarian Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Клавишни комбинации в Windows](https://support.microsoft.com/bg-bg/windows/%D0%BA%D0%BB%D0%B0%D0%B2%D0%B8%D1%88%D0%BD%D0%B8-%D0%BA%D0%BE%D0%BC%D0%B1%D0%B8%D0%BD%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-bg-003` | `bg` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text control label; the surrounding Bulgarian dialog supplies the full localized concept. | [Microsoft — Алтернативен текст](https://support.microsoft.com/bg-bg/accessibility/office-accessibility/everything-you-need-to-know-to-write-effective-alt-text) |
@@ -4421,7 +4791,6 @@ locale and UI context.
 | `R-da-002` | `da` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Danish Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Tastaturgenveje i Windows](https://support.microsoft.com/da-dk/windows/tastaturgenveje-i-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-da-003` | `da` | `toolNames.link` | established loanword | `Link` is the established Danish computing term and the natural concise toolbox label. | [Den Danske Ordbog — link](https://ordnet.dk/ddo/ordbog?query=link) |
 | `R-da-004` | `da` | `toolNames.database` | established loanword | `Database` is the established unchanged Danish computing term and the natural toolbox label. | [Den Danske Ordbog — database](https://ordnet.dk/ddo/ordbog/database) |
-| `R-da-005` | `da` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only invariant runtime interpolation tokens; its Danish word order is encoded by the token sequence rather than English lexical copy. | [Translation Guidelines — placeholder integrity](../../src/components/i18n/locales/TRANSLATION_GUIDELINES.md) |
 | `R-da-006` | `da` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only invariant runtime interpolation tokens; its Danish word order is encoded by the token sequence rather than English lexical copy. | [Translation Guidelines — placeholder integrity](../../src/components/i18n/locales/TRANSLATION_GUIDELINES.md) |
 | `R-da-007` | `da` | `tools.colorPicker.color.orange` | established loanword | `Orange` is the established unchanged Danish color adjective. | [Den Danske Ordbog — orange](https://ordnet.dk/ddo/ordbog?query=orange) |
 | `R-da-008` | `da` | `searchTerms.layout` | established loanword | `layout` is an established Danish design term; lowercase matches Danish search-alias style. | [Den Danske Ordbog — layout](https://ordnet.dk/ddo/ordbog/layout) |
@@ -4514,6 +4883,7 @@ locale and UI context.
 | `R-fr-021` | `fr` | `tools.video.pause` | established cognate | `Pause` is the standard unchanged France-French media-control label. | [Apple — Écouter de la musique sur l’iPhone](https://support.apple.com/fr-fr/guide/iphone/iph676daac9b/ios) |
 | `R-fr-022` | `fr` | `tools.video.volume` | established cognate | `Volume` is the standard unchanged France-French media-control label. | [Apple — Écouter de la musique sur l’iPhone](https://support.apple.com/fr-fr/guide/iphone/iph676daac9b/ios) |
 | `R-fr-023` | `fr` | `tools.file.previewRaw` | established cognate | `Source` is the standard French term for a source-text view and pairs naturally with the adjacent `Aperçu` tab. | [MDN — Déboguer du CSS](https://developer.mozilla.org/fr/docs/Learn_web_development/Core/Styling_basics/Debugging_CSS) |
+| `R-fr-024` | `fr` | `notifier.ok` | established loanword | `OK` is the conventional unchanged France-French confirmation-button label. | [Apple France — bouton OK](https://support.apple.com/fr-fr/guide/iphone/iph3d1110d4/ios) |
 | `R-it-001` | `it` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Italian Apple guidance retains the `⌘` platform symbol. | [Apple — Abbreviazioni da tastiera del Mac](https://support.apple.com/it-it/102650) |
 | `R-it-002` | `it` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Italian Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Scelte rapide da tastiera in Windows](https://support.microsoft.com/it-it/windows/scelte-rapide-da-tastiera-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-it-003` | `it` | `toolNames.link` | established loanword | `Link` is the established Italian computing term and the natural concise toolbox label. | [Treccani — link](https://www.treccani.it/vocabolario/link/) |

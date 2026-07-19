@@ -141,7 +141,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.image.emptyLink',
     'tools.image.cropAspectRatio',
     'tools.image.cropRatioOval',
-    // "File"/"Link"/"Preview"/"Board"/"Embed"/"Toggle"/"Raw" are the standard
+    // "File"/"Link"/"Preview"/"Board"/"Embed"/"Toggle" are the standard
     // English loanwords in Filipino (Tagalog) product UIs.
     'toolNames.file',
     'toolNames.link',
@@ -151,7 +151,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.toggle.placeholder',
     'tools.file.emptyLink',
     'tools.file.preview',
-    'tools.file.previewRaw',
     'tools.database.viewTypeBoard',
     'tools.database.propertyTypeCheckbox',
     'tools.database.listView',
@@ -203,6 +202,11 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.database',
     'tools.image.sizeFull',
     'tools.database.defaultStatusProperty',
+    // "Artist" is the established Bokmål music-metadata noun.
+    'tools.audio.artistPlaceholder',
+    // Placeholder-only swatch labels follow Bokmål modifier-before-noun order.
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
   ]),
   pl: new Set([
     'toolNames.link',

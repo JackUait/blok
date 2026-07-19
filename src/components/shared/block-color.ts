@@ -11,7 +11,7 @@
 import type { I18n } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import { createColorPicker, getActivePresets } from './color-picker';
+import { createColorPicker, formatSwatchLabel, getActivePresets } from './color-picker';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK, colorVarName } from './color-presets';
 
 /**
@@ -55,12 +55,6 @@ export const applyBlockColor = (element: HTMLElement, data: BlockColorData): voi
 };
 
 /**
- * Capitalize a preset name for display ('red' → 'Red').
- * @param name - preset name
- */
-const titleCase = (name: string): string => name.charAt(0).toUpperCase() + name.slice(1);
-
-/**
  * Small inline swatch markup for a color menu entry.
  * @param cssValue - the CSS color value (var reference)
  * @param isBackground - render a filled square (bg) vs a colored glyph (text)
@@ -73,18 +67,6 @@ const swatch = (cssValue: string, isBackground: boolean): string => {
     ? `<span style="${base}background-color:${cssValue};border:1px solid rgba(0,0,0,0.08)"></span>`
     : `<span style="${base}color:${cssValue}">A</span>`;
 };
-
-/**
- * Labels for the block-color menu, resolved by the calling tool via its i18n.
- */
-export interface BlockColorLabels {
-  /** Title for the text-color submenu, e.g. "Text color". */
-  textColor: string;
-  /** Title for the background-color submenu, e.g. "Background". */
-  background: string;
-  /** Title for the "no color" reset entry, e.g. "Default". */
-  default: string;
-}
 
 /**
  * Options for {@link buildBlockColorTunes}.
@@ -110,8 +92,10 @@ export interface BlockColorTuneOptions {
 export interface BlockColorToolboxEntry {
   /** Unique popover-item name. */
   name: string;
-  /** Composed, already-translated title (color + axis label). */
+  /** Localized title composed from the locale's swatch-label template. */
   title: string;
+  /** English counterpart of the title, used for multilingual search. */
+  englishTitle: string;
   /** Inline swatch markup shown as the item icon. */
   icon: string;
   /** Which color field this command sets. */
@@ -128,18 +112,22 @@ export interface BlockColorToolboxEntry {
  * reset for each axis. Unlike {@link buildBlockColorTunes} (nested submenus for
  * the block-settings menu), these are flat, individually searchable entries —
  * so typing e.g. "/red background" or "/orange text" surfaces them directly.
- * @param labels - already-translated axis labels (Text color, Background, Default)
+ * Titles are composed via the locale's swatch-label templates so each locale
+ * controls the color name, word order and casing.
+ * @param i18n - translator resolving the swatch-label templates and color names
  */
-export const getBlockColorToolboxEntries = (labels: BlockColorLabels): BlockColorToolboxEntry[] => {
-  const axes: Array<{ field: keyof BlockColorData; mode: 'text' | 'bg'; label: string; keyword: string }> = [
-    { field: 'textColor', mode: 'text', label: labels.textColor, keyword: 'text' },
-    { field: 'backgroundColor', mode: 'bg', label: labels.background, keyword: 'background' },
+export const getBlockColorToolboxEntries = (i18n: I18n): BlockColorToolboxEntry[] => {
+  const english: Pick<I18n, 't'> = { t: (key) => i18n.getEnglishTranslation(key) };
+  const axes: Array<{ field: keyof BlockColorData; mode: 'text' | 'bg'; labelKey: string; keyword: string }> = [
+    { field: 'textColor', mode: 'text', labelKey: 'tools.marker.textColor', keyword: 'text' },
+    { field: 'backgroundColor', mode: 'bg', labelKey: 'tools.marker.background', keyword: 'background' },
   ];
 
   return axes.flatMap((axis) => {
     const presetEntries = COLOR_PRESETS.map((preset) => ({
       name: `block-color-${axis.mode}-${preset.name}`,
-      title: `${titleCase(preset.name)} ${axis.label}`,
+      title: formatSwatchLabel(i18n, axis.labelKey, preset.name),
+      englishTitle: formatSwatchLabel(english, axis.labelKey, preset.name),
       icon: swatch(colorVarName(preset.name, axis.mode), axis.field === 'backgroundColor'),
       field: axis.field,
       value: preset.name as string | undefined,
@@ -148,7 +136,8 @@ export const getBlockColorToolboxEntries = (labels: BlockColorLabels): BlockColo
 
     const defaultEntry = {
       name: `block-color-${axis.mode}-default`,
-      title: `${labels.default} ${axis.label}`,
+      title: formatSwatchLabel(i18n, axis.labelKey, null),
+      englishTitle: formatSwatchLabel(english, axis.labelKey, null),
       icon: swatch(axis.field === 'backgroundColor' ? 'transparent' : 'currentColor', axis.field === 'backgroundColor'),
       field: axis.field,
       value: undefined,

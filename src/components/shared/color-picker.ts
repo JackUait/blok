@@ -42,6 +42,24 @@ function colorsEqual(a: string, b: string): boolean {
 }
 
 /**
+ * Compose the localized label for a color entry ("Red text color" /
+ * "Цвет текста: Красный") from the locale's swatch-label template, so each
+ * locale controls the color name, word order and casing. Pass a preset name
+ * for a color entry, or null for the Default (reset) entry.
+ * @param i18n - translator resolving the template and color keys
+ * @param modeLabelKey - i18n key of the axis label, e.g. 'tools.marker.textColor'
+ * @param presetName - preset name ('red', …) or null for the Default entry
+ */
+export const formatSwatchLabel = (i18n: Pick<I18n, 't'>, modeLabelKey: string, presetName: string | null): string => {
+  const label = presetName === null
+    ? i18n.t('tools.colorPicker.defaultSwatchLabel').replace('{default}', i18n.t('tools.marker.default'))
+    : i18n.t('tools.colorPicker.colorSwatchLabel').replace('{color}', i18n.t('tools.colorPicker.color.' + presetName));
+  const composed = label.replace('{mode}', i18n.t(modeLabelKey).toLowerCase());
+
+  return composed.charAt(0).toUpperCase() + composed.slice(1);
+};
+
+/**
  * Describes one section in the color picker (e.g. "Text" or "Background")
  */
 export interface ColorPickerMode {
@@ -260,11 +278,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         renderRecentSection();
         onColorSelect(swatchColor, mode.key);
       });
-      const colorLabel = i18n.t('tools.colorPicker.colorSwatchLabel')
-        .replace('{color}', i18n.t('tools.colorPicker.color.' + entry.name))
-        .replace('{mode}', i18n.t(mode.labelKey).toLowerCase());
-
-      onHover(swatch, colorLabel.charAt(0).toUpperCase() + colorLabel.slice(1), { placement: 'top' });
+      onHover(swatch, formatSwatchLabel(i18n, mode.labelKey, entry.name), { placement: 'top' });
       grid.appendChild(swatch);
     }
 
@@ -328,11 +342,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     defaultSwatch.addEventListener('click', () => {
       onColorSelect(null, mode.key);
     });
-    const defaultLabel = i18n.t('tools.colorPicker.defaultSwatchLabel')
-      .replace('{default}', i18n.t('tools.marker.default'))
-      .replace('{mode}', i18n.t(mode.labelKey).toLowerCase());
-
-    onHover(defaultSwatch, defaultLabel.charAt(0).toUpperCase() + defaultLabel.slice(1), { placement: 'top' });
+    onHover(defaultSwatch, formatSwatchLabel(i18n, mode.labelKey, null), { placement: 'top' });
     grid.appendChild(defaultSwatch);
 
     for (const preset of presets) {
@@ -357,11 +367,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         renderRecentSection();
         onColorSelect(swatchColor, mode.key);
       });
-      const colorLabel = i18n.t('tools.colorPicker.colorSwatchLabel')
-        .replace('{color}', i18n.t('tools.colorPicker.color.' + preset.name))
-        .replace('{mode}', i18n.t(mode.labelKey).toLowerCase());
-
-      onHover(swatch, colorLabel.charAt(0).toUpperCase() + colorLabel.slice(1), { placement: 'top' });
+      onHover(swatch, formatSwatchLabel(i18n, mode.labelKey, preset.name), { placement: 'top' });
       grid.appendChild(swatch);
     }
   };

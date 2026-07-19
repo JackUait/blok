@@ -6,7 +6,36 @@ import {
   BLOCK_COLOR_SANITIZE,
 } from '../../../../src/components/shared/block-color';
 
-const labels = { textColor: 'Text color', background: 'Background', default: 'Default' };
+/**
+ * Russian-style dictionary: templates reorder to "{mode}: {color}" so the tests
+ * prove word order and color names come from the locale, not from code.
+ */
+const RU_DICT: Record<string, string> = {
+  'tools.marker.textColor': 'Цвет текста',
+  'tools.marker.background': 'Фон',
+  'tools.marker.default': 'По умолчанию',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.colorPicker.color.red': 'Красный',
+  'tools.colorPicker.color.orange': 'Оранжевый',
+};
+
+const EN_DICT: Record<string, string> = {
+  'tools.marker.textColor': 'Text color',
+  'tools.marker.background': 'Background',
+  'tools.marker.default': 'Default',
+  'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
+  'tools.colorPicker.colorSwatchLabel': '{color} {mode}',
+  'tools.colorPicker.color.red': 'Red',
+  'tools.colorPicker.color.orange': 'Orange',
+};
+
+const toolboxI18n = {
+  t: (key: string): string => RU_DICT[key] ?? key,
+  has: (key: string): boolean => key in RU_DICT,
+  getEnglishTranslation: (key: string): string => EN_DICT[key] ?? '',
+  getLocale: (): string => 'ru',
+};
 
 describe('block-color foundation', () => {
   describe('applyBlockColor', () => {
@@ -93,7 +122,7 @@ describe('block-color foundation', () => {
 
   describe('getBlockColorToolboxEntries', () => {
     it('returns a flat text + background command per preset, plus two Default resets', () => {
-      const entries = getBlockColorToolboxEntries(labels);
+      const entries = getBlockColorToolboxEntries(toolboxI18n);
 
       // 9 presets × 2 axes + 2 default resets
       expect(entries).toHaveLength(20);
@@ -103,28 +132,42 @@ describe('block-color foundation', () => {
       expect(new Set(names).size).toBe(names.length); // names are unique
     });
 
-    it('composes translated titles for text and background commands', () => {
-      const entries = getBlockColorToolboxEntries(labels);
+    it('composes titles from the locale swatch-label template (translated color, locale word order)', () => {
+      const entries = getBlockColorToolboxEntries(toolboxI18n);
 
       const redText = entries.find((e) => e.field === 'textColor' && e.value === 'red');
       const redBg = entries.find((e) => e.field === 'backgroundColor' && e.value === 'red');
 
-      expect(redText?.title).toBe('Red Text color');
-      expect(redBg?.title).toBe('Red Background');
+      expect(redText?.title).toBe('Цвет текста: Красный');
+      expect(redBg?.title).toBe('Фон: Красный');
     });
 
-    it('emits Default reset entries that clear each axis (value undefined)', () => {
-      const entries = getBlockColorToolboxEntries(labels);
+    it('exposes an English title alongside the localized one for multilingual search', () => {
+      const entries = getBlockColorToolboxEntries(toolboxI18n);
+
+      const redText = entries.find((e) => e.field === 'textColor' && e.value === 'red');
+      const redBg = entries.find((e) => e.field === 'backgroundColor' && e.value === 'red');
+
+      expect(redText?.englishTitle).toBe('Red text color');
+      expect(redBg?.englishTitle).toBe('Red background');
+    });
+
+    it('emits Default reset entries composed from the locale default-swatch template', () => {
+      const entries = getBlockColorToolboxEntries(toolboxI18n);
 
       const defaults = entries.filter((e) => e.value === undefined);
 
       expect(defaults).toHaveLength(2);
       expect(defaults.map((e) => e.field).sort()).toEqual(['backgroundColor', 'textColor']);
-      expect(defaults.every((e) => e.title.startsWith('Default'))).toBe(true);
+
+      const textDefault = defaults.find((e) => e.field === 'textColor');
+
+      expect(textDefault?.title).toBe('Цвет текста: По умолчанию');
+      expect(textDefault?.englishTitle).toBe('Default text color');
     });
 
     it('carries a swatch icon and color-related search terms for filtering', () => {
-      const entries = getBlockColorToolboxEntries(labels);
+      const entries = getBlockColorToolboxEntries(toolboxI18n);
 
       const orangeText = entries.find((e) => e.field === 'textColor' && e.value === 'orange');
 

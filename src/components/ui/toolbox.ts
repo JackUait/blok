@@ -846,11 +846,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const anyToolSupportsColor = Array.from(this.tools.values()).some((tool) => this.toolSupportsBlockColor(tool));
 
     if (anyToolSupportsColor) {
-      const colorEntries = getBlockColorToolboxEntries({
-        textColor: this.i18n.t('tools.marker.textColor'),
-        background: this.i18n.t('tools.marker.background'),
-        default: this.i18n.t('tools.marker.default'),
-      });
+      const colorEntries = getBlockColorToolboxEntries(this.api.i18n);
 
       this.colorCommandNames = colorEntries.map((entry) => entry.name);
 
@@ -863,7 +859,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
             void this.applyBlockColorCommand(entry.field, entry.value);
           },
           secondaryLabel: '',
-          englishTitle: entry.title,
+          englishTitle: entry.englishTitle,
           searchTerms: entry.searchTerms,
         });
       });

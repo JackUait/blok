@@ -263,6 +263,12 @@ describe('Toolbox', () => {
         on: vi.fn(),
         off: vi.fn(),
       },
+      i18n: {
+        t: vi.fn((key: string) => key),
+        has: vi.fn(() => false),
+        getEnglishTranslation: vi.fn((key: string) => key),
+        getLocale: vi.fn(() => 'en'),
+      },
     } as unknown as API;
 
     // Update mocks object (mutation instead of reassignment)

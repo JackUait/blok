@@ -265,7 +265,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bn` | Bengali | Bengali | ltr | to-audit | — | — | pending | pending | pending | `F-bn-001` | pending |
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
-| `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | — | — | pending | pending | pending | `F-da-001`–`F-da-083` | pending |
+| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `codex-da-first-final-545` | — | pass | pass | pass | `F-da-001`–`F-da-083` | first-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-first-final` | — | pass | pass | pass | `F-de-001`–`F-de-089` | first-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
@@ -396,6 +396,7 @@ locale returns to `pending`.
 | `am` | `wire-database-am-first-final` | `sha256:0e243c7a9f95c19901726d50e8600c8aa5c23fe29ab52736a27303652e32336e` | — | — |
 | `ar` | `codex-wire-ui-ar-first-final` | `sha256:c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a` | — | — |
 | `bg` | `codex-bg-first-final-reread` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` | — | — |
+| `da` | `codex-da-first-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` | — | — |
 | `de` | `root-de-first-final` | `sha256:5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba` | — | — |
 | `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
 | `ru` | `root-ru-first-final` | `sha256:55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821` | — | — |
@@ -923,60 +924,35 @@ their complete runtime scope. The source-level emoji correction independently
 resets all Czech pass evidence under rule 2; no reviewer or digest may be
 recorded until both exhaustive passes repeat on the corrected final bytes.
 
-### Danish (`da`) — current 539-key second pass complete
+### Danish (`da`) — current first pass complete
 
-The current-byte first reviewer inspected and, after applying the closed
-correction set, independently re-read 539/539 Danish values in source order
-across all top-level namespaces and all 23 `tools.*` subnamespaces. The review
-is bound to
-`sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2`.
-Coverage included all 38 placeholder-bearing values, all 29 documented
-source-only contracts, all 44 search aliases in their 14 duplicate-intent
-groups, every exact-English match, and all 42 changed-English dependencies.
-The current caller disposition is complete: 509 caller-consumed or retained
-built-compatibility contracts, 29 documented source-only contracts, and the
-single `notifier.dismiss` localization bypass.
+The current 545-entry corpus supersedes the historical 539-key review.
+Reviewer `codex-da-first-final-545` restarted at entry 1 on the final bytes
+and reread all 545/545 English/Danish pairs in English insertion order. The
+pass revalidated all 83 findings, all 77 English dependency rows covering 75
+current keys, every placeholder and alias, all 117 provider compositions, and
+the complete 532 caller-consumed or built-compatible + 12 source-only + 1
+localization-bypassed partition. The transient `popover.search` experiment was
+absent from both bound dictionaries; the stable pair is `Search` / `Søg`.
 
-All findings `F-da-001` through `F-da-076` are applied and exact, including
-the count-neutral nested-content warning, Apple’s unhyphenated `Billede i
-billede`, Microsoft’s `Ryd indhold` and plural `Aktiviteter`, and the
-source-synchronized `Forhåndsvisning` tab. The dictionary contains exactly 28
-supported exact-English values, all recorded as `R-da-001` through
-`R-da-028` below. All 44 search aliases remain normalization-distinct.
+The final dictionary has 545 unique, non-empty NFC string values with no
+missing, extra, duplicate, encoding, control, replacement-character,
+boundary-whitespace, or placeholder defect. The 38 placeholder-bearing values
+contain the same 54 occurrences as English. All 44 unique aliases in 14 live
+groups remain useful and normalization-distinct. The five multi-block
+templates are correct for their caller cardinalities, while the remaining
+variable-count messages remain count-neutral.
 
-Fresh post-edit validation found 539 Danish keys matching the 539 English
-keys, with no missing, extra, or duplicate decoded keys and zero structural
-integrity issues. Placeholder multisets match English for all 539 values;
-string type, non-empty, normalization, encoding, control-character, and
-boundary-whitespace checks also pass. The translation-guideline corpus passes
-975/975; the focused exact-English retention test passes 1/1; all 79 checker
-tests pass; and the live translation checker exits successfully.
+All `F-da-001` through `F-da-083` expectations match the final bytes. The
+exact-English inventory is exactly the 29 sourced notation, interpolation,
+loanword, acronym, and established-cognate retentions recorded as `R-da-001`
+through `R-da-029`. The live checker reports all 545 Danish keys with valid
+integrity and source coverage, and the focused Danish finding, count, emoji,
+structural, and retention gates pass.
 
-Terminology evidence includes Den Danske Ordbog entries for
-[ligning](https://ordnet.dk/ddo/ordbog?query=ligning),
-[formel](https://ordnet.dk/ddo/ordbog?query=formel),
-[link](https://ordnet.dk/ddo/ordbog?query=link),
-[upload](https://ordnet.dk/ddo/ordbog?query=upload),
-[database](https://ordnet.dk/ddo/ordbog/database),
-[layout](https://ordnet.dk/ddo/ordbog/layout),
-[video](https://ordnet.dk/ddo/ordbog/video),
-[pause](https://ordnet.dk/ddo/ordbog/pause),
-[status](https://ordnet.dk/ddo/ordbog/status), and
-[URL](https://ordnet.dk/ddo/ordbog/URL);
-[Microsoft equation UI](https://support.microsoft.com/da-dk/education/create-equations-in-word-for-the-web);
-[Apple music metadata](https://support.apple.com/da-dk/guide/iphone/iph0138fb328/ios);
-[Apple shortcut terminology](https://support.apple.com/da-dk/102650);
-[Microsoft list terminology](https://support.microsoft.com/da-dk/office/definer-nye-punkttegn-tal-og-opstillinger-i-flere-niveauer-6c06ef65-27ad-4893-80c9-0b944cb81f5f);
-[Microsoft's `Ryd indhold` command](https://support.microsoft.com/da-dk/office/arbejd-med-links-i-excel-7fc80d8d-68f9-482f-ab01-584c44d72b3e);
-[Microsoft's plural `Aktiviteter` emoji category](https://support.microsoft.com/da-dk/teams/chat/send-an-emoji-gif-or-sticker-in-microsoft-teams);
-and [Apple media terminology](https://support.apple.com/da-dk/guide/tv/atvb7944597f/26/tvos/26).
-A distinct second reviewer independently reread all 539 English/Danish pairs
-on the same bound bytes and revalidated all 76 findings, all 28 retentions,
-all 38 placeholder contracts, all 44 aliases in 14 groups, all 42
-changed-English dependencies, all 29 source-only contracts, the 509+29+1
-caller partition, and the complete structural manifest without finding a
-residual. Danish is therefore `second-pass-complete` on the bound 539-key
-digest.
+The current first pass binds to raw SHA-256
+`ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882`.
+The distinct complete second pass remains pending.
 
 ### Spanish (`es`) — current 539-key second pass complete
 

@@ -265,15 +265,15 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bn` | Bengali | Bengali | ltr | to-audit | — | — | pending | pending | pending | `F-bn-001` | pending |
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-cs-001` | pending |
-| `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | — | — | pending | pending | pending | `F-da-001`–`F-da-070` | pending |
-| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-073` | pending |
+| `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | codex-root-da-pass1-539-2026-07-19 | codex-da-pass2-539-2026-07-19 | pass | pass | pass | `F-da-001`–`F-da-076` | second-pass-complete |
+| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | codex-root-de-pass1-539-2026-07-19 | — | pass | pass | pass | `F-de-001`–`F-de-088` | first-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-en-pass1-539-2026-07-19 | — | pass | pass | pass | `F-en-001`–`F-en-042` | first-pass-complete |
-| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-087` | pending |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-en-pass1-539-2026-07-19 | codex-root-en-pass2-539-2026-07-19 | pass | pass | pass | `F-en-001`–`F-en-042` | second-pass-complete |
+| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | codex-root-es-pass1-539-2026-07-19 | — | pass | pass | pass | `F-es-001`–`F-es-097` | first-pass-complete |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
-| `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-060` | pending |
+| `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | codex-fi-pass1-539-2026-07-19 | — | pass | pass | pass | `F-fi-001`–`F-fi-077` | first-pass-complete |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-125` | pending |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
@@ -301,20 +301,20 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `my` | Burmese (Myanmar) | Myanmar | ltr | to-audit | — | — | pending | pending | pending | `F-my-001` | pending |
 | `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001` | pending |
 | `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | codex-nl-pass1-539-2026-07-19 | codex-nl-pass2-539-2026-07-19 | pass | pass | pass | `F-nl-001`–`F-nl-085` | second-pass-complete |
-| `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | codex-no-pass1-539-2026-07-19 | — | pass | pass | pass | `F-no-001`–`F-no-079` | first-pass-complete |
+| `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | codex-root-no-pass1-539-2026-07-19 | — | pass | pass | pass | `F-no-001`–`F-no-080` | first-pass-complete |
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001` | pending |
 | `pl` | Polish | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-pl-001` | pending |
 | `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001` | pending |
 | `pt` | Portuguese (current Brazilian wording) | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-pt-001` | pending |
 | `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001` | pending |
-| `ru` | Russian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-ru-001` | pending |
+| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | codex-ru-pass1-539-2026-07-19 | — | pass | pass | pass | `F-ru-001`–`F-ru-120` | first-pass-complete |
 | `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001` | pending |
 | `si` | Sinhala | Sinhala | ltr | to-audit | — | — | pending | pending | pending | `F-si-001` | pending |
 | `sk` | Slovak | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sk-001` | pending |
 | `sl` | Slovenian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sl-001` | pending |
 | `sq` | Albanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sq-001` | pending |
 | `sr` | Serbian (Cyrillic) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-sr-001` | pending |
-| `sv` | Swedish | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sv-001` | pending |
+| `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | codex-root-sv-pass1-539-2026-07-19 | — | pass | pass | pass | `F-sv-001`–`F-sv-083` | first-pass-complete |
 | `sw` | Swahili | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sw-001` | pending |
 | `ta` | Tamil | Tamil | ltr | to-audit | — | — | pending | pending | pending | `F-ta-001` | pending |
 | `te` | Telugu | Telugu | ltr | to-audit | — | — | pending | pending | pending | `F-te-001` | pending |
@@ -328,6 +328,24 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `zh` | Chinese (Simplified) | Simplified Han | ltr | to-audit | — | — | pending | pending | pending | `F-zh-001` | pending |
 | `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | to-audit | — | — | pending | pending | pending | `F-zh-TW-001` | pending |
 
+| `R-sv-001` | `sv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Swedish Apple guidance retains the `⌘` platform symbol. | [Apple — Kortkommandon på Mac](https://support.apple.com/sv-se/102650) |
+| `R-sv-002` | `sv` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Swedish Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Kortkommandon i Windows](https://support.microsoft.com/sv-se/windows/kortkommandon-i-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
+| `R-sv-003` | `sv` | `toolNames.text` | established cognate | `Text` is the normal unchanged Swedish noun and the natural concise toolbox label. | [Svenska Akademiens ordlista — text](https://svenska.se/saol/?sok=text) |
+| `R-sv-004` | `sv` | `tools.colorPicker.color.orange` | established cognate | `Orange` is the established unchanged Swedish color name. | [Svenska Akademiens ordlista — orange](https://svenska.se/saol/?sok=orange) |
+| `R-sv-005` | `sv` | `searchTerms.layout` | established loanword | Lowercase `layout` is an established Swedish design and interface term and follows the locale's search-alias casing. | [Microsoft — Hantera tangentbordslayout](https://support.microsoft.com/sv-SE/Windows/Hardware/Input-Devices/manage-the-language-and-keyboard-input-layout-settings-in-windows) |
+| `R-sv-006` | `sv` | `tools.callout.colorOrange` | established cognate | `Orange` is the established unchanged Swedish color name. | [Svenska Akademiens ordlista — orange](https://svenska.se/saol/?sok=orange) |
+| `R-sv-007` | `sv` | `toolNames.video` | established loanword | `Video` is the established unchanged Swedish media noun and the natural concise toolbox label. | [Apple — Spela upp videor på iPhone](https://support.apple.com/sv-se/guide/iphone/iphb71f9b54d/ios) |
+| `R-sv-008` | `sv` | `tools.link.linkText` | established cognate | `Text` is the normal unchanged Swedish noun for the visible link text. | [Svenska Akademiens ordlista — text](https://svenska.se/saol/?sok=text) |
+| `R-sv-009` | `sv` | `tools.image.sizeFull` | established cognate | `Full` is the ordinary Swedish adjective for a complete or 100-percent extent and is a concise size option in this context. | [Svenska Akademiens ordlista — full](https://svenska.se/saol/?sok=full) |
+| `R-sv-010` | `sv` | `tools.image.altButton` | acronym | `Alt` is the conventional compact form associated with Swedish `alternativtext`; the surrounding dialog supplies the full localized label. | [Microsoft — Effektiv alternativtext](https://support.microsoft.com/sv-se/accessibility/office-accessibility/everything-you-need-to-know-to-write-effective-alt-text) |
+| `R-sv-011` | `sv` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation used unchanged in Swedish media interfaces. | [Apple — Beskär en bild eller video](https://support.apple.com/sv-se/guide/iphone/iph3dc593597/ios) |
+| `R-sv-012` | `sv` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Swedish media interfaces. | [Apple — Beskär en bild eller video](https://support.apple.com/sv-se/guide/iphone/iph3dc593597/ios) |
+| `R-sv-013` | `sv` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Swedish media interfaces. | [Apple — Beskär en bild eller video](https://support.apple.com/sv-se/guide/iphone/iph3dc593597/ios) |
+| `R-sv-014` | `sv` | `tools.audio.artistPlaceholder` | established loanword | `Artist` is the established unchanged Swedish media noun and Apple Music uses the exact field label for track metadata. | [Apple Music — Ändra låtinformation](https://support.apple.com/sv-se/guide/music-windows/mus2561f46f8/windows) |
+| `R-sv-015` | `sv` | `tools.database.propertyTypeText` | established cognate | `Text` is the normal unchanged Swedish noun for this database property type. | [Svenska Akademiens ordlista — text](https://svenska.se/saol/?sok=text) |
+| `R-sv-016` | `sv` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Swedish product interfaces. | [Svenska Akademiens ordlista — URL](https://svenska.se/saol/?sok=url) |
+| `R-sv-017` | `sv` | `tools.database.defaultStatusProperty` | established cognate | `Status` is the normal unchanged Swedish noun for this workflow property. | [Svenska Akademiens ordlista — status](https://svenska.se/saol/?sok=status) |
+
 ## Reviewed Dictionary Digests
 
 These hashes bind each completed review to the exact raw dictionary that both
@@ -336,9 +354,15 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
-| `en` | `codex-en-pass1-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` | — | — |
+| `en` | `codex-en-pass1-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` | `codex-root-en-pass2-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` |
+| `da` | `codex-root-da-pass1-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` | `codex-da-pass2-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` |
+| `de` | `codex-root-de-pass1-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` | — | — |
+| `es` | `codex-root-es-pass1-539-2026-07-19` | `sha256:9575136e82187a2839d8fec16f3cdc260e71377bc5d1f51c62b03df677661247` | — | — |
+| `fi` | `codex-fi-pass1-539-2026-07-19` | `sha256:0ca6b959eedb97fe8ca1bed8ce75549cae9a5f299fb7f9f18463574443eebe71` | — | — |
 | `nl` | `codex-nl-pass1-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` | `codex-nl-pass2-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` |
-| `no` | `codex-no-pass1-539-2026-07-19` | `sha256:e1a4882c60e01a87c40704c2e64fd9eac3da2194172179c742fc5506b4f8b93d` | — | — |
+| `no` | `codex-root-no-pass1-539-2026-07-19` | `sha256:d08881a82c9e3fd0bf81e38a92add5cdf667c3ec2edc424453dca86a3a6a3033` | — | — |
+| `ru` | `codex-ru-pass1-539-2026-07-19` | `sha256:85346859ecb32511fdd877786f50e2fc0e462880cdb044f9dfa98001d5cd0eb8` | — | — |
+| `sv` | `codex-root-sv-pass1-539-2026-07-19` | `sha256:5ad6c69ea09192087498df91d9d26b1fb13915ede46622076970875226cf16af` | — | — |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -375,7 +399,7 @@ source-coverage, encoding, and normalization checker pass. `F-en-036` and all
 only the missing-key defect; every locale row remains `pending` and still
 requires two complete, distinct 539-entry linguistic passes.
 
-## English Source Audit Evidence — current 539-key first pass complete
+## English Source Audit Evidence — current 539-key second pass complete
 
 The current first reviewer inspected all 539/539 English values against the
 guidelines and their rendered, accessibility, or explicitly documented
@@ -397,6 +421,16 @@ encoding, normalization, and 195-static-reference checker pass. The current
 raw dictionary SHA-256 is
 `3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65`.
 English has no exact-English retention inventory by definition.
+
+The distinct second reviewer independently reread all 539 current values in
+source order, rechecked the 509 caller-consumed or built contracts, 29
+source-only contracts, the localization-bypassed notifier contract, all 42
+recorded source findings, all 38 placeholder-bearing values, and all 44 search
+aliases. No additional source defect was found. The focused English search
+alias and duplicate-key cases pass, the complete 946-case guideline contract
+passes against these bytes, and the live checker again reports 539/539 keys
+with intact placeholders, encoding, normalization, and static source coverage.
+This second pass is bound to the same raw SHA-256 shown above.
 
 The prior English pass inspected all 538 values in their rendered,
 accessibility, or explicitly documented source-only contexts. Coverage was
@@ -510,30 +544,53 @@ for concise German alternative-text terminology; and
 These results close the German first pass; the distinct second review remains
 unassigned.
 
-### Danish (`da`) — first-pass evidence reset by second review
+After the 539-key migration and all later residual corrections, the current
+first reviewer repeated the complete 539-value review in English source order.
+The current pass rechecked every `F-de-001` through `F-de-088` expectation,
+all 42 changed-English dependencies, the 509 caller-consumed or built
+contracts, 29 source-only contracts, the notifier bypass, all 38
+placeholder-bearing values, all 44 aliases, and exactly the 25 supported
+retentions `R-de-001` through `R-de-025`. The final residual changed the emoji
+category heading from singular `Aktivität` to Microsoft’s established plural
+`Aktivitäten`.
 
-The first reviewer inspected and, after applying the reviewed corrections,
-re-read 538/538 current Danish values across all top-level namespaces and all
-23 `tools.*` subnamespaces. Coverage included every source-only value, all
-44/44 search aliases, every placeholder-bearing value, all 35 changed-English
-dependencies, and the full exact-English inventory.
+The live checker, its 79-case unit suite, the complete guideline,
+search-quality, duplicate-key, and focused exact-retention suites pass.
+Structural inspection found no key, type, placeholder, encoding,
+normalization, control-character, or boundary-whitespace defect. This current
+first pass binds to raw SHA-256
+`ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c`.
+German is therefore `first-pass-complete`; a distinct complete second review
+remains required on these exact bytes.
 
-All 68 reviewed corrections are applied and exact: the 15 formerly exempt
-English fallbacks, 20 of the 35 changed-source dependencies, and 33 additional
-caller-backed defects. The other 15 changed-source dependencies retain their
-reviewed Danish wording. The amended `F-da-066` contract and dictionary both
-use `Kopiér video-URL ved den aktuelle afspilningsposition`. The final
-dictionary contains exactly 28 supported exact-English values, all recorded as
-`R-da-001` through `R-da-028` below. All 44 search aliases remain
-normalization-distinct.
+### Danish (`da`) — current 539-key second pass complete
 
-Fresh post-edit validation found 538 Danish keys matching the 538 English keys,
-with no missing, extra, or duplicate decoded keys and zero structural integrity
-issues. Placeholder multisets match English for all 538 values; string type,
-non-empty, normalization, encoding, control-character, and boundary-whitespace
-checks also pass. All 68 focused Danish finding cases pass, the full
-translation-guideline corpus passes 334/334, the search-term quality suite
-passes 129/129, and the live translation checker exits successfully.
+The current-byte first reviewer inspected and, after applying the closed
+correction set, independently re-read 539/539 Danish values in source order
+across all top-level namespaces and all 23 `tools.*` subnamespaces. The review
+is bound to
+`sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2`.
+Coverage included all 38 placeholder-bearing values, all 29 documented
+source-only contracts, all 44 search aliases in their 14 duplicate-intent
+groups, every exact-English match, and all 42 changed-English dependencies.
+The current caller disposition is complete: 509 caller-consumed or retained
+built-compatibility contracts, 29 documented source-only contracts, and the
+single `notifier.dismiss` localization bypass.
+
+All findings `F-da-001` through `F-da-076` are applied and exact, including
+the count-neutral nested-content warning, Apple’s unhyphenated `Billede i
+billede`, Microsoft’s `Ryd indhold` and plural `Aktiviteter`, and the
+source-synchronized `Forhåndsvisning` tab. The dictionary contains exactly 28
+supported exact-English values, all recorded as `R-da-001` through
+`R-da-028` below. All 44 search aliases remain normalization-distinct.
+
+Fresh post-edit validation found 539 Danish keys matching the 539 English
+keys, with no missing, extra, or duplicate decoded keys and zero structural
+integrity issues. Placeholder multisets match English for all 539 values;
+string type, non-empty, normalization, encoding, control-character, and
+boundary-whitespace checks also pass. The translation-guideline corpus passes
+975/975; the focused exact-English retention test passes 1/1; all 79 checker
+tests pass; and the live translation checker exits successfully.
 
 Terminology evidence includes Den Danske Ordbog entries for
 [ligning](https://ordnet.dk/ddo/ordbog?query=ligning),
@@ -550,37 +607,45 @@ Terminology evidence includes Den Danske Ordbog entries for
 [Apple music metadata](https://support.apple.com/da-dk/guide/iphone/iph0138fb328/ios);
 [Apple shortcut terminology](https://support.apple.com/da-dk/102650);
 [Microsoft list terminology](https://support.microsoft.com/da-dk/office/definer-nye-punkttegn-tal-og-opstillinger-i-flere-niveauer-6c06ef65-27ad-4893-80c9-0b944cb81f5f);
+[Microsoft's `Ryd indhold` command](https://support.microsoft.com/da-dk/office/arbejd-med-links-i-excel-7fc80d8d-68f9-482f-ab01-584c44d72b3e);
+[Microsoft's plural `Aktiviteter` emoji category](https://support.microsoft.com/da-dk/teams/chat/send-an-emoji-gif-or-sticker-in-microsoft-teams);
 and [Apple media terminology](https://support.apple.com/da-dk/guide/tv/atvb7944597f/26/tvos/26).
-The distinct second review approved the rest of this evidence but found that
-`F-da-016` still used plural `de` for content whose `{count}` may equal one,
-and that `tools.video.pip` did not match Apple’s unhyphenated Danish
-`Billede i billede`. `F-da-016` is therefore reopened with a count-neutral
-expectation and `F-da-069` records the additional terminology defect. The
-Danish results, reviewer cells, digest, and final status are reset until both
-corrections are applied and the complete current dictionary is reviewed again.
+A distinct second reviewer independently reread all 539 English/Danish pairs
+on the same bound bytes and revalidated all 76 findings, all 28 retentions,
+all 38 placeholder contracts, all 44 aliases in 14 groups, all 42
+changed-English dependencies, all 29 source-only contracts, the 509+29+1
+caller partition, and the complete structural manifest without finding a
+residual. Danish is therefore `second-pass-complete` on the bound 539-key
+digest.
 
 ### Spanish (`es`) — first pass complete
 
-The first reviewer inspected and, after applying the approved corrections,
-re-read 538/538 current Spanish values across all eight top-level namespaces
-and every `tools.*` subnamespace. Coverage included all 38
-placeholder-bearing values, all 29 documented source-only contracts, all 44
-search aliases, every exact-English match, and all 35 changed-English
-dependencies.
+The current-byte first reviewer inspected and, after applying the closed
+correction set, independently re-read 539/539 Spanish values in source order
+across all eight top-level namespaces and every `tools.*` subnamespace. The
+review is bound to
+`sha256:9575136e82187a2839d8fec16f3cdc260e71377bc5d1f51c62b03df677661247`.
+Coverage included all 38 placeholder-bearing values, all 29 documented
+source-only contracts, all 44 search aliases in their 14 duplicate-intent
+groups, every exact-English match, and all 42 changed-English dependencies.
+The current caller disposition is complete: 509 caller-consumed or retained
+built-compatibility contracts, 29 documented source-only contracts, and the
+single `notifier.dismiss` localization bypass.
 
-All 86 approved corrections are applied and exact. The initial dictionary had
-26 exact-English values: 11 supported retentions and 15 defects. Those 15
-defects are now localized, while approved `F-es-046` changed
-`toolNames.marker` from `Resaltador` to `Color`, creating one newly supported
-exact match. The final exact-English inventory is therefore 12 values,
-recorded as `R-es-001` through `R-es-012` below. All 44 search aliases are
-reviewed and normalization-distinct.
+All findings `F-es-001` through `F-es-097` are applied and exact. The initial
+dictionary had 26 exact-English values: 11 supported retentions and 15
+defects. Those 15 defects are now localized, while approved `F-es-046`
+changed `toolNames.marker` from `Resaltador` to `Color`, creating one newly
+supported exact match. The final exact-English inventory is therefore exactly
+12 values, recorded as `R-es-001` through `R-es-012` below. All 44 search
+aliases are reviewed and normalization-distinct.
 
-Fresh post-edit validation found 538 Spanish keys in the reviewed order, with
+Fresh post-edit validation found 539 Spanish keys in the reviewed order, with
 no missing, extra, or duplicate decoded keys. Placeholder multisets, string
 type, non-empty, NFC, encoding, control-character, and boundary-whitespace
-checks are clean. The translation-guideline suite passes 334/334, the
-search-term quality suite passes 129/129, all 77 checker tests pass, and the
+checks are clean. The translation-guideline suite passes 969/969; the
+search-term-quality and duplicate-key suites pass 199/199; the focused
+exact-English retention test passes 1/1; all 79 checker tests pass; and the
 live translation checker exits successfully.
 
 The selected register is informal Spain Spanish: `tú` imperatives for
@@ -589,11 +654,13 @@ spelling such as `vídeo` and `añadir`. Terminology evidence includes
 [Notion's Spain callout guidance](https://www.notion.com/es-es/help/customize-and-style-your-content?position=1)
 for `Destacado`;
 [Notion's Spain media guidance](https://www.notion.com/es-es/help/images-files-and-media)
-for `leyenda`, media alignment, `Crear inserción`, and `Reemplazar`;
+for `leyenda`, media alignment, and `Reemplazar`;
 [Notion's board guidance](https://www.notion.com/es-es/help/boards)
 for `añadir`, `tablero`, and `estado`;
 [Microsoft programming-language terminology](https://support.microsoft.com/es-ES/infopath/change-the-programming-language-of-a-form-template);
 [Microsoft cell-alignment terminology](https://support.microsoft.com/es-es/office/alinear-texto-en-una-celda-en-excel-b2489a1f-6c89-45b7-9562-bbc287aa71ea);
+[Microsoft's `Borrar contenido` command](https://support.microsoft.com/es-es/excel/clear-cells-of-contents-or-formats);
+[Microsoft's plural `Actividades` emoji category](https://support.microsoft.com/es-es/office/enviar-un-emoji-o-un-gif-en-microsoft-teams-gratis-cfbfc796-de50-4c59-b116-9117e0b25b6b);
 [Microsoft equation and LaTeX terminology](https://support.microsoft.com/es-es/office/escribir-una-ecuaci%C3%B3n-o-una-f%C3%B3rmula-1d01cabc-ceb1-458d-bc70-7f9737722702);
 [Apple shortcut notation](https://support.apple.com/es-es/102650);
 [Adobe aspect-ratio notation](https://helpx.adobe.com/es/premiere/mobile/manage-clips/change-the-aspect-ratio-of-clips.html);
@@ -607,7 +674,8 @@ caller in `src/components/utils/notifier/draw.ts` reads the bundled English
 dictionary rather than the active locale. That localization bypass is
 recorded as a valid caller disposition rather than a Spanish value finding and
 does not block this dictionary pass. These results close the Spanish first
-pass; the distinct second review remains unassigned.
+pass on the bound 539-key digest; the distinct second review remains
+unassigned.
 
 ### French (`fr`) — first pass complete
 
@@ -695,6 +763,41 @@ checks, the 130-case search suite, 77 checker tests, and the live checker pass.
 The final exact-English inventory remains exactly the 22 sourced `R-fr`
 entries. These results close the French first pass; the distinct second review
 must now repeat against the current digest.
+
+### Finnish (`fi`) — first pass complete
+
+The current-byte reviewer inspected 539/539 Finnish values in source order and
+then repeated the complete semantic inventory after all corrections. The
+review is bound to
+`sha256:0ca6b959eedb97fe8ca1bed8ce75549cae9a5f299fb7f9f18463574443eebe71`.
+It reconciled all findings `F-fi-001` through `F-fi-077`, all 42
+changed-English dependencies, all 38 placeholder-bearing templates, all 44
+search aliases in their 14 duplicate-intent groups, all 29 documented
+source-only contracts, and exactly the eight supported exact-English
+retentions `R-fi-001` through `R-fi-008`. The caller disposition is complete:
+509 caller-consumed or retained built-compatibility contracts, 29 source-only
+contracts, and the single `notifier.dismiss` localization bypass.
+
+The placeholder review found one cross-locale runtime defect rather than a
+Finnish wording defect: the single-block duplication path passed `{position}`
+to `a11y.blockDuplicated` but omitted required `{total}`, rendering a literal
+`{total}` in every locale. A red-first four-block regression now requires
+`{ position: 4, total: 4 }`, and the caller supplies the block count. The
+independent post-fix matrix covers all 38 templates and 41 runtime contracts
+with no remaining caller issue; the Finnish reproduction is
+`Lohko kopioitu kohtaan 4/4`.
+
+Structural inspection found 539 keys, exact placeholder multisets, and no key,
+type, empty-string, duplicate-key, normalization, encoding,
+control-character, or boundary-whitespace defect. The complete guideline
+corpus passes 975/975; the combined `F-fi`/`F-en` cases pass 119/119; search
+and duplicate-key suites pass 199/199; the focused Finnish retention case
+passes; checker tests pass 79/79; DragA11y passes 21/21; relevant component
+and tool caller suites pass 268 and 457 cases; and the independent 18-file
+caller sweep passes 1,026 tests. Targeted lint and `git diff --check` are
+clean, and independent code review found no Critical, Important, or Minor
+issue. Finnish is therefore `first-pass-complete` on the bound digest; a
+distinct complete second review remains required on these exact bytes.
 
 ### Italian (`it`) — first-pass evidence reset by second review
 
@@ -1124,7 +1227,11 @@ key, source-only contract, exact match, or `F-no` finding.
 The preceding paragraphs preserve the historical 538-key defect evidence.
 After the 539-key migration and the later residual corrections, the fresh
 first reviewer reread all 539 current values and approved
-`F-no-001` through `F-no-079`. Coverage is 509 caller-consumed or built
+`F-no-001` through `F-no-080`. A second-review challenge exposed and closed
+three residuals: the count-unsafe pronoun in the nested-content warning, the
+indefinite focused-block announcement, and the singular emoji category
+heading. The current-byte pass rechecked those corrections together with
+every unchanged value. Coverage is 509 caller-consumed or built
 contracts, 29 documented source-only contracts, and the one localized value
 whose notifier caller still bypasses the active dictionary. All 38
 placeholder-bearing values, all 44 search aliases, and all 42 changed-English
@@ -1134,9 +1241,88 @@ retentions `R-no-001` through `R-no-016`.
 Finding, structural, ledger-integrity, exact-retention, search-quality,
 duplicate-key, paste-menu caller, and live 539-key checker suites pass. The
 first pass binds to raw SHA-256
-`e1a4882c60e01a87c40704c2e64fd9eac3da2194172179c742fc5506b4f8b93d`.
+`d08881a82c9e3fd0bf81e38a92add5cdf667c3ec2edc424453dca86a3a6a3033`.
 Norwegian is therefore `first-pass-complete`; a distinct complete second
 review remains required on these exact bytes.
+
+### Swedish (`sv`) — current 539-key first pass complete
+
+The first reviewer reread all 539 current Swedish values in six disjoint
+source-order ranges after the final correction batch. A second-review
+challenge then exposed the subjectless finite verb in
+`a11y.navigatedToBlock`; the corrected resultative announcement and every
+unchanged value were rechecked on the current bytes. The review reconciled
+all `F-sv-001` through `F-sv-083` expectations, all 42 changed-English
+dependencies, all 38 placeholder-bearing values, all 44 search aliases across
+14 registered groups, and the exact 17 supported English retentions
+`R-sv-001` through `R-sv-017`.
+
+Caller tracing accounts for all 539 contracts: 509 are caller-consumed or
+built, 29 are documented source-only values, and `notifier.dismiss` is the
+single localized value whose current notifier caller bypasses the active
+dictionary. A separate caller/dependency cross-check independently reconciled
+that partition, every finding, every dependency, every placeholder, every
+alias, and every retention without finding a residual.
+
+The live checker, its 79-case unit suite, the guideline, duplicate-key, search,
+exact-retention, and caller-focused suites all pass. Structural inspection
+found no missing, extra, duplicate, empty, non-string, non-NFC, replacement,
+control-character, or boundary-whitespace defect. The first pass binds to raw
+SHA-256
+`5ad6c69ea09192087498df91d9d26b1fb13915ede46622076970875226cf16af`.
+Swedish is therefore `first-pass-complete`; a distinct complete second review
+remains required on these exact bytes.
+
+### Russian (`ru`) — current 539-key first pass complete
+
+The first reviewer inspected all 539 Russian values against the current
+English source, their rendered, accessibility, built-compatibility, or
+documented source-only contracts. After the correction batch, the reviewer
+independently reread all 539 current EN/RU pairs in four source-order
+partitions (1–140, 141–280, 281–420, and 421–539), including every unchanged
+value. No residual semantic, grammar, terminology, register, punctuation, or
+accessibility defect remained.
+
+`F-ru-002` through `F-ru-120` recorded 119 corrections in addition to the
+previously verified 539-key migration finding `F-ru-001`. The red-first
+guideline run failed exactly those 119 expectations and no other case before
+the dictionary changed. The final dictionary differs from its pre-audit bytes
+at exactly 119 keys. All 42 changed-English dependencies have an explicit
+current disposition: 25 required correction and 17 retained their reviewed
+Russian wording. All 38 placeholder-bearing templates preserve their exact
+placeholder multisets.
+
+All 44 search aliases were reread in the 14 registered `searchTermKeys`
+groups. Their normalized Russian values are lowercase, the 44-key union is
+complete, and no group contains a duplicate alias. The exact-English inventory
+is exactly seven values, documented as `R-ru-001` through `R-ru-007`: two
+platform shortcuts, the compact `Alt` control, three aspect-ratio notations,
+and the `URL` acronym.
+
+Caller reconciliation accounts for all 539 contracts: 509 are caller-consumed
+or retained built-compatibility values, 29 are documented source-only values,
+and `notifier.dismiss` is the single localized value whose built-in notifier
+still reads the bundled English dictionary instead of the active locale. The
+29 source-only values were individually reread; the nested-content warning,
+plain-text label, and video-caption toggle required corrections, while the
+other 26 retain their reviewed current wording.
+
+The Russian tooltip composition exposed one legitimate structural edge case:
+`blockSettings.openMenuAction` must begin with `, чтобы…` so both
+`Нажмите, чтобы…` and `Нажмите или используйте Ctrl+/, чтобы…` are
+grammatical. The integrity checker now admits a localized Unicode
+punctuation-plus-space prefix only when the English source fragment begins
+with whitespace and all other boundary whitespace remains aligned. A
+red-first positive case and a punctuation-without-space negative case lock
+that narrow rule while the pre-existing accidental-whitespace case remains
+red.
+
+Guideline, structural, ledger-integrity, exact-retention, search-quality,
+duplicate-key, live 539-key checker, and the checker’s 81-case unit suites
+pass. The first pass binds to raw SHA-256
+`85346859ecb32511fdd877786f50e2fc0e462880cdb044f9dfa98001d5cd0eb8`.
+Russian is therefore `first-pass-complete`; a distinct complete second review
+remains required on these exact bytes.
 
 ## Findings
 
@@ -1194,7 +1380,7 @@ follows the global transition rule above.
 | `F-en-042` | `en` | `tools.file.previewRender` | jargon / context | `"Rendered"` | `"Preview"` | This Markdown-preview tab shows the formatted visual preview. “Rendered” exposes an implementation term; “Preview” is the familiar user-facing state and pairs clearly with “Source.” | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
-| `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks werden sie auf die oberste Ebene verschoben. Fortfahren?"` | Source-only warning must work for one or many and avoid needlessly technical `Konvertierung`. | verified |
+| `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird jeder verschachtelte Block auf die oberste Ebene verschoben. Fortfahren?"` | Source-only warning must work for one or many and avoid needlessly technical `Konvertierung`; the first correction retained plural `sie werden`, which is unsuitable when `{count}=1`. | verified |
 | `F-de-004` | `de` | `toolbox.addBelow` | grammar | `"Klicken zum Einfügen darunter"` | `"Klicken, um darunter einzufügen"` | Plus-button tooltip needs a grammatical action phrase. | verified |
 | `F-de-005` | `de` | `toolbox.optionAddAbove` | shortcut clarity | `"⌥ — darüber einfügen"` | `"⌥-Klick: darüber einfügen"` | Tooltip omitted the click gesture required by the shortcut. | verified |
 | `F-de-006` | `de` | `toolbox.ctrlAddAbove` | shortcut clarity | `"Strg — darüber einfügen"` | `"Strg-Klick: darüber einfügen"` | Windows tooltip omitted the click gesture required by the shortcut. | verified |
@@ -1234,12 +1420,12 @@ follows the global transition rule above.
 | `F-de-040` | `de` | `tools.image.converting` | pending translation | `"Converting…"` | `"Wird konvertiert…"` | Visible image-processing status retained an English fallback. | verified |
 | `F-de-041` | `de` | `tools.image.altDescription` | accessibility / brevity | `"Fügen Sie einen Alternativtext hinzu, der das Bild beschreibt. So wird Ihre Seite für sehbehinderte oder blinde Personen zugänglicher."` | `"Beschreiben Sie dieses Bild für Menschen, die es nicht sehen können."` | Alt dialog already supplies the purpose; German accessibility guidance favors concise direct descriptions. | verified |
 | `F-de-042` | `de` | `tools.image.errorFileTooLarge` | pending translation | `"Image is too large. {size} exceeds the {max} limit."` | `"Das Bild ist zu groß. {size} überschreitet die Höchstgrenze von {max}."` | Image upload size error retained an English fallback; placeholders remain exact. | verified |
-| `F-de-043` | `de` | `tools.image.errorDefaultMessage` | natural error copy | `"Die URL hat einen Fehler zurückgegeben. Versuchen Sie eine andere Quelle oder laden Sie die Datei erneut hoch."` | `"Beim Laden der URL ist ein Fehler aufgetreten. Versuchen Sie eine andere Quelle oder laden Sie die Datei erneut hoch."` | A URL does not itself “return” an error; replacement is clearer and less technical. | verified |
+| `F-de-043` | `de` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"Die URL hat einen Fehler zurückgegeben. Versuchen Sie eine andere Quelle oder laden Sie die Datei erneut hoch."` | `"Das Bild konnte über diese URL nicht geladen werden. Versuchen Sie es mit einer anderen Quelle oder laden Sie die Datei erneut hoch."` | The image error body must identify the failed image load rather than an abstract URL-loading error, while retaining both recovery actions from the corrected source. | verified |
 | `F-de-044` | `de` | `tools.image.emptyOrDropHere` | grammar | `"oder Bild hier ablegen"` | `"oder ein Bild hier ablegen"` | Visible image empty-state instruction lacked an article. | verified |
 | `F-de-045` | `de` | `tools.file.emptyDropHint` | grammar | `"oder Datei hier ablegen"` | `"oder eine Datei hier ablegen"` | Visible file empty-state instruction lacked an article. | verified |
 | `F-de-046` | `de` | `tools.file.errorFileTooLarge` | pending translation | `"File is too large. {size} exceeds the {max} limit."` | `"Die Datei ist zu groß. {size} überschreitet die Höchstgrenze von {max}."` | File upload size error retained an English fallback; placeholders remain exact. | verified |
 | `F-de-047` | `de` | `tools.file.previewRaw` | context | `"Original"` | `"Quelltext"` | Markdown preview tab shows source text, not an original file. | verified |
-| `F-de-048` | `de` | `tools.file.previewRender` | jargon | `"Gerendert"` | `"Formatiert"` | Markdown preview tab should avoid an unnecessary technical anglicism and pair naturally with `Quelltext`. | verified |
+| `F-de-048` | `de` | `tools.file.previewRender` | terminology / source synchronization | `"Gerendert"` | `"Vorschau"` | The corrected source names the rendered Preview tab; Microsoft’s German product UI uses the familiar label [Vorschau](https://support.microsoft.com/de-de/office/f%C3%BCr-die-vorschau-von-dateien-in-onedrive-sharepoint-und-teams-unterst%C3%BCtzte-dateitypen-e054cd0f-8ef2-4ccb-937e-26e37419c5e4). | verified |
 | `F-de-049` | `de` | `tools.database.viewTypeListDescription` | terminology / clarity | `"Eine einfache lineare Ansicht"` | `"Elemente in einer einfachen Liste anzeigen"` | View picker should describe the familiar result rather than an abstract linear view. | verified |
 | `F-de-050` | `de` | `tools.bookmark.loading` | progress punctuation | `"Linkvorschau wird geladen"` | `"Linkvorschau wird geladen…"` | Rendered in-progress placeholder needs the corpus progress ellipsis. | verified |
 | `F-de-051` | `de` | `tools.embed.empty` | read-only context | `"Link zum Einbetten einfügen"` | `"Kein Link zum Einbetten"` | Key renders only for an empty read-only embed where pasting is impossible. | verified |
@@ -1279,7 +1465,7 @@ follows the global transition rule above.
 | `F-da-013` | `da` | `tools.audio.coverErrorType` | pending translation | `"Choose an image file"` | `"Vælg en billedfil"` | Wrong-file-type validation instruction retained an English fallback. | verified |
 | `F-da-014` | `da` | `tools.audio.coverErrorTooLarge` | pending translation | `"Image is too large"` | `"Billedet er for stort"` | Cover upload error retained an English fallback. | verified |
 | `F-da-015` | `da` | `tools.audio.coverAdd` | pending translation | `"Add a cover"` | `"Tilføj et coverbillede"` | Cover-picker action retained an English fallback. | verified |
-| `F-da-016` | `da` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Denne blok indeholder {count} indlejrede blokke. Konvertering vil flytte dem til øverste niveau. Vil du fortsætte?"` | `"Indlejrede blokke: {count}. Hvis blokken konverteres, flyttes det indlejrede indhold til øverste niveau. Fortsæt?"` | The first correction retained plural `de`, which is ungrammatical when `{count}=1`; count-neutral `det indlejrede indhold` follows [Den Danske Ordbog](https://ordnet.dk/ddo/ordbog/indhold) and the corrected source contract. | open |
+| `F-da-016` | `da` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Denne blok indeholder {count} indlejrede blokke. Konvertering vil flytte dem til øverste niveau. Vil du fortsætte?"` | `"Indlejrede blokke: {count}. Hvis blokken konverteres, flyttes det indlejrede indhold til øverste niveau. Fortsæt?"` | The first correction retained plural `de`, which is ungrammatical when `{count}=1`; count-neutral `det indlejrede indhold` follows [Den Danske Ordbog](https://ordnet.dk/ddo/ordbog/indhold) and the corrected source contract. | verified |
 | `F-da-017` | `da` | `tools.marker.textColor` | terminology | `"Tekst"` | `"Tekstfarve"` | Shared color-picker mode needs an explicit text-color label. | verified |
 | `F-da-018` | `da` | `tools.toggle.bodyPlaceholder` | hint clarity | `"Tom sammenklappelig blok. Klik eller træk blokke ind."` | `"Tom sammenklappelig blok. Klik for at tilføje en blok, eller træk blokke hertil."` | Placeholder must distinguish click-to-create from drag-to-drop. | verified |
 | `F-da-019` | `da` | `tools.table.placement` | terminology | `"Placering"` | `"Justering"` | Picker controls cell-content alignment rather than generic placement. | verified |
@@ -1310,7 +1496,7 @@ follows the global transition rule above.
 | `F-da-044` | `da` | `searchTerms.header` | semantic alias | `"sidehoved"` | `"rubrik"` | Alias targets the heading tool; `sidehoved` means a page header. | verified |
 | `F-da-045` | `da` | `searchTerms.unordered` | terminology | `"usorteret"` | `"punktopstilling"` | An unordered list is not an unsorted list; replacement is established list terminology. | verified |
 | `F-da-046` | `da` | `searchTerms.ordered` | terminology | `"sorteret"` | `"nummereret"` | An ordered list is numbered, not semantically sorted. | verified |
-| `F-da-047` | `da` | `tools.file.previewRender` | context / terminology | `"Vis"` | `"Formateret"` | Rendered-view tab paired with `Kildetekst` needs a state label, not an imperative. | verified |
+| `F-da-047` | `da` | `tools.file.previewRender` | context / source synchronization | `"Formateret"` | `"Forhåndsvisning"` | The tab shows the rendered visual preview; `Formateret` describes a property rather than the familiar preview state now named by the source. | verified |
 | `F-da-048` | `da` | `tools.video.alignmentLeft` | action clarity | `"Venstre"` | `"Venstrejustér"` | Menu item performs an alignment action and has no separate accessible label. | verified |
 | `F-da-049` | `da` | `tools.video.alignmentCenter` | action clarity | `"Midten"` | `"Centrér"` | Menu item performs an alignment action and has no separate accessible label. | verified |
 | `F-da-050` | `da` | `tools.video.alignmentRight` | action clarity | `"Højre"` | `"Højrejustér"` | Menu item performs an alignment action and has no separate accessible label. | verified |
@@ -1332,7 +1518,7 @@ follows the global transition rule above.
 | `F-da-066` | `da` | `tools.video.ctxCopyUrlAtTime` | context / grammar | `"Kopiér video-URL ved aktuelt tidspunkt"` | `"Kopiér video-URL ved den aktuelle afspilningsposition"` | Context-menu action copies the media position, not a wall-clock time; replacement also fixes the definite phrase. | verified |
 | `F-da-067` | `da` | `tools.audio.speedDecrease` | grammar / action clarity | `"Reducer afspilningshastighed"` | `"Sænk afspilningshastigheden"` | Natural imperative needs the definite object. | verified |
 | `F-da-068` | `da` | `tools.audio.speedIncrease` | grammar | `"Øg afspilningshastighed"` | `"Øg afspilningshastigheden"` | Adds the required definite ending to the object. | verified |
-| `F-da-069` | `da` | `tools.video.pip` | established product terminology | `"Billede-i-billede"` | `"Billede i billede"` | Apple’s Danish [Apple TV](https://support.apple.com/da-dk/guide/tv/atvb7944597f/26/tvos/26) and [iPhone](https://support.apple.com/da-dk/guide/iphone/iphcc3587b5d/ios) interfaces use the unhyphenated feature name. | open |
+| `F-da-069` | `da` | `tools.video.pip` | established product terminology | `"Billede-i-billede"` | `"Billede i billede"` | Apple’s Danish [Apple TV](https://support.apple.com/da-dk/guide/tv/atvb7944597f/26/tvos/26) and [iPhone](https://support.apple.com/da-dk/guide/iphone/iphcc3587b5d/ios) interfaces use the unhyphenated feature name. | verified |
 | `F-es-001` | `es` | `tools.image.errorFileTooLarge` | pending translation / error | `"Image is too large. {size} exceeds the {max} limit."` | `"La imagen es demasiado grande. {size} supera el límite de {max}."` | Image-size error retained English; both placeholders remain exact. | verified |
 | `F-es-002` | `es` | `tools.video.errorFileTooLarge` | pending translation / error | `"Video is too large. {size} exceeds the {max} limit."` | `"El vídeo es demasiado grande. {size} supera el límite de {max}."` | Video-size error retained English; Spain spelling and both placeholders are preserved. | verified |
 | `F-es-003` | `es` | `tools.file.errorFileTooLarge` | pending translation / error | `"File is too large. {size} exceeds the {max} limit."` | `"El archivo es demasiado grande. {size} supera el límite de {max}."` | File-size error retained English; both placeholders remain exact. | verified |
@@ -1348,7 +1534,7 @@ follows the global transition rule above.
 | `F-es-013` | `es` | `tools.audio.coverAdd` | pending translation / action | `"Add a cover"` | `"Añadir una portada"` | Empty cover-picker action retained English. | verified |
 | `F-es-014` | `es` | `toolNames.equation` | pending translation / tool name | `"Equation"` | `"Ecuación"` | Inline equation tool retained English instead of the established Spanish mathematical term. | verified |
 | `F-es-015` | `es` | `tools.equation.placeholder` | pending translation / hint | `"Enter a LaTeX formula…"` | `"Escribe una fórmula LaTeX…"` | Formula input retained English; replacement uses the informal register and preserves `LaTeX`. | verified |
-| `F-es-016` | `es` | `blockSettings.convertWithChildrenWarning` | number / terminology | `"Este bloque contiene {count} bloques anidados. Al convertirlo, pasarán al nivel superior. ¿Quieres continuar?"` | `"Bloques anidados: {count}. Al convertir este bloque, se moverán al nivel superior. ¿Quieres continuar?"` | Source-only warning needs a count-neutral label and the corrected move-to-top-level semantics. | verified |
+| `F-es-016` | `es` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Bloques anidados: {count}. Al convertir este bloque, se moverán al nivel superior. ¿Quieres continuar?"` | `"Bloques anidados: {count}. Al convertir este bloque, el contenido anidado se moverá al nivel superior. ¿Quieres continuar?"` | The first correction retained a plural implicit subject that is awkward when `{count}=1`; `el contenido anidado` preserves the move-to-top-level semantics without number-dependent agreement. | verified |
 | `F-es-017` | `es` | `tools.marker.textColor` | terminology | `"Texto"` | `"Color del texto"` | Shared color-picker mode needs an explicit text-color label. | verified |
 | `F-es-018` | `es` | `tools.toggle.bodyPlaceholder` | hint clarity | `"Desplegable vacío. Haz clic o arrastra bloques dentro."` | `"Desplegable vacío. Haz clic para añadir un bloque o arrastra bloques aquí."` | Placeholder must distinguish click-to-create from drag-to-place. | verified |
 | `F-es-019` | `es` | `tools.table.placement` | terminology | `"Posición"` | `"Alineación"` | Picker controls horizontal and vertical cell-content alignment. | verified |
@@ -1692,7 +1878,7 @@ follows the global transition rule above.
 | `F-nl-064` | `nl` | `tools.video.ctxCopyUrlAtTime` | context / clarity | `"Video-URL op huidige tijd kopiëren"` | `"Video-URL vanaf de huidige afspeelpositie kopiëren"` | The copied URL starts at the playback head, not at an ambiguous current clock time. | verified |
 | `F-nl-065` | `nl` | `tools.video.ctxStats` | slang / terminology / source synchronization | `"Statistieken voor nerds"` | `"Afspeelstatistieken"` | Removes slang and identifies the playback-data domain. | verified |
 | `F-nl-066` | `nl` | `tools.callout.emojiSearchResults` | number / accessibility / source synchronization | `"{count} emoji's gevonden"` | `"Emojiresultaten: {count}"` | The live region can announce one result; the replacement is count-neutral. | verified |
-| `F-no-001` | `no` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Denne blokken inneholder {count} nestede blokker. Konvertering vil flytte dem til øverste nivå. Vil du fortsette?"` | `"Nestede blokker: {count}. Når denne blokken konverteres, flyttes de til øverste nivå. Vil du fortsette?"` | Source-only warning must follow the corrected count-first source contract and avoid treating the placeholder as an attributive plural phrase. | verified |
+| `F-no-001` | `no` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Denne blokken inneholder {count} nestede blokker. Konvertering vil flytte dem til øverste nivå. Vil du fortsette?"` | `"Nestede blokker: {count}. Når denne blokken konverteres, flyttes det nestede innholdet til øverste nivå. Vil du fortsette?"` | Source-only warning must follow the corrected count-first source contract and remain grammatical for both one and many nested blocks; count-neutral `det nestede innholdet` avoids the plural pronoun `de` when `{count}` is one. | verified |
 | `F-no-002` | `no` | `toolbox.optionAddAbove` | platform terminology | `"Option-klikk for å legge til ovenfor"` | `"Tilvalg-klikk for å legge til ovenfor"` | Apple’s Norwegian macOS terminology names the Option key `Tilvalg`, including modified-click instructions. | verified |
 | `F-no-003` | `no` | `tools.marker.textColor` | terminology / source synchronization | `"Tekst"` | `"Tekstfarge"` | Shared color-picker modes require an explicit text-color label; the old noun does not distinguish text from the mode itself. | verified |
 | `F-no-004` | `no` | `tools.paragraph.placeholder` | grammar / hint clarity | `"Skriv noe eller trykk / for å velge"` | `"Skriv noe, eller trykk på / for å velge et verktøy"` | The instruction needs the preposition after `trykk`, punctuation between alternatives, and the omitted object selected by `/`. | verified |
@@ -1707,7 +1893,7 @@ follows the global transition rule above.
 | `F-no-013` | `no` | `a11y.searchResults` | number / accessibility / source synchronization | `"{count} resultater"` | `"Søkeresultater: {count}"` | Search live regions can announce one result; the label-before-count form is grammatical for every value. | verified |
 | `F-no-014` | `no` | `a11y.allBlocksSelected` | number / accessibility / source synchronization | `"Alle blokker valgt, {count} blokker"` | `"Alle blokker er valgt. Totalt: {count}"` | Select-all can operate on one block; the replacement is count-neutral and avoids repeating a plural noun. | verified |
 | `F-no-015` | `no` | `a11y.navigationModeExited` | grammar / accessibility | `"Avsluttet navigasjonsmodus"` | `"Navigasjonsmodus avsluttet"` | The old past-tense verb lacks a subject; the replacement is a natural status announcement. | verified |
-| `F-no-016` | `no` | `a11y.navigatedToBlock` | grammar / accessibility | `"Navigerte til blokk"` | `"Navigert til blokk"` | A completed navigation announcement requires the resultative participle rather than finite past tense without a subject. | verified |
+| `F-no-016` | `no` | `a11y.navigatedToBlock` | grammar / accessibility | `"Navigerte til blokk"` | `"Navigert til blokken"` | A completed navigation announcement requires the resultative participle rather than finite past tense without a subject, and the definite noun identifies the specific block that received focus. | verified |
 | `F-no-017` | `no` | `a11y.dropCreateColumnLeft` | drop context / accessibility | `"Oppretter en kolonne til venstre"` | `"En kolonne opprettes til venstre når du slipper"` | The announcement occurs before drop and must describe the prospective result rather than imply creation is already underway. | verified |
 | `F-no-018` | `no` | `a11y.dropCreateColumnRight` | drop context / accessibility | `"Oppretter en kolonne til høyre"` | `"En kolonne opprettes til høyre når du slipper"` | The announcement occurs before drop and must describe the prospective result rather than imply creation is already underway. | verified |
 | `F-no-019` | `no` | `searchTerms.header` | semantic alias | `"topptekst"` | `"rubrikk"` | The alias targets the heading tool; `topptekst` denotes page-header content rather than a document heading. | verified |
@@ -1774,72 +1960,120 @@ follows the global transition rule above.
 | `F-bs-001` | `bs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti formatiranje"` | LibreOffice’s Bosnian product UI supplies the exact Clear formatting translation [Očisti formatiranje](https://github.com/LibreOffice/translations/blob/master/source/bs/svx/messages.po#L6304-L6305). | verified |
 | `F-cs-001` | `cs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Vymazat formátování"` | Microsoft’s Czech Word instructions name the concise command [Vymazat formátování](https://support.microsoft.com/cs-cz/office/form%C3%A1tov%C3%A1n%C3%AD-dokumentu-aplikace-word-fb9ef2d6-e2ad-4721-abc1-55f88864617f). | verified |
 | `F-da-070` | `da` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Ryd formatering"` | Microsoft’s Danish editor UI uses the exact concise command [Ryd formatering](https://support.microsoft.com/da-dk/office/rydde-al-tekstformatering-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
+| `F-da-071` | `da` | `tools.table.clearSelection` | context / action accuracy | `"Ryd"` | `"Ryd indhold"` | Both table callers clear selected cell, row, or column contents while preserving the cells and formatting; Microsoft Excel uses the exact Danish command [Ryd indhold](https://support.microsoft.com/da-dk/office/arbejd-med-links-i-excel-7fc80d8d-68f9-482f-ab01-584c44d72b3e). | verified |
+| `F-da-072` | `da` | `a11y.navigatedToBlock` | grammar / accessibility | `"Navigeret til blok"` | `"Navigeret til blokken"` | The announcement refers to the definite block that just received navigation focus, so the bare indefinite noun is unnatural. | verified |
+| `F-da-073` | `da` | `a11y.dropCreateColumnLeft` | event timing / accessibility | `"Opretter en kolonne til venstre"` | `"Der oprettes en kolonne til venstre"` | The live-region message describes the prospective drop result, not an action already in progress; the passive future-result wording preserves that timing without an omitted subject. | verified |
+| `F-da-074` | `da` | `a11y.dropCreateColumnRight` | event timing / accessibility | `"Opretter en kolonne til højre"` | `"Der oprettes en kolonne til højre"` | The live-region message describes the prospective drop result, not an action already in progress; the passive future-result wording preserves that timing without an omitted subject. | verified |
+| `F-da-075` | `da` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Aktivitet"` | `"Aktiviteter"` | The emoji picker renders a category heading and navigation label; Microsoft Teams’ Danish emoji gallery uses the plural category name [Aktiviteter](https://support.microsoft.com/da-dk/teams/chat/send-an-emoji-gif-or-sticker-in-microsoft-teams). | verified |
+| `F-da-076` | `da` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"URL’en returnerede en fejl. Prøv en anden kilde, eller upload filen igen."` | `"Billedet kunne ikke indlæses fra denne URL. Prøv en anden kilde, eller upload filen igen."` | A URL does not itself return an error; the replacement directly identifies the failed image load while preserving the concise recovery instruction. | verified |
 | `F-de-073` | `de` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Formatierung löschen"` | Microsoft’s German editor UI uses the exact command [Formatierung löschen](https://support.microsoft.com/de-DE/PowerPoint/clear-all-text-formatting). | verified |
+| `F-de-074` | `de` | `blockSettings.clickAction` | caller composition / naturalness | `"Klicken"` | `"Mit einem Klick"` | The fragment is composed by the settings toggler with `openMenuAction`; the replacement produces the natural instruction `Mit einem Klick [oder ⌘/] das Menü öffnen`. | verified |
+| `F-de-075` | `de` | `blockSettings.openMenuAction` | caller composition / naturalness | `" zum Öffnen des Menüs"` | `" das Menü öffnen"` | The leading-space fragment must compose with `clickAction` and an optional shortcut; the current pair recreates the stilted wording already rejected by `F-de-002`. | verified |
+| `F-de-076` | `de` | `tools.colorPicker.defaultSwatchLabel` | accessibility / caller composition | `"{mode} {default}"` | `"{mode}: {default}"` | The template is a swatch accessible name; punctuation separates label and value so callers produce natural output such as `Textfarbe: Standard`. | verified |
+| `F-de-077` | `de` | `tools.colorPicker.colorSwatchLabel` | accessibility / caller composition | `"{mode} {color}"` | `"{mode}: {color}"` | The template is a swatch accessible name; punctuation separates label and value so callers produce natural output such as `Textfarbe: Rot`. | verified |
+| `F-de-078` | `de` | `tools.table.comfortableText` | naturalness / density terminology | `"Komfortabler Text"` | `"Luftiger Text"` | The current label is an English calque; Microsoft describes the roomier density using [großzügigere Abstände](https://support.microsoft.com/de-de/office/sie-bevorzugen-geringere-abst%C3%A4nde-7aedcfaf-03de-49ad-9bf8-8730134f1f3b), and `Luftiger Text` forms a concise contrast with compact text. | verified |
+| `F-de-079` | `de` | `tools.callout.skinTone` | established product terminology | `"Hautfarbe"` | `"Hautton"` | Microsoft’s German emoji interface uses the exact selector term [Hautton](https://support.microsoft.com/de-DE/teams/chat/select-your-emoji-skin-tone). | verified |
+| `F-de-080` | `de` | `tools.link.jumpToSection` | grammar / established product terminology | `"Zu Abschnitt springen"` | `"Zum Abschnitt springen"` | The source-only link action needs the contracted article; Microsoft uses the exact German label [Zum Abschnitt springen](https://support.microsoft.com/de-de/office/formatieren-einer-edition-e4c524cf-cf06-40b5-9ebe-d6d8efd18d27). | verified |
+| `F-de-081` | `de` | `tools.video.alignmentLeft` | action terminology | `"Links"` | `"Linksbündig ausrichten"` | The settings item performs an alignment action and has no separate accessible action label; Microsoft German uses `Linksbündig ausrichten`. | verified |
+| `F-de-082` | `de` | `tools.video.alignmentCenter` | action terminology | `"Mitte"` | `"Zentriert ausrichten"` | The settings item performs an alignment action; the current noun only names a position rather than the command. | verified |
+| `F-de-083` | `de` | `tools.video.alignmentRight` | action terminology | `"Rechts"` | `"Rechtsbündig ausrichten"` | The settings item performs an alignment action and has no separate accessible action label; Microsoft German uses `Rechtsbündig ausrichten`. | verified |
+| `F-de-084` | `de` | `tools.audio.alignmentLeft` | action terminology | `"Links"` | `"Linksbündig ausrichten"` | The audio settings item performs the same alignment action as its video counterpart and needs the same explicit command. | verified |
+| `F-de-085` | `de` | `tools.audio.alignmentCenter` | action terminology | `"Mitte"` | `"Zentriert ausrichten"` | The audio settings item performs the same alignment action as its video counterpart and needs the same explicit command. | verified |
+| `F-de-086` | `de` | `tools.audio.alignmentRight` | action terminology | `"Rechts"` | `"Rechtsbündig ausrichten"` | The audio settings item performs the same alignment action as its video counterpart and needs the same explicit command. | verified |
+| `F-de-087` | `de` | `tools.audio.coverSourceAria` | accessibility / context | `"Bildquelle"` | `"Quelle des Coverbilds"` | The accessible tab-group label belongs to the cover-image dialog; generic `Bildquelle` loses the required cover context. | verified |
+| `F-de-088` | `de` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Aktivität"` | `"Aktivitäten"` | The emoji picker renders this value as a category heading and category-navigation accessible name; Microsoft Teams’ German emoji catalog uses the plural category label `Aktivitäten`. | verified |
 | `F-dv-001` | `dv` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ފޯމެޓްތައް ފޮހޭ"` | TinyMCE’s current Dhivehi rich-text-editor locale maps the exact action Clear formatting to [ފޯމެޓްތައް ފޮހޭ](https://unpkg.com/tinymce-i18n@26.2.9/langs/dv.js), a closer caller match than a composed generic-cleaning phrase. | verified |
 | `F-el-001` | `el` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Απαλοιφή μορφοποίησης"` | Microsoft’s Greek editor UI uses the exact command [Απαλοιφή μορφοποίησης](https://support.microsoft.com/el-gr/office/%CE%B1%CF%80%CE%B1%CE%BB%CE%BF%CE%B9%CF%86%CE%AE-%CF%8C%CE%BB%CE%B7%CF%82-%CF%84%CE%B7%CF%82-%CE%BC%CE%BF%CF%81%CF%86%CE%BF%CF%80%CE%BF%CE%AF%CE%B7%CF%83%CE%B7%CF%82-%CE%BA%CE%B5%CE%B9%CE%BC%CE%AD%CE%BD%CE%BF%CF%85-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
 | `F-es-087` | `es` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Borrar formato"` | Microsoft’s Spanish editor UI uses the exact concise command [Borrar formato](https://support.microsoft.com/es-es/office/borrar-todo-el-formato-de-texto-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
+| `F-es-088` | `es` | `blockSettings.clickAction` | caller composition / naturalness | `"Clic"` | `"Haz clic"` | The fragment is composed with an optional shortcut and `para abrir el menú`; the imperative produces the natural instruction `Haz clic o ⌘/ para abrir el menú` instead of a bare noun. | verified |
+| `F-es-089` | `es` | `tools.colorPicker.defaultSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {default}"` | `"{mode}: {default}"` | The template is a swatch accessible name; the colon separates the mode from its value in output such as `Color del texto: Predeterminado`. | verified |
+| `F-es-090` | `es` | `tools.colorPicker.colorSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {color}"` | `"{mode}: {color}"` | The template is a swatch accessible name; the colon makes output such as `Color del texto: Rojo` an unambiguous label-value pair. | verified |
+| `F-es-091` | `es` | `tools.table.clearSelection` | context / action accuracy | `"Borrar"` | `"Borrar contenido"` | Both table callers clear selected cell, row, or column contents while preserving the cells and formatting; Microsoft Excel uses the exact Spanish command `Borrar contenido`. | verified |
+| `F-es-092` | `es` | `tools.table.comfortableText` | naturalness / density terminology | `"Texto cómodo"` | `"Texto espacioso"` | The current label is an English calque; the option describes the roomier density opposite `Texto compacto`, not emotional comfort. | verified |
+| `F-es-093` | `es` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Actividad"` | `"Actividades"` | The emoji picker renders a category heading and navigation label; Microsoft Teams’ Spanish emoji gallery uses the plural category name `Actividades`. | verified |
+| `F-es-094` | `es` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"La URL devolvió un error. Prueba con otra fuente o vuelve a subir el archivo."` | `"No se pudo cargar la imagen desde esta URL. Prueba con otra fuente o vuelve a subir el archivo."` | A URL does not itself return an error; the replacement directly identifies the failed image load while retaining the concise informal recovery instruction. | verified |
+| `F-es-095` | `es` | `tools.file.previewRaw` | context / source synchronization | `"Sin formato"` | `"Fuente"` | The Markdown tab shows the file’s source text; `Sin formato` describes styling rather than the content and no longer matches the corrected source contract. | verified |
+| `F-es-096` | `es` | `tools.file.previewRender` | context / source synchronization | `"Con formato"` | `"Vista previa"` | The tab shows the formatted visual preview; `Con formato` describes a property instead of the familiar preview state. | verified |
+| `F-es-097` | `es` | `tools.linkPaste.embed` | action grammar / source-only contract | `"Crear inserción"` | `"Insertar contenido"` | The paste-menu item must name a natural action; `Crear inserción` is an awkward nominal calque, while `Insertar contenido` matches the locale’s established embed terminology. | verified |
 | `F-et-001` | `et` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Eemalda vorming"` | Microsoft’s Estonian Word UI uses the exact command [Eemalda vorming](https://support.microsoft.com/et-ee/word/format-your-word-document). | verified |
 | `F-fa-001` | `fa` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"پاک کردن قالب‌بندی"` | LibreOffice’s Persian product UI supplies the exact Clear formatting translation [پاک کردن قالب‌بندی](https://github.com/LibreOffice/translations/blob/master/source/fa/svx/messages.po#L6368-L6369). | verified |
 | `F-fi-001` | `fi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Poista muotoilu"` | Microsoft’s Finnish OneNote UI uses the exact concise command [Poista muotoilu](https://support.microsoft.com/fi-fi/office/tekstin-korostaminen-onenoten-verkkoversio-5dadd21f-311c-42a3-8094-281f7bb7e127) for removing inline text styling. | verified |
-| `F-fi-002` | `fi` | `toolNames.bold` | terminology / tool name | `"Lihavoitu"` | `"Lihavointi"` | The current state adjective means “bolded”; the toolbox needs the established Finnish formatting-command noun. | open |
-| `F-fi-003` | `fi` | `toolNames.italic` | terminology / tool name | `"Kursiivi"` | `"Kursivointi"` | Use the established Finnish formatting-command term parallel to `Lihavointi`. | open |
-| `F-fi-004` | `fi` | `tools.marker.textColor` | terminology / source synchronization | `"Teksti"` | `"Tekstin väri"` | The current value drops the color concept and collides with plain Text; Microsoft Finnish uses `tekstin väri`. | open |
-| `F-fi-005` | `fi` | `tools.paragraph.placeholder` | grammar / hint clarity | `"Kirjoita jotain tai paina / valitaksesi"` | `"Kirjoita jotain tai paina / valitaksesi työkalun"` | The current instruction is grammatically incomplete because it omits what the slash command selects. | open |
-| `F-fi-006` | `fi` | `tools.toggle.bodyPlaceholder` | action clarity / source synchronization | `"Tyhjä avattava lohko. Napsauta tai pudota lohkoja sisään."` | `"Tyhjä avattava lohko. Napsauta lisätäksesi lohkon tai vedä lohkoja tähän."` | The caller’s click adds a child block while drag accepts existing blocks; the replacement names both distinct actions. | open |
-| `F-fi-007` | `fi` | `tools.toggle.ariaLabelCollapse` | established UI terminology | `"Pienennä"` | `"Kutista"` | `Pienennä` means reduce or minimize; Microsoft Finnish uses `Kutista` as the counterpart to expand. | open |
-| `F-fi-008` | `fi` | `tools.table.clearSelection` | context / action accuracy | `"Tyhjennä"` | `"Tyhjennä sisältö"` | Both table callers clear cell contents; the corrected source distinguishes this from clearing selection or deleting cells. | open |
-| `F-fi-009` | `fi` | `tools.table.placement` | terminology / source synchronization | `"Sijainti"` | `"Tasaus"` | The picker changes cell-content alignment rather than location; Microsoft Finnish uses `Tasaus`. | open |
-| `F-fi-010` | `fi` | `blockSettings.copyLink` | grammar / semantics | `"Kopioi linkki lohkoon"` | `"Kopioi lohkon linkki"` | The current phrase reads as “copy a link into the block”; the action copies this block’s link. | open |
-| `F-fi-011` | `fi` | `a11y.dropCancelled` | drag terminology / accessibility | `"Veto peruutettu"` | `"Vetäminen peruutettu"` | `Veto` means a pull, bet, or draw; `vetäminen` names the UI drag operation naturally. | open |
-| `F-fi-012` | `fi` | `searchTerms.collapse` | terminology consistency | `"pienennä"` | `"kutista"` | The search alias must use the same established expand/collapse term as the corrected action. | open |
-| `F-fi-013` | `fi` | `tools.callout.addEmoji` | terminology / source synchronization | `"Lisää emoji"` | `"Lisää kuvake"` | The corrected source says Add icon; the callout UI treats the chosen emoji as its icon. | open |
-| `F-fi-014` | `fi` | `tools.callout.filterEmojis` | search clarity / accessibility | `"Suodata…"` | `"Hae emojeja…"` | This is a searchbox placeholder and accessible name; the current generic Filter omits what is searched. | open |
-| `F-fi-015` | `fi` | `tools.callout.pickRandom` | action clarity / accessibility | `"Satunnainen"` | `"Valitse satunnainen emoji"` | The button needs a complete action and object rather than a bare adjective. | open |
-| `F-fi-016` | `fi` | `toolNames.equation` | pending translation / tool name | `"Equation"` | `"Yhtälö"` | The English fallback must be replaced by the established Finnish mathematical term. | open |
-| `F-fi-017` | `fi` | `tools.equation.placeholder` | pending translation / hint | `"Enter a LaTeX formula…"` | `"Syötä LaTeX-kaava…"` | Localizes the full instruction while preserving the LaTeX product name. | open |
-| `F-fi-018` | `fi` | `tools.link.linkTitle` | context / terminology | `"Linkin otsikko"` | `"Linkin teksti"` | The field changes the visible link text, not title metadata. | open |
-| `F-fi-019` | `fi` | `tools.image.sizeFull` | grammar / size label | `"Täysi"` | `"Täysi koko"` | Bare `Täysi` is an incomplete adjective for a size option; the replacement explicitly means full size. | open |
-| `F-fi-020` | `fi` | `tools.image.moreOptions` | terminology / accessibility | `"Lisää asetuksia"` | `"Lisää vaihtoehtoja"` | “Options” are not necessarily settings; Microsoft Finnish uses `Lisää vaihtoehtoja` for overflow actions. | open |
-| `F-fi-021` | `fi` | `tools.image.converting` | pending translation / progress | `"Converting…"` | `"Muunnetaan…"` | The visible image-processing state retained an English fallback. | open |
-| `F-fi-022` | `fi` | `tools.image.errorFileTooLarge` | pending translation / error | `"Image is too large. {size} exceeds the {max} limit."` | `"Kuva on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the upload error and preserves both placeholders exactly. | open |
-| `F-fi-023` | `fi` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"URL palautti virheen. Kokeile toista lähdettä tai lataa tiedosto uudelleen."` | `"Kuvaa ei voitu ladata tästä URL-osoitteesta. Kokeile toista lähdettä tai lähetä tiedosto uudelleen."` | The corrected source identifies the failed image load; the current value personifies the URL and uses upload/download-ambiguous `lataa`. | open |
-| `F-fi-024` | `fi` | `tools.file.errorFileTooLarge` | pending translation / error | `"File is too large. {size} exceeds the {max} limit."` | `"Tiedosto on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the file-preview error and preserves both placeholders exactly. | open |
-| `F-fi-025` | `fi` | `tools.file.previewRaw` | source synchronization / tab terminology | `"Koodi"` | `"Lähde"` | The corrected source concept is Source; the Markdown text is not necessarily program code. | open |
-| `F-fi-026` | `fi` | `tools.file.previewRender` | source synchronization / tab terminology | `"Näkymä"` | `"Esikatselu"` | The corrected source concept is Preview; `Näkymä` only means a generic view. | open |
-| `F-fi-027` | `fi` | `tools.video.moreOptions` | terminology / accessibility | `"Lisää asetuksia"` | `"Lisää vaihtoehtoja"` | Same options-versus-settings distinction as the image overflow control. | open |
-| `F-fi-028` | `fi` | `tools.video.loop` | media terminology / state label | `"Toista"` | `"Jatkuva toisto"` | `Toista` also means Play or Repeat and does not clearly name loop mode; YouTube Finnish uses continuous-play terminology. | open |
-| `F-fi-029` | `fi` | `tools.video.errorFileTooLarge` | pending translation / error | `"Video is too large. {size} exceeds the {max} limit."` | `"Video on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the upload error and preserves both placeholders exactly. | open |
-| `F-fi-030` | `fi` | `tools.audio.loop` | media terminology / state label | `"Toista"` | `"Jatkuva toisto"` | Same loop-versus-play ambiguity as the video control. | open |
-| `F-fi-031` | `fi` | `tools.audio.errorFileTooLarge` | pending translation / error | `"Audio is too large. {size} exceeds the {max} limit."` | `"Äänitiedosto on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the error, names the audio file precisely, and preserves both placeholders. | open |
-| `F-fi-032` | `fi` | `tools.audio.titlePlaceholder` | pending translation / metadata | `"Track title"` | `"Kappaleen nimi"` | Apple’s Finnish music metadata uses the natural track-name term. | open |
-| `F-fi-033` | `fi` | `tools.audio.artistPlaceholder` | pending translation / metadata | `"Artist"` | `"Artisti"` | English `Artist` is not the Finnish noun `Artisti`. | open |
-| `F-fi-034` | `fi` | `tools.audio.emptyOrDropHere` | media terminology / grammar | `"tai pudota ääni tähän"` | `"tai pudota äänitiedosto tähän"` | The drop target accepts an audio file, not abstract sound. | open |
-| `F-fi-035` | `fi` | `tools.audio.emptyUrlPlaceholder` | grammar | `"Liitä äänin URL…"` | `"Liitä äänen URL…"` | `äänin` is not the required singular genitive; use `äänen`. | open |
-| `F-fi-036` | `fi` | `tools.audio.emptyUrlAria` | grammar / accessibility | `"Äänin URL"` | `"Äänen URL"` | Corrects the same singular-genitive error in the accessible label. | open |
-| `F-fi-037` | `fi` | `tools.audio.emptySourceAria` | grammar / accessibility | `"Äänin lähde"` | `"Äänen lähde"` | Corrects the same singular-genitive error in the source-group label. | open |
-| `F-fi-038` | `fi` | `tools.audio.coverChange` | pending translation / media terminology | `"Change cover"` | `"Vaihda kansikuva"` | Localizes the action with Spotify Finnish’s established `kansikuva` term. | open |
-| `F-fi-039` | `fi` | `tools.audio.coverSet` | pending translation / media terminology | `"Set cover image"` | `"Aseta kansikuva"` | Localizes the action with the established music-cover term. | open |
-| `F-fi-040` | `fi` | `tools.audio.coverRemove` | pending translation / media terminology | `"Remove cover"` | `"Poista kansikuva"` | Localizes the action with the established music-cover term. | open |
-| `F-fi-041` | `fi` | `tools.audio.coverErrorType` | pending translation / error | `"Choose an image file"` | `"Valitse kuvatiedosto"` | Localizes the wrong-file-type recovery instruction. | open |
-| `F-fi-042` | `fi` | `tools.audio.coverErrorTooLarge` | pending translation / error | `"Image is too large"` | `"Kuva on liian suuri"` | Localizes the cover-image size error. | open |
-| `F-fi-043` | `fi` | `tools.audio.coverAdd` | pending translation / media terminology | `"Add a cover"` | `"Lisää kansikuva"` | Localizes the empty-cover action with the established music-cover term. | open |
-| `F-fi-044` | `fi` | `tools.audio.coverSourceAria` | accessibility / terminology consistency | `"Kuvan lähde"` | `"Kansikuvan lähde"` | The generic image-source label loses the cover-specific accessible context. | open |
-| `F-fi-045` | `fi` | `tools.database.viewTypeListDescription` | terminology / source synchronization | `"Yksinkertainen lineaarinen näkymä"` | `"Näytä kohteet yksinkertaisena luettelona"` | The current value changes list to abstract linear view and omits the user-facing action. | open |
-| `F-fi-046` | `fi` | `tools.embed.empty` | read-only context / source synchronization | `"Upota liittämällä linkki"` | `"Ei upotuslinkkiä"` | The caller renders a read-only empty state, where a paste instruction is impossible. | open |
-| `F-fi-047` | `fi` | `notifier.dismiss` | semantics / action | `"Hylkää"` | `"Sulje"` | `Hylkää` means reject; the × button closes the notification. | open |
-| `F-fi-048` | `fi` | `tools.video.toggleTimeDisplay` | accessibility / source synchronization | `"Vaihda aikanäyttö"` | `"Vaihda kuluneen ja jäljellä olevan ajan välillä"` | The accessible name must identify the two states the control switches between. | open |
-| `F-fi-049` | `fi` | `tools.video.speedDecrease` | grammar / action terminology | `"Hidasta toistonopeutta"` | `"Pienennä toistonopeutta"` | The current phrase awkwardly means “slow the speed”; the paired quantitative action is decrease. | open |
-| `F-fi-050` | `fi` | `tools.video.speedIncrease` | grammar / action terminology | `"Nopeuta toistonopeutta"` | `"Suurenna toistonopeutta"` | The current phrase redundantly means “speed up the speed”; use the paired quantitative action. | open |
-| `F-fi-051` | `fi` | `tools.video.ctxStats` | slang / source synchronization | `"Tilastot nörteille"` | `"Toistotilastot"` | The current value retains prohibited “Stats for nerds” slang; the corrected source is neutral Playback statistics. | open |
-| `F-fi-052` | `fi` | `tools.audio.speedDecrease` | grammar / action terminology | `"Hidasta toistonopeutta"` | `"Pienennä toistonopeutta"` | Same decrease terminology issue as the video control. | open |
-| `F-fi-053` | `fi` | `tools.audio.speedIncrease` | grammar / action terminology | `"Nopeuta toistonopeutta"` | `"Suurenna toistonopeutta"` | Same increase terminology issue as the video control. | open |
-| `F-fi-054` | `fi` | `tools.colorPicker.defaultSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {default}"` | `"{mode}: {default}"` | The template is the swatch’s accessible name; punctuation separates the mode from the value so assistive technology reads `Tekstin väri: Oletus` as a label-value pair. | open |
-| `F-fi-055` | `fi` | `tools.colorPicker.colorSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {color}"` | `"{mode}: {color}"` | The template is the swatch’s accessible name; punctuation separates the mode from color values such as `Tekstin väri: Harmaa`. | open |
-| `F-fi-056` | `fi` | `tools.code.searchLanguage` | number / punctuation / source synchronization | `"Hae kieltä..."` | `"Hae kieliä…"` | The search covers a list of languages, so the object must be plural; continuing input uses the corpus-standard U+2026 ellipsis. | open |
-| `F-fi-057` | `fi` | `tools.image.exitFullscreen` | grammar / action terminology | `"Poistu koko näytöltä"` | `"Poistu koko näytön tilasta"` | The action exits full-screen mode rather than leaving a physical screen; the replacement names the mode idiomatically. | open |
-| `F-fi-058` | `fi` | `tools.bookmark.loading` | progress context / source synchronization | `"Ladataan esikatselua"` | `"Ladataan linkin esikatselua…"` | The rendered loading state must identify the link preview and use an ellipsis to signal continuing work. | open |
-| `F-fi-059` | `fi` | `tools.video.fullscreenExit` | grammar / action terminology | `"Poistu koko näytöstä"` | `"Poistu koko näytön tilasta"` | The control exits full-screen mode; the current phrase incorrectly describes leaving the screen itself. | open |
-| `F-fi-060` | `fi` | `tools.video.speedPresets` | accessibility / control-group context | `"Nopeusasetukset"` | `"Esiasetetut nopeudet"` | This accessible label names the preset-speed chip group, not playback-speed settings generally. | open |
+| `F-fi-002` | `fi` | `toolNames.bold` | terminology / tool name | `"Lihavoitu"` | `"Lihavointi"` | The current state adjective means “bolded”; the toolbox needs the established Finnish formatting-command noun. | verified |
+| `F-fi-003` | `fi` | `toolNames.italic` | terminology / tool name | `"Kursiivi"` | `"Kursivointi"` | Use the established Finnish formatting-command term parallel to `Lihavointi`. | verified |
+| `F-fi-004` | `fi` | `tools.marker.textColor` | terminology / source synchronization | `"Teksti"` | `"Tekstin väri"` | The current value drops the color concept and collides with plain Text; Microsoft Finnish uses `tekstin väri`. | verified |
+| `F-fi-005` | `fi` | `tools.paragraph.placeholder` | grammar / hint clarity | `"Kirjoita jotain tai paina / valitaksesi"` | `"Kirjoita jotain tai paina / valitaksesi työkalun"` | The current instruction is grammatically incomplete because it omits what the slash command selects. | verified |
+| `F-fi-006` | `fi` | `tools.toggle.bodyPlaceholder` | action clarity / source synchronization | `"Tyhjä avattava lohko. Napsauta tai pudota lohkoja sisään."` | `"Tyhjä avattava lohko. Napsauta lisätäksesi lohkon tai vedä lohkoja tähän."` | The caller’s click adds a child block while drag accepts existing blocks; the replacement names both distinct actions. | verified |
+| `F-fi-007` | `fi` | `tools.toggle.ariaLabelCollapse` | established UI terminology | `"Pienennä"` | `"Kutista"` | `Pienennä` means reduce or minimize; Microsoft Finnish uses `Kutista` as the counterpart to expand. | verified |
+| `F-fi-008` | `fi` | `tools.table.clearSelection` | context / action accuracy | `"Tyhjennä"` | `"Tyhjennä sisältö"` | Both table callers clear cell contents; the corrected source distinguishes this from clearing selection or deleting cells. | verified |
+| `F-fi-009` | `fi` | `tools.table.placement` | terminology / source synchronization | `"Sijainti"` | `"Tasaus"` | The picker changes cell-content alignment rather than location; Microsoft Finnish uses `Tasaus`. | verified |
+| `F-fi-010` | `fi` | `blockSettings.copyLink` | grammar / semantics | `"Kopioi linkki lohkoon"` | `"Kopioi lohkon linkki"` | The current phrase reads as “copy a link into the block”; the action copies this block’s link. | verified |
+| `F-fi-011` | `fi` | `a11y.dropCancelled` | drag terminology / accessibility | `"Veto peruutettu"` | `"Vetäminen peruutettu"` | `Veto` means a pull, bet, or draw; `vetäminen` names the UI drag operation naturally. | verified |
+| `F-fi-012` | `fi` | `searchTerms.collapse` | terminology consistency | `"pienennä"` | `"kutista"` | The search alias must use the same established expand/collapse term as the corrected action. | verified |
+| `F-fi-013` | `fi` | `tools.callout.addEmoji` | terminology / source synchronization | `"Lisää emoji"` | `"Lisää kuvake"` | The corrected source says Add icon; the callout UI treats the chosen emoji as its icon. | verified |
+| `F-fi-014` | `fi` | `tools.callout.filterEmojis` | search clarity / accessibility | `"Suodata…"` | `"Hae emojeja…"` | This is a searchbox placeholder and accessible name; the current generic Filter omits what is searched. | verified |
+| `F-fi-015` | `fi` | `tools.callout.pickRandom` | action clarity / accessibility | `"Satunnainen"` | `"Valitse satunnainen emoji"` | The button needs a complete action and object rather than a bare adjective. | verified |
+| `F-fi-016` | `fi` | `toolNames.equation` | pending translation / tool name | `"Equation"` | `"Yhtälö"` | The English fallback must be replaced by the established Finnish mathematical term. | verified |
+| `F-fi-017` | `fi` | `tools.equation.placeholder` | pending translation / hint | `"Enter a LaTeX formula…"` | `"Syötä LaTeX-kaava…"` | Localizes the full instruction while preserving the LaTeX product name. | verified |
+| `F-fi-018` | `fi` | `tools.link.linkTitle` | context / terminology | `"Linkin otsikko"` | `"Linkin teksti"` | The field changes the visible link text, not title metadata. | verified |
+| `F-fi-019` | `fi` | `tools.image.sizeFull` | grammar / size label | `"Täysi"` | `"Täysi koko"` | Bare `Täysi` is an incomplete adjective for a size option; the replacement explicitly means full size. | verified |
+| `F-fi-020` | `fi` | `tools.image.moreOptions` | terminology / accessibility | `"Lisää asetuksia"` | `"Lisää vaihtoehtoja"` | “Options” are not necessarily settings; Microsoft Finnish uses `Lisää vaihtoehtoja` for overflow actions. | verified |
+| `F-fi-021` | `fi` | `tools.image.converting` | pending translation / progress | `"Converting…"` | `"Muunnetaan…"` | The visible image-processing state retained an English fallback. | verified |
+| `F-fi-022` | `fi` | `tools.image.errorFileTooLarge` | pending translation / error | `"Image is too large. {size} exceeds the {max} limit."` | `"Kuva on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the upload error and preserves both placeholders exactly. | verified |
+| `F-fi-023` | `fi` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"URL palautti virheen. Kokeile toista lähdettä tai lataa tiedosto uudelleen."` | `"Kuvaa ei voitu ladata tästä URL-osoitteesta. Kokeile toista lähdettä tai lähetä tiedosto uudelleen."` | The corrected source identifies the failed image load; the current value personifies the URL and uses upload/download-ambiguous `lataa`. | verified |
+| `F-fi-024` | `fi` | `tools.file.errorFileTooLarge` | pending translation / error | `"File is too large. {size} exceeds the {max} limit."` | `"Tiedosto on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the file-preview error and preserves both placeholders exactly. | verified |
+| `F-fi-025` | `fi` | `tools.file.previewRaw` | source synchronization / tab terminology | `"Koodi"` | `"Lähde"` | The corrected source concept is Source; the Markdown text is not necessarily program code. | verified |
+| `F-fi-026` | `fi` | `tools.file.previewRender` | source synchronization / tab terminology | `"Näkymä"` | `"Esikatselu"` | The corrected source concept is Preview; `Näkymä` only means a generic view. | verified |
+| `F-fi-027` | `fi` | `tools.video.moreOptions` | terminology / accessibility | `"Lisää asetuksia"` | `"Lisää vaihtoehtoja"` | Same options-versus-settings distinction as the image overflow control. | verified |
+| `F-fi-028` | `fi` | `tools.video.loop` | media terminology / state label | `"Toista"` | `"Jatkuva toisto"` | `Toista` also means Play or Repeat and does not clearly name loop mode; YouTube Finnish uses continuous-play terminology. | verified |
+| `F-fi-029` | `fi` | `tools.video.errorFileTooLarge` | pending translation / error | `"Video is too large. {size} exceeds the {max} limit."` | `"Video on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the upload error and preserves both placeholders exactly. | verified |
+| `F-fi-030` | `fi` | `tools.audio.loop` | media terminology / state label | `"Toista"` | `"Jatkuva toisto"` | Same loop-versus-play ambiguity as the video control. | verified |
+| `F-fi-031` | `fi` | `tools.audio.errorFileTooLarge` | pending translation / error | `"Audio is too large. {size} exceeds the {max} limit."` | `"Äänitiedosto on liian suuri. Koko {size} ylittää rajan {max}."` | Localizes the error, names the audio file precisely, and preserves both placeholders. | verified |
+| `F-fi-032` | `fi` | `tools.audio.titlePlaceholder` | pending translation / metadata | `"Track title"` | `"Kappaleen nimi"` | Apple’s Finnish music metadata uses the natural track-name term. | verified |
+| `F-fi-033` | `fi` | `tools.audio.artistPlaceholder` | pending translation / metadata | `"Artist"` | `"Artisti"` | English `Artist` is not the Finnish noun `Artisti`. | verified |
+| `F-fi-034` | `fi` | `tools.audio.emptyOrDropHere` | media terminology / grammar | `"tai pudota ääni tähän"` | `"tai pudota äänitiedosto tähän"` | The drop target accepts an audio file, not abstract sound. | verified |
+| `F-fi-035` | `fi` | `tools.audio.emptyUrlPlaceholder` | grammar | `"Liitä äänin URL…"` | `"Liitä äänen URL…"` | `äänin` is not the required singular genitive; use `äänen`. | verified |
+| `F-fi-036` | `fi` | `tools.audio.emptyUrlAria` | grammar / accessibility | `"Äänin URL"` | `"Äänen URL"` | Corrects the same singular-genitive error in the accessible label. | verified |
+| `F-fi-037` | `fi` | `tools.audio.emptySourceAria` | grammar / accessibility | `"Äänin lähde"` | `"Äänen lähde"` | Corrects the same singular-genitive error in the source-group label. | verified |
+| `F-fi-038` | `fi` | `tools.audio.coverChange` | pending translation / media terminology | `"Change cover"` | `"Vaihda kansikuva"` | Localizes the action with Spotify Finnish’s established `kansikuva` term. | verified |
+| `F-fi-039` | `fi` | `tools.audio.coverSet` | pending translation / media terminology | `"Set cover image"` | `"Aseta kansikuva"` | Localizes the action with the established music-cover term. | verified |
+| `F-fi-040` | `fi` | `tools.audio.coverRemove` | pending translation / media terminology | `"Remove cover"` | `"Poista kansikuva"` | Localizes the action with the established music-cover term. | verified |
+| `F-fi-041` | `fi` | `tools.audio.coverErrorType` | pending translation / error | `"Choose an image file"` | `"Valitse kuvatiedosto"` | Localizes the wrong-file-type recovery instruction. | verified |
+| `F-fi-042` | `fi` | `tools.audio.coverErrorTooLarge` | pending translation / error | `"Image is too large"` | `"Kuva on liian suuri"` | Localizes the cover-image size error. | verified |
+| `F-fi-043` | `fi` | `tools.audio.coverAdd` | pending translation / media terminology | `"Add a cover"` | `"Lisää kansikuva"` | Localizes the empty-cover action with the established music-cover term. | verified |
+| `F-fi-044` | `fi` | `tools.audio.coverSourceAria` | accessibility / terminology consistency | `"Kuvan lähde"` | `"Kansikuvan lähde"` | The generic image-source label loses the cover-specific accessible context. | verified |
+| `F-fi-045` | `fi` | `tools.database.viewTypeListDescription` | terminology / source synchronization | `"Yksinkertainen lineaarinen näkymä"` | `"Näytä kohteet yksinkertaisena luettelona"` | The current value changes list to abstract linear view and omits the user-facing action. | verified |
+| `F-fi-046` | `fi` | `tools.embed.empty` | read-only context / source synchronization | `"Upota liittämällä linkki"` | `"Ei upotuslinkkiä"` | The caller renders a read-only empty state, where a paste instruction is impossible. | verified |
+| `F-fi-047` | `fi` | `notifier.dismiss` | semantics / action | `"Hylkää"` | `"Sulje"` | `Hylkää` means reject; the × button closes the notification. | verified |
+| `F-fi-048` | `fi` | `tools.video.toggleTimeDisplay` | accessibility / source synchronization | `"Vaihda aikanäyttö"` | `"Vaihda kuluneen ja jäljellä olevan ajan välillä"` | The accessible name must identify the two states the control switches between. | verified |
+| `F-fi-049` | `fi` | `tools.video.speedDecrease` | grammar / action terminology | `"Hidasta toistonopeutta"` | `"Pienennä toistonopeutta"` | The current phrase awkwardly means “slow the speed”; the paired quantitative action is decrease. | verified |
+| `F-fi-050` | `fi` | `tools.video.speedIncrease` | grammar / action terminology | `"Nopeuta toistonopeutta"` | `"Suurenna toistonopeutta"` | The current phrase redundantly means “speed up the speed”; use the paired quantitative action. | verified |
+| `F-fi-051` | `fi` | `tools.video.ctxStats` | slang / source synchronization | `"Tilastot nörteille"` | `"Toistotilastot"` | The current value retains prohibited “Stats for nerds” slang; the corrected source is neutral Playback statistics. | verified |
+| `F-fi-052` | `fi` | `tools.audio.speedDecrease` | grammar / action terminology | `"Hidasta toistonopeutta"` | `"Pienennä toistonopeutta"` | Same decrease terminology issue as the video control. | verified |
+| `F-fi-053` | `fi` | `tools.audio.speedIncrease` | grammar / action terminology | `"Nopeuta toistonopeutta"` | `"Suurenna toistonopeutta"` | Same increase terminology issue as the video control. | verified |
+| `F-fi-054` | `fi` | `tools.colorPicker.defaultSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {default}"` | `"{mode}: {default}"` | The template is the swatch’s accessible name; punctuation separates the mode from the value so assistive technology reads `Tekstin väri: Oletus` as a label-value pair. | verified |
+| `F-fi-055` | `fi` | `tools.colorPicker.colorSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {color}"` | `"{mode}: {color}"` | The template is the swatch’s accessible name; punctuation separates the mode from color values such as `Tekstin väri: Harmaa`. | verified |
+| `F-fi-056` | `fi` | `tools.code.searchLanguage` | number / punctuation / source synchronization | `"Hae kieltä..."` | `"Hae kieliä…"` | The search covers a list of languages, so the object must be plural; continuing input uses the corpus-standard U+2026 ellipsis. | verified |
+| `F-fi-057` | `fi` | `tools.image.exitFullscreen` | grammar / action terminology | `"Poistu koko näytöltä"` | `"Poistu koko näytön tilasta"` | The action exits full-screen mode rather than leaving a physical screen; the replacement names the mode idiomatically. | verified |
+| `F-fi-058` | `fi` | `tools.bookmark.loading` | progress context / source synchronization | `"Ladataan esikatselua"` | `"Ladataan linkin esikatselua…"` | The rendered loading state must identify the link preview and use an ellipsis to signal continuing work. | verified |
+| `F-fi-059` | `fi` | `tools.video.fullscreenExit` | grammar / action terminology | `"Poistu koko näytöstä"` | `"Poistu koko näytön tilasta"` | The control exits full-screen mode; the current phrase incorrectly describes leaving the screen itself. | verified |
+| `F-fi-060` | `fi` | `tools.video.speedPresets` | accessibility / control-group context | `"Nopeusasetukset"` | `"Esiasetetut nopeudet"` | This accessible label names the preset-speed chip group, not playback-speed settings generally. | verified |
+| `F-fi-061` | `fi` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Tässä lohkossa on {count} sisäkkäistä lohkoa. Muuntaminen siirtää ne ylimmälle tasolle. Jatketaanko?"` | `"Sisäkkäisiä lohkoja: {count}. Tämän lohkon muuntaminen siirtää sisäkkäisen sisällön ylimmälle tasolle. Jatketaanko?"` | The source-only count can be one or many; the current partitive-plural noun and plural pronoun fail at `{count}=1`, while `sisäkkäinen sisältö` remains count-neutral. | verified |
+| `F-fi-062` | `fi` | `a11y.searchResults` | number / accessibility | `"{count} tulosta"` | `"Hakutuloksia: {count}"` | The search live region can announce one result; moving the invariant count after a descriptive partitive-plural label avoids the Finnish one-versus-many case change. | verified |
+| `F-fi-063` | `fi` | `a11y.allBlocksSelected` | number / accessibility | `"Kaikki lohkot valittu, {count} lohkoa"` | `"Kaikki lohkot valittu. Lohkoja yhteensä: {count}"` | Select-all can contain one block; the count-neutral label avoids an ungrammatical partitive noun at `{count}=1` and separates the completed state from its total. | verified |
+| `F-fi-064` | `fi` | `tools.audio.errorOneDrive` | compound spelling | `"OneDrive -linkkejä ei voi toistaa suoraan — lataa tiedosto ja lähetä se tähän."` | `"OneDrive-linkkejä ei voi toistaa suoraan — lataa tiedosto ja lähetä se tähän."` | A one-word proper name attaches directly to the Finnish common-noun compound with a hyphen; Microsoft likewise writes [OneDrive-linkki](https://support.microsoft.com/fi-FI/onedrive/share-files-and-folders-in-microsoft-onedrive). | verified |
+| `F-fi-065` | `fi` | `tools.callout.emojiSearchResults` | number / accessibility / source synchronization | `"{count} emojia löytyi"` | `"Emojihaun tuloksia: {count}"` | The emoji-search live region can announce one or many matches; a label-before-count construction avoids Finnish numeral-governed case changes. | verified |
+| `F-fi-066` | `fi` | `toolbox.optionAddAbove` | platform shortcut / action clarity | `"Option-napsautus lisää yläpuolelle"` | `"Optio-klikkaa lisätäksesi yläpuolelle"` | The tooltip must name the modifier-click action in natural Finnish; Apple’s Finnish Mac guidance uses the exact `Optio-klikkaa` idiom. | verified |
+| `F-fi-067` | `fi` | `toolbox.ctrlAddAbove` | shortcut / action clarity | `"Ctrl-napsautus lisää yläpuolelle"` | `"Ctrl+napsauta lisätäksesi yläpuolelle"` | The tooltip must tell the user to Ctrl-click rather than exposing an awkward action noun; Microsoft Finnish uses `Ctrl+napsauta` for this gesture. | verified |
+| `F-fi-068` | `fi` | `searchTerms.header` | semantic alias / search coverage | `"ylätunniste"` | `"otsake"` | This alias targets the heading tool, while `ylätunniste` means a page header; `otsake` is a distinct heading synonym and does not duplicate `searchTerms.heading=otsikko`. | verified |
+| `F-fi-069` | `fi` | `tools.callout.skinTone` | established product terminology | `"Ihonväri"` | `"Ihon sävy"` | Microsoft’s Finnish emoji selector uses the exact term `Ihon sävy`. | verified |
+| `F-fi-070` | `fi` | `tools.video.alignmentLeft` | action terminology | `"Vasen"` | `"Tasaa vasemmalle"` | The video settings item performs an alignment action and has no separate accessible action label. | verified |
+| `F-fi-071` | `fi` | `tools.video.alignmentCenter` | action terminology | `"Keskellä"` | `"Tasaa keskelle"` | The video settings item performs an alignment action; the current adverb only describes a state. | verified |
+| `F-fi-072` | `fi` | `tools.video.alignmentRight` | action terminology | `"Oikea"` | `"Tasaa oikealle"` | The video settings item performs an alignment action and has no separate accessible action label. | verified |
+| `F-fi-073` | `fi` | `tools.audio.alignmentLeft` | action terminology | `"Vasen"` | `"Tasaa vasemmalle"` | The audio settings item performs the same alignment action as its video counterpart. | verified |
+| `F-fi-074` | `fi` | `tools.audio.alignmentCenter` | action terminology | `"Keskellä"` | `"Tasaa keskelle"` | The audio settings item performs the same alignment action as its video counterpart. | verified |
+| `F-fi-075` | `fi` | `tools.audio.alignmentRight` | action terminology | `"Oikea"` | `"Tasaa oikealle"` | The audio settings item performs the same alignment action as its video counterpart. | verified |
+| `F-fi-076` | `fi` | `tools.bookmark.error` | context / source synchronization | `"Esikatselua ei voitu ladata"` | `"Linkin esikatselua ei voitu ladata"` | The rendered error must identify the failed link preview rather than an unspecified preview. | verified |
+| `F-fi-077` | `fi` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Maininta"` | `"Mainitse"` | The paste-menu contract names an action alongside imperatives; the current noun means “a mention” rather than “mention.” | verified |
 | `F-fil-001` | `fil` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"I-clear ang pag-format"` | Google’s official Filipino Gmail UI uses the exact toolbar option [I-clear ang pag-format](https://support.google.com/mail/answer/8260?co=GENIE.Platform%3DAndroid&hl=fil), matching this dictionary’s existing clear-action register. | verified |
 | `F-fr-125` | `fr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Effacer la mise en forme"` | Microsoft’s French editor UI uses the exact concise command [Effacer la mise en forme](https://support.microsoft.com/fr-fr/office/effacer-toute-la-mise-en-forme-du-texte-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
 | `F-gu-001` | `gu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ફોર્મેટિંગ સાફ કરો"` | An independent terminology pass rejected LibreOffice’s longer Clear Direct Formatting label because its technical qualifier is absent from this concise source. The replacement combines this dictionary’s established `ફોર્મેટિંગ` noun and `સાફ કરો` action; Google’s Gujarati UI independently uses the same formatting loanword. | verified |
@@ -1890,12 +2124,132 @@ follows the global transition rule above.
 | `F-no-077` | `no` | `tools.colorPicker.colorSwatchLabel` | grammar / placeholder order | `"{mode} {color}"` | `"{color} {mode}"` | The caller substitutes labels such as `Tekstfarge Rød` and `Bakgrunn Rød`; idiomatic Bokmål is `Rød tekstfarge` and `Rød bakgrunn`. | verified |
 | `F-no-078` | `no` | `tools.file.previewRaw` | source synchronization / tab terminology | `"Råtekst"` | `"Kilde"` | The corrected source concept is the Markdown source view paired with Preview. `Kilde` is the concise user-facing tab label. | verified |
 | `F-no-079` | `no` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Omtale"` | `"Omtal"` | `buildPasteMenuItems` defines an action title alongside imperatives such as `Behold`, `Opprett`, and `Bygg inn`. Notion Bokmål uses the imperative phrases [Omtal en person and Omtal en side](https://www.notion.com/nb/help/writing-and-editing-basics). | verified |
+| `F-no-080` | `no` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Aktivitet"` | `"Aktiviteter"` | The emoji picker renders a category heading rather than a single activity; [Microsoft Teams Bokmål](https://support.microsoft.com/nb-no/teams/chat/send-an-emoji-gif-or-sticker-in-microsoft-teams) uses the plural category label `Aktiviteter`. | verified |
 | `F-pa-001` | `pa` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ"` | LibreOffice Punjabi uses `ਸਿੱਧੀ ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ` for Clear Direct Formatting in its [official product source](https://github.com/LibreOffice/translations/blob/master/source/pa-IN/officecfg/registry/data/org/openoffice/Office/UI.po#L34689-L34695); the direct qualifier and accelerator are omitted for this compact inline command. | verified |
 | `F-pl-001` | `pl` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Wyczyść formatowanie"` | Microsoft’s Polish editor UI uses the exact command [Wyczyść formatowanie](https://support.microsoft.com/pl-PL/PowerPoint/clear-all-text-formatting). | verified |
 | `F-ps-001` | `ps` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"بڼه پاکه کړئ"` | WordPress Pashto translates Clear formatting as `بڼه پاکه کړه` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/ps/default/export-translations/?format=po); the final verb is adjusted to this dictionary’s polite imperative register. | verified |
 | `F-pt-001` | `pt` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Limpar formatação"` | Microsoft’s Brazilian Portuguese editor UI uses Limpar Formatação in [official product help](https://support.microsoft.com/pt-BR/PowerPoint/clear-all-text-formatting); the second word is lowercased for the dictionary’s sentence-case register. | verified |
 | `F-ro-001` | `ro` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Șterge formatarea"` | Google Docs uses `Șterge formatarea textului` in [Romanian help](https://support.google.com/docs/answer/179738?co=GENIE.Platform%3DDesktop&hl=ro), and [CKEditor independently uses the concise form](https://github.com/ckeditor/ckeditor5/blob/master/packages/ckeditor5-remove-format/lang/translations/ro.po#L14-L16) selected for this toolbar. | verified |
 | `F-ru-001` | `ru` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Очистить форматирование"` | Microsoft’s Russian editor UI uses the exact concise formatting-clear command in [official Word help](https://support.microsoft.com/ru-ru/office/%D0%B4%D0%BE%D0%B1%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%8D%D1%84%D1%84%D0%B5%D0%BA%D1%82%D0%B0-%D1%82%D0%B5%D0%BA%D1%81%D1%82%D1%83-%D0%BA%D0%BE%D0%BD%D1%82%D1%83%D1%80%D0%B0-%D1%82%D0%B5%D0%BD%D0%B8-%D0%BE%D1%82%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F-%D0%B8%D0%BB%D0%B8-%D1%81%D0%B2%D0%B5%D1%87%D0%B5%D0%BD%D0%B8%D1%8F-%D0%B2-word-3f3a758e-d255-4ba7-94f8-a3ee78fddfe1). | verified |
+| `F-ru-002` | `ru` | `blockSettings.dragToMove` | gesture terminology | `"Тяните, чтобы переместить"` | `"Перетащите, чтобы переместить"` | The standard Russian UI verb for a drag gesture is `Перетащите`. | verified |
+| `F-ru-003` | `ru` | `blockSettings.clickToOpenMenu` | accessibility / action result | `"Нажмите для меню"` | `"Нажмите, чтобы открыть меню"` | This standalone read-only instruction must name the result of the click. | verified |
+| `F-ru-004` | `ru` | `toolbox.optionAddAbove` | shortcut instruction | `"⌥ — добавить выше"` | `"⌥ + щелчок — добавить выше"` | The current hint omits the required click gesture. | verified |
+| `F-ru-005` | `ru` | `toolbox.ctrlAddAbove` | shortcut instruction | `"Ctrl — добавить выше"` | `"Ctrl + щелчок — добавить выше"` | The current hint omits the required click gesture. | verified |
+| `F-ru-006` | `ru` | `toolbox.typeToSearch` | grammar / clarity | `"Введите для поиска"` | `"Введите запрос для поиска"` | The current instruction is grammatically incomplete without an object. | verified |
+| `F-ru-007` | `ru` | `toolNames.bold` | established typography terminology | `"Жирный"` | `"Полужирный"` | [Apple’s Russian keyboard-shortcut guidance](https://support.apple.com/ru-ru/102650) uses the established typography term `полужирным`. | verified |
+| `F-ru-008` | `ru` | `tools.marker.textColor` | context / terminology | `"Текст"` | `"Цвет текста"` | The shared color-mode control must explicitly distinguish text color from background color. | verified |
+| `F-ru-009` | `ru` | `tools.marker.default` | capitalization | `"по умолчанию"` | `"По умолчанию"` | This is a standalone visible option and follows the locale’s sentence-case register. | verified |
+| `F-ru-010` | `ru` | `tools.colorPicker.defaultSwatchLabel` | placeholder grammar | `"{mode} {default}"` | `"{mode}: {default}"` | A colon makes every runtime mode/default combination grammatical without changing either placeholder. | verified |
+| `F-ru-011` | `ru` | `tools.colorPicker.colorSwatchLabel` | placeholder grammar | `"{mode} {color}"` | `"{mode}: {color}"` | A colon avoids invalid Russian adjective order and agreement while preserving both placeholders. | verified |
+| `F-ru-012` | `ru` | `tools.paragraph.placeholder` | context / grammar | `"Напишите что-нибудь или нажмите / для выбора блока"` | `"Напишите что-нибудь или нажмите /, чтобы выбрать инструмент"` | The slash menu chooses a tool, and the purpose clause requires punctuation. | verified |
+| `F-ru-013` | `ru` | `tools.toggle.placeholder` | tool terminology | `"Сворачиваемый блок"` | `"Сворачиваемый список"` | The visible tool type is the toggle-list tool rather than a generic block. | verified |
+| `F-ru-014` | `ru` | `tools.toggle.bodyPlaceholder` | action distinction / source synchronization | `"Пустой сворачиваемый блок. Нажмите или перетащите блоки внутрь."` | `"Пустой сворачиваемый блок. Нажмите, чтобы добавить блок, или перетащите блоки сюда."` | The instruction must distinguish click-to-create from drag-to-drop. | verified |
+| `F-ru-015` | `ru` | `tools.table.clearSelection` | established table action terminology | `"Очистить"` | `"Очистить содержимое"` | The action preserves cells and formatting; [Microsoft’s Russian Excel UI](https://support.microsoft.com/ru-ru/office/%D0%BE%D1%87%D0%B8%D1%81%D1%82%D0%BA%D0%B0-%D1%8F%D1%87%D0%B5%D0%B5%D0%BA-%D1%81%D0%BE%D0%B4%D0%B5%D1%80%D0%B6%D0%B8%D0%BC%D0%BE%D0%B3%D0%BE-%D0%B8%D0%BB%D0%B8-%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%82%D0%BE%D0%B2-9ff6b8ff-1afd-495f-8ad8-8c1f6f82a9d6) uses `Очистить содержимое`. | verified |
+| `F-ru-016` | `ru` | `tools.table.headerColumn` | established table terminology | `"Колонка-заголовок"` | `"Столбец заголовков"` | `Столбец заголовков` is the established Russian term for a table header column. | verified |
+| `F-ru-017` | `ru` | `tools.table.headerRow` | established table terminology | `"Строка-заголовок"` | `"Строка заголовков"` | `Строка заголовков` is the established Russian term for a table header row. | verified |
+| `F-ru-018` | `ru` | `tools.table.clickToAddRow` | clarity / action | `"Нажмите, чтобы добавить строку"` | `"Нажмите, чтобы добавить новую строку"` | The add-row affordance creates a new row. | verified |
+| `F-ru-019` | `ru` | `tools.table.dragToAddRemoveRows` | gesture terminology | `"Тяните, чтобы добавить или удалить строки"` | `"Перетащите, чтобы добавить или удалить строки"` | `Перетащите` is the natural Russian UI verb for the drag gesture. | verified |
+| `F-ru-020` | `ru` | `tools.table.clickToAddColumn` | clarity / action | `"Нажмите, чтобы добавить столбец"` | `"Нажмите, чтобы добавить новый столбец"` | The add-column affordance creates a new column. | verified |
+| `F-ru-021` | `ru` | `tools.table.dragToAddRemoveColumns` | gesture terminology | `"Тяните, чтобы добавить или удалить столбцы"` | `"Перетащите, чтобы добавить или удалить столбцы"` | `Перетащите` is the natural Russian UI verb for the drag gesture. | verified |
+| `F-ru-022` | `ru` | `tools.table.comfortableText` | context / terminology | `"Комфортный текст"` | `"Обычный текст"` | The implementation exposes the regular editor text size opposite compact, not a comfort judgment. | verified |
+| `F-ru-023` | `ru` | `tools.table.placement` | established table terminology | `"Расположение"` | `"Выравнивание"` | The picker controls cell-content alignment; [Microsoft’s Russian Excel help](https://support.microsoft.com/ru-ru/excel/get-started/align-or-rotate-text-in-a-cell) uses the corresponding alignment terminology. | verified |
+| `F-ru-024` | `ru` | `a11y.dragHandle` | accessibility / action results | `"Перетащите или нажмите для меню"` | `"Перетащите, чтобы переместить блок, или нажмите, чтобы открыть меню"` | The accessible label must describe both actions, their results, and the block object. | verified |
+| `F-ru-025` | `ru` | `a11y.dragHandleRole` | accessibility / role terminology | `"управление блоком"` | `"маркер перетаскивания"` | The current role description is generic; this element is specifically a drag handle. | verified |
+| `F-ru-026` | `ru` | `a11y.dropPosition` | number agreement / accessibility | `"Будет перемещён на позицию {position} из {total}"` | `"Будет размещено на позиции {position} из {total}"` | Masculine singular fails for one-or-many drag; the replacement is count-neutral and preserves both placeholders. | verified |
+| `F-ru-027` | `ru` | `a11y.blocksMoved` | grammar / accessibility | `"Блоков перемещено: {count}, позиция {position}"` | `"Перемещено блоков: {count}. Позиция: {position}"` | Count-neutral wording and two complete announcements remove the comma splice. | verified |
+| `F-ru-028` | `ru` | `a11y.movedUp` | grammar / placeholder context | `"Блок перемещён вверх, позиция {position} из {total}"` | `"Блок перемещён вверх на позицию {position} из {total}"` | Russian requires the preposition `на` before the resulting position. | verified |
+| `F-ru-029` | `ru` | `a11y.movedDown` | grammar / placeholder context | `"Блок перемещён вниз, позиция {position} из {total}"` | `"Блок перемещён вниз на позицию {position} из {total}"` | Russian requires the preposition `на` before the resulting position. | verified |
+| `F-ru-030` | `ru` | `a11y.atTop` | accessibility / failure reason | `"Блок уже вверху"` | `"Блок находится вверху и не может быть перемещён выше"` | The boundary announcement must explain why the requested move failed. | verified |
+| `F-ru-031` | `ru` | `a11y.atBottom` | accessibility / failure reason | `"Блок уже внизу"` | `"Блок находится внизу и не может быть перемещён ниже"` | The boundary announcement must explain why the requested move failed. | verified |
+| `F-ru-032` | `ru` | `a11y.searchResults` | accessibility / number | `"Результатов: {count}"` | `"Результаты поиска: {count}"` | The label-before-count form is explicit and grammatical for every result count. | verified |
+| `F-ru-033` | `ru` | `blockSettings.convertWithChildrenWarning` | number agreement / source-only contract | `"Этот блок содержит {count} вложенных блоков. При конвертации они будут перемещены на верхний уровень. Продолжить?"` | `"Вложенных блоков: {count}. При преобразовании этого блока каждый вложенный блок будет перемещён на верхний уровень. Продолжить?"` | The count-neutral source-only warning avoids one/many agreement failure and replaces jargon. | verified |
+| `F-ru-034` | `ru` | `searchTerms.separator` | search alias / transliteration | `"сепаратор"` | `"линия"` | The current alias is needless transliteration; `линия` is a useful native divider query distinct from the other aliases. | verified |
+| `F-ru-035` | `ru` | `searchTerms.plain` | search alias / clarity | `"простой"` | `"обычный текст"` | A bare adjective is ambiguous as a paragraph search alias. | verified |
+| `F-ru-036` | `ru` | `searchTerms.header` | search alias / register | `"шапка"` | `"название"` | `шапка` is colloquial UI jargon and a misleading heading alias. | verified |
+| `F-ru-037` | `ru` | `searchTerms.number` | search alias / semantics | `"число"` | `"нумерация"` | The alias targets a numbered list, not numeric data. | verified |
+| `F-ru-038` | `ru` | `searchTerms.citation` | search alias / semantics | `"ссылка"` | `"цитирование"` | The alias targets quote/citation content, not a hyperlink. | verified |
+| `F-ru-039` | `ru` | `tools.callout.addEmoji` | source synchronization / icon terminology | `"Добавить эмодзи"` | `"Добавить значок"` | The corrected source presents the selected emoji as the callout icon. | verified |
+| `F-ru-040` | `ru` | `tools.callout.editIcon` | established UI terminology | `"Изменить иконку"` | `"Изменить значок"` | `значок` is the established native Russian UI term and matches the adjacent controls. | verified |
+| `F-ru-041` | `ru` | `tools.callout.removeEmoji` | established UI terminology | `"Удалить иконку"` | `"Удалить значок"` | `значок` is the established native Russian UI term and matches the adjacent controls. | verified |
+| `F-ru-042` | `ru` | `tools.callout.filterEmojis` | accessibility / search context | `"Фильтр…"` | `"Поиск эмодзи…"` | The searchbox accessible name must state both the action and its target. | verified |
+| `F-ru-043` | `ru` | `tools.callout.pickRandom` | action completeness | `"Случайно"` | `"Выбрать случайный эмодзи"` | The dice-button tooltip requires a complete action rather than an adverb. | verified |
+| `F-ru-044` | `ru` | `tools.callout.skinTone` | established platform terminology | `"Тон кожи"` | `"Оттенок кожи"` | `Оттенок кожи` is the established Russian platform term for an emoji skin-tone selector. | verified |
+| `F-ru-045` | `ru` | `tools.callout.emojiCategoryActivity` | emoji category terminology | `"Активности"` | `"Действия"` | `Активности` is an unnatural plural calque; `Действия` is the natural category label. | verified |
+| `F-ru-046` | `ru` | `tools.callout.colorDefault` | capitalization | `"по умолчанию"` | `"По умолчанию"` | This is a standalone visible option and follows sentence case. | verified |
+| `F-ru-047` | `ru` | `tools.quote.defaultSize` | capitalization | `"по умолчанию"` | `"По умолчанию"` | This is a standalone visible option and follows sentence case. | verified |
+| `F-ru-048` | `ru` | `toolNames.equation` | untranslated source copy | `"Equation"` | `"Формула"` | The toolbox name is untranslated; `Формула` is the natural concise Russian tool name. | verified |
+| `F-ru-049` | `ru` | `tools.equation.placeholder` | untranslated source copy | `"Enter a LaTeX formula…"` | `"Введите формулу LaTeX…"` | The equation placeholder is untranslated and must follow the locale’s polite imperative register. | verified |
+| `F-ru-050` | `ru` | `tools.code.searchLanguage` | number / punctuation | `"Поиск языка..."` | `"Поиск языков…"` | The picker spans multiple languages and the corpus uses the single ellipsis character. | verified |
+| `F-ru-051` | `ru` | `blockSettings.copyLinkError` | error context | `"Не удалось скопировать ссылку"` | `"Не удалось скопировать ссылку на блок"` | The error must identify the failed block-link operation. | verified |
+| `F-ru-052` | `ru` | `tools.link.linkTitle` | field semantics / source synchronization | `"Название ссылки"` | `"Текст ссылки"` | The field edits visible anchor text rather than link metadata. | verified |
+| `F-ru-053` | `ru` | `tools.code.plainText` | source-only terminology / source synchronization | `"Простой текст"` | `"Обычный текст"` | The source-only format contract uses the established Microsoft Russian plain-text term, corroborated by [official Word format help](https://support.microsoft.com/ru-ru/word/file-formats-for-saving-documents). | verified |
+| `F-ru-054` | `ru` | `tools.image.converting` | untranslated progress copy | `"Converting…"` | `"Преобразование…"` | The image-conversion progress state is untranslated. | verified |
+| `F-ru-055` | `ru` | `tools.image.toggleCaption` | toggle semantics | `"Показать подпись"` | `"Показать или скрыть подпись"` | The same toggle represents both showing and hiding the caption. | verified |
+| `F-ru-056` | `ru` | `tools.image.altDescription` | accessibility / source synchronization | `"Добавьте описание изображения. Это сделает вашу страницу доступнее для людей с нарушениями зрения."` | `"Опишите изображение для тех, кто его не видит."` | The corrected source uses concise, direct, user-centered alt-text guidance. | verified |
+| `F-ru-057` | `ru` | `tools.image.previewControls` | accessibility / object context | `"Управление просмотром"` | `"Элементы управления просмотром изображения"` | The accessible group label must identify the image-preview object. | verified |
+| `F-ru-058` | `ru` | `tools.image.errorFileTooLarge` | untranslated upload error | `"Image is too large. {size} exceeds the {max} limit."` | `"Размер изображения ({size}) превышает ограничение {max}."` | The upload error is untranslated; the replacement preserves both placeholders exactly. | verified |
+| `F-ru-059` | `ru` | `tools.image.errorDefaultMessage` | error context / source synchronization | `"Сервер вернул ошибку. Попробуйте другой источник или загрузите файл заново."` | `"Не удалось загрузить изображение по этому URL. Попробуйте другой источник или загрузите файл ещё раз."` | The message should describe the URL image-load failure rather than expose a server implementation detail. | verified |
+| `F-ru-060` | `ru` | `tools.image.emptyOrDropHere` | drop-target context | `"или перетащите сюда"` | `"или перетащите изображение сюда"` | The empty-state instruction omitted the object being dropped. | verified |
+| `F-ru-061` | `ru` | `tools.image.cropRatioFree` | crop-mode terminology | `"Свободно"` | `"Свободный формат"` | The current adverb is unnatural as a standalone crop-mode label. | verified |
+| `F-ru-062` | `ru` | `tools.database.addView` | database terminology | `"Добавить вид"` | `"Добавить представление"` | `представление` is the established Russian database term for a view. | verified |
+| `F-ru-063` | `ru` | `tools.database.viewTypeListDescription` | clarity / source synchronization | `"Простой линейный вид"` | `"Показывать элементы простым списком"` | The abstract current phrase should describe the rendered simple-list result. | verified |
+| `F-ru-064` | `ru` | `tools.database.propertyTypeSelect` | property semantics | `"Список"` | `"Выбор"` | The property represents one choice, not a list view. | verified |
+| `F-ru-065` | `ru` | `tools.database.propertyTypeMultiSelect` | terminology / transliteration | `"Мультивыбор"` | `"Множественный выбор"` | The current hybrid transliteration violates the native terminology requirement. | verified |
+| `F-ru-066` | `ru` | `tools.database.cardDetails` | accessibility / object context | `"Карточка"` | `"Сведения о карточке"` | The drawer’s accessible name must identify that it exposes card details. | verified |
+| `F-ru-067` | `ru` | `tools.bookmark.loading` | progress context / punctuation | `"Загрузка превью ссылки"` | `"Загрузка предварительного просмотра ссылки…"` | The progress state needs the full Russian link-preview term and an ellipsis. | verified |
+| `F-ru-068` | `ru` | `tools.bookmark.error` | terminology / error context | `"Не удалось загрузить превью ссылки"` | `"Не удалось загрузить предварительный просмотр ссылки"` | The natural full Russian term avoids unnecessary English-derived shorthand. | verified |
+| `F-ru-069` | `ru` | `tools.embed.empty` | read-only context / source synchronization | `"Вставьте ссылку для встраивания"` | `"Нет ссылки для встраивания"` | The caller renders a read-only empty embed where a paste instruction is impossible. | verified |
+| `F-ru-070` | `ru` | `tools.linkPaste.embed` | action terminology | `"Создать встраивание"` | `"Встроить содержимое"` | The nominal calque is unnatural; [YouTube’s official Russian help](https://support.google.com/youtube/answer/171780?hl=ru) uses `Встроить` for the embed action. | verified |
+| `F-ru-071` | `ru` | `tools.linkPaste.embedVideo` | embed action / placeholder grammar | `"Вставить {provider}-видео"` | `"Встроить видео из {provider}"` | Embed is not insert, and the brand compound is awkward; the provider placeholder is preserved. | verified |
+| `F-ru-072` | `ru` | `tools.linkPaste.embedAudio` | embed action | `"Вставить аудио из {provider}"` | `"Встроить аудио из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-073` | `ru` | `tools.linkPaste.embedImage` | embed action | `"Вставить изображение из {provider}"` | `"Встроить изображение из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-074` | `ru` | `tools.linkPaste.embedSocial` | embed action / terminology | `"Вставить пост из {provider}"` | `"Встроить публикацию из {provider}"` | The action creates an embed, and `публикация` is the natural neutral term. | verified |
+| `F-ru-075` | `ru` | `tools.linkPaste.embedDocument` | embed action | `"Вставить документ из {provider}"` | `"Встроить документ из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-076` | `ru` | `tools.linkPaste.embedTable` | embed action | `"Вставить таблицу из {provider}"` | `"Встроить таблицу из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-077` | `ru` | `tools.linkPaste.embedForm` | embed action | `"Вставить форму из {provider}"` | `"Встроить форму из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-078` | `ru` | `tools.linkPaste.embedCode` | embed action | `"Вставить код из {provider}"` | `"Встроить код из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-079` | `ru` | `tools.linkPaste.embedDesign` | embed action | `"Вставить макет из {provider}"` | `"Встроить макет из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-080` | `ru` | `tools.linkPaste.embedChart` | embed action / terminology | `"Вставить график из {provider}"` | `"Встроить диаграмму из {provider}"` | The action creates an embed, and `диаграмма` covers the broader chart concept. | verified |
+| `F-ru-081` | `ru` | `tools.linkPaste.embedMap` | embed action | `"Вставить карту из {provider}"` | `"Встроить карту из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-082` | `ru` | `tools.linkPaste.embedCalendar` | embed action | `"Вставить календарь из {provider}"` | `"Встроить календарь из {provider}"` | The paste-menu action creates an embed, not a generic insertion. | verified |
+| `F-ru-083` | `ru` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Упоминание"` | `"Упомянуть"` | The paste-menu contract names an action alongside other infinitive commands. | verified |
+| `F-ru-084` | `ru` | `tools.file.toggleCaption` | toggle semantics | `"Показать подпись"` | `"Показать или скрыть подпись"` | The same toggle represents both showing and hiding the caption. | verified |
+| `F-ru-085` | `ru` | `tools.file.errorFileTooLarge` | untranslated upload error | `"File is too large. {size} exceeds the {max} limit."` | `"Размер файла ({size}) превышает ограничение {max}."` | The upload error is untranslated; both placeholders remain exact. | verified |
+| `F-ru-086` | `ru` | `tools.file.previewRaw` | preview-tab semantics | `"Код"` | `"Исходный текст"` | The raw tab shows source text that is not necessarily program code. | verified |
+| `F-ru-087` | `ru` | `tools.file.previewRender` | preview-tab semantics | `"Просмотр"` | `"Предпросмотр"` | This names the formatted preview state opposite the source-text tab. | verified |
+| `F-ru-088` | `ru` | `tools.video.alignmentLeft` | action terminology | `"Слева"` | `"Выровнять по левому краю"` | The settings item performs an alignment action and has no separate action label. | verified |
+| `F-ru-089` | `ru` | `tools.video.alignmentCenter` | action terminology | `"По центру"` | `"Выровнять по центру"` | The settings item performs an alignment action and has no separate action label. | verified |
+| `F-ru-090` | `ru` | `tools.video.alignmentRight` | action terminology | `"Справа"` | `"Выровнять по правому краю"` | The settings item performs an alignment action and has no separate action label. | verified |
+| `F-ru-091` | `ru` | `tools.video.toggleCaption` | toggle semantics / source-only contract | `"Показать подпись"` | `"Показать или скрыть подпись"` | The source-only toggle represents both showing and hiding the caption. | verified |
+| `F-ru-092` | `ru` | `tools.video.errorFileTooLarge` | untranslated upload error | `"Video is too large. {size} exceeds the {max} limit."` | `"Размер видео ({size}) превышает ограничение {max}."` | The upload error is untranslated; both placeholders remain exact. | verified |
+| `F-ru-093` | `ru` | `tools.video.emptyOrDropHere` | drop-target context | `"или перетащите сюда"` | `"или перетащите видео сюда"` | The empty-state instruction omitted the object being dropped. | verified |
+| `F-ru-094` | `ru` | `tools.audio.alignmentLeft` | action terminology | `"Слева"` | `"Выровнять по левому краю"` | The settings item performs an alignment action and has no separate action label. | verified |
+| `F-ru-095` | `ru` | `tools.audio.alignmentCenter` | action terminology | `"По центру"` | `"Выровнять по центру"` | The settings item performs an alignment action and has no separate action label. | verified |
+| `F-ru-096` | `ru` | `tools.audio.alignmentRight` | action terminology | `"Справа"` | `"Выровнять по правому краю"` | The settings item performs an alignment action and has no separate action label. | verified |
+| `F-ru-097` | `ru` | `tools.audio.errorFileTooLarge` | untranslated upload error | `"Audio is too large. {size} exceeds the {max} limit."` | `"Размер аудиофайла ({size}) превышает ограничение {max}."` | The upload error is untranslated; both placeholders remain exact. | verified |
+| `F-ru-098` | `ru` | `tools.audio.errorGoogleDrive` | recovery copy / product terminology | `"Ссылки Google Drive нельзя воспроизвести напрямую — скачайте файл и загрузите его сюда."` | `"Аудио по ссылкам на Google Диск нельзя воспроизвести напрямую — скачайте файл и загрузите его сюда."` | Links are not played; [Google’s official Russian help](https://support.google.com/drive/answer/2424384?co=GENIE.Platform%3DDesktop&hl=ru-US) uses the product name `Google Диск`. | verified |
+| `F-ru-099` | `ru` | `tools.audio.errorOneDrive` | recovery copy / subject clarity | `"Ссылки OneDrive нельзя воспроизвести напрямую — скачайте файл и загрузите его сюда."` | `"Аудио по ссылкам на OneDrive нельзя воспроизвести напрямую — скачайте файл и загрузите его сюда."` | The audio, not the links themselves, cannot be played; [Microsoft’s Russian OneDrive help](https://support.microsoft.com/ru-RU/onedrive/share-files-and-folders-in-microsoft-onedrive) corroborates the product context. | verified |
+| `F-ru-100` | `ru` | `tools.audio.titlePlaceholder` | untranslated metadata | `"Track title"` | `"Название трека"` | The track-title metadata placeholder is untranslated. | verified |
+| `F-ru-101` | `ru` | `tools.audio.artistPlaceholder` | untranslated metadata | `"Artist"` | `"Исполнитель"` | The artist metadata placeholder is untranslated. | verified |
+| `F-ru-102` | `ru` | `tools.audio.emptyOrDropHere` | drop-target context | `"или перетащите сюда"` | `"или перетащите аудиофайл сюда"` | The empty-state instruction omitted the audio-file object. | verified |
+| `F-ru-103` | `ru` | `tools.audio.coverChange` | untranslated cover action | `"Change cover"` | `"Изменить обложку"` | The cover-image action is untranslated. | verified |
+| `F-ru-104` | `ru` | `tools.audio.coverSet` | untranslated cover action | `"Set cover image"` | `"Установить обложку"` | The cover-image action is untranslated. | verified |
+| `F-ru-105` | `ru` | `tools.audio.coverRemove` | untranslated cover action | `"Remove cover"` | `"Удалить обложку"` | The cover-image action is untranslated. | verified |
+| `F-ru-106` | `ru` | `tools.audio.coverErrorType` | untranslated recovery copy | `"Choose an image file"` | `"Выберите файл изображения"` | The wrong-file-type recovery instruction is untranslated. | verified |
+| `F-ru-107` | `ru` | `tools.audio.coverErrorTooLarge` | untranslated error | `"Image is too large"` | `"Изображение слишком большое"` | The cover-image size error is untranslated. | verified |
+| `F-ru-108` | `ru` | `tools.audio.coverAdd` | untranslated cover action | `"Add a cover"` | `"Добавьте обложку"` | The empty-cover action is untranslated. | verified |
+| `F-ru-109` | `ru` | `tools.audio.coverOrDropHere` | drop-target context | `"или перетащите сюда"` | `"или перетащите изображение сюда"` | The cover-image drop instruction omitted its object. | verified |
+| `F-ru-110` | `ru` | `tools.audio.coverSourceAria` | accessibility / object context | `"Источник изображения"` | `"Источник обложки"` | The accessible tab-group name must identify the cover-image role rather than a generic image source. | verified |
+| `F-ru-111` | `ru` | `a11y.allBlocksSelected` | accessibility / number grammar | `"Выбраны все блоки, блоков: {count}"` | `"Выбраны все блоки. Всего: {count}"` | The replacement is count-neutral and removes repetition and a comma splice. | verified |
+| `F-ru-112` | `ru` | `a11y.navigationModeEntered` | accessibility / interaction terminology | `"Режим навигации. Используйте стрелки для перемещения между блоками, Enter — для редактирования, Escape — для выхода."` | `"Режим навигации. Используйте клавиши со стрелками для перехода между блоками, Enter — для редактирования, Escape — для выхода."` | The instruction names the arrow keys and distinguishes navigation from moving blocks. | verified |
+| `F-ru-113` | `ru` | `a11y.navigationModeExited` | accessibility / completed state | `"Выход из режима навигации"` | `"Режим навигации завершён"` | A live-region announcement should describe the completed state. | verified |
+| `F-ru-114` | `ru` | `a11y.navigatedToBlock` | accessibility / completed event | `"Переход к блоку"` | `"Вы перешли к блоку"` | A live-region announcement should describe the completed navigation event. | verified |
+| `F-ru-115` | `ru` | `blockSettings.orConjunction` | composition grammar | `" или "` | `" или используйте "` | The fragment must compose naturally as `Нажмите или используйте Ctrl+/…`. | verified |
+| `F-ru-116` | `ru` | `blockSettings.openMenuAction` | composition punctuation | `" чтобы открыть меню"` | `", чтобы открыть меню"` | Both runtime compositions require the leading comma before the purpose clause. | verified |
+| `F-ru-117` | `ru` | `tools.video.seek` | accessibility / media terminology | `"Перемотка"` | `"Позиция воспроизведения"` | The range control represents the current playback position, not a rewind action. | verified |
+| `F-ru-118` | `ru` | `tools.video.toggleTimeDisplay` | accessibility / source synchronization | `"Переключить отображение времени"` | `"Переключить прошедшее и оставшееся время"` | The accessible action must name the two actual display states. | verified |
+| `F-ru-119` | `ru` | `tools.video.speedPresets` | UI terminology | `"Предустановки скорости"` | `"Предустановленные скорости"` | The adjective phrase is natural Russian UI copy and avoids an implementation-style nominal calque. | verified |
+| `F-ru-120` | `ru` | `tools.video.ctxStats` | slang / source synchronization | `"Статистика для гиков"` | `"Статистика воспроизведения"` | The current label uses prohibited slang; the replacement identifies the playback-data context. | verified |
 | `F-sd-001` | `sd` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"فارميٽنگ صاف ڪريو"` | WordPress Sindhi supplies the native clear action `صاف ڪريو` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/snd/default/export-translations/?format=po); the object reuses this dictionary’s established `فارميٽنگ` noun. This adapted value remains flagged for a distinct full-language pass. | verified |
 | `F-si-001` | `si` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"හැඩතල ගැන්වීම ඉවත් කරන්න"` | WordPress Sinhala uses `ආකෘතිකරණය ඉවත්කරන්න` for Clear formatting in its [official catalog](https://translate.wordpress.org/projects/wp/dev/si/default/export-translations/?format=po); the selected wording follows this dictionary’s existing formatting noun and spacing conventions. | verified |
 | `F-sk-001` | `sk` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Vymazať formátovanie"` | Microsoft’s Slovak editor UI uses the exact command [Vymazať formátovanie](https://support.microsoft.com/sk-SK/PowerPoint/clear-all-text-formatting). | verified |
@@ -1903,6 +2257,88 @@ follows the global transition rule above.
 | `F-sq-001` | `sq` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Largo formatimin"` | CKEditor’s Albanian remove-format plugin uses the exact command [Largo formatimin](https://github.com/ckeditor/ckeditor5/blob/master/packages/ckeditor5-remove-format/lang/translations/sq.po#L14-L16). | verified |
 | `F-sr-001` | `sr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Уклони форматирање"` | CKEditor’s Serbian Cyrillic remove-format plugin uses the exact command [Уклони форматирање](https://github.com/ckeditor/ckeditor5/blob/master/packages/ckeditor5-remove-format/lang/translations/sr.po#L14-L16), preserving this dictionary’s shipped script. | verified |
 | `F-sv-001` | `sv` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Radera formatering"` | Microsoft’s Swedish editor UI uses the exact concise command [Radera formatering](https://support.microsoft.com/sv-SE/PowerPoint/clear-all-text-formatting). | verified |
+| `F-sv-002` | `sv` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Det här blocket innehåller {count} nästlade block. Om du konverterar det flyttas de till den översta nivån. Vill du fortsätta?"` | `"Nästlade block: {count}. Om du omvandlar det här blocket flyttas varje nästlat block till den översta nivån. Fortsätta?"` | The source-only count can be one or many; the first correction retained plural `de`, which fails at `{count}=1`. `Varje nästlat block` is count-neutral, while `omvandla` stays consistent with the visible conversion terminology and corrected source contract. | verified |
+| `F-sv-003` | `sv` | `toolbox.optionAddAbove` | shortcut / action clarity | `"⌥ — lägg till ovanför"` | `"⌥-klicka för att lägga till ovanför"` | The tooltip must state the click gesture required with the Option key rather than present a key and an unrelated action fragment. | verified |
+| `F-sv-004` | `sv` | `toolbox.ctrlAddAbove` | shortcut / action clarity | `"Ctrl — lägg till ovanför"` | `"Ctrl-klicka för att lägga till ovanför"` | The tooltip must state the Ctrl-click gesture required by the caller. | verified |
+| `F-sv-005` | `sv` | `tools.colorPicker.defaultSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {default}"` | `"{mode}: {default}"` | The template is a swatch accessible name; the colon makes caller output such as `Textfärg: Standard` an unambiguous label-value pair. | verified |
+| `F-sv-006` | `sv` | `tools.colorPicker.colorSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {color}"` | `"{mode}: {color}"` | The template is a swatch accessible name; the colon makes values such as `Textfärg: Grå` unambiguous. | verified |
+| `F-sv-007` | `sv` | `tools.paragraph.placeholder` | hint clarity | `"Skriv något eller tryck / för att välja"` | `"Skriv något eller tryck / för att välja ett verktyg"` | The current sentence is incomplete because it omits what the slash command selects. | verified |
+| `F-sv-008` | `sv` | `tools.toggle.bodyPlaceholder` | action clarity / source synchronization | `"Tom vikbar lista. Klicka eller släpp block här."` | `"Tom vikbar lista. Klicka för att lägga till ett block eller dra block hit."` | The click creates a child block while drag accepts existing blocks; the replacement names both distinct actions. | verified |
+| `F-sv-009` | `sv` | `tools.toggle.ariaLabelCollapse` | action terminology / accessibility | `"Dölj"` | `"Fäll ihop"` | The control collapses a disclosure; `Dölj` only says hide and loses the paired expand/collapse model. | verified |
+| `F-sv-010` | `sv` | `tools.toggle.ariaLabelExpand` | action terminology / accessibility | `"Visa"` | `"Fäll ut"` | The control expands a disclosure; `Visa` only says show and loses the paired expand/collapse model. | verified |
+| `F-sv-011` | `sv` | `tools.table.clearSelection` | context / action accuracy | `"Rensa"` | `"Rensa innehåll"` | Both table callers clear selected cell, row, or column contents rather than merely clearing the painted selection. | verified |
+| `F-sv-012` | `sv` | `tools.table.placement` | terminology / source synchronization | `"Placering"` | `"Justering"` | The 3-by-3 control changes cell-content alignment, not the cell’s location; Microsoft Swedish uses `textjustering` for this concept. | verified |
+| `F-sv-013` | `sv` | `blockSettings.copyLink` | semantics / compound terminology | `"Kopiera länk till block"` | `"Kopiera blockets länk"` | The current phrase can mean copying a link into a block; the action copies the link that belongs to this block. | verified |
+| `F-sv-014` | `sv` | `a11y.dragHandle` | accessibility / clarity | `"Dra för att flytta eller klicka för meny"` | `"Dra för att flytta blocket eller klicka för att öppna menyn"` | The accessible instruction needs both objects and the result of clicking the handle. | verified |
+| `F-sv-015` | `sv` | `a11y.blocksMoved` | number agreement / accessibility | `"{count} block flyttade till position {position}"` | `"Flyttade block: {count}. Position: {position}"` | Swedish participle agreement differs for one and many; the label-before-count form remains grammatical for every runtime count. | verified |
+| `F-sv-016` | `sv` | `a11y.blocksDuplicated` | number agreement / accessibility | `"{count} block duplicerade från position {position}"` | `"Duplicerade block: {count}. Från position {position}"` | The current plural participle is ungrammatical for a count of one; the replacement is count-neutral. | verified |
+| `F-sv-017` | `sv` | `a11y.atTop` | grammar / accessibility / source synchronization | `"Blocket är högst upp, kan inte flyttas uppåt"` | `"Blocket är högst upp och kan inte flyttas uppåt"` | Replaces a comma splice with the complete conjunction required by the corrected source. | verified |
+| `F-sv-018` | `sv` | `a11y.atBottom` | grammar / accessibility / source synchronization | `"Blocket är längst ner, kan inte flyttas nedåt"` | `"Blocket är längst ner och kan inte flyttas nedåt"` | Replaces a comma splice with the complete conjunction required by the corrected source. | verified |
+| `F-sv-019` | `sv` | `a11y.searchResults` | accessibility / source synchronization | `"{count} resultat"` | `"Sökresultat: {count}"` | The label-before-count form identifies what the live-region number represents and remains grammatical for every count. | verified |
+| `F-sv-020` | `sv` | `a11y.allBlocksSelected` | number / punctuation / source synchronization | `"Alla block markerade, {count} block"` | `"Alla block markerade. Totalt: {count}"` | Avoids a comma splice and repeated count-sensitive noun while preserving the total. | verified |
+| `F-sv-021` | `sv` | `a11y.blocksSelected` | number agreement / accessibility | `"{count} block markerade"` | `"Markerade block: {count}"` | Swedish participle agreement differs for one and many; the replacement is count-neutral. | verified |
+| `F-sv-022` | `sv` | `a11y.navigationModeEntered` | accessibility / instruction grammar | `"Navigeringsläge. Använd piltangenterna för att flytta mellan block, Enter för att redigera, Escape för att avsluta."` | `"Navigeringsläge. Använd piltangenterna för att flytta mellan block. Tryck på Enter för att redigera och på Escape för att avsluta."` | Complete keyboard instructions are clearer when read aloud than the current comma-separated fragments. | verified |
+| `F-sv-023` | `sv` | `a11y.navigationModeExited` | grammar / event state | `"Avslutade navigeringsläge"` | `"Navigeringsläget avslutades"` | The current phrase lacks definite agreement and an explicit event subject; the passive sentence announces the completed state naturally. | verified |
+| `F-sv-024` | `sv` | `a11y.navigatedToBlock` | grammar / accessibility | `"Navigerade till block"` | `"Navigerat till blocket"` | The completed status announcement requires a resultative participle rather than a finite past-tense verb without a subject, and the definite noun identifies the specific block that received focus. | verified |
+| `F-sv-025` | `sv` | `a11y.dropCreateColumnLeft` | drop context / accessibility | `"Skapar en kolumn till vänster"` | `"En kolumn skapas till vänster när du släpper"` | The announcement occurs before drop and must describe the prospective result rather than imply creation is already happening. | verified |
+| `F-sv-026` | `sv` | `a11y.dropCreateColumnRight` | drop context / accessibility | `"Skapar en kolumn till höger"` | `"En kolumn skapas till höger när du släpper"` | The announcement occurs before drop and must describe the prospective result rather than imply creation is already happening. | verified |
+| `F-sv-027` | `sv` | `tools.columns.resizeAriaLabel` | accessibility / specificity | `"Ändra kolumnstorlek"` | `"Ändra kolumnbredd"` | The drag handle changes column width, not an arbitrary column dimension or property. | verified |
+| `F-sv-028` | `sv` | `tools.columns.turnInto` | terminology consistency / source-only contract | `"Konvertera till kolumner"` | `"Omvandla till kolumner"` | `Omvandla` matches the reviewed visible conversion heading and is the natural document-editing action for this source-only title. | verified |
+| `F-sv-029` | `sv` | `searchTerms.header` | semantic alias / duplicate search slot | `"sidhuvud"` | `"överskrift"` | The alias targets the heading tool, so `sidhuvud` is semantically wrong; the first correction duplicated `searchTerms.heading=rubrik` and wasted one of the tool's three search slots. Svenska Akademiens ordlista records [överskrift](https://svenska.se/saol/?sok=%C3%B6verskrift) as a genuine heading synonym. | verified |
+| `F-sv-030` | `sv` | `searchTerms.unordered` | list terminology | `"osorterad"` | `"oordnad"` | An unordered list is not an unsorted data set; `oordnad` preserves the list-model meaning. | verified |
+| `F-sv-031` | `sv` | `searchTerms.ordered` | list terminology | `"sorterad"` | `"ordnad"` | An ordered list expresses sequence rather than semantic sorting; `ordnad` preserves that distinction. | verified |
+| `F-sv-032` | `sv` | `searchTerms.collapse` | terminology consistency | `"dölj"` | `"fäll ihop"` | The search alias should name the disclosure-collapse action used by the corrected toggle control rather than generic hiding. | verified |
+| `F-sv-033` | `sv` | `searchTerms.expand` | terminology consistency | `"visa"` | `"fäll ut"` | The search alias should name the disclosure-expand action used by the corrected toggle control rather than generic showing. | verified |
+| `F-sv-034` | `sv` | `tools.callout.addEmoji` | terminology / source synchronization | `"Lägg till emoji"` | `"Lägg till ikon"` | The callout presents the chosen emoji as an editable and removable icon, matching the corrected source. | verified |
+| `F-sv-035` | `sv` | `tools.callout.filterEmojis` | search clarity / accessibility / source synchronization | `"Filtrera…"` | `"Sök efter emojier…"` | The value is the placeholder and accessible name of an emoji searchbox, not a generic filter action. | verified |
+| `F-sv-036` | `sv` | `tools.callout.pickRandom` | action clarity / accessibility / source synchronization | `"Slumpmässig"` | `"Välj en slumpmässig emoji"` | The dice button needs a complete action and object rather than a bare adjective. | verified |
+| `F-sv-037` | `sv` | `tools.callout.skinTone` | established product terminology | `"Hudfärg"` | `"Hudton"` | Microsoft’s Swedish emoji UI uses the exact selector term [Hudton](https://support.microsoft.com/sv-se/teams/chat/select-your-emoji-skin-tone). | verified |
+| `F-sv-038` | `sv` | `toolNames.equation` | pending translation / tool name | `"Equation"` | `"Ekvation"` | The inline equation tool retains an English fallback instead of the standard Swedish mathematical term. | verified |
+| `F-sv-039` | `sv` | `tools.equation.placeholder` | pending translation / hint | `"Enter a LaTeX formula…"` | `"Ange en LaTeX-formel…"` | Localizes the complete instruction while retaining the LaTeX product name. | verified |
+| `F-sv-040` | `sv` | `tools.code.searchLanguage` | punctuation / source synchronization | `"Sök språk..."` | `"Sök språk…"` | The continuing search input must use the corpus-standard U+2026 ellipsis rather than three full stops. | verified |
+| `F-sv-041` | `sv` | `tools.link.linkTitle` | context / terminology / source synchronization | `"Länktitel"` | `"Länktext"` | The inline-link field edits the anchor’s visible text, not title metadata. | verified |
+| `F-sv-042` | `sv` | `tools.image.exitFullscreen` | action terminology | `"Avsluta helskärm"` | `"Avsluta helskärmsläge"` | The control exits a mode; [official Swedish platform terminology](https://support.microsoft.com/sv-se/topic/windows-spel-helsk%C3%A4rmsl%C3%A4ge-67fb8d12-5467-4a95-8adf-0a10789576ab) uses `helskärmsläge`. | verified |
+| `F-sv-043` | `sv` | `tools.image.converting` | pending translation / progress | `"Converting…"` | `"Konverterar…"` | The visible image-processing progress state retains an English fallback. | verified |
+| `F-sv-044` | `sv` | `tools.image.altDescription` | accessibility / brevity / source synchronization | `"Lägg till alt-text som beskriver bilden. Det gör sidan mer tillgänglig för personer med nedsatt syn eller som är blinda."` | `"Beskriv den här bilden för personer som inte kan se den."` | The dialog already establishes alternative text; the corrected source is concise and directly describes the audience, consistent with [Microsoft’s Swedish alternative-text guidance](https://support.microsoft.com/sv-se/accessibility/office-accessibility/everything-you-need-to-know-to-write-effective-alt-text). | verified |
+| `F-sv-045` | `sv` | `tools.image.errorFileTooLarge` | pending translation / error | `"Image is too large. {size} exceeds the {max} limit."` | `"Bilden är för stor. {size} överskrider gränsen på {max}."` | Localizes the upload error and preserves both interpolation placeholders exactly. | verified |
+| `F-sv-046` | `sv` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"URL:en returnerade ett fel. Prova en annan källa eller ladda upp filen igen."` | `"Bilden kunde inte läsas in från den här webbadressen. Prova en annan källa eller ladda upp filen igen."` | The corrected source identifies the failed image load; the current text instead personifies a URL and obscures what failed. | verified |
+| `F-sv-047` | `sv` | `tools.file.errorFileTooLarge` | pending translation / error | `"File is too large. {size} exceeds the {max} limit."` | `"Filen är för stor. {size} överskrider gränsen på {max}."` | Localizes the file upload error and preserves both placeholders exactly. | verified |
+| `F-sv-048` | `sv` | `tools.file.previewRender` | terminology / source synchronization | `"Vy"` | `"Förhandsgranskning"` | The corrected source names the rendered Preview tab; `Vy` is only a generic view and does not match the surrounding preview UI. | verified |
+| `F-sv-049` | `sv` | `tools.video.alignmentLeft` | action terminology | `"Vänster"` | `"Vänsterjustera"` | The settings item performs an alignment action and has no separate accessible action label. | verified |
+| `F-sv-050` | `sv` | `tools.video.alignmentCenter` | action terminology | `"Centrerat"` | `"Centrera"` | The settings item performs an alignment action; the current adjective only describes a state. | verified |
+| `F-sv-051` | `sv` | `tools.video.alignmentRight` | action terminology | `"Höger"` | `"Högerjustera"` | The settings item performs an alignment action and has no separate accessible action label. | verified |
+| `F-sv-052` | `sv` | `tools.video.hideControls` | media terminology / specificity | `"Dölj kontroller"` | `"Dölj uppspelningsreglage"` | The setting hides the player’s playback controls; `reglage` is the established Swedish media-interface term and the compound supplies the missing context. | verified |
+| `F-sv-053` | `sv` | `tools.video.errorFileTooLarge` | pending translation / error | `"Video is too large. {size} exceeds the {max} limit."` | `"Videon är för stor. {size} överskrider gränsen på {max}."` | Localizes the video upload error and preserves both placeholders exactly. | verified |
+| `F-sv-054` | `sv` | `tools.audio.alignmentLeft` | action terminology | `"Vänster"` | `"Vänsterjustera"` | The settings item performs an alignment action and has no separate accessible action label. | verified |
+| `F-sv-055` | `sv` | `tools.audio.alignmentCenter` | action terminology | `"Centrerat"` | `"Centrera"` | The settings item performs an alignment action; the current adjective only describes a state. | verified |
+| `F-sv-056` | `sv` | `tools.audio.alignmentRight` | action terminology | `"Höger"` | `"Högerjustera"` | The settings item performs an alignment action and has no separate accessible action label. | verified |
+| `F-sv-057` | `sv` | `tools.audio.errorFileTooLarge` | pending translation / error | `"Audio is too large. {size} exceeds the {max} limit."` | `"Ljudfilen är för stor. {size} överskrider gränsen på {max}."` | Localizes the upload error, identifies the file resource, and preserves both placeholders exactly. | verified |
+| `F-sv-058` | `sv` | `tools.audio.errorGoogleDrive` | natural recovery copy / source synchronization | `"Google Drive-länkar kan inte spelas upp direkt — ladda ner filen och ladda upp den här."` | `"Google Drive-länkar kan inte spelas upp direkt. Ladda ner filen och ladda upp den här i stället."` | Two complete sentences improve readability and restore the source’s missing `instead` recovery relationship. | verified |
+| `F-sv-059` | `sv` | `tools.audio.errorOneDrive` | natural recovery copy / source synchronization | `"OneDrive-länkar kan inte spelas upp direkt — ladda ner filen och ladda upp den här."` | `"OneDrive-länkar kan inte spelas upp direkt. Ladda ner filen och ladda upp den här i stället."` | Two complete sentences improve readability and restore the source’s missing `instead` recovery relationship. | verified |
+| `F-sv-060` | `sv` | `tools.audio.titlePlaceholder` | pending translation / metadata | `"Track title"` | `"Spårtitel"` | [Spotify’s Swedish metadata guidance](https://support.spotify.com/se/artists/article/metadata-formatting-guidelines/) uses the established compound `spårtitel` for a track-title field. | verified |
+| `F-sv-061` | `sv` | `tools.audio.emptyAddAudio` | grammar / media terminology | `"Lägg till en ljud"` | `"Lägg till ljud"` | Swedish `ljud` is neuter and is naturally used as a mass noun in this media action; the current common-gender article is ungrammatical. | verified |
+| `F-sv-062` | `sv` | `tools.audio.emptyOrDropHere` | grammar / media terminology | `"eller släpp en ljud här"` | `"eller släpp en ljudfil här"` | The drop target accepts an audio file; the current common-gender article before neuter `ljud` is ungrammatical. | verified |
+| `F-sv-063` | `sv` | `tools.audio.coverChange` | pending translation / established media terminology | `"Change cover"` | `"Ändra omslagsbild"` | Localizes the artwork action with Spotify Swedish’s exact [Ändra omslagsbild](https://support.spotify.com/se/article/add-playlist-cover/) terminology. | verified |
+| `F-sv-064` | `sv` | `tools.audio.coverSet` | pending translation / established media terminology | `"Set cover image"` | `"Ange omslagsbild"` | Localizes the action and uses the same established `omslagsbild` term as the adjacent artwork controls. | verified |
+| `F-sv-065` | `sv` | `tools.audio.coverRemove` | pending translation / established media terminology | `"Remove cover"` | `"Ta bort omslagsbild"` | Localizes the removal action and retains the reviewed cover-image term. | verified |
+| `F-sv-066` | `sv` | `tools.audio.coverErrorType` | pending translation / error | `"Choose an image file"` | `"Välj en bildfil"` | Localizes the wrong-file-type recovery instruction. | verified |
+| `F-sv-067` | `sv` | `tools.audio.coverErrorTooLarge` | pending translation / error | `"Image is too large"` | `"Bilden är för stor"` | Localizes the cover-image size error. | verified |
+| `F-sv-068` | `sv` | `tools.audio.coverAdd` | pending translation / established media terminology | `"Add a cover"` | `"Lägg till omslagsbild"` | Localizes the empty-cover action with Spotify Swedish’s established `omslagsbild` term. | verified |
+| `F-sv-069` | `sv` | `tools.audio.coverSourceAria` | accessibility / terminology consistency | `"Bildkälla"` | `"Omslagsbildens källa"` | The accessible tab-group name must identify the cover-image source selector rather than a generic image source. | verified |
+| `F-sv-070` | `sv` | `tools.database.viewTypeBoardDescription` | grammar / source synchronization | `"Visa arbete som kolumner"` | `"Visa arbetet i kolumner"` | The view description needs a definite object and the natural preposition for arranging work in columns. | verified |
+| `F-sv-071` | `sv` | `tools.database.viewTypeListDescription` | terminology / clarity / source synchronization | `"En enkel linjär vy"` | `"Visa objekt i en enkel lista"` | The current abstract phrase loses both the user action and the familiar list concept from the corrected source. | verified |
+| `F-sv-072` | `sv` | `tools.bookmark.loading` | progress context / punctuation / source synchronization | `"Läser in förhandsvisning av länk"` | `"Läser in en förhandsgranskning av länken…"` | The rendered progress state needs the definite link context and the corpus-standard ellipsis. | verified |
+| `F-sv-073` | `sv` | `tools.bookmark.error` | context / source synchronization | `"Det gick inte att läsa in förhandsvisningen"` | `"Det gick inte att läsa in förhandsgranskningen av länken"` | The error must identify the link preview rather than a generic preview. | verified |
+| `F-sv-074` | `sv` | `tools.embed.empty` | read-only context / source synchronization | `"Klistra in en länk att bädda in"` | `"Ingen inbäddningslänk"` | The caller renders a read-only empty embed, where a paste instruction is impossible. | verified |
+| `F-sv-075` | `sv` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Omnämnande"` | `"Omnämn"` | `buildPasteMenuItems` defines an action title alongside imperatives; Notion Swedish uses the exact action phrase [Omnämn en person](https://www.notion.com/sv/help/writing-and-editing-basics). | verified |
+| `F-sv-076` | `sv` | `notifier.dismiss` | semantics / action | `"Avfärda"` | `"Stäng"` | The × button closes the notification; `Avfärda` means rejecting or dismissing a proposition and is unnatural as the button’s accessible action. | verified |
+| `F-sv-077` | `sv` | `tools.video.seek` | accessibility / media terminology | `"Sök"` | `"Uppspelningsposition"` | The accessible name belongs to a playback-position slider; `Sök` incorrectly suggests content search. | verified |
+| `F-sv-078` | `sv` | `tools.video.toggleTimeDisplay` | accessibility / source synchronization | `"Växla tidsvisning"` | `"Växla mellan förfluten och återstående tid"` | The accessible action must identify the two actual time-display states instead of exposing an abstract toggle. | verified |
+| `F-sv-079` | `sv` | `tools.video.fullscreenExit` | action terminology | `"Avsluta helskärm"` | `"Avsluta helskärmsläge"` | The control exits a mode; official Swedish platform terminology uses `helskärmsläge`. | verified |
+| `F-sv-080` | `sv` | `tools.video.ctxCopyUrlAtTime` | context / clarity | `"Kopiera videons URL vid aktuell tid"` | `"Kopiera videons URL vid aktuell uppspelningsposition"` | The copied URL targets the current playback head; `aktuell tid` can instead mean the current wall-clock time. | verified |
+| `F-sv-081` | `sv` | `tools.video.ctxStats` | slang / terminology / source synchronization | `"Statistik för nördar"` | `"Uppspelningsstatistik"` | The corrected source deliberately removes slang and identifies the playback-data context. | verified |
+| `F-sv-082` | `sv` | `tools.callout.emojiSearchResults` | number / accessibility / source synchronization | `"{count} emojier hittades"` | `"Emojiträffar: {count}"` | The live region can announce one match; the label-before-count form is grammatical for every result count. | verified |
+| `F-sv-083` | `sv` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Aktivitet"` | `"Aktiviteter"` | The emoji picker renders this as a section heading and category-navigation accessible name; [Unicode CLDR Swedish](https://raw.githubusercontent.com/unicode-org/cldr/release-48/common/main/sv.xml) and [Microsoft Teams Swedish](https://support.microsoft.com/sv-se/office/skicka-en-emoji-eller-gif-i-kostnadsfritt-microsoft-teams-cfbfc796-de50-4c59-b116-9117e0b25b6b) use the plural category label `Aktiviteter`. | verified |
 | `F-sw-001` | `sw` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Ondoa uumbizaji"` | WordPress Swahili’s literal catalog label is `Fomati safi` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/sw/default/export-translations/?format=po); `Ondoa uumbizaji` is the more natural action built from this dictionary’s vocabulary and remains explicitly flagged for independent full-language review. | verified |
 | `F-ta-001` | `ta` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"வடிவமைப்பை அகற்று"` | Google Docs’ Tamil UI uses the exact command [வடிவமைப்பை அகற்று](https://support.google.com/docs/answer/4492226?hl=ta). | verified |
 | `F-te-001` | `te` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ఫార్మాటింగ్‌ను తొలగించు"` | The wording combines this dictionary’s established `ఫార్మాటింగ్` with LibreOffice’s native removal verb in its [official Telugu source](https://github.com/LibreOffice/translations/blob/master/source/te/officecfg/registry/data/org/openoffice/Office/UI.po#L34966-L34972); [Google Docs](https://support.google.com/docs/answer/179738?co=GENIE.Platform%3DDesktop&hl=te) corroborates the construction. | verified |
@@ -2082,3 +2518,10 @@ locale and UI context.
 | `R-no-014` | `no` | `tools.audio.pause` | established cognate | `Pause` is the established unchanged Bokmål noun and the standard concise audio-player control label in Norwegian media interfaces. | [Bokmålsordboka — pause](https://ordbokene.no/bm/pause); [Apple — Bruk avspillingskontrollene](https://support.apple.com/no-no/guide/iphone/iphaec9fc22f/ios) |
 | `R-no-015` | `no` | `tools.colorPicker.defaultSwatchLabel` | universal notation | The placeholder-only template contains no English words. Bokmål modifier-before-noun order renders the caller output as idiomatic `Standard tekstfarge`. | [Microsoft — Endre standard tekstfarge](https://support.microsoft.com/nb-no/office/endre-standard-tekstfarge-skriftfarge-i-word-59f83009-12c2-4feb-b548-93621dfe6f2f) |
 | `R-no-016` | `no` | `tools.colorPicker.colorSwatchLabel` | universal notation | The placeholder-only template contains no English words. Bokmål modifier-before-noun order renders caller values such as `Rød tekstfarge` naturally. | [Microsoft — Endre standard tekstfarge](https://support.microsoft.com/nb-no/office/endre-standard-tekstfarge-skriftfarge-i-word-59f83009-12c2-4feb-b548-93621dfe6f2f) |
+| `R-ru-001` | `ru` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; the Command symbol is language-independent. | [Apple — Сочетания клавиш Mac](https://support.apple.com/ru-ru/102650) |
+| `R-ru-002` | `ru` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Russian product guidance retains `Ctrl` in key combinations. | [Microsoft — Сочетания клавиш в Windows](https://support.microsoft.com/ru-ru/windows/%D1%81%D0%BE%D1%87%D0%B5%D1%82%D0%B0%D0%BD%D0%B8%D1%8F-%D0%BA%D0%BB%D0%B0%D0%B2%D0%B8%D1%88-%D0%B2-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
+| `R-ru-003` | `ru` | `tools.image.altButton` | acronym | `Alt` is the conventional compact form associated with Russian alternative-text controls; the surrounding dialog supplies the full localized phrase. | [Microsoft — Добавление замещающего текста](https://support.microsoft.com/ru-RU/accessibility/office-accessibility/add-alternative-text-to-a-shape-picture-chart-smartart-graphic-or-other-object) |
+| `R-ru-004` | `ru` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation used unchanged in Russian media interfaces. | [Apple — Настройки съёмки с помощью инструментов камеры iPhone](https://support.apple.com/ru-ru/guide/iphone/-iph3dc593597/ios) |
+| `R-ru-005` | `ru` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Russian media interfaces. | [Apple — Настройки съёмки с помощью инструментов камеры iPhone](https://support.apple.com/ru-ru/guide/iphone/-iph3dc593597/ios) |
+| `R-ru-006` | `ru` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Russian media interfaces. | [Apple — Настройки съёмки с помощью инструментов камеры iPhone](https://support.apple.com/ru-ru/guide/iphone/-iph3dc593597/ios) |
+| `R-ru-007` | `ru` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Russian product interfaces. | [Microsoft — Работа со ссылками в Excel](https://support.microsoft.com/ru-ru/excel/work-with-links-in-excel) |

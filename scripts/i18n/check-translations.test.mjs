@@ -273,6 +273,32 @@ describe('findLocaleIntegrityIssues', () => {
     );
   });
 
+  it('accepts localized leading punctuation plus a space on a source fragment', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': ' to open the menu' },
+        { 'message.key': ', чтобы открыть меню' }
+      ),
+      []
+    );
+  });
+
+  it('rejects localized leading punctuation without the required following space', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': ' to open the menu' },
+        { 'message.key': ',чтобы открыть меню' }
+      ),
+      [
+        {
+          key: 'message.key',
+          kind: 'boundary-whitespace',
+          value: ',чтобы открыть меню',
+        },
+      ]
+    );
+  });
+
   it('reports non-NFC values', () => {
     const decomposed = 'Cafe\u0301';
 

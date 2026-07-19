@@ -187,9 +187,18 @@ export function findLocaleIntegrityIssues(sourceTranslation, translation) {
         issues.push({ key, kind: 'placeholder-mismatch', value });
       }
 
+      const sourceEdgeWhitespace = edgeWhitespace(sourceValue);
+      const translatedEdgeWhitespace = edgeWhitespace(value);
+      const replacesLeadingSpaceWithPunctuation =
+        sourceEdgeWhitespace.leading !== '' &&
+        translatedEdgeWhitespace.leading === '' &&
+        /^\p{P}\s/u.test(value) &&
+        sourceEdgeWhitespace.trailing === translatedEdgeWhitespace.trailing;
+
       if (
-        JSON.stringify(edgeWhitespace(value)) !==
-        JSON.stringify(edgeWhitespace(sourceValue))
+        JSON.stringify(translatedEdgeWhitespace) !==
+          JSON.stringify(sourceEdgeWhitespace) &&
+        !replacesLeadingSpaceWithPunctuation
       ) {
         issues.push({ key, kind: 'boundary-whitespace', value });
       }

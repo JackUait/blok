@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -39,6 +40,22 @@ const readLocale = (
 const english = readLocale('en').messages as EnglishMessages;
 const englishKeys = Object.keys(english).sort();
 const auditLedger = readFileSync(AUDIT_LEDGER_PATH, 'utf-8');
+const RESULT_STATES = new Set(['pending', 'open', 'pass']);
+const FINAL_STATUSES = new Set([
+  'pending',
+  'first-pass-complete',
+  'second-pass-complete',
+  'verified',
+]);
+const FINDING_STATUSES = new Set(['open', 'verified']);
+const RETENTION_CATEGORIES = new Set([
+  'universal notation',
+  'product-brand',
+  'acronym',
+  'established cognate',
+  'established loanword',
+]);
+const GLOBAL_FINDING_KEYS = new Set(['35 changed English source keys']);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'blockSettings.openMenuAction': ' to open the menu',
@@ -83,7 +100,7 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
 };
 
 const decodeLedgerCode = (cell: string): string => {
-  const trimmed = cell.trim();
+  const trimmed = cell.trim().replace(/\\\|/gu, '|');
 
   if (!trimmed.startsWith('`') || !trimmed.endsWith('`')) {
     return trimmed;
@@ -98,22 +115,495 @@ const decodeLedgerCode = (cell: string): string => {
   return code;
 };
 
-const englishLedgerFindings = auditLedger
-  .split('\n')
-  .filter(line => line.startsWith('| `F-en-'))
-  .map(line => {
-    const cells = line
-      .split('|')
-      .slice(1, -1)
-      .map(cell => cell.trim());
+const isMarkdownCellDelimiter = (
+  character: string,
+  currentCell: string
+): boolean => {
+  const trailingBackslashCount = currentCell.match(/\\+$/u)?.[0].length ?? 0;
 
-    return {
-      id: decodeLedgerCode(cells[0] ?? ''),
-      key: decodeLedgerCode(cells[2] ?? ''),
-      expected: decodeLedgerCode(cells[5] ?? ''),
-      status: cells[7] ?? '',
-    };
-  });
+  return character === '|' && trailingBackslashCount % 2 === 0;
+};
+
+const parseMarkdownRow = (line: string): string[] => {
+  if (!line.startsWith('|') || !line.endsWith('|')) {
+    return [];
+  }
+
+  const cells: string[] = [];
+  let cell = '';
+
+  for (const character of line.slice(1, -1)) {
+    if (isMarkdownCellDelimiter(character, cell)) {
+      cells.push(cell.trim());
+      cell = '';
+      continue;
+    }
+
+    cell += character;
+  }
+
+  cells.push(cell.trim());
+
+  return cells;
+};
+
+const parseLedgerFindings = (ledger: string) => {
+  return ledger
+    .split('\n')
+    .filter(line => line.startsWith('| `F-'))
+    .map(line => {
+      const cells = parseMarkdownRow(line);
+
+      return {
+        id: decodeLedgerCode(cells[0] ?? ''),
+        locale: decodeLedgerCode(cells[1] ?? ''),
+        key: decodeLedgerCode(cells[2] ?? ''),
+        expected: decodeLedgerCode(cells[5] ?? ''),
+        status: decodeLedgerCode(cells[7] ?? ''),
+      };
+    });
+};
+
+const parseLocaleAuditRows = (ledger: string) => {
+  const localeAudit = ledger.slice(
+    ledger.indexOf('## Locale Audit'),
+    ledger.indexOf('## Reviewed Dictionary Digests')
+  );
+
+  return localeAudit
+    .split('\n')
+    .filter(line => /^\| `[a-z]{2,3}(?:-[A-Z]{2})?` \|/u.test(line))
+    .map(line => {
+      const cells = parseMarkdownRow(line);
+
+      return {
+        locale: decodeLedgerCode(cells[0] ?? ''),
+        register: decodeLedgerCode(cells[4] ?? ''),
+        firstReviewer: decodeLedgerCode(cells[5] ?? ''),
+        secondReviewer: decodeLedgerCode(cells[6] ?? ''),
+        results: cells.slice(7, 10).map(decodeLedgerCode),
+        findingIds:
+          cells[10]?.match(/F-[a-z]{2,3}(?:-[A-Z]{2})?-\d{3}/gu) ?? [],
+        finalStatus: decodeLedgerCode(cells[11] ?? ''),
+      };
+    });
+};
+
+const parseRetentionRows = (ledger: string) => {
+  return ledger
+    .split('\n')
+    .filter(line => /^\| `R-(?!<locale>)[^`]+` \|/u.test(line))
+    .map(line => {
+      const cells = parseMarkdownRow(line);
+
+      return {
+        id: decodeLedgerCode(cells[0] ?? ''),
+        locale: decodeLedgerCode(cells[1] ?? ''),
+        key: decodeLedgerCode(cells[2] ?? ''),
+        category: decodeLedgerCode(cells[3] ?? ''),
+        justification: cells[4] ?? '',
+        source: cells[5] ?? '',
+      };
+    });
+};
+
+const parseReviewedDictionaryDigests = (ledger: string) => {
+  const digestSection = ledger.slice(
+    ledger.indexOf('## Reviewed Dictionary Digests'),
+    ledger.indexOf('## English Source Audit Evidence')
+  );
+
+  return digestSection
+    .split('\n')
+    .filter(line =>
+      /^\| `[a-z]{2,3}(?:-[A-Z]{2})?` \| `[^`]+` \| `sha256:[a-f0-9]{64}` \|/u.test(
+        line
+      )
+    )
+    .map(line => {
+      const cells = parseMarkdownRow(line);
+
+      return {
+        locale: decodeLedgerCode(cells[0] ?? ''),
+        firstReviewer: decodeLedgerCode(cells[1] ?? ''),
+        firstDigest: decodeLedgerCode(cells[2] ?? ''),
+        secondReviewer: decodeLedgerCode(cells[3] ?? ''),
+        secondDigest: decodeLedgerCode(cells[4] ?? ''),
+      };
+    });
+};
+
+const hashRawDictionary = (raw: string): string => {
+  return `sha256:${createHash('sha256').update(raw).digest('hex')}`;
+};
+
+const findLedgerRowWidthIssues = (ledger: string): string[] => {
+  const issues: string[] = [];
+  const localeSection = ledger.slice(
+    ledger.indexOf('## Locale Audit'),
+    ledger.indexOf('## Reviewed Dictionary Digests')
+  );
+  const digestSection = ledger.slice(
+    ledger.indexOf('## Reviewed Dictionary Digests'),
+    ledger.indexOf('## English Source Audit Evidence')
+  );
+  const checks = [
+    {
+      lines: localeSection
+        .split('\n')
+        .filter(line => /^\| `[a-z]{2,3}(?:-[A-Z]{2})?` \|/u.test(line)),
+      expected: 12,
+      table: 'locale audit',
+    },
+    {
+      lines: digestSection
+        .split('\n')
+        .filter(line => /^\| `[a-z]{2,3}(?:-[A-Z]{2})?` \|/u.test(line)),
+      expected: 5,
+      table: 'reviewed dictionary digest',
+    },
+    {
+      lines: ledger.split('\n').filter(line => line.startsWith('| `F-')),
+      expected: 8,
+      table: 'finding',
+    },
+    {
+      lines: ledger
+        .split('\n')
+        .filter(line => /^\| `R-(?!<locale>)[^`]+` \|/u.test(line)),
+      expected: 6,
+      table: 'retention',
+    },
+  ];
+
+  const rowsToCheck = checks.flatMap(check =>
+    check.lines.map(line => ({ ...check, line }))
+  );
+
+  for (const { expected, line, table } of rowsToCheck) {
+    const cells = parseMarkdownRow(line);
+
+    if (cells.length !== expected) {
+      issues.push(
+        `${decodeLedgerCode(cells[0] ?? 'unknown row')}: ${table} row must contain exactly ${expected} cells`
+      );
+    }
+  }
+
+  return issues;
+};
+
+const sameSortedValues = (left: string[], right: string[]): boolean => {
+  return JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+};
+
+const isAssignedReviewer = (reviewer: string): boolean => {
+  return /^[a-z0-9][a-z0-9._-]*$/iu.test(reviewer);
+};
+
+const isValidReviewer = (reviewer: string): boolean => {
+  return reviewer === '—' || isAssignedReviewer(reviewer);
+};
+
+type LedgerFinding = ReturnType<typeof parseLedgerFindings>[number];
+
+const findFindingDomainIssues = (finding: LedgerFinding): string[] => {
+  const issues: string[] = [];
+  const isGlobalFinding = finding.id.startsWith('F-global-');
+
+  if (isGlobalFinding) {
+    const hasValidGlobalId = /^F-global-\d{3}$/u.test(finding.id);
+
+    if (!hasValidGlobalId) {
+      issues.push(`${finding.id}: invalid global finding identifier`);
+    }
+
+    if (finding.locale !== 'all non-English') {
+      issues.push(`${finding.id}: global locale must be all non-English`);
+    }
+
+    if (!GLOBAL_FINDING_KEYS.has(finding.key)) {
+      issues.push(`${finding.id}: invalid global finding key ${finding.key}`);
+    }
+
+    return issues;
+  }
+
+  if (!localeCodes.includes(finding.locale)) {
+    issues.push(`${finding.id}: invalid finding locale ${finding.locale}`);
+
+    return issues;
+  }
+
+  const findingSequence = finding.id.slice(`F-${finding.locale}-`.length);
+  const findingIdMatchesLocale =
+    finding.id.startsWith(`F-${finding.locale}-`) &&
+    /^\d{3}$/u.test(findingSequence);
+
+  if (!findingIdMatchesLocale) {
+    issues.push(`${finding.id}: identifier does not match ${finding.locale}`);
+  }
+
+  if (!(finding.key in readLocale(finding.locale).messages)) {
+    issues.push(`${finding.id}: unknown ${finding.locale} key ${finding.key}`);
+  }
+
+  return issues;
+};
+
+const findLedgerContractIssues = (ledger: string): string[] => {
+  const issues = findLedgerRowWidthIssues(ledger);
+  const findings = parseLedgerFindings(ledger);
+  const localeRows = parseLocaleAuditRows(ledger);
+  const retentions = parseRetentionRows(ledger);
+  const digests = parseReviewedDictionaryDigests(ledger);
+  const localeRowCodes = localeRows.map(row => row.locale);
+  const findingIds = findings.map(finding => finding.id);
+  const retentionIds = retentions.map(retention => retention.id);
+  const retentionLocaleKeys = retentions.map(
+    retention => `${retention.locale}:${retention.key}`
+  );
+  const digestLocales = digests.map(digest => digest.locale);
+
+  if (!sameSortedValues(localeRowCodes, localeCodes)) {
+    issues.push('locale audit rows must match the on-disk locale set exactly');
+  }
+
+  if (new Set(localeRowCodes).size !== localeRowCodes.length) {
+    issues.push('locale audit rows must be unique');
+  }
+
+  if (new Set(findingIds).size !== findingIds.length) {
+    issues.push('finding identifiers must be unique');
+  }
+
+  if (new Set(retentionIds).size !== retentionIds.length) {
+    issues.push('retention identifiers must be unique');
+  }
+
+  if (new Set(retentionLocaleKeys).size !== retentionLocaleKeys.length) {
+    issues.push('retention locale/key pairs must be unique');
+  }
+
+  if (new Set(digestLocales).size !== digestLocales.length) {
+    issues.push('reviewed dictionary digest locales must be unique');
+  }
+
+  for (const finding of findings) {
+    if (!FINDING_STATUSES.has(finding.status)) {
+      issues.push(`${finding.id}: invalid finding status ${finding.status}`);
+    }
+
+    issues.push(...findFindingDomainIssues(finding));
+  }
+
+  for (const retention of retentions) {
+    if (!localeCodes.includes(retention.locale) || retention.locale === 'en') {
+      issues.push(`${retention.id}: invalid retention locale ${retention.locale}`);
+      continue;
+    }
+
+    const retentionSequence = retention.id.slice(
+      `R-${retention.locale}-`.length
+    );
+    const retentionIdMatchesLocale =
+      retention.id.startsWith(`R-${retention.locale}-`) &&
+      /^\d{3}$/u.test(retentionSequence);
+
+    if (!retentionIdMatchesLocale) {
+      issues.push(
+        `${retention.id}: identifier does not match ${retention.locale}`
+      );
+    }
+
+    if (!RETENTION_CATEGORIES.has(retention.category)) {
+      issues.push(`${retention.id}: invalid category ${retention.category}`);
+    }
+
+    const messages = readLocale(retention.locale).messages;
+
+    if (!(retention.key in messages)) {
+      issues.push(`${retention.id}: unknown key ${retention.key}`);
+    } else if (messages[retention.key] !== english[retention.key]) {
+      issues.push(
+        `${retention.id}: ${retention.locale} ${retention.key} is not identical to English`
+      );
+    }
+
+    if (
+      retention.justification.length === 0 ||
+      retention.justification === 'justification'
+    ) {
+      issues.push(`${retention.id}: missing locale-specific justification`);
+    }
+
+    if (retention.source.length === 0 || retention.source === 'source') {
+      issues.push(`${retention.id}: missing supporting source`);
+    }
+  }
+
+  const hasOpenGlobalFinding = findings.some(
+    finding =>
+      finding.id.startsWith('F-global-') && finding.status === 'open'
+  );
+  const completedLocaleCodes = localeRows
+    .filter(row => row.finalStatus !== 'pending')
+    .map(row => row.locale);
+
+  if (!sameSortedValues(digestLocales, completedLocaleCodes)) {
+    issues.push(
+      'reviewed dictionary digests must match completed locale rows exactly'
+    );
+  }
+
+  for (const digest of digests) {
+    const row = localeRows.find(candidate => candidate.locale === digest.locale);
+
+    if (row === undefined) {
+      issues.push(`${digest.locale}: digest has no locale audit row`);
+      continue;
+    }
+
+    const currentDigest = hashRawDictionary(readLocale(digest.locale).raw);
+
+    if (digest.firstReviewer !== row.firstReviewer) {
+      issues.push(
+        `${digest.locale}: first-pass digest reviewer does not match locale row`
+      );
+    }
+
+    if (digest.firstDigest !== currentDigest) {
+      issues.push(
+        `${digest.locale}: first-pass digest does not match current dictionary`
+      );
+    }
+
+    if (row.finalStatus === 'first-pass-complete') {
+      if (digest.secondReviewer !== '—' || digest.secondDigest !== '—') {
+        issues.push(
+          `${digest.locale}: first-pass digest row must leave second-pass evidence unassigned`
+        );
+      }
+    } else if (
+      ['second-pass-complete', 'verified'].includes(row.finalStatus)
+    ) {
+      if (
+        digest.secondReviewer !== row.secondReviewer ||
+        digest.secondDigest !== currentDigest
+      ) {
+        issues.push(
+          `${digest.locale}: second-pass evidence does not match the current completed review`
+        );
+      }
+    }
+  }
+
+  for (const row of localeRows) {
+    const localeFindings = findings.filter(
+      finding => finding.locale === row.locale
+    );
+    const expectedFindingIds = localeFindings.map(finding => finding.id);
+
+    if (!sameSortedValues(row.findingIds, expectedFindingIds)) {
+      issues.push(
+        `${row.locale}: locale finding IDs must match the finding table exactly`
+      );
+    }
+
+    if (row.results.length !== 3 || row.results.some(result => !RESULT_STATES.has(result))) {
+      issues.push(`${row.locale}: invalid result state`);
+    }
+
+    if (!FINAL_STATUSES.has(row.finalStatus)) {
+      issues.push(`${row.locale}: invalid final status ${row.finalStatus}`);
+    }
+
+    if (!isValidReviewer(row.firstReviewer)) {
+      issues.push(`${row.locale}: invalid first reviewer identifier`);
+    }
+
+    if (!isValidReviewer(row.secondReviewer)) {
+      issues.push(`${row.locale}: invalid second reviewer identifier`);
+    }
+
+    const hasCompletedPass = row.finalStatus !== 'pending';
+
+    if (hasCompletedPass) {
+      if (row.register.length === 0 || row.register === 'to-audit') {
+        issues.push(`${row.locale}: ${row.finalStatus} requires a register`);
+      }
+
+      if (!isAssignedReviewer(row.firstReviewer)) {
+        issues.push(
+          `${row.locale}: ${row.finalStatus} requires a first reviewer`
+        );
+      }
+
+      if (row.results.some(result => result !== 'pass')) {
+        issues.push(
+          `${row.locale}: ${row.finalStatus} requires all results to pass`
+        );
+      }
+
+      if (localeFindings.some(finding => finding.status !== 'verified')) {
+        issues.push(
+          `${row.locale}: ${row.finalStatus} requires every locale finding to be verified`
+        );
+      }
+    }
+
+    if (
+      row.finalStatus === 'first-pass-complete' &&
+      row.secondReviewer !== '—'
+    ) {
+      issues.push(
+        `${row.locale}: first-pass-complete requires an unassigned second reviewer`
+      );
+    }
+
+    if (
+      ['second-pass-complete', 'verified'].includes(row.finalStatus) &&
+      (!isAssignedReviewer(row.secondReviewer) ||
+        row.secondReviewer === row.firstReviewer)
+    ) {
+      issues.push(
+        `${row.locale}: ${row.finalStatus} requires a distinct second reviewer`
+      );
+    }
+
+    if (row.finalStatus === 'verified' && hasOpenGlobalFinding) {
+      issues.push(
+        `${row.locale}: verified is blocked by an open global finding`
+      );
+    }
+
+    if (row.results[2] === 'pass' && row.locale !== 'en') {
+      const messages = readLocale(row.locale).messages;
+      const exactEnglishKeys = Object.keys(english).filter(
+        key => messages[key] === english[key]
+      );
+      const retainedKeys = retentions
+        .filter(retention => retention.locale === row.locale)
+        .map(retention => retention.key);
+
+      if (!sameSortedValues(exactEnglishKeys, retainedKeys)) {
+        issues.push(
+          `${row.locale}: exact-English pass requires a complete retention inventory`
+        );
+      }
+    }
+  }
+
+  return issues;
+};
+
+const ledgerFindings = parseLedgerFindings(auditLedger);
+const englishLedgerFindings = ledgerFindings.filter(
+  finding => finding.locale === 'en'
+);
+const localizedLedgerFindings = ledgerFindings.filter(
+  finding => finding.locale !== 'en' && !finding.id.startsWith('F-global-')
+);
 
 describe('translation guideline corpus integrity', () => {
   it.each(Object.entries(ENGLISH_GUIDELINE_EXPECTATIONS))(
@@ -142,10 +632,8 @@ describe('translation guideline corpus integrity', () => {
     const englishRow = localeAudit
       .split('\n')
       .find(line => line.startsWith('| `en` |'));
-    const englishCells = englishRow
-      ?.split('|')
-      .slice(1, -1)
-      .map(cell => cell.trim());
+    const englishCells =
+      englishRow === undefined ? undefined : parseMarkdownRow(englishRow);
     const recordedFindingIds = englishCells?.[10]
       ?.match(/F-en-\d{3}/gu)
       ?.sort() ?? [];
@@ -157,6 +645,90 @@ describe('translation guideline corpus integrity', () => {
     expect(recordedFindingIds).toEqual(expectedFindingIds);
     expect(englishCells?.slice(7, 10)).toEqual(['pass', 'pass', 'pass']);
     expect(englishCells?.[11]).toBe('first-pass-complete');
+  });
+
+  it.each(localizedLedgerFindings)(
+    '$id keeps $locale $key at its reviewed wording',
+    ({ id, locale, key, expected }) => {
+      const messages = readLocale(locale).messages;
+
+      expect(
+        messages[key],
+        `${id} requires the reviewed ${locale} wording for ${key}`
+      ).toBe(expected);
+    }
+  );
+
+  it('keeps localized finding identifiers and locale/key pairs unique', () => {
+    const ids = localizedLedgerFindings.map(finding => finding.id);
+    const localeKeys = localizedLedgerFindings.map(
+      finding => `${finding.locale}:${finding.key}`
+    );
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(localeKeys).size).toBe(localeKeys.length);
+  });
+
+  it('rejects a locale completion claim with an unverified finding', () => {
+    const invalidLedger = auditLedger.replace(
+      '| verified |\n| `F-en-002`',
+      '| open |\n| `F-en-002`'
+    );
+
+    expect(findLedgerContractIssues(invalidLedger)).toContain(
+      'en: first-pass-complete requires every locale finding to be verified'
+    );
+  });
+
+  it('rejects a completed locale with an empty first reviewer', () => {
+    const englishRow = auditLedger
+      .split('\n')
+      .find(line => line.startsWith('| `en` |'));
+    const invalidRow = englishRow?.replace(
+      '| codex-en-pass1-2026-07-19 |',
+      '|  |'
+    );
+    const invalidLedger =
+      englishRow === undefined || invalidRow === undefined
+        ? auditLedger
+        : auditLedger.replace(englishRow, invalidRow);
+
+    expect(findLedgerContractIssues(invalidLedger)).toContain(
+      'en: first-pass-complete requires a first reviewer'
+    );
+  });
+
+  it('rejects stale first-pass evidence after dictionary content changes', () => {
+    const currentDigest = hashRawDictionary(readLocale('en').raw);
+    const staleLedger = auditLedger.replace(
+      currentDigest,
+      `sha256:${'0'.repeat(64)}`
+    );
+
+    expect(findLedgerContractIssues(staleLedger)).toContain(
+      'en: first-pass digest does not match current dictionary'
+    );
+  });
+
+  it('rejects a global finding outside the global locale domain', () => {
+    const invalidLedger = auditLedger.replace(
+      '| `F-global-001` | all non-English |',
+      '| `F-global-001` | arbitrary locale |'
+    );
+
+    expect(findLedgerContractIssues(invalidLedger)).toContain(
+      'F-global-001: global locale must be all non-English'
+    );
+  });
+
+  it('parses escaped Markdown table pipes without creating extra cells', () => {
+    expect(
+      parseMarkdownRow('| `F-example-001` | `"before \\| after"` | evidence |')
+    ).toEqual(['`F-example-001`', '`"before \\| after"`', 'evidence']);
+  });
+
+  it('keeps locale progress and retention evidence internally consistent', () => {
+    expect(findLedgerContractIssues(auditLedger)).toEqual([]);
   });
 
   it.each(localeCodes)('%s satisfies structural translation rules', locale => {

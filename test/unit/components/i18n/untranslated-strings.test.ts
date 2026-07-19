@@ -65,43 +65,15 @@ describe('locale completeness (keys match en)', () => {
  * Keys whose English value is a keyboard symbol / universal notation and is
  * expected to stay identical in every locale (⌘/, Ctrl+/, ...).
  */
-/**
- * Keys that ship English-first by product decision (2026-06-19): the upload
- * size-limit error copy. They are present in every locale (so category 1 stays
- * green) but intentionally fall back to the English string at runtime via
- * i18next `fallbackLng: 'en'` until translated. Remove a key from here once its
- * real per-locale translations land.
- */
-const PENDING_TRANSLATION_KEYS = new Set<string>([
-  'tools.image.errorFileTooLarge',
-  'tools.video.errorFileTooLarge',
-  'tools.file.errorFileTooLarge',
-  'tools.image.converting',
-  // Audio tool: error copy and audio-specific metadata fields ship English-first.
-  'tools.audio.errorFileTooLarge',
-  'tools.audio.titlePlaceholder',
-  'tools.audio.artistPlaceholder',
-  // Audio cover art: cover-specific action labels ship English-first.
-  'tools.audio.coverChange',
-  'tools.audio.coverSet',
-  'tools.audio.coverRemove',
-  'tools.audio.coverErrorType',
-  'tools.audio.coverErrorTooLarge',
-  'tools.audio.coverAdd',
-  // Equation inline tool: name + formula-input placeholder ship English-first.
-  'toolNames.equation',
-  'tools.equation.placeholder',
-]);
-
-const UNIVERSAL_SYMBOL_KEYS = new Set<string>([
-  'blockSettings.menuShortcutMac',
-  'blockSettings.menuShortcutWin',
-  'tools.image.cropRatio1to1',
-  'tools.image.cropRatio4to3',
-  'tools.image.cropRatio16to9',
-  'tools.database.propertyTypeUrl',
-  'tools.image.altButton',
-]);
+const UNIVERSAL_EXACT_VALUES: Readonly<Record<string, string>> = {
+  'blockSettings.menuShortcutMac': '⌘/',
+  'blockSettings.menuShortcutWin': 'Ctrl+/',
+  'tools.image.cropRatio1to1': '1:1',
+  'tools.image.cropRatio4to3': '4:3',
+  'tools.image.cropRatio16to9': '16:9',
+  'tools.database.propertyTypeUrl': 'URL',
+  'tools.image.altButton': 'Alt',
+};
 
 /**
  * Per-locale allowlist of keys that legitimately share the English spelling
@@ -138,6 +110,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.color.orange',
     'tools.callout.colorOrange',
     'toolNames.code',
+    // Microsoft Planner's German UI uses "Board" and "Boardansicht".
+    'toolNames.board',
     // "Link" is the standard loanword for a hyperlink in German UIs.
     'toolNames.link',
     'tools.code.codeTab',
@@ -147,11 +121,16 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeText',
     'tools.database.defaultStatusProperty',
     'tools.database.defaultViewBoard',
-    'searchTerms.layout',
     // "Text" is a direct cognate of the English word in German.
     'tools.link.linkText',
   ]),
-  es: new Set(['tools.stub.error', 'tools.table.cellColor', 'tools.callout.color']),
+  es: new Set([
+    'tools.stub.error',
+    'tools.table.cellColor',
+    'tools.callout.color',
+    // "Color" is the standard Spanish cognate and names both marker modes.
+    'toolNames.marker',
+  ]),
   // "Link" is the standard loanword for a hyperlink in Estonian UIs.
   et: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.file.emptyLink']),
   fil: new Set([
@@ -224,7 +203,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ro: new Set([
     'toolNames.text',
     'toolNames.link',
-    'tools.marker.textColor',
     'searchTerms.separator',
     'searchTerms.program',
     'tools.image.emptyLink',
@@ -235,7 +213,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Text" is a direct cognate of the English word in Romanian.
     'tools.link.linkText',
   ]),
-  sk: new Set(['tools.marker.textColor', 'tools.database.propertyTypeText', 'tools.link.linkText']),
+  sk: new Set(['tools.database.propertyTypeText', 'tools.link.linkText']),
   sq: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
   sv: new Set([
     'toolNames.text',
@@ -335,14 +313,41 @@ describe('locale values are translated (identical-to-en only when cognate)', () 
   const english = loadLocaleMessages('en');
   const nonEnglish = listLocaleCodes().filter(code => code !== 'en');
 
+  it('keeps every locale-specific allowlist entry exact to English', () => {
+    const staleEntries = Object.entries(COGNATE_RETENTIONS).flatMap(
+      ([locale, keys]) => {
+        const messages = loadLocaleMessages(locale);
+
+        return [...keys]
+          .filter(key => messages[key] !== english[key])
+          .map(key => `${locale}:${key}`);
+      }
+    );
+
+    expect(
+      staleEntries,
+      'non-exact allowlist entries could admit a future English regression'
+    ).toEqual([]);
+  });
+
+  it('keeps universal exemptions bound to their reviewed source notation', () => {
+    const sourceDrift = Object.entries(UNIVERSAL_EXACT_VALUES)
+      .filter(([key, expected]) => english[key] !== expected)
+      .map(([key]) => key);
+
+    expect(
+      sourceDrift,
+      'a changed source value must be reclassified before remaining universal'
+    ).toEqual([]);
+  });
+
   it.each(nonEnglish)(
     '%s has no unexpected identical-to-English values',
     locale => {
       const messages = loadLocaleMessages(locale);
       const allowed = COGNATE_RETENTIONS[locale] ?? new Set<string>();
       const offenders = Object.keys(english).filter(key => {
-        if (UNIVERSAL_SYMBOL_KEYS.has(key)) return false;
-        if (PENDING_TRANSLATION_KEYS.has(key)) return false;
+        if (key in UNIVERSAL_EXACT_VALUES) return false;
         if (allowed.has(key)) return false;
 
         return key in messages && messages[key] === english[key];

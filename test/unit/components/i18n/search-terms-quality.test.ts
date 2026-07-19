@@ -119,47 +119,92 @@ const KNOWN_BAD_VALUES: Record<string, Record<string, string>> = {
 // Script validation — non-Latin locales must use their native script
 // ---------------------------------------------------------------------------
 
-/** Returns true if the string contains ONLY ASCII letters (a-z, A-Z) and common punctuation */
-function isAsciiOnly(s: string): boolean {
-  return /^[a-zA-Z\s\-'.]+$/.test(s);
-}
-
 /**
  * Locales that use non-Latin scripts.
- * If a searchTerms value is pure ASCII in one of these, it is likely untranslated.
+ * Each search term must contain at least one character from the locale's
+ * expected script unless it is an explicitly accepted technical loanword.
  */
-const NON_LATIN_LOCALES = new Set([
-  'ar', 'fa', 'he', 'yi',                       // Semitic / RTL
-  'ku', 'ug', 'ur', 'ps', 'dv', 'sd',           // Other RTL
-  'ru', 'uk', 'sr', 'bg', 'mk', 'mn',           // Cyrillic
-  'el',                                           // Greek
-  'hy',                                           // Armenian
-  'ka',                                           // Georgian
-  'am',                                           // Ethiopic
-  'hi', 'mr', 'ne',                              // Devanagari
-  'bn',                                           // Bengali
-  'gu',                                           // Gujarati
-  'pa',                                           // Gurmukhi
-  'ta',                                           // Tamil
-  'te',                                           // Telugu
-  'kn',                                           // Kannada
-  'ml',                                           // Malayalam
-  'si',                                           // Sinhala
-  'th',                                           // Thai
-  'km',                                           // Khmer
-  'lo',                                           // Lao
-  'my',                                           // Myanmar
-  'ja',                                           // Japanese
-  'ko',                                           // Korean
-  'zh',                                           // Chinese
-  'zh-TW',                                        // Taiwan Traditional Chinese
-]);
+const EXPECTED_SEARCH_SCRIPTS: Readonly<Record<string, RegExp>> = {
+  ar: /\p{Script=Arabic}/u,
+  fa: /\p{Script=Arabic}/u,
+  ku: /\p{Script=Arabic}/u,
+  ps: /\p{Script=Arabic}/u,
+  sd: /\p{Script=Arabic}/u,
+  ug: /\p{Script=Arabic}/u,
+  ur: /\p{Script=Arabic}/u,
+  dv: /\p{Script=Thaana}/u,
+  he: /\p{Script=Hebrew}/u,
+  yi: /\p{Script=Hebrew}/u,
+  bg: /\p{Script=Cyrillic}/u,
+  mk: /\p{Script=Cyrillic}/u,
+  mn: /\p{Script=Cyrillic}/u,
+  ru: /\p{Script=Cyrillic}/u,
+  sr: /\p{Script=Cyrillic}/u,
+  uk: /\p{Script=Cyrillic}/u,
+  el: /\p{Script=Greek}/u,
+  hy: /\p{Script=Armenian}/u,
+  ka: /\p{Script=Georgian}/u,
+  am: /\p{Script=Ethiopic}/u,
+  hi: /\p{Script=Devanagari}/u,
+  mr: /\p{Script=Devanagari}/u,
+  ne: /\p{Script=Devanagari}/u,
+  bn: /\p{Script=Bengali}/u,
+  gu: /\p{Script=Gujarati}/u,
+  pa: /\p{Script=Gurmukhi}/u,
+  ta: /\p{Script=Tamil}/u,
+  te: /\p{Script=Telugu}/u,
+  kn: /\p{Script=Kannada}/u,
+  ml: /\p{Script=Malayalam}/u,
+  si: /\p{Script=Sinhala}/u,
+  th: /\p{Script=Thai}/u,
+  km: /\p{Script=Khmer}/u,
+  lo: /\p{Script=Lao}/u,
+  my: /\p{Script=Myanmar}/u,
+  ja: /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u,
+  ko: /\p{Script=Hangul}/u,
+  zh: /\p{Script=Han}/u,
+  'zh-TW': /\p{Script=Han}/u,
+};
 
 /**
  * Accepted ASCII loanwords that are standard UI terms even in non-Latin locales.
  * These get a pass on the "must use native script" rule.
  */
 const ACCEPTED_ASCII_LOANWORDS = new Set(['info', 'ok', 'pre']);
+const LETTER = /\p{Letter}/u;
+const COMMON_OR_INHERITED_SCRIPT =
+  /[\p{Script=Common}\p{Script=Inherited}]/u;
+
+function findNativeScriptViolations(
+  messages: Record<string, string>,
+  locale: string
+): string[] {
+  const expectedScript = EXPECTED_SEARCH_SCRIPTS[locale];
+
+  if (!expectedScript) {
+    return [];
+  }
+
+  const violations: string[] = [];
+
+  for (const [key, value] of Object.entries(messages)) {
+    if (!key.startsWith('searchTerms.')) continue;
+    if (ACCEPTED_ASCII_LOANWORDS.has(value.toLowerCase().trim())) continue;
+    const usesExpectedScript = expectedScript.test(value);
+    const containsForeignScriptLetter = [...value].some(
+      character =>
+        LETTER.test(character) &&
+        !expectedScript.test(character) &&
+        !COMMON_OR_INHERITED_SCRIPT.test(character)
+    );
+
+    if (!usesExpectedScript || containsForeignScriptLetter) {
+      violations.push(`${key} = "${value}"`);
+    }
+  }
+
+  return violations;
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -167,6 +212,9 @@ const ACCEPTED_ASCII_LOANWORDS = new Set(['info', 'ok', 'pre']);
 
 describe('searchTerms translation quality', () => {
   const locales = getLocaleDirs();
+  const nonLatinLocales = locales.filter(
+    locale => locale in EXPECTED_SEARCH_SCRIPTS
+  );
 
   // 1. No duplicate values within any tool's searchTermKeys group
   describe('no duplicate values within tool searchTermKeys groups', () => {
@@ -200,26 +248,34 @@ describe('searchTerms translation quality', () => {
     }
   });
 
-  // 3. Non-Latin locales should not have pure-ASCII searchTerms values
+  // 3. Non-Latin locales should use their expected native script
   describe('non-Latin locales use native script', () => {
-    for (const locale of locales) {
-      if (!NON_LATIN_LOCALES.has(locale)) continue;
+    test('rejects Latin transliteration even when it contains diacritics', () => {
+      expect(
+        findNativeScriptViolations(
+          { 'searchTerms.divider': 'dabeşker' },
+          'ku'
+        )
+      ).toEqual(['searchTerms.divider = "dabeşker"']);
+    });
 
+    test('rejects mixed native-script and foreign-script letters', () => {
+      expect(
+        findNativeScriptViolations(
+          { 'searchTerms.divider': 'دابەشکەر test' },
+          'ku'
+        )
+      ).toEqual(['searchTerms.divider = "دابەشکەر test"']);
+    });
+
+    for (const locale of nonLatinLocales) {
       test(`${locale}`, () => {
         const messages = loadMessages(locale);
-        const asciiValues: string[] = [];
-
-        for (const [key, value] of Object.entries(messages)) {
-          if (!key.startsWith('searchTerms.')) continue;
-          if (ACCEPTED_ASCII_LOANWORDS.has(value.toLowerCase().trim())) continue;
-          if (isAsciiOnly(value)) {
-            asciiValues.push(`${key} = "${value}"`);
-          }
-        }
+        const scriptViolations = findNativeScriptViolations(messages, locale);
 
         expect(
-          asciiValues,
-          `${locale}: pure-ASCII searchTerms (likely untranslated):\n  ${asciiValues.join('\n  ')}`
+          scriptViolations,
+          `${locale}: searchTerms outside the locale's native script:\n  ${scriptViolations.join('\n  ')}`
         ).toHaveLength(0);
       });
     }

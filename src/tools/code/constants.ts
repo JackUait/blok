@@ -6,6 +6,8 @@ export const LANGUAGE_KEY = 'tools.code.language';
 export const COPIED_KEY = 'tools.code.copied';
 export const COPY_CODE_KEY = 'tools.code.copyCode';
 export const SEARCH_LANGUAGE_KEY = 'tools.code.searchLanguage';
+export const AUTO_DETECTED_KEY = 'tools.code.autoDetected';
+export const PLAIN_TEXT_KEY = 'tools.code.plainText';
 
 // Default values
 export const DEFAULT_LANGUAGE = 'plain text';

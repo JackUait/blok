@@ -381,9 +381,13 @@ describe('BlockSettings', () => {
     expect(eventsDispatcher.emit).toHaveBeenCalledWith(blockSettings.events.opened);
 
     const popover = getLastPopover();
+    const messages = (popover?.params as {
+      messages?: { actions?: string };
+    } | undefined)?.messages;
 
     expect(popover?.show).toHaveBeenCalledTimes(1);
     expect(popover?.on).toHaveBeenCalledWith('closed', expect.any(Function));
+    expect(messages?.actions).toBe('popover.actions');
 
     // Note: focusItem(0) is no longer called here because the popover's
     // focusInitialElement() handles initial focus (search input or first item)

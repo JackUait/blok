@@ -105,6 +105,7 @@ vi.mock('../../../../../../src/components/selection/index', () => {
 const popoverHolder = vi.hoisted(() => {
   return {
     factory: (): Record<string, unknown> => ({}),
+    params: null as unknown,
   };
 });
 
@@ -119,7 +120,8 @@ vi.mock('../../../../../../src/components/utils/popover/popover-inline', () => (
     size;
     activateItemByName;
 
-    constructor() {
+    constructor(params: unknown) {
+      popoverHolder.params = params;
       const instance = popoverHolder.factory();
 
       this.hide = instance.hide;
@@ -140,6 +142,7 @@ describe('InlineToolbar.tryToShow error recovery', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    popoverHolder.params = null;
 
     // Default: PopoverInline constructor succeeds with a stub popover
     popoverHolder.factory = () => ({
@@ -218,6 +221,16 @@ describe('InlineToolbar.tryToShow error recovery', () => {
     expect(wrapper.getAttribute('role')).toBe('toolbar');
     expect(wrapper.getAttribute('aria-orientation')).toBe('horizontal');
     expect(wrapper.getAttribute('aria-label')).toBe('a11y.textFormatting');
+  });
+
+  it('passes the localized action-group label to its popover', async () => {
+    await inlineToolbar.tryToShow();
+
+    const params = popoverHolder.params as {
+      messages?: { actions?: string };
+    } | null;
+
+    expect(params?.messages?.actions).toBe('popover.actions');
   });
 
   it('resets opened and openingPromise when open() throws', async () => {

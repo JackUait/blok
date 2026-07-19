@@ -300,6 +300,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         messages: {
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
           search: this.Blok.I18n.t('popover.search'),
+          actions: this.Blok.I18n.t('popover.actions'),
           // Plumb the result-count announcement template so the search field
           // announces matches to screen readers (parity with the Toolbox).
           searchResults: this.Blok.I18n.t('a11y.searchResults'),

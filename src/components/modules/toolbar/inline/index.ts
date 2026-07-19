@@ -424,6 +424,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       messages: {
         nothingFound: this.Blok.I18n.t('popover.nothingFound'),
         search: this.Blok.I18n.t('popover.search'),
+        actions: this.Blok.I18n.t('popover.actions'),
       },
     });
 

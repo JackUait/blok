@@ -2738,7 +2738,7 @@ describe('Toolbox', () => {
       expect(lastPopoverParams.value.listboxId).toBe('blok-toolbox-popover');
     });
 
-    it('passes a searchResults announcement template (from i18n) to the popover', () => {
+    it('passes localized search-result messages to the popover', () => {
        
       new Toolbox({
         api: mocks.api,
@@ -2747,9 +2747,13 @@ describe('Toolbox', () => {
         i18n: mockI18n,
       });
 
-      const messages = lastPopoverParams.value.messages as { searchResults?: string } | undefined;
+      const messages = lastPopoverParams.value.messages as {
+        actions?: string;
+        searchResults?: string;
+      } | undefined;
 
       // mockI18n.t echoes the key back
+      expect(messages?.actions).toBe('popover.actions');
       expect(messages?.searchResults).toBe('a11y.searchResults');
     });
 

@@ -107,11 +107,21 @@ type LinkConfig = {
   } | void;
 };
 
-const createTool = (linkConfig?: LinkConfig): ToolSetup => {
+const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
+  'tools.link.keepTyping': 'Keep typing to add a link',
+  'tools.link.emailAddress': 'Email address',
+  'tools.link.jumpToSection': 'Jump to section',
+  'tools.link.webLink': 'Link to web page',
+};
+
+const createTool = (
+  linkConfig?: LinkConfig,
+  translations: Record<string, string> = ENGLISH_LINK_TRANSLATIONS
+): ToolSetup => {
   const toolbar = { close: vi.fn() };
   const inlineToolbar = { close: vi.fn() };
   const notifier = { show: vi.fn() };
-  const i18n = { t: vi.fn((phrase: string) => phrase) };
+  const i18n = { t: vi.fn((phrase: string) => translations[phrase] ?? phrase) };
 
   const api = {
     toolbar,
@@ -592,6 +602,38 @@ describe('LinkInlineTool', () => {
   });
 
   describe('suggestion chip', () => {
+    it.each([
+      {
+        value: 'incomplet',
+        key: 'tools.link.keepTyping',
+        translation: 'Continuez à saisir pour ajouter un lien',
+      },
+      {
+        value: 'mailto:hello@example.com',
+        key: 'tools.link.emailAddress',
+        translation: 'Adresse e-mail',
+      },
+      {
+        value: '#results',
+        key: 'tools.link.jumpToSection',
+        translation: 'Aller à une section',
+      },
+      {
+        value: 'https://example.com',
+        key: 'tools.link.webLink',
+        translation: 'Lien vers une page web',
+      },
+    ])('localizes the $key suggestion label', ({ value, key, translation }) => {
+      const { tool } = createTool(undefined, { [key]: translation });
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+
+      expect(typeEl?.textContent).toBe(translation);
+    });
+
     it('is hidden initially', () => {
       const { tool } = createTool();
       const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;

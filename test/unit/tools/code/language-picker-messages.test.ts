@@ -64,7 +64,7 @@ describe('CodeTool language picker popover messages', () => {
     vi.restoreAllMocks();
   });
 
-  it('passes search, nothingFound and searchResults messages to the popover', () => {
+  it('passes localized search and result-group messages to the popover', () => {
     const tool = new CodeTool(createOptions());
 
     (tool as unknown as ToolWithPicker).buildLanguagePicker(
@@ -75,11 +75,12 @@ describe('CodeTool language picker popover messages', () => {
     expect(popoverMock.constructorParams).toHaveLength(1);
 
     const params = popoverMock.constructorParams[0] as {
-      messages?: { search?: string; nothingFound?: string; searchResults?: string };
+      messages?: { search?: string; nothingFound?: string; actions?: string; searchResults?: string };
     };
 
     expect(params.messages?.search).toBe('tools.code.searchLanguage');
     expect(params.messages?.nothingFound).toBe('popover.nothingFound');
+    expect(params.messages?.actions).toBe('popover.actions');
     expect(params.messages?.searchResults).toBe('a11y.searchResults');
   });
 });

@@ -33,7 +33,14 @@ vi.mock('../../../../src/tools/code/prism-applier', () => ({
   disposePrismStyles: mockDisposePrismStyles,
 }));
 
-const createMockAPI = (): API =>
+const ENGLISH_CODE_TRANSLATIONS: Record<string, string> = {
+  'tools.code.autoDetected': 'auto',
+  'tools.code.plainText': 'Plain text',
+};
+
+const createMockAPI = (
+  translations: Record<string, string> = ENGLISH_CODE_TRANSLATIONS
+): API =>
   ({
     styles: {
       block: 'ce-block',
@@ -44,7 +51,7 @@ const createMockAPI = (): API =>
       settingsButtonActive: '',
       selected: '',
     },
-    i18n: { t: (k: string) => k },
+    i18n: { t: (k: string) => translations[k] ?? k },
     blocks: {
       getCurrentBlockIndex: vi.fn().mockReturnValue(0),
       insert: vi.fn(),
@@ -53,7 +60,7 @@ const createMockAPI = (): API =>
 
 const createOptions = (
   data: Partial<CodeData> = {},
-  overrides: { readOnly?: boolean } = {}
+  overrides: { readOnly?: boolean; translations?: Record<string, string> } = {}
 ): BlockToolConstructorOptions<CodeData> => ({
   data: {
     code: data.code ?? '',
@@ -61,7 +68,7 @@ const createOptions = (
     ...(data.lineNumbers !== undefined ? { lineNumbers: data.lineNumbers } : {}),
   } as CodeData,
   config: {},
-  api: createMockAPI(),
+  api: createMockAPI(overrides.translations),
   readOnly: overrides.readOnly ?? false,
   block: { id: 'code-block-id' } as never,
 });
@@ -83,6 +90,22 @@ describe('CodeTool', () => {
   });
 
   describe('render()', () => {
+    it('localizes the plain-text language name', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions(
+        { language: 'plain text' },
+        { translations: { 'tools.code.plainText': 'Texte brut' } }
+      ));
+      const el = tool.render();
+      const btn = el.querySelector('[data-blok-testid="code-language-btn"]');
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string }> };
+      }>;
+
+      expect(btn?.querySelector('span')?.textContent).toBe('Texte brut');
+      expect(settings[0].children.items[0].title).toBe('Texte brut');
+    });
+
     it('returns a wrapper div with header and code element', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());
@@ -341,6 +364,30 @@ describe('CodeTool', () => {
   });
 
   describe('renderSettings()', () => {
+    it('localizes the auto-detected language marker', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions(
+        { language: 'plain text' },
+        {
+          translations: {
+            'tools.code.autoDetected': 'automatique',
+            'tools.code.plainText': 'Texte brut',
+          },
+        }
+      ));
+
+      (tool as unknown as { _detectedLanguage: string | null })._detectedLanguage = 'python';
+
+      const settings = tool.renderSettings() as Array<{
+        children: { items: Array<{ title: string; secondaryLabel?: string }> };
+      }>;
+
+      expect(settings[0].children.items[0]).toMatchObject({
+        title: 'Python',
+        secondaryLabel: 'automatique',
+      });
+    });
+
     it('returns menu config with language submenu', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ language: 'javascript' }));

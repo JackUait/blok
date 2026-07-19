@@ -25,6 +25,8 @@ import {
   COPIED_KEY,
   LANGUAGE_KEY,
   SEARCH_LANGUAGE_KEY,
+  AUTO_DETECTED_KEY,
+  PLAIN_TEXT_KEY,
   COPIED_FEEDBACK_STYLES,
   PREVIEWABLE_LANGUAGES,
   CODE_TAB_KEY,
@@ -430,8 +432,8 @@ export class CodeTool implements BlockTool {
       const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
       if (detectedLanguage) {
         childItems.push({
-          title: detectedLanguage.name,
-          secondaryLabel: 'auto',
+          title: this.getLanguageName(detectedLanguage.id),
+          secondaryLabel: this.api.i18n.t(AUTO_DETECTED_KEY),
           icon: IconWand,
           onActivate: (): void => this.setLanguage(detectedLanguage.id),
           closeOnActivate: true,
@@ -442,7 +444,7 @@ export class CodeTool implements BlockTool {
     }
 
     childItems.push(...LANGUAGES.map((lang) => ({
-      title: lang.name,
+      title: this.getLanguageName(lang.id),
       trailingIcon: lang.id === selectedId ? IconCheck : undefined,
       onActivate: (): void => this.setLanguage(lang.id),
       closeOnActivate: true,
@@ -542,7 +544,7 @@ export class CodeTool implements BlockTool {
       const detectedLanguage = LANGUAGES.find((lang) => lang.id === detectedId);
       if (detectedLanguage) {
         items.push({
-          title: detectedLanguage.name,
+          title: this.getLanguageName(detectedLanguage.id),
           name: detectedLanguage.id,
           icon: IconWand,
           toggle: 'language',
@@ -555,7 +557,7 @@ export class CodeTool implements BlockTool {
     }
 
     items.push(...LANGUAGES.map((lang) => ({
-      title: lang.name,
+      title: this.getLanguageName(lang.id),
       name: lang.id,
       trailingIcon: lang.id === selectedId ? IconCheck : undefined,
       toggle: 'language',
@@ -579,6 +581,7 @@ export class CodeTool implements BlockTool {
       messages: {
         search: this.api.i18n.t(SEARCH_LANGUAGE_KEY),
         nothingFound: this.api.i18n.t('popover.nothingFound'),
+        actions: this.api.i18n.t('popover.actions'),
         // Result-count announcement template for screen readers (parity with
         // the Block Settings / Toolbox searchable popovers).
         searchResults: this.api.i18n.t('a11y.searchResults'),
@@ -587,6 +590,10 @@ export class CodeTool implements BlockTool {
   }
 
   private getLanguageName(id: string): string {
+    if (id === DEFAULT_LANGUAGE) {
+      return this.api.i18n.t(PLAIN_TEXT_KEY);
+    }
+
     const entry = LANGUAGES.find((lang) => lang.id === id);
 
     return entry ? entry.name : id;

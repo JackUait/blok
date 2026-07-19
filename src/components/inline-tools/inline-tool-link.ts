@@ -452,7 +452,7 @@ export class LinkInlineTool implements InlineTool {
       urlEl.className = `block text-xs font-medium truncate ${isComplete ? 'text-text-primary' : 'text-gray-text'}`;
     }
     if (typeEl) {
-      typeEl.textContent = isComplete ? label : 'Keep typing to add a link';
+      typeEl.textContent = isComplete ? label : this.i18n.t('tools.link.keepTyping');
       typeEl.className = 'block text-[10.5px] text-gray-text leading-tight mt-px';
     }
     if (row) {
@@ -508,13 +508,13 @@ export class LinkInlineTool implements InlineTool {
    */
   private getLinkTypeInfo(url: string): { icon: string; label: string } {
     if (url.startsWith('mailto:')) {
-      return { icon: IconMail, label: 'Email address' };
+      return { icon: IconMail, label: this.i18n.t('tools.link.emailAddress') };
     }
     if (url.startsWith('#')) {
-      return { icon: IconHash, label: 'Jump to section' };
+      return { icon: IconHash, label: this.i18n.t('tools.link.jumpToSection') };
     }
 
-    return { icon: IconGlobe, label: 'Link to web page' };
+    return { icon: IconGlobe, label: this.i18n.t('tools.link.webLink') };
   }
 
   /**
@@ -997,4 +997,3 @@ export class LinkInlineTool implements InlineTool {
     element.setAttribute(attributeName, state ? 'true' : 'false');
   }
 };
-

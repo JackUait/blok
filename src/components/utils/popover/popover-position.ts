@@ -96,8 +96,21 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   if (placeLeftOfAnchor && popoverSize.width <= anchor.left - offset - boundaryLeft) {
     const anchorCenterInDocCoords = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
     const scopeBottomInDocCoords = scopeBounds.bottom + scrollOffset.y;
-    const viewportTopFloor = scrollOffset.y + viewportMargin;
-    const viewportBottomCeiling = scrollOffset.y + viewportSize.height - viewportMargin;
+    // The viewport margin is an aesthetic preference and must never detach
+    // the menu from its own anchor: when the six-dots handle sits inside the
+    // margin zone, clamping to the margin would place the whole menu above
+    // (or below) the handle. Relax the floor/ceiling to the anchor's edge in
+    // that case, hard-bounded by the viewport itself.
+    const anchorTopInDocCoords = anchor.top + scrollOffset.y;
+    const anchorBottomInDocCoords = anchor.bottom + scrollOffset.y;
+    const viewportTopFloor = Math.max(
+      scrollOffset.y,
+      Math.min(scrollOffset.y + viewportMargin, anchorTopInDocCoords)
+    );
+    const viewportBottomCeiling = Math.min(
+      scrollOffset.y + viewportSize.height,
+      Math.max(scrollOffset.y + viewportSize.height - viewportMargin, anchorBottomInDocCoords)
+    );
 
     const topFloor = Math.max(scopeTopInDocCoords, viewportTopFloor);
     const bottomCeiling = Math.min(scopeBottomInDocCoords, viewportBottomCeiling);

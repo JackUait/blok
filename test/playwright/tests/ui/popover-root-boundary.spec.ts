@@ -247,6 +247,68 @@ test.describe('root popover boundary', () => {
     });
   });
 
+  // Regression sweep: every placement bug in this area was noticed by a user
+  // with the handle near the screen top/bottom — positions no test opened the
+  // menu at. Each case pins the USER-SPECIFIED contract at an extreme: the
+  // menu never touches the screen border (small aesthetic gap) and never
+  // detaches from the six-dots handle (their vertical spans overlap).
+  const edgeCases = [
+    { name: 'screen top', triggerViewportY: 4 },
+    { name: 'screen bottom', triggerViewportY: 720 - 28 },
+  ] as const;
+
+  edgeCases.forEach(({ name, triggerViewportY }) => {
+    test(`regression: menu keeps the gap and stays attached when the handle sits at the ${name}`, async ({ page }) => {
+      // A wide gutter so the menu fits left of the handle — the placement
+      // mode under test. Without it the menu falls back to below/above.
+      await createBookmarkFixture(page, { rootCss: '#blok { margin-left: 420px }' });
+
+      const bookmark = page.locator(BOOKMARK_SELECTOR);
+
+      await bookmark.scrollIntoViewIfNeeded();
+      // Put the block's top edge at the target viewport position. Locator
+      // hover()/click() auto-scroll the target into view, which would undo
+      // the extreme positioning — drive the mouse by coordinates instead.
+      await page.evaluate((targetY) => {
+        const el = document.querySelector('[data-blok-tool="bookmark"]');
+
+        if (el) {
+          window.scrollBy(0, el.getBoundingClientRect().top - targetY);
+        }
+      }, triggerViewportY);
+
+      const bookmarkBox = await requireBoundingBox(bookmark, 'Bookmark at screen edge');
+
+      await page.mouse.move(bookmarkBox.x + 60, triggerViewportY + 8);
+      await page.mouse.move(bookmarkBox.x + 62, triggerViewportY + 9);
+
+      const trigger = page.locator(SETTINGS_TRIGGER_SELECTOR);
+
+      await expect(trigger).toBeVisible();
+      const triggerBox = await requireBoundingBox(trigger, 'Settings trigger at screen edge');
+
+      await page.mouse.click(triggerBox.x + triggerBox.width / 2, triggerBox.y + triggerBox.height / 2);
+
+      const menu = page.locator(MENU_SELECTOR);
+
+      await expect(menu).toBeVisible();
+      await expect(menu).toHaveCSS('transform', 'none');
+      const menuBox = await requireBoundingBox(menu, 'Menu at screen edge');
+
+      // The placement mode under test: the menu fits fully left of the handle.
+      expect(menuBox.width).toBeLessThanOrEqual(triggerBox.x - 8);
+      expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(triggerBox.x);
+
+      // GAP: the menu never touches the screen border.
+      expect(menuBox.y).toBeGreaterThanOrEqual(7);
+      expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(720 - 7);
+
+      // ATTACHMENT: the handle's vertical span overlaps the menu's span.
+      expect(triggerBox.y + triggerBox.height).toBeGreaterThan(menuBox.y);
+      expect(triggerBox.y).toBeLessThan(menuBox.y + menuBox.height);
+    });
+  });
+
   test('keeps a snapshot anchor attached when the window scrolls after opening', async ({ page }) => {
     await createBookmarkFixture(page, { rootCss: 'body { height: 100vh }' });
 

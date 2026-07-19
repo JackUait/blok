@@ -585,6 +585,76 @@ describe('resolvePosition', () => {
       expect(result.top).toBe(692);
     });
 
+    /**
+     * LAW: exhaustive invariant sweep. Every regression this file pins was
+     * first noticed by a user at an anchor position the hand-picked cases
+     * missed (mid-viewport was tested, the extremes were not). This sweep
+     * moves the anchor through every position — including past the screen
+     * edges — and asserts the full USER-SPECIFIED contract at each one:
+     *
+     *   1. GAP: the menu never touches the screen border (>= margin away),
+     *   2. ATTACHMENT: an on-screen handle always overlaps the menu's span,
+     *   3. CENTERED: when centering violates nothing, the menu is centered.
+     *
+     * If a placement change breaks any of these for ANY anchor position,
+     * this fails with the exact offending position in the message.
+     */
+    describe('LAW: gap/attachment/centering invariants hold for every anchor position', () => {
+      const viewportSize = { width: 1280, height: 720 };
+      const margin = 8;
+      const popoverSize = { width: 298, height: 370 };
+      const handleHeight = 24;
+      const scrollOffsets = [0, 353];
+
+      scrollOffsets.forEach((scrollY) => {
+        it(`sweeps anchor top from offscreen-above to offscreen-below (scrollY=${scrollY})`, () => {
+          for (let anchorTop = -handleHeight; anchorTop <= viewportSize.height; anchorTop += 7) {
+            const anchor = rect({
+              top: anchorTop,
+              bottom: anchorTop + handleHeight,
+              left: 400,
+              right: 418,
+              width: 18,
+              height: handleHeight,
+            });
+            const result = resolvePosition({
+              anchor,
+              popoverSize,
+              scopeBounds: rect({ top: -3000, bottom: 5000, left: 0, right: viewportSize.width }),
+              viewportSize,
+              scrollOffset: { x: 0, y: scrollY },
+              offset: 8,
+              placeLeftOfAnchor: true,
+              viewportMargin: margin,
+            });
+            const label = `anchorTop=${anchorTop} scrollY=${scrollY}`;
+            const menuTop = result.top - scrollY;
+            const menuBottom = menuTop + popoverSize.height;
+
+            // 1. GAP — the menu never touches the screen border.
+            expect(menuTop, `${label}: menu touches screen top`).toBeGreaterThanOrEqual(margin);
+            expect(menuBottom, `${label}: menu touches screen bottom`).toBeLessThanOrEqual(viewportSize.height - margin);
+
+            // 2. ATTACHMENT — an on-screen handle overlaps the menu's span.
+            if (anchorTop >= 0 && anchorTop + handleHeight <= viewportSize.height) {
+              expect(anchor.bottom, `${label}: handle fully above the menu`).toBeGreaterThan(menuTop);
+              expect(anchor.top, `${label}: handle fully below the menu`).toBeLessThan(menuBottom);
+            }
+
+            // 3. CENTERED — when centering violates nothing, the menu is centered.
+            const desiredTop = anchorTop + handleHeight / 2 - popoverSize.height / 2;
+
+            if (desiredTop >= margin && desiredTop + popoverSize.height <= viewportSize.height - margin) {
+              expect(menuTop, `${label}: menu not centered on the handle`).toBe(desiredTop);
+            }
+
+            // The menu always stays fully left of the handle (never covers it).
+            expect(result.left - 0 + popoverSize.width, `${label}: menu covers the handle`).toBeLessThanOrEqual(anchor.left);
+          }
+        });
+      });
+    });
+
     it('pins to the viewport-margin floor when popover is taller than viewport minus margins', () => {
       const result = resolvePosition({
         anchor: rect({ top: 300, bottom: 340, left: 400, right: 440 }),

@@ -264,18 +264,18 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bg` | Bulgarian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-bg-001` | pending |
 | `bn` | Bengali | Bengali | ltr | to-audit | — | — | pending | pending | pending | `F-bn-001` | pending |
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
-| `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-100` | pending |
-| `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | codex-root-da-pass1-539-2026-07-19 | codex-da-pass2-539-2026-07-19 | pass | pass | pass | `F-da-001`–`F-da-076` | second-pass-complete |
-| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | codex-root-de-pass1-539-2026-07-19 | codex-de-pass2-539-2026-07-19 | pass | pass | pass | `F-de-001`–`F-de-088` | second-pass-complete |
+| `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
+| `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | — | — | pending | pending | pending | `F-da-001`–`F-da-076` | pending |
+| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-088` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-en-pass1-539-2026-07-19 | codex-root-en-pass2-539-2026-07-19 | pass | pass | pass | `F-en-001`–`F-en-042` | second-pass-complete |
-| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | codex-root-es-pass1-539-2026-07-19 | codex-es-pass2-current-539-2026-07-19 | pass | pass | pass | `F-es-001`–`F-es-099` | second-pass-complete |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-046` | pending |
+| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-098` | pending |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
-| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | codex-root-fr-pass1-539-2026-07-19 | codex-fr-pass2-539-2026-07-19 | pass | pass | pass | `F-fr-001`–`F-fr-131` | second-pass-complete |
+| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-131` | pending |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
 | `hi` | Hindi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-hi-001` | pending |
@@ -283,7 +283,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
-| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | codex-root-it-pass1-539-2026-07-19 | codex-it-pass2-539-2026-07-19 | pass | pass | pass | `F-it-001`–`F-it-089` | second-pass-complete |
+| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | — | — | pending | pending | pending | `F-it-001`–`F-it-089` | pending |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | to-audit | — | — | pending | pending | pending | `F-ja-001` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
@@ -300,21 +300,21 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ms` | Malay | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ms-001` | pending |
 | `my` | Burmese (Myanmar) | Myanmar | ltr | to-audit | — | — | pending | pending | pending | `F-my-001` | pending |
 | `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001` | pending |
-| `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | codex-nl-pass1-539-2026-07-19 | codex-nl-pass2-539-2026-07-19 | pass | pass | pass | `F-nl-001`–`F-nl-085` | second-pass-complete |
+| `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | — | — | pending | pending | pending | `F-nl-001`–`F-nl-085` | pending |
 | `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-no-001`–`F-no-081` | pending |
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001` | pending |
-| `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-pl-001`–`F-pl-122` | pending |
+| `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-pl-001`–`F-pl-126` | pending |
 | `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001` | pending |
-| `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | codex-root-pt-pass1-final-539-2026-07-19 | codex-pt-pass2-final-539-2026-07-19 | pass | pass | pass | `F-pt-001`–`F-pt-085` | second-pass-complete |
+| `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | — | — | pending | pending | pending | `F-pt-001`–`F-pt-085` | pending |
 | `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001` | pending |
-| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | codex-ru-pass1-final-539-2026-07-19 | — | pass | pass | pass | `F-ru-001`–`F-ru-121` | first-pass-complete |
+| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | — | — | pending | pending | pending | `F-ru-001`–`F-ru-126` | pending |
 | `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001` | pending |
 | `si` | Sinhala | Sinhala | ltr | to-audit | — | — | pending | pending | pending | `F-si-001` | pending |
 | `sk` | Slovak | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sk-001` | pending |
 | `sl` | Slovenian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sl-001` | pending |
 | `sq` | Albanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sq-001` | pending |
 | `sr` | Serbian (Cyrillic) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-sr-001` | pending |
-| `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | codex-root-sv-pass1-final-539-2026-07-19 | — | pass | pass | pass | `F-sv-001`–`F-sv-087` | first-pass-complete |
+| `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | — | — | pending | pending | pending | `F-sv-001`–`F-sv-094` | pending |
 | `sw` | Swahili | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sw-001` | pending |
 | `ta` | Tamil | Tamil | ltr | to-audit | — | — | pending | pending | pending | `F-ta-001` | pending |
 | `te` | Telugu | Telugu | ltr | to-audit | — | — | pending | pending | pending | `F-te-001` | pending |
@@ -325,8 +325,8 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ur` | Urdu | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ur-001` | pending |
 | `vi` | Vietnamese | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-vi-001` | pending |
 | `yi` | Yiddish | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-yi-001` | pending |
-| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | codex-root-zh-pass1-final-539-2026-07-19 | codex-zh-pass2-current-539-2026-07-19 | pass | pass | pass | `F-zh-001`–`F-zh-058` | second-pass-complete |
-| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | codex-root-zh-tw-pass1-final-539-2026-07-19 | codex-zh-tw-pass2-current-539-2026-07-19 | pass | pass | pass | `F-zh-TW-001`–`F-zh-TW-032` | second-pass-complete |
+| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-001`–`F-zh-058` | pending |
+| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-TW-001`–`F-zh-TW-032` | pending |
 
 | `R-sv-001` | `sv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Swedish Apple guidance retains the `⌘` platform symbol. | [Apple — Kortkommandon på Mac](https://support.apple.com/sv-se/102650) |
 | `R-sv-002` | `sv` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Swedish Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Kortkommandon i Windows](https://support.microsoft.com/sv-se/windows/kortkommandon-i-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
@@ -366,18 +366,6 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
-| `en` | `codex-en-pass1-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` | `codex-root-en-pass2-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` |
-| `da` | `codex-root-da-pass1-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` | `codex-da-pass2-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` |
-| `de` | `codex-root-de-pass1-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` | `codex-de-pass2-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` |
-| `es` | `codex-root-es-pass1-539-2026-07-19` | `sha256:435016766dd78f39b086cb3dd6dd33a929084557206ce8a8952f9221f22affc6` | `codex-es-pass2-current-539-2026-07-19` | `sha256:435016766dd78f39b086cb3dd6dd33a929084557206ce8a8952f9221f22affc6` |
-| `fr` | `codex-root-fr-pass1-539-2026-07-19` | `sha256:527c5314abd2dde23467557cb2afc91127d824eeed07ba67b44e2613534f6f12` | `codex-fr-pass2-539-2026-07-19` | `sha256:527c5314abd2dde23467557cb2afc91127d824eeed07ba67b44e2613534f6f12` |
-| `it` | `codex-root-it-pass1-539-2026-07-19` | `sha256:8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668` | `codex-it-pass2-539-2026-07-19` | `sha256:8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668` |
-| `nl` | `codex-nl-pass1-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` | `codex-nl-pass2-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` |
-| `pt` | `codex-root-pt-pass1-final-539-2026-07-19` | `sha256:21e40fd19ff448456d40d3f0eb26bb93d780f085c08dd5b34168c5a4a838f8e1` | `codex-pt-pass2-final-539-2026-07-19` | `sha256:21e40fd19ff448456d40d3f0eb26bb93d780f085c08dd5b34168c5a4a838f8e1` |
-| `ru` | `codex-ru-pass1-final-539-2026-07-19` | `sha256:752a2470228fc4841c76a54137d52fbe36d023dc4ff8b07dedd47e06993b349e` | — | — |
-| `sv` | `codex-root-sv-pass1-final-539-2026-07-19` | `sha256:a3566610fc0beb4f30bd8401ba06b42503dffe33f09c2490d4ab37097f22e468` | — | — |
-| `zh` | `codex-root-zh-pass1-final-539-2026-07-19` | `sha256:55af042f145b5a8130cd90a645b4667434807a7eaa008f2ed296f8634ffc45c8` | `codex-zh-pass2-current-539-2026-07-19` | `sha256:55af042f145b5a8130cd90a645b4667434807a7eaa008f2ed296f8634ffc45c8` |
-| `zh-TW` | `codex-root-zh-tw-pass1-final-539-2026-07-19` | `sha256:324a7c1224b322cc685ecf531c718b7f702088d31a0209caece734b755139d77` | `codex-zh-tw-pass2-current-539-2026-07-19` | `sha256:324a7c1224b322cc685ecf531c718b7f702088d31a0209caece734b755139d77` |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -414,7 +402,19 @@ source-coverage, encoding, and normalization checker pass. `F-en-036` and all
 only the missing-key defect; every locale row remains `pending` and still
 requires two complete, distinct 539-entry linguistic passes.
 
-## English Source Audit Evidence — current 539-key second pass complete
+## English Source Audit Evidence — pending after source-level residuals
+
+The current-byte dependency review found four material scope omissions in the
+emoji picker’s visible category headings and navigation `title`/`aria-label`
+values. Runtime category data places smileys in `people`, animals in `nature`,
+drinks in `foods`, and geographic places in `places`; the bundled
+`@emoji-mart/data` English localization names the same categories “Smileys &
+People,” “Animals & Nature,” “Food & Drink,” and “Travel & Places.”
+`F-en-043` through `F-en-046` record sentence-case source corrections. Because
+all 68 localized dictionaries depend on these source meanings, evidence reset
+rule 2 clears every reviewer, result, final status, and reviewed digest. The
+following completed-pass evidence is historical until both full reviews are
+repeated on the corrected final bytes.
 
 The current first reviewer inspected all 539/539 English values against the
 guidelines and their rendered, accessibility, or explicitly documented
@@ -633,6 +633,16 @@ relationship, and six actionable audio/video alignment items expose only
 states instead of commands. Reviewer and digest evidence is removed, all
 three results are reset to `pending`, and both complete passes must be
 repeated after remediation.
+
+A subsequent clean source-order replay found 22 additional defects, recorded
+as `F-cs-101` through `F-cs-122`, and reopened `F-cs-019` for the standard
+Czech physical-key label `Esc`. The new set replaces literal English
+click/drag/release constructions with natural Czech instrumental phrasing,
+repairs two elliptical screen-reader boundary announcements, restores the
+block object in failed copy-link feedback, and gives the four emoji categories
+their complete runtime scope. The source-level emoji correction independently
+resets all Czech pass evidence under rule 2; no reviewer or digest may be
+recorded until both exhaustive passes repeat on the corrected final bytes.
 
 ### Danish (`da`) — current 539-key second pass complete
 
@@ -857,8 +867,8 @@ aliases in 14 groups, all 29 source-only contracts, and the 509+29+1 caller
 partition. Multiple-block count templates were traced to guards that require
 counts greater than one.
 
-The current exact-English inventory is exactly the 23 supported retentions
-`R-fr-001` through `R-fr-023`. Structural inspection found 539 keys and no
+Before the emoji-category source reset, the exact-English inventory was the 23
+supported retentions `R-fr-001` through `R-fr-023`. Structural inspection found 539 keys and no
 missing, extra, duplicate, non-string, empty, placeholder, NFC, encoding,
 control-character, replacement-character, or boundary-whitespace defect.
 Finding, ledger-integrity, exact-retention, search-quality, duplicate-key, and
@@ -1454,6 +1464,12 @@ elliptical screen-reader instruction. The stale reviewer and digest evidence
 has been removed, all three results are reset to `pending`, and both complete
 passes must be repeated after remediation.
 
+The subsequent final-byte replay found one remaining count-dependent pronoun
+in `F-pl-002`, one shared single/multiple-drag announcement, and three
+source-expanded emoji categories. They are recorded as the amended
+`F-pl-002` and `F-pl-123` through `F-pl-126`. The English category-source
+change independently keeps every Polish result and reviewer pending.
+
 ### Brazilian Portuguese (`pt`) — current 539-key first pass complete
 
 The current-byte reviewer reread all 539 English/Brazilian-Portuguese pairs
@@ -1578,6 +1594,14 @@ search-quality suite, exact-retention checks, 81-case checker suite, and live
 Swedish is `first-pass-complete` and still requires a distinct second pass on
 these exact bytes.
 
+That conclusion is now historical. The halted second review found four
+additional Swedish residuals (`F-sv-088` through `F-sv-091`) in full
+alternative-text labels, the free-form crop option, and provider-composed
+video embedding. The expanded English category source adds three more
+required Swedish corrections as `F-sv-092` through `F-sv-094`; the
+travel-and-places value was already complete. All reviewer and digest evidence
+remains reset.
+
 ### Russian (`ru`) — current 539-key first pass complete
 
 The first reviewer inspected all 539 Russian values against the current
@@ -1648,6 +1672,13 @@ guideline suite pass. This fresh first pass binds to raw SHA-256
 `752a2470228fc4841c76a54137d52fbe36d023dc4ff8b07dedd47e06993b349e`;
 Russian is `first-pass-complete` and still requires a distinct second pass on
 these exact bytes.
+
+That conclusion is now historical. Before the source reset, the halted second
+review found two metadata-label residuals (`F-ru-122` and `F-ru-123`).
+The expanded English category source adds the three incomplete Russian
+category labels as `F-ru-124` through `F-ru-126`; the existing
+travel-and-places label remains complete. All results, reviewers, and digest
+evidence remain reset.
 
 ### Simplified Chinese (`zh`) — current 539-key second pass complete
 
@@ -1813,6 +1844,10 @@ follows the global transition rule above.
 | `F-en-040` | `en` | `tools.image.errorDefaultMessage` | natural error copy | `"The URL returned an error. Try a different source or re-upload the file."` | `"The image couldn’t be loaded from this URL. Try a different source or upload the file again."` | A URL does not itself “return” an error. The replacement describes the failed image load directly and replaces the awkward “re-upload” construction with a natural recovery instruction. | verified |
 | `F-en-041` | `en` | `tools.file.previewRaw` | jargon / context | `"Raw"` | `"Source"` | This Markdown-preview tab shows the file’s source text. “Raw” is unnecessary technical jargon and does not name the content as clearly as “Source.” | verified |
 | `F-en-042` | `en` | `tools.file.previewRender` | jargon / context | `"Rendered"` | `"Preview"` | This Markdown-preview tab shows the formatted visual preview. “Rendered” exposes an implementation term; “Preview” is the familiar user-facing state and pairs clearly with “Source.” | verified |
+| `F-en-043` | `en` | `tools.callout.emojiCategoryPeople` | category scope / accessibility | `"People"` | `"Smileys & people"` | The label is rendered as a visible heading and navigation accessible name for 529 entries that begin with facial-expression emoji and also contain people; the bundled picker localization names both halves. | verified |
+| `F-en-044` | `en` | `tools.callout.emojiCategoryNature` | category scope / accessibility | `"Nature"` | `"Animals & nature"` | The label is rendered as a visible heading and navigation accessible name for 152 entries that begin with animals and also contain plants; the old label omits the dominant animal scope. | verified |
+| `F-en-045` | `en` | `tools.callout.emojiCategoryFood` | category scope / accessibility | `"Food"` | `"Food & drink"` | The category contains both food and beverage emoji, and the label is exposed visually and to assistive technology; the bundled picker localization names both scopes. | verified |
+| `F-en-046` | `en` | `tools.callout.emojiCategoryTravel` | category scope / accessibility | `"Travel"` | `"Travel & places"` | The category contains geography and buildings as well as transport and travel emoji, and its visible and accessible label must name both scopes. | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
 | `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird jeder verschachtelte Block auf die oberste Ebene verschoben. Fortfahren?"` | Source-only warning must work for one or many and avoid needlessly technical `Konvertierung`; the first correction retained plural `sie werden`, which is unsuitable when `{count}=1`. | verified |
@@ -2411,7 +2446,7 @@ follows the global transition rule above.
 | `F-cs-016` | `cs` | `a11y.searchResults` | number / accessibility / source synchronization | `"{count} výsledků"` | `"Výsledky hledání: {count}"` | Label-before-count wording remains grammatical for one, few, and many results. | verified |
 | `F-cs-017` | `cs` | `a11y.allBlocksSelected` | number / accessibility / source synchronization | `"Vybrány všechny bloky, {count} bloků"` | `"Vybrány všechny bloky. Celkem: {count}"` | The separate total avoids count-dependent repetition and matches the corrected source structure. | verified |
 | `F-cs-018` | `cs` | `a11y.blocksSelected` | number / accessibility | `"Vybráno {count} bloků"` | `"Počet vybraných bloků: {count}"` | Label-before-count wording avoids Czech one/few/many agreement. | verified |
-| `F-cs-019` | `cs` | `a11y.navigationModeEntered` | grammar / accessibility | `"Režim navigace. Pomocí šipek se pohybujte mezi bloky, klávesou Enter upravujte a klávesou Escape režim ukončíte."` | `"Režim navigace. Mezi bloky se pohybujte pomocí kláves se šipkami, klávesou Enter zahajte úpravy a klávesou Escape režim ukončete."` | The old sentence mixed imperative and indicative forms and described continuous editing rather than entering edit mode. | verified |
+| `F-cs-019` | `cs` | `a11y.navigationModeEntered` | grammar / keyboard / accessibility | `"Režim navigace. Pomocí šipek se pohybujte mezi bloky, klávesou Enter upravujte a klávesou Escape režim ukončíte."` | `"Režim navigace. Mezi bloky se pohybujte pomocí kláves se šipkami, klávesou Enter zahajte úpravy a klávesou Esc režim ukončete."` | The old sentence mixed imperative and indicative forms and described continuous editing rather than entering edit mode; Apple and Microsoft’s Czech shortcut guidance use the physical-key label `Esc`. | verified |
 | `F-cs-020` | `cs` | `a11y.navigatedToBlock` | event accuracy / accessibility | `"Přesunuto na blok"` | `"Přešli jste na blok"` | Focus navigation occurred; the old passive wording falsely suggested that an object was moved. | verified |
 | `F-cs-021` | `cs` | `toolNames.board` | product terminology / consistency | `"Nástěnka"` | `"Tabule"` | The tool name must agree with the existing Czech board-view terminology. | verified |
 | `F-cs-022` | `cs` | `toolNames.quote` | terminology | `"Citace"` | `"Citát"` | The tool inserts a quotation, while `citace` refers to a citation or reference. | verified |
@@ -2493,6 +2528,28 @@ follows the global transition rule above.
 | `F-cs-098` | `cs` | `tools.audio.alignmentLeft` | action terminology | `"Vlevo"` | `"Zarovnat vlevo"` | The audio settings item performs the same alignment action as its video counterpart and needs the same explicit Czech command. | verified |
 | `F-cs-099` | `cs` | `tools.audio.alignmentCenter` | action terminology | `"Na střed"` | `"Zarovnat na střed"` | The audio settings item performs the same alignment action as its video counterpart and needs the same explicit Czech command. | verified |
 | `F-cs-100` | `cs` | `tools.audio.alignmentRight` | action terminology | `"Vpravo"` | `"Zarovnat vpravo"` | The audio settings item performs the same alignment action as its video counterpart and needs the same explicit Czech command. | verified |
+| `F-cs-101` | `cs` | `blockSettings.dragToMove` | natural tooltip grammar | `"Přetáhněte pro přesunutí"` | `"Přetažením přesunete"` | Czech product instructions express the means with the instrumental form; the old infinitive-after-`pro` construction is a literal English calque. | verified |
+| `F-cs-102` | `cs` | `blockSettings.clickToOpenMenu` | natural tooltip grammar / accessibility | `"Klikněte pro otevření nabídky"` | `"Kliknutím otevřete nabídku"` | The standalone accessible name needs the natural Czech instrumental construction rather than a literal “click for opening” calque. | verified |
+| `F-cs-103` | `cs` | `toolbox.addBelow` | natural tooltip grammar / object clarity | `"Klikněte pro přidání pod"` | `"Kliknutím přidáte blok níže"` | The plus-button tooltip’s old calque ends with a dangling preposition; the replacement names the added block and reads naturally. | verified |
+| `F-cs-104` | `cs` | `tools.table.clickToAddRow` | natural instruction grammar | `"Klikněte pro přidání nového řádku"` | `"Kliknutím přidáte nový řádek"` | The table resize helper needs the conventional instrumental action construction instead of an English syntactic calque. | verified |
+| `F-cs-105` | `cs` | `tools.table.dragToAddRemoveRows` | natural instruction grammar | `"Přetáhněte pro přidání nebo odebrání řádků"` | `"Přetažením přidáte nebo odeberete řádky"` | The resize helper describes the result of dragging; instrumental phrasing is concise and idiomatic Czech. | verified |
+| `F-cs-106` | `cs` | `tools.table.clickToAddColumn` | natural instruction grammar | `"Klikněte pro přidání nového sloupce"` | `"Kliknutím přidáte nový sloupec"` | The table resize helper needs the conventional instrumental action construction instead of an English syntactic calque. | verified |
+| `F-cs-107` | `cs` | `tools.table.dragToAddRemoveColumns` | natural instruction grammar | `"Přetáhněte pro přidání nebo odebrání sloupců"` | `"Přetažením přidáte nebo odeberete sloupce"` | The resize helper describes the result of dragging; instrumental phrasing is concise and idiomatic Czech. | verified |
+| `F-cs-108` | `cs` | `a11y.atTop` | grammar / accessibility | `"Blok je na začátku, nelze přesunout výše"` | `"Blok je na začátku a nelze jej přesunout výše"` | The keyboard boundary announcement needs a conjunction and explicit object; the old comma joins an elliptical clause. | verified |
+| `F-cs-109` | `cs` | `a11y.atBottom` | grammar / accessibility | `"Blok je na konci, nelze přesunout níže"` | `"Blok je na konci a nelze jej přesunout níže"` | The keyboard boundary announcement needs a conjunction and explicit object; the old comma joins an elliptical clause. | verified |
+| `F-cs-110` | `cs` | `blockSettings.copyLinkError` | feedback object clarity | `"Odkaz se nepodařilo zkopírovat"` | `"Odkaz na blok se nepodařilo zkopírovat"` | The toast must identify the block link whose copy action failed, matching the initiating command and success feedback context. | verified |
+| `F-cs-111` | `cs` | `tools.callout.emojiCategoryPeople` | category scope / accessibility | `"Lidé"` | `"Smajlíci a lidé"` | The visible heading and navigation accessible name cover smileys as well as people; the bundled Czech emoji-picker localization names both scopes. | verified |
+| `F-cs-112` | `cs` | `tools.callout.emojiCategoryNature` | category scope / accessibility | `"Příroda"` | `"Zvířata a příroda"` | The category begins with and contains animals as well as plants; the bundled Czech emoji-picker localization names both scopes. | verified |
+| `F-cs-113` | `cs` | `tools.callout.emojiCategoryFood` | category scope / accessibility | `"Jídlo"` | `"Jídlo a pití"` | The category contains food and beverages, and the bundled Czech emoji-picker localization names both scopes. | verified |
+| `F-cs-114` | `cs` | `tools.callout.emojiCategoryTravel` | category scope / accessibility | `"Cestování"` | `"Cestování a místa"` | The category contains geography and buildings as well as travel; Microsoft Czech and the bundled picker localization name both scopes. | verified |
+| `F-cs-115` | `cs` | `tools.image.emptyDropToUpload` | natural drop-overlay instruction | `"Pusťte pro nahrání"` | `"Uvolněním nahrajete soubor"` | The drag overlay appears while a file is held over the image target; Czech interfaces describe the release result with instrumental wording rather than the literal `pro` calque. | verified |
+| `F-cs-116` | `cs` | `tools.file.emptyDropToUpload` | natural drop-overlay instruction | `"Pusťte pro nahrání"` | `"Uvolněním nahrajete soubor"` | The file drop overlay needs the same idiomatic release instruction as the other upload targets. | verified |
+| `F-cs-117` | `cs` | `tools.video.emptyDropToUpload` | natural drop-overlay instruction | `"Pusťte pro nahrání"` | `"Uvolněním nahrajete soubor"` | The video drop overlay needs the same idiomatic release instruction as the other upload targets. | verified |
+| `F-cs-118` | `cs` | `tools.audio.emptyDropToUpload` | natural drop-overlay instruction | `"Pusťte pro nahrání"` | `"Uvolněním nahrajete soubor"` | The audio drop overlay needs the same idiomatic release instruction as the other upload targets. | verified |
+| `F-cs-119` | `cs` | `tools.audio.coverDropToUpload` | natural drop-overlay instruction | `"Pusťte pro nahrání"` | `"Uvolněním nahrajete soubor"` | The cover-image drop overlay needs the same idiomatic release instruction as the other upload targets. | verified |
+| `F-cs-120` | `cs` | `blockSettings.clickAction` | fragment composition / grammar | `"Klikněte"` | `"Kliknutím"` | In read-only mode this fragment composes with `openMenuAction`; in editable mode it precedes the alternative shortcut. The instrumental form makes both complete Czech sentences. | verified |
+| `F-cs-121` | `cs` | `blockSettings.orConjunction` | fragment composition / grammar | `" nebo "` | `" nebo stisknutím "` | The settings-tooltip fragment must introduce a keyboard shortcut as an alternative means, yielding “Kliknutím nebo stisknutím Ctrl+/ …” while preserving both boundary spaces. | verified |
+| `F-cs-122` | `cs` | `blockSettings.openMenuAction` | fragment composition / grammar | `" pro otevření nabídky"` | `" otevřete nabídku"` | Combined with `clickAction` and the optional shortcut fragment, the predicate produces natural Czech in both read-only and editable tooltip variants while preserving its leading space. | verified |
 | `F-da-070` | `da` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Ryd formatering"` | Microsoft’s Danish editor UI uses the exact concise command [Ryd formatering](https://support.microsoft.com/da-dk/office/rydde-al-tekstformatering-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
 | `F-da-071` | `da` | `tools.table.clearSelection` | context / action accuracy | `"Ryd"` | `"Ryd indhold"` | Both table callers clear selected cell, row, or column contents while preserving the cells and formatting; Microsoft Excel uses the exact Danish command [Ryd indhold](https://support.microsoft.com/da-dk/office/arbejd-med-links-i-excel-7fc80d8d-68f9-482f-ab01-584c44d72b3e). | verified |
 | `F-da-072` | `da` | `a11y.navigatedToBlock` | grammar / accessibility | `"Navigeret til blok"` | `"Navigeret til blokken"` | The announcement refers to the definite block that just received navigation focus, so the bare indefinite noun is unnatural. | verified |
@@ -2696,7 +2753,7 @@ follows the global transition rule above.
 | `F-no-081` | `no` | `tools.image.previewControls` | accessibility / object context | `"Kontroller for forhåndsvisning"` | `"Kontroller for forhåndsvisning av bilde"` | The value labels the live image-preview toolbar, so the accessible name must retain the controlled image object; [Apple’s Bokmål guidance](https://support.apple.com/no-no/guide/pages-iphone/tana6bcd99e0/ios) corroborates the `Kontroller for … av …` construction. | verified |
 | `F-pa-001` | `pa` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ"` | LibreOffice Punjabi uses `ਸਿੱਧੀ ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ` for Clear Direct Formatting in its [official product source](https://github.com/LibreOffice/translations/blob/master/source/pa-IN/officecfg/registry/data/org/openoffice/Office/UI.po#L34689-L34695); the direct qualifier and accelerator are omitted for this compact inline command. | verified |
 | `F-pl-001` | `pl` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Wyczyść formatowanie"` | Microsoft’s Polish editor UI uses the exact command [Wyczyść formatowanie](https://support.microsoft.com/pl-PL/PowerPoint/clear-all-text-formatting). | verified |
-| `F-pl-002` | `pl` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Ten blok zawiera {count} zagnieżdżonych bloków. Po konwersji zostaną one przeniesione na poziom główny. Kontynuować?"` | `"Liczba zagnieżdżonych bloków: {count}. Przekształcenie tego bloku przeniesie je na poziom główny. Kontynuować?"` | The source-only count can be one or many; the label avoids Polish numeral inflection and replaces the needless `konwersja` calque. | verified |
+| `F-pl-002` | `pl` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Ten blok zawiera {count} zagnieżdżonych bloków. Po konwersji zostaną one przeniesione na poziom główny. Kontynuować?"` | `"Liczba zagnieżdżonych bloków: {count}. Przekształcenie tego bloku przeniesie zagnieżdżoną zawartość na poziom główny. Kontynuować?"` | The source-only count can be one or many; label-before-count wording avoids numeral inflection, and count-neutral `zagnieżdżoną zawartość` remains grammatical when `{count}=1`, unlike plural `je`. | verified |
 | `F-pl-003` | `pl` | `toolbox.optionAddAbove` | shortcut clarity | `"⌥ — dodaj powyżej"` | `"Kliknij z naciśniętym klawiszem ⌥, aby dodać powyżej"` | The toolbox hint requires an Option-click gesture; Apple’s Polish shortcut guidance identifies Option with `⌥`. | verified |
 | `F-pl-004` | `pl` | `toolbox.ctrlAddAbove` | shortcut clarity | `"Ctrl — dodaj powyżej"` | `"Kliknij z naciśniętym klawiszem Ctrl, aby dodać powyżej"` | The Windows hint omitted the click gesture and therefore did not describe the actual action. | verified |
 | `F-pl-005` | `pl` | `tools.marker.textColor` | terminology / source synchronization | `"Tekst"` | `"Kolor tekstu"` | The shared color-mode control must distinguish text color from background color. | verified |
@@ -2817,6 +2874,10 @@ follows the global transition rule above.
 | `F-pl-120` | `pl` | `tools.audio.loop` | media state terminology / consistency | `"Zapętl"` | `"Odtwarzanie w pętli"` | The audio toggle represents the same persistent loop state as video and needs the same natural noun phrase rather than an imperative command. | verified |
 | `F-pl-121` | `pl` | `tools.audio.errorGoogleDrive` | grammar / established product terminology | `"Linków Google Drive nie można odtwarzać bezpośrednio — pobierz plik i prześlij go tutaj."` | `"Linków do plików na Dysku Google nie można odtwarzać bezpośrednio — pobierz plik i prześlij go tutaj."` | The old bare noun chain is unnatural and treats links as the playable resource; [Google’s Polish documentation](https://support.google.com/drive/answer/2423485?hl=pl) uses the localized product name `Dysk Google`. | verified |
 | `F-pl-122` | `pl` | `tools.audio.errorOneDrive` | grammar / established product terminology | `"Linków OneDrive nie można odtwarzać bezpośrednio — pobierz plik i prześlij go tutaj."` | `"Linków do plików w usłudze OneDrive nie można odtwarzać bezpośrednio — pobierz plik i prześlij go tutaj."` | The old English-style noun chain is unnatural; [Microsoft’s Polish documentation](https://support.microsoft.com/pl-pl/office/linki-786eb268-2e5d-4184-bc18-cad0bda6175e) uses the construction `link do pliku w usłudze OneDrive`. | verified |
+| `F-pl-123` | `pl` | `a11y.dropPosition` | number / accessibility / prospective drag context | `"Zostanie upuszczony na pozycji {position} z {total}"` | `"Pozycja docelowa: {position} z {total}"` | The same pre-drop announcement handles one or multiple selected blocks, but masculine singular `upuszczony` assumes one; a neutral destination label works for both caller branches. | verified |
+| `F-pl-124` | `pl` | `tools.callout.emojiCategoryPeople` | category scope / accessibility | `"Ludzie"` | `"Buźki i osoby"` | The visible heading and navigation accessible name cover smileys as well as people; Emoji Mart and Apple’s Polish picker terminology name both scopes. | verified |
+| `F-pl-125` | `pl` | `tools.callout.emojiCategoryNature` | category scope / accessibility | `"Natura"` | `"Zwierzęta i natura"` | The runtime category begins with and contains animals as well as plants; the official picker localization names both scopes. | verified |
+| `F-pl-126` | `pl` | `tools.callout.emojiCategoryFood` | category scope / accessibility | `"Jedzenie"` | `"Jedzenie i napoje"` | The category contains both food and beverages, so its visible and accessible Polish label must name both scopes. | verified |
 | `F-ps-001` | `ps` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"بڼه پاکه کړئ"` | WordPress Pashto translates Clear formatting as `بڼه پاکه کړه` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/ps/default/export-translations/?format=po); the final verb is adjusted to this dictionary’s polite imperative register. | verified |
 | `F-pt-001` | `pt` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Limpar formatação"` | Microsoft’s Brazilian Portuguese editor UI uses Limpar Formatação in [official product help](https://support.microsoft.com/pt-BR/PowerPoint/clear-all-text-formatting); the second word is lowercased for the dictionary’s sentence-case register. | verified |
 | `F-pt-002` | `pt` | `blockSettings.convertWithChildrenWarning` | count neutrality / source synchronization | `"Este bloco contém {count} blocos aninhados. Ao convertê-lo, eles passarão para o nível superior. Deseja continuar?"` | `"Blocos aninhados: {count}. Ao converter este bloco, cada bloco aninhado será movido para o nível superior. Deseja continuar?"` | The confirmation can receive one nested block; the replacement remains grammatical for every `{count}` and states the move performed by conversion. | verified |
@@ -3025,6 +3086,11 @@ follows the global transition rule above.
 | `F-ru-119` | `ru` | `tools.video.speedPresets` | UI terminology | `"Предустановки скорости"` | `"Предустановленные скорости"` | The adjective phrase is natural Russian UI copy and avoids an implementation-style nominal calque. | verified |
 | `F-ru-120` | `ru` | `tools.video.ctxStats` | slang / source synchronization | `"Статистика для гиков"` | `"Статистика воспроизведения"` | The current label uses prohibited slang; the replacement identifies the playback-data context. | verified |
 | `F-ru-121` | `ru` | `tools.callout.emojiCategoryTravel` | category scope / established terminology | `"Путешествия"` | `"Путешествия и места"` | The caller maps emoji-mart’s `places` category to this label, so travel alone omits part of the gallery; [Microsoft Teams’ Russian emoji guidance](https://support.microsoft.com/ru-ru/teams/chat/send-an-emoji-gif-or-sticker-in-microsoft-teams) uses the established category `Путешествия и места`. | verified |
+| `F-ru-122` | `ru` | `blockSettings.lastEdited` | metadata terminology | `"Последнее редактирование"` | `"Последнее изменение"` | The footer reports the latest saved modification rather than the editing process; Google Docs uses the exact Russian metadata term `Последнее изменение`. | verified |
+| `F-ru-123` | `ru` | `blockSettings.lastEditedBy` | metadata relationship / placeholder | `"Последнее редактирование: {name}"` | `"Автор последнего изменения: {name}"` | The author-bearing footer must state the person’s relationship to the last modification; Microsoft uses `автор последнего изменения` in Russian metadata UI. | verified |
+| `F-ru-124` | `ru` | `tools.callout.emojiCategoryPeople` | category scope / accessibility | `"Люди"` | `"Смайлики и люди"` | The visible heading and navigation accessible name cover smileys as well as people; Microsoft’s Russian emoji UI names both scopes. | verified |
+| `F-ru-125` | `ru` | `tools.callout.emojiCategoryNature` | category scope / accessibility | `"Природа"` | `"Животные и природа"` | The category begins with and contains animals as well as plants; Google’s Russian emoji picker names both scopes. | verified |
+| `F-ru-126` | `ru` | `tools.callout.emojiCategoryFood` | category scope / accessibility | `"Еда"` | `"Еда и напитки"` | The category contains food and beverages; Google’s Russian emoji picker names both scopes. | verified |
 | `F-sd-001` | `sd` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"فارميٽنگ صاف ڪريو"` | WordPress Sindhi supplies the native clear action `صاف ڪريو` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/snd/default/export-translations/?format=po); the object reuses this dictionary’s established `فارميٽنگ` noun. This adapted value remains flagged for a distinct full-language pass. | verified |
 | `F-si-001` | `si` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"හැඩතල ගැන්වීම ඉවත් කරන්න"` | WordPress Sinhala uses `ආකෘතිකරණය ඉවත්කරන්න` for Clear formatting in its [official catalog](https://translate.wordpress.org/projects/wp/dev/si/default/export-translations/?format=po); the selected wording follows this dictionary’s existing formatting noun and spacing conventions. | verified |
 | `F-sk-001` | `sk` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Vymazať formátovanie"` | Microsoft’s Slovak editor UI uses the exact command [Vymazať formátovanie](https://support.microsoft.com/sk-SK/PowerPoint/clear-all-text-formatting). | verified |
@@ -3118,6 +3184,13 @@ follows the global transition rule above.
 | `F-sv-085` | `sv` | `tools.table.comfortableText` | naturalness / density terminology | `"Bekväm text"` | `"Luftig text"` | The implementation exposes the roomier regular-size option opposite `Kompakt text`; the old wording describes emotional comfort, while `Luftig text` naturally names the visual density. | verified |
 | `F-sv-086` | `sv` | `tools.image.previewControls` | accessibility / object context | `"Förhandsvisningskontroller"` | `"Reglage för bildförhandsvisning"` | This accessible name labels the concrete image-preview toolbar, so it must identify both its controls and the image-preview object; Apple’s Swedish UI guidance uses [`reglage`](https://support.apple.com/sv-se/guide/mac-pro/apddf030866a/mac) for an actionable preview toolbar. | verified |
 | `F-sv-087` | `sv` | `tools.callout.emojiCategoryTravel` | category scope / established terminology | `"Resor"` | `"Resor och platser"` | The caller maps emoji-mart’s `places` category to this label, so travel alone omits part of the gallery; [Microsoft Teams’ Swedish emoji guidance](https://support.microsoft.com/sv-SE/teams/chat/send-an-emoji-gif-or-sticker-in-microsoft-teams) uses the established category `Resor och platser`. | verified |
+| `F-sv-088` | `sv` | `tools.image.altEdit` | established accessibility terminology | `"Redigera alt-text"` | `"Redigera alternativtext"` | This is a full image action label, not the compact `Alt` badge; Microsoft’s Swedish accessibility UI uses the established compound `alternativtext`. | verified |
+| `F-sv-089` | `sv` | `tools.image.altPlaceholder` | established accessibility terminology | `"Alt-text"` | `"Alternativtext"` | The full text-field placeholder should use established Swedish `alternativtext`, reserving `Alt` for the compact adjacent control. | verified |
+| `F-sv-090` | `sv` | `tools.image.cropRatioFree` | option clarity / established media terminology | `"Fri"` | `"Fri form"` | As a standalone aspect-ratio option, `Fri` is underspecified; Adobe’s Swedish crop UI uses `Fri form` for unconstrained cropping. | verified |
+| `F-sv-091` | `sv` | `tools.linkPaste.embedVideo` | provider-template grammar | `"Bädda in {provider}-video"` | `"Bädda in en video från {provider}"` | Immutable provider titles such as `VK Video` and `Tencent Video` make the old compound repeat `video`; the prepositional template remains natural for every registered provider. | verified |
+| `F-sv-092` | `sv` | `tools.callout.emojiCategoryPeople` | category scope / accessibility | `"Människor"` | `"Smileys och människor"` | The visible heading and navigation accessible name cover smileys as well as people; Unicode CLDR’s Swedish category names both scopes. | verified |
+| `F-sv-093` | `sv` | `tools.callout.emojiCategoryNature` | category scope / accessibility | `"Natur"` | `"Djur och natur"` | The runtime category begins with and contains animals as well as plants; Unicode CLDR’s Swedish category names both scopes. | verified |
+| `F-sv-094` | `sv` | `tools.callout.emojiCategoryFood` | category scope / accessibility | `"Mat"` | `"Mat och dryck"` | The category contains food and beverages; Unicode CLDR’s Swedish category names both scopes. | verified |
 | `F-sw-001` | `sw` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Ondoa uumbizaji"` | WordPress Swahili’s literal catalog label is `Fomati safi` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/sw/default/export-translations/?format=po); `Ondoa uumbizaji` is the more natural action built from this dictionary’s vocabulary and remains explicitly flagged for independent full-language review. | verified |
 | `F-ta-001` | `ta` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"வடிவமைப்பை அகற்று"` | Google Docs’ Tamil UI uses the exact command [வடிவமைப்பை அகற்று](https://support.google.com/docs/answer/4492226?hl=ta). | verified |
 | `F-te-001` | `te` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ఫార్మాటింగ్‌ను తొలగించు"` | The wording combines this dictionary’s established `ఫార్మాటింగ్` with LibreOffice’s native removal verb in its [official Telugu source](https://github.com/LibreOffice/translations/blob/master/source/te/officecfg/registry/data/org/openoffice/Office/UI.po#L34966-L34972); [Google Docs](https://support.google.com/docs/answer/179738?co=GENIE.Platform%3DDesktop&hl=te) corroborates the construction. | verified |
@@ -3218,7 +3291,7 @@ follows the global transition rule above.
 | `F-zh-TW-030` | `zh-TW` | `tools.colorPicker.defaultSwatchLabel` | accessibility / label-value punctuation | `"{mode} {default}"` | `"{mode}：{default}"` | The color-picker caller inserts localized mode and default labels into one spoken tooltip; W3C’s [Chinese Layout Requirements](https://www.w3.org/TR/clreq/#punctuation_marks) identifies the native colon as U+FF1A `：`. Both placeholders remain intact. | verified |
 | `F-zh-TW-031` | `zh-TW` | `tools.colorPicker.colorSwatchLabel` | accessibility / label-value punctuation | `"{mode} {color}"` | `"{mode}：{color}"` | The swatch caller composes values such as “文字顏色：灰色”; a bare space leaves the adjacent nouns ambiguous, while W3C documents `：` as the native Chinese colon. Both placeholders remain intact. | verified |
 | `F-zh-TW-032` | `zh-TW` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖曳控制項"` | `"拖曳控點"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Taiwan Fluent UI guidance uses the handle-specific term [拖曳控點](https://learn.microsoft.com/zh-tw/power-apps/teams/use-the-fluent-ui-controls). | verified |
-| `F-global-001` | all non-English | 42 changed English source keys | source dependency | Localized values have not been re-reviewed against the 41 corrected source values and the new clear-formatting key. | Re-audit all 42 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete 539-key locale pass must inspect all 42 dependencies, including `toolNames.clearFormat` and `F-en-037` through `F-en-042`. | open |
+| `F-global-001` | all non-English | 46 changed English source keys | source dependency | Localized values have not been re-reviewed against the 45 corrected source values and the new clear-formatting key. | Re-audit all 46 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete 539-key locale pass must inspect all 46 dependencies, including `toolNames.clearFormat` and `F-en-037` through `F-en-046`. | open |
 
 ## Exact-English Retentions
 
@@ -3326,7 +3399,6 @@ locale and UI context.
 | `R-fr-009` | `fr` | `tools.audio.pause` | established cognate | `Pause` is the standard unchanged France-French media-control label. | [Apple — Écouter de la musique sur l’iPhone](https://support.apple.com/fr-fr/guide/iphone/iph676daac9b/ios) |
 | `R-fr-010` | `fr` | `tools.audio.volume` | established cognate | `Volume` is the standard unchanged France-French media-control label. | [Apple — Écouter de la musique sur l’iPhone](https://support.apple.com/fr-fr/guide/iphone/iph676daac9b/ios) |
 | `R-fr-011` | `fr` | `tools.callout.colorOrange` | established cognate | `Orange` is the established unchanged French color name. | [Académie française — orange](https://www.dictionnaire-academie.fr/article/A9O0620) |
-| `R-fr-012` | `fr` | `tools.callout.emojiCategoryNature` | established cognate | `Nature` is the normal French category name and needs no localization change. | [Académie française — nature](https://www.dictionnaire-academie.fr/article/A9N0131) |
 | `R-fr-013` | `fr` | `tools.code.codeTab` | established cognate | `Code` is the established French term for program source and the natural editor-tab label. | [Académie française — code](https://www.dictionnaire-academie.fr/article/A9C2779) |
 | `R-fr-014` | `fr` | `tools.colorPicker.color.orange` | established cognate | `Orange` is the established unchanged French color name. | [Académie française — orange](https://www.dictionnaire-academie.fr/article/A9O0620) |
 | `R-fr-015` | `fr` | `tools.database.propertyTypeDate` | established cognate | `Date` is the normal unchanged French noun for this database property type. | [Académie française — date](https://www.dictionnaire-academie.fr/article/A9D0115) |

@@ -55,7 +55,7 @@ const RETENTION_CATEGORIES = new Set([
   'established cognate',
   'established loanword',
 ]);
-const GLOBAL_FINDING_KEYS = new Set(['42 changed English source keys']);
+const GLOBAL_FINDING_KEYS = new Set(['46 changed English source keys']);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'blockSettings.openMenuAction': ' to open the menu',
@@ -86,6 +86,10 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.addEmoji': 'Add icon',
   'tools.callout.filterEmojis': 'Search emojis…',
   'tools.callout.pickRandom': 'Pick a random emoji',
+  'tools.callout.emojiCategoryPeople': 'Smileys & people',
+  'tools.callout.emojiCategoryNature': 'Animals & nature',
+  'tools.callout.emojiCategoryFood': 'Food & drink',
+  'tools.callout.emojiCategoryTravel': 'Travel & places',
   'tools.code.searchLanguage': 'Search languages…',
   'tools.code.plainText': 'Plain text',
   'tools.link.linkTitle': 'Link text',

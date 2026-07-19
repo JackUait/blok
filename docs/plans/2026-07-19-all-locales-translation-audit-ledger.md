@@ -269,7 +269,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-089` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-078` | pending |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-077` | pending |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
@@ -402,18 +402,23 @@ source-coverage, encoding, and normalization checker pass. `F-en-036` and all
 only the missing-key defect; every locale row remains `pending` and still
 requires two complete, distinct 539-entry linguistic passes.
 
-## English Source Audit Evidence — pending after source-scope defects
+## English Source Audit Evidence — pending after group-move source defect
 
 The previously completed 545-key passes below are historical. A later
 caller-cardinality trace proved that `a11y.atTop`, `a11y.atBottom`,
 `a11y.movedUp`, and `a11y.movedDown` are shared by single-block and
 multi-block-selection paths while their English text names one block.
-`F-en-074` through `F-en-077` record those four source defects. The fresh
-English reread then proved that `tools.callout.emojiCategoryActivity` labels
-an entire multi-emoji section and navigation target while the English value
-was singular; `F-en-078` records that fifth source defect. Evidence reset rule
-2 therefore clears English and every localized pass and digest before the
-dependent localized wording is re-reviewed.
+`F-en-074` through `F-en-077` record the four source defects. Evidence reset
+rule 2 therefore clears English and every localized pass and digest before
+the count-neutral source wording is applied.
+
+The fresh English reread separately challenged the singular `Activity`
+category label because the caller renders both a multi-item heading and a
+navigation accessible name. The bundled `@emoji-mart/data` English locale
+uses the exact singular `Activity`, however, and Unicode CLDR's plural-scoped
+`activities` character-label type likewise resolves to English `activity`.
+The established upstream category term is therefore intentionally retained;
+it is not a finding or a localized source-change dependency.
 
 The current first reviewer inspected all 545/545 final English values in four
 disjoint source-order ranges: 1–140, 141–280, 281–420, and 421–545. Every
@@ -1974,7 +1979,6 @@ follows the global transition rule above.
 | `F-en-075` | `en` | `a11y.atBottom` | accessibility / selection cardinality | `"Block is at the bottom and cannot move down"` | `"Cannot move down. Already at the bottom."` | `BlockOperations.moveCurrentBlockDown` passes the same boundary key when either one current block or a multi-block `selectedBlocks` group is already at the bottom. The count-neutral announcement is accurate for both paths without adding an unavailable count. Its exact expectation failed before remediation and passes with the corrected value. | verified |
 | `F-en-076` | `en` | `a11y.movedUp` | accessibility / selection cardinality | `"Block moved up to position {position} of {total}"` | `"Moved up to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
 | `F-en-077` | `en` | `a11y.movedDown` | accessibility / selection cardinality | `"Block moved down to position {position} of {total}"` | `"Moved down to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
-| `F-en-078` | `en` | `tools.callout.emojiCategoryActivity` | category scope / accessibility / number | `"Activity"` | `"Activities"` | The emoji picker maps this key to Emoji Mart's complete `activity` category and renders it both as a multi-emoji section heading and as the category-navigation accessible name. Its sibling category labels and the already-reviewed Danish, German, Spanish, French, Norwegian, Portuguese, and Swedish values use the plural category scope. The exact expectation failed before remediation and passes with the plural source value. | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
 | `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird der verschachtelte Inhalt auf die oberste Ebene verschoben. Fortfahren?"` | The source-only warning must work for one or many and avoid needlessly technical `Konvertierung`. The final source uses the count-neutral collective “nested content”; German mirrors it with singular `der verschachtelte Inhalt`, avoiding both the old plural pronoun and a forced distributive construction. | verified |
@@ -3423,9 +3427,8 @@ follows the global transition rule above.
 | `F-zh-TW-030` | `zh-TW` | `tools.colorPicker.defaultSwatchLabel` | accessibility / label-value punctuation | `"{mode} {default}"` | `"{mode}：{default}"` | The color-picker caller inserts localized mode and default labels into one spoken tooltip; W3C’s [Chinese Layout Requirements](https://www.w3.org/TR/clreq/#punctuation_marks) identifies the native colon as U+FF1A `：`. Both placeholders remain intact. | verified |
 | `F-zh-TW-031` | `zh-TW` | `tools.colorPicker.colorSwatchLabel` | accessibility / label-value punctuation | `"{mode} {color}"` | `"{mode}：{color}"` | The swatch caller composes values such as “文字顏色：灰色”; a bare space leaves the adjacent nouns ambiguous, while W3C documents `：` as the native Chinese colon. Both placeholders remain intact. | verified |
 | `F-zh-TW-032` | `zh-TW` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖曳控制項"` | `"拖曳控點"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Taiwan Fluent UI guidance uses the handle-specific term [拖曳控點](https://learn.microsoft.com/zh-tw/power-apps/teams/use-the-fluent-ui-controls). | verified |
-| `F-global-001` | all non-English | 78 changed English source keys | source dependency | Localized values have not been re-reviewed against the 71 corrected source values and seven new keys. | Re-audit all 78 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete locale pass must inspect all 78 dependencies, including `toolNames.clearFormat`, the expanded emoji categories, the plural activity-category scope, every provider-composition template, the corrected broken-image error, both new media-caption placeholders, all three localized notifier-dialog defaults, the Markdown footnote backlink label, and all four count-neutral group-move announcements. | open |
+| `F-global-001` | all non-English | 77 changed English source keys | source dependency | Localized values have not been re-reviewed against the 70 corrected source values and seven new keys. | Re-audit all 77 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete locale pass must inspect all 77 dependencies, including `toolNames.clearFormat`, the expanded emoji categories, every provider-composition template, the corrected broken-image error, both new media-caption placeholders, all three localized notifier-dialog defaults, the Markdown footnote backlink label, and all four count-neutral group-move announcements. | open |
 | `F-global-002` | all non-English | four expanded emoji category keys | source dependency / category scope / accessibility | The 68 localized dictionaries still use one-part labels for some or all of the newly expanded smileys-and-people, animals-and-nature, food-and-drink, and travel-and-places source categories. | Apply the independently reviewed native four-label matrix to all 68 localized dictionaries, retaining a current value only when it already expresses both scopes. | Three independent language-family reviews inspected all 272 visible and ARIA labels against runtime category contents, bundled Emoji Mart data, Unicode CLDR, and official Apple, Google, Microsoft, Android, and native-language product terminology. The executable 68-locale matrix records all 253 required corrections and 19 valid retentions. | verified |
-| `F-global-003` | all non-English | activity emoji category scope | source dependency / category scope / accessibility / number | The localized activity-category labels have not been re-reviewed after the English source was corrected from singular `Activity` to plural `Activities`. | Review all 68 native labels as headings and navigation names for the complete activity emoji category; use a plural or a natural language-specific collective category label, not wording that denotes one activity. | `CATEGORY_I18N_KEYS` maps the key to Emoji Mart's full `activity` group, while `buildSection` and the category navigation expose the translation as a multi-item heading and accessible name. Every localized dictionary requires an explicit native-scope decision before this dependency can close. | open |
 
 ## Exact-English Retentions
 

@@ -87,8 +87,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // Swatch labels are placeholder-only ("{default} {mode}") and read naturally
   // in the English source order, so an identical value is correct here.
   am: new Set(['tools.colorPicker.defaultSwatchLabel', 'tools.colorPicker.colorSwatchLabel']),
-  az: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
-  bg: new Set(['tools.colorPicker.defaultSwatchLabel', 'tools.colorPicker.colorSwatchLabel']),
+  az: new Set([
+    'tools.image.cropRatioOval',
+    'tools.database.defaultStatusProperty',
+    'notifier.ok',
+  ]),
+  bg: new Set(['notifier.ok']),
   // "Text" is a direct cognate of the English word in Czech.
   cs: new Set(['tools.database.propertyTypeText', 'tools.link.linkText']),
   da: new Set([
@@ -104,6 +108,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
+    'notifier.ok',
     // Placeholder-only swatch labels read naturally in source order.
     'tools.colorPicker.defaultSwatchLabel',
     'tools.colorPicker.colorSwatchLabel',
@@ -123,6 +128,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeText',
     'tools.database.defaultStatusProperty',
     'tools.database.defaultViewBoard',
+    'notifier.ok',
     // "Text" is a direct cognate of the English word in German.
     'tools.link.linkText',
   ]),
@@ -139,7 +145,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.link.emailAddress',
     'tools.code.autoDetected',
     'tools.image.emptyLink',
-    'tools.image.cropAspectRatio',
     'tools.image.cropRatioOval',
     // "File"/"Link"/"Preview"/"Board"/"Embed"/"Toggle" are the standard
     // English loanwords in Filipino (Tagalog) product UIs.
@@ -163,7 +168,6 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   fr: new Set([
     'tools.colorPicker.color.orange',
     'searchTerms.note',
-    'tools.callout.emojiCategoryNature',
     'tools.callout.colorOrange',
     'toolNames.code',
     'tools.code.codeTab',

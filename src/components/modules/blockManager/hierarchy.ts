@@ -334,8 +334,18 @@ export class BlockHierarchy {
       // column child container — it was never legitimately "claimed" by the row.
       const strandedInColumnsRow =
         isColumnsRow(currentNestedContainer) && isColumnContainer(newContainer);
+      // A DISCONNECTED container can never legitimately claim a block. When
+      // replace() swaps out a container block (e.g. toggle heading → toggle
+      // heading of another level), the children holders leave the document
+      // inside the removed subtree; their nearest nested container still
+      // resolves to that dead subtree's container. Treating that as a claim
+      // stranded the children in detached DOM — visible content lost while the
+      // model still said they were nested (the toggle-heading level-convert
+      // data-loss bug). Only a container that is actually in the document can
+      // veto the mount.
       const claimedByOtherContainer =
         currentNestedContainer !== null &&
+        currentNestedContainer.isConnected &&
         currentNestedContainer !== newContainer &&
         !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
         !isColumnsRow(newContainer) &&

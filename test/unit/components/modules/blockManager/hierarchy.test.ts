@@ -951,10 +951,13 @@ describe('BlockHierarchy', () => {
       const claimedBlock = requireBlock('claimed-block');
       const toggleParent = requireBlock('toggle-parent');
 
-      // Simulate claimed-block sitting inside a table cell's nested-blocks container
+      // Simulate claimed-block sitting inside a table cell's nested-blocks container.
+      // The container must be IN the document: only a live container legitimately
+      // claims a holder (a detached one is a dead subtree — see the test below).
       const tableCellContainer = document.createElement('div');
       tableCellContainer.setAttribute('data-blok-nested-blocks', '');
       tableCellContainer.appendChild(claimedBlock.holder);
+      document.body.appendChild(tableCellContainer);
 
       // Give toggle-parent a toggle-children container
       const toggleContainer = document.createElement('div');
@@ -962,11 +965,54 @@ describe('BlockHierarchy', () => {
       toggleContainer.setAttribute('data-blok-nested-blocks', '');
       toggleParent.holder.appendChild(toggleContainer);
 
-      hierarchy.setBlockParent(claimedBlock, 'toggle-parent');
+      try {
+        hierarchy.setBlockParent(claimedBlock, 'toggle-parent');
 
-      // The holder must remain in the table cell container — NOT stolen by the toggle
-      expect(tableCellContainer.contains(claimedBlock.holder)).toBe(true);
-      expect(toggleContainer.contains(claimedBlock.holder)).toBe(false);
+        // The holder must remain in the table cell container — NOT stolen by the toggle
+        expect(tableCellContainer.contains(claimedBlock.holder)).toBe(true);
+        expect(toggleContainer.contains(claimedBlock.holder)).toBe(false);
+      } finally {
+        tableCellContainer.remove();
+      }
+    });
+
+    it('mounts the holder when its current container is DETACHED from the document', () => {
+      // Regression: converting a toggle heading to a toggle heading of another
+      // level replaces the block holder; the children ride along inside the
+      // REMOVED subtree, so their nearest nested container resolves to a dead,
+      // disconnected node. That dead container must NOT veto the mount — the
+      // children were invisibly stranded in detached DOM (data loss for the user).
+      repository = createRepositoryWithBlocks([
+        { id: 'old-parent', parentId: null, contentIds: ['child'] },
+        { id: 'child', parentId: 'old-parent', contentIds: [] },
+        { id: 'new-parent', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const child = requireBlock('child');
+      const newParent = requireBlock('new-parent');
+
+      // Child sits inside a DETACHED old toggle container (replaced block's subtree).
+      const detachedOldContainer = document.createElement('div');
+      detachedOldContainer.setAttribute('data-blok-toggle-children', '');
+      detachedOldContainer.setAttribute('data-blok-nested-blocks', '');
+      detachedOldContainer.appendChild(child.holder);
+
+      // The new parent is live in the document with its own children container.
+      const newContainer = document.createElement('div');
+      newContainer.setAttribute('data-blok-toggle-children', '');
+      newContainer.setAttribute('data-blok-nested-blocks', '');
+      newParent.holder.appendChild(newContainer);
+      document.body.appendChild(newParent.holder);
+
+      try {
+        hierarchy.setBlockParent(child, 'new-parent');
+
+        expect(newContainer.contains(child.holder)).toBe(true);
+        expect(child.parentId).toBe('new-parent');
+      } finally {
+        newParent.holder.remove();
+      }
     });
 
     it('mounts a reparented block\'s holder into a column\'s [data-blok-nested-blocks] container', () => {

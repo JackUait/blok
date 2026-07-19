@@ -89,6 +89,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'four expanded emoji category keys',
   'tools.colorPicker.recentlyUsed localized labels',
   'popover.search localized action placeholders',
+  'notifier.dismiss helper localization contract',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {

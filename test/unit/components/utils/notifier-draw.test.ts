@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { alert, confirm, prompt, getWrapper, CSS, createDismissButton, NOTIFIER_DISMISS_KEY } from '../../../../src/components/utils/notifier/draw';
 import { show } from '../../../../src/components/utils/notifier/index';
-import { englishDictionary } from '../../../../src/components/i18n/lightweight-i18n';
 
 describe('Notifier draw', () => {
   beforeEach(() => {
@@ -125,21 +124,20 @@ describe('Notifier draw', () => {
       expect(NOTIFIER_DISMISS_KEY).toBe('notifier.dismiss');
     });
 
-    it('renders a real <button> with a testid and accessible label', () => {
-      const btn = createDismissButton(vi.fn());
+    it('renders a real <button> with a caller-supplied localized accessible label', () => {
+      const localizedLabel = 'বন্ধ করুন';
+      const btn = createDismissButton(vi.fn(), localizedLabel);
 
       expect(btn.tagName).toBe('BUTTON');
       expect(btn.getAttribute('type')).toBe('button');
       expect(btn.getAttribute('data-blok-testid')).toBe('notification-dismiss');
 
-      const expectedLabel = (englishDictionary as Record<string, string>)[NOTIFIER_DISMISS_KEY] ?? 'Dismiss';
-
-      expect(btn.getAttribute('aria-label')).toBe(expectedLabel);
+      expect(btn.getAttribute('aria-label')).toBe(localizedLabel);
     });
 
     it('invokes the dismiss callback on click', () => {
       const onDismiss = vi.fn();
-      const btn = createDismissButton(onDismiss);
+      const btn = createDismissButton(onDismiss, 'Dismiss');
 
       btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 

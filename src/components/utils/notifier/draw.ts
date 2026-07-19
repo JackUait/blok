@@ -1,4 +1,3 @@
-import { englishDictionary } from '../../i18n/lightweight-i18n';
 import { openModalDialog, type ModalDialogHandle } from '../modal-dialog';
 import { twJoin } from '../tw';
 
@@ -42,9 +41,8 @@ export const CSS = {
 
 /**
  * Namespaced i18n key for the toast's dismiss-button accessible label. The
- * built-in notifier util has no access to a live I18n module instance, so it
- * resolves the label from the shared English dictionary and falls back to a
- * literal when the key is absent (see {@link createDismissButton}).
+ * drawing utility has no live I18n module, so callers must resolve this key and
+ * pass the localized value to {@link createDismissButton}.
  */
 export const NOTIFIER_DISMISS_KEY = 'notifier.dismiss';
 
@@ -58,34 +56,24 @@ export const NOTIFIER_DISMISS_KEY = 'notifier.dismiss';
 export const modalCleanups = new WeakMap<HTMLElement, () => void>();
 
 /**
- * English fallback used when the {@link NOTIFIER_DISMISS_KEY} translation is not
- * present in the bundled dictionary.
- */
-const NOTIFIER_DISMISS_FALLBACK = 'Dismiss';
-
-/**
- * Resolves the dismiss-button label from the bundled English dictionary,
- * falling back to {@link NOTIFIER_DISMISS_FALLBACK} when the key is absent.
- */
-const resolveDismissLabel = (): string => {
-  return (englishDictionary as Record<string, string>)[NOTIFIER_DISMISS_KEY] ?? NOTIFIER_DISMISS_FALLBACK;
-};
-
-/**
  * Builds the transient toast's dismiss button. Radix Toast / Sonner give every
  * toast an explicit, keyboard-reachable close affordance; the built-in toast
  * previously had none. The glyph is decorative (`aria-hidden`); the button is
  * named via `aria-label` so assistive tech announces its purpose.
  * @param {() => void} onDismiss - invoked when the button is activated
+ * @param {string} label - localized accessible label resolved by the caller
  * @returns {HTMLButtonElement} the dismiss button
  */
-export const createDismissButton = (onDismiss: () => void): HTMLButtonElement => {
+export const createDismissButton = (
+  onDismiss: () => void,
+  label: string
+): HTMLButtonElement => {
   const button = document.createElement('button');
 
   button.type = 'button';
   button.className = CSS.dismissBtn;
   button.setAttribute('data-blok-testid', 'notification-dismiss');
-  button.setAttribute('aria-label', resolveDismissLabel());
+  button.setAttribute('aria-label', label);
 
   const glyph = document.createElement('span');
 

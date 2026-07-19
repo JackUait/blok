@@ -261,7 +261,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `wire-database-am-first-final` | — | pass | pass | pass | `F-am-001`–`F-am-078` | first-pass-complete |
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `codex-wire-ui-ar-first-final` | — | pass | pass | pass | `F-ar-001`–`F-ar-075` | first-pass-complete |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-090` | pending |
-| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `codex-bg-first-final-reread` | — | pass | pass | pass | `F-bg-001`–`F-bg-095` | first-pass-complete |
+| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `codex-bg-first-final-reread` | `root-bg-second-final-545` | pass | pass | pass | `F-bg-001`–`F-bg-095` | second-pass-complete |
 | `bn` | Bengali | Bengali | ltr | to-audit | — | — | pending | pending | pending | `F-bn-001` | pending |
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
@@ -395,7 +395,7 @@ locale returns to `pending`.
 |---|---|---|---|---|
 | `am` | `wire-database-am-first-final` | `sha256:0e243c7a9f95c19901726d50e8600c8aa5c23fe29ab52736a27303652e32336e` | — | — |
 | `ar` | `codex-wire-ui-ar-first-final` | `sha256:c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a` | — | — |
-| `bg` | `codex-bg-first-final-reread` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` | — | — |
+| `bg` | `codex-bg-first-final-reread` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` | `root-bg-second-final-545` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` |
 | `da` | `codex-da-first-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` | `root-da-second-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` |
 | `de` | `root-de-first-final` | `sha256:5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba` | — | — |
 | `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
@@ -733,7 +733,7 @@ The current first pass binds to raw SHA-256
 `c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a`.
 The distinct complete second pass remains pending.
 
-### Bulgarian (`bg`) — current first pass complete
+### Bulgarian (`bg`) — current second pass complete
 
 The initial current-byte review inspected all 545 English/Bulgarian pairs and
 recorded 75 defects in addition to the historical clear-format finding.
@@ -763,7 +763,16 @@ case, three search-quality cases, and 31 provider/paste-menu cases pass.
 
 The current first pass binds to raw SHA-256
 `dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a`.
-The distinct complete second pass remains pending.
+Distinct reviewer `root-bg-second-final-545` then independently reread all
+545/545 final pairs in source order. That pass rechecked every current caller
+or documented source-only contract, all 95 findings, all 77 dependency rows,
+the exact eight retentions, every placeholder and alias, all provider
+compositions, and the complete caller disposition. It separately challenged
+the destination announcements, physical-key naming, caption toggles, media
+controls, and copy-failure wording without finding a semantic, grammatical, or
+register residual. Fresh structural, finding, ledger, retention, and
+dictionary-integrity gates pass, and a final rehash reproduces the same bound
+digest for both reviews. The terminal repository-wide gates remain pending.
 
 ### German (`de`) — current first pass complete
 

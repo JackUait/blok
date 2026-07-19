@@ -64,8 +64,9 @@ const RETENTION_CATEGORIES = new Set([
   'established loanword',
 ]);
 const GLOBAL_FINDING_KEYS = new Set([
-  '77 changed English source keys',
+  '78 changed English source keys',
   'four expanded emoji category keys',
+  'activity emoji category scope',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
@@ -103,6 +104,7 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiCategoryPeople': 'Smileys & people',
   'tools.callout.emojiCategoryNature': 'Animals & nature',
   'tools.callout.emojiCategoryFood': 'Food & drink',
+  'tools.callout.emojiCategoryActivity': 'Activities',
   'tools.callout.emojiCategoryTravel': 'Travel & places',
   'tools.code.searchLanguage': 'Search languages…',
   'tools.code.plainText': 'Plain text',

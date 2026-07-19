@@ -81,7 +81,7 @@ describe('Header Tool - heading level submenu', () => {
     vi.restoreAllMocks();
   });
 
-  it('groups heading levels and the toggle conversion under one submenu', () => {
+  it('groups only the heading levels under the submenu (no toggle conversion anywhere)', () => {
     const header = new Header(createHeaderOptions({ text: 'Hi', level: 2 }));
     const settings = toMenuArray(header.renderSettings());
     const headingLevels = settings.find(setting => setting.name === 'header-levels');
@@ -89,6 +89,7 @@ describe('Header Tool - heading level submenu', () => {
 
     expect(headingLevels).toMatchObject({ title: 'toolNames.heading' });
     expect(settings.find(setting => setting.name === 'header-toggle-convert')).toBeUndefined();
+    expect(childItems.find(item => item.name === 'header-toggle-convert')).toBeUndefined();
     expect(childItems.map(item => item.dataset as Record<string, string> | undefined)).toEqual([
       { 'blok-header-level': '1' },
       { 'blok-header-level': '2' },
@@ -96,9 +97,7 @@ describe('Header Tool - heading level submenu', () => {
       { 'blok-header-level': '4' },
       { 'blok-header-level': '5' },
       { 'blok-header-level': '6' },
-      undefined,
     ]);
-    expect(childItems.at(-1)?.name).toBe('header-toggle-convert');
   });
 });
 
@@ -1477,97 +1476,6 @@ describe('Header Tool - sanitize preserves inline formatting (D3)', () => {
   it('declares block color fields in sanitize so they round-trip', () => {
     expect(Header.sanitize.textColor).toBe(false);
     expect(Header.sanitize.backgroundColor).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// FIX D2: Plain <-> Toggle heading conversion via the block settings menu.
-// ---------------------------------------------------------------------------
-describe('Header Tool - plain <-> toggle conversion (D2)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('a plain heading gains a "Toggle heading" convert entry', () => {
-    const options = createHeaderOptions({ text: 'Hi', level: 2 });
-    const header = new Header(options);
-    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
-
-    expect(entry).toBeDefined();
-    // mock i18n.t echoes the key
-    expect(entry?.title).toBe('tools.header.toggleHeading');
-  });
-
-  it('a toggle heading shows the convert entry as active (toggle-switch back to plain)', () => {
-    const options = createHeaderOptions({ text: 'Hi', level: 2, isToggleable: true });
-    const header = new Header(options);
-    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
-
-    expect(entry).toBeDefined();
-    // Single shared label (no collision with the "Heading 2" level selector).
-    expect(entry?.title).toBe('tools.header.toggleHeading');
-    expect(entry?.isActive).toBe(true);
-  });
-
-  it('a plain heading shows the convert entry as inactive', () => {
-    const options = createHeaderOptions({ text: 'Hi', level: 2 });
-    const header = new Header(options);
-    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
-
-    expect(entry?.isActive).toBe(false);
-  });
-
-  it('activating the convert entry turns a plain heading into a toggle (arrow + children container)', () => {
-    const options = createHeaderOptions({ text: 'Hi', level: 2 });
-    const header = new Header(options);
-
-    header.render();
-
-    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
-
-    (entry?.onActivate as () => void)();
-
-    const wrapper = header.render();
-
-    expect(wrapper.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`)).not.toBeNull();
-    expect(wrapper.querySelector('[data-blok-toggle-children]')).not.toBeNull();
-    expect(header.save(wrapper).isToggleable).toBe(true);
-  });
-
-  it('converting a toggle-with-children back to plain releases children as siblings (not orphaned)', () => {
-    const setBlockParent = vi.fn();
-    const child1 = { id: 'c1', holder: document.createElement('div') };
-    const child2 = { id: 'c2', holder: document.createElement('div') };
-    const mockAPI = createMockAPI();
-
-    (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue([child1, child2]);
-    (mockAPI.blocks as unknown as Record<string, unknown>).setBlockParent = setBlockParent;
-
-    const header = new Header({
-      data: { text: 'Hi', level: 2, isToggleable: true } as HeaderData,
-      config: {},
-      api: mockAPI,
-      readOnly: false,
-      block: { id: 'test-block-id', dispatchChange: vi.fn() } as never,
-    });
-
-    header.render();
-    header.rendered();
-
-    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
-
-    (entry?.onActivate as () => void)();
-
-    // Children un-nested to top-level (null), never deleted → they survive in the tree.
-    expect(setBlockParent).toHaveBeenCalledWith('c1', null);
-    expect(setBlockParent).toHaveBeenCalledWith('c2', null);
-
-    const saved = header.save(document.createElement('div'));
-    expect(saved.isToggleable).toBeUndefined();
   });
 });
 

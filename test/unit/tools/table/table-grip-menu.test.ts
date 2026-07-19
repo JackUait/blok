@@ -18,7 +18,7 @@ import type { I18n } from '../../../../types/api';
  * tore the grip popover (and the selection) down as it opened.
  */
 
-const i18nStub: I18n = { t: (key: string) => key } as unknown as I18n;
+const i18nStub: I18n = { t: (key: string) => key, has: () => false } as unknown as I18n;
 
 const createOptions = (overrides: Partial<PopoverMenuOptions> = {}): PopoverMenuOptions => ({
   getColumnCount: () => 3,

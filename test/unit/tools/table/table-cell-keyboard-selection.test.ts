@@ -56,7 +56,7 @@ import { TableCellSelection } from '../../../../src/tools/table/table-cell-selec
 import type { CellMark, FillDirection, SelectionRange } from '../../../../src/tools/table/table-cell-selection';
 import type { I18n } from '../../../../types/api';
 
-const i18n = { t: (key: string) => key } as unknown as I18n;
+const i18n = { t: (key: string) => key, has: () => false } as unknown as I18n;
 
 interface GridSpec {
   rows: number;

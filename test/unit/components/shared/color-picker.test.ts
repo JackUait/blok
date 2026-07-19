@@ -499,6 +499,224 @@ describe('createColorPicker', () => {
     });
   });
 
+  describe('recently used section', () => {
+    beforeEach(() => {
+      localStorage.removeItem('blok-recent-colors');
+    });
+
+    afterEach(() => {
+      localStorage.removeItem('blok-recent-colors');
+    });
+
+    const clickSwatch = (element: HTMLElement, testId: string): void => {
+      element.querySelector<HTMLElement>(`[data-blok-testid="${testId}"]`)?.click();
+    };
+
+    it('does not render a recent section when no colors have been used', () => {
+      const { element } = createColorPicker(createOptions());
+
+      expect(element.querySelector('[data-blok-testid="test-section-recent"]')).toBeNull();
+    });
+
+    it('leaves no visible empty spacer child when there are no recents (would add a stray flex gap)', () => {
+      const { element } = createColorPicker(createOptions());
+
+      const visibleEmptyChildren = Array.from(element.children).filter(
+        (child) => child.childElementCount === 0 && !(child as HTMLElement).hidden
+      );
+
+      expect(visibleEmptyChildren).toHaveLength(0);
+    });
+
+    it('shows a recent section in a new picker after a color swatch was clicked', () => {
+      const first = createColorPicker(createOptions());
+
+      clickSwatch(first.element, 'test-swatch-text-red');
+
+      const second = createColorPicker(createOptions());
+
+      expect(second.element.querySelector('[data-blok-testid="test-section-recent"]')).not.toBeNull();
+      expect(second.element.querySelector('[data-blok-testid="test-swatch-recent-text-red"]')).not.toBeNull();
+    });
+
+    it('updates the recent section of the same picker after a click', () => {
+      const { element } = createColorPicker(createOptions());
+
+      clickSwatch(element, 'test-swatch-bg-blue');
+
+      expect(element.querySelector('[data-blok-testid="test-swatch-recent-bg-blue"]')).not.toBeNull();
+    });
+
+    it('renders the recent section before the mode sections', () => {
+      const first = createColorPicker(createOptions());
+
+      clickSwatch(first.element, 'test-swatch-text-red');
+
+      const second = createColorPicker(createOptions());
+      const sections = Array.from(second.element.querySelectorAll('[data-blok-testid^="test-section-"]'));
+
+      expect(sections[0].getAttribute('data-blok-testid')).toBe('test-section-recent');
+    });
+
+    it('shows at most 5 recent swatches, most recent first', () => {
+      const { element } = createColorPicker(createOptions());
+
+      for (const name of ['gray', 'brown', 'orange', 'yellow', 'green', 'blue']) {
+        clickSwatch(element, `test-swatch-text-${name}`);
+      }
+
+      const recents = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-recent-"]'));
+
+      expect(recents).toHaveLength(5);
+      expect(recents[0].getAttribute('data-blok-testid')).toBe('test-swatch-recent-text-blue');
+      // oldest (gray) evicted
+      expect(element.querySelector('[data-blok-testid="test-swatch-recent-text-gray"]')).toBeNull();
+    });
+
+    it('does not duplicate an entry when the same color+mode is clicked twice', () => {
+      const { element } = createColorPicker(createOptions());
+
+      clickSwatch(element, 'test-swatch-text-red');
+      clickSwatch(element, 'test-swatch-text-blue');
+      clickSwatch(element, 'test-swatch-text-red');
+
+      const recents = Array.from(element.querySelectorAll('[data-blok-testid^="test-swatch-recent-"]'));
+
+      expect(recents).toHaveLength(2);
+      expect(recents[0].getAttribute('data-blok-testid')).toBe('test-swatch-recent-text-red');
+    });
+
+    it('tracks the same preset name separately per mode (text vs bg)', () => {
+      const { element } = createColorPicker(createOptions());
+
+      clickSwatch(element, 'test-swatch-text-red');
+      clickSwatch(element, 'test-swatch-bg-red');
+
+      expect(element.querySelector('[data-blok-testid="test-swatch-recent-text-red"]')).not.toBeNull();
+      expect(element.querySelector('[data-blok-testid="test-swatch-recent-bg-red"]')).not.toBeNull();
+    });
+
+    it('does not record default swatch clicks', () => {
+      const { element } = createColorPicker(createOptions());
+
+      clickSwatch(element, 'test-swatch-text-default');
+
+      expect(element.querySelector('[data-blok-testid="test-section-recent"]')).toBeNull();
+    });
+
+    it('clicking a recent text swatch calls onColorSelect with the text color and text mode key', () => {
+      const onColorSelect = vi.fn();
+      const { element } = createColorPicker(createOptions({ onColorSelect }));
+      const redText = COLOR_PRESETS.find((p) => p.name === 'red')?.text;
+
+      clickSwatch(element, 'test-swatch-text-red');
+      onColorSelect.mockClear();
+
+      clickSwatch(element, 'test-swatch-recent-text-red');
+
+      expect(onColorSelect).toHaveBeenCalledWith(redText, 'text');
+    });
+
+    it('clicking a recent bg swatch calls onColorSelect with the bg color and bg mode key', () => {
+      const onColorSelect = vi.fn();
+      const { element } = createColorPicker(createOptions({ onColorSelect }));
+      const blueBg = COLOR_PRESETS.find((p) => p.name === 'blue')?.bg;
+
+      clickSwatch(element, 'test-swatch-bg-blue');
+      onColorSelect.mockClear();
+
+      clickSwatch(element, 'test-swatch-recent-bg-blue');
+
+      expect(onColorSelect).toHaveBeenCalledWith(blueBg, 'bg');
+    });
+
+    it('recent text swatches show "A", recent bg swatches do not', () => {
+      const { element } = createColorPicker(createOptions());
+
+      clickSwatch(element, 'test-swatch-text-red');
+      clickSwatch(element, 'test-swatch-bg-blue');
+
+      expect(element.querySelector('[data-blok-testid="test-swatch-recent-text-red"]')?.textContent).toBe('A');
+      expect(element.querySelector('[data-blok-testid="test-swatch-recent-bg-blue"]')?.textContent).toBe('');
+    });
+
+    it('resolves recent swatch colors against the active theme presets', () => {
+      const light = createColorPicker(createOptions());
+
+      clickSwatch(light.element, 'test-swatch-text-gray');
+
+      document.documentElement.setAttribute('data-blok-theme', 'dark');
+
+      try {
+        const onColorSelect = vi.fn();
+        const dark = createColorPicker(createOptions({ onColorSelect }));
+
+        clickSwatch(dark.element, 'test-swatch-recent-text-gray');
+
+        expect(onColorSelect).toHaveBeenCalledWith('#9b9b9b', 'text');
+      } finally {
+        document.documentElement.removeAttribute('data-blok-theme');
+      }
+    });
+
+    it('persists recents in localStorage under blok-recent-colors', () => {
+      const { element } = createColorPicker(createOptions());
+
+      clickSwatch(element, 'test-swatch-text-red');
+
+      const stored: unknown = JSON.parse(localStorage.getItem('blok-recent-colors') ?? 'null');
+
+      expect(stored).toEqual([{ name: 'red', field: 'text' }]);
+    });
+
+    it('ignores corrupt localStorage content without crashing', () => {
+      localStorage.setItem('blok-recent-colors', 'not-json{');
+
+      const { element } = createColorPicker(createOptions());
+
+      expect(element.querySelector('[data-blok-testid="test-section-recent"]')).toBeNull();
+    });
+
+    it('titles the recent section via the tools.colorPicker.recentlyUsed i18n key when translated', () => {
+      const first = createColorPicker(createOptions());
+
+      clickSwatch(first.element, 'test-swatch-text-red');
+
+      const i18n: I18n = {
+        t: (key: string) => (key === 'tools.colorPicker.recentlyUsed' ? 'Récemment utilisées' : key),
+        has: (key: string) => key === 'tools.colorPicker.recentlyUsed',
+        getEnglishTranslation: () => '',
+        getLocale: () => 'en',
+      };
+      const second = createColorPicker(createOptions({ i18n }));
+      const section = second.element.querySelector('[data-blok-testid="test-section-recent"]');
+
+      expect(section?.textContent).toContain('Récemment utilisées');
+    });
+
+    it('tolerates an i18n object without has() — swatch clicks still record and select', () => {
+      const onColorSelect = vi.fn();
+      const partialI18n = { t: (key: string) => key } as unknown as I18n;
+      const { element } = createColorPicker(createOptions({ i18n: partialI18n, onColorSelect }));
+
+      clickSwatch(element, 'test-swatch-text-red');
+
+      expect(onColorSelect).toHaveBeenCalledWith(COLOR_PRESETS.find((p) => p.name === 'red')?.text, 'text');
+      expect(element.querySelector('[data-blok-testid="test-swatch-recent-text-red"]')).not.toBeNull();
+    });
+
+    it('falls back to English "Recently used" when the i18n key is not in the dictionary', () => {
+      const first = createColorPicker(createOptions());
+
+      clickSwatch(first.element, 'test-swatch-text-red');
+
+      const second = createColorPicker(createOptions());
+      const section = second.element.querySelector('[data-blok-testid="test-section-recent"]');
+
+      expect(section?.textContent).toContain('Recently used');
+    });
+  });
+
   describe('focus outline suppression', () => {
     it('suppresses native focus outline on color swatches', () => {
       const { element } = createColorPicker(createOptions());

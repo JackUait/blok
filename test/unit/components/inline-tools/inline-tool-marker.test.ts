@@ -19,7 +19,7 @@ const createMockApi = () => ({
   toolbar: {},
   inlineToolbar: { close: vi.fn() },
   notifier: {},
-  i18n: { t: (key: string) => key },
+  i18n: { t: (key: string) => key, has: () => false },
   blocks: {},
   selection: {},
   caret: {},

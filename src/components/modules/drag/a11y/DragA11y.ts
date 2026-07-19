@@ -174,6 +174,7 @@ export class DragA11y {
     } else {
       const message = this.i18n.t('a11y.blockDuplicated', {
         position: newIndex + 1,
+        total: this.blockManager.blocks.length,
       });
 
       this.announcer.announce(message, { politeness: 'assertive' });

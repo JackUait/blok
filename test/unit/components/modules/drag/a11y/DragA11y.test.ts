@@ -319,11 +319,17 @@ describe('DragA11y', () => {
     it('should announce single block duplicated', () => {
       const duplicatedBlock = createMockBlock('duplicated');
       mockBlockManager.getBlockIndex = vi.fn(() => 3);
+      mockBlockManager.blocks = [
+        createMockBlock('existing-1') as Block,
+        createMockBlock('existing-2') as Block,
+        createMockBlock('existing-3') as Block,
+        duplicatedBlock as Block,
+      ];
 
       a11y.announceDuplicateComplete([duplicatedBlock as Block]);
 
       expect(mockAnnouncer.announce).toHaveBeenCalledWith(
-        'a11y.blockDuplicated:{"position":4}',
+        'a11y.blockDuplicated:{"position":4,"total":4}',
         { politeness: 'assertive' }
       );
     });

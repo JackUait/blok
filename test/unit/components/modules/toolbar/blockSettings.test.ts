@@ -517,7 +517,10 @@ describe('BlockSettings', () => {
     };
 
     expect(params?.placeLeftOfAnchor).toBe(true);
-    expect(params?.viewportMargin).toBe(50);
+    // The menu hugs the handle and yields only to the actual screen edge —
+    // a small aesthetic gap, not a large layout margin (which detached the
+    // menu from the handle near the viewport top/bottom).
+    expect(params?.viewportMargin).toBe(8);
     expect(params?.trigger).toBe(toggler);
     expect(params?.position).toBeUndefined();
     // The block holder is the trigger snapshot's movement reference: the

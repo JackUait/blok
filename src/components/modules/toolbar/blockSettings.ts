@@ -313,7 +313,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
          * the toggler. Default accordingly when the caller doesn't override.
          */
         placeLeftOfAnchor: options?.placeLeftOfAnchor ?? (anchorRect === undefined),
-        viewportMargin: 50,
+        /**
+         * The menu hugs the six-dots handle and yields only to the actual
+         * screen edge: a small aesthetic gap. A larger margin visibly
+         * detaches the menu from the handle near the viewport top/bottom.
+         */
+        viewportMargin: 8,
         contextLabel,
         /**
          * The block holder is the anchor's movement reference. For a trigger

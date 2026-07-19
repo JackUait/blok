@@ -266,7 +266,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
 | `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | — | — | pending | pending | pending | `F-da-001`–`F-da-076` | pending |
-| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-089` | pending |
+| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-first-final` | — | pass | pass | pass | `F-de-001`–`F-de-089` | first-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-final-first` | `wire-media-en-second-final` | pass | pass | pass | `F-en-001`–`F-en-077` | second-pass-complete |
@@ -366,6 +366,7 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
+| `de` | `root-de-first-final` | `sha256:5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba` | — | — |
 | `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
 | `ru` | `root-ru-first-final` | `sha256:55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821` | — | — |
 | `zh` | `root-zh-first-final` | `sha256:4ce752ee3664e25e8ca67d59dab1c438b4e388008d6db56e9e170b285ea897ab` | — | — |
@@ -636,7 +637,7 @@ approved scope of this translation-value audit.
 
 ## Localized First-Pass Evidence
 
-### German (`de`) — pending after group-move source reset
+### German (`de`) — current first pass complete
 
 The first reviewer inspected and, after applying the reviewed corrections,
 re-read 538/538 current German values in eight top-level namespace passes and
@@ -728,6 +729,23 @@ English group-move accessibility source defects recorded as `F-en-074`
 through `F-en-077`. The German dictionary correction and `F-de-089` remain
 valid, but both complete German passes must be repeated after the four
 dependent values are re-reviewed.
+
+Reviewer `root-de-first-final` then restarted from the first entry and read all
+545 current English/German pairs in source order after the group-move
+corrections. This final-byte pass revalidated `F-de-001` through `F-de-089`,
+all 77 changed-English dependency rows covering 75 unique German keys, all 38
+placeholder-bearing values and 54 placeholder occurrences, all 44 aliases in
+14 live groups, all 117 provider compositions, the 12 source-only contracts,
+and the complete 532+12+1 caller/source-only/bypassed partition. No residual
+semantic, register, punctuation, accessibility, provider-composition, or
+structural defect was found.
+
+The exact-English inventory contains exactly 26 current values, each justified
+by `R-de-001` through `R-de-026`. Fresh focused verification passed all 89
+German finding expectations, the German structural rule, and the executable
+ledger contract (91/91 selected cases). The current raw dictionary SHA-256 is
+`5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba`.
+The distinct complete second pass remains pending.
 
 ### Czech (`cs`) — pending after second-pass residuals
 

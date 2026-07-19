@@ -425,6 +425,28 @@ test.describe('ui.block-tunes', () => {
       ).toBeVisible();
     });
 
+    test('keeps the six-dots settings toggler visible while the tunes menu is open', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaToolbar(page);
+
+      await expect(page.locator(POPOVER_CONTAINER_SELECTOR)).toBeVisible();
+      // The handle the menu belongs to must stay on screen (Notion parity):
+      // hiding it makes the menu look detached and shifts the toolbar layout.
+      await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
+    });
+
     test('convert to submenu stays on-screen when block settings hugs the left edge', async ({ page }) => {
       // Regression: the BlockSettings popover opens with placeLeftOfAnchor,
       // which clamps its left edge to the viewport's left when the anchor

@@ -260,7 +260,7 @@ const createDefaultItems = (): PopoverParams['items'] => [
   },
 ];
 
-const createPopover = (params: Partial<PopoverParamsBase> = {}): PopoverDesktop => {
+const createPopover = (params: Partial<PopoverParamsBase> & { positionContext?: HTMLElement } = {}): PopoverDesktop => {
   const scopeElement = params.scopeElement ?? document.createElement('div');
 
   document.body.appendChild(scopeElement);
@@ -758,7 +758,78 @@ describe('PopoverDesktop', () => {
       }
     });
 
-    it('keeps a body-scoped menu centered on its hidden trigger after deep document scrolling', () => {
+    // Regression: opening block settings hides the plus button, which shrinks
+    // the toolbar actions container. The trigger snapshot's movement reference
+    // used to be the auto-picked nearest measurable ancestor (that same actions
+    // container), so its open-state layout shift was read as "the anchor moved
+    // right" and the first reposition() pushed the menu into the content
+    // column, clipping the first characters of every line. A caller-supplied
+    // positionContext (the block holder — stable across the menu's own
+    // open-state side effects) must win over the auto-picked ancestor.
+    it('uses the caller-supplied positionContext as the trigger-snapshot movement reference so open-state layout shifts of the trigger ancestors cannot move the menu', () => {
+      const originalInnerWidth = window.innerWidth;
+      const originalInnerHeight = window.innerHeight;
+
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280, writable: true });
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800, writable: true });
+
+      try {
+        const actions = document.createElement('div');
+        const trigger = document.createElement('button');
+        const holder = document.createElement('div');
+
+        actions.appendChild(trigger);
+        document.body.appendChild(actions);
+        document.body.appendChild(holder);
+
+        const triggerRectSpy = vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue(
+          createRect({ top: 220, bottom: 244, left: 348, right: 366, width: 18, height: 24 })
+        );
+        const actionsRectSpy = vi.spyOn(actions, 'getBoundingClientRect').mockReturnValue(
+          createRect({ top: 220, bottom: 244, left: 324, right: 366, width: 42, height: 24 })
+        );
+
+        vi.spyOn(holder, 'getBoundingClientRect').mockReturnValue(
+          createRect({ top: 213, bottom: 513, left: 371, right: 1021, width: 650, height: 300 })
+        );
+
+        const popover = createPopover({
+          trigger,
+          positionContext: holder,
+          placeLeftOfAnchor: true,
+          viewportMargin: 50,
+        });
+        const instance = popover as unknown as PopoverDesktopInternal;
+
+        vi.spyOn(instance, 'size', 'get').mockReturnValue({ height: 368, width: 298 });
+
+        popover.show();
+
+        const popoverElement = popover.getElement();
+
+        // left = trigger.left (348) - offset (8) - width (298) = 42
+        expect(popoverElement.style.left).toBe('42px');
+        expect(popoverElement.style.top).toBe('220px');
+
+        // Open-state side effects: the trigger is hidden and the actions
+        // container shrinks (plus button removed), shifting its left edge.
+        triggerRectSpy.mockReturnValue(createRect({}));
+        actionsRectSpy.mockReturnValue(
+          createRect({ top: 220, bottom: 244, left: 366, right: 366, width: 0, height: 24 })
+        );
+
+        window.dispatchEvent(new Event('resize'));
+
+        // The stable holder did not move, so neither may the menu.
+        expect(popoverElement.style.left).toBe('42px');
+        expect(popoverElement.style.top).toBe('220px');
+      } finally {
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });
+      }
+    });
+
+    it('keeps a body-scoped menu attached to its hidden trigger after deep document scrolling', () => {
       const originalInnerWidth = window.innerWidth;
       const originalInnerHeight = window.innerHeight;
       const originalScrollX = window.scrollX;
@@ -796,7 +867,11 @@ describe('PopoverDesktop', () => {
         liveRectSpy.mockReturnValue(createRect({}));
         popover.show();
 
-        expect(parseFloat(popover.getElement().style.top) - window.scrollY).toBe(296);
+        // The trigger sits at left=24, so the 298-wide menu cannot fit on its
+        // left and placement falls back to the standard below/above mode.
+        // Below has 720 - 492 - 8 = 220px < 368, above has 460px → opens
+        // above: top = 468 - 8 - 368 = 92.
+        expect(parseFloat(popover.getElement().style.top) - window.scrollY).toBe(92);
       } finally {
         Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
         Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });

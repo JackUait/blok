@@ -31,9 +31,11 @@ const missingLifecycle: PopoverParams = {
   position,
 };
 
-// @ts-expect-error A context has no meaning without its virtual position.
-const orphanContext: PopoverParams = {
+// Legal without a virtual position: the context is the movement reference for
+// the trigger-rect snapshot used once a hidden trigger stops being measurable.
+const triggerSnapshotContext: PopoverParams = {
   items,
+  trigger: document.createElement('button'),
   positionContext,
 };
 
@@ -50,6 +52,6 @@ void [
   trackedVirtualPosition,
   dismissibleVirtualPosition,
   missingLifecycle,
-  orphanContext,
+  triggerSnapshotContext,
   conflictingLifecycle,
 ];

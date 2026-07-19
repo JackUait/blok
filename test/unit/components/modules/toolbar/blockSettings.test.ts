@@ -389,11 +389,11 @@ describe('BlockSettings', () => {
   });
 
   // Regression: the BlockSettingsOpened event toggles a data attribute whose
-  // Tailwind rule (`group-data-[blok-block-settings-opened=true]:hidden`) sets
-  // the settings toggler to `display:none`. If we emit before showing the
-  // popover, the trigger element collapses to a zero rect and the popover
-  // positions itself at the viewport's top-left corner. `show()` must run
-  // while the trigger is still visible — i.e. before the `opened` event is
+  // Tailwind rules restyle the toolbar (the plus button hides; historically
+  // the settings toggler hid too). If we emit before showing the popover, the
+  // trigger element can collapse to a zero rect and the popover positions
+  // itself at the viewport's top-left corner. `show()` must run while the
+  // trigger is still measurable — i.e. before the `opened` event is
   // dispatched.
   it('calls popover.show() before dispatching the opened event so the trigger rect is still measurable', async () => {
     blockSettings.make();
@@ -480,7 +480,7 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
-  it('passes placeLeftOfAnchor:true to popover so menu opens to the left of dots button, vertically centered', async () => {
+  it('passes placeLeftOfAnchor:true to popover so menu opens beside the dots button', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -495,14 +495,69 @@ describe('BlockSettings', () => {
       getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }, 'getTunesItems').mockResolvedValue([]);
 
-    await blockSettings.open(block);
+    const toggler = document.createElement('button');
+
+    await blockSettings.open(block, toggler);
 
     const popover = getLastPopover();
-    const params = popover?.params as { placeLeftOfAnchor?: boolean; viewportMargin?: number };
+    const params = popover?.params as {
+      placeLeftOfAnchor?: boolean;
+      viewportMargin?: number;
+      trigger?: HTMLElement;
+      position?: DOMRect;
+      positionContext?: HTMLElement;
+    };
 
     expect(params?.placeLeftOfAnchor).toBe(true);
     expect(params?.viewportMargin).toBe(50);
+    expect(params?.trigger).toBe(toggler);
+    expect(params?.position).toBeUndefined();
+    // The block holder is the trigger snapshot's movement reference: the
+    // toggler's own ancestors shift when the plus button hides on open, which
+    // must not be misread as anchor movement.
+    expect(params?.positionContext).toBe(block.holder);
 
+    getTunesItemsSpy.mockRestore();
+  });
+
+  // Regression: the keyboard (⌘+/) and API paths open block settings without
+  // an anchor. The old fallback anchored the popover to the settings wrapper —
+  // an empty 0x0 div whose rect is all zeros whenever the toolbar is hidden —
+  // which rendered the menu pinned at the viewport's top-left corner, covering
+  // content. Without an anchor element, the popover must anchor to the block
+  // holder rect (same contract as the Shift+F10 context-menu path).
+  it('anchors to the block holder rect when opened without an anchor (keyboard/API path)', async () => {
+    blockSettings.make();
+
+    const block = createBlock();
+
+    blokMock.BlockManager.currentBlock = block;
+
+    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
+
+    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
+
+    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
+      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+    }, 'getTunesItems').mockResolvedValue([]);
+
+    const holderRect = new DOMRect(371, 213, 650, 40);
+    const holderRectSpy = vi.spyOn(block.holder, 'getBoundingClientRect').mockReturnValue(holderRect);
+
+    await blockSettings.open(block);
+
+    const popover = getLastPopover();
+    const params = popover?.params as {
+      position?: DOMRect;
+      positionContext?: HTMLElement;
+      placeLeftOfAnchor?: boolean;
+    };
+
+    expect(params?.position).toBe(holderRect);
+    expect(params?.positionContext).toBe(block.holder);
+    expect(params?.placeLeftOfAnchor).toBe(false);
+
+    holderRectSpy.mockRestore();
     getTunesItemsSpy.mockRestore();
   });
 

@@ -315,7 +315,7 @@ describe('resolvePosition', () => {
   });
 
   describe('placeLeftOfAnchor', () => {
-    it('places popover to the left of anchor, vertically centered', () => {
+    it('places popover to the left of anchor, top-aligned with the anchor top', () => {
       const result = resolvePosition({
         anchor: rect({ top: 100, bottom: 140, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 100 },
@@ -328,12 +328,17 @@ describe('resolvePosition', () => {
 
       // horizontal: popover.right = anchor.left - offset → left = 400 - 8 - 250 = 142
       expect(result.left).toBe(142);
-      // vertical: anchor center = 120, popover top = 120 - 50 = 70
-      expect(result.top).toBe(70);
+      // vertical: top-aligned with anchor top — the menu extends downward and
+      // never covers the content above the block
+      expect(result.top).toBe(100);
       expect(result.openLeft).toBe(true);
     });
 
-    it('clamps to scope left boundary when popover would overflow left', () => {
+    it('falls back to opening below the anchor when the popover cannot fully fit on its left', () => {
+      // A clamped left placement would slide the menu over its own trigger
+      // (the six-dots handle must stay visible), and the anchor's right side
+      // is the block content. Opening below the anchor keeps the handle clear
+      // and covers only content below — same as the context-menu placement.
       const result = resolvePosition({
         anchor: rect({ top: 100, bottom: 140, left: 200, right: 240 }),
         popoverSize: { width: 300, height: 100 },
@@ -344,11 +349,13 @@ describe('resolvePosition', () => {
         placeLeftOfAnchor: true,
       });
 
-      // raw = 200 - 8 - 300 = -108, clamped to scope.left (0)
-      expect(result.left).toBe(0);
+      // space left of anchor = 200 - 8 = 192 < 300 → below: top = 140 + 8
+      expect(result.top).toBe(148);
+      expect(result.left).toBe(200);
+      expect(result.openTop).toBe(false);
     });
 
-    it('clamps to scope top boundary when anchor is near the top', () => {
+    it('keeps top-alignment when the anchor is near the top and there is room below', () => {
       const result = resolvePosition({
         anchor: rect({ top: 20, bottom: 60, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 200 },
@@ -359,8 +366,8 @@ describe('resolvePosition', () => {
         placeLeftOfAnchor: true,
       });
 
-      // anchor center y = 40, raw top = 40 - 100 = -60, clamped to 0
-      expect(result.top).toBe(0);
+      // top-aligned with the anchor: the menu opens downward from the block
+      expect(result.top).toBe(20);
     });
 
     it('respects scrollOffset when placeLeftOfAnchor is true', () => {
@@ -375,7 +382,7 @@ describe('resolvePosition', () => {
       });
 
       expect(result.left).toBe(192); // 142 + 50
-      expect(result.top).toBe(270); // 70 + 200
+      expect(result.top).toBe(300); // anchor top 100 + scroll 200
     });
 
     it('pins top to anchor top when viewport margin would push popover below the anchor (no scroll)', () => {
@@ -390,7 +397,7 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Centered raw top = -60. Viewport-margin floor (50) would sit below anchor top (20),
+      // Viewport-margin floor (50) would sit below anchor top (20),
       // so the effective floor is clamped to anchor top. Popover top pinned at 20.
       expect(result.top).toBe(20);
     });
@@ -427,7 +434,7 @@ describe('resolvePosition', () => {
       expect(result.top).toBeLessThanOrEqual(5);
     });
 
-    it('does not clamp when centered position leaves enough viewport room', () => {
+    it('keeps top-alignment when there is enough viewport room below', () => {
       const result = resolvePosition({
         anchor: rect({ top: 400, bottom: 440, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 200 },
@@ -439,11 +446,11 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Center = 420, raw top = 420 - 100 = 320. Floor = 50. No clamp.
-      expect(result.top).toBe(320);
+      // Top-aligned with anchor top; maxTop = 750 - 200 = 550 leaves room. No clamp.
+      expect(result.top).toBe(400);
     });
 
-    it('shifts top upward when centered position would overflow viewport bottom', () => {
+    it('shifts top upward when top-aligned position would overflow viewport bottom', () => {
       const result = resolvePosition({
         anchor: rect({ top: 700, bottom: 740, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 400 },
@@ -455,12 +462,12 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Centered raw top = 720 - 200 = 520. bottom = 520 + 400 = 920, exceeds viewport (800 - 50 = 750).
+      // Top-aligned raw top = 700. bottom = 700 + 400 = 1100, exceeds viewport (800 - 50 = 750).
       // maxTop = 750 - 400 = 350. Clamp to 350.
       expect(result.top).toBe(350);
     });
 
-    it('shifts top upward when page is scrolled and centered overflows bottom', () => {
+    it('shifts top upward when page is scrolled and top-aligned overflows bottom', () => {
       const result = resolvePosition({
         anchor: rect({ top: 700, bottom: 740, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 400 },
@@ -472,9 +479,50 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Anchor center doc = 720 + 300 = 1020. Raw top = 1020 - 200 = 820.
+      // Anchor top doc = 700 + 300 = 1000.
       // maxTop = (300 + 800 - 50) - 400 = 1050 - 400 = 650. Clamp to 650.
       expect(result.top).toBe(650);
+    });
+
+    it('regression: block near viewport top — menu opens AT the block, not pinned over content above (top-left-corner bug)', () => {
+      // Mirrors the real repro: toggler at (348, 220), 298x368 menu, 1280x800
+      // viewport. The old vertically-centered math clamped the menu to
+      // top=viewportMargin (50), covering the heading above the block.
+      const result = resolvePosition({
+        anchor: rect({ top: 220, bottom: 244, left: 348, right: 366, width: 18, height: 24 }),
+        popoverSize: { width: 298, height: 368 },
+        scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1280 }),
+        viewportSize: { width: 1280, height: 800 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      // The menu must not extend above the block it belongs to.
+      expect(result.top).toBe(220);
+      // And it must stay horizontally attached to the toggler.
+      expect(result.left).toBe(348 - 8 - 298);
+    });
+
+    it('regression: playground gutter 21px short — menu opens below the handle, leaving the six-dots button fully visible', () => {
+      // Mirrors the real playground: toggler at left=285, 298-wide menu. A
+      // clamped left placement (menu at 0..298) would cover the toggler at
+      // x=285; opening below keeps the handle visible above the menu.
+      const result = resolvePosition({
+        anchor: rect({ top: 166, bottom: 190, left: 285, right: 303, width: 18, height: 24 }),
+        popoverSize: { width: 298, height: 400 },
+        scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1280 }),
+        viewportSize: { width: 1280, height: 800 },
+        scrollOffset: { x: 0, y: 0 },
+        offset: 8,
+        placeLeftOfAnchor: true,
+        viewportMargin: 50,
+      });
+
+      expect(result.top).toBe(190 + 8);
+      expect(result.left).toBe(285);
+      expect(result.openTop).toBe(false);
     });
 
     it('falls back to top-aligned at viewportMargin when popover is taller than viewport minus margins', () => {

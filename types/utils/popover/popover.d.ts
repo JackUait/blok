@@ -136,16 +136,16 @@ export interface PopoverParamsBase {
   leftAlignElement?: HTMLElement;
 
   /**
-   * When true, the popover is placed to the left of the trigger (right edge sits
-   * one offset-gap before trigger's left edge) and vertically centered against the
-   * trigger. Clamping to scope boundaries still applies.
+   * When true, the popover is placed to the left of the trigger (clamped to
+   * the boundary when it does not fully fit) and top-aligned with the trigger
+   * so it extends downward without covering the content above it.
    */
   placeLeftOfAnchor?: boolean;
 
   /**
    * Minimum distance (in pixels) between the popover and the viewport top/bottom
    * edges. Applied only together with placeLeftOfAnchor. Keeps the popover fully
-   * inside the viewport — shifting upward if centered placement would overflow
+   * inside the viewport — shifting upward if top-aligned placement would overflow
    * the bottom — so it stays visible and close to the trigger.
    */
   viewportMargin?: number;
@@ -186,7 +186,14 @@ export type PopoverPositionLifecycle = 'dismiss-on-nested-scroll';
 type PopoverWithoutVirtualPosition = {
   /** No virtual position: placement uses a live trigger or inline container. */
   position?: never;
-  positionContext?: never;
+  /**
+   * Optional movement reference for the trigger-rect snapshot that anchors the
+   * popover once its trigger is hidden after opening. Must be an element whose
+   * geometry is independent of the popover's own open-state side effects
+   * (e.g. the block holder — not the toolbar actions zone, which shrinks when
+   * sibling buttons hide on open).
+   */
+  positionContext?: HTMLElement;
   positionLifecycle?: never;
 };
 

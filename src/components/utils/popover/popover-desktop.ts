@@ -234,7 +234,8 @@ export class PopoverDesktop extends PopoverAbstract {
   private leftAlignElement: HTMLElement | undefined;
 
   /**
-   * When true, places the popover to the left of the trigger, vertically centered.
+   * When true, places the popover to the left of the trigger, top-aligned
+   * with the trigger so it never covers the content above it.
    */
   private placeLeftOfAnchor = false;
 
@@ -304,9 +305,17 @@ export class PopoverDesktop extends PopoverAbstract {
       const initialRect = params.trigger.getBoundingClientRect();
 
       if (isMeasurableRect(initialRect)) {
+        /**
+         * The snapshot's movement reference must be an element whose geometry
+         * is independent of this popover's own open-state side effects. A
+         * caller-supplied positionContext (e.g. the block holder) wins over
+         * the auto-picked nearest measurable ancestor: the trigger's ancestors
+         * (toolbar actions zone) shrink when sibling buttons hide on open,
+         * and that layout shift would be misread as anchor movement.
+         */
         this.capturedTriggerAnchor = captureAnchorSnapshot(
           initialRect,
-          this.findMeasurableAncestor(params.trigger)
+          params.positionContext ?? this.findMeasurableAncestor(params.trigger)
         );
       }
     }
@@ -550,7 +559,10 @@ export class PopoverDesktop extends PopoverAbstract {
     // their owning wrapper.
     if (hasAnchor) {
       this.positionTracker?.detach();
-      this.positionTracker = createPositionTracker(this.nodes.popover, (event?: Event) => {
+      // Observe the container, not the outer positioning host: the host is a
+      // zero-size box, so a ResizeObserver on it never fires when the menu's
+      // rendered size settles after placement.
+      this.positionTracker = createPositionTracker(this.nodes.popoverContainer ?? this.nodes.popover, (event?: Event) => {
         const nestedScrollerMoved = event?.type === 'scroll' && event.target instanceof Element;
         const hasUntrackableVirtualAnchor = this.params.position !== undefined
           && !this.hasMeasurablePositionContext();
@@ -565,6 +577,19 @@ export class PopoverDesktop extends PopoverAbstract {
           this.hide();
 
           return;
+        }
+
+        /**
+         * The show()-time size is measured on a detached clone and can settle
+         * differently once the menu actually renders (fonts, promoted items,
+         * min-width). On size/viewport changes (ResizeObserver and window
+         * resize fire without a scroll event) re-measure so the recomputed
+         * position uses the real size — a stale width can slide the menu over
+         * its own trigger. Scrolls keep the cache: size cannot change there
+         * and re-cloning per scroll frame would thrash layout.
+         */
+        if (event?.type !== 'scroll') {
+          this.invalidateSizeCache();
         }
 
         this.reposition();

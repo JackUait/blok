@@ -18,9 +18,9 @@ export interface PositionInput {
   /** Element rect whose left edge overrides anchor's left for horizontal alignment */
   leftAlignRect?: DOMRect;
   /**
-   * When true, the popover is placed to the left of the anchor (its right edge
-   * sits one offset-gap before the anchor's left edge) and is vertically centered
-   * against the anchor. Clamping to scope boundaries still applies.
+   * When true, the popover is placed to the left of the anchor (clamped to the
+   * boundary when it does not fully fit) and is top-aligned with the anchor so
+   * it extends downward without covering the content above.
    */
   placeLeftOfAnchor?: boolean;
   /**
@@ -85,11 +85,16 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   const boundaryLeft = Math.max(0, scopeBounds.left);
   const scopeTopInDocCoords = scopeBounds.top + scrollOffset.y;
 
-  // Placement mode: left of anchor, vertically centered.
-  if (placeLeftOfAnchor) {
-    const anchorCenterY = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
+  // Placement mode: left of the anchor, top-aligned with the anchor so the
+  // menu extends downward and never covers the content above the block it
+  // belongs to. Used only when the popover fully fits left of the anchor:
+  // a clamped partial fit would slide the menu over its own trigger (the
+  // six-dots handle must stay visible), and the anchor's right side is the
+  // block content. When it does not fit, fall through to the standard
+  // below/above placement — the handle stays clear and the menu covers only
+  // content below, matching the context-menu behavior.
+  if (placeLeftOfAnchor && popoverSize.width <= anchor.left - offset - boundaryLeft) {
     const anchorTopInDocCoords = anchor.top + scrollOffset.y;
-    const rawTop = anchorCenterY - popoverSize.height / 2;
     const scopeBottomInDocCoords = scopeBounds.bottom + scrollOffset.y;
     const viewportTopFloor = scrollOffset.y + viewportMargin;
     const viewportBottomCeiling = scrollOffset.y + viewportSize.height - viewportMargin;
@@ -100,12 +105,17 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     const topFloor = Math.max(scopeTopInDocCoords, Math.min(viewportTopFloor, anchorTopInDocCoords));
     const bottomCeiling = Math.min(scopeBottomInDocCoords, viewportBottomCeiling);
     const maxTop = bottomCeiling - popoverSize.height;
-    const anchorCeiling = Math.max(topFloor, anchorTopInDocCoords);
-    const constrainedTop = Math.min(anchorCeiling, Math.max(topFloor, rawTop));
+    // Top-aligned with the anchor; shifted up only as far as needed to stay
+    // inside the bottom boundary, never above the top floor.
     const top = maxTop < topFloor
       ? topFloor
-      : Math.min(maxTop, constrainedTop);
+      : Math.max(topFloor, Math.min(anchorTopInDocCoords, maxTop));
 
+    // The menu sits left of the anchor, clamped to the boundary when it does
+    // not fully fit. Never flip to the anchor's right side: the block content
+    // always lies right of the dots button, so a right-side placement would
+    // cover the very content the menu belongs to, while clamping merely
+    // compresses the gap between menu and anchor.
     const rawLeft = anchor.left - offset - popoverSize.width + scrollOffset.x;
     const left = Math.max(boundaryLeft + scrollOffset.x, rawLeft);
 

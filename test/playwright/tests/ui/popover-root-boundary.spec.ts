@@ -177,10 +177,29 @@ const openBookmarkMenu = async (
 };
 
 const expectMenuBesideTrigger = (menuBox: BoundingBox, triggerBox: BoundingBox): void => {
-  const triggerCenterY = triggerBox.y + triggerBox.height / 2;
-  const menuCenterY = menuBox.y + menuBox.height / 2;
+  const offset = 8;
+  const fitsLeftOfTrigger = menuBox.width <= triggerBox.x - offset;
 
-  expect(Math.abs(menuCenterY - triggerCenterY)).toBeLessThanOrEqual(2);
+  if (fitsLeftOfTrigger) {
+    // The menu is top-aligned with its trigger and extends downward, shifted
+    // up only as far as the 50px bottom viewport margin requires — it must
+    // never be vertically centered over the content above the block.
+    const viewportMargin = 50;
+    const topFloor = Math.min(viewportMargin, triggerBox.y);
+    const expectedTop = Math.max(topFloor, Math.min(triggerBox.y, 720 - viewportMargin - menuBox.height));
+
+    expect(Math.abs(menuBox.y - expectedTop)).toBeLessThanOrEqual(2);
+    // The six-dots handle stays fully visible to the menu's right.
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(triggerBox.x);
+  } else {
+    // Not enough room on the left: the menu opens below (or above) the
+    // trigger instead of sliding over it — the handle must stay visible.
+    const opensBelow = menuBox.y >= triggerBox.y + triggerBox.height;
+    const opensAbove = menuBox.y + menuBox.height <= triggerBox.y;
+
+    expect(opensBelow || opensAbove).toBe(true);
+  }
+
   expect(menuBox.x).toBeGreaterThanOrEqual(0);
   expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(1280);
   expect(menuBox.y).toBeGreaterThanOrEqual(0);
@@ -255,7 +274,11 @@ test.describe('root popover boundary', () => {
       .toBeGreaterThan(1000);
     expectMenuBesideTrigger(menuBox, triggerBox);
 
-    await page.evaluate(() => window.scrollBy(80, 0));
+    // Scroll left (away from the viewport's left edge): the menu opens left of
+    // the gutter, so scrolling right would push it into the boundary clamp
+    // that deliberately keeps it on-screen — the pure-tracking assertion holds
+    // only while the menu is clear of the boundary.
+    await page.evaluate(() => window.scrollBy(-80, 0));
 
     await expect.poll(async () => {
       const movedMenu = await requireBoundingBox(menu, 'Menu after horizontal scroll');

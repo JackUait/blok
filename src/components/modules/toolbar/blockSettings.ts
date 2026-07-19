@@ -192,7 +192,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      * wrapper for mounting.
      */
     const trigger = anchor instanceof HTMLElement ? anchor : undefined;
-    const anchorRect = anchor instanceof HTMLElement ? undefined : anchor;
+    const providedAnchorRect = anchor instanceof HTMLElement ? undefined : anchor;
 
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
     const hasMultipleBlocksSelected = selectedBlocks.length > 1;
@@ -259,6 +259,16 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
       const items = await this.getTunesItems(block, commonTunes, toolTunes, caretOffset);
 
+      /**
+       * Without any anchor (keyboard ⌘+/ or API paths), anchor to the block
+       * holder rect — same contract as the Shift+F10 context-menu path. The
+       * previous fallback (the settings wrapper element) is an empty 0x0 div
+       * whose rect collapses to all zeros whenever the toolbar is hidden,
+       * which rendered the menu pinned at the viewport's top-left corner.
+       */
+      const anchorRect = providedAnchorRect
+        ?? (trigger === undefined ? block.holder.getBoundingClientRect() : undefined);
+
       const activeEntry = hasMultipleBlocksSelected
         ? undefined
         : await block.getActiveToolboxEntry();
@@ -296,13 +306,20 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         placeLeftOfAnchor: options?.placeLeftOfAnchor ?? (anchorRect === undefined),
         viewportMargin: 50,
         contextLabel,
+        /**
+         * The block holder is the anchor's movement reference. For a trigger
+         * (dots button) it backs the hidden-trigger snapshot: the toggler's
+         * own ancestors shift when the plus button hides on open, which must
+         * not be misread as anchor movement. For a virtual rect it supplies
+         * motion deltas through nested scrolling.
+         */
+        positionContext: block.holder,
       };
       const popoverParams: PopoverParams & { flipper?: Flipper } = anchorRect === undefined
         ? popoverBaseParams
         : {
           ...popoverBaseParams,
           position: anchorRect,
-          positionContext: block.holder,
         };
 
       if (PopoverClass === PopoverDesktop) {
@@ -337,12 +354,11 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        * Show the popover BEFORE dispatching the `opened` event.
        *
        * Listeners of that event toggle a data attribute on the UI wrapper
-       * (`data-blok-block-settings-opened=true`) whose Tailwind rule hides the
-       * settings toggler via `display:none`. If we emit first, the trigger
-       * element collapses to a zero rect before `show()` reads it, and the
-       * popover ends up positioned at the viewport's top-left corner.
-       * Measure + place the popover while the trigger is still visible,
-       * then announce state change.
+       * (`data-blok-block-settings-opened=true`) whose Tailwind rules restyle
+       * the toolbar (the plus button hides; the toggler shows its active
+       * state). If we emit first, layout can shift before `show()` measures
+       * the trigger. Measure + place the popover while the toolbar is still
+       * in its pre-open state, then announce the state change.
        */
       this.popover.show();
       this.attachFlipperKeydownListener(block);

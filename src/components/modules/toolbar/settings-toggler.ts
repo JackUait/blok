@@ -130,8 +130,11 @@ export class SettingsTogglerHandler {
         'can-hover:hover:bg-bg-light',
         // Hide when the toolbox popover is open
         'group-data-[blok-toolbox-opened=true]:hidden',
-        // Hide while the block settings popover is open (matches plus-button)
-        'group-data-[blok-block-settings-opened=true]:hidden',
+        // Stay visible while the block settings popover is open — the menu
+        // belongs to this handle (Notion parity), and hiding it would also
+        // shift the toolbar layout under the menu's anchor. Show the active
+        // background instead.
+        'group-data-[blok-block-settings-opened=true]:bg-bg-light',
         // Mobile styles (static positioning with overlay-pane appearance)
         'mobile:bg-popover-bg mobile:border mobile:border-mobile-border mobile:shadow-overlay-pane mobile:rounded-[6px] mobile:z-2',
         'mobile:w-toolbox-btn-mobile mobile:h-toolbox-btn-mobile'

@@ -138,44 +138,11 @@ See `scripts/release.mjs` for the full workflow. Publish happens **before** git 
 
 ## Architecture
 
-Entry: `src/blok.ts` → `Core` (`src/components/core.ts`) → modules
-
-**Module System**: All modules extend `Module` base class, communicate via `EventsDispatcher`. Key modules in `src/components/modules/`:
-
-- **BlockManager**: Creates/deletes/reorders blocks
-- **UI**: DOM structure, event delegation
-- **Toolbar**: Plus button (+) and settings toggler (☰)
-- **Toolbox**: Slash menu (/ or + button)
-- **InlineToolbar**: Text formatting (bold, italic, link)
-- **BlockSettings**: Block settings menu (☰)
-- **DragManager**: Pointer-based drag & drop
-- **Caret**: Cursor position management
-- **Saver**: Extracts JSON data
-- **Renderer**: Renders blocks from JSON
-- **History**: Undo/redo
-- **Paste**: Clipboard operations
-- **API**: Public API
-
-**Blocks** (`src/components/block/index.ts`): Fundamental unit. Wraps Tool. Has unique id, data, parentId/contentIds. Lifecycle: rendered/updated/removed/moved. Database rows are `database-row` blocks (children of database blocks via parentId/contentIds).
-
-DOM: `holder` → `contentElement` → `toolRenderedElement`
+DOM nesting per block: `holder` → `contentElement` → `toolRenderedElement`
 
 ## Tools
 
-Tools implement `BlockTool` interface (`types/tools/block-tool.d.ts`):
-
-```typescript
-class MyTool {
-  static get toolbox() { return { title: 'My Tool', icon: '<svg>...</svg>' }; }
-  render() { return document.createElement('div'); }
-  save(blockContent) { return { text: blockContent.textContent }; }
-  validate(savedData) { return savedData.text.length > 0; }
-  rendered() { }
-  updated() { }
-  removed() { }
-  moved() { }
-}
-```
+Tools implement the `BlockTool` interface (`types/tools/block-tool.d.ts`).
 
 See `src/tools/` for examples: paragraph/, header/, list/
 
@@ -301,26 +268,7 @@ const CUSTOM_TOOL = `(() => {
 
 ## Documentation
 
-The documentation is a React application in the `docs/` directory with its own `package.json`.
-
-### Docs Commands
-
-```bash
-# From project root
-yarn serve:docs         # Dev server with proxy to blok demo
-
-# From docs/ directory
-yarn test
-```
-
-### Docs Testing
-
-Uses Vitest with React Testing Library. Tests are co-located with components.
-
-```bash
-# Run all docs tests
-cd docs && yarn test
-```
+The docs are a separate React app in `docs/` (own `package.json`, Vitest + React Testing Library).
 
 ### Plans Directory
 

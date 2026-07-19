@@ -1410,6 +1410,31 @@ const editor = new Blok({
   },
 });`,
   },
+  {
+    id: 'clearFormat',
+    exportName: 'ClearFormat',
+    type: 'inline',
+    title: 'Clear Format',
+    description:
+      'Removes inline formatting (bold, italic, underline, strikethrough, inline code, highlight) from the selected text while keeping links intact. Activated with Cmd/Ctrl+\\ or by clicking the Tx button in the inline toolbar.',
+    importExample: `import { ClearFormat } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `// Removes formatting tags from the block's text field.
+// "<b>Hello</b> world" becomes "Hello world"`,
+    saveDataExample: `{
+  "type": "paragraph",
+  "data": { "text": "Hello world" }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { ClearFormat } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    clearFormat: ClearFormat,
+  },
+});`,
+  },
 ];
 
 // Derived lookup sets used by the documentation coverage unit test.

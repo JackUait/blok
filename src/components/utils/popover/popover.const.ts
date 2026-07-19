@@ -60,8 +60,13 @@ export const cssInline = {
   // Popover root element for inline
   popover: 'relative',
 
-  // Container for inline popover
-  popoverContainer: 'flex-row top-0 min-w-max w-max p-1 mobile:absolute',
+  // Container for inline popover — a vertical card: convert row on top, then
+  // the formatting button grid
+  popoverContainer: 'flex-col top-0 min-w-max w-max p-1 mobile:absolute',
+
+  // Items container for inline popover — the convert row spans all five
+  // columns, formatting buttons flow below it five per row
+  items: 'grid grid-cols-5 justify-items-center gap-y-0.5 pt-0 pb-0',
 
   // Opened state for inline popover - symmetric padding (no scroll area, so pt matches pb).
   // pt is re-added here because the shared opened state drops it for flush item-list menus.

@@ -119,6 +119,7 @@ export class ConvertInlineTool implements InlineTool {
 
     return {
       name: 'convert-to',
+      icon: currentBlockToolboxItem?.icon,
       title: currentBlockTitle,
        hint: {
         title: this.i18nAPI.t('popover.convertTo'),

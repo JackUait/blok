@@ -135,12 +135,12 @@ export class PopoverInline extends PopoverDesktop {
       );
     }
 
-    // Apply inline items container styles. The horizontal toolbar is a single row whose
-    // symmetric breathing room comes from the container, so drop the vertical-list
-    // before-first (pt-0) and after-last (pb-0) gaps that css.items carries.
+    // Apply inline items container styles: a five-column grid with the convert
+    // row and separator stretched across the full width.
     if (this.nodes.items) {
-      this.nodes.items.className = twMerge(css.items, 'flex pt-0 pb-0');
+      this.nodes.items.className = twMerge(css.items, cssInline.items);
     }
+    this.applyGridItemSpans();
 
     // Set inline height CSS variables
     this.nodes.popover.style.setProperty('--height', INLINE_HEIGHT);
@@ -167,6 +167,28 @@ export class PopoverInline extends PopoverDesktop {
         }
       });
 
+  }
+
+  /**
+   * Stretch the convert row and separators across the full grid width and
+   * right-align the convert row chevron. Item elements are owned by the
+   * popover-item components, so the grid spans are patched here where the
+   * grid itself is defined.
+   */
+  private applyGridItemSpans(): void {
+    const root = this.nodes.popover;
+
+    root.querySelectorAll(`[${DATA_ATTR.itemName}="convert-to"]`).forEach((convertEl) => {
+      convertEl.classList.add('col-span-full', 'w-full');
+
+      convertEl
+        .querySelectorAll('[data-blok-testid="popover-item-chevron-right"]')
+        .forEach((chevron) => chevron.classList.add('ml-auto'));
+    });
+
+    root
+      .querySelectorAll('[data-blok-testid="popover-item-separator"]')
+      .forEach((separator) => separator.classList.add('col-span-full', 'w-full'));
   }
 
   /**
@@ -198,9 +220,7 @@ export class PopoverInline extends PopoverDesktop {
         cssInline.popoverContainerOpened
       );
 
-      // Set height based on screen
-      const height = isMobileScreen() ? 'var(--height-mobile)' : 'var(--height)';
-      this.nodes.popoverContainer.style.height = height;
+      // The grid card sizes to its rows — no fixed single-row height.
     }
 
     const containerRect = this.nestingLevel === 0
@@ -324,9 +344,10 @@ export class PopoverInline extends PopoverDesktop {
 
       nestedContainer.style.left = `${left}px`;
 
-      // Set top position based on height
-      const topOffset = isMobileScreen() ? 'calc(var(--height-mobile) + 3px)' : 'calc(var(--height) + 3px)';
-      nestedContainer.style.top = topOffset;
+      // Open right below the trigger item's row of the grid card
+      const triggerBottom = itemEl ? itemEl.offsetTop + itemEl.offsetHeight : this.nodes.popoverContainer.offsetHeight;
+
+      nestedContainer.style.top = `${triggerBottom + 3}px`;
     }
 
     return nestedPopover;

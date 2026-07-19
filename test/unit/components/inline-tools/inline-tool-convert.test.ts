@@ -164,6 +164,9 @@ describe('ConvertInlineTool', () => {
 
     const menuConfig = config as MenuConfigWithChildren;
 
+    // the convert row leads with the current block type's icon (like "T Normal Text")
+    expect((menuConfig as { icon?: string }).icon).toBe('<svg>current</svg>');
+
     const children = menuConfig.children;
 
     expect(children?.items).toHaveLength(1);

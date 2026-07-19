@@ -20,7 +20,7 @@ export const REQUIRED_TOOL_EXPORTS = [
   'Embed', 'Bookmark',
   // Inline tools
   'Bold', 'Italic', 'Underline', 'Strikethrough',
-  'InlineCode', 'Equation', 'Link', 'Marker',
+  'InlineCode', 'Equation', 'Link', 'Marker', 'ClearFormat',
 ] as const;
 
 export function assertEditorModulesComplete(

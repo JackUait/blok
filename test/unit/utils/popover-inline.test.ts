@@ -60,6 +60,77 @@ describe('PopoverInline', () => {
     document.body.innerHTML = '';
   });
 
+  describe('grid card layout', () => {
+    const createGridPopover = (): PopoverInline => {
+      return new PopoverInline({
+        items: [
+          {
+            icon: 'T',
+            title: 'Text',
+            name: 'convert-to',
+            children: {
+              items: [ { icon: 'i', title: 'Heading', name: 'header', onActivate: vi.fn() } ],
+            },
+          },
+          { type: PopoverItemType.Separator },
+          { icon: 'B', name: 'bold', onActivate: vi.fn() },
+          { icon: 'I', name: 'italic', onActivate: vi.fn() },
+          { icon: 'U', name: 'underline', onActivate: vi.fn() },
+          { icon: 'S', name: 'strikethrough', onActivate: vi.fn() },
+          { icon: 'C', name: 'inlineCode', onActivate: vi.fn() },
+          { icon: 'E', name: 'equation', onActivate: vi.fn() },
+        ],
+      });
+    };
+
+    it('lays formatting buttons out as a five-column grid', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const items = popover.getElement().querySelector(`[${DATA_ATTR.popoverItems}]`);
+
+      expect(items?.className).toContain('grid-cols-5');
+    });
+
+    it('stretches the convert row and separator across the full grid width', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const element = popover.getElement();
+      const convert = element.querySelector('[data-blok-item-name="convert-to"]');
+      const separator = element.querySelector('[data-blok-testid="popover-item-separator"]');
+
+      expect(convert?.className).toContain('col-span-full');
+      expect(separator?.className).toContain('col-span-full');
+    });
+
+    it('pushes the convert row chevron to the right edge', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const chevron = popover
+        .getElement()
+        .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-chevron-right"]');
+
+      expect(chevron?.className).toContain('ml-auto');
+    });
+
+    it('does not pin the container to the single-row toolbar height', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const container = popover
+        .getElement()
+        .querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
+
+      expect(container?.style.height).toBe('');
+    });
+  });
+
   describe('constructor', () => {
     it('should create popover with proper structure', () => {
       const popover = createPopoverInline();

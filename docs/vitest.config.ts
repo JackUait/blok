@@ -103,7 +103,7 @@ export default defineConfig({
             'Image', 'File', 'Audio', 'Video', 'ColumnList', 'Column',
             'Embed', 'Bookmark',
             'Bold', 'Italic', 'Underline', 'Strikethrough',
-            'InlineCode', 'Equation', 'Link', 'Marker',
+            'InlineCode', 'Equation', 'Link', 'Marker', 'ClearFormat',
           ];
           return {
             code: toolExports.map((name) => `export const ${name} = class {};`).join('\n'),

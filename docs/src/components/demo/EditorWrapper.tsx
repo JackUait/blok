@@ -162,7 +162,7 @@ export const EditorWrapper: React.FC<{
     Image, File: FileTool, Audio, Video, ColumnList, Column,
     Embed, Bookmark,
     Bold, Italic, Underline, Strikethrough,
-    InlineCode, Equation, Link, Marker,
+    InlineCode, Equation, Link, Marker, ClearFormat,
   } = mods.tools;
 
   const { props: settingsProps, deps: settingsDeps } = buildEditorSettingsProps(settings, resolvedTheme);
@@ -202,14 +202,15 @@ export const EditorWrapper: React.FC<{
         embed: Embed,
         bookmark: { class: Bookmark, config: { endpoint: "/unfurl" } },
         // Inline tools
+        marker: Marker,
         bold: Bold,
         italic: Italic,
         underline: Underline,
+        clearFormat: ClearFormat,
+        link: Link,
         strikethrough: Strikethrough,
         inlineCode: InlineCode,
         equation: Equation,
-        link: Link,
-        marker: Marker,
       }}
       data={{
         blocks: [

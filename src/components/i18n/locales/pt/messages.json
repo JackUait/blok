@@ -176,7 +176,7 @@
   "tools.callout.emojiCategoryNature": "Natureza",
   "tools.callout.emojiCategoryFood": "Comida",
   "tools.callout.emojiCategoryActivity": "Atividades",
-  "tools.callout.emojiCategoryTravel": "Viagem",
+  "tools.callout.emojiCategoryTravel": "Viagens e lugares",
   "tools.callout.emojiCategoryObjects": "Objetos",
   "tools.callout.emojiCategorySymbols": "Símbolos",
   "tools.callout.emojiCategoryFlags": "Bandeiras",
@@ -340,7 +340,7 @@
   "tools.database.addView": "Adicionar visualização",
   "tools.database.viewTypeBoard": "Quadro",
   "tools.database.viewTypeList": "Lista",
-  "tools.database.viewTypeBoardDescription": "Visualize o trabalho em colunas",
+  "tools.database.viewTypeBoardDescription": "Visualizar o trabalho em colunas",
   "tools.database.viewTypeListDescription": "Exibir itens em uma lista simples",
   "tools.database.propertyTypeHeading": "Tipo de propriedade",
   "tools.database.propertyTypeText": "Texto",
@@ -521,8 +521,8 @@
   "tools.video.speedPresets": "Velocidades predefinidas",
   "tools.video.on": "Ativado",
   "tools.video.off": "Desativado",
-  "tools.video.theater": "Modo cinema",
-  "tools.video.theaterExit": "Sair do modo cinema",
+  "tools.video.theater": "Modo teatro",
+  "tools.video.theaterExit": "Sair do modo teatro",
   "tools.video.pip": "Picture-in-picture",
   "tools.video.ctxCopyUrl": "Copiar URL do vídeo",
   "tools.video.ctxCopyUrlAtTime": "Copiar URL do vídeo na posição de reprodução atual",
@@ -536,6 +536,6 @@
   "tools.audio.speedDecrease": "Diminuir velocidade de reprodução",
   "tools.audio.speedIncrease": "Aumentar velocidade de reprodução",
   "tools.callout.emojiSearchResults": "Resultados da pesquisa de emojis: {count}",
-  "tools.database.checkboxChecked": "Marcado",
-  "tools.database.checkboxUnchecked": "Desmarcado"
+  "tools.database.checkboxChecked": "Marcada",
+  "tools.database.checkboxUnchecked": "Desmarcada"
 }

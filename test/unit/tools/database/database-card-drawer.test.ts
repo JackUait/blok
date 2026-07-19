@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DatabaseCardDrawer } from '../../../../src/tools/database/database-card-drawer';
 import type { CardDrawerOptions } from '../../../../src/tools/database/database-card-drawer';
 import type { DatabaseRow, SelectOption, PropertyDefinition } from '../../../../src/tools/database/types';
+import type { I18n } from '../../../../types';
 import type { ToolsConfig } from '../../../../types/api/tools';
 
 const makeRow = (overrides: Partial<DatabaseRow> = {}): DatabaseRow => ({
@@ -192,8 +193,14 @@ describe('DatabaseCardDrawer', () => {
       expect(el.getAttribute('aria-label')).toBeTruthy();
     });
 
-    it('close button has aria-label="Close"', () => {
-      const options = createOptions();
+    it('localizes the close button accessible label', () => {
+      const i18n: I18n = {
+        t: vi.fn((key: string) => key === 'tools.database.close' ? 'Zavřít' : key),
+        has: vi.fn(() => true),
+        getEnglishTranslation: vi.fn(() => ''),
+        getLocale: vi.fn(() => 'cs'),
+      };
+      const options = createOptions({ i18n });
       const drawer = new DatabaseCardDrawer(options);
       const row = makeRow();
 
@@ -201,7 +208,8 @@ describe('DatabaseCardDrawer', () => {
 
       const closeBtn = options.wrapper.querySelector('[data-blok-database-drawer-close]') as HTMLButtonElement;
 
-      expect(closeBtn.getAttribute('aria-label')).toBe('Close');
+      expect(closeBtn.getAttribute('aria-label')).toBe('Zavřít');
+      expect(i18n.t).toHaveBeenCalledWith('tools.database.close');
     });
 
     it('title input has aria-label', () => {

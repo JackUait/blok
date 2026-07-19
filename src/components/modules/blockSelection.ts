@@ -14,6 +14,7 @@ import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
 import { announce } from '../utils/announcer';
 import { Shortcuts } from '../utils/shortcuts';
+import { translateToolName, translateToolTitle } from '../utils/tools';
 import { TOOL_NAME as LIST_TOOL_NAME } from '../../tools/list/constants';
 import { buildSemanticListHtml, type SemanticListItem } from '../../tools/list/dom-builder';
 import type { ListItemStyle } from '../../tools/list/types';
@@ -981,19 +982,57 @@ export class BlockSelection extends Module {
         return;
       }
 
-      this.lastAnnouncedNavigationIndex = pendingIndex;
+      void this.resolveNavigationToolName(block).then((tool) => {
+        /**
+         * Resolving a variant toolbox entry can await block data. If focus,
+         * navigation mode, or the block at this index changed meanwhile, this
+         * announcement is stale and must not reach assistive technology.
+         */
+        if (
+          !this._navigationModeEnabled
+          || this.navigationFocusIndex !== pendingIndex
+          || this.lastAnnouncedNavigationIndex === pendingIndex
+          || this.Blok.BlockManager.getBlockByIndex(pendingIndex) !== block
+        ) {
+          return;
+        }
 
-      const total = this.Blok.BlockManager.blocks.length;
+        this.lastAnnouncedNavigationIndex = pendingIndex;
 
-      announce(
-        this.Blok.I18n.t('a11y.navigationPosition', {
-          tool: block.name,
-          position: pendingIndex + 1,
-          total,
-        }),
-        { politeness: 'polite' }
-      );
+        announce(
+          this.Blok.I18n.t('a11y.navigationPosition', {
+            tool,
+            position: pendingIndex + 1,
+            total: this.Blok.BlockManager.blocks.length,
+          }),
+          { politeness: 'polite' }
+        );
+      });
     }, NAVIGATION_ANNOUNCE_THROTTLE_MS);
+  }
+
+  /**
+   * Resolve the active toolbox label for a block through the current locale.
+   * Multi-entry tools (for example heading levels) can select their active
+   * entry from block data, so this must use the same resolver as block settings.
+   *
+   * @param block - block whose user-facing tool name should be announced
+   */
+  private async resolveNavigationToolName(block: Block): Promise<string> {
+    try {
+      const activeEntry = await block.getActiveToolboxEntry();
+
+      if (activeEntry) {
+        return translateToolTitle(this.Blok.I18n, activeEntry, block.name);
+      }
+    } catch {
+      /**
+       * A custom tool can fail while exposing active-entry data. Preserve the
+       * navigation announcement with its best registered-name translation.
+       */
+    }
+
+    return translateToolName(this.Blok.I18n, undefined, block.name);
   }
 
   /**

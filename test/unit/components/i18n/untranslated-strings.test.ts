@@ -460,6 +460,7 @@ const KNOWN_HARDCODED_STRINGS: Array<{ file: string; needle: string }> = [
   { file: 'src/tools/database/database-board-view.ts', needle: 'Kanban board' },
   { file: 'src/tools/database/database-card-drawer.ts', needle: 'Card details' },
   { file: 'src/tools/database/database-card-drawer.ts', needle: 'Card title' },
+  { file: 'src/tools/database/database-card-drawer.ts', needle: "setAttribute('aria-label', 'Close')" },
   { file: 'src/tools/database/database-tab-bar.ts', needle: "title: 'Rename'" },
   { file: 'src/tools/database/database-tab-bar.ts', needle: "title: 'Duplicate'" },
   { file: 'src/tools/database/database-tab-bar.ts', needle: "title: 'Delete'" },

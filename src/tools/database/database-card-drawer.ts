@@ -1,5 +1,6 @@
 import type { I18n, OutputData } from '../../../types';
 import type { ToolsConfig } from '../../../types/api/tools';
+import { englishDictionary } from '../../components/i18n/lightweight-i18n';
 import type { DatabaseRow, PropertyDefinition, PropertyType, PropertyValue } from './types';
 import { IconChevronRight } from '../../components/icons';
 import { DatabasePropertyTypePopover } from './database-property-type-popover';
@@ -104,7 +105,10 @@ export class DatabaseCardDrawer {
     const closeBtn = document.createElement('button');
 
     closeBtn.setAttribute('data-blok-database-drawer-close', '');
-    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.setAttribute(
+      'aria-label',
+      this.i18n?.t('tools.database.close') ?? englishDictionary['tools.database.close']
+    );
     closeBtn.innerHTML = IconChevronRight + IconChevronRight;
     closeBtn.addEventListener('click', () => {
       this.close();

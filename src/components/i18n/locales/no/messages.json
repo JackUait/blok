@@ -292,7 +292,7 @@
   "tools.image.altDescription": "Beskriv dette bildet for personer som ikke kan se det.",
   "tools.image.altPlaceholder": "Alt-tekst",
   "tools.image.preview": "Forhåndsvisning av bilde",
-  "tools.image.previewControls": "Kontroller for forhåndsvisning",
+  "tools.image.previewControls": "Kontroller for forhåndsvisning av bilde",
   "tools.image.navigationControls": "Bildenavigering",
   "tools.image.previousImage": "Forrige bilde",
   "tools.image.nextImage": "Neste bilde",

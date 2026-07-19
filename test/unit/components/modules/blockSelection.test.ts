@@ -71,6 +71,9 @@ const createBlockStub = (options?: {
     // Mock preservedData and preservedTunes for clipboard operations
     preservedData: { text: 'Sample text' },
     preservedTunes: {},
+    getActiveToolboxEntry: vi.fn().mockResolvedValue({
+      titleKey: 'text',
+    }),
   };
 
   Object.defineProperty(blockStub, 'selected', {
@@ -140,7 +143,8 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
       MIME_TYPE: 'application/x-blok',
     } as unknown as BlokModules['Paste'],
     I18n: {
-      t: vi.fn((key: string) => key),
+      t: vi.fn((key: string) => key === 'toolNames.text' ? 'Текст' : key),
+      has: vi.fn((key: string) => key === 'toolNames.text'),
     } as unknown as BlokModules['I18n'],
   };
 
@@ -1686,36 +1690,36 @@ describe('BlockSelection', () => {
       expect(announce).toHaveBeenCalledWith('a11y.navigationModeEntered', { politeness: 'assertive' });
     });
 
-    it('announces the focused block position after the throttle window', () => {
+    it('announces the focused block position after the throttle window', async () => {
       const { blockSelection, modules } = createBlockSelection();
 
       blockSelection.enableNavigationMode();
 
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
 
       expect(modules.I18n.t).toHaveBeenCalledWith('a11y.navigationPosition', {
-        tool: 'paragraph',
+        tool: 'Текст',
         position: 1,
         total: 3,
       });
       expect(announce).toHaveBeenCalledWith('a11y.navigationPosition', { politeness: 'polite' });
     });
 
-    it('coalesces rapid navigation into a single throttled position announcement', () => {
+    it('coalesces rapid navigation into a single throttled position announcement', async () => {
       const { blockSelection, modules } = createBlockSelection();
 
       blockSelection.enableNavigationMode();
       blockSelection.navigateNext();
       blockSelection.navigateNext();
 
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
 
       const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
         (call) => call[0] === 'a11y.navigationPosition'
       );
 
       expect(positionCalls).toHaveLength(1);
-      expect(positionCalls[0][1]).toEqual({ tool: 'paragraph', position: 3, total: 3 });
+      expect(positionCalls[0][1]).toEqual({ tool: 'Текст', position: 3, total: 3 });
     });
 
     it('announces a polite exit hint when navigation mode is disabled', () => {
@@ -1729,13 +1733,13 @@ describe('BlockSelection', () => {
       expect(announce).toHaveBeenCalledWith('a11y.navigationModeExited', { politeness: 'polite' });
     });
 
-    it('does not announce a stale position when returning to the last-announced block within the throttle window', () => {
+    it('does not announce a stale position when returning to the last-announced block within the throttle window', async () => {
       const { blockSelection, modules } = createBlockSelection();
 
       blockSelection.enableNavigationMode();
 
       // First announcement fires for index 0 (position 1).
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
 
       (modules.I18n.t as ReturnType<typeof vi.fn>).mockClear();
       (announce as ReturnType<typeof vi.fn>).mockClear();
@@ -1745,7 +1749,7 @@ describe('BlockSelection', () => {
       blockSelection.navigateNext();
       blockSelection.navigatePrevious();
 
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
 
       const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
         (call) => call[0] === 'a11y.navigationPosition'
@@ -1754,11 +1758,11 @@ describe('BlockSelection', () => {
       expect(positionCalls).toHaveLength(0);
     });
 
-    it('still announces a new position reached within the throttle window after returning and moving again', () => {
+    it('still announces a new position reached within the throttle window after returning and moving again', async () => {
       const { blockSelection, modules } = createBlockSelection();
 
       blockSelection.enableNavigationMode();
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
 
       (modules.I18n.t as ReturnType<typeof vi.fn>).mockClear();
 
@@ -1768,14 +1772,14 @@ describe('BlockSelection', () => {
       blockSelection.navigateNext();
       blockSelection.navigateNext();
 
-      vi.advanceTimersByTime(300);
+      await vi.advanceTimersByTimeAsync(300);
 
       const positionCalls = (modules.I18n.t as ReturnType<typeof vi.fn>).mock.calls.filter(
         (call) => call[0] === 'a11y.navigationPosition'
       );
 
       expect(positionCalls).toHaveLength(1);
-      expect(positionCalls[0][1]).toEqual({ tool: 'paragraph', position: 3, total: 3 });
+      expect(positionCalls[0][1]).toEqual({ tool: 'Текст', position: 3, total: 3 });
     });
   });
 

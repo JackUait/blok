@@ -176,6 +176,16 @@ describe("API_SECTIONS", () => {
       const description = stylesSection!.description ?? "";
       expect(description).toContain("56px");
     });
+
+    it("documents that style.tokens values are fixed across theme/read-only state and that gutter keys are ignored", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("light and dark themes");
+      expect(description).toContain("read-only state");
+      expect(description).toContain("--blok-editor-gutter-*");
+    });
   });
 
   describe("Blocks API", () => {

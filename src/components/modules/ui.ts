@@ -70,6 +70,16 @@ interface UINodes extends Record<string, unknown> {
  * @property {Element} nodes.wrapper  - <blok-editor>
  * @property {Element} nodes.redactor - <blok-redactor>
  */
+
+/**
+ * Monotonically increasing suffix for theme-token style tag ids. Two
+ * instances can land on the same holderId (e.g. both holders are id-less,
+ * so the id falls back to the constant BLOK_INTERFACE_VALUE), so the
+ * holderId alone is not enough to keep instances' tags — and destroy()
+ * cleanup — independent of each other.
+ */
+const themeTokenStyleTagCounter = { value: 0 };
+
 export class UI extends Module<UINodes> {
   /**
    * Controllers for UI state management
@@ -787,10 +797,23 @@ export class UI extends Module<UINodes> {
     const varLines: string[] = [];
 
     for (const [name, value] of Object.entries(tokens)) {
-      if (!/^--blok-[\w-]+$/.test(name) || /[;{}]/.test(value)) {
-        log(`style.tokens entry "${name}" skipped — keys must match --blok-* and values must not contain ; { }`, 'warn');
+      if (!/^--blok-[\w-]+$/.test(name) || /[;{}]|\/\*|\*\//.test(value)) {
+        log(`style.tokens entry "${name}" skipped — keys must match --blok-* and values must not contain ; { } /* */`, 'warn');
         continue;
       }
+
+      /**
+       * Gutter tokens are read-only-state-dependent: :where([data-blok-readonly])
+       * collapses them to 0px in main.css. Injecting them at (0,1,0) specificity
+       * on the same wrapper that carries data-blok-readonly would win over that
+       * rule and break the automatic collapse. Hosts that need custom gutters
+       * must set them via CSS on the wrapper instead.
+       */
+      if (name.startsWith('--blok-editor-gutter')) {
+        log(`style.tokens entry "${name}" skipped — gutter tokens are state-dependent (they collapse in read-only mode) and must be set via CSS on the host wrapper instead of style.tokens`, 'warn');
+        continue;
+      }
+
       varLines.push(`  ${name}: ${value};`);
     }
 
@@ -798,14 +821,8 @@ export class UI extends Module<UINodes> {
       return;
     }
 
-    const holderId = this.nodes.holder.id !== '' ? this.nodes.holder.id : (this.nodes.wrapper.dataset['blokInterface'] ?? 'default');
-    const styleTagId = `blok-theme-tokens-${holderId}`;
-
-    this.themeTokenStyleTagId = styleTagId;
-
-    if ($.get(styleTagId)) {
-      return;
-    }
+    const holderId = this.nodes.holder.id !== '' ? this.nodes.holder.id : this.nodes.wrapper.dataset['blokInterface'];
+    const styleTagId = `blok-theme-tokens-${holderId}-${themeTokenStyleTagCounter.value++}`;
 
     const css = [
       `[data-blok-interface], [data-blok-popover], [data-blok-top-layer] {`,
@@ -823,6 +840,8 @@ export class UI extends Module<UINodes> {
     }
 
     $.prepend(document.head, tag);
+
+    this.themeTokenStyleTagId = styleTagId;
   }
 
   /**

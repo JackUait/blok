@@ -7,6 +7,7 @@ import {
 } from "../../../../src/components/constants";
 import { BlokMobileLayoutToggled } from "../../../../src/components/events";
 import * as Dom from "../../../../src/components/dom";
+import * as Logger from "../../../../src/components/utils/logger";
 import { mobileScreenBreakpoint } from "../../../../src/components/utils";
 import { SelectionUtils } from "../../../../src/components/selection/index";
 import type { BlokConfig } from "../../../../types";
@@ -1716,6 +1717,19 @@ describe("UI module", () => {
   });
 
   describe("loadThemeTokenStyles", () => {
+    /**
+     * Theme token tag ids now carry a per-instance counter suffix
+     * (blok-theme-tokens-<holderId>-<n>), so lookups match by prefix
+     * rather than asserting the exact generated id.
+     */
+    const getThemeTokenTag = (holderId: string): HTMLStyleElement | null => {
+      const tags = Array.from(
+        document.head.querySelectorAll<HTMLStyleElement>("style"),
+      ).filter((tag) => tag.id.startsWith(`blok-theme-tokens-${holderId}-`));
+
+      return tags[0] ?? null;
+    };
+
     it("does not inject a style tag when config.style.tokens is not set", () => {
       const { ui } = createUI({ configOverrides: { style: {} } });
 
@@ -1759,7 +1773,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
 
-      const tag = document.getElementById("blok-theme-tokens-tokens-editor");
+      const tag = getThemeTokenTag("tokens-editor");
       expect(tag).not.toBeNull();
       expect(tag?.textContent).toContain(
         "[data-blok-interface], [data-blok-popover], [data-blok-top-layer]",
@@ -1802,7 +1816,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
 
-      const tag = document.getElementById("blok-theme-tokens-invalid-keys-editor");
+      const tag = getThemeTokenTag("invalid-keys-editor");
       expect(tag?.textContent).toContain("--blok-bg: #fff;");
       expect(tag?.textContent).not.toContain("color: red");
       expect(tag?.textContent).not.toContain("--evil");
@@ -1844,7 +1858,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
 
-      const tag = document.getElementById("blok-theme-tokens-invalid-values-editor");
+      const tag = getThemeTokenTag("invalid-values-editor");
       expect(tag?.textContent).not.toContain("lime");
       expect(tag?.textContent).toContain("--blok-selection: blue;");
     });
@@ -1883,7 +1897,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
 
-      const tag = document.getElementById("blok-theme-tokens-tokens-nonce-editor");
+      const tag = getThemeTokenTag("tokens-nonce-editor");
       expect(tag?.getAttribute("nonce")).toBe("abc-nonce-123");
     });
 
@@ -1918,11 +1932,192 @@ describe("UI module", () => {
 
       (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
 
-      expect(document.getElementById("blok-theme-tokens-tokens-destroy-editor")).not.toBeNull();
+      expect(getThemeTokenTag("tokens-destroy-editor")).not.toBeNull();
 
       ui.destroy();
 
-      expect(document.getElementById("blok-theme-tokens-tokens-destroy-editor")).toBeNull();
+      expect(getThemeTokenTag("tokens-destroy-editor")).toBeNull();
+    });
+
+    it("gives two id-less-holder instances distinct tags, both containing their own tokens", () => {
+      const { ui: ui1 } = createUI({
+        configOverrides: { style: { tokens: { "--blok-selection": "red" } } },
+      });
+      const { ui: ui2 } = createUI({
+        configOverrides: { style: { tokens: { "--blok-selection": "blue" } } },
+      });
+
+      (ui1 as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+      (ui2 as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tags = Array.from(document.head.querySelectorAll("style")).filter((tag) =>
+        tag.id.startsWith("blok-theme-tokens-"),
+      );
+
+      expect(tags).toHaveLength(2);
+      expect(tags[0].id).not.toBe(tags[1].id);
+
+      const contents = tags.map((tag) => tag.textContent ?? "");
+      expect(contents.some((css) => css.includes("--blok-selection: red;"))).toBe(true);
+      expect(contents.some((css) => css.includes("--blok-selection: blue;"))).toBe(true);
+    });
+
+    it("destroying one id-less-holder instance leaves the other's tag alive with its own tokens", () => {
+      const { ui: ui1 } = createUI({
+        configOverrides: { style: { tokens: { "--blok-selection": "red" } } },
+      });
+      const { ui: ui2 } = createUI({
+        configOverrides: { style: { tokens: { "--blok-selection": "blue" } } },
+      });
+
+      (ui1 as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+      (ui2 as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      ui1.destroy();
+
+      const remaining = Array.from(document.head.querySelectorAll("style")).filter((tag) =>
+        tag.id.startsWith("blok-theme-tokens-"),
+      );
+
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].textContent).toContain("--blok-selection: blue;");
+    });
+
+    it("skips --blok-editor-gutter-* keys so the read-only gutter collapse cannot be overridden", () => {
+      const holder = document.createElement("div");
+      holder.id = "gutter-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: {
+            tokens: {
+              "--blok-editor-gutter-start": "40px",
+              "--blok-editor-gutter-end": "40px",
+              "--blok-selection": "green",
+            },
+          },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tag = getThemeTokenTag("gutter-editor");
+      expect(tag?.textContent).not.toContain("--blok-editor-gutter-start");
+      expect(tag?.textContent).not.toContain("--blok-editor-gutter-end");
+      expect(tag?.textContent).toContain("--blok-selection: green;");
+    });
+
+    it("injects no tag when the only provided token is a gutter key", () => {
+      const holder = document.createElement("div");
+      holder.id = "gutter-only-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: { tokens: { "--blok-editor-gutter-start": "40px" } },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tags = Array.from(document.head.querySelectorAll("style")).filter((tag) =>
+        tag.id.startsWith("blok-theme-tokens-"),
+      );
+
+      expect(tags).toHaveLength(0);
+    });
+
+    it("emits a warning via the logger when an invalid entry is skipped", () => {
+      const logSpy = vi.spyOn(Logger, "log");
+
+      const { ui } = createUI({
+        configOverrides: {
+          style: { tokens: { color: "red", "--blok-bg": "#fff" } },
+        },
+      });
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("color"), "warn");
+    });
+
+    it("skips values containing CSS comment delimiters", () => {
+      const holder = document.createElement("div");
+      holder.id = "comment-editor";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: {
+            tokens: {
+              "--blok-bg": "red /* } body { background: lime */",
+              "--blok-selection": "green",
+            },
+          },
+        } as BlokConfig,
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadThemeTokenStyles: () => void }).loadThemeTokenStyles();
+
+      const tag = getThemeTokenTag("comment-editor");
+      expect(tag?.textContent).not.toContain("/*");
+      expect(tag?.textContent).not.toContain("*/");
+      expect(tag?.textContent).toContain("--blok-selection: green;");
     });
   });
 

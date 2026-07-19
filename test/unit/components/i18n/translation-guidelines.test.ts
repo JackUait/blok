@@ -32,6 +32,10 @@ const LOCALIZED_RECENTLY_USED_EXPECTATIONS_PATH = resolve(
   __dirname,
   'fixtures/localized-recently-used-expectations.json'
 );
+const LOCALIZED_POPOVER_SEARCH_EXPECTATIONS_PATH = resolve(
+  __dirname,
+  'fixtures/localized-popover-search-expectations.json'
+);
 
 const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
@@ -62,6 +66,9 @@ const localizedGroupMoveExpectations = JSON.parse(
 const localizedRecentlyUsedExpectations = JSON.parse(
   readFileSync(LOCALIZED_RECENTLY_USED_EXPECTATIONS_PATH, 'utf-8')
 ) as Record<string, string>;
+const localizedPopoverSearchExpectations = JSON.parse(
+  readFileSync(LOCALIZED_POPOVER_SEARCH_EXPECTATIONS_PATH, 'utf-8')
+) as Record<string, string>;
 const RESULT_STATES = new Set(['pending', 'open', 'pass']);
 const FINAL_STATUSES = new Set([
   'pending',
@@ -81,9 +88,11 @@ const GLOBAL_FINDING_KEYS = new Set([
   '77 changed English source keys',
   'four expanded emoji category keys',
   'tools.colorPicker.recentlyUsed localized labels',
+  'popover.search localized action placeholders',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'popover.search': 'Find an action…',
   'blockSettings.openMenuAction': ' to open the menu',
   'blockSettings.orConjunction': ' or press ',
   'blockSettings.convertWithChildrenWarning':
@@ -865,6 +874,19 @@ describe('translation guideline corpus integrity', () => {
       expect(readLocale(locale).messages['tools.colorPicker.recentlyUsed']).toBe(
         expected
       );
+    }
+  );
+
+  it('covers every non-English locale in the action-placeholder matrix', () => {
+    expect(Object.keys(localizedPopoverSearchExpectations).sort()).toEqual(
+      localeCodes.filter(locale => locale !== 'en')
+    );
+  });
+
+  it.each(Object.entries(localizedPopoverSearchExpectations))(
+    '$0 uses its reviewed action-oriented popover placeholder',
+    (locale, expected) => {
+      expect(readLocale(locale).messages['popover.search']).toBe(expected);
     }
   );
 

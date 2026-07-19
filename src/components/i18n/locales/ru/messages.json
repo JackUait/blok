@@ -7,7 +7,7 @@
   "toolbox.optionAddAbove": "⌥ + щелчок — добавить выше",
   "toolbox.ctrlAddAbove": "Ctrl + щелчок — добавить выше",
   "toolbox.typeToSearch": "Введите запрос для поиска",
-  "popover.search": "Поиск",
+  "popover.search": "Найти действие…",
   "popover.nothingFound": "Ничего не найдено",
   "popover.convertTo": "Преобразовать в",
   "toolNames.text": "Текст",

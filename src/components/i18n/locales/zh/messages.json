@@ -7,7 +7,7 @@
   "toolbox.optionAddAbove": "按住 Option 键点击以在上方添加",
   "toolbox.ctrlAddAbove": "按住 Ctrl 键点击以在上方添加",
   "toolbox.typeToSearch": "输入以搜索",
-  "popover.search": "搜索",
+  "popover.search": "搜索操作…",
   "popover.nothingFound": "未找到结果",
   "popover.convertTo": "转换为",
   "toolNames.text": "文本",

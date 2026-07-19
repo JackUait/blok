@@ -7,7 +7,7 @@
   "toolbox.optionAddAbove": "⌥ — hozzáadás fölé",
   "toolbox.ctrlAddAbove": "Ctrl — hozzáadás fölé",
   "toolbox.typeToSearch": "Írjon a kereséshez",
-  "popover.search": "Keresés",
+  "popover.search": "Művelet keresése…",
   "popover.nothingFound": "Nincs találat",
   "popover.convertTo": "Átalakítás",
   "toolNames.text": "Szöveg",

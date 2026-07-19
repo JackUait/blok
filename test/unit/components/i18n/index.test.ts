@@ -140,7 +140,7 @@ describe('I18n Module', () => {
 
       expect(i18n.getLocale()).toBe('zh-TW');
       expect(i18n.t('blockSettings.dragToMove')).toBe('拖曳以移動');
-      expect(i18n.t('popover.search')).toBe('搜尋');
+      expect(i18n.t('popover.search')).toBe('搜尋動作…');
     });
 
     it('sets locale to English and loads English dictionary', async () => {
@@ -245,7 +245,7 @@ describe('I18n Module', () => {
         await i18n.prepare();
 
         expect(i18n.getLocale()).toBe('zh-TW');
-        expect(i18n.t('popover.search')).toBe('搜尋');
+        expect(i18n.t('popover.search')).toBe('搜尋動作…');
       }
     );
 
@@ -468,7 +468,7 @@ describe('I18n Module', () => {
 
       // Russian base translations should be available
       expect(i18n.getLocale()).toBe('ru');
-      expect(i18n.t('popover.search')).toBe('Поиск');
+      expect(i18n.t('popover.search')).toBe('Найти действие…');
       expect(i18n.t('toolbox.addBelow')).toBe('Нажмите, чтобы добавить ниже');
     });
 

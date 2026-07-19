@@ -7,7 +7,7 @@
   "toolbox.optionAddAbove": "ඉහළින් එක් කිරීමට Option-ක්ලික් කරන්න",
   "toolbox.ctrlAddAbove": "ඉහළින් එක් කිරීමට Ctrl-ක්ලික් කරන්න",
   "toolbox.typeToSearch": "සෙවීමට ටයිප් කරන්න",
-  "popover.search": "සොයන්න",
+  "popover.search": "ක්‍රියාවක් සොයන්න…",
   "popover.nothingFound": "කිසිවක් හමු නොවීය",
   "popover.convertTo": "ලෙස පරිවර්තනය කරන්න",
   "toolNames.text": "පෙළ",

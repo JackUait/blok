@@ -7,7 +7,7 @@
   "toolbox.optionAddAbove": "⌥+클릭하여 위에 추가",
   "toolbox.ctrlAddAbove": "Ctrl+클릭하여 위에 추가",
   "toolbox.typeToSearch": "검색어를 입력하세요",
-  "popover.search": "검색",
+  "popover.search": "작업 검색…",
   "popover.nothingFound": "검색 결과 없음",
   "popover.convertTo": "변환",
   "toolNames.text": "텍스트",

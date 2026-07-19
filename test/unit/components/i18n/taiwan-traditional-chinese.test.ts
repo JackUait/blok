@@ -44,7 +44,7 @@ const GUIDELINE_EXPECTATIONS: Messages = {
   'tools.equation.placeholder': '輸入 LaTeX 方程式…',
   'tools.image.converting': '轉換中…',
   'tools.image.errorFileTooLarge': '圖片太大。{size} 超過 {max} 上限。',
-  'tools.image.errorSourceOffline': '來源檔案可能已移動或離線。',
+  'tools.image.errorSourceOffline': '來源檔案可能已移動或處於離線狀態。',
   'tools.file.errorFileTooLarge': '檔案太大。{size} 超過 {max} 上限。',
   'tools.file.previewRender': '預覽',
   'tools.video.loop': '重複播放',
@@ -61,7 +61,7 @@ const GUIDELINE_EXPECTATIONS: Messages = {
   'tools.audio.coverAdd': '新增封面',
   'tools.audio.coverSourceAria': '封面來源',
   'tools.database.titlePlaceholder': '新資料庫',
-  'tools.database.viewTypeBoardDescription': '以多欄看板呈現內容',
+  'tools.database.viewTypeBoardDescription': '以多欄顯示項目',
   'tools.database.viewTypeListDescription': '在簡單清單中顯示項目',
   'tools.video.ctxCopyUrlAtTime': '複製目前播放位置的影片網址',
 };
@@ -133,7 +133,7 @@ describe('Taiwan Traditional Chinese translations', () => {
   it('uses established Taiwan product terminology', () => {
     expect(taiwan['blockSettings.dragToMove']).toBe('拖曳以移動');
     expect(taiwan['toolbox.addBelow']).toBe('按一下以在下方新增');
-    expect(taiwan['popover.search']).toBe('搜尋');
+    expect(taiwan['popover.search']).toBe('搜尋動作…');
     expect(taiwan['blockSettings.delete']).toBe('刪除');
     expect(taiwan['toolNames.file']).toBe('檔案');
     expect(taiwan['toolNames.link']).toBe('連結');

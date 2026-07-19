@@ -7,7 +7,7 @@
   "toolbox.optionAddAbove": "⌥ + clic pour ajouter au-dessus",
   "toolbox.ctrlAddAbove": "Ctrl + clic pour ajouter au-dessus",
   "toolbox.typeToSearch": "Saisissez un terme de recherche",
-  "popover.search": "Rechercher",
+  "popover.search": "Rechercher une action…",
   "popover.nothingFound": "Aucun résultat",
   "popover.convertTo": "Convertir en",
   "toolNames.text": "Texte",

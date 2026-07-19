@@ -7,7 +7,7 @@
   "toolbox.optionAddAbove": "⌥ คลิกเพื่อเพิ่มด้านบน",
   "toolbox.ctrlAddAbove": "Ctrl คลิกเพื่อเพิ่มด้านบน",
   "toolbox.typeToSearch": "พิมพ์เพื่อค้นหา",
-  "popover.search": "ค้นหา",
+  "popover.search": "ค้นหาการดำเนินการ…",
   "popover.nothingFound": "ไม่พบผลลัพธ์",
   "popover.convertTo": "แปลงเป็น",
   "toolNames.text": "ข้อความ",

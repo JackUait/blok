@@ -269,7 +269,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-089` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-078` | pending |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-079` | pending |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
@@ -447,6 +447,37 @@ dictionary and 210 static source references.
 All locale rows remain `pending`, and the digest table remains empty, until
 their two complete 546-entry review passes are performed as required by reset
 rule 2.
+
+## Action-Oriented Popover Search Source Migration
+
+Commit `1e62b3e9` changed English `popover.search` from the generic placeholder
+`Search` to `Find an action…`. The same key labels search inputs in the
+toolbox, block-settings menu, and inline-action popover, so every localized
+value must now name the action object rather than retain a bare search verb or
+noun.
+
+The 546-key migration had already reset every locale row and removed all
+digests, so this later-discovered source-value dependency does not preserve or
+invalidate any completed current pass. `F-en-079` records the approved English
+source wording. `F-global-004` tracks all 68 localized dependencies and blocks
+terminal verification until its independently challenged matrix is applied.
+
+Remediation is complete. The first full matrix challenge corrected 23 register
+mismatches in the draft, replacing polite-plural imperatives with the
+infinitive, nominal, or informal-singular UI forms already established by
+those locales. A distinct second reviewer then inspected every one of the 68
+corrected values and accepted all of them, including explicit
+script-and-morphology checks for the lower-resource Dhivehi, Kurdish, Lao,
+Burmese, Pashto, Sindhi, and Uyghur entries. The executable matrix has complete
+68-locale coverage, uses NFC text and exactly one terminal U+2026 ellipsis per
+value, and reuses each dictionary's `popover.actions` terminology.
+
+Before remediation, the coverage case passed and all 68 exact wording cases
+failed against the old generic values. After applying the reviewed matrix, all
+69 action-placeholder cases, all 2,237 guideline-contract cases, the i18n
+module regression, 87 scanner cases, and the live checker pass. The checker
+reports 546 complete, structurally valid keys in every dictionary and 210
+static source references.
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -2258,6 +2289,7 @@ follows the global transition rule above.
 | `F-en-076` | `en` | `a11y.movedUp` | accessibility / selection cardinality | `"Block moved up to position {position} of {total}"` | `"Moved up to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
 | `F-en-077` | `en` | `a11y.movedDown` | accessibility / selection cardinality | `"Block moved down to position {position} of {total}"` | `"Moved down to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
 | `F-en-078` | `en` | `tools.colorPicker.recentlyUsed` | missing key / hard-coded fallback / source coverage | `missing; caller falls back to "Recently used"` | `"Recently used"` | The committed color-picker section renders this sentence-case heading above recent color swatches. A file-local constant hid the missing key from the former scanner, while the caller bypassed localization with raw English. The direct source key removes that fallback. Post-commit review then caught the regex resolver's scope, comment, and interpolation false negatives; three failing regressions now pass with lexical TypeScript-AST resolution, as do the component regression, exact English expectation, and live source-coverage check. | verified |
+| `F-en-079` | `en` | `popover.search` | source wording / caller context | `"Search"` | `"Find an action…"` | The shared placeholder filters action choices in the toolbox, block-settings menu, and inline-action popover. Naming the action object tells users what the field searches while the native ellipsis signals that typing continues the interaction. The committed source expectation and direct i18n module regression pass. | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
 | `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird der verschachtelte Inhalt auf die oberste Ebene verschoben. Fortfahren?"` | The source-only warning must work for one or many and avoid needlessly technical `Konvertierung`. The final source uses the count-neutral collective “nested content”; German mirrors it with singular `der verschachtelte Inhalt`, avoiding both the old plural pronoun and a forced distributive construction. | verified |
@@ -4063,6 +4095,7 @@ follows the global transition rule above.
 | `F-global-001` | all non-English | 77 changed English source keys | source dependency | Localized values have not been re-reviewed against the 70 corrected source values and seven new keys. | All 5,236 dependent values have a current reviewed disposition, and every required localized correction is applied. | All 77 dependencies were inspected in all 68 localized dictionaries against their callers or documented contracts. Executable emoji and movement matrices, exact placeholder and NFC checks, all 1,448 synchronized localized findings, the 1,743-case guideline contract, and the live 545-key checker verify the final state; complete locale passes remain separately required. | verified |
 | `F-global-002` | all non-English | four expanded emoji category keys | source dependency / category scope / accessibility | The 68 localized dictionaries still use one-part labels for some or all of the newly expanded smileys-and-people, animals-and-nature, food-and-drink, and travel-and-places source categories. | Apply the independently reviewed native four-label matrix to all 68 localized dictionaries, retaining a current value only when it already expresses both scopes. | Three independent language-family reviews inspected all 272 visible and ARIA labels against runtime category contents, bundled Emoji Mart data, Unicode CLDR, and official Apple, Google, Microsoft, Android, and native-language product terminology. The executable 68-locale matrix records all 253 required corrections and 19 valid retentions. | verified |
 | `F-global-003` | all non-English | tools.colorPicker.recentlyUsed localized labels | source dependency / missing key / hard-coded fallback / false friend | The committed recently-used color section had no localized dictionary key and fell back to raw English in every non-English locale; the first matrix also used Yiddish `לעצטנס געוויינט`, whose participle means “cried/wept,” not product “used.” | Add the independently reviewed context-aware label to all 68 localized dictionaries, use Yiddish `לעצטנס געניצט`, and require direct dictionary resolution in the caller. | Two context challenges corrected Norwegian plural agreement and completed the Burmese attributive phrase; a third independent challenge caught the Yiddish false friend and explicitly accepted the other 67 values. The corrected Yiddish expectation failed before remediation. The final 69/69 matrix cases, 59/59 caller cases, 87/87 scanner cases, live 546-key checker, and full guideline contract pass. | verified |
+| `F-global-004` | all non-English | popover.search localized action placeholders | source dependency / caller context | All 68 localized values translated the old generic `Search` source and omitted the newly explicit action object. | Apply the independently reviewed action-oriented placeholder matrix to all 68 localized dictionaries, preserving native register and ellipsis. | The first full challenge corrected 23 register mismatches; a distinct second reviewer accepted all 68 corrected values, including explicit low-resource script-and-morphology checks. The final 69/69 matrix cases, all 2,237 guideline cases, i18n module regression, 87 scanner cases, and live 546-key/210-reference checker pass. | verified |
 
 ## Exact-English Retentions
 

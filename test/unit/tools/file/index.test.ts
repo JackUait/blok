@@ -384,6 +384,27 @@ describe('FileTool — image auto-convert', () => {
 describe('FileTool — caption & read-only', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('uses the localized caption placeholder when config does not override it', () => {
+    const api = createMockApi({
+      i18n: {
+        t: (key: string) => key === 'tools.file.captionPlaceholder'
+          ? 'Dateibeschriftung schreiben…'
+          : key,
+        has: (key: string) => key === 'tools.file.captionPlaceholder',
+      },
+    });
+    const tool = new FileTool(createOptions(
+      { url: 'https://cdn/doc.pdf', captionVisible: true },
+      {},
+      undefined,
+      api,
+    ));
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="file-caption"]')?.getAttribute('data-placeholder'))
+      .toBe('Dateibeschriftung schreiben…');
+  });
+
   it('persists the caption on blur', () => {
     const block = createMockBlock();
     const tool = new FileTool(createOptions({ url: 'https://cdn/doc.pdf', captionVisible: true }, {}, block));

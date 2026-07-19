@@ -230,7 +230,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   volume.setAttribute('data-role', 'volume');
   volume.setAttribute('aria-label', i18nLabel('volume', 'Volume'));
 
-  const fullscreen = button('fullscreen', i18nLabel('fullscreen', 'Fullscreen'), IconExpandFullscreen);
+  const fullscreen = button('fullscreen', i18nLabel('fullscreen', 'Full screen'), IconExpandFullscreen);
 
   const volumeWrap = document.createElement('div');
   volumeWrap.className = 'blok-video-controls__volume-wrap';
@@ -482,7 +482,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
     const isFull = document.fullscreenElement === figure;
     figure.setAttribute('data-fullscreen', String(isFull));
     fullscreen.innerHTML = isFull ? IconPlayerFullscreenExit : IconExpandFullscreen;
-    fullscreen.setAttribute('aria-label', isFull ? i18nLabel('fullscreenExit', 'Exit fullscreen') : i18nLabel('fullscreen', 'Fullscreen'));
+    fullscreen.setAttribute('aria-label', isFull ? i18nLabel('fullscreenExit', 'Exit full screen') : i18nLabel('fullscreen', 'Full screen'));
     // Lift the live caption into the top title bar on entry; clear it on exit so
     // it can pick up later edits next time. Empty caption → no bar.
     if (isFull) {

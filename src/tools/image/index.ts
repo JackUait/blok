@@ -31,7 +31,7 @@ import {
   IconImage,
   IconReplace,
 } from '../../components/icons';
-import { DEFAULT_CAPTION_PLACEHOLDER, DEFAULT_RELOAD_ATTEMPTS, URL_PATTERN } from './constants';
+import { DEFAULT_RELOAD_ATTEMPTS, URL_PATTERN } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
@@ -56,6 +56,7 @@ import { Uploader, type UploadResult } from './uploader';
 import { convertGifToWebm } from './gif-to-webm';
 import { downloadImage } from './download';
 import { resolveConvertedUploader } from './converted-uploader';
+import { tr } from './i18n';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -803,7 +804,8 @@ export class ImageTool implements BlockTool {
       this.observeOverlayWidth(figure, overlay);
     }
 
-    const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
+    const placeholder = this.config.captionPlaceholder
+      ?? tr(this.api.i18n, 'tools.image.captionPlaceholder');
     const captionVisible = this.data.captionVisible !== false;
     const captionRow = renderCaptionRow({
       caption: {

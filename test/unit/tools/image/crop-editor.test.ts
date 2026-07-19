@@ -314,7 +314,7 @@ describe('crop-editor', () => {
     const root = container.querySelector<HTMLElement>('.blok-image-crop-editor')!;
     expect(root.getAttribute('aria-label')).toBe('Crop image');
     const group = container.querySelector<HTMLElement>('[data-action="ratio"]')!;
-    expect(group.getAttribute('aria-label')).toBe('Aspect ratio');
+    expect(group.getAttribute('aria-label')).toBe('Crop shape');
     const reset = container.querySelector<HTMLButtonElement>('[data-action="reset"]')!;
     expect(reset.textContent).toBe('Reset');
     const cancel = container.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;

@@ -3,9 +3,12 @@ import { VideoTool } from '../../../../src/tools/video';
 import type { VideoData, VideoConfig } from '../../../../types/tools/video';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, PatternPasteEvent } from '../../../../types';
 
-const createMockApi = (): API => ({
+const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
-  i18n: { t: (k: string) => k, has: () => false },
+  i18n: {
+    t: (k: string) => messages[k] ?? k,
+    has: (k: string) => k in messages,
+  },
 } as unknown as API);
 
 const createMockBlock = (): BlockAPI => ({
@@ -41,6 +44,17 @@ describe('VideoTool — RENDERED state', () => {
     expect(video.hasAttribute('controls')).toBe(false);
     expect(root.querySelector('[data-role="video-controls"]')).not.toBeNull();
     expect(root.querySelector('[data-role="video-controls"] [data-action="play-toggle"]')).not.toBeNull();
+  });
+
+  it('uses the localized caption placeholder when config does not override it', () => {
+    const tool = new VideoTool({
+      ...createOptions({ url: 'https://x/y.mp4' }),
+      api: createMockApi({ 'tools.video.captionPlaceholder': 'Videobeschriftung schreiben…' }),
+    });
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="video-caption"]')?.getAttribute('data-placeholder'))
+      .toBe('Videobeschriftung schreiben…');
   });
 
   it('attaches custom controls even in read-only mode (viewers can still play)', () => {

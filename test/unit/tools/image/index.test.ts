@@ -11,9 +11,12 @@ vi.mock('../../../../src/tools/image/gif-to-webm', () => ({
 import { convertGifToWebm } from '../../../../src/tools/image/gif-to-webm';
 const mockConvert = vi.mocked(convertGifToWebm);
 
-const createMockApi = (): API => ({
+const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
-  i18n: { t: (k: string) => k, has: () => false },
+  i18n: {
+    t: (k: string) => messages[k] ?? k,
+    has: (k: string) => k in messages,
+  },
 } as unknown as API);
 
 const createMockBlock = (): BlockAPI => ({
@@ -46,6 +49,17 @@ describe('ImageTool — RENDERED state', () => {
     expect(img).not.toBeNull();
     if (!img) throw new Error('img missing');
     expect(img.getAttribute('src')).toBe('https://x/y.png');
+  });
+
+  it('uses the localized caption placeholder when config does not override it', () => {
+    const tool = new ImageTool({
+      ...createOptions({ url: 'https://x/y.png' }),
+      api: createMockApi({ 'tools.image.captionPlaceholder': 'Bildunterschrift schreiben…' }),
+    });
+    const root = tool.render();
+
+    expect(root.querySelector('.blok-image-caption')?.getAttribute('data-placeholder'))
+      .toBe('Bildunterschrift schreiben…');
   });
 
   it('save() returns the persisted shape', () => {
@@ -1882,4 +1896,3 @@ describe('ImageTool — GIF auto-conversion', () => {
     expect(label?.textContent).toBe('tools.image.converting');
   });
 });
-

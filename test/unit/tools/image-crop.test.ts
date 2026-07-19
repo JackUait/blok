@@ -33,7 +33,7 @@ import type { ImageConfig, ImageData } from '../../../types/tools/image';
 
 const EN: Record<string, string> = {
   'tools.image.cropDialogLabel': 'Crop image',
-  'tools.image.cropAspectRatio': 'Aspect ratio',
+  'tools.image.cropAspectRatio': 'Crop shape',
   'tools.image.cropReset': 'Reset',
   'tools.image.cropCancel': 'Cancel',
   'tools.image.cropDone': 'Done',

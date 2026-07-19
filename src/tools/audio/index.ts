@@ -345,7 +345,7 @@ export class AudioTool implements BlockTool {
       this.errorMessage = tr(
         this.api.i18n,
         'tools.audio.errorGoogleDrive',
-        'Google Drive links can’t be played directly — download the file and upload it here instead.',
+        'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
       );
       this.state = 'ERROR';
       this.renderState();
@@ -355,7 +355,7 @@ export class AudioTool implements BlockTool {
       this.errorMessage = tr(
         this.api.i18n,
         'tools.audio.errorOneDrive',
-        'OneDrive links can’t be played directly — download the file and upload it here instead.',
+        'Audio from OneDrive can’t be played directly. Download the file and upload it here instead.',
       );
       this.state = 'ERROR';
       this.renderState();
@@ -507,7 +507,8 @@ export class AudioTool implements BlockTool {
 
   /** Build a caption row (with its blur handler wired) ready to mount. */
   private createCaptionRow(): HTMLElement {
-    const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
+    const placeholder = this.config.captionPlaceholder
+      ?? tr(this.api.i18n, 'tools.audio.captionPlaceholder', DEFAULT_CAPTION_PLACEHOLDER);
     const row = renderCaptionRow({
       value: this.data.caption ?? '',
       placeholder,

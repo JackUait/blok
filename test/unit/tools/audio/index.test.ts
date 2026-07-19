@@ -79,9 +79,12 @@ vi.mock('../../../../src/tools/audio/uploader', () => {
   return { AudioUploadError, Uploader };
 });
 
-const createMockApi = (): API => ({
+const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
-  i18n: { t: (k: string) => k, has: () => false },
+  i18n: {
+    t: (k: string) => messages[k] ?? k,
+    has: (k: string) => k in messages,
+  },
 } as unknown as API);
 
 const createMockBlock = (): BlockAPI => ({
@@ -197,7 +200,9 @@ describe('AudioTool', () => {
     await Promise.resolve();
 
     const error = el.querySelector('[data-role="audio-error"]');
-    expect(error?.textContent).toContain('Google Drive');
+    expect(error?.textContent).toContain(
+      'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
+    );
   });
 
   it('shows a OneDrive-specific error when the link needs an upload backend', async () => {
@@ -218,7 +223,9 @@ describe('AudioTool', () => {
     await Promise.resolve();
 
     const error = el.querySelector('[data-role="audio-error"]');
-    expect(error?.textContent).toContain('OneDrive');
+    expect(error?.textContent).toContain(
+      'Audio from OneDrive can’t be played directly. Download the file and upload it here instead.',
+    );
   });
 
   it('with sources "upload" ignores a pasted URL pattern (no url set)', async () => {
@@ -387,6 +394,17 @@ describe('AudioTool', () => {
     captionEl!.textContent = 'My caption';
     captionEl!.dispatchEvent(new Event('blur'));
     expect(tool.save().caption).toBe('My caption');
+  });
+
+  it('uses the localized caption placeholder when config does not override it', () => {
+    const tool = new AudioTool({
+      ...opts({ url: 'https://x/y.mp3' }),
+      api: createMockApi({ 'tools.audio.captionPlaceholder': 'Audiobeschriftung schreiben…' }),
+    });
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="audio-caption"]')?.getAttribute('data-placeholder'))
+      .toBe('Audiobeschriftung schreiben…');
   });
 
   const activateSetting = (tool: AudioTool, name: string): void => {

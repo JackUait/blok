@@ -417,7 +417,8 @@ export class VideoTool implements BlockTool {
     });
     if (this.theater) this.controlsHandle?.setTheater(true);
 
-    const placeholder = this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER;
+    const placeholder = this.config.captionPlaceholder
+      ?? tr(this.api.i18n, 'tools.video.captionPlaceholder', DEFAULT_CAPTION_PLACEHOLDER);
     const captionVisible = this.data.captionVisible !== false;
     if (captionVisible || !this.readOnly) {
       figure.appendChild(renderCaptionRow({

@@ -13,7 +13,7 @@ import type { FileConfig, FileData, FileUploadResult } from '../../../types/tool
 import type { ImageData } from '../../../types/tools/image';
 import type { VideoData } from '../../../types/tools/video';
 import { IconCaption, IconCopy, IconDownload, IconFile, IconReplace } from '../../components/icons';
-import { DEFAULT_CAPTION_PLACEHOLDER, PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
+import { PASTE_EXTENSIONS, PASTE_MIME_TYPES } from './constants';
 import { renderEmptyState, type EmptyStateElement } from './empty-state';
 import { renderUploadingState, type UploadingStateElement } from './uploading-state';
 import { renderCaptionRow, renderFileCard } from './ui';
@@ -402,7 +402,8 @@ export class FileTool implements BlockTool {
     if (captionVisible && (!this.readOnly || hasCaption)) {
       wrap.appendChild(renderCaptionRow({
         value: this.data.caption ?? '',
-        placeholder: this.config.captionPlaceholder ?? DEFAULT_CAPTION_PLACEHOLDER,
+        placeholder: this.config.captionPlaceholder
+          ?? this.api.i18n.t('tools.file.captionPlaceholder'),
         readOnly: this.readOnly,
         onChange: (next) => {
           if (next !== this.data.caption) {

@@ -865,6 +865,16 @@ describe('video controls — volume + fullscreen', () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 
+  it('uses two-word English labels for entering and leaving full screen', () => {
+    const fullscreen = q(h.controls, '[data-action="fullscreen"]');
+    expect(fullscreen.getAttribute('aria-label')).toBe('Full screen');
+
+    Object.defineProperty(document, 'fullscreenElement', { value: h.figure, configurable: true });
+    document.dispatchEvent(new Event('fullscreenchange'));
+
+    expect(fullscreen.getAttribute('aria-label')).toBe('Exit full screen');
+  });
+
   it('surfaces the caption as a top title bar in fullscreen, hidden otherwise', () => {
     const cap = document.createElement('div');
     cap.setAttribute('data-role', 'video-caption');

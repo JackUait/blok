@@ -713,7 +713,7 @@ describe('English fallback when i18n is omitted', () => {
     expectLabel('zoom-reset', 'Reset zoom');
     expectLabel('lightbox-download', 'Download');
     expectLabel('lightbox-copy-url', 'Copy URL');
-    expectLabel('lightbox-collapse', 'Exit fullscreen');
+    expectLabel('lightbox-collapse', 'Exit full screen');
     close();
   });
 

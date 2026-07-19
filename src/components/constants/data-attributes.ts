@@ -68,6 +68,10 @@ export const DATA_ATTR = {
    *  Public styling hook — lets hosts (and Blok's own CSS, e.g. the
    *  gutter auto-collapse) key rules off the editing state without JS. */
   readonly: 'data-blok-readonly',
+  /** Present on the editor wrapper when config.hideToolbar is true.
+   *  Public styling hook — drives the gutter auto-collapse (the gutter
+   *  exists solely to house the toolbar's +/⠿ controls). */
+  toolbarHidden: 'data-blok-toolbar-hidden',
 
   // ============================================
   // Editor Modes

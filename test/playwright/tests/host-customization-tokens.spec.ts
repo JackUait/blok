@@ -58,6 +58,8 @@ interface CreateOptions {
   readOnly?: boolean;
   containerStyle?: Record<string, string>;
   styleTokens?: Record<string, string>;
+  hideToolbar?: boolean;
+  placeholder?: string;
 }
 
 const createBlok = async (page: Page, options: CreateOptions = {}): Promise<void> => {
@@ -77,18 +79,20 @@ const createBlok = async (page: Page, options: CreateOptions = {}): Promise<void
   }
 
   await page.evaluate(
-    async ({ holder, initialData, readOnly, styleTokens }) => {
+    async ({ holder, initialData, readOnly, styleTokens, hideToolbar, placeholder }) => {
       const blok = new window.Blok({
         holder,
         ...(initialData ? { data: initialData } : {}),
         ...(readOnly !== undefined ? { readOnly } : {}),
         ...(styleTokens ? { style: { tokens: styleTokens } } : {}),
+        ...(hideToolbar !== undefined ? { hideToolbar } : {}),
+        ...(placeholder !== undefined ? { placeholder } : {}),
       });
 
       window.blokInstance = blok;
       await blok.isReady;
     },
-    { holder: HOLDER_ID, initialData: options.data ?? null, readOnly: options.readOnly, styleTokens: options.styleTokens }
+    { holder: HOLDER_ID, initialData: options.data ?? null, readOnly: options.readOnly, styleTokens: options.styleTokens, hideToolbar: options.hideToolbar, placeholder: options.placeholder }
   );
 };
 
@@ -297,4 +301,47 @@ test('style.tokens override is applied to body-mounted popover UI', async ({ pag
   const value = await popover.evaluate((el) => getComputedStyle(el).getPropertyValue('--blok-popover-bg').trim());
 
   expect(value).toBe('rgb(1, 2, 3)');
+});
+
+test('hideToolbar keeps the toolbar closed on hover and collapses the gutter', async ({ page }) => {
+  await createBlok(page, {
+    hideToolbar: true,
+    data: { blocks: [{ type: 'paragraph', data: { text: 'No toolbar here' } }] },
+  });
+
+  const wrapper = page.locator(BLOK_INTERFACE_SELECTOR);
+
+  await expect(wrapper).toHaveAttribute('data-blok-toolbar-hidden', '');
+
+  const redactor = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-redactor]`);
+
+  await expect(redactor).toHaveCSS('padding-inline-start', '0px');
+
+  const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`);
+
+  await paragraph.hover();
+
+  // The hover toolbar (plus / drag controls) must never open.
+  const plusButton = page.locator('[data-blok-testid="plus-button"]');
+
+  await expect(plusButton).toBeHidden();
+});
+
+test('--blok-placeholder-color drives the empty-paragraph placeholder color in production', async ({ page }) => {
+  await createBlok(page, {
+    containerStyle: { '--blok-placeholder-color': 'rgb(255, 0, 0)' },
+    placeholder: 'Type something…',
+    data: { blocks: [{ type: 'paragraph', data: { text: '' } }] },
+  });
+
+  const editable = page
+    .locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`)
+    .locator('[contenteditable]')
+    .first();
+
+  await editable.click();
+
+  const placeholderColor = await editable.evaluate((el) => getComputedStyle(el, '::before').color);
+
+  expect(placeholderColor).toBe('rgb(255, 0, 0)');
 });

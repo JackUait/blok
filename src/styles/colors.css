@@ -42,6 +42,14 @@
   --color-search-input-border: var(--blok-search-input-border);
   --color-search-input-focus-border: var(--blok-search-input-focus-border);
   --color-search-input-placeholder: var(--blok-search-input-placeholder);
+  /* Empty-block placeholder text (::before). The --blok-placeholder-color
+     hook is deliberately NOT declared in the palette: a palette declaration
+     lands on the wrapper element itself, and custom-property inheritance
+     resolves from the nearest ancestor — it would shadow a host's value set
+     on any container above the editor. Dangling with a fallback keeps the
+     hook overridable from anywhere (and tracks --blok-gray-text so dark
+     themes inherit it). */
+  --color-block-placeholder: var(--blok-placeholder-color, var(--blok-gray-text));
   --color-link-input-border: var(--blok-link-input-border);
   --color-popover-icon-bg: var(--blok-popover-icon-bg);
   --color-popover-icon-active-bg: var(--blok-popover-icon-active-bg);

@@ -306,6 +306,61 @@ describe('Toolbar module interactions', () => {
     (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = originalBlockSelection;
   });
 
+  it('does not open on moveAndOpen when config.hideToolbar is true', () => {
+    (toolbar as unknown as { config: { hideToolbar?: boolean } }).config.hideToolbar = true;
+
+    const holder = document.createElement('div');
+    const pluginsContent = document.createElement('div');
+    holder.appendChild(pluginsContent);
+    const block = {
+      id: 'block-1',
+      name: 'paragraph',
+      holder,
+      pluginsContent,
+      isEmpty: false,
+      cleanupDraggable: vi.fn(),
+      setupDraggable: vi.fn(),
+      getToolbarAnchorElement: vi.fn(() => undefined),
+    };
+
+    (toolbar as unknown as { toolboxInstance: { opened: boolean; close: () => void } }).toolboxInstance = {
+      opened: false,
+      close: vi.fn(),
+    };
+
+    (toolbar as unknown as { moveAndOpen: (block: unknown) => void }).moveAndOpen(block);
+
+    expect((toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock).toBeNull();
+    expect(toolbar.opened).toBe(false);
+  });
+
+  it('does not move for multiple blocks when config.hideToolbar is true', () => {
+    (toolbar as unknown as { config: { hideToolbar?: boolean } }).config.hideToolbar = true;
+
+    const block1 = { name: 'block1', holder: document.createElement('div') };
+    const block2 = { name: 'block2', holder: document.createElement('div') };
+
+    const blok = getBlok();
+    const originalBlockSelection = blok.BlockSelection;
+    (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = {
+      ...originalBlockSelection,
+      get selectedBlocks() {
+        return [block1, block2];
+      },
+    } as typeof blok.BlockSelection;
+
+    (toolbar as unknown as { toolboxInstance: { opened: boolean } }).toolboxInstance = {
+      opened: false,
+    };
+
+    (toolbar as unknown as { moveAndOpenForMultipleBlocks: () => void }).moveAndOpenForMultipleBlocks();
+
+    expect((toolbar as unknown as { hoveredBlock: unknown }).hoveredBlock).toBeNull();
+    expect(toolbar.opened).toBe(false);
+
+    (toolbar as unknown as { Blok: { BlockSelection: typeof originalBlockSelection } }).Blok.BlockSelection = originalBlockSelection;
+  });
+
   it('resolves a cell block to its parent table block in moveAndOpen', () => {
     // Create a DOM structure simulating a table with a cell block inside
     const tableBlockHolder = document.createElement('div');

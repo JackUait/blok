@@ -289,6 +289,11 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // back to the general list token so checklists follow it unless overridden.
   '--blok-list-padding-start',
   '--blok-checklist-padding-start',
+  // Consumer-supplied empty-block placeholder color; falls back to
+  // --blok-gray-text. Deliberately never declared in the palette — a wrapper
+  // declaration would shadow ancestor-level host overrides via
+  // nearest-ancestor custom-property inheritance.
+  '--blok-placeholder-color',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {

@@ -290,6 +290,13 @@ const editor = new Blok(config);`,
           "Fires once when the editor becomes ready, receiving the fully-initialized Blok instance",
       },
       {
+        option: "onEnter",
+        type: "(event: KeyboardEvent, api: API) => boolean | void",
+        default: "undefined",
+        description:
+          "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for Shift+Enter, tools with enableLineBreaks, or while a popover/toolbar owns Enter. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph.",
+      },
+      {
         option: "autofocus",
         type: "boolean",
         default: "false",
@@ -336,7 +343,8 @@ const editor = new Blok(config);`,
       {
         name: "blocks.render(data)",
         returnType: "Promise<void>",
-        description: "Render passed JSON data as blocks.",
+        description:
+          "Render passed JSON data as blocks. The editor deep-clones the data, so the passed object is never mutated or retained — frozen store state (Redux, Immer) can be passed directly.",
         example: `const data = {
   blocks: [
     { id: '1', type: 'paragraph', data: { text: 'Hello World' } },
@@ -1154,7 +1162,7 @@ editor.selection.restore();`,
     badge: "Styles",
     title: "Styles API",
     description:
-      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are fixed — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active, collapsing the gutter to 0 automatically. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config.",
+      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are fixed — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active, collapsing the gutter to 0 automatically. The same collapse applies with `hideToolbar: true` in the constructor config — the hover toolbar never opens and the wrapper carries `data-blok-toolbar-hidden`, so no gutter space is reserved. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config.",
     example: `// Customize the editor from your host app via CSS custom properties —
 // no need to target Blok's internal test IDs or data attributes.
 .my-editor-container {
@@ -1179,6 +1187,9 @@ editor.selection.restore();`,
 
   /* Placeholder color of popover search inputs */
   --blok-search-input-placeholder: rgba(112, 118, 132, 0.8);
+
+  /* Placeholder color of empty blocks (default: follows --blok-gray-text) */
+  --blok-placeholder-color: rgba(112, 118, 132, 0.6);
 
   /* Heading typography (defaults mirror the built-in scale) */
   --blok-heading-1-font-size: 32px;
@@ -1931,7 +1942,7 @@ export function Editor() {
         type: "OutputData",
         default: "—",
         description:
-          "Editor content (reactive). Seeds the initial document; after mount, new content re-renders in place. Updates are deep-equal–deduped, so echoing the editor's own output back never clobbers the caret.",
+          "Editor content (reactive). Seeds the initial document; after mount, new content — including transitions to and from empty content — re-renders in place on the same instance (never recreates the editor). Updates are deep-equal–deduped, so echoing the editor's own output back never clobbers the caret.",
       },
       {
         option: "onSave",
@@ -1952,7 +1963,7 @@ export function Editor() {
         type: "(editor: Blok) => void",
         default: "—",
         description:
-          "Called once with the live Blok instance. Fires after the forwarded ref commits, so ref.current is also populated at this point.",
+          "Called with the live Blok instance, exactly once per editor instance. Fires after the forwarded ref commits, so ref.current is also populated. The editor is recreated (and onReady re-fired) only when deps change or the component remounts — data changes, including to/from empty content, re-render in place and never re-fire it.",
       },
       {
         option: "deps",

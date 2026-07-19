@@ -388,6 +388,19 @@
   --blok-editor-gutter-end: 0px;
 }
 
+/*
+ * Same collapse when the hover toolbar is disabled via config.hideToolbar
+ * (the wrapper is stamped with data-blok-toolbar-hidden in UI.make): the
+ * gutter exists solely to house the toolbar's +/⠿ controls, so a toolbar-less
+ * editor reserves no space for them. Token redeclaration for the same
+ * production-cascade reasons as the read-only rule above; a host can opt the
+ * gutter back in with any (0,1,1)+ declaration on the wrapper.
+ */
+:where([data-blok-toolbar-hidden]) {
+  --blok-editor-gutter-start: 0px;
+  --blok-editor-gutter-end: 0px;
+}
+
 /**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation

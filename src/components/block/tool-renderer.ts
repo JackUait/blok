@@ -237,11 +237,11 @@ export class ToolRenderer {
     // Placeholder styling classes using Tailwind arbitrary variants
     const placeholderClasses = [
       'empty:before:pointer-events-none',
-      'empty:before:text-gray-text',
+      'empty:before:text-block-placeholder',
       'empty:before:cursor-text',
       'empty:before:content-[attr(data-blok-placeholder)]',
       'data-[blok-empty=true]:before:pointer-events-none',
-      'data-[blok-empty=true]:before:text-gray-text',
+      'data-[blok-empty=true]:before:text-block-placeholder',
       'data-[blok-empty=true]:before:cursor-text',
       'data-[blok-empty=true]:before:content-[attr(data-blok-placeholder)]',
     ];

@@ -15,9 +15,13 @@
  * runtime-overridable custom property so hosts never have to target
  * internals again.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { css as searchInputCss } from '../../../src/components/utils/popover/components/search-input/search-input.const';
+import { PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES } from '../../../src/components/utils/placeholder';
 import { BASE_STYLES, CHECKLIST_ITEM_STYLES, ITEM_STYLES } from '../../../src/tools/list/constants';
 
 import { readMainCss } from './helpers/read-main-css';
@@ -103,6 +107,48 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(body).not.toBeNull();
       expect(body).toMatch(/--blok-editor-gutter-start:\s*0px/);
       expect(body).toMatch(/--blok-editor-gutter-end:\s*0px/);
+    });
+
+    it('auto-collapses the gutter when the toolbar is hidden via config.hideToolbar', () => {
+      const body = findRuleBody(css, ':where([data-blok-toolbar-hidden])');
+
+      expect(body).not.toBeNull();
+      expect(body).toMatch(/--blok-editor-gutter-start:\s*0px/);
+      expect(body).toMatch(/--blok-editor-gutter-end:\s*0px/);
+    });
+  });
+
+  describe('block placeholder color', () => {
+    it('maps a Tailwind color to the --blok-placeholder-color token with a gray-text fallback', () => {
+      expect(css).toMatch(
+        /--color-block-placeholder:\s*var\(--blok-placeholder-color,\s*var\(--blok-gray-text\)\)/
+      );
+    });
+
+    it('keeps the hook out of the palette so ancestor-level host overrides are not shadowed by the wrapper', () => {
+      // A palette declaration would land on the wrapper element itself and,
+      // via nearest-ancestor custom-property inheritance, beat any value a
+      // host sets on a container above the editor.
+      expect(css).not.toMatch(/--blok-placeholder-color:\s*[^;]+;/);
+    });
+
+    it('styles every placeholder ::before through the token instead of a hardcoded color', () => {
+      const classArrays = [PLACEHOLDER_CLASSES, PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES];
+
+      for (const classes of classArrays) {
+        const joined = classes.join(' ');
+
+        expect(joined).toContain('before:text-block-placeholder');
+        expect(joined).not.toContain('before:text-gray-text');
+      }
+
+      const toolRendererSource = readFileSync(
+        resolve(__dirname, '../../../src/components/block/tool-renderer.ts'),
+        'utf8'
+      );
+
+      expect(toolRendererSource).toContain('before:text-block-placeholder');
+      expect(toolRendererSource).not.toContain('before:text-gray-text');
     });
   });
 

@@ -140,7 +140,9 @@ export interface BlokConfig {
   onBeforePaste?: (html: string) => string | null;
 
   /**
-   * If true, toolbar won't be shown
+   * If true, the hover toolbar (plus button / drag handle) never opens and the
+   * editor gutter reserved for it collapses (the wrapper is stamped with
+   * `data-blok-toolbar-hidden`). The keyboard "/" menu keeps working.
    */
   hideToolbar?: boolean;
 
@@ -322,6 +324,24 @@ export interface BlokConfig {
    * @param api - blok.js api
    */
   onSave?(data: OutputData, api: API): void;
+
+  /**
+   * Fires when the user presses Enter inside a block, right before blok would
+   * split the block or create a new one. Return `true` to mark the event as
+   * handled — blok then suppresses its default block split/create (it still
+   * calls `preventDefault()` so the browser doesn't insert a native newline).
+   * Return `false`/`undefined` to keep the default behavior.
+   *
+   * Designed for chat-input-style consumers ("Enter sends the message") — pair
+   * it with a single-block setup instead of subclassing Paragraph. It never
+   * fires for Shift+Enter (soft line break), for tools with `enableLineBreaks`
+   * (e.g. code), or while a popover/toolbar flipper owns the Enter key.
+   *
+   * @param event - the original keydown event
+   * @param api - blok.js api
+   * @returns true when the event was handled and the default split/create should be suppressed
+   */
+  onEnter?(event: KeyboardEvent, api: API): boolean | void;
 
   /**
    * Transforms the blocks array just before it is rendered, on every render

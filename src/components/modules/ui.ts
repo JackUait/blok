@@ -643,6 +643,13 @@ export class UI extends Module<UINodes> {
     if (this.isRtl) {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
     }
+    if (this.config.hideToolbar === true) {
+      /**
+       * Public styling hook: collapses the editor gutter (see main.css) —
+       * with the hover toolbar disabled there are no +/⠿ controls to house.
+       */
+      this.nodes.wrapper.setAttribute(DATA_ATTR.toolbarHidden, '');
+    }
     this.nodes.redactor = $.make('div', [
       // Firefox empty contenteditable fix
       '[&_[contenteditable]:empty]:after:content-["\\feff_"]',

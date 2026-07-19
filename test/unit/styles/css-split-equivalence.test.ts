@@ -406,8 +406,15 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // caption/replace/download on mid-width figures) and an @container
     // display-text step; the three medium-tier selectors outweigh the removed
     // clamps by ~0.3KB. Bumps the multiplier to 1.403.
+    // 2026-07-20: hideToolbar gutter collapse + block placeholder token —
+    // main.css gained the :where([data-blok-toolbar-hidden]) token
+    // redeclaration (config.hideToolbar was dead config; hosts hacked the
+    // gutter away with !important) and colors.css gained
+    // --blok-placeholder-color / --color-block-placeholder so hosts recolor
+    // empty-block placeholders without targeting internals. Bumps the
+    // multiplier to 1.405.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.403);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.405);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

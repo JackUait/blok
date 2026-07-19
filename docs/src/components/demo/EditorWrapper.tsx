@@ -169,8 +169,8 @@ export const EditorWrapper: React.FC<{
 
   return (
     // The host div carries the toolbar-hiding class (the core's hideToolbar
-    // config is dead, and recreating the editor to toggle chrome would flash
-    // the content) and anchors the runtime alignment re-stamping above.
+    // is creation-time config, and recreating the editor to toggle chrome
+    // would flash the content) and anchors the runtime alignment re-stamping.
     <div ref={hostRef} className={settings.hideToolbar ? 'demo-toolbar-hidden' : undefined}>
     <BlokEditor
       ref={handleEditorRef}

@@ -34,9 +34,11 @@ interface EditorSettingsProps {
  * autofocus are creation-time config here, but changing them never recreates
  * the editor (deps stays empty — recreation flashes the content): EditorWrapper
  * re-applies alignment on the live DOM, and autofocus naturally applies on the
- * next load. hideToolbar is dead config in the core, so it isn't passed at all —
- * EditorWrapper hides the toolbar with a CSS host class instead. The editor's
- * theme always mirrors the site theme.
+ * next load. hideToolbar is creation-time config in the core (the toolbar gate
+ * and the data-blok-toolbar-hidden gutter collapse are set at init), so passing
+ * it here couldn't follow live panel toggles — EditorWrapper hides the toolbar
+ * with a CSS host class instead. The editor's theme always mirrors the site
+ * theme.
  */
 export function buildEditorSettingsProps(
   settings: EditorSettings,

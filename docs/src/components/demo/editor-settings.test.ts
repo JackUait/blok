@@ -17,8 +17,9 @@ describe('buildEditorSettingsProps', () => {
     expect(props.autofocus).toBe(false);
     expect(props.style).toEqual({ contentAlign: 'left' });
     expect(props.placeholder).toBeUndefined();
-    // hideToolbar is dead config in the core — the demo hides the toolbar via
-    // CSS instead, so it must not be passed to the editor.
+    // hideToolbar is creation-time config in the core and the demo never
+    // recreates the editor, so live toggling goes through a CSS host class
+    // instead — it must not be passed to the editor.
     expect('hideToolbar' in props).toBe(false);
   });
 

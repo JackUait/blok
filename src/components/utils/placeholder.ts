@@ -16,11 +16,11 @@
  */
 export const PLACEHOLDER_CLASSES: string[] = [
   'empty:before:pointer-events-none',
-  'empty:before:text-gray-text',
+  'empty:before:text-block-placeholder',
   'empty:before:cursor-text',
   'empty:before:content-[attr(data-placeholder)]',
   'data-[blok-empty=true]:before:pointer-events-none',
-  'data-[blok-empty=true]:before:text-gray-text',
+  'data-[blok-empty=true]:before:text-block-placeholder',
   'data-[blok-empty=true]:before:cursor-text',
   'data-[blok-empty=true]:before:content-[attr(data-placeholder)]',
 ];
@@ -31,11 +31,11 @@ export const PLACEHOLDER_CLASSES: string[] = [
  */
 export const PLACEHOLDER_ACTIVE_CLASSES: string[] = [
   'empty:before:pointer-events-none',
-  'empty:before:text-gray-text',
+  'empty:before:text-block-placeholder',
   'empty:before:cursor-text',
   'empty:before:content-[attr(data-blok-placeholder-active)]',
   'data-[empty=true]:before:pointer-events-none',
-  'data-[empty=true]:before:text-gray-text',
+  'data-[empty=true]:before:text-block-placeholder',
   'data-[empty=true]:before:cursor-text',
   'data-[empty=true]:before:content-[attr(data-blok-placeholder-active)]',
 ];
@@ -47,11 +47,11 @@ export const PLACEHOLDER_ACTIVE_CLASSES: string[] = [
  */
 export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
   'empty:focus:before:pointer-events-none',
-  'empty:focus:before:text-gray-text',
+  'empty:focus:before:text-block-placeholder',
   'empty:focus:before:cursor-text',
   'empty:focus:before:content-[attr(data-blok-placeholder-active)]',
   '[&[data-empty=true]:focus]:before:pointer-events-none',
-  '[&[data-empty=true]:focus]:before:text-gray-text',
+  '[&[data-empty=true]:focus]:before:text-block-placeholder',
   '[&[data-empty=true]:focus]:before:cursor-text',
   '[&[data-empty=true]:focus]:before:content-[attr(data-blok-placeholder-active)]',
 ];

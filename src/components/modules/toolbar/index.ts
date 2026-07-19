@@ -454,6 +454,13 @@ export class Toolbar extends Module<ToolbarNodes> {
     }
 
     /**
+     * config.hideToolbar — the hover toolbar (plus / drag controls) never opens
+     */
+    if (this.config.hideToolbar === true) {
+      return;
+    }
+
+    /**
      * Reset explicitlyClosed flag when toolbar is opened
      */
     this.explicitlyClosed = false;
@@ -714,6 +721,13 @@ export class Toolbar extends Module<ToolbarNodes> {
      * readOnly: { hideControls: true } — pure document view, no hover toolbar
      */
     if (this.Blok.ReadOnly.isControlsHidden) {
+      return;
+    }
+
+    /**
+     * config.hideToolbar — the hover toolbar (plus / drag controls) never opens
+     */
+    if (this.config.hideToolbar === true) {
       return;
     }
 

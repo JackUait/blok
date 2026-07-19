@@ -110,10 +110,16 @@ describe('buildPasteMenuItems', () => {
     const templateI18n: PasteMenuI18n = {
       t: (key: string): string => {
         if (key === 'tools.linkPaste.embedVideo') {
-          return 'Embed {provider} video';
+          return 'Embed a video from {provider}';
         }
         if (key === 'tools.linkPaste.embedAudio') {
           return 'Embed {provider} audio';
+        }
+        if (key === 'tools.linkPaste.embedForm') {
+          return 'Embed a form from {provider}';
+        }
+        if (key === 'tools.linkPaste.embedMap') {
+          return 'Embed a map from {provider}';
         }
 
         return key;
@@ -124,7 +130,7 @@ describe('buildPasteMenuItems', () => {
       const items = buildPasteMenuItems([{ type: 'embed' }], templateI18n, vi.fn(), youtubeUrl);
       const embed = asDefaultItem(items[0]);
 
-      expect(embed.title).toBe('Embed YouTube video');
+      expect(embed.title).toBe('Embed a video from YouTube');
       expect(embed.secondaryLabel).toBeUndefined();
     });
 
@@ -137,6 +143,38 @@ describe('buildPasteMenuItems', () => {
       );
 
       expect(asDefaultItem(audio).title).toBe('Embed Spotify audio');
+    });
+
+    it.each([
+      [
+        'https://vk.com/video-1_2',
+        'Embed a video from VK Video',
+      ],
+      [
+        'https://docs.google.com/forms/d/e/form-id/viewform',
+        'Embed a form from Google Forms',
+      ],
+      [
+        'https://storymaps.arcgis.com/stories/0123456789abcdef0123456789abcdef',
+        'Embed a map from ArcGIS StoryMaps',
+      ],
+      [
+        'https://www.openstreetmap.org/#map=12/51.505/-0.09',
+        'Embed a map from OpenStreetMap',
+      ],
+      [
+        'https://v.qq.com/x/page/a1b2c3.html',
+        'Embed a video from Tencent Video',
+      ],
+    ])('keeps the %s provider title grammatical', (url, expected) => {
+      const [item] = buildPasteMenuItems(
+        [{ type: 'embed' }],
+        templateI18n,
+        vi.fn(),
+        url
+      );
+
+      expect(asDefaultItem(item).title).toBe(expected);
     });
 
     it('uses a link-type icon distinct from the generic embed globe', () => {

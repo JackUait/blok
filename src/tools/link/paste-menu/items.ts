@@ -43,7 +43,7 @@ interface PasteMenuItemPresentation {
 
 /**
  * Per link-type presentation of the embed item: the icon and the i18n key of an
- * action template with a `{provider}` placeholder (e.g. "Embed {provider} video"),
+ * action template with a `{provider}` placeholder (e.g. "Embed a video from {provider}"),
  * so the menu reads as "what this link will become".
  */
 const EMBED_TYPE_PRESENTATION: Record<EmbedServiceType, { icon: string; labelKey: string }> = {
@@ -83,7 +83,7 @@ const presentationFor = (type: PasteMenuActionType): PasteMenuItemPresentation =
  * Each item closes the popover on activation and reports its type to `onSelect`.
  *
  * When `url` matches a registered embed provider, the embed item is titled with
- * the provider's link-type action template (e.g. "Embed YouTube video") and
+ * the provider's link-type action template (e.g. "Embed a video from YouTube") and
  * shows the link-type icon instead of the generic globe.
  */
 export function buildPasteMenuItems(

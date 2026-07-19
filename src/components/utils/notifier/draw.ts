@@ -342,11 +342,11 @@ export const prompt = (options: PromptNotifierOptions): HTMLElement => {
 
   btnsWrapper.className = CSS.btnsWrapper;
 
-  okBtn.innerHTML = options.okText || 'Ok';
+  okBtn.innerHTML = options.okText || 'OK';
   okBtn.className = twJoin(CSS.btn, CSS.okBtn);
   okBtn.setAttribute('data-blok-testid', 'notification-confirm-button');
 
-  cancelBtn.innerHTML = 'Cancel';
+  cancelBtn.innerHTML = options.cancelText || 'Cancel';
   cancelBtn.className = twJoin(CSS.btn, CSS.cancelBtn);
   cancelBtn.setAttribute('data-blok-testid', 'notification-cancel-button');
 

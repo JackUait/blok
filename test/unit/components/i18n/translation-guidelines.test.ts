@@ -56,14 +56,15 @@ const RETENTION_CATEGORIES = new Set([
   'established loanword',
 ]);
 const GLOBAL_FINDING_KEYS = new Set([
-  '46 changed English source keys',
+  '62 changed English source keys',
   'four expanded emoji category keys',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'blockSettings.openMenuAction': ' to open the menu',
+  'blockSettings.orConjunction': ' or press ',
   'blockSettings.convertWithChildrenWarning':
-    'Nested blocks: {count}. Converting this block will move them to the top level. Continue?',
+    'Nested blocks: {count}. Converting this block will move the nested content to the top level. Continue?',
   'tools.marker.textColor': 'Text color',
   'tools.toggle.bodyPlaceholder':
     'Empty toggle. Click to add a block, or drag blocks here.',
@@ -99,19 +100,36 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.altDescription':
     'Describe this image for people who can’t see it.',
   'tools.image.viewFullscreen': 'View full screen',
+  'tools.image.exitFullscreen': 'Exit full screen',
+  'tools.image.cropAspectRatio': 'Crop shape',
   'tools.image.errorDefaultMessage':
     'The image couldn’t be loaded from this URL. Try a different source or upload the file again.',
   'tools.file.previewRaw': 'Source',
   'tools.file.previewRender': 'Preview',
   'tools.file.previewError': 'Couldn’t load preview',
   'tools.database.viewTypeListDescription': 'Show items in a simple list',
+  'tools.database.viewTypeBoardDescription': 'Show items in columns',
   'tools.bookmark.loading': 'Loading link preview…',
   'tools.embed.empty': 'No embed link',
   'tools.video.toggleTimeDisplay':
     'Switch between elapsed and remaining time',
   'tools.video.ctxStats': 'Playback statistics',
+  'tools.video.fullscreen': 'Full screen',
+  'tools.video.fullscreenExit': 'Exit full screen',
+  'tools.video.captionPlaceholder': 'Write a caption…',
+  'tools.audio.errorGoogleDrive':
+    'Audio from Google Drive can’t be played directly. Download the file and upload it here instead.',
+  'tools.audio.errorOneDrive':
+    'Audio from OneDrive can’t be played directly. Download the file and upload it here instead.',
+  'tools.audio.captionPlaceholder': 'Write a caption…',
+  'tools.linkPaste.embedVideo': 'Embed a video from {provider}',
+  'tools.linkPaste.embedForm': 'Embed a form from {provider}',
+  'tools.linkPaste.embedMap': 'Embed a map from {provider}',
   'tools.callout.emojiSearchResults': 'Emoji matches: {count}',
   'toolNames.clearFormat': 'Clear formatting',
+  'notifier.confirm': 'Confirm',
+  'notifier.cancel': 'Cancel',
+  'notifier.ok': 'OK',
 };
 
 const EMOJI_CATEGORY_SCOPE_KEYS = [

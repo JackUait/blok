@@ -54,6 +54,30 @@ export class NotifierAPI extends Module {
       return;
     }
 
+    if (options.type === 'confirm') {
+      const confirmOptions = options as ConfirmNotifierOptions;
+
+      this.builtInNotifier.show({
+        ...confirmOptions,
+        okText: confirmOptions.okText || this.Blok.I18n.t('notifier.confirm'),
+        cancelText: confirmOptions.cancelText || this.Blok.I18n.t('notifier.cancel'),
+      });
+
+      return;
+    }
+
+    if (options.type === 'prompt') {
+      const promptOptions = options as PromptNotifierOptions;
+
+      this.builtInNotifier.show({
+        ...promptOptions,
+        okText: promptOptions.okText || this.Blok.I18n.t('notifier.ok'),
+        cancelText: promptOptions.cancelText || this.Blok.I18n.t('notifier.cancel'),
+      });
+
+      return;
+    }
+
     this.builtInNotifier.show(options);
   }
 }

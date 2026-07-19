@@ -342,6 +342,17 @@ describe('Notifier draw', () => {
       expect(el.isConnected).toBe(false);
     });
 
+    it('renders a consumer-supplied cancel label', () => {
+      const el = prompt({
+        message: 'Name?',
+        okHandler: vi.fn(),
+        cancelText: 'Never mind',
+      });
+      const cancelBtn = el.querySelector<HTMLButtonElement>('[data-blok-testid="notification-cancel-button"]');
+
+      expect(cancelBtn?.textContent).toBe('Never mind');
+    });
+
     it('cancels on Escape', () => {
       const cancelHandler = vi.fn();
       const el = prompt({ message: 'Name?', okHandler: vi.fn(), cancelHandler });

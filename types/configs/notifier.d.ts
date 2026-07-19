@@ -73,7 +73,7 @@ export interface ConfirmNotifierOptions extends NotifierOptions {
 export interface PromptNotifierOptions extends NotifierOptions {
   /**
    * Text for the Submit button
-   * 'Ok' by default
+   * 'OK' by default
    */
   okText?: string;
 
@@ -83,6 +83,12 @@ export interface PromptNotifierOptions extends NotifierOptions {
    * @param {string} value
    */
   okHandler: (value: string) => void;
+
+  /**
+   * Text for the cancel button
+   * 'Cancel' by default
+   */
+  cancelText?: string;
 
   /**
    * Cross button pressing callback

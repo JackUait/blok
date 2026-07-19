@@ -176,7 +176,6 @@
 .blok-embed-empty__bar:hover { border-color: var(--blok-border-primary); }
 .blok-embed-empty__bar:focus-within {
   border-color: var(--blok-color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-accent) 18%, transparent);
 }
 
 .blok-embed-empty__bar-icon {

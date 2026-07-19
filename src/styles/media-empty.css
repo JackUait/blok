@@ -227,7 +227,6 @@
 }
 .blok-media-empty__embed-bar:focus-within {
   border-color: var(--blok-color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-accent) 18%, transparent);
 }
 
 .blok-media-empty__embed-icon {
@@ -364,7 +363,6 @@
   outline-offset: 0;
   border-color: var(--blok-color-accent);
   border-radius: var(--blok-space-1-75);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-accent) 20%, transparent);
 }
 .blok-media-empty__input:disabled {
   opacity: .65;
@@ -383,7 +381,6 @@
 }
 .blok-media-empty__search:focus-within {
   border-color: var(--blok-color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-accent) 20%, transparent);
 }
 .blok-media-empty__search-icon {
   display: inline-flex;
@@ -462,7 +459,7 @@
 }
 .blok-media-empty__error[hidden] { display: none; }
 
-/* ----- Shared invalid-field convention (H11): destructive ring keyed on
+/* ----- Shared invalid-field convention (H11): destructive border keyed on
    aria-invalid, applied wherever setFieldValidity() marks a control. Shipped
    via main.css so link/embed/media inputs share one look, but scoped to the
    Blok isolation ancestors (same trio as the preflight reset) so host-app
@@ -474,7 +471,6 @@
 :where([data-blok-interface], [data-blok-popover], [data-blok-top-layer]) [aria-invalid="true"]:focus,
 :where([data-blok-interface], [data-blok-popover], [data-blok-top-layer]) [aria-invalid="true"]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blok-color-danger) 25%, transparent);
 }
 
 @container (max-width: 460px) {

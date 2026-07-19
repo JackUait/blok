@@ -27,12 +27,13 @@ describe('SearchInput', () => {
     vi.restoreAllMocks();
   });
 
-  it('builds the wrapper with icon and input', () => {
+  it('builds the wrapper with the input as its only child (no icon)', () => {
     const searchInput = createSearchInput();
     const element = searchInput.getElement();
 
     expect(element).toHaveAttribute('data-blok-testid', 'popover-search-field');
-    expect(element.children.length).toBe(2);
+    expect(element.children.length).toBe(1);
+    expect(element.querySelector('svg')).toBeNull();
 
     const input = element.querySelector('[data-blok-testid="popover-search-input"]') as HTMLInputElement;
 
@@ -43,12 +44,10 @@ describe('SearchInput', () => {
     expect(input.placeholder).toBe('Filter actions');
   });
 
-  it('positions the wrapper so its focus ring paints above sibling backgrounds', () => {
-    // The focus-within ring is a box-shadow that extends 2px below the wrapper.
+  it('positions the wrapper so it paints above sibling backgrounds', () => {
     // The popover's context label sits flush underneath with an opaque
-    // bg-popover-bg, and a later sibling's background paints over a static
-    // sibling's shadow — clipping the ring's bottom edge. `relative` lifts the
-    // wrapper into the positioned paint layer, above sibling backgrounds.
+    // bg-popover-bg. `relative` lifts the wrapper into the positioned paint
+    // layer, above sibling backgrounds, so its border is never clipped.
     const searchInput = createSearchInput();
     const element = searchInput.getElement();
 

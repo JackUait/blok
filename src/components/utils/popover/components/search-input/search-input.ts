@@ -1,5 +1,4 @@
 import { Dom } from '../../../../dom';
-import { IconSearch } from '../../../../icons';
 import { EventsDispatcher } from '../../../events';
 import { Listeners } from '../../../listeners';
 
@@ -62,10 +61,6 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
     this.wrapper = Dom.make('div', css.wrapper);
     this.wrapper.setAttribute('data-blok-testid', 'popover-search-field');
 
-    const iconWrapper = Dom.make('div', css.icon, {
-      innerHTML: IconSearch,
-    });
-
     this.input = Dom.make('input', css.input, {
       type: 'search',
       placeholder,
@@ -97,7 +92,6 @@ export class SearchInput extends EventsDispatcher<SearchInputEventMap> {
       this.input.setAttribute('aria-controls', controlsId);
     }
 
-    this.wrapper.appendChild(iconWrapper);
     this.wrapper.appendChild(this.input);
 
     const eventsToHandle = ['input', 'keyup', 'search', 'change'] as const;

@@ -64,7 +64,7 @@ export class LinkInlineTool implements InlineTool {
   /**
    * Tailwind classes for input
    */
-  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[320px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border focus:shadow-[0_0_0_2px_rgba(35,131,226,0.15)] mobile:text-[15px] mobile:font-medium';
+  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[320px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border mobile:text-[15px] mobile:font-medium';
 
   /**
    * Data attributes for e2e selectors

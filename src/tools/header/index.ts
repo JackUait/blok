@@ -19,7 +19,7 @@ import type {
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { DATA_ATTR } from '../../components/constants';
-import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
+import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
@@ -539,7 +539,17 @@ export class Header implements BlockTool {
 
     const colorItems = Array.isArray(colorTunes) ? colorTunes : [colorTunes];
 
-    return [...levelEntries, this.buildToggleConvertEntry(), ...colorItems] as MenuConfig;
+    return [
+      {
+        icon: IconHeading,
+        title: this.api.i18n.t('toolNames.heading'),
+        name: 'header-levels',
+        children: {
+          items: [...levelEntries, this.buildToggleConvertEntry()],
+        },
+      },
+      ...colorItems,
+    ] as MenuConfig;
   }
 
   /**

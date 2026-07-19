@@ -52,15 +52,55 @@ const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
 };
 
 /**
- * renderSettings now mixes level entries with the block-color submenus (D1) and
- * the toggle-convert entry (D2). Tests that assert on the heading LEVEL choices
- * filter to just those entries via the 'blok-header-level' dataset marker.
+ * renderSettings groups levels and toggle conversion in a heading submenu, next
+ * to the block-color submenus. Tests can inspect only its child menu items.
  */
+const headingMenuItems = (config: MenuConfig): Array<Record<string, unknown>> => {
+  const headingLevels = toMenuArray(config).find(setting => setting.name === 'header-levels');
+  const children = headingLevels?.children;
+
+  if (children === null || typeof children !== 'object' || !('items' in children) || !Array.isArray(children.items)) {
+    return [];
+  }
+
+  return children.items as Array<Record<string, unknown>>;
+};
+
 const levelEntries = (config: MenuConfig): Array<Record<string, unknown>> => {
-  return toMenuArray(config).filter(
-    s => (s.dataset as Record<string, string> | undefined)?.['blok-header-level'] !== undefined
+  return headingMenuItems(config).filter(
+    setting => (setting.dataset as Record<string, string> | undefined)?.['blok-header-level'] !== undefined
   );
 };
+
+describe('Header Tool - heading level submenu', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('groups heading levels and the toggle conversion under one submenu', () => {
+    const header = new Header(createHeaderOptions({ text: 'Hi', level: 2 }));
+    const settings = toMenuArray(header.renderSettings());
+    const headingLevels = settings.find(setting => setting.name === 'header-levels');
+    const childItems = (headingLevels?.children as { items?: Array<Record<string, unknown>> } | undefined)?.items ?? [];
+
+    expect(headingLevels).toMatchObject({ title: 'toolNames.heading' });
+    expect(settings.find(setting => setting.name === 'header-toggle-convert')).toBeUndefined();
+    expect(childItems.map(item => item.dataset as Record<string, string> | undefined)).toEqual([
+      { 'blok-header-level': '1' },
+      { 'blok-header-level': '2' },
+      { 'blok-header-level': '3' },
+      { 'blok-header-level': '4' },
+      { 'blok-header-level': '5' },
+      { 'blok-header-level': '6' },
+      undefined,
+    ]);
+    expect(childItems.at(-1)?.name).toBe('header-toggle-convert');
+  });
+});
 
 describe('Header Tool - Custom Configurations', () => {
   describe('placeholder configuration', () => {
@@ -200,10 +240,10 @@ describe('Header Tool - Custom Configurations', () => {
         }
       );
       const header = new Header(options);
-      const settings = toMenuArray(header.renderSettings());
+      const settings = levelEntries(header.renderSettings());
 
-      expect(settings[0].title).toBe('Title');
-      expect(settings[1].title).toBe('Subtitle');
+      expect(settings[0]?.title).toBe('Title');
+      expect(settings[1]?.title).toBe('Subtitle');
     });
 
     it('applies custom font size via inline styles', () => {
@@ -952,7 +992,7 @@ describe('Header Tool - Custom Configurations', () => {
         header.render();
 
         // Trigger setLevel through renderSettings onActivate
-        const settings = toMenuArray(header.renderSettings());
+        const settings = headingMenuItems(header.renderSettings());
         const h3Setting = settings.find(s => (s.dataset as Record<string, string>)?.['blok-header-level'] === '3');
         const onActivate = h3Setting?.onActivate as (() => void) | undefined;
 
@@ -1455,8 +1495,7 @@ describe('Header Tool - plain <-> toggle conversion (D2)', () => {
   it('a plain heading gains a "Toggle heading" convert entry', () => {
     const options = createHeaderOptions({ text: 'Hi', level: 2 });
     const header = new Header(options);
-    const settings = toMenuArray(header.renderSettings());
-    const entry = settings.find(s => s.name === 'header-toggle-convert');
+    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
 
     expect(entry).toBeDefined();
     // mock i18n.t echoes the key
@@ -1466,8 +1505,7 @@ describe('Header Tool - plain <-> toggle conversion (D2)', () => {
   it('a toggle heading shows the convert entry as active (toggle-switch back to plain)', () => {
     const options = createHeaderOptions({ text: 'Hi', level: 2, isToggleable: true });
     const header = new Header(options);
-    const settings = toMenuArray(header.renderSettings());
-    const entry = settings.find(s => s.name === 'header-toggle-convert');
+    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
 
     expect(entry).toBeDefined();
     // Single shared label (no collision with the "Heading 2" level selector).
@@ -1478,8 +1516,7 @@ describe('Header Tool - plain <-> toggle conversion (D2)', () => {
   it('a plain heading shows the convert entry as inactive', () => {
     const options = createHeaderOptions({ text: 'Hi', level: 2 });
     const header = new Header(options);
-    const settings = toMenuArray(header.renderSettings());
-    const entry = settings.find(s => s.name === 'header-toggle-convert');
+    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
 
     expect(entry?.isActive).toBe(false);
   });
@@ -1490,7 +1527,7 @@ describe('Header Tool - plain <-> toggle conversion (D2)', () => {
 
     header.render();
 
-    const entry = toMenuArray(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
+    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
 
     (entry?.onActivate as () => void)();
 
@@ -1521,7 +1558,7 @@ describe('Header Tool - plain <-> toggle conversion (D2)', () => {
     header.render();
     header.rendered();
 
-    const entry = toMenuArray(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
+    const entry = headingMenuItems(header.renderSettings()).find(s => s.name === 'header-toggle-convert');
 
     (entry?.onActivate as () => void)();
 

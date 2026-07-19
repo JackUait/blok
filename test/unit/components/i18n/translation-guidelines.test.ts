@@ -20,6 +20,10 @@ const AUDIT_LEDGER_PATH = resolve(
   __dirname,
   '../../../../docs/plans/2026-07-19-all-locales-translation-audit-ledger.md'
 );
+const TRANSLATION_GUIDELINES_PATH = resolve(
+  __dirname,
+  '../../../../src/components/i18n/locales/TRANSLATION_GUIDELINES.md'
+);
 
 const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
@@ -40,6 +44,10 @@ const readLocale = (
 const english = readLocale('en').messages as EnglishMessages;
 const englishKeys = Object.keys(english).sort();
 const auditLedger = readFileSync(AUDIT_LEDGER_PATH, 'utf-8');
+const translationGuidelines = readFileSync(
+  TRANSLATION_GUIDELINES_PATH,
+  'utf-8'
+);
 const RESULT_STATES = new Set(['pending', 'open', 'pass']);
 const FINAL_STATUSES = new Set([
   'pending',
@@ -795,6 +803,15 @@ const localizedLedgerFindings = ledgerFindings.filter(
 );
 
 describe('translation guideline corpus integrity', () => {
+  it('defines sentence case for English UI labels', () => {
+    expect(translationGuidelines).toContain(
+      'English uses sentence case for UI labels'
+    );
+    expect(translationGuidelines).not.toContain(
+      'English title-cases UI labels'
+    );
+  });
+
   it('covers every non-English locale in the emoji category scope matrix', () => {
     expect(Object.keys(LOCALIZED_EMOJI_CATEGORY_SCOPE).sort()).toEqual(
       localeCodes.filter(locale => locale !== 'en')

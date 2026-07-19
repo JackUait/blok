@@ -269,7 +269,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-088` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-root-en-first-545 | — | pass | pass | pass | `F-en-001`–`F-en-073` | first-pass-complete |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-root-en-first-545 | codex-wire-media-en-second-545 | pass | pass | pass | `F-en-001`–`F-en-073` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
@@ -366,7 +366,7 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
-| `en` | `codex-root-en-first-545` | `sha256:52ad75d149b7c642ea268ea7236b238169ba442874543837da2778f89ca3b3aa` | — | — |
+| `en` | `codex-root-en-first-545` | `sha256:52ad75d149b7c642ea268ea7236b238169ba442874543837da2778f89ca3b3aa` | `codex-wire-media-en-second-545` | `sha256:52ad75d149b7c642ea268ea7236b238169ba442874543837da2778f89ca3b3aa` |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -403,7 +403,7 @@ source-coverage, encoding, and normalization checker pass. `F-en-036` and all
 only the missing-key defect; every locale row remains `pending` and still
 requires two complete, distinct 539-entry linguistic passes.
 
-## English Source Audit Evidence — current 545-key first pass complete
+## English Source Audit Evidence — current 545-key two-pass review complete
 
 The current first reviewer inspected all 545/545 final English values in four
 disjoint source-order ranges: 1–140, 141–280, 281–420, and 421–545. Every
@@ -436,9 +436,34 @@ raw SHA-256 is
 `52ad75d149b7c642ea268ea7236b238169ba442874543837da2778f89ca3b3aa`.
 English has no exact-English retention inventory by definition.
 
-The distinct complete second pass is still pending. All 539-key and earlier
-evidence below remains historical context only and does not support the
-current status.
+The distinct second reviewer completed the independent review at
+`2026-07-19T13:13:40+03:00`. It reread all 545/545 current values in the same
+four disjoint source-order ranges, rechecked every rendered, accessible,
+built-compatibility, and source-only contract, and found no English dictionary
+defect. Coverage included all 38 placeholder-bearing values, all 44 aliases in
+14 caller groups, the complete 532 caller/built + 12 source-only + 1 unused
+caller partition, all 117 provider compositions, all 73 verified English
+findings, and the raw-English runtime sweep.
+
+The review did expose one contradiction in the written guideline:
+the capitalization parenthetical said English title-cases UI labels while the
+authoritative locale row and final dictionary use sentence case. Historical
+English evidence below already resolves that same contradiction in favor of
+sentence case and records that criterion as the basis of the first pass.
+Changing the parenthetical to say that English uses sentence case therefore
+clarifies the existing contract; it changes neither `en/messages.json` bytes
+nor the pass criterion and does not reset locale propagation.
+
+A focused guideline assertion failed against the contradictory wording before
+the clarification and passes afterward. The final English
+source/structural/finding/ledger selection passes 77/77, the raw-English
+runtime sweep passes 44/44, the affected Markdown/file/provider suites pass
+74/74, and the live checker reports 545 keys with complete locale structure,
+valid integrity, and source coverage. Both review digest fields bind to the
+same unchanged raw SHA-256:
+`52ad75d149b7c642ea268ea7236b238169ba442874543837da2778f89ca3b3aa`.
+English is `second-pass-complete`. All 539-key and earlier evidence below
+remains historical context only and does not support the current status.
 
 The current-byte dependency review found four material scope omissions in the
 emoji picker’s visible category headings and navigation `title`/`aria-label`

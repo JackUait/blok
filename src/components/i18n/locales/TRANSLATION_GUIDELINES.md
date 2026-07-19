@@ -88,7 +88,7 @@ Arabic, Hebrew, Persian, Urdu, and other RTL languages are supported. The editor
 ## Grammar & Style
 
 - **Consistent grammatical person** - Use imperative mood for actions ("Delete" not "Deletes" or "To delete")
-- **Capitalization conventions** - Follow language-specific rules (German capitalizes nouns, English title-cases UI labels)
+- **Capitalization conventions** - Follow language-specific rules (German capitalizes nouns, English uses sentence case for UI labels)
 - **Formal/informal register** - Choose formal (vous/Sie/usted) or informal (tu/du/tú) consistently within each language
 
 ## Practical Considerations

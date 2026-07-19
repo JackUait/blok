@@ -261,7 +261,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `wire-database-am-first-final` | — | pass | pass | pass | `F-am-001`–`F-am-078` | first-pass-complete |
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `codex-wire-ui-ar-first-final` | — | pass | pass | pass | `F-ar-001`–`F-ar-075` | first-pass-complete |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-090` | pending |
-| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | — | — | pending | pending | pending | `F-bg-001`–`F-bg-076` | pending |
+| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `codex-bg-first-final-reread` | — | pass | pass | pass | `F-bg-001`–`F-bg-095` | first-pass-complete |
 | `bn` | Bengali | Bengali | ltr | to-audit | — | — | pending | pending | pending | `F-bn-001` | pending |
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
@@ -395,6 +395,7 @@ locale returns to `pending`.
 |---|---|---|---|---|
 | `am` | `wire-database-am-first-final` | `sha256:0e243c7a9f95c19901726d50e8600c8aa5c23fe29ab52736a27303652e32336e` | — | — |
 | `ar` | `codex-wire-ui-ar-first-final` | `sha256:c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a` | — | — |
+| `bg` | `codex-bg-first-final-reread` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` | — | — |
 | `de` | `root-de-first-final` | `sha256:5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba` | — | — |
 | `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
 | `ru` | `root-ru-first-final` | `sha256:55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821` | — | — |
@@ -729,6 +730,38 @@ control-character, replacement-character, boundary-whitespace, semantic,
 register, punctuation, accessibility, count, or provider-composition defect.
 The current first pass binds to raw SHA-256
 `c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a`.
+The distinct complete second pass remains pending.
+
+### Bulgarian (`bg`) — current first pass complete
+
+The initial current-byte review inspected all 545 English/Bulgarian pairs and
+recorded 75 defects in addition to the historical clear-format finding.
+Independent proposal review accepted 72 replacements unchanged and amended
+the nested-content warning, list-view description, and current-position video
+URL action. After that correction set passed, a skeptical complete reread
+retained 19 further objective defects: compact commands expressed as
+nominalizations, one incomplete search hint, two accessibility announcements
+that did not report completed events, and an ambiguous database view name.
+All 95 findings are now applied and exact.
+
+Reviewer `codex-bg-first-final-reread` restarted at entry 1 on the final bytes
+and reread all 545/545 English/Bulgarian pairs in source order without finding
+a residual. The pass reconciled all 38 placeholder-bearing values and 54
+occurrences, 44 unique search aliases across 14 groups, all 117 provider
+compositions, 77 English dependency rows covering 75 current keys, and the
+complete 532 caller/built + 12 source-only + 1 localization-bypassed caller
+partition.
+
+The final dictionary has 545 unique, non-empty NFC string values with no
+missing, extra, duplicate, control, replacement-character, boundary-space, or
+placeholder defect. Its exact-English inventory is exactly the eight sourced
+shortcut, compact accessibility, ratio, acronym, and confirmation-label
+retentions recorded as `R-bg-001` through `R-bg-008`. The live checker, 81
+checker cases, 97 focused finding/structural/ledger cases, the exact-retention
+case, three search-quality cases, and 31 provider/paste-menu cases pass.
+
+The current first pass binds to raw SHA-256
+`dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a`.
 The distinct complete second pass remains pending.
 
 ### German (`de`) — current first pass complete
@@ -3079,6 +3112,25 @@ follows the global transition rule above.
 | `F-bg-074` | `bg` | `tools.audio.speedDecrease` | terminology / caller context | `"Намаляване на скоростта"` | `"Намали скоростта на възпроизвеждане"` | The complete 545-entry first-pass caller review found the current Bulgarian wording inaccurate, incomplete, untranslated, ungrammatical, or inconsistent with the selected register in this UI contract; the replacement preserves every runtime placeholder. | verified |
 | `F-bg-075` | `bg` | `tools.audio.speedIncrease` | terminology / caller context | `"Увеличаване на скоростта"` | `"Увеличи скоростта на възпроизвеждане"` | The complete 545-entry first-pass caller review found the current Bulgarian wording inaccurate, incomplete, untranslated, ungrammatical, or inconsistent with the selected register in this UI contract; the replacement preserves every runtime placeholder. | verified |
 | `F-bg-076` | `bg` | `tools.callout.emojiSearchResults` | terminology / caller context | `"Намерени са {count} емоджита"` | `"Съвпадения за емоджи: {count}"` | The complete 545-entry first-pass caller review found the current Bulgarian wording inaccurate, incomplete, untranslated, ungrammatical, or inconsistent with the selected register in this UI contract; the replacement preserves every runtime placeholder. | verified |
+| `F-bg-077` | `bg` | `toolbox.typeToSearch` | hint clarity / grammar | `"Въведете за търсене"` | `"Въведете текст за търсене"` | The existing polite instruction omits what the user should enter; the replacement supplies the natural direct object. | verified |
+| `F-bg-078` | `bg` | `blockSettings.duplicate` | command mood / register | `"Дублиране"` | `"Дублирай"` | A compact block-menu command requires the selected concise singular imperative, not an action nominalization. | verified |
+| `F-bg-079` | `bg` | `tools.table.duplicateColumn` | command mood / register | `"Дублиране"` | `"Дублирай"` | The table-column menu item performs an immediate action and must use the same concise imperative as the other compact commands. | verified |
+| `F-bg-080` | `bg` | `tools.table.duplicateRow` | command mood / register | `"Дублиране"` | `"Дублирай"` | The table-row menu item performs an immediate action and must use the same concise imperative as its column counterpart. | verified |
+| `F-bg-081` | `bg` | `tools.table.fitToPageWidth` | command mood / action clarity | `"Побиране в ширината на страницата"` | `"Побери в ширината на страницата"` | This settings item changes the table width; the imperative names the available action instead of an abstract process. | verified |
+| `F-bg-082` | `bg` | `a11y.insertBlock` | command mood / accessibility | `"Вмъкване на блок"` | `"Вмъкни блок"` | The accessible action label belongs to an insertion control and must expose a direct command rather than an action noun. | verified |
+| `F-bg-083` | `bg` | `tools.link.copyUrl` | command mood / object accuracy | `"Копиране на връзката"` | `"Копирай връзката"` | The compact link-editor command copies the current link and needs a direct imperative with its definite object. | verified |
+| `F-bg-084` | `bg` | `tools.link.edit` | command mood / register | `"Редактиране"` | `"Редактирай"` | The link action is a compact command, so its noun form is inconsistent with the selected Bulgarian imperative register. | verified |
+| `F-bg-085` | `bg` | `tools.image.replace` | command mood / object context | `"Замяна на изображението"` | `"Замени изображението"` | The image settings item performs replacement and must expose a direct command naming the image object. | verified |
+| `F-bg-086` | `bg` | `tools.image.errorReplace` | recovery action / command mood | `"Замяна"` | `"Замени"` | The error-state recovery button needs an actionable imperative rather than a replacement noun. | verified |
+| `F-bg-087` | `bg` | `tools.file.replace` | command mood / object context | `"Замяна на файла"` | `"Замени файла"` | The file settings item performs replacement and must expose a direct command naming the file object. | verified |
+| `F-bg-088` | `bg` | `tools.file.errorReplace` | recovery action / command mood | `"Замяна"` | `"Замени"` | The file-error recovery button needs the same direct imperative as the image-error action. | verified |
+| `F-bg-089` | `bg` | `tools.video.replace` | command mood / object context | `"Замяна на видеото"` | `"Замени видеото"` | The video settings item performs replacement and must expose a direct command naming the video object. | verified |
+| `F-bg-090` | `bg` | `tools.video.errorReplace` | recovery action / command mood | `"Замяна"` | `"Замени"` | The video-error recovery button needs an actionable imperative rather than an action noun. | verified |
+| `F-bg-091` | `bg` | `tools.audio.replace` | command mood / object context | `"Замяна на аудиото"` | `"Замени аудиото"` | The audio settings item performs replacement and must expose a direct command naming the audio object. | verified |
+| `F-bg-092` | `bg` | `tools.audio.errorReplace` | recovery action / command mood | `"Замяна"` | `"Замени"` | The audio-error recovery button needs the same direct imperative as the sibling recovery actions. | verified |
+| `F-bg-093` | `bg` | `a11y.navigationModeExited` | event state / accessibility | `"Излизане от режима на навигация"` | `"Излязохте от режима на навигация"` | The assertive live-region message reports a completed mode exit; the existing verbal noun can sound like an in-progress action. | verified |
+| `F-bg-094` | `bg` | `a11y.navigatedToBlock` | event state / accessibility | `"Придвижване до блок"` | `"Преминахте към блок"` | The live-region message confirms completed navigation to the focused block rather than naming an abstract movement. | verified |
+| `F-bg-095` | `bg` | `tools.database.listView` | view terminology / disambiguation | `"Списък"` | `"Списъчен изглед"` | This value names the rendered database view mode, so the explicit `изглед` distinguishes it from a generic list or the separate view-type label. | verified |
 | `F-bn-001` | `bn` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"বিন্যাস অপসারণ"` | LibreOffice’s Bengali product UI supplies the exact Clear formatting translation [বিন্যাস অপসারণ](https://github.com/LibreOffice/translations/blob/master/source/bn/svx/messages.po#L6302-L6303). | verified |
 | `F-bs-001` | `bs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti formatiranje"` | LibreOffice’s Bosnian product UI supplies the exact Clear formatting translation [Očisti formatiranje](https://github.com/LibreOffice/translations/blob/master/source/bs/svx/messages.po#L6304-L6305). | verified |
 | `F-cs-001` | `cs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Vymazat formátování"` | Microsoft’s Czech Word instructions name the concise command [Vymazat formátování](https://support.microsoft.com/cs-cz/office/form%C3%A1tov%C3%A1n%C3%AD-dokumentu-aplikace-word-fb9ef2d6-e2ad-4721-abc1-55f88864617f). | verified |

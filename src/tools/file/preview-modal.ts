@@ -23,6 +23,7 @@ export interface FilePreviewOptions {
     error?: string;
     download?: string;
     openInNewTab?: string;
+    backToContent?: string;
   };
 }
 
@@ -166,7 +167,10 @@ async function renderMarkdown(
   indicator.style.transition = '';
 
   ensurePrismStyles();
-  renderView.innerHTML = await markdownToHtml(text, { baseUrl: opts.url });
+  renderView.innerHTML = await markdownToHtml(text, {
+    baseUrl: opts.url,
+    backToContentLabel: opts.labels.backToContent,
+  });
 
   const mdRaw = await tokenizePrism(text, 'markdown');
   if (mdRaw !== null) {

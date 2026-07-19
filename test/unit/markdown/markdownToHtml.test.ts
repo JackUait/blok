@@ -134,6 +134,16 @@ describe('markdownToHtml', () => {
     expect(html).toContain('The note body.');
   });
 
+  it('uses and escapes the localized footnote backlink label', async () => {
+    const html = await markdownToHtml(
+      'Text with a note.[^1]\n\n[^1]: The note body.',
+      { backToContentLabel: 'Zurück & "weiter"' }
+    );
+
+    expect(html).toContain('aria-label="Zurück &amp; &quot;weiter&quot;"');
+    expect(html).not.toContain('aria-label="Back to content"');
+  });
+
   it('renders GitHub alerts from labelled blockquotes', async () => {
     const html = await markdownToHtml('> [!WARNING]\n> Be careful here.');
     expect(html).toContain('blok-md-alert');

@@ -109,20 +109,22 @@ describe('buildPasteMenuItems', () => {
     /** Resolves the per-type embed templates the way a real locale would. */
     const templateI18n: PasteMenuI18n = {
       t: (key: string): string => {
-        if (key === 'tools.linkPaste.embedVideo') {
-          return 'Embed a video from {provider}';
-        }
-        if (key === 'tools.linkPaste.embedAudio') {
-          return 'Embed {provider} audio';
-        }
-        if (key === 'tools.linkPaste.embedForm') {
-          return 'Embed a form from {provider}';
-        }
-        if (key === 'tools.linkPaste.embedMap') {
-          return 'Embed a map from {provider}';
-        }
+        const templates: Record<string, string> = {
+          'tools.linkPaste.embedVideo': 'Embed a video from {provider}',
+          'tools.linkPaste.embedAudio': 'Embed audio from {provider}',
+          'tools.linkPaste.embedImage': 'Embed an image from {provider}',
+          'tools.linkPaste.embedSocial': 'Embed a post from {provider}',
+          'tools.linkPaste.embedDocument': 'Embed a document from {provider}',
+          'tools.linkPaste.embedTable': 'Embed a table from {provider}',
+          'tools.linkPaste.embedForm': 'Embed a form from {provider}',
+          'tools.linkPaste.embedCode': 'Embed code from {provider}',
+          'tools.linkPaste.embedDesign': 'Embed a design from {provider}',
+          'tools.linkPaste.embedChart': 'Embed a chart from {provider}',
+          'tools.linkPaste.embedMap': 'Embed a map from {provider}',
+          'tools.linkPaste.embedCalendar': 'Embed a calendar from {provider}',
+        };
 
-        return key;
+        return templates[key] ?? key;
       },
     };
 
@@ -142,7 +144,7 @@ describe('buildPasteMenuItems', () => {
         'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'
       );
 
-      expect(asDefaultItem(audio).title).toBe('Embed Spotify audio');
+      expect(asDefaultItem(audio).title).toBe('Embed audio from Spotify');
     });
 
     it.each([
@@ -165,6 +167,42 @@ describe('buildPasteMenuItems', () => {
       [
         'https://v.qq.com/x/page/a1b2c3.html',
         'Embed a video from Tencent Video',
+      ],
+      [
+        'https://podcasts.apple.com/us/podcast/the-daily/id1200361736',
+        'Embed audio from Apple Podcasts',
+      ],
+      [
+        'https://giphy.com/gifs/lustig-witzig-funny-reaction-cJhDKXoHvzahcGPgiK',
+        'Embed an image from GIPHY',
+      ],
+      [
+        'https://www.reddit.com/r/programming/comments/1abc2de/some_title_slug/',
+        'Embed a post from Reddit',
+      ],
+      [
+        'https://docs.google.com/document/d/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv/edit',
+        'Embed a document from Google Docs',
+      ],
+      [
+        'https://airtable.com/shr5EBHUmHzStubDx',
+        'Embed a table from Airtable',
+      ],
+      [
+        'https://codepen.io/team/pen/AbCdEf',
+        'Embed code from CodePen',
+      ],
+      [
+        'https://www.figma.com/design/KEY123/My-File',
+        'Embed a design from Figma',
+      ],
+      [
+        'https://www.desmos.com/calculator/qy6jc8mfi9',
+        'Embed a chart from Desmos',
+      ],
+      [
+        'https://calendly.com/acme-team',
+        'Embed a calendar from Calendly',
       ],
     ])('keeps the %s provider title grammatical', (url, expected) => {
       const [item] = buildPasteMenuItems(

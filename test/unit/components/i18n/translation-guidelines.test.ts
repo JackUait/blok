@@ -56,7 +56,7 @@ const RETENTION_CATEGORIES = new Set([
   'established loanword',
 ]);
 const GLOBAL_FINDING_KEYS = new Set([
-  '62 changed English source keys',
+  '73 changed English source keys',
   'four expanded emoji category keys',
 ]);
 
@@ -102,11 +102,13 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.viewFullscreen': 'View full screen',
   'tools.image.exitFullscreen': 'Exit full screen',
   'tools.image.cropAspectRatio': 'Crop shape',
+  'tools.image.errorSourceOffline': 'The source file may have moved or be offline.',
   'tools.image.errorDefaultMessage':
     'The image couldn’t be loaded from this URL. Try a different source or upload the file again.',
   'tools.file.previewRaw': 'Source',
   'tools.file.previewRender': 'Preview',
   'tools.file.previewError': 'Couldn’t load preview',
+  'tools.file.previewBackToContent': 'Back to content',
   'tools.database.viewTypeListDescription': 'Show items in a simple list',
   'tools.database.viewTypeBoardDescription': 'Show items in columns',
   'tools.bookmark.loading': 'Loading link preview…',
@@ -123,8 +125,17 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
     'Audio from OneDrive can’t be played directly. Download the file and upload it here instead.',
   'tools.audio.captionPlaceholder': 'Write a caption…',
   'tools.linkPaste.embedVideo': 'Embed a video from {provider}',
+  'tools.linkPaste.embedAudio': 'Embed audio from {provider}',
+  'tools.linkPaste.embedImage': 'Embed an image from {provider}',
+  'tools.linkPaste.embedSocial': 'Embed a post from {provider}',
+  'tools.linkPaste.embedDocument': 'Embed a document from {provider}',
+  'tools.linkPaste.embedTable': 'Embed a table from {provider}',
   'tools.linkPaste.embedForm': 'Embed a form from {provider}',
+  'tools.linkPaste.embedCode': 'Embed code from {provider}',
+  'tools.linkPaste.embedDesign': 'Embed a design from {provider}',
+  'tools.linkPaste.embedChart': 'Embed a chart from {provider}',
   'tools.linkPaste.embedMap': 'Embed a map from {provider}',
+  'tools.linkPaste.embedCalendar': 'Embed a calendar from {provider}',
   'tools.callout.emojiSearchResults': 'Emoji matches: {count}',
   'toolNames.clearFormat': 'Clear formatting',
   'notifier.confirm': 'Confirm',

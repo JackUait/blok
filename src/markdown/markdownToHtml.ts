@@ -45,12 +45,17 @@ interface RenderContext {
   footnoteNumbers: Map<string, number>;
   slug: (text: string) => string;
   baseUrl?: string;
+  backToContentLabel: string;
 }
 
 export interface MarkdownPreviewOptions {
   /** Source document URL, used to resolve relative URLs in raw HTML. */
   baseUrl?: string;
+  /** Accessible label for each footnote backlink. */
+  backToContentLabel?: string;
 }
+
+const DEFAULT_BACK_TO_CONTENT_LABEL = 'Back to content';
 
 function escapeHtml(text: string): string {
   return text
@@ -148,6 +153,7 @@ export async function markdownToHtml(md: string, opts: MarkdownPreviewOptions = 
     footnoteNumbers: new Map(),
     slug: createSlugger(),
     baseUrl: opts.baseUrl,
+    backToContentLabel: opts.backToContentLabel ?? DEFAULT_BACK_TO_CONTENT_LABEL,
   };
 
   // Prepass: collect definitions and footnote definitions so references can
@@ -429,7 +435,7 @@ async function renderFootnotes(ctx: RenderContext): Promise<string> {
     const inner = def !== undefined ? await nodesToHtml(def.children as BlockNode[], ctx) : '';
 
     return `<li id="fn-${id}">${inner}`
-      + `<a class="blok-md-fnback" href="#fnref-${id}" aria-label="Back to content">↩</a></li>`;
+      + `<a class="blok-md-fnback" href="#fnref-${id}" aria-label="${escapeHtml(ctx.backToContentLabel)}">↩</a></li>`;
   }));
 
   return `<section class="blok-md-footnotes"><hr><ol>${items.join('')}</ol></section>`;

@@ -33,6 +33,7 @@ const labels = { close: 'Close preview' };
 const LABELS = {
   close: 'Close', raw: 'Source', render: 'Preview',
   loading: 'Loading…', error: 'Error', download: 'Download',
+  backToContent: 'Return to the document',
 };
 
 function getDialog(): HTMLElement | null {
@@ -231,6 +232,10 @@ describe('openFilePreview — text kinds', () => {
 
     await vi.waitFor(() => {
       expect(document.querySelector('[data-role="file-preview-md-render"]')?.innerHTML).toContain('<h1>Hi</h1>');
+    });
+    expect(markdownToHtml).toHaveBeenCalledWith('# Hi', {
+      baseUrl: 'readme.md',
+      backToContentLabel: 'Return to the document',
     });
 
     const rawBtn = document.querySelector<HTMLButtonElement>('[data-action="preview-raw"]');

@@ -310,6 +310,7 @@ export class FileTool implements BlockTool {
         error: this.api.i18n.t('tools.file.previewError'),
         download: this.api.i18n.t('tools.file.previewDownload'),
         openInNewTab: this.api.i18n.t('tools.file.previewOpenInNewTab'),
+        backToContent: this.api.i18n.t('tools.file.previewBackToContent'),
       },
     });
   }

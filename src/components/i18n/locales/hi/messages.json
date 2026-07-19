@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "इस ब्लॉक में {count} नेस्टेड ब्लॉक हैं। रूपांतरित करने पर वे शीर्ष स्तर पर आ जाएँगे। जारी रखें?",
   "toolNames.underline": "अंडरलाइन",
   "toolNames.strikethrough": "स्ट्राइकथ्रू",
+  "toolNames.clearFormat": "टेक्स्ट की फ़ॉर्मैटिंग हटाएं",
   "toolNames.callout": "कॉलआउट",
   "toolNames.divider": "विभाजक",
   "toolNames.spacer": "रिक्त स्थान",

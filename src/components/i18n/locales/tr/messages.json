@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Bu bloğun {count} iç içe bloğu var. Dönüştürmek, bunları en üst düzeye taşıyacak. Devam edilsin mi?",
   "toolNames.underline": "Altı çizili",
   "toolNames.strikethrough": "Üstü çizili",
+  "toolNames.clearFormat": "Biçimlendirmeyi temizle",
   "toolNames.callout": "Bilgi kutusu",
   "toolNames.divider": "Ayırıcı",
   "toolNames.spacer": "Boşluk",

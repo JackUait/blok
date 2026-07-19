@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks werden sie auf die oberste Ebene verschoben. Fortfahren?",
   "toolNames.underline": "Unterstrichen",
   "toolNames.strikethrough": "Durchgestrichen",
+  "toolNames.clearFormat": "Formatierung löschen",
   "toolNames.callout": "Hervorhebung",
   "toolNames.divider": "Trennlinie",
   "toolNames.spacer": "Abstand",

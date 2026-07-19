@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Ten blok zawiera {count} zagnieżdżonych bloków. Po konwersji zostaną one przeniesione na poziom główny. Kontynuować?",
   "toolNames.underline": "Podkreślenie",
   "toolNames.strikethrough": "Przekreślenie",
+  "toolNames.clearFormat": "Wyczyść formatowanie",
   "toolNames.callout": "Objaśnienie",
   "toolNames.divider": "Separator",
   "toolNames.spacer": "Odstęp",

@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Este bloco contém {count} blocos aninhados. Ao convertê-lo, eles passarão para o nível superior. Deseja continuar?",
   "toolNames.underline": "Sublinhado",
   "toolNames.strikethrough": "Tachado",
+  "toolNames.clearFormat": "Limpar formatação",
   "toolNames.callout": "Destaque",
   "toolNames.divider": "Divisor",
   "toolNames.spacer": "Espaçador",

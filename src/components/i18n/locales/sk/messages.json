@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Tento blok obsahuje {count} vnorených blokov. Po konverzii budú presunuté na najvyššiu úroveň. Pokračovať?",
   "toolNames.underline": "Podčiarknuté",
   "toolNames.strikethrough": "Prečiarknuté",
+  "toolNames.clearFormat": "Vymazať formátovanie",
   "toolNames.callout": "Vysvetlivka",
   "toolNames.divider": "Oddeľovač",
   "toolNames.spacer": "Medzera",

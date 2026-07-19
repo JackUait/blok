@@ -121,6 +121,7 @@
   "blockSettings.convertWithChildrenWarning": "Энэ блок {count} дотоод блок агуулж байна. Хөрвүүлэхэд тэдгээр нь дээд түвшинд шилжих болно. Үргэлжлүүлэх үү?",
   "toolNames.underline": "Доогуур зураас",
   "toolNames.strikethrough": "Дундуур зураас",
+  "toolNames.clearFormat": "Шууд форматыг арилгах",
   "toolNames.callout": "Тодорхойлол",
   "toolNames.divider": "Хуваагч",
   "toolNames.spacer": "Зай",

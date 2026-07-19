@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "דער בלאָק האָט {count} אַרײַנגענעסטלטע בלאָקן. זיין איבערמאַכן וועט זיי אַרױפֿרוקן צום ערשטן מדרגה. פֿאָרזעצן?",
   "toolNames.underline": "אונטערשטרייכן",
   "toolNames.strikethrough": "דורכשטרייכן",
+  "toolNames.clearFormat": "אַראָפּנעם די פֿאָרמאַטירונג",
   "toolNames.callout": "באַמערקונג",
   "toolNames.divider": "טיילער",
   "toolNames.spacer": "צווישנרוים",

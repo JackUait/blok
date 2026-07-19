@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "บล็อกนี้มี {count} บล็อกที่ซ้อนอยู่ การแปลงจะย้ายบล็อกเหล่านั้นขึ้นสู่ระดับบนสุด ต้องการดำเนินการต่อไหม?",
   "toolNames.underline": "ขีดเส้นใต้",
   "toolNames.strikethrough": "ขีดทับ",
+  "toolNames.clearFormat": "ล้างการจัดรูปแบบ",
   "toolNames.callout": "กล่องเน้น",
   "toolNames.divider": "เส้นคั่น",
   "toolNames.spacer": "ช่องว่าง",

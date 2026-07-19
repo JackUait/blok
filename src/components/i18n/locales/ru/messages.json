@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Этот блок содержит {count} вложенных блоков. При конвертации они будут перемещены на верхний уровень. Продолжить?",
   "toolNames.underline": "Подчёркнутый",
   "toolNames.strikethrough": "Зачёркнутый",
+  "toolNames.clearFormat": "Очистить форматирование",
   "toolNames.callout": "Выноска",
   "toolNames.divider": "Разделитель",
   "toolNames.spacer": "Отступ",

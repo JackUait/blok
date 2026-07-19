@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "ਇਸ ਬਲਾਕ ਵਿੱਚ {count} ਨੇਸਟਡ ਬਲਾਕ ਹਨ। ਬਦਲਣ ਨਾਲ ਇਹ ਸਿਖਰ ਪੱਧਰ 'ਤੇ ਆ ਜਾਣਗੇ। ਕੀ ਜਾਰੀ ਰੱਖਣਾ ਹੈ?",
   "toolNames.underline": "ਅੰਡਰਲਾਈਨ",
   "toolNames.strikethrough": "ਸਟ੍ਰਾਈਕਥਰੂ",
+  "toolNames.clearFormat": "ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ",
   "toolNames.callout": "ਕਾਲਆਊਟ",
   "toolNames.database": "ਡੇਟਾਬੇਸ",
   "toolNames.board": "ਬੋਰਡ",

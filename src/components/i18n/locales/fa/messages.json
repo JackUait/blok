@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "این بلوک دارای {count} بلوک تو در تو است. تبدیل آن، بلوک‌های تو در تو را به سطح اصلی منتقل می‌کند. آیا می‌خواهید ادامه دهید؟",
   "toolNames.underline": "زیرخط",
   "toolNames.strikethrough": "خط‌خورده",
+  "toolNames.clearFormat": "پاک کردن قالب‌بندی",
   "toolNames.callout": "یادداشت",
   "toolNames.divider": "جداکننده",
   "toolNames.spacer": "فاصله",

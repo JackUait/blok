@@ -119,6 +119,7 @@
   "blockSettings.convertWithChildrenWarning": "ಈ ಬ್ಲಾಕ್‌ನಲ್ಲಿ {count} ನೆಸ್ಟೆಡ್ ಬ್ಲಾಕ್‌ಗಳಿವೆ. ಪರಿವರ್ತಿಸಿದರೆ ಅವು ಮೇಲ್ಮಟ್ಟಕ್ಕೆ ಸ್ಥಳಾಂತರಗೊಳ್ಳುತ್ತವೆ. ಮುಂದುವರಿಯಲೇ?",
   "toolNames.underline": "ಅಂಡರ್‌ಲೈನ್",
   "toolNames.strikethrough": "ಸ್ಟ್ರೈಕ್‌ಥ್ರೂ",
+  "toolNames.clearFormat": "ಫಾರ್ಮ್ಯಾಟಿಂಗ್ ತೆರವುಗೊಳಿಸಿ",
   "toolNames.callout": "ಕಾಲ್‌ಔಟ್",
   "toolNames.database": "ಡೇಟಾಬೇಸ್",
   "toolNames.board": "ಬೋರ್ಡ್",

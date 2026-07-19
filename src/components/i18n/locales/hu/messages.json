@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Ennek a blokknak {count} beágyazott blokkja van. Az átalakítás ezeket a legfelső szintre helyezi. Folytatja?",
   "toolNames.underline": "Aláhúzás",
   "toolNames.strikethrough": "Áthúzás",
+  "toolNames.clearFormat": "Formázás törlése",
   "toolNames.callout": "Kiemelés",
   "toolNames.divider": "Elválasztó",
   "toolNames.spacer": "Térköz",

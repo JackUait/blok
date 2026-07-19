@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Овај блок садржи {count} угнежђених блокова. Конверзијом ће бити премештени на највиши ниво. Наставити?",
   "toolNames.underline": "Подвучено",
   "toolNames.strikethrough": "Прецртано",
+  "toolNames.clearFormat": "Уклони форматирање",
   "toolNames.callout": "Истакнуто",
   "toolNames.divider": "Раздвајач",
   "toolNames.spacer": "Размак",

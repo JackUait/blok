@@ -62,8 +62,10 @@ describe('locale completeness (keys match en)', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * Keys whose English value is a keyboard symbol / universal notation and is
- * expected to stay identical in every locale (⌘/, Ctrl+/, ...).
+ * Keys whose English value is a keyboard symbol / universal notation and may
+ * legitimately stay identical in a locale (⌘/, Ctrl+/, ...). Localized key
+ * names such as German `Strg+/` remain valid; the source-value binding below
+ * ensures that changed English notation must be reviewed and reclassified.
  */
 const UNIVERSAL_EXACT_VALUES: Readonly<Record<string, string>> = {
   'blockSettings.menuShortcutMac': '⌘/',
@@ -172,8 +174,18 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeDate',
   ]),
   id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
-  // "File" is the standard computing loanword in Italian (Notion/Google Docs).
-  it: new Set(['searchTerms.layout', 'toolNames.file']),
+  it: new Set([
+    // Established Italian product and computing loanwords.
+    'searchTerms.layout',
+    'toolNames.file',
+    'toolNames.link',
+    'toolNames.database',
+    'tools.image.emptyLink',
+    'tools.file.emptyLink',
+    'tools.video.emptyLink',
+    'tools.audio.emptyLink',
+    'tools.audio.coverLink',
+  ]),
   // "grid" is a common search keyword loanword for the table tool in Malay UIs.
   ms: new Set(['tools.database.defaultStatusProperty', 'searchTerms.grid']),
   nl: new Set([
@@ -477,6 +489,39 @@ describe('hardcoded user-facing strings bypass i18n', () => {
     }
 
     expect(offenders, 'toolbox titles must use titleKey for i18n').toEqual([]);
+  });
+
+  it('sweep: built-in inline-tool titleKeys exist in the English dictionary', () => {
+    const english = loadLocaleMessages('en');
+    const offenders: string[] = [];
+    const inlineTools = walkTsFiles(join(SRC_DIR, 'components', 'inline-tools'));
+
+    for (const file of inlineTools) {
+      const text = readFileSync(file, 'utf-8');
+      const titleKeyPattern =
+        /(?:public\s+)?static\s+titleKey\s*=\s*(['"])([^'"]+)\1/gu;
+
+      for (const match of text.matchAll(titleKeyPattern)) {
+        const shortKey = match[2];
+
+        if (shortKey === undefined) {
+          continue;
+        }
+
+        const key = shortKey.includes('.')
+          ? shortKey
+          : `toolNames.${shortKey}`;
+
+        if (!(key in english)) {
+          offenders.push(`${relative(REPO_ROOT, file)} → ${key}`);
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      'inline-tool titleKeys must resolve through the locale dictionary'
+    ).toEqual([]);
   });
 });
 

@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "اس بلاک میں {count} نیسٹڈ بلاکس ہیں۔ اسے تبدیل کرنے سے وہ اعلیٰ سطح پر آ جائیں گے۔ کیا آپ جاری رکھنا چاہتے ہیں؟",
   "toolNames.underline": "خط کشیدہ",
   "toolNames.strikethrough": "کٹا ہوا",
+  "toolNames.clearFormat": "فارمیٹ ہٹائیں",
   "toolNames.callout": "نوٹ",
   "toolNames.divider": "تقسیم کار",
   "toolNames.spacer": "خالی جگہ",

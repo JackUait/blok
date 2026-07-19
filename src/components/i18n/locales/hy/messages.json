@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Այս բլոկն ունի {count} ներդրված բլոկ: Փոխարկելու դեպքում դրանք կտեղափոխվեն բարձրագույն մակարդակ: Շարունակե՞լ:",
   "toolNames.underline": "Ընդգծում",
   "toolNames.strikethrough": "Վրագծում",
+  "toolNames.clearFormat": "Մաքրել ուղղակի ձևաչափումը",
   "toolNames.callout": "Ծանուցում",
   "toolNames.divider": "Բաժանարար",
   "toolNames.spacer": "Բացատ",

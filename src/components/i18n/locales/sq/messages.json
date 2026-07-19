@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Ky bllok ka {count} bllokë të ndërfutur. Konvertimi i tij do t'i zhvendosë ato në nivelin e sipërm. Vazhdoni?",
   "toolNames.underline": "Nënvizim",
   "toolNames.strikethrough": "Vizë përmes",
+  "toolNames.clearFormat": "Largo formatimin",
   "toolNames.callout": "Theksim",
   "toolNames.divider": "Ndarës",
   "toolNames.spacer": "Hapësirë",

@@ -119,6 +119,7 @@
   "blockSettings.convertWithChildrenWarning": "ဤဘလောက်တွင် ထပ်ဆင့်ဘလောက် {count} ခု ပါဝင်သည်။ ပြောင်းလဲပါက ၎င်းတို့သည် အထက်ဆုံးအဆင့်သို့ ရောက်သွားမည်။ ဆက်လက်မည်လား?",
   "toolNames.underline": "မျဉ်းသား",
   "toolNames.strikethrough": "ဖျက်မျဉ်း",
+  "toolNames.clearFormat": "ဖော်မတ်ချခြင်းကို ရှင်းလင်းရန်",
   "toolNames.callout": "မှတ်သားချက်",
   "toolNames.database": "ဒေတာဘေ့စ်",
   "toolNames.board": "ဘုတ်",

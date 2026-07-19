@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "இந்த தொகுதியில் {count} உட்பொதிக்கப்பட்ட தொகுதிகள் உள்ளன. மாற்றினால் அவை மேல் நிலைக்கு நகர்த்தப்படும். தொடரவா?",
   "toolNames.underline": "அடிக்கோடு",
   "toolNames.strikethrough": "நடுக்கோடு",
+  "toolNames.clearFormat": "வடிவமைப்பை அகற்று",
   "toolNames.callout": "குறிப்புப்பெட்டி",
   "toolNames.database": "தரவுத்தளம்",
   "toolNames.board": "பலகை",

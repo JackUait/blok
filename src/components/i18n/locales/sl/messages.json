@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Ta blok vsebuje {count} gnezdenih blokov. Pri pretvorbi bodo premaknjeni na najvišjo raven. Nadaljevati?",
   "toolNames.underline": "Podčrtano",
   "toolNames.strikethrough": "Prečrtano",
+  "toolNames.clearFormat": "Počisti oblikovanje",
   "toolNames.callout": "Opomba",
   "toolNames.divider": "Ločilnik",
   "toolNames.spacer": "Razmik",

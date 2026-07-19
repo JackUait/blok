@@ -376,6 +376,26 @@ describe('extractKeysFromSource', () => {
     const keys = extractKeysFromSource(source);
     assert.deepEqual([...keys].sort(), ['blockSettings.delete', 'popover.search']);
   });
+
+  it('extracts short literal titleKeys through the toolNames namespace', () => {
+    const source = `
+      public static titleKey = 'clearFormat';
+      const entry = { titleKey: "bold" };
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys].sort(), [
+      'toolNames.bold',
+      'toolNames.clearFormat',
+    ]);
+  });
+
+  it('preserves fully qualified literal titleKeys', () => {
+    const source = `const entry = { titleKey: 'tools.table.title' };`;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys], ['tools.table.title']);
+  });
 });
 
 describe('scanSourceKeys', () => {

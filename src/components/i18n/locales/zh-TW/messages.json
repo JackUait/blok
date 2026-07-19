@@ -129,6 +129,7 @@
   "a11y.textFormatting": "文字格式",
   "toolNames.underline": "底線",
   "toolNames.strikethrough": "刪除線",
+  "toolNames.clearFormat": "清除格式",
   "toolNames.callout": "提示框",
   "toolNames.database": "資料庫",
   "toolNames.board": "看板",

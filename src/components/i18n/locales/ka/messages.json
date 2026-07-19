@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "ამ ბლოკს აქვს {count} ჩადგმული ბლოკი. კონვერტაცია მათ მთავარ დონეზე გადაიტანს. გაგრძელება?",
   "toolNames.underline": "ხაზგასმა",
   "toolNames.strikethrough": "გადახაზვა",
+  "toolNames.clearFormat": "პირდაპირი დაფორმატების გასუფთავება",
   "toolNames.callout": "შენიშვნა",
   "toolNames.divider": "გამყოფი",
   "toolNames.spacer": "დაშორება",

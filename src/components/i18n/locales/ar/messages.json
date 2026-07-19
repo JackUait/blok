@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "تحتوي هذه الكتلة على {count} كتل متداخلة. سيؤدي تحويلها إلى رفعها إلى المستوى الأعلى. هل تريد المتابعة؟",
   "toolNames.underline": "تسطير",
   "toolNames.strikethrough": "يتوسطه خط",
+  "toolNames.clearFormat": "مسح التنسيق",
   "toolNames.callout": "تنبيه",
   "toolNames.divider": "فاصل",
   "toolNames.spacer": "مباعد",

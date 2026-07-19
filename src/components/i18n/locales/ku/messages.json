@@ -121,6 +121,7 @@
   "blockSettings.convertWithChildrenWarning": "ئەم بلۆکە {count} بلۆکی ناوخۆی هەیە. گۆڕینەکە ئەوانەی بۆ ئاستی سەرەوە دەبات. بەردەوام بی؟",
   "toolNames.underline": "ژێرهێڵ",
   "toolNames.strikethrough": "هێڵی سەر",
+  "toolNames.clearFormat": "شێوەپێدانی ڕاستەوخۆ پاکبکەرەوە",
   "toolNames.callout": "تێبینی",
   "toolNames.divider": "جیاکەرەوە",
   "toolNames.spacer": "بۆشایی",

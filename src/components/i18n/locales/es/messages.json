@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Bloques anidados: {count}. Al convertir este bloque, se moverán al nivel superior. ¿Quieres continuar?",
   "toolNames.underline": "Subrayado",
   "toolNames.strikethrough": "Tachado",
+  "toolNames.clearFormat": "Borrar formato",
   "toolNames.callout": "Destacado",
   "toolNames.divider": "Divisor",
   "toolNames.spacer": "Espaciador",

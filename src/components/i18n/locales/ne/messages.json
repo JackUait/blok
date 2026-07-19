@@ -119,6 +119,7 @@
   "blockSettings.convertWithChildrenWarning": "यस ब्लकमा {count} नेस्टेड ब्लकहरू छन्। रूपान्तरण गर्दा ती शीर्ष स्तरमा आउनेछन्। जारी राख्ने?",
   "toolNames.underline": "अधोरेखा",
   "toolNames.strikethrough": "स्ट्राइकथ्रु",
+  "toolNames.clearFormat": "ढाँचा खाली गर्नुहोस्",
   "toolNames.callout": "कलआउट",
   "toolNames.database": "डेटाबेस",
   "toolNames.board": "बोर्ड",

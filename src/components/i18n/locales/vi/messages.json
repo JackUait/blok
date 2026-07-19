@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Khối này có {count} khối lồng nhau. Khi chuyển đổi, các khối đó sẽ được đưa lên cấp cao nhất. Tiếp tục?",
   "toolNames.underline": "Gạch chân",
   "toolNames.strikethrough": "Gạch ngang",
+  "toolNames.clearFormat": "Xóa định dạng",
   "toolNames.callout": "Chú thích",
   "toolNames.divider": "Đường phân cách",
   "toolNames.spacer": "Khoảng trống",

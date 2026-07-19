@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "هن بلاڪ ۾ {count} نيسٽيڊ بلاڪ آهن. ان کي تبديل ڪرڻ سان اهي مٿيان سطح تي اچي ويندا. ڇا توهان جاري رکڻ چاهيو ٿا؟",
   "toolNames.underline": "هيٺ لڪير",
   "toolNames.strikethrough": "وچ لڪير",
+  "toolNames.clearFormat": "فارميٽنگ صاف ڪريو",
   "toolNames.callout": "نوٽ",
   "toolNames.divider": "ورهائيندڙ",
   "toolNames.spacer": "خالي جاءِ",

@@ -121,6 +121,7 @@
   "blockSettings.convertWithChildrenWarning": "Blok ini mempunyai {count} blok bersarang. Penukaran akan memindahkan blok tersebut ke peringkat teratas. Teruskan?",
   "toolNames.underline": "Garis Bawah",
   "toolNames.strikethrough": "Garis tengah",
+  "toolNames.clearFormat": "Kosongkan format teks",
   "toolNames.callout": "Serlahan",
   "toolNames.divider": "Pembahagi",
   "toolNames.spacer": "Ruang",

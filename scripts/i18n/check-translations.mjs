@@ -279,22 +279,43 @@ export function findUntranslatedKeys(sourceTranslation, translation) {
 
 /**
  * Extracts all statically-known i18n keys from a TypeScript source string.
- * Matches .t('key') and .t("key") — skips dynamic arguments.
+ * Matches .t('key'), .t("key"), and literal tool titleKey assignments.
+ * Short titleKeys resolve through the toolNames namespace. Dynamic arguments
+ * and template literals are skipped.
  *
  * @param {string} source - File contents as a string
  * @returns {Set<string>} Set of key strings found
  */
 export function extractKeysFromSource(source) {
   const keys = new Set();
-  // Match .t('key') or .t("key") — require opening paren immediately after t
-  const regex = /\.t\((['"])([^'"]+)\1/g;
-  let match;
-  while ((match = regex.exec(source)) !== null) {
-    const key = match[2];
+  const addQualifiedKey = (key) => {
     if (key.includes('.') && !key.endsWith('.')) {
       keys.add(key);
     }
+  };
+
+  // Match .t('key') or .t("key") — require opening paren immediately after t.
+  const translationCallPattern = /\.t\((['"])([^'"]+)\1/g;
+  let match;
+
+  while ((match = translationCallPattern.exec(source)) !== null) {
+    const key = match[2];
+
+    addQualifiedKey(key);
   }
+
+  // Built-in tools declare translation keys either as a static class property
+  // or as a toolbox object property. A short key is defined by the runtime
+  // contract to resolve as toolNames.<key>.
+  const titleKeyPattern = /\btitleKey\s*(?:=|:)\s*(['"])([^'"]+)\1/g;
+
+  while ((match = titleKeyPattern.exec(source)) !== null) {
+    const key = match[2];
+    const qualifiedKey = key.includes('.') ? key : `toolNames.${key}`;
+
+    addQualifiedKey(qualifiedKey);
+  }
+
   return keys;
 }
 

@@ -121,6 +121,7 @@
   "blockSettings.convertWithChildrenWarning": "이 블록에는 {count}개의 중첩 블록이 있습니다. 변환하면 중첩 블록이 최상위 레벨로 이동됩니다. 계속하시겠습니까?",
   "toolNames.underline": "밑줄",
   "toolNames.strikethrough": "취소선",
+  "toolNames.clearFormat": "텍스트 서식 지우기",
   "toolNames.callout": "콜아웃",
   "toolNames.divider": "구분선",
   "toolNames.spacer": "여백",

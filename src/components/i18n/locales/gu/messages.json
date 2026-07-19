@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "આ બ્લૉકમાં {count} નેસ્ટેડ બ્લૉક છે. રૂપાંતરિત કરવાથી તે ટોચના સ્તરે આવી જશે. આગળ વધવું છે?",
   "toolNames.underline": "અન્ડરલાઇન",
   "toolNames.strikethrough": "સ્ટ્રાઇકથ્રૂ",
+  "toolNames.clearFormat": "ફોર્મેટિંગ સાફ કરો",
   "toolNames.callout": "કૉલઆઉટ",
   "toolNames.database": "ડેટાબેઝ",
   "toolNames.board": "બોર્ડ",

@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "Ang block na ito ay may {count} na mga nested block. Kapag na-convert, ililipat ang mga ito sa pinakamataas na antas. Ituloy?",
   "toolNames.underline": "Salungguhit",
   "toolNames.strikethrough": "May guhit",
+  "toolNames.clearFormat": "I-clear ang pag-format",
   "toolNames.callout": "Paalala",
   "toolNames.database": "Talaan ng datos",
   "toolNames.board": "Board",

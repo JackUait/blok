@@ -119,6 +119,7 @@
   "blockSettings.convertWithChildrenWarning": "ບລັອກນີ້ມີ {count} ບລັອກທີ່ຊ້ອນກັນ. ການປ່ຽນຮູບແບບຈະຍ້າຍພວກມັນໄປຢູ່ລະດັບສູງສຸດ. ສືບຕໍ່ບໍ?",
   "toolNames.underline": "ຂີດກ້ອງ",
   "toolNames.strikethrough": "ຂີດທັບ",
+  "toolNames.clearFormat": "ລ້າງຮູບແບບໂດຍກົງ",
   "toolNames.callout": "ກ່ອງເນັ້ນ",
   "toolNames.database": "ຖານຂໍ້ມູນ",
   "toolNames.board": "ກະດານ",

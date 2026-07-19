@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Sellel plokil on {count} pesastatud plokki. Teisendamisel tõstetakse need ülemisele tasemele. Jätkata?",
   "toolNames.underline": "Allajoonimine",
   "toolNames.strikethrough": "Läbikriipsutus",
+  "toolNames.clearFormat": "Eemalda vorming",
   "toolNames.callout": "Vihjekast",
   "toolNames.divider": "Eraldaja",
   "toolNames.spacer": "Vahe",

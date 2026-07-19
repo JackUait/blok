@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "Bu blokun {count} iç-içə bloku var. Çevirdikdə onlar ən yuxarı səviyyəyə köçürüləcək. Davam edilsin?",
   "toolNames.underline": "Altdan xətt",
   "toolNames.strikethrough": "Üstü xətli",
+  "toolNames.clearFormat": "Formatı təmizlə",
   "toolNames.callout": "Vurğu",
   "toolNames.database": "Verilənlər bazası",
   "toolNames.board": "Lövhə",

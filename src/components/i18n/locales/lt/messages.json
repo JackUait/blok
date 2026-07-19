@@ -121,6 +121,7 @@
   "blockSettings.convertWithChildrenWarning": "Šiame bloke yra {count} įdėtinių blokų. Konvertavus jie bus perkelti į aukščiausią lygį. Tęsti?",
   "toolNames.underline": "Pabrauktas",
   "toolNames.strikethrough": "Perbrauktas",
+  "toolNames.clearFormat": "Valyti formatavimą",
   "toolNames.callout": "Pastaba",
   "toolNames.divider": "Skirtukas",
   "toolNames.spacer": "Tarpas",

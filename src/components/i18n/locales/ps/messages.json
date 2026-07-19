@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "دا بلاک {count} ننوتي بلاکونه لري. د هغه بدلول به دوی لوړ کچې ته وړاندې کړي. ادامه ورکوئ؟",
   "toolNames.underline": "کرښنلیک",
   "toolNames.strikethrough": "پرېکړلیک",
+  "toolNames.clearFormat": "بڼه پاکه کړئ",
   "toolNames.callout": "یادونه",
   "toolNames.divider": "بېلونکی",
   "toolNames.spacer": "تش ځای",

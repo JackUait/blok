@@ -129,6 +129,7 @@
   "a11y.textFormatting": "Text formatting",
   "toolNames.underline": "Underline",
   "toolNames.strikethrough": "Strikethrough",
+  "toolNames.clearFormat": "Clear formatting",
   "toolNames.callout": "Callout",
   "toolNames.database": "Database",
   "toolNames.board": "Board",

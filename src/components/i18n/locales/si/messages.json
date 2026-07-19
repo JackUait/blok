@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "මෙම බ්ලොක් එකේ {count} කූඩු කළ බ්ලොක් ඇත. පරිවර්තනය කිරීමෙන් ඒවා ඉහළ මට්ටමට ගෙන යනු ලැබේ. ඉදිරියට යන්නද?",
   "toolNames.underline": "යටිරේඛනය",
   "toolNames.strikethrough": "හරස් ඉරි",
+  "toolNames.clearFormat": "හැඩතල ගැන්වීම ඉවත් කරන්න",
   "toolNames.callout": "අවධාරක සටහන",
   "toolNames.database": "දත්ත සමුදාය",
   "toolNames.board": "පුවරුව",

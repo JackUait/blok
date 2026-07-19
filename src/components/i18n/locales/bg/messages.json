@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Този блок съдържа {count} вложени блока. При конвертиране те ще бъдат преместени на най-горното ниво. Продължи?",
   "toolNames.underline": "Подчертан",
   "toolNames.strikethrough": "Зачертан",
+  "toolNames.clearFormat": "Изчисти форматирането",
   "toolNames.callout": "Бележка",
   "toolNames.divider": "Разделител",
   "toolNames.spacer": "Разстояние",

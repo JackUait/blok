@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "ប្លុកនេះមាន {count} ប្លុករង។ ការបំលែងនឹងប្រែប្លុកទាំងនោះទៅកម្រិតកំពូល។ ចង់បន្តទេ?",
   "toolNames.underline": "គូសបន្ទាត់ពីក្រោម",
   "toolNames.strikethrough": "គូសបន្ទាត់ចំកណ្ដាល",
+  "toolNames.clearFormat": "ជម្រះទ្រង់ទ្រាយ",
   "toolNames.callout": "ប្រអប់រំលេច",
   "toolNames.database": "មូលដ្ឋានទិន្នន័យ",
   "toolNames.board": "បន្ទះ",

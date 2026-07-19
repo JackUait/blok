@@ -121,6 +121,7 @@
   "blockSettings.convertWithChildrenWarning": "Овој блок содржи {count} вгнездени блокови. При конвертирање тие ќе бидат преместени на највисокото ниво. Продолжи?",
   "toolNames.underline": "Подвлечено",
   "toolNames.strikethrough": "Прецртано",
+  "toolNames.clearFormat": "Избриши форматирање",
   "toolNames.callout": "Истакнато",
   "toolNames.divider": "Разделник",
   "toolNames.spacer": "Растојание",

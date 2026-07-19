@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "ይህ ብሎክ {count} የተካተቱ ብሎኮች አሉት። ሲቀይሩ ወደ ከፍተኛ ደረጃ ይዛወራሉ። መቀጠል ይፈልጋሉ?",
   "toolNames.underline": "ከስር ማስመር",
   "toolNames.strikethrough": "የተሰረዘ መስመር",
+  "toolNames.clearFormat": "ቅርጸት አጽዳ",
   "toolNames.callout": "ማስታወሻ",
   "toolNames.database": "ዳታቤዝ",
   "toolNames.board": "ሰሌዳ",

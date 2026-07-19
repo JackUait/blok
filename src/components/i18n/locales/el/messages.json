@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Αυτό το μπλοκ έχει {count} ένθετα μπλοκ. Η μετατροπή του θα τα μετακινήσει στο ανώτατο επίπεδο. Να συνεχιστεί;",
   "toolNames.underline": "Υπογράμμιση",
   "toolNames.strikethrough": "Διαγράμμιση",
+  "toolNames.clearFormat": "Απαλοιφή μορφοποίησης",
   "toolNames.callout": "Επεξήγηση",
   "toolNames.divider": "Διαχωριστικό",
   "toolNames.spacer": "Διάστημα",

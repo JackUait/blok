@@ -38,7 +38,7 @@ export class ClearFormatInlineTool implements InlineTool {
   /**
    * Title for the Inline Tool
    */
-  public static title = 'Clear format';
+  public static title = 'Clear formatting';
 
   /**
    * Translation key for i18n

@@ -47,7 +47,7 @@ describe('ClearFormatInlineTool', () => {
 
   it('exposes inline metadata and an empty sanitizer config', () => {
     expect(ClearFormatInlineTool.isInline).toBe(true);
-    expect(ClearFormatInlineTool.title).toBe('Clear format');
+    expect(ClearFormatInlineTool.title).toBe('Clear formatting');
     expect(ClearFormatInlineTool.titleKey).toBe('clearFormat');
     expect(ClearFormatInlineTool.sanitize).toStrictEqual({});
   });

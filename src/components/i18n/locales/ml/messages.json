@@ -119,6 +119,7 @@
   "blockSettings.convertWithChildrenWarning": "ഈ ബ്ലോക്കിൽ {count} നെസ്റ്റഡ് ബ്ലോക്കുകൾ ഉണ്ട്. പരിവർത്തനം ചെയ്‌താൽ അവ ഉന്നത തലത്തിലേക്ക് മാറ്റപ്പെടും. തുടരണോ?",
   "toolNames.underline": "അടിവര",
   "toolNames.strikethrough": "സ്ട്രൈക്ക്ത്രൂ",
+  "toolNames.clearFormat": "ഫോർമാറ്റിംഗ് മായ്ക്കുക",
   "toolNames.callout": "കോളൗട്ട്",
   "toolNames.database": "ഡാറ്റാബേസ്",
   "toolNames.board": "ബോർഡ്",

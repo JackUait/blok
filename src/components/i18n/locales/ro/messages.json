@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Acest bloc are {count} blocuri incluse. Convertirea le va promova la nivelul principal. Continuați?",
   "toolNames.underline": "Subliniat",
   "toolNames.strikethrough": "Tăiat",
+  "toolNames.clearFormat": "Șterge formatarea",
   "toolNames.callout": "Evidențiere",
   "toolNames.divider": "Separator",
   "toolNames.spacer": "Distanțier",

@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Blok ini memiliki {count} blok bersarang. Mengubahnya akan memindahkan blok-blok tersebut ke tingkat teratas. Lanjutkan?",
   "toolNames.underline": "Garis bawah",
   "toolNames.strikethrough": "Coret",
+  "toolNames.clearFormat": "Hapus pemformatan",
   "toolNames.callout": "Info",
   "toolNames.divider": "Pemisah",
   "toolNames.spacer": "Spasi",

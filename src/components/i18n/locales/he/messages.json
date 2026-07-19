@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "לבלוק זה יש {count} בלוקים מקוננים. המרתו תעביר אותם לרמה העליונה. להמשיך?",
   "toolNames.underline": "קו תחתון",
   "toolNames.strikethrough": "קו חוצה",
+  "toolNames.clearFormat": "נקה עיצוב",
   "toolNames.callout": "תיבת הדגשה",
   "toolNames.divider": "מפריד",
   "toolNames.spacer": "מרווח",

@@ -108,6 +108,7 @@
   "blockSettings.convertWithChildrenWarning": "Ovaj blok sadrži {count} ugniježđenih blokova. Konverzijom će biti premješteni na najviši nivo. Nastaviti?",
   "toolNames.underline": "Podcrtano",
   "toolNames.strikethrough": "Precrtano",
+  "toolNames.clearFormat": "Očisti formatiranje",
   "toolNames.callout": "Isticanje",
   "toolNames.database": "Baza podataka",
   "toolNames.board": "Tabla",

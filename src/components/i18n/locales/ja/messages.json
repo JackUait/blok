@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "このブロックには {count} 個のネストされたブロックがあります。変換すると、それらはトップレベルに移動されます。続けますか？",
   "toolNames.underline": "下線",
   "toolNames.strikethrough": "取り消し線",
+  "toolNames.clearFormat": "文字書式をクリア",
   "toolNames.callout": "コールアウト",
   "toolNames.divider": "区切り線",
   "toolNames.spacer": "スペース",

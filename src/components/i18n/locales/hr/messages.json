@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Ovaj blok sadrži {count} ugniježđenih blokova. Pretvorbom će biti premješteni na najvišu razinu. Nastaviti?",
   "toolNames.underline": "Podcrtano",
   "toolNames.strikethrough": "Precrtano",
+  "toolNames.clearFormat": "Očisti oblikovanje",
   "toolNames.callout": "Isticanje",
   "toolNames.divider": "Razdjelnik",
   "toolNames.spacer": "Razmak",

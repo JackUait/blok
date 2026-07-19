@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Tässä lohkossa on {count} sisäkkäistä lohkoa. Muuntaminen siirtää ne ylimmälle tasolle. Jatketaanko?",
   "toolNames.underline": "Alleviivaus",
   "toolNames.strikethrough": "Yliviivaus",
+  "toolNames.clearFormat": "Poista muotoilu",
   "toolNames.callout": "Huomioruutu",
   "toolNames.divider": "Erotin",
   "toolNames.spacer": "Väli",

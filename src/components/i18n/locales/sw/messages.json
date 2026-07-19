@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "Kizuizi hiki kina vizuizi {count} vilivyowekwa ndani. Kubadilisha kutavihamisha hadi kiwango cha juu. Endelea?",
   "toolNames.underline": "Mstari chini",
   "toolNames.strikethrough": "Mstari katikati",
+  "toolNames.clearFormat": "Ondoa uumbizaji",
   "toolNames.callout": "Angazio",
   "toolNames.divider": "Kigawanyo",
   "toolNames.spacer": "Nafasi",

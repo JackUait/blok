@@ -110,6 +110,7 @@
   "blockSettings.convertWithChildrenWarning": "بۇ بۆلەكتە {count} قاتلاشقان بۆلەك بار. ئۇنى ئۆزگەرتسەڭىز، ئۇلار ئەڭ ئۈستكى قاتقا چىقىرىلىدۇ. داۋاملاشتۇرامسىز؟",
   "toolNames.underline": "ئاستى سىزىق",
   "toolNames.strikethrough": "ئۆچۈرۈش سىزىقى",
+  "toolNames.clearFormat": "پىچىمنى چىقىرىۋەت",
   "toolNames.callout": "ئەسكەرتىش",
   "toolNames.divider": "بۆلگۈچ",
   "toolNames.spacer": "بوشلۇق",

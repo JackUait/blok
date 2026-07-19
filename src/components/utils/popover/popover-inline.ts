@@ -182,8 +182,12 @@ export class PopoverInline extends PopoverDesktop {
       convertEl.classList.add('col-span-full', 'w-full');
 
       convertEl
+        .querySelectorAll('[data-blok-testid="popover-item-title"]')
+        .forEach((title) => title.classList.add('font-medium'));
+
+      convertEl
         .querySelectorAll('[data-blok-testid="popover-item-chevron-right"]')
-        .forEach((chevron) => chevron.classList.add('ml-auto'));
+        .forEach((chevron) => chevron.classList.add('ml-auto', 'text-text-secondary'));
     });
 
     root

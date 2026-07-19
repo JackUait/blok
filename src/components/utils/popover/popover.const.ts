@@ -65,8 +65,11 @@ export const cssInline = {
   popoverContainer: 'flex-col top-0 min-w-max w-max p-1 mobile:absolute',
 
   // Items container for inline popover — the convert row spans all five
-  // columns, formatting buttons flow below it five per row
-  items: 'grid grid-cols-5 justify-items-center gap-y-0.5 pt-0 pb-0',
+  // columns, formatting buttons flow below it five per row. Tracks are at
+  // least 2rem so buttons get square-ish cells even when the convert row is
+  // narrow; buttons stretch (no justify-items-center) so hover pills fill
+  // their whole cell.
+  items: 'grid grid-cols-[repeat(5,minmax(2rem,auto))] gap-x-0.5 gap-y-0.5 pt-0 pb-0',
 
   // Opened state for inline popover - symmetric padding (no scroll area, so pt matches pb).
   // pt is re-added here because the shared opened state drops it for flush item-list menus.

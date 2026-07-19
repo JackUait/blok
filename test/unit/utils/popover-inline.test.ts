@@ -83,14 +83,17 @@ describe('PopoverInline', () => {
       });
     };
 
-    it('lays formatting buttons out as a five-column grid', () => {
+    it('lays formatting buttons out on five comfortable grid tracks with gaps', () => {
       const popover = createGridPopover();
 
       popover.show();
 
       const items = popover.getElement().querySelector(`[${DATA_ATTR.popoverItems}]`);
 
-      expect(items?.className).toContain('grid-cols-5');
+      expect(items?.className).toContain('grid-cols-[repeat(5,minmax(2rem,auto))]');
+      expect(items?.className).toContain('gap-x-0.5');
+      // Buttons stretch to fill their tracks so hover pills cover the whole cell
+      expect(items?.className).not.toContain('justify-items-center');
     });
 
     it('stretches the convert row and separator across the full grid width', () => {
@@ -116,6 +119,21 @@ describe('PopoverInline', () => {
         .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-chevron-right"]');
 
       expect(chevron?.className).toContain('ml-auto');
+    });
+
+    it('styles the convert row as a card header: medium label, muted chevron', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const convert = popover
+        .getElement()
+        .querySelector('[data-blok-item-name="convert-to"]');
+      const title = convert?.querySelector('[data-blok-testid="popover-item-title"]');
+      const chevron = convert?.querySelector('[data-blok-testid="popover-item-chevron-right"]');
+
+      expect(title?.className).toContain('font-medium');
+      expect(chevron?.className).toContain('text-text-secondary');
     });
 
     it('does not pin the container to the single-row toolbar height', () => {

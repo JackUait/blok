@@ -340,7 +340,7 @@
   "tools.database.addView": "Добавить представление",
   "tools.database.viewTypeBoard": "Доска",
   "tools.database.viewTypeList": "Список",
-  "tools.database.viewTypeBoardDescription": "Показать элементы в колонках",
+  "tools.database.viewTypeBoardDescription": "Показывать элементы в колонках",
   "tools.database.viewTypeListDescription": "Показывать элементы простым списком",
   "tools.database.propertyTypeHeading": "Тип свойства",
   "tools.database.propertyTypeText": "Текст",

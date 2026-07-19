@@ -307,7 +307,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001` | pending |
 | `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | — | — | pending | pending | pending | `F-pt-001`–`F-pt-085` | pending |
 | `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001` | pending |
-| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | — | — | pending | pending | pending | `F-ru-001`–`F-ru-126` | pending |
+| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | `root-ru-first-final` | — | pass | pass | pass | `F-ru-001`–`F-ru-127` | first-pass-complete |
 | `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001` | pending |
 | `si` | Sinhala | Sinhala | ltr | to-audit | — | — | pending | pending | pending | `F-si-001` | pending |
 | `sk` | Slovak | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sk-001` | pending |
@@ -367,6 +367,7 @@ locale returns to `pending`.
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
 | `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
+| `ru` | `root-ru-first-final` | `sha256:55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821` | — | — |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -1733,7 +1734,7 @@ required Swedish corrections as `F-sv-092` through `F-sv-094`; the
 travel-and-places value was already complete. All reviewer and digest evidence
 remains reset.
 
-### Russian (`ru`) — current 539-key first pass complete
+### Russian (`ru`) — current 545-key first pass complete
 
 The first reviewer inspected all 539 Russian values against the current
 English source, their rendered, accessibility, built-compatibility, or
@@ -1810,6 +1811,28 @@ The expanded English category source adds the three incomplete Russian
 category labels as `F-ru-124` through `F-ru-126`; the existing
 travel-and-places label remains complete. All results, reviewers, and digest
 evidence remain reset.
+
+Reviewer `root-ru-first-final` then inspected all 545 final English/Russian
+pairs in source order against their rendered, accessible,
+built-compatibility, provider-composed, or documented source-only contracts.
+The pass found `F-ru-127`: the board-view behavior subtitle used perfective
+`Показать` beside the list subtitle’s imperfective `Показывать`. Its exact
+expectation failed red, the shared-aspect correction was applied, and the
+reviewer restarted from entry 1 and reread all 545 values on the corrected
+bytes without finding another residual.
+
+The final pass revalidates all 127 Russian findings, all 77 changed-English
+dependencies, all 38 placeholder-bearing values and 54 occurrences, all 44
+distinct aliases in 14 groups, all 117 provider compositions, all 12
+source-only contracts, and the complete 532 caller/built + 12 source-only + 1
+unused-notifier partition. The exact-English inventory remains exactly the
+seven supported values `R-ru-001` through `R-ru-007`. The focused Russian,
+structural, retention-ledger, and finding synchronization selection passes
+129/129, and the live checker reports 545 complete keys with valid integrity
+and source coverage. The first pass binds to raw SHA-256
+`55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821`.
+Russian is `first-pass-complete` and requires a distinct full second review on
+these exact bytes.
 
 ### Simplified Chinese (`zh`) — current 539-key second pass complete
 
@@ -3258,6 +3281,7 @@ follows the global transition rule above.
 | `F-ru-124` | `ru` | `tools.callout.emojiCategoryPeople` | category scope / accessibility | `"Люди"` | `"Смайлики и люди"` | The visible heading and navigation accessible name cover smileys as well as people; Microsoft’s Russian emoji UI names both scopes. | verified |
 | `F-ru-125` | `ru` | `tools.callout.emojiCategoryNature` | category scope / accessibility | `"Природа"` | `"Животные и природа"` | The category begins with and contains animals as well as plants; Google’s Russian emoji picker names both scopes. | verified |
 | `F-ru-126` | `ru` | `tools.callout.emojiCategoryFood` | category scope / accessibility | `"Еда"` | `"Еда и напитки"` | The category contains food and beverages; Google’s Russian emoji picker names both scopes. | verified |
+| `F-ru-127` | `ru` | `tools.database.viewTypeBoardDescription` | aspect / sibling consistency / source synchronization | `"Показать элементы в колонках"` | `"Показывать элементы в колонках"` | The popover renders this as a persistent view-behavior subtitle beside `Показывать элементы простым списком`; matching imperfective infinitives describe what each view does, whereas perfective `Показать` reads as a one-shot command. The exact regression and structural checks pass after correction. | verified |
 | `F-sd-001` | `sd` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"فارميٽنگ صاف ڪريو"` | WordPress Sindhi supplies the native clear action `صاف ڪريو` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/snd/default/export-translations/?format=po); the object reuses this dictionary’s established `فارميٽنگ` noun. This adapted value remains flagged for a distinct full-language pass. | verified |
 | `F-si-001` | `si` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"හැඩතල ගැන්වීම ඉවත් කරන්න"` | WordPress Sinhala uses `ආකෘතිකරණය ඉවත්කරන්න` for Clear formatting in its [official catalog](https://translate.wordpress.org/projects/wp/dev/si/default/export-translations/?format=po); the selected wording follows this dictionary’s existing formatting noun and spacing conventions. | verified |
 | `F-sk-001` | `sk` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Vymazať formátovanie"` | Microsoft’s Slovak editor UI uses the exact command [Vymazať formátovanie](https://support.microsoft.com/sk-SK/PowerPoint/clear-all-text-formatting). | verified |

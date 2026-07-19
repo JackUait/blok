@@ -182,17 +182,15 @@ const expectMenuBesideTrigger = (menuBox: BoundingBox, triggerBox: BoundingBox):
 
   if (fitsLeftOfTrigger) {
     // The menu is vertically centered on its trigger (the six-dots handle),
-    // shifted up/down only as far as the screen edge requires (small 8px
-    // gap). When the handle itself sits inside the gap zone, the floor/
-    // ceiling relaxes to the handle's edge so the menu stays attached.
+    // shifted up/down only as far as the screen edge requires. The margin is
+    // a small unconditional gap: the menu never touches the screen border,
+    // even when the handle itself sits at the very edge.
     const viewportMargin = 8;
     const desiredTop = triggerBox.y + triggerBox.height / 2 - menuBox.height / 2;
-    const topFloor = Math.max(0, Math.min(viewportMargin, triggerBox.y));
-    const bottomCeiling = Math.min(720, Math.max(720 - viewportMargin, triggerBox.y + triggerBox.height));
-    const maxTop = bottomCeiling - menuBox.height;
-    const expectedTop = maxTop < topFloor
-      ? topFloor
-      : Math.max(topFloor, Math.min(desiredTop, maxTop));
+    const maxTop = 720 - viewportMargin - menuBox.height;
+    const expectedTop = maxTop < viewportMargin
+      ? viewportMargin
+      : Math.max(viewportMargin, Math.min(desiredTop, maxTop));
 
     expect(Math.abs(menuBox.y - expectedTop)).toBeLessThanOrEqual(2);
     // The six-dots handle stays fully visible to the menu's right.

@@ -402,24 +402,24 @@ describe('resolvePosition', () => {
       expect(result.top).toBe(50);
     });
 
-    it('regression: margin yields so the handle stays inside the menu when it sits within the top margin zone', () => {
-      // The six-dots handle is 20px from the viewport top — inside the 50px
-      // margin zone. Clamping to the margin floor would place the menu
-      // entirely below the handle, detaching it from its anchor. The floor
-      // must relax to the anchor's top instead.
+    it('regression: menu keeps the aesthetic gap from the screen top even when the handle touches it', () => {
+      // The six-dots handle sits at the very top of the screen. The menu must
+      // never touch the screen border: it stays at the small margin, and the
+      // 24px-tall handle still overlaps the menu's span.
       const result = resolvePosition({
-        anchor: rect({ top: 20, bottom: 60, left: 400, right: 440 }),
+        anchor: rect({ top: 2, bottom: 26, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 200 },
         scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
         viewportSize: { width: 1024, height: 768 },
         scrollOffset: { x: 0, y: 0 },
         offset: 8,
         placeLeftOfAnchor: true,
-        viewportMargin: 50,
+        viewportMargin: 8,
       });
 
-      expect(result.top).toBe(20);
-      expect(result.top).toBeLessThanOrEqual(20); // handle top inside menu span
+      expect(result.top).toBe(8);
+      // The handle still overlaps the menu span (pokes out by at most the margin).
+      expect(result.top).toBeLessThan(26);
     });
 
     it('clamps to the viewport-margin floor in doc coords when page is scrolled', () => {
@@ -435,13 +435,11 @@ describe('resolvePosition', () => {
       });
 
       // Anchor center doc = 50 + 400 = 450, desired top = 450 - 150 = 300.
-      // Viewport-margin floor = 400 + 50 = 450, but the anchor top (430 in
-      // doc coords) is inside the margin zone → floor relaxes to 430 so the
-      // handle stays within the menu's span.
-      expect(result.top).toBe(430);
+      // Viewport-margin floor = 400 + 50 = 450 → clamp to 450.
+      expect(result.top).toBe(450);
     });
 
-    it('keeps the popover inside the viewport even when the anchor sits at the very top', () => {
+    it('keeps the whole popover inside viewport margins even when the anchor sits at the very top', () => {
       const result = resolvePosition({
         anchor: rect({ top: 5, bottom: 45, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 600 },
@@ -453,10 +451,10 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // The anchor is inside the margin zone → floor relaxes to the anchor
-      // top (5) so the menu tracks the handle instead of detaching.
-      expect(result.top).toBe(5);
-      expect(result.top + 600).toBeLessThanOrEqual(900);
+      // Centering is impossible; the menu shifts down just enough to fit —
+      // the margin gap is unconditional so the menu never touches the border.
+      expect(result.top).toBe(50);
+      expect(result.top + 600).toBeLessThanOrEqual(900 - 50);
     });
 
     it('centers on the anchor when there is enough viewport room on both sides', () => {
@@ -550,28 +548,28 @@ describe('resolvePosition', () => {
       expect(result.openTop).toBe(false);
     });
 
-    it('regression: margin yields so the handle stays inside the menu when it sits within the bottom margin zone', () => {
-      // The six-dots handle bottom is 16px from the viewport bottom — inside
-      // the 50px margin zone. Clamping the menu bottom to (viewport - 50)
-      // would leave the handle floating below a detached menu. The ceiling
-      // must relax to the anchor's bottom instead.
+    it('regression: menu keeps the aesthetic gap from the screen bottom even when the handle touches it', () => {
+      // The six-dots handle sits at the very bottom of the screen. The menu
+      // must never touch the screen border: its bottom stops at the margin
+      // gap, and the handle still overlaps the menu's span.
       const result = resolvePosition({
-        anchor: rect({ top: 760, bottom: 784, left: 400, right: 440 }),
+        anchor: rect({ top: 776, bottom: 800, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 400 },
         scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1000 }),
         viewportSize: { width: 1024, height: 800 },
         scrollOffset: { x: 0, y: 0 },
         offset: 8,
         placeLeftOfAnchor: true,
-        viewportMargin: 50,
+        viewportMargin: 8,
       });
 
-      // Ceiling relaxes from 750 to anchor.bottom (784) → top = 784 - 400.
-      expect(result.top).toBe(384);
-      expect(result.top + 400).toBeGreaterThanOrEqual(784); // handle bottom inside menu span
+      // Menu bottom = 800 - 8 = 792 → top = 392. Gap preserved.
+      expect(result.top).toBe(392);
+      // The handle still overlaps the menu span (pokes out by at most the margin).
+      expect(result.top + 400).toBeGreaterThan(776);
     });
 
-    it('regression: bottom-zone relaxation works in doc coords when page is scrolled', () => {
+    it('regression: bottom gap is preserved in doc coords when page is scrolled', () => {
       const result = resolvePosition({
         anchor: rect({ top: 770, bottom: 794, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 400 },
@@ -580,30 +578,11 @@ describe('resolvePosition', () => {
         scrollOffset: { x: 0, y: 300 },
         offset: 8,
         placeLeftOfAnchor: true,
-        viewportMargin: 50,
+        viewportMargin: 8,
       });
 
-      // Anchor bottom doc = 794 + 300 = 1094 > margin ceiling (1050) →
-      // ceiling relaxes to 1094; still within the hard viewport bottom
-      // (1100). top = 1094 - 400.
-      expect(result.top).toBe(694);
-    });
-
-    it('never relaxes past the hard viewport edge even when the anchor pokes beyond it', () => {
-      // Anchor bottom (804) is past the viewport bottom (800): the ceiling
-      // relaxes only to the hard edge, not beyond.
-      const result = resolvePosition({
-        anchor: rect({ top: 780, bottom: 804, left: 400, right: 440 }),
-        popoverSize: { width: 250, height: 400 },
-        scopeBounds: rect({ top: 0, bottom: 2000, left: 0, right: 1000 }),
-        viewportSize: { width: 1024, height: 800 },
-        scrollOffset: { x: 0, y: 0 },
-        offset: 8,
-        placeLeftOfAnchor: true,
-        viewportMargin: 50,
-      });
-
-      expect(result.top).toBe(400); // 800 - 400
+      // Ceiling = 300 + 800 - 8 = 1092 → top = 1092 - 400 = 692.
+      expect(result.top).toBe(692);
     });
 
     it('pins to the viewport-margin floor when popover is taller than viewport minus margins', () => {

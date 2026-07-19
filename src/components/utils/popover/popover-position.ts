@@ -96,21 +96,13 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   if (placeLeftOfAnchor && popoverSize.width <= anchor.left - offset - boundaryLeft) {
     const anchorCenterInDocCoords = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
     const scopeBottomInDocCoords = scopeBounds.bottom + scrollOffset.y;
-    // The viewport margin is an aesthetic preference and must never detach
-    // the menu from its own anchor: when the six-dots handle sits inside the
-    // margin zone, clamping to the margin would place the whole menu above
-    // (or below) the handle. Relax the floor/ceiling to the anchor's edge in
-    // that case, hard-bounded by the viewport itself.
-    const anchorTopInDocCoords = anchor.top + scrollOffset.y;
-    const anchorBottomInDocCoords = anchor.bottom + scrollOffset.y;
-    const viewportTopFloor = Math.max(
-      scrollOffset.y,
-      Math.min(scrollOffset.y + viewportMargin, anchorTopInDocCoords)
-    );
-    const viewportBottomCeiling = Math.min(
-      scrollOffset.y + viewportSize.height,
-      Math.max(scrollOffset.y + viewportSize.height - viewportMargin, anchorBottomInDocCoords)
-    );
+    // The viewport margin is an unconditional aesthetic gap: the menu must
+    // never touch the screen border, even when the anchor itself sits at the
+    // very edge. Callers keep the margin small (see BlockSettings) so the
+    // 24px-tall handle still overlaps the menu's span in that extreme — a
+    // large margin here would visibly detach the menu from its handle.
+    const viewportTopFloor = scrollOffset.y + viewportMargin;
+    const viewportBottomCeiling = scrollOffset.y + viewportSize.height - viewportMargin;
 
     const topFloor = Math.max(scopeTopInDocCoords, viewportTopFloor);
     const bottomCeiling = Math.min(scopeBottomInDocCoords, viewportBottomCeiling);

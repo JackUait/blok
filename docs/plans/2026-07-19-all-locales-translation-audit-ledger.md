@@ -265,7 +265,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bn` | Bengali | Bengali | ltr | to-audit | — | — | pending | pending | pending | `F-bn-001` | pending |
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
-| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `codex-da-first-final-545` | — | pass | pass | pass | `F-da-001`–`F-da-083` | first-pass-complete |
+| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `codex-da-first-final-545` | `root-da-second-final-545` | pass | pass | pass | `F-da-001`–`F-da-083` | second-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-first-final` | — | pass | pass | pass | `F-de-001`–`F-de-089` | first-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
@@ -396,7 +396,7 @@ locale returns to `pending`.
 | `am` | `wire-database-am-first-final` | `sha256:0e243c7a9f95c19901726d50e8600c8aa5c23fe29ab52736a27303652e32336e` | — | — |
 | `ar` | `codex-wire-ui-ar-first-final` | `sha256:c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a` | — | — |
 | `bg` | `codex-bg-first-final-reread` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` | — | — |
-| `da` | `codex-da-first-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` | — | — |
+| `da` | `codex-da-first-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` | `root-da-second-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` |
 | `de` | `root-de-first-final` | `sha256:5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba` | — | — |
 | `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
 | `ru` | `root-ru-first-final` | `sha256:55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821` | — | — |
@@ -924,7 +924,7 @@ their complete runtime scope. The source-level emoji correction independently
 resets all Czech pass evidence under rule 2; no reviewer or digest may be
 recorded until both exhaustive passes repeat on the corrected final bytes.
 
-### Danish (`da`) — current first pass complete
+### Danish (`da`) — current second pass complete
 
 The current 545-entry corpus supersedes the historical 539-key review.
 Reviewer `codex-da-first-final-545` restarted at entry 1 on the final bytes
@@ -952,7 +952,15 @@ structural, and retention gates pass.
 
 The current first pass binds to raw SHA-256
 `ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882`.
-The distinct complete second pass remains pending.
+Distinct reviewer `root-da-second-final-545` then independently reread all
+545/545 final pairs in source order. That pass rechecked every concrete or
+documented source-only contract, all findings, dependencies, retentions,
+placeholders, aliases, provider compositions, and caller dispositions. It
+also challenged the physical-key and media-control terminology against current
+Danish Apple product wording, including `Alternativ-klik`, `Esc`, and `Spol`,
+without finding a residual. Fresh structural, finding, ledger, retention, and
+dictionary-integrity gates pass, and a final rehash reproduces the same bound
+digest for both reviews. The terminal repository-wide gates remain pending.
 
 ### Spanish (`es`) — current 539-key second pass complete
 

@@ -32,8 +32,8 @@
   "bs": {
     "a11y.atTop": "Pomjeranje gore nije moguće. Vrh je već dostignut.",
     "a11y.atBottom": "Pomjeranje dolje nije moguće. Dno je već dostignuto.",
-    "a11y.movedUp": "Pomjeranje gore završeno je na poziciji {position} od {total}.",
-    "a11y.movedDown": "Pomjeranje dolje završeno je na poziciji {position} od {total}."
+    "a11y.movedUp": "Premještanje prema gore završeno je na poziciji {position} od {total}.",
+    "a11y.movedDown": "Premještanje prema dolje završeno je na poziciji {position} od {total}."
   },
   "cs": {
     "a11y.atTop": "Nelze přesunout výše. Již na začátku.",

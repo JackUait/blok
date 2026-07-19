@@ -41,16 +41,29 @@ const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
   .map(entry => entry.name)
   .sort();
+const localeCache = new Map<
+  string,
+  { raw: string; messages: LocaleMessages }
+>();
 
 const readLocale = (
   locale: string
 ): { raw: string; messages: LocaleMessages } => {
-  const raw = readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8');
+  const cached = localeCache.get(locale);
 
-  return {
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const raw = readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8');
+  const result = {
     raw,
     messages: JSON.parse(raw) as LocaleMessages,
   };
+
+  localeCache.set(locale, result);
+
+  return result;
 };
 
 const english = readLocale('en').messages as EnglishMessages;
@@ -199,7 +212,7 @@ const LOCALIZED_EMOJI_CATEGORY_SCOPE = {
   az: ['Smaylik və insanlar', 'Heyvanlar və təbiət', 'Yemək-içmək', 'Səyahət və yerlər'],
   bg: ['Усмивки и хора', 'Животни и природа', 'Храна и напитки', 'Пътуване и места'],
   bn: ['হাসিমুখ ও মানুষ', 'প্রাণী ও প্রকৃতি', 'খাবার ও পানীয়', 'ভ্রমণ ও স্থান'],
-  bs: ['Smješko i ljudi', 'Životinje i priroda', 'Hrana i piće', 'Putovanje i mjesta'],
+  bs: ['Smajlići i ljudi', 'Životinje i priroda', 'Hrana i piće', 'Putovanja i mjesta'],
   cs: ['Smajlíci a lidé', 'Zvířata a příroda', 'Jídlo a pití', 'Cestování a místa'],
   da: ['Smileys og personer', 'Dyr og natur', 'Mad og drikke', 'Rejser og steder'],
   de: ['Smileys und Personen', 'Tiere und Natur', 'Essen und Trinken', 'Reisen und Orte'],

@@ -125,6 +125,89 @@ export const validateHierarchy = (blocks: OutputBlockData[]): HierarchyViolation
   return violations;
 };
 
+/**
+ * Resolve the build/runtime environment in a way that works in BROWSERS too.
+ *
+ * The long-standing `typeof process !== 'undefined' ? process.env?.NODE_ENV :
+ * undefined` pattern silently disables every dev/test gate in a real browser:
+ * Vite's `define` inlines the literal, but the vestigial `typeof process`
+ * guard still evaluates false at runtime, so e2e runs never asserted anything.
+ * Reading `process.env.NODE_ENV` directly lets the bundler substitute the
+ * literal at build time (dev serve and `--mode test` builds get their mode,
+ * production builds get dead-code-eliminated); the try/catch covers any
+ * environment where neither the define nor a real `process` exists.
+ */
+export const resolveRuntimeEnv = (): string | undefined => {
+  try {
+    return process.env.NODE_ENV;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * A repository block whose holder can be checked for document attachment.
+ */
+export interface HolderAttachmentInput {
+  id: BlockId | undefined;
+  /** Undefined when the caller works with partial stubs (e.g. saver unit fixtures) — such blocks are not assessable and never flagged. */
+  holder: Element | undefined;
+  parentId?: BlockId | null;
+}
+
+/**
+ * Stranded-holder violation: a block that the model still owns but whose
+ * holder is not connected to the document.
+ */
+export interface HolderAttachmentViolation {
+  kind: 'holder-stranded';
+  blockId: BlockId | undefined;
+  message: string;
+}
+
+/**
+ * Detect blocks stranded in detached DOM: the block is alive in the model,
+ * but its holder is not connected to the document — so the content is
+ * invisible, unreachable, and (from the user's point of view) lost, while
+ * every save still claims it exists.
+ *
+ * This is the signature of the toggle-heading level-convert data-loss bug:
+ * replace() removed the old container subtree with the children's holders
+ * still inside it, and the reparent mount was vetoed, leaving the children
+ * parked in the dead subtree forever.
+ *
+ * Precision rule: a block is stranded exactly when its own PARENT's holder is
+ * connected but its holder is not — the parent is visible while the child is
+ * gone. Anchoring on the parent (not "any holder in the document") keeps unit
+ * fixtures honest: tests routinely attach one holder to jsdom's body while
+ * unrelated blocks stay detached, and that is not a strand.
+ */
+export const validateHolderAttachment = (blocks: HolderAttachmentInput[]): HolderAttachmentViolation[] => {
+  const byId = new Map<BlockId, HolderAttachmentInput>();
+
+  for (const block of blocks) {
+    if (block.id !== undefined) {
+      byId.set(block.id, block);
+    }
+  }
+
+  return blocks
+    .filter(b => {
+      if (b.holder === undefined || b.holder.isConnected || b.parentId === undefined || b.parentId === null) {
+        return false;
+      }
+
+      const parent = byId.get(b.parentId);
+
+      return parent?.holder !== undefined && parent.holder.isConnected;
+    })
+    .map(b => ({
+      kind: 'holder-stranded' as const,
+      blockId: b.id,
+      message: `Block ${String(b.id)} is stranded: its parent ${String(b.parentId)} is in the document but the block's holder is detached`,
+    }));
+};
+
 export const assertHierarchy = (blocks: OutputBlockData[], context: string): void => {
   const violations = validateHierarchy(blocks);
 

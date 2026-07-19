@@ -85,6 +85,17 @@ test.describe('toggle heading level conversion keeps children', () => {
   });
 
   test('turning a toggle heading into a toggle heading of another level keeps its children nested', async ({ page }) => {
+    // Surface the stranded-holder invariant gate: if any mutation strands a
+    // block's holder in detached DOM, the gate throws (pageerror) or the error
+    // is caught and warned (console). Either way this test must see it.
+    const invariantErrors: string[] = [];
+
+    page.on('pageerror', (err) => invariantErrors.push(err.message));
+    page.on('console', (msg) => {
+      if ((msg.type() === 'warning' || msg.type() === 'error') && /stranded|invariant violated/i.test(msg.text())) {
+        invariantErrors.push(msg.text());
+      }
+    });
     await createBlok(page, {
       blocks: [
         { id: 'toggle-h', type: 'header', data: { text: 'Toggle parent', level: 2, isToggleable: true, isOpen: true }, content: ['child-1'] },
@@ -141,6 +152,9 @@ test.describe('toggle heading level conversion keeps children', () => {
 
     expect(resavedChild).toBeDefined();
     expect(resavedChild?.parent).toBe('toggle-h');
+
+    // No stranded-holder invariant violations may have fired along the way.
+    expect(invariantErrors).toEqual([]);
   });
 
   test('undo after toggle-heading → toggle-heading conversion restores everything', async ({ page }) => {

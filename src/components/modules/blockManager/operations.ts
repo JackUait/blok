@@ -12,7 +12,7 @@
 import type { BlockToolData, PasteEvent, OutputBlockData } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { Block } from '../../block';
-import { validateHierarchy } from '../../utils/hierarchy-invariant';
+import { resolveRuntimeEnv, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { BlockInsertion } from './block-insertion';
 import { BlockMutation } from './block-mutation';
 import { BlockRemoval } from './block-removal';
@@ -448,7 +448,9 @@ export class BlockOperations implements OperationsContext {
    * @param context - label of the operation that just ran (for error messages)
    */
   public assertHierarchyInvariantInDev(context: string): void {
-    const env = typeof process !== 'undefined' ? process.env?.NODE_ENV : undefined;
+    // Browser-aware env resolution: the old `typeof process` pattern silently
+    // disabled this gate in every real-browser (e2e/dev-serve) session.
+    const env = resolveRuntimeEnv();
 
     if (env !== 'test' && env !== 'development') {
       return;
@@ -468,6 +470,15 @@ export class BlockOperations implements OperationsContext {
       v.kind === 'content-duplicate'
     );
 
+    /**
+     * NOTE: the stranded-holder check (validateHolderAttachment) deliberately
+     * does NOT run here. Composite teardowns pass through legitimate transient
+     * strands mid-operation — e.g. removing a table inside a toggle promotes
+     * the cell blocks in the model while their holders stay in the table's
+     * subtree until the table's own async teardown removes them. The settled
+     * chokepoint for that class is Saver.doSave (a save that emits blocks the
+     * user cannot see IS the bug).
+     */
     if (violations.length === 0) {
       return;
     }

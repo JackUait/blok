@@ -11,7 +11,7 @@ import { Module } from '../__module';
 import type { Block } from '../block';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
-import { validateHierarchy } from '../utils/hierarchy-invariant';
+import { resolveRuntimeEnv, validateHierarchy, validateHolderAttachment } from '../utils/hierarchy-invariant';
 import { sanitizeBlocks } from '../utils/sanitizer';
 import { normalizeInlineImages } from './normalizeInlineImages';
 
@@ -98,6 +98,8 @@ export class Saver extends Module {
 
     const { BlockManager, Tools } = this.Blok;
     const blocks = BlockManager.blocks;
+
+    this.assertNoStrandedHolders(blocks);
 
     /**
      * If there is only one block and it is empty and it's the default tool, return empty blocks array.
@@ -692,6 +694,58 @@ export class Saver extends Module {
       lastEditedAt: block.lastEditedAt,
       lastEditedBy: block.lastEditedBy,
     };
+  }
+
+  /**
+   * Stranded-holder gate (dev/test throw, prod log-only).
+   *
+   * A block whose PARENT holder is in the document while its own holder is
+   * detached is content the user cannot see or reach — yet save() would still
+   * emit it. That mismatch is the signature of the toggle-heading
+   * level-convert data-loss bug: replace() removed the old container subtree
+   * with the children's holders still inside it, and the reparent mount was
+   * vetoed, leaving the children parked in the dead subtree while every save
+   * kept claiming they existed.
+   *
+   * Save time is the settled chokepoint for this class: composite teardowns
+   * (e.g. removing a table inside a toggle) legitimately pass through
+   * transient strands mid-mutation, so per-mutation asserts would
+   * false-positive; by the time anything saves, those transients must have
+   * resolved. Uses resolveRuntimeEnv (not the `typeof process` pattern) so it
+   * is live in real-browser e2e and dev-serve sessions, not just jsdom.
+   * @param blocks - the live blocks about to be saved
+   */
+  private assertNoStrandedHolders(blocks: Block[]): void {
+    /**
+     * Children of self-managing containers (table/database) are exempt: cells
+     * mount their blocks lazily (mountBlocksInCell), so an unmounted cell
+     * child at save time is a legitimate transitional state, not a strand.
+     * Same exemption set as the DOM-order guard above.
+     */
+    const exemptParentIds = new Set(
+      blocks.filter(b => Saver.DOM_ORDER_EXEMPT_PARENTS.has(b.name)).map(b => b.id)
+    );
+
+    const violations = validateHolderAttachment(
+      blocks
+        .filter(b => b.parentId === null || !exemptParentIds.has(b.parentId))
+        .map(b => ({ id: b.id, holder: b.holder, parentId: b.parentId }))
+    );
+
+    if (violations.length === 0) {
+      return;
+    }
+
+    const message =
+      `Saver: stranded block holder(s) detected — the save would emit content the user cannot see:\n${
+        violations.map(v => `  - ${v.message}`).join('\n')}`;
+    const env = resolveRuntimeEnv();
+
+    if (env === 'test' || env === 'development') {
+      throw new Error(message);
+    }
+
+    logLabeled(message, 'error');
   }
 
   /**

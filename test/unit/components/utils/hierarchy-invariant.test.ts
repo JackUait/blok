@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { assertHierarchy, validateHierarchy } from '../../../../src/components/utils/hierarchy-invariant';
+import { assertHierarchy, validateHierarchy, validateHolderAttachment } from '../../../../src/components/utils/hierarchy-invariant';
 import type { OutputBlockData } from '../../../../types';
 
 describe('hierarchy-invariant', () => {
@@ -109,6 +109,86 @@ describe('hierarchy-invariant', () => {
 
       expect(() => assertHierarchy(blocks, 'after save')).toThrow(/Hierarchy invariant violated at after save/);
       expect(() => assertHierarchy(blocks, 'after save')).toThrow(/p1.*parent=c1/);
+    });
+  });
+
+  describe('validateHolderAttachment', () => {
+    // Regression class: toggle-heading level convert stranded children in
+    // detached DOM — the model kept the blocks while their holders sat in a
+    // removed subtree. A block is stranded exactly when its PARENT's holder
+    // is connected but its own is not: the parent is visible, the child is
+    // gone — invisible to the user, unrecoverable by undo, effectively data
+    // loss.
+
+    const makeHolder = (connected: boolean): HTMLElement => {
+      const el = document.createElement('div');
+
+      if (connected) {
+        document.body.appendChild(el);
+      }
+
+      return el;
+    };
+
+    const cleanup = (holders: HTMLElement[]): void => {
+      holders.forEach(h => h.remove());
+    };
+
+    it('flags a child whose holder is detached while its parent holder is connected', () => {
+      const holders = [makeHolder(true), makeHolder(false)];
+
+      try {
+        const violations = validateHolderAttachment([
+          { id: 'parent', holder: holders[0], parentId: null },
+          { id: 'stranded-child', holder: holders[1], parentId: 'parent' },
+        ]);
+
+        expect(violations).toHaveLength(1);
+        expect(violations[0].blockId).toBe('stranded-child');
+        expect(violations[0].message).toMatch(/stranded/i);
+      } finally {
+        cleanup(holders);
+      }
+    });
+
+    it('reports nothing when parent and child are both connected', () => {
+      const holders = [makeHolder(true), makeHolder(true)];
+
+      try {
+        expect(validateHolderAttachment([
+          { id: 'parent', holder: holders[0], parentId: null },
+          { id: 'child', holder: holders[1], parentId: 'parent' },
+        ])).toHaveLength(0);
+      } finally {
+        cleanup(holders);
+      }
+    });
+
+    it('reports nothing when parent and child are both detached (whole subtree/editor out of the document)', () => {
+      const holders = [makeHolder(false), makeHolder(false)];
+
+      expect(validateHolderAttachment([
+        { id: 'parent', holder: holders[0], parentId: null },
+        { id: 'child', holder: holders[1], parentId: 'parent' },
+      ])).toHaveLength(0);
+    });
+
+    it('does not flag ROOT blocks or blocks whose parent is not in the set (unit fixtures attach holders selectively)', () => {
+      const holders = [makeHolder(true), makeHolder(false), makeHolder(false)];
+
+      try {
+        expect(validateHolderAttachment([
+          { id: 'attached-root', holder: holders[0], parentId: null },
+          { id: 'detached-root', holder: holders[1], parentId: null },
+          { id: 'orphan', holder: holders[2], parentId: 'ghost' },
+        ])).toHaveLength(0);
+      } finally {
+        cleanup(holders);
+      }
+    });
+
+    it('reports nothing for an empty block list', () => {
+      expect(validateHolderAttachment([])).toHaveLength(0);
     });
   });
 });

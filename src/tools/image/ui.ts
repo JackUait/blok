@@ -987,15 +987,16 @@ export type OverlayTier = 'full' | 'medium' | 'compact';
  * them inline instead. `data-compact` is kept in sync as an alias for the
  * compact tier (existing CSS/tests key off it).
  */
-export function updateOverlayTier(overlay: HTMLElement, width: number, height?: number): void {
+function classifyOverlayTier(width: number, height?: number): OverlayTier {
   const tooNarrow = width > 0 && width < OVERLAY_COMPACT_THRESHOLD;
   const tooShort = height !== undefined && height > 0 && height < OVERLAY_COMPACT_HEIGHT_THRESHOLD;
-  let tier: OverlayTier = 'full';
-  if (tooNarrow || tooShort) {
-    tier = 'compact';
-  } else if (width > 0 && width < OVERLAY_MEDIUM_THRESHOLD) {
-    tier = 'medium';
-  }
+  if (tooNarrow || tooShort) return 'compact';
+  if (width > 0 && width < OVERLAY_MEDIUM_THRESHOLD) return 'medium';
+  return 'full';
+}
+
+export function updateOverlayTier(overlay: HTMLElement, width: number, height?: number): void {
+  const tier = classifyOverlayTier(width, height);
   overlay.setAttribute('data-tier', tier);
   if (tier === 'compact') {
     overlay.setAttribute('data-compact', 'true');

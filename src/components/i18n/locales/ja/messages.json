@@ -251,7 +251,7 @@
   "tools.link.keepTyping": "入力を続けてリンクを追加",
   "tools.link.emailAddress": "メールアドレス",
   "tools.link.jumpToSection": "セクションへ移動",
-  "tools.link.webLink": "Web ページへのリンク",
+  "tools.link.webLink": "リンク",
   "tools.link.copyUrl": "リンクをコピー",
   "tools.link.edit": "編集",
   "tools.link.urlCopied": "リンクをクリップボードにコピーしました",

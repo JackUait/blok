@@ -269,7 +269,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-089` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-079` | pending |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-080` | pending |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
@@ -478,6 +478,44 @@ failed against the old generic values. After applying the reviewed matrix, all
 module regression, 87 scanner cases, and the live checker pass. The checker
 reports 546 complete, structurally valid keys in every dictionary and 210
 static source references.
+
+## Generic Catch-All Link Label Migration
+
+The inline-link suggestion chip uses `tools.link.webLink` as its catch-all
+label for every complete link except `mailto:` and `#` anchors. Its caller
+accepts HTTP(S), FTP/WS and other double-slash schemes, `tel:` and `sms:`,
+protocol-relative URLs, absolute internal paths, plain domains, and IP
+addresses. The English source `Link to web page` and 67 localized equivalents
+therefore described only one subset of the destinations that render them.
+Bosnian was already generic because its complete locale review had corrected
+the same caller-context defect in `F-bs-085`.
+
+This source-value correction does not change the 546-key schema. Every locale
+row and digest was already pending after the recently-used key migration, so
+there is no completed current pass to invalidate. `F-en-080` records the
+English correction from `Link to web page` to `Link`; `F-global-006` binds all
+68 localized values to the independently reviewed catch-all matrix.
+
+Three disjoint language-family reviews inspected 23, 23, and 22 values. The
+middle cohort rejected five draft values that had mechanically copied a
+transliterated or non-native `toolNames.link` form: Kannada now uses `ಕೊಂಡಿ`,
+Sorani `بەستەر`, Malayalam `കണ്ണി`, Nepali `लिङ्क`, and Pashto `تړونی`.
+A distinct whole-matrix reviewer independently confirmed all five corrections,
+accepted the other 63 values, and specifically retained mainstream Gujarati
+`લિંક` and Hindi `लिंक` after checking official Google product usage. The
+reviewed 68-locale fixture is byte-for-byte identical to the final review
+artifact, is NFC-normalized, and has SHA-256
+`7d489cef89d80cebd9557d0480600e0ab42d8db1a6bb2ec698bc472559fee614`.
+
+The matrix coverage case passed before remediation, Bosnian already matched,
+and the other 67 exact locale cases failed on the old web-page-specific
+values. Seven caller-shape regressions and two existing default-label
+assertions also failed on the old English wording. After remediation, the
+direct 69-dictionary comparison, all 69 matrix cases, and all 76 inline-link
+cases pass. The complete 2,543-case guideline contract and live 546-key,
+208-static-reference checker also pass. The nine localized values that now
+exactly equal English `Link` are recorded as sourced established-loanword
+retentions.
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -2290,6 +2328,7 @@ follows the global transition rule above.
 | `F-en-077` | `en` | `a11y.movedDown` | accessibility / selection cardinality | `"Block moved down to position {position} of {total}"` | `"Moved down to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
 | `F-en-078` | `en` | `tools.colorPicker.recentlyUsed` | missing key / hard-coded fallback / source coverage | `missing; caller falls back to "Recently used"` | `"Recently used"` | The committed color-picker section renders this sentence-case heading above recent color swatches. A file-local constant hid the missing key from the former scanner, while the caller bypassed localization with raw English. The direct source key removes that fallback. Post-commit review then caught the regex resolver's scope, comment, and interpolation false negatives; three failing regressions now pass with lexical TypeScript-AST resolution, as do the component regression, exact English expectation, and live source-coverage check. | verified |
 | `F-en-079` | `en` | `popover.search` | source wording / caller context | `"Search"` | `"Find an action…"` | The shared placeholder filters action choices in the toolbox, block-settings menu, and inline-action popover. Naming the action object tells users what the field searches while the native ellipsis signals that typing continues the interaction. The committed source expectation and direct i18n module regression pass. | verified |
+| `F-en-080` | `en` | `tools.link.webLink` | caller scope / terminology | `"Link to web page"` | `"Link"` | `getLinkTypeInfo` uses this catch-all label for every complete link except `mailto:` and `#` anchors, including HTTP(S), FTP/WS, `tel:`, `sms:`, protocol-relative URLs, absolute internal paths, plain domains, and IP addresses. The generic noun accurately covers every caller branch; seven red-first suggestion-chip cases failed on the over-specific old wording. | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
 | `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird der verschachtelte Inhalt auf die oberste Ebene verschoben. Fortfahren?"` | The source-only warning must work for one or many and avoid needlessly technical `Konvertierung`. The final source uses the count-neutral collective “nested content”; German mirrors it with singular `der verschachtelte Inhalt`, avoiding both the old plural pronoun and a forced distributive construction. | verified |
@@ -4333,6 +4372,7 @@ follows the global transition rule above.
 | `F-global-003` | all non-English | tools.colorPicker.recentlyUsed localized labels | source dependency / missing key / hard-coded fallback / false friend | The committed recently-used color section had no localized dictionary key and fell back to raw English in every non-English locale; the first matrix also used Yiddish `לעצטנס געוויינט`, whose participle means “cried/wept,” not product “used.” | Add the independently reviewed context-aware label to all 68 localized dictionaries, use Yiddish `לעצטנס געניצט`, and require direct dictionary resolution in the caller. | Two context challenges corrected Norwegian plural agreement and completed the Burmese attributive phrase; a third independent challenge caught the Yiddish false friend and explicitly accepted the other 67 values. The corrected Yiddish expectation failed before remediation. The final 69/69 matrix cases, 59/59 caller cases, 87/87 scanner cases, live 546-key checker, and full guideline contract pass. | verified |
 | `F-global-004` | all non-English | popover.search localized action placeholders | source dependency / caller context | All 68 localized values translated the old generic `Search` source and omitted the newly explicit action object. | Apply the independently reviewed action-oriented placeholder matrix to all 68 localized dictionaries, preserving native register and ellipsis. | The first full challenge corrected 23 register mismatches; a distinct second reviewer accepted all 68 corrected values, including explicit low-resource script-and-morphology checks. The final 69/69 matrix cases, all 2,237 guideline cases, i18n module regression, 87 scanner cases, and live 546-key/210-reference checker pass. | verified |
 | `F-global-005` | all non-English | notifier.dismiss helper localization contract | dormant localization bypass / dependency injection | The exported dismiss-button helper is not currently used by production notifier rendering, but its built-in English lookup would bypass every localized dictionary if the internal helper were reused. | Keep the dormant helper source-safe by requiring any future caller to supply a localized accessible label instead of allowing the drawing utility to choose English. | An adversarial Bengali source review found the latent bypass and confirmed there is no current production caller. The helper-level regression failed with English `Dismiss`, then passed a Bengali label through unchanged after the helper began requiring injection and dropped its English-dictionary import; notifier-show tests continue to confirm that live toasts render no dismiss button. | verified |
+| `F-global-006` | all non-English | tools.link.webLink catch-all labels | source dependency / caller scope / terminology | Sixty-seven localized labels still restricted the catch-all suggestion to a web page, while the first draft also preserved five weaker transliterated or non-native generic terms; Bosnian alone was already generic. | Apply the independently reviewed 68-locale generic-label matrix, including native Kannada `ಕೊಂಡಿ`, Sorani `بەستەر`, Malayalam `കണ്ണി`, locale-correct Nepali `लिङ्क`, and native Pashto `تړونی`. | Three disjoint family reviews covered 23+23+22 locales, and a distinct whole-matrix reviewer confirmed all 68 final values and all nine exact-English loanword retentions. The final fixture exactly matches the reviewed artifact at SHA-256 `7d489cef89d80cebd9557d0480600e0ab42d8db1a6bb2ec698bc472559fee614`; its coverage case and Bosnian passed red, the other 67 locale cases failed red, and all 69 dictionary cases, 76 caller cases, 2,543 guideline cases, and the live 546-key/208-reference checker pass after remediation. | verified |
 
 ## Exact-English Retentions
 
@@ -4573,3 +4613,12 @@ locale and UI context.
 | `R-ru-005` | `ru` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Russian media interfaces. | [Apple — Настройки съёмки с помощью инструментов камеры iPhone](https://support.apple.com/ru-ru/guide/iphone/-iph3dc593597/ios) |
 | `R-ru-006` | `ru` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Russian media interfaces. | [Apple — Настройки съёмки с помощью инструментов камеры iPhone](https://support.apple.com/ru-ru/guide/iphone/-iph3dc593597/ios) |
 | `R-ru-007` | `ru` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Russian product interfaces. | [Microsoft — Работа со ссылками в Excel](https://support.microsoft.com/ru-ru/excel/work-with-links-in-excel) |
+| `R-da-030` | `da` | `tools.link.webLink` | established loanword | `Link` is the established Danish IT noun and the concise generic label for every destination accepted by the catch-all caller. | [Den Danske Ordbog — link](https://ordnet.dk/ddo/ordbog?query=link) |
+| `R-de-027` | `de` | `tools.link.webLink` | established loanword | `Link` is the lexicalized German computing noun; its noun capitalization and generic scope are correct. | [Duden — Link](https://www.duden.de/rechtschreibung/Link) |
+| `R-et-001` | `et` | `tools.link.webLink` | established loanword | `Link` is an established Estonian computing noun and a natural concise generic UI label. | [Sõnaveeb — link](https://sonaveeb.ee/search/unif/dlall/dsall/link/1/est?uilang=en) |
+| `R-fil-001` | `fil` | `tools.link.webLink` | established loanword | `Link` is the established unchanged Filipino product term for a generic digital link. | [Google Business Profile Help — mga link](https://support.google.com/business/answer/3474050?hl=fil) |
+| `R-it-022` | `it` | `tools.link.webLink` | established loanword | `Link` is the established Italian computing noun and the natural generic label for the catch-all suggestion. | [Treccani — link](https://www.treccani.it/vocabolario/link/) |
+| `R-nl-023` | `nl` | `tools.link.webLink` | established loanword | `Link` is the standard concise Dutch product term and accurately labels every accepted link type. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |
+| `R-pl-016` | `pl` | `tools.link.webLink` | established loanword | `Link` is the standard unchanged Polish computing noun and the natural generic suggestion label. | [Microsoft — Dostosowywanie immersywnego wydarzenia](https://support.microsoft.com/pl-PL/teams/meetings/customize-an-immersive-event-in-microsoft-teams) |
+| `R-pt-019` | `pt` | `tools.link.webLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese product term and is generic across the caller's destination types. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-ro-001` | `ro` | `tools.link.webLink` | established loanword | `Link` is an established Romanian IT/UI noun used for web, email, FTP, document, and internal-page destinations. | [Microsoft — Crearea sau editarea unui hyperlink](https://support.microsoft.com/ro-RO/Word/create-or-edit-a-hyperlink) |

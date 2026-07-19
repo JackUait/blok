@@ -262,7 +262,7 @@
   "tools.link.keepTyping": "Keep typing to add a link",
   "tools.link.emailAddress": "Email address",
   "tools.link.jumpToSection": "Jump to section",
-  "tools.link.webLink": "Link to web page",
+  "tools.link.webLink": "Link",
   "tools.link.copyUrl": "Copy link",
   "tools.link.edit": "Edit",
   "tools.link.urlCopied": "Link copied to clipboard",

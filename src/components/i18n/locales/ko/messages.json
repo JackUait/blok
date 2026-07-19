@@ -262,7 +262,7 @@
   "tools.link.keepTyping": "계속 입력하여 링크를 추가하세요",
   "tools.link.emailAddress": "이메일 주소",
   "tools.link.jumpToSection": "섹션으로 이동",
-  "tools.link.webLink": "웹페이지 링크",
+  "tools.link.webLink": "링크",
   "tools.link.copyUrl": "링크 복사",
   "tools.link.edit": "편집",
   "tools.link.urlCopied": "링크가 클립보드에 복사되었습니다",

@@ -36,6 +36,10 @@ const LOCALIZED_POPOVER_SEARCH_EXPECTATIONS_PATH = resolve(
   __dirname,
   'fixtures/localized-popover-search-expectations.json'
 );
+const LOCALIZED_LINK_TYPE_EXPECTATIONS_PATH = resolve(
+  __dirname,
+  'fixtures/localized-link-type-expectations.json'
+);
 
 const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
@@ -82,6 +86,9 @@ const localizedRecentlyUsedExpectations = JSON.parse(
 const localizedPopoverSearchExpectations = JSON.parse(
   readFileSync(LOCALIZED_POPOVER_SEARCH_EXPECTATIONS_PATH, 'utf-8')
 ) as Record<string, string>;
+const localizedLinkTypeExpectations = JSON.parse(
+  readFileSync(LOCALIZED_LINK_TYPE_EXPECTATIONS_PATH, 'utf-8')
+) as Record<string, string>;
 const RESULT_STATES = new Set(['pending', 'open', 'pass']);
 const FINAL_STATUSES = new Set([
   'pending',
@@ -103,6 +110,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'tools.colorPicker.recentlyUsed localized labels',
   'popover.search localized action placeholders',
   'notifier.dismiss helper localization contract',
+  'tools.link.webLink catch-all labels',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
@@ -145,6 +153,7 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiCategoryTravel': 'Travel & places',
   'tools.code.searchLanguage': 'Search languages…',
   'tools.code.plainText': 'Plain text',
+  'tools.link.webLink': 'Link',
   'tools.link.linkTitle': 'Link text',
   'tools.image.altDescription':
     'Describe this image for people who can’t see it.',
@@ -901,6 +910,19 @@ describe('translation guideline corpus integrity', () => {
     '$0 uses its reviewed action-oriented popover placeholder',
     (locale, expected) => {
       expect(readLocale(locale).messages['popover.search']).toBe(expected);
+    }
+  );
+
+  it('covers every non-English locale in the generic link-label matrix', () => {
+    expect(Object.keys(localizedLinkTypeExpectations).sort()).toEqual(
+      localeCodes.filter(locale => locale !== 'en')
+    );
+  });
+
+  it.each(Object.entries(localizedLinkTypeExpectations))(
+    '$0 uses its reviewed generic catch-all link label',
+    (locale, expected) => {
+      expect(readLocale(locale).messages['tools.link.webLink']).toBe(expected);
     }
   );
 

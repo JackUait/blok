@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 import { IconLink } from '../../../../src/components/icons';
 
+import defaultDictionary from '../../../../src/components/i18n/locales/en/messages.json';
 import { LinkInlineTool } from '../../../../src/components/inline-tools/inline-tool-link';
 import type { SelectionUtils } from '../../../../src/components/selection';
 import type { API } from '../../../../types';
@@ -108,10 +109,10 @@ type LinkConfig = {
 };
 
 const ENGLISH_LINK_TRANSLATIONS: Record<string, string> = {
-  'tools.link.keepTyping': 'Keep typing to add a link',
-  'tools.link.emailAddress': 'Email address',
-  'tools.link.jumpToSection': 'Jump to section',
-  'tools.link.webLink': 'Link to web page',
+  'tools.link.keepTyping': defaultDictionary['tools.link.keepTyping'],
+  'tools.link.emailAddress': defaultDictionary['tools.link.emailAddress'],
+  'tools.link.jumpToSection': defaultDictionary['tools.link.jumpToSection'],
+  'tools.link.webLink': defaultDictionary['tools.link.webLink'],
 };
 
 const createTool = (
@@ -621,7 +622,7 @@ describe('LinkInlineTool', () => {
       {
         value: 'https://example.com',
         key: 'tools.link.webLink',
-        translation: 'Lien vers une page web',
+        translation: 'Lien',
       },
     ])('localizes the $key suggestion label', ({ value, key, translation }) => {
       const { tool } = createTool(undefined, { [key]: translation });
@@ -632,6 +633,25 @@ describe('LinkInlineTool', () => {
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
 
       expect(typeEl?.textContent).toBe(translation);
+    });
+
+    it.each([
+      'https://example.com',
+      'ftp://files.example.com',
+      'tel:+15551234567',
+      'sms:+15551234567',
+      '//cdn.example.com/file.js',
+      '/docs/getting-started',
+      'example.com',
+    ])('uses the generic English link label for %s', value => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion(value);
+
+      const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
+
+      expect(typeEl?.textContent).toBe('Link');
     });
 
     it('is hidden initially', () => {
@@ -654,7 +674,7 @@ describe('LinkInlineTool', () => {
 
       expect(chip?.classList.contains('hidden')).toBe(false);
       expect(urlEl?.textContent).toBe('https://example.com');
-      expect(typeEl?.textContent).toBe('Link to web page');
+      expect(typeEl?.textContent).toBe('Link');
     });
 
     it('hides chip when input is cleared', () => {
@@ -703,7 +723,7 @@ describe('LinkInlineTool', () => {
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
       const row = itemWrapper.querySelector('[data-link-suggestion-row]');
 
-      expect(typeEl?.textContent).toBe('Link to web page');
+      expect(typeEl?.textContent).toBe('Link');
       expect(row?.className).toContain('cursor-pointer');
     });
 

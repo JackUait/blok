@@ -249,7 +249,7 @@
   "tools.link.keepTyping": "พิมพ์ต่อเพื่อเพิ่มลิงก์",
   "tools.link.emailAddress": "ที่อยู่อีเมล",
   "tools.link.jumpToSection": "ไปยังส่วน",
-  "tools.link.webLink": "ลิงก์ไปยังหน้าเว็บ",
+  "tools.link.webLink": "ลิงก์",
   "tools.link.copyUrl": "คัดลอกลิงก์",
   "tools.link.edit": "แก้ไข",
   "tools.link.urlCopied": "คัดลอกลิงก์ไปยังคลิปบอร์ดแล้ว",

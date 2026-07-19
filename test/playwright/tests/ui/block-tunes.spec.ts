@@ -447,6 +447,51 @@ test.describe('ui.block-tunes', () => {
       await expect(page.locator(SETTINGS_BUTTON_SELECTOR)).toBeVisible();
     });
 
+    test('locks page scroll while the tunes menu is open and releases it on close', async ({ page }) => {
+      await createBlok(page, {
+        data: {
+          blocks: Array.from({ length: 40 }, (_, i) => ({
+            type: 'paragraph',
+            data: {
+              text: `Paragraph ${i}`,
+            },
+          })),
+        },
+      });
+
+      // Open the menu on the first block (the shared helper asserts a
+      // single-block document, so inline the steps for this 40-block doc).
+      const firstBlock = page.locator(BLOCK_SELECTOR).first();
+
+      await firstBlock.click();
+
+      const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
+
+      await expect(settingsButton).toBeVisible();
+      await settingsButton.click();
+      await expect(page.locator(POPOVER_CONTAINER_SELECTOR)).toBeVisible();
+
+      // The body carries the scroll lock while the menu is open, so wheel
+      // input cannot scroll the page away from the anchored menu.
+      await expect(page.locator('[data-blok-scroll-locked]')).toBeAttached();
+
+      const scrollBefore = await page.evaluate(() => window.scrollY);
+
+      await page.mouse.wheel(0, 400);
+      // Give a potential (buggy) scroll two frames to happen before asserting.
+      await page.evaluate(async () => new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+      }));
+
+      const scrollAfter = await page.evaluate(() => window.scrollY);
+
+      expect(scrollAfter).toBe(scrollBefore);
+
+      await page.keyboard.press('Escape');
+      await expect(page.locator(POPOVER_CONTAINER_SELECTOR)).toBeHidden();
+      await expect(page.locator('[data-blok-scroll-locked]')).not.toBeAttached();
+    });
+
     test('convert to submenu stays on-screen when block settings hugs the left edge', async ({ page }) => {
       // Regression: the BlockSettings popover opens with placeLeftOfAnchor,
       // which clamps its left edge to the viewport's left when the anchor

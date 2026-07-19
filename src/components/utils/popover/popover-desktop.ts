@@ -234,8 +234,8 @@ export class PopoverDesktop extends PopoverAbstract {
   private leftAlignElement: HTMLElement | undefined;
 
   /**
-   * When true, places the popover to the left of the trigger, top-aligned
-   * with the trigger so it never covers the content above it.
+   * When true, places the popover to the left of the trigger, vertically
+   * centered on the trigger and shifted only as needed to stay on screen.
    */
   private placeLeftOfAnchor = false;
 

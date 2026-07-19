@@ -42,6 +42,11 @@ export class ScrollLocker {
   private static previousPaddingRight: null | string = null;
 
   /**
+   * Body inline overflow captured before the lock was applied
+   */
+  private static previousOverflow: null | string = null;
+
+  /**
    * Whether this particular instance currently holds a lock
    */
   private locked = false;
@@ -93,6 +98,14 @@ export class ScrollLocker {
       ScrollLocker.lockHard();
     } else {
       ScrollLocker.compensateScrollbarGap();
+      /**
+       * The inline style is the actual lock: Blok's utility CSS is scoped to
+       * the editor and never styles document.body on a host page, so the
+       * Tailwind class alone silently does nothing there. The class and data
+       * attribute remain as styling/testing hooks.
+       */
+      ScrollLocker.previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
       document.body.classList.add(ScrollLocker.CSS.overflowHidden);
       document.body.setAttribute(ScrollLocker.DATA_ATTR.scrollLocked, 'true');
     }
@@ -105,6 +118,8 @@ export class ScrollLocker {
     if (isIosDevice) {
       ScrollLocker.unlockHard();
     } else {
+      document.body.style.overflow = ScrollLocker.previousOverflow ?? '';
+      ScrollLocker.previousOverflow = null;
       document.body.classList.remove(ScrollLocker.CSS.overflowHidden);
       document.body.removeAttribute(ScrollLocker.DATA_ATTR.scrollLocked);
       ScrollLocker.restoreScrollbarGap();
@@ -149,6 +164,11 @@ export class ScrollLocker {
       ScrollLocker.CSS.fixed,
       ScrollLocker.CSS.wFull
     );
+    /** Inline styles are the actual lock — see applyLock() */
+    ScrollLocker.previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
     document.body.style.top = `calc(-1 * var(--window-scroll-offset))`;
     document.body.setAttribute(ScrollLocker.DATA_ATTR.scrollLockedHard, 'true');
   }
@@ -162,6 +182,10 @@ export class ScrollLocker {
       ScrollLocker.CSS.fixed,
       ScrollLocker.CSS.wFull
     );
+    document.body.style.overflow = ScrollLocker.previousOverflow ?? '';
+    ScrollLocker.previousOverflow = null;
+    document.body.style.position = '';
+    document.body.style.width = '';
     document.body.style.top = '';
     document.body.removeAttribute(ScrollLocker.DATA_ATTR.scrollLockedHard);
     if (ScrollLocker.scrollPosition !== null) {

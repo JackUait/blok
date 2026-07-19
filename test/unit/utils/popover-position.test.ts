@@ -315,7 +315,7 @@ describe('resolvePosition', () => {
   });
 
   describe('placeLeftOfAnchor', () => {
-    it('places popover to the left of anchor, top-aligned with the anchor top', () => {
+    it('places popover to the left of anchor, vertically centered on the anchor', () => {
       const result = resolvePosition({
         anchor: rect({ top: 100, bottom: 140, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 100 },
@@ -328,9 +328,8 @@ describe('resolvePosition', () => {
 
       // horizontal: popover.right = anchor.left - offset → left = 400 - 8 - 250 = 142
       expect(result.left).toBe(142);
-      // vertical: top-aligned with anchor top — the menu extends downward and
-      // never covers the content above the block
-      expect(result.top).toBe(100);
+      // vertical: centered on the anchor — anchor center 120, popover half-height 50
+      expect(result.top).toBe(70);
       expect(result.openLeft).toBe(true);
     });
 
@@ -355,7 +354,7 @@ describe('resolvePosition', () => {
       expect(result.openTop).toBe(false);
     });
 
-    it('keeps top-alignment when the anchor is near the top and there is room below', () => {
+    it('shifts down to the boundary when centering would overflow the top', () => {
       const result = resolvePosition({
         anchor: rect({ top: 20, bottom: 60, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 200 },
@@ -366,8 +365,8 @@ describe('resolvePosition', () => {
         placeLeftOfAnchor: true,
       });
 
-      // top-aligned with the anchor: the menu opens downward from the block
-      expect(result.top).toBe(20);
+      // centered would put top at 40 - 100 = -60 → clamped to the scope top (0)
+      expect(result.top).toBe(0);
     });
 
     it('respects scrollOffset when placeLeftOfAnchor is true', () => {
@@ -382,10 +381,10 @@ describe('resolvePosition', () => {
       });
 
       expect(result.left).toBe(192); // 142 + 50
-      expect(result.top).toBe(300); // anchor top 100 + scroll 200
+      expect(result.top).toBe(270); // anchor center doc (120 + 200) - half height (50)
     });
 
-    it('pins top to anchor top when viewport margin would push popover below the anchor (no scroll)', () => {
+    it('clamps to the viewport-margin floor when centering would overflow the top', () => {
       const result = resolvePosition({
         anchor: rect({ top: 20, bottom: 60, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 200 },
@@ -397,12 +396,12 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Viewport-margin floor (50) would sit below anchor top (20),
-      // so the effective floor is clamped to anchor top. Popover top pinned at 20.
-      expect(result.top).toBe(20);
+      // Centered would put top at 40 - 100 = -60; shifted down to the
+      // viewport-margin floor so the whole menu stays on screen.
+      expect(result.top).toBe(50);
     });
 
-    it('pins top to anchor top in doc coords when page is scrolled', () => {
+    it('clamps to the viewport-margin floor in doc coords when page is scrolled', () => {
       const result = resolvePosition({
         anchor: rect({ top: 30, bottom: 70, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 300 },
@@ -414,11 +413,12 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Anchor top in doc = 30 + 400 = 430. Viewport floor (450) exceeds ceiling; clamp to 430.
-      expect(result.top).toBe(430);
+      // Anchor center doc = 50 + 400 = 450, desired top = 450 - 150 = 300.
+      // Viewport-margin floor = 400 + 50 = 450 → clamp to 450.
+      expect(result.top).toBe(450);
     });
 
-    it('never positions popover top below anchor top (regression)', () => {
+    it('keeps the whole popover inside viewport margins even when the anchor sits at the very top', () => {
       const result = resolvePosition({
         anchor: rect({ top: 5, bottom: 45, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 600 },
@@ -430,11 +430,12 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Popover top must never exceed anchor.top (=5) regardless of margins.
-      expect(result.top).toBeLessThanOrEqual(5);
+      // Centering is impossible; the menu shifts down just enough to fit.
+      expect(result.top).toBe(50);
+      expect(result.top + 600).toBeLessThanOrEqual(900 - 50);
     });
 
-    it('keeps top-alignment when there is enough viewport room below', () => {
+    it('centers on the anchor when there is enough viewport room on both sides', () => {
       const result = resolvePosition({
         anchor: rect({ top: 400, bottom: 440, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 200 },
@@ -446,11 +447,11 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Top-aligned with anchor top; maxTop = 750 - 200 = 550 leaves room. No clamp.
-      expect(result.top).toBe(400);
+      // Anchor center 420, half height 100 → top 320. Fits inside [50, 550].
+      expect(result.top).toBe(320);
     });
 
-    it('shifts top upward when top-aligned position would overflow viewport bottom', () => {
+    it('shifts up when centered position would overflow viewport bottom', () => {
       const result = resolvePosition({
         anchor: rect({ top: 700, bottom: 740, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 400 },
@@ -462,12 +463,12 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Top-aligned raw top = 700. bottom = 700 + 400 = 1100, exceeds viewport (800 - 50 = 750).
+      // Centered top = 720 - 200 = 520; bottom would be 920 > 750.
       // maxTop = 750 - 400 = 350. Clamp to 350.
       expect(result.top).toBe(350);
     });
 
-    it('shifts top upward when page is scrolled and top-aligned overflows bottom', () => {
+    it('shifts up when page is scrolled and centered position overflows bottom', () => {
       const result = resolvePosition({
         anchor: rect({ top: 700, bottom: 740, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 400 },
@@ -479,15 +480,15 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // Anchor top doc = 700 + 300 = 1000.
-      // maxTop = (300 + 800 - 50) - 400 = 1050 - 400 = 650. Clamp to 650.
+      // Anchor center doc = 720 + 300 = 1020, desired top = 820.
+      // maxTop = (300 + 800 - 50) - 400 = 650. Clamp to 650.
       expect(result.top).toBe(650);
     });
 
-    it('regression: block near viewport top — menu opens AT the block, not pinned over content above (top-left-corner bug)', () => {
-      // Mirrors the real repro: toggler at (348, 220), 298x368 menu, 1280x800
-      // viewport. The old vertically-centered math clamped the menu to
-      // top=viewportMargin (50), covering the heading above the block.
+    it('regression: menu is vertically centered on the six-dots handle (goal spec)', () => {
+      // Mirrors the real playground: toggler at (348, 220), 298x368 menu,
+      // 1280x800 viewport. Centered placement fits (desired top 48 is only
+      // 2px above the margin floor → clamped to 50, menu bottom 418 << 750).
       const result = resolvePosition({
         anchor: rect({ top: 220, bottom: 244, left: 348, right: 366, width: 18, height: 24 }),
         popoverSize: { width: 298, height: 368 },
@@ -499,8 +500,8 @@ describe('resolvePosition', () => {
         viewportMargin: 50,
       });
 
-      // The menu must not extend above the block it belongs to.
-      expect(result.top).toBe(220);
+      // Anchor center 232, half height 184 → desired 48, floor 50.
+      expect(result.top).toBe(50);
       // And it must stay horizontally attached to the toggler.
       expect(result.left).toBe(348 - 8 - 298);
     });
@@ -525,7 +526,7 @@ describe('resolvePosition', () => {
       expect(result.openTop).toBe(false);
     });
 
-    it('falls back to top-aligned at viewportMargin when popover is taller than viewport minus margins', () => {
+    it('pins to the viewport-margin floor when popover is taller than viewport minus margins', () => {
       const result = resolvePosition({
         anchor: rect({ top: 300, bottom: 340, left: 400, right: 440 }),
         popoverSize: { width: 250, height: 900 },

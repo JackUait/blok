@@ -136,17 +136,17 @@ export interface PopoverParamsBase {
   leftAlignElement?: HTMLElement;
 
   /**
-   * When true, the popover is placed to the left of the trigger (clamped to
-   * the boundary when it does not fully fit) and top-aligned with the trigger
-   * so it extends downward without covering the content above it.
+   * When true, the popover is placed to the left of the trigger (when it
+   * fully fits there) and is vertically centered on the trigger, shifted up
+   * or down only as far as needed to stay inside the viewport.
    */
   placeLeftOfAnchor?: boolean;
 
   /**
    * Minimum distance (in pixels) between the popover and the viewport top/bottom
    * edges. Applied only together with placeLeftOfAnchor. Keeps the popover fully
-   * inside the viewport — shifting upward if top-aligned placement would overflow
-   * the bottom — so it stays visible and close to the trigger.
+   * inside the viewport — shifting it vertically when centered placement would
+   * overflow either edge — so it stays visible and close to the trigger.
    */
   viewportMargin?: number;
 

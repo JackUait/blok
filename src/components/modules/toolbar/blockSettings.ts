@@ -9,6 +9,7 @@ import { Flipper } from '../../flipper';
 import { IconColumns, IconCopy, IconReplace, IconTrash } from '../../icons';
 import { wrapBlocksInColumns } from '../../../tools/column-drop';
 import { SelectionUtils } from '../../selection/index';
+import { ScrollLocker } from '../../utils/scroll-locker';
 import type { BlockToolAdapter } from '../../tools/block';
 import { isMobileScreen, keyCodes } from '../../utils';
 import { beautifyShortcut } from '../../utils/string';
@@ -96,6 +97,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private selection: SelectionUtils = new SelectionUtils();
 
   /**
+   * Locks page scroll while the menu is open so the anchored popover cannot
+   * drift away from (or over) the content it belongs to
+   */
+  private scrollLocker = new ScrollLocker();
+
+  /**
    * Popover instance. There is a util for vertical lists.
    * Null until popover is not initialized
    */
@@ -153,6 +160,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
    * Destroys module
    */
   public destroy(): void {
+    this.scrollLocker.unlock();
     this.detachFlipperKeydownListener();
     this.removeAllNodes();
     this.listeners.destroy();
@@ -361,6 +369,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
        * in its pre-open state, then announce the state change.
        */
       this.popover.show();
+      this.scrollLocker.lock();
       this.attachFlipperKeydownListener(block);
 
       /** Tell to subscribers that block settings is opened */
@@ -403,6 +412,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     this.opened = false;
     this.isOpening = false; // Clear isOpening flag when closing
+    this.scrollLocker.unlock();
 
     /**
      * If selection is at blok on Block Settings closing,

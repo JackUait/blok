@@ -809,7 +809,9 @@ describe('PopoverDesktop', () => {
 
         // left = trigger.left (348) - offset (8) - width (298) = 42
         expect(popoverElement.style.left).toBe('42px');
-        expect(popoverElement.style.top).toBe('220px');
+        // vertically centered on the trigger (center 232 - 184 = 48),
+        // clamped to the 50px viewport-margin floor
+        expect(popoverElement.style.top).toBe('50px');
 
         // Open-state side effects: the trigger is hidden and the actions
         // container shrinks (plus button removed), shifting its left edge.
@@ -822,7 +824,7 @@ describe('PopoverDesktop', () => {
 
         // The stable holder did not move, so neither may the menu.
         expect(popoverElement.style.left).toBe('42px');
-        expect(popoverElement.style.top).toBe('220px');
+        expect(popoverElement.style.top).toBe('50px');
       } finally {
         Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth, writable: true });
         Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalInnerHeight, writable: true });

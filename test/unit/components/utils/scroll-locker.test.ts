@@ -166,6 +166,61 @@ describe('ScrollLocker', () => {
     expect(document.body).not.toHaveAttribute('data-blok-scroll-locked');
   });
 
+  it('locks via inline overflow style so it works on host pages without Blok stylesheet scope', () => {
+    // Regression: the lock used to rely solely on the Tailwind `overflow-hidden`
+    // class, but Blok's utility CSS is scoped to the editor and never styles
+    // document.body on a host page — the class silently did nothing and the
+    // page kept scrolling under the open menu.
+    setIsIosDeviceValue(false);
+    const locker = new ScrollLocker();
+
+    locker.lock();
+
+    expect(document.body.style.overflow).toBe('hidden');
+
+    locker.unlock();
+
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('restores a pre-existing inline overflow value on unlock', () => {
+    setIsIosDeviceValue(false);
+    document.body.style.overflow = 'auto';
+    const locker = new ScrollLocker();
+
+    locker.lock();
+
+    expect(document.body.style.overflow).toBe('hidden');
+
+    locker.unlock();
+
+    expect(document.body.style.overflow).toBe('auto');
+    document.body.style.overflow = '';
+  });
+
+  it('applies the hard lock via inline styles on iOS devices', () => {
+    setIsIosDeviceValue(true);
+    Object.defineProperty(window, 'pageYOffset', {
+      configurable: true,
+      value: 40,
+    });
+    window.scrollTo = vi.fn();
+
+    const locker = new ScrollLocker();
+
+    locker.lock();
+
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(document.body.style.position).toBe('fixed');
+    expect(document.body.style.width).toBe('100%');
+
+    locker.unlock();
+
+    expect(document.body.style.overflow).toBe('');
+    expect(document.body.style.position).toBe('');
+    expect(document.body.style.width).toBe('');
+  });
+
   it('compensates for the scrollbar gap while locked', () => {
     setIsIosDeviceValue(false);
     const originalInnerWidth = window.innerWidth;

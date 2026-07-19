@@ -18,16 +18,16 @@ export interface PositionInput {
   /** Element rect whose left edge overrides anchor's left for horizontal alignment */
   leftAlignRect?: DOMRect;
   /**
-   * When true, the popover is placed to the left of the anchor (clamped to the
-   * boundary when it does not fully fit) and is top-aligned with the anchor so
-   * it extends downward without covering the content above.
+   * When true, the popover is placed to the left of the anchor (when it fully
+   * fits there) and is vertically centered on the anchor, shifted up or down
+   * only as far as needed to stay inside the viewport/scope.
    */
   placeLeftOfAnchor?: boolean;
   /**
    * Minimum distance (in pixels) between the popover and the viewport top/bottom
    * edges. Applied only when placeLeftOfAnchor is true. Keeps the popover
-   * within the viewport — shifting up if centered placement would overflow the
-   * bottom — so it remains fully visible near the anchor. Has no effect when 0.
+   * within the viewport — shifting it vertically when centered placement would
+   * overflow either edge. Has no effect when 0.
    */
   viewportMargin?: number;
 }
@@ -85,31 +85,30 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   const boundaryLeft = Math.max(0, scopeBounds.left);
   const scopeTopInDocCoords = scopeBounds.top + scrollOffset.y;
 
-  // Placement mode: left of the anchor, top-aligned with the anchor so the
-  // menu extends downward and never covers the content above the block it
-  // belongs to. Used only when the popover fully fits left of the anchor:
-  // a clamped partial fit would slide the menu over its own trigger (the
-  // six-dots handle must stay visible), and the anchor's right side is the
-  // block content. When it does not fit, fall through to the standard
-  // below/above placement — the handle stays clear and the menu covers only
-  // content below, matching the context-menu behavior.
+  // Placement mode: left of the anchor, vertically centered on the anchor
+  // (the six-dots handle), shifted up/down only as far as needed to stay
+  // inside the viewport/scope. Used only when the popover fully fits left of
+  // the anchor: a clamped partial fit would slide the menu over its own
+  // trigger (the six-dots handle must stay visible), and the anchor's right
+  // side is the block content. When it does not fit, fall through to the
+  // standard below/above placement — the handle stays clear and the menu
+  // covers only content below, matching the context-menu behavior.
   if (placeLeftOfAnchor && popoverSize.width <= anchor.left - offset - boundaryLeft) {
-    const anchorTopInDocCoords = anchor.top + scrollOffset.y;
+    const anchorCenterInDocCoords = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
     const scopeBottomInDocCoords = scopeBounds.bottom + scrollOffset.y;
     const viewportTopFloor = scrollOffset.y + viewportMargin;
     const viewportBottomCeiling = scrollOffset.y + viewportSize.height - viewportMargin;
 
-    // Popover top must never sit below the anchor top — keeps the menu visually
-    // attached to the trigger instead of dropping underneath it when the viewport
-    // margin would otherwise force the top edge down.
-    const topFloor = Math.max(scopeTopInDocCoords, Math.min(viewportTopFloor, anchorTopInDocCoords));
+    const topFloor = Math.max(scopeTopInDocCoords, viewportTopFloor);
     const bottomCeiling = Math.min(scopeBottomInDocCoords, viewportBottomCeiling);
     const maxTop = bottomCeiling - popoverSize.height;
-    // Top-aligned with the anchor; shifted up only as far as needed to stay
-    // inside the bottom boundary, never above the top floor.
+    // Centered on the anchor; when precise centering would overflow the
+    // top/bottom boundary, shift vertically just enough to fit. When the
+    // popover is taller than the available window, pin it to the top floor.
+    const desiredTop = anchorCenterInDocCoords - popoverSize.height / 2;
     const top = maxTop < topFloor
       ? topFloor
-      : Math.max(topFloor, Math.min(anchorTopInDocCoords, maxTop));
+      : Math.max(topFloor, Math.min(desiredTop, maxTop));
 
     // The menu sits left of the anchor, clamped to the boundary when it does
     // not fully fit. Never flip to the anchor's right side: the block content

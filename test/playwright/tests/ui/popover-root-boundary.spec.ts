@@ -181,12 +181,14 @@ const expectMenuBesideTrigger = (menuBox: BoundingBox, triggerBox: BoundingBox):
   const fitsLeftOfTrigger = menuBox.width <= triggerBox.x - offset;
 
   if (fitsLeftOfTrigger) {
-    // The menu is top-aligned with its trigger and extends downward, shifted
-    // up only as far as the 50px bottom viewport margin requires — it must
-    // never be vertically centered over the content above the block.
+    // The menu is vertically centered on its trigger (the six-dots handle),
+    // shifted up/down only as far as the 50px viewport margins require.
     const viewportMargin = 50;
-    const topFloor = Math.min(viewportMargin, triggerBox.y);
-    const expectedTop = Math.max(topFloor, Math.min(triggerBox.y, 720 - viewportMargin - menuBox.height));
+    const desiredTop = triggerBox.y + triggerBox.height / 2 - menuBox.height / 2;
+    const maxTop = 720 - viewportMargin - menuBox.height;
+    const expectedTop = maxTop < viewportMargin
+      ? viewportMargin
+      : Math.max(viewportMargin, Math.min(desiredTop, maxTop));
 
     expect(Math.abs(menuBox.y - expectedTop)).toBeLessThanOrEqual(2);
     // The six-dots handle stays fully visible to the menu's right.

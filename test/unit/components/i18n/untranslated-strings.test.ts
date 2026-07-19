@@ -171,6 +171,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'toolNames.image',
     'popover.actions',
     'tools.database.propertyTypeDate',
+    'tools.file.previewRaw',
   ]),
   id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
   it: new Set([

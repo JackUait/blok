@@ -266,16 +266,16 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-cs-001` | pending |
 | `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | codex-root-da-pass1-539-2026-07-19 | codex-da-pass2-539-2026-07-19 | pass | pass | pass | `F-da-001`–`F-da-076` | second-pass-complete |
-| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | codex-root-de-pass1-539-2026-07-19 | — | pass | pass | pass | `F-de-001`–`F-de-088` | first-pass-complete |
+| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | codex-root-de-pass1-539-2026-07-19 | codex-de-pass2-539-2026-07-19 | pass | pass | pass | `F-de-001`–`F-de-088` | second-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-en-pass1-539-2026-07-19 | codex-root-en-pass2-539-2026-07-19 | pass | pass | pass | `F-en-001`–`F-en-042` | second-pass-complete |
-| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | codex-root-es-pass1-539-2026-07-19 | — | pass | pass | pass | `F-es-001`–`F-es-097` | first-pass-complete |
+| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | codex-root-es-pass1-539-2026-07-19 | — | pass | pass | pass | `F-es-001`–`F-es-099` | first-pass-complete |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | codex-fi-pass1-539-2026-07-19 | — | pass | pass | pass | `F-fi-001`–`F-fi-077` | first-pass-complete |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
-| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-125` | pending |
+| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | codex-root-fr-pass1-539-2026-07-19 | codex-fr-pass2-539-2026-07-19 | pass | pass | pass | `F-fr-001`–`F-fr-131` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
 | `hi` | Hindi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-hi-001` | pending |
@@ -283,7 +283,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
-| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | — | — | pending | pending | pending | `F-it-001`–`F-it-084` | pending |
+| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | codex-root-it-pass1-539-2026-07-19 | — | pass | pass | pass | `F-it-001`–`F-it-089` | first-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | to-audit | — | — | pending | pending | pending | `F-ja-001` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
@@ -356,9 +356,11 @@ locale returns to `pending`.
 |---|---|---|---|---|
 | `en` | `codex-en-pass1-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` | `codex-root-en-pass2-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` |
 | `da` | `codex-root-da-pass1-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` | `codex-da-pass2-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` |
-| `de` | `codex-root-de-pass1-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` | — | — |
-| `es` | `codex-root-es-pass1-539-2026-07-19` | `sha256:9575136e82187a2839d8fec16f3cdc260e71377bc5d1f51c62b03df677661247` | — | — |
+| `de` | `codex-root-de-pass1-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` | `codex-de-pass2-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` |
+| `es` | `codex-root-es-pass1-539-2026-07-19` | `sha256:435016766dd78f39b086cb3dd6dd33a929084557206ce8a8952f9221f22affc6` | — | — |
 | `fi` | `codex-fi-pass1-539-2026-07-19` | `sha256:0ca6b959eedb97fe8ca1bed8ce75549cae9a5f299fb7f9f18463574443eebe71` | — | — |
+| `fr` | `codex-root-fr-pass1-539-2026-07-19` | `sha256:527c5314abd2dde23467557cb2afc91127d824eeed07ba67b44e2613534f6f12` | `codex-fr-pass2-539-2026-07-19` | `sha256:527c5314abd2dde23467557cb2afc91127d824eeed07ba67b44e2613534f6f12` |
+| `it` | `codex-root-it-pass1-539-2026-07-19` | `sha256:8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668` | — | — |
 | `nl` | `codex-nl-pass1-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` | `codex-nl-pass2-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` |
 | `no` | `codex-root-no-pass1-539-2026-07-19` | `sha256:d08881a82c9e3fd0bf81e38a92add5cdf667c3ec2edc424453dca86a3a6a3033` | — | — |
 | `ru` | `codex-ru-pass1-539-2026-07-19` | `sha256:85346859ecb32511fdd877786f50e2fc0e462880cdb044f9dfa98001d5cd0eb8` | — | — |
@@ -560,8 +562,12 @@ Structural inspection found no key, type, placeholder, encoding,
 normalization, control-character, or boundary-whitespace defect. This current
 first pass binds to raw SHA-256
 `ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c`.
-German is therefore `first-pass-complete`; a distinct complete second review
-remains required on these exact bytes.
+A distinct second reviewer independently reread all 539 English/German pairs
+on the same bytes and revalidated all 88 findings, all 25 retentions, all 42
+changed-English dependencies, all 38 placeholder contracts, all 44 aliases
+in 14 groups, all 29 source-only contracts, the 509+29+1 caller partition,
+and the complete structural manifest without finding a residual. German is
+therefore `second-pass-complete` on these exact bytes.
 
 ### Danish (`da`) — current 539-key second pass complete
 
@@ -624,7 +630,7 @@ The current-byte first reviewer inspected and, after applying the closed
 correction set, independently re-read 539/539 Spanish values in source order
 across all eight top-level namespaces and every `tools.*` subnamespace. The
 review is bound to
-`sha256:9575136e82187a2839d8fec16f3cdc260e71377bc5d1f51c62b03df677661247`.
+`sha256:435016766dd78f39b086cb3dd6dd33a929084557206ce8a8952f9221f22affc6`.
 Coverage included all 38 placeholder-bearing values, all 29 documented
 source-only contracts, all 44 search aliases in their 14 duplicate-intent
 groups, every exact-English match, and all 42 changed-English dependencies.
@@ -632,7 +638,11 @@ The current caller disposition is complete: 509 caller-consumed or retained
 built-compatibility contracts, 29 documented source-only contracts, and the
 single `notifier.dismiss` localization bypass.
 
-All findings `F-es-001` through `F-es-097` are applied and exact. The initial
+All findings `F-es-001` through `F-es-099` are applied and exact. A
+second-review challenge exposed two residuals in the earlier bytes: the
+screen-reader instruction now uses Spain Spanish `Intro` and `Esc`, and the
+file-caption action retains its required definite article. The current-byte
+review rechecked both corrections together with every unchanged value. The initial
 dictionary had 26 exact-English values: 11 supported retentions and 15
 defects. Those 15 defects are now localized, while approved `F-es-046`
 changed `toolNames.marker` from `Resaltador` to `Color`, creating one newly
@@ -677,7 +687,7 @@ does not block this dictionary pass. These results close the Spanish first
 pass on the bound 539-key digest; the distinct second review remains
 unassigned.
 
-### French (`fr`) — first pass complete
+### French (`fr`) — current 539-key first pass complete
 
 The first reviewer inspected 538/538 current French values in the shipped
 France-French (`fr-FR`) dictionary. This pre-correction inspection covered all
@@ -764,6 +774,32 @@ The final exact-English inventory remains exactly the 22 sourced `R-fr`
 entries. These results close the French first pass; the distinct second review
 must now repeat against the current digest.
 
+After the 539-key migration, the current-byte reviewer repeated the complete
+539-value review in four disjoint source-order ranges. A later challenge
+amended the count-unsafe nested-content warning and bookmark loading state and
+closed six additional residuals: both color-swatch compositions, completed
+hash navigation, the emoji activity category, the image-centered default
+error, and the bookmark error resource. The reviewer then reread all 539
+current English/French pairs and reconciled `F-fr-001` through `F-fr-131`,
+all 42 changed-English dependencies, all 38 placeholder contracts, all 44
+aliases in 14 groups, all 29 source-only contracts, and the 509+29+1 caller
+partition. Multiple-block count templates were traced to guards that require
+counts greater than one.
+
+The current exact-English inventory is exactly the 23 supported retentions
+`R-fr-001` through `R-fr-023`. Structural inspection found 539 keys and no
+missing, extra, duplicate, non-string, empty, placeholder, NFC, encoding,
+control-character, replacement-character, or boundary-whitespace defect.
+Finding, ledger-integrity, exact-retention, search-quality, duplicate-key, and
+live-checker gates pass. The current first pass binds to raw SHA-256
+`527c5314abd2dde23467557cb2afc91127d824eeed07ba67b44e2613534f6f12`.
+A distinct second reviewer independently reread all 539 English/French pairs
+on the same bytes and revalidated all 131 findings, all 23 retentions, all 42
+dependencies, all 38 placeholder contracts and their count guards, all 44
+aliases in 14 groups, all 29 source-only contracts, the 509+29+1 caller
+partition, and the complete structural manifest without finding a residual.
+French is therefore `second-pass-complete` on these exact bytes.
+
 ### Finnish (`fi`) — first pass complete
 
 The current-byte reviewer inspected 539/539 Finnish values in source order and
@@ -799,7 +835,7 @@ clean, and independent code review found no Critical, Important, or Minor
 issue. Finnish is therefore `first-pass-complete` on the bound digest; a
 distinct complete second review remains required on these exact bytes.
 
-### Italian (`it`) — first-pass evidence reset by second review
+### Italian (`it`) — current 539-key first pass complete
 
 The first reviewer inspected 538/538 current Italian values in the shipped
 dictionary. This pre-correction inspection covered all eight top-level
@@ -947,6 +983,27 @@ SHA-256
 Because the dictionary bytes changed, the reset rule leaves all three result
 columns `pending`, both reviewer cells empty, and no digest evidence; a fresh
 complete first pass is still required.
+
+After the 539-key migration, the current-byte reviewer reread all 539 values
+in English source order and reconciled every caller and contract. The review
+amended the video seek control to the precise `Posizione di riproduzione` and
+closed five additional residuals: both color-swatch compositions, the
+image-centered default error, the rendered `Anteprima` tab, and the
+imperative paste-menu action `Menziona`. All `F-it-001` through `F-it-089`
+expectations are now exact.
+
+The current pass covers all 42 changed-English dependencies, all 38
+placeholder-bearing values, all 44 aliases in 14 groups, all 29 source-only
+contracts, the 509+29+1 caller partition, and exactly the 21 supported
+retentions `R-it-001` through `R-it-021`. Structural inspection found 539
+keys and no missing, extra, duplicate, type, empty-value, placeholder, NFC,
+encoding, control-character, replacement-character, or boundary-whitespace
+defect. Finding, ledger-integrity, exact-retention, search-quality,
+duplicate-key, caller, and live-checker gates pass. The current first pass
+binds to raw SHA-256
+`8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668`.
+Italian is therefore `first-pass-complete`; a distinct complete second review
+remains required on these exact bytes.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -1608,7 +1665,7 @@ follows the global transition rule above.
 | `F-fr-001` | `fr` | `toolbox.optionAddAbove` | shortcut / action clarity | `"⌥ — ajouter au-dessus"` | `"⌥ + clic pour ajouter au-dessus"` | Slash-toolbox tooltip must name the click gesture; Apple France supports the modifier-key notation. | verified |
 | `F-fr-002` | `fr` | `toolbox.ctrlAddAbove` | shortcut / action clarity | `"Ctrl — ajouter au-dessus"` | `"Ctrl + clic pour ajouter au-dessus"` | Windows tooltip must name the click gesture rather than presenting an unexplained dash. | verified |
 | `F-fr-003` | `fr` | `toolbox.typeToSearch` | search clarity | `"Saisissez pour rechercher"` | `"Saisissez un terme de recherche"` | Search placeholder needs a grammatical object; Notion France uses an explicit search-term prompt. | verified |
-| `F-fr-004` | `fr` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer ?"` | `"Blocs imbriqués : {count}. La conversion de ce bloc les déplacera au niveau supérieur. Continuer ?"` | Source-only warning must remain grammatical when the count is one and synchronize with the clarified English contract. | verified |
+| `F-fr-004` | `fr` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Ce bloc contient {count} blocs imbriqués. La conversion les déplacera au niveau supérieur. Continuer ?"` | `"Blocs imbriqués : {count}. La conversion de ce bloc déplacera le contenu imbriqué au niveau supérieur. Continuer ?"` | Source-only warning must remain grammatical for both one and many nested blocks; count-neutral `le contenu imbriqué` avoids the plural pronoun `les` when `{count}` is one. | verified |
 | `F-fr-005` | `fr` | `tools.marker.textColor` | terminology | `"Texte"` | `"Couleur du texte"` | Shared color picker needs an explicit text-color mode name rather than the ambiguous noun `Texte`. | verified |
 | `F-fr-006` | `fr` | `toolNames.toggleList` | terminology / consistency | `"Liste réductible"` | `"Liste dépliante"` | Notion France uses `Liste dépliante` for this editor block; `réductible` is better retained only as a search alias. | verified |
 | `F-fr-007` | `fr` | `tools.header.toggleHeading` | terminology / consistency | `"Titre réductible"` | `"Titre dépliant"` | Visible toggle-heading label must follow the established France-French `dépliant` terminology. | verified |
@@ -1683,7 +1740,7 @@ follows the global transition rule above.
 | `F-fr-076` | `fr` | `tools.image.errorFileTooLarge` | pending translation / error | `"Image is too large. {size} exceeds the {max} limit."` | `"L’image est trop volumineuse. Sa taille de {size} dépasse la limite de {max}."` | Image-size error retained English; replacement is natural France French and preserves both placeholders. | verified |
 | `F-fr-077` | `fr` | `tools.image.errorUploadFailedTitle` | punctuation | `"Échec de l'envoi"` | `"Échec de l’envoi"` | French UI typography requires the U+2019 apostrophe. | verified |
 | `F-fr-078` | `fr` | `tools.image.errorImageFailedToLoad` | punctuation | `"Échec du chargement de l'image"` | `"Échec du chargement de l’image"` | French UI typography requires the U+2019 apostrophe. | verified |
-| `F-fr-079` | `fr` | `tools.bookmark.loading` | progress punctuation | `"Chargement de l’aperçu"` | `"Chargement de l’aperçu…"` | Rendered in-progress placeholder needs U+2026 to signal ongoing work. | verified |
+| `F-fr-079` | `fr` | `tools.bookmark.loading` | progress punctuation / source synchronization | `"Chargement de l’aperçu"` | `"Chargement de l’aperçu du lien…"` | The rendered in-progress state needs U+2026 and must preserve the corrected source’s link-preview resource context. | verified |
 | `F-fr-080` | `fr` | `tools.embed.empty` | read-only context | `"Collez un lien à intégrer"` | `"Aucun lien intégré"` | Caller renders only in an empty read-only embed where pasting is impossible. | verified |
 | `F-fr-081` | `fr` | `tools.link.linkTitle` | context / terminology | `"Titre du lien"` | `"Texte du lien"` | Field edits the visible anchor text, not an HTML-style link title. | verified |
 | `F-fr-082` | `fr` | `tools.linkPaste.embedAudio` | punctuation | `"Intégrer l'audio {provider}"` | `"Intégrer l’audio {provider}"` | French UI typography requires the U+2019 apostrophe; placeholder remains exact. | verified |
@@ -1794,7 +1851,7 @@ follows the global transition rule above.
 | `F-it-063` | `it` | `tools.bookmark.loading` | grammar / progress | `"Caricamento anteprima del link"` | `"Caricamento dell’anteprima del link…"` | The ongoing-state label requires the articulated preposition and an ellipsis to signal that preview loading is in progress. | verified |
 | `F-it-064` | `it` | `tools.bookmark.error` | punctuation consistency | `"Impossibile caricare l'anteprima del link"` | `"Impossibile caricare l’anteprima del link"` | Contemporary Italian UI typography in this dictionary uses the U+2019 apostrophe; this straight apostrophe is inconsistent. | verified |
 | `F-it-065` | `it` | `tools.embed.empty` | semantic / source synchronization | `"Incolla un link da incorporare"` | `"Nessun link incorporato"` | The empty-state text reports that no embed link exists; the current imperative describes a different action and does not follow the corrected source. | verified |
-| `F-it-066` | `it` | `tools.video.seek` | accessibility / terminology | `"Scorri"` | `"Avanzamento video"` | The accessible slider controls the video playback position, not page scrolling; the replacement names video progress directly. | verified |
+| `F-it-066` | `it` | `tools.video.seek` | accessibility / terminology | `"Scorri"` | `"Posizione di riproduzione"` | The accessible range input controls the current playback position, not page scrolling or a generic progress indicator; Google Drive’s Italian screen-reader guidance uses `posizione di riproduzione`. | verified |
 | `F-it-067` | `it` | `tools.video.toggleTimeDisplay` | accessibility / clarity | `"Attiva/disattiva visualizzazione tempo"` | `"Passa dal tempo trascorso al tempo rimanente e viceversa"` | The accessible action must identify the two actual display states rather than expose an abstract toggle. | verified |
 | `F-it-068` | `it` | `tools.video.fullscreenExit` | grammar | `"Esci da schermo intero"` | `"Esci dallo schermo intero"` | Italian requires the articulated preposition `dallo` before `schermo intero`. | verified |
 | `F-it-069` | `it` | `tools.video.ctxCopyUrlAtTime` | accessibility / context | `"Copia URL del video al minuto attuale"` | `"Copia l’URL del video in corrispondenza del minuto corrente"` | The context action copies a URL at the current playback position; the replacement names that temporal correspondence precisely and adds the required article. | verified |
@@ -1995,6 +2052,8 @@ follows the global transition rule above.
 | `F-es-095` | `es` | `tools.file.previewRaw` | context / source synchronization | `"Sin formato"` | `"Fuente"` | The Markdown tab shows the file’s source text; `Sin formato` describes styling rather than the content and no longer matches the corrected source contract. | verified |
 | `F-es-096` | `es` | `tools.file.previewRender` | context / source synchronization | `"Con formato"` | `"Vista previa"` | The tab shows the formatted visual preview; `Con formato` describes a property instead of the familiar preview state. | verified |
 | `F-es-097` | `es` | `tools.linkPaste.embed` | action grammar / source-only contract | `"Crear inserción"` | `"Insertar contenido"` | The paste-menu item must name a natural action; `Crear inserción` is an awkward nominal calque, while `Insertar contenido` matches the locale’s established embed terminology. | verified |
+| `F-es-098` | `es` | `a11y.navigationModeEntered` | platform terminology / accessibility | `"Modo de navegación. Usa las teclas de flecha para moverte entre bloques, Enter para editar y Escape para salir."` | `"Modo de navegación. Usa las teclas de flecha para moverte entre bloques, Intro para editar y Esc para salir."` | The assertive screen-reader instruction must use Spain Spanish key names; [Notion Spain](https://www.notion.com/es-es/help/keyboard-shortcuts) consistently labels these keys `Intro` and `Esc`. | verified |
+| `F-es-099` | `es` | `tools.file.toggleCaption` | grammar / terminology consistency | `"Mostrar u ocultar leyenda"` | `"Mostrar u ocultar la leyenda"` | The live file-settings action refers to the file’s specific caption and must retain the definite article used by the image and video sibling actions. | verified |
 | `F-et-001` | `et` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Eemalda vorming"` | Microsoft’s Estonian Word UI uses the exact command [Eemalda vorming](https://support.microsoft.com/et-ee/word/format-your-word-document). | verified |
 | `F-fa-001` | `fa` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"پاک کردن قالب‌بندی"` | LibreOffice’s Persian product UI supplies the exact Clear formatting translation [پاک کردن قالب‌بندی](https://github.com/LibreOffice/translations/blob/master/source/fa/svx/messages.po#L6368-L6369). | verified |
 | `F-fi-001` | `fi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Poista muotoilu"` | Microsoft’s Finnish OneNote UI uses the exact concise command [Poista muotoilu](https://support.microsoft.com/fi-fi/office/tekstin-korostaminen-onenoten-verkkoversio-5dadd21f-311c-42a3-8094-281f7bb7e127) for removing inline text styling. | verified |
@@ -2076,6 +2135,12 @@ follows the global transition rule above.
 | `F-fi-077` | `fi` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Maininta"` | `"Mainitse"` | The paste-menu contract names an action alongside imperatives; the current noun means “a mention” rather than “mention.” | verified |
 | `F-fil-001` | `fil` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"I-clear ang pag-format"` | Google’s official Filipino Gmail UI uses the exact toolbar option [I-clear ang pag-format](https://support.google.com/mail/answer/8260?co=GENIE.Platform%3DAndroid&hl=fil), matching this dictionary’s existing clear-action register. | verified |
 | `F-fr-125` | `fr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Effacer la mise en forme"` | Microsoft’s French editor UI uses the exact concise command [Effacer la mise en forme](https://support.microsoft.com/fr-fr/office/effacer-toute-la-mise-en-forme-du-texte-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
+| `F-fr-126` | `fr` | `tools.colorPicker.defaultSwatchLabel` | punctuation / caller composition | `"{mode} {default}"` | `"{mode} : {default}"` | The caller otherwise produces an ungrammatical adjacency such as `Couleur du texte Par défaut`; the French non-breaking-space colon creates a clear label/value relationship. | verified |
+| `F-fr-127` | `fr` | `tools.colorPicker.colorSwatchLabel` | punctuation / caller composition | `"{mode} {color}"` | `"{mode} : {color}"` | The caller otherwise produces an ungrammatical adjacency such as `Couleur du texte Rouge`; the French non-breaking-space colon creates a clear label/value relationship. | verified |
+| `F-fr-128` | `fr` | `a11y.navigatedToBlock` | accessibility / event completion | `"Accès au bloc"` | `"Vous avez accédé au bloc"` | Both callers announce completed hash navigation; the full sentence expresses that completed event and follows the locale’s formal-address accessibility register. | verified |
+| `F-fr-129` | `fr` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Activité"` | `"Activités"` | The emoji picker renders a category heading rather than one activity; [Microsoft Teams France](https://support.microsoft.com/fr-fr/teams/free/chat-calling/send-an-emoji-or-gif-in-microsoft-teams-free) uses the plural category label `Activités`. | verified |
+| `F-fr-130` | `fr` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"L’URL a renvoyé une erreur. Essayez une autre source ou importez de nouveau le fichier."` | `"Impossible de charger l’image depuis cette URL. Essayez une autre source ou importez de nouveau le fichier."` | The corrected source identifies the failed image load; the current text instead personifies the URL and obscures what failed. | verified |
+| `F-fr-131` | `fr` | `tools.bookmark.error` | context / source synchronization | `"Impossible de charger l’aperçu"` | `"Impossible de charger l’aperçu du lien"` | The rendered error must identify the failed link preview rather than a generic preview; [Microsoft France](https://support.microsoft.com/fr-fr/office/aper%C3%A7u-du-lien-par-bing-1bcfa7f8-a42b-4d59-bc68-2052868c79ab) uses `aperçu du lien`. | verified |
 | `F-gu-001` | `gu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ફોર્મેટિંગ સાફ કરો"` | An independent terminology pass rejected LibreOffice’s longer Clear Direct Formatting label because its technical qualifier is absent from this concise source. The replacement combines this dictionary’s established `ફોર્મેટિંગ` noun and `સાફ કરો` action; Google’s Gujarati UI independently uses the same formatting loanword. | verified |
 | `F-he-001` | `he` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"נקה עיצוב"` | Microsoft’s Hebrew editor UI uses the exact concise command [נקה עיצוב](https://support.microsoft.com/he-IL/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hi-001` | `hi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"टेक्स्ट की फ़ॉर्मैटिंग हटाएं"` | Google Docs’ Hindi shortcut action uses this exact wording in [official help](https://support.google.com/docs/answer/179738?hl=hi), NFC-normalized for the corpus. | verified |
@@ -2084,6 +2149,11 @@ follows the global transition rule above.
 | `F-hy-001` | `hy` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Մաքրել ուղղակի ձևաչափումը"` | LibreOffice’s Armenian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/hy/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-id-001` | `id` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Hapus pemformatan"` | Microsoft’s Indonesian editor UI uses Hapus Pemformatan in [official product help](https://support.microsoft.com/id-ID/PowerPoint/clear-all-text-formatting); the second word is lowercased to the dictionary’s sentence-case register. | verified |
 | `F-it-084` | `it` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Cancella formattazione"` | Microsoft’s Italian editor UI uses the exact concise command [Cancella formattazione](https://support.microsoft.com/it-IT/PowerPoint/clear-all-text-formatting). | verified |
+| `F-it-085` | `it` | `tools.colorPicker.defaultSwatchLabel` | punctuation / caller composition | `"{mode} {default}"` | `"{mode}: {default}"` | The caller otherwise produces an ambiguous adjacency such as `Colore del testo Predefinito`; the colon creates a natural property/value tooltip while preserving both placeholders. | verified |
+| `F-it-086` | `it` | `tools.colorPicker.colorSwatchLabel` | punctuation / caller composition | `"{mode} {color}"` | `"{mode}: {color}"` | The caller otherwise produces an ambiguous adjacency such as `Colore del testo Rosso`; the colon creates a natural property/value tooltip while preserving both placeholders. | verified |
+| `F-it-087` | `it` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"L’URL ha restituito un errore. Prova con un’altra fonte o ricarica il file."` | `"Impossibile caricare l’immagine da questo URL. Prova con un’altra fonte o ricarica il file."` | The corrected source identifies the failed image load; the current text instead personifies the URL and obscures what failed. | verified |
+| `F-it-088` | `it` | `tools.file.previewRender` | context / source synchronization | `"Formattato"` | `"Anteprima"` | The rendered Markdown tab must name the familiar preview view rather than expose a bare adjective; [Microsoft Italian](https://support.microsoft.com/it-it/office/video-visualizzare-in-anteprima-e-stampare-i-file-bd6cee81-895f-41ca-b940-5e4ad85f18e1) uses `Anteprima`. | verified |
+| `F-it-089` | `it` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Menzione"` | `"Menziona"` | The paste-menu item is a clickable action alongside imperatives such as `Mantieni`, `Crea`, and `Incorpora`; the current noun names a mention rather than the action. | verified |
 | `F-ja-001` | `ja` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"文字書式をクリア"` | Google Docs’ Japanese shortcut action uses the exact character-formatting command [文字書式をクリア](https://support.google.com/docs/answer/179738?hl=ja). | verified |
 | `F-ka-001` | `ka` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"პირდაპირი დაფორმატების გასუფთავება"` | LibreOffice’s Georgian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ka/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-km-001` | `km` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ជម្រះទ្រង់ទ្រាយ"` | LibreOffice’s exact short Clear formatting entry is `ជម្រះ​ទ្រង់ទ្រាយ`; the invisible separator is omitted to match this JSON corpus. An independent pass rejected the longer direct-formatting proposal as needless technical scope. | verified |
@@ -2459,6 +2529,7 @@ locale and UI context.
 | `R-fr-020` | `fr` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in France-French media interfaces. | [Apple Clips — Modifier les proportions](https://support.apple.com/fr-fr/guide/clips/dev57f9eb69d/ios) |
 | `R-fr-021` | `fr` | `tools.video.pause` | established cognate | `Pause` is the standard unchanged France-French media-control label. | [Apple — Écouter de la musique sur l’iPhone](https://support.apple.com/fr-fr/guide/iphone/iph676daac9b/ios) |
 | `R-fr-022` | `fr` | `tools.video.volume` | established cognate | `Volume` is the standard unchanged France-French media-control label. | [Apple — Écouter de la musique sur l’iPhone](https://support.apple.com/fr-fr/guide/iphone/iph676daac9b/ios) |
+| `R-fr-023` | `fr` | `tools.file.previewRaw` | established cognate | `Source` is the standard French term for a source-text view and pairs naturally with the adjacent `Aperçu` tab. | [MDN — Déboguer du CSS](https://developer.mozilla.org/fr/docs/Learn_web_development/Core/Styling_basics/Debugging_CSS) |
 | `R-it-001` | `it` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Italian Apple guidance retains the `⌘` platform symbol. | [Apple — Abbreviazioni da tastiera del Mac](https://support.apple.com/it-it/102650) |
 | `R-it-002` | `it` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Italian Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Scelte rapide da tastiera in Windows](https://support.microsoft.com/it-it/windows/scelte-rapide-da-tastiera-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-it-003` | `it` | `toolNames.link` | established loanword | `Link` is the established Italian computing term and the natural concise toolbox label. | [Treccani — link](https://www.treccani.it/vocabolario/link/) |

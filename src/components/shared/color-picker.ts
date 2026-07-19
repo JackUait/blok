@@ -9,7 +9,7 @@ import { COLOR_PRESETS, COLOR_PRESETS_DARK } from './color-presets';
  * Checks the data-blok-theme attribute first (explicit override),
  * then falls back to the prefers-color-scheme media query.
  */
-function getActivePresets(): typeof COLOR_PRESETS {
+export function getActivePresets(): typeof COLOR_PRESETS {
   const theme = document.documentElement.getAttribute('data-blok-theme');
 
   if (theme === 'dark') return COLOR_PRESETS_DARK;

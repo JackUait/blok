@@ -803,28 +803,27 @@ describe('Paragraph Tool - Custom Configurations', () => {
       expect(text.backgroundColor).toBe(false);
     });
 
-    it('exposes Text color and Background submenus via renderSettings', () => {
+    it('exposes a single Color submenu via renderSettings', () => {
       const { options } = createOptionsWithBlock({ text: 'Hi' });
       const paragraph = new Paragraph(options);
       const settings = paragraph.renderSettings() as Array<{ name?: string; title?: string }>;
 
       const names = settings.map((s) => s.name);
 
-      expect(names).toContain('block-text-color');
-      expect(names).toContain('block-background-color');
+      expect(names).toContain('block-color');
+      expect(names).not.toContain('block-text-color');
+      expect(names).not.toContain('block-background-color');
     });
 
-    it('uses the reused marker i18n keys for the submenu labels', () => {
+    it('reuses the marker "Color" i18n key for the submenu label', () => {
       const { options } = createOptionsWithBlock({ text: 'Hi' });
       const paragraph = new Paragraph(options);
       const settings = paragraph.renderSettings() as Array<{ name?: string; title?: string }>;
 
-      const textTune = settings.find((s) => s.name === 'block-text-color');
-      const bgTune = settings.find((s) => s.name === 'block-background-color');
+      const colorTune = settings.find((s) => s.name === 'block-color');
 
       // mock i18n returns the key as-is
-      expect(textTune?.title).toBe('tools.marker.textColor');
-      expect(bgTune?.title).toBe('tools.marker.background');
+      expect(colorTune?.title).toBe('toolNames.marker');
     });
 
     it('persists and re-applies a picked color (mutates data, re-renders, dispatches change)', () => {
@@ -834,11 +833,12 @@ describe('Paragraph Tool - Custom Configurations', () => {
 
       const settings = paragraph.renderSettings() as Array<{
         name?: string;
-        children?: { items: Array<{ title: string; onActivate: () => void }> };
+        children?: { items: Array<{ element: HTMLElement }> };
       }>;
-      const bgTune = settings.find((s) => s.name === 'block-background-color');
+      const colorTune = settings.find((s) => s.name === 'block-color');
+      const picker = colorTune?.children?.items[0].element as HTMLElement;
 
-      bgTune?.children?.items.find((i) => i.title === 'Blue')?.onActivate();
+      (picker.querySelector('[data-blok-testid="block-color-swatch-backgroundColor-blue"]') as HTMLElement).click();
 
       expect(element.style.backgroundColor).toBe('var(--blok-color-blue-bg)');
       expect(paragraph.save(element).backgroundColor).toBe('blue');

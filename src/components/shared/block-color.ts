@@ -8,8 +8,11 @@
  * header) call {@link applyBlockColor} on render and expose
  * {@link buildBlockColorTunes} in their block-settings menu.
  */
+import type { I18n } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
-import { COLOR_PRESETS, colorVarName } from './color-presets';
+import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
+import { createColorPicker, getActivePresets } from './color-picker';
+import { COLOR_PRESETS, COLOR_PRESETS_DARK, colorVarName } from './color-presets';
 
 /**
  * Block-level color stored on a tool's data. Values are preset names.
@@ -89,8 +92,8 @@ export interface BlockColorLabels {
 export interface BlockColorTuneOptions {
   /** Current block color data (drives the active swatch). */
   data: BlockColorData;
-  /** Display labels (already translated by the caller). */
-  labels: BlockColorLabels;
+  /** The calling tool's i18n (labels are resolved via the shared picker's keys). */
+  i18n: I18n;
   /**
    * Called when a swatch is picked. `value` is a preset name, or undefined to
    * clear the field. The caller persists it (e.g. via api.blocks.update) which
@@ -157,57 +160,72 @@ export const getBlockColorToolboxEntries = (labels: BlockColorLabels): BlockColo
 };
 
 /**
- * Build the two block-settings entries (Text color, Background) each opening a
- * palette of the shared 9-hue presets plus a Default reset — mirroring Notion's
- * block color menu. Spread the result into a tool's `renderSettings()` output.
- * @param options - data, labels and the persistence callback
+ * Map a raw swatch CSS value emitted by the shared picker back to its preset
+ * name. Both light and dark preset tables are searched since the picker
+ * renders whichever matches the active theme.
+ * @param color - the CSS value from the clicked swatch
+ * @param field - which preset column the value came from
+ */
+const presetNameFromCss = (color: string, field: 'text' | 'bg'): string | undefined => {
+  return [...COLOR_PRESETS, ...COLOR_PRESETS_DARK].find((preset) => preset[field] === color)?.name;
+};
+
+/**
+ * Build the single "Color" block-settings entry: a submenu hosting the shared
+ * two-section (Text color / Background) swatch picker used by the marker and
+ * table cells — mirroring Notion's block color menu. Spread the result into a
+ * tool's `renderSettings()` output.
+ * @param options - data, i18n and the persistence callback
  */
 export const buildBlockColorTunes = (options: BlockColorTuneOptions): MenuConfig => {
-  const { data, labels, onPick } = options;
+  const { data, i18n, onPick } = options;
+  const activePresets = getActivePresets();
 
-  const makeSwatchItems = (
-    field: keyof BlockColorData,
-    presetMode: 'text' | 'bg'
-  ): MenuConfig[] => {
-    const isBackground = field === 'backgroundColor';
+  const cssFor = (name: string | undefined, field: 'text' | 'bg'): string | null => {
+    if (name === undefined) {
+      return null;
+    }
 
-    const defaultItem = {
-      title: labels.default,
-      icon: swatch('transparent', isBackground),
-      closeOnActivate: true,
-      isActive: (): boolean => !data[field],
-      onActivate: (): void => onPick(field, undefined),
-    };
-
-    const presetItems = COLOR_PRESETS.map((preset) => ({
-      title: titleCase(preset.name),
-      name: `${field}-${preset.name}`,
-      icon: swatch(colorVarName(preset.name, presetMode), isBackground),
-      closeOnActivate: true,
-      isActive: (): boolean => data[field] === preset.name,
-      onActivate: (): void => onPick(field, preset.name),
-    }));
-
-    return [defaultItem, ...presetItems] as MenuConfig[];
+    return activePresets.find((preset) => preset.name === name)?.[field] ?? null;
   };
+
+  const handle = createColorPicker({
+    i18n,
+    testIdPrefix: 'block-color',
+    modes: [
+      { key: 'textColor', labelKey: 'tools.marker.textColor', presetField: 'text' },
+      { key: 'backgroundColor', labelKey: 'tools.marker.background', presetField: 'bg' },
+    ],
+    initialActiveColors: {
+      textColor: cssFor(data.textColor, 'text'),
+      backgroundColor: cssFor(data.backgroundColor, 'bg'),
+    },
+    onColorSelect: (color, modeKey) => {
+      const field = modeKey as keyof BlockColorData;
+
+      handle.setActiveColor(color, modeKey);
+
+      if (color === null) {
+        onPick(field, undefined);
+      } else {
+        onPick(field, presetNameFromCss(color, field === 'textColor' ? 'text' : 'bg'));
+      }
+    },
+  });
 
   return [
     {
-      title: labels.textColor,
-      name: 'block-text-color',
+      title: i18n.t('toolNames.marker'),
+      name: 'block-color',
       icon: swatch(data.textColor ? colorVarName(data.textColor, 'text') : 'currentColor', false),
       children: {
         searchable: false,
-        items: makeSwatchItems('textColor', 'text'),
-      },
-    },
-    {
-      title: labels.background,
-      name: 'block-background-color',
-      icon: swatch(data.backgroundColor ? colorVarName(data.backgroundColor, 'bg') : 'transparent', true),
-      children: {
-        searchable: false,
-        items: makeSwatchItems('backgroundColor', 'bg'),
+        items: [
+          {
+            type: PopoverItemType.Html,
+            element: handle.element,
+          },
+        ],
       },
     },
   ] as MenuConfig;

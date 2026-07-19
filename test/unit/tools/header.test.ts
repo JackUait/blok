@@ -1527,13 +1527,14 @@ describe('Header Tool - block-level color (D1)', () => {
     expect(saved.backgroundColor).toBeUndefined();
   });
 
-  it('renderSettings includes Text color and Background submenus', () => {
+  it('renderSettings includes a single Color submenu (no separate text/background)', () => {
     const options = createHeaderOptions({ text: 'Hi', level: 2 });
     const header = new Header(options);
     const settings = toMenuArray(header.renderSettings());
 
-    expect(settings.find(s => s.name === 'block-text-color')).toBeDefined();
-    expect(settings.find(s => s.name === 'block-background-color')).toBeDefined();
+    expect(settings.find(s => s.name === 'block-color')).toBeDefined();
+    expect(settings.find(s => s.name === 'block-text-color')).toBeUndefined();
+    expect(settings.find(s => s.name === 'block-background-color')).toBeUndefined();
   });
 
   it('picking a swatch updates the element and persists in save()', () => {
@@ -1546,11 +1547,11 @@ describe('Header Tool - block-level color (D1)', () => {
     const element = header.render();
 
     const settings = toMenuArray(header.renderSettings());
-    const textColorEntry = settings.find(s => s.name === 'block-text-color') as Record<string, unknown>;
-    const items = (textColorEntry.children as { items: Array<Record<string, unknown>> }).items;
-    const redItem = items.find(i => i.name === 'textColor-red') as Record<string, unknown>;
+    const colorEntry = settings.find(s => s.name === 'block-color') as Record<string, unknown>;
+    const items = (colorEntry.children as { items: Array<{ element: HTMLElement }> }).items;
+    const redSwatch = items[0].element.querySelector('[data-blok-testid="block-color-swatch-textColor-red"]') as HTMLElement;
 
-    (redItem.onActivate as () => void)();
+    redSwatch.click();
 
     expect(element.style.color).toBe('var(--blok-color-red-text)');
     expect(header.save(element).textColor).toBe('red');

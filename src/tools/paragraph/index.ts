@@ -424,11 +424,7 @@ export class Paragraph implements BlockTool {
   public renderSettings(): MenuConfig {
     return buildBlockColorTunes({
       data: this._data,
-      labels: {
-        textColor: this.api.i18n.t('tools.marker.textColor'),
-        background: this.api.i18n.t('tools.marker.background'),
-        default: this.api.i18n.t('tools.marker.default'),
-      },
+      i18n: this.api.i18n,
       onPick: (field, value): void => {
         // Assigning undefined clears the field (applyBlockColor + save treat it as unset).
         this._data[field] = value;

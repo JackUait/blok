@@ -529,11 +529,7 @@ export class Header implements BlockTool {
 
     const colorTunes = buildBlockColorTunes({
       data: this._data,
-      labels: {
-        textColor: this.api.i18n.t('tools.marker.textColor'),
-        background: this.api.i18n.t('tools.marker.background'),
-        default: this.api.i18n.t('tools.marker.default'),
-      },
+      i18n: this.api.i18n,
       onPick: (field, value): void => this.setBlockColor(field, value),
     });
 

@@ -37,51 +37,56 @@ describe('block-color foundation', () => {
   });
 
   describe('buildBlockColorTunes', () => {
-    it('returns Text color and Background submenus with Default + 9 swatches each', () => {
-      const tunes = buildBlockColorTunes({ data: {}, labels, onPick: vi.fn() }) as Array<{
-        title: string;
-        children: { items: unknown[] };
+    const i18n = { t: (key: string) => key, has: () => true } as never;
+
+    const pickerElement = (tunes: unknown): HTMLElement => {
+      const [tune] = tunes as Array<{
+        children: { items: Array<{ element: HTMLElement }> };
       }>;
 
-      expect(tunes).toHaveLength(2);
-      expect(tunes[0].title).toBe('Text color');
-      expect(tunes[1].title).toBe('Background');
-      // Default + 9 presets
-      expect(tunes[0].children.items).toHaveLength(10);
-      expect(tunes[1].children.items).toHaveLength(10);
+      return tune.children.items[0].element;
+    };
+
+    it('returns a single Color entry hosting the shared two-section picker', () => {
+      const tunes = buildBlockColorTunes({ data: {}, i18n, onPick: vi.fn() }) as Array<{
+        name: string;
+        title: string;
+        children: { items: Array<{ type: string; element: HTMLElement }> };
+      }>;
+
+      expect(tunes).toHaveLength(1);
+      expect(tunes[0].name).toBe('block-color');
+      // mock i18n echoes the key; reuses the marker's "Color" label
+      expect(tunes[0].title).toBe('toolNames.marker');
+
+      const picker = pickerElement(tunes);
+
+      expect(picker.querySelector('[data-blok-testid="block-color-section-textColor"]')).not.toBeNull();
+      expect(picker.querySelector('[data-blok-testid="block-color-section-backgroundColor"]')).not.toBeNull();
     });
 
     it('marks the active swatch from data and the Default when unset', () => {
-      const tunes = buildBlockColorTunes({
-        data: { textColor: 'purple' },
-        labels,
-        onPick: vi.fn(),
-      }) as Array<{ children: { items: Array<{ title: string; isActive: () => boolean }> } }>;
+      const tunes = buildBlockColorTunes({ data: { textColor: 'purple' }, i18n, onPick: vi.fn() });
+      const picker = pickerElement(tunes);
 
-      const textItems = tunes[0].children.items;
-      const purple = textItems.find((i) => i.title === 'Purple');
-      const def = textItems.find((i) => i.title === 'Default');
-      const bgItems = tunes[1].children.items;
-      const bgDefault = bgItems.find((i) => i.title === 'Default');
+      const purple = picker.querySelector('[data-blok-testid="block-color-swatch-textColor-purple"]');
+      const textDefault = picker.querySelector('[data-blok-testid="block-color-swatch-textColor-default"]');
+      const bgDefault = picker.querySelector('[data-blok-testid="block-color-swatch-backgroundColor-default"]');
 
-      expect(purple?.isActive()).toBe(true);
-      expect(def?.isActive()).toBe(false);
+      expect(purple?.classList.contains('ring-2')).toBe(true);
+      expect(textDefault?.classList.contains('ring-2')).toBe(false);
       // background unset → its Default is active
-      expect(bgDefault?.isActive()).toBe(true);
+      expect(bgDefault?.classList.contains('ring-2')).toBe(true);
     });
 
     it('calls onPick with the field + preset name, and undefined for Default', () => {
       const onPick = vi.fn();
-      const tunes = buildBlockColorTunes({ data: {}, labels, onPick }) as Array<{
-        children: { items: Array<{ title: string; onActivate: () => void }> };
-      }>;
+      const picker = pickerElement(buildBlockColorTunes({ data: {}, i18n, onPick }));
 
-      const bgItems = tunes[1].children.items;
-
-      bgItems.find((i) => i.title === 'Red')?.onActivate();
+      (picker.querySelector('[data-blok-testid="block-color-swatch-backgroundColor-red"]') as HTMLElement).click();
       expect(onPick).toHaveBeenCalledWith('backgroundColor', 'red');
 
-      bgItems.find((i) => i.title === 'Default')?.onActivate();
+      (picker.querySelector('[data-blok-testid="block-color-swatch-backgroundColor-default"]') as HTMLElement).click();
       expect(onPick).toHaveBeenCalledWith('backgroundColor', undefined);
     });
   });

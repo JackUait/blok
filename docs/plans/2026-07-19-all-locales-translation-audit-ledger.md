@@ -258,18 +258,18 @@ These rules prevent a machine or reviewer from retaining stale completion:
 
 | Locale | Language/variant | Primary script | Direction | Register | First reviewer | Second reviewer | Structural result | Semantic/style result | Exact-English retention result | Finding IDs | Final status |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `wire-database-am-first-final` | — | pass | pass | pass | `F-am-001`–`F-am-078` | first-pass-complete |
-| `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `codex-wire-ui-ar-first-final` | — | pass | pass | pass | `F-ar-001`–`F-ar-075` | first-pass-complete |
+| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | — | — | pending | pending | pending | `F-am-001`–`F-am-078` | pending |
+| `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | — | — | pending | pending | pending | `F-ar-001`–`F-ar-075` | pending |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-102` | pending |
-| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `codex-bg-first-final-reread` | `root-bg-second-final-545` | pass | pass | pass | `F-bg-001`–`F-bg-095` | second-pass-complete |
+| `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | — | — | pending | pending | pending | `F-bg-001`–`F-bg-095` | pending |
 | `bn` | Bengali | Bengali | ltr | to-audit | — | — | pending | pending | pending | `F-bn-001` | pending |
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
-| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `codex-da-first-final-545` | `root-da-second-final-545` | pass | pass | pass | `F-da-001`–`F-da-083` | second-pass-complete |
-| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-first-final` | — | pass | pass | pass | `F-de-001`–`F-de-089` | first-pass-complete |
+| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | — | — | pending | pending | pending | `F-da-001`–`F-da-083` | pending |
+| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-089` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-final-first` | `wire-media-en-second-final` | pass | pass | pass | `F-en-001`–`F-en-077` | second-pass-complete |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-078` | pending |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
@@ -307,7 +307,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001` | pending |
 | `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | — | — | pending | pending | pending | `F-pt-001`–`F-pt-085` | pending |
 | `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001` | pending |
-| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | `root-ru-first-final` | — | pass | pass | pass | `F-ru-001`–`F-ru-127` | first-pass-complete |
+| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | — | — | pending | pending | pending | `F-ru-001`–`F-ru-127` | pending |
 | `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001` | pending |
 | `si` | Sinhala | Sinhala | ltr | to-audit | — | — | pending | pending | pending | `F-si-001` | pending |
 | `sk` | Slovak | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sk-001` | pending |
@@ -325,8 +325,8 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ur` | Urdu | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ur-001` | pending |
 | `vi` | Vietnamese | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-vi-001` | pending |
 | `yi` | Yiddish | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-yi-001` | pending |
-| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | `root-zh-first-final` | — | pass | pass | pass | `F-zh-001`–`F-zh-058` | first-pass-complete |
-| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | `root-zh-tw-first-final` | — | pass | pass | pass | `F-zh-TW-001`–`F-zh-TW-032` | first-pass-complete |
+| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-001`–`F-zh-058` | pending |
+| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-TW-001`–`F-zh-TW-032` | pending |
 
 | `R-sv-001` | `sv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Swedish Apple guidance retains the `⌘` platform symbol. | [Apple — Kortkommandon på Mac](https://support.apple.com/sv-se/102650) |
 | `R-sv-002` | `sv` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Swedish Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Kortkommandon i Windows](https://support.microsoft.com/sv-se/windows/kortkommandon-i-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
@@ -393,15 +393,46 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
-| `am` | `wire-database-am-first-final` | `sha256:0e243c7a9f95c19901726d50e8600c8aa5c23fe29ab52736a27303652e32336e` | — | — |
-| `ar` | `codex-wire-ui-ar-first-final` | `sha256:c27fd6f0e411d150ee530c38cbb6d56622983460ab783cf72241891edfcb916a` | — | — |
-| `bg` | `codex-bg-first-final-reread` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` | `root-bg-second-final-545` | `sha256:dec0ff3045bd05fae1d24ce84d8305d3368efbb908862bc4c01bd967ecfd4c5a` |
-| `da` | `codex-da-first-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` | `root-da-second-final-545` | `sha256:ddd366a262ba55e344dd1e1345826044d4c2fd2eeec19ff0eca82194fee04882` |
-| `de` | `root-de-first-final` | `sha256:5502270cbc38536c7cd83a7aac955bc724cdbc72d7e5a3efe47a00992574c7ba` | — | — |
-| `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
-| `ru` | `root-ru-first-final` | `sha256:55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821` | — | — |
-| `zh` | `root-zh-first-final` | `sha256:4ce752ee3664e25e8ca67d59dab1c438b4e388008d6db56e9e170b285ea897ab` | — | — |
-| `zh-TW` | `root-zh-tw-first-final` | `sha256:2295357fbc1931aaff5ffc14b3a990d0ad4c8058ca4e65d789b282f0f666ffc4` | — | — |
+
+## 546-Key Recently-Used Label Migration
+
+Commit `d5fdc344` added a recently-used color section whose title references
+`tools.colorPicker.recentlyUsed` through a file-local constant, but it added
+neither the English source key nor localized values. The caller instead used
+`i18n.has()` and a hard-coded English fallback. The former static scanner only
+recognized literal `.t('key')` calls, so the live checker incorrectly passed.
+
+The scanner regression first proves the constant-indirection false negative,
+then resolves file-local string constants passed directly to `.t()`. With that
+fix active, the live checker fails on exactly the undefined key. The component
+regression independently fails on the raw-English fallback, and the executable
+68-locale matrix fails once for every missing localized label.
+
+This is an English source-key change affecting all 69 dictionaries. Evidence
+reset rule 2 therefore returns every completed locale row to `pending`, clears
+its reviewer and result cells, and removes every reviewed dictionary digest.
+The earlier 545-key findings remain historical evidence, but no completed pass
+is carried forward to the 546-key corpus. `F-en-078` records the source defect;
+`F-global-003` binds the independently reviewed localized label matrix.
+
+Remediation is complete. Two independent 68-label challenges accepted the
+corrected matrix. The first accepted 66 values and corrected two context
+defects: Norwegian now uses the plural elliptical heading `Nylig brukte`,
+supported by
+[QGIS Bokmål](https://raw.githubusercontent.com/qgis/QGIS/master/i18n/qgis_nb.ts),
+and Burmese now completes its attributive phrase with the explicit head noun
+`အရောင်များ` (“colors”). Chromium string ID `300580149047131921` was treated
+only as a terminology baseline because several locale values are contaminated
+by its permission-specific caller context; the final matrix instead agrees
+with the implied plural color swatches.
+
+The direct dictionary lookup, 69/69 matrix cases, 59/59 color-picker cases,
+84/84 scanner cases, all 2,167 guideline-contract cases, and the live checker
+now pass. The checker reports 546 complete, structurally valid keys in every
+dictionary and recognizes the constant-backed key among 209 static source
+references. All locale rows nevertheless remain `pending`, and the digest
+table remains empty, until their two complete 546-entry review passes are
+performed as required by reset rule 2.
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -2212,6 +2243,7 @@ follows the global transition rule above.
 | `F-en-075` | `en` | `a11y.atBottom` | accessibility / selection cardinality | `"Block is at the bottom and cannot move down"` | `"Cannot move down. Already at the bottom."` | `BlockOperations.moveCurrentBlockDown` passes the same boundary key when either one current block or a multi-block `selectedBlocks` group is already at the bottom. The count-neutral announcement is accurate for both paths without adding an unavailable count. Its exact expectation failed before remediation and passes with the corrected value. | verified |
 | `F-en-076` | `en` | `a11y.movedUp` | accessibility / selection cardinality | `"Block moved up to position {position} of {total}"` | `"Moved up to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
 | `F-en-077` | `en` | `a11y.movedDown` | accessibility / selection cardinality | `"Block moved down to position {position} of {total}"` | `"Moved down to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
+| `F-en-078` | `en` | `tools.colorPicker.recentlyUsed` | missing key / hard-coded fallback / source coverage | `missing; caller falls back to "Recently used"` | `"Recently used"` | The committed color-picker section renders this sentence-case heading above recent color swatches. A file-local constant hid the missing key from the former scanner, while the caller bypassed localization with raw English. The direct source key removes that fallback and preserves the intended concise label; the scanner regression, component regression, exact English expectation, and live source-coverage check all pass. | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
 | `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird der verschachtelte Inhalt auf die oberste Ebene verschoben. Fortfahren?"` | The source-only warning must work for one or many and avoid needlessly technical `Konvertierung`. The final source uses the count-neutral collective “nested content”; German mirrors it with singular `der verschachtelte Inhalt`, avoiding both the old plural pronoun and a forced distributive construction. | verified |
@@ -4016,6 +4048,7 @@ follows the global transition rule above.
 | `F-zh-TW-032` | `zh-TW` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖曳控制項"` | `"拖曳控點"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Taiwan Fluent UI guidance uses the handle-specific term [拖曳控點](https://learn.microsoft.com/zh-tw/power-apps/teams/use-the-fluent-ui-controls). | verified |
 | `F-global-001` | all non-English | 77 changed English source keys | source dependency | Localized values have not been re-reviewed against the 70 corrected source values and seven new keys. | All 5,236 dependent values have a current reviewed disposition, and every required localized correction is applied. | All 77 dependencies were inspected in all 68 localized dictionaries against their callers or documented contracts. Executable emoji and movement matrices, exact placeholder and NFC checks, all 1,448 synchronized localized findings, the 1,743-case guideline contract, and the live 545-key checker verify the final state; complete locale passes remain separately required. | verified |
 | `F-global-002` | all non-English | four expanded emoji category keys | source dependency / category scope / accessibility | The 68 localized dictionaries still use one-part labels for some or all of the newly expanded smileys-and-people, animals-and-nature, food-and-drink, and travel-and-places source categories. | Apply the independently reviewed native four-label matrix to all 68 localized dictionaries, retaining a current value only when it already expresses both scopes. | Three independent language-family reviews inspected all 272 visible and ARIA labels against runtime category contents, bundled Emoji Mart data, Unicode CLDR, and official Apple, Google, Microsoft, Android, and native-language product terminology. The executable 68-locale matrix records all 253 required corrections and 19 valid retentions. | verified |
+| `F-global-003` | all non-English | tools.colorPicker.recentlyUsed localized labels | source dependency / missing key / hard-coded fallback | The committed recently-used color section has no localized dictionary key and falls back to raw English in every non-English locale. | Add the independently reviewed context-aware label to all 68 localized dictionaries and require direct dictionary resolution in the caller. | The executable locale matrix records all 68 native labels after two independent context challenges corrected Norwegian plural agreement, completed the Burmese attributive phrase with “colors,” and accepted the resulting 68/68 snapshot. Chromium string ID `300580149047131921` supplied a terminology baseline but was not copied blindly because some locale values explicitly mention permissions or a feature. The 69/69 matrix cases, 59/59 caller cases, 84/84 scanner cases, live 546-key checker, and full guideline contract pass. | verified |
 
 ## Exact-English Retentions
 

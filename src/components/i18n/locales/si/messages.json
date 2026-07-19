@@ -27,6 +27,7 @@
   "tools.marker.default": "පෙරනිමි",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "මෑතකදී භාවිත කළ",
   "tools.colorPicker.color.gray": "අළු",
   "tools.colorPicker.color.brown": "දුඹුරු",
   "tools.colorPicker.color.orange": "තැඹිලි",

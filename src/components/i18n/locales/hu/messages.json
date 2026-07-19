@@ -29,6 +29,7 @@
   "tools.marker.default": "Alapértelmezett",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Legutóbb használt",
   "tools.colorPicker.color.gray": "Szürke",
   "tools.colorPicker.color.brown": "Barna",
   "tools.colorPicker.color.orange": "Narancs",

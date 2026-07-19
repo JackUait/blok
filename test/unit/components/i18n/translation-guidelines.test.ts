@@ -28,6 +28,10 @@ const LOCALIZED_GROUP_MOVE_EXPECTATIONS_PATH = resolve(
   __dirname,
   'fixtures/localized-group-move-expectations.json'
 );
+const LOCALIZED_RECENTLY_USED_EXPECTATIONS_PATH = resolve(
+  __dirname,
+  'fixtures/localized-recently-used-expectations.json'
+);
 
 const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
@@ -55,6 +59,9 @@ const translationGuidelines = readFileSync(
 const localizedGroupMoveExpectations = JSON.parse(
   readFileSync(LOCALIZED_GROUP_MOVE_EXPECTATIONS_PATH, 'utf-8')
 ) as Record<string, Record<string, string>>;
+const localizedRecentlyUsedExpectations = JSON.parse(
+  readFileSync(LOCALIZED_RECENTLY_USED_EXPECTATIONS_PATH, 'utf-8')
+) as Record<string, string>;
 const RESULT_STATES = new Set(['pending', 'open', 'pass']);
 const FINAL_STATUSES = new Set([
   'pending',
@@ -73,6 +80,7 @@ const RETENTION_CATEGORIES = new Set([
 const GLOBAL_FINDING_KEYS = new Set([
   '77 changed English source keys',
   'four expanded emoji category keys',
+  'tools.colorPicker.recentlyUsed localized labels',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
@@ -81,6 +89,7 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'blockSettings.convertWithChildrenWarning':
     'Nested blocks: {count}. Converting this block will move the nested content to the top level. Continue?',
   'tools.marker.textColor': 'Text color',
+  'tools.colorPicker.recentlyUsed': 'Recently used',
   'tools.toggle.bodyPlaceholder':
     'Empty toggle. Click to add a block, or drag blocks here.',
   'tools.table.insertColumnLeft': 'Insert column left',
@@ -843,6 +852,21 @@ describe('translation guideline corpus integrity', () => {
       localeCodes.filter(locale => locale !== 'en')
     );
   });
+
+  it('covers every non-English locale in the recently-used label matrix', () => {
+    expect(Object.keys(localizedRecentlyUsedExpectations).sort()).toEqual(
+      localeCodes.filter(locale => locale !== 'en')
+    );
+  });
+
+  it.each(Object.entries(localizedRecentlyUsedExpectations))(
+    '$0 uses its reviewed recently-used color label',
+    (locale, expected) => {
+      expect(readLocale(locale).messages['tools.colorPicker.recentlyUsed']).toBe(
+        expected
+      );
+    }
+  );
 
   it.each(Object.entries(localizedGroupMoveExpectations))(
     '$0 uses count-neutral group-move announcements',

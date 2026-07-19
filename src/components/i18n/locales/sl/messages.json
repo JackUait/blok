@@ -29,6 +29,7 @@
   "tools.marker.default": "Privzeto",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Nedavno uporabljene",
   "tools.colorPicker.color.gray": "Siva",
   "tools.colorPicker.color.brown": "Rjava",
   "tools.colorPicker.color.orange": "Oranžna",

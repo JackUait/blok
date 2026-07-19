@@ -27,6 +27,7 @@
   "tools.marker.default": "Podrazumijevano",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Nedavno korištene",
   "tools.colorPicker.color.gray": "Sivo",
   "tools.colorPicker.color.brown": "Smeđe",
   "tools.colorPicker.color.orange": "Narančasto",

@@ -29,6 +29,7 @@
   "tools.marker.default": "Oletus",
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
+  "tools.colorPicker.recentlyUsed": "Äskettäin käytetyt",
   "tools.colorPicker.color.gray": "Harmaa",
   "tools.colorPicker.color.brown": "Ruskea",
   "tools.colorPicker.color.orange": "Oranssi",

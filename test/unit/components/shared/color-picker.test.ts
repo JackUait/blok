@@ -705,15 +705,21 @@ describe('createColorPicker', () => {
       expect(element.querySelector('[data-blok-testid="test-swatch-recent-text-red"]')).not.toBeNull();
     });
 
-    it('falls back to English "Recently used" when the i18n key is not in the dictionary', () => {
+    it('uses dictionary resolution without a hard-coded English fallback', () => {
       const first = createColorPicker(createOptions());
 
       clickSwatch(first.element, 'test-swatch-text-red');
 
-      const second = createColorPicker(createOptions());
+      const i18n: I18n = {
+        t: (key: string) => (key === 'tools.colorPicker.recentlyUsed' ? 'Localized recent colors' : key),
+        has: () => false,
+        getEnglishTranslation: () => '',
+        getLocale: () => 'en',
+      };
+      const second = createColorPicker(createOptions({ i18n }));
       const section = second.element.querySelector('[data-blok-testid="test-section-recent"]');
 
-      expect(section?.textContent).toContain('Recently used');
+      expect(section?.textContent).toContain('Localized recent colors');
     });
   });
 

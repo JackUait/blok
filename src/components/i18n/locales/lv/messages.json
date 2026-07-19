@@ -29,6 +29,7 @@
   "tools.marker.default": "Noklusējuma",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Nesen izmantotās",
   "tools.colorPicker.color.gray": "Pelēks",
   "tools.colorPicker.color.brown": "Brūns",
   "tools.colorPicker.color.orange": "Oranžs",

@@ -29,6 +29,7 @@
   "tools.marker.default": "ڊفالٽ",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "تازو استعمال ٿيل",
   "tools.colorPicker.color.gray": "خاڪي",
   "tools.colorPicker.color.brown": "ناسي",
   "tools.colorPicker.color.orange": "نارنگي",

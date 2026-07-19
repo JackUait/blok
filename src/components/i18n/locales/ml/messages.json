@@ -27,6 +27,7 @@
   "tools.marker.default": "സ്ഥിരസ്ഥിതി",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "അടുത്തിടെ ഉപയോഗിച്ചവ",
   "tools.colorPicker.color.gray": "ചാരം",
   "tools.colorPicker.color.brown": "തവിട്ട്",
   "tools.colorPicker.color.orange": "ഓറഞ്ച്",

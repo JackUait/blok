@@ -29,6 +29,7 @@
   "tools.marker.default": "По умолчанию",
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
+  "tools.colorPicker.recentlyUsed": "Недавно использованные",
   "tools.colorPicker.color.gray": "Серый",
   "tools.colorPicker.color.brown": "Коричневый",
   "tools.colorPicker.color.orange": "Оранжевый",

@@ -29,6 +29,7 @@
   "tools.marker.default": "기본값",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "최근 사용한 색상",
   "tools.colorPicker.color.gray": "회색",
   "tools.colorPicker.color.brown": "갈색",
   "tools.colorPicker.color.orange": "주황",

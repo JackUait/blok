@@ -27,6 +27,7 @@
   "tools.marker.default": "Standart",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Son istifadə edilənlər",
   "tools.colorPicker.color.gray": "Boz",
   "tools.colorPicker.color.brown": "Qəhvəyi",
   "tools.colorPicker.color.orange": "Narıncı",

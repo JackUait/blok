@@ -29,6 +29,7 @@
   "tools.marker.default": "ברירת מחדל",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "בשימוש לאחרונה",
   "tools.colorPicker.color.gray": "אפור",
   "tools.colorPicker.color.brown": "חום",
   "tools.colorPicker.color.orange": "כתום",

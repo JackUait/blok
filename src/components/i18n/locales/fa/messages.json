@@ -29,6 +29,7 @@
   "tools.marker.default": "پیش‌فرض",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "اخیراً استفاده‌شده",
   "tools.colorPicker.color.gray": "خاکستری",
   "tools.colorPicker.color.brown": "قهوه‌ای",
   "tools.colorPicker.color.orange": "نارنجی",

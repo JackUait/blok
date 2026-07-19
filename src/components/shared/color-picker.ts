@@ -103,10 +103,7 @@ const RECENT_COLORS_STORAGE_KEY = 'blok-recent-colors';
 const RECENT_COLORS_LIMIT = 5;
 
 /**
- * i18n key for the "Recently used" section title. DELIBERATELY not yet added
- * to the locale dictionaries: doing so resets the translation audit ledger's
- * completed pass evidence (rule 2). Until the audit stabilizes and the key is
- * added to all locales, the title falls back to English via i18n.has().
+ * i18n key for the "Recently used" section title.
  */
 const RECENTLY_USED_LABEL_KEY = 'tools.colorPicker.recentlyUsed';
 
@@ -231,10 +228,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     const title = document.createElement('div');
 
     title.className = 'text-xs font-medium text-text-primary/60 px-0.5';
-    // typeof guard: tools may hand the picker a partial i18n without has().
-    const hasTranslation = typeof i18n.has === 'function' && i18n.has(RECENTLY_USED_LABEL_KEY);
-
-    title.textContent = hasTranslation ? i18n.t(RECENTLY_USED_LABEL_KEY) : 'Recently used';
+    title.textContent = i18n.t(RECENTLY_USED_LABEL_KEY);
 
     const grid = document.createElement('div');
 

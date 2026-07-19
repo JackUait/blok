@@ -29,6 +29,7 @@
   "tools.marker.default": "Mặc định",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Đã dùng gần đây",
   "tools.colorPicker.color.gray": "Xám",
   "tools.colorPicker.color.brown": "Nâu",
   "tools.colorPicker.color.orange": "Cam",

@@ -29,6 +29,7 @@
   "tools.marker.default": "Standaard",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Recent gebruikt",
   "tools.colorPicker.color.gray": "Grijs",
   "tools.colorPicker.color.brown": "Bruin",
   "tools.colorPicker.color.orange": "Oranje",

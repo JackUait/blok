@@ -288,29 +288,58 @@ export function findUntranslatedKeys(sourceTranslation, translation) {
 
 /**
  * Extracts all statically-known i18n keys from a TypeScript source string.
- * Matches .t('key'), .t("key"), and literal tool titleKey assignments.
- * Short titleKeys resolve through the toolNames namespace. Dynamic arguments
- * and template literals are skipped.
+ * Matches .t('key'), .t("key"), local string constants passed to .t(), and
+ * literal tool titleKey assignments. Short titleKeys resolve through the
+ * toolNames namespace. Other dynamic arguments and template literals are
+ * skipped.
  *
  * @param {string} source - File contents as a string
  * @returns {Set<string>} Set of key strings found
  */
 export function extractKeysFromSource(source) {
   const keys = new Set();
+  const localStringConstants = new Map();
   const addQualifiedKey = (key) => {
     if (key.includes('.') && !key.endsWith('.')) {
       keys.add(key);
     }
   };
 
+  // Resolve file-local string constants when they are passed directly to .t().
+  // Merely declaring a dotted string does not make it an i18n dependency.
+  const localStringConstantPattern =
+    /\bconst\s+([A-Za-z_$][\w$]*)\s*(?::[^=;\n]+)?=\s*(['"])([^'"\n]+)\2/g;
+  let match;
+
+  while ((match = localStringConstantPattern.exec(source)) !== null) {
+    const identifier = match[1];
+    const value = match[3];
+
+    if (identifier !== undefined && value !== undefined) {
+      localStringConstants.set(identifier, value);
+    }
+  }
+
   // Match .t('key') or .t("key") — require opening paren immediately after t.
   const translationCallPattern = /\.t\((['"])([^'"]+)\1/g;
-  let match;
 
   while ((match = translationCallPattern.exec(source)) !== null) {
     const key = match[2];
 
     addQualifiedKey(key);
+  }
+
+  const constantTranslationCallPattern =
+    /\.t\(\s*([A-Za-z_$][\w$]*)\s*\)/g;
+
+  while ((match = constantTranslationCallPattern.exec(source)) !== null) {
+    const identifier = match[1];
+    const key =
+      identifier === undefined ? undefined : localStringConstants.get(identifier);
+
+    if (key !== undefined) {
+      addQualifiedKey(key);
+    }
   }
 
   // Built-in tools declare translation keys either as a static class property

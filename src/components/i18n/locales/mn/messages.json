@@ -29,6 +29,7 @@
   "tools.marker.default": "Өгөгдмөл",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Сүүлд ашигласан",
   "tools.colorPicker.color.gray": "Саарал",
   "tools.colorPicker.color.brown": "Хүрэн",
   "tools.colorPicker.color.orange": "Улбар шар",

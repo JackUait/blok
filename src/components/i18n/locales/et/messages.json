@@ -29,6 +29,7 @@
   "tools.marker.default": "vaikimisi",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Hiljuti kasutatud",
   "tools.colorPicker.color.gray": "Hall",
   "tools.colorPicker.color.brown": "Pruun",
   "tools.colorPicker.color.orange": "Oranž",

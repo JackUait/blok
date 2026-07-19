@@ -29,6 +29,7 @@
   "tools.marker.default": "Standard",
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
+  "tools.colorPicker.recentlyUsed": "Senast använda",
   "tools.colorPicker.color.gray": "Grå",
   "tools.colorPicker.color.brown": "Brun",
   "tools.colorPicker.color.orange": "Orange",

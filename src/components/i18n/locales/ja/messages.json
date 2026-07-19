@@ -29,6 +29,7 @@
   "tools.marker.default": "デフォルト",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "最近使用した色",
   "tools.colorPicker.color.gray": "グレー",
   "tools.colorPicker.color.brown": "ブラウン",
   "tools.colorPicker.color.orange": "オレンジ",

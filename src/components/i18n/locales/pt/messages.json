@@ -29,6 +29,7 @@
   "tools.marker.default": "Padrão",
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
+  "tools.colorPicker.recentlyUsed": "Usadas recentemente",
   "tools.colorPicker.color.gray": "Cinza",
   "tools.colorPicker.color.brown": "Marrom",
   "tools.colorPicker.color.orange": "Laranja",

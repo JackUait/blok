@@ -29,6 +29,7 @@
   "tools.marker.default": "Lalai",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Digunakan baru-baru ini",
   "tools.colorPicker.color.gray": "Kelabu",
   "tools.colorPicker.color.brown": "Coklat",
   "tools.colorPicker.color.orange": "Oren",

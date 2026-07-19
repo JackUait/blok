@@ -27,6 +27,7 @@
   "tools.marker.default": "पूर्वनिर्धारित",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "हालै प्रयोग गरिएका",
   "tools.colorPicker.color.gray": "खैरो",
   "tools.colorPicker.color.brown": "बदामी",
   "tools.colorPicker.color.orange": "सुन्तला",

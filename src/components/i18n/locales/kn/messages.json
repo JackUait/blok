@@ -27,6 +27,7 @@
   "tools.marker.default": "ಡೀಫಾಲ್ಟ್",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "ಇತ್ತೀಚೆಗೆ ಬಳಸಿದವು",
   "tools.colorPicker.color.gray": "ಬೂದು",
   "tools.colorPicker.color.brown": "ಕಂದು",
   "tools.colorPicker.color.orange": "ಕಿತ್ತಳೆ",

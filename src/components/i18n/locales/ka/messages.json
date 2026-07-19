@@ -29,6 +29,7 @@
   "tools.marker.default": "ნაგულისხმევი",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "ახლახან გამოყენებული",
   "tools.colorPicker.color.gray": "ნაცრისფერი",
   "tools.colorPicker.color.brown": "ყავისფერი",
   "tools.colorPicker.color.orange": "ნარინჯისფერი",

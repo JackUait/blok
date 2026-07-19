@@ -31,6 +31,7 @@
   "tools.marker.default": "預設",
   "tools.colorPicker.defaultSwatchLabel": "{mode}：{default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}：{color}",
+  "tools.colorPicker.recentlyUsed": "最近使用",
   "tools.colorPicker.color.gray": "灰色",
   "tools.colorPicker.color.brown": "棕色",
   "tools.colorPicker.color.orange": "橘色",

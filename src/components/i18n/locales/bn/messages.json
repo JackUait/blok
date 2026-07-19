@@ -27,6 +27,7 @@
   "tools.marker.default": "ডিফল্ট",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "সম্প্রতি ব্যবহৃত",
   "tools.colorPicker.color.gray": "ধূসর",
   "tools.colorPicker.color.brown": "বাদামী",
   "tools.colorPicker.color.orange": "কমলা",

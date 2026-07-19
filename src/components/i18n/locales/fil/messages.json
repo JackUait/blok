@@ -27,6 +27,7 @@
   "tools.marker.default": "Karaniwan",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Kamakailang ginamit",
   "tools.colorPicker.color.gray": "Kulay-abo",
   "tools.colorPicker.color.brown": "Kayumanggi",
   "tools.colorPicker.color.orange": "Kahel",

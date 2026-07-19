@@ -29,6 +29,7 @@
   "tools.marker.default": "Domyślnie",
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
+  "tools.colorPicker.recentlyUsed": "Ostatnio używane",
   "tools.colorPicker.color.gray": "Szary",
   "tools.colorPicker.color.brown": "Brązowy",
   "tools.colorPicker.color.orange": "Pomarańczowy",

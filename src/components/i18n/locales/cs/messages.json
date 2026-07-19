@@ -29,6 +29,7 @@
   "tools.marker.default": "Výchozí",
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
+  "tools.colorPicker.recentlyUsed": "Nedávno použité",
   "tools.colorPicker.color.gray": "Šedá",
   "tools.colorPicker.color.brown": "Hnědá",
   "tools.colorPicker.color.orange": "Oranžová",

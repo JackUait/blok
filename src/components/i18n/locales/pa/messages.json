@@ -27,6 +27,7 @@
   "tools.marker.default": "ਮੂਲ",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "ਹਾਲ ਹੀ ਵਿੱਚ ਵਰਤੇ ਗਏ",
   "tools.colorPicker.color.gray": "ਸਲੇਟੀ",
   "tools.colorPicker.color.brown": "ਭੂਰਾ",
   "tools.colorPicker.color.orange": "ਸੰਤਰੀ",

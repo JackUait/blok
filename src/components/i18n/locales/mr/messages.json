@@ -27,6 +27,7 @@
   "tools.marker.default": "डीफॉल्ट",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "अलीकडे वापरलेले",
   "tools.colorPicker.color.gray": "राखाडी",
   "tools.colorPicker.color.brown": "तपकिरी",
   "tools.colorPicker.color.orange": "नारिंगी",

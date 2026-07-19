@@ -29,6 +29,7 @@
   "tools.marker.default": "Chaguo-msingi",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Zilizotumika hivi majuzi",
   "tools.colorPicker.color.gray": "Kijivu",
   "tools.colorPicker.color.brown": "Kahawia",
   "tools.colorPicker.color.orange": "Chungwa",

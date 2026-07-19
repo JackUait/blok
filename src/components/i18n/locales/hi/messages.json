@@ -29,6 +29,7 @@
   "tools.marker.default": "डिफ़ॉल्ट",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "हाल ही में इस्तेमाल किए गए",
   "tools.colorPicker.color.gray": "ग्रे",
   "tools.colorPicker.color.brown": "भूरा",
   "tools.colorPicker.color.orange": "नारंगी",

@@ -31,6 +31,7 @@
   "tools.marker.default": "Default",
   "tools.colorPicker.defaultSwatchLabel": "{default} {mode}",
   "tools.colorPicker.colorSwatchLabel": "{color} {mode}",
+  "tools.colorPicker.recentlyUsed": "Recently used",
   "tools.colorPicker.color.gray": "Gray",
   "tools.colorPicker.color.brown": "Brown",
   "tools.colorPicker.color.orange": "Orange",

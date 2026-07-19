@@ -29,6 +29,7 @@
   "tools.marker.default": "Implicit",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Utilizate recent",
   "tools.colorPicker.color.gray": "Gri",
   "tools.colorPicker.color.brown": "Maro",
   "tools.colorPicker.color.orange": "Portocaliu",

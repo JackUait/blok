@@ -29,6 +29,7 @@
   "tools.marker.default": "Bawaan",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "Baru-baru ini digunakan",
   "tools.colorPicker.color.gray": "Abu-abu",
   "tools.colorPicker.color.brown": "Coklat",
   "tools.colorPicker.color.orange": "Oranye",

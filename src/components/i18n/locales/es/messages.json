@@ -29,6 +29,7 @@
   "tools.marker.default": "Predeterminado",
   "tools.colorPicker.defaultSwatchLabel": "{mode}: {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode}: {color}",
+  "tools.colorPicker.recentlyUsed": "Usados recientemente",
   "tools.colorPicker.color.gray": "Gris",
   "tools.colorPicker.color.brown": "Marrón",
   "tools.colorPicker.color.orange": "Naranja",

@@ -29,6 +29,7 @@
   "tools.marker.default": "سۈكۈتتىكى",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",
   "tools.colorPicker.colorSwatchLabel": "{mode} {color}",
+  "tools.colorPicker.recentlyUsed": "يېقىندا ئىشلىتىلگەن",
   "tools.colorPicker.color.gray": "كۈلرەڭ",
   "tools.colorPicker.color.brown": "قوڭۇر",
   "tools.colorPicker.color.orange": "قىزغۇچ سېرىق",

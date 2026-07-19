@@ -403,6 +403,36 @@ describe('extractKeysFromSource', () => {
     assert.deepEqual([...keys].sort(), ['blockSettings.delete', 'popover.search']);
   });
 
+  it('resolves a translation key passed through a local string constant', () => {
+    const source = `
+      const RECENTLY_USED_LABEL_KEY = 'tools.colorPicker.recentlyUsed';
+      title.textContent = i18n.t(RECENTLY_USED_LABEL_KEY);
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys], ['tools.colorPicker.recentlyUsed']);
+  });
+
+  it('resolves a typed local string constant used by a translation call', () => {
+    const source = `
+      const ERROR_KEY: string = "tools.stub.error";
+      title.textContent = i18n.t(ERROR_KEY);
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys], ['tools.stub.error']);
+  });
+
+  it('does not collect qualified constants that are never translated', () => {
+    const source = `
+      const STORAGE_KEY = 'blok.recent.colors';
+      localStorage.getItem(STORAGE_KEY);
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.equal(keys.size, 0);
+  });
+
   it('extracts short literal titleKeys through the toolNames namespace', () => {
     const source = `
       public static titleKey = 'clearFormat';

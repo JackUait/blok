@@ -1,0 +1,410 @@
+{
+  "am": {
+    "a11y.atTop": "ወደ ላይ ማንቀሳቀስ አይቻልም። ከፍተኛው ቦታ ላይ ቀድሞውኑ ተደርሷል።",
+    "a11y.atBottom": "ወደ ታች ማንቀሳቀስ አይቻልም። ዝቅተኛው ቦታ ላይ ቀድሞውኑ ተደርሷል።",
+    "a11y.movedUp": "ወደ ላይ መንቀሳቀስ በ{total} ውስጥ በቦታ {position} ተጠናቋል።",
+    "a11y.movedDown": "ወደ ታች መንቀሳቀስ በ{total} ውስጥ በቦታ {position} ተጠናቋል።"
+  },
+  "ar": {
+    "a11y.atTop": "لا يمكن التحريك للأعلى. تم بلوغ أعلى القائمة بالفعل.",
+    "a11y.atBottom": "لا يمكن التحريك للأسفل. تم بلوغ أسفل القائمة بالفعل.",
+    "a11y.movedUp": "تم النقل للأعلى إلى الموضع {position} من {total}.",
+    "a11y.movedDown": "تم النقل للأسفل إلى الموضع {position} من {total}."
+  },
+  "az": {
+    "a11y.atTop": "Yuxarı köçürmək mümkün deyil. Ən yuxarı mövqeyə artıq çatılıb.",
+    "a11y.atBottom": "Aşağı köçürmək mümkün deyil. Ən aşağı mövqeyə artıq çatılıb.",
+    "a11y.movedUp": "Yuxarı köçürmə tamamlandı: mövqe {position}, cəmi {total}.",
+    "a11y.movedDown": "Aşağı köçürmə tamamlandı: mövqe {position}, cəmi {total}."
+  },
+  "bg": {
+    "a11y.atTop": "Преместването нагоре е невъзможно. Най-горната позиция вече е достигната.",
+    "a11y.atBottom": "Преместването надолу е невъзможно. Най-долната позиция вече е достигната.",
+    "a11y.movedUp": "Преместването нагоре до позиция {position} от {total} е завършено.",
+    "a11y.movedDown": "Преместването надолу до позиция {position} от {total} е завършено."
+  },
+  "bn": {
+    "a11y.atTop": "আর উপরে সরানো যাবে না। ইতিমধ্যে সবার উপরে আছে।",
+    "a11y.atBottom": "আর নিচে সরানো যাবে না। ইতিমধ্যে সবার নিচে আছে।",
+    "a11y.movedUp": "উপরে সরানো হয়েছে, {total}টির মধ্যে {position} অবস্থানে।",
+    "a11y.movedDown": "নিচে সরানো হয়েছে, {total}টির মধ্যে {position} অবস্থানে।"
+  },
+  "bs": {
+    "a11y.atTop": "Pomjeranje gore nije moguće. Vrh je već dostignut.",
+    "a11y.atBottom": "Pomjeranje dolje nije moguće. Dno je već dostignuto.",
+    "a11y.movedUp": "Pomjeranje gore završeno je na poziciji {position} od {total}.",
+    "a11y.movedDown": "Pomjeranje dolje završeno je na poziciji {position} od {total}."
+  },
+  "cs": {
+    "a11y.atTop": "Nelze přesunout výše. Již na začátku.",
+    "a11y.atBottom": "Nelze přesunout níže. Již na konci.",
+    "a11y.movedUp": "Přesunuto nahoru na pozici {position} z {total}.",
+    "a11y.movedDown": "Přesunuto dolů na pozici {position} z {total}."
+  },
+  "da": {
+    "a11y.atTop": "Kan ikke flyttes op. Allerede øverst.",
+    "a11y.atBottom": "Kan ikke flyttes ned. Allerede nederst.",
+    "a11y.movedUp": "Flyttet op til position {position} af {total}.",
+    "a11y.movedDown": "Flyttet ned til position {position} af {total}."
+  },
+  "de": {
+    "a11y.atTop": "Verschieben nach oben nicht möglich. Bereits ganz oben.",
+    "a11y.atBottom": "Verschieben nach unten nicht möglich. Bereits ganz unten.",
+    "a11y.movedUp": "Nach oben verschoben, Position {position} von {total}.",
+    "a11y.movedDown": "Nach unten verschoben, Position {position} von {total}."
+  },
+  "dv": {
+    "a11y.atTop": "މައްޗަށް ނުދެވޭނެ. މިހާރު އެންމެ މަތީގައި.",
+    "a11y.atBottom": "ތިރިއަށް ނުދެވޭނެ. މިހާރު އެންމެ ތިރީގައި.",
+    "a11y.movedUp": "މައްޗަށް ގޮސްފި، {total} ގެ ތެރެއިން {position} ވަނަ ޕޮޒިޝަންގައި.",
+    "a11y.movedDown": "ތިރިއަށް ގޮސްފި، {total} ގެ ތެރެއިން {position} ވަނަ ޕޮޒިޝަންގައި."
+  },
+  "el": {
+    "a11y.atTop": "Δεν είναι δυνατή η μετακίνηση προς τα πάνω. Ήδη στην κορυφή.",
+    "a11y.atBottom": "Δεν είναι δυνατή η μετακίνηση προς τα κάτω. Ήδη στο κάτω μέρος.",
+    "a11y.movedUp": "Η μετακίνηση προς τα πάνω ολοκληρώθηκε στη θέση {position} από {total}.",
+    "a11y.movedDown": "Η μετακίνηση προς τα κάτω ολοκληρώθηκε στη θέση {position} από {total}."
+  },
+  "es": {
+    "a11y.atTop": "No se puede subir más. Ya se alcanzó la parte superior.",
+    "a11y.atBottom": "No se puede bajar más. Ya se alcanzó la parte inferior.",
+    "a11y.movedUp": "Movimiento hacia arriba completado en la posición {position} de {total}.",
+    "a11y.movedDown": "Movimiento hacia abajo completado en la posición {position} de {total}."
+  },
+  "et": {
+    "a11y.atTop": "Üles ei saa liigutada. Juba üleval.",
+    "a11y.atBottom": "Alla ei saa liigutada. Juba all.",
+    "a11y.movedUp": "Teisaldatud üles positsioonile {position}, kokku {total}.",
+    "a11y.movedDown": "Teisaldatud alla positsioonile {position}, kokku {total}."
+  },
+  "fa": {
+    "a11y.atTop": "جابه‌جایی به بالا ممکن نیست. از قبل در بالاترین موقعیت.",
+    "a11y.atBottom": "جابه‌جایی به پایین ممکن نیست. از قبل در پایین‌ترین موقعیت.",
+    "a11y.movedUp": "جابه‌جایی به بالا تا موقعیت {position} از {total} انجام شد.",
+    "a11y.movedDown": "جابه‌جایی به پایین تا موقعیت {position} از {total} انجام شد."
+  },
+  "fi": {
+    "a11y.atTop": "Siirto ylemmäs ei onnistu. Ylin kohta on jo saavutettu.",
+    "a11y.atBottom": "Siirto alemmas ei onnistu. Alin kohta on jo saavutettu.",
+    "a11y.movedUp": "Siirretty ylös kohtaan {position}, yhteensä {total}.",
+    "a11y.movedDown": "Siirretty alas kohtaan {position}, yhteensä {total}."
+  },
+  "fil": {
+    "a11y.atTop": "Hindi na mailipat pataas. Nasa pinakataas na.",
+    "a11y.atBottom": "Hindi na mailipat pababa. Nasa pinakababa na.",
+    "a11y.movedUp": "Inilipat pataas sa posisyon {position} sa kabuuang {total}.",
+    "a11y.movedDown": "Inilipat pababa sa posisyon {position} sa kabuuang {total}."
+  },
+  "fr": {
+    "a11y.atTop": "Impossible de monter davantage. Le haut de la liste est déjà atteint.",
+    "a11y.atBottom": "Impossible de descendre davantage. Le bas de la liste est déjà atteint.",
+    "a11y.movedUp": "Déplacement vers le haut terminé à la position {position} sur {total}.",
+    "a11y.movedDown": "Déplacement vers le bas terminé à la position {position} sur {total}."
+  },
+  "gu": {
+    "a11y.atTop": "ઉપર ખસેડી શકાય નહીં. પહેલેથી ટોચ પર છે.",
+    "a11y.atBottom": "નીચે ખસેડી શકાય નહીં. પહેલેથી તળિયે છે.",
+    "a11y.movedUp": "ઉપર ખસેડવાનું {total} માંથી {position} સ્થાને પૂર્ણ થયું.",
+    "a11y.movedDown": "નીચે ખસેડવાનું {total} માંથી {position} સ્થાને પૂર્ણ થયું."
+  },
+  "he": {
+    "a11y.atTop": "לא ניתן להעביר למעלה. כבר בראש הרשימה.",
+    "a11y.atBottom": "לא ניתן להעביר למטה. כבר בתחתית הרשימה.",
+    "a11y.movedUp": "ההעברה למעלה הושלמה במיקום {position} מתוך {total}.",
+    "a11y.movedDown": "ההעברה למטה הושלמה במיקום {position} מתוך {total}."
+  },
+  "hi": {
+    "a11y.atTop": "और ऊपर ले जाना संभव नहीं है। पहले से सबसे ऊपर।",
+    "a11y.atBottom": "और नीचे ले जाना संभव नहीं है। पहले से सबसे नीचे।",
+    "a11y.movedUp": "ऊपर की ओर स्थानांतरण {total} में से {position} स्थान पर पूरा हुआ।",
+    "a11y.movedDown": "नीचे की ओर स्थानांतरण {total} में से {position} स्थान पर पूरा हुआ।"
+  },
+  "hr": {
+    "a11y.atTop": "Pomicanje prema gore nije moguće. Vrh je već dosegnut.",
+    "a11y.atBottom": "Pomicanje prema dolje nije moguće. Dno je već dosegnuto.",
+    "a11y.movedUp": "Pomicanje prema gore završeno je na poziciji {position} od {total}.",
+    "a11y.movedDown": "Pomicanje prema dolje završeno je na poziciji {position} od {total}."
+  },
+  "hu": {
+    "a11y.atTop": "Nem lehet feljebb mozgatni. Már a lista elején.",
+    "a11y.atBottom": "Nem lehet lejjebb mozgatni. Már a lista végén.",
+    "a11y.movedUp": "Feljebb mozgatva, {position}. pozíció, összesen {total}.",
+    "a11y.movedDown": "Lejjebb mozgatva, {position}. pozíció, összesen {total}."
+  },
+  "hy": {
+    "a11y.atTop": "Վերև տեղափոխումը հնարավոր չէ։ Արդեն ամենավերևում։",
+    "a11y.atBottom": "Ներքև տեղափոխումը հնարավոր չէ։ Արդեն ամենաներքևում։",
+    "a11y.movedUp": "Վերև տեղափոխումն ավարտված է, դիրք {position} {total}-ից։",
+    "a11y.movedDown": "Ներքև տեղափոխումն ավարտված է, դիրք {position} {total}-ից։"
+  },
+  "id": {
+    "a11y.atTop": "Tidak dapat dipindahkan ke atas. Posisi saat ini sudah paling atas.",
+    "a11y.atBottom": "Tidak dapat dipindahkan ke bawah. Posisi saat ini sudah paling bawah.",
+    "a11y.movedUp": "Pemindahan ke atas selesai. Posisi: {position} dari {total}.",
+    "a11y.movedDown": "Pemindahan ke bawah selesai. Posisi: {position} dari {total}."
+  },
+  "it": {
+    "a11y.atTop": "Impossibile spostare verso l’alto. La posizione più alta è già stata raggiunta.",
+    "a11y.atBottom": "Impossibile spostare verso il basso. La posizione più bassa è già stata raggiunta.",
+    "a11y.movedUp": "Spostamento verso l’alto completato. Posizione: {position} di {total}.",
+    "a11y.movedDown": "Spostamento verso il basso completato. Posizione: {position} di {total}."
+  },
+  "ja": {
+    "a11y.atTop": "上に移動できません。すでに一番上です。",
+    "a11y.atBottom": "下に移動できません。すでに一番下です。",
+    "a11y.movedUp": "上に移動しました。位置：{total}個中{position}番目。",
+    "a11y.movedDown": "下に移動しました。位置：{total}個中{position}番目。"
+  },
+  "ka": {
+    "a11y.atTop": "ზემოთ გადატანა შეუძლებელია. მიმდინარე პოზიცია უკვე ყველაზე ზედაა.",
+    "a11y.atBottom": "ქვემოთ გადატანა შეუძლებელია. მიმდინარე პოზიცია უკვე ყველაზე ქვედაა.",
+    "a11y.movedUp": "ზემოთ გადატანა დასრულდა. პოზიცია: {position} {total}-დან.",
+    "a11y.movedDown": "ქვემოთ გადატანა დასრულდა. პოზიცია: {position} {total}-დან."
+  },
+  "km": {
+    "a11y.atTop": "មិនអាចផ្លាស់ទីឡើងលើបានទេ។ ទីតាំងបច្ចុប្បន្នស្ថិតនៅខាងលើបំផុតរួចហើយ។",
+    "a11y.atBottom": "មិនអាចផ្លាស់ទីចុះក្រោមបានទេ។ ទីតាំងបច្ចុប្បន្នស្ថិតនៅខាងក្រោមបំផុតរួចហើយ។",
+    "a11y.movedUp": "ការផ្លាស់ទីឡើងលើបានបញ្ចប់។ ទីតាំង៖ {position} នៃ {total}។",
+    "a11y.movedDown": "ការផ្លាស់ទីចុះក្រោមបានបញ្ចប់។ ទីតាំង៖ {position} នៃ {total}។"
+  },
+  "kn": {
+    "a11y.atTop": "ಮೇಲಕ್ಕೆ ಸರಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ಪ್ರಸ್ತುತ ಸ್ಥಾನವೇ ಅತ್ಯಂತ ಮೇಲಿನದು.",
+    "a11y.atBottom": "ಕೆಳಕ್ಕೆ ಸರಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ಪ್ರಸ್ತುತ ಸ್ಥಾನವೇ ಅತ್ಯಂತ ಕೆಳಗಿನದು.",
+    "a11y.movedUp": "ಮೇಲಕ್ಕೆ ಸರಿಸುವುದು ಪೂರ್ಣಗೊಂಡಿದೆ. ಸ್ಥಾನ: {position}; ಒಟ್ಟು: {total}.",
+    "a11y.movedDown": "ಕೆಳಕ್ಕೆ ಸರಿಸುವುದು ಪೂರ್ಣಗೊಂಡಿದೆ. ಸ್ಥಾನ: {position}; ಒಟ್ಟು: {total}."
+  },
+  "ko": {
+    "a11y.atTop": "위로 이동할 수 없습니다. 현재 위치가 이미 맨 위입니다.",
+    "a11y.atBottom": "아래로 이동할 수 없습니다. 현재 위치가 이미 맨 아래입니다.",
+    "a11y.movedUp": "위로 이동했습니다. 위치: {total}개 중 {position}번째.",
+    "a11y.movedDown": "아래로 이동했습니다. 위치: {total}개 중 {position}번째."
+  },
+  "ku": {
+    "a11y.atTop": "گواستنەوە بۆ سەرەوە ناکرێت. شوێنی ئێستا هەرە سەرەوەیە.",
+    "a11y.atBottom": "گواستنەوە بۆ خوارەوە ناکرێت. شوێنی ئێستا هەرە خوارەوەیە.",
+    "a11y.movedUp": "گواستنەوە بۆ سەرەوە تەواو بوو. شوێن: {position} لە {total}.",
+    "a11y.movedDown": "گواستنەوە بۆ خوارەوە تەواو بوو. شوێن: {position} لە {total}."
+  },
+  "lo": {
+    "a11y.atTop": "ບໍ່ສາມາດຍ້າຍຂຶ້ນໄດ້. ຕຳແໜ່ງປັດຈຸບັນຢູ່ເທິງສຸດແລ້ວ.",
+    "a11y.atBottom": "ບໍ່ສາມາດຍ້າຍລົງໄດ້. ຕຳແໜ່ງປັດຈຸບັນຢູ່ລຸ່ມສຸດແລ້ວ.",
+    "a11y.movedUp": "ການຍ້າຍຂຶ້ນສຳເລັດແລ້ວ. ຕຳແໜ່ງ: {position} ຈາກ {total}.",
+    "a11y.movedDown": "ການຍ້າຍລົງສຳເລັດແລ້ວ. ຕຳແໜ່ງ: {position} ຈາກ {total}."
+  },
+  "lt": {
+    "a11y.atTop": "Negalima perkelti aukštyn. Jau pasiekta aukščiausia pozicija.",
+    "a11y.atBottom": "Negalima perkelti žemyn. Jau pasiekta žemiausia pozicija.",
+    "a11y.movedUp": "Perkėlimas aukštyn baigtas. Pozicija: {position} iš {total}.",
+    "a11y.movedDown": "Perkėlimas žemyn baigtas. Pozicija: {position} iš {total}."
+  },
+  "lv": {
+    "a11y.atTop": "Nevar pārvietot augšup. Jau sasniegta augstākā pozīcija.",
+    "a11y.atBottom": "Nevar pārvietot lejup. Jau sasniegta zemākā pozīcija.",
+    "a11y.movedUp": "Pārvietošana augšup pabeigta. Pozīcija: {position} no {total}.",
+    "a11y.movedDown": "Pārvietošana lejup pabeigta. Pozīcija: {position} no {total}."
+  },
+  "mk": {
+    "a11y.atTop": "Преместувањето нагоре не е можно. Најгорната позиција е веќе достигната.",
+    "a11y.atBottom": "Преместувањето надолу не е можно. Најдолната позиција е веќе достигната.",
+    "a11y.movedUp": "Преместувањето нагоре е завршено. Позиција: {position} од {total}.",
+    "a11y.movedDown": "Преместувањето надолу е завршено. Позиција: {position} од {total}."
+  },
+  "ml": {
+    "a11y.atTop": "മുകളിലേക്ക് നീക്കാൻ കഴിയില്ല. നിലവിലെ സ്ഥാനം ഇതിനകം ഏറ്റവും മുകളിലാണ്.",
+    "a11y.atBottom": "താഴേക്ക് നീക്കാൻ കഴിയില്ല. നിലവിലെ സ്ഥാനം ഇതിനകം ഏറ്റവും താഴെയാണ്.",
+    "a11y.movedUp": "മുകളിലേക്കുള്ള നീക്കം പൂർത്തിയായി. സ്ഥാനം: {position}; ആകെ: {total}.",
+    "a11y.movedDown": "താഴേക്കുള്ള നീക്കം പൂർത്തിയായി. സ്ഥാനം: {position}; ആകെ: {total}."
+  },
+  "mn": {
+    "a11y.atTop": "Дээш зөөх боломжгүй. Одоогийн байрлал аль хэдийн хамгийн дээд талд байна.",
+    "a11y.atBottom": "Доош зөөх боломжгүй. Одоогийн байрлал аль хэдийн хамгийн доод талд байна.",
+    "a11y.movedUp": "Дээш зөөх үйлдэл дууслаа. Байрлал: {position}; нийт: {total}.",
+    "a11y.movedDown": "Доош зөөх үйлдэл дууслаа. Байрлал: {position}; нийт: {total}."
+  },
+  "mr": {
+    "a11y.atTop": "वर हलवता येत नाही. सध्याचे स्थान आधीच सर्वांत वर आहे.",
+    "a11y.atBottom": "खाली हलवता येत नाही. सध्याचे स्थान आधीच सर्वांत खाली आहे.",
+    "a11y.movedUp": "वर हलवण्याची क्रिया पूर्ण झाली. स्थान: {position}; एकूण: {total}.",
+    "a11y.movedDown": "खाली हलवण्याची क्रिया पूर्ण झाली. स्थान: {position}; एकूण: {total}."
+  },
+  "ms": {
+    "a11y.atTop": "Tidak boleh dialih ke atas. Kedudukan semasa sudah paling atas.",
+    "a11y.atBottom": "Tidak boleh dialih ke bawah. Kedudukan semasa sudah paling bawah.",
+    "a11y.movedUp": "Pemindahan ke atas selesai. Kedudukan: {position} daripada {total}.",
+    "a11y.movedDown": "Pemindahan ke bawah selesai. Kedudukan: {position} daripada {total}."
+  },
+  "my": {
+    "a11y.atTop": "အပေါ်သို့ ရွှေ့၍မရပါ။ လက်ရှိအနေအထားမှာ ထိပ်ဆုံးဖြစ်နေပါပြီ။",
+    "a11y.atBottom": "အောက်သို့ ရွှေ့၍မရပါ။ လက်ရှိအနေအထားမှာ အောက်ဆုံးဖြစ်နေပါပြီ။",
+    "a11y.movedUp": "အပေါ်သို့ ရွှေ့ခြင်း ပြီးစီးပါပြီ။ အနေအထား: {position}၊ စုစုပေါင်း: {total}။",
+    "a11y.movedDown": "အောက်သို့ ရွှေ့ခြင်း ပြီးစီးပါပြီ။ အနေအထား: {position}၊ စုစုပေါင်း: {total}။"
+  },
+  "ne": {
+    "a11y.atTop": "माथि सार्न सकिँदैन। हालको स्थान पहिले नै सबैभन्दा माथि छ।",
+    "a11y.atBottom": "तल सार्न सकिँदैन। हालको स्थान पहिले नै सबैभन्दा तल छ।",
+    "a11y.movedUp": "माथि सार्ने कार्य पूरा भयो। स्थान: {position}; जम्मा: {total}।",
+    "a11y.movedDown": "तल सार्ने कार्य पूरा भयो। स्थान: {position}; जम्मा: {total}।"
+  },
+  "nl": {
+    "a11y.atTop": "Omhoog verplaatsen is niet mogelijk. De bovenste positie is al bereikt.",
+    "a11y.atBottom": "Omlaag verplaatsen is niet mogelijk. De onderste positie is al bereikt.",
+    "a11y.movedUp": "Omhoog verplaatst naar positie {position} van {total}.",
+    "a11y.movedDown": "Omlaag verplaatst naar positie {position} van {total}."
+  },
+  "no": {
+    "a11y.atTop": "Kan ikke flyttes opp. Øverste posisjon er allerede nådd.",
+    "a11y.atBottom": "Kan ikke flyttes ned. Nederste posisjon er allerede nådd.",
+    "a11y.movedUp": "Flyttet opp til posisjon {position} av {total}.",
+    "a11y.movedDown": "Flyttet ned til posisjon {position} av {total}."
+  },
+  "pa": {
+    "a11y.atTop": "ਉੱਪਰ ਵੱਲ ਹਿਲਾਉਣਾ ਸੰਭਵ ਨਹੀਂ। ਮੌਜੂਦਾ ਸਥਾਨ ਪਹਿਲਾਂ ਹੀ ਸਭ ਤੋਂ ਉੱਪਰ ਹੈ।",
+    "a11y.atBottom": "ਹੇਠਾਂ ਵੱਲ ਹਿਲਾਉਣਾ ਸੰਭਵ ਨਹੀਂ। ਮੌਜੂਦਾ ਸਥਾਨ ਪਹਿਲਾਂ ਹੀ ਸਭ ਤੋਂ ਹੇਠਾਂ ਹੈ।",
+    "a11y.movedUp": "ਉੱਪਰ ਵੱਲ ਹਿਲਾਉਣ ਦੀ ਕਾਰਵਾਈ ਪੂਰੀ ਹੋਈ। ਸਥਾਨ: {position}; ਕੁੱਲ: {total}।",
+    "a11y.movedDown": "ਹੇਠਾਂ ਵੱਲ ਹਿਲਾਉਣ ਦੀ ਕਾਰਵਾਈ ਪੂਰੀ ਹੋਈ। ਸਥਾਨ: {position}; ਕੁੱਲ: {total}।"
+  },
+  "pl": {
+    "a11y.atTop": "Nie można przenieść wyżej. Osiągnięto już najwyższą pozycję.",
+    "a11y.atBottom": "Nie można przenieść niżej. Osiągnięto już najniższą pozycję.",
+    "a11y.movedUp": "Przeniesiono w górę na pozycję {position} z {total}.",
+    "a11y.movedDown": "Przeniesiono w dół na pozycję {position} z {total}."
+  },
+  "ps": {
+    "a11y.atTop": "پورته لېږدول ممکن نه دي. اوسنی ځای لا دمخه تر ټولو پورته دی.",
+    "a11y.atBottom": "ښکته لېږدول ممکن نه دي. اوسنی ځای لا دمخه تر ټولو ښکته دی.",
+    "a11y.movedUp": "پورته خوځښت بشپړ شو. ځای: {position} له {total} څخه.",
+    "a11y.movedDown": "ښکته خوځښت بشپړ شو. ځای: {position} له {total} څخه."
+  },
+  "pt": {
+    "a11y.atTop": "Não é possível mover para cima. Já no topo.",
+    "a11y.atBottom": "Não é possível mover para baixo. Já no fim.",
+    "a11y.movedUp": "Movimento para cima concluído: posição {position} de {total}.",
+    "a11y.movedDown": "Movimento para baixo concluído: posição {position} de {total}."
+  },
+  "ro": {
+    "a11y.atTop": "Mutarea în sus nu este posibilă. Deja la început.",
+    "a11y.atBottom": "Mutarea în jos nu este posibilă. Deja la sfârșit.",
+    "a11y.movedUp": "Mutarea în sus s-a încheiat la poziția {position} din {total}.",
+    "a11y.movedDown": "Mutarea în jos s-a încheiat la poziția {position} din {total}."
+  },
+  "ru": {
+    "a11y.atTop": "Невозможно переместить выше. Уже вверху.",
+    "a11y.atBottom": "Невозможно переместить ниже. Уже внизу.",
+    "a11y.movedUp": "Перемещено вверх на позицию {position} из {total}.",
+    "a11y.movedDown": "Перемещено вниз на позицию {position} из {total}."
+  },
+  "sd": {
+    "a11y.atTop": "مٿي منتقل ڪرڻ ممڪن ناهي. اڳ ۾ ئي سڀ کان مٿي.",
+    "a11y.atBottom": "هيٺ منتقل ڪرڻ ممڪن ناهي. اڳ ۾ ئي سڀ کان هيٺ.",
+    "a11y.movedUp": "مٿي منتقلي مڪمل ٿي: ڪل {total} مان پوزيشن {position}.",
+    "a11y.movedDown": "هيٺ منتقلي مڪمل ٿي: ڪل {total} مان پوزيشن {position}."
+  },
+  "si": {
+    "a11y.atTop": "ඉහළට ගෙන යා නොහැක. දැනටමත් ඉහළම ස්ථානයේ.",
+    "a11y.atBottom": "පහළට ගෙන යා නොහැක. දැනටමත් පහළම ස්ථානයේ.",
+    "a11y.movedUp": "ඉහළට ගෙන යාම සම්පූර්ණ විය: {total}න් {position} ස්ථානය.",
+    "a11y.movedDown": "පහළට ගෙන යාම සම්පූර්ණ විය: {total}න් {position} ස්ථානය."
+  },
+  "sk": {
+    "a11y.atTop": "Presun nahor nie je možný. Už na vrchu.",
+    "a11y.atBottom": "Presun nadol nie je možný. Už na spodku.",
+    "a11y.movedUp": "Presun nahor bol dokončený na pozícii {position} z {total}.",
+    "a11y.movedDown": "Presun nadol bol dokončený na pozícii {position} z {total}."
+  },
+  "sl": {
+    "a11y.atTop": "Premik navzgor ni mogoč. Že na vrhu.",
+    "a11y.atBottom": "Premik navzdol ni mogoč. Že na dnu.",
+    "a11y.movedUp": "Premaknjeno navzgor na položaj {position} od {total}.",
+    "a11y.movedDown": "Premaknjeno navzdol na položaj {position} od {total}."
+  },
+  "sq": {
+    "a11y.atTop": "Lëvizja lart nuk është e mundur. Tashmë në krye.",
+    "a11y.atBottom": "Lëvizja poshtë nuk është e mundur. Tashmë në fund.",
+    "a11y.movedUp": "Lëvizja lart përfundoi në pozicionin {position} nga {total}.",
+    "a11y.movedDown": "Lëvizja poshtë përfundoi në pozicionin {position} nga {total}."
+  },
+  "sr": {
+    "a11y.atTop": "Померање нагоре није могуће. Већ на врху.",
+    "a11y.atBottom": "Померање надоле није могуће. Већ на дну.",
+    "a11y.movedUp": "Померање нагоре је завршено на позицији {position} од {total}.",
+    "a11y.movedDown": "Померање надоле је завршено на позицији {position} од {total}."
+  },
+  "sv": {
+    "a11y.atTop": "Kan inte flyttas uppåt. Redan högst upp.",
+    "a11y.atBottom": "Kan inte flyttas nedåt. Redan längst ner.",
+    "a11y.movedUp": "Flytten uppåt är slutförd. Position: {position} av {total}.",
+    "a11y.movedDown": "Flytten nedåt är slutförd. Position: {position} av {total}."
+  },
+  "sw": {
+    "a11y.atTop": "Haiwezekani kusogeza juu. Tayari juu kabisa.",
+    "a11y.atBottom": "Haiwezekani kusogeza chini. Tayari chini kabisa.",
+    "a11y.movedUp": "Kusogeza juu kumekamilika: nafasi ya {position} kati ya {total}.",
+    "a11y.movedDown": "Kusogeza chini kumekamilika: nafasi ya {position} kati ya {total}."
+  },
+  "ta": {
+    "a11y.atTop": "மேலே நகர்த்த முடியாது. மேல் எல்லை ஏற்கனவே எட்டப்பட்டுள்ளது.",
+    "a11y.atBottom": "கீழே நகர்த்த முடியாது. கீழ் எல்லை ஏற்கனவே எட்டப்பட்டுள்ளது.",
+    "a11y.movedUp": "மேலே நகர்த்தல் முடிந்தது: நிலை {position}, மொத்தம் {total}.",
+    "a11y.movedDown": "கீழே நகர்த்தல் முடிந்தது: நிலை {position}, மொத்தம் {total}."
+  },
+  "te": {
+    "a11y.atTop": "పైకి తరలించడం సాధ్యం కాదు. ఇప్పటికే మొదటి స్థానంలో.",
+    "a11y.atBottom": "కిందికి తరలించడం సాధ్యం కాదు. ఇప్పటికే చివరి స్థానంలో.",
+    "a11y.movedUp": "పైకి తరలింపు పూర్తయింది: స్థానం {position}, మొత్తం {total}.",
+    "a11y.movedDown": "కిందికి తరలింపు పూర్తయింది: స్థానం {position}, మొత్తం {total}."
+  },
+  "th": {
+    "a11y.atTop": "ไม่สามารถย้ายขึ้นได้ เนื่องจากอยู่บนสุดแล้ว",
+    "a11y.atBottom": "ไม่สามารถย้ายลงได้ เนื่องจากอยู่ล่างสุดแล้ว",
+    "a11y.movedUp": "ย้ายขึ้นไปยังตำแหน่ง {position} จากทั้งหมด {total} แล้ว",
+    "a11y.movedDown": "ย้ายลงไปยังตำแหน่ง {position} จากทั้งหมด {total} แล้ว"
+  },
+  "tr": {
+    "a11y.atTop": "Yukarı taşımak mümkün değil. Zaten en üstte.",
+    "a11y.atBottom": "Aşağı taşımak mümkün değil. Zaten en altta.",
+    "a11y.movedUp": "Yukarı taşıma tamamlandı: {total} içinden {position}. konum.",
+    "a11y.movedDown": "Aşağı taşıma tamamlandı: {total} içinden {position}. konum."
+  },
+  "ug": {
+    "a11y.atTop": "ئۈستىگە يۆتكەش مۇمكىن ئەمەس. ئاللىبۇرۇن ئەڭ ئۈستىدىكى ئورۇندا.",
+    "a11y.atBottom": "ئاستىغا يۆتكەش مۇمكىن ئەمەس. ئاللىبۇرۇن ئەڭ ئاستىدىكى ئورۇندا.",
+    "a11y.movedUp": "ئۈستىگە يۆتكەش تاماملاندى: ئورۇن {position}، جەمئىي {total}.",
+    "a11y.movedDown": "ئاستىغا يۆتكەش تاماملاندى: ئورۇن {position}، جەمئىي {total}."
+  },
+  "uk": {
+    "a11y.atTop": "Неможливо перемістити вище. Уже вгорі.",
+    "a11y.atBottom": "Неможливо перемістити нижче. Уже внизу.",
+    "a11y.movedUp": "Переміщено вгору на позицію {position} з {total}.",
+    "a11y.movedDown": "Переміщено вниз на позицію {position} з {total}."
+  },
+  "ur": {
+    "a11y.atTop": "اوپر منتقل کرنا ممکن نہیں۔ پہلے ہی سب سے اوپر۔",
+    "a11y.atBottom": "نیچے منتقل کرنا ممکن نہیں۔ پہلے ہی سب سے نیچے۔",
+    "a11y.movedUp": "اوپر منتقلی مکمل ہوئی: کل {total} میں سے مقام {position}۔",
+    "a11y.movedDown": "نیچے منتقلی مکمل ہوئی: کل {total} میں سے مقام {position}۔"
+  },
+  "vi": {
+    "a11y.atTop": "Không thể di chuyển lên. Đã ở trên cùng.",
+    "a11y.atBottom": "Không thể di chuyển xuống. Đã ở dưới cùng.",
+    "a11y.movedUp": "Đã di chuyển lên đến vị trí {position} trong tổng số {total}.",
+    "a11y.movedDown": "Đã di chuyển xuống đến vị trí {position} trong tổng số {total}."
+  },
+  "yi": {
+    "a11y.atTop": "נישט מעגלעך צו באַוועגן אַרויף. שוין אויבן.",
+    "a11y.atBottom": "נישט מעגלעך צו באַוועגן אַראָפּ. שוין אונטן.",
+    "a11y.movedUp": "באַוועגונג אַרויף פֿאַרענדיקט: פּאָזיציע {position} פֿון {total}.",
+    "a11y.movedDown": "באַוועגונג אַראָפּ פֿאַרענדיקט: פּאָזיציע {position} פֿון {total}."
+  },
+  "zh": {
+    "a11y.atTop": "无法上移。已在顶部。",
+    "a11y.atBottom": "无法下移。已在底部。",
+    "a11y.movedUp": "已上移至第 {position} 个位置，共 {total} 个位置。",
+    "a11y.movedDown": "已下移至第 {position} 个位置，共 {total} 个位置。"
+  },
+  "zh-TW": {
+    "a11y.atTop": "無法上移。已在頂端。",
+    "a11y.atBottom": "無法下移。已在底端。",
+    "a11y.movedUp": "已上移至第 {position} 個位置，共 {total} 個位置。",
+    "a11y.movedDown": "已下移至第 {position} 個位置，共 {total} 個位置。"
+  }
+}

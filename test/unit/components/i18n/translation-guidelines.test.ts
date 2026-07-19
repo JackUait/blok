@@ -24,6 +24,10 @@ const TRANSLATION_GUIDELINES_PATH = resolve(
   __dirname,
   '../../../../src/components/i18n/locales/TRANSLATION_GUIDELINES.md'
 );
+const LOCALIZED_GROUP_MOVE_EXPECTATIONS_PATH = resolve(
+  __dirname,
+  'fixtures/localized-group-move-expectations.json'
+);
 
 const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
@@ -48,6 +52,9 @@ const translationGuidelines = readFileSync(
   TRANSLATION_GUIDELINES_PATH,
   'utf-8'
 );
+const localizedGroupMoveExpectations = JSON.parse(
+  readFileSync(LOCALIZED_GROUP_MOVE_EXPECTATIONS_PATH, 'utf-8')
+) as Record<string, Record<string, string>>;
 const RESULT_STATES = new Set(['pending', 'open', 'pass']);
 const FINAL_STATUSES = new Set([
   'pending',
@@ -158,6 +165,13 @@ const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryNature',
   'tools.callout.emojiCategoryFood',
   'tools.callout.emojiCategoryTravel',
+] as const;
+
+const GROUP_MOVE_KEYS = [
+  'a11y.atTop',
+  'a11y.atBottom',
+  'a11y.movedUp',
+  'a11y.movedDown',
 ] as const;
 
 const LOCALIZED_EMOJI_CATEGORY_SCOPE = {
@@ -823,6 +837,25 @@ describe('translation guideline corpus integrity', () => {
       localeCodes.filter(locale => locale !== 'en')
     );
   });
+
+  it('covers every non-English locale in the group-move matrix', () => {
+    expect(Object.keys(localizedGroupMoveExpectations).sort()).toEqual(
+      localeCodes.filter(locale => locale !== 'en')
+    );
+  });
+
+  it.each(Object.entries(localizedGroupMoveExpectations))(
+    '$0 uses count-neutral group-move announcements',
+    (locale, expected) => {
+      const messages = readLocale(locale).messages;
+      const actual = Object.fromEntries(
+        GROUP_MOVE_KEYS.map(key => [key, messages[key]])
+      );
+
+      expect(Object.keys(expected)).toEqual(GROUP_MOVE_KEYS);
+      expect(actual).toEqual(expected);
+    }
+  );
 
   it.each(Object.entries(LOCALIZED_EMOJI_CATEGORY_SCOPE))(
     '$0 uses complete localized emoji category scope',

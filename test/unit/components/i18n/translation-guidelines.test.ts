@@ -64,7 +64,7 @@ const RETENTION_CATEGORIES = new Set([
   'established loanword',
 ]);
 const GLOBAL_FINDING_KEYS = new Set([
-  '73 changed English source keys',
+  '77 changed English source keys',
   'four expanded emoji category keys',
 ]);
 
@@ -91,8 +91,10 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.table.placementBottomCenter': 'Bottom center',
   'tools.table.placementBottomRight': 'Bottom right',
   'a11y.dropCancelled': 'Drag canceled',
-  'a11y.atTop': 'Block is at the top and cannot move up',
-  'a11y.atBottom': 'Block is at the bottom and cannot move down',
+  'a11y.atTop': 'Cannot move up. Already at the top.',
+  'a11y.atBottom': 'Cannot move down. Already at the bottom.',
+  'a11y.movedUp': 'Moved up to position {position} of {total}',
+  'a11y.movedDown': 'Moved down to position {position} of {total}',
   'a11y.searchResults': 'Search results: {count}',
   'a11y.allBlocksSelected': 'All blocks selected. Total: {count}',
   'tools.callout.addEmoji': 'Add icon',

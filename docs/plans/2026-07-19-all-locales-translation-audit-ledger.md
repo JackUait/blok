@@ -266,10 +266,10 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bs` | Bosnian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-bs-001` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-cs-001`–`F-cs-122` | pending |
 | `da` | Danish | Latin | ltr | neutral concise Danish; direct actions; lowercase search aliases | — | — | pending | pending | pending | `F-da-001`–`F-da-076` | pending |
-| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-088` | pending |
+| `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-089` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-root-en-first-545 | codex-wire-media-en-second-545 | pass | pass | pass | `F-en-001`–`F-en-073` | second-pass-complete |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-077` | pending |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-099` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
@@ -366,7 +366,6 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
-| `en` | `codex-root-en-first-545` | `sha256:52ad75d149b7c642ea268ea7236b238169ba442874543837da2778f89ca3b3aa` | `codex-wire-media-en-second-545` | `sha256:52ad75d149b7c642ea268ea7236b238169ba442874543837da2778f89ca3b3aa` |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -403,7 +402,15 @@ source-coverage, encoding, and normalization checker pass. `F-en-036` and all
 only the missing-key defect; every locale row remains `pending` and still
 requires two complete, distinct 539-entry linguistic passes.
 
-## English Source Audit Evidence — current 545-key two-pass review complete
+## English Source Audit Evidence — pending after group-move source defect
+
+The previously completed 545-key passes below are historical. A later
+caller-cardinality trace proved that `a11y.atTop`, `a11y.atBottom`,
+`a11y.movedUp`, and `a11y.movedDown` are shared by single-block and
+multi-block-selection paths while their English text names one block.
+`F-en-074` through `F-en-077` record the four source defects. Evidence reset
+rule 2 therefore clears English and every localized pass and digest before
+the count-neutral source wording is applied.
 
 The current first reviewer inspected all 545/545 final English values in four
 disjoint source-order ranges: 1–140, 141–280, 281–420, and 421–545. Every
@@ -587,7 +594,7 @@ approved scope of this translation-value audit.
 
 ## Localized First-Pass Evidence
 
-### German (`de`) — first pass complete
+### German (`de`) — pending after group-move source reset
 
 The first reviewer inspected and, after applying the reviewed corrections,
 re-read 538/538 current German values in eight top-level namespace passes and
@@ -655,6 +662,30 @@ changed-English dependencies, all 38 placeholder contracts, all 44 aliases
 in 14 groups, all 29 source-only contracts, the 509+29+1 caller partition,
 and the complete structural manifest without finding a residual. German is
 therefore `second-pass-complete` on these exact bytes.
+
+The preceding 538/539-key conclusions are historical. For the current
+545-key corpus, `codex-root-de-first-545` independently inspected every
+English/German pair in source order, all 532 caller-consumed or retained
+built contracts, the 12 source-only contracts, the unused `notifier.dismiss`
+contract, all 38 placeholder-bearing values, all 44 search aliases, all 117
+provider compositions, and all 73 changed-English dependencies. The current
+review revalidated `F-de-001` through `F-de-088` and found one residual:
+`F-de-089` replaces the image-preview toolbar's singular, object-free
+accessible name with `Steuerelemente der Bildvorschau`.
+
+The exact expectation failed before that edit and passed afterward. The
+reviewer then reread all 545 final pairs. The live checker reports 545 keys
+with matching structure, placeholders, encoding, and normalization; all 26
+exact-English values are justified in `R-de-001` through `R-de-026`.
+The final raw dictionary SHA-256 is
+`a6bc5a3e9e4024b4090173f2ef7928a30900ebd7ee668d41f99d5ec344e4b176`.
+The distinct complete second pass remains pending.
+
+That current-byte German conclusion was subsequently invalidated by the four
+English group-move accessibility source defects recorded as `F-en-074`
+through `F-en-077`. The German dictionary correction and `F-de-089` remain
+valid, but both complete German passes must be repeated after the four
+dependent values are re-reviewed.
 
 ### Czech (`cs`) — pending after second-pass residuals
 
@@ -1936,9 +1967,13 @@ follows the global transition rule above.
 | `F-en-071` | `en` | `tools.linkPaste.embedDesign` | provider composition / grammar | `"Embed {provider} design"` | `"Embed a design from {provider}"` | Provider-final grammar composes safely with product names such as draw.io and Behance without treating brands as ordinary modifiers. | verified |
 | `F-en-072` | `en` | `tools.linkPaste.embedChart` | provider composition / grammar | `"Embed {provider} chart"` | `"Embed a chart from {provider}"` | The type-first construction remains grammatical with every chart provider, including the multiword name Our World in Data. | verified |
 | `F-en-073` | `en` | `tools.linkPaste.embedCalendar` | provider composition / grammar | `"Embed {provider} calendar"` | `"Embed a calendar from {provider}"` | The provider-final template presents Calendly as the source service and avoids a brittle English brand compound. | verified |
+| `F-en-074` | `en` | `a11y.atTop` | accessibility / selection cardinality | `"Block is at the top and cannot move up"` | `"Cannot move up. Already at the top."` | `BlockOperations.moveCurrentBlockUp` passes the same boundary key when either one current block or a multi-block `selectedBlocks` group is already at the top. The count-neutral announcement is accurate for both paths without adding an unavailable count. Its exact expectation failed before remediation and passes with the corrected value. | verified |
+| `F-en-075` | `en` | `a11y.atBottom` | accessibility / selection cardinality | `"Block is at the bottom and cannot move down"` | `"Cannot move down. Already at the bottom."` | `BlockOperations.moveCurrentBlockDown` passes the same boundary key when either one current block or a multi-block `selectedBlocks` group is already at the bottom. The count-neutral announcement is accurate for both paths without adding an unavailable count. Its exact expectation failed before remediation and passes with the corrected value. | verified |
+| `F-en-076` | `en` | `a11y.movedUp` | accessibility / selection cardinality | `"Block moved up to position {position} of {total}"` | `"Moved up to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
+| `F-en-077` | `en` | `a11y.movedDown` | accessibility / selection cardinality | `"Block moved down to position {position} of {total}"` | `"Moved down to position {position} of {total}"` | `finishMove` announces this key after moving either the current block or a selected block group and supplies only `{position}` and `{total}`. Removing the singular subject preserves both placeholders and accurately covers both caller cardinalities. Its exact expectation failed before remediation and the selection-move tests pass with the corrected value. | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
-| `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird jeder verschachtelte Block auf die oberste Ebene verschoben. Fortfahren?"` | Source-only warning must work for one or many and avoid needlessly technical `Konvertierung`; the first correction retained plural `sie werden`, which is unsuitable when `{count}=1`. | verified |
+| `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks wird der verschachtelte Inhalt auf die oberste Ebene verschoben. Fortfahren?"` | The source-only warning must work for one or many and avoid needlessly technical `Konvertierung`. The final source uses the count-neutral collective “nested content”; German mirrors it with singular `der verschachtelte Inhalt`, avoiding both the old plural pronoun and a forced distributive construction. | verified |
 | `F-de-004` | `de` | `toolbox.addBelow` | grammar | `"Klicken zum Einfügen darunter"` | `"Klicken, um darunter einzufügen"` | Plus-button tooltip needs a grammatical action phrase. | verified |
 | `F-de-005` | `de` | `toolbox.optionAddAbove` | shortcut clarity | `"⌥ — darüber einfügen"` | `"⌥-Klick: darüber einfügen"` | Tooltip omitted the click gesture required by the shortcut. | verified |
 | `F-de-006` | `de` | `toolbox.ctrlAddAbove` | shortcut clarity | `"Strg — darüber einfügen"` | `"Strg-Klick: darüber einfügen"` | Windows tooltip omitted the click gesture required by the shortcut. | verified |
@@ -1996,8 +2031,8 @@ follows the global transition rule above.
 | `F-de-058` | `de` | `tools.video.ctxCopyUrlAtTime` | context | `"Video-URL zur aktuellen Zeit kopieren"` | `"Video-URL an der aktuellen Wiedergabeposition kopieren"` | “Aktuelle Zeit” can mean clock time; action copies the media timestamp. | verified |
 | `F-de-059` | `de` | `tools.video.ctxStats` | slang / terminology | `"Statistiken für Nerds"` | `"Wiedergabestatistiken"` | Context-menu item must remove prohibited slang and name the playback data. | verified |
 | `F-de-060` | `de` | `tools.audio.errorFileTooLarge` | pending translation | `"Audio is too large. {size} exceeds the {max} limit."` | `"Die Audiodatei ist zu groß. {size} überschreitet die Höchstgrenze von {max}."` | Audio upload size error retained an English fallback; placeholders remain exact. | verified |
-| `F-de-061` | `de` | `tools.audio.errorGoogleDrive` | register / error clarity | `"Google-Drive-Links können nicht direkt abgespielt werden — Datei herunterladen und hier hochladen."` | `"Google-Drive-Links lassen sich nicht direkt abspielen. Laden Sie die Datei stattdessen herunter und hier hoch."` | Recovery error switched to clipped infinitive wording and omitted the “instead” relationship. | verified |
-| `F-de-062` | `de` | `tools.audio.errorOneDrive` | register / error clarity | `"OneDrive-Links können nicht direkt abgespielt werden — Datei herunterladen und hier hochladen."` | `"OneDrive-Links lassen sich nicht direkt abspielen. Laden Sie die Datei stattdessen herunter und hier hoch."` | Recovery error switched to clipped infinitive wording and omitted the “instead” relationship. | verified |
+| `F-de-061` | `de` | `tools.audio.errorGoogleDrive` | register / error clarity / source synchronization | `"Google-Drive-Links können nicht direkt abgespielt werden — Datei herunterladen und hier hochladen."` | `"Eine Audiodatei aus Google Drive kann nicht direkt wiedergegeben werden. Laden Sie die Datei stattdessen herunter und hier hoch."` | The recovery error uses the locale's formal imperative, preserves the “instead” relationship, and follows the corrected source by identifying the audio resource rather than incorrectly saying that a link is played. | verified |
+| `F-de-062` | `de` | `tools.audio.errorOneDrive` | register / error clarity / source synchronization | `"OneDrive-Links können nicht direkt abgespielt werden — Datei herunterladen und hier hochladen."` | `"Eine Audiodatei aus OneDrive kann nicht direkt wiedergegeben werden. Laden Sie die Datei stattdessen herunter und hier hoch."` | The recovery error uses the locale's formal imperative, preserves the “instead” relationship, and follows the corrected source by identifying the audio resource rather than incorrectly saying that a link is played. | verified |
 | `F-de-063` | `de` | `tools.audio.titlePlaceholder` | pending translation | `"Track title"` | `"Titel"` | Audio metadata field retained an English fallback. | verified |
 | `F-de-064` | `de` | `tools.audio.artistPlaceholder` | pending translation | `"Artist"` | `"Künstler"` | Audio metadata field retained an English fallback. | verified |
 | `F-de-065` | `de` | `tools.audio.emptyOrDropHere` | grammar / clarity | `"oder Audio hier ablegen"` | `"oder eine Audiodatei hier ablegen"` | Empty-state instruction lacked an article and refers to an audio file. | verified |
@@ -2661,6 +2696,7 @@ follows the global transition rule above.
 | `F-de-086` | `de` | `tools.audio.alignmentRight` | action terminology | `"Rechts"` | `"Rechtsbündig ausrichten"` | The audio settings item performs the same alignment action as its video counterpart and needs the same explicit command. | verified |
 | `F-de-087` | `de` | `tools.audio.coverSourceAria` | accessibility / context | `"Bildquelle"` | `"Quelle des Coverbilds"` | The accessible tab-group label belongs to the cover-image dialog; generic `Bildquelle` loses the required cover context. | verified |
 | `F-de-088` | `de` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Aktivität"` | `"Aktivitäten"` | The emoji picker renders this value as a category heading and category-navigation accessible name; Microsoft Teams’ German emoji catalog uses the plural category label `Aktivitäten`. | verified |
+| `F-de-089` | `de` | `tools.image.previewControls` | accessibility / object context | `"Vorschausteuerung"` | `"Steuerelemente der Bildvorschau"` | `src/tools/image/ui.ts` uses this value as the accessible name of the image-preview toolbar. The singular compound neither names the concrete plural controls nor identifies the image object; the replacement supplies both. The focused regression and live structural checker pass on the corrected value. | verified |
 | `F-dv-001` | `dv` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ފޯމެޓްތައް ފޮހޭ"` | TinyMCE’s current Dhivehi rich-text-editor locale maps the exact action Clear formatting to [ފޯމެޓްތައް ފޮހޭ](https://unpkg.com/tinymce-i18n@26.2.9/langs/dv.js), a closer caller match than a composed generic-cleaning phrase. | verified |
 | `F-el-001` | `el` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Απαλοιφή μορφοποίησης"` | Microsoft’s Greek editor UI uses the exact command [Απαλοιφή μορφοποίησης](https://support.microsoft.com/el-gr/office/%CE%B1%CF%80%CE%B1%CE%BB%CE%BF%CE%B9%CF%86%CE%AE-%CF%8C%CE%BB%CE%B7%CF%82-%CF%84%CE%B7%CF%82-%CE%BC%CE%BF%CF%81%CF%86%CE%BF%CF%80%CE%BF%CE%AF%CE%B7%CF%83%CE%B7%CF%82-%CE%BA%CE%B5%CE%B9%CE%BC%CE%AD%CE%BD%CE%BF%CF%85-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
 | `F-es-087` | `es` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Borrar formato"` | Microsoft’s Spanish editor UI uses the exact concise command [Borrar formato](https://support.microsoft.com/es-es/office/borrar-todo-el-formato-de-texto-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
@@ -3379,7 +3415,7 @@ follows the global transition rule above.
 | `F-zh-TW-030` | `zh-TW` | `tools.colorPicker.defaultSwatchLabel` | accessibility / label-value punctuation | `"{mode} {default}"` | `"{mode}：{default}"` | The color-picker caller inserts localized mode and default labels into one spoken tooltip; W3C’s [Chinese Layout Requirements](https://www.w3.org/TR/clreq/#punctuation_marks) identifies the native colon as U+FF1A `：`. Both placeholders remain intact. | verified |
 | `F-zh-TW-031` | `zh-TW` | `tools.colorPicker.colorSwatchLabel` | accessibility / label-value punctuation | `"{mode} {color}"` | `"{mode}：{color}"` | The swatch caller composes values such as “文字顏色：灰色”; a bare space leaves the adjacent nouns ambiguous, while W3C documents `：` as the native Chinese colon. Both placeholders remain intact. | verified |
 | `F-zh-TW-032` | `zh-TW` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖曳控制項"` | `"拖曳控點"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Taiwan Fluent UI guidance uses the handle-specific term [拖曳控點](https://learn.microsoft.com/zh-tw/power-apps/teams/use-the-fluent-ui-controls). | verified |
-| `F-global-001` | all non-English | 73 changed English source keys | source dependency | Localized values have not been re-reviewed against the 66 corrected source values and seven new keys. | Re-audit all 73 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete locale pass must inspect all 73 dependencies, including `toolNames.clearFormat`, the expanded emoji categories, every provider-composition template, the corrected broken-image error, both new media-caption placeholders, all three localized notifier-dialog defaults, and the Markdown footnote backlink label. | open |
+| `F-global-001` | all non-English | 77 changed English source keys | source dependency | Localized values have not been re-reviewed against the 70 corrected source values and seven new keys. | Re-audit all 77 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete locale pass must inspect all 77 dependencies, including `toolNames.clearFormat`, the expanded emoji categories, every provider-composition template, the corrected broken-image error, both new media-caption placeholders, all three localized notifier-dialog defaults, the Markdown footnote backlink label, and all four count-neutral group-move announcements. | open |
 | `F-global-002` | all non-English | four expanded emoji category keys | source dependency / category scope / accessibility | The 68 localized dictionaries still use one-part labels for some or all of the newly expanded smileys-and-people, animals-and-nature, food-and-drink, and travel-and-places source categories. | Apply the independently reviewed native four-label matrix to all 68 localized dictionaries, retaining a current value only when it already expresses both scopes. | Three independent language-family reviews inspected all 272 visible and ARIA labels against runtime category contents, bundled Emoji Mart data, Unicode CLDR, and official Apple, Google, Microsoft, Android, and native-language product terminology. The executable 68-locale matrix records all 253 required corrections and 19 valid retentions. | verified |
 
 ## Exact-English Retentions
@@ -3457,6 +3493,7 @@ locale and UI context.
 | `R-de-023` | `de` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in German interfaces. | [Duden — URL](https://www.duden.de/rechtschreibung/URL) |
 | `R-de-024` | `de` | `tools.database.defaultStatusProperty` | established cognate | `Status` is the normal unchanged German noun for this workflow property. | [Duden — Status](https://www.duden.de/rechtschreibung/Status) |
 | `R-de-025` | `de` | `tools.database.defaultViewBoard` | established loanword | `Board` is established German product terminology for the default column-based view. | [Microsoft Planner — Navigieren mit einer Sprachausgabe](https://support.microsoft.com/de-de/accessibility/planner/use-a-screen-reader-to-explore-and-navigate-microsoft-planner) |
+| `R-de-026` | `de` | `notifier.ok` | established loanword | `OK` is the conventional unchanged German confirmation-button label and is the natural compact action in the built-in prompt dialog. | [Microsoft Outlook accessibility — “OK, Schaltfläche”](https://support.microsoft.com/de-DE/accessibility/outlook/use-a-screen-reader-to-format-text-in-your-email-in-outlook) |
 | `R-es-001` | `es` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is platform shortcut notation rather than English prose; Spanish macOS documentation retains the `⌘` symbol. | [Apple — Atajos de teclado del Mac](https://support.apple.com/es-es/102650) |
 | `R-es-002` | `es` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is platform shortcut notation rather than translatable prose; Spanish Windows documentation retains `Ctrl`. | [Microsoft — Métodos abreviados de teclado de Windows](https://support.microsoft.com/es-es/topic/m%C3%A9todos-abreviados-de-teclado-f2302f54-02a3-a62b-36ef-74ee5a83cb87) |
 | `R-es-003` | `es` | `tools.stub.error` | established cognate | `Error` is the normal unchanged Spanish noun for an error state. | [RAE — error](https://dle.rae.es/error) |

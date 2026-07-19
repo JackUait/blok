@@ -294,7 +294,7 @@
   "tools.image.altDescription": "Beschreiben Sie dieses Bild für Menschen, die es nicht sehen können.",
   "tools.image.altPlaceholder": "Alternativtext",
   "tools.image.preview": "Bildvorschau",
-  "tools.image.previewControls": "Vorschausteuerung",
+  "tools.image.previewControls": "Steuerelemente der Bildvorschau",
   "tools.image.navigationControls": "Bildnavigation",
   "tools.image.previousImage": "Vorheriges Bild",
   "tools.image.nextImage": "Nächstes Bild",

@@ -216,7 +216,14 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
   ]),
-  pt: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.file.emptyLink', 'tools.image.cropRatioOval', 'searchTerms.layout']),
+  pt: new Set([
+    'toolNames.link',
+    'tools.image.emptyLink',
+    'tools.file.emptyLink',
+    'tools.image.cropRatioOval',
+    'tools.database.defaultStatusProperty',
+    'searchTerms.layout',
+  ]),
   ro: new Set([
     'toolNames.text',
     'toolNames.link',

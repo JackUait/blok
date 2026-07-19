@@ -111,7 +111,7 @@ describe('I18n Module', () => {
       await i18n.setLocale('ru');
 
       expect(i18n.getLocale()).toBe('ru');
-      expect(i18n.t('blockSettings.dragToMove')).toBe('Тяните, чтобы переместить');
+      expect(i18n.t('blockSettings.dragToMove')).toBe('Перетащите, чтобы переместить');
     });
 
     it('sets locale to Chinese and loads Chinese dictionary', async () => {

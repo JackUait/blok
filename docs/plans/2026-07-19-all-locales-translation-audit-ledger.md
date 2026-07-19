@@ -270,10 +270,10 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-en-pass1-539-2026-07-19 | codex-root-en-pass2-539-2026-07-19 | pass | pass | pass | `F-en-001`–`F-en-042` | second-pass-complete |
-| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | codex-root-es-pass1-539-2026-07-19 | — | pass | pass | pass | `F-es-001`–`F-es-099` | first-pass-complete |
+| `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | codex-root-es-pass1-539-2026-07-19 | codex-es-pass2-current-539-2026-07-19 | pass | pass | pass | `F-es-001`–`F-es-099` | second-pass-complete |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
-| `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | codex-fi-pass1-539-2026-07-19 | — | pass | pass | pass | `F-fi-001`–`F-fi-077` | first-pass-complete |
+| `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | codex-root-fi-pass1-final-539-2026-07-19 | — | pass | pass | pass | `F-fi-001`–`F-fi-091` | first-pass-complete |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | codex-root-fr-pass1-539-2026-07-19 | codex-fr-pass2-539-2026-07-19 | pass | pass | pass | `F-fr-001`–`F-fr-131` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
@@ -283,7 +283,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
-| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | codex-root-it-pass1-539-2026-07-19 | — | pass | pass | pass | `F-it-001`–`F-it-089` | first-pass-complete |
+| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | codex-root-it-pass1-539-2026-07-19 | codex-it-pass2-539-2026-07-19 | pass | pass | pass | `F-it-001`–`F-it-089` | second-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | to-audit | — | — | pending | pending | pending | `F-ja-001` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
@@ -305,7 +305,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001` | pending |
 | `pl` | Polish | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-pl-001` | pending |
 | `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001` | pending |
-| `pt` | Portuguese (current Brazilian wording) | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-pt-001` | pending |
+| `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | codex-pt-pass1-539-2026-07-19 | — | pass | pass | pass | `F-pt-001`–`F-pt-079` | first-pass-complete |
 | `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001` | pending |
 | `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | codex-ru-pass1-539-2026-07-19 | — | pass | pass | pass | `F-ru-001`–`F-ru-120` | first-pass-complete |
 | `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001` | pending |
@@ -325,8 +325,8 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ur` | Urdu | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ur-001` | pending |
 | `vi` | Vietnamese | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-vi-001` | pending |
 | `yi` | Yiddish | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-yi-001` | pending |
-| `zh` | Chinese (Simplified) | Simplified Han | ltr | to-audit | — | — | pending | pending | pending | `F-zh-001` | pending |
-| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | to-audit | — | — | pending | pending | pending | `F-zh-TW-001` | pending |
+| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | codex-root-zh-pass1-final-539-2026-07-19 | codex-zh-pass2-current-539-2026-07-19 | pass | pass | pass | `F-zh-001`–`F-zh-058` | second-pass-complete |
+| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | codex-root-zh-tw-pass1-final-539-2026-07-19 | codex-zh-tw-pass2-current-539-2026-07-19 | pass | pass | pass | `F-zh-TW-001`–`F-zh-TW-032` | second-pass-complete |
 
 | `R-sv-001` | `sv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Swedish Apple guidance retains the `⌘` platform symbol. | [Apple — Kortkommandon på Mac](https://support.apple.com/sv-se/102650) |
 | `R-sv-002` | `sv` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Swedish Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Kortkommandon i Windows](https://support.microsoft.com/sv-se/windows/kortkommandon-i-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
@@ -345,6 +345,18 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `R-sv-015` | `sv` | `tools.database.propertyTypeText` | established cognate | `Text` is the normal unchanged Swedish noun for this database property type. | [Svenska Akademiens ordlista — text](https://svenska.se/saol/?sok=text) |
 | `R-sv-016` | `sv` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Swedish product interfaces. | [Svenska Akademiens ordlista — URL](https://svenska.se/saol/?sok=url) |
 | `R-sv-017` | `sv` | `tools.database.defaultStatusProperty` | established cognate | `Status` is the normal unchanged Swedish noun for this workflow property. | [Svenska Akademiens ordlista — status](https://svenska.se/saol/?sok=status) |
+| `R-zh-001` | `zh` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Apple’s Simplified Chinese guidance retains the `⌘` platform symbol. | [Apple — Mac 键盘快捷键](https://support.apple.com/zh-cn/102650) |
+| `R-zh-002` | `zh` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Microsoft’s Simplified Chinese shortcut guidance retains `Ctrl` in key combinations. | [Microsoft — Windows 的键盘快捷方式](https://support.microsoft.com/zh-cn/windows/windows-%E7%9A%84%E9%94%AE%E7%9B%98%E5%BF%AB%E6%8D%B7%E6%96%B9%E5%BC%8F-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
+| `R-zh-003` | `zh` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation used unchanged in Simplified Chinese media interfaces. | [Apple — 使用 iPhone 相机工具设置照片](https://support.apple.com/zh-cn/guide/iphone/iph3dc593597/ios) |
+| `R-zh-004` | `zh` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Simplified Chinese media interfaces. | [Apple — 使用 iPhone 相机工具设置照片](https://support.apple.com/zh-cn/guide/iphone/iph3dc593597/ios) |
+| `R-zh-005` | `zh` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Simplified Chinese media interfaces. | [Apple — 使用 iPhone 相机工具设置照片](https://support.apple.com/zh-cn/guide/iphone/iph3dc593597/ios) |
+| `R-zh-006` | `zh` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Simplified Chinese web and product terminology. | [MDN — 什么是 URL？](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL) |
+| `R-zh-TW-001` | `zh-TW` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Apple’s Taiwan guidance retains the `⌘` platform symbol. | [Apple — Mac 鍵盤快速鍵](https://support.apple.com/zh-tw/102650) |
+| `R-zh-TW-002` | `zh-TW` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Microsoft’s Taiwan guidance retains `Ctrl` in key combinations. | [Microsoft — Windows 鍵盤提示與訣竅](https://support.microsoft.com/zh-TW/Windows/Hardware/Input-Devices/windows-keyboard-tips-and-tricks) |
+| `R-zh-TW-003` | `zh-TW` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation used unchanged in Taiwan Traditional Chinese media interfaces. | [Apple — 在 iPhone 上使用相機工具設定快照](https://support.apple.com/zh-tw/guide/iphone/iph3dc593597/ios) |
+| `R-zh-TW-004` | `zh-TW` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Taiwan Traditional Chinese media interfaces. | [Apple — 在 iPhone 上使用相機工具設定快照](https://support.apple.com/zh-tw/guide/iphone/iph3dc593597/ios) |
+| `R-zh-TW-005` | `zh-TW` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Taiwan Traditional Chinese media interfaces. | [Apple — 在 iPhone 上使用相機工具設定快照](https://support.apple.com/zh-tw/guide/iphone/iph3dc593597/ios) |
+| `R-zh-TW-006` | `zh-TW` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Taiwan Traditional Chinese product terminology. | [Apple — 在 iPhone 或 iPad 上的「捷徑」中加入網頁 API](https://support.apple.com/zh-tw/guide/shortcuts/apda283236d7/ios) |
 
 ## Reviewed Dictionary Digests
 
@@ -357,14 +369,17 @@ locale returns to `pending`.
 | `en` | `codex-en-pass1-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` | `codex-root-en-pass2-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` |
 | `da` | `codex-root-da-pass1-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` | `codex-da-pass2-539-2026-07-19` | `sha256:5e69377e6b7f3a4e1bfe316f4cc2dbc71add435ad5f080eac8597163d77876d2` |
 | `de` | `codex-root-de-pass1-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` | `codex-de-pass2-539-2026-07-19` | `sha256:ca1608fe3c635886bea5f3381d8918d34ab7d175e3b4a59c7830d0d155c6855c` |
-| `es` | `codex-root-es-pass1-539-2026-07-19` | `sha256:435016766dd78f39b086cb3dd6dd33a929084557206ce8a8952f9221f22affc6` | — | — |
-| `fi` | `codex-fi-pass1-539-2026-07-19` | `sha256:0ca6b959eedb97fe8ca1bed8ce75549cae9a5f299fb7f9f18463574443eebe71` | — | — |
+| `es` | `codex-root-es-pass1-539-2026-07-19` | `sha256:435016766dd78f39b086cb3dd6dd33a929084557206ce8a8952f9221f22affc6` | `codex-es-pass2-current-539-2026-07-19` | `sha256:435016766dd78f39b086cb3dd6dd33a929084557206ce8a8952f9221f22affc6` |
+| `fi` | `codex-root-fi-pass1-final-539-2026-07-19` | `sha256:2691149c29ffd1fcff28d894a26b4766cc95c285d4d89937d501eb6aa8de1409` | — | — |
 | `fr` | `codex-root-fr-pass1-539-2026-07-19` | `sha256:527c5314abd2dde23467557cb2afc91127d824eeed07ba67b44e2613534f6f12` | `codex-fr-pass2-539-2026-07-19` | `sha256:527c5314abd2dde23467557cb2afc91127d824eeed07ba67b44e2613534f6f12` |
-| `it` | `codex-root-it-pass1-539-2026-07-19` | `sha256:8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668` | — | — |
+| `it` | `codex-root-it-pass1-539-2026-07-19` | `sha256:8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668` | `codex-it-pass2-539-2026-07-19` | `sha256:8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668` |
 | `nl` | `codex-nl-pass1-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` | `codex-nl-pass2-539-2026-07-19` | `sha256:9eda880443a99fb3162cb98edcb99d8993c73864e85f0e754827af6e4c263223` |
 | `no` | `codex-root-no-pass1-539-2026-07-19` | `sha256:d08881a82c9e3fd0bf81e38a92add5cdf667c3ec2edc424453dca86a3a6a3033` | — | — |
+| `pt` | `codex-pt-pass1-539-2026-07-19` | `sha256:99a2bb5f2d7a7d95f0104cdeeecbd29c8f4eef29162ca57792493a29873c32d6` | — | — |
 | `ru` | `codex-ru-pass1-539-2026-07-19` | `sha256:85346859ecb32511fdd877786f50e2fc0e462880cdb044f9dfa98001d5cd0eb8` | — | — |
 | `sv` | `codex-root-sv-pass1-539-2026-07-19` | `sha256:5ad6c69ea09192087498df91d9d26b1fb13915ede46622076970875226cf16af` | — | — |
+| `zh` | `codex-root-zh-pass1-final-539-2026-07-19` | `sha256:55af042f145b5a8130cd90a645b4667434807a7eaa008f2ed296f8634ffc45c8` | `codex-zh-pass2-current-539-2026-07-19` | `sha256:55af042f145b5a8130cd90a645b4667434807a7eaa008f2ed296f8634ffc45c8` |
+| `zh-TW` | `codex-root-zh-tw-pass1-final-539-2026-07-19` | `sha256:324a7c1224b322cc685ecf531c718b7f702088d31a0209caece734b755139d77` | `codex-zh-tw-pass2-current-539-2026-07-19` | `sha256:324a7c1224b322cc685ecf531c718b7f702088d31a0209caece734b755139d77` |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -624,7 +639,7 @@ caller partition, and the complete structural manifest without finding a
 residual. Danish is therefore `second-pass-complete` on the bound 539-key
 digest.
 
-### Spanish (`es`) — first pass complete
+### Spanish (`es`) — current 539-key second pass complete
 
 The current-byte first reviewer inspected and, after applying the closed
 correction set, independently re-read 539/539 Spanish values in source order
@@ -683,9 +698,15 @@ and RAE entries for
 caller in `src/components/utils/notifier/draw.ts` reads the bundled English
 dictionary rather than the active locale. That localization bypass is
 recorded as a valid caller disposition rather than a Spanish value finding and
-does not block this dictionary pass. These results close the Spanish first
-pass on the bound 539-key digest; the distinct second review remains
-unassigned.
+does not block this dictionary pass. A distinct second reviewer independently
+reread all 539 current English/Spanish pairs on the same bound bytes. That
+review revalidated `F-es-001` through `F-es-099`, the exact 12-value
+`R-es-001` through `R-es-012` inventory, all 42 changed-English dependencies,
+all 38 placeholder contracts, all 44 aliases in 14 groups, all 29 source-only
+contracts, and the 509+29+1 caller partition without finding a residual. The
+live checker, 1,712 locale-contract cases, the focused Spanish retention
+case, 386 caller cases, and the checker’s 81-case suite pass. Spanish is
+therefore `second-pass-complete` on the bound 539-key digest.
 
 ### French (`fr`) — current 539-key first pass complete
 
@@ -800,13 +821,13 @@ aliases in 14 groups, all 29 source-only contracts, the 509+29+1 caller
 partition, and the complete structural manifest without finding a residual.
 French is therefore `second-pass-complete` on these exact bytes.
 
-### Finnish (`fi`) — first pass complete
+### Finnish (`fi`) — current 539-key first pass complete
 
-The current-byte reviewer inspected 539/539 Finnish values in source order and
-then repeated the complete semantic inventory after all corrections. The
-review is bound to
+The earlier current-byte reviewer inspected 539/539 Finnish values in source
+order and then repeated the complete semantic inventory after its correction
+set. That earlier review was bound to
 `sha256:0ca6b959eedb97fe8ca1bed8ce75549cae9a5f299fb7f9f18463574443eebe71`.
-It reconciled all findings `F-fi-001` through `F-fi-077`, all 42
+It reconciled findings `F-fi-001` through `F-fi-077`, all 42
 changed-English dependencies, all 38 placeholder-bearing templates, all 44
 search aliases in their 14 duplicate-intent groups, all 29 documented
 source-only contracts, and exactly the eight supported exact-English
@@ -832,8 +853,18 @@ passes; checker tests pass 79/79; DragA11y passes 21/21; relevant component
 and tool caller suites pass 268 and 457 cases; and the independent 18-file
 caller sweep passes 1,026 tests. Targeted lint and `git diff --check` are
 clean, and independent code review found no Critical, Important, or Minor
-issue. Finnish is therefore `first-pass-complete` on the bound digest; a
-distinct complete second review remains required on these exact bytes.
+issue. A distinct reviewer subsequently reread all 539 bound English/Finnish
+pairs and found the 14 residual defects recorded as `F-fi-078` through
+`F-fi-091`. Their 14 focused expectations failed red before the corrections
+were applied. A new first reviewer then reread all 539 final pairs in four
+disjoint source-order ranges and revalidated all 91 findings, all 42
+dependencies, all 38 placeholder contracts, all 44 aliases in 14 groups, all
+29 source-only contracts, the 509+29+1 partition, Finnish count grammar, and
+the exact eight-value retention inventory without finding another residual.
+The current first pass binds to raw SHA-256
+`2691149c29ffd1fcff28d894a26b4766cc95c285d4d89937d501eb6aa8de1409`.
+Finnish is therefore `first-pass-complete`; a distinct complete second review
+remains required on these exact bytes.
 
 ### Italian (`it`) — current 539-key first pass complete
 
@@ -1002,8 +1033,20 @@ defect. Finding, ledger-integrity, exact-retention, search-quality,
 duplicate-key, caller, and live-checker gates pass. The current first pass
 binds to raw SHA-256
 `8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668`.
-Italian is therefore `first-pass-complete`; a distinct complete second review
-remains required on these exact bytes.
+The distinct second reviewer independently reread all 539 English/Italian
+pairs on those exact bytes and reconciled every `F-it-001` through
+`F-it-089` correction, all 21 retentions, 42 changed-English dependencies,
+38 placeholder contracts, 44 aliases in 14 groups, 29 source-only values,
+and the complete 509+29+1 caller partition. The reviewer also checked every
+count-bearing template against its reachable plural guard: plural forms are
+used only above one, and singular-reachable forms remain count-neutral.
+Structure is clean across all 539 keys and 23 tool namespaces, with no
+duplicate, placeholder, NFC, encoding, control-character,
+replacement-character, or boundary-whitespace defect. The locale/ledger,
+search, quote, video, caller, retention, and live-checker gates pass with no
+residual finding. Both reviews bind to raw SHA-256
+`8bdfda0775d97740d4810572718bae8ad69008f4df12b95553b5c19edd66b668`;
+Italian is therefore `second-pass-complete`.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -1302,6 +1345,51 @@ first pass binds to raw SHA-256
 Norwegian is therefore `first-pass-complete`; a distinct complete second
 review remains required on these exact bytes.
 
+### Brazilian Portuguese (`pt`) — current 539-key first pass complete
+
+The current-byte reviewer reread all 539 English/Brazilian-Portuguese pairs
+in four explicit disjoint source-order ranges (1–140, 141–280, 281–420, and
+421–539). The pass covered every visible, accessibility,
+built-compatibility, and documented source-only contract. It closed 78
+current semantic, grammar, terminology, accessibility, punctuation, or
+pending-English defects in addition to the verified schema-migration finding.
+`F-pt-001` through `F-pt-079` now match the dictionary exactly. The focused
+red-first run failed exactly the 78 new expectations before their values
+changed, then the complete guideline corpus passed.
+
+Caller reconciliation rederived the complete 539-contract partition: 509
+caller-consumed or retained built-compatible values, all 29 documented
+source-only values, and the one localized `notifier.dismiss` value whose
+caller still bypasses the active dictionary. All 42 changed-English
+dependencies were reconciled: 33 required Portuguese corrections and nine
+retain reviewed wording. All 38 placeholder-bearing values preserve their
+names and multiplicities. The nine count-bearing contracts were checked at
+their actual one-versus-many branches; every variable-count value uses
+count-neutral grammar. All 44 aliases remain useful, lowercase, present, and
+normalization-distinct in their 14 caller groups.
+
+The final exact-English inventory is exactly 18 supported values, recorded as
+`R-pt-001` through `R-pt-018`: two platform shortcuts, three aspect ratios,
+the `Alt` and `URL` abbreviations, established `Link`, `layout`, `Oval`,
+`Status`, and `Volume` uses. Supporting terminology comes from
+[Apple’s Brazilian shortcut guidance](https://support.apple.com/pt-br/102650),
+[Microsoft’s Windows shortcuts](https://support.microsoft.com/pt-br/windows/atalhos-de-teclado-no-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec),
+[Notion’s media guidance](https://www.notion.com/pt/help/images-files-and-media),
+[Notion’s database-property guidance](https://www.notion.com/pt/help/database-properties),
+[Adobe’s layout terminology](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html),
+and [Google’s media accessibility guidance](https://support.google.com/drive/answer/12169158?hl=pt-BR).
+
+The selected register is neutral contemporary Brazilian Portuguese: implicit
+`você` in direct imperatives and complete instructions, concise infinitive
+action labels, sentence case, and established Brazilian product and
+accessibility terms. The final-byte replay found zero residuals. The live
+checker, all 79 Portuguese finding cases, the exact-retention guard, the
+130-case search-quality suite, placeholder and integrity gates, and
+`git diff --check` pass. The first pass binds to raw SHA-256
+`99a2bb5f2d7a7d95f0104cdeeecbd29c8f4eef29162ca57792493a29873c32d6`.
+Brazilian Portuguese is therefore `first-pass-complete`; a distinct complete
+second review remains required on these exact bytes.
+
 ### Swedish (`sv`) — current 539-key first pass complete
 
 The first reviewer reread all 539 current Swedish values in six disjoint
@@ -1380,6 +1468,116 @@ pass. The first pass binds to raw SHA-256
 `85346859ecb32511fdd877786f50e2fc0e462880cdb044f9dfa98001d5cd0eb8`.
 Russian is therefore `first-pass-complete`; a distinct complete second review
 remains required on these exact bytes.
+
+### Simplified Chinese (`zh`) — current 539-key second pass complete
+
+After the composed-tooltip comparison invalidated the initial evidence, the
+first reviewer performed a strict reset and reread all 539 current
+English/Simplified-Chinese pairs in four disjoint source-order ranges (1–135,
+136–270, 271–405, and 406–539). The replay covered every visible,
+accessibility, built-compatibility, and documented source-only contract,
+including all 42 changed-English dependencies. Across the replay rounds it
+found and closed 57 current
+defects in addition to the verified schema-migration finding: shortcut hints
+that omitted the click gesture; two fragments whose caller composition was
+ungrammatical; incomplete action, alignment, and accessible labels; a
+prospective drop announcement that incorrectly described completed movement;
+implementation-flavored nested-block wording; unnatural attribution and
+spoken-time wording; source-sync defects; punctuation outliers; and the
+remaining English fallbacks in equation, image, file, video, audio-metadata,
+and cover-art surfaces. `F-zh-001` through `F-zh-058` now match the current
+dictionary exactly.
+
+Caller reconciliation uses the established 539-contract partition: 509
+caller-consumed or built-compatible values, 29 documented source-only values,
+and the one localized notifier value whose caller still bypasses the active
+dictionary. The pass separately reread all 38 placeholder-bearing values and
+preserves every placeholder name and occurrence count. All 44 search aliases
+were reviewed in their 14 registered tool groups; their Simplified Chinese
+wording remains useful in the target tool context and no group contains a
+normalized duplicate.
+
+The final exact-English inventory is exactly six supported values:
+two platform shortcuts, three aspect-ratio notations, and the `URL` acronym,
+recorded as `R-zh-001` through `R-zh-006`. Apple’s
+[Simplified Chinese shortcut guidance](https://support.apple.com/zh-cn/102650),
+[camera aspect-ratio guidance](https://support.apple.com/zh-cn/guide/iphone/iph3dc593597/ios),
+Microsoft’s
+[Windows shortcut guidance](https://support.microsoft.com/zh-cn/windows/windows-%E7%9A%84%E9%94%AE%E7%9B%98%E5%BF%AB%E6%8D%B7%E6%96%B9%E5%BC%8F-dcc61a57-8ff0-cffe-9796-cb9706c75eec),
+and MDN’s [Simplified Chinese URL reference](https://developer.mozilla.org/zh-CN/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL)
+support those retentions.
+
+The initial red-first run failed exactly 46 expectations. The comparison
+round then failed exactly two newly recorded composed-fragment expectations,
+and the strict-reset replay failed exactly two residual expectations before
+each corresponding dictionary change. A distinct review later exposed seven
+residuals in the earlier bytes; their seven expectations failed red before
+`F-zh-052` through `F-zh-058` were applied. The first reviewer then reread all
+539 final English/Simplified-Chinese pairs in the four documented source-order
+ranges without finding another defect. The current guideline, live checker,
+placeholder, UTF-8, NFC, source-coverage, boundary-whitespace,
+exact-retention, duplicate-key, and search-quality gates pass. The current
+first pass binds to raw SHA-256
+`55af042f145b5a8130cd90a645b4667434807a7eaa008f2ed296f8634ffc45c8`.
+A distinct second reviewer then independently reread all 539 final-byte
+English/Simplified-Chinese pairs in source order, revalidated every finding,
+retention, placeholder, alias, source-only contract, and caller disposition,
+and found no residual semantic, grammar, register, accessibility, punctuation,
+or structural defect. Simplified Chinese is therefore
+`second-pass-complete` on these exact bytes.
+
+### Taiwan Traditional Chinese (`zh-TW`) — current 539-key second pass complete
+
+The first reviewer inspected all 539 current English/Taiwan-Traditional-
+Chinese pairs in four disjoint source-order ranges (1–135, 136–270, 271–405,
+and 406–539). The review covered every visible, accessibility,
+built-compatibility, and documented source-only contract, including all 42
+changed-English dependencies. Across the replay rounds it found and closed 31
+current defects in
+addition to the verified schema-migration finding: two ungrammatical composed
+tooltip fragments; incomplete action, table, icon, search, and accessible
+labels; ambiguous image and media errors; stale source meanings; handle-role
+and swatch-template terminology; a read-only
+embed instruction that could not be performed; and playback controls whose
+wording did not identify their actual state or target. `F-zh-TW-001` through
+`F-zh-TW-032` now match the current dictionary exactly.
+
+Caller reconciliation uses the established 539-contract partition: 509
+caller-consumed or built-compatible values, 29 documented source-only values,
+and the one localized notifier value whose caller still bypasses the active
+dictionary. The pass separately reread all 38 placeholder-bearing values and
+preserves every placeholder name and occurrence count. All 44 search aliases
+were reviewed in their 14 registered tool groups; their Taiwan wording remains
+useful in the target tool context and no group contains a normalized
+duplicate. The Taiwan-specific regression suite also passes all eight
+structure, placeholder, terminology, script, and distinct-localization cases.
+
+The final exact-English inventory is exactly six supported values: two
+platform shortcuts, three aspect-ratio notations, and the `URL` acronym,
+recorded as `R-zh-TW-001` through `R-zh-TW-006`. Apple’s Taiwan
+[shortcut guidance](https://support.apple.com/zh-tw/102650),
+[camera aspect-ratio guidance](https://support.apple.com/zh-tw/guide/iphone/iph3dc593597/ios),
+and [Shortcuts URL guidance](https://support.apple.com/zh-tw/guide/shortcuts/apda283236d7/ios),
+plus Microsoft’s Taiwan
+[keyboard guidance](https://support.microsoft.com/zh-TW/Windows/Hardware/Input-Devices/windows-keyboard-tips-and-tricks),
+support those retentions.
+
+The focused red-first guideline run failed exactly the initial 28 newly
+recorded expectations before the dictionary changed. A distinct review later
+exposed three residuals in the earlier bytes; their three expectations failed
+red before `F-zh-TW-030` through `F-zh-TW-032` were applied. The first
+reviewer then reread all 539 final English/Taiwan-Traditional-Chinese pairs in
+the four documented source-order ranges without finding another defect. The
+current guideline, live checker, placeholder, UTF-8, NFC, source-coverage,
+boundary-whitespace, exact-retention, duplicate-key, search-quality, and
+Taiwan-specific gates pass. The current first pass binds to raw SHA-256
+`324a7c1224b322cc685ecf531c718b7f702088d31a0209caece734b755139d77`.
+A distinct second reviewer then independently reread all 539 final-byte
+English/Taiwan-Traditional-Chinese pairs in source order, separately from the
+Simplified Chinese pass, and revalidated every finding, retention,
+Taiwan-script choice, placeholder, alias, source-only contract, and caller
+disposition without finding a residual. Taiwan Traditional Chinese is
+therefore `second-pass-complete` on these exact bytes.
 
 ## Findings
 
@@ -2133,6 +2331,20 @@ follows the global transition rule above.
 | `F-fi-075` | `fi` | `tools.audio.alignmentRight` | action terminology | `"Oikea"` | `"Tasaa oikealle"` | The audio settings item performs the same alignment action as its video counterpart. | verified |
 | `F-fi-076` | `fi` | `tools.bookmark.error` | context / source synchronization | `"Esikatselua ei voitu ladata"` | `"Linkin esikatselua ei voitu ladata"` | The rendered error must identify the failed link preview rather than an unspecified preview. | verified |
 | `F-fi-077` | `fi` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Maininta"` | `"Mainitse"` | The paste-menu contract names an action alongside imperatives; the current noun means “a mention” rather than “mention.” | verified |
+| `F-fi-078` | `fi` | `searchTerms.bullet` | semantic alias / search coverage | `"luettelo"` | `"luettelomerkki"` | This alias targets the bullet concept inside the bulleted-list group; `luettelo` only repeats the broader list concept, while Microsoft uses [luettelomerkki](https://support.microsoft.com/fi-fi/office/luettelon-luettelomerkkien-riviv%C3%A4lin-muuttaminen-word-2c83b66f-3ac3-45cf-976a-ba3639ae4f06). | verified |
+| `F-fi-079` | `fi` | `searchTerms.info` | semantic alias / search coverage | `"tiedote"` | `"tieto"` | `Tiedote` means an announcement or bulletin; the callout alias must express information, for which Finnish language guidance uses `tieto`. | verified |
+| `F-fi-080` | `fi` | `tools.image.altDescription` | accessibility / source synchronization | `"Lisää vaihtoehtoinen teksti, joka kuvaa tämän kuvan. Näin sivu on saavutettavampi heikkonäköisille ja sokeille."` | `"Kuvaile tätä kuvaa käyttäjille, jotka eivät näe sitä."` | The dialog already supplies the alternative-text context; the corrected source is concise and user-centered, matching Microsoft’s Finnish accessibility framing for [users who cannot see an image](https://support.microsoft.com/fi-FI/accessibility/office-accessibility/add-alternative-text-to-a-shape-picture-chart-smartart-graphic-or-other-object). | verified |
+| `F-fi-081` | `fi` | `a11y.dropCreateColumnLeft` | prospective drag context / accessibility | `"Luo sarakkeen vasemmalle"` | `"Kun pudotat, vasemmalle luodaan sarake"` | The live region announces a prospective result while the pointer hovers before drop; the current phrase is neither a clear future result nor a grammatical imperative. | verified |
+| `F-fi-082` | `fi` | `a11y.dropCreateColumnRight` | prospective drag context / accessibility | `"Luo sarakkeen oikealle"` | `"Kun pudotat, oikealle luodaan sarake"` | The live region announces a prospective result while the pointer hovers before drop; the current phrase is neither a clear future result nor a grammatical imperative. | verified |
+| `F-fi-083` | `fi` | `tools.linkPaste.embedVideo` | provider composition / grammar | `"Upota {provider}-video"` | `"Upota video palvelusta {provider}"` | The caller substitutes multiword providers such as `VK Video` and `Tencent Video`; provider-final grammar avoids malformed compounds while preserving `{provider}`. | verified |
+| `F-fi-084` | `fi` | `tools.linkPaste.embedAudio` | provider composition / grammar | `"Upota {provider}-äänite"` | `"Upota äänite palvelusta {provider}"` | The caller substitutes multiword providers such as `Apple Music` and `Pocket Casts`; provider-final grammar avoids malformed compounds while preserving `{provider}`. | verified |
+| `F-fi-085` | `fi` | `tools.linkPaste.embedSocial` | provider composition / grammar | `"Upota {provider}-julkaisu"` | `"Upota julkaisu palvelusta {provider}"` | The provider registry includes multiword social-service names; provider-final grammar remains correct for every literal substitution and preserves `{provider}`. | verified |
+| `F-fi-086` | `fi` | `tools.linkPaste.embedDocument` | provider composition / grammar | `"Upota {provider}-dokumentti"` | `"Upota dokumentti palvelusta {provider}"` | Literal substitution currently produces malformed multiword compounds such as `Google Drive-dokumentti`; provider-final grammar preserves `{provider}` and works for every registry entry. | verified |
+| `F-fi-087` | `fi` | `tools.linkPaste.embedTable` | provider composition / grammar | `"Upota {provider}-taulukko"` | `"Upota taulukko palvelusta {provider}"` | Literal substitution currently produces malformed multiword compounds such as `Google Sheets-taulukko`; provider-final grammar preserves `{provider}` and works for every registry entry. | verified |
+| `F-fi-088` | `fi` | `tools.linkPaste.embedForm` | provider composition / grammar | `"Upota {provider}-lomake"` | `"Upota lomake palvelusta {provider}"` | Literal substitution currently produces malformed multiword compounds such as `Google Forms-lomake`; provider-final grammar preserves `{provider}` and works for every registry entry. | verified |
+| `F-fi-089` | `fi` | `tools.linkPaste.embedCode` | provider composition / grammar | `"Upota {provider}-koodi"` | `"Upota koodi palvelusta {provider}"` | The provider registry includes multiword code-service names; provider-final grammar remains correct for every literal substitution and preserves `{provider}`. | verified |
+| `F-fi-090` | `fi` | `tools.linkPaste.embedChart` | provider composition / grammar | `"Upota {provider}-kaavio"` | `"Upota kaavio palvelusta {provider}"` | Literal substitution includes multiword providers such as `Our World in Data`; provider-final grammar remains correct and preserves `{provider}`. | verified |
+| `F-fi-091` | `fi` | `tools.linkPaste.embedMap` | provider composition / grammar | `"Upota {provider}-kartta"` | `"Upota kartta palvelusta {provider}"` | Literal substitution includes multiword providers such as `ArcGIS StoryMaps`; provider-final grammar remains correct and preserves `{provider}`. | verified |
 | `F-fil-001` | `fil` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"I-clear ang pag-format"` | Google’s official Filipino Gmail UI uses the exact toolbar option [I-clear ang pag-format](https://support.google.com/mail/answer/8260?co=GENIE.Platform%3DAndroid&hl=fil), matching this dictionary’s existing clear-action register. | verified |
 | `F-fr-125` | `fr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Effacer la mise en forme"` | Microsoft’s French editor UI uses the exact concise command [Effacer la mise en forme](https://support.microsoft.com/fr-fr/office/effacer-toute-la-mise-en-forme-du-texte-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
 | `F-fr-126` | `fr` | `tools.colorPicker.defaultSwatchLabel` | punctuation / caller composition | `"{mode} {default}"` | `"{mode} : {default}"` | The caller otherwise produces an ungrammatical adjacency such as `Couleur du texte Par défaut`; the French non-breaking-space colon creates a clear label/value relationship. | verified |
@@ -2199,6 +2411,84 @@ follows the global transition rule above.
 | `F-pl-001` | `pl` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Wyczyść formatowanie"` | Microsoft’s Polish editor UI uses the exact command [Wyczyść formatowanie](https://support.microsoft.com/pl-PL/PowerPoint/clear-all-text-formatting). | verified |
 | `F-ps-001` | `ps` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"بڼه پاکه کړئ"` | WordPress Pashto translates Clear formatting as `بڼه پاکه کړه` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/ps/default/export-translations/?format=po); the final verb is adjusted to this dictionary’s polite imperative register. | verified |
 | `F-pt-001` | `pt` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Limpar formatação"` | Microsoft’s Brazilian Portuguese editor UI uses Limpar Formatação in [official product help](https://support.microsoft.com/pt-BR/PowerPoint/clear-all-text-formatting); the second word is lowercased for the dictionary’s sentence-case register. | verified |
+| `F-pt-002` | `pt` | `blockSettings.convertWithChildrenWarning` | count neutrality / source synchronization | `"Este bloco contém {count} blocos aninhados. Ao convertê-lo, eles passarão para o nível superior. Deseja continuar?"` | `"Blocos aninhados: {count}. Ao converter este bloco, cada bloco aninhado será movido para o nível superior. Deseja continuar?"` | The confirmation can receive one nested block; the replacement remains grammatical for every `{count}` and states the move performed by conversion. | verified |
+| `F-pt-003` | `pt` | `toolbox.optionAddAbove` | shortcut clarity | `"⌥ — adicionar acima"` | `"⌥ + clique para adicionar acima"` | The plus-button tooltip requires a modified click, not the Option key alone; [Apple’s Brazilian Portuguese guidance](https://support.apple.com/pt-br/guide/mac-help/-mh35859/mac) names Option-click as `Opção + clique`. | verified |
+| `F-pt-004` | `pt` | `toolbox.ctrlAddAbove` | shortcut clarity | `"Ctrl — adicionar acima"` | `"Ctrl + clique para adicionar acima"` | The Windows plus-button tooltip omitted the click gesture required by the shortcut. | verified |
+| `F-pt-005` | `pt` | `tools.marker.textColor` | context / terminology | `"Texto"` | `"Cor do texto"` | This color-picker mode sits beside the background mode and must explicitly identify text color. | verified |
+| `F-pt-006` | `pt` | `tools.colorPicker.defaultSwatchLabel` | accessibility / composed-label clarity | `"{mode} {default}"` | `"{mode}: {default}"` | The swatch accessible name combines a color mode with the default label; the colon exposes that relationship instead of running the two labels together. | verified |
+| `F-pt-007` | `pt` | `tools.colorPicker.colorSwatchLabel` | accessibility / composed-label clarity | `"{mode} {color}"` | `"{mode}: {color}"` | Each swatch accessible name combines its mode and color; the colon makes the two substituted labels unambiguous. | verified |
+| `F-pt-008` | `pt` | `tools.paragraph.placeholder` | action clarity | `"Escreva algo ou pressione / para selecionar"` | `"Escreva algo ou pressione / para selecionar uma ferramenta"` | Pressing slash opens the tool selector, so the empty-paragraph hint needs the object of `selecionar`. | verified |
+| `F-pt-009` | `pt` | `tools.toggle.placeholder` | tool terminology | `"Recolhível"` | `"Lista recolhível"` | The value labels the empty toggle tool; naming it as a collapsible list is clearer than the standalone adjective. | verified |
+| `F-pt-010` | `pt` | `tools.toggle.bodyPlaceholder` | action clarity / source synchronization | `"Bloco recolhível vazio. Clique ou arraste blocos para dentro."` | `"Bloco recolhível vazio. Clique para adicionar um bloco ou arraste blocos para cá."` | Clicking creates a child block, while dragging moves existing blocks into the toggle; the hint must distinguish those two caller actions. | verified |
+| `F-pt-011` | `pt` | `tools.table.clearSelection` | context / action accuracy | `"Limpar"` | `"Limpar conteúdo"` | The table command clears selected cells’ contents while preserving cells and formatting; deletion is a separate action. | verified |
+| `F-pt-012` | `pt` | `tools.table.placement` | table-control terminology | `"Posicionamento"` | `"Alinhamento"` | This label heads the 3×3 cell-content alignment control, matching Adobe’s Brazilian Portuguese [Alinhamento](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html) terminology. | verified |
+| `F-pt-013` | `pt` | `tools.table.placementTopLeft` | established alignment terminology | `"Superior esquerdo"` | `"Canto superior esquerdo"` | The 3×3 alignment option denotes the corner position; Adobe’s Brazilian Portuguese UI uses [Canto superior esquerdo](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html). | verified |
+| `F-pt-014` | `pt` | `tools.table.placementTopCenter` | established alignment terminology | `"Superior centro"` | `"Centro superior"` | The 3×3 alignment option uses the established Brazilian Portuguese order [Centro superior](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html). | verified |
+| `F-pt-015` | `pt` | `tools.table.placementTopRight` | established alignment terminology | `"Superior direito"` | `"Canto superior direito"` | The 3×3 alignment option denotes the corner position; Adobe’s Brazilian Portuguese UI uses [Canto superior direito](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html). | verified |
+| `F-pt-016` | `pt` | `tools.table.placementMiddleLeft` | established alignment terminology | `"Meio esquerdo"` | `"Centro esquerdo"` | The 3×3 alignment option uses Adobe’s Brazilian Portuguese [Centro esquerdo](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html) label. | verified |
+| `F-pt-017` | `pt` | `tools.table.placementMiddleRight` | established alignment terminology | `"Meio direito"` | `"Centro direito"` | The 3×3 alignment option uses Adobe’s Brazilian Portuguese [Centro direito](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html) label. | verified |
+| `F-pt-018` | `pt` | `tools.table.placementBottomLeft` | established alignment terminology | `"Inferior esquerdo"` | `"Canto inferior esquerdo"` | The 3×3 alignment option denotes the corner position; Adobe’s Brazilian Portuguese UI uses [Canto inferior esquerdo](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html). | verified |
+| `F-pt-019` | `pt` | `tools.table.placementBottomCenter` | established alignment terminology | `"Inferior centro"` | `"Centro inferior"` | The 3×3 alignment option uses the established Brazilian Portuguese order [Centro inferior](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html). | verified |
+| `F-pt-020` | `pt` | `tools.table.placementBottomRight` | established alignment terminology | `"Inferior direito"` | `"Canto inferior direito"` | The 3×3 alignment option denotes the corner position; Adobe’s Brazilian Portuguese UI uses [Canto inferior direito](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html). | verified |
+| `F-pt-021` | `pt` | `a11y.dragHandle` | accessibility / object clarity | `"Arraste para mover ou clique para abrir o menu"` | `"Arraste para mover o bloco ou clique para abrir o menu"` | This is the block drag handle’s accessible instruction; naming the block makes the movement action complete. | verified |
+| `F-pt-022` | `pt` | `a11y.dragHandleRole` | accessibility terminology | `"controle de arrastar"` | `"alça de arrasto"` | The value is the drag handle’s role description; MDN’s Brazilian Portuguese reference uses [alça de arrasto](https://developer.mozilla.org/pt-BR/docs/Web/HTML/Reference/Elements/textarea). | verified |
+| `F-pt-023` | `pt` | `a11y.dropPosition` | prospective drag context / accessibility | `"Será solto na posição {position} de {total}"` | `"Posição de destino: {position} de {total}"` | The live region announces the prospective drop target during dragging; the replacement labels the destination without an unnatural passive construction. | verified |
+| `F-pt-024` | `pt` | `a11y.movedUp` | grammar / accessibility | `"Bloco movido para cima, posição {position} de {total}"` | `"Bloco movido para cima até a posição {position} de {total}"` | This live-region message reports completed keyboard movement; `até` states the resulting position naturally. | verified |
+| `F-pt-025` | `pt` | `a11y.movedDown` | grammar / accessibility | `"Bloco movido para baixo, posição {position} de {total}"` | `"Bloco movido para baixo até a posição {position} de {total}"` | This live-region message reports completed keyboard movement; `até` states the resulting position naturally. | verified |
+| `F-pt-026` | `pt` | `a11y.atTop` | accessibility / boundary context | `"Não é possível subir mais"` | `"O bloco já está no topo e não pode ser movido mais para cima"` | The failed move announcement must identify the block, its current boundary, and the unavailable direction. | verified |
+| `F-pt-027` | `pt` | `a11y.atBottom` | accessibility / boundary context | `"Não é possível descer mais"` | `"O bloco já está no fim e não pode ser movido mais para baixo"` | The failed move announcement must identify the block, its current boundary, and the unavailable direction. | verified |
+| `F-pt-028` | `pt` | `a11y.searchResults` | accessibility / number neutrality | `"{count} resultados"` | `"Resultados da pesquisa: {count}"` | The live-region template can receive one result; putting the count after a fixed label avoids singular/plural disagreement and identifies the search context. | verified |
+| `F-pt-029` | `pt` | `a11y.allBlocksSelected` | accessibility / number neutrality | `"Todos os blocos selecionados, {count} blocos"` | `"Todos os blocos selecionados. Total: {count}"` | The select-all live-region template can receive one; the fixed total label remains grammatical for every `{count}`. | verified |
+| `F-pt-030` | `pt` | `a11y.navigationModeEntered` | keyboard terminology / instruction clarity | `"Modo de navegação. Use as teclas de seta para mover entre blocos, Enter para editar, Escape para sair."` | `"Modo de navegação. Use as teclas de seta para navegar entre os blocos. Pressione Enter para editar e Esc para sair."` | This live instruction describes keyboard navigation; complete sentences and the visible key label `Esc` make all three actions explicit. | verified |
+| `F-pt-031` | `pt` | `a11y.navigatedToBlock` | event accuracy / accessibility | `"Movido para o bloco"` | `"Navegou até o bloco"` | The live region reports focus navigation, not movement of the block itself. | verified |
+| `F-pt-032` | `pt` | `tools.callout.addEmoji` | context / terminology | `"Adicionar emoji"` | `"Adicionar ícone"` | In the callout UI, the chosen emoji functions as the callout’s editable and removable icon. | verified |
+| `F-pt-033` | `pt` | `tools.callout.filterEmojis` | search clarity / accessibility | `"Pesquisar…"` | `"Pesquisar emojis…"` | The value is both the emoji searchbox placeholder and accessible name, so it must state what is searched. | verified |
+| `F-pt-034` | `pt` | `tools.callout.pickRandom` | action clarity / accessibility | `"Aleatório"` | `"Escolher um emoji aleatório"` | The dice button’s accessible label must name both the action and its emoji object. | verified |
+| `F-pt-035` | `pt` | `tools.callout.emojiCategoryActivity` | emoji-category terminology / number | `"Atividade"` | `"Atividades"` | The emoji picker renders a category containing multiple activities, so its heading requires the plural. | verified |
+| `F-pt-036` | `pt` | `toolNames.equation` | untranslated source text | `"Equation"` | `"Equação"` | The toolbox title is visible Portuguese UI, but the current value leaks the English tool name. | verified |
+| `F-pt-037` | `pt` | `tools.equation.placeholder` | untranslated source text | `"Enter a LaTeX formula…"` | `"Insira uma fórmula LaTeX…"` | The empty equation editor displays this instruction; Notion’s Brazilian Portuguese math help uses [fórmulas LaTeX](https://www.notion.com/pt/help/math-equations). | verified |
+| `F-pt-038` | `pt` | `tools.code.searchLanguage` | number / ellipsis typography | `"Pesquisar linguagem..."` | `"Pesquisar linguagens…"` | The code-language picker searches across multiple languages, and its input uses the corpus-standard ellipsis character. | verified |
+| `F-pt-039` | `pt` | `tools.link.linkTitle` | context / terminology | `"Título do link"` | `"Texto do link"` | This field edits the anchor’s visible text, not title metadata. | verified |
+| `F-pt-040` | `pt` | `tools.image.converting` | untranslated source text | `"Converting…"` | `"Convertendo…"` | The rendered image-conversion progress state currently leaks English into the Portuguese UI. | verified |
+| `F-pt-041` | `pt` | `tools.image.altDescription` | accessibility / brevity / source synchronization | `"Adicione um texto alternativo para descrever esta imagem. Isso torna a página mais acessível para pessoas com deficiência visual."` | `"Descreva esta imagem para quem não consegue vê-la."` | The alternative-text dialog already establishes the feature; the replacement is direct, concise, and centered on the person who needs the description. | verified |
+| `F-pt-042` | `pt` | `tools.image.previewControls` | accessibility / object clarity | `"Controles da pré-visualização"` | `"Controles da pré-visualização da imagem"` | This value labels the image preview toolbar for assistive technology and must identify which preview it controls. | verified |
+| `F-pt-043` | `pt` | `tools.image.errorFileTooLarge` | untranslated source text / error clarity | `"Image is too large. {size} exceeds the {max} limit."` | `"A imagem é muito grande. {size} excede o limite de {max}."` | The image-upload error is rendered to Portuguese users and must preserve both size placeholders while translating the leaked English text. | verified |
+| `F-pt-044` | `pt` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"A URL retornou um erro. Tente outra fonte ou reenvie o arquivo."` | `"Não foi possível carregar a imagem a partir desta URL. Tente outra origem ou envie o arquivo novamente."` | The image loader failed, not the URL itself; the replacement describes that failure directly and gives natural recovery actions. | verified |
+| `F-pt-045` | `pt` | `tools.file.errorFileTooLarge` | untranslated source text / error clarity | `"File is too large. {size} exceeds the {max} limit."` | `"O arquivo é muito grande. {size} excede o limite de {max}."` | The file-upload error is rendered to Portuguese users and must preserve both size placeholders while translating the leaked English text. | verified |
+| `F-pt-046` | `pt` | `tools.file.previewRaw` | tab terminology / source synchronization | `"Código"` | `"Código-fonte"` | This Markdown preview tab shows the file’s source text; `Código-fonte` identifies that content more precisely than generic `Código`. | verified |
+| `F-pt-047` | `pt` | `tools.file.previewRender` | tab terminology / source synchronization | `"Visualização"` | `"Pré-visualização"` | This tab shows the rendered Markdown preview and should match the dictionary’s established `pré-visualização` terminology. | verified |
+| `F-pt-048` | `pt` | `tools.video.alignmentLeft` | action-label grammar | `"Esquerda"` | `"Alinhar à esquerda"` | This value is a video alignment menu command, not a passive alignment-state label. | verified |
+| `F-pt-049` | `pt` | `tools.video.alignmentCenter` | action-label grammar | `"Centro"` | `"Alinhar ao centro"` | This value is a video alignment menu command, not a passive alignment-state label. | verified |
+| `F-pt-050` | `pt` | `tools.video.alignmentRight` | action-label grammar | `"Direita"` | `"Alinhar à direita"` | This value is a video alignment menu command, not a passive alignment-state label. | verified |
+| `F-pt-051` | `pt` | `tools.video.errorFileTooLarge` | untranslated source text / error clarity | `"Video is too large. {size} exceeds the {max} limit."` | `"O vídeo é muito grande. {size} excede o limite de {max}."` | The video-upload error is rendered to Portuguese users and must preserve both size placeholders while translating the leaked English text. | verified |
+| `F-pt-052` | `pt` | `tools.audio.alignmentLeft` | action-label grammar | `"Esquerda"` | `"Alinhar à esquerda"` | This value is an audio alignment menu command, not a passive alignment-state label. | verified |
+| `F-pt-053` | `pt` | `tools.audio.alignmentCenter` | action-label grammar | `"Centro"` | `"Alinhar ao centro"` | This value is an audio alignment menu command, not a passive alignment-state label. | verified |
+| `F-pt-054` | `pt` | `tools.audio.alignmentRight` | action-label grammar | `"Direita"` | `"Alinhar à direita"` | This value is an audio alignment menu command, not a passive alignment-state label. | verified |
+| `F-pt-055` | `pt` | `tools.audio.errorFileTooLarge` | untranslated source text / error clarity | `"Audio is too large. {size} exceeds the {max} limit."` | `"O arquivo de áudio é muito grande. {size} excede o limite de {max}."` | The audio-upload error is rendered to Portuguese users and must preserve both size placeholders while translating the leaked English text. | verified |
+| `F-pt-056` | `pt` | `tools.audio.titlePlaceholder` | untranslated source text | `"Track title"` | `"Título da faixa"` | The audio metadata title input currently displays an English placeholder in the Portuguese UI. | verified |
+| `F-pt-057` | `pt` | `tools.audio.artistPlaceholder` | untranslated source text | `"Artist"` | `"Artista"` | The audio metadata artist input currently displays an English placeholder in the Portuguese UI. | verified |
+| `F-pt-058` | `pt` | `tools.audio.emptyOrDropHere` | object clarity | `"ou solte um áudio aqui"` | `"ou solte um arquivo de áudio aqui"` | This drop-zone instruction accepts an audio file; naming the file is the natural and precise Portuguese construction. | verified |
+| `F-pt-059` | `pt` | `tools.audio.coverChange` | untranslated source text | `"Change cover"` | `"Alterar capa"` | The audio cover action currently leaks English into the Portuguese menu. | verified |
+| `F-pt-060` | `pt` | `tools.audio.coverSet` | untranslated source text | `"Set cover image"` | `"Definir imagem de capa"` | The action that selects an audio cover image currently leaks English into the Portuguese UI. | verified |
+| `F-pt-061` | `pt` | `tools.audio.coverRemove` | untranslated source text | `"Remove cover"` | `"Remover capa"` | The audio cover removal action currently leaks English into the Portuguese menu. | verified |
+| `F-pt-062` | `pt` | `tools.audio.coverErrorType` | untranslated source text | `"Choose an image file"` | `"Escolha um arquivo de imagem"` | The cover-file type error is rendered to Portuguese users but currently remains in English. | verified |
+| `F-pt-063` | `pt` | `tools.audio.coverErrorTooLarge` | untranslated source text | `"Image is too large"` | `"A imagem é muito grande"` | The oversized-cover error is rendered to Portuguese users but currently remains in English. | verified |
+| `F-pt-064` | `pt` | `tools.audio.coverAdd` | untranslated source text | `"Add a cover"` | `"Adicionar uma capa"` | The empty audio-cover control currently exposes an English action label. | verified |
+| `F-pt-065` | `pt` | `tools.audio.coverSourceAria` | accessibility / object clarity | `"Origem da imagem"` | `"Origem da capa"` | This accessible label belongs specifically to the audio cover-source control, not to a generic image-source picker. | verified |
+| `F-pt-066` | `pt` | `tools.database.viewTypeListDescription` | context / source synchronization | `"Uma visão linear simples"` | `"Exibir itens em uma lista simples"` | The database view picker needs an action-oriented description that preserves the familiar list concept; Notion’s Brazilian Portuguese database guidance uses [itens and lista](https://www.notion.com/pt/help/database-properties). | verified |
+| `F-pt-067` | `pt` | `tools.database.propertyTypeSelect` | property-type terminology | `"Seleção"` | `"Selecionar"` | This value names the Select property type in the database property menu; Notion’s Brazilian Portuguese UI uses [Selecionar](https://www.notion.com/pt/help/database-properties). | verified |
+| `F-pt-068` | `pt` | `tools.database.defaultStatusProperty` | established product terminology | `"Estado"` | `"Status"` | This is the default database status-property name; Notion’s Brazilian Portuguese documentation uses [Status](https://www.notion.com/pt/help/database-properties). | verified |
+| `F-pt-069` | `pt` | `tools.bookmark.loading` | progress punctuation / source synchronization | `"Carregando pré-visualização do link"` | `"Carregando pré-visualização do link…"` | The rendered in-progress bookmark state needs the corpus-standard ellipsis. | verified |
+| `F-pt-070` | `pt` | `tools.embed.empty` | read-only context / source synchronization | `"Cole um link para incorporar"` | `"Nenhum link incorporado"` | The caller renders this only for an empty embed in read-only mode, where a paste instruction is impossible. | verified |
+| `F-pt-071` | `pt` | `tools.linkPaste.embed` | established action terminology / source-only contract | `"Criar incorporação"` | `"Criar integração"` | This paste-menu action creates an embed; Notion’s Brazilian Portuguese media help uses the exact command [Criar integração](https://www.notion.com/pt/help/images-files-and-media). | verified |
+| `F-pt-072` | `pt` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Menção"` | `"Mencionar"` | `buildPasteMenuItems` requires an action label; Notion’s Brazilian Portuguese editing help uses [Mencionar](https://www.notion.com/pt/help/writing-and-editing-basics). | verified |
+| `F-pt-073` | `pt` | `notifier.dismiss` | control semantics / accessibility | `"Dispensar"` | `"Fechar"` | The caller applies this label to the notification’s × close button, so the value must name the close action even though that notifier currently bypasses locale injection. | verified |
+| `F-pt-074` | `pt` | `tools.video.seek` | accessibility / media terminology | `"Buscar"` | `"Posição da reprodução"` | This value labels the video seek slider rather than a search or one-shot seek command; Google’s Portuguese media help describes the control as the [posição da reprodução](https://support.google.com/drive/answer/12169158?hl=pt-BR_ALL). | verified |
+| `F-pt-075` | `pt` | `tools.video.toggleTimeDisplay` | accessibility / source synchronization | `"Alternar exibição de tempo"` | `"Alternar entre o tempo decorrido e o tempo restante"` | The time-display button’s accessible name must identify both actual states; Apple’s Brazilian Portuguese player guidance uses [tempo decorrido and tempo restante](https://support.apple.com/pt-br/guide/tvapp/atvbfbcc3987/web). | verified |
+| `F-pt-076` | `pt` | `tools.video.pip` | established media terminology | `"Imagem em imagem"` | `"Picture-in-picture"` | The player button invokes the standard mode that Google’s Brazilian Portuguese media help calls [Picture-in-picture](https://support.google.com/drive/answer/12169158?hl=pt-BR_ALL). | verified |
+| `F-pt-077` | `pt` | `tools.video.ctxCopyUrlAtTime` | context / media terminology | `"Copiar URL do vídeo no tempo atual"` | `"Copiar URL do vídeo na posição de reprodução atual"` | The context-menu action copies a URL for the current playback head; `tempo atual` can instead mean wall-clock time. | verified |
+| `F-pt-078` | `pt` | `tools.video.ctxStats` | slang / terminology / source synchronization | `"Estatísticas para nerds"` | `"Estatísticas de reprodução"` | The context-menu item opens playback data; the replacement removes prohibited slang and identifies the data’s domain. | verified |
+| `F-pt-079` | `pt` | `tools.callout.emojiSearchResults` | number / accessibility / source synchronization | `"{count} emojis encontrados"` | `"Resultados da pesquisa de emojis: {count}"` | The emoji-search live-region template can receive one; the label-before-count form remains grammatical for every result count. | verified |
 | `F-ro-001` | `ro` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Șterge formatarea"` | Google Docs uses `Șterge formatarea textului` in [Romanian help](https://support.google.com/docs/answer/179738?co=GENIE.Platform%3DDesktop&hl=ro), and [CKEditor independently uses the concise form](https://github.com/ckeditor/ckeditor5/blob/master/packages/ckeditor5-remove-format/lang/translations/ro.po#L14-L16) selected for this toolbar. | verified |
 | `F-ru-001` | `ru` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Очистить форматирование"` | Microsoft’s Russian editor UI uses the exact concise formatting-clear command in [official Word help](https://support.microsoft.com/ru-ru/office/%D0%B4%D0%BE%D0%B1%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5-%D1%8D%D1%84%D1%84%D0%B5%D0%BA%D1%82%D0%B0-%D1%82%D0%B5%D0%BA%D1%81%D1%82%D1%83-%D0%BA%D0%BE%D0%BD%D1%82%D1%83%D1%80%D0%B0-%D1%82%D0%B5%D0%BD%D0%B8-%D0%BE%D1%82%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F-%D0%B8%D0%BB%D0%B8-%D1%81%D0%B2%D0%B5%D1%87%D0%B5%D0%BD%D0%B8%D1%8F-%D0%B2-word-3f3a758e-d255-4ba7-94f8-a3ee78fddfe1). | verified |
 | `F-ru-002` | `ru` | `blockSettings.dragToMove` | gesture terminology | `"Тяните, чтобы переместить"` | `"Перетащите, чтобы переместить"` | The standard Russian UI verb for a drag gesture is `Перетащите`. | verified |
@@ -2420,7 +2710,95 @@ follows the global transition rule above.
 | `F-vi-001` | `vi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Xóa định dạng"` | Microsoft’s Vietnamese help uses `Xóa định dạng khỏi văn bản` for the operation in [official product documentation](https://support.microsoft.com/vi-VN/PowerPoint/clear-all-text-formatting); the toolbar-sized label retains its established core term. | verified |
 | `F-yi-001` | `yi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"אַראָפּנעם די פֿאָרמאַטירונג"` | No authoritative localized vendor label was found. The selected wording deliberately reuses this dictionary’s `אַראָפּנעם דעם לינק` action pattern and `פֿאָרמאַטירונג` noun; it is the migration’s highest-uncertainty value and remains flagged for independent full-language review. | verified |
 | `F-zh-001` | `zh` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"清除格式"` | Microsoft’s Simplified Chinese editor UI uses the exact concise command [清除格式](https://support.microsoft.com/zh-CN/PowerPoint/clear-all-text-formatting). | verified |
+| `F-zh-002` | `zh` | `toolbox.optionAddAbove` | shortcut clarity | `"⌥ 在上方添加"` | `"按住 Option 键点击以在上方添加"` | The plus-button tooltip must name the modified click gesture; Apple’s Simplified Chinese guidance describes the same gesture as holding Option while clicking. | verified |
+| `F-zh-003` | `zh` | `toolbox.ctrlAddAbove` | shortcut clarity | `"Ctrl 在上方添加"` | `"按住 Ctrl 键点击以在上方添加"` | The Windows tooltip omitted the click gesture required by the shortcut. | verified |
+| `F-zh-004` | `zh` | `tools.marker.textColor` | terminology | `"文字"` | `"文字颜色"` | The shared color picker needs an explicit text-color mode label to distinguish it from the adjacent background mode. | verified |
+| `F-zh-005` | `zh` | `tools.toggle.bodyPlaceholder` | action clarity / source synchronization | `"空的折叠块。点击或将块拖入其中。"` | `"空折叠块。点击添加内容块，或将内容块拖到此处。"` | The click action creates a child block; the old hint never stated that result. | verified |
+| `F-zh-006` | `zh` | `blockSettings.lastEditedBy` | grammar | `"{name} 上次编辑"` | `"最后由 {name} 编辑"` | The old word order reads as though `{name}` is the subject of an incomplete “last edited” statement rather than the editor attribution. | verified |
+| `F-zh-007` | `zh` | `a11y.dragHandle` | accessibility / missing object | `"拖动移动或点击打开菜单"` | `"拖动以移动内容块，或点击打开菜单"` | The drag-handle accessible name must identify the block being moved and separate its two actions naturally. | verified |
+| `F-zh-008` | `zh` | `tools.table.clearSelection` | context / source synchronization | `"清除"` | `"清除内容"` | The command clears selected cells’ contents while preserving their structure and formatting; row and column deletion are separate actions. | verified |
+| `F-zh-009` | `zh` | `tools.callout.addEmoji` | terminology / source synchronization | `"添加表情"` | `"添加图标"` | The callout UI presents the selected emoji as its editable and removable icon. | verified |
+| `F-zh-010` | `zh` | `tools.callout.filterEmojis` | search clarity / accessibility / source synchronization | `"搜索…"` | `"搜索表情符号…"` | The value is both the placeholder and accessible name of an emoji searchbox and must state what is searched. | verified |
+| `F-zh-011` | `zh` | `tools.callout.pickRandom` | action clarity / accessibility / source synchronization | `"随机"` | `"随机选择表情符号"` | The dice button needs a complete action and object instead of a bare adjective. | verified |
+| `F-zh-012` | `zh` | `tools.table.placement` | terminology / source synchronization | `"位置"` | `"对齐方式"` | The picker controls horizontal and vertical alignment inside selected cells, not their position in the table. | verified |
+| `F-zh-013` | `zh` | `tools.table.placementTopCenter` | naturalness | `"居中上"` | `"顶部居中"` | Chinese spatial modifiers precede the alignment state in this cell-alignment label. | verified |
+| `F-zh-014` | `zh` | `tools.table.placementMiddleLeft` | naturalness | `"左中"` | `"左侧居中"` | The old clipped coordinate is not a natural UI label for middle-left alignment. | verified |
+| `F-zh-015` | `zh` | `tools.table.placementMiddleRight` | naturalness | `"右中"` | `"右侧居中"` | The old clipped coordinate is not a natural UI label for middle-right alignment. | verified |
+| `F-zh-016` | `zh` | `tools.table.placementBottomCenter` | naturalness | `"居中下"` | `"底部居中"` | Chinese spatial modifiers precede the alignment state in this cell-alignment label. | verified |
+| `F-zh-017` | `zh` | `toolNames.equation` | pending translation / tool name | `"Equation"` | `"公式"` | The inline equation tool retained an English fallback instead of the standard concise Chinese mathematical term. | verified |
+| `F-zh-018` | `zh` | `tools.equation.placeholder` | pending translation / hint | `"Enter a LaTeX formula…"` | `"输入 LaTeX 公式…"` | Localizes the complete input instruction while retaining the LaTeX product name. | verified |
+| `F-zh-019` | `zh` | `tools.code.searchLanguage` | punctuation / source synchronization | `"搜索语言..."` | `"搜索语言…"` | The continuing search input must use the corpus-standard U+2026 ellipsis. | verified |
+| `F-zh-020` | `zh` | `tools.link.linkTitle` | context / terminology / source synchronization | `"链接标题"` | `"链接文本"` | The field changes the anchor’s visible text, not title metadata. | verified |
+| `F-zh-021` | `zh` | `tools.image.converting` | pending translation / progress | `"Converting…"` | `"正在转换…"` | The visible image-processing progress state retained an English fallback. | verified |
+| `F-zh-022` | `zh` | `tools.image.altDescription` | accessibility / brevity / source synchronization | `"添加替代文本以描述此图片。这能让页面对视障或失明用户更易访问。"` | `"为看不到这张图片的用户描述图片。"` | The dialog already establishes alternative text; the corrected source is shorter, direct, and centered on the people who need the description. | verified |
+| `F-zh-023` | `zh` | `tools.image.errorFileTooLarge` | pending translation / error | `"Image is too large. {size} exceeds the {max} limit."` | `"图片过大。{size} 超过 {max} 上限。"` | Localizes the image-size error while preserving both placeholders exactly. | verified |
+| `F-zh-024` | `zh` | `tools.image.errorSourceOffline` | semantics / error recovery | `"来源可能已更改或离线。"` | `"源文件可能已移动或离线。"` | A generic “source” cannot itself go offline or move; the message refers to the remote source file. | verified |
+| `F-zh-025` | `zh` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"URL 返回错误。请尝试其他来源或重新上传文件。"` | `"无法从此 URL 加载图片。请尝试其他来源或重新上传文件。"` | The corrected source identifies the failed image load directly instead of personifying the URL. | verified |
+| `F-zh-026` | `zh` | `tools.database.viewTypeListDescription` | terminology / source synchronization | `"简洁的线性视图"` | `"在简单列表中显示项目"` | The old abstract noun phrase omits the user action and familiar list concept supplied by the corrected source. | verified |
+| `F-zh-027` | `zh` | `tools.bookmark.loading` | progress punctuation / source synchronization | `"正在加载链接预览"` | `"正在加载链接预览…"` | The rendered in-progress state needs the corpus-standard ellipsis. | verified |
+| `F-zh-028` | `zh` | `tools.embed.empty` | read-only context / source synchronization | `"粘贴链接以嵌入"` | `"没有嵌入链接"` | The caller renders a read-only empty embed where a paste instruction is impossible. | verified |
+| `F-zh-029` | `zh` | `tools.file.errorFileTooLarge` | pending translation / error | `"File is too large. {size} exceeds the {max} limit."` | `"文件过大。{size} 超过 {max} 上限。"` | Localizes the file-size error while preserving both placeholders exactly. | verified |
+| `F-zh-030` | `zh` | `tools.file.previewRaw` | terminology / source synchronization | `"源文件"` | `"源文本"` | This Markdown-preview tab shows source text rather than a separate source file. | verified |
+| `F-zh-031` | `zh` | `tools.video.errorFileTooLarge` | pending translation / error | `"Video is too large. {size} exceeds the {max} limit."` | `"视频过大。{size} 超过 {max} 上限。"` | Localizes the video-size error while preserving both placeholders exactly. | verified |
+| `F-zh-032` | `zh` | `tools.audio.errorFileTooLarge` | pending translation / error | `"Audio is too large. {size} exceeds the {max} limit."` | `"音频文件过大。{size} 超过 {max} 上限。"` | Localizes the audio-size error, identifies the file resource, and preserves both placeholders exactly. | verified |
+| `F-zh-033` | `zh` | `tools.audio.titlePlaceholder` | pending translation / metadata | `"Track title"` | `"曲目标题"` | Localizes the audio metadata field with the standard Chinese term for a track title. | verified |
+| `F-zh-034` | `zh` | `tools.audio.artistPlaceholder` | pending translation / metadata | `"Artist"` | `"艺人"` | Localizes the audio metadata field with the standard concise Chinese label. | verified |
+| `F-zh-035` | `zh` | `tools.audio.coverChange` | pending translation / action | `"Change cover"` | `"更换封面"` | Localizes the cover-art replacement action. | verified |
+| `F-zh-036` | `zh` | `tools.audio.coverSet` | pending translation / action | `"Set cover image"` | `"设置封面图片"` | Localizes the action and explicitly names the cover image. | verified |
+| `F-zh-037` | `zh` | `tools.audio.coverRemove` | pending translation / action | `"Remove cover"` | `"移除封面"` | Localizes the cover-art removal action. | verified |
+| `F-zh-038` | `zh` | `tools.audio.coverErrorType` | pending translation / error recovery | `"Choose an image file"` | `"选择图片文件"` | Localizes the wrong-file-type recovery instruction. | verified |
+| `F-zh-039` | `zh` | `tools.audio.coverErrorTooLarge` | pending translation / error | `"Image is too large"` | `"图片过大"` | Localizes the cover-image size error. | verified |
+| `F-zh-040` | `zh` | `tools.audio.coverAdd` | pending translation / action | `"Add a cover"` | `"添加封面"` | Localizes the empty-cover action. | verified |
+| `F-zh-041` | `zh` | `tools.audio.coverSourceAria` | accessibility / terminology consistency | `"图片来源"` | `"封面来源"` | The accessible tab-group name must identify the cover source selector rather than a generic image source. | verified |
+| `F-zh-042` | `zh` | `a11y.navigationModeEntered` | keyboard convention / accessibility | `"导航模式。使用方向键在内容块之间移动，Enter 编辑，Escape 退出。"` | `"导航模式。使用方向键在内容块之间移动，按 Enter 编辑，按 Esc 退出。"` | The instruction needs explicit key-press verbs and the conventional Chinese-platform `Esc` key name. | verified |
+| `F-zh-043` | `zh` | `tools.video.seek` | accessibility / media terminology | `"跳转"` | `"播放位置"` | The value labels a playback-position slider; the old action verb suggests a one-shot jump command. | verified |
+| `F-zh-044` | `zh` | `tools.video.seekValueText` | accessibility / naturalness | `"{total} 中的 {current}"` | `"当前位置 {current}，总时长 {total}"` | The slider’s spoken value needs a natural current-position and total-duration relationship. | verified |
+| `F-zh-045` | `zh` | `tools.video.toggleTimeDisplay` | accessibility / source synchronization | `"切换时间显示"` | `"在已播放时间和剩余时间之间切换"` | The accessible action must identify the two actual time-display states instead of exposing an abstract toggle. | verified |
+| `F-zh-046` | `zh` | `tools.video.ctxCopyUrlAtTime` | context / clarity | `"复制当前时间的视频网址"` | `"复制当前播放位置的视频网址"` | The copied URL targets the playback head, whereas “current time” can mean wall-clock time. | verified |
+| `F-zh-047` | `zh` | `tools.video.ctxStats` | slang / source synchronization | `"极客统计信息"` | `"播放统计信息"` | The corrected source deliberately removes the “geek” label and identifies the playback-data context. | verified |
+| `F-zh-048` | `zh` | `blockSettings.orConjunction` | composed shortcut grammar | `" 或 "` | `" 或按 "` | In the editable tooltip, this fragment precedes the raw shortcut notation; Simplified Chinese needs the key-press verb so the composition reads “click or press Ctrl+/”. Preserve both boundary spaces. | verified |
+| `F-zh-049` | `zh` | `blockSettings.openMenuAction` | composed action grammar | `" 打开菜单"` | `" 以打开菜单"` | This fragment completes both the click-only and click-or-shortcut tooltip lines; the purpose marker `以` makes both compositions grammatical while preserving the required leading space. | verified |
+| `F-zh-050` | `zh` | `a11y.dropPosition` | prospective drag context / accessibility | `"将移动至第 {position} 位，共 {total} 个"` | `"将放置在第 {position} 位，共 {total} 个"` | This announcement is spoken before drop; `放置` describes the prospective drop result instead of incorrectly announcing completed movement. | verified |
+| `F-zh-051` | `zh` | `blockSettings.convertWithChildrenWarning` | terminology / source synchronization | `"此内容块包含 {count} 个嵌套块。转换后，这些嵌套块将被提升至顶层。是否继续？"` | `"嵌套内容块：{count} 个。转换此内容块会将嵌套内容移至顶层。是否继续？"` | The corrected source avoids implementation-flavored “promote,” remains count-neutral, and states that conversion moves the nested content. | verified |
+| `F-zh-052` | `zh` | `tools.colorPicker.defaultSwatchLabel` | accessibility / label-value punctuation | `"{mode} {default}"` | `"{mode}：{default}"` | The color-picker caller inserts localized mode and default labels into one spoken tooltip; W3C’s [Chinese Layout Requirements](https://www.w3.org/TR/clreq/#punctuation_marks) identifies the native colon as U+FF1A `：`. Both placeholders remain intact. | verified |
+| `F-zh-053` | `zh` | `tools.colorPicker.colorSwatchLabel` | accessibility / label-value punctuation | `"{mode} {color}"` | `"{mode}：{color}"` | The swatch caller composes values such as “文字颜色：灰色”; a bare space leaves the adjacent nouns ambiguous, while W3C documents `：` as the native Chinese colon. Both placeholders remain intact. | verified |
+| `F-zh-054` | `zh` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖动控件"` | `"拖动手柄"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Mainland guidance uses the handle-specific term [拖动手柄](https://support.microsoft.com/zh-cn/teams/meetings/present-content-in-microsoft-teams-meetings). | verified |
+| `F-zh-055` | `zh` | `toolNames.todoList` | tool distinction / terminology | `"清单"` | `"待办清单"` | The visible tool and list-style title must distinguish a checklist from generic list tools; Notion’s Mainland catalog uses [待办清单](https://www.notion.com/zh-cn/templates/category/to-do-lists). | verified |
+| `F-zh-056` | `zh` | `tools.columns.turnInto` | source-only terminology consistency | `"转换为列"` | `"转换为分栏"` | The source-only label names the same side-by-side page-layout tool already localized as `分栏`; Microsoft likewise uses [分栏](https://support.microsoft.com/zh-cn/word/insert-a-column-break) for page columns, while `列` suggests a table column. | verified |
+| `F-zh-057` | `zh` | `toolNames.inlineCode` | tool distinction / terminology | `"代码"` | `"行内代码"` | The visible inline-toolbar title must distinguish this formatter from the code-block tool; MDN uses the explicit term [行内代码](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Reference/Elements/code). | verified |
+| `F-zh-058` | `zh` | `a11y.blocksDuplicated` | grammar / accessibility | `"已复制 {count} 个内容块，起始位置第 {position} 位"` | `"已复制 {count} 个内容块，起始位置为第 {position} 位"` | The assertive spoken announcement needs `为` between the topic `起始位置` and its ordinal complement; both placeholders remain unchanged. | verified |
 | `F-zh-TW-001` | `zh-TW` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"清除格式"` | Microsoft’s Taiwan Traditional Chinese editor UI uses the exact concise command [清除格式](https://support.microsoft.com/zh-TW/PowerPoint/clear-all-text-formatting). | verified |
+| `F-zh-TW-002` | `zh-TW` | `blockSettings.orConjunction` | composed shortcut grammar | `" 或 "` | `" 或按 "` | In the editable tooltip, this fragment precedes the raw shortcut notation; Taiwan Chinese needs the key-press verb so the composition reads “按一下或按 Ctrl+/”. Preserve both boundary spaces. | verified |
+| `F-zh-TW-003` | `zh-TW` | `blockSettings.openMenuAction` | composed action grammar | `" 開啟選單"` | `" 以開啟選單"` | This fragment completes both the click-only and click-or-shortcut tooltip lines; the purpose marker `以` makes both compositions grammatical while preserving the required leading space. | verified |
+| `F-zh-TW-004` | `zh-TW` | `tools.marker.textColor` | terminology / source synchronization | `"文字"` | `"文字顏色"` | The shared color picker needs an explicit text-color mode label to distinguish it from the adjacent background mode. | verified |
+| `F-zh-TW-005` | `zh-TW` | `tools.toggle.bodyPlaceholder` | action clarity / source synchronization | `"空白的收合區塊。按一下或將區塊拖曳至此。"` | `"空白收合區塊。按一下以新增區塊，或將區塊拖曳至此。"` | The click action creates a child block; the old hint never stated that result. | verified |
+| `F-zh-TW-006` | `zh-TW` | `tools.table.clearSelection` | context / source synchronization | `"清除"` | `"清除內容"` | The command clears selected cells’ contents while preserving structure and formatting; deletion is a separate action. | verified |
+| `F-zh-TW-007` | `zh-TW` | `tools.table.placement` | terminology / source synchronization | `"位置"` | `"對齊方式"` | The picker controls horizontal and vertical alignment inside selected cells, not their position in the table. | verified |
+| `F-zh-TW-008` | `zh-TW` | `a11y.dragHandle` | accessibility / missing object | `"拖曳以移動，或按一下以開啟選單"` | `"拖曳以移動區塊，或按一下以開啟選單"` | The drag-handle accessible name must identify the block being moved. | verified |
+| `F-zh-TW-009` | `zh-TW` | `a11y.navigationModeEntered` | keyboard convention / accessibility | `"導覽模式。使用方向鍵在區塊間移動，按 Enter 編輯，按 Escape 離開。"` | `"導覽模式。使用方向鍵在區塊間移動，按 Enter 編輯，按 Esc 離開。"` | Taiwan platform guidance uses the concise physical-key label `Esc`; the spoken instruction should match it. | verified |
+| `F-zh-TW-010` | `zh-TW` | `tools.callout.addEmoji` | terminology / source synchronization | `"新增表情符號"` | `"新增圖示"` | The callout UI presents the selected emoji as its editable and removable icon. | verified |
+| `F-zh-TW-011` | `zh-TW` | `tools.callout.filterEmojis` | search clarity / accessibility / source synchronization | `"搜尋…"` | `"搜尋表情符號…"` | The value is both the placeholder and accessible name of an emoji searchbox and must state what is searched. | verified |
+| `F-zh-TW-012` | `zh-TW` | `tools.callout.pickRandom` | action clarity / accessibility / source synchronization | `"隨機選取"` | `"隨機選取表情符號"` | The dice button needs a complete action and object. | verified |
+| `F-zh-TW-013` | `zh-TW` | `tools.link.linkTitle` | context / terminology / source synchronization | `"連結標題"` | `"連結文字"` | The field changes the anchor’s visible text, not title metadata. | verified |
+| `F-zh-TW-014` | `zh-TW` | `tools.image.altDescription` | accessibility / brevity / source synchronization | `"新增替代文字來描述此圖片，讓視障或全盲使用者也能理解內容。"` | `"為看不到這張圖片的使用者描述圖片。"` | The dialog already establishes alternative text; the corrected source is shorter, direct, and centered on the user who needs the description. | verified |
+| `F-zh-TW-015` | `zh-TW` | `tools.image.errorFileTooLarge` | error clarity | `"圖片大小為 {size}，上限為 {max}。"` | `"圖片太大。{size} 超過 {max} 上限。"` | The visible error must explicitly state that the current image exceeds the limit while preserving both placeholders. | verified |
+| `F-zh-TW-016` | `zh-TW` | `tools.image.errorSourceOffline` | semantics / error recovery | `"來源可能已移動或離線。"` | `"來源檔案可能已移動或離線。"` | A generic “source” cannot itself move or go offline; the message refers to the remote source file. | verified |
+| `F-zh-TW-017` | `zh-TW` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"網址傳回錯誤。請嘗試其他來源或重新上傳檔案。"` | `"無法從此網址載入圖片。請嘗試其他來源或重新上傳檔案。"` | The corrected source identifies the failed image load directly instead of personifying the URL. | verified |
+| `F-zh-TW-018` | `zh-TW` | `tools.file.errorFileTooLarge` | error clarity | `"檔案大小為 {size}，上限為 {max}。"` | `"檔案太大。{size} 超過 {max} 上限。"` | The visible error must explicitly state that the current file exceeds the limit while preserving both placeholders. | verified |
+| `F-zh-TW-019` | `zh-TW` | `tools.video.errorFileTooLarge` | error clarity | `"影片大小為 {size}，上限為 {max}。"` | `"影片太大。{size} 超過 {max} 上限。"` | The visible error must explicitly state that the current video exceeds the limit while preserving both placeholders. | verified |
+| `F-zh-TW-020` | `zh-TW` | `tools.audio.errorFileTooLarge` | error clarity | `"音訊大小為 {size}，上限為 {max}。"` | `"音訊檔案太大。{size} 超過 {max} 上限。"` | The visible error must explicitly identify the audio file and state that it exceeds the limit while preserving both placeholders. | verified |
+| `F-zh-TW-021` | `zh-TW` | `tools.database.viewTypeListDescription` | terminology / source synchronization | `"依序顯示內容"` | `"在簡單清單中顯示項目"` | The old phrase loses the familiar list concept supplied by the corrected source. | verified |
+| `F-zh-TW-022` | `zh-TW` | `tools.bookmark.loading` | progress punctuation / source synchronization | `"正在載入連結預覽"` | `"正在載入連結預覽…"` | The rendered in-progress state needs the corpus-standard ellipsis. | verified |
+| `F-zh-TW-023` | `zh-TW` | `tools.embed.empty` | read-only context / source synchronization | `"貼上連結以嵌入內容"` | `"沒有嵌入連結"` | The caller renders a read-only empty embed where a paste instruction is impossible. | verified |
+| `F-zh-TW-024` | `zh-TW` | `tools.video.seek` | accessibility / media terminology | `"跳至"` | `"播放位置"` | The value labels a playback-position slider; the old action verb suggests a one-shot jump command. | verified |
+| `F-zh-TW-025` | `zh-TW` | `tools.video.seekValueText` | accessibility / naturalness | `"{total} 中的 {current}"` | `"目前位置 {current}，總長度 {total}"` | The slider’s spoken value needs a natural current-position and total-duration relationship. | verified |
+| `F-zh-TW-026` | `zh-TW` | `tools.video.toggleTimeDisplay` | accessibility / source synchronization | `"切換時間顯示"` | `"在已播放時間與剩餘時間之間切換"` | The accessible action must identify the two actual time-display states instead of exposing an abstract toggle. | verified |
+| `F-zh-TW-027` | `zh-TW` | `tools.video.ctxCopyUrlAtTime` | context / clarity | `"複製目前時間點的影片網址"` | `"複製目前播放位置的影片網址"` | The copied URL targets the playback head, whereas “current time” can mean wall-clock time. | verified |
+| `F-zh-TW-028` | `zh-TW` | `tools.video.ctxStats` | terminology / source synchronization | `"詳細統計資料"` | `"播放統計資料"` | The corrected source identifies playback data; the old generic label omits that context. | verified |
+| `F-zh-TW-029` | `zh-TW` | `a11y.dropPosition` | prospective drag context / accessibility | `"將移動至第 {position} 個位置，共 {total} 個"` | `"將放置於第 {position} 個位置，共 {total} 個"` | This announcement is spoken before drop; `放置` describes the prospective drop result instead of incorrectly announcing completed movement. | verified |
+| `F-zh-TW-030` | `zh-TW` | `tools.colorPicker.defaultSwatchLabel` | accessibility / label-value punctuation | `"{mode} {default}"` | `"{mode}：{default}"` | The color-picker caller inserts localized mode and default labels into one spoken tooltip; W3C’s [Chinese Layout Requirements](https://www.w3.org/TR/clreq/#punctuation_marks) identifies the native colon as U+FF1A `：`. Both placeholders remain intact. | verified |
+| `F-zh-TW-031` | `zh-TW` | `tools.colorPicker.colorSwatchLabel` | accessibility / label-value punctuation | `"{mode} {color}"` | `"{mode}：{color}"` | The swatch caller composes values such as “文字顏色：灰色”; a bare space leaves the adjacent nouns ambiguous, while W3C documents `：` as the native Chinese colon. Both placeholders remain intact. | verified |
+| `F-zh-TW-032` | `zh-TW` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖曳控制項"` | `"拖曳控點"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Taiwan Fluent UI guidance uses the handle-specific term [拖曳控點](https://learn.microsoft.com/zh-tw/power-apps/teams/use-the-fluent-ui-controls). | verified |
 | `F-global-001` | all non-English | 42 changed English source keys | source dependency | Localized values have not been re-reviewed against the 41 corrected source values and the new clear-formatting key. | Re-audit all 42 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete 539-key locale pass must inspect all 42 dependencies, including `toolNames.clearFormat` and `F-en-037` through `F-en-042`. | open |
 
 ## Exact-English Retentions
@@ -2589,6 +2967,24 @@ locale and UI context.
 | `R-no-014` | `no` | `tools.audio.pause` | established cognate | `Pause` is the established unchanged Bokmål noun and the standard concise audio-player control label in Norwegian media interfaces. | [Bokmålsordboka — pause](https://ordbokene.no/bm/pause); [Apple — Bruk avspillingskontrollene](https://support.apple.com/no-no/guide/iphone/iphaec9fc22f/ios) |
 | `R-no-015` | `no` | `tools.colorPicker.defaultSwatchLabel` | universal notation | The placeholder-only template contains no English words. Bokmål modifier-before-noun order renders the caller output as idiomatic `Standard tekstfarge`. | [Microsoft — Endre standard tekstfarge](https://support.microsoft.com/nb-no/office/endre-standard-tekstfarge-skriftfarge-i-word-59f83009-12c2-4feb-b548-93621dfe6f2f) |
 | `R-no-016` | `no` | `tools.colorPicker.colorSwatchLabel` | universal notation | The placeholder-only template contains no English words. Bokmål modifier-before-noun order renders caller values such as `Rød tekstfarge` naturally. | [Microsoft — Endre standard tekstfarge](https://support.microsoft.com/nb-no/office/endre-standard-tekstfarge-skriftfarge-i-word-59f83009-12c2-4feb-b548-93621dfe6f2f) |
+| `R-pt-001` | `pt` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Apple’s Brazilian Portuguese guidance retains the `⌘` platform symbol. | [Apple — Atalhos de teclado no Mac](https://support.apple.com/pt-br/102650) |
+| `R-pt-002` | `pt` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Microsoft’s Brazilian Portuguese guidance retains `Ctrl` in key combinations. | [Microsoft — Atalhos de teclado no Windows](https://support.microsoft.com/pt-br/windows/atalhos-de-teclado-no-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
+| `R-pt-003` | `pt` | `toolNames.link` | established loanword | `Link` is the standard unchanged Brazilian Portuguese web noun and the natural concise toolbox label. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-004` | `pt` | `searchTerms.layout` | established loanword | Lowercase `layout` is an established Brazilian Portuguese design term and follows the locale’s search-alias casing. | [Adobe — Visão geral do painel Layout flexível](https://helpx.adobe.com/br/indesign/using/flex-layout-panel-overview.html) |
+| `R-pt-005` | `pt` | `tools.image.altButton` | acronym | `Alt` is the conventional compact form for Brazilian Portuguese alternative-text controls; the surrounding dialog supplies the full localized phrase. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-006` | `pt` | `tools.image.emptyLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese action/source label in media interfaces. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-007` | `pt` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation used unchanged in Brazilian Portuguese media interfaces. | [Apple — Use as ferramentas da câmera para configurar a foto](https://support.apple.com/pt-br/guide/iphone/iph3dc593597/ios) |
+| `R-pt-008` | `pt` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Brazilian Portuguese media interfaces. | [Apple — Use as ferramentas da câmera para configurar a foto](https://support.apple.com/pt-br/guide/iphone/iph3dc593597/ios) |
+| `R-pt-009` | `pt` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Brazilian Portuguese media interfaces. | [Apple — Use as ferramentas da câmera para configurar a foto](https://support.apple.com/pt-br/guide/iphone/iph3dc593597/ios) |
+| `R-pt-010` | `pt` | `tools.image.cropRatioOval` | established cognate | `Oval` is the normal unchanged Brazilian Portuguese geometry term and a concise crop-shape label. | [Microsoft — Usar uma forma oval](https://support.microsoft.com/pt-br/topic/usar-a-forma-do-caso-3aa9183f-a32d-4b71-8d54-ed18e67f6f53) |
+| `R-pt-011` | `pt` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Brazilian Portuguese database interfaces. | [Notion — Propriedades do banco de dados](https://www.notion.com/pt/help/database-properties) |
+| `R-pt-012` | `pt` | `tools.database.defaultStatusProperty` | established loanword | `Status` is the established unchanged Brazilian Portuguese workflow-property name. | [Notion — Propriedades do banco de dados](https://www.notion.com/pt/help/database-properties) |
+| `R-pt-013` | `pt` | `tools.file.emptyLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese action/source label in file interfaces. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-014` | `pt` | `tools.video.emptyLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese action/source label in video interfaces. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-015` | `pt` | `tools.audio.emptyLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese action/source label in audio interfaces. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-016` | `pt` | `tools.audio.coverLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese source label in cover-art interfaces. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-017` | `pt` | `tools.video.volume` | established cognate | `Volume` is the normal unchanged Brazilian Portuguese media-control noun. | [Google Drive — Usar um leitor de tela para reproduzir vídeos](https://support.google.com/drive/answer/12169158?hl=pt-BR) |
+| `R-pt-018` | `pt` | `tools.audio.volume` | established cognate | `Volume` is the normal unchanged Brazilian Portuguese media-control noun. | [Google Drive — Usar um leitor de tela para reproduzir vídeos](https://support.google.com/drive/answer/12169158?hl=pt-BR) |
 | `R-ru-001` | `ru` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; the Command symbol is language-independent. | [Apple — Сочетания клавиш Mac](https://support.apple.com/ru-ru/102650) |
 | `R-ru-002` | `ru` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Russian product guidance retains `Ctrl` in key combinations. | [Microsoft — Сочетания клавиш в Windows](https://support.microsoft.com/ru-ru/windows/%D1%81%D0%BE%D1%87%D0%B5%D1%82%D0%B0%D0%BD%D0%B8%D1%8F-%D0%BA%D0%BB%D0%B0%D0%B2%D0%B8%D1%88-%D0%B2-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-ru-003` | `ru` | `tools.image.altButton` | acronym | `Alt` is the conventional compact form associated with Russian alternative-text controls; the surrounding dialog supplies the full localized phrase. | [Microsoft — Добавление замещающего текста](https://support.microsoft.com/ru-RU/accessibility/office-accessibility/add-alternative-text-to-a-shape-picture-chart-smartart-graphic-or-other-object) |

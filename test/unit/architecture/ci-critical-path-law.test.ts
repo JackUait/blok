@@ -250,6 +250,7 @@ describe('CI critical-path law', () => {
     ]);
 
     expect(build.name).toBe('Build');
+    expect(build.needs).toBeUndefined();
     expect(build['runs-on']).toBe('ubuntu-latest');
     expectOrderedSteps('ci.build', build, [
       checkout,

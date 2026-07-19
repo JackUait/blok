@@ -325,8 +325,8 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ur` | Urdu | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ur-001` | pending |
 | `vi` | Vietnamese | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-vi-001` | pending |
 | `yi` | Yiddish | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-yi-001` | pending |
-| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-001`–`F-zh-058` | pending |
-| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-TW-001`–`F-zh-TW-032` | pending |
+| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | `root-zh-first-final` | — | pass | pass | pass | `F-zh-001`–`F-zh-058` | first-pass-complete |
+| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | `root-zh-tw-first-final` | — | pass | pass | pass | `F-zh-TW-001`–`F-zh-TW-032` | first-pass-complete |
 
 | `R-sv-001` | `sv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Swedish Apple guidance retains the `⌘` platform symbol. | [Apple — Kortkommandon på Mac](https://support.apple.com/sv-se/102650) |
 | `R-sv-002` | `sv` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Swedish Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Kortkommandon i Windows](https://support.microsoft.com/sv-se/windows/kortkommandon-i-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
@@ -368,6 +368,8 @@ locale returns to `pending`.
 |---|---|---|---|---|
 | `en` | `root-en-final-first` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` | `wire-media-en-second-final` | `sha256:b95b5cba60f75758fe56851f7d397301616a5b8d64172321f9e503f2dcea3e35` |
 | `ru` | `root-ru-first-final` | `sha256:55f6ba9287d6372890b35651c4f14ef88a4b42c83c81dda8e36b0a3579970821` | — | — |
+| `zh` | `root-zh-first-final` | `sha256:4ce752ee3664e25e8ca67d59dab1c438b4e388008d6db56e9e170b285ea897ab` | — | — |
+| `zh-TW` | `root-zh-tw-first-final` | `sha256:2295357fbc1931aaff5ffc14b3a990d0ad4c8058ca4e65d789b282f0f666ffc4` | — | — |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -1834,7 +1836,7 @@ and source coverage. The first pass binds to raw SHA-256
 Russian is `first-pass-complete` and requires a distinct full second review on
 these exact bytes.
 
-### Simplified Chinese (`zh`) — current 539-key second pass complete
+### Simplified Chinese (`zh`) — current 545-key first pass complete
 
 After the composed-tooltip comparison invalidated the initial evidence, the
 first reviewer performed a strict reset and reread all 539 current
@@ -1891,7 +1893,27 @@ and found no residual semantic, grammar, register, accessibility, punctuation,
 or structural defect. Simplified Chinese is therefore
 `second-pass-complete` on these exact bytes.
 
-### Taiwan Traditional Chinese (`zh-TW`) — current 539-key second pass complete
+That 539-key conclusion is historical after the English source resets.
+Reviewer `root-zh-first-final` performed a new complete pass over all 545
+final English/Simplified-Chinese pairs in source order. Every value was
+rechecked in its rendered, accessible, built-compatibility,
+provider-composed, or documented source-only context. The pass revalidated all
+58 findings, all 77 changed-English dependencies, all 38
+placeholder-bearing values and 54 occurrences, all 44 aliases in 14 groups,
+all 117 provider compositions, all 12 source-only contracts, and the complete
+532 caller/built + 12 source-only + 1 unused-notifier partition without
+finding a residual.
+
+The exact-English inventory remains exactly the six sourced values
+`R-zh-001` through `R-zh-006`. The focused Simplified-Chinese and Taiwan
+finding selection, structural checks, and retention-ledger gate pass 92/92;
+the live checker reports 545 complete keys with valid integrity and source
+coverage. The current first pass binds to raw SHA-256
+`4ce752ee3664e25e8ca67d59dab1c438b4e388008d6db56e9e170b285ea897ab`.
+Simplified Chinese is `first-pass-complete` and requires a distinct full
+second review on these exact bytes.
+
+### Taiwan Traditional Chinese (`zh-TW`) — current 545-key first pass complete
 
 The first reviewer inspected all 539 current English/Taiwan-Traditional-
 Chinese pairs in four disjoint source-order ranges (1–135, 136–270, 271–405,
@@ -1943,6 +1965,25 @@ Simplified Chinese pass, and revalidated every finding, retention,
 Taiwan-script choice, placeholder, alias, source-only contract, and caller
 disposition without finding a residual. Taiwan Traditional Chinese is
 therefore `second-pass-complete` on these exact bytes.
+
+That 539-key conclusion is historical after the English source resets.
+Reviewer `root-zh-tw-first-final` independently performed a new complete pass
+over all 545 final English/Taiwan-Traditional-Chinese pairs in source order.
+Every value was rechecked in its rendered, accessible, built-compatibility,
+provider-composed, or documented source-only context. The pass revalidated all
+32 findings, all 77 changed-English dependencies, all 38 placeholder-bearing
+values and 54 occurrences, all 44 aliases in 14 groups, all 117 provider
+compositions, all 12 source-only contracts, and the complete 532 caller/built
++ 12 source-only + 1 unused-notifier partition without finding a residual.
+
+The exact-English inventory remains exactly the six sourced values
+`R-zh-TW-001` through `R-zh-TW-006`. The focused Taiwan finding, structural,
+and retention-ledger selection passes 34/34, and the live checker reports 545
+complete keys with valid integrity and source coverage. The current first pass
+binds to raw SHA-256
+`2295357fbc1931aaff5ffc14b3a990d0ad4c8058ca4e65d789b282f0f666ffc4`.
+Taiwan Traditional Chinese is `first-pass-complete` and requires a distinct
+full second review on these exact bytes.
 
 ## Findings
 

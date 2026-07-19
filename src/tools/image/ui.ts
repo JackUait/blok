@@ -928,10 +928,16 @@ export interface OverlayState {
 
 /**
  * Below this figure width the overlay collapses to just the "..." button.
- * The expanded toolbar is ~240px; collapse only when the image is too narrow
- * to comfortably fit the full row (roughly sm-size territory).
+ * The medium-tier row is ~130px; collapse when it can't fit with breathing room.
  */
 export const OVERLAY_COMPACT_THRESHOLD = 230;
+/**
+ * Below this figure width the overlay drops its secondary actions
+ * (caption toggle, replace, download) into the "..." menu so the remaining
+ * controls keep their full 28px size instead of shrinking. The full row at
+ * fixed button sizes is ~214px; below this it reads crowded on the figure.
+ */
+export const OVERLAY_MEDIUM_THRESHOLD = 360;
 /**
  * Below this figure height the overlay collapses too — a short image can't
  * fit the ~46px toolbar row without colliding with the resize handles.
@@ -973,16 +979,25 @@ export function applyAutoFull(
   }
 }
 
-export function updateOverlayCompact(
-  overlay: HTMLElement,
-  width: number,
-  height?: number,
-  threshold: number = OVERLAY_COMPACT_THRESHOLD,
-  heightThreshold: number = OVERLAY_COMPACT_HEIGHT_THRESHOLD
-): void {
-  const tooNarrow = width > 0 && width < threshold;
-  const tooShort = height !== undefined && height > 0 && height < heightThreshold;
+export type OverlayTier = 'full' | 'medium' | 'compact';
+
+/**
+ * Classify the overlay into a size tier from the figure's rendered size and
+ * stamp it as `data-tier`. Controls never scale — each tier shows fewer of
+ * them inline instead. `data-compact` is kept in sync as an alias for the
+ * compact tier (existing CSS/tests key off it).
+ */
+export function updateOverlayTier(overlay: HTMLElement, width: number, height?: number): void {
+  const tooNarrow = width > 0 && width < OVERLAY_COMPACT_THRESHOLD;
+  const tooShort = height !== undefined && height > 0 && height < OVERLAY_COMPACT_HEIGHT_THRESHOLD;
+  let tier: OverlayTier = 'full';
   if (tooNarrow || tooShort) {
+    tier = 'compact';
+  } else if (width > 0 && width < OVERLAY_MEDIUM_THRESHOLD) {
+    tier = 'medium';
+  }
+  overlay.setAttribute('data-tier', tier);
+  if (tier === 'compact') {
     overlay.setAttribute('data-compact', 'true');
   } else {
     overlay.removeAttribute('data-compact');

@@ -401,8 +401,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // indirection rules plus their doc comment so hosts can indent
     // checklists independently of bulleted/ordered lists. Bumps the
     // multiplier to 1.402.
+    // 2026-07-19: image control size tiers — replaced the fluid cqw clamps
+    // with fixed control sizes plus a data-tier="medium" rule (hides
+    // caption/replace/download on mid-width figures) and an @container
+    // display-text step; the three medium-tier selectors outweigh the removed
+    // clamps by ~0.3KB. Bumps the multiplier to 1.403.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.402);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.403);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

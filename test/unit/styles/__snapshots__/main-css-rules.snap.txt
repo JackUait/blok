@@ -3843,7 +3843,7 @@
 [data-blok-tool="image"] .blok-image-caption {
   display: block;
   margin-top: var(--blok-space-2);
-  font-size: clamp(10px, calc(6.5px + 1.5cqw), 13.5px);
+  font-size: 12px;
   color: var(--blok-text-secondary);
   line-height: 1.5;
   outline: none;
@@ -3877,9 +3877,9 @@
 [data-blok-tool="image"] .blok-image-caption-row__alt {
   flex: 0 0 auto;
   margin-top: var(--blok-space-1);
-  padding: clamp(2px, 0.6cqw, 3px) clamp(4px, 1.6cqw, 8px);
+  padding: 2px 6px;
   font: inherit;
-  font-size: clamp(8.5px, calc(6px + 1cqw), 11px);
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1.4;
@@ -3890,6 +3890,15 @@
   cursor: pointer;
   opacity: 0;
   transition: opacity 120ms ease, color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+[@container (min-width: 360px)] [data-blok-tool="image"] .blok-image-caption {
+  font-size: 13.5px;
+}
+
+[@container (min-width: 360px)] [data-blok-tool="image"] .blok-image-caption-row__alt {
+  padding: 3px 8px;
+  font-size: 11px;
 }
 
 [data-blok-tool="image"] .blok-image-caption-row__alt:hover {
@@ -3932,8 +3941,8 @@
 }
 
 [data-blok-tool="image"] .blok-image-toolbar button {
-  width: clamp(18px, calc(8px + 4cqw), 28px);
-  height: clamp(18px, calc(8px + 4cqw), 28px);
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   color: var(--blok-overlay-fg);
@@ -3955,8 +3964,8 @@
 }
 
 [data-blok-tool="image"] .blok-image-toolbar button svg {
-  width: clamp(9px, calc(4px + 2cqw), 14px);
-  height: clamp(9px, calc(4px + 2cqw), 14px);
+  width: 14px;
+  height: 14px;
 }
 
 [data-blok-tool="image"] .blok-image-toolbar button[aria-pressed="true"], [data-blok-tool="image"] .blok-image-toolbar button[aria-expanded="true"] {
@@ -3978,8 +3987,12 @@
 }
 
 [data-blok-tool="image"] .blok-image-toolbar__pill button {
-  width: clamp(17px, calc(7px + 3.8cqw), 26px);
+  width: 26px;
   border-radius: 0;
+}
+
+[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="caption-toggle"], [data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="replace"], [data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="download"] {
+  display: none;
 }
 
 [data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] > :not([data-action="more"]) {
@@ -4083,7 +4096,7 @@
 [data-blok-tool="image"] [data-role="resize-handle"] {
   position: absolute;
   top: 50%;
-  width: clamp(3.5px, calc(1px + 1cqw), 6px);
+  width: 6px;
   height: clamp(24px, 25%, 50px);
   background: var(--blok-handle-bg-default);
   border: 1px solid var(--blok-handle-fg-default);

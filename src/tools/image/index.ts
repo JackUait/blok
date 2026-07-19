@@ -46,7 +46,7 @@ import {
   renderCaptionRow,
   renderImage,
   renderOverlay,
-  updateOverlayCompact,
+  updateOverlayTier,
 } from './ui';
 import { openCropModal } from './crop-modal';
 import { openAltPopover } from './alt-popover';
@@ -861,7 +861,7 @@ export class ImageTool implements BlockTool {
         const containerWidth = container?.clientWidth ?? figure.clientWidth;
         applyAutoFull(this.root, img, containerWidth);
       }
-      updateOverlayCompact(overlay, figure.clientWidth, figure.clientHeight);
+      updateOverlayTier(overlay, figure.clientWidth, figure.clientHeight);
     };
     sync();
     if (img && !img.complete) {

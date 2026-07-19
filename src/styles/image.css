@@ -14,10 +14,10 @@
   display: inline-block;
   position: relative;
   max-width: 100%;
-  /* Establish an inline-size container so the caption, Alt/"..." toolbar, and
-     resize handles (all descendants of the figure) can scale fluidly with the
-     image's rendered width via cqw units. The figure is already
-     position:relative, so the toolbar/handles' absolute anchoring is unchanged. */
+  /* Establish an inline-size container so the caption/Alt display text can
+     step between its two fixed sizes via @container at the medium breakpoint.
+     The figure is already position:relative, so the toolbar/handles' absolute
+     anchoring is unchanged. */
   container-type: inline-size;
 }
 [data-blok-tool="image"][data-size="sm"]   .blok-image-inner { width: 280px; }
@@ -59,8 +59,9 @@
 [data-blok-tool="image"] .blok-image-caption {
   display: block;
   margin-top: var(--blok-space-2);
-  /* Fluid: full 13.5px at ≥~500px wide, ramps down to 10px for small (~250px) images. */
-  font-size: clamp(10px, calc(6.5px + 1.5cqw), 13.5px);
+  /* Two fixed steps: 12px on narrow figures, 13.5px from the medium
+     breakpoint up (@container rule below; matches OVERLAY_MEDIUM_THRESHOLD). */
+  font-size: 12px;
   color: var(--blok-text-secondary);
   line-height: 1.5;
   outline: none;
@@ -89,10 +90,11 @@
 [data-blok-tool="image"] .blok-image-caption-row__alt {
   flex: 0 0 auto;
   margin-top: var(--blok-space-1);
-  /* Fluid padding + font: full size at ≥~500px wide, shrinks for small images. */
-  padding: clamp(2px, 0.6cqw, 3px) clamp(4px, 1.6cqw, 8px);
+  /* Two fixed steps like the caption: small below the medium breakpoint,
+     full size from it up (@container rule below). */
+  padding: 2px 6px;
   font: inherit;
-  font-size: clamp(8.5px, calc(6px + 1cqw), 11px);
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1.4;
@@ -103,6 +105,15 @@
   cursor: pointer;
   opacity: 0;
   transition: opacity 120ms ease, color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+/* Full-size step for display text — same breakpoint as OVERLAY_MEDIUM_THRESHOLD
+   in src/tools/image/ui.ts so text and toolbar tier switch together. */
+@container (min-width: 360px) {
+  [data-blok-tool="image"] .blok-image-caption { font-size: 13.5px; }
+  [data-blok-tool="image"] .blok-image-caption-row__alt {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
 }
 [data-blok-tool="image"] .blok-image-caption-row__alt:hover {
   color: var(--blok-text-primary);
@@ -154,9 +165,10 @@
   pointer-events: none;
 }
 [data-blok-tool="image"] .blok-image-toolbar button {
-  /* Fluid square: 28px at ≥~500px wide, shrinks toward 18px for small images. */
-  width: clamp(18px, calc(8px + 4cqw), 28px);
-  height: clamp(18px, calc(8px + 4cqw), 28px);
+  /* Fixed comfortable square in every tier — narrow figures drop actions into
+     the "..." menu (data-tier, set by updateOverlayTier) instead of shrinking. */
+  width: 28px;
+  height: 28px;
   display: grid; place-items: center;
   color: var(--blok-overlay-fg);
   background: transparent;
@@ -168,8 +180,8 @@
 [data-blok-tool="image"] .blok-image-toolbar button:hover { background: var(--blok-overlay-fg-hover); color: var(--blok-overlay-fg-strong); }
 [data-blok-tool="image"] .blok-image-toolbar button.is-danger:hover { background: var(--blok-overlay-danger-bg); color: var(--blok-overlay-danger-fg); }
 [data-blok-tool="image"] .blok-image-toolbar button svg {
-  width: clamp(9px, calc(4px + 2cqw), 14px);
-  height: clamp(9px, calc(4px + 2cqw), 14px);
+  width: 14px;
+  height: 14px;
 }
 [data-blok-tool="image"] .blok-image-toolbar button[aria-pressed="true"],
 [data-blok-tool="image"] .blok-image-toolbar button[aria-expanded="true"] {
@@ -181,7 +193,14 @@
   background: var(--blok-overlay-divider);
 }
 [data-blok-tool="image"] .blok-image-toolbar__pill { display: inline-flex; border-radius: var(--blok-space-1); overflow: hidden; }
-[data-blok-tool="image"] .blok-image-toolbar__pill button { width: clamp(17px, calc(7px + 3.8cqw), 26px); border-radius: 0; }
+[data-blok-tool="image"] .blok-image-toolbar__pill button { width: 26px; border-radius: 0; }
+/* Medium tier — secondary actions (caption, replace, download) move into the
+   "..." menu so align/crop/fullscreen keep their full size on mid-width figures. */
+[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="caption-toggle"],
+[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="replace"],
+[data-blok-tool="image"] .blok-image-toolbar[data-tier="medium"] [data-action="download"] {
+  display: none;
+}
 /* Compact toolbar — figure too narrow to fit all actions; collapse to just the "..." button. */
 [data-blok-tool="image"] .blok-image-toolbar[data-compact="true"] > :not([data-action="more"]) {
   display: none;
@@ -269,9 +288,8 @@
 [data-blok-tool="image"] [data-role="resize-handle"] {
   position: absolute;
   top: 50%;
-  /* Fluid width: full 6px pill at ≥~500px wide, thins toward 3.5px for small images.
-     Height already scales via 25% of the figure. */
-  width: clamp(3.5px, calc(1px + 1cqw), 6px);
+  /* Fixed grab-target width; height already scales via 25% of the figure. */
+  width: 6px;
   height: clamp(24px, 25%, 50px);
   background: var(--blok-handle-bg-default);
   border: 1px solid var(--blok-handle-fg-default);

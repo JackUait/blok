@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
-import { updateOverlayCompact, isTinyImage, applyAutoFull } from '../../../../src/tools/image/ui';
+import { updateOverlayTier, isTinyImage, applyAutoFull } from '../../../../src/tools/image/ui';
 import type { ImageData, ImageConfig } from '../../../../types/tools/image';
 import type { API, BlockToolConstructorOptions, BlockAPI, FilePasteEvent, HTMLPasteEvent, PatternPasteEvent } from '../../../../types';
 import { simulateClick, simulateKeydown } from '../../../helpers/simulate';
@@ -1295,42 +1295,55 @@ describe('ImageTool — configurable reload attempts', () => {
   });
 });
 
-describe('updateOverlayCompact', () => {
-  it('sets data-compact="true" when width below threshold', () => {
+describe('updateOverlayTier', () => {
+  it('sets data-tier="full" for wide images', () => {
     const el = document.createElement('div');
-    updateOverlayCompact(el, 200);
+    updateOverlayTier(el, 600, 400);
+    expect(el.getAttribute('data-tier')).toBe('full');
+    expect(el.getAttribute('data-compact')).toBeNull();
+  });
+
+  it('sets data-tier="medium" between compact and medium thresholds', () => {
+    const el = document.createElement('div');
+    updateOverlayTier(el, 300, 400);
+    expect(el.getAttribute('data-tier')).toBe('medium');
+    expect(el.getAttribute('data-compact')).toBeNull();
+  });
+
+  it('sets data-tier="compact" and data-compact below compact threshold', () => {
+    const el = document.createElement('div');
+    updateOverlayTier(el, 200);
+    expect(el.getAttribute('data-tier')).toBe('compact');
     expect(el.getAttribute('data-compact')).toBe('true');
   });
 
-  it('removes data-compact when width at or above threshold', () => {
+  it('zero width (detached) resolves to full, never compact', () => {
     const el = document.createElement('div');
-    el.setAttribute('data-compact', 'true');
-    updateOverlayCompact(el, 600);
+    updateOverlayTier(el, 0);
+    expect(el.getAttribute('data-tier')).toBe('full');
     expect(el.getAttribute('data-compact')).toBeNull();
   });
 
-  it('zero width (detached) does not force compact', () => {
+  it('collapses to compact when height below threshold even if width is wide', () => {
     const el = document.createElement('div');
-    updateOverlayCompact(el, 0);
-    expect(el.getAttribute('data-compact')).toBeNull();
-  });
-
-  it('sets data-compact when height below threshold even if width is wide', () => {
-    const el = document.createElement('div');
-    updateOverlayCompact(el, 600, 50);
+    updateOverlayTier(el, 600, 50);
+    expect(el.getAttribute('data-tier')).toBe('compact');
     expect(el.getAttribute('data-compact')).toBe('true');
   });
 
   it('does not force compact when height omitted', () => {
     const el = document.createElement('div');
-    updateOverlayCompact(el, 600);
+    updateOverlayTier(el, 600);
+    expect(el.getAttribute('data-tier')).toBe('full');
     expect(el.getAttribute('data-compact')).toBeNull();
   });
 
-  it('removes data-compact when both dimensions are comfortable', () => {
+  it('clears stale compact state when dimensions grow comfortable', () => {
     const el = document.createElement('div');
     el.setAttribute('data-compact', 'true');
-    updateOverlayCompact(el, 600, 200);
+    el.setAttribute('data-tier', 'compact');
+    updateOverlayTier(el, 600, 200);
+    expect(el.getAttribute('data-tier')).toBe('full');
     expect(el.getAttribute('data-compact')).toBeNull();
   });
 });

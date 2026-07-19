@@ -11,6 +11,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -35,6 +36,12 @@ function runCheckerFixture(sourceRaw, localeRaw) {
     mkdirSync(scriptDir, { recursive: true });
     mkdirSync(join(localesDir, 'en'), { recursive: true });
     mkdirSync(join(localesDir, 'fr'), { recursive: true });
+    mkdirSync(join(root, 'node_modules'), { recursive: true });
+    symlinkSync(
+      realpathSync(new URL('../../node_modules/typescript', import.meta.url)),
+      join(root, 'node_modules/typescript'),
+      'junction'
+    );
     writeFileSync(
       scriptPath,
       readFileSync(new URL('./check-translations.mjs', import.meta.url), 'utf8')
@@ -421,6 +428,47 @@ describe('extractKeysFromSource', () => {
     const keys = extractKeysFromSource(source);
 
     assert.deepEqual([...keys], ['tools.stub.error']);
+  });
+
+  it('resolves shadowed translation constants in their lexical scopes', () => {
+    const source = `
+      const LABEL_KEY = 'tools.outer.label';
+      title.textContent = i18n.t(LABEL_KEY);
+
+      {
+        const LABEL_KEY = 'tools.inner.label';
+        subtitle.textContent = i18n.t(LABEL_KEY);
+      }
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys].sort(), [
+      'tools.inner.label',
+      'tools.outer.label',
+    ]);
+  });
+
+  it('ignores translation constants and calls inside comments', () => {
+    const source = `
+      const REAL_KEY = 'tools.real.label';
+      title.textContent = i18n.t(REAL_KEY);
+
+      // const COMMENTED_KEY = 'tools.commented.label';
+      // title.textContent = i18n.t(COMMENTED_KEY);
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys], ['tools.real.label']);
+  });
+
+  it('resolves a constant key when a translation call interpolates values', () => {
+    const source = `
+      const COUNT_KEY = 'tools.results.count';
+      title.textContent = i18n.t(COUNT_KEY, { count: 2 });
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys], ['tools.results.count']);
   });
 
   it('does not collect qualified constants that are never translated', () => {

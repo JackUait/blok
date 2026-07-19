@@ -12,6 +12,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = join(__dirname, '../../src/components/i18n/locales');
@@ -298,49 +299,106 @@ export function findUntranslatedKeys(sourceTranslation, translation) {
  */
 export function extractKeysFromSource(source) {
   const keys = new Set();
-  const localStringConstants = new Map();
   const addQualifiedKey = (key) => {
     if (key.includes('.') && !key.endsWith('.')) {
       keys.add(key);
     }
   };
 
-  // Resolve file-local string constants when they are passed directly to .t().
-  // Merely declaring a dotted string does not make it an i18n dependency.
-  const localStringConstantPattern =
-    /\bconst\s+([A-Za-z_$][\w$]*)\s*(?::[^=;\n]+)?=\s*(['"])([^'"\n]+)\2/g;
+  /**
+   * Resolve the string initializer for the lexical symbol referenced by a
+   * translation call. The type checker keeps shadowed declarations distinct
+   * and the AST excludes commented-out code.
+   *
+   * @param {import('typescript').Identifier} identifier
+   * @param {import('typescript').TypeChecker} checker
+   * @returns {string | undefined}
+   */
+  const resolveLocalStringConstant = (identifier, checker) => {
+    const symbol = checker.getSymbolAtLocation(identifier);
+    const declaration = symbol?.declarations?.find(ts.isVariableDeclaration);
+
+    if (
+      declaration === undefined ||
+      !ts.isVariableDeclarationList(declaration.parent) ||
+      (declaration.parent.flags & ts.NodeFlags.Const) === 0
+    ) {
+      return undefined;
+    }
+
+    let initializer = declaration.initializer;
+
+    while (
+      initializer !== undefined &&
+      (ts.isAsExpression(initializer) ||
+        ts.isSatisfiesExpression(initializer) ||
+        ts.isTypeAssertionExpression(initializer) ||
+        ts.isParenthesizedExpression(initializer))
+    ) {
+      initializer = initializer.expression;
+    }
+
+    return initializer !== undefined && ts.isStringLiteral(initializer)
+      ? initializer.text
+      : undefined;
+  };
+
+  const fileName = 'translation-source.ts';
+  const sourceFile = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  const compilerHost = {
+    getSourceFile: (name) => (name === fileName ? sourceFile : undefined),
+    getDefaultLibFileName: () => 'lib.d.ts',
+    writeFile: () => {},
+    getCurrentDirectory: () => '',
+    getDirectories: () => [],
+    fileExists: (name) => name === fileName,
+    readFile: (name) => (name === fileName ? source : undefined),
+    getCanonicalFileName: (name) => name,
+    useCaseSensitiveFileNames: () => true,
+    getNewLine: () => '\n',
+  };
+  const program = ts.createProgram(
+    [fileName],
+    {
+      noLib: true,
+      noResolve: true,
+      target: ts.ScriptTarget.Latest,
+    },
+    compilerHost
+  );
+  const checker = program.getTypeChecker();
+
+  const visitTranslationCalls = (node) => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === 't'
+    ) {
+      const argument = node.arguments[0];
+      const key =
+        argument !== undefined && ts.isStringLiteral(argument)
+          ? argument.text
+          : argument !== undefined && ts.isIdentifier(argument)
+            ? resolveLocalStringConstant(argument, checker)
+            : undefined;
+
+      if (key !== undefined) {
+        addQualifiedKey(key);
+      }
+    }
+
+    ts.forEachChild(node, visitTranslationCalls);
+  };
+
+  visitTranslationCalls(sourceFile);
+
   let match;
-
-  while ((match = localStringConstantPattern.exec(source)) !== null) {
-    const identifier = match[1];
-    const value = match[3];
-
-    if (identifier !== undefined && value !== undefined) {
-      localStringConstants.set(identifier, value);
-    }
-  }
-
-  // Match .t('key') or .t("key") — require opening paren immediately after t.
-  const translationCallPattern = /\.t\((['"])([^'"]+)\1/g;
-
-  while ((match = translationCallPattern.exec(source)) !== null) {
-    const key = match[2];
-
-    addQualifiedKey(key);
-  }
-
-  const constantTranslationCallPattern =
-    /\.t\(\s*([A-Za-z_$][\w$]*)\s*\)/g;
-
-  while ((match = constantTranslationCallPattern.exec(source)) !== null) {
-    const identifier = match[1];
-    const key =
-      identifier === undefined ? undefined : localStringConstants.get(identifier);
-
-    if (key !== undefined) {
-      addQualifiedKey(key);
-    }
-  }
 
   // Built-in tools declare translation keys either as a static class property
   // or as a toolbox object property. A short key is defined by the runtime

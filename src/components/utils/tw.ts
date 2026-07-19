@@ -80,7 +80,9 @@ const CLASS_PATTERNS: Array<{ pattern: RegExp; getGroup: (match: RegExpMatchArra
   { pattern: /^pb-(.+)$/, getGroup: () => 'pb' },
   { pattern: /^pl-(.+)$/, getGroup: () => 'pl' },
 
-  // Gap: gap-*, gap-x-*, gap-y-*
+  // Gap: axis-specific gaps are independent groups, like mx/my and px/py
+  { pattern: /^gap-x-(.+)$/, getGroup: () => 'gap-x' },
+  { pattern: /^gap-y-(.+)$/, getGroup: () => 'gap-y' },
   { pattern: /^gap-(.+)$/, getGroup: () => 'gap' },
 
   // Border radius: rounded-*

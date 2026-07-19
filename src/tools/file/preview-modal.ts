@@ -103,20 +103,20 @@ async function renderMarkdown(
 ): Promise<void> {
   body.replaceChildren();
 
-  // The Rendered/Raw switch lives in the header (centre slot), not in a
+  // The Preview/Source switch lives in the header (centre slot), not in a
   // band of its own — see buildElements for the header grid.
   const toolbar = document.createElement('div');
   toolbar.className = 'blok-file-preview-toggle';
   toolbar.setAttribute('role', 'group');
-  toolbar.setAttribute('aria-label', `${opts.labels.render ?? 'Rendered'} / ${opts.labels.raw ?? 'Raw'}`);
+  toolbar.setAttribute('aria-label', `${opts.labels.render ?? 'Preview'} / ${opts.labels.raw ?? 'Source'}`);
   const renderBtn = document.createElement('button');
   renderBtn.type = 'button';
   renderBtn.setAttribute('data-action', 'preview-render');
-  renderBtn.textContent = opts.labels.render ?? 'Rendered';
+  renderBtn.textContent = opts.labels.render ?? 'Preview';
   const rawBtn = document.createElement('button');
   rawBtn.type = 'button';
   rawBtn.setAttribute('data-action', 'preview-raw');
-  rawBtn.textContent = opts.labels.raw ?? 'Raw';
+  rawBtn.textContent = opts.labels.raw ?? 'Source';
   // Sliding pill that glides under the active segment. Sits behind the labels
   // (the buttons paint above it) and is measured/moved in JS because the two
   // labels have different widths across locales — a fixed 50/50 split would
@@ -326,7 +326,7 @@ export function openFilePreview(opts: FilePreviewOptions): () => void {
   // Mount the scroll haze only once the body holds its rendered view — the fill
   // helpers call body.replaceChildren(), which would otherwise wipe the strips.
   // The haze's own MutationObserver then tracks later changes (e.g. the markdown
-  // Rendered ⇄ Raw toggle). PDFs scroll inside their iframe, so they opt out.
+  // Preview ⇄ Source toggle). PDFs scroll inside their iframe, so they opt out.
   void startFill().then(() => {
     if (!state.closed && kind !== 'pdf') {
       haze.init(body);

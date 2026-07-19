@@ -26,7 +26,7 @@ describe('buildCodeDOM', () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { wrapper, preElement, codeElement, gutterElement } = buildCodeDOM({
       code: '',
-      languageName: 'Plain Text',
+      languageName: 'Plain text',
       readOnly: false,
       copyLabel: 'Copy code',
     });

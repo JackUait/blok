@@ -7,7 +7,7 @@
  * read as scrollable from every side.
  *
  * One instance serves every previewable type. Rather than binding to a specific
- * scroll container (which would miss the markdown Rendered ⇄ Raw toggle), it
+ * scroll container (which would miss the markdown Preview ⇄ Source toggle), it
  * binds to the body and resolves the *active* scrolling child on each update:
  *   - scroll is caught in the capture phase (scroll doesn't bubble, but it does
  *     propagate capturing), so any descendant scroll refreshes the haze;

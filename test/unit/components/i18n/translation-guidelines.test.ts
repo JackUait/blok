@@ -55,7 +55,7 @@ const RETENTION_CATEGORIES = new Set([
   'established cognate',
   'established loanword',
 ]);
-const GLOBAL_FINDING_KEYS = new Set(['36 changed English source keys']);
+const GLOBAL_FINDING_KEYS = new Set(['42 changed English source keys']);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'blockSettings.openMenuAction': ' to open the menu',
@@ -68,6 +68,7 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.table.insertColumnRight': 'Insert column right',
   'tools.table.insertRowAbove': 'Insert row above',
   'tools.table.insertRowBelow': 'Insert row below',
+  'tools.table.clearSelection': 'Clear contents',
   'tools.table.placement': 'Alignment',
   'tools.table.placementTopLeft': 'Top left',
   'tools.table.placementTopCenter': 'Top center',
@@ -86,9 +87,15 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.filterEmojis': 'Search emojis…',
   'tools.callout.pickRandom': 'Pick a random emoji',
   'tools.code.searchLanguage': 'Search languages…',
+  'tools.code.plainText': 'Plain text',
   'tools.link.linkTitle': 'Link text',
   'tools.image.altDescription':
     'Describe this image for people who can’t see it.',
+  'tools.image.viewFullscreen': 'View full screen',
+  'tools.image.errorDefaultMessage':
+    'The image couldn’t be loaded from this URL. Try a different source or upload the file again.',
+  'tools.file.previewRaw': 'Source',
+  'tools.file.previewRender': 'Preview',
   'tools.file.previewError': 'Couldn’t load preview',
   'tools.database.viewTypeListDescription': 'Show items in a simple list',
   'tools.bookmark.loading': 'Loading link preview…',

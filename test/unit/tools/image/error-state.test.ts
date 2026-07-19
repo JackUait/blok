@@ -11,7 +11,7 @@ describe('renderErrorState', () => {
     const msg = el.querySelector('.blok-image-error__msg');
     if (!title || !msg) throw new Error('missing nodes');
     expect(title.textContent).toBe('Couldn\u2019t load image');
-    expect(msg.textContent).toBe('The URL returned an error. Try a different source or re-upload the file.');
+    expect(msg.textContent).toBe('The image couldn’t be loaded from this URL. Try a different source or upload the file again.');
   });
 
   it('renders custom title and message when provided', () => {

@@ -415,7 +415,7 @@ const OVERLAY_EN_MAP: Record<string, string> = {
   'tools.image.toggleCaption': 'Toggle caption',
   'tools.image.replace': 'Replace image',
   'tools.image.crop': 'Crop',
-  'tools.image.viewFullscreen': 'View fullscreen',
+  'tools.image.viewFullscreen': 'View full screen',
   'tools.image.downloadOriginal': 'Download original',
   'tools.image.moreOptions': 'More options',
   'blockSettings.delete': 'Delete',
@@ -536,7 +536,7 @@ describe('renderOverlay', () => {
       'align-trigger': 'Alignment',
       'caption-toggle': 'Toggle caption',
       'replace': 'Replace image',
-      'fullscreen': 'View fullscreen',
+      'fullscreen': 'View full screen',
       'download': 'Download original',
       'more': 'More options',
     };
@@ -738,7 +738,7 @@ describe('English fallback when i18n is omitted', () => {
     expectLabel('caption-toggle', 'Toggle caption');
     expectLabel('replace', 'Replace image');
     expectLabel('crop', 'Crop');
-    expectLabel('fullscreen', 'View fullscreen');
+    expectLabel('fullscreen', 'View full screen');
     expectLabel('download', 'Download original');
     expectLabel('more', 'More options');
   });

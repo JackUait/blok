@@ -224,7 +224,7 @@ test('read-only mode sets file caption to contenteditable="false"', async ({ pag
 });
 
 // ---------------------------------------------------------------------------
-// 4. Markdown preview: rendered view by default, Raw toggle shows source
+// 4. Markdown preview: preview view by default, Source toggle shows source
 // ---------------------------------------------------------------------------
 test('Markdown file preview toggles between rendered and raw views', async ({ page }) => {
   await createBlokWithFile(page);
@@ -262,12 +262,12 @@ test('Markdown file preview toggles between rendered and raw views', async ({ pa
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
 
-  // Rendered view is shown by default with the formatted heading.
+  // Preview is shown by default with the formatted heading.
   const renderView = dialog.locator('[data-role="file-preview-md-render"]');
   await expect(renderView.getByRole('heading', { name: 'Hello' })).toBeVisible();
 
-  // Switching to Raw reveals the markdown source.
-  await dialog.getByRole('button', { name: 'Raw' }).click();
+  // Switching to Source reveals the Markdown source.
+  await dialog.getByRole('button', { name: 'Source' }).click();
   const rawView = dialog.locator('[data-role="file-preview-md-raw"]');
   await expect(rawView).toContainText('# Hello');
 });

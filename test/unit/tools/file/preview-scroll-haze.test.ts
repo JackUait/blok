@@ -91,7 +91,7 @@ describe('ScrollHaze', () => {
     haze.destroy();
   });
 
-  it('ignores a hidden view (e.g. the markdown raw pane while Rendered shows)', () => {
+  it('ignores a hidden view (e.g. the Markdown source pane while Preview shows)', () => {
     const body = document.createElement('div');
     const hidden = makeScroller({
       scrollTop: 200, scrollHeight: 1000, clientHeight: 500, scrollWidth: 500, clientWidth: 500, scrollLeft: 0,

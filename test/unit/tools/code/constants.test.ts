@@ -35,7 +35,7 @@ describe('Code Block Constants', () => {
     });
 
     it('first entry is plain text', () => {
-      expect(LANGUAGES[0]).toEqual({ id: 'plain text', name: 'Plain Text' });
+      expect(LANGUAGES[0]).toEqual({ id: 'plain text', name: 'Plain text' });
     });
 
     it('every entry has id and name strings', () => {

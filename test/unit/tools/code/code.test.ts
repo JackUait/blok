@@ -1391,8 +1391,8 @@ describe('CodeTool', () => {
       const detectedItem = items.find((i) => i.secondaryLabel === 'auto');
       expect(detectedItem).toBeUndefined();
 
-      // First item should be Plain Text with trailing check icon
-      expect(items[0].title).toBe('Plain Text');
+      // First item should be Plain text with trailing check icon
+      expect(items[0].title).toBe('Plain text');
       expect(items[0].trailingIcon).toBeDefined();
 
       el.remove();

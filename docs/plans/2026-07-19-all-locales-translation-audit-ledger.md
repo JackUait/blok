@@ -269,7 +269,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | — | — | pending | pending | pending | `F-de-001`–`F-de-073` | pending |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
-| `en` | English | Latin | ltr | concise US English; sentence-case UI | — | — | pending | pending | pending | `F-en-001`–`F-en-036` | pending |
+| `en` | English | Latin | ltr | concise US English; sentence-case UI | codex-en-pass1-539-2026-07-19 | — | pass | pass | pass | `F-en-001`–`F-en-042` | first-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | — | — | pending | pending | pending | `F-es-001`–`F-es-087` | pending |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
@@ -336,6 +336,7 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
+| `en` | `codex-en-pass1-539-2026-07-19` | `sha256:3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65` | — | — |
 
 ## 539-Key Clear-Formatting Schema Migration
 
@@ -372,9 +373,30 @@ source-coverage, encoding, and normalization checker pass. `F-en-036` and all
 only the missing-key defect; every locale row remains `pending` and still
 requires two complete, distinct 539-entry linguistic passes.
 
-## English Source Audit Evidence — prior 538-key pass reset by migration
+## English Source Audit Evidence — current 539-key first pass complete
 
-The first English pass inspected all 538 values in their rendered,
+The current first reviewer inspected all 539/539 English values against the
+guidelines and their rendered, accessibility, or explicitly documented
+source-only contexts. The numbered coverage partitions were 1–140, 141–280,
+281–420, and 421–539: disjoint coverage totaling 539. This replay included
+the migrated `toolNames.clearFormat` value and revalidated every historical
+source-copy decision.
+
+The current replay found six residual defects: the ambiguous table action,
+the `Plain Text` capitalization outlier, the awkward full-screen command, the
+calqued image-load error, and the two technical Markdown-preview labels.
+`F-en-037` through `F-en-042` recorded all six as open before the dictionary
+or fallbacks changed. Their six exact expectations then failed red, the
+reviewed replacements were applied, and the affected table, code, image, and
+file-preview surfaces were rechecked. The 764-case guideline suite, 152
+code-tool cases under an explicit 20-second per-test ceiling, 190 affected
+table/image/file cases, and the live 539-key structural, placeholder,
+encoding, normalization, and 195-static-reference checker pass. The current
+raw dictionary SHA-256 is
+`3b04f0c6a90626b9e5baad6b73e4df875a78a65a40a7c8a27753dc1bb410fd65`.
+English has no exact-English retention inventory by definition.
+
+The prior English pass inspected all 538 values in their rendered,
 accessibility, or explicitly documented source-only contexts. Coverage was
 disjoint and exhaustive:
 
@@ -1143,6 +1165,12 @@ follows the global transition rule above.
 | `F-en-034` | `en` | `tools.video.ctxStats` | slang / terminology | `Stats for nerds` | `Playback statistics` | The context-menu item opens technical playback data; the replacement removes prohibited slang. | verified |
 | `F-en-035` | `en` | `tools.callout.emojiSearchResults` | number / accessibility | `{count} emojis found` | `Emoji matches: {count}` | The live-region template can receive one; the replacement is count-neutral. | verified |
 | `F-en-036` | `en` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Clear formatting"` | The red-first inline-tool sweep and source-copy case reproduced the missing runtime key. The English dictionary and raw tool fallback now both use the concise Microsoft UI term [Clear Formatting](https://support.microsoft.com/en-us/office/clear-all-text-formatting-c094c4da-7f09-4cea-9a8d-c166949c9c80); the focused source-copy, inline-metadata, title-key sweep, and static source-coverage checks pass. | verified |
+| `F-en-037` | `en` | `tools.table.clearSelection` | context / action accuracy | `"Clear"` | `"Clear contents"` | Both callers clear selected cell, row, or column contents while preserving the cells and their formatting; deletion is a separate action. Microsoft Excel uses the exact [Clear Contents](https://support.microsoft.com/en-US/Excel/clear-cells-of-contents-or-formats) command for that operation. | verified |
+| `F-en-038` | `en` | `tools.code.plainText` | capitalization | `"Plain Text"` | `"Plain text"` | The generic format name is not a proper noun and must follow the audit’s resolved sentence-case register; Microsoft’s English UI uses [Plain text](https://support.microsoft.com/en-us/edge/improved-copy-and-paste-of-urls-in-microsoft-edge). The source-only dictionary contract and hardcoded language-list label must remain aligned. | verified |
+| `F-en-039` | `en` | `tools.image.viewFullscreen` | grammar / UI terminology | `"View fullscreen"` | `"View full screen"` | The visible menu item and overlay accessible name open a full-viewport image lightbox. “Full screen” is the natural noun phrase after “View” and matches Apple’s English [View full screen](https://support.apple.com/en-bh/guide/dvd-player/dvdp7a064d1e/mac) command. | verified |
+| `F-en-040` | `en` | `tools.image.errorDefaultMessage` | natural error copy | `"The URL returned an error. Try a different source or re-upload the file."` | `"The image couldn’t be loaded from this URL. Try a different source or upload the file again."` | A URL does not itself “return” an error. The replacement describes the failed image load directly and replaces the awkward “re-upload” construction with a natural recovery instruction. | verified |
+| `F-en-041` | `en` | `tools.file.previewRaw` | jargon / context | `"Raw"` | `"Source"` | This Markdown-preview tab shows the file’s source text. “Raw” is unnecessary technical jargon and does not name the content as clearly as “Source.” | verified |
+| `F-en-042` | `en` | `tools.file.previewRender` | jargon / context | `"Rendered"` | `"Preview"` | This Markdown-preview tab shows the formatted visual preview. “Rendered” exposes an implementation term; “Preview” is the familiar user-facing state and pairs clearly with “Source.” | verified |
 | `F-de-001` | `de` | `blockSettings.dragToMove` | naturalness | `"Ziehen zum Verschieben"` | `"Zum Verschieben ziehen"` | First line of the settings-toggler tooltip needs natural German infinitive word order. | verified |
 | `F-de-002` | `de` | `blockSettings.clickToOpenMenu` | naturalness / accessibility | `"Klicken zum Öffnen des Menüs"` | `"Zum Öffnen des Menüs klicken"` | Standalone settings-toggler accessible name is stilted in the old word order. | verified |
 | `F-de-003` | `de` | `blockSettings.convertWithChildrenWarning` | number / terminology | `"Dieser Block enthält {count} verschachtelte Blöcke. Durch die Konvertierung werden sie auf die oberste Ebene verschoben. Möchten Sie fortfahren?"` | `"Verschachtelte Blöcke: {count}. Beim Umwandeln dieses Blocks werden sie auf die oberste Ebene verschoben. Fortfahren?"` | Source-only warning must work for one or many and avoid needlessly technical `Konvertierung`. | verified |
@@ -1785,7 +1813,7 @@ follows the global transition rule above.
 | `F-yi-001` | `yi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"אַראָפּנעם די פֿאָרמאַטירונג"` | No authoritative localized vendor label was found. The selected wording deliberately reuses this dictionary’s `אַראָפּנעם דעם לינק` action pattern and `פֿאָרמאַטירונג` noun; it is the migration’s highest-uncertainty value and remains flagged for independent full-language review. | verified |
 | `F-zh-001` | `zh` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"清除格式"` | Microsoft’s Simplified Chinese editor UI uses the exact concise command [清除格式](https://support.microsoft.com/zh-CN/PowerPoint/clear-all-text-formatting). | verified |
 | `F-zh-TW-001` | `zh-TW` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"清除格式"` | Microsoft’s Taiwan Traditional Chinese editor UI uses the exact concise command [清除格式](https://support.microsoft.com/zh-TW/PowerPoint/clear-all-text-formatting). | verified |
-| `F-global-001` | all non-English | 36 changed English source keys | source dependency | Localized values have not been re-reviewed against the 35 corrected source values and the new clear-formatting key. | Re-audit all 36 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete 539-key locale pass must inspect all 36 dependencies, including `toolNames.clearFormat`. | open |
+| `F-global-001` | all non-English | 42 changed English source keys | source dependency | Localized values have not been re-reviewed against the 41 corrected source values and the new clear-formatting key. | Re-audit all 42 dependent values in all 68 localized dictionaries and correct them where required. | English-source changes invalidate dependent semantic evidence; every complete 539-key locale pass must inspect all 42 dependencies, including `toolNames.clearFormat` and `F-en-037` through `F-en-042`. | open |
 
 ## Exact-English Retentions
 

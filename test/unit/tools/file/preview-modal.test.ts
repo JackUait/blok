@@ -31,7 +31,7 @@ import { fillOfficeBody } from '../../../../src/tools/file/office-preview';
 const labels = { close: 'Close preview' };
 
 const LABELS = {
-  close: 'Close', raw: 'Raw', render: 'Rendered',
+  close: 'Close', raw: 'Source', render: 'Preview',
   loading: 'Loading…', error: 'Error', download: 'Download',
 };
 

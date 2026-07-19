@@ -229,7 +229,7 @@ describe('TableCellSelection', () => {
   const mockI18n = {
     t: vi.fn((key: string) => {
       const translations: Record<string, string> = {
-        'tools.table.clearSelection': 'Clear',
+        'tools.table.clearSelection': 'Clear contents',
         'tools.table.copySelection': 'Copy',
       };
 
@@ -694,7 +694,7 @@ describe('TableCellSelection', () => {
       expect(lastPopoverArgs?.items).toHaveLength(2);
       expect(lastPopoverArgs?.items?.[0]?.title).toBe('Copy');
       expect(lastPopoverArgs?.items?.[0]?.secondaryLabel).toMatch(/[⌘C]|Ctrl\+C/);
-      expect(lastPopoverArgs?.items?.[1]?.title).toBe('Clear');
+      expect(lastPopoverArgs?.items?.[1]?.title).toBe('Clear contents');
       expect(lastPopoverArgs?.items?.[1]?.secondaryLabel).toBe('Del');
       expect(document.querySelector('[data-blok-popover-opened]')).not.toBeNull();
     });
@@ -2193,4 +2193,3 @@ describe('TableCellSelection', () => {
   });
 
 });
-

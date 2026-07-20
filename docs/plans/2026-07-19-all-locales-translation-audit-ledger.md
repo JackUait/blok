@@ -283,7 +283,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-084` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-gu-001`–`F-gu-054` | pending |
-| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions; inclusive plural recovery guidance; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-038` | pending |
+| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-038` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-004` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
@@ -4849,6 +4849,55 @@ completeness, integrity, source-coverage, encoding, and docs checks pass with
 only the catalogued warnings. This findings work earns no complete-pass
 credit; both complete Hebrew reviews must restart at entry 1 on the new digest.
 
+### Hebrew corrected-byte fresh first-pass residual — remediated
+
+Reviewer `/root/dhivehi_postfix_first_blind/he_blind_audit_1` restarted at
+entry 1 and reread all 546 English/Hebrew pairs on raw dictionary SHA-256
+`bcfc4bd1ff42edf73a638fa01869dff59c53038cc21eac2b4ac75a18e90e154f`.
+Its source-order matrix is bound at SHA-256
+`cb10fc1be14e5893b1d1fe01e292464a4b1b3314e2345bc4d4a7c5f3643f9376`;
+its two-row residual artifact is bound at SHA-256
+`156b1425e8a643e34651008857678a0dac1a5b92b8641b35bc0c295134ce52b3`;
+and its validator is bound at SHA-256
+`2b5b8ffa5b8c932937b138a76be6dcde494a7ed808c3218aaa36183f00b82b44`
+and freshly reports `PASS`. The stopped complete review verifies all 546
+identities, all 38 placeholder-bearing values with 54 occurrences, Unicode,
+NFC, RTL and mixed-script safety, all 38 earlier Hebrew findings, and all six
+exact-English retentions. Its 397/122/14/12/1 lifecycle labels were reconciled
+only after the linguistic read from a parent-supplied locale-independent policy
+map; they are provenance evidence, not an independently source-derived
+subpartition.
+
+Distinct proposal-aware reviewer
+`/root/dhivehi_postfix_first_blind/he_residual_challenge` accepted both
+corrections exactly, with no amendment, rejection, addition, or removal. Its
+accepted map is bound at SHA-256
+`2ecc8d33c716fc73231a970e5f51b36cda277b374eb16c3f335033fa24746bba`;
+its challenge is bound at SHA-256
+`0524064809b1138b01ca4d0e7e2cab0e7f6f726c8f852dda0dc051b5cc9bf317`;
+its validator is bound at SHA-256
+`4218b4060c62e38bb08a906e21bf7438eaa956e4bb5664ba77b4601307a27361`;
+and its sealed manifest is bound at SHA-256
+`9de3d42c666b1a2c7a9bd5087ccf8e943c5e49b1542873d6142cc0633933ff06`.
+A fresh replay reports `PASS`. An exhaustive scan of all Hebrew tokens ending
+in vav or `נה`, plus the 210-key media/error family union, closes the affected
+set at exactly the Google Drive and OneDrive audio recovery instructions.
+
+These two residuals amend existing findings `F-he-027` and `F-he-028`. The
+fresh complete review and challenge overturn the earlier isolated
+inclusive-plural decision: `הורד … והעלה …` matches the locale's consistent
+masculine-singular UI address, including adjacent image, file, video, and audio
+recovery actions. The findings were reopened before dictionary mutation; the
+red gate failed exactly those two reviewed-value assertions while the other
+3,262 cases passed. Two independent map replays confirm that applying the
+accepted map changed exactly those two values, with no missing or unexpected
+edit, and produced raw dictionary SHA-256
+`743a444255897a5a46d741732310d5071051ed12e8d77657cad6fee97f1cf0f9`.
+All 3,264 guideline cases, all 182 identical-value cases, and all 3,981 cases
+across the complete nine-file i18n suite pass; both findings are verified.
+This stopped work earns no complete-pass credit, and both full 546-entry
+reviews must restart at entry 1 on the corrected bytes.
+
 ### Estonian, Persian, Filipino, and Dutch correction closure
 
 The correction pass closed all 135 current-byte findings: 42 Estonian rows
@@ -7982,8 +8031,8 @@ follows the global transition rule above.
 | `F-he-024` | `he` | `tools.image.resetZoom` | caller-aware translation quality | `"אפס תצוגה"` | `"אפס את גודל התצוגה"` | The 100% control resets zoom, not the entire view. איפוס גודל התצוגה is established Microsoft Hebrew zoom terminology, so אפס את גודל התצוגה is precise product copy. Independent disposition: keep. | verified |
 | `F-he-025` | `he` | `tools.image.errorDefaultMessage` | caller-aware translation quality | `"הכתובת החזירה שגיאה. נסה מקור אחר או העלה שוב את הקובץ."` | `"לא ניתן לטעון את התמונה מכתובת ה-URL הזו. נסה מקור אחר או העלה שוב את הקובץ."` | The error state is an image-load failure from a URL. The current “the address returned an error” is an imprecise causal claim; the proposal names the failed image load and preserves both recovery actions. Independent disposition: keep. | verified |
 | `F-he-026` | `he` | `tools.file.previewRaw` | caller-aware translation quality | `"קוד"` | `"מקור"` | This label is the Source side of a rendered-versus-raw preview toggle and may expose non-code text. מקור names source/raw content; קוד incorrectly narrows it to code. Independent disposition: keep. | verified |
-| `F-he-027` | `he` | `tools.audio.errorGoogleDrive` | caller-aware translation quality | `"לא ניתן לנגן ישירות שמע מ-Google Drive. במקום זאת, הורידו את הקובץ והעלו אותו כאן."` | `"לא ניתן לנגן קובץ שמע מ-Google Drive ישירות. במקום זאת, הורידו את הקובץ והעלו אותו כאן."` | The discovery improves the first clause’s word order and supplies קובץ, but its singular masculine הורד/העלה needlessly replaces the current inclusive plural recovery instructions. Retaining הורידו/העלו preserves neutral mixed-audience guidance. Independent disposition: amend. | verified |
-| `F-he-028` | `he` | `tools.audio.errorOneDrive` | caller-aware translation quality | `"לא ניתן לנגן ישירות שמע מ-OneDrive. במקום זאת, הורידו את הקובץ והעלו אותו כאן."` | `"לא ניתן לנגן קובץ שמע מ-OneDrive ישירות. במקום זאת, הורידו את הקובץ והעלו אותו כאן."` | The discovery improves the first clause’s word order and supplies קובץ, but its singular masculine הורד/העלה needlessly replaces the current inclusive plural recovery instructions. Retaining הורידו/העלו preserves neutral mixed-audience guidance. Independent disposition: amend. | verified |
+| `F-he-027` | `he` | `tools.audio.errorGoogleDrive` | caller-aware translation quality / register consistency | `"לא ניתן לנגן ישירות שמע מ-Google Drive. במקום זאת, הורידו את הקובץ והעלו אותו כאן."` | `"לא ניתן לנגן קובץ שמע מ-Google Drive ישירות. במקום זאת, הורד את הקובץ והעלה אותו כאן."` | The first correction restored natural word order and the missing file noun. A fresh complete review then found its plural recovery imperatives isolated from the locale's consistent masculine-singular UI address; the independent challenge accepted `הורד … והעלה …` exactly. | verified |
+| `F-he-028` | `he` | `tools.audio.errorOneDrive` | caller-aware translation quality / register consistency | `"לא ניתן לנגן ישירות שמע מ-OneDrive. במקום זאת, הורידו את הקובץ והעלו אותו כאן."` | `"לא ניתן לנגן קובץ שמע מ-OneDrive ישירות. במקום זאת, הורד את הקובץ והעלה אותו כאן."` | The first correction restored natural word order and the missing file noun. A fresh complete review then found its plural recovery imperatives isolated from the locale's consistent masculine-singular UI address; the independent challenge accepted `הורד … והעלה …` exactly. | verified |
 | `F-he-029` | `he` | `tools.audio.coverSourceAria` | caller-aware translation quality | `"מקור תמונה"` | `"מקור העטיפה"` | The accessible label belongs to the audio cover picker. מקור תמונה is a generic image source; מקור העטיפה identifies the specific cover source controlled here. Independent disposition: keep. | verified |
 | `F-he-030` | `he` | `tools.database.viewTypeListDescription` | caller-aware translation quality | `"תצוגה לינארית פשוטה"` | `"הצג פריטים ברשימה פשוטה"` | The view-type description must explain what list view does. The current “simple linear view” omits the action, items, and list; the proposal restores all three. Independent disposition: keep. | verified |
 | `F-he-031` | `he` | `tools.bookmark.loading` | caller-aware translation quality | `"טוען תצוגה מקדימה"` | `"טוען תצוגה מקדימה של הקישור…"` | The bookmark placeholder specifically loads a link preview. The proposal restores the omitted link object and the ongoing-state ellipsis. Independent disposition: keep. | verified |

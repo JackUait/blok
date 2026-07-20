@@ -138,6 +138,16 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
     this.placeholder$.set(value);
   }
 
+  /**
+   * Theme tokens. Construction-only config forced hosts with a live light/dark
+   * toggle to recreate the editor or hand-write the global stylesheet Blok
+   * already injects; this drives the runtime `tokens` API instead.
+   */
+  private readonly styleTokens$ = signal<Record<string, string> | undefined>(undefined);
+  @Input() set styleTokens(value: Record<string, string> | undefined) {
+    this.styleTokens$.set(value);
+  }
+
   private readonly autofocus$ = signal<boolean | undefined>(false);
   @Input() set autofocus(value: boolean | undefined) {
     this.autofocus$.set(value);
@@ -168,6 +178,9 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
    * no-op, so it won't clobber the caret. Renders are serialized via `renderChain`.
    */
   private lastRenderedData?: OutputData | LooseOutputData;
+
+  /** Last token set pushed through `tokens.set`, for deep-equal deduping. */
+  private appliedTokens?: Record<string, string>;
   private seededEditor: Blok | null = null;
   private renderChain: Promise<void> = Promise.resolve();
 
@@ -339,6 +352,18 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
       if (editor && placeholder !== undefined) {
         editor.placeholder.set(placeholder);
       }
+    });
+
+    effect(() => {
+      const editor = this.instance();
+      const tokens = this.styleTokens$() ?? this.config?.style?.tokens;
+
+      if (!editor || tokens === undefined || deepEqual(tokens, this.appliedTokens)) {
+        return;
+      }
+
+      this.appliedTokens = { ...tokens };
+      editor.tokens.set(tokens);
     });
 
     effect(() => {

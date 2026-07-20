@@ -9,8 +9,8 @@
  * column at the content-area left edge.
  */
 [data-blok-database-board] {
-  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
-  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 
   /* macOS-style scrollbar — thin, rounded, visible on hover/scroll.
      Reserve its layout space so it never paints over the columns. */
@@ -566,8 +566,8 @@
 
 /* Database Title */
 [data-blok-database-title] {
-  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
-  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 /* Database Tab Bar */
@@ -576,7 +576,7 @@
   align-items: center;
   gap: var(--blok-space-0-5);
   padding: var(--blok-space-1) 0 var(--blok-space-2);
-  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-title-row] {
@@ -588,7 +588,7 @@
 /* Single-view mode: move centering offset to the row, strip it from the title
    so the + button sits exactly 4px after the title text */
 [data-blok-database-title-row][data-single-view] {
-  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 [data-blok-database-title-row][data-single-view] [data-blok-database-title] {
@@ -834,8 +834,8 @@
 [data-blok-database-list] {
   display: flex;
   flex-direction: column;
-  padding-left: max(0px, calc((100% - var(--max-width-content)) / 2));
-  padding-right: max(0px, calc((100% - var(--max-width-content)) / 2));
+  padding-left: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
+  padding-right: max(0px, calc((100% - var(--blok-content-max-width, var(--max-width-content))) / 2));
 }
 
 /**

@@ -261,6 +261,47 @@ class Blok {
     };
 
     /**
+     * Theme tokens API — exposed immediately (mirrors theme/width/placeholder)
+     * so hosts can flip tokens before isReady without a silent no-op. The set
+     * is buffered and replayed once UI is ready.
+     *
+     * Replace semantics: each call carries the complete token set, mirroring
+     * config.style.tokens, so a light/dark flip drops tokens absent from the
+     * new palette.
+     */
+    const tokensBuffer = { pending: null as Record<string, string> | null };
+
+    const applyTokens = (tokens: Record<string, string>): void => {
+      tokensBuffer.pending = tokens;
+
+      const ui = getUIModule();
+
+      if (ui !== undefined) {
+        ui.setThemeTokens(tokens);
+        tokensBuffer.pending = null;
+      }
+    };
+
+    (this as Record<string, unknown>).tokens = {
+      get: (): Record<string, string> => {
+        if (tokensBuffer.pending !== null) {
+          return { ...tokensBuffer.pending };
+        }
+
+        const ui = getUIModule();
+
+        if (ui !== undefined) {
+          return ui.getThemeTokens();
+        }
+
+        const cfg = this.initialConfiguration;
+
+        return isObject(cfg) ? { ...((cfg as BlokConfig).style?.tokens ?? {}) } : {};
+      },
+      set: (tokens: Record<string, string>): void => applyTokens(tokens),
+    };
+
+    /**
      * We need to export isReady promise in the constructor
      * as it can be used before other API methods are exported
      * @type {Promise<void>}
@@ -330,6 +371,18 @@ class Blok {
           ui.setWidthMode(widthBuffer.pendingMode);
         }
         widthBuffer.pendingMode = null;
+      }
+
+      // Apply any theme tokens buffered before isReady resolved. UI.prepare()
+      // has already injected config.style.tokens, so this replaces them with
+      // the caller's intent.
+      if (tokensBuffer.pending !== null) {
+        const ui = (blok.moduleInstances as Partial<BlokModules>).UI;
+
+        if (ui !== undefined) {
+          ui.setThemeTokens(tokensBuffer.pending);
+        }
+        tokensBuffer.pending = null;
       }
 
       // Apply any placeholder buffered before isReady resolved.

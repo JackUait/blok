@@ -110,6 +110,18 @@ export class UI extends Module<UINodes> {
   /** Unique style tag ID for this instance's theme token overrides, derived from the holder element */
   private themeTokenStyleTagId: string | null = null;
 
+  /** Theme tokens currently applied, post-validation. Mirrors the live style tag. */
+  private appliedThemeTokens: Record<string, string> = {};
+
+  /** Rendered `--name: value;` lines for {@link appliedThemeTokens}. */
+  private themeTokenVarLines: string[] = [];
+
+  /**
+   * Whether setThemeTokens() was called. Such a call can precede prepare(), and
+   * must then win over `config.style.tokens` when prepare() finally injects.
+   */
+  private themeTokensSetAtRuntime = false;
+
   /**
    * Reset the block hover state (used after drag cancellation to allow toolbar to show again)
    */
@@ -489,12 +501,7 @@ export class UI extends Module<UINodes> {
     }
 
     // Remove the per-instance theme token style tag to prevent leaks in SPAs
-    if (this.themeTokenStyleTagId !== null) {
-      const themeTokenStyleTag = $.get(this.themeTokenStyleTagId);
-      if (themeTokenStyleTag) {
-        themeTokenStyleTag.remove();
-      }
-    }
+    this.removeThemeTokenStyleTag();
 
     // Clean up accessibility announcer
     destroyAnnouncer();
@@ -806,10 +813,62 @@ export class UI extends Module<UINodes> {
   private loadThemeTokenStyles(): void {
     const tokens = this.config.style?.tokens;
 
+    /**
+     * A runtime setThemeTokens() can land before prepare() runs (core populates
+     * moduleInstances synchronously but awaits prepare() later). Those tokens
+     * are already stored but could not be injected yet — flush them now that the
+     * nodes exist, and let them win over the construction config.
+     */
+    if (this.themeTokensSetAtRuntime) {
+      this.renderThemeTokenStyleTag();
+
+      return;
+    }
+
     if (tokens === undefined || Object.keys(tokens).length === 0) {
       return;
     }
 
+    this.storeThemeTokens(tokens);
+    this.renderThemeTokenStyleTag();
+  }
+
+  /**
+   * Returns the theme tokens currently applied by {@link setThemeTokens}, after
+   * validation — entries rejected as invalid are absent.
+   */
+  public getThemeTokens(): Record<string, string> {
+    return { ...this.appliedThemeTokens };
+  }
+
+  /**
+   * Replaces the injected theme-token stylesheet at runtime.
+   *
+   * Replace (not merge) semantics: the argument is the complete token set,
+   * mirroring `config.style.tokens`, so a host flipping light/dark passes the
+   * whole palette and tokens dropped from it stop applying. Passing `{}`
+   * removes the stylesheet.
+   *
+   * This exists because the injected sheet is the only styling channel that
+   * reaches body-mounted UI (popovers, tooltips, top-layer elements), which
+   * cannot inherit custom properties from the holder. Without a runtime
+   * setter, a host with a live theme toggle had to hand-write that same
+   * global stylesheet itself.
+   * @param tokens - complete set of `--blok-*` overrides to apply
+   */
+  public setThemeTokens(tokens: Record<string, string>): void {
+    this.themeTokensSetAtRuntime = true;
+    this.storeThemeTokens(tokens);
+    this.renderThemeTokenStyleTag();
+  }
+
+  /**
+   * Validates and stores a token set without touching the DOM, so it can be
+   * called before the nodes exist.
+   * @param tokens - candidate `--blok-*` overrides
+   */
+  private storeThemeTokens(tokens: Record<string, string>): void {
+    const applied: Record<string, string> = {};
     const varLines: string[] = [];
 
     for (const [name, value] of Object.entries(tokens)) {
@@ -830,10 +889,26 @@ export class UI extends Module<UINodes> {
         continue;
       }
 
+      applied[name] = value;
       varLines.push(`  ${name}: ${value};`);
     }
 
-    if (varLines.length === 0) {
+    this.appliedThemeTokens = applied;
+    this.themeTokenVarLines = varLines;
+  }
+
+  /**
+   * (Re)injects the stylesheet for the stored theme tokens.
+   *
+   * No-ops while the nodes are absent: the setter is public and reachable
+   * between module construction and prepare(), and the tag id is derived from
+   * the holder/wrapper. prepare() calls this again once make() has run, so
+   * tokens set that early are not lost, just deferred.
+   */
+  private renderThemeTokenStyleTag(): void {
+    this.removeThemeTokenStyleTag();
+
+    if (this.themeTokenVarLines.length === 0 || this.nodes?.wrapper === undefined) {
       return;
     }
 
@@ -842,7 +917,7 @@ export class UI extends Module<UINodes> {
 
     const css = [
       `[data-blok-interface], [data-blok-popover], [data-blok-top-layer] {`,
-      varLines.join('\n'),
+      this.themeTokenVarLines.join('\n'),
       `}`,
     ].join('\n');
 
@@ -858,6 +933,19 @@ export class UI extends Module<UINodes> {
     $.prepend(document.head, tag);
 
     this.themeTokenStyleTagId = styleTagId;
+  }
+
+  /**
+   * Removes this instance's theme-token style tag, if one is currently injected.
+   * Shared by {@link setThemeTokens} (which re-injects) and destroy().
+   */
+  private removeThemeTokenStyleTag(): void {
+    if (this.themeTokenStyleTagId === null) {
+      return;
+    }
+
+    $.get(this.themeTokenStyleTagId)?.remove();
+    this.themeTokenStyleTagId = null;
   }
 
   /**

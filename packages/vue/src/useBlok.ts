@@ -239,6 +239,25 @@ export function useBlok(
     { immediate: true }
   );
 
+  // Theme tokens were construction-only, so a host with a live light/dark
+  // toggle had to recreate the editor or hand-write the global stylesheet Blok
+  // already injects. Deep-equal-deduped because `tokens` is typically a fresh
+  // object literal; `deep: true` so mutating the same object still propagates.
+  const appliedTokens: { value: Record<string, string> | undefined } = { value: undefined };
+
+  watch(
+    [editor, () => mergedConfig().style?.tokens],
+    ([ed, tokens]) => {
+      if (!ed || tokens === undefined || deepEqual(tokens, appliedTokens.value)) {
+        return;
+      }
+
+      appliedTokens.value = { ...tokens };
+      ed.tokens.set(tokens);
+    },
+    { immediate: true, deep: true }
+  );
+
   watch(
     [editor, () => mergedConfig().autofocus],
     ([ed, autofocus]) => {

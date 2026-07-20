@@ -34,6 +34,7 @@ import {
   ResolvedTheme,
   Width,
   Placeholder,
+  Tokens,
 } from './api';
 
 import { LooseOutputData, OutputData } from './data-formats';
@@ -135,6 +136,7 @@ export {
   Width,
   EditorWidth,
   Placeholder,
+  Tokens,
 } from './api';
 export {
   BlockMutationType,
@@ -270,6 +272,8 @@ export interface PendingBlok {
   width: Width;
   /** Placeholder API, exposed immediately after construction. */
   placeholder: Placeholder;
+  /** Runtime theme-tokens API, exposed immediately after construction. */
+  tokens: Tokens;
 }
 
 /**
@@ -313,6 +317,7 @@ export class Blok {
   public theme: Theme;
   public width: Width;
   public placeholder: Placeholder;
+  public tokens: Tokens;
   constructor(configuration?: BlokConfig|string);
 
   /**

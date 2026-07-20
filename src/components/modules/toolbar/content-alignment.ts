@@ -76,14 +76,27 @@ export function resolveVisualContentWidth(
 }
 
 /**
- * Read the `--max-width-content` CSS custom property off the given element
- * (inherited from `:root`/`@theme`). Returns `null` if the token is absent
- * or not a positive finite number.
- * @param element - element whose computed style supplies the CSS var
+ * Read the content-column cap off the given element, mirroring the CSS
+ * resolution order `var(--blok-content-max-width, var(--max-width-content))`:
+ * the public host hook wins, the private `@theme` default is the fallback.
+ * Reading only the private token positioned the toolbar against the uncapped
+ * default whenever a host narrowed the column.
+ *
+ * Returns `null` if neither token yields a positive finite number — including
+ * the `--blok-content-max-width: none` case used by `width: 'full'`, which
+ * correctly means "no cap to clamp against".
+ * @param element - element whose computed style supplies the CSS vars
  */
 function readMaxContentWidth(element: HTMLElement): number | null {
-  const raw = getComputedStyle(element).getPropertyValue('--max-width-content').trim();
-  const value = parseFloat(raw);
+  const styles = getComputedStyle(element);
 
-  return Number.isFinite(value) && value > 0 ? value : null;
+  for (const token of ['--blok-content-max-width', '--max-width-content']) {
+    const value = parseFloat(styles.getPropertyValue(token).trim());
+
+    if (Number.isFinite(value) && value > 0) {
+      return value;
+    }
+  }
+
+  return null;
 }

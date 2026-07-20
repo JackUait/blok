@@ -26,6 +26,7 @@ export interface MockBlokInstance {
   theme: { set: ReturnType<typeof vi.fn> };
   width: { set: ReturnType<typeof vi.fn> };
   placeholder: { set: ReturnType<typeof vi.fn> };
+  tokens: { set: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
   on: ReturnType<typeof vi.fn>;
   off: ReturnType<typeof vi.fn>;
 }
@@ -43,6 +44,8 @@ class MockBlok implements MockBlokInstance {
   public theme = { set: vi.fn() };
   public width = { set: vi.fn() };
   public placeholder = { set: vi.fn() };
+
+  public tokens = { set: vi.fn(), get: vi.fn().mockReturnValue({}) };
   public on = vi.fn();
   public off = vi.fn();
 

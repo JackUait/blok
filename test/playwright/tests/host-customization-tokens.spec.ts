@@ -303,6 +303,100 @@ test('style.tokens override is applied to body-mounted popover UI', async ({ pag
   expect(value).toBe('rgb(1, 2, 3)');
 });
 
+test('tokens.set repaints body-mounted popover UI at runtime (host theme toggle)', async ({ page }) => {
+  await createBlok(page, {
+    styleTokens: { '--blok-popover-bg': 'rgb(1, 2, 3)' },
+    data: { blocks: [{ type: 'paragraph', data: { text: '' } }] },
+  });
+
+  /*
+   * The whole point of the runtime API: a host light/dark toggle must reach
+   * UI portaled OUT of the editor wrapper, which cannot inherit custom
+   * properties from the holder. Unit tests only assert the generated CSS text,
+   * so this drives the built bundle and reads the popover's computed value.
+   */
+  await page.evaluate(() => {
+    window.blokInstance?.tokens.set({ '--blok-popover-bg': 'rgb(9, 8, 7)' });
+  });
+
+  const paragraphBlock = page.locator(
+    `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`
+  );
+
+  await expect(paragraphBlock).toHaveCount(1);
+
+  const editable = paragraphBlock.locator('[contenteditable]');
+
+  await editable.click();
+  await editable.fill('');
+  await editable.focus();
+  await page.keyboard.type('/');
+
+  const popover = page.locator('[data-blok-popover]').first();
+
+  await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
+
+  const isBodyChild = await popover.evaluate((el) => el.parentElement === document.body);
+
+  expect(isBodyChild).toBe(true);
+
+  const value = await popover.evaluate((el) => getComputedStyle(el).getPropertyValue('--blok-popover-bg').trim());
+
+  expect(value).toBe('rgb(9, 8, 7)');
+
+  // Replace semantics: a token dropped from the new set stops applying.
+  await page.evaluate(() => {
+    window.blokInstance?.tokens.set({});
+  });
+
+  const cleared = await popover.evaluate((el) => getComputedStyle(el).getPropertyValue('--blok-popover-bg').trim());
+
+  expect(cleared).not.toBe('rgb(9, 8, 7)');
+});
+
+test('runtime tokens survive a live theme toggle (the actual host scenario)', async ({ page }) => {
+  await createBlok(page, {
+    data: { blocks: [{ type: 'paragraph', data: { text: 'themed' } }] },
+  });
+
+  /*
+   * The workaround this API replaces existed specifically because the host's
+   * token bridge "must flip live on dark-mode toggle". So the contract that
+   * matters is not just "tokens can be set at runtime" but "tokens set at
+   * runtime still win after Blok switches theme" — Blok's own dark palette is
+   * declared at zero specificity via :where(), while the injected sheet is a
+   * plain (0,1,0) selector, so the override must survive. If the palette ever
+   * stopped being :where()-wrapped, this is what would catch it.
+   */
+  const readPopoverBg = (): Promise<string> =>
+    page.evaluate(() =>
+      getComputedStyle(document.querySelector('[data-blok-interface]') as Element)
+        .getPropertyValue('--blok-popover-bg')
+        .trim()
+    );
+
+  await page.evaluate(() => {
+    window.blokInstance?.theme.set('light');
+    window.blokInstance?.tokens.set({ '--blok-popover-bg': 'rgb(11, 22, 33)' });
+  });
+
+  expect(await readPopoverBg()).toBe('rgb(11, 22, 33)');
+
+  await page.evaluate(() => {
+    window.blokInstance?.theme.set('dark');
+  });
+
+  expect(await page.evaluate(() => window.blokInstance?.theme.getResolved())).toBe('dark');
+  expect(await readPopoverBg()).toBe('rgb(11, 22, 33)');
+
+  // And the host can flip the palette itself on that toggle — the whole point.
+  await page.evaluate(() => {
+    window.blokInstance?.tokens.set({ '--blok-popover-bg': 'rgb(44, 55, 66)' });
+  });
+
+  expect(await readPopoverBg()).toBe('rgb(44, 55, 66)');
+});
+
 test('hideToolbar keeps the toolbar closed on hover and collapses the gutter', async ({ page }) => {
   await createBlok(page, {
     hideToolbar: true,

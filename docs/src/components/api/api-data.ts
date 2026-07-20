@@ -2092,6 +2092,13 @@ export function Editor() {
         description: "Content width mode (reactive). Synced after mount via editor.width.set().",
       },
       {
+        option: "style",
+        type: "BlokConfig['style']",
+        default: "—",
+        description:
+          "Styling config. `style.tokens` is reactive: changed `--blok-*` overrides sync in place after mount via editor.tokens.set() (deep-equal deduped), so a host light/dark toggle needs no remount. Replace semantics — pass the whole palette; tokens dropped from it stop applying. Angular exposes this as the separate [styleTokens] input.",
+      },
+      {
         option: "autofocus",
         type: "boolean",
         default: "false",

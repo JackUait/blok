@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.5](https://github.com/JackUait/blok/compare/v1.2.4...v1.2.5) (2026-07-20)
+
+### Features
+
+- **i18n** — New Taiwan Traditional Chinese locale (`zh-TW`) with its own emoji dictionary, bringing the corpus to 69 locale variants. A full audit pass over every shipped locale corrected terminology and localized previously hardcoded runtime strings (media captions, database defaults, emoji category scopes, recent color labels, action search, move announcements), with hardened locale validation.
+- **Theming** — New `style.tokens` config lets each editor instance pass `--blok-*` token overrides that also reach body-mounted UI (popovers, menus). The edit-mode gutter now defaults to 56px and is owned by Blok, checklists get a dedicated padding token (falling back to the list token), `hideToolbar` config now actually hides the toolbar and collapses the gutter, and `--blok-placeholder-color` is a public hook.
+- **Inline toolbar** — Restructured as a card with a convert row plus a five-column tool grid, including a new clear-format tool and redrawn toggle-heading icons.
+- **Color** — Text and background tunes merged into a single Color submenu; the color picker gained a Recently Used section remembering the last 5 colors; slash-menu color command titles are localized.
+- **Table** — Compact/comfortable text-size switch, grouped with density under a text-size submenu.
+- **Header** — Heading level converts are grouped under a heading submenu in block settings.
+- **Image** — Overlay controls use discrete size tiers (full/medium/compact) instead of fluid scaling, keeping them legible at small widths.
+- **Data compatibility** — Editor.js-shaped data is accepted losslessly: null-tolerant `LooseOutputData` inputs, public `equalsOutputData`/`isEmptyOutputData` utilities, echo-safe `blocks.render()` (re-rendering identical data is a no-op), and a synchronous `isRendered` flag.
+
+### Bug Fixes
+
+- **Popovers** — Block-settings menu placement fixes: the menu centers on the six-dots handle, stays attached to it near viewport edges, never touches the screen border, and submenus always open to the right and appear only when hovering the trigger or the submenu itself; page scroll is locked while the menu is open.
+- **Editor** — Toggle-heading level conversion no longer strands child blocks in a detached DOM (silent data loss); a save-time invariant gate now rejects stranded holders outright.
+- **Adapters/Core** — Six consumer runtime workarounds root-caused and fixed in core, types, and adapters.
+- **UI** — Inputs show a single focus indicator (no double border), and the popover search icon was removed.
+- **Accessibility** — Move and duplicate announcements are count-neutral and carry correct totals; search results announcements keep their context.
+
+### Maintenance
+
+- **CI** — Shorter critical path (parallel build start, faster lint), with contract tests enforcing the workflow shape.
+- **Tests** — Animation-frame APIs polyfilled for jsdom environments; extreme-position e2e sweeps guard menu placement at screen edges.
+
 ## [1.2.4](https://github.com/JackUait/blok/compare/v1.2.3...v1.2.4) (2026-07-18)
 
 ### Bug Fixes

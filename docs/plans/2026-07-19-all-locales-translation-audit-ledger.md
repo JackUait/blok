@@ -281,7 +281,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-101` | pending |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
-| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-133` | pending |
+| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | — | pass | pass | pass | `F-fr-001`–`F-fr-133` | first-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | — | — | pending | pending | pending | `F-hi-001`–`F-hi-079` | pending |
@@ -412,6 +412,7 @@ locale returns to `pending`.
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
+| `fr` | `root-czech_546_first_pass` | `sha256:4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38` | — | — |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
 ## 546-Key Recently-Used Label Migration
@@ -1692,6 +1693,27 @@ exactly the old value and passes after remediation. The corrected dictionary
 SHA-256 is
 `4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38`;
 French remains `pending` until two fresh complete passes.
+
+Reviewer `root-czech_546_first_pass` then restarted from entry 1 and directly
+reread all 546 current English/French pairs in source order. It independently
+upheld the 133 current finding rows, including amended `F-fr-062`, and all 23
+retentions whose IDs intentionally skip `R-fr-012`. It revalidated 38
+placeholder-bearing values with 54 occurrences, 44 aliases in 14 groups and
+48 references, 117 provider compositions, 20 block-color titles, three
+migrations, 80 changed-English rows covering 78 keys, and the complete
+533+12+1 caller partition. The emoji live-region wording was also exercised
+with singular and plural dynamic counts; no residual or uncertainty remained.
+
+The current-byte artifact is
+`/tmp/blok-fr-546-first-pass-final-natural.json` with SHA-256
+`c0d3169c5e251509aebb8bb6af5e66e7f6fa918df920996639d5833cae0e5dbe`;
+its independent validator passed 6,335 assertions. The artifact preserves the
+historical superseded emoji finding as an additional disposition while
+explicitly confirming that the current ledger consolidates the final wording
+into `F-fr-062` and contains 133 distinct rows. French is now
+`first-pass-complete` on raw dictionary SHA-256
+`4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38`,
+pending a distinct complete second pass.
 
 ### Finnish (`fi`) — pending after second-pass residuals
 

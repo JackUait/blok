@@ -391,6 +391,8 @@ describe('FileTool — caption & read-only', () => {
           ? 'Dateibeschriftung schreiben…'
           : key,
         has: (key: string) => key === 'tools.file.captionPlaceholder',
+        getEnglishTranslation: (key: string) => key,
+        getLocale: () => 'de',
       },
     });
     const tool = new FileTool(createOptions(

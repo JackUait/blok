@@ -229,6 +229,11 @@ rewriteTypeImports(path.resolve(stagingDir, 'angular/block-context.ts'));
 rewriteTypeImports(path.resolve(stagingDir, 'angular/createAngularBlock.ts'));
 rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-editor.component.ts'));
 rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-content.directive.ts'));
+// Also rewrite staged shared/ files that import from '../../types'.
+for (const entry of readdirSync(path.resolve(stagingDir, 'shared'), { withFileTypes: true })) {
+  if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
+  rewriteTypeImports(path.resolve(stagingDir, 'shared', entry.name));
+}
 
 // Fail-loud guard: after all rewrites, no staged .ts source file should still contain
 // a relative import whose specifier points into the core types/ or markdown/types tree.

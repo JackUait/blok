@@ -266,7 +266,7 @@ test.describe('toggle heading level conversion keeps children', () => {
     } as unknown as OutputData);
 
     // Focus the empty toggle heading and open the slash menu.
-    const heading = page.locator(`${BLOK_INTERFACE_SELECTOR} h2[contenteditable="true"]`).first();
+    const heading = page.getByRole('heading', { level: 2 }).first();
 
     await heading.click();
     await page.keyboard.type('/');

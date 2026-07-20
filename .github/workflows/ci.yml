@@ -18,10 +18,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Check translations
         run: node scripts/i18n/check-translations.mjs

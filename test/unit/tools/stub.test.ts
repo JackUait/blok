@@ -4,7 +4,15 @@ import type { API, BlockAPI } from '@/types';
 import type { BlockToolConstructorOptions } from '@/types/tools/block-tool';
 import { Stub, type StubData } from '../../../src/tools/stub';
 import { Blok } from '../../../src/blok';
-import type { BlokConfig, OutputData } from '../../../types';
+import type { Blok as PublicBlok, BlokConfig, OutputData } from '../../../types';
+
+const isSaveableBlok = (candidate: Blok): candidate is Blok & Pick<PublicBlok, 'save'> => {
+  return 'save' in candidate && typeof candidate.save === 'function';
+};
+
+const hasNested = (value: unknown): value is { nested: unknown } => {
+  return typeof value === 'object' && value !== null && 'nested' in value;
+};
 
 interface CreateStubOptions {
   data?: Partial<StubData>;
@@ -108,6 +116,9 @@ describe('Stub tool', () => {
     expect(output).toEqual(savedData);
     expect(output).not.toBe(savedData);
     expect(output.data).not.toBe(savedData.data);
+    if (!hasNested(output.data)) {
+      throw new Error('save() output is missing the expected nested payload');
+    }
     expect(output.data.nested).not.toBe(savedData.data.nested);
   });
 
@@ -177,6 +188,11 @@ describe('Stub tool save output through editor.save()', () => {
     editor = createEditor(buildDocument());
     await editor.isReady;
 
+    // The public save() lands on the instance only after isReady (prototype swap).
+    if (!isSaveableBlok(editor)) {
+      throw new Error('editor did not expose save() after isReady');
+    }
+
     const first = await editor.save();
     const firstBlock = first.blocks[0];
 
@@ -201,6 +217,11 @@ describe('Stub tool save output through editor.save()', () => {
   it('two consecutive saves return structurally equal but not identity-shared data', async () => {
     editor = createEditor(buildDocument());
     await editor.isReady;
+
+    // The public save() lands on the instance only after isReady (prototype swap).
+    if (!isSaveableBlok(editor)) {
+      throw new Error('editor did not expose save() after isReady');
+    }
 
     const first = await editor.save();
     const second = await editor.save();

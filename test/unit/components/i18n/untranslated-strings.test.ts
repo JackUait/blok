@@ -536,22 +536,21 @@ describe('hardcoded user-facing strings bypass i18n', () => {
       const text = readFileSync(file, 'utf-8');
       const titleKeyPattern =
         /(?:public\s+)?static\s+titleKey\s*=\s*(['"])([^'"]+)\1/gu;
+      const missingKeys = Array.from(
+        text.matchAll(titleKeyPattern),
+        match => match[2]
+      )
+        .filter((shortKey): shortKey is string => shortKey !== undefined)
+        .map(shortKey =>
+          shortKey.includes('.') ? shortKey : `toolNames.${shortKey}`
+        )
+        .filter(key => !(key in english));
 
-      for (const match of text.matchAll(titleKeyPattern)) {
-        const shortKey = match[2];
-
-        if (shortKey === undefined) {
-          continue;
-        }
-
-        const key = shortKey.includes('.')
-          ? shortKey
-          : `toolNames.${shortKey}`;
-
-        if (!(key in english)) {
-          offenders.push(`${relative(REPO_ROOT, file)} → ${key}`);
-        }
-      }
+      offenders.push(
+        ...missingKeys.map(
+          key => `${relative(REPO_ROOT, file)} → ${key}`
+        )
+      );
     }
 
     expect(

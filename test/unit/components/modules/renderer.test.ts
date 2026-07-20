@@ -641,6 +641,48 @@ describe('Renderer module', () => {
     );
   });
 
+  it('normalizes null block ids to undefined so the factory generates fresh ones', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    const logLabeledSpy = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+    blockManager.composeBlock = vi.fn<BlockManagerComposeBlock>((options) => {
+      return createMockBlock({ id: options.id, tool: options.tool });
+    });
+
+    const blocks = [
+      { id: null, type: 'paragraph', data: { text: 'First' } },
+      { id: null, type: 'paragraph', data: { text: 'Second' } },
+    ] as unknown as OutputBlockData[];
+
+    await renderer.render(blocks);
+
+    expect(blockManager.composeBlock).toHaveBeenCalledTimes(2);
+    expect((blockManager.composeBlock.mock.calls[0][0]).id).toBeUndefined();
+    expect((blockManager.composeBlock.mock.calls[1][0]).id).toBeUndefined();
+
+    // Two null ids must not be treated as duplicates of each other
+    expect(logLabeledSpy).not.toHaveBeenCalled();
+  });
+
+  it('passes an empty object to composeBlock when a block arrives with data: null', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    const blocks = [
+      { id: 'b1', type: 'paragraph', data: null },
+    ] as unknown as OutputBlockData[];
+
+    await renderer.render(blocks);
+
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'b1', data: {} })
+    );
+  });
+
   it('emits blocks:rendered with the rendered block count after a batch render', async () => {
     const { renderer, tools, emit } = createRenderer();
 

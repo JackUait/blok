@@ -26,6 +26,7 @@ import type {
   BlocksRenderedPayload,
   BlokConfig,
   EditorWidth,
+  LooseOutputData,
   OutputBlockData,
   OutputData,
   ResolvedTheme,
@@ -143,8 +144,8 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
   }
 
   // ---- Reactive content (seeds construction, then re-renders on change) ----
-  private readonly data$ = signal<OutputData | undefined>(undefined);
-  @Input() set data(value: OutputData | undefined) {
+  private readonly data$ = signal<OutputData | LooseOutputData | undefined>(undefined);
+  @Input() set data(value: OutputData | LooseOutputData | undefined) {
     this.data$.set(value);
   }
 
@@ -166,7 +167,7 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
    * effect below). A controlled `data` echo that deep-equals this baseline is a
    * no-op, so it won't clobber the caret. Renders are serialized via `renderChain`.
    */
-  private lastRenderedData?: OutputData;
+  private lastRenderedData?: OutputData | LooseOutputData;
   private seededEditor: Blok | null = null;
   private renderChain: Promise<void> = Promise.resolve();
 
@@ -297,7 +298,7 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
   }
 
   /** Replace the editor content. Resolves undefined until the editor is ready. */
-  render(data: OutputData): Promise<void> | undefined {
+  render(data: OutputData | LooseOutputData): Promise<void> | undefined {
     return this.instance()?.render(data);
   }
 
@@ -427,7 +428,7 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
   // ---- ControlValueAccessor (optional forms integration) ----
 
   /** Seeds/renders an externally-set form value through the same dedup machinery. */
-  writeValue(value: OutputData | null): void {
+  writeValue(value: OutputData | LooseOutputData | null): void {
     this.data$.set(value ?? undefined);
   }
 

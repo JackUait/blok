@@ -114,7 +114,7 @@
         "render": {
           "name": "render(data)",
           "returnType": "Promise<void>",
-          "description": "Renders editor content from previously saved JSON data.",
+          "description": "Renders editor content from previously saved JSON data. Accepts the loose wire shape (`LooseOutputData`) — `null` values for block `data`, `id`, or `time` from backend DTOs are normalized at the boundary.",
           "note": "Loads saved content and replaces the current document. To append instead of replace, use `blocks.insertMany()`."
         },
         "focus": {
@@ -141,6 +141,11 @@
           "name": "isReady",
           "type": "Promise<Blok>",
           "description": "Promise that resolves with the ready editor instance"
+        },
+        "isRendered": {
+          "name": "isRendered",
+          "type": "boolean",
+          "description": "Synchronous render-readiness flag — true once the current render batch has landed in the DOM (mirrors the `data-blok-rendered` wrapper attribute); false before the first render and while a re-render is in flight. Complements the async `isReady`/`onReady`: no await or callback needed, so mount state can be polled synchronously."
         },
         "blocks": {
           "name": "blocks",
@@ -215,9 +220,9 @@
         },
         "data": {
           "option": "data",
-          "type": "OutputData",
+          "type": "OutputData | LooseOutputData",
           "default": "undefined",
-          "description": "Initial data to render"
+          "description": "Initial data to render. The loose wire shape is accepted: `null` values for block `data`, `id`, or `time` (common in backend DTOs) are normalized at the boundary."
         },
         "readOnly": {
           "option": "readOnly",
@@ -285,7 +290,7 @@
             "note": "Same as the top-level `clear()`, exposed on the blocks module. Use when you already hold `editor.blocks`."
           },
           "render": {
-            "note": "Replaces the whole document. To add blocks without clearing, use `insert()` or `insertMany()`."
+            "note": "Replaces the whole document. Echoing the editor's own output back is a caret-preserving no-op — no consumer-side dedupe needed. To add blocks without clearing, use `insert()` or `insertMany()`."
           },
           "renderFromHTML": {
             "note": "Handy for importing legacy HTML, but the result is only as good as the tools' paste handlers — JSON via `render()` preserves more fidelity when you control the source."
@@ -721,7 +726,15 @@
     "outputData": {
       "title": "OutputData",
       "badge": "Data",
-      "description": "The data structure returned by the save() method."
+      "description": "The data structure returned by the save() method. Input positions — the `data` config option, `render()`, `blocks.render()`, and `blocks.insertMany()` — also accept the loose wire variants `LooseOutputData` / `LooseOutputBlockData`, where block `data`, `id`, and `time` may be `null`: a `null` `data` becomes `{}`, a `null`/empty `id` gets a generated one. Saved output is always the strict shape.",
+      "methods": {
+        "equalsOutputData": {
+          "note": "Use it to gate persistence or state updates on real changes — `time` and `version` differ on every save, so a naive deep-equal always reports a change."
+        },
+        "isEmptyOutputData": {
+          "note": "Content-less visual blocks (e.g. a divider with `data: {}`) count as empty — check `blocks.length` when mere block presence matters."
+        }
+      }
     },
     "blockData": {
       "title": "BlockData",

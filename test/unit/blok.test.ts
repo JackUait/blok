@@ -778,6 +778,43 @@ describe('Blok', () => {
     });
   });
 
+  describe('isRendered', () => {
+    it('mirrors the wrapper render-readiness attribute synchronously', async () => {
+      const wrapper = document.createElement('div');
+
+      if (mocks.mockModuleInstances === undefined) {
+        throw new Error('mockModuleInstances not initialized');
+      }
+
+      mocks.mockModuleInstances.UI = {
+        ...(mocks.mockModuleInstances.UI as unknown as Record<string, unknown>),
+        nodes: { wrapper },
+      } as unknown as BlokModules['UI'];
+
+      const blok = new Blok();
+
+      // Not rendered yet — flag is false without awaiting anything.
+      expect(blok.isRendered).toBe(false);
+
+      wrapper.setAttribute('data-blok-rendered', '');
+      expect(blok.isRendered).toBe(true);
+
+      // Cleared while a re-render is in flight.
+      wrapper.removeAttribute('data-blok-rendered');
+      expect(blok.isRendered).toBe(false);
+
+      await blok.isReady;
+    });
+
+    it('is false when the UI module has no wrapper yet', async () => {
+      const blok = new Blok();
+
+      expect(blok.isRendered).toBe(false);
+
+      await blok.isReady;
+    });
+  });
+
   describe('destroy', () => {
     it('should call destroy on all module instances that have destroy method', async () => {
       const mockDestroy1 = vi.fn();

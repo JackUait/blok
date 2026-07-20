@@ -422,6 +422,34 @@ describe('BlockFactory', () => {
 
       expect(block).toBeInstanceOf(Block);
     });
+
+    it('coerces null data to an empty object before it reaches the tool', () => {
+      const adapter = factory.getTool('paragraph');
+
+      if (adapter === undefined) {
+        throw new Error('paragraph tool is not registered in the test factory');
+      }
+
+      const createSpy = vi.spyOn(adapter, 'create');
+
+      const block = factory.composeBlock({
+        tool: 'paragraph',
+        data: null as unknown as BlockToolData,
+      });
+
+      expect(block).toBeInstanceOf(Block);
+      expect(createSpy.mock.calls[0][0]).toEqual({});
+    });
+
+    it('generates a fresh id when a null id arrives from a wire DTO', () => {
+      const block = factory.composeBlock({
+        tool: 'paragraph',
+        id: null as unknown as string,
+      });
+
+      expect(typeof block.id).toBe('string');
+      expect(block.id.length).toBeGreaterThan(0);
+    });
   });
 
   describe('hasTool', () => {

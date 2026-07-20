@@ -680,7 +680,7 @@ describe("docs accuracy against public type surface (root-cause guards)", () => 
     const dts = readSource("types/index.d.ts");
     const classBody = dts.match(/export class Blok \{([\s\S]*?)\n\}/)?.[1] ?? "";
     const publicMembers = new Set(
-      [...classBody.matchAll(/public\s+(\w+)/g)].map((m) => m[1])
+      [...classBody.matchAll(/public\s+(?:readonly\s+)?(\w+)/g)].map((m) => m[1])
     );
     expect(publicMembers.size).toBeGreaterThan(0);
     const core = API_SECTIONS.find((s) => s.id === "core");
@@ -739,5 +739,87 @@ describe("docs accuracy against public type surface (root-cause guards)", () => 
         ).toBe(true);
       }
     }
+  });
+});
+
+describe("loose wire-shape input and OutputData utilities", () => {
+  // Source of truth: types/data-formats/output-data.d.ts (LooseOutputData /
+  // LooseOutputBlockData), src/shared/output-data.ts (equalsOutputData,
+  // isEmptyOutputData, normalizeOutputBlocks), and the echo-safe
+  // blocks.render() in src/components/modules/api/blocks.ts.
+  const findSection = (id: string) => API_SECTIONS.find((s) => s.id === id);
+
+  it("source still accepts the loose wire shape and normalizes it", () => {
+    const dts = readSource("types/data-formats/output-data.d.ts");
+    expect(dts).toContain("LooseOutputData");
+    expect(dts).toContain("LooseOutputBlockData");
+    const shared = readSource("src/shared/output-data.ts");
+    expect(shared).toContain("export function equalsOutputData");
+    expect(shared).toContain("export function isEmptyOutputData");
+    expect(shared).toContain("export function normalizeOutputBlocks");
+  });
+
+  it("config `data` option documents the loose wire shape", () => {
+    const row = findSection("config")?.table?.find((r) => r.option === "data");
+    expect(row).toBeDefined();
+    expect(row!.type).toContain("LooseOutputData");
+    expect(row!.description).toMatch(/null/i);
+  });
+
+  it("blocks.render documents echo-safety and the loose input shape", () => {
+    const method = findSection("blocks-api")?.methods?.find(
+      (m) => m.name === "blocks.render(data)",
+    );
+    expect(method).toBeDefined();
+    expect(method!.description).toMatch(/no-op/i);
+    expect(method!.description).toMatch(/caret/i);
+    expect(method!.description).toContain("LooseOutputData");
+  });
+
+  it("blocks.insertMany documents the loose block shape", () => {
+    const method = findSection("blocks-api")?.methods?.find(
+      (m) => m.name === "blocks.insertMany(blocks, index?)",
+    );
+    const blocksParam = method?.params?.find((p) => p.name === "blocks");
+    expect(blocksParam).toBeDefined();
+    expect(blocksParam!.type).toContain("LooseOutputBlockData");
+  });
+
+  it("core render(data) documents the loose input shape", () => {
+    const method = findSection("core")?.methods?.find(
+      (m) => m.name === "render(data)",
+    );
+    expect(method).toBeDefined();
+    expect(method!.description).toContain("LooseOutputData");
+  });
+
+  it("core section documents the synchronous isRendered property", () => {
+    const prop = findSection("core")?.properties?.find(
+      (p) => p.name === "isRendered",
+    );
+    expect(prop).toBeDefined();
+    expect(prop!.type).toBe("boolean");
+    expect(prop!.description).toContain("data-blok-rendered");
+  });
+
+  it("output-data section documents equalsOutputData and isEmptyOutputData with examples", () => {
+    const methods = findSection("output-data")?.methods ?? [];
+    const names = methods.map((m) => m.name);
+    expect(names).toContain("equalsOutputData(a, b)");
+    expect(names).toContain("isEmptyOutputData(data)");
+    for (const method of methods) {
+      expect(method.example).toBeDefined();
+      expect(method.example!).toContain("@bloklabs/core");
+      expect(method.returnType).toBe("boolean");
+    }
+    const equals = methods.find((m) => m.name === "equalsOutputData(a, b)");
+    // Equality ignores the volatile envelope fields — the load-bearing fact.
+    expect(equals!.description).toMatch(/time/);
+    expect(equals!.description).toMatch(/version/);
+  });
+
+  it("output-data section description mentions the loose input variant", () => {
+    const section = findSection("output-data");
+    expect(section?.description).toContain("LooseOutputData");
   });
 });

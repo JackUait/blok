@@ -36,7 +36,7 @@ import {
   Placeholder,
 } from './api';
 
-import { OutputData } from './data-formats';
+import { LooseOutputData, OutputData } from './data-formats';
 import { BlockMutationEvent, BlockMutationEventMap, BlockMutationType } from './events/block';
 import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdded';
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
@@ -91,7 +91,7 @@ export {
 
 export * from './utils/popover';
 
-export { OutputData, OutputBlockData} from './data-formats/output-data';
+export { OutputData, OutputBlockData, LooseOutputData, LooseOutputBlockData} from './data-formats/output-data';
 export {
   PropertyType,
   SelectOption,
@@ -197,6 +197,31 @@ export { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector };
 export const version: string;
 
 /**
+ * Structural equality for saved documents. Compares the `blocks` arrays
+ * deeply; the volatile `time` and `version` envelope fields are ignored, so a
+ * document round-tripped through `save()` compares equal to its echo. Nullish
+ * documents compare equal to `{ blocks: [] }`. Accepts the loose wire shape
+ * ({@link LooseOutputData}) as-is.
+ * @param a - first document to compare
+ * @param b - second document to compare
+ */
+export function equalsOutputData(
+  a: OutputData | LooseOutputData | null | undefined,
+  b: OutputData | LooseOutputData | null | undefined,
+): boolean;
+
+/**
+ * True when the document carries no user content: it is nullish, has no
+ * blocks, or every block's data holds only empty values (blank/whitespace
+ * strings, empty arrays/objects, nulls). Numbers and booleans are treated as
+ * presentation metadata (`level`, `checked`, …) and never count as content.
+ * Content-less visual blocks (e.g. a divider with `{}` data) therefore count
+ * as empty — check `blocks.length` when mere block presence matters.
+ * @param data - document to inspect
+ */
+export function isEmptyOutputData(data: OutputData | LooseOutputData | null | undefined): boolean;
+
+/**
  * Compatibility shim for migrating Editor.js custom inline tools.
  * Adapts a legacy Editor.js-style inline tool class (render()→HTMLElement plus
  * surround()/checkState()) into a Blok-compatible inline tool whose render()
@@ -233,6 +258,8 @@ export function wrapLegacyInlineTool(
 export interface PendingBlok {
   /** Resolves with the fully-initialized Blok instance once core modules are ready. */
   isReady: Promise<Blok>;
+  /** Synchronous render-readiness flag; false until the first render batch lands in the DOM. */
+  readonly isRendered: boolean;
   /** Destroy the instance. Safe to call before `isReady` resolves. */
   destroy(): void;
   /** Theme API, exposed immediately after construction. */
@@ -248,6 +275,15 @@ export interface PendingBlok {
  */
 export class Blok {
   public isReady: Promise<Blok>;
+
+  /**
+   * Synchronous render-readiness flag. True once the current render batch has
+   * landed in the DOM (mirrors the `data-blok-rendered` wrapper attribute);
+   * false before first render and while a re-render is in flight. Unlike
+   * `isReady`/`onReady` this needs no await or callback, so consumers
+   * coordinating several editor instances can poll mount state synchronously.
+   */
+  public readonly isRendered: boolean;
 
   public blocks: Blocks;
   public caret: Caret;
@@ -282,7 +318,7 @@ export class Blok {
   /**
    * @see Blocks.render
    */
-  public render(data: OutputData): Promise<void>;
+  public render(data: OutputData | LooseOutputData): Promise<void>;
 
   /**
    * @see Caret.focus

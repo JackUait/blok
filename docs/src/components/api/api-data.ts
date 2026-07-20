@@ -135,7 +135,8 @@ console.log(data.blocks); // Array of block data`,
       {
         name: "render(data)",
         returnType: "Promise<void>",
-        description: "Renders editor content from previously saved JSON data.",
+        description:
+          "Renders editor content from previously saved JSON data. Accepts the loose wire shape (`LooseOutputData`) — `null` values for block `data`, `id`, or `time` from backend DTOs are normalized at the boundary.",
         example: `// Load saved content
 const savedData = {
   blocks: [
@@ -176,6 +177,12 @@ editor.destroy();`,
         name: "isReady",
         type: "Promise<Blok>",
         description: "Promise that resolves with the ready editor instance",
+      },
+      {
+        name: "isRendered",
+        type: "boolean",
+        description:
+          "Synchronous render-readiness flag — true once the current render batch has landed in the DOM (mirrors the `data-blok-rendered` wrapper attribute); false before the first render and while a re-render is in flight. Complements the async `isReady`/`onReady`: no await or callback needed, so mount state can be polled synchronously.",
       },
       { name: "blocks", type: "Blocks", description: "Blocks API module" },
       { name: "caret", type: "Caret", description: "Caret API module" },
@@ -257,9 +264,10 @@ const editor = new Blok(config);`,
       },
       {
         option: "data",
-        type: "OutputData",
+        type: "OutputData | LooseOutputData",
         default: "undefined",
-        description: "Initial data to render",
+        description:
+          "Initial data to render. The loose wire shape is accepted: `null` values for block `data`, `id`, or `time` (common in backend DTOs) are normalized at the boundary.",
       },
       {
         option: "readOnly",
@@ -344,7 +352,7 @@ const editor = new Blok(config);`,
         name: "blocks.render(data)",
         returnType: "Promise<void>",
         description:
-          "Render passed JSON data as blocks. The editor deep-clones the data, so the passed object is never mutated or retained — frozen store state (Redux, Immer) can be passed directly.",
+          "Render passed JSON data as blocks, replacing the current document. Echo-safe: when the incoming document is structurally equal to the current saved content (`time`/`version` ignored), the call is a caret-preserving no-op — the `data → render → onSave → setState → data` round-trip needs no consumer-side dedupe. Accepts the loose wire shape (`LooseOutputData`); the editor deep-clones the data, so the passed object is never mutated or retained — frozen store state (Redux, Immer) can be passed directly.",
         example: `const data = {
   blocks: [
     { id: '1', type: 'paragraph', data: { text: 'Hello World' } },
@@ -572,9 +580,10 @@ console.log('Inserted:', inserted.length, 'blocks');`,
         params: [
           {
             name: "blocks",
-            type: "OutputBlockData[]",
+            type: "OutputBlockData[] | LooseOutputBlockData[]",
             required: true,
-            description: "The blocks to insert.",
+            description:
+              "The blocks to insert. Loose wire blocks are accepted — a `null` `data` becomes `{}`, a `null`/empty `id` gets a generated one.",
           },
           {
             name: "index",
@@ -1754,7 +1763,8 @@ blockTools.forEach(tool => {
     id: "output-data",
     badge: "Data",
     title: "OutputData",
-    description: "The data structure returned by the save() method.",
+    description:
+      "The data structure returned by the save() method. Input positions — the `data` config option, `render()`, `blocks.render()`, and `blocks.insertMany()` — also accept the loose wire variants `LooseOutputData` / `LooseOutputBlockData`, where block `data`, `id`, and `time` may be `null`: a `null` `data` becomes `{}`, a `null`/empty `id` gets a generated one. Saved output is always the strict shape.",
     example: `// Save editor content
 const data = await editor.save();
 
@@ -1800,6 +1810,31 @@ interface OutputData {
         type: "OutputBlockData[]",
         default: "—",
         description: "Array of block data",
+      },
+    ],
+    methods: [
+      {
+        name: "equalsOutputData(a, b)",
+        returnType: "boolean",
+        description:
+          "Structural equality for saved documents, exported from the main entry. Compares the `blocks` arrays deeply; the volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo. Nullish documents and loose wire shapes are accepted — `null`/`undefined` compares equal to `{ blocks: [] }`.",
+        example: `import { equalsOutputData } from '@bloklabs/core';
+
+const saved = await editor.save();
+if (!equalsOutputData(saved, previousData)) {
+  await persist(saved); // only hit the backend on real changes
+}`,
+      },
+      {
+        name: "isEmptyOutputData(data)",
+        returnType: "boolean",
+        description:
+          "True when the document carries no user content, exported from the main entry: it is nullish, has no blocks, or every block's data holds only empty values (blank/whitespace-only strings, empty arrays/objects). Numbers and booleans (`level`, `checked`, styles) are presentation metadata and never count as content on their own.",
+        example: `import { isEmptyOutputData } from '@bloklabs/core';
+
+const data = await editor.save();
+submitButton.disabled = isEmptyOutputData(data);
+// → true for a fresh editor holding one blank paragraph`,
       },
     ],
   },

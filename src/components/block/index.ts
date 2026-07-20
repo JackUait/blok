@@ -280,8 +280,10 @@ export class Block extends EventsDispatcher<BlockEvents> {
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
-    // Use the provided id as-is; only generate a new one when the id is empty
-    const validatedId = id !== '' ? id : generateBlockId();
+    // Use the provided id as-is; generate a new one only when the id is empty
+    // or a non-string (wire DTOs may carry `id: null` — the parameter default
+    // above covers `undefined` only)
+    const validatedId = typeof id === 'string' && id !== '' ? id : generateBlockId();
 
     // Set basic properties
     this.name = tool.name;

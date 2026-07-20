@@ -168,13 +168,16 @@ export class Renderer extends Module {
      */
     const blocks = processedBlocks.map((blockData: OutputBlockData) => {
       const { tunes, parent, content, lastEditedAt, lastEditedBy } = blockData;
-      const hasDuplicateId = blockData.id !== undefined && seenIds.has(blockData.id);
+      // Wire DTOs may carry `id: null` — normalize to undefined so the block
+      // factory generates a fresh id and null ids never collide as "duplicates".
+      const incomingId = blockData.id ?? undefined;
+      const hasDuplicateId = incomingId !== undefined && seenIds.has(incomingId);
 
       if (hasDuplicateId) {
-        logLabeled(`Duplicate block id «${blockData.id}» replaced with a generated id to ensure uniqueness`, 'warn');
+        logLabeled(`Duplicate block id «${incomingId}» replaced with a generated id to ensure uniqueness`, 'warn');
       }
 
-      const id = hasDuplicateId ? generateBlockId() : blockData.id;
+      const id = hasDuplicateId ? generateBlockId() : incomingId;
 
       if (id !== undefined) {
         seenIds.add(id);

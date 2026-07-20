@@ -112,15 +112,15 @@ export class BlockMutation {
       index: blockIndex,
     });
 
-    // Sync changed data to Yjs
-    if (data !== undefined) {
+    // Sync changed data to Yjs (`!= null` — callers may pass a literal null)
+    if (data != null) {
       for (const [key, value] of Object.entries(data)) {
         this.dependencies.YjsManager.updateBlockData(block.id, key, value);
       }
     }
 
-    // Sync changed tunes to Yjs
-    if (tunes !== undefined) {
+    // Sync changed tunes to Yjs (`!= null` — callers may pass a literal null)
+    if (tunes != null) {
       for (const [tuneName, tuneData] of Object.entries(tunes)) {
         this.dependencies.YjsManager.updateBlockTune(block.id, tuneName, tuneData);
       }

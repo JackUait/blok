@@ -82,3 +82,49 @@ export interface OutputData {
    */
   blocks: OutputBlockData[];
 }
+
+/**
+ * Wire-tolerant variant of {@link OutputBlockData} accepted in INPUT positions
+ * (the `data` config option, `render()` / `blocks.render()`,
+ * `blocks.insertMany()`).
+ *
+ * Backend DTOs — especially Editor.js-era APIs — commonly serialize absent
+ * values as `null` rather than omitting them. The editor normalizes these at
+ * the boundary: a `null`/missing `data` becomes `{}`, a `null`/empty `id` is
+ * replaced with a generated one. Saved OUTPUT is always the strict
+ * {@link OutputData} shape.
+ */
+export type LooseOutputBlockData<Type extends string = string, Data extends object = Record<string, unknown>> =
+  Omit<OutputBlockData<Type, Data>, 'id' | 'data'> & {
+    /**
+     * Unique Id of the block. `null` and `''` are treated as "absent":
+     * a fresh id is generated on render/insert.
+     */
+    id?: BlockId | null;
+
+    /**
+     * Saved Block data. `null` and `undefined` are normalized to `{}`.
+     */
+    data?: BlockToolData<Data> | null;
+  };
+
+/**
+ * Wire-tolerant variant of {@link OutputData} accepted in INPUT positions.
+ * See {@link LooseOutputBlockData}.
+ */
+export interface LooseOutputData {
+  /**
+   * Blok's version
+   */
+  version?: string | null;
+
+  /**
+   * Timestamp of saving in milliseconds
+   */
+  time?: number | null;
+
+  /**
+   * Blocks to render
+   */
+  blocks: LooseOutputBlockData[];
+}

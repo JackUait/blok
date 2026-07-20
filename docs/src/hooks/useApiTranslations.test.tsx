@@ -96,7 +96,7 @@ describe('useApiTranslations', () => {
     expect(saveMethod?.description).toBe('Извлекает содержимое редактора в виде JSON-данных. Основной метод для сохранения контента.');
 
     const renderMethod = coreSection?.methods?.find(m => m.name === 'render(data)');
-    expect(renderMethod?.description).toBe('Отображает содержимое редактора из ранее сохранённых JSON-данных.');
+    expect(renderMethod?.description).toBe('Отображает содержимое редактора из ранее сохранённых JSON-данных. Принимает нестрогий формат (`LooseOutputData`) — значения `null` для `data`, `id` или `time` блока из backend-DTO нормализуются на границе.');
 
     const focusMethod = coreSection?.methods?.find(m => m.name === 'focus(atEnd?)');
     expect(focusMethod?.description).toBe('Устанавливает фокус на редактор. Опционально позиционирует курсор в конце содержимого.');

@@ -267,6 +267,9 @@ type BlokStub = {
     markRenderEnd: ReturnType<typeof vi.fn>;
     pendingHashScroll: string | null;
   };
+  Saver: {
+    save: ReturnType<typeof vi.fn>;
+  };
   BlockSelection: {
     selectBlock: ReturnType<typeof vi.fn>;
   };
@@ -312,6 +315,11 @@ const createBlokStub = (
       markRenderStart: vi.fn(),
       markRenderEnd: vi.fn(),
       pendingHashScroll: null,
+    },
+    // render() serializes the current content for its echo-equality check;
+    // resolving undefined disables the skip so every test exercises a real render.
+    Saver: {
+      save: vi.fn(async () => undefined) as ReturnType<typeof vi.fn>,
     },
     Paste: {
       processText: vi.fn(async (_html: string, _sanitize: boolean) => {}) as ReturnType<typeof vi.fn>,

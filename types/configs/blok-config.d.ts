@@ -1,6 +1,6 @@
 import type { ThemeMode, ResolvedTheme } from '../api/theme';
 import {ToolConstructable, ToolSettings} from '../tools';
-import {API, Blok, LogLevels, OutputBlockData, OutputData} from '../index';
+import {API, Blok, LogLevels, LooseOutputData, OutputBlockData, OutputData} from '../index';
 import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
@@ -182,9 +182,14 @@ export interface BlokConfig {
   }
 
   /**
-   * Data to render on Blok start
+   * Data to render on Blok start.
+   *
+   * Accepts the strict saved shape ({@link OutputData}) as well as the loose
+   * wire shape ({@link LooseOutputData}) where `data`/`id`/`time` may be
+   * `null` — nulls are normalized at the boundary, so backend DTOs can be
+   * passed as-is.
    */
-  data?: OutputData;
+  data?: OutputData | LooseOutputData;
 
   /**
    * Height of Blok's bottom area that allows to set focus on the last Block

@@ -1278,6 +1278,34 @@ describe('BlockManager', () => {
         })
       );
     });
+
+    it('update() tolerates null data alongside tunes (wire DTOs allow data: null)', async () => {
+      const blockToUpdate = createBlockStub({ id: 'block-1', data: { text: 'Hello' } });
+      const { blockManager, composeBlockSpy } = createBlockManager({
+        initialBlocks: [ blockToUpdate ],
+      });
+      const newBlock = createBlockStub({ id: 'block-1' });
+
+      composeBlockSpy.mockReturnValue(newBlock);
+
+      const nullData = null as unknown as Partial<Record<string, unknown>>;
+
+      await expect(blockManager.update(blockToUpdate, nullData, { alignment: 'center' })).resolves.toBe(newBlock);
+    });
+
+    it('update() tolerates null tunes alongside data', async () => {
+      const blockToUpdate = createBlockStub({ id: 'block-1', data: { text: 'Hello' } });
+      const { blockManager, composeBlockSpy } = createBlockManager({
+        initialBlocks: [ blockToUpdate ],
+      });
+      const newBlock = createBlockStub({ id: 'block-1' });
+
+      composeBlockSpy.mockReturnValue(newBlock);
+
+      const nullTunes = null as unknown as { [name: string]: unknown };
+
+      await expect(blockManager.update(blockToUpdate, { text: 'Updated' }, nullTunes)).resolves.toBe(newBlock);
+    });
   });
 
   it('keeps isSyncingFromYjs true during insertMany RENDERED lifecycle', () => {

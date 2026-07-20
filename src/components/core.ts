@@ -8,6 +8,7 @@ import { Modules } from './modules';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
+import { normalizeOutputBlocks } from '../shared/output-data';
 import { EventsDispatcher } from './utils/events';
 
 /**
@@ -182,7 +183,9 @@ export class Core {
     if (Array.isArray(this.config.data.blocks)) {
       this.config.data = {
         ...this.config.data,
-        blocks: cloneOutputBlocks(this.config.data.blocks),
+        // Normalize the loose wire shape (null data/ids) into the strict
+        // saved shape before cloning.
+        blocks: cloneOutputBlocks(normalizeOutputBlocks(this.config.data.blocks)),
       };
     }
 
@@ -302,7 +305,10 @@ export class Core {
       throw new CriticalError('Blok data is not initialized');
     }
 
-    return renderer.render(this.config.data.blocks);
+    // Idempotent re-normalization: `config.data` is declared with the loose
+    // wire type, but prepare() already normalized it — this narrows the type
+    // without a cast.
+    return renderer.render(normalizeOutputBlocks(this.config.data.blocks));
   }
 
   /**

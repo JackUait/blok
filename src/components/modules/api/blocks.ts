@@ -1,4 +1,4 @@
-import type { BlockToolData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
+import type { BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
@@ -12,6 +12,7 @@ import { capitalize } from '../../utils';
 import { announce } from '../../utils/announcer';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
+import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 
 import { logLabeled } from './../../utils';
@@ -226,9 +227,25 @@ export class BlocksAPI extends Module {
    * Fills Blok with Blocks data
    * @param {OutputData} data — Saved Blok data
    */
-  public async render(data: OutputData): Promise<void> {
+  public async render(data: OutputData | LooseOutputData): Promise<void> {
     if (data === undefined || data.blocks === undefined) {
       throw new Error('Incorrect data passed to the render() method');
+    }
+
+    /**
+     * Echo-safety: render() is a full clear-and-rebuild that destroys the
+     * caret/selection. When a consumer round-trips editor output through
+     * their state (data → render → onSave → setState → data), the echoed
+     * document is structurally identical to the current content — rebuilding
+     * would clobber the caret for zero visual change. Compare against the
+     * current saved state and no-op on equality (time/version are ignored).
+     */
+    const currentContent = await this.Blok.Saver.save();
+
+    if (currentContent !== undefined && equalsOutputData(currentContent, data)) {
+      this.processPendingHashScroll();
+
+      return;
     }
 
     /**
@@ -240,9 +257,10 @@ export class BlocksAPI extends Module {
 
     try {
       await this.Blok.BlockManager.clear();
-      // The caller owns `data` (often frozen store state): deep-clone at this
-      // boundary so the editor never mutates or retains their objects.
-      await this.Blok.Renderer.render(cloneOutputBlocks(data.blocks));
+      // The caller owns `data` (often frozen store state): normalize the
+      // loose wire shape, then deep-clone at this boundary so the editor
+      // never mutates or retains their objects.
+      await this.Blok.Renderer.render(cloneOutputBlocks(normalizeOutputBlocks(data.blocks)));
     } finally {
       this.Blok.Renderer.markRenderEnd();
     }
@@ -491,7 +509,7 @@ export class BlocksAPI extends Module {
    * @param index - index to insert the blocks at. Defaults to the end of the document.
    */
   private insertMany = (
-    blocks: OutputBlockData[],
+    blocks: OutputBlockData[] | LooseOutputBlockData[],
     index: number = this.Blok.BlockManager.blocks.length
   ): BlockAPIInterface[] => {
     this.validateIndex(index);
@@ -500,8 +518,9 @@ export class BlocksAPI extends Module {
     // alternative load paths (any consumer of the public API) get the
     // same hierarchical correctness as Renderer.render(). Without this,
     // flat-array article shapes lose their cell→child relationship and
-    // children render as detached top-level blocks.
-    const normalizedBlocks = normalizeTableChildParents(blocks);
+    // children render as detached top-level blocks. The loose wire shape
+    // (null data/ids) is normalized first.
+    const normalizedBlocks = normalizeTableChildParents(normalizeOutputBlocks(blocks));
 
     const blocksToInsert = normalizedBlocks.map(({ id, type, data, tunes, parent, content, lastEditedAt, lastEditedBy }) => {
       return this.Blok.BlockManager.composeBlock({

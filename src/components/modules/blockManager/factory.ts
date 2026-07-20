@@ -77,7 +77,9 @@ export class BlockFactory {
 
     const block = new Block({
       id,
-      data,
+      // Wire DTOs (e.g. Editor.js backends) may carry `data: null`; the
+      // destructuring default above only covers `undefined`.
+      data: data ?? {},
       tool,
       api: this.dependencies.API,
       readOnly: this.readOnlyState,

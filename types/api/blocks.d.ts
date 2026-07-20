@@ -1,4 +1,4 @@
-import {OutputBlockData, OutputData} from '../data-formats/output-data';
+import {LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData} from '../data-formats/output-data';
 import {BlockToolData, ToolConfig} from '../tools';
 import {BlockAPI} from './block';
 import {BlockTuneData} from '../block-tunes/block-tune-data';
@@ -30,11 +30,12 @@ export interface Blocks {
   /**
    * Render passed data
    *
-   * @param {OutputData} data - saved Block data
+   * @param {OutputData} data - saved Block data (the loose wire shape with
+   * `null` data/ids is accepted and normalized at the boundary)
    *
    * @returns {Promise<void>}
    */
-  render(data: OutputData): Promise<void>;
+  render(data: OutputData | LooseOutputData): Promise<void>;
 
   /**
    * Render passed HTML string
@@ -158,7 +159,7 @@ export interface Blocks {
    * Inserts several Blocks to specified index
    */
   insertMany(
-    blocks: OutputBlockData[],
+    blocks: OutputBlockData[] | LooseOutputBlockData[],
     index?: number,
   ): BlockAPI[];
 

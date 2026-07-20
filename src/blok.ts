@@ -49,6 +49,14 @@ class Blok {
   public isReady: Promise<Blok>;
 
   /**
+   * Synchronous render-readiness flag. True once the current render batch has
+   * landed in the DOM (mirrors the `data-blok-rendered` wrapper attribute);
+   * false before first render and while a re-render is in flight.
+   * Defined as an instance getter in the constructor.
+   */
+  declare public readonly isRendered: boolean;
+
+  /**
    * Stores destroy method implementation.
    * Clear heap occupied by Blok and remove UI components from the DOM.
    */
@@ -97,6 +105,23 @@ class Blok {
      * Flag to track if destroy() was called before isReady resolved
      */
     const lifecycle = { pendingDestroy: false };
+
+    /**
+     * Synchronous render-readiness flag: mirrors the `data-blok-rendered`
+     * wrapper attribute (set once a render batch has landed in the DOM,
+     * cleared while a re-render is in flight). Unlike `isReady`/`onReady`
+     * this needs no await/callback, so consumers coordinating several editor
+     * instances (e.g. a comments list) can poll mount state synchronously.
+     */
+    Object.defineProperty(this, 'isRendered', {
+      get: (): boolean => {
+        const ui = blok.moduleInstances?.UI as { nodes?: { wrapper?: HTMLElement } } | undefined;
+
+        return ui?.nodes?.wrapper?.hasAttribute(DATA_ATTR.rendered) ?? false;
+      },
+      enumerable: true,
+      configurable: true,
+    });
 
     /**
      * Initialize destroy to set the pendingDestroy flag.
@@ -575,3 +600,10 @@ export { wrapLegacyInlineTool } from './components/inline-tools/wrap-legacy-inli
  * get typed payloads (see {@link BlokEditorEventMap}).
  */
 export { BlockRendered, BlocksRendered } from './components/events';
+
+/**
+ * Structural comparison and emptiness predicates for saved documents.
+ * Semver-guaranteed so consumers never hand-write deep equality for the
+ * `data → render → onSave → data` echo round-trip or emptiness gating.
+ */
+export { equalsOutputData, isEmptyOutputData } from './shared/output-data';

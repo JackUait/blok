@@ -19,7 +19,7 @@ import {
   type BlockPortalRegistry,
 } from './block-portal-registry';
 import { setRegistry, removeRegistry } from './registry-map';
-import type { Blok, OutputData } from '@/types';
+import type { Blok, LooseOutputData, OutputData } from '@/types';
 import type { UseBlokConfig } from './types';
 
 /**
@@ -101,7 +101,7 @@ export function useBlok(
   const state: {
     current: Blok | null;
     holder: HTMLDivElement | null;
-    lastRenderedData: OutputData | undefined;
+    lastRenderedData: OutputData | LooseOutputData | undefined;
     seededEditor: Blok | null;
     renderChain: Promise<void>;
   } = {

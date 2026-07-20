@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.6](https://github.com/JackUait/blok/compare/v1.2.5...v1.2.6) (2026-07-20)
+
+### Features
+
+- **Paste** — Google Docs tables used as fake column layouts (every row has exactly 2 or 3 cells) now paste as real column layouts instead of table blocks. Genuine tables (4+ columns, ragged rows, single column, Google Sheets, nested tables) still paste as tables.
+- **API** — Four first-class capabilities replacing host workarounds: a `style.nativeSelection` config opt-out for the forced `::selection` repaint, public `--blok-block-padding-top/-bottom/-inline` tokens for compact read-only rendering, a static `Blok.whenAllReady()` collective-readiness aggregate, and `createReactInlineTool` in the React adapter with a full inline-tool `destroy()` lifecycle.
+
+### Bug Fixes
+
+- **Data integrity** — Three silent data-loss defects fixed: code containing `<` was corrupted on render and save (`if (a<b)` became `if (a`), empty code blocks were dropped on save, and a document whose only block was `/` saved as empty. Tools can now declare a field as literal text via a `PLAINTEXT` sanitizer rule.
+- **Caret** — Highlighting a non-focusable block now blurs stale input focus, so Chromium can no longer restore the current block from a stale collapsed range.
+- **i18n** — Locale audit corrections across dozens of locales, including Dutch color labels and shared toggle guidance.
+
 ## [1.2.5](https://github.com/JackUait/blok/compare/v1.2.4...v1.2.5) (2026-07-20)
 
 ### Features

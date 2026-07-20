@@ -107,8 +107,10 @@ test('upload renders a download card with correct filename and download attribut
   // Filename shown in the card
   await expect(page.locator('[data-role="file-name"]')).toHaveText('report.pdf');
 
-  // download attribute equals the filename
-  await expect(fileCard).toHaveAttribute('download', 'report.pdf');
+  // The separate download affordance carries the filename
+  const downloadLink = fileBlock.getByLabel('Download');
+  await expect(downloadLink).toBeVisible();
+  await expect(downloadLink).toHaveAttribute('download', 'report.pdf');
 });
 
 // ---------------------------------------------------------------------------

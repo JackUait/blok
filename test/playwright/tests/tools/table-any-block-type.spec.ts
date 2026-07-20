@@ -473,6 +473,9 @@ test.describe('table cells — any block type', () => {
       // Copy it
       await page.keyboard.press(`${modKey}+c`);
 
+      // Dismiss the inline toolbar opened by the text selection before changing focus
+      await page.keyboard.press('Escape');
+
       // Click into the first table cell
       const firstCell = getCell(page, 0, 0);
       const cellEditable = getCellEditable(page, 0, 0);

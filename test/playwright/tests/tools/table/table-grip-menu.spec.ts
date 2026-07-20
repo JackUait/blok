@@ -205,7 +205,7 @@ test.describe('Table grip menu — color, duplicate, clear', () => {
     await expect(getCell(page, 2, 0)).toContainText('C');
   });
 
-  test('grip → Clear wipes the text but keeps the row color', async ({ page }) => {
+  test('grip → Clear contents wipes the text but keeps the row color', async ({ page }) => {
     // The row is coloured from the start, so the test drives exactly one gesture:
     // the clear itself.
     await createColoredTable(page);
@@ -215,7 +215,7 @@ test.describe('Table grip menu — color, duplicate, clear', () => {
     ).not.toBe('');
 
     await openRowGripMenu(page, 0);
-    await page.getByText('Clear', { exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Clear contents', exact: true }).click();
 
     await expect(getCell(page, 0, 0)).not.toContainText('A');
     await expect(getCell(page, 0, 1)).not.toContainText('B');

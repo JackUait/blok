@@ -289,6 +289,7 @@ describe('BlockOperations', () => {
   let blockDidMutatedSpy: Mock<BlockDidMutated>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     dependencies = createMockDependencies();
 
     // Setup blocks
@@ -332,7 +333,7 @@ describe('BlockOperations', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('moveCurrentBlockUp/Down flat-indent group cohesion', () => {
@@ -1519,6 +1520,65 @@ describe('BlockOperations', () => {
       expect(newBlock.contentIds).toEqual(['child-1', 'child-2']);
       expect(child1.parentId).toBe(newBlock.id);
       expect(child2.parentId).toBe(newBlock.id);
+    });
+
+    it('preserves children created during the replacement render lifecycle', () => {
+      const sourceBlock = createMockBlock({ id: 'lifecycle-parent', name: 'paragraph' });
+      const testStore = createBlocksStore([sourceBlock]);
+      const testRepo = new BlockRepository();
+      const lifecycleAdapter = createMockBlockToolAdapter('lifecycle-container');
+      let lifecycleChild: Block | undefined;
+
+      testRepo.initialize(testStore);
+
+      const testHierarchy = new BlockHierarchy(testRepo);
+      const lifecycleOperations = new BlockOperations(
+        dependencies,
+        testRepo,
+        factory,
+        testHierarchy,
+        blockDidMutatedSpy,
+        0
+      );
+
+      lifecycleOperations.setYjsSync(yjsSync);
+
+      class LifecycleContainerTool implements BlockTool {
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+
+        public save(): BlockToolData {
+          return {};
+        }
+
+        public rendered(): void {
+          if (lifecycleChild !== undefined) {
+            return;
+          }
+
+          lifecycleChild = lifecycleOperations.insertInsideParent(sourceBlock.id, 1, testStore);
+        }
+      }
+
+      lifecycleAdapter.create = vi.fn(() => new LifecycleContainerTool());
+      (factory as unknown as { dependencies: { tools: ToolsCollection<BlockToolAdapter> } })
+        .dependencies.tools.set('lifecycle-container', lifecycleAdapter);
+
+      const newBlock = lifecycleOperations.replace(
+        sourceBlock,
+        'lifecycle-container',
+        {},
+        testStore
+      );
+
+      if (lifecycleChild === undefined) {
+        throw new Error('Test setup failed: replacement lifecycle did not insert a child');
+      }
+
+      expect(newBlock.contentIds).toContain(lifecycleChild.id);
+      expect(lifecycleChild.parentId).toBe(newBlock.id);
+      expect(validateHierarchy(projectRepositoryForInvariant(testRepo))).toEqual([]);
     });
 
     it('keeps a nested block\'s children nested under it after converting (structural)', () => {

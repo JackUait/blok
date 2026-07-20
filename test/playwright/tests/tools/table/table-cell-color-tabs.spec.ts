@@ -179,7 +179,7 @@ const openColorPicker = async (page: Page): Promise<void> => {
   await expect(pill).toBeVisible();
   await pill.click();
 
-  const colorItem = page.getByText('Color');
+  const colorItem = page.locator('[data-blok-testid="popover-item"][data-blok-item-name="cellColor"]');
 
   await expect(colorItem).toBeVisible();
 

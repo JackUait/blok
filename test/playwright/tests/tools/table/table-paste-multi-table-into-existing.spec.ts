@@ -133,17 +133,17 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
  */
 const paste = async (locator: Locator, data: Record<string, string>): Promise<void> => {
   await locator.evaluate((element: HTMLElement, pasteData: Record<string, string>) => {
-    const pasteEvent = Object.assign(new Event('paste', {
+    const clipboardData = new DataTransfer();
+
+    for (const [type, value] of Object.entries(pasteData)) {
+      clipboardData.setData(type, value);
+    }
+
+    element.dispatchEvent(new ClipboardEvent('paste', {
       bubbles: true,
       cancelable: true,
-    }), {
-      clipboardData: {
-        getData: (type: string): string => pasteData[type] ?? '',
-        types: Object.keys(pasteData),
-      },
-    });
-
-    element.dispatchEvent(pasteEvent);
+      clipboardData,
+    }));
   }, data);
 };
 
@@ -163,7 +163,10 @@ function resolveBlockText(blocks: SavedBlock[], blockId: string): string {
 }
 
 /**
- * Build Google Docs HTML containing two tables.
+ * Build Google Docs HTML containing two four-column data tables.
+ *
+ * Blok intentionally maps uniform two- and three-column Google Docs tables
+ * to column layouts, while four-column tables remain genuine table blocks.
  */
 function buildMultiTableGoogleDocsHtml(): string {
   return [
@@ -179,6 +182,12 @@ function buildMultiTableGoogleDocsHtml(): string {
     '<td style="border:solid #000 1pt;padding:5pt;">',
     '<p dir="ltr"><span>PastedA2</span></p>',
     '</td>',
+    '<td style="border:solid #000 1pt;padding:5pt;">',
+    '<p dir="ltr"><span>PastedA3</span></p>',
+    '</td>',
+    '<td style="border:solid #000 1pt;padding:5pt;">',
+    '<p dir="ltr"><span>PastedA4</span></p>',
+    '</td>',
     '</tr>',
     '</tbody>',
     '</table>',
@@ -192,6 +201,12 @@ function buildMultiTableGoogleDocsHtml(): string {
     '</td>',
     '<td style="border:solid #000 1pt;padding:5pt;">',
     '<p dir="ltr"><span>PastedB2</span></p>',
+    '</td>',
+    '<td style="border:solid #000 1pt;padding:5pt;">',
+    '<p dir="ltr"><span>PastedB3</span></p>',
+    '</td>',
+    '<td style="border:solid #000 1pt;padding:5pt;">',
+    '<p dir="ltr"><span>PastedB4</span></p>',
     '</td>',
     '</tr>',
     '</tbody>',
@@ -255,7 +270,7 @@ test.describe('Multi-table paste into existing table — content preservation', 
 
     await paste(firstCellEditable, {
       'text/html': multiTableHtml,
-      'text/plain': 'PastedA1\tPastedA2\nPastedB1\tPastedB2',
+      'text/plain': 'PastedA1\tPastedA2\tPastedA3\tPastedA4\nPastedB1\tPastedB2\tPastedB3\tPastedB4',
     });
 
     // Wait for paste processing to complete by checking the DOM for at least 2 table blocks.
@@ -358,15 +373,15 @@ test.describe('Multi-table paste into existing table — content preservation', 
 
     await paste(firstCellEditable, {
       'text/html': multiTableHtml,
-      'text/plain': 'PastedA1\tPastedA2\nPastedB1\tPastedB2',
+      'text/plain': 'PastedA1\tPastedA2\tPastedA3\tPastedA4\nPastedB1\tPastedB2\tPastedB3\tPastedB4',
     });
 
     // Wait for paste processing to fully complete.
     // The paste handler is fire-and-forget async, and table blocks appear in
     // the DOM (with data-blok-tool="table") during insert() BEFORE onPaste()
-    // populates their content. Wait for PastedB1 to appear in the DOM text,
-    // which proves the last pasted table's onPaste has completed.
-    await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toContainText('PastedB1', { timeout: 10000 });
+    // populates their content. Wait for the last cell of the second table to
+    // appear in the DOM, which proves the last pasted table's onPaste completed.
+    await expect(page.locator(BLOK_INTERFACE_SELECTOR)).toContainText('PastedB4', { timeout: 10000 });
 
     // Now that paste processing is fully complete, save and verify
     const allBlocks = await page.evaluate(async () => {
@@ -387,7 +402,11 @@ test.describe('Multi-table paste into existing table — content preservation', 
 
     expect(allParagraphTexts).toContain('PastedA1');
     expect(allParagraphTexts).toContain('PastedA2');
+    expect(allParagraphTexts).toContain('PastedA3');
+    expect(allParagraphTexts).toContain('PastedA4');
     expect(allParagraphTexts).toContain('PastedB1');
     expect(allParagraphTexts).toContain('PastedB2');
+    expect(allParagraphTexts).toContain('PastedB3');
+    expect(allParagraphTexts).toContain('PastedB4');
   });
 });

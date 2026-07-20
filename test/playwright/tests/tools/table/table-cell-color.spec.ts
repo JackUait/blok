@@ -234,7 +234,7 @@ const openColorPicker = async (page: Page): Promise<void> => {
   await pill.click();
 
   // Hover the "Color" item to reveal the color picker
-  const colorItem = page.getByText('Color');
+  const colorItem = page.locator('[data-blok-testid="popover-item"][data-blok-item-name="cellColor"]');
 
   await expect(colorItem).toBeVisible();
 

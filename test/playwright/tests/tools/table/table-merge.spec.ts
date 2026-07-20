@@ -440,7 +440,7 @@ test.describe('Table structural ops through a merged region', () => {
 
     await expect(grip).toBeVisible();
     await grip.click();
-    await page.getByText(item, { exact: true }).click();
+    await page.getByRole('menuitem', { name: item, exact: true }).click();
   };
 
   const runRowGripAction = async (
@@ -455,7 +455,7 @@ test.describe('Table structural ops through a merged region', () => {
 
     await expect(grip).toBeVisible();
     await grip.click();
-    await page.getByText(item, { exact: true }).click();
+    await page.getByRole('menuitem', { name: item, exact: true }).click();
   };
 
   test('inserting a column INSIDE a colspan grows the merge instead of corrupting the grid', async ({ page }) => {
@@ -464,7 +464,7 @@ test.describe('Table structural ops through a merged region', () => {
 
     // Column 1 is covered by the merge — insert to its left, inside the
     // footprint. Row 2 is the only row that still renders a cell there.
-    await runColGripAction(page, 1, 2, 'Insert Column Left');
+    await runColGripAction(page, 1, 2, 'Insert column left');
 
     const origin = getCellAt(page, 0, 0);
 
@@ -500,7 +500,7 @@ test.describe('Table structural ops through a merged region', () => {
 
     // Row 1 is covered by the merge — insert above it, inside the footprint.
     // Column 2 is the only column that still renders a cell in that row.
-    await runRowGripAction(page, 1, 2, 'Insert Row Above');
+    await runRowGripAction(page, 1, 2, 'Insert row above');
 
     const origin = getCellAt(page, 0, 0);
 

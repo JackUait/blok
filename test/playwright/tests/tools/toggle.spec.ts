@@ -259,7 +259,7 @@ test.describe('Toggle Tool', () => {
       const placeholder = page.locator(TOGGLE_BODY_PLACEHOLDER_SELECTOR);
 
       await expect(placeholder).toBeVisible();
-      await expect(placeholder).toHaveText('Empty toggle. Click or drop blocks inside.');
+      await expect(placeholder).toHaveText('Empty toggle. Click to add a block, or drag blocks here.');
     });
 
     test('body placeholder is hidden when toggle is collapsed', async ({ page }) => {

@@ -51,7 +51,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto(TEST_PAGE_URL);
 });
 
-test('opening the image overlay "more" menu hides the block drag handle dots', async ({ page }) => {
+test('opening the image overlay "more" menu keeps the block drag handle visible and active', async ({ page }) => {
   await createBlok(page, {
     blocks: [
       { type: 'image', data: { url: SAMPLE_IMAGE_URL, alt: 'pic' } },
@@ -74,5 +74,6 @@ test('opening the image overlay "more" menu hides the block drag handle dots', a
   const popover = page.locator(BLOCK_TUNES_POPOVER_SELECTOR);
 
   await expect(popover).toBeVisible();
-  await expect(settingsToggler).toBeHidden();
+  await expect(settingsToggler).toBeVisible();
+  await expect(settingsToggler).toHaveAttribute('aria-expanded', 'true');
 });

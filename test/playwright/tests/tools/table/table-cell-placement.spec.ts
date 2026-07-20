@@ -197,11 +197,11 @@ const openPillPopover = async (page: Page): Promise<void> => {
 const openPlacementPicker = async (page: Page): Promise<void> => {
   await openPillPopover(page);
 
-  const placementItem = page.getByText('Placement');
+  const placementItem = page.locator('[data-blok-testid="popover-item"][data-blok-item-name="cellPlacement"]');
 
-  await expect(placementItem).toBeVisible();
+  await expect(placementItem).toContainText('Alignment');
 
-  const itemBox = assertBoundingBox(await placementItem.boundingBox(), 'Placement item');
+  const itemBox = assertBoundingBox(await placementItem.boundingBox(), 'Alignment item');
 
   await page.mouse.move(itemBox.x + itemBox.width / 2, itemBox.y + itemBox.height / 2);
 
@@ -235,7 +235,7 @@ test.describe('Cell Placement', () => {
 
     await expect(pill).toBeAttached();
 
-    // Open pill popover → hover Placement → pick bottom-right
+    // Open pill popover → hover Alignment → pick bottom-right
     await openPlacementPicker(page);
 
     const gridCell = page.locator('[data-placement="bottom-right"]');

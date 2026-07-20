@@ -221,11 +221,10 @@ export class BlockMutation {
      * into" keeps the children nested under the retyped block (matching Notion)
      * regardless of the target tool: just re-home them onto the new block.
      *
-     * `reparentChildren` uses setBlockParent, which pushes each child id onto
-     * `newBlock.contentIds`. Reset it first so we don't end up with a pre-existing
-     * array plus appended ids.
+     * `reparentChildren` uses setBlockParent, which appends each old child id to
+     * `newBlock.contentIds` while preserving children created by the replacement
+     * tool's synchronous render lifecycle.
      */
-    newBlock.contentIds = [];
     this.reparentChildren(oldContentIds, newBlock.id);
 
     this.ctx.assertHierarchyInvariantInDev('replace');

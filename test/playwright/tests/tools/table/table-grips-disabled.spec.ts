@@ -234,39 +234,39 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
       },
     });
 
-    // Click a cell in row 1 (second row, first column) to show grips
+    // Hover a cell in row 1 (second row, first column) to show its grips.
     const secondRowCell = page.locator(`${CELL_SELECTOR} >> nth=2`);
 
-    await secondRowCell.click();
+    await secondRowCell.hover({ position: { x: 8, y: 8 } });
 
-    // Click the row 1 grip to open its popover
-    const rowGripForRow1 = page.locator(`${ROW_GRIP_SELECTOR} >> nth=1`);
+    // Click the exposed half of the row grip; its center sits on the table border.
+    const rowGripForRow1 = page.locator('[data-blok-table-grip-row="1"][data-blok-table-grip-visible]');
 
     await expect(rowGripForRow1).toBeVisible({ timeout: 2000 });
-    await rowGripForRow1.scrollIntoViewIfNeeded();
-    await rowGripForRow1.click({ force: true });
+    await rowGripForRow1.click({ position: { x: 1, y: 1 } });
 
-    // Row 1 popover should NOT contain the heading toggle
-    await expect(page.getByText('Insert Row Above')).toBeVisible();
-    await expect(page.getByText('Header row')).toHaveCount(0);
+    // Row 1 popover should NOT contain the heading toggle.
+    await expect(page.getByRole('menuitem', { name: 'Insert row above', exact: true })).toBeVisible();
+    await expect(page.getByText('Header row', { exact: true })).toHaveCount(0);
 
-    // Close the popover
+    // Close the popover and wait for its grip to finish hiding.
     await page.mouse.click(10, 10);
     await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-table-grip-visible]')).toHaveCount(0);
 
-    // Click the first cell in row 0 to show grips
+    // Hover the first cell in row 0 to show its grips.
     const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
-    await firstCell.click();
+    await firstCell.hover({ position: { x: 8, y: 8 } });
 
-    // Click the row 0 grip to open its popover
-    const rowGripForRow0 = page.locator(`${ROW_GRIP_SELECTOR} >> nth=0`);
+    // Click the exposed half of the row grip; its center sits on the table border.
+    const rowGripForRow0 = page.locator('[data-blok-table-grip-row="0"][data-blok-table-grip-visible]');
 
     await expect(rowGripForRow0).toBeVisible({ timeout: 2000 });
-    await rowGripForRow0.click();
+    await rowGripForRow0.click({ position: { x: 1, y: 1 } });
 
-    // Row 0 popover SHOULD contain the heading toggle
-    await expect(page.getByText('Header row')).toBeVisible();
+    // Row 0 popover SHOULD contain the heading toggle.
+    await expect(page.getByText('Header row', { exact: true })).toBeVisible();
   });
 
   test('heading column toggle only appears in column grip popover for column 0', async ({ page }) => {
@@ -287,38 +287,38 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
       },
     });
 
-    // Click a cell in column 1 (second column) to show grips
+    // Hover a cell in column 1 (second column) to show its grips.
     const secondColumnCell = page.locator(`${CELL_SELECTOR} >> nth=1`);
 
-    await secondColumnCell.click();
+    await secondColumnCell.hover({ position: { x: 8, y: 8 } });
 
-    // Click the column 1 grip to open its popover
-    const colGripForCol1 = page.locator(`${COL_GRIP_SELECTOR} >> nth=1`);
+    // Click the exposed half of the column grip; its center sits on the table border.
+    const colGripForCol1 = page.locator('[data-blok-table-grip-col="1"][data-blok-table-grip-visible]');
 
     await expect(colGripForCol1).toBeVisible({ timeout: 2000 });
-    await colGripForCol1.click();
+    await colGripForCol1.click({ position: { x: 1, y: 1 } });
 
-    // Column 1 popover should NOT contain the heading column toggle
-    await expect(page.getByText('Insert Column Left')).toBeVisible();
-    await expect(page.getByText('Header column')).toHaveCount(0);
+    // Column 1 popover should NOT contain the heading column toggle.
+    await expect(page.getByRole('menuitem', { name: 'Insert column left', exact: true })).toBeVisible();
+    await expect(page.getByText('Header column', { exact: true })).toHaveCount(0);
 
     // Close the popover
     await page.mouse.click(10, 10);
     await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
 
-    // Click the first cell in column 0 to show grips
+    // Hover the first cell in column 0 to show its grips.
     const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);
 
-    await firstCell.click();
+    await firstCell.hover({ position: { x: 8, y: 8 } });
 
-    // Click the column 0 grip to open its popover
-    const colGripForCol0 = page.locator(`${COL_GRIP_SELECTOR} >> nth=0`);
+    // Click the exposed half of the column grip; its center sits on the table border.
+    const colGripForCol0 = page.locator('[data-blok-table-grip-col="0"][data-blok-table-grip-visible]');
 
     await expect(colGripForCol0).toBeVisible({ timeout: 2000 });
-    await colGripForCol0.click();
+    await colGripForCol0.click({ position: { x: 1, y: 1 } });
 
-    // Column 0 popover SHOULD contain the heading column toggle
-    await expect(page.getByText('Header column')).toBeVisible();
+    // Column 0 popover SHOULD contain the heading column toggle.
+    await expect(page.getByText('Header column', { exact: true })).toBeVisible();
   });
 
   test('toggling heading row off does not remove heading column styling', async ({ page }) => {

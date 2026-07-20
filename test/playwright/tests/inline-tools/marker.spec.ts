@@ -1060,42 +1060,58 @@ test.describe('inline tool marker', () => {
 
       expect(renderedSwatchCount).toBe(swatchTestIds.length);
 
+      const swatchCenters = await page.evaluate((ids) => {
+        return ids.map((id) => {
+          const swatch = document.querySelector(`[data-blok-testid="${id}"]`);
+
+          if (swatch === null) {
+            throw new Error(`Cannot measure swatch center: ${id} was not found`);
+          }
+
+          const rect = swatch.getBoundingClientRect();
+
+          return {
+            id,
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+          };
+        });
+      }, swatchTestIds);
       const tooltip = page.getByTestId('tooltip');
 
-      for (const hoveredId of swatchTestIds) {
-        await page.locator(`[data-blok-testid="${hoveredId}"]`).hover();
+      for (const hoveredSwatch of swatchCenters) {
+        await page.mouse.move(hoveredSwatch.x, hoveredSwatch.y);
         await expect(tooltip).toHaveAttribute('data-state', 'open');
 
-        // Hit-test every swatch center in one page-side pass: whatever
-        // element the browser would actually deliver a click to must be the
-        // swatch (or a descendant of it) — never an overlay.
-        const shielded = await page.evaluate((ids) => {
+        // Hit-test every precomputed swatch center in one page-side pass:
+        // whatever element the browser would actually deliver a click to must
+        // be the swatch (or a descendant of it) — never an overlay.
+        const shielded = await page.evaluate((centers) => {
           const offenders: string[] = [];
 
-          for (const id of ids) {
-            const swatch = document.querySelector(`[data-blok-testid="${id}"]`);
+          for (const center of centers) {
+            const swatch = document.querySelector(`[data-blok-testid="${center.id}"]`);
 
             if (swatch === null) {
-              offenders.push(`${id}: swatch not found`);
+              offenders.push(`${center.id}: swatch not found`);
               continue;
             }
 
-            const rect = swatch.getBoundingClientRect();
-            const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            const hit = document.elementFromPoint(center.x, center.y);
 
             if (hit !== swatch && !swatch.contains(hit)) {
               const hitDescription = hit === null
                 ? 'nothing'
                 : `<${hit.tagName.toLowerCase()} data-blok-testid="${hit.getAttribute('data-blok-testid') ?? ''}">`;
 
-              offenders.push(`${id}: shielded by ${hitDescription}`);
+              offenders.push(`${center.id}: shielded by ${hitDescription}`);
             }
           }
 
           return offenders;
-        }, swatchTestIds);
+        }, swatchCenters);
 
-        expect(shielded, `while hovering ${hoveredId}`).toEqual([]);
+        expect(shielded, `while hovering ${hoveredSwatch.id}`).toEqual([]);
       }
     });
   });

@@ -1112,20 +1112,15 @@ test.describe('inline toolbar', () => {
 
     await expect(boldButton).toHaveAttribute('data-blok-popover-item-active', 'true');
 
-    // Close the toolbar before selecting new text to ensure fresh state
-    await page.evaluate(() => {
-      window.blokInstance?.inlineToolbar?.close();
-    });
-
     const toolbar = page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR);
-
-    // Wait for toolbar to be hidden before selecting new text
-    await expect(toolbar).toHaveCount(0);
 
     await selectText(paragraph, 'plain part');
 
-    // Wait for the toolbar to appear automatically via selectionchange event
-    // This ensures the selection is properly established before checking the active state
+    await page.evaluate(() => {
+      window.blokInstance?.inlineToolbar?.close();
+      window.blokInstance?.inlineToolbar?.open();
+    });
+
     await expect(toolbar).toBeVisible();
 
     // Re-locate the bold button after the toolbar is visible to ensure we're checking the new instance

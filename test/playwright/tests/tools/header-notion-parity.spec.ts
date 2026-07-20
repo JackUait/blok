@@ -9,6 +9,7 @@ const HOLDER_ID = 'blok';
 const HEADER_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`;
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
+const NESTED_POPOVER_SELECTOR = '[data-blok-nested="true"] [data-blok-testid="popover-container"]';
 const TOGGLE_ARROW_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-toggle-arrow]`;
 
 declare global {
@@ -93,7 +94,11 @@ test.describe('header Notion parity', () => {
     await createBlok(page, headerData('My Heading', 2));
     await openBlockTunes(page);
 
-    const toggleEntry = page.getByTestId('popover-item').filter({ hasText: 'Toggle heading' });
+    const convertTo = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-item-name="convert-to"]`);
+
+    await convertTo.dispatchEvent('mouseover');
+
+    const toggleEntry = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="toggle-header-2"]`);
 
     await expect(toggleEntry).toBeVisible();
     await toggleEntry.click();
@@ -133,10 +138,14 @@ test.describe('header Notion parity', () => {
 
     await openBlockTunes(page);
 
-    // Active toggle entry -> click to convert back to plain.
-    const toggleEntry = page.getByTestId('popover-item').filter({ hasText: 'Toggle heading' });
+    const convertTo = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-item-name="convert-to"]`);
 
-    await toggleEntry.click();
+    await convertTo.dispatchEvent('mouseover');
+
+    const headingEntry = page.locator(`${NESTED_POPOVER_SELECTOR} [data-blok-item-name="header-2"]`);
+
+    await expect(headingEntry).toBeVisible();
+    await headingEntry.click();
 
     await expect(page.locator(TOGGLE_ARROW_SELECTOR)).toHaveCount(0);
 
@@ -152,14 +161,14 @@ test.describe('header Notion parity', () => {
     await createBlok(page, headerData('Colored heading', 2));
     await openBlockTunes(page);
 
-    const textColorEntry = page.getByTestId('popover-item').filter({ hasText: 'Text' }).first();
+    const colorEntry = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-item-name="block-color"]`);
 
-    await textColorEntry.hover();
+    await colorEntry.dispatchEvent('mouseover');
 
-    const redSwatch = page.getByTestId('popover-item').filter({ hasText: 'Red' }).first();
+    const redSwatch = page.getByTestId('block-color-swatch-textColor-red');
 
     await expect(redSwatch).toBeVisible();
-    await redSwatch.dispatchEvent('click');
+    await redSwatch.click();
 
     const heading = page.getByRole('heading', { level: 2, name: 'Colored heading' });
 

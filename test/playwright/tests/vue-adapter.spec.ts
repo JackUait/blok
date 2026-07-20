@@ -1,7 +1,23 @@
 import { test, expect } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 
 const VUE_TEST_URL = 'http://localhost:4444/test/playwright/fixtures/vue-test.html';
+
+const placeCaretAtEnd = async (editable: Locator): Promise<void> => {
+  await editable.focus();
+  await editable.evaluate((element) => {
+    const range = element.ownerDocument.createRange();
+
+    range.selectNodeContents(element);
+    range.collapse(false);
+
+    const selection = element.ownerDocument.getSelection();
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  });
+};
 
 test.describe('Vue adapter', () => {
   test.beforeAll(() => {
@@ -23,8 +39,7 @@ test.describe('Vue adapter', () => {
     await expect(paragraph).toBeVisible();
     await expect(paragraph).toContainText('Hello from Vue');
 
-    await paragraph.click();
-    await page.keyboard.press('End');
+    await placeCaretAtEnd(paragraph);
     await page.keyboard.type(' - E2E test');
 
     await page.getByTestId('save').click();
@@ -52,8 +67,7 @@ test.describe('Vue adapter', () => {
     const editorContainer = page.getByTestId('editor-container');
     const paragraph = editorContainer.locator('[contenteditable="true"]').filter({ hasText: 'Hello from Vue' });
 
-    await paragraph.click();
-    await page.keyboard.press('End');
+    await placeCaretAtEnd(paragraph);
     await page.keyboard.type(' - kept');
 
     await page.getByTestId('toggle-theme').click();

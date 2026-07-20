@@ -327,6 +327,11 @@ export class Caret extends Module {
 
     if (!block.focusable) {
       window.getSelection()?.removeAllRanges();
+
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
       BlockSelection.selectBlock(block);
       BlockManager.currentBlock = block;
 

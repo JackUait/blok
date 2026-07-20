@@ -1,5 +1,7 @@
 // test/playwright/tests/tools/image-compression.spec.ts
 
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
@@ -20,6 +22,8 @@ interface UploadedFile {
 
 const SOURCE_WIDTH = 800;
 const SOURCE_HEIGHT = 600;
+const PHOTO_FIXTURE_PATH = join(process.cwd(), 'test/playwright/fixtures/image/photo.jpg');
+const SHOT_FIXTURE_PATH = join(process.cwd(), 'test/playwright/fixtures/image/shot.png');
 
 declare global {
   interface Window {
@@ -27,7 +31,6 @@ declare global {
     Blok: new (...args: unknown[]) => Blok;
     BlokImage: unknown;
     __uploaded?: UploadedFile;
-    __originalSize?: number;
   }
 }
 
@@ -98,61 +101,14 @@ const awaitEmptyCard = async (page: Page): Promise<void> => {
   await expect(page.locator(IMAGE_BLOCK_SELECTOR)).toBeVisible();
 };
 
-/**
- * Feed a freshly generated JPEG into the empty card's file input.
- *
- * The image is deliberately photograph-like — smooth colour fields plus a light
- * grain — rather than uniform random noise. Pure noise is the pathological case
- * no encoder can improve on, so a compressor would (correctly) decline it and
- * the test would prove nothing about real uploads.
- */
-const uploadGeneratedImage = async (
-  page: Page,
-  { mimeType, fileName }: { mimeType: string; fileName: string },
-): Promise<void> => {
-  const imageBytes = await page.evaluate(async ({ width, height, mime }) => {
-    const canvas = document.createElement('canvas');
-
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) throw new Error('no 2d context');
-    const pixels = ctx.createImageData(canvas.width, canvas.height);
-
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        const i = (y * width + x) * 4;
-        const grain = (Math.random() - 0.5) * 30;
-
-        pixels.data[i] = 128 + 110 * Math.sin(x / 37) * Math.cos(y / 53) + grain;
-        pixels.data[i + 1] = 128 + 110 * Math.sin((x + y) / 61) + grain;
-        pixels.data[i + 2] = 128 + 110 * Math.cos(y / 29) * Math.sin(x / 71) + grain;
-        pixels.data[i + 3] = 255;
-      }
-    }
-    ctx.putImageData(pixels, 0, 0);
-
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, mime, 1);
-    });
-
-    if (!blob) throw new Error('encode failed');
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-
-    window.__originalSize = bytes.byteLength;
-
-    return Array.from(bytes);
-  }, { width: SOURCE_WIDTH, height: SOURCE_HEIGHT, mime: mimeType });
-
-  await page
+const uploadFixtureImage = (page: Page, path: string): Promise<void> =>
+  page
     .locator(IMAGE_BLOCK_SELECTOR)
     .getByTestId('file-input')
-    .setInputFiles({ name: fileName, mimeType, buffer: Buffer.from(imageBytes) });
-};
+    .setInputFiles(path);
 
-const uploadGeneratedJpeg = (page: Page): Promise<void> =>
-  uploadGeneratedImage(page, { mimeType: 'image/jpeg', fileName: 'photo.jpg' });
+const uploadPhoto = (page: Page): Promise<void> => uploadFixtureImage(page, PHOTO_FIXTURE_PATH);
+const uploadShot = (page: Page): Promise<void> => uploadFixtureImage(page, SHOT_FIXTURE_PATH);
 
 const uploadedFile = async (page: Page): Promise<UploadedFile> => {
   await page.waitForFunction(() => window.__uploaded !== undefined);
@@ -163,9 +119,6 @@ const uploadedFile = async (page: Page): Promise<UploadedFile> => {
   return uploaded as UploadedFile;
 };
 
-const originalSize = (page: Page): Promise<number> =>
-  page.evaluate(() => window.__originalSize ?? 0);
-
 test.beforeEach(async ({ page }) => {
   await page.goto(TEST_PAGE_URL);
   await page.waitForFunction(() => typeof window.Blok === 'function');
@@ -174,10 +127,10 @@ test.beforeEach(async ({ page }) => {
 test('compresses an uploaded photo by default, keeping its format', async ({ page }) => {
   await createBlok(page, true);
   await awaitEmptyCard(page);
-  await uploadGeneratedJpeg(page);
+  await uploadPhoto(page);
 
   const uploaded = await uploadedFile(page);
-  const original = await originalSize(page);
+  const original = statSync(PHOTO_FIXTURE_PATH).size;
 
   expect(original).toBeGreaterThan(100 * 1024);
   expect(uploaded.type).toBe('image/jpeg');
@@ -204,7 +157,7 @@ test('opting into WebP re-encodes the upload, or falls back to the source format
 
   await createBlok(page, { format: 'webp' });
   await awaitEmptyCard(page);
-  await uploadGeneratedJpeg(page);
+  await uploadPhoto(page);
 
   const uploaded = await uploadedFile(page);
 
@@ -256,10 +209,10 @@ test("format 'avif' re-encodes a PNG upload into a real, decodable AVIF", async 
 
   await createBlok(page, { format: 'avif' });
   await awaitEmptyCard(page);
-  await uploadGeneratedImage(page, { mimeType: 'image/png', fileName: 'shot.png' });
+  await uploadShot(page);
 
   const uploaded = await uploadedFile(page);
-  const original = await originalSize(page);
+  const original = statSync(SHOT_FIXTURE_PATH).size;
 
   expect(original).toBeGreaterThan(100 * 1024);
 
@@ -282,10 +235,10 @@ test("fallbackFormat serves WebP to browsers that cannot produce the preferred A
 
   await createBlok(page, { format: 'avif', fallbackFormat: 'webp' });
   await awaitEmptyCard(page);
-  await uploadGeneratedImage(page, { mimeType: 'image/png', fileName: 'shot.png' });
+  await uploadShot(page);
 
   const uploaded = await uploadedFile(page);
-  const original = await originalSize(page);
+  const original = statSync(SHOT_FIXTURE_PATH).size;
 
   // Every current engine encodes at least one of the two — the chain's whole
   // point is that no user with a modern browser is stuck with the original.
@@ -302,10 +255,10 @@ test("fallbackFormat serves WebP to browsers that cannot produce the preferred A
 test('a dimension cap downscales the upload, preserving aspect ratio', async ({ page }) => {
   await createBlok(page, { maxWidth: 400 });
   await awaitEmptyCard(page);
-  await uploadGeneratedJpeg(page);
+  await uploadPhoto(page);
 
   const uploaded = await uploadedFile(page);
-  const original = await originalSize(page);
+  const original = statSync(PHOTO_FIXTURE_PATH).size;
 
   expect(uploaded.width).toBe(400);
   expect(uploaded.height).toBe(300);
@@ -315,10 +268,10 @@ test('a dimension cap downscales the upload, preserving aspect ratio', async ({ 
 test('compress: false uploads the exact original bytes', async ({ page }) => {
   await createBlok(page, false);
   await awaitEmptyCard(page);
-  await uploadGeneratedJpeg(page);
+  await uploadPhoto(page);
 
   const uploaded = await uploadedFile(page);
-  const original = await originalSize(page);
+  const original = statSync(PHOTO_FIXTURE_PATH).size;
 
   expect(uploaded.size).toBe(original);
   expect(uploaded.name).toBe('photo.jpg');

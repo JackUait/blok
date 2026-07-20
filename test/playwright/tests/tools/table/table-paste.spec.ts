@@ -149,17 +149,17 @@ const pasteHtml = async (page: Page, html: string): Promise<void> => {
  */
 const paste = async (locator: Locator, data: Record<string, string>): Promise<void> => {
   await locator.evaluate((element: HTMLElement, pasteData: Record<string, string>) => {
-    const pasteEvent = Object.assign(new Event('paste', {
+    const clipboardData = new DataTransfer();
+
+    for (const [type, value] of Object.entries(pasteData)) {
+      clipboardData.setData(type, value);
+    }
+
+    element.dispatchEvent(new ClipboardEvent('paste', {
       bubbles: true,
       cancelable: true,
-    }), {
-      clipboardData: {
-        getData: (type: string): string => pasteData[type] ?? '',
-        types: Object.keys(pasteData),
-      },
-    });
-
-    element.dispatchEvent(pasteEvent);
+      clipboardData,
+    }));
   }, data);
 };
 
@@ -289,7 +289,9 @@ test.describe('Paste HTML Table into Editor', () => {
 
     await paragraph.click();
 
-    // Google Docs wraps clipboard HTML in <b id="docs-internal-guid-..."><div>...</div></b>
+    // Google Docs wraps clipboard HTML in <b id="docs-internal-guid-..."><div>...</div></b>.
+    // Use four columns so this remains a data table; uniform 2/3-column Docs tables
+    // intentionally paste as column layouts.
     const googleDocsHTML = [
       '<meta charset="utf-8">',
       '<b style="font-weight:normal;" id="docs-internal-guid-abc12345">',
@@ -303,6 +305,12 @@ test.describe('Paste HTML Table into Editor', () => {
       '<td style="border:solid #000 1pt;padding:5pt;">',
       '<p dir="ltr"><span style="font-weight:700;">Age</span></p>',
       '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span style="font-weight:700;">Role</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span style="font-weight:700;">City</span></p>',
+      '</td>',
       '</tr>',
       '<tr>',
       '<td style="border:solid #000 1pt;padding:5pt;">',
@@ -310,6 +318,12 @@ test.describe('Paste HTML Table into Editor', () => {
       '</td>',
       '<td style="border:solid #000 1pt;padding:5pt;">',
       '<p dir="ltr"><span>30</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>Engineer</span></p>',
+      '</td>',
+      '<td style="border:solid #000 1pt;padding:5pt;">',
+      '<p dir="ltr"><span>Paris</span></p>',
       '</td>',
       '</tr>',
       '</tbody>',
@@ -326,12 +340,16 @@ test.describe('Paste HTML Table into Editor', () => {
 
     const cells = table.locator(CELL_SELECTOR);
 
-    await expect(cells).toHaveCount(4);
+    await expect(cells).toHaveCount(8);
 
     await expect(cells.filter({ hasText: 'Name' })).toHaveCount(1);
     await expect(cells.filter({ hasText: 'Age' })).toHaveCount(1);
+    await expect(cells.filter({ hasText: 'Role' })).toHaveCount(1);
+    await expect(cells.filter({ hasText: 'City' })).toHaveCount(1);
     await expect(cells.filter({ hasText: 'Alice' })).toHaveCount(1);
     await expect(cells.filter({ hasText: '30' })).toHaveCount(1);
+    await expect(cells.filter({ hasText: 'Engineer' })).toHaveCount(1);
+    await expect(cells.filter({ hasText: 'Paris' })).toHaveCount(1);
   });
 
   test('Pasting a Google Docs table does not leave orphaned cell blocks after read-only toggle', async ({ page }) => {
@@ -344,7 +362,9 @@ test.describe('Paste HTML Table into Editor', () => {
 
     await paragraph.click();
 
-    // Google Docs wraps clipboard HTML in <b id="docs-internal-guid-..."><div>...</div></b>
+    // Google Docs wraps clipboard HTML in <b id="docs-internal-guid-..."><div>...</div></b>.
+    // Use four columns so this remains a data table; uniform 2/3-column Docs tables
+    // intentionally paste as column layouts.
     const googleDocsHTML = [
       '<meta charset="utf-8">',
       '<b style="font-weight:normal;" id="docs-internal-guid-abc12345">',
@@ -358,8 +378,6 @@ test.describe('Paste HTML Table into Editor', () => {
       '<td style="border:solid #000 1pt;padding:5pt;">',
       '<p dir="ltr"><span>B</span></p>',
       '</td>',
-      '</tr>',
-      '<tr>',
       '<td style="border:solid #000 1pt;padding:5pt;">',
       '<p dir="ltr"><span>C</span></p>',
       '</td>',
@@ -428,8 +446,10 @@ test.describe('Paste HTML Table into Editor', () => {
 
     await paragraph.click();
 
-    // Google-Docs-shaped table: bullets (with a nested item) in the first cell,
-    // a numbered list in the second, plain text in the third.
+    // Google-Docs-shaped four-column data table: bullets (with a nested item)
+    // in the first cell, a numbered list in the second, and plain text cells
+    // in the third and fourth. Four columns distinguish a data table from the
+    // 2/3-column Google Docs layout idiom.
     const html = [
       '<meta charset="utf-8">',
       '<b style="font-weight:normal;" id="docs-internal-guid-list123">',
@@ -439,6 +459,7 @@ test.describe('Paste HTML Table into Editor', () => {
       '</td>',
       '<td><ol><li><p>one</p></li><li><p>two</p></li></ol></td>',
       '<td><p>plain</p></td>',
+      '<td><p>extra</p></td>',
       '</tr></tbody></table>',
       '</b>',
     ].join('');
@@ -448,6 +469,8 @@ test.describe('Paste HTML Table into Editor', () => {
     const table = page.locator(TABLE_SELECTOR);
 
     await expect(table).toBeVisible();
+    await expect(table.locator(CELL_SELECTOR)).toHaveCount(4);
+    await expect(table).toContainText('extra');
 
     const output = await page.evaluate(async () => window.blokInstance?.save());
 

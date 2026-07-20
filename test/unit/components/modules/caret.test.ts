@@ -247,6 +247,33 @@ describe('Caret module', () => {
     });
   });
 
+  describe('setToBlockAtXPosition', () => {
+    it('blurs stale focused input when highlighting a non-focusable block', () => {
+      const { caret, blockSelection, blockManager } = createCaret();
+      const block = createBlock({ focusable: false });
+      const focusedInput = createContentEditable();
+      const removeAllRanges = vi.fn();
+
+      focusedInput.tabIndex = 0;
+      document.body.appendChild(focusedInput);
+      focusedInput.focus();
+      expect(focusedInput).toHaveFocus();
+      const blur = vi.spyOn(focusedInput, 'blur');
+
+      vi.spyOn(window, 'getSelection').mockReturnValue({
+        removeAllRanges,
+      } as unknown as globalThis.Selection | null);
+
+      caret.setToBlockAtXPosition(block, null, false);
+
+      expect(blockSelection.clearSelection).toHaveBeenCalledTimes(1);
+      expect(removeAllRanges).toHaveBeenCalledTimes(1);
+      expect(blur).toHaveBeenCalledTimes(1);
+      expect(blockSelection.selectBlock).toHaveBeenCalledWith(block);
+      expect(blockManager.currentBlock).toBe(block);
+    });
+  });
+
   describe('setToInput', () => {
     it('moves caret to requested position and updates current input reference', () => {
       const { caret, blockManager } = createCaret();

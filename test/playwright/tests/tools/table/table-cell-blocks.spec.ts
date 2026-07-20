@@ -351,6 +351,9 @@ test.describe('Block Types Inside Table Cells', () => {
     await page.keyboard.press(`${modKey}+a`);
     await page.keyboard.press(`${modKey}+c`);
 
+    // Dismiss the inline toolbar opened by the text selection before changing focus
+    await page.keyboard.press('Escape');
+
     // 3. Click into the first table cell's editable area
     const cellEditable = getCellEditable(page, 0, 0);
 

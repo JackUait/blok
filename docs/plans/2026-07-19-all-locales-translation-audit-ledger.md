@@ -313,7 +313,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-fil-001`–`F-fil-099` | first-pass-complete |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | `root-fil_2c9_proposal_challenge` | pass | pass | pass | `F-gu-001`–`F-gu-054` | second-pass-complete |
-| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-he-001`–`F-he-047` | first-pass-complete |
+| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-069` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-004` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
@@ -451,7 +451,6 @@ locale returns to `pending`.
 | `fil` | `root-dv_corrected_46c_second` | `sha256:8240e764e995550e70707d56ce20c703113b359504af38db559e1bab0bd8af8d` | — | — |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
 | `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | `root-fil_2c9_proposal_challenge` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` |
-| `he` | `root-dv_corrected_46c_second` | `sha256:91ca89a271bda90e01e7b0d8285f742de6a336f6a108e70654e7cd3f6ec89d7d` | — | — |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
@@ -5278,6 +5277,67 @@ confirms 546 unique passing identities, and rebinds the current dictionary
 digest. This exact-byte review earns first-pass credit only; a distinct
 complete second review is still required.
 
+### Hebrew 91c second-review residual — remediated
+
+Distinct reviewer `/root/he_91ca_second` restarted at entry 1 and reread all
+546 source-order pairs on the same raw dictionary SHA-256
+`91ca89a271bda90e01e7b0d8285f742de6a336f6a108e70654e7cd3f6ec89d7d`.
+Its stopped-review bundle is
+`/Users/jackuait/.codex/audit-evidence/blok-he-91ca89-review2-20260720T163938Z-v1`;
+the complete matrix is bound at SHA-256
+`d09e0511a872172b1c897999ecc8824dd2b9d5e8a49b98d70622b7e92206b873`;
+the 26-row bounded proposal map at SHA-256
+`399e5b423f433df6c6bddf2e3c6c811df38773ad546820e2ce4bf1cd20c4f452`;
+the manifest at SHA-256
+`a4d7b9a95600515d0afc0f853716b9b087fb621a6d2360856d6dbbd79d95f68d`;
+and the checksum manifest at SHA-256
+`c3dddeb0f9bf1058e52b0bd551367b3c61e74e05bc34af0a3b88f26961bbc5cc`.
+The review reports 520 pass and 26 fail: 24 operative labels expressed as
+action nouns and two loop-state labels with masculine agreement. Its primary
+lifecycle artifact, SHA-256
+`c200b4f9318b27230b7ffafb3873e6dfd26b29d14d43dbadc64d1eada60b6180`,
+swaps the semantic identities of `toolNames.text` and
+`tools.video.seekValueText`; it is superseded for lifecycle credit.
+
+Independent challenger `/root/azeri_proposal_challenge` reread the complete
+dictionary, every proposal and caller, and the coupled action families. Its
+sealed bundle is
+`/Users/jackuait/.codex/audit-evidence/blok-he-91ca89-proposal-challenge-20260720T170423Z-v1`.
+It records 21 accepts, one amendment, four rejections, zero omissions, and
+four instances of proposal overreach. The adjudications are bound at SHA-256
+`3d6b78c275c8b5d86d8b1739940801b4c10133596c18027201f3cb550ebefd73`;
+the exact 22-row effective map at SHA-256
+`d9f9742f0f609df6a3e0d9b2bda51649cfa1f5c4b191033051cf071afa427e66`;
+the manifest at SHA-256
+`c6ec2afb7f475c61bcc4d9c54eaeee57f419cdcdc961e9383344ba8640005e4e`;
+the checksum manifest at SHA-256
+`d64cc5d5de2e293951be30522f1fcf4f0382b8c0d34b5b94c2fa66963831bff7`;
+and the seal at SHA-256
+`9115e04dfbd94d1e3b2f7bd6f2b00db90c05b0f3a45ceca8f749950aceb556dc`.
+Before remediation, a root replay passed all 7,615 sealed validator checks and
+every checksum. The lifecycle supplement correctly proves the uniform 397
+literal + 122 finite-dynamic + 25 registered-namespace-compatible + two
+no-uniform-route closure.
+
+The challenge retains the existing noun labels `tools.image.cropCancel`,
+`tools.image.cropDone`, `notifier.confirm`, and `notifier.cancel`. It amends
+the proposed `tools.video.on` value to feminine state label `"מופעלת"` and
+accepts paired `tools.video.off` as `"כבויה"`. Before the dictionary edit, the
+red guideline gate passed 3,291 cases and failed exactly `F-he-048`–`F-he-069`.
+Applying only the sealed 22-key map preserved all 546 identities and produced
+raw dictionary SHA-256
+`9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d`.
+The green guideline gate passes all 3,313 cases; all 182 exact-retention cases,
+294 focused caller cases across 14 files, and the complete nine-file i18n
+suite with 4,030 cases also pass. Translation completeness, integrity, source
+coverage, docs translation, and encoding checks pass with only the
+repository's known warnings. All 22 findings are verified.
+
+This correction invalidates both reviews on the `91ca89a…` bytes for
+completion credit. Hebrew remains `pending` with no review digest, and two
+fresh independent 546-entry reviews must restart at entry 1 on the
+`9dc2d5fe…` bytes.
+
 ### Estonian, Persian, Filipino, and Dutch correction closure
 
 The correction pass closed all 135 current-byte findings: 42 Estonian rows
@@ -8542,6 +8602,28 @@ follows the global transition rule above.
 | `F-he-045` | `he` | `tools.video.speedIncrease` | accessibility / command grammar | `"הגדל מהירות הפעלה"` | `"הגבר את מהירות ההפעלה"` | The plus stepper exposes this value as an ARIA command. The accepted phrasing replaces the telegraphic calque with the natural `הגבר את` command construction while preserving the established playback-speed term. | verified |
 | `F-he-046` | `he` | `tools.audio.speedDecrease` | accessibility / media-family consistency | `"הקטן מהירות הפעלה"` | `"הפחת את מהירות ההפעלה"` | The audio minus stepper has the same concrete role as its video sibling. The accepted value closes the decrease-command family, while the standalone speed label correctly remains nominal. | verified |
 | `F-he-047` | `he` | `tools.audio.speedIncrease` | accessibility / media-family consistency | `"הגדל מהירות הפעלה"` | `"הגבר את מהירות ההפעלה"` | The audio plus stepper has the same concrete role as its video sibling. The accepted value closes the increase-command family without changing the noun labels or preset-group label. | verified |
+| `F-he-048` | `he` | `tools.table.duplicateColumn` | caller role / command grammar | `"שכפול"` | `"שכפל"` | The popover item immediately duplicates the selected column. The accepted masculine-singular command replaces the action noun and matches the table and database command family. | verified |
+| `F-he-049` | `he` | `tools.table.duplicateRow` | caller role / command grammar | `"שכפול"` | `"שכפל"` | The paired row item immediately dispatches duplication and has the same command contract as the column item; the accepted imperative closes that pair. | verified |
+| `F-he-050` | `he` | `tools.table.fitToPageWidth` | caller role / command grammar | `"התאמה לרוחב הדף"` | `"התאם לרוחב הדף"` | This settings item invokes a one-shot width action. The accepted value names that command directly instead of describing an adjustment. | verified |
+| `F-he-051` | `he` | `blockSettings.duplicate` | caller role / command grammar | `"שכפול"` | `"שכפל"` | The block-settings item immediately duplicates the selected block set and sits beside imperative sibling actions, so the accepted direct command is required. | verified |
+| `F-he-052` | `he` | `a11y.insertBlock` | accessibility / command grammar | `"הוספת בלוק"` | `"הוסף בלוק"` | The plus button exposes this value as its operable accessible name. The accepted imperative announces the button action and matches the established add family. | verified |
+| `F-he-053` | `he` | `tools.link.copyUrl` | accessibility / command grammar | `"העתקת הקישור"` | `"העתק קישור"` | The link hover-card copy button uses this value as its accessible name; the accepted imperative labels the immediate copy action rather than naming the act. | verified |
+| `F-he-054` | `he` | `tools.link.edit` | caller role / command grammar | `"עריכה"` | `"ערוך"` | This is visible text on the hover-card button that opens link editing. The accepted imperative matches nearby edit and remove commands. | verified |
+| `F-he-055` | `he` | `tools.image.crop` | caller role / command grammar | `"חיתוך"` | `"חתוך"` | Both the image settings item and overlay button enter crop mode. The accepted imperative replaces the process noun for those operative callers. | verified |
+| `F-he-056` | `he` | `tools.image.viewFullscreen` | caller role / command grammar | `"תצוגת מסך מלא"` | `"הצג במסך מלא"` | The image settings and overlay controls open the lightbox. The accepted direct command pairs naturally with the established exit action. | verified |
+| `F-he-057` | `he` | `tools.image.exitFullscreen` | accessibility / command grammar | `"יציאה ממסך מלא"` | `"צא ממסך מלא"` | The lightbox collapse button consumes this value as its accessible name. The accepted imperative exactly matches the parallel video exit command. | verified |
+| `F-he-058` | `he` | `tools.image.download` | accessibility / command grammar | `"הורדה"` | `"הורד"` | The lightbox download button performs an immediate action; the accepted imperative matches the image-original, file, video, and audio download family. | verified |
+| `F-he-059` | `he` | `tools.image.altEdit` | accessibility / command grammar | `"עריכת טקסט חלופי"` | `"ערוך טקסט חלופי"` | The dominant caller is the alt-text button accessible name and tooltip. The accepted task-oriented imperative remains suitable when reused as the editing dialog label. | verified |
+| `F-he-060` | `he` | `tools.embed.replace` | caller role / command grammar | `"החלפה"` | `"החלף"` | This embed settings item immediately replaces the source. The accepted command matches the established image, file, video, and audio replace family. | verified |
+| `F-he-061` | `he` | `tools.embed.urlSubmit` | caller role / command grammar | `"הטמעת קישור"` | `"הטמע קישור"` | The URL form renders this value on its submit button. The accepted imperative names the concrete submit action rather than the embedding process. | verified |
+| `F-he-062` | `he` | `tools.file.cancelUpload` | accessibility / command grammar | `"ביטול העלאה"` | `"בטל העלאה"` | The upload-progress cancel button uses this as its accessible name. The accepted imperative clearly labels the immediate cancellation action. | verified |
+| `F-he-063` | `he` | `tools.file.download` | caller role / command grammar | `"הורדה"` | `"הורד"` | The file settings item downloads the current file immediately; the accepted command closes the cross-media download family. | verified |
+| `F-he-064` | `he` | `tools.file.previewClose` | accessibility / command grammar | `"סגירת התצוגה המקדימה"` | `"סגור את התצוגה המקדימה"` | The preview close button consumes this value as its accessible name. The accepted imperative names that button action directly. | verified |
+| `F-he-065` | `he` | `tools.file.previewDownload` | accessibility / command grammar | `"הורדה"` | `"הורד"` | The preview toolbar download button has the same operative accessible-name contract as the other download controls. | verified |
+| `F-he-066` | `he` | `tools.video.download` | caller role / command grammar | `"הורדה"` | `"הורד"` | The video context-menu item immediately downloads the media. The accepted imperative matches every accepted Hebrew download command. | verified |
+| `F-he-067` | `he` | `tools.audio.download` | caller role / command grammar | `"הורדה"` | `"הורד"` | The audio context-menu item has the same immediate download role as its video sibling and therefore uses the same accepted command. | verified |
+| `F-he-068` | `he` | `tools.video.on` | grammatical gender / concrete caller | `"פועל"` | `"מופעלת"` | The value is composed beside feminine `לולאה` in the loop setting. The independent challenge amended the first proposal to the natural feminine enabled-state label `מופעלת`. | verified |
+| `F-he-069` | `he` | `tools.video.off` | grammatical gender / concrete caller | `"כבוי"` | `"כבויה"` | The paired loop setting also requires feminine agreement with `לולאה`; the accepted value corrects the masculine outlier without changing the caller. | verified |
 | `F-ku-003` | `ku` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"داشکاندنی بەتاڵ. کلیک بکە یان بلۆک بخەرە ناوی."` | `"داشکاندنی بەتاڵ. کلیک بکە بۆ زیادکردنی بلۆکێک یان بلۆکەکان ڕاکێشە بۆ ئێرە."` | The old Sorani copy says only click or put a block inside. The replacement uses established repository morphology to name singular click-to-add, plural drag, and the target explicitly. | verified |
 | `F-ps-002` | `ps` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"خالي راټولېدونکی. د بلاکونو د دننه کولو لپاره کلیک وکړئ یا کش کړئ."` | `"خالي راټولېدونکی. د یوه بلاک اضافه کولو لپاره کلیک وکړئ یا بلاکونه دلته کش کړئ."` | The old purpose phrase ambiguously applies clicking to putting plural blocks inside. The replacement uses correct oblique singular `یوه`, plural drag object, and an explicit destination in the locale's established formal register. | verified |
 | `F-sd-002` | `sd` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"خالي سمٽيل بلاڪ. ڪلڪ ڪريو يا بلاڪ اندر ڏانهن ڇڪيو."` | `"خالي سمٽيل بلاڪ. هڪ بلاڪ شامل ڪرڻ لاءِ ڪلڪ ڪريو يا بلاڪن کي هتي ڇڪيو."` | The old Sindhi copy omits the click result and does not distinguish singular creation from plural dragging. The replacement uses natural singular `هڪ بلاڪ`, plural oblique `بلاڪن کي`, and the established formal imperatives. | verified |

@@ -268,7 +268,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-ar-546-first-final` | — | pass | pass | pass | `F-ar-001`–`F-ar-075` | first-pass-complete |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-az-546-first-final` | — | pass | pass | pass | `F-az-001`–`F-az-104` | first-pass-complete |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | `root-azeri_proposal_challenge` | — | pass | pass | pass | `F-bn-001`–`F-bn-070` | first-pass-complete |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-071` | pending |
 | `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-danish_546_first_pass` | — | pass | pass | pass | `F-bs-001`–`F-bs-181` | first-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-da-546-first-restart` | — | pass | pass | pass | `F-da-001`–`F-da-085` | first-pass-complete |
@@ -405,7 +405,6 @@ locale returns to `pending`.
 | `ar` | `root-ar-546-first-final` | `sha256:4ca1701da68e8ec214b28f1174e87ec6cfa7e57b45c090701e9e5c4b4619588d` | — | — |
 | `az` | `root-az-546-first-final` | `sha256:38d2ab7bbda7564efef6a56e99ff3fdc0f3a3479b39fe58fd507e5d8e1a6351a` | — | — |
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
-| `bn` | `root-azeri_proposal_challenge` | `sha256:da595ac5640a884103f9862f232f4006bc8898f44847c27fbf84eefb1828dd40` | — | — |
 | `bs` | `root-danish_546_first_pass` | `sha256:e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc` | — | — |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-da-546-first-restart` | `sha256:ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f` | — | — |
@@ -1062,7 +1061,7 @@ the independent second-pass artifact is
 Fresh translation-guideline, block-color, and live translation-checker gates
 pass. The terminal repository-wide gates remain pending.
 
-### Bengali (`bn`) — corrected-byte first pass complete
+### Bengali (`bn`) — pending after second-pass residual
 
 The current Bengali audit had recorded 68 corrections and four supported
 exact-English retentions before a final count-grammar check found one
@@ -1122,6 +1121,23 @@ The current-byte first-pass artifact is
 its validator passed 4,118 assertions. Bengali is
 `first-pass-complete` pending a distinct complete second pass on the same
 dictionary bytes.
+
+Reviewer `root` then independently restarted at entry 1 and directly reread
+all 546 English/Bengali pairs in source order as the distinct second pass. It
+upheld `F-bn-001` through `F-bn-070`, all four retentions, and the previously
+validated placeholder, alias, provider, block-color, migration,
+changed-English, and caller-partition inventories. It found one natural-error
+copy residual in `tools.image.errorSourceOffline`: the current wording
+literally says that the source file itself may be offline. The broken-image
+caller covers a moved or unavailable remote resource, so `F-bn-071` uses the
+same established `অনুপলব্ধ` availability term already present in this
+dictionary's image errors. The focused expectation failed on exactly the old
+value before remediation and passed afterward; the corrected raw dictionary
+SHA-256 is
+`f36b6303b8c7839cebee9d5699de12ba70026be77cd24578caf6d00f230caa79`.
+Because the correction changes the dictionary bytes, the attempted second
+pass does not complete the locale and the earlier first-pass credit is also
+reset. Both complete passes must restart after remediation.
 
 ### Bosnian (`bs`) — corrected-byte first pass complete
 
@@ -4046,6 +4062,7 @@ follows the global transition rule above.
 | `F-bn-068` | `bn` | `tools.audio.emptyOrDropHere` | drop-target object clarity | `"অথবা এখানে অডিও ফেলুন"` | `"অথবা এখানে অডিও ফাইল ফেলুন"` | The drop target accepts a file, not abstract audio. Official [Files by Google Bengali help](https://support.google.com/files/answer/10018943?hl=bn) uses the exact product term `অডিও ফাইল`. | verified |
 | `F-bn-069` | `bn` | `blockSettings.blocksSelected` | number grammar / classifier | `"{count} ব্লক"` | `"{count}টি ব্লক"` | This dynamic selected-block count requires the Bengali classifier `টি`; the replacement matches every sibling block-count announcement and standard Bengali numeral–noun construction. Evidence: [Unicode CLDR Bengali number verification](https://www.unicode.org/cldr/cldr-aux/charts/28/verify/numbers/bn.html); [Google Android accessibility guidance](https://support.google.com/accessibility/android/answer/6151854?hl=bn). | verified |
 | `F-bn-070` | `bn` | `a11y.blocksDuplicated` | caller semantics / accessibility | `"{count}টি ব্লক {position} অবস্থান থেকে কপি করা হয়েছে"` | `"{count}টি ব্লক কপি করা হয়েছে। শুরুর অবস্থান: {position}"` | The drag-a11y caller passes the first newly duplicated block's destination index as `{position}`, not the source position. The replacement announces the completed duplication and labels the new duplicates' starting position without reversing that relationship. | verified |
+| `F-bn-071` | `bn` | `tools.image.errorSourceOffline` | natural error copy / resource state | `"উৎস ফাইলটি সরানো হয়ে থাকতে পারে বা অফলাইন হতে পারে।"` | `"উৎস ফাইলটি সরানো হয়ে থাকতে পারে বা অনুপলব্ধ হতে পারে।"` | A file is not naturally described as being offline. The broken-image caller needs the broader moved-or-unavailable source state, and `অনুপলব্ধ` matches the locale's existing image-unavailable terminology. | verified |
 | `F-bs-001` | `bs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti formatiranje"` | LibreOffice’s Bosnian product UI supplies the exact Clear formatting translation [Očisti formatiranje](https://github.com/LibreOffice/translations/blob/master/source/bs/svx/messages.po#L6304-L6305). | verified |
 | `F-bs-002` | `bs` | `blockSettings.convertWithChildrenWarning` | semantic accuracy / locale style | `"Ugniježđeni blokovi: {count}. Konverzijom ovog bloka ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | `"Ugniježđeni blokovi: {count}. Ako pretvorite ovaj blok, ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | Avoid technical nominalization while preserving the count-neutral warning. Frozen 545-key audit index 8; independent disposition: accept-original-proposal. | verified |
 | `F-bs-003` | `bs` | `toolbox.optionAddAbove` | semantic accuracy / locale style | `"Option-klik za dodavanje iznad"` | `"Držite tipku Option i kliknite za dodavanje iznad"` | Replaces the awkward compound and explicitly tells the user to hold Option while clicking. Frozen 545-key audit index 10; independent disposition: adjust. | verified |

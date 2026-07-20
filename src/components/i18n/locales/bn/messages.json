@@ -305,7 +305,7 @@
   "tools.image.errorUploadFailed": "আপলোড ব্যর্থ",
   "tools.image.errorFileTooLarge": "ছবিটি খুব বড়। আকার {size}; সর্বোচ্চ {max}।",
   "tools.image.errorUploadFailedTitle": "আপলোড ব্যর্থ হয়েছে",
-  "tools.image.errorSourceOffline": "উৎস ফাইলটি সরানো হয়ে থাকতে পারে বা অফলাইন হতে পারে।",
+  "tools.image.errorSourceOffline": "উৎস ফাইলটি সরানো হয়ে থাকতে পারে বা অনুপলব্ধ হতে পারে।",
   "tools.image.errorUnavailable": "ছবি অনুপলব্ধ",
   "tools.image.errorImageFailedToLoad": "ছবি লোড করা যায়নি",
   "tools.image.errorDefaultTitle": "ছবি লোড করা যায়নি",

@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Blok as BlokInstance } from '../../types';
 import { Paragraph } from '../../src/tools/paragraph';
 
-let editor: BlokInstance | undefined;
+/**
+ * The runtime class from src/blok and the published Blok type don't unify
+ * (module APIs are grafted on after isReady), so type only what this test uses.
+ */
+interface TestEditor {
+  isReady: Promise<unknown>;
+  destroy: () => void;
+}
+
+let editor: TestEditor | undefined;
 let holder: HTMLDivElement | undefined;
 
 describe('Blok jsdom compatibility', () => {
@@ -60,7 +68,7 @@ describe('Blok jsdom compatibility', () => {
     expect(requestAnimationFrame).toBeTypeOf('function');
     expect(cancelAnimationFrame).toBeTypeOf('function');
 
-    editor = new Blok({
+    const instance = new Blok({
       holder,
       tools: {
         paragraph: Paragraph,
@@ -70,6 +78,8 @@ describe('Blok jsdom compatibility', () => {
       },
     });
 
-    await expect(editor.isReady).resolves.toBe(editor);
+    editor = instance;
+
+    await expect(instance.isReady).resolves.toBe(instance);
   }, 60_000);
 });

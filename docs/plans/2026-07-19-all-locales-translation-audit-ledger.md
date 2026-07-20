@@ -315,7 +315,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | `root-fil_2c9_proposal_challenge` | pass | pass | pass | `F-gu-001`–`F-gu-054` | second-pass-complete |
 | `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-he_9dc_first_fresh` | `root-he_9dc_second_fresh` | pass | pass | pass | `F-he-001`–`F-he-069` | second-pass-complete |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
-| `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-052` | pending |
+| `hr` | Croatian | Latin | ltr | neutral contemporary Croatian; concise direct singular imperatives for actions and recovery instructions; sentence-case noun/state labels; count-neutral accessibility wording; established Croatian product/media terminology; conventional unchanged shortcut, ratio, and acronym notation | `root-hr_b4f_first_final_clean` | `root-hr_b4f_second_replacement` | pass | pass | pass | `F-hr-001`–`F-hr-052` | second-pass-complete |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-004` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-004` | pending |
@@ -453,6 +453,7 @@ locale returns to `pending`.
 | `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | `root-fil_2c9_proposal_challenge` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` |
 | `he` | `root-he_9dc_first_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` | `root-he_9dc_second_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
+| `hr` | `root-hr_b4f_first_final_clean` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` | `root-hr_b4f_second_replacement` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
 ## 546-Key Recently-Used Label Migration
@@ -2816,6 +2817,52 @@ and 47-extra-Russian-doc warnings. These proposal and remediation artifacts
 earn no complete-pass credit. Croatian remains `pending` with no digest row;
 two fresh, independent 546-entry reviews must restart from entry 1 on the
 new raw bytes.
+
+### Croatian corrected-byte complete reviews — clean
+
+Fresh reviewer `root-hr_b4f_first_final_clean` read all 546
+English/Croatian pairs twice from entry 1 on raw Croatian SHA-256
+`b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9`.
+The review used the exact 544-file production boundary, including
+`src/components/i18n/locales/index.ts` and excluding test IDs, tests,
+stories, playground files, and every auxiliary locale JSON. Its read-only
+bundle is `/private/tmp/blok-hr-b4f-first-final-clean`. Both passes accept
+546/546 pairs with zero residuals or proposals, exact placeholder and
+boundary-space closure, and exactly the nine English-identical values
+recorded as `R-hr-001` through `R-hr-009`. The final matrix, replay manifest,
+and replay seal are respectively SHA-256
+`e07f432eb6f4804825282fe57998a0b7818e2e7db957852599c52ad72ce4bc8e`,
+`b08c22ad801a7f7b03cfc63706bb51ea92a705920768e077edf55f0843a7df34`,
+and
+`357c3e8b1718475ed8d0f10c0078b764f8d45f8130156ab654b2ee4887692877`.
+Its two 24-file replays are byte-identical.
+
+Distinct reviewer `root-hr_b4f_second_replacement` independently repeated
+both complete 546-entry passes on the same catalog bytes and exact
+production boundary. Its read-only bundle is
+`/private/tmp/blok_hr_b4f_second_replacement_clean`. It reproduces the raw
+398 literal + 121 finite + 27 registered/no-raw-route partition and semantic
+397 literal + 122 finite + 25 registered-compatible + two no-route closure,
+including literal `toolNames.text`, finite `tools.video.seekValueText`, and
+only `blockSettings.convertWithChildrenWarning` and
+`tools.columns.turnInto` as no-route. Its final matrix and byte-identical
+replay directory are respectively SHA-256
+`8a4ad8ed096fc40675e4275c9b98d77d5feefa58bffafa9fd514083810f0a9fe`
+and
+`3f0e30751e2d7dd13829f67e7ed00ef7676dc76674ace46d675db012fef414a3`;
+the immutable seal is
+`a8ab1da4d0ab48daa01f0b7277c7edc08059de80ed189c29c4dfe61ea25260db`.
+
+An earlier attempted replacement review is explicitly excluded from
+completion credit because its mechanical source inventory included every
+emoji-picker locale JSON and `src/components/constants/test-ids.ts` while
+omitting the production locale index. Root independently ran each valid
+bundle's validator twice, reproduced the exact 544-file boundary and
+546/546 clean matrices, verified byte-identical replays and every sealed
+checksum, and confirmed read-only files and directories. Both valid
+reviewers accept the same nine exact-English retentions. Croatian therefore
+earns structural, semantic/style, and exact-retention passes and is now
+`second-pass-complete` on the bound `b4ffda…` bytes.
 
 ### Hungarian (`hu`) — pending after current-byte residuals
 

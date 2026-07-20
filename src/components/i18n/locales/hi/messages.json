@@ -75,7 +75,7 @@
   "a11y.blockMoved": "ब्लॉक {total} में से {position} पर ले जाया गया",
   "a11y.blocksMoved": "{count} ब्लॉक {position} पर ले जाए गए",
   "a11y.blockDuplicated": "ब्लॉक {total} में से {position} पर कॉपी किया गया",
-  "a11y.blocksDuplicated": "{count} ब्लॉक {position} से कॉपी किए गए",
+  "a11y.blocksDuplicated": "{count} ब्लॉक कॉपी किए गए। शुरुआती स्थान: {position}",
   "a11y.movedUp": "ऊपर ले जाया गया। नया स्थान: {total} में से {position}।",
   "a11y.movedDown": "नीचे ले जाया गया। नया स्थान: {total} में से {position}।",
   "a11y.atTop": "और ऊपर नहीं ले जाया जा सकता। यह पहले से सबसे ऊपर है।",

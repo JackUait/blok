@@ -284,7 +284,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-133` | pending |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
-| `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | — | — | pending | pending | pending | `F-hi-001`–`F-hi-078` | pending |
+| `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | — | — | pending | pending | pending | `F-hi-001`–`F-hi-079` | pending |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
@@ -1799,6 +1799,29 @@ pass after remediation. The corrected raw dictionary matches that projected
 SHA-256 exactly; its placeholder contracts all match English, and its exact
 English inventory is exactly the seven documented universal values. Hindi
 remains `pending` until two fresh complete current-byte passes finish.
+
+Reviewer `root-azeri_proposal_challenge` then restarted at entry 1 and
+directly reread all 546 current English/Hindi pairs before consulting the
+earlier Hindi artifacts. It upheld `F-hi-001` through `F-hi-078`, all seven
+retentions, 38 placeholder-bearing values with 54 occurrences, 44 aliases in
+14 caller groups and 48 references, 117 provider compositions, 20 block-color
+titles, three migrations, 80 changed-English rows covering 78 keys, and the
+complete 533+12+1 caller partition. It found one caller-semantic residual:
+`DragA11y.announceDuplicateComplete` passes the first newly duplicated block's
+destination index as `position`, but the current `a11y.blocksDuplicated`
+wording says the blocks were copied “from” that position. `F-hi-079` separates
+the completed copy announcement from a concise starting-position label.
+
+The fresh-pass artifact is
+`/tmp/blok-hi-546-first-pass-post-f078.json` with SHA-256
+`59b22fd7c35c89d70c1172ab55394e762441f9d9ff27f3601a400148105319c3`;
+its independent validator passed 3,967 assertions. The focused expectation
+failed on exactly the recorded old value before remediation and passed
+afterward; the corrected raw dictionary SHA-256 is
+`8e11b2d7043c665a0262c6b8c6d6033144993d63ddf954c7b548181e354b217b`.
+Because this correction changes the bytes, the attempted pass does not earn
+first-pass credit and both complete passes must restart on the corrected
+dictionary.
 
 ### Italian (`it`) — current 546-key first pass complete
 
@@ -4549,6 +4572,7 @@ follows the global transition rule above.
 | `F-hi-076` | `hi` | `tools.video.toggleTimeDisplay` | source synchronization / accessibility | `"समय प्रदर्शन टॉगल करें"` | `"बीते और बचे हुए समय के बीच बदलें"` | The accessible name must identify the two time-display states the control switches between. | verified |
 | `F-hi-077` | `hi` | `tools.video.ctxStats` | source synchronization / neutral terminology | `"विस्तृत आंकड़े"` | `"प्लेबैक के आंकड़े"` | The corrected source is neutral Playback statistics; the replacement names the playback context rather than merely “detailed statistics.” | verified |
 | `F-hi-078` | `hi` | `tools.callout.emojiSearchResults` | source synchronization / count-neutral accessibility | `"{count} इमोजी मिलीं"` | `"मिलते-जुलते इमोजी: {count}"` | The emoji-search live region can announce one or many matches; the label-before-count construction follows the corrected source without fixing the noun to one number. | verified |
+| `F-hi-079` | `hi` | `a11y.blocksDuplicated` | accessibility / caller destination semantics | `"{count} ब्लॉक {position} से कॉपी किए गए"` | `"{count} ब्लॉक कॉपी किए गए। शुरुआती स्थान: {position}"` | `DragA11y.announceDuplicateComplete` supplies the first newly duplicated block's destination index, not a source position. The replacement removes the misleading “copied from” construction while preserving both placeholders. | verified |
 | `F-hr-001` | `hr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti oblikovanje"` | Microsoft’s Croatian editor UI uses the exact concise command [Očisti oblikovanje](https://support.microsoft.com/hr-HR/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hu-001` | `hu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Formázás törlése"` | Microsoft’s Hungarian editor UI uses the exact command [Formázás törlése](https://support.microsoft.com/hu-HU/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hy-001` | `hy` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Մաքրել ուղղակի ձևաչափումը"` | LibreOffice’s Armenian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/hy/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |

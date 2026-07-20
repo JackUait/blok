@@ -303,7 +303,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | `root-arabic_546_current_first` | pass | pass | pass | `F-da-001`–`F-da-088` | second-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
-| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-dv-001`–`F-dv-062` | pending |
+| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-dv_corrected_46c_first` | — | pass | pass | pass | `F-dv-001`–`F-dv-062` | first-pass-complete |
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
@@ -441,6 +441,7 @@ locale returns to `pending`.
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-amharic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` | `root-arabic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
+| `dv` | `root-dv_corrected_46c_first` | `sha256:46c41eed53047a5e4e6f2365867fd254370adb18602fa09f512819374e3905b4` | — | — |
 | `el` | `root-czech_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` | `root-danish_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
@@ -4836,6 +4837,35 @@ completeness, integrity, source coverage, docs translation, encoding,
 exact-retention, and whitespace checks also pass with only the repository's
 known warnings. This stopped review earns no complete-pass credit: both
 complete 546-entry reviews must restart at entry 1 on the corrected bytes.
+
+### Dhivehi corrected-byte complete review 1 — clean
+
+Distinct fresh reviewer `/root/dv_corrected_46c_first` reread every source-order
+pair twice on raw dictionary SHA-256
+`46c41eed53047a5e4e6f2365867fd254370adb18602fa09f512819374e3905b4`
+without consulting prior Dhivehi audit or proposal artifacts. The sealed bundle
+is `/tmp/blok-dv-46c-first-20260720T151831Z-v2`; its 546-row matrix is bound at
+SHA-256
+`66964c626563594d93f577d2d8ade53550eaab62c8a0d7c9ccc47ef417004302`;
+its empty residual map is bound at SHA-256
+`e9ee2a361474208a76fe691e7bca50042883851d3462f0561d2216c07d6c22a9`;
+its lifecycle evidence is bound at SHA-256
+`c4750cc8f2e26e3201d49238d8a1a0cc838867bec60455de004fa1233f16ea87`;
+its validator is bound at SHA-256
+`62a855bc9615669269d099df99f25001b05c074fd242c79836065508ae661d06`;
+and its sealed manifest is bound at SHA-256
+`d4a50dc9d17d1d0db9d79f2deabb87827748f68669599fe2110ae59c4dff7f1b`.
+
+The review reports 546 pass and zero fail, zero residual corrections, zero
+placeholder mismatches, and all nine exact-English retentions justified. It
+independently reproduces the uniform source-derived lifecycle taxonomy of 397
+literal, 122 finite dynamic, 25 registered-namespace-compatible, and two
+without a uniform route, while rejecting the historical finer split as
+non-source-derived. A root replay of the sealed validator and every checksum
+passes. The 3,272-case guideline gate, 182-case exact-retention gate, and
+translation completeness, integrity, source-coverage, and encoding checks also
+pass. This exact-byte review earns first-pass credit only; a distinct complete
+second review is still required.
 
 ### Gujarati 546-key current-byte findings — corrections pending
 

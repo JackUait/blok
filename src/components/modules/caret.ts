@@ -176,6 +176,14 @@ export class Caret extends Module {
       window.getSelection()?.removeAllRanges();
 
       /**
+       * Chromium may recreate a collapsed range in the previously focused input.
+       * Blur it so SelectionController cannot restore currentBlock from that stale range.
+       */
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
+      /**
        * Highlight Block
        */
       BlockSelection.selectBlock(block);

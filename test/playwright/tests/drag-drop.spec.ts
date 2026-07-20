@@ -2775,6 +2775,10 @@ test.describe('drag and drop', () => {
       // Toggle is explicitly closed
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
+      // Freeze browser timers so machine load cannot consume the 500ms cancellation window.
+      await page.clock.install();
+      await page.clock.pauseAt(new Date(Date.now() + 1000));
+
       // Hover over paragraph to reveal drag handle
       const paraBlock = page.getByTestId('block-wrapper').filter({ hasText: 'Drag me' });
       await paraBlock.hover();
@@ -2792,21 +2796,20 @@ test.describe('drag and drop', () => {
       // Move over the closed toggle
       await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 15 });
 
-      await page.waitForFunction(() => {
-        const wrapper = document.querySelector('[data-blok-interface=blok]');
-        return wrapper?.getAttribute('data-blok-dragging') === 'true';
-      }, { timeout: 2000 });
+      await expect(page.locator('[data-blok-interface=blok]')).toHaveAttribute('data-blok-dragging', 'true');
 
       // spring-loading attribute should appear immediately
-      await expect(page.locator('[data-blok-spring-loading]')).toBeVisible();
+      const springLoading = page.locator('[data-blok-spring-loading]');
+
+      await expect(springLoading).toBeVisible();
 
       // Move away before 500ms — attribute should disappear
       const paraBox = await getBoundingBox(paraBlock);
       await page.mouse.move(paraBox.x + paraBox.width / 2, paraBox.y + paraBox.height / 2, { steps: 5 });
-      // Wait deterministically for attribute removal (cancellation)
-      await page.waitForFunction(() => document.querySelector('[data-blok-spring-loading]') === null, { timeout: 2000 });
+      await expect(springLoading).toHaveCount(0);
 
-      // Toggle should still be closed
+      // Advancing past the original deadline proves that the cancelled callback stays dead.
+      await page.clock.fastForward(500);
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
       await page.mouse.up();

@@ -154,6 +154,7 @@ const setCollapsedSelection = (node: Node, offset: number): void => {
 
 describe('Caret module', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     document.body.innerHTML = '';
   });
 
@@ -166,7 +167,14 @@ describe('Caret module', () => {
     it('highlights non focusable block instead of moving caret', () => {
       const { caret, blockSelection, blockManager } = createCaret();
       const block = createBlock({ focusable: false });
+      const focusedInput = createContentEditable();
       const removeAllRanges = vi.fn();
+
+      focusedInput.tabIndex = 0;
+      document.body.appendChild(focusedInput);
+      focusedInput.focus();
+      expect(focusedInput).toHaveFocus();
+      const blur = vi.spyOn(focusedInput, 'blur');
 
       vi.spyOn(window, 'getSelection').mockReturnValue({
         removeAllRanges,
@@ -176,6 +184,7 @@ describe('Caret module', () => {
 
       expect(blockSelection.clearSelection).toHaveBeenCalledTimes(1);
       expect(removeAllRanges).toHaveBeenCalledTimes(1);
+      expect(blur).toHaveBeenCalledTimes(1);
       expect(blockSelection.selectBlock).toHaveBeenCalledWith(block);
       expect(blockManager.currentBlock).toBe(block);
     });

@@ -216,6 +216,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ]),
   // "OK" is the conventional compact confirmation label in Japanese UIs.
   ja: new Set(['notifier.ok']),
+  // This placeholder-only template follows Latvian modifier-before-noun order.
+  lv: new Set(['tools.colorPicker.defaultSwatchLabel']),
   // "grid" is a common search keyword loanword for the table tool in Malay UIs;
   // "OK" is the conventional compact confirmation label in Malay UIs.
   ms: new Set([

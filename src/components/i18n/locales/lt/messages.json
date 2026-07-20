@@ -91,7 +91,7 @@
   "blockSettings.openMenuAction": " norėdami atidaryti meniu",
   "tools.paragraph.placeholder": "Rašykite ką nors arba spauskite /, kad pasirinktumėte įrankį",
   "tools.toggle.placeholder": "Sutraukiamas",
-  "tools.toggle.bodyPlaceholder": "Tuščias sutraukiamas blokas. Spustelėkite arba nuvilkite blokus į vidų.",
+  "tools.toggle.bodyPlaceholder": "Tuščias sutraukiamas blokas. Spustelėkite, kad pridėtumėte bloką, arba nuvilkite blokus į vidų.",
   "tools.toggle.ariaLabelCollapse": "Sutraukti",
   "tools.toggle.ariaLabelExpand": "Išskleisti",
   "tools.table.title": "Lentelė",

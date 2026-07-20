@@ -5,7 +5,7 @@
   "blockSettings.menuShortcutWin": "Ctrl+/",
   "toolbox.addBelow": "Kattintson az alá szúráshoz",
   "toolbox.optionAddAbove": "⌥-kattintás — hozzáadás fölé",
-  "toolbox.ctrlAddAbove": "Ctrl — hozzáadás fölé",
+  "toolbox.ctrlAddAbove": "Ctrl+kattintás — hozzáadás fölé",
   "toolbox.typeToSearch": "Írjon a kereséshez",
   "popover.search": "Művelet keresése…",
   "popover.nothingFound": "Nincs találat",

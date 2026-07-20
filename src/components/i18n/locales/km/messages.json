@@ -22,7 +22,7 @@
   "toolNames.toggleList": "បញ្ជីបត់បាន",
   "tools.link.addLink": "បន្ថែមតំណ",
   "tools.link.invalidLink": "តំណមិនត្រឹមត្រូវ",
-  "tools.marker.textColor": "អត្ថបទ",
+  "tools.marker.textColor": "ពណ៌អត្ថបទ",
   "tools.marker.background": "ផ្ទៃខាងក្រោយ",
   "tools.marker.default": "លំនាំដើម",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

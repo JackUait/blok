@@ -24,7 +24,7 @@
   "toolNames.database": "Andmebaas",
   "tools.link.addLink": "Lisa link",
   "tools.link.invalidLink": "Vigane link",
-  "tools.marker.textColor": "Tekst",
+  "tools.marker.textColor": "Teksti värv",
   "tools.marker.background": "Taust",
   "tools.marker.default": "vaikimisi",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

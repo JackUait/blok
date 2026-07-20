@@ -24,7 +24,7 @@
   "toolNames.database": "Duomenų bazė",
   "tools.link.addLink": "Pridėti nuorodą",
   "tools.link.invalidLink": "Netinkama nuoroda",
-  "tools.marker.textColor": "Tekstas",
+  "tools.marker.textColor": "Teksto spalva",
   "tools.marker.background": "Fonas",
   "tools.marker.default": "Numatytoji",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

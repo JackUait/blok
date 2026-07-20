@@ -266,10 +266,10 @@ These rules prevent a machine or reviewer from retaining stale completion:
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `root-amharic_546_current_first` | `root-hindi_546_current_second` | pass | pass | pass | `F-am-001`–`F-am-096` | second-pass-complete |
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-arabic_546_current_first` | `root-amharic_546_current_first` | pass | pass | pass | `F-ar-001`–`F-ar-076`, `F-ar-078` | second-pass-complete |
-| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-hindi_546_current_second` | — | pass | pass | pass | `F-az-001`–`F-az-106` | first-pass-complete |
+| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-107` | pending |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
 | `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-077` | pending |
-| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | — | — | pending | pending | pending | `F-bs-001`–`F-bs-182` | pending |
+| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-hindi_546_current_second` | — | pass | pass | pass | `F-bs-001`–`F-bs-182` | first-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | — | pass | pass | pass | `F-da-001`–`F-da-088` | first-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
@@ -277,7 +277,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
-| `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
+| `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001`–`F-et-002` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-101` | pending |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
@@ -285,19 +285,19 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
-| `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-002` | pending |
-| `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-002` | pending |
-| `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-002` | pending |
+| `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-003` | pending |
+| `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-003` | pending |
+| `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-003` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-002` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001`–`F-ka-002` | pending |
-| `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
-| `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001` | pending |
-| `ko` | Korean | Hangul | ltr | to-audit | — | — | pending | pending | pending | `F-ko-001` | pending |
-| `ku` | Sorani (Central Kurdish) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ku-001` | pending |
+| `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001`–`F-km-002` | pending |
+| `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001`–`F-kn-002` | pending |
+| `ko` | Korean | Hangul | ltr | to-audit | — | — | pending | pending | pending | `F-ko-001`–`F-ko-002` | pending |
+| `ku` | Sorani (Central Kurdish) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ku-001`–`F-ku-002` | pending |
 | `lo` | Lao | Lao | ltr | to-audit | — | — | pending | pending | pending | `F-lo-001` | pending |
-| `lt` | Lithuanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lt-001` | pending |
+| `lt` | Lithuanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lt-001`–`F-lt-002` | pending |
 | `lv` | Latvian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lv-001` | pending |
 | `mk` | Macedonian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mk-001` | pending |
 | `ml` | Malayalam | Malayalam | ltr | to-audit | — | — | pending | pending | pending | `F-ml-001` | pending |
@@ -404,8 +404,8 @@ locale returns to `pending`.
 |---|---|---|---|---|
 | `am` | `root-amharic_546_current_first` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` | `root-hindi_546_current_second` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` |
 | `ar` | `root-arabic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` | `root-amharic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` |
-| `az` | `root-hindi_546_current_second` | `sha256:d38942a860e4faf81ee17865ce2dc1f604f7b3f596969398a75c395983b19292` | — | — |
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
+| `bs` | `root-hindi_546_current_second` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` | — | — |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-amharic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` | — | — |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
@@ -1187,7 +1187,7 @@ also passed. Both reviews bind to raw Arabic SHA-256
 `c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab`;
 Arabic is `second-pass-complete`.
 
-### Azerbaijani (`az`) — current first pass complete
+### Azerbaijani (`az`) — pending after current-byte second-pass residual
 
 Reviewer `root-az-546-first-final` restarted at entry 1 and directly read all
 546 current English/Azerbaijani pairs in English insertion order. The pass
@@ -1318,6 +1318,26 @@ checker passed all required checks.
 This earns first-pass credit on raw Azerbaijani SHA-256
 `d38942a860e4faf81ee17865ce2dc1f604f7b3f596969398a75c395983b19292`;
 a distinct complete second pass remains required.
+
+Distinct reviewer `root-arabic_546_current_first` then restarted at English
+entry 1 and directly read all 546 bound English/Azerbaijani pairs before
+consulting prior Azerbaijani evidence. The attempted second pass stopped on
+one previously undispositioned plural-scope defect.
+`tools.callout.emojiCategoryPeople` labels the visible sticky section and
+navigation `title` and `aria-label` for a category containing 529
+smiley-and-people entries. The old singular `Smaylik və insanlar`
+under-translates English plural “Smileys”; `F-az-107` corrects it to
+`Smayliklər və insanlar`.
+
+The stopped review binds to pre-correction raw Azerbaijani SHA-256
+`d38942a860e4faf81ee17865ce2dc1f604f7b3f596969398a75c395983b19292`.
+The focused ledger expectation and the corrected complete-category policy
+matrix both failed on exactly the singular old value before remediation.
+Both pass afterward. The corrected raw Azerbaijani SHA-256 is
+`ab1bcdafd65e2b9d8910da99d04ef8233e52a8a604a27e8c30ed42ef89a6de7a`.
+The attempted second pass earns no credit, and its finding invalidates the
+earlier first-pass credit. Both complete passes must restart from entry 1 on
+the corrected bytes.
 
 ### Bulgarian (`bg`) — current second pass complete
 
@@ -1558,7 +1578,7 @@ The attempted second pass earns no credit, and its finding invalidates the
 earlier first-pass credit. Both complete passes must restart from entry 1 on
 the corrected bytes.
 
-### Bosnian (`bs`) — pending after second-pass residual
+### Bosnian (`bs`) — current first pass complete
 
 The current 546-key review found three caller-context residuals after the
 earlier Bosnian corpus work. The inline formatter still shared the generic
@@ -1605,6 +1625,37 @@ remediation and passes afterward. The corrected raw Bosnian SHA-256 is
 The attempted review earns no pass credit, and the accepted correction
 invalidates the earlier first-pass boundary. Bosnian returns to `pending`;
 both complete passes must restart on the corrected bytes.
+
+Reviewer `root-hindi_546_current_second` then restarted at English entry 1
+and directly read all 546 corrected English/Bosnian pairs before consulting
+prior Bosnian evidence. The fresh pass independently upheld all 182 findings
+and all nine exact-English retentions. Its mutually exclusive classification
+is 355 ordinary clean pairs, 182 finding-backed pairs, and nine retentions.
+It also replayed all 38 placeholder-bearing values with 54 occurrences, 44
+aliases in 14 groups and 48 references, 117 provider compositions, 20
+block-color titles, three migrations, nine count templates, and the complete
+533+12+1 caller partition. The inline-code, image-navigation, video-seek, and
+corrected broken-resource labels all survived explicit caller and language
+challenges. No residual survived.
+
+The sealed current-byte first-pass artifact is
+`/tmp/blok-bs-546-current-first-pass.json` with SHA-256
+`892484c943be8302c775d61ea2a3b0c48ca1c1c49434f44c73d35425ff7e633d`;
+its canonical payload SHA-256 is
+`b4ec0e337a5d8b9e4584fff937601e8a4e9c69386003cd39e40d2548e50d83ed`.
+The read-only builder has SHA-256
+`449d84d2a87be6418ccb1e05f8a294a03713a085518333318338a1dccf5ffe64`;
+the independent read-only validator has SHA-256
+`782730ab05eea1f60e83d3eca7e2578d9b0bc27589105d0fcc6c6cadf088bcf9`
+and reproduced 11,549 assertions twice at the sealed evidence revision.
+Fresh checker, live-integrity, and full unit gates passed 88, all required
+live checks, and 17,582 tests across 692 files with one skipped. A later
+unrelated Azerbaijani policy-row correction changes the shared guideline
+file, so a current replay stops at that source-evidence hash; the English,
+Bosnian, and concrete caller bytes remain identical to the sealed evidence.
+This earns first-pass credit on raw Bosnian SHA-256
+`cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3`;
+a distinct complete second pass remains required.
 
 ### German (`de`) — current second pass complete
 
@@ -2147,6 +2198,25 @@ passes. Its artifact is `/tmp/blok-es-546-second-pass.json` with SHA-256
 `4c199de6f5dca7d264943f0c82fcb50ccc46154f9b08a99afd1243f32c49c71b`.
 Spanish is `second-pass-complete`.
 
+### Estonian (`et`) — pending after first-pass residual
+
+Reviewer `root` started at English entry 1 and read the clean current
+English/Estonian pairs in insertion order without consulting prior Estonian
+evidence. The attempted first pass stopped on the first genuine residual at
+entry 28. English changed from `Text` to `Text color`, but Estonian retained
+the former-source `Tekst`. The shared picker renders this value directly as
+its text-color section title beside the background axis and composes it into
+every swatch label. `F-et-002` restores the established Estonian product term
+`Teksti värv`.
+
+The attempted pass binds to pre-correction raw Estonian SHA-256
+`1d081220efa6193051ad80758144c65fd5d74f124c09e87606a4fdf138e87d7f`.
+The focused expectation failed on exactly `Tekst` before remediation and
+passes afterward. The corrected raw Estonian SHA-256 is
+`c79577d148d56e1475fb53804f934a73e439004d91e6703f99d2300e20ee8009`.
+The attempted review earns no pass credit; both complete passes must start
+from entry 1 on the corrected bytes.
+
 ### French (`fr`) — pending after current 546-key residuals
 
 The first reviewer inspected 538/538 current French values in the shipped
@@ -2452,7 +2522,7 @@ conventional Finnish dialog label `R-fi-009`. The challenge artifact is
 Finnish remains `pending`; after these three expectations are remediated,
 both complete current-byte passes must restart.
 
-### Croatian (`hr`) — pending after first-pass residual
+### Croatian (`hr`) — pending after current-byte residuals
 
 Reviewer `root-arabic_546_current_first` directly read all 546
 English/Croatian pairs in source order before consulting prior Croatian
@@ -2470,7 +2540,24 @@ passes afterward. The corrected raw Croatian SHA-256 is
 The attempted review earns no pass credit; both complete passes must start
 from entry 1 on the corrected bytes.
 
-### Hungarian (`hu`) — pending after first-pass residual
+Reviewer `root-hindi_546_current_second` then restarted at English entry 1
+and read the corrected English/Croatian pairs in insertion order without
+consulting prior Croatian evidence. The attempted first pass stopped on the
+first genuine residual at entry 318. The broken-image caller selects
+`tools.image.errorSourceOffline` after a generic load failure or a complete
+image with zero natural width; it cannot diagnose that the source is
+literally offline. `F-hr-003` replaces the old `izvan mreže` claim with the
+broader and established unavailable-source wording `više nije dostupna`.
+
+The stopped review binds to pre-correction raw Croatian SHA-256
+`f007c09ed4d33217090c895a5830dd3c14e3abf9f92b9b3159758500f460fed0`.
+The focused expectation failed on exactly the old offline-state wording and
+passes afterward. The corrected raw Croatian SHA-256 is
+`60e775973b44d6d81de3d93f55af789236431003c174db4a52ba126280b4b2b7`.
+The attempted review earns no pass credit; both complete passes must restart
+from entry 1 on the corrected bytes.
+
+### Hungarian (`hu`) — pending after current-byte residuals
 
 Reviewer `root-arabic_546_current_first` directly read all 546
 English/Hungarian pairs in source order before consulting prior Hungarian
@@ -2489,7 +2576,23 @@ and passes afterward. The corrected raw Hungarian SHA-256 is
 The attempted review earns no pass credit; both complete passes must start
 from entry 1 on the corrected bytes.
 
-### Armenian (`hy`) — pending after first-pass residual
+Reviewer `root-hindi_546_current_second` then restarted at English entry 1
+and read the corrected English/Hungarian pairs in insertion order without
+consulting prior Hungarian evidence. The attempted first pass stopped on the
+first genuine residual at entry 11. The Windows plus-button caller displays
+`toolbox.ctrlAddAbove` verbatim as its alternate-gesture tooltip, but the old
+`Ctrl — hozzáadás fölé` names only the modifier and omits the click action.
+`F-hu-003` restores the complete `Ctrl+kattintás` gesture.
+
+The stopped review binds to pre-correction raw Hungarian SHA-256
+`460c7fc85489b2e4016b1b4d0893b1aa38080f2a2ecfb286f8da61b221b275a5`.
+The focused expectation failed on exactly the incomplete old tooltip and
+passes afterward. The corrected raw Hungarian SHA-256 is
+`9a82b7f76798b4d132d8446cf55f85534726f63602197b12a50be3322520aa3e`.
+The attempted review earns no pass credit; both complete passes must restart
+from entry 1 on the corrected bytes.
+
+### Armenian (`hy`) — pending after current-byte residuals
 
 Reviewer `root-arabic_546_current_first` directly read all 546
 English/Armenian pairs in source order before consulting prior Armenian
@@ -2506,6 +2609,23 @@ The focused expectation failed on exactly the incomplete old wording before
 remediation and passes afterward. The corrected raw Armenian SHA-256 is
 `a247be6f32a2b09552c4563161decfe081eb258f2028debb9604a91e3103417f`.
 The attempted review earns no pass credit; both complete passes must start
+from entry 1 on the corrected bytes.
+
+Reviewer `root-hindi_546_current_second` then restarted at English entry 1
+and read the corrected English/Armenian pairs in insertion order without
+consulting prior Armenian evidence. The attempted first pass stopped on the
+first genuine residual at entry 2. The settings toggler exposes
+`blockSettings.clickToOpenMenu` verbatim as its read-only `aria-label`, but
+the old `Սեղմեք մենյու համար` omits the verb “open” and the definite menu
+object. `F-hy-003` restores the complete action instruction
+`Սեղմեք՝ մենյուն բացելու համար`.
+
+The stopped review binds to pre-correction raw Armenian SHA-256
+`a247be6f32a2b09552c4563161decfe081eb258f2028debb9604a91e3103417f`.
+The focused expectation failed on exactly the incomplete old instruction and
+passes afterward. The corrected raw Armenian SHA-256 is
+`41b92d86757df440a35347a9c7432bbcb3a32b0688be32f5580dd0d059504b08`.
+The attempted review earns no pass credit; both complete passes must restart
 from entry 1 on the corrected bytes.
 
 ### Indonesian (`id`) — pending after first-pass residual
@@ -3101,6 +3221,101 @@ The attempted pass binds to pre-correction raw Georgian SHA-256
 The focused expectation failed on exactly `ტექსტი` before remediation and
 passes afterward. The corrected raw Georgian SHA-256 is
 `aaf72af474b728886faa2b48ee2fcf35437248926f7cfdad30a2972eaedb68d3`.
+The attempted review earns no pass credit; both complete passes must start
+from entry 1 on the corrected bytes.
+
+### Khmer (`km`) — pending after first-pass residual
+
+Reviewer `root-amharic_546_current_first` directly read all 546
+English/Khmer pairs in English insertion order before consulting prior Khmer
+evidence. The attempted first pass identified its first genuine residual at
+entry 28. English changed from `Text` to `Text color`, but Khmer retained the
+former-source `អត្ថបទ`. The shared picker renders this value directly as its
+text-color section title beside the background axis and composes it into
+every swatch label. `F-km-002` restores the established Khmer product term
+`ពណ៌អត្ថបទ`.
+
+The attempted pass binds to pre-correction raw Khmer SHA-256
+`798852eb7864559f548490359355cf4e9c0ece1c2407ca5ac9b2a2d2022c2ce0`.
+The focused expectation failed on exactly `អត្ថបទ` before remediation and
+passes afterward. The corrected raw Khmer SHA-256 is
+`179f94b48749e9f34e5d69fe56b6fb1e159cc8fac6b446f8a1a7bc3fc3e4a548`.
+The attempted review earns no pass credit; both complete passes must start
+from entry 1 on the corrected bytes.
+
+### Kannada (`kn`) — pending after first-pass residual
+
+Reviewer `root-amharic_546_current_first` directly read all 546
+English/Kannada pairs in English insertion order before consulting prior
+Kannada evidence. The attempted first pass identified its first genuine
+residual at entry 28. English changed from `Text` to `Text color`, but
+Kannada retained the former-source `ಪಠ್ಯ`. The shared picker renders this
+value directly as its text-color section title beside the background axis
+and composes it into every swatch label. `F-kn-002` restores the established
+Kannada product term `ಪಠ್ಯದ ಬಣ್ಣ`.
+
+The attempted pass binds to pre-correction raw Kannada SHA-256
+`76550bedd0e28515ba5421f1cc9a01e065386a1716cd43e8594e5071ea980c68`.
+The focused expectation failed on exactly `ಪಠ್ಯ` before remediation and
+passes afterward. The corrected raw Kannada SHA-256 is
+`97f913fe4b1143eb21c9343274ca5d96557a187b14b2c53dab8a2e55041d34b3`.
+The attempted review earns no pass credit; both complete passes must start
+from entry 1 on the corrected bytes.
+
+### Korean (`ko`) — pending after first-pass residual
+
+Reviewer `root-amharic_546_current_first` directly read all 546
+English/Korean pairs in English insertion order before consulting prior
+Korean evidence. The attempted first pass identified its first genuine
+residual at entry 28. English changed from `Text` to `Text color`, but Korean
+retained the former-source `텍스트`. The shared picker renders this value
+directly as its text-color section title beside the background axis and
+composes it into every swatch label. `F-ko-002` restores the established
+Korean product term `텍스트 색상`.
+
+The attempted pass binds to pre-correction raw Korean SHA-256
+`ccc2028e48635a28b3e3eed13f0969ef29079578b5efbb81c2a4559431f8b0d9`.
+The focused expectation failed on exactly `텍스트` before remediation and
+passes afterward. The corrected raw Korean SHA-256 is
+`282a5fbe379e8057a2d4d1bd33f2761a6926f03b141b7b331e969e8a7467e146`.
+The attempted review earns no pass credit; both complete passes must start
+from entry 1 on the corrected bytes.
+
+### Sorani Kurdish (`ku`) — pending after first-pass residual
+
+Reviewer `root-amharic_546_current_first` directly read all 546
+English/Kurdish pairs in English insertion order before consulting prior
+Kurdish evidence. The attempted first pass identified its first genuine
+residual at entry 3. The repository selects Sorani/Central Kurdish in Arabic
+script and RTL for this artifact, but `blockSettings.clickAction` was the
+Latin-script Kurmanji `Klîk bike`. The settings tooltip renders and composes
+this fragment directly. `F-ku-002` replaces it with the established Sorani
+action `کلیک بکە`, already used repeatedly in the current dictionary.
+
+The attempted pass binds to pre-correction raw Kurdish SHA-256
+`33716c6faf58a60c9340500922933bbfac042ea4e5dc3cb2d6f62c84184988b1`.
+The focused expectation failed on exactly the Latin-script old value and
+passes afterward. The corrected raw Kurdish SHA-256 is
+`3a51cf76feac5063edc7473214e40dc5de0995e0f4236c4eebe1488001c2c96a`.
+The attempted review earns no pass credit; both complete passes must start
+from entry 1 on the corrected bytes.
+
+### Lithuanian (`lt`) — pending after first-pass residual
+
+Reviewer `root` started at English entry 1 and read the clean current
+English/Lithuanian pairs in insertion order without consulting prior
+Lithuanian evidence. The attempted first pass stopped on the first genuine
+residual at entry 28. English changed from `Text` to `Text color`, but
+Lithuanian retained the former-source `Tekstas`. The shared picker renders
+this value directly as its text-color section title beside the background
+axis and composes it into every swatch label. `F-lt-002` restores the
+established Lithuanian product label `Teksto spalva`.
+
+The attempted pass binds to pre-correction raw Lithuanian SHA-256
+`2eca89c45fcd6c76aa9278999fa698a48086fdea95180317d92d181bc20e4022`.
+The focused expectation failed on exactly `Tekstas` before remediation and
+passes afterward. The corrected raw Lithuanian SHA-256 is
+`dcb7b24cb9af4aa8d34b18ebb7abec726e862bc2276eb4b254734b212be4ee39`.
 The attempted review earns no pass credit; both complete passes must start
 from entry 1 on the corrected bytes.
 
@@ -4817,6 +5032,7 @@ follows the global transition rule above.
 | `F-az-104` | `az` | `tools.colorPicker.colorSwatchLabel` | word order / live block-color composition | `"{mode} {color}"` | `"{color} {mode}"` | The same live composition contract applies to every named swatch. Placing the color modifier first yields natural titles such as `Qırmızı mətn rəngi` and `Qırmızı arxa fon`; the old bare sequence lacked the copular clause required for a predicate reading. [Azerbaijani red-text-color usage](https://code.mu/az/javascript/book/prime/inbuilt/string/substring-replacement/) | verified |
 | `F-az-105` | `az` | `tools.image.errorSourceOffline` | natural error copy / resource availability | `"Mənbə faylı köçürülmüş və ya oflayn ola bilər."` | `"Mənbə faylı köçürülmüş və ya əlçatan olmaya bilər."` | The broken-image caller only observes that a remote image resource failed to load; a file itself is not naturally “offline.” The replacement states the user-relevant moved-or-unavailable condition, using the same `əlçatan olmaya bilər` availability wording found in [Google's Azerbaijani product guidance](https://support.google.com/youtube/answer/57407?co=GENIE.Platform%3DDesktop&hl=az). | verified |
 | `F-az-106` | `az` | `a11y.searchResults` | accessibility / source synchronization / count neutrality | `"{count} nəticə"` | `"Axtarış nəticələri: {count}"` | Toolbox, block-settings, and code-language search all pass this template to the same live-region caller. The terse old value drops the explicit search context added by `F-en-021`; the label-before-count replacement remains grammatical for every count and uses the established phrase in [Google's Azerbaijani search guidance](https://support.google.com/youtube/answer/58097?hl=az). | verified |
+| `F-az-107` | `az` | `tools.callout.emojiCategoryPeople` | plural scope / visible and accessible category label | `"Smaylik və insanlar"` | `"Smayliklər və insanlar"` | The emoji picker uses this label as the visible sticky heading and navigation `title`/`aria-label` for a category containing 529 smiley-and-people entries. Singular `Smaylik` under-translates English plural “Smileys”; Azerbaijani usage attests the plural [`smayliklər`](https://www.lent.az/xeber/texno/menalarini-sehv-bildiyimiz-8-emoji-yanlis-formada-istifade-edirik-40592642). | verified |
 | `F-bg-001` | `bg` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Изчисти форматирането"` | Microsoft’s Bulgarian Word UI uses the exact command [Изчисти форматирането](https://support.microsoft.com/bg-BG/Word/format-your-word-document). | verified |
 | `F-bg-002` | `bg` | `blockSettings.convertWithChildrenWarning` | confirmation register / caller context | `"Вложени блокове: {count}. Преобразуването на този блок ще премести вложеното съдържание на най-горното ниво. Продължи?"` | `"Вложени блокове: {count}. Преобразуването на този блок ще премести вложеното съдържание на най-горното ниво. Искате ли да продължите?"` | The source-only confirmation must retain the selected polite plural register. Independent review selected Microsoft’s standard Bulgarian confirmation pattern `Искате ли да продължите?` and preserved `{count}` exactly. | verified |
 | `F-bg-003` | `bg` | `popover.convertTo` | terminology / caller context | `"Конвертирай в"` | `"Преобразувай в"` | The complete 545-entry first-pass caller review found the current Bulgarian wording inaccurate, incomplete, untranslated, ungrammatical, or inconsistent with the selected register in this UI contract; the replacement preserves every runtime placeholder. | verified |
@@ -5423,6 +5639,7 @@ follows the global transition rule above.
 | `F-es-102` | `es` | `tools.image.navigationControls` | accessibility / navigation relationship | `"Navegación de imágenes"` | `"Navegación entre imágenes"` | The group contains previous/next controls for moving among gallery images; `entre imágenes` states that relationship unambiguously. | verified |
 | `F-es-103` | `es` | `searchTerms.number` | search alias / established list terminology | `"número"` | `"numeración"` | The alias is consumed only by the numbered-list toolbox entry; [Microsoft Word Spain](https://support.microsoft.com/es-es/office/crear-una-lista-numerada-o-con-vi%C3%B1etas-9ff81241-58a8-4d88-8d8c-acab3006a23e) uses `Numeración` for the formatting function, while `número` is a generic numeric noun. | verified |
 | `F-et-001` | `et` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Eemalda vorming"` | Microsoft’s Estonian Word UI uses the exact command [Eemalda vorming](https://support.microsoft.com/et-ee/word/format-your-word-document). | verified |
+| `F-et-002` | `et` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"Tekst"` | `"Teksti värv"` | English changed from “Text” to “Text color,” while Estonian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Microsoft’s Estonian editor documentation uses [`teksti värv`](https://support.microsoft.com/et-ee/office/teksti-v%C3%A4rvi-muutmine-powerpointi-slaidil-26773c77-daad-4ef2-bed9-bf7ab3eed348). | verified |
 | `F-fa-001` | `fa` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"پاک کردن قالب‌بندی"` | LibreOffice’s Persian product UI supplies the exact Clear formatting translation [پاک کردن قالب‌بندی](https://github.com/LibreOffice/translations/blob/master/source/fa/svx/messages.po#L6368-L6369). | verified |
 | `F-fi-001` | `fi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Poista muotoilu"` | Microsoft’s Finnish OneNote UI uses the exact concise command [Poista muotoilu](https://support.microsoft.com/fi-fi/office/tekstin-korostaminen-onenoten-verkkoversio-5dadd21f-311c-42a3-8094-281f7bb7e127) for removing inline text styling. | verified |
 | `F-fi-002` | `fi` | `toolNames.bold` | terminology / tool name | `"Lihavoitu"` | `"Lihavointi"` | The current state adjective means “bolded”; the toolbox needs the established Finnish formatting-command noun. | verified |
@@ -5626,10 +5843,13 @@ follows the global transition rule above.
 | `F-hi-086` | `hi` | `tools.link.copyFailed` | grammar / caller-visible error | `"लिंक कॉपी नहीं की जा सकी"` | `"लिंक कॉपी नहीं किया जा सका"` | The link-copy caller reports failure to copy a masculine `लिंक`. The replacement restores masculine passive agreement and matches the adjacent successful-copy wording `लिंक क्लिपबोर्ड पर कॉपी किया गया`. | verified |
 | `F-hr-001` | `hr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti oblikovanje"` | Microsoft’s Croatian editor UI uses the exact concise command [Očisti oblikovanje](https://support.microsoft.com/hr-HR/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hr-002` | `hr` | `tools.marker.textColor` | source synchronization / color-axis distinction | `"Tekst"` | `"Boja teksta"` | The shared color picker uses this label as the text-color axis beside the background-color axis and composes it into every swatch title. The old bare `Tekst` drops “color”; Apple’s Croatian Pages UI uses the exact product label [`Boja teksta`](https://support.apple.com/hr-hr/118123). | verified |
+| `F-hr-003` | `hr` | `tools.image.errorSourceOffline` | caller semantics / resource availability | `"Izvorna datoteka možda je premještena ili izvan mreže."` | `"Izvorna datoteka možda je premještena ili više nije dostupna."` | The broken-image caller selects this after a generic image-load failure or a complete image with zero natural width; neither path diagnoses an offline state. The replacement covers any moved or unavailable source and matches [Microsoft’s Croatian unavailable embedded-file wording](https://support.microsoft.com/hr-hr/onedrive/how-to-add-an-embedded-document-or-picture-into-a-webpage). | verified |
 | `F-hu-001` | `hu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Formázás törlése"` | Microsoft’s Hungarian editor UI uses the exact command [Formázás törlése](https://support.microsoft.com/hu-HU/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hu-002` | `hu` | `toolbox.optionAddAbove` | shortcut / interaction completeness | `"⌥ — hozzáadás fölé"` | `"⌥-kattintás — hozzáadás fölé"` | The plus-button tooltip describes an actual Option-click that inserts above; the old value names only the modifier and result, omitting the click gesture. Apple’s Hungarian UI uses the same modifier-click compound pattern in [`Control-kattintás`](https://support.apple.com/hu-hu/guide/mac-help/-mh35853/mac). | verified |
+| `F-hu-003` | `hu` | `toolbox.ctrlAddAbove` | shortcut / interaction completeness | `"Ctrl — hozzáadás fölé"` | `"Ctrl+kattintás — hozzáadás fölé"` | The plus-button displays this verbatim as its Windows alternate-gesture tooltip. The old value names only the modifier, omitting the click action; Google’s Hungarian shortcut table uses the exact compact form [`Ctrl+kattintás`](https://support.google.com/meet/answer/9298571?hl=hu-HU). | verified |
 | `F-hy-001` | `hy` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Մաքրել ուղղակի ձևաչափումը"` | LibreOffice’s Armenian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/hy/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-hy-002` | `hy` | `blockSettings.dragToMove` | grammar / standalone drag instruction | `"Քաշեք տեղափոխելու"` | `"Քաշեք՝ տեղափոխելու համար"` | This key is a complete standalone tooltip line on the registered block drag handle. The old purposive infinitive lacks the required `համար`; the replacement restores the established imperative-purpose construction and Armenian comma mark, matching [Google’s Armenian drag guidance](https://support.google.com/gemini/answer/16179553?co=GENIE.Platform%3DAndroid&hl=hy). | verified |
+| `F-hy-003` | `hy` | `blockSettings.clickToOpenMenu` | accessibility / complete action instruction | `"Սեղմեք մենյու համար"` | `"Սեղմեք՝ մենյուն բացելու համար"` | The settings toggler exposes this verbatim as its read-only `aria-label`. The old phrase omits the verb “open” and the definite menu object; OpenAI’s Armenian Help Center uses the same complete construction [`Սեղմեք ... մենյուն բացելու համար`](https://help.openai.com/hy-am/articles/7905739-chatgpt-ios-app-upgrading-to-a-paid-subscription). | verified |
 | `F-id-001` | `id` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Hapus pemformatan"` | Microsoft’s Indonesian editor UI uses Hapus Pemformatan in [official product help](https://support.microsoft.com/id-ID/PowerPoint/clear-all-text-formatting); the second word is lowercased to the dictionary’s sentence-case register. | verified |
 | `F-id-002` | `id` | `tools.marker.textColor` | source synchronization / color-axis distinction | `"Teks"` | `"Warna teks"` | The shared color picker renders this as the standalone text-color axis beside the background-color axis and composes it into every text-color command. The old bare `Teks` drops “color”; Google’s Indonesian editor documentation uses the exact control label [`Warna teks`](https://support.google.com/docs/answer/13267978?hl=id). | verified |
 | `F-it-084` | `it` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Cancella formattazione"` | Microsoft’s Italian editor UI uses the exact concise command [Cancella formattazione](https://support.microsoft.com/it-IT/PowerPoint/clear-all-text-formatting). | verified |
@@ -5738,11 +5958,16 @@ follows the global transition rule above.
 | `F-ka-001` | `ka` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"პირდაპირი დაფორმატების გასუფთავება"` | LibreOffice’s Georgian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ka/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-ka-002` | `ka` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"ტექსტი"` | `"ტექსტის ფერი"` | English changed from “Text” to “Text color,” while Georgian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Google’s Georgian product UI uses the exact term [`ტექსტის ფერი`](https://support.google.com/youtube/answer/16215842?co=GENIE.Platform%3DiOS&hl=ka). | verified |
 | `F-km-001` | `km` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ជម្រះទ្រង់ទ្រាយ"` | LibreOffice’s exact short Clear formatting entry is `ជម្រះ​ទ្រង់ទ្រាយ`; the invisible separator is omitted to match this JSON corpus. An independent pass rejected the longer direct-formatting proposal as needless technical scope. | verified |
+| `F-km-002` | `km` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"អត្ថបទ"` | `"ពណ៌អត្ថបទ"` | English changed from “Text” to “Text color,” while Khmer retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Collabora Office’s Khmer product help uses the exact term [`ពណ៌អត្ថបទ`](https://help.collaboraoffice.com/22.05/km/text/shared/01/05020200.html). | verified |
 | `F-kn-001` | `kn` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ಫಾರ್ಮ್ಯಾಟಿಂಗ್ ತೆರವುಗೊಳಿಸಿ"` | The replacement combines this dictionary’s and Google’s established `ಫಾರ್ಮ್ಯಾಟಿಂಗ್` terminology with this dictionary’s polite `ತೆರವುಗೊಳಿಸಿ` clear-action register. An independent pass rejected the longer LibreOffice direct-formatting label as needlessly technical. | verified |
+| `F-kn-002` | `kn` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"ಪಠ್ಯ"` | `"ಪಠ್ಯದ ಬಣ್ಣ"` | English changed from “Text” to “Text color,” while Kannada retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Apple’s Kannada product documentation uses the exact term [`ಪಠ್ಯದ ಬಣ್ಣ`](https://support.apple.com/kn-in/guide/iphone/iph406a46ab8/ios). | verified |
 | `F-ko-001` | `ko` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"텍스트 서식 지우기"` | Google Docs’ Korean shortcut action uses the exact command [텍스트 서식 지우기](https://support.google.com/docs/answer/179738?hl=ko). | verified |
+| `F-ko-002` | `ko` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"텍스트"` | `"텍스트 색상"` | English changed from “Text” to “Text color,” while Korean retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Google Docs’ Korean UI uses the exact term [`텍스트 색상`](https://support.google.com/docs/answer/13267978?hl=ko). | verified |
 | `F-ku-001` | `ku` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"شێوەپێدانی ڕاستەوخۆ پاکبکەرەوە"` | LibreOffice’s Central Kurdish (`ckb`) localization supplies this exact command in its [official Sorani source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ckb/officecfg/registry/data/org/openoffice/Office/UI.po), avoiding the Kurmanji fallback associated with generic `ku` elsewhere. | verified |
+| `F-ku-002` | `ku` | `blockSettings.clickAction` | selected-register script / caller composition | `"Klîk bike"` | `"کلیک بکە"` | The repository selects Sorani/Central Kurdish in Arabic script and RTL, but the tooltip fragment accidentally uses Latin-script Kurmanji. The replacement is already established in this dictionary’s complete menu-opening instruction and is attested as the standalone action by the [Kurdistan Regional Government](https://gov.krd/dmi/activities/news-and-press-releases/2025/august/%DA%A9%DB%86%D8%B1%D8%B3%DB%8C-%D9%81%DB%8E%D8%B1%D8%A8%D9%88%D9%88%D9%86%DB%8C-%D8%B2%D9%85%D8%A7%D9%86%DB%8C-%DA%A9%D9%88%D8%B1%D8%AF%DB%8C-%D8%A8%DB%95-%D8%A6%DB%86%D9%86%D9%84%D8%A7%DB%8C%D9%86-%D8%A8%DB%86-%DA%A9%DB%86%D8%B1%D8%AF%D8%A7%D9%86%DB%8C-%D8%AF%DB%95%D8%B1%DB%95%D9%88%DB%95%DB%8C-%D9%88%DA%B5%D8%A7%D8%AA-%D8%A8%DB%95%D8%B1%D8%AF%DB%95%D9%88%D8%A7%D9%85%DB%95/). | verified |
 | `F-lo-001` | `lo` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ລ້າງຮູບແບບໂດຍກົງ"` | LibreOffice’s Lao UI supplies this exact Clear Direct Formatting command in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/lo/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-lt-001` | `lt` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Valyti formatavimą"` | Microsoft’s Lithuanian editor UI uses the exact concise command [Valyti formatavimą](https://support.microsoft.com/lt-LT/PowerPoint/clear-all-text-formatting). | verified |
+| `F-lt-002` | `lt` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"Tekstas"` | `"Teksto spalva"` | English changed from “Text” to “Text color,” while Lithuanian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Microsoft’s Lithuanian editor documentation uses the exact label [`Teksto spalva`](https://support.microsoft.com/lt-lt/office/teksto-spalvos-keitimas-99b47f41-4e14-4551-a09d-820a004d1cde). | verified |
 | `F-lv-001` | `lv` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Notīrīt formatējumu"` | Microsoft’s Latvian editor UI uses the exact concise command [Notīrīt formatējumu](https://support.microsoft.com/lv-LV/PowerPoint/clear-all-text-formatting). | verified |
 | `F-mk-001` | `mk` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Избриши форматирање"` | LibreOffice’s Macedonian Writer UI supplies this exact Clear Direct Formatting command in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/mk/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-ml-001` | `ml` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ഫോർമാറ്റിംഗ് മായ്ക്കുക"` | The replacement reuses this dictionary’s established `ഫോർമാറ്റിംഗ്` and `മായ്ക്കുക` terms. An independent pass rejected the longer LibreOffice direct-formatting label as unnecessary technical scope and rejected LibreOffice’s unrelated short “remove section” entry. | verified |

@@ -24,7 +24,7 @@
   "toolNames.database": "데이터베이스",
   "tools.link.addLink": "링크 추가",
   "tools.link.invalidLink": "잘못된 링크",
-  "tools.marker.textColor": "텍스트",
+  "tools.marker.textColor": "텍스트 색상",
   "tools.marker.background": "배경",
   "tools.marker.default": "기본값",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

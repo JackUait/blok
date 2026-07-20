@@ -22,7 +22,7 @@
   "toolNames.toggleList": "ಟಾಗಲ್ ಪಟ್ಟಿ",
   "tools.link.addLink": "ಲಿಂಕ್ ಸೇರಿಸಿ",
   "tools.link.invalidLink": "ಅಮಾನ್ಯ ಲಿಂಕ್",
-  "tools.marker.textColor": "ಪಠ್ಯ",
+  "tools.marker.textColor": "ಪಠ್ಯದ ಬಣ್ಣ",
   "tools.marker.background": "ಹಿನ್ನೆಲೆ",
   "tools.marker.default": "ಡೀಫಾಲ್ಟ್",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

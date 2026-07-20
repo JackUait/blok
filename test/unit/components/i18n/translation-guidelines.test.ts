@@ -244,7 +244,7 @@ const LOCALIZED_EMOJI_CATEGORY_SCOPE = {
   hr: ['Smajlići i osobe', 'Životinje i priroda', 'Hrana i piće', 'Putovanja i mjesta'],
   hu: ['Hangulatjelek és emberek', 'Állatok és természet', 'Ételek és italok', 'Utazás és helyek'],
   hy: ['Ժպիտներ և մարդիկ', 'Կենդանիներ և բնություն', 'Սնունդ և խմիչք', 'Ճամփորդություն և վայրեր'],
-  id: ['Smiley dan orang', 'Hewan dan alam', 'Makanan dan minuman', 'Perjalanan dan tempat'],
+  id: ['Wajah tersenyum dan orang', 'Hewan dan alam', 'Makanan dan minuman', 'Perjalanan dan tempat'],
   it: ['Faccine e persone', 'Animali e natura', 'Cibi e bevande', 'Viaggi e luoghi'],
   ja: ['スマイリーと人々', '動物と自然', '食べ物と飲み物', '旅行と場所'],
   ka: ['სიცილაკები და ადამიანები', 'ცხოველები და ბუნება', 'საჭმელი და სასმელი', 'მოგზაურობა და ადგილები'],

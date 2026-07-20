@@ -143,6 +143,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       allowGenericEmbed: this.config?.linkPaste?.allowGenericEmbed === true,
       position: this.getLinkEndRect(linkBlock, url) ?? this.getCaretRect(),
       ...(linkBlock?.holder ? { trigger: linkBlock.holder } : {}),
+      ...(this.config?.i18n?.direction ? { direction: this.config.i18n.direction } : {}),
       onSelect: (type: PasteMenuActionType): void => {
         void this.applyMenuAction(type, url, linkBlock, canReplace);
       },

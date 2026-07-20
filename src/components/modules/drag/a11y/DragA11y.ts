@@ -4,6 +4,7 @@
 
 import type { Block } from '../../../block';
 import { DRAG_CONFIG } from '../utils/drag.constants';
+import { resolveMoveDestination } from '../utils/moveDestination';
 
 export interface AnnouncerAdapter {
   announce(message: string, options?: { politeness: 'polite' | 'assertive' }): void;
@@ -43,9 +44,29 @@ export class DragA11y {
    * Throttled to avoid overwhelming screen readers with rapid announcements
    * Only announces if the position has changed since the last announcement
    * @param targetBlock - Current drop target block
-   * @param targetEdge - Edge of target ('top' or 'bottom')
+   * @param targetEdge - Edge of target ('top', 'bottom', 'left', or 'right')
+   * @param sourceBlocks - Blocks participating in the drag
+   * @param isDuplicate - Whether the preview represents Alt/Option duplication
    */
-  announceDropPosition(targetBlock: Block, targetEdge: 'top' | 'bottom' | 'left' | 'right'): void {
+  announceDropPosition(
+    targetBlock: Block,
+    targetEdge: 'top' | 'bottom' | 'left' | 'right',
+    sourceBlocks: Block[] = [],
+    isDuplicate = false
+  ): void {
+    if (isDuplicate && sourceBlocks.length === 0) {
+      return;
+    }
+
+    const targetIndex = this.blockManager.getBlockIndex(targetBlock);
+    const hasStaleSource = sourceBlocks.some(
+      block => !this.blockManager.blocks.includes(block)
+    );
+
+    if (targetIndex === -1 || hasStaleSource) {
+      return;
+    }
+
     // Horizontal drops create a column left/right of the target rather than
     // reordering by index, so they get a dedicated phrasing.
     if (targetEdge === 'left' || targetEdge === 'right') {
@@ -56,13 +77,26 @@ export class DragA11y {
       return;
     }
 
-    const targetIndex = this.blockManager.getBlockIndex(targetBlock);
-    const dropIndex = targetEdge === 'top' ? targetIndex : targetIndex + 1;
+    const rawDropIndex = targetEdge === 'top' ? targetIndex : targetIndex + 1;
+    const moveDestination = sourceBlocks.length === 0 || isDuplicate
+      ? null
+      : resolveMoveDestination(
+        this.blockManager.blocks,
+        sourceBlocks,
+        targetBlock,
+        targetEdge
+      );
 
-    this.scheduleAnnouncement(`index-${dropIndex}`, () => {
+    if (!isDuplicate && sourceBlocks.length > 0 && moveDestination === null) {
+      return;
+    }
+
+    const dropIndex = moveDestination?.finalFirstIndex ?? rawDropIndex;
+    const total = this.blockManager.blocks.length + (isDuplicate ? sourceBlocks.length : 0);
+    const operation = isDuplicate ? 'duplicate' : 'move';
+
+    this.scheduleAnnouncement(`${operation}-index-${dropIndex}-total-${total}`, () => {
       this.lastAnnouncedDropIndex = dropIndex;
-
-      const total = this.blockManager.blocks.length;
 
       return this.i18n.t('a11y.dropPosition', {
         position: dropIndex + 1,

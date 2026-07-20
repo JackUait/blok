@@ -266,9 +266,9 @@ These rules prevent a machine or reviewer from retaining stale completion:
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `root-amharic_546_current_first` | `root-hindi_546_current_second` | pass | pass | pass | `F-am-001`–`F-am-096` | second-pass-complete |
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-arabic_546_current_first` | `root-amharic_546_current_first` | pass | pass | pass | `F-ar-001`–`F-ar-076`, `F-ar-078` | second-pass-complete |
-| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-107` | pending |
+| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-az_546_corrected_current_first` | — | pass | pass | pass | `F-az-001`–`F-az-107` | first-pass-complete |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-078` | pending |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | `root-bn_546_corrected_current_first` | — | pass | pass | pass | `F-bn-001`–`F-bn-078` | first-pass-complete |
 | `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-hindi_546_current_second` | `root-amharic_546_current_first` | pass | pass | pass | `F-bs-001`–`F-bs-182` | second-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | `root-arabic_546_current_first` | pass | pass | pass | `F-da-001`–`F-da-088` | second-pass-complete |
@@ -277,10 +277,10 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
-| `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001`–`F-et-045` | pending |
-| `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001`–`F-fa-053` | pending |
+| `et` | Estonian | Latin | ltr | neutral contemporary Estonian; concise imperatives for user actions; natural impersonal wording for system states and live-region announcements; sentence-case UI; established Estonian product, accessibility, and media terminology; count-neutral variable templates | `root-et_546_corrected_current_first` | `root-et_546_corrected_current_second` | pass | pass | pass | `F-et-001`–`F-et-055` | second-pass-complete |
+| `fa` | Persian (Farsi) | Arabic | rtl | neutral contemporary standard Iranian Persian; polite plural imperatives for instructions and recovery guidance; concise imperative or noun labels for compact controls; Persian punctuation and established Persian product, accessibility, and media terminology; conventional unchanged Latin brands, acronyms, formulas, and shortcut notation | `root-fa_546_lifecycle_replacement` | `root-fa_546_corrected_second` | pass | pass | pass | `F-fa-001`–`F-fa-053` | second-pass-complete |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
-| `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001`–`F-fil-039` | pending |
+| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-044` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001`–`F-gu-002` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001`–`F-he-002` | pending |
@@ -404,7 +404,9 @@ locale returns to `pending`.
 |---|---|---|---|---|
 | `am` | `root-amharic_546_current_first` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` | `root-hindi_546_current_second` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` |
 | `ar` | `root-arabic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` | `root-amharic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` |
+| `az` | `root-az_546_corrected_current_first` | `sha256:ab1bcdafd65e2b9d8910da99d04ef8233e52a8a604a27e8c30ed42ef89a6de7a` | — | — |
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
+| `bn` | `root-bn_546_corrected_current_first` | `sha256:991d522f8e606b41af8409f1839a4871214ecd49854213e72a304030348fafc3` | — | — |
 | `bs` | `root-hindi_546_current_second` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` | `root-amharic_546_current_first` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-amharic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` | `root-arabic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` |
@@ -412,6 +414,8 @@ locale returns to `pending`.
 | `el` | `root-czech_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` | `root-danish_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
+| `et` | `root-et_546_corrected_current_first` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` | `root-et_546_corrected_current_second` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` |
+| `fa` | `root-fa_546_lifecycle_replacement` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` | `root-fa_546_corrected_second` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` |
 | `fi` | `root-fi_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` | `root-fil_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
@@ -1340,6 +1344,25 @@ The attempted second pass earns no credit, and its finding invalidates the
 earlier first-pass credit. Both complete passes must restart from entry 1 on
 the corrected bytes.
 
+Reviewer `root-az_546_corrected_current_first` then restarted at entry 1 and
+independently reread all 546 current English/Azerbaijani pairs on raw
+dictionary SHA-256
+`ab1bcdafd65e2b9d8910da99d04ef8233e52a8a604a27e8c30ed42ef89a6de7a`.
+The read-only matrix is bound at SHA-256
+`71c963c8482c81ac6e303fb7b7fbdac68f9f1363c9a990a840120e0f77672885`;
+its read-only validator is bound at SHA-256
+`c1c54c93a4e19fcba06103fd03ff6dbfb0061b800db683fa731f26862d4c9f94`
+and freshly passes 14,749 assertions. The pass accepts every pair and
+independently verifies all 107 finding-backed values, all 14 exact-English
+retentions, all 38 placeholder-bearing values and 54 occurrences, and the
+exact 533 consumed-or-built-compatible + 12 source-only + 1 dormant lifecycle
+identities. The latest corrected plural category
+`tools.callout.emojiCategoryPeople=Smayliklər və insanlar` was explicitly
+rechecked in both its visible and accessible scope.
+
+Azerbaijani is therefore `first-pass-complete` on these exact bytes and still
+requires a distinct strict-blind second review.
+
 ### Bulgarian (`bg`) — current second pass complete
 
 Reviewer `root-bg-546-first-final` restarted at entry 1 and read all 546
@@ -1622,6 +1645,24 @@ remediation and passes afterward. The corrected raw Bengali SHA-256 is
 The attempted second pass earns no credit, and the correction invalidates
 the earlier first-pass boundary. Both complete passes must restart from entry
 1 on the corrected bytes.
+
+Reviewer `root-bn_546_corrected_current_first` then restarted at entry 1 and
+independently reread all 546 current English/Bengali pairs on raw dictionary
+SHA-256
+`991d522f8e606b41af8409f1839a4871214ecd49854213e72a304030348fafc3`.
+The read-only matrix is bound at SHA-256
+`ca951d620bc98e516d4befaf802d1f98dd53c162fe12d153343836fcbcc0789b`;
+its read-only validator is bound at SHA-256
+`018bb8cd539d10e8c5d4847136a3184c02159b85db676543877cf771f9909a95`
+and freshly passes 12,668 assertions. The pass accepts all 546 pairs,
+independently upholds all 78 finding-backed values and the four justified
+retentions, verifies all 38 placeholder-bearing values and 54 occurrences,
+and confirms the exact 533 consumed-or-built-compatible + 12 source-only + 1
+dormant lifecycle identities. The corrected ordinal `নম্বর` wording and the
+hyphen-attached seek-value suffix were explicitly rechallenged.
+
+Bengali is therefore `first-pass-complete` on these exact bytes and still
+requires a distinct strict-blind second review.
 
 ### Bosnian (`bs`) — current second pass complete
 
@@ -4619,6 +4660,264 @@ pre-correction review artifacts, and no reviewer or result credit carries
 forward. Each corrected digest still needs two fresh, independent blind reviews
 covering all 546 entries before either review-completion state can be awarded.
 
+### Estonian corrected-byte first-pass residuals
+
+Reviewer `root-et_546_corrected_first` blindly reviewed all 546 Estonian
+entries on raw dictionary SHA-256
+`fa2504166c9634e22cc4e7ad59a1d678180cc5032f052e48e3a4a0df5600bdcf`.
+The immutable first-pass matrix is sealed at SHA-256
+`9423cdf5347a3ed699514d03cfb224718787fa7ed4b8aac3c6616fb559a99042`
+and records 534 accepted rows plus 12 residual findings, the exact 533
+consumed-or-built-compatible + 12 source-only + 1 dormant lifecycle
+partition, all 18 exact-English retentions, and all 45 earlier findings.
+
+A distinct blind challenger accepted 11 proposals and amended one after
+checking the real callers and authoritative terminology. Its immutable
+artifact is bound at SHA-256
+`384d0541ae00101db206a48cb06fd3e358340732e60d1e376365dda939e263ab`;
+the 238-check validator and checksum manifest both pass. For
+`tools.video.seek`, the first proposal `Video edenemisriba` denotes a passive
+progress bar, while the caller is an interactive media range. The accepted
+`Video ajaskaala` follows localized Microsoft video-player terminology and
+lets the native slider role convey the interaction.
+
+The challenge separately confirmed a caller defect in the numeric values
+supplied to `a11y.dropPosition`: the preview announces a pre-removal insertion
+slot, so moving one or more earlier blocks can overstate the final position and
+can even produce `5 of 4`. No Estonian wording can repair those values. The
+caller defect is tracked independently from the 12 copy changes. Ten new keys
+use `F-et-046`–`F-et-055`; the two keys already corrected earlier reuse and
+extend `F-et-009` and `F-et-041`, preserving the executable one-finding-per-
+locale/key law. These changes earn no complete-pass credit. Applying them
+created raw Estonian dictionary SHA-256
+`c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092`,
+which must receive two fresh complete reviews. Before the dictionary edit, all
+12 reviewed-value assertions failed while the other copy assertions passed;
+four synthetic ledger guards also hit the default timeout under transient test
+load. With the reviewed values applied and an explicit 20-second guard timeout,
+all 3,073 translation-guideline cases pass.
+
+### Estonian corrected-byte fresh first pass
+
+Reviewer `root-et_546_corrected_current_first` independently reread all 546
+current English/Estonian pairs on raw dictionary SHA-256
+`c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092`.
+The immutable matrix is bound at SHA-256
+`b71f0acc0e27f2650fc41bf8dc1dcc6922b09cc7629e894f114301fad7590d32`;
+its immutable validator is bound at SHA-256
+`2521a5e9f369cafbf8ef921b8b96e93a59735e8647fb25ea38e9b3d4b2ac70b5`.
+Both artifacts are read-only. A fresh validator replay passed 9,974 checks
+over all rows, the exact 533 consumed-or-built-compatible + 12 source-only + 1
+dormant lifecycle identities, all 18 exact-English retentions, and all 55
+finding-backed current values.
+
+The blind source-order pass found no residual copy defect and kept the shared
+drag-destination caller behavior separate from the linguistically correct
+Estonian templates. The selected register is neutral contemporary Estonian:
+concise imperatives for actions, natural impersonal wording for system states
+and live-region announcements, sentence-case UI, established product and media
+terminology, and count-neutral variable templates. Estonian is therefore
+`first-pass-complete` on these exact bytes.
+
+Distinct reviewer `root-et_546_corrected_current_second` then independently
+reread all 546 current pairs and found no residual. Its read-only full matrix
+is bound at SHA-256
+`3d635b8c9262cb59bce78e58e6a62292a16405491ae23eecc74b8fc1864309bd`;
+its read-only validator is bound at SHA-256
+`45c17f9258d0f7ef7df0101e78eed662280dc349fe659c83fa873148b5a395b7`
+and freshly passes 8,687 checks. It independently verifies the exact 533+12+1
+lifecycle identities, all 18 retentions, and all 55 finding-backed values;
+the shared drag-destination caller behavior remains separately dispositioned.
+Both reviews bind to raw dictionary SHA-256
+`c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092`.
+Estonian is therefore `second-pass-complete`; repository-wide terminal gates
+remain separate.
+
+### Shared drag destination caller remediation
+
+The independent Estonian proposal challenge separately froze caller finding
+`R-CALLER-01`: `DragA11y` announced the raw pre-removal insertion boundary as
+the final destination. Its six exact scenarios demonstrated both ordinary
+overstatement and impossible output such as `5 of 4`. The correct first moved
+index is the raw target-edge boundary minus every member of the physical moved
+footprint before that boundary; Alt/Option duplication keeps the raw boundary
+because its sources are not removed.
+
+`F-global-008` tracks the shared caller contract. The initial red matrix failed
+four preview cases and three execution cases, while the new resolver suite
+could not import before implementation. Execution review then found that the
+old multiple-move arithmetic also reordered supported non-contiguous
+selections incorrectly and could reverse variable-width nested roots.
+Additional red cases covered stale participants, targets inside physical or
+logical source subtrees, flat structural descendants whose holders are
+siblings, duplicate previews, side-drop indicators, and column drops whose
+logical or DOM-contained children must ride with their selected ancestor.
+
+One shared resolver now validates live participants and physical/logical target
+boundaries, distinguishes explicitly moved roots from the DOM-carried
+footprint, and computes the final first index. Move execution anchors each
+source root against the live target, preserves document order for
+non-contiguous and nested groups, retains the store-owned lifecycle timing for
+single real moves, and reports the first moved block directly to completion
+announcements. The controller uses the same contract before rendering vertical
+or horizontal indicators, while duplicate previews retain the prospective raw
+slot and total. The focused resolver, A11y, operations, and controller
+integration gate passes 132/132 tests. A distinct read-only implementation
+review then inspected the resolver, execution, controller, A11y, horizontal
+source filtering, target guards, lifecycle compatibility, and completion
+semantics without finding a blocker. It independently reran the 132-case gate,
+scoped ESLint, full TypeScript check, and whitespace validation successfully.
+`F-global-008` is therefore verified; terminal locale gates remain separate.
+
+### Filipino corrected-byte first-pass residual
+
+Reviewer `root-fil_546_corrected_first` blindly reviewed all 546 Filipino
+entries on raw dictionary SHA-256
+`2bb0e4652578cc91adc91fc01a63674195d26831ed1e2b75196c4e4112f880cd`.
+The parent-bound reconciled matrix is sealed at SHA-256
+`d46b2a6810c29d2ef746680450071944af6d9c046001a44d6f6d7b1d6c42f1c1`
+and records 545 accepted rows plus the single residual `F-fil-040`, the exact
+533 consumed-or-built-compatible + 12 source-only + 1 dormant lifecycle
+partition, all 43 exact-English retentions, and all 39 earlier findings.
+
+A distinct blind challenger accepted the correction exactly. Its immutable
+artifact is bound at SHA-256
+`c2aaf5c81abb4284506dba28e61d6c66b68a70731b5ff299254590d7eeb4bc16`.
+The real `DragA11y` caller announces a prospective drop target that may be
+above or below the current position and may carry one or multiple selected
+blocks. Current `Ibibaba` is both malformed for contemplated `ibababa` and
+directionally restricted to lowering; the accepted `Ilalagay` wording is
+prospective, direction-neutral, and count-safe.
+
+The ledger expectation was recorded before the dictionary changed and failed
+in exactly the `F-fil-040` case while the other 3,062 guideline cases passed.
+After applying only that reviewed value, all 3,063 cases pass. The corrected
+raw Filipino dictionary is bound at SHA-256
+`3ad9bf285a468c354ecf47d3194b25cb60fc518289a087d25d28a00eaec6b2b2`.
+The finding earns no complete-pass credit: this new digest restarts both
+required complete reviews.
+
+### Filipino corrected-byte fresh first pass
+
+Reviewer `root-fil_546_corrected_current_first` independently reread all 546
+current English/Filipino pairs on raw dictionary SHA-256
+`3ad9bf285a468c354ecf47d3194b25cb60fc518289a087d25d28a00eaec6b2b2`.
+The read-only immutable matrix is bound at SHA-256
+`06890a866093b211264654bb21ba2981a2d6c29a79c1b4e66ba43485b9444f4d`
+and records 546 sequential pass decisions with no residual. Its structural
+seal verifies all 546 unique non-empty NFC values, all 38 placeholder-bearing
+keys and 54 occurrences, and the exact 533
+consumed-or-built-compatible + 12 source-only + 1 dormant lifecycle
+identities.
+
+The pass independently reconciled all 40 finding-backed current values and all
+43 exact-English retentions. The selected register is neutral contemporary
+Filipino product UI with concise direct imperatives, natural Taglish for
+established computing and media terms, sentence-case UI, count-neutral
+templates, and conventional unchanged technical notation. Filipino is
+therefore provisionally `first-pass-complete` on these exact bytes.
+
+Distinct reviewer `root-fil_546_corrected_current_second` then reread all 546
+pairs and stopped on three new residuals in the code-language placeholder,
+bookmark loading state, and video playback-statistics action. Its read-only
+matrix is bound at SHA-256
+`751ea7b706056216e03bf8492a178d3f1047bebda0f1d77c1020ff5a0db77222`;
+its read-only validator is bound at SHA-256
+`9762c98632d0e5698c449218f1ab89d5e29035a4b201bfc97cfdf38be6f5ccd8`
+and passes 14,575 checks over the exact 533+12+1 lifecycle, all 43
+retentions, all 40 earlier findings, and the three residuals. The stopped
+pass earns no credit and invalidates the provisional first-pass evidence.
+Filipino is `pending`; an independent proposal challenge must resolve the
+exact corrections before both complete reviews restart on new bytes.
+
+The independent three-proposal challenge kept all three exact replacements
+and found the directly coupled bookmark-error omission. Its read-only artifact
+is bound at SHA-256
+`777f28301300fdb08009b05810e5bbb8325cfe10a3b432a2c7e959f6ba1aea06`
+and passes all 18 seal checks. A separate reviewer then independently kept
+`tools.bookmark.error=Hindi ma-load ang preview ng link`; that read-only
+artifact is bound at SHA-256
+`9a235ed53e806d4184c6a94fedd964683ef32c5f82f10dd9259fcdbea9c09f6a`.
+The four corrections are recorded as `F-fil-041`–`F-fil-044` before the
+dictionary edit. The four reviewed-value expectations failed exactly before
+remediation while the other 3,073 guideline cases passed. After applying only
+the challenged values, all 3,077 cases pass. The corrected raw Filipino
+dictionary is bound at SHA-256
+`b2e7720aba28e9eb46dba1659e97a81e37f410f05482626a836c781f1115afd8`.
+All four findings are verified; both complete reviews must restart at entry 1
+on this new digest.
+
+### Persian corrected-byte first pass and detached-UI direction finding
+
+Reviewer `root-fa_546_corrected_first` blindly inspected all 546 Persian
+entries and accepted every dictionary value, but its otherwise immutable
+matrix mislabeled nine lifecycle identities. In particular, it swapped
+source-only `blockSettings.convertWithChildrenWarning` with dormant
+`notifier.dismiss` and exchanged four other source-only contracts with four
+built-compatible contracts. Its aggregate 533+12+1 counts and copy judgments
+remain useful challenge evidence, but the artifact does not earn complete-pass
+credit under the exact-identity requirement.
+
+Replacement reviewer `root-fa_546_lifecycle_replacement` therefore restarted
+at entry 1 on raw dictionary SHA-256
+`b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d`
+and independently accepted all 546 current pairs. The read-only matrix is
+bound at SHA-256
+`d8957ac6cc306b05d2075d8e314e4d238f76c0d08ca30aa71998eb0e4c6a8f11`;
+its read-only validator is bound at SHA-256
+`abada8d9b39b80d1bf606839850d69b82fd3cc6c1c76032a52270bb9b421e6d2`
+and freshly passes. It verifies the exact 533
+consumed-or-built-compatible + 12 source-only + 1 dormant identities, all
+three exact-English retentions, and all 53 earlier findings without a Persian
+copy residual. During the review lineage, the first reviewer also reproduced
+one high-severity caller cluster: detached editor UI rendered with an LTR base
+direction.
+
+An independent Chromium challenge kept the Persian dictionary and confirmed
+the caller defect. Its frozen artifact is bound at SHA-256
+`c53f50f1adb5fb3c30bff7f99505e528628760d08d34f79b7c7f26885cdee667`;
+its validator and checksum manifest pass. The challenge directly measured
+incorrect fragment order in mixed Persian/Latin settings, provider, and
+shortcut compositions. It identified 25 directly corrupted keys and 59
+built-in keys as a source-backed lower bound, with consumer-defined titles and
+shortcuts making the total open-ended. The Persian strings themselves remain
+linguistically correct.
+
+`F-global-007` tracks the shared caller correction. Six focused regression
+tests failed before remediation while the other 146 focused cases passed. A
+single per-open helper now copies the effective owning direction onto tooltip,
+popover, nested submenu, and lightbox roots as semantic `dir` plus inline
+`direction: … !important`, which is required to beat the isolation reset.
+The first implementation review caught a source-less virtual-popover fallback
+that could mistake `document.body` for the editor owner; the correction
+excludes document roots, restores a filtered `scopeElement`, and threads the
+normalized configured direction into link-paste virtual menus. A final
+read-only reviewer found no remaining correctness issue and independently
+passed six focused files with 169/169 cases plus whitespace validation. The
+broader related unit gate passes 27 files and 687/687 tests, and a fresh
+Chromium run passes the complete tooltip file 29/29 while directly verifying
+semantic and computed RTL→LTR→RTL singleton refresh. `F-global-007` is
+verified.
+
+Distinct reviewer `root-fa_546_corrected_second` independently reread all 546
+current pairs and found no Persian copy residual. Its read-only matrix is
+bound at SHA-256
+`7dc91687c81587060ea1c245bedbfa16051b9f5763a6ad0835cc8960ef5aca29`;
+its read-only validator is bound at SHA-256
+`ece2be8647fc6e342739b8a49a9135885ac9a9ecf9c64dea519e8629306791b5`
+and freshly passes. The pass independently verifies the same exact 533+12+1
+lifecycle identities, all 53 finding-backed values, all three exact-English
+retentions, 117 provider compositions, and 20 block-color compositions.
+Targeted terminology challenges also upheld `تراز به مرکز` and `نامبری`
+against official Persian product usage.
+
+The caller finding is separate from the accepted Persian copy and global
+findings do not block a locale's review transition. Both complete reviews bind
+to raw dictionary SHA-256
+`b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d`.
+Persian is therefore `second-pass-complete`; repository-wide terminal gates
+remain separate.
+
 ## Findings
 
 Add one row for every structural, semantic, style, register, terminology,
@@ -7138,7 +7437,7 @@ follows the global transition rule above.
 | `F-et-006` | `et` | `tools.paragraph.placeholder` | instruction clarity | `"Kirjuta midagi või vajuta / valimiseks"` | `"Kirjuta midagi või vajuta tööriista valimiseks klahvi /"` | It restores the omitted tool-selection purpose and explicitly names / as a key, while retaining the concise imperative UI style. | verified |
 | `F-et-007` | `et` | `tools.table.clearSelection` | context / action accuracy | `"Tühista"` | `"Tühjenda sisu"` | “Tühjenda” names destructive content clearing; “Tühista” means cancel or invalidate and misstates the handler. | verified |
 | `F-et-008` | `et` | `tools.table.placement` | context / control terminology | `"Paigutus"` | `"Joondus"` | “Joondus” is the established Estonian UI term for alignment; “Paigutus” is broader layout/placement. | verified |
-| `F-et-009` | `et` | `a11y.blockDuplicated` | accessibility / terminology | `"Plokk duplitseeritud positsioonile {position}/{total}"` | `"Plokk dubleeritud positsioonile {position}/{total}"` | EKI records “dubleerima/dubleeritud”; the correction also matches the product’s visible “Dubleeri” action and preserves both placeholders. | verified |
+| `F-et-009` | `et` | `a11y.blockDuplicated` | accessibility / terminology / spoken numeric relation | `"Plokk duplitseeritud positsioonile {position}/{total}"` | `"Plokk dubleeritud positsioonile {position}, kokku {total}"` | EKI records `dubleerima`/`dubleeritud`, matching the visible `Dubleeri` action. A corrected-byte follow-up also replaced the ambiguous slash with spoken aggregate `kokku`; the caller supplies the duplicated block's final index and total, and both placeholders remain exact. | verified |
 | `F-et-010` | `et` | `a11y.blocksDuplicated` | accessibility / terminology | `"{count} plokki duplitseeritud alates positsioonist {position}"` | `"{count} plokki dubleeritud alates positsioonist {position}"` | “Dubleeritud” is the supported form and restores terminology consistency; both placeholders remain exact. | verified |
 | `F-et-011` | `et` | `a11y.searchResults` | accessibility / number | `"{count} tulemust"` | `"Otsingutulemusi: {count}"` | The label-first partitive form avoids the invalid singular rendering “1 tulemust” for every integer and retains {count}. | verified |
 | `F-et-012` | `et` | `tools.callout.addEmoji` | source synchronization / terminology | `"Lisa emoji"` | `"Lisa ikoon"` | “Ikoon” preserves the broader product action instead of narrowing it to one symbol class. | verified |
@@ -7170,11 +7469,21 @@ follows the global transition rule above.
 | `F-et-038` | `et` | `a11y.allBlocksSelected` | accessibility / number | `"Kõik plokid valitud, {count} plokki"` | `"Kõik plokid valitud. Kokku: {count}"` | The label-first count avoids “1 plokki”, preserves {count}, and separates the complete status statements with correct punctuation. | verified |
 | `F-et-039` | `et` | `a11y.navigatedToBlock` | accessibility / terminology | `"Liikuti plokile"` | `"Liiguti plokile"` | “Liikuti” is not the past impersonal form of liikuma; “Liiguti” fixes the spelling and inflection. | verified |
 | `F-et-040` | `et` | `notifier.dismiss` | action semantics | `"Loobu"` | `"Sulge"` | “Sulge” names closing the notification; “Loobu” means abandoning or giving something up and mislabels the control. | verified |
-| `F-et-041` | `et` | `tools.video.seek` | context / control terminology | `"Keri"` | `"Video kerimisriba"` | Bare “Esituskoht” is ambiguous and does not name the control. Official Estonian YouTube help calls the seek bar “kerimisriba”; prefixing “Video” makes the slider name self-contained. | verified |
+| `F-et-041` | `et` | `tools.video.seek` | accessibility / interactive media terminology | `"Keri"` | `"Video ajaskaala"` | The real caller is an interactive range that seeks playback, not scrolling or a passive progress bar. The earlier intermediate `Video kerimisriba` and follow-up proposal `Video edenemisriba` therefore remained inaccurate. Microsoft’s localized video-player guidance uses [`video ajaskaala`](https://support.microsoft.com/et-ee/office/videote-trimmimine-microsoft-stream-c41f21f5-e803-4dbf-99a6-65452003a1ee); the native slider role supplies the interaction. | verified |
 | `F-et-042` | `et` | `tools.video.toggleTimeDisplay` | accessibility / state clarity | `"Lülita ajanäit"` | `"Vaheta möödunud ja järelejäänud aja vahel"` | It identifies both states and the switching action; generic “Lülita ajanäit” does not tell assistive-technology users what changes. | verified |
 | `F-et-043` | `et` | `tools.video.ctxCopyUrlAtTime` | context / playback terminology | `"Kopeeri video URL praegusel ajal"` | `"Kopeeri video URL praegusest taasesituskohast"` | The current “praegusel ajal” means “nowadays”. Adding “taasesitus” to the proposal’s ambiguous “esituskoht” makes the referenced playback position explicit. | verified |
 | `F-et-044` | `et` | `tools.video.ctxStats` | terminology / tone | `"Statistika asjatundjatele"` | `"Esitusstatistika"` | It replaces obsolete “statistics for experts” wording with the neutral current Playback statistics contract and matches the locale’s established media term “Esituskiirus”. | verified |
 | `F-et-045` | `et` | `tools.callout.emojiSearchResults` | terminology / naturalness | `"Leiti {count} emojit"` | `"Emojivasteid: {count}"` | The label-first partitive form preserves “matches” while avoiding the invalid “1 emojit” rendering for arbitrary counts; {count} remains exact. | verified |
+| `F-et-046` | `et` | `a11y.dragStarted` | accessibility / impersonal state announcement | `"Lohistab plokki"` | `"Plokki lohistatakse"` | The old third-person form implies an unstated actor. The impersonal form naturally foregrounds the block's drag state in a system announcement, following [EKI guidance](https://teatmik.eki.ee/teatmik/umbisikuline-tegumood-ja-poolt-tarind/). | verified |
+| `F-et-047` | `et` | `a11y.dragStartedMultiple` | accessibility / impersonal state announcement / number | `"Lohistab {count} plokki"` | `"Lohistatakse {count} plokki"` | The caller selects this key only above one. The impersonal form fits a live-region announcement, and the numeral-governed singular partitive `plokki` follows [EKI number guidance](https://teatmik.eki.ee/teatmik/arvukirjutus/). | verified |
+| `F-et-048` | `et` | `a11y.dropPosition` | accessibility / spoken numeric relation | `"Asetatakse positsioonile {position}/{total}"` | `"Asetatakse positsioonile {position}, kokku {total}"` | `Kokku` makes the aggregate explicit for speech and avoids the slash's ambiguous relationship while preserving both placeholders. The separately confirmed caller-level numeric defect cannot be corrected in translation. | verified |
+| `F-et-049` | `et` | `a11y.blockMoved` | accessibility / spoken numeric relation | `"Plokk teisaldatud positsioonile {position}/{total}"` | `"Plokk teisaldatud positsioonile {position}, kokku {total}"` | The explicit aggregate reads naturally in a completion announcement and matches the existing Estonian moved-up and moved-down wording. | verified |
+| `F-et-050` | `et` | `a11y.navigationModeEntered` | accessibility / localized key terminology | `"Navigeerimisrežiim. Kasuta nooleklahve plokkide vahel liikumiseks, Enterit muutmiseks ja Escape'i väljumiseks."` | `"Navigeerimisrežiim. Kasuta nooleklahve plokkide vahel liikumiseks, muutmiseks sisestusklahvi (Enter) ja väljumiseks paoklahvi (Esc)."` | The standard localized key names make the instruction natural, while the parenthetical legends preserve recognition of the physical keys. Official Microsoft accessibility copy uses the same [`sisestusklahvi (Enter)` and `paoklahvi (Esc)`](https://support.microsoft.com/et-ee/accessibility/teams/basic-tasks-using-a-screen-reader-with-microsoft-teams) forms. | verified |
+| `F-et-051` | `et` | `a11y.navigationPosition` | accessibility / spoken numeric relation | `"{tool}, {position}/{total}"` | `"{tool}, positsioon {position}, kokku {total}"` | The replacement explicitly labels both the ordinal and aggregate values while remaining concise for a throttled repeated live-region announcement. | verified |
+| `F-et-052` | `et` | `tools.video.caption` | media-neutral terminology | `"Pildiallkiri"` | `"Pealdis"` | The editable text belongs to video, not a still picture. Official localized [LibreOffice help](https://help.libreoffice.org/latest/et/text/swriter/01/04060000.html) uses the generic UI term `Pealdis`. | verified |
+| `F-et-053` | `et` | `tools.video.toggleCaption` | media-neutral terminology / source-only coverage | `"Näita või peida pildiallkiri"` | `"Näita või peida pealdis"` | The source-only contract has no production caller at this revision, but it should retain the same media-neutral caption terminology as the active video and audio fields. | verified |
+| `F-et-054` | `et` | `tools.audio.caption` | media-neutral terminology | `"Pildiallkiri"` | `"Pealdis"` | `Pildiallkiri` is image-specific and especially inapt for author text under an audio card. `Pealdis` is the established generic caption term and matches the existing Estonian placeholder. | verified |
+| `F-et-055` | `et` | `tools.video.seekValueText` | accessibility / spoken numeric relation | `"{current} / {total}"` | `"{current}, kokku {total}"` | The media slider exposes formatted current and maximum times as `aria-valuetext`; the explicit aggregate is clearer in speech than a slash and preserves both placeholders. | verified |
 | `F-fa-003` | `fa` | `blockSettings.clickAction` | composed UI grammar | `"کلیک کنید"` | `"با کلیک"` | As a prefix fragment it supplies the shared instrumental phrase and composes into a natural imperative in both caller forms. | verified |
 | `F-fa-004` | `fa` | `blockSettings.orConjunction` | composed UI grammar | `" یا از این میان‌بر استفاده کنید: "` | `" یا میان‌بر "` | The coordinated noun phrase is grammatical under the shared «با» and preserves the caller-required leading and trailing ASCII spaces. | verified |
 | `F-fa-005` | `fa` | `blockSettings.openMenuAction` | composed UI grammar | `" برای باز کردن منو"` | `" منو را باز کنید"` | This suffix supplies the imperative predicate for both composed tooltips and preserves its required leading ASCII space. | verified |
@@ -7263,6 +7572,11 @@ follows the global transition rule above.
 | `F-fil-037` | `fil` | `tools.database.propertyTypeMultiSelect` | grammar / property terminology | `"Maramihang piliin"` | `"Maramihang pagpili"` | The property-type picker requires a noun. “Pagpili” names selection; current “piliin” is an imperative verb. | verified |
 | `F-fil-038` | `fil` | `tools.embed.empty` | context / read-only state | `"Mag-paste ng link para i-embed"` | `"Walang naka-embed na link"` | The caller reaches this key only in the read-only empty branch, where paste is unavailable. “Walang naka-embed na link” describes that state instead of issuing an impossible command. | verified |
 | `F-fil-039` | `fil` | `tools.video.toggleTimeDisplay` | accessibility / state clarity | `"I-toggle ang display ng oras"` | `"Lumipat sa pagitan ng oras na lumipas at oras na natitira"` | AMEND: the proposal leaves `lumipas` without its required noun/linker phrase. The final explicitly switches between “oras na lumipas” and “oras na natitira,” naming both states in a complete accessible label. | verified |
+| `F-fil-040` | `fil` | `a11y.dropPosition` | accessibility / morphology / direction-neutral prospective action | `"Ibibaba sa posisyon {position} ng {total}"` | `"Ilalagay sa posisyon {position} sa kabuuang {total}"` | The live caller announces an arbitrary prospective drop target above or below and can carry one or multiple blocks. `Ibibaba` is malformed for contemplated `ibababa` and still means lowering; direction-neutral `Ilalagay` preserves both placeholders and the future action. Sources: [DragA11y caller](../../src/components/modules/drag/a11y/DragA11y.ts), [KWF — baba](https://kwfdiksiyonaryo.ph/?query=baba), [KWF — lagay](https://kwfdiksiyonaryo.ph/?query=lagay). | verified |
+| `F-fil-041` | `fil` | `tools.code.searchLanguage` | punctuation / source synchronization | `"Maghanap ng wika..."` | `"Maghanap ng wika…"` | The searchable programming-language picker uses this value as both placeholder and accessible label. U+2026 matches the continuing-input source, the Filipino placeholder convention, and the KWF punctuation standard; the old ASCII three-dot sequence is the locale's sole outlier. | verified |
+| `F-fil-042` | `fil` | `tools.bookmark.loading` | context / ongoing state / punctuation | `"Nilo-load ang preview"` | `"Nilo-load ang preview ng link…"` | The asynchronous bookmark unfurl replaces the whole placeholder while fetching metadata for a pasted URL. `ng link` restores the source object and distinguishes this state from other preview families; the ellipsis marks ongoing work. The independent challenge kept the exact proposal. | verified |
+| `F-fil-043` | `fil` | `tools.video.ctxStats` | terminology / caller context | `"Mga detalyadong stat"` | `"Mga istatistika ng pag-playback"` | The video context-menu action opens playback resolution, frame, buffer, and viewport measurements. The final names that domain and replaces vague `detalyadong` plus abbreviated English `stat` with established Filipino product terminology. | verified |
+| `F-fil-044` | `fil` | `tools.bookmark.error` | context / source completeness | `"Hindi ma-load ang preview"` | `"Hindi ma-load ang preview ng link"` | This terminal state is specifically a failed link-metadata unfurl. A separate independent challenge confirmed that adding `ng link` restores the omitted source qualifier without an ongoing-state ellipsis and does not conflict with the generic file-preview error. | verified |
 | `F-nl-086` | `nl` | `tools.callout.emojiCategoryActivity` | category scope / number | `"Activiteit"` | `"Activiteiten"` | The heading groups many activities rather than naming one activity. The plural matches official Dutch emoji-gallery terminology and the collective/plural sibling categories. Sources: [Microsoft Support — Een emoji of GIF verzenden in Microsoft Teams (gratis)](https://support.microsoft.com/nl-NL/teams/free/chat-calling/send-an-emoji-or-gif-in-microsoft-teams-free). | verified |
 | `F-nl-087` | `nl` | `tools.image.previewControls` | accessibility / specificity | `"Voorbeeldbediening"` | `"Regelaars voor afbeeldingsvoorbeeld"` | The accessible group name must identify both the controls and their image-preview scope. `Regelaars` and `afbeeldingsvoorbeeld` are attested Dutch product terms; the current compact compound is generic and drops the image object. Sources: [W3C WAI-ARIA Authoring Practices — Providing Accessible Names and Descriptions](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/); [Apple Support NL — Finder on Mac Pro](https://support.apple.com/nl-nl/guide/mac-pro/apddf030866a/mac); [Apple Support NL — Belichtings- en kleurinstellingen aanpassen](https://support.apple.com/nl-nl/guide/iphone/-iphebbd067ce/ios); [Microsoft Support NL — Het formaat van het Microsoft SwiftKey-toetsenbord wijzigen](https://support.microsoft.com/nl-nl/swiftkey-keyboard/how-to-resize-microsoft-swiftkey-keyboard); [Google Photos Help NL — Foto’s en video’s verwijderen en herstellen](https://support.google.com/photos/answer/6128850?co=GENIE.Platform%3DAndroid&hl=nl). | verified |
 | `F-nl-088` | `nl` | `tools.image.errorSourceOffline` | natural error copy | `"Het bronbestand is mogelijk verplaatst of offline."` | `"Het bronbestand is mogelijk verplaatst of niet beschikbaar."` | The caller only knows the remote source cannot be loaded; it does not establish a synchronized offline-file state. `niet beschikbaar` accurately describes the unavailable resource and is natural Dutch error copy. Sources: [Microsoft Support NL — Een verbindingsfout corrigeren](https://support.microsoft.com/nl-nl/excel/how-to-correct-a-connect-error); [Microsoft Support NL — De status Off-line bestand wordt onjuist weergegeven](https://support.microsoft.com/nl-nl/topic/de-status-off-line-bestand-wordt-onjuist-weergegeven-in-file-explorer-in-windows-3026cc25-2d68-1202-2d14-d20e63246a5a). | verified |
@@ -7274,6 +7588,9 @@ follows the global transition rule above.
 | `F-global-004` | all non-English | popover.search localized action placeholders | source dependency / caller context | All 68 localized values translated the old generic `Search` source and omitted the newly explicit action object. | Apply the independently reviewed action-oriented placeholder matrix to all 68 localized dictionaries, preserving native register and ellipsis. | The first full challenge corrected 23 register mismatches; a distinct second reviewer accepted all 68 corrected values, including explicit low-resource script-and-morphology checks. The final 69/69 matrix cases, all 2,237 guideline cases, i18n module regression, 87 scanner cases, and live 546-key/210-reference checker pass. | verified |
 | `F-global-005` | all non-English | notifier.dismiss helper localization contract | dormant localization bypass / dependency injection | The exported dismiss-button helper is not currently used by production notifier rendering, but its built-in English lookup would bypass every localized dictionary if the internal helper were reused. | Keep the dormant helper source-safe by requiring any future caller to supply a localized accessible label instead of allowing the drawing utility to choose English. | An adversarial Bengali source review found the latent bypass and confirmed there is no current production caller. The helper-level regression failed with English `Dismiss`, then passed a Bengali label through unchanged after the helper began requiring injection and dropped its English-dictionary import; notifier-show tests continue to confirm that live toasts render no dismiss button. | verified |
 | `F-global-006` | all non-English | tools.link.webLink catch-all labels | source dependency / caller scope / terminology | Sixty-seven localized labels still restricted the catch-all suggestion to a web page, while the first draft also preserved five weaker transliterated or non-native generic terms; Bosnian alone was already generic. | Apply the independently reviewed 68-locale generic-label matrix, including native Kannada `ಕೊಂಡಿ`, Sorani `بەستەر`, Malayalam `കണ്ണി`, locale-correct Nepali `लिङ्क`, and native Pashto `تړونی`. | Three disjoint family reviews covered 23+23+22 locales, and a distinct whole-matrix reviewer confirmed all 68 final values and all nine exact-English loanword retentions. The final fixture exactly matches the reviewed artifact at SHA-256 `7d489cef89d80cebd9557d0480600e0ab42d8db1a6bb2ec698bc472559fee614`; its coverage case and Bosnian passed red, the other 67 locale cases failed red, and all 69 dictionary cases, 76 caller cases, 2,543 guideline cases, and the live 546-key/208-reference checker pass after remediation. | verified |
+| `F-global-007` | all non-English | detached editor UI direction contract | caller / portal ancestry / bidirectional layout / accessibility | Body- and Top-Layer-mounted tooltip, popover, and lightbox roots lose their owning editor ancestry; the isolation reset forces non-inline tooltip/popover direction to initial/LTR, while lightbox inherits the host body. Nested desktop submenus under an RTL inline popover are also reset to LTR. | On every open, resolve the effective owning editor direction and apply both semantic `dir` and inline-important CSS `direction` to every detached or reset UI root; refresh the tooltip singleton across mixed-direction editors and support explicit direction for virtual roots. | Two independent Chromium reproductions confirmed that the Persian dictionary and editor wrapper are correctly RTL while affected roots compute LTR; `dir` alone still loses to the reset. The frozen challenge identifies 25 direct and at least 59 built-in affected keys. Six regression tests failed before remediation. After the body-root fallback correction, a distinct reviewer found no blocker and passed 169/169 focused cases; the broader related unit gate passes 687/687, and Chromium passes the 29-test tooltip file with direct computed-direction verification. | verified |
+
+| `F-global-008` | all non-English | drag move destination contract | caller / accessibility / move indexing / structural integrity | Drop previews announced a raw pre-removal boundary instead of the first moved block's final position, producing overstated or impossible values; multiple execution also returned the raw slot and misordered supported non-contiguous or variable-width nested groups. Invalid descendant and stale targets could still display indicators, and side-drop source filtering could detach nested children. | Resolve one move contract from the live flat array, explicit sources, physical carried footprint, logical ancestry, target, and edge; use its final first index for previews and results, anchor execution to the live target, preserve nested/non-contiguous order, validate indicators in every mode, and keep nested children attached during side drops. | The frozen Estonian caller challenge records six exact numeric scenarios. Red-first unit and integration cases cover formula, execution, lifecycle, staleness, duplicate, physical/logical descendant, indicator, and horizontal source-filter contracts. A distinct read-only reviewer found no blocker and independently passed the 132-case focused gate, scoped ESLint, full TypeScript, and whitespace checks. | verified |
 
 ## Exact-English Retentions
 

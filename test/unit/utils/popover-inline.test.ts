@@ -446,6 +446,49 @@ describe('PopoverInline', () => {
   });
 
   describe('nested popover items sizing', () => {
+    it('keeps a nested desktop submenu in the owning inline popover direction', () => {
+      const owner = document.createElement('div');
+      const popover = createPopoverInline({
+        items: [
+          {
+            icon: 'Icon',
+            title: 'Turn into',
+            name: 'convert-to',
+            children: {
+              items: [
+                {
+                  title: 'Child Action',
+                  name: 'child-action',
+                  onActivate: vi.fn(),
+                },
+              ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverInlineInternal;
+
+      owner.style.direction = 'rtl';
+      owner.appendChild(popover.getElement());
+      document.body.appendChild(owner);
+      popover.show();
+
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.hasChildren
+      );
+
+      expect(parentItem).toBeDefined();
+
+      instance.showNestedItems(parentItem!);
+
+      const nestedRoot = instance.nestedPopover?.getElement();
+
+      expect(nestedRoot).toHaveAttribute('dir', 'rtl');
+      expect(nestedRoot?.style.getPropertyValue('direction')).toBe('rtl');
+      expect(nestedRoot?.style.getPropertyPriority('direction')).toBe('important');
+    });
+
     it('does NOT pin the nested items width with w-full — an explicit width ignores the scrollbar-gutter margin offsets, leaving the scrollbar 8px from the popover edge instead of 2px', () => {
       const popover = createPopoverInline({
         items: [

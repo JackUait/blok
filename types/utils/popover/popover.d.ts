@@ -66,6 +66,12 @@ export interface PopoverParamsBase {
   scopeElement?: HTMLElement;
 
   /**
+   * Effective editor direction for a detached or virtual popover. When
+   * provided, this overrides direction inferred from live owning elements.
+   */
+  direction?: 'ltr' | 'rtl';
+
+  /**
    * Element relative to which the popover should be positioned
    */
   trigger?: HTMLElement;

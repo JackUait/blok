@@ -27,6 +27,7 @@ import { applyRubberBand } from './spring';
 import { downloadImage } from './download';
 import { tr } from './i18n';
 import { promoteToTopLayer, removeFromTopLayer } from '../../components/utils/top-layer';
+import { syncPortalDirection } from '../../components/utils/portal-direction';
 
 const ALIGN_TO_TEXT_ALIGN: Record<ImageAlign, string> = {
   left: 'left',
@@ -195,6 +196,11 @@ export interface LightboxOptions {
    * When omitted, the dialog cross-fades without a spatial transition.
    */
   origin?: HTMLElement;
+  /**
+   * Effective editor direction. Overrides the origin when a virtual or
+   * programmatic lightbox has no reliable live owner.
+   */
+  direction?: 'ltr' | 'rtl';
   i18n?: I18nInstance;
   /**
    * Other images on the page, enabling prev/next navigation within the lightbox.
@@ -252,6 +258,10 @@ export function openLightbox(opts: LightboxOptions): () => void {
   dialog.setAttribute('aria-modal', 'true');
   dialog.setAttribute('aria-label', tr(opts.i18n, 'tools.image.preview'));
   dialog.className = 'blok-image-lightbox';
+  syncPortalDirection(dialog, {
+    direction: opts.direction,
+    source: opts.origin,
+  });
 
   const backdrop = document.createElement('div');
   backdrop.className = 'blok-image-lightbox__backdrop';
@@ -1216,4 +1226,3 @@ function appendSimpleButton(parent: HTMLElement, spec: SimpleButtonSpec): void {
   });
   parent.appendChild(btn);
 }
-

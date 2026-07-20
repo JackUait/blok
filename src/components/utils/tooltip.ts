@@ -1,6 +1,7 @@
 import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../constants';
 
 import { shouldFlip } from './popover/popover-position';
+import { syncPortalDirection } from './portal-direction';
 import {
   promoteToTopLayer,
   removeFromTopLayer,
@@ -268,6 +269,13 @@ class Tooltip {
     if (!this.nodes.wrapper) {
       return;
     }
+
+    /**
+     * The singleton lives under body/Top Layer, outside its owning editor.
+     * Refresh on every show so simultaneous RTL and LTR editors cannot leak a
+     * stale direction into one another.
+     */
+    syncPortalDirection(this.nodes.wrapper, { source: element });
 
     const resolvedPlacement = this.resolvePlacement(element, showingOptions.placement ?? 'bottom');
 

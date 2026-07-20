@@ -112,6 +112,8 @@ const GLOBAL_FINDING_KEYS = new Set([
   'popover.search localized action placeholders',
   'notifier.dismiss helper localization contract',
   'tools.link.webLink catch-all labels',
+  'detached editor UI direction contract',
+  'drag move destination contract',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {

@@ -80,4 +80,24 @@ describe('PasteMenuController virtual anchor lifecycle', () => {
 
     expect(document.querySelector<HTMLElement>('[data-blok-popover-opened]')?.style.top).toBe('94px');
   });
+
+  it('uses explicit editor direction for a source-less virtual menu instead of the host body', () => {
+    document.body.style.direction = 'ltr';
+    const controller = new PasteMenuController({ t: (key) => key });
+
+    controller.open({
+      url: 'https://example.com/article',
+      hasSelection: false,
+      position: createRect({ top: 110, bottom: 126, left: 80, right: 80, width: 0, height: 16 }),
+      direction: 'rtl',
+      onSelect: vi.fn(),
+      onDismiss: vi.fn(),
+    } as Parameters<PasteMenuController['open']>[0] & { direction: 'rtl' });
+
+    const openPopover = document.querySelector<HTMLElement>('[data-blok-popover-opened]');
+
+    expect(openPopover).toHaveAttribute('dir', 'rtl');
+    expect(openPopover?.style.getPropertyValue('direction')).toBe('rtl');
+    expect(openPopover?.style.getPropertyPriority('direction')).toBe('important');
+  });
 });

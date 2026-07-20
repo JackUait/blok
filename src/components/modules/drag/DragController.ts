@@ -24,6 +24,11 @@ import { hasPassedThreshold } from './utils/drag.constants';
 import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
 import { getListItemDepth } from './utils/depthUtils';
+import {
+  hasLogicalSourceAncestor,
+  isMoveTargetValid,
+  resolveMoveDestination,
+} from './utils/moveDestination';
 
 interface BoundHandlers {
   onMouseMove: (e: MouseEvent) => void;
@@ -307,7 +312,7 @@ export class DragController extends Module {
     this.preview.updatePosition(e.clientX, e.clientY);
 
     // Find drop target and update indicator
-    this.updateDropTarget(e.clientX, e.clientY);
+    this.updateDropTarget(e.clientX, e.clientY, e.altKey);
 
     // Handle auto-scroll
     if (this.autoScroll && isActuallyDragging(state)) {
@@ -363,11 +368,12 @@ export class DragController extends Module {
     );
   }
 
-  private updateDropTarget(clientX: number, clientY: number): void {
+  private updateDropTarget(clientX: number, clientY: number, isDuplicate = false): void {
     const state = this.stateMachine.getState();
     const sourceBlock = this.stateMachine.getSourceBlock();
+    const sourceBlocks = this.stateMachine.getSourceBlocks();
 
-    if (!isActuallyDragging(state) || !sourceBlock || !this.targetDetector) {
+    if (!isActuallyDragging(state) || !sourceBlock || !sourceBlocks || !this.targetDetector) {
       return;
     }
 
@@ -404,6 +410,37 @@ export class DragController extends Module {
       return;
     }
 
+    const blocks = this.Blok.BlockManager.blocks;
+    const hasLiveParticipants =
+      blocks.includes(dropTarget.block)
+      && this.Blok.BlockManager.getBlockIndex(dropTarget.block) !== -1
+      && sourceBlocks.every(
+        block =>
+          blocks.includes(block)
+          && this.Blok.BlockManager.getBlockIndex(block) !== -1
+      );
+    const verticalEdge =
+      dropTarget.edge === 'top' || dropTarget.edge === 'bottom'
+        ? dropTarget.edge
+        : null;
+    const hasValidMoveDestination = hasLiveParticipants && (
+      verticalEdge !== null
+        ? isDuplicate
+          || resolveMoveDestination(
+            blocks,
+            sourceBlocks,
+            dropTarget.block,
+            verticalEdge
+          ) !== null
+        : isMoveTargetValid(blocks, sourceBlocks, dropTarget.block)
+    );
+
+    if (!hasValidMoveDestination) {
+      this.stateMachine.updateTarget(null, null);
+      this.springLoader.update(null);
+      return;
+    }
+
     // Update state with new target
     this.stateMachine.updateTarget(dropTarget.block, dropTarget.edge, dropTarget.parentId);
     // Spring-load closed toggles: auto-expand after 500ms hover
@@ -433,7 +470,12 @@ export class DragController extends Module {
 
     // Announce drop position change to screen readers
     if (this.a11y) {
-      this.a11y.announceDropPosition(dropTarget.block, dropTarget.edge);
+      this.a11y.announceDropPosition(
+        dropTarget.block,
+        dropTarget.edge,
+        sourceBlocks,
+        isDuplicate
+      );
     }
   }
 
@@ -713,7 +755,6 @@ export class DragController extends Module {
     // Sources are the dragged blocks in document order; never the target.
     const dragged = (sourceBlocks.length > 0 ? sourceBlocks : [sourceBlock])
       .filter(block => block.id !== targetBlock.id);
-    const draggedIds = new Set(dragged.map(block => block.id));
 
     // Drop only the TOP-LEVEL dragged blocks into the new/added column. A
     // container's descendants are included in sourceBlocks (e.g. a callout
@@ -723,7 +764,19 @@ export class DragController extends Module {
     // callout. Mirrors the previewBlocks filter and handleDropImpl's
     // parentIsBeingMoved skip.
     const sourceIds = dragged
-      .filter(block => block.parentId === null || !draggedIds.has(block.parentId))
+      .filter(block => {
+        const hasDraggedLogicalParent = hasLogicalSourceAncestor(
+          this.Blok.BlockManager.blocks,
+          dragged,
+          block
+        );
+        const hasDraggedPhysicalParent = dragged.some(
+          candidate =>
+            candidate !== block && candidate.holder.contains(block.holder)
+        );
+
+        return !hasDraggedLogicalParent && !hasDraggedPhysicalParent;
+      })
       .map(block => block.id);
 
     if (sourceIds.length === 0) {
@@ -999,7 +1052,7 @@ export class DragController extends Module {
     }
 
     // Announce successful drop to screen readers
-    const movedBlock = this.Blok.BlockManager.getBlockByIndex(result.targetIndex);
+    const movedBlock = result.movedBlocks[0];
     if (this.a11y && movedBlock) {
       this.a11y.announceDropComplete(movedBlock, sourceBlocks, isMultiBlockDrag);
     }

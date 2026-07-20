@@ -1,6 +1,7 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 import { EventsDispatcher } from '../events';
 import { Listeners } from '../listeners';
+import { syncPortalDirection } from '../portal-direction';
 import { isPromotedToTopLayer, promoteToTopLayer, removeFromTopLayer, supportsPopoverAPI } from '../top-layer';
 import { twMerge } from '../tw';
 
@@ -135,6 +136,25 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    */
   public show(): void {
     const mountTarget = this.nodes.popover;
+    const connectedParent = mountTarget.isConnected
+      && mountTarget.parentElement !== document.body
+      && mountTarget.parentElement !== document.documentElement
+      ? mountTarget.parentElement
+      : null;
+    const scopeElement = this.params.scopeElement !== document.body
+      && this.params.scopeElement !== document.documentElement
+      ? this.params.scopeElement
+      : undefined;
+    const directionSource = this.params.trigger
+      ?? this.params.positionContext
+      ?? this.params.leftAlignElement
+      ?? scopeElement
+      ?? connectedParent;
+
+    syncPortalDirection(mountTarget, {
+      direction: this.params.direction,
+      source: directionSource,
+    });
 
     if (mountTarget !== null && !mountTarget.isConnected) {
       document.body.appendChild(mountTarget);

@@ -19,6 +19,11 @@ export interface PasteMenuOpenParams {
    * the global Escape handler can dismiss it; placement still uses `position`.
    */
   trigger?: HTMLElement;
+  /**
+   * Effective editor direction for the virtual fallback when no live trigger
+   * exists.
+   */
+  direction?: 'ltr' | 'rtl';
   /** Called with the chosen action when the user picks an item. */
   onSelect: (type: PasteMenuActionType) => void;
   /** Called when the menu closes without a pick (e.g. Escape) so the paste isn't lost. */
@@ -94,6 +99,7 @@ export class PasteMenuController implements LinkPasteMenu {
     const popover = new PopoverDesktop({
       items,
       flippable: true,
+      ...(params.direction ? { direction: params.direction } : {}),
       ...(params.trigger ? { trigger: params.trigger } : {}),
       ...virtualPositionParams(params.position, params.trigger),
     });

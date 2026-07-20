@@ -80,6 +80,70 @@ test.describe('tooltip API', () => {
   });
 
   test.describe('show()', () => {
+    test('refreshes semantic and computed direction for every owning trigger', async ({ page }) => {
+      const states = await page.evaluate(({ holder, tooltipSelector }) => {
+        const container = document.getElementById(holder);
+        const rtlTarget = document.createElement('button');
+        const ltrTarget = document.createElement('button');
+
+        rtlTarget.style.direction = 'rtl';
+        ltrTarget.style.direction = 'ltr';
+        container?.append(rtlTarget, ltrTarget);
+
+        const capture = (target: HTMLElement, content: string): {
+          dir: string | null;
+          computedDirection: string;
+          inlineDirection: string;
+          priority: string;
+        } => {
+          window.blokInstance?.tooltip?.show(target, content);
+
+          const tooltip = document.querySelector<HTMLElement>(tooltipSelector);
+
+          if (tooltip === null) {
+            throw new Error('Expected singleton tooltip root');
+          }
+
+          return {
+            dir: tooltip.getAttribute('dir'),
+            computedDirection: getComputedStyle(tooltip).direction,
+            inlineDirection: tooltip.style.getPropertyValue('direction'),
+            priority: tooltip.style.getPropertyPriority('direction'),
+          };
+        };
+
+        return [
+          capture(rtlTarget, 'راهنما'),
+          capture(ltrTarget, 'Help'),
+          capture(rtlTarget, 'راهنما'),
+        ];
+      }, {
+        holder: HOLDER_ID,
+        tooltipSelector: TOOLTIP_INTERFACE_SELECTOR,
+      });
+
+      expect(states).toEqual([
+        {
+          dir: 'rtl',
+          computedDirection: 'rtl',
+          inlineDirection: 'rtl',
+          priority: 'important',
+        },
+        {
+          dir: 'ltr',
+          computedDirection: 'ltr',
+          inlineDirection: 'ltr',
+          priority: 'important',
+        },
+        {
+          dir: 'rtl',
+          computedDirection: 'rtl',
+          inlineDirection: 'rtl',
+          priority: 'important',
+        },
+      ]);
+    });
+
     test('should show tooltip with text content', async ({ page }) => {
       const testElement = await page.evaluate(({ holder }) => {
         const container = document.getElementById(holder);

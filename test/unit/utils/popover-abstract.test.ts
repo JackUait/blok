@@ -356,6 +356,92 @@ describe('PopoverAbstract', () => {
   });
 
   describe('public API', () => {
+    it('copies the owning trigger direction onto a body-mounted root with cascade priority', () => {
+      const trigger = document.createElement('button');
+
+      trigger.style.direction = 'rtl';
+      document.body.appendChild(trigger);
+
+      const popover = createPopover({ trigger });
+      const root = popover.getElement();
+
+      popover.show();
+
+      expect(root).toHaveAttribute('dir', 'rtl');
+      expect(root.style.getPropertyValue('direction')).toBe('rtl');
+      expect(root.style.getPropertyPriority('direction')).toBe('important');
+    });
+
+    it('lets an explicit effective direction override an opposite trigger direction', () => {
+      const trigger = document.createElement('button');
+
+      trigger.style.direction = 'rtl';
+      document.body.appendChild(trigger);
+
+      const params = {
+        trigger,
+        direction: 'ltr',
+      } as unknown as Partial<PopoverParamsBase>;
+      const popover = createPopover(params);
+      const root = popover.getElement();
+
+      popover.show();
+
+      expect(root).toHaveAttribute('dir', 'ltr');
+      expect(root.style.getPropertyValue('direction')).toBe('ltr');
+      expect(root.style.getPropertyPriority('direction')).toBe('important');
+    });
+
+    it('does not mistake the host body for an owning editor when no direction source exists', () => {
+      document.body.style.direction = 'rtl';
+
+      try {
+        const popover = createPopover();
+        const root = popover.getElement();
+
+        popover.show();
+
+        expect(root).not.toHaveAttribute('dir');
+        expect(root.style.getPropertyValue('direction')).toBe('');
+        expect(root.style.getPropertyPriority('direction')).toBe('');
+      } finally {
+        document.body.style.removeProperty('direction');
+      }
+    });
+
+    it('uses a non-document scope as the direction owner for a source-less popover', () => {
+      const scopeElement = document.createElement('div');
+
+      scopeElement.style.direction = 'rtl';
+      document.body.appendChild(scopeElement);
+
+      const popover = createPopover({ scopeElement });
+      const root = popover.getElement();
+
+      popover.show();
+
+      expect(root).toHaveAttribute('dir', 'rtl');
+      expect(root.style.getPropertyValue('direction')).toBe('rtl');
+      expect(root.style.getPropertyPriority('direction')).toBe('important');
+    });
+
+    it('does not use document.body when it is explicitly provided as the scope', () => {
+      document.body.style.direction = 'rtl';
+
+      try {
+        const popover = createPopover({ scopeElement: document.body });
+        const root = popover.getElement();
+
+        popover.show();
+
+        expect(root).not.toHaveAttribute('dir');
+        expect(root.style.getPropertyValue('direction')).toBe('');
+        expect(root.style.getPropertyPriority('direction')).toBe('');
+      } finally {
+        document.body.style.removeProperty('direction');
+      }
+    });
+
     it('show() marks popover as opened and focuses search when available', () => {
       const popover = createPopover();
       const nodes = popover.getNodesForTests();

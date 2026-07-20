@@ -192,6 +192,34 @@ describe('Tooltip utility', () => {
     vi.useRealTimers();
   });
 
+  it('syncs the singleton direction from every trigger so RTL and LTR editors cannot leak into each other', () => {
+    const rtlTarget = createTargetElement();
+    const ltrTarget = createTargetElement();
+
+    rtlTarget.style.direction = 'rtl';
+    ltrTarget.style.direction = 'ltr';
+
+    show(rtlTarget, 'راهنما');
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper).toHaveAttribute('dir', 'rtl');
+    expect(wrapper?.style.getPropertyValue('direction')).toBe('rtl');
+    expect(wrapper?.style.getPropertyPriority('direction')).toBe('important');
+
+    show(ltrTarget, 'Help');
+
+    expect(wrapper).toHaveAttribute('dir', 'ltr');
+    expect(wrapper?.style.getPropertyValue('direction')).toBe('ltr');
+    expect(wrapper?.style.getPropertyPriority('direction')).toBe('important');
+
+    show(rtlTarget, 'راهنما');
+
+    expect(wrapper).toHaveAttribute('dir', 'rtl');
+    expect(wrapper?.style.getPropertyValue('direction')).toBe('rtl');
+    expect(wrapper?.style.getPropertyPriority('direction')).toBe('important');
+  });
+
   it('uses position: fixed so Top-Layer placement is viewport-relative', () => {
     /**
      * Regression: when promoted to the CSS Top Layer (popover="manual" +

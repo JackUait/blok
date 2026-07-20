@@ -11,9 +11,15 @@ import type { SavedData } from '../../../../../../types/data-formats';
 describe('DragOperations', () => {
   let operations: DragOperations;
   let mockBlockManager: {
+    blocks: Block[];
     getBlockIndex: (block: Block) => number;
     getBlockByIndex: (index: number) => Block | undefined;
-    move: (toIndex: number, fromIndex: number, needToFocus: boolean) => void;
+    move: (
+      toIndex: number,
+      fromIndex: number,
+      needToFocus: boolean,
+      skipMovedHook?: boolean
+    ) => void;
     insert: (config: {
       tool: string;
       data: Record<string, unknown>;
@@ -36,6 +42,7 @@ describe('DragOperations', () => {
     vi.clearAllMocks();
 
     mockBlockManager = {
+      blocks: [],
       getBlockIndex: vi.fn(),
       getBlockByIndex: vi.fn(),
       move: vi.fn(),
@@ -54,6 +61,40 @@ describe('DragOperations', () => {
     operations = new DragOperations(mockBlockManager, mockYjsManager, mockBlockSelection);
   });
 
+  const configureBlockOrder = (blocks: Block[]): void => {
+    mockBlockManager.blocks = [...blocks];
+    mockBlockManager.getBlockIndex = vi.fn(
+      (block: Block) => mockBlockManager.blocks.indexOf(block)
+    );
+    mockBlockManager.getBlockByIndex = vi.fn(
+      (index: number) => mockBlockManager.blocks[index]
+    );
+    mockBlockManager.move = vi.fn((toIndex: number, fromIndex: number): void => {
+      const [block] = mockBlockManager.blocks.splice(fromIndex, 1);
+
+      mockBlockManager.blocks.splice(toIndex, 0, block);
+
+      const blockIndex = mockBlockManager.blocks.indexOf(block);
+      const nestedBlocks = mockBlockManager.blocks.filter(
+        (candidate, index) =>
+          index !== blockIndex && block.holder.contains(candidate.holder)
+      );
+
+      if (nestedBlocks.length === 0) {
+        return;
+      }
+
+      nestedBlocks
+        .map(candidate => mockBlockManager.blocks.indexOf(candidate))
+        .sort((left, right) => right - left)
+        .forEach(index => mockBlockManager.blocks.splice(index, 1));
+
+      const settledBlockIndex = mockBlockManager.blocks.indexOf(block);
+
+      mockBlockManager.blocks.splice(settledBlockIndex + 1, 0, ...nestedBlocks);
+    });
+  };
+
   describe('constructor', () => {
     it('should initialize with adapters', () => {
       expect(operations).toBeInstanceOf(DragOperations);
@@ -68,18 +109,10 @@ describe('DragOperations', () => {
   describe('moveBlocks - single block', () => {
     it('should move block to bottom of target', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
+      const middleBlock = createMockBlock('middle', 'paragraph', { text: 'middle' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
-      let sourceIndex = 0;
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === sourceBlock) return sourceIndex;
-        if (block === targetBlock) return 2;
-
-        return -1;
-      });
-      mockBlockManager.move = vi.fn((toIndex) => {
-        sourceIndex = toIndex;
-      });
+      configureBlockOrder([sourceBlock, middleBlock, targetBlock]);
 
       const result = operations.moveBlocks([sourceBlock], targetBlock, 'bottom');
 
@@ -93,17 +126,18 @@ describe('DragOperations', () => {
     it('should move block to top of target', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
-      let sourceIndex = 5;
+      const fillers = ['a', 'b', 'c', 'd'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === sourceBlock) return sourceIndex;
-        if (block === targetBlock) return 2;
-
-        return -1;
-      });
-      mockBlockManager.move = vi.fn((toIndex) => {
-        sourceIndex = toIndex;
-      });
+      configureBlockOrder([
+        fillers[0],
+        fillers[1],
+        targetBlock,
+        fillers[2],
+        fillers[3],
+        sourceBlock,
+      ]);
 
       const result = operations.moveBlocks([sourceBlock], targetBlock, 'top');
 
@@ -116,12 +150,11 @@ describe('DragOperations', () => {
     it('should not reorder the flat array if position unchanged', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      const fillers = ['a', 'b'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === sourceBlock) return 2;
-        if (block === targetBlock) return 3;
-        return -1;
-      });
+      configureBlockOrder([...fillers, sourceBlock, targetBlock]);
 
       const result = operations.moveBlocks([sourceBlock], targetBlock, 'top');
 
@@ -142,12 +175,11 @@ describe('DragOperations', () => {
     it('should still fire the moved() hook when position is unchanged (depth-only drop)', () => {
       const sourceBlock = createMockBlock('source', 'list', { text: 'source' });
       const targetBlock = createMockBlock('target', 'list', { text: 'target' });
+      const fillers = ['a', 'b'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === sourceBlock) return 2;
-        if (block === targetBlock) return 3;
-        return -1;
-      });
+      configureBlockOrder([...fillers, sourceBlock, targetBlock]);
 
       operations.moveBlocks([sourceBlock], targetBlock, 'top');
 
@@ -162,17 +194,243 @@ describe('DragOperations', () => {
   });
 
   describe('moveBlocks - multiple blocks', () => {
+    it.each([
+      {
+        name: 'single source before target',
+        order: ['S', 'A', 'T', 'B', 'C'],
+        sources: ['S'],
+        expected: ['A', 'T', 'S', 'B', 'C'],
+        expectedIndex: 2,
+      },
+      {
+        name: 'single source after target',
+        order: ['A', 'T', 'B', 'S', 'C'],
+        sources: ['S'],
+        expected: ['A', 'T', 'S', 'B', 'C'],
+        expectedIndex: 2,
+      },
+      {
+        name: 'multiple sources before target',
+        order: ['S1', 'S2', 'A', 'T', 'B', 'C'],
+        sources: ['S1', 'S2'],
+        expected: ['A', 'T', 'S1', 'S2', 'B', 'C'],
+        expectedIndex: 2,
+      },
+      {
+        name: 'multiple sources after target',
+        order: ['A', 'T', 'B', 'S1', 'S2', 'C'],
+        sources: ['S1', 'S2'],
+        expected: ['A', 'T', 'S1', 'S2', 'B', 'C'],
+        expectedIndex: 2,
+      },
+      {
+        name: 'single source before bottom-most target',
+        order: ['S', 'A', 'B', 'T'],
+        sources: ['S'],
+        expected: ['A', 'B', 'T', 'S'],
+        expectedIndex: 3,
+      },
+      {
+        name: 'multiple sources before bottom-most target',
+        order: ['S1', 'S2', 'A', 'T'],
+        sources: ['S1', 'S2'],
+        expected: ['A', 'T', 'S1', 'S2'],
+        expectedIndex: 2,
+      },
+      {
+        name: 'non-contiguous sources spanning the target',
+        order: ['S1', 'A', 'T', 'B', 'S2', 'C'],
+        sources: ['S1', 'S2'],
+        expected: ['A', 'T', 'S1', 'S2', 'B', 'C'],
+        expectedIndex: 2,
+      },
+    ])('preserves order and returns the final first index for $name', ({ order, sources, expected, expectedIndex }) => {
+      const byId = new Map(
+        order.map(id => [id, createMockBlock(id, 'paragraph', { text: id })])
+      );
+      const blocks = order.map(id => byId.get(id)!);
+      const arrayManager = {
+        blocks,
+        getBlockIndex: (block: Block): number => blocks.indexOf(block),
+        getBlockByIndex: (index: number): Block | undefined => blocks[index],
+        move: vi.fn((toIndex: number, fromIndex: number): void => {
+          const [block] = blocks.splice(fromIndex, 1);
+
+          blocks.splice(toIndex, 0, block);
+        }),
+        insert: vi.fn(),
+      };
+      const arrayOperations = new DragOperations(
+        arrayManager,
+        mockYjsManager,
+        mockBlockSelection
+      );
+
+      const result = arrayOperations.moveBlocks(
+        sources.map(id => byId.get(id)!),
+        byId.get('T')!,
+        'bottom'
+      );
+
+      expect(blocks.map(block => block.id)).toEqual(expected);
+      expect(result.targetIndex).toBe(expectedIndex);
+      expect(result.movedBlocks[0]?.id).toBe(sources[0]);
+    });
+
+    it('preserves non-contiguous source order above the target', () => {
+      const byId = new Map(
+        ['S1', 'A', 'T', 'B', 'S2', 'C'].map(id => [
+          id,
+          createMockBlock(id, 'paragraph', { text: id }),
+        ])
+      );
+
+      configureBlockOrder(
+        ['S1', 'A', 'T', 'B', 'S2', 'C'].map(id => byId.get(id)!)
+      );
+
+      const result = operations.moveBlocks(
+        [byId.get('S1')!, byId.get('S2')!],
+        byId.get('T')!,
+        'top'
+      );
+
+      expect(mockBlockManager.blocks.map(block => block.id)).toEqual([
+        'A',
+        'S1',
+        'S2',
+        'T',
+        'B',
+        'C',
+      ]);
+      expect(result.targetIndex).toBe(1);
+    });
+
+    it('moves variable-width nested root subtrees as ordered units', () => {
+      const root1 = createMockBlock('root-1', 'toggle', { text: 'root 1' });
+      const child1 = createMockBlock('child-1', 'paragraph', { text: 'child 1' }, [], root1.id);
+      const root2 = createMockBlock('root-2', 'toggle', { text: 'root 2' });
+      const child2 = createMockBlock('child-2', 'toggle', { text: 'child 2' }, [], root2.id);
+      const grandchild2 = createMockBlock(
+        'grandchild-2',
+        'paragraph',
+        { text: 'grandchild 2' },
+        [],
+        child2.id
+      );
+      const before = createMockBlock('before', 'paragraph', { text: 'before' });
+      const target = createMockBlock('target', 'paragraph', { text: 'target' });
+      const after = createMockBlock('after', 'paragraph', { text: 'after' });
+      const tail = createMockBlock('tail', 'paragraph', { text: 'tail' });
+
+      root1.contentIds = [child1.id];
+      root1.holder.appendChild(child1.holder);
+      root2.contentIds = [child2.id];
+      child2.contentIds = [grandchild2.id];
+      root2.holder.appendChild(child2.holder);
+      child2.holder.appendChild(grandchild2.holder);
+
+      const sources = [root1, child1, root2, child2, grandchild2];
+
+      configureBlockOrder([
+        root1,
+        child1,
+        before,
+        target,
+        after,
+        root2,
+        child2,
+        grandchild2,
+        tail,
+      ]);
+
+      const result = operations.moveBlocks(sources, target, 'bottom');
+
+      expect(mockBlockManager.blocks.map(block => block.id)).toEqual([
+        'before',
+        'target',
+        'root-1',
+        'child-1',
+        'root-2',
+        'child-2',
+        'grandchild-2',
+        'after',
+        'tail',
+      ]);
+      expect(mockBlockManager.move).toHaveBeenCalledTimes(2);
+      expect(result.targetIndex).toBe(2);
+      sources.forEach(block => {
+        expect(block.call).toHaveBeenCalledWith(
+          BlockToolAPI.MOVED,
+          expect.objectContaining({ isGroupMove: true })
+        );
+      });
+    });
+
+    it('moves flat structural descendants explicitly when their holders are siblings', () => {
+      const root = createMockBlock('root', 'list', { text: 'root' });
+      const child = createMockBlock('child', 'list', { text: 'child' }, [], root.id);
+      const before = createMockBlock('before', 'paragraph', { text: 'before' });
+      const target = createMockBlock('target', 'paragraph', { text: 'target' });
+      const after = createMockBlock('after', 'paragraph', { text: 'after' });
+
+      root.contentIds = [child.id];
+      configureBlockOrder([root, child, before, target, after]);
+
+      const result = operations.moveBlocks([root, child], target, 'bottom');
+
+      expect(mockBlockManager.blocks.map(block => block.id)).toEqual([
+        'before',
+        'target',
+        'root',
+        'child',
+        'after',
+      ]);
+      expect(mockBlockManager.move).toHaveBeenCalledTimes(2);
+      expect(result.targetIndex).toBe(2);
+    });
+
+    it('keeps an already-settled bottom-edge move as a lifecycle-only no-op', () => {
+      const target = createMockBlock('target', 'paragraph', { text: 'target' });
+      const source = createMockBlock('source', 'list', { text: 'source' });
+      const tail = createMockBlock('tail', 'paragraph', { text: 'tail' });
+
+      configureBlockOrder([target, source, tail]);
+
+      const result = operations.moveBlocks([source], target, 'bottom');
+
+      expect(mockBlockManager.move).not.toHaveBeenCalled();
+      expect(source.call).toHaveBeenCalledWith(BlockToolAPI.MOVED, {
+        fromIndex: 1,
+        toIndex: 1,
+      });
+      expect(result.targetIndex).toBe(1);
+    });
+
+    it('rejects a target carried inside the selected root subtree', () => {
+      const root = createMockBlock('root', 'toggle', { text: 'root' });
+      const target = createMockBlock('target', 'paragraph', { text: 'target' }, [], root.id);
+
+      root.contentIds = [target.id];
+      root.holder.appendChild(target.holder);
+      configureBlockOrder([root, target]);
+
+      const result = operations.moveBlocks([root], target, 'bottom');
+
+      expect(mockBlockManager.move).not.toHaveBeenCalled();
+      expect(root.call).not.toHaveBeenCalled();
+      expect(result).toEqual({ movedBlocks: [], targetIndex: -1 });
+    });
+
     it('should move multiple blocks down', () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
       const block2 = createMockBlock('block-2', 'paragraph', { text: '2' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      const fillers = ['a', 'b'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === block1) return 0;
-        if (block === block2) return 1;
-        if (block === targetBlock) return 4;
-        return -1;
-      });
+      configureBlockOrder([block1, block2, ...fillers, targetBlock]);
 
       const result = operations.moveBlocks(
         [block1, block2],
@@ -187,20 +445,26 @@ describe('DragOperations', () => {
       // moveMultipleBlocks must NOT open its own nested transactMoves.
       expect(mockYjsManager.transactMoves).not.toHaveBeenCalled();
       expect(result.movedBlocks).toEqual([block1, block2]);
-      expect(result.targetIndex).toBe(5);
+      expect(result.targetIndex).toBe(3);
     });
 
     it('should move multiple blocks up', () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
       const block2 = createMockBlock('block-2', 'paragraph', { text: '2' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      const fillers = ['a', 'b', 'c', 'd'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === block1) return 5;
-        if (block === block2) return 6;
-        if (block === targetBlock) return 2;
-        return -1;
-      });
+      configureBlockOrder([
+        fillers[0],
+        fillers[1],
+        targetBlock,
+        fillers[2],
+        fillers[3],
+        block1,
+        block2,
+      ]);
 
       const result = operations.moveBlocks(
         [block1, block2],
@@ -219,13 +483,19 @@ describe('DragOperations', () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
       const block2 = createMockBlock('block-2', 'paragraph', { text: '2' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      const fillers = ['a', 'b', 'c', 'd'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === block1) return 5;
-        if (block === block2) return 6;
-        if (block === targetBlock) return 2;
-        return -1;
-      });
+      configureBlockOrder([
+        fillers[0],
+        fillers[1],
+        targetBlock,
+        fillers[2],
+        fillers[3],
+        block1,
+        block2,
+      ]);
 
       operations.moveBlocks([block1, block2], targetBlock, 'top');
 
@@ -244,13 +514,11 @@ describe('DragOperations', () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
       const block2 = createMockBlock('block-2', 'paragraph', { text: '2' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      const fillers = ['a', 'b'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === block1) return 0;
-        if (block === block2) return 1;
-        if (block === targetBlock) return 4;
-        return -1;
-      });
+      configureBlockOrder([block1, block2, ...fillers, targetBlock]);
 
       operations.moveBlocks([block1, block2], targetBlock, 'bottom');
 
@@ -573,12 +841,12 @@ describe('DragOperations', () => {
 
       // sourceBlock was replaced mid-drag (Yjs sync / conversion / update).
       // getBlockIndex returns -1 for the stale reference; target is healthy.
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === staleSource) return -1;
-        if (block === targetBlock) return 3;
-
-        return -1;
-      });
+      configureBlockOrder([
+        createMockBlock('a', 'paragraph', { text: 'a' }),
+        createMockBlock('b', 'paragraph', { text: 'b' }),
+        createMockBlock('c', 'paragraph', { text: 'c' }),
+        targetBlock,
+      ]);
 
       const result = operations.moveBlocks([staleSource], targetBlock, 'bottom');
 
@@ -593,12 +861,11 @@ describe('DragOperations', () => {
       const sourceBlock = createMockBlock('source', 'paragraph', { text: 'source' });
       const staleTarget = createMockBlock('stale-target', 'paragraph', { text: 'stale' });
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === sourceBlock) return 2;
-        if (block === staleTarget) return -1;
-
-        return -1;
-      });
+      configureBlockOrder([
+        createMockBlock('a', 'paragraph', { text: 'a' }),
+        createMockBlock('b', 'paragraph', { text: 'b' }),
+        sourceBlock,
+      ]);
 
       const result = operations.moveBlocks([sourceBlock], staleTarget, 'top');
 
@@ -611,13 +878,13 @@ describe('DragOperations', () => {
       const staleBlock = createMockBlock('stale', 'paragraph', { text: 'stale' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === block1) return 0;
-        if (block === staleBlock) return -1;
-        if (block === targetBlock) return 4;
-
-        return -1;
-      });
+      configureBlockOrder([
+        block1,
+        createMockBlock('a', 'paragraph', { text: 'a' }),
+        createMockBlock('b', 'paragraph', { text: 'b' }),
+        createMockBlock('c', 'paragraph', { text: 'c' }),
+        targetBlock,
+      ]);
 
       const result = operations.moveBlocks([block1, staleBlock], targetBlock, 'bottom');
 
@@ -755,13 +1022,11 @@ describe('DragOperations', () => {
       const block1 = createMockBlock('block-1', 'paragraph', { text: '1' });
       const block2 = createMockBlock('block-2', 'paragraph', { text: '2' });
       const targetBlock = createMockBlock('target', 'paragraph', { text: 'target' });
+      const fillers = ['a', 'b'].map(id =>
+        createMockBlock(id, 'paragraph', { text: id })
+      );
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === block1) return 0;
-        if (block === block2) return 1;
-        if (block === targetBlock) return 4;
-        return -1;
-      });
+      configureBlockOrder([block1, block2, ...fillers, targetBlock]);
 
       const result = ops.moveBlocks([block1, block2], targetBlock, 'bottom');
 
@@ -769,7 +1034,7 @@ describe('DragOperations', () => {
       expect(mockBlockManager.move).toHaveBeenCalledWith(4, 1, false, true);
       expect(mockBlockManager.move).toHaveBeenCalledWith(3, 0, false, true);
       expect(result.movedBlocks).toEqual([block1, block2]);
-      expect(result.targetIndex).toBe(5);
+      expect(result.targetIndex).toBe(3);
     });
   });
 });

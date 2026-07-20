@@ -39,6 +39,13 @@ describe('DragA11y', () => {
     a11y = new DragA11y(mockBlockManager, mockI18n, mockAnnouncer);
   });
 
+  const setBlockOrder = (...blocks: Block[]): void => {
+    mockBlockManager.blocks = blocks;
+    mockBlockManager.getBlockIndex = vi.fn(
+      (block: Block) => mockBlockManager.blocks.indexOf(block)
+    );
+  };
+
   afterEach(() => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
@@ -51,12 +58,113 @@ describe('DragA11y', () => {
   });
 
   describe('announceDropPosition', () => {
-    it('should announce drop position with throttling', () => {
-      const targetBlock = createMockBlock('target');
-      mockBlockManager.getBlockIndex = vi.fn(() => 2);
-      mockBlockManager.blocks = [targetBlock as Block];
+    it.each([
+      {
+        name: 'single source before target',
+        order: ['S', 'A', 'T', 'B', 'C'],
+        sources: ['S'],
+        expectedPosition: 3,
+      },
+      {
+        name: 'single source after target',
+        order: ['A', 'T', 'B', 'S', 'C'],
+        sources: ['S'],
+        expectedPosition: 3,
+      },
+      {
+        name: 'multiple sources before target',
+        order: ['S1', 'S2', 'A', 'T', 'B', 'C'],
+        sources: ['S1', 'S2'],
+        expectedPosition: 3,
+      },
+      {
+        name: 'multiple sources after target',
+        order: ['A', 'T', 'B', 'S1', 'S2', 'C'],
+        sources: ['S1', 'S2'],
+        expectedPosition: 3,
+      },
+      {
+        name: 'single source before bottom-most target',
+        order: ['S', 'A', 'B', 'T'],
+        sources: ['S'],
+        expectedPosition: 4,
+      },
+      {
+        name: 'multiple sources before bottom-most target',
+        order: ['S1', 'S2', 'A', 'T'],
+        sources: ['S1', 'S2'],
+        expectedPosition: 3,
+      },
+    ])('announces the eventual first moved position for $name', ({ order, sources, expectedPosition }) => {
+      const byId = new Map(order.map(id => [id, createMockBlock(id) as Block]));
 
-      a11y.announceDropPosition(targetBlock as Block, 'bottom');
+      mockBlockManager.blocks = order.map(id => byId.get(id)!);
+      mockBlockManager.getBlockIndex = vi.fn(
+        (block: Block) => mockBlockManager.blocks.indexOf(block)
+      );
+
+      a11y.announceDropPosition(
+        byId.get('T')!,
+        'bottom',
+        sources.map(id => byId.get(id)!)
+      );
+      vi.advanceTimersByTime(300);
+
+      expect(mockI18n.t).toHaveBeenCalledWith('a11y.dropPosition', {
+        position: expectedPosition,
+        total: order.length,
+      });
+      expect(a11y.getLastAnnouncedIndex()).toBe(expectedPosition - 1);
+    });
+
+    it('keeps the raw insertion position for duplicate previews because sources are not removed', () => {
+      const source = createMockBlock('source') as Block;
+      const target = createMockBlock('target') as Block;
+
+      mockBlockManager.blocks = [source, target];
+      mockBlockManager.getBlockIndex = vi.fn(
+        (block: Block) => mockBlockManager.blocks.indexOf(block)
+      );
+
+      a11y.announceDropPosition(target, 'bottom', [source], true);
+      vi.advanceTimersByTime(300);
+
+      expect(mockI18n.t).toHaveBeenCalledWith('a11y.dropPosition', {
+        position: 3,
+        total: 3,
+      });
+    });
+
+    it('does not announce a duplicate preview when a source is stale', () => {
+      const staleSource = createMockBlock('stale-source') as Block;
+      const target = createMockBlock('target') as Block;
+
+      setBlockOrder(target);
+      a11y.announceDropPosition(target, 'bottom', [staleSource], true);
+      vi.advanceTimersByTime(300);
+
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+      expect(mockI18n.t).not.toHaveBeenCalled();
+    });
+
+    it('does not announce a duplicate preview for an empty source group', () => {
+      const target = createMockBlock('target') as Block;
+
+      setBlockOrder(target);
+      a11y.announceDropPosition(target, 'bottom', [], true);
+      vi.advanceTimersByTime(300);
+
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+      expect(mockI18n.t).not.toHaveBeenCalled();
+    });
+
+    it('should announce drop position with throttling', () => {
+      const before1 = createMockBlock('before-1') as Block;
+      const before2 = createMockBlock('before-2') as Block;
+      const targetBlock = createMockBlock('target') as Block;
+
+      setBlockOrder(before1, before2, targetBlock);
+      a11y.announceDropPosition(targetBlock, 'bottom');
 
       // Before throttle timeout, no announcement yet
       expect(mockAnnouncer.announce).not.toHaveBeenCalled();
@@ -65,54 +173,74 @@ describe('DragA11y', () => {
       vi.advanceTimersByTime(300);
 
       expect(mockAnnouncer.announce).toHaveBeenCalledWith(
-        'a11y.dropPosition:{"position":4,"total":1}',
+        'a11y.dropPosition:{"position":4,"total":3}',
         { politeness: 'polite' }
       );
     });
 
     it('should not announce same position twice', () => {
-      const targetBlock = createMockBlock('target');
-      mockBlockManager.getBlockIndex = vi.fn(() => 2);
-      mockBlockManager.blocks = [targetBlock as Block];
+      const targetBlock = createMockBlock('target') as Block;
 
-      a11y.announceDropPosition(targetBlock as Block, 'bottom');
+      setBlockOrder(
+        createMockBlock('before-1') as Block,
+        createMockBlock('before-2') as Block,
+        targetBlock
+      );
+      a11y.announceDropPosition(targetBlock, 'bottom');
       vi.advanceTimersByTime(300);
       vi.clearAllMocks();
 
       // Same position again
-      a11y.announceDropPosition(targetBlock as Block, 'bottom');
+      a11y.announceDropPosition(targetBlock, 'bottom');
       vi.advanceTimersByTime(300);
 
       expect(mockAnnouncer.announce).not.toHaveBeenCalled();
     });
 
     it('should calculate correct drop index for top edge', () => {
-      const targetBlock = createMockBlock('target');
-      mockBlockManager.getBlockIndex = vi.fn(() => 2);
-      mockBlockManager.blocks = [targetBlock as Block];
+      const targetBlock = createMockBlock('target') as Block;
 
-      a11y.announceDropPosition(targetBlock as Block, 'top');
+      setBlockOrder(
+        createMockBlock('before-1') as Block,
+        createMockBlock('before-2') as Block,
+        targetBlock
+      );
+      a11y.announceDropPosition(targetBlock, 'top');
       vi.advanceTimersByTime(300);
 
       expect(mockAnnouncer.announce).toHaveBeenCalledWith(
-        'a11y.dropPosition:{"position":3,"total":1}',
+        'a11y.dropPosition:{"position":3,"total":3}',
         { politeness: 'polite' }
       );
     });
 
     it('should calculate correct drop index for bottom edge', () => {
-      const targetBlock = createMockBlock('target');
-      mockBlockManager.getBlockIndex = vi.fn(() => 2);
-      mockBlockManager.blocks = [targetBlock as Block];
+      const targetBlock = createMockBlock('target') as Block;
 
-      a11y.announceDropPosition(targetBlock as Block, 'bottom');
+      setBlockOrder(
+        createMockBlock('before-1') as Block,
+        createMockBlock('before-2') as Block,
+        targetBlock
+      );
+      a11y.announceDropPosition(targetBlock, 'bottom');
       vi.advanceTimersByTime(300);
 
       // targetIndex 2 + 1 = 3, position is 3 + 1 = 4
       expect(mockI18n.t).toHaveBeenCalledWith('a11y.dropPosition', {
         position: 4,
-        total: 1,
+        total: 3,
       });
+    });
+
+    it('does not announce a stale target that is no longer in the block array', () => {
+      const staleTarget = createMockBlock('stale-target') as Block;
+
+      setBlockOrder(createMockBlock('live') as Block);
+      a11y.announceDropPosition(staleTarget, 'top');
+      vi.advanceTimersByTime(300);
+
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+      expect(mockI18n.t).not.toHaveBeenCalled();
     });
 
     it('should throttle rapid position changes', () => {
@@ -201,37 +329,44 @@ describe('DragA11y', () => {
     });
 
     it('should handle position changes after timeout', () => {
-      const targetBlock1 = createMockBlock('target1');
-      const targetBlock2 = createMockBlock('target2');
+      const targetBlock1 = createMockBlock('target1') as Block;
+      const middleBlock = createMockBlock('middle') as Block;
+      const targetBlock2 = createMockBlock('target2') as Block;
 
-      mockBlockManager.getBlockIndex = vi.fn((block) => {
-        if (block === targetBlock1) return 0;
-        if (block === targetBlock2) return 2;
-        return -1;
-      });
-      mockBlockManager.blocks = [targetBlock1 as Block, targetBlock2 as Block];
+      setBlockOrder(targetBlock1, middleBlock, targetBlock2);
 
       // First announcement
-      a11y.announceDropPosition(targetBlock1 as Block, 'top');
+      a11y.announceDropPosition(targetBlock1, 'top');
       vi.advanceTimersByTime(300);
 
       expect(mockAnnouncer.announce).toHaveBeenCalledWith(
-        'a11y.dropPosition:{"position":1,"total":2}',
+        'a11y.dropPosition:{"position":1,"total":3}',
         { politeness: 'polite' }
       );
 
       // Second announcement after first completed
-      a11y.announceDropPosition(targetBlock2 as Block, 'bottom');
+      a11y.announceDropPosition(targetBlock2, 'bottom');
       vi.advanceTimersByTime(300);
 
       expect(mockAnnouncer.announce).toHaveBeenCalledWith(
-        'a11y.dropPosition:{"position":4,"total":2}',
+        'a11y.dropPosition:{"position":4,"total":3}',
         { politeness: 'polite' }
       );
     });
   });
 
   describe('announceDropPosition - column drops', () => {
+    it('does not announce a column drop for a stale target', () => {
+      const staleTarget = createMockBlock('stale-target') as Block;
+
+      setBlockOrder(createMockBlock('live') as Block);
+      a11y.announceDropPosition(staleTarget, 'left');
+      vi.advanceTimersByTime(300);
+
+      expect(mockAnnouncer.announce).not.toHaveBeenCalled();
+      expect(mockI18n.t).not.toHaveBeenCalled();
+    });
+
     it('should announce creating a column to the left, throttled', () => {
       const targetBlock = createMockBlock('target');
       mockBlockManager.getBlockIndex = vi.fn(() => 1);
@@ -402,11 +537,14 @@ describe('DragA11y', () => {
     });
 
     it('should return last announced index after announcement', () => {
-      const targetBlock = createMockBlock('target');
-      mockBlockManager.getBlockIndex = vi.fn(() => 2);
-      mockBlockManager.blocks = [targetBlock as Block];
+      const targetBlock = createMockBlock('target') as Block;
 
-      a11y.announceDropPosition(targetBlock as Block, 'bottom');
+      setBlockOrder(
+        createMockBlock('before-1') as Block,
+        createMockBlock('before-2') as Block,
+        targetBlock
+      );
+      a11y.announceDropPosition(targetBlock, 'bottom');
       vi.advanceTimersByTime(300);
 
       // dropIndex = 2 + 1 = 3

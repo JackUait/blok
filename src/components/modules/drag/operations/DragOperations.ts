@@ -4,6 +4,8 @@
 
 import { BlockToolAPI } from '../../../block';
 import type { Block } from '../../../block';
+import { resolveMoveDestination } from '../utils/moveDestination';
+import type { MoveDestination } from '../utils/moveDestination';
 
 export interface MoveResult {
   movedBlocks: Block[];
@@ -35,6 +37,7 @@ export interface DuplicatePreparation {
 }
 
 export interface BlockManagerAdapter {
+  blocks: Block[];
   getBlockIndex(block: Block): number;
   getBlockByIndex(index: number): Block | undefined;
   move(toIndex: number, fromIndex: number, needToFocus: boolean, skipMovedHook?: boolean): void;
@@ -85,29 +88,26 @@ export class DragOperations {
     targetBlock: Block,
     edge: 'top' | 'bottom'
   ): MoveResult {
-    // Stale-reference guard: if any source or the target has been replaced
-    // mid-drag (Yjs remote update, blockManager.update, tool conversion),
-    // getBlockIndex returns -1. Calling blockManager.move(N, -1) would invoke
-    // Array.splice(-1, 1), which removes the LAST block in the array — this
-    // is the root cause of the "completely unrelated block dropped" bug.
-    // Abort cleanly instead of silently moving the wrong block.
-    if (this.blockManager.getBlockIndex(targetBlock) === -1) {
+    const hasStaleParticipant =
+      this.blockManager.getBlockIndex(targetBlock) === -1
+      || sourceBlocks.some(block => this.blockManager.getBlockIndex(block) === -1);
+
+    if (hasStaleParticipant) {
       return { movedBlocks: [], targetIndex: -1 };
     }
 
-    const hasStaleSource = sourceBlocks.some(
-      (block) => this.blockManager.getBlockIndex(block) === -1
+    const destination = resolveMoveDestination(
+      this.blockManager.blocks,
+      sourceBlocks,
+      targetBlock,
+      edge
     );
 
-    if (hasStaleSource) {
+    if (destination === null) {
       return { movedBlocks: [], targetIndex: -1 };
     }
 
-    if (sourceBlocks.length === 1) {
-      return this.moveSingleBlock(sourceBlocks[0], targetBlock, edge);
-    }
-
-    return this.moveMultipleBlocks(sourceBlocks, targetBlock, edge);
+    return this.applyMoveDestination(sourceBlocks, targetBlock, edge, destination);
   }
 
   /**
@@ -308,178 +308,79 @@ export class DragOperations {
   }
 
   /**
-   * Moves a single block to a new position
+   * Applies a precomputed move by anchoring every source root to the live
+   * target. Re-reading the target index after each move is what keeps
+   * non-contiguous selections and variable-width nested subtrees ordered.
    */
-  private moveSingleBlock(
-    sourceBlock: Block,
-    targetBlock: Block,
-    edge: 'top' | 'bottom'
-  ): MoveResult {
-    const fromIndex = this.blockManager.getBlockIndex(sourceBlock);
-    const targetIndex = this.blockManager.getBlockIndex(targetBlock);
-
-    // Calculate the new index based on drop position
-    const baseIndex = edge === 'top' ? targetIndex : targetIndex + 1;
-
-    // Adjust index if moving from before the target
-    const toIndex = fromIndex < baseIndex ? baseIndex - 1 : baseIndex;
-
-    // Position unchanged: the source is dropped at the slot it already occupies
-    // (e.g. a list item dropped at the end of a nested sub-list it already
-    // follows). Skip the flat-array reorder — there is nothing to move — but
-    // STILL fire the moved() hook so tools that derive state from their
-    // neighbours can react. List items recompute their depth only in moved(); on
-    // a same-position drop the depth must still update to nest into the sub-list,
-    // otherwise the drop is a silent no-op.
-    if (fromIndex === toIndex) {
-      sourceBlock.call(BlockToolAPI.MOVED, { fromIndex, toIndex });
-
-      if (this.blockSelection) {
-        this.blockSelection.selectBlock(sourceBlock);
-      }
-
-      return { movedBlocks: [sourceBlock], targetIndex: fromIndex };
-    }
-
-    this.blockManager.move(toIndex, fromIndex, false);
-
-    // After the move, sourceBlock may be at a different index than toIndex
-    // (e.g. if nested blocks were re-sorted). Use sourceBlock directly.
-    const actualIndex = this.blockManager.getBlockIndex(sourceBlock);
-
-    if (!this.blockSelection) {
-      return { movedBlocks: [sourceBlock], targetIndex: actualIndex };
-    }
-
-    this.blockSelection.selectBlock(sourceBlock);
-
-    return { movedBlocks: [sourceBlock], targetIndex: actualIndex };
-  }
-
-  /**
-   * Moves multiple blocks to a new position
-   */
-  private moveMultipleBlocks(
+  private applyMoveDestination(
     sourceBlocks: Block[],
     targetBlock: Block,
-    edge: 'top' | 'bottom'
+    edge: 'top' | 'bottom',
+    destination: MoveDestination
   ): MoveResult {
-    // Sort blocks by current index
-    const sortedBlocks = [...sourceBlocks].sort((a, b) =>
-      this.blockManager.getBlockIndex(a) - this.blockManager.getBlockIndex(b)
+    const sortedBlocks = [...new Set(sourceBlocks)].sort(
+      (left, right) =>
+        this.blockManager.getBlockIndex(left) - this.blockManager.getBlockIndex(right)
     );
-
-    // Calculate target insertion point
-    const targetIndex = this.blockManager.getBlockIndex(targetBlock);
-    const insertIndex = edge === 'top' ? targetIndex : targetIndex + 1;
-
-    // When the move set includes parent-child groups (e.g., table + its cell blocks),
-    // only explicitly move the root blocks (those whose parentId is not another block
-    // in the same set). DOM-nested children follow their parent automatically, and
-    // resortNestedBlocks (called inside blocks.move) re-sorts them in the flat array.
-    const sourceIds = new Set(sourceBlocks.map(b => b.id));
-    const blocksToMove = sortedBlocks.filter(
-      b => b.parentId === null || !sourceIds.has(b.parentId)
+    const originalIndices = new Map(
+      sortedBlocks.map(block => [
+        block,
+        this.blockManager.getBlockIndex(block),
+      ])
     );
+    const rootsInMoveOrder = edge === 'top'
+      ? destination.sourceRoots
+      : [...destination.sourceRoots].reverse();
+    const alreadySettled = destination.footprint.every(
+      (block, offset) =>
+        this.blockManager.blocks[destination.finalFirstIndex + offset] === block
+    );
+    const isGroupMove = sortedBlocks.length > 1;
 
-    // Determine if we're moving blocks up or down
-    const firstBlock = blocksToMove[0] ?? sortedBlocks[0];
-    const firstBlockIndex = this.blockManager.getBlockIndex(firstBlock);
-    const movingDown = insertIndex > firstBlockIndex;
+    if (!alreadySettled) {
+      rootsInMoveOrder.forEach(block => {
+        const fromIndex = this.blockManager.getBlockIndex(block);
+        const liveTargetIndex = this.blockManager.getBlockIndex(targetBlock);
+        const rawInsertionIndex = liveTargetIndex + (edge === 'bottom' ? 1 : 0);
+        const toIndex = fromIndex < rawInsertionIndex
+          ? rawInsertionIndex - 1
+          : rawInsertionIndex;
 
-    // Execute the array moves directly. Do NOT open a transactMoves group here:
-    // the sole caller, DragController.handleDrop, already wraps the entire drop
-    // (these moves AND the subsequent setBlockParent reparent loop) in one
-    // transactMoves. A nested group would close YjsManager.isMoveGroupActive in
-    // its finally before that reparent loop runs, routing setBlockParent onto a
-    // separate Y.UndoManager entry and splitting a drag-reparent into a
-    // two-step undo. Grouping is the caller's responsibility.
-    if (movingDown) {
-      this.moveBlocksDown(blocksToMove, insertIndex);
-    } else {
-      this.moveBlocksUp(blocksToMove, insertIndex);
+        if (fromIndex !== toIndex) {
+          if (isGroupMove) {
+            this.blockManager.move(toIndex, fromIndex, false, true);
+          } else {
+            this.blockManager.move(toIndex, fromIndex, false);
+          }
+        }
+      });
     }
 
-    // Clear selection first, then re-select all moved blocks
-    const blockSelection = this.blockSelection;
-    if (blockSelection) {
-      blockSelection.clearSelection();
+    if (isGroupMove || alreadySettled) {
       sortedBlocks.forEach(block => {
-        blockSelection.selectBlock(block);
+        block.call(BlockToolAPI.MOVED, {
+          fromIndex: originalIndices.get(block) ?? 0,
+          toIndex: this.blockManager.getBlockIndex(block),
+          ...(isGroupMove ? { isGroupMove: true } : {}),
+        });
       });
     }
 
-    return { movedBlocks: sortedBlocks, targetIndex: insertIndex };
-  }
-
-  /**
-   * Moves blocks down (to a higher index)
-   *
-   * Blocks are processed in reverse order so each lands at its exact final position
-   * without index-shifting side-effects. The `moved()` lifecycle hook is suppressed
-   * during the loop because depth-validators in list items read neighbour depths from
-   * the DOM — in intermediate states those neighbours haven't arrived yet, causing
-   * depths to be incorrectly capped. After all blocks are in place the hooks are
-   * re-triggered in document order (parent → children) so each block sees correct
-   * neighbours when it validates.
-   */
-  private moveBlocksDown(sortedBlocks: Block[], insertIndex: number): void {
-    const originalIndices = new Map<Block, number>();
-
-    sortedBlocks.forEach(block => {
-      originalIndices.set(block, this.blockManager.getBlockIndex(block));
-    });
-
-    const reversedBlocks = [...sortedBlocks].reverse();
-
-    reversedBlocks.forEach((block, index) => {
-      const currentIndex = this.blockManager.getBlockIndex(block);
-      const targetPosition = insertIndex - 1 - index;
-
-      this.blockManager.move(targetPosition, currentIndex, false, true);
-    });
-
-    sortedBlocks.forEach(block => {
-      block.call(BlockToolAPI.MOVED, {
-        fromIndex: originalIndices.get(block) ?? 0,
-        toIndex: this.blockManager.getBlockIndex(block),
-        isGroupMove: true,
-      });
-    });
-  }
-
-  /**
-   * Moves blocks up (to a lower index)
-   *
-   * Forward order is used so parent blocks arrive at their target before children,
-   * giving depth-validators the correct predecessor. The `moved()` hook is still
-   * suppressed during the loop and re-triggered afterward for symmetry with
-   * `moveBlocksDown` and to guard against any edge-cases in future reordering.
-   */
-  private moveBlocksUp(sortedBlocks: Block[], baseInsertIndex: number): void {
-    const originalIndices = new Map<Block, number>();
-
-    sortedBlocks.forEach(block => {
-      originalIndices.set(block, this.blockManager.getBlockIndex(block));
-    });
-
-    sortedBlocks.forEach((block, index) => {
-      const currentIndex = this.blockManager.getBlockIndex(block);
-      const targetIndex = baseInsertIndex + index;
-
-      if (currentIndex === targetIndex) {
-        return;
+    if (this.blockSelection) {
+      if (isGroupMove) {
+        this.blockSelection.clearSelection();
       }
 
-      this.blockManager.move(targetIndex, currentIndex, false, true);
-    });
-
-    sortedBlocks.forEach(block => {
-      block.call(BlockToolAPI.MOVED, {
-        fromIndex: originalIndices.get(block) ?? 0,
-        toIndex: this.blockManager.getBlockIndex(block),
-        isGroupMove: true,
+      sortedBlocks.forEach(block => {
+        this.blockSelection?.selectBlock(block);
       });
-    });
+    }
+
+    const firstRoot = destination.sourceRoots[0];
+    const finalFirstIndex = firstRoot === undefined
+      ? -1
+      : this.blockManager.getBlockIndex(firstRoot);
+
+    return { movedBlocks: sortedBlocks, targetIndex: finalFirstIndex };
   }
 }

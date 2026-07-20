@@ -14,6 +14,41 @@ const openAtBody = (opts: Parameters<typeof openLightbox>[0]): (() => void) => o
 const bar = (): HTMLElement => document.body.querySelector('[data-role="lightbox-toolbar"]') as HTMLElement;
 
 describe('openLightbox toolbar', () => {
+  it('copies the origin direction onto the body-mounted dialog with cascade priority', () => {
+    const origin = document.createElement('div');
+
+    origin.style.direction = 'rtl';
+    document.body.appendChild(origin);
+
+    const close = openAtBody({ url: 'https://example.com/pic.jpg', origin });
+    const dialog = document.body.querySelector('.blok-image-lightbox') as HTMLElement;
+
+    expect(dialog).toHaveAttribute('dir', 'rtl');
+    expect(dialog.style.getPropertyValue('direction')).toBe('rtl');
+    expect(dialog.style.getPropertyPriority('direction')).toBe('important');
+    close();
+  });
+
+  it('lets an explicit effective direction override an opposite lightbox origin', () => {
+    const origin = document.createElement('div');
+
+    origin.style.direction = 'rtl';
+    document.body.appendChild(origin);
+
+    const options = {
+      url: 'https://example.com/pic.jpg',
+      origin,
+      direction: 'ltr',
+    } as unknown as Parameters<typeof openLightbox>[0];
+    const close = openAtBody(options);
+    const dialog = document.body.querySelector('.blok-image-lightbox') as HTMLElement;
+
+    expect(dialog).toHaveAttribute('dir', 'ltr');
+    expect(dialog.style.getPropertyValue('direction')).toBe('ltr');
+    expect(dialog.style.getPropertyPriority('direction')).toBe('important');
+    close();
+  });
+
   it('never renders filename label, even when fileName provided', () => {
     const close = openAtBody({ url: 'https://example.com/pic.jpg', fileName: 'photo.jpg' });
     expect(bar().querySelector('.blok-image-lightbox__filename')).toBeNull();

@@ -376,6 +376,203 @@ describe("DragManager - Component Integration", () => {
       // Cleanup
       document.dispatchEvent(createMouseEvent("mouseup"));
     });
+
+    it("does not show a vertical drop indicator inside the moved DOM footprint", () => {
+      const { dragManager, blocks, modules, wrapper } = createDragManager();
+      const sourceBlock = blocks[0];
+      const nestedTarget = blocks[1];
+      const blockSelection = modules.BlockSelection as unknown as {
+        selectedBlocks: Block[];
+      };
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+      sourceBlock.holder.appendChild(nestedTarget.holder);
+
+      sourceBlock.selected = true;
+      blockSelection.selectedBlocks = [sourceBlock];
+
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(nestedTarget.holder);
+      (nestedTarget.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 50, clientY: 225 }),
+      );
+
+      expect(nestedTarget.holder).not.toHaveAttribute("data-drop-indicator");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("does not show a side-drop indicator inside the moved DOM footprint", () => {
+      const { dragManager, blocks, modules, wrapper } = createDragManager();
+      const sourceBlock = blocks[0];
+      const nestedTarget = blocks[1];
+      const blockSelection = modules.BlockSelection as unknown as {
+        selectedBlocks: Block[];
+      };
+
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 1024,
+      });
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+      sourceBlock.holder.appendChild(nestedTarget.holder);
+
+      sourceBlock.selected = true;
+      blockSelection.selectedBlocks = [sourceBlock];
+
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(nestedTarget.holder);
+      (nestedTarget.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 2, clientY: 225 }),
+      );
+
+      expect(nestedTarget.holder).not.toHaveAttribute("data-drop-indicator");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("does not show a side-drop indicator on a logical descendant with a sibling holder", () => {
+      const { dragManager, blocks, modules, wrapper } = createDragManager();
+      const sourceBlock = blocks[0];
+      const childTarget = blocks[1];
+      const blockSelection = modules.BlockSelection as unknown as {
+        selectedBlocks: Block[];
+      };
+
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 1024,
+      });
+      sourceBlock.contentIds = [childTarget.id];
+      (childTarget as unknown as { parentId: string | null }).parentId =
+        sourceBlock.id;
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+
+      sourceBlock.selected = true;
+      blockSelection.selectedBlocks = [sourceBlock];
+
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      vi.mocked(document.elementFromPoint).mockReturnValue(childTarget.holder);
+      (childTarget.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 2, clientY: 225 }),
+      );
+
+      expect(childTarget.holder).not.toHaveAttribute("data-drop-indicator");
+
+      document.dispatchEvent(createMouseEvent("mouseup"));
+    });
+
+    it("does not show a duplicate indicator after a source becomes stale", () => {
+      const { dragManager, blocks, wrapper } = createDragManager();
+      const sourceBlock = blocks[0];
+      const targetBlock = blocks[2];
+
+      document.body.appendChild(wrapper);
+      blocks.forEach(block => wrapper.appendChild(block.holder));
+
+      const dragHandle = document.createElement("div");
+
+      dragManager.setupDragHandle(dragHandle, sourceBlock);
+      dragHandle.dispatchEvent(
+        createMouseEvent("mousedown", { clientX: 100, clientY: 100 }),
+      );
+      document.dispatchEvent(
+        createMouseEvent("mousemove", { clientX: 110, clientY: 100 }),
+      );
+
+      blocks.splice(blocks.indexOf(sourceBlock), 1);
+      vi.mocked(document.elementFromPoint).mockReturnValue(targetBlock.holder);
+      (targetBlock.holder.getBoundingClientRect as Mock).mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 100,
+        width: 100,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => ({}),
+      });
+
+      document.dispatchEvent(
+        createMouseEvent("mousemove", {
+          altKey: true,
+          clientX: 50,
+          clientY: 225,
+        }),
+      );
+
+      expect(targetBlock.holder).not.toHaveAttribute("data-drop-indicator");
+
+      document.dispatchEvent(createMouseEvent("mouseup", { altKey: true }));
+    });
   });
 
   describe("List item drop indicator alignment", () => {
@@ -674,9 +871,9 @@ describe("DragManager - Component Integration", () => {
 
       // Verify the move operation was called with correct parameters
       expect(modules.BlockManager.move).toHaveBeenCalledWith(
-        expect.anything(), // dragged block
-        expect.anything(), // target index
-        expect.anything(), // options
+        2,
+        0,
+        false,
       );
 
       // Verify drag state is cleaned up (observable behavior)
@@ -2776,6 +2973,151 @@ describe("DragManager - Component Integration", () => {
       const childReparent = setBlockParent.mock.calls.find((c) => c[0] === "callout1-child");
 
       expect(childReparent).toBeUndefined();
+    });
+
+    it("does not reparent a DOM-contained child whose legacy parentId is null", () => {
+      const para = createBlockStub({ id: "p1", name: "paragraph", parentId: null });
+      const callout = createBlockStub({
+        id: "callout1",
+        name: "callout",
+        parentId: null,
+      });
+      const child = createBlockStub({
+        id: "callout1-child",
+        name: "paragraph",
+        parentId: null,
+      });
+
+      callout.holder.appendChild(child.holder);
+
+      const allBlocks = [para, callout, child];
+      const setBlockParent = vi.fn();
+      const insert = vi.fn((type: string) => ({
+        id: `${type}-new-${insert.mock.calls.length}`,
+        holder: document.createElement("div"),
+      }));
+      const apiBlocks = {
+        insert,
+        setBlockParent,
+        getById: vi.fn((id: string) => {
+          const block = allBlocks.find(candidate => candidate.id === id);
+
+          return block ? { id: block.id, parentId: block.parentId } : null;
+        }),
+        getBlockIndex: vi.fn((id: string) => {
+          const index = allBlocks.findIndex(block => block.id === id);
+
+          return index === -1 ? undefined : index;
+        }),
+        getChildren: vi.fn(() => []),
+        transact: vi.fn((fn: () => void) => fn()),
+      };
+      const { dragManager } = createDragManager({
+        API: { methods: { blocks: apiBlocks } } as unknown as BlokModules["API"],
+      });
+
+      (
+        dragManager as unknown as {
+          handleColumnDrop: (
+            sourceBlock: Block,
+            sourceBlocks: Block[],
+            targetBlock: Block,
+            edge: "left" | "right",
+            targetParentId: string | null,
+          ) => void;
+        }
+      ).handleColumnDrop(callout, [callout, child], para, "right", null);
+
+      expect(
+        setBlockParent.mock.calls.find(call => call[0] === "callout1")
+      ).toBeDefined();
+      expect(
+        setBlockParent.mock.calls.find(call => call[0] === "callout1-child")
+      ).toBeUndefined();
+    });
+
+    it("does not reparent a dragged grandchild through an unselected logical parent", () => {
+      const para = createBlockStub({ id: "p1", name: "paragraph", parentId: null });
+      const ancestor = createBlockStub({
+        id: "ancestor",
+        name: "callout",
+        parentId: null,
+        contentIds: ["middle"],
+      });
+      const middle = createBlockStub({
+        id: "middle",
+        name: "callout",
+        parentId: "ancestor",
+        contentIds: ["grandchild"],
+      });
+      const grandchild = createBlockStub({
+        id: "grandchild",
+        name: "paragraph",
+        parentId: "middle",
+      });
+      const allBlocks = [para, ancestor, middle, grandchild];
+      const setBlockParent = vi.fn();
+      const insert = vi.fn((type: string) => ({
+        id: `${type}-new-${insert.mock.calls.length}`,
+        holder: document.createElement("div"),
+      }));
+      const apiBlocks = {
+        insert,
+        setBlockParent,
+        getById: vi.fn((id: string) => {
+          const block = allBlocks.find(candidate => candidate.id === id);
+
+          return block ? { id: block.id, parentId: block.parentId } : null;
+        }),
+        getBlockIndex: vi.fn((id: string) => {
+          const index = allBlocks.findIndex(block => block.id === id);
+
+          return index === -1 ? undefined : index;
+        }),
+        getChildren: vi.fn(() => []),
+        transact: vi.fn((fn: () => void) => fn()),
+      };
+      const blockManager = {
+        blocks: allBlocks,
+        getBlockIndex: vi.fn((block: Block) => allBlocks.indexOf(block)),
+        getBlockByIndex: vi.fn((index: number) => allBlocks[index]),
+        getBlockById: vi.fn((id: string) =>
+          allBlocks.find(block => block.id === id)
+        ),
+        move: vi.fn(),
+        insert: vi.fn(),
+        setBlockParent: vi.fn(),
+        setBlockIndent: vi.fn(),
+      };
+      const { dragManager } = createDragManager({
+        API: { methods: { blocks: apiBlocks } } as unknown as BlokModules["API"],
+        BlockManager: blockManager as unknown as BlokModules["BlockManager"],
+      });
+
+      (
+        dragManager as unknown as {
+          handleColumnDrop: (
+            sourceBlock: Block,
+            sourceBlocks: Block[],
+            targetBlock: Block,
+            edge: "left" | "right",
+            targetParentId: string | null,
+          ) => void;
+        }
+      ).handleColumnDrop(
+        ancestor,
+        [ancestor, grandchild],
+        para,
+        "right",
+        null,
+      );
+
+      expect(
+        setBlockParent.mock.calls.find(call => call[0] === "ancestor")
+      ).toBeDefined();
+      expect(
+        setBlockParent.mock.calls.find(call => call[0] === "grandchild")
+      ).toBeUndefined();
     });
   });
 

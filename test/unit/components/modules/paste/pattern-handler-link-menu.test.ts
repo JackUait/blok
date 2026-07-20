@@ -90,6 +90,14 @@ describe('PatternHandler — link paste menu gating', () => {
     expect(pasteMock).not.toHaveBeenCalled();
   });
 
+  it('passes the effective editor direction to the link menu', async () => {
+    const handler = makeHandler({ i18n: { direction: 'rtl' } });
+
+    await handler.handle('https://example.com/article', context);
+
+    expect(menuOpen?.direction).toBe('rtl');
+  });
+
   it('inserts the link immediately so it stays visible while the menu is open', async () => {
     const handler = makeHandler({});
 

@@ -513,7 +513,7 @@
   "tools.video.play": "再生",
   "tools.video.pause": "一時停止",
   "tools.video.seek": "再生位置",
-  "tools.video.seekValueText": "{total}中{current}",
+  "tools.video.seekValueText": "現在：{current}、合計：{total}",
   "tools.video.toggleTimeDisplay": "経過時間と残り時間の表示を切り替える",
   "tools.video.mute": "ミュート",
   "tools.video.unmute": "ミュート解除",

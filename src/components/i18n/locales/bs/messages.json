@@ -305,7 +305,7 @@
   "tools.image.errorUploadFailed": "Otpremanje nije uspjelo",
   "tools.image.errorFileTooLarge": "Slika je prevelika. {size} premašuje ograničenje od {max}.",
   "tools.image.errorUploadFailedTitle": "Otpremanje nije uspjelo",
-  "tools.image.errorSourceOffline": "Izvorna datoteka je možda premještena ili nije na mreži.",
+  "tools.image.errorSourceOffline": "Izvorna datoteka je možda premještena ili više nije dostupna.",
   "tools.image.errorUnavailable": "Slika nije dostupna",
   "tools.image.errorImageFailedToLoad": "Slika se ne može učitati",
   "tools.image.errorDefaultTitle": "Slika se ne može učitati",

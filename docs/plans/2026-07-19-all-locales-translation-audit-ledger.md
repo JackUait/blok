@@ -264,12 +264,12 @@ These rules prevent a machine or reviewer from retaining stale completion:
 
 | Locale | Language/variant | Primary script | Direction | Register | First reviewer | Second reviewer | Structural result | Semantic/style result | Exact-English retention result | Finding IDs | Final status |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `root-amharic_546_current_first` | — | pass | pass | pass | `F-am-001`–`F-am-096` | first-pass-complete |
-| `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-arabic_546_current_first` | — | pass | pass | pass | `F-ar-001`–`F-ar-076`, `F-ar-078` | first-pass-complete |
+| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `root-amharic_546_current_first` | `root-hindi_546_current_second` | pass | pass | pass | `F-am-001`–`F-am-096` | second-pass-complete |
+| `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-arabic_546_current_first` | `root-amharic_546_current_first` | pass | pass | pass | `F-ar-001`–`F-ar-076`, `F-ar-078` | second-pass-complete |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-106` | pending |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-076` | pending |
-| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-danish_546_first_pass` | — | pass | pass | pass | `F-bs-001`–`F-bs-181` | first-pass-complete |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | `root-arabic_546_current_first` | — | pass | pass | pass | `F-bn-001`–`F-bn-076` | first-pass-complete |
+| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | — | — | pending | pending | pending | `F-bs-001`–`F-bs-182` | pending |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | — | — | pending | pending | pending | `F-da-001`–`F-da-088` | pending |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
@@ -290,7 +290,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
-| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | `root-azeri_proposal_challenge` | — | pass | pass | pass | `F-ja-001`, `F-ja-004`–`F-ja-093` | first-pass-complete |
+| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
 | `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001` | pending |
@@ -402,10 +402,10 @@ locale returns to `pending`.
 
 | Locale | First-pass reviewer | First-pass dictionary SHA-256 | Second-pass reviewer | Second-pass dictionary SHA-256 |
 |---|---|---|---|---|
-| `am` | `root-amharic_546_current_first` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` | — | — |
-| `ar` | `root-arabic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` | — | — |
+| `am` | `root-amharic_546_current_first` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` | `root-hindi_546_current_second` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` |
+| `ar` | `root-arabic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` | `root-amharic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` |
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
-| `bs` | `root-danish_546_first_pass` | `sha256:e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc` | — | — |
+| `bn` | `root-arabic_546_current_first` | `sha256:b94739f7fe7e8b624e67f85496fe52c9e9eb07d6ada0c885f5f0723df5458390` | — | — |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
 | `el` | `root-czech_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` | `root-danish_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` |
@@ -414,7 +414,6 @@ locale returns to `pending`.
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
-| `ja` | `root-azeri_proposal_challenge` | `sha256:8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73` | — | — |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -837,7 +836,7 @@ English is `second-pass-complete`.
 
 ## Localized First-Pass Evidence
 
-### Amharic (`am`) — current first pass complete
+### Amharic (`am`) — current second pass complete
 
 Reviewer `wire-database-am-first-545` initially inspected all 545
 English/Amharic pairs in source order, the complete 532+12+1
@@ -1011,7 +1010,36 @@ credit on raw SHA-256
 `70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4`;
 a distinct second pass remains required.
 
-### Arabic (`ar`) — current first pass complete
+Distinct reviewer `root-hindi_546_current_second` then directly reread all
+546 English/Amharic pairs in English insertion order before opening the
+first-pass evidence or ledger dispositions. The second pass independently
+upheld all 96 findings and the complete nine-retention inventory; replayed 38
+placeholder-bearing values with 54 occurrences, 44 aliases in 14 caller
+groups and 48 references, 117 provider compositions, 20 distinct block-color
+titles, three migrations, 80 changed-English rows over 78 keys, and nine
+count templates; and reconstructed the complete 533+12+1 caller partition.
+The remote-resource wording, three settings compositions, duplicate
+destination announcement, drag-handle actions, image-navigation and card
+labels, and video range name all survived explicit caller and linguistic
+challenges. No residual survived.
+
+The sealed second-pass artifact is
+`/tmp/blok-am-546-current-second-pass.json` with SHA-256
+`a2b6cb47cddd420b0b3cccfef39b3b30460e288078f1032cc14c9bd5d55342c9`;
+its canonical payload SHA-256 is
+`189b337b8fe5a9850484e470944737f692d915c90c23622de32dae0faed2e2bf`.
+The read-only builder has SHA-256
+`1d25d0c41cae8571f5a36b9d17e02346094fa2facafe3649e28d53c4fad167a5`;
+the independent read-only validator has SHA-256
+`cbda9fcff8d437687146849a96db6a9454adfcd0c9cd44f68548d5fa167c60f2`
+and freshly replayed 13,389 assertions. Focused policy and caller suites
+passed 3,917 tests, the checker suite passed 88, and the live checker passed
+with only the nine documented exact-English warnings. Both passes bind to
+raw Amharic SHA-256
+`70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4`;
+Amharic is `second-pass-complete`.
+
+### Arabic (`ar`) — current second pass complete
 
 Reviewer `codex-wire-ui-ar-first-545` initially inspected all 545
 English/Arabic pairs in source order, the complete 532+12+1
@@ -1124,6 +1152,39 @@ Fresh checker and 3,793 focused tests also passed. This earns Arabic
 first-pass credit on raw SHA-256
 `c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab`;
 a distinct second pass remains required.
+
+Distinct reviewer `root-amharic_546_current_first` then directly reread all
+546 English/Arabic pairs in six source-order partitions before consulting
+the first-pass evidence. The second pass independently upheld the normalized
+77-finding set (`F-ar-001` through `F-ar-076` plus `F-ar-078`), confirmed
+that no active `F-ar-077` exists, and revalidated all six exact-English
+retentions. Its 463 ordinary pairs, 77 findings, and six retentions partition
+all 546 entries. It also replayed 38 placeholder-bearing values with 54
+occurrences, 44 aliases in 14 caller groups and 48 references, 117 providers,
+20 block-color titles, three migrations, 80 changed-English rows over 78
+keys, and the complete 533+12+1 caller partition. The first-duplicate
+destination wording, drag-handle action, settings compositions, image
+errors/navigation, card menu label, and playback-position range name all
+survived explicit challenges. No residual survived.
+
+The sealed second-pass artifact is
+`/tmp/blok-ar-546-complete-second-pass.json` with SHA-256
+`46f1b3d5d4bfda5f823a61aefe4e74299403bef35cd1981ac379256d77408d32`;
+its canonical payload SHA-256 is
+`e404a2781b92cc422ee813a4fd05deacae8099c5ebeb21c48e4292a147364b3c`.
+The read-only builder has SHA-256
+`aa5eb0615eb97fefecb2f57ae7d3af13971c93ecd9e025e4a32ff21f2a2ecc84`;
+the read-only validator has SHA-256
+`251efae88c2ecec9e208c6cd557dd45bf48156ed5bc0a429f83f01e082521f0d`
+and passed 10,032 assertions at its sealed `d44119a7` evidence revision.
+Later Azerbaijani-only ledger commits advance `master`, so a fresh replay
+correctly stops at the validator's whole-HEAD equality assertion; the sealed
+artifact, payload, builder, validator, English bytes, Arabic bytes, guideline
+bytes, and read-only modes still reproduce exactly, and neither locale file
+changed after the seal. Fresh checker, live checker, policy, and caller gates
+also passed. Both reviews bind to raw Arabic SHA-256
+`c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab`;
+Arabic is `second-pass-complete`.
 
 ### Azerbaijani (`az`) — pending after current-byte residuals
 
@@ -1262,7 +1323,7 @@ the independent second-pass artifact is
 Fresh translation-guideline, block-color, and live translation-checker gates
 pass. The terminal repository-wide gates remain pending.
 
-### Bengali (`bn`) — pending after second-pass residual
+### Bengali (`bn`) — current first pass complete
 
 The current Bengali audit had recorded 68 corrections and four supported
 exact-English retentions before a final count-grammar check found one
@@ -1415,7 +1476,39 @@ corrected raw Bengali dictionary SHA-256 is
 `b94739f7fe7e8b624e67f85496fe52c9e9eb07d6ada0c885f5f0723df5458390`.
 Both complete current-byte passes must restart on those corrected bytes.
 
-### Bosnian (`bs`) — corrected-byte first pass complete
+Reviewer `root-arabic_546_current_first` then restarted at English entry 1
+and directly read all 546 corrected English/Bengali pairs in seven complete
+source-order partitions before consulting prior Bengali evidence. The pass
+independently upheld all 76 findings and the complete four-retention
+inventory. Its mutually exclusive classification is 466 ordinary clean
+pairs, 76 finding-backed pairs, four exact-English retentions, and zero
+residuals. It also replayed all 38 placeholder-bearing values with 54
+occurrences, 44 aliases in 14 caller groups and 48 references, 117 provider
+compositions, 20 block-color titles, three migrations, 80 changed-English
+rows over 78 keys, and the full 533+12+1 caller/source-only/dormant
+partition. The three settings fragments and their read-only, macOS, and
+Windows outputs, drag-handle action, first-duplicate destination, broken
+resource, image-navigation and card-menu roles, video seek label, and compact
+native duplicate labels all survived explicit caller and linguistic
+challenges. No residual survived.
+
+The sealed current-byte first-pass artifact is
+`/tmp/blok-bn-546-current-first-pass.json` with SHA-256
+`06d7ae885fff5d3af3eb3b491e1064caf444571c57aa50c137bb6df9588c40f6`;
+its canonical payload SHA-256 is
+`c1bb3fbba88324b5c0a31ee685a9485d5d395179462854c8557d3d01df08f4a1`.
+The read-only builder has SHA-256
+`0758dd4b1ef6fb6ca2cf5533a32d9e06f61a344b6128463cae8a33e2ba199419`;
+the independent read-only validator has SHA-256
+`af062a55d387f95b0b96f4bda1ea8f4a8d08d3450c6103ab249a3fe566ca0c74`
+and freshly replayed 12,640 assertions. The checker suite passed 88 tests,
+the focused Bengali policy gate passed two, 1,008 caller/source tests passed,
+and the live checker reported all 546 keys with only the four documented
+exact-English warnings. This earns first-pass credit on raw Bengali SHA-256
+`b94739f7fe7e8b624e67f85496fe52c9e9eb07d6ada0c885f5f0723df5458390`;
+a distinct complete second pass remains required.
+
+### Bosnian (`bs`) — pending after second-pass residual
 
 The current 546-key review found three caller-context residuals after the
 earlier Bosnian corpus work. The inline formatter still shared the generic
@@ -1443,6 +1536,25 @@ The complete first-pass artifact is
 This pass binds to corrected raw dictionary SHA-256
 `e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc`;
 Bosnian is `first-pass-complete` pending a distinct complete second pass.
+
+Distinct reviewer `root-arabic_546_current_first` then restarted at English
+entry 1 and directly read all 546 English/Bosnian pairs in source order
+before consulting the first-pass evidence. The attempted second pass found
+one caller-backed residual. `tools.image.errorSourceOffline` is selected only
+after an image resource repeatedly fails to load; that caller cannot know
+that the file is literally “not on the network.” `F-bs-182` replaces `nije
+na mreži` with the established unavailable-state wording `više nije
+dostupna`, covering a moved, removed, denied, or unreachable source without
+inventing a network-location diagnosis.
+
+The attempted pass binds to pre-correction raw Bosnian SHA-256
+`e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc`.
+The focused expectation failed on exactly the recorded old value before
+remediation and passes afterward. The corrected raw Bosnian SHA-256 is
+`cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3`.
+The attempted review earns no pass credit, and the accepted correction
+invalidates the earlier first-pass boundary. Bosnian returns to `pending`;
+both complete passes must restart on the corrected bytes.
 
 ### German (`de`) — current second pass complete
 
@@ -2671,7 +2783,7 @@ bind to raw SHA-256
 `2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e`;
 Italian is therefore `second-pass-complete`.
 
-### Japanese (`ja`) — pending after current remediation
+### Japanese (`ja`) — pending after seek-value residual
 
 The baseline proposal review directly inspected all 546 English/Japanese
 pairs and the complete 533+12+1 caller/source-only/dormant partition. Its
@@ -2791,6 +2903,29 @@ its independent validator passed 6,002 assertions. Japanese is now
 `first-pass-complete` on raw dictionary SHA-256
 `8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73`,
 pending a distinct complete second pass.
+
+Distinct reviewer `root-arabic_546_current_first` then restarted at English
+entry 1 and directly read all 546 English/Japanese pairs before consulting
+the first-pass evidence. The attempted second pass reopened
+`tools.video.seekValueText`. Its caller substitutes formatted current and
+maximum playback times into `aria-valuetext`; the intermediate
+`{total}中{current}` produces terse output such as `2:05中1:05`, where the
+count/ranking construction does not clearly identify either playback value.
+The final `F-ja-083` expectation now renders `現在：1:05、合計：2:05`,
+explicitly identifying the current value first and total second. The
+executable ledger consolidates this superseding correction into the existing
+locale/key row rather than creating a second active finding for the same
+contract.
+
+The attempted review binds to pre-correction raw Japanese SHA-256
+`8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73`.
+The focused `F-ja-083` expectation failed on exactly the intermediate value
+before remediation and passes afterward. The corrected raw Japanese SHA-256
+is
+`62f44a0940208dc3b9954f6bf8d6736577bd37ef2ba529657e0276734e34318f`.
+The attempted review earns no pass credit, and the accepted correction
+invalidates the earlier first-pass boundary. Japanese returns to `pending`;
+both complete passes must restart on the corrected bytes.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -4860,6 +4995,7 @@ follows the global transition rule above.
 | `F-bs-179` | `bs` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Kod"` | `"Umetnuti kod"` | The inline formatter and separate code-block tool exposed the same title. The official [WordPress Bosnian translation catalog](https://translate.wordpress.org/projects/wp/dev/bs/default/export-translations/?format=json) translates “Inline code” as `Umetnuti kod`, which distinguishes the two tools while retaining a two-word toolbox label. | verified |
 | `F-bs-180` | `bs` | `tools.image.navigationControls` | accessibility / navigation relationship | `"Navigacija slikama"` | `"Navigacija između slika"` | This ARIA group contains previous-image and next-image controls. `između slika` states movement among images directly instead of leaving the relationship underspecified. | verified |
 | `F-bs-181` | `bs` | `tools.video.seek` | accessibility / media-control semantics | `"Premotavanje"` | `"Pozicija reprodukcije"` | The value labels a range whose value is the current playback position, not a rewind operation. The [W3C seek-slider pattern](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/) defines that caller contract, and University of Zagreb/SRCE media guidance uses [`pozicija reprodukcije`](https://www.srce.unizg.hr/sites/default/files/edu/multimedia/r701_polaznik.pdf) for the same concept. | verified |
+| `F-bs-182` | `bs` | `tools.image.errorSourceOffline` | natural error copy / resource availability | `"Izvorna datoteka je možda premještena ili nije na mreži."` | `"Izvorna datoteka je možda premještena ili više nije dostupna."` | The broken-image caller knows only that a remote image resource repeatedly failed to load, not that the file is literally “off the network.” The replacement states the user-relevant moved-or-unavailable condition; official regional product copy likewise uses [`više nije dostupna`](https://support.microsoft.com/sr-latn-rs/office/opcija-odbaci-vi%C5%A1e-nije-dostupna-za-pominjanja-i-reakcije-u-oknu-obave%C5%A1tenja-programa-outlook-9f8df9f8-3b4c-4280-9181-038a94bfae65) for an unavailable state. | verified |
 | `F-cs-001` | `cs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Vymazat formátování"` | Microsoft’s Czech Word instructions name the concise command [Vymazat formátování](https://support.microsoft.com/cs-cz/office/form%C3%A1tov%C3%A1n%C3%AD-dokumentu-aplikace-word-fb9ef2d6-e2ad-4721-abc1-55f88864617f). | verified |
 | `F-cs-002` | `cs` | `blockSettings.convertWithChildrenWarning` | number / source synchronization | `"Tento blok obsahuje {count} vnořených bloků. Po převodu budou přesunuty na nejvyšší úroveň. Pokračovat?"` | `"Počet vnořených bloků: {count}. Při převodu tohoto bloku se vnořený obsah přesune na nejvyšší úroveň. Pokračovat?"` | The source count can be singular or plural; label-before-count wording avoids Czech numeral agreement and names the moved content. | verified |
 | `F-cs-003` | `cs` | `tools.marker.textColor` | terminology / source synchronization | `"Písmo"` | `"Barva písma"` | The shared color picker must distinguish font color from the adjacent background mode. | verified |
@@ -5406,7 +5542,7 @@ follows the global transition rule above.
 | `F-ja-080` | `ja` | `tools.embed.openOriginal` | object scope / embed action | `"元のページを開く"` | `"元のコンテンツを開く"` | An embed can represent arbitrary content rather than only a page. Caller contract: [src/tools/link/embed/index.ts](../../src/tools/link/embed/index.ts). | verified |
 | `F-ja-081` | `ja` | `tools.linkPaste.embedAudio` | terminology / provider composition | `"{provider}からオーディオを埋め込む"` | `"{provider}から音声を埋め込む"` | Matches the established audio-tool terminology and remains grammatical for all 26 audio providers. [埋め込み、ブックマーク、リンクメンション — Notion](https://www.notion.com/ja/help/embed-and-connect-other-apps). | verified |
 | `F-ja-082` | `ja` | `tools.video.seek` | accessibility / media terminology | `"シーク"` | `"再生位置"` | The range label should name the controlled playback position rather than expose seek jargon. Caller contract: [src/tools/video/controls.ts](../../src/tools/video/controls.ts). | verified |
-| `F-ja-083` | `ja` | `tools.video.seekValueText` | accessibility / Japanese spacing | `"{total} 中 {current}"` | `"{total}中{current}"` | Preserve the correct Japanese total/current order but remove source-language spaces from the ARIA value text. [動画やチャンネルを共有する — YouTube](https://support.google.com/youtube/answer/57741?hl=ja). | verified |
+| `F-ja-083` | `ja` | `tools.video.seekValueText` | accessibility / runtime value clarity | `"{total} 中 {current}"` | `"現在：{current}、合計：{total}"` | The video seek caller substitutes bare `M:SS` values into `aria-valuetext`. The intermediate no-space correction produced ambiguous count-style speech such as `2:05中1:05`; explicit labels identify the current value first and the total second while preserving both placeholders. This follows the [W3C media seek-slider accessibility contract](https://www.w3.org/WAI/ARIA/apg/patterns/slider/examples/slider-seek/) and Apple’s Japanese distinction between [`現在の再生ヘッド位置` and `合計継続時間`](https://support.apple.com/ja-jp/guide/motion/motnd4ca94f3/mac). | verified |
 | `F-ja-084` | `ja` | `tools.video.toggleTimeDisplay` | accessibility / state completeness | `"時間表示を切り替え"` | `"経過時間と残り時間の表示を切り替える"` | The accessible action must state both elapsed and remaining time states. Caller contract: [src/tools/video/controls.ts](../../src/tools/video/controls.ts). | verified |
 | `F-ja-085` | `ja` | `tools.video.fullscreen` | established full-screen terminology | `"全画面"` | `"全画面表示"` | Use the established Japanese label for the display mode rather than the clipped 全画面 noun. [Surface Hub 2S の通知とクイック操作 — Microsoft](https://support.microsoft.com/ja-jp/surface/notifications-and-quick-actions-on-surface-hub-2s). | verified |
 | `F-ja-086` | `ja` | `tools.video.fullscreenExit` | established full-screen terminology | `"全画面を終了"` | `"全画面表示を終了"` | Use the established Japanese action for leaving full-screen display. [Surface Hub 2S の通知とクイック操作 — Microsoft](https://support.microsoft.com/ja-jp/surface/notifications-and-quick-actions-on-surface-hub-2s). | verified |

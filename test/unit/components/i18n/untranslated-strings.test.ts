@@ -139,6 +139,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Text" is a direct cognate of the English word in German.
     'tools.link.linkText',
   ]),
+  // "OK" is the conventional compact confirmation label in Greek UIs.
+  el: new Set(['notifier.ok']),
   es: new Set([
     'tools.stub.error',
     'tools.table.cellColor',

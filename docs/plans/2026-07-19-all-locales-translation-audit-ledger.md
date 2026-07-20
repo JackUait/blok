@@ -274,7 +274,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-da-546-first-restart` | — | pass | pass | pass | `F-da-001`–`F-da-085` | first-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
-| `el` | Greek | Greek | ltr | to-audit | — | — | pending | pending | pending | `F-el-001` | pending |
+| `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | — | — | pending | pending | pending | `F-el-001`–`F-el-072` | pending |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
@@ -284,13 +284,13 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | — | pass | pass | pass | `F-fr-001`–`F-fr-133` | first-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
-| `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | — | — | pending | pending | pending | `F-hi-001`–`F-hi-079` | pending |
+| `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-czech_546_first_pass` | — | pass | pass | pass | `F-hi-001`–`F-hi-079` | first-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
-| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
+| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | `root-azeri_proposal_challenge` | — | pass | pass | pass | `F-ja-001`, `F-ja-004`–`F-ja-093` | first-pass-complete |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
 | `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001` | pending |
@@ -412,7 +412,9 @@ locale returns to `pending`.
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
 | `fr` | `root-czech_546_first_pass` | `sha256:4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38` | — | — |
+| `hi` | `root-czech_546_first_pass` | `sha256:8e11b2d7043c665a0262c6b8c6d6033144993d63ddf954c7b548181e354b217b` | — | — |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
+| `ja` | `root-azeri_proposal_challenge` | `sha256:8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73` | — | — |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -1471,6 +1473,47 @@ This pass binds to corrected raw dictionary SHA-256
 `ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f`;
 Danish is `first-pass-complete` pending a distinct complete second pass.
 
+### Greek (`el`) — corrected bytes pending current-byte passes
+
+Reviewer `root-danish_546_first_pass` directly reread all 546 English/Greek
+pairs in source order and inspected every caller or documented source-only
+contract. The audit proposed `F-el-002` through `F-el-070` and independently
+revalidated `F-el-001`. It also inventoried all 38 placeholder-bearing values
+with 54 occurrences, 44 aliases in 14 caller groups and 48 references, 117
+provider compositions, 20 block-color command titles, three later migrations,
+80 changed-English rows covering 78 keys, and the complete 533+12+1
+caller/source-only/dormant partition. The 22 exact-English values consist of
+15 genuine untranslated fallbacks covered by findings and the seven supported
+retentions `R-el-001` through `R-el-007`.
+
+The proposal artifact is `/tmp/blok-el-546-first-pass.json` with SHA-256
+`bb664d00da0e6ed963ffd1e415db7829e20bd5a2d0e09ca1b09661189d11ac9e`;
+its independent validator passed. It binds to English SHA-256
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`
+and pre-correction Greek SHA-256
+`cb94d5e5c9dfd8158c6f42410a48e640c8b34bc359bf578fb63cdbd69d41cce6`.
+
+Reviewer `root` then independently challenged all 69 proposals, their caller
+claims, official terminology, accessibility and count behavior, and the
+exact-English inventory. All 69 proposals were accepted without amendment.
+The challenge found two additional residuals. `F-el-071` corrects the
+multi-block duplicate announcement because the caller supplies the first new
+duplicate's destination, not a source position; official Greek product copy
+uses [Θέση έναρξης](https://support.apple.com/el-gr/105033). `F-el-072`
+distinguishes the inline formatter from the separate code-block tool using
+Microsoft's established Greek term
+[Ενσωματωμένος κώδικας](https://learn.microsoft.com/el-gr/contribute/content/code-in-docs).
+The challenge artifact is `/tmp/blok-el-546-proposal-challenge.json` with
+SHA-256
+`1b615b74ad687089e4b8d0a709290639563d8cf50244450412ea9710788604bc`.
+The focused expectations then failed on exactly the 71 recorded old values,
+while the already-remediated `F-el-001` passed. After remediation, all 72
+Greek findings pass. The corrected dictionary changes exactly the 71 expected
+keys, preserves every placeholder multiset, and has exactly the seven
+documented source-equal values. Its raw SHA-256 is
+`b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61`.
+Greek remains `pending` until two fresh complete current-byte passes finish.
+
 ### Spanish (`es`) — current 546-key second pass complete
 
 The current-byte first reviewer inspected and, after applying the closed
@@ -1861,6 +1904,19 @@ Because this correction changes the bytes, the attempted pass does not earn
 first-pass credit and both complete passes must restart on the corrected
 dictionary.
 
+Reviewer `root-czech_546_first_pass` then restarted at entry 1 and directly
+reread all 546 corrected English/Hindi pairs in source order. It independently
+upheld `F-hi-001` through `F-hi-079`, all seven retentions, the complete
+placeholder, alias, provider, block-color, migration, changed-English, and
+533+12+1 caller inventories, and the corrected duplicate destination
+announcement. No residual or uncertainty survived. The current-byte artifact
+is `/tmp/blok-hi-546-first-pass-post-f079-clean.json` with SHA-256
+`c38c530d1580af157d4a4eee3e94ab6fe3c2701bfd1a46346cd9248908c4ceb9`;
+its independent validator passed 3,997 assertions. This review binds to raw
+Hindi dictionary SHA-256
+`8e11b2d7043c665a0262c6b8c6d6033144993d63ddf954c7b548181e354b217b`.
+Hindi is `first-pass-complete` pending a distinct complete second pass.
+
 ### Italian (`it`) — current 546-key first pass complete
 
 The first reviewer inspected 538/538 current Italian values in the shipped
@@ -2188,6 +2244,25 @@ correction and passed afterward; the corrected raw dictionary SHA-256 is
 Because applying this correction changes the dictionary bytes, the attempted
 second pass does not complete the locale and the earlier first-pass credit is
 also reset. Both complete passes must restart on the corrected bytes.
+
+Reviewer `root-azeri_proposal_challenge` then restarted at entry 1 on the
+corrected bytes and directly reread all 546 English/Japanese pairs in source
+order. It independently upheld all 91 current findings and seven retentions,
+including the destination semantics of `F-ja-093`, and revalidated the
+38-value/54-occurrence placeholder inventory, 44 aliases in 14 groups and 48
+references, 117 provider compositions, 20 block-color titles, three
+migrations, 80 changed-English rows covering 78 keys, and the complete
+533+12+1 caller partition. The exact-English inventory remains exactly the
+seven documented notation, ratio, acronym, and confirmation values. No
+residual or uncertainty survived.
+
+The fresh artifact is
+`/tmp/blok-ja-546-current-d7-post-f093-v2.json` with SHA-256
+`2f903ff3aa6241138f2194f33fc87b1cca761eb907227ed6351fe1d4037cccf1`;
+its independent validator passed 6,002 assertions. Japanese is now
+`first-pass-complete` on raw dictionary SHA-256
+`8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73`,
+pending a distinct complete second pass.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -4401,6 +4476,77 @@ follows the global transition rule above.
 | `F-de-089` | `de` | `tools.image.previewControls` | accessibility / object context | `"Vorschausteuerung"` | `"Steuerelemente der Bildvorschau"` | `src/tools/image/ui.ts` uses this value as the accessible name of the image-preview toolbar. The singular compound neither names the concrete plural controls nor identifies the image object; the replacement supplies both. The focused regression and live structural checker pass on the corrected value. | verified |
 | `F-dv-001` | `dv` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ފޯމެޓްތައް ފޮހޭ"` | TinyMCE’s current Dhivehi rich-text-editor locale maps the exact action Clear formatting to [ފޯމެޓްތައް ފޮހޭ](https://unpkg.com/tinymce-i18n@26.2.9/langs/dv.js), a closer caller match than a composed generic-cleaning phrase. | verified |
 | `F-el-001` | `el` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Απαλοιφή μορφοποίησης"` | Microsoft’s Greek editor UI uses the exact command [Απαλοιφή μορφοποίησης](https://support.microsoft.com/el-gr/office/%CE%B1%CF%80%CE%B1%CE%BB%CE%BF%CE%B9%CF%86%CE%AE-%CF%8C%CE%BB%CE%B7%CF%82-%CF%84%CE%B7%CF%82-%CE%BC%CE%BF%CF%81%CF%86%CE%BF%CF%80%CE%BF%CE%AF%CE%B7%CF%83%CE%B7%CF%82-%CE%BA%CE%B5%CE%B9%CE%BC%CE%AD%CE%BD%CE%BF%CF%85-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
+| `F-el-002` | `el` | `blockSettings.clickToOpenMenu` | action wording / grammar | `"Κλικ για το μενού"` | `"Κάντε κλικ για να ανοίξετε το μενού"` | The current noun fragment is not a natural user instruction; the replacement is a complete formal imperative and states the resulting action. Caller: standalone tooltip on the settings toggler. | verified |
+| `F-el-003` | `el` | `blockSettings.clickAction` | action wording | `"Κλικ"` | `"Κάντε κλικ"` | This value begins a composed instruction and needs the formal imperative used by Greek product guidance. Caller: composed with the conjunction, platform shortcut, and menu action. | verified |
+| `F-el-004` | `el` | `blockSettings.openMenuAction` | grammar / fragment contract | `" για άνοιγμα του μενού"` | `" για να ανοίξετε το μενού"` | The caller needs a purpose clause after the shortcut. The replacement preserves the required leading U+0020 and yields a natural complete instruction. | verified |
+| `F-el-005` | `el` | `toolbox.addBelow` | action wording / grammar | `"Κλικ για προσθήκη κάτω"` | `"Κάντε κλικ για να προσθέσετε από κάτω"` | The current telegraphic noun phrase is less natural than a direct formal instruction. | verified |
+| `F-el-006` | `el` | `toolbox.optionAddAbove` | shortcut semantics / action clarity | `"⌥ — προσθήκη πάνω"` | `"⌥-κλικ για προσθήκη από πάνω"` | An em dash does not encode the required modified-click gesture. The replacement explicitly binds Option to click, following [Apple’s Greek Option-click notation](https://support.apple.com/el-gr/102650). | verified |
+| `F-el-007` | `el` | `toolbox.ctrlAddAbove` | shortcut semantics / action clarity | `"Ctrl — προσθήκη πάνω"` | `"Ctrl-κλικ για προσθήκη από πάνω"` | An em dash does not encode the required modified-click gesture. The replacement explicitly binds Ctrl to click. | verified |
+| `F-el-008` | `el` | `tools.marker.textColor` | terminology / composition | `"Κείμενο"` | `"Χρώμα κειμένου"` | `Κείμενο` names the content rather than the color axis. The explicit established UI term also makes composed swatch labels unambiguous. | verified |
+| `F-el-009` | `el` | `tools.colorPicker.defaultSwatchLabel` | composition / grammar | `"{mode} {default}"` | `"{mode}: {default}"` | Bare juxtaposition produces unnatural labels such as `Κείμενο Προεπιλογή`; a colon cleanly relates the mode and default value. | verified |
+| `F-el-010` | `el` | `tools.colorPicker.colorSwatchLabel` | composition / grammar | `"{mode} {color}"` | `"{mode}: {color}"` | Bare juxtaposition produces unnatural labels such as `Κείμενο Γκρι`; a colon cleanly relates the mode and color value. | verified |
+| `F-el-011` | `el` | `tools.toggle.placeholder` | tool name / grammar | `"Αναδιπλούμενο"` | `"Αναδιπλούμενη λίστα"` | The current substantivized neuter adjective is incomplete; the replacement supplies the familiar noun for this collapsible-list block. | verified |
+| `F-el-012` | `el` | `tools.toggle.bodyPlaceholder` | grammar / hint clarity | `"Κενό αναδιπλούμενο. Κάντε κλικ ή σύρετε μπλοκ μέσα."` | `"Κενή αναδιπλούμενη λίστα. Κάντε κλικ για να προσθέσετε ένα μπλοκ ή σύρετε μπλοκ εδώ."` | The current gender is wrong for the clarified tool noun and it conflates click-to-add with drag-to-move. | verified |
+| `F-el-013` | `el` | `tools.table.clearSelection` | terminology / destructive-action scope | `"Καθαρισμός"` | `"Απαλοιφή περιεχομένων"` | The caller preserves cells and formatting and removes only content, matching Microsoft’s established Greek spreadsheet command. | verified |
+| `F-el-014` | `el` | `tools.table.clickToAddRow` | action wording / completeness | `"Κλικ για προσθήκη γραμμής"` | `"Κάντε κλικ για να προσθέσετε μια νέα γραμμή"` | The formal instruction restores both the click action and the source distinction that a new row will be added. | verified |
+| `F-el-015` | `el` | `tools.table.clickToAddColumn` | action wording / completeness | `"Κλικ για προσθήκη στήλης"` | `"Κάντε κλικ για να προσθέσετε μια νέα στήλη"` | The formal instruction restores both the click action and the source distinction that a new column will be added. | verified |
+| `F-el-016` | `el` | `tools.table.placement` | terminology | `"Τοποθέτηση"` | `"Στοίχιση"` | The control changes horizontal and vertical alignment inside cells; `Τοποθέτηση` is a generic placement term. | verified |
+| `F-el-017` | `el` | `a11y.dragHandle` | accessibility / action clarity | `"Σύρετε για μετακίνηση ή κλικ για μενού"` | `"Σύρετε το μπλοκ για να το μετακινήσετε ή κάντε κλικ για να ανοίξετε το μενού"` | The current announcement omits the dragged object and reduces both actions to noun fragments. | verified |
+| `F-el-018` | `el` | `a11y.searchResults` | accessibility / count clarity | `"{count} αποτελέσματα"` | `"Αποτελέσματα αναζήτησης: {count}"` | The current phrase loses the search context; the label form remains grammatical for every count. | verified |
+| `F-el-019` | `el` | `a11y.allBlocksSelected` | accessibility / punctuation / count | `"Επιλέχθηκαν όλα τα μπλοκ, {count} μπλοκ"` | `"Επιλέχθηκαν όλα τα μπλοκ. Σύνολο: {count}"` | The current comma splice redundantly repeats `μπλοκ`; two concise sentences communicate completion and total. | verified |
+| `F-el-020` | `el` | `a11y.blocksSelected` | accessibility / selection cardinality | `"Επιλέχθηκαν {count} μπλοκ"` | `"Επιλεγμένα μπλοκ: {count}"` | The finite plural verb fails when rectangle selection reports one block; a count-label construction avoids that mismatch. | verified |
+| `F-el-021` | `el` | `searchTerms.splitter` | search alias / semantic domain | `"διαιρέτης"` | `"διαίρεση"` | `Διαιρέτης` primarily denotes a mathematical divisor. `Διαίρεση` is the established UI noun for splitting and remains distinct from the other divider aliases. | verified |
+| `F-el-022` | `el` | `tools.callout.addEmoji` | source meaning / terminology | `"Προσθήκη emoji"` | `"Προσθήκη εικονιδίου"` | The source labels the affordance as an icon, while the current value narrows it to the emoji implementation. | verified |
+| `F-el-023` | `el` | `tools.callout.filterEmojis` | control purpose / punctuation | `"Φίλτρο…"` | `"Αναζήτηση emoji…"` | The field searches emoji; `Φίλτρο` alone does not tell users what can be entered. | verified |
+| `F-el-024` | `el` | `tools.callout.pickRandom` | action clarity | `"Τυχαίο"` | `"Επιλογή τυχαίου emoji"` | The current adjective identifies neither the action nor its object. | verified |
+| `F-el-025` | `el` | `tools.callout.skinTone` | established terminology | `"Χρώμα δέρματος"` | `"Τόνος δέρματος"` | Greek product and CLDR terminology uses `τόνος δέρματος`, not the literal color label. | verified |
+| `F-el-026` | `el` | `toolNames.equation` | untranslated English / tool name | `"Equation"` | `"Εξίσωση"` | The exact-English fallback is not an allowed proper noun; `Εξίσωση` is the established Greek product term. | verified |
+| `F-el-027` | `el` | `tools.equation.placeholder` | untranslated English / instruction | `"Enter a LaTeX formula…"` | `"Εισαγάγετε έναν τύπο LaTeX…"` | The replacement localizes the complete instruction while retaining the standardized LaTeX name. | verified |
+| `F-el-028` | `el` | `tools.code.searchLanguage` | number / punctuation | `"Αναζήτηση γλώσσας..."` | `"Αναζήτηση γλωσσών…"` | The picker searches multiple languages and the source uses the native ellipsis character. | verified |
+| `F-el-029` | `el` | `blockSettings.copyLinkError` | error specificity | `"Δεν ήταν δυνατή η αντιγραφή του συνδέσμου"` | `"Δεν ήταν δυνατή η αντιγραφή του συνδέσμου προς το μπλοκ"` | The current error drops the block destination and can be confused with copying any link. | verified |
+| `F-el-030` | `el` | `tools.link.linkTitle` | established terminology | `"Τίτλος συνδέσμου"` | `"Κείμενο συνδέσμου"` | The field edits visible link text, not a title attribute; Greek Apple UI uses the replacement term. | verified |
+| `F-el-031` | `el` | `tools.image.converting` | untranslated English | `"Converting…"` | `"Μετατροπή…"` | The progress state is an unexplained exact-English fallback and has a concise native equivalent. | verified |
+| `F-el-032` | `el` | `tools.image.altDescription` | accessibility / concision / inclusivity | `"Προσθέστε εναλλακτικό κείμενο για να περιγράψετε αυτή την εικόνα. Αυτό κάνει τη σελίδα σας πιο προσβάσιμη σε άτομα με προβλήματα όρασης."` | `"Περιγράψτε αυτή την εικόνα για άτομα που δεν μπορούν να τη δουν."` | The current copy is much longer than the source and narrows the audience; the replacement is direct and inclusive. | verified |
+| `F-el-033` | `el` | `tools.image.previewControls` | accessibility / specificity | `"Στοιχεία ελέγχου προεπισκόπησης"` | `"Στοιχεία ελέγχου προεπισκόπησης εικόνας"` | The generic current group label omits what is being previewed. | verified |
+| `F-el-034` | `el` | `tools.image.errorFileTooLarge` | untranslated English / error message | `"Image is too large. {size} exceeds the {max} limit."` | `"Η εικόνα είναι πολύ μεγάλη. Το μέγεθος {size} υπερβαίνει το όριο των {max}."` | Localizes the complete image-size error while preserving both measured placeholders. | verified |
+| `F-el-035` | `el` | `tools.image.errorSourceOffline` | naturalness / error message | `"Το αρχείο προέλευσης μπορεί να έχει μετακινηθεί ή να είναι εκτός σύνδεσης."` | `"Το αρχείο προέλευσης μπορεί να έχει μετακινηθεί ή να μην είναι πλέον διαθέσιμο."` | `Εκτός σύνδεσης` is unnatural when predicated of a file; the replacement states the user-relevant availability condition. | verified |
+| `F-el-036` | `el` | `tools.image.errorDefaultMessage` | error accuracy | `"Το URL επέστρεψε σφάλμα. Δοκιμάστε άλλη πηγή ή μεταφορτώστε ξανά το αρχείο."` | `"Δεν ήταν δυνατή η φόρτωση της εικόνας από αυτό το URL. Δοκιμάστε άλλη πηγή ή μεταφορτώστε ξανά το αρχείο."` | The caller only knows image loading failed; the replacement states that observable failure and preserves recovery steps. | verified |
+| `F-el-037` | `el` | `tools.file.errorFileTooLarge` | untranslated English / error message | `"File is too large. {size} exceeds the {max} limit."` | `"Το αρχείο είναι πολύ μεγάλο. Το μέγεθος {size} υπερβαίνει το όριο των {max}."` | Localizes the complete file-size error while preserving both measured placeholders. | verified |
+| `F-el-038` | `el` | `tools.video.errorFileTooLarge` | untranslated English / error message | `"Video is too large. {size} exceeds the {max} limit."` | `"Το βίντεο είναι πολύ μεγάλο. Το μέγεθος {size} υπερβαίνει το όριο των {max}."` | Localizes the complete video-size error while preserving both measured placeholders. | verified |
+| `F-el-039` | `el` | `tools.audio.errorFileTooLarge` | untranslated English / error message | `"Audio is too large. {size} exceeds the {max} limit."` | `"Το αρχείο ήχου είναι πολύ μεγάλο. Το μέγεθος {size} υπερβαίνει το όριο των {max}."` | Localizes the complete audio-size error while preserving both measured placeholders. | verified |
+| `F-el-040` | `el` | `tools.video.alignmentLeft` | action label / terminology | `"Αριστερά"` | `"Στοίχιση αριστερά"` | The child menu item performs an alignment action and has no separate accessible action label. | verified |
+| `F-el-041` | `el` | `tools.video.alignmentCenter` | action label / terminology | `"Κέντρο"` | `"Στοίχιση στο κέντρο"` | The child menu item performs an alignment action and has no separate accessible action label. | verified |
+| `F-el-042` | `el` | `tools.video.alignmentRight` | action label / terminology | `"Δεξιά"` | `"Στοίχιση δεξιά"` | The child menu item performs an alignment action and has no separate accessible action label. | verified |
+| `F-el-043` | `el` | `tools.audio.alignmentLeft` | action label / terminology | `"Αριστερά"` | `"Στοίχιση αριστερά"` | The audio child menu performs the same explicit alignment action as video. | verified |
+| `F-el-044` | `el` | `tools.audio.alignmentCenter` | action label / terminology | `"Κέντρο"` | `"Στοίχιση στο κέντρο"` | The audio child menu performs the same explicit alignment action as video. | verified |
+| `F-el-045` | `el` | `tools.audio.alignmentRight` | action label / terminology | `"Δεξιά"` | `"Στοίχιση δεξιά"` | The audio child menu performs the same explicit alignment action as video. | verified |
+| `F-el-046` | `el` | `tools.audio.replace` | grammar / case | `"Αντικατάσταση ήχος"` | `"Αντικατάσταση ήχου"` | The object of `Αντικατάσταση` requires the genitive; the current nominative phrase is ungrammatical. | verified |
+| `F-el-047` | `el` | `tools.audio.titlePlaceholder` | untranslated English / field label | `"Track title"` | `"Τίτλος κομματιού"` | The exact-English placeholder has an established Greek media equivalent. | verified |
+| `F-el-048` | `el` | `tools.audio.artistPlaceholder` | untranslated English / field label | `"Artist"` | `"Καλλιτέχνης"` | The exact-English placeholder has a standard Greek equivalent. | verified |
+| `F-el-049` | `el` | `tools.audio.emptyAddAudio` | grammar / case | `"Προσθήκη ήχος"` | `"Προσθήκη ήχου"` | The object of `Προσθήκη` requires the genitive. | verified |
+| `F-el-050` | `el` | `tools.audio.emptyOrDropHere` | grammar / object accuracy | `"ή σύρετε ένα ήχος εδώ"` | `"ή σύρετε ένα αρχείο ήχου εδώ"` | The current article and noun disagree and describe abstract audio rather than an audio file. | verified |
+| `F-el-051` | `el` | `tools.audio.emptyUrlPlaceholder` | grammar / instruction | `"Επικολλήστε URL ήχος…"` | `"Επικολλήστε ένα URL ήχου…"` | The current noun is in the wrong case and lacks a natural article. | verified |
+| `F-el-052` | `el` | `tools.audio.emptyUrlAria` | grammar / accessible name | `"URL ήχος"` | `"URL ήχου"` | The dependent noun must be genitive; the current nominative phrase is ungrammatical. | verified |
+| `F-el-053` | `el` | `tools.audio.emptySourceAria` | grammar / accessible name | `"Πηγή ήχος"` | `"Πηγή ήχου"` | The dependent noun must be genitive; the current nominative phrase is ungrammatical. | verified |
+| `F-el-054` | `el` | `tools.audio.coverChange` | untranslated English / media terminology | `"Change cover"` | `"Αλλαγή εξωφύλλου"` | Localizes the action with the established Greek media noun `εξώφυλλο`. | verified |
+| `F-el-055` | `el` | `tools.audio.coverSet` | untranslated English / media terminology | `"Set cover image"` | `"Ορισμός εικόνας εξωφύλλου"` | Localizes the action and explicitly identifies the cover artwork. | verified |
+| `F-el-056` | `el` | `tools.audio.coverRemove` | untranslated English / media terminology | `"Remove cover"` | `"Αφαίρεση εξωφύλλου"` | Localizes the action with the established Greek media noun. | verified |
+| `F-el-057` | `el` | `tools.audio.coverErrorType` | untranslated English / error instruction | `"Choose an image file"` | `"Επιλέξτε ένα αρχείο εικόνας"` | Localizes the complete validation instruction and names the required file type. | verified |
+| `F-el-058` | `el` | `tools.audio.coverErrorTooLarge` | untranslated English / error message | `"Image is too large"` | `"Η εικόνα είναι πολύ μεγάλη"` | Localizes the complete cover-size error. | verified |
+| `F-el-059` | `el` | `tools.audio.coverAdd` | untranslated English / media terminology | `"Add a cover"` | `"Προσθήκη εξωφύλλου"` | Localizes the action with Apple’s established Greek media wording. | verified |
+| `F-el-060` | `el` | `tools.audio.coverSourceAria` | accessible-name specificity | `"Πηγή εικόνας"` | `"Πηγή εξωφύλλου"` | The current generic image-source label loses the audio-cover context. | verified |
+| `F-el-061` | `el` | `tools.database.viewTypeListDescription` | view description / source meaning | `"Απλή γραμμική προβολή"` | `"Εμφάνιση στοιχείων σε απλή λίστα"` | The current abstract “linear display” omits the items; the replacement directly describes the view. | verified |
+| `F-el-062` | `el` | `tools.bookmark.loading` | progress-state punctuation | `"Φόρτωση προεπισκόπησης συνδέσμου"` | `"Φόρτωση προεπισκόπησης συνδέσμου…"` | The loading operation is ongoing and must retain the ellipsis. | verified |
+| `F-el-063` | `el` | `tools.bookmark.error` | error specificity | `"Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης"` | `"Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης συνδέσμου"` | The current message omits that the failed preview belongs to a link. | verified |
+| `F-el-064` | `el` | `tools.embed.empty` | empty-state accuracy | `"Επικολλήστε σύνδεσμο για ενσωμάτωση"` | `"Δεν υπάρχει σύνδεσμος ενσωμάτωσης"` | The caller renders a missing-link state; the current imperative asks the user to paste in a read-only state. | verified |
+| `F-el-065` | `el` | `notifier.dismiss` | control semantics | `"Απόρριψη"` | `"Κλείσιμο"` | `Απόρριψη` means rejection; the notifier helper closes a notice without rejecting its content. | verified |
+| `F-el-066` | `el` | `tools.video.seek` | media-control terminology / accessibility | `"Αναζήτηση"` | `"Θέση αναπαραγωγής"` | `Αναζήτηση` means search, not movement on a playback timeline; the replacement names the slider state. | verified |
+| `F-el-067` | `el` | `tools.video.toggleTimeDisplay` | accessible action clarity | `"Εναλλαγή εμφάνισης χρόνου"` | `"Εναλλαγή μεταξύ του χρόνου που έχει παρέλθει και του χρόνου που απομένει"` | The current label omits the two display states; the replacement names both established states. | verified |
+| `F-el-068` | `el` | `tools.video.ctxCopyUrlAtTime` | media terminology / precision | `"Αντιγραφή URL βίντεο στην τρέχουσα στιγμή"` | `"Αντιγραφή URL βίντεο στην τρέχουσα χρονική θέση"` | `Τρέχουσα στιγμή` can mean the present moment generally; `χρονική θέση` identifies the video timeline. | verified |
+| `F-el-069` | `el` | `tools.video.ctxStats` | source meaning / neutral register | `"Στατιστικά για ειδικούς"` | `"Στατιστικά αναπαραγωγής"` | The current wording changes the neutral source into an audience label; the replacement directly names playback data. | verified |
+| `F-el-070` | `el` | `tools.callout.emojiSearchResults` | accessibility / count clarity | `"Βρέθηκαν {count} emoji"` | `"Αποτελέσματα αναζήτησης emoji: {count}"` | The finite plural statement is awkward across counts; the label form states the search-result context. | verified |
+| `F-el-071` | `el` | `a11y.blocksDuplicated` | accessibility / caller destination semantics | `"{count} μπλοκ αντιγράφηκαν από τη θέση {position}"` | `"Αντιγράφηκαν {count} μπλοκ. Θέση έναρξης: {position}."` | The caller supplies the first newly duplicated block’s destination index, not a source position. The replacement removes the misleading `από` relation and uses the established Greek position term [Θέση έναρξης](https://support.apple.com/el-gr/105033). | verified |
+| `F-el-072` | `el` | `toolNames.inlineCode` | tool distinction / established terminology | `"Κώδικας"` | `"Ενσωματωμένος κώδικας"` | The inline formatter and separate code-block tool currently expose the same title. Microsoft Greek distinguishes inline formatting as [Ενσωματωμένος κώδικας](https://learn.microsoft.com/el-gr/contribute/content/code-in-docs). | verified |
 | `F-es-087` | `es` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Borrar formato"` | Microsoft’s Spanish editor UI uses the exact concise command [Borrar formato](https://support.microsoft.com/es-es/office/borrar-todo-el-formato-de-texto-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
 | `F-es-088` | `es` | `blockSettings.clickAction` | caller composition / naturalness | `"Clic"` | `"Haz clic"` | The fragment is composed with an optional shortcut and `para abrir el menú`; the imperative produces the natural instruction `Haz clic o ⌘/ para abrir el menú` instead of a bare noun. | verified |
 | `F-es-089` | `es` | `tools.colorPicker.defaultSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {default}"` | `"{mode}: {default}"` | The template is a swatch accessible name; the colon separates the mode from its value in output such as `Color del texto: Predeterminado`. | verified |
@@ -5413,6 +5559,13 @@ locale and UI context.
 | `R-de-024` | `de` | `tools.database.defaultStatusProperty` | established cognate | `Status` is the normal unchanged German noun for this workflow property. | [Duden — Status](https://www.duden.de/rechtschreibung/Status) |
 | `R-de-025` | `de` | `tools.database.defaultViewBoard` | established loanword | `Board` is established German product terminology for the default column-based view. | [Microsoft Planner — Navigieren mit einer Sprachausgabe](https://support.microsoft.com/de-de/accessibility/planner/use-a-screen-reader-to-explore-and-navigate-microsoft-planner) |
 | `R-de-026` | `de` | `notifier.ok` | established loanword | `OK` is the conventional unchanged German confirmation-button label and is the natural compact action in the built-in prompt dialog. | [Microsoft Outlook accessibility — “OK, Schaltfläche”](https://support.microsoft.com/de-DE/accessibility/outlook/use-a-screen-reader-to-format-text-in-your-email-in-outlook) |
+| `R-el-001` | `el` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is executable macOS shortcut notation rather than English prose. | [Apple — Συντομεύσεις πληκτρολογίου](https://support.apple.com/el-gr/102650) |
+| `R-el-002` | `el` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is executable Windows shortcut notation; Greek product interfaces retain `Ctrl` in key combinations. | [Microsoft — Συντομεύσεις πληκτρολογίου στα Windows](https://support.microsoft.com/el-gr/windows/%CF%83%CF%85%CE%BD%CF%84%CE%BF%CE%BC%CE%B5%CF%8D%CF%83%CE%B5%CE%B9%CF%82-%CF%80%CE%BB%CE%B7%CE%BA%CF%84%CF%81%CE%BF%CE%BB%CE%BF%CE%B3%CE%AF%CE%BF%CF%85-%CF%83%CF%84%CE%B1-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
+| `R-el-003` | `el` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation, not lexical English. | [Apple — Αναλογίες εικόνας](https://support.apple.com/el-gr/guide/iphone/iph3dc593597/ios) |
+| `R-el-004` | `el` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation, not lexical English. | [Apple — Αναλογίες εικόνας](https://support.apple.com/el-gr/guide/iphone/iph3dc593597/ios) |
+| `R-el-005` | `el` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation, not lexical English. | [Apple — Αναλογίες εικόνας](https://support.apple.com/el-gr/guide/iphone/iph3dc593597/ios) |
+| `R-el-006` | `el` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional standardized technical acronym in Greek product UI. | [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986.html) |
+| `R-el-007` | `el` | `notifier.ok` | established loanword | `OK` is the conventional unchanged Greek confirmation-control label. | [Unicode CLDR — Greek annotations](https://unicode.org/cldr/charts/48/annotations/other_indo_european.html) |
 | `R-es-001` | `es` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is platform shortcut notation rather than English prose; Spanish macOS documentation retains the `⌘` symbol. | [Apple — Atajos de teclado del Mac](https://support.apple.com/es-es/102650) |
 | `R-es-002` | `es` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is platform shortcut notation rather than translatable prose; Spanish Windows documentation retains `Ctrl`. | [Microsoft — Métodos abreviados de teclado de Windows](https://support.microsoft.com/es-es/topic/m%C3%A9todos-abreviados-de-teclado-f2302f54-02a3-a62b-36ef-74ee5a83cb87) |
 | `R-es-003` | `es` | `tools.stub.error` | established cognate | `Error` is the normal unchanged Spanish noun for an error state. | [RAE — error](https://dle.rae.es/error) |

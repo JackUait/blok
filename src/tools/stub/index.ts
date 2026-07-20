@@ -66,11 +66,21 @@ export class Stub implements BlockTool {
   }
 
   /**
-   * Return original Tool data
+   * Return a deep copy of the original Tool data.
+   *
+   * Must never return the retained `savedData` by reference: the saver pushes
+   * this object straight into the `editor.save()` output, so an aliased return
+   * would let a consumer mutating the save result corrupt subsequent saves.
    * @returns {BlockToolData}
    */
   public save(): BlockToolData {
-    return this.savedData;
+    try {
+      return structuredClone(this.savedData);
+    } catch {
+      // Data carrying non-cloneable values (e.g. functions) falls back to a
+      // shallow copy, which at least detaches the top-level object.
+      return { ...this.savedData };
+    }
   }
 
   /**

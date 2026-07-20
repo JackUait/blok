@@ -1,6 +1,11 @@
+import { PasteConfig } from '../configs';
+import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
 import { MediaSource } from './media-source';
+import { MenuConfig } from './menu-config';
+import { PasteEvent } from './paste-events';
+import { ToolboxConfig } from './tool-settings';
 
 /** Horizontal alignment of the image within its container. */
 export type ImageAlignment = 'left' | 'center' | 'right';
@@ -172,4 +177,72 @@ export interface ImageConfig {
    * auto-retry (fail on the first error).
    */
   reloadAttempts?: number;
+}
+
+/**
+ * Image Tool constructor options
+ */
+export type ImageConstructorOptions = BlockToolConstructorOptions<ImageData, ImageConfig>;
+
+/**
+ * Image Tool for the Blok Editor
+ * Provides Image Blocks with upload, resize, crop, and frame controls
+ */
+export declare class Image implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Paste substitutions configuration
+   */
+  static pasteConfig?: PasteConfig | false;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  constructor(options: ImageConstructorOptions);
+
+  /**
+   * Return Tool's view
+   */
+  render(): HTMLElement;
+
+  /**
+   * Extract Tool's data from the view
+   */
+  save(block?: HTMLElement): ImageData;
+
+  /**
+   * Validate Image block data
+   */
+  validate(data: ImageData): boolean;
+
+  /**
+   * Handle pasted image files, URLs, and <img> tags
+   */
+  onPaste(event: PasteEvent): void;
+
+  /**
+   * Toggle read-only mode
+   */
+  setReadOnly(state: boolean): void;
+
+  /**
+   * Returns image block tunes config
+   */
+  renderSettings(): MenuConfig;
+
+  /**
+   * Set the frame treatment (none, border, shadow)
+   */
+  setFrame(next: ImageFrame): void;
+
+  /**
+   * Toggle rounded corners
+   */
+  setRounded(next: boolean): void;
 }

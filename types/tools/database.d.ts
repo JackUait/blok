@@ -1,5 +1,7 @@
+import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { OutputData } from '../data-formats/output-data';
+import { ToolboxConfig } from './tool-settings';
 
 // ─── Property types ───
 
@@ -149,4 +151,83 @@ export interface DatabaseAdapter {
 
 export interface DatabaseConfig {
   adapter?: DatabaseAdapter;
+}
+
+/**
+ * Database Tool constructor options
+ */
+export type DatabaseConstructorOptions = BlockToolConstructorOptions<DatabaseData, DatabaseConfig>;
+
+/**
+ * Database Tool for the Blok Editor
+ * Notion-style database block: schema + views stored in its data, rows as
+ * child `database-row` blocks.
+ */
+export declare class Database implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  constructor(options: DatabaseConstructorOptions);
+
+  /**
+   * Return Tool's view
+   */
+  render(): HTMLDivElement;
+
+  /**
+   * Called after the block is added to the page
+   */
+  rendered(): void;
+
+  /**
+   * Extract Tool's data from the view
+   */
+  save(blockContent: HTMLElement): DatabaseData;
+
+  /**
+   * Validate Database block data
+   */
+  validate(savedData: DatabaseData): boolean;
+
+  /**
+   * Clean up subscriptions and view renderers
+   */
+  destroy(): void;
+
+  /**
+   * Toggle read-only mode
+   */
+  setReadOnly(state: boolean): void;
+
+  /**
+   * Add a new view of the given type
+   */
+  addView(type: ViewType): void;
+
+  /**
+   * Rename a view
+   */
+  renameView(viewId: string, name: string): void;
+
+  /**
+   * Duplicate a view
+   */
+  duplicateView(viewId: string): void;
+
+  /**
+   * Delete a view
+   */
+  deleteView(viewId: string): void;
+
+  /**
+   * Move a view to a new position
+   */
+  reorderView(viewId: string, newPosition: string): void;
 }

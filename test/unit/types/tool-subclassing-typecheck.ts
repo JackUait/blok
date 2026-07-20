@@ -22,6 +22,15 @@ import {
   Quote,
   ColumnList,
   Column,
+  Database,
+  DatabaseRow,
+  Image,
+  File,
+  Audio,
+  Video,
+  Code,
+  Embed,
+  Bookmark,
 } from '../../../types/tools-entry';
 import type {
   ParagraphConstructorOptions,
@@ -46,6 +55,24 @@ import type {
   ColumnListData,
   ColumnConstructorOptions,
   ColumnData,
+  DatabaseConstructorOptions,
+  DatabaseData,
+  DatabaseRowConstructorOptions,
+  DatabaseRowData,
+  ImageConstructorOptions,
+  ImageData,
+  FileConstructorOptions,
+  FileData,
+  AudioConstructorOptions,
+  AudioData,
+  VideoConstructorOptions,
+  VideoData,
+  CodeConstructorOptions,
+  CodeData,
+  EmbedConstructorOptions,
+  EmbedData,
+  BookmarkConstructorOptions,
+  BookmarkData,
 } from '../../../types/tools-entry';
 import type { BlockToolConstructable, ToolSettings } from '../../../types';
 
@@ -116,6 +143,60 @@ class SubColumn extends Column {
   }
 }
 
+class SubDatabase extends Database {
+  public save(blockContent: HTMLElement): DatabaseData {
+    return super.save(blockContent);
+  }
+}
+
+class SubDatabaseRow extends DatabaseRow {
+  public save(block: HTMLElement): DatabaseRowData {
+    return super.save(block);
+  }
+}
+
+class SubImage extends Image {
+  public save(block?: HTMLElement): ImageData {
+    return super.save(block);
+  }
+}
+
+class SubFile extends File {
+  public save(): FileData {
+    return super.save();
+  }
+}
+
+class SubAudio extends Audio {
+  public validate(data: AudioData): boolean {
+    return super.validate(data);
+  }
+}
+
+class SubVideo extends Video {
+  public save(block?: HTMLElement): VideoData {
+    return super.save(block);
+  }
+}
+
+class SubCode extends Code {
+  public merge(data: CodeData): void {
+    super.merge(data);
+  }
+}
+
+class SubEmbed extends Embed {
+  public save(): EmbedData {
+    return super.save();
+  }
+}
+
+class SubBookmark extends Bookmark {
+  public validate(data: BookmarkData): boolean {
+    return super.validate(data);
+  }
+}
+
 // Every subclass must remain assignable to BlockToolConstructable.
 const _subclasses: BlockToolConstructable[] = [
   SubParagraph,
@@ -129,6 +210,15 @@ const _subclasses: BlockToolConstructable[] = [
   SubQuote,
   SubColumnList,
   SubColumn,
+  SubDatabase,
+  SubDatabaseRow,
+  SubImage,
+  SubFile,
+  SubAudio,
+  SubVideo,
+  SubCode,
+  SubEmbed,
+  SubBookmark,
 ];
 
 void _subclasses;
@@ -147,6 +237,15 @@ const _tools: Record<string, BlockToolConstructable> = {
   quote: Quote,
   column_list: ColumnList,
   column: Column,
+  database: Database,
+  'database-row': DatabaseRow,
+  image: Image,
+  file: File,
+  audio: Audio,
+  video: Video,
+  code: Code,
+  embed: Embed,
+  bookmark: Bookmark,
 };
 
 void _settings;
@@ -166,9 +265,20 @@ const _useInstances = (
   q: Quote,
   cl: ColumnList,
   co: Column,
+  db: Database,
+  dbr: DatabaseRow,
+  im: Image,
+  fi: File,
+  au: Audio,
+  vi: Video,
+  cd: Code,
+  em: Embed,
+  bm: Bookmark,
 ): void => {
   void p; void h; void l; void t; void tg; void d;
   void s; void c; void q; void cl; void co;
+  void db; void dbr; void im; void fi; void au;
+  void vi; void cd; void em; void bm;
 };
 
 void _useInstances;
@@ -186,6 +296,15 @@ const _optionUsers = (
   q: QuoteConstructorOptions,
   cl: ColumnListConstructorOptions,
   co: ColumnConstructorOptions,
+  db: DatabaseConstructorOptions,
+  dbr: DatabaseRowConstructorOptions,
+  im: ImageConstructorOptions,
+  fi: FileConstructorOptions,
+  au: AudioConstructorOptions,
+  vi: VideoConstructorOptions,
+  cd: CodeConstructorOptions,
+  em: EmbedConstructorOptions,
+  bm: BookmarkConstructorOptions,
 ): unknown[] => [
   new Paragraph(p),
   new Header(h),
@@ -198,6 +317,15 @@ const _optionUsers = (
   new Quote(q),
   new ColumnList(cl),
   new Column(co),
+  new Database(db),
+  new DatabaseRow(dbr),
+  new Image(im),
+  new File(fi),
+  new Audio(au),
+  new Video(vi),
+  new Code(cd),
+  new Embed(em),
+  new Bookmark(bm),
 ];
 
 void _optionUsers;

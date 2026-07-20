@@ -20,17 +20,16 @@ export { Callout, CalloutConstructorOptions, CalloutConstructable } from './tool
 export { Quote, QuoteConstructorOptions, QuoteConstructable } from './tools/quote';
 export { ColumnList, ColumnListConstructorOptions, ColumnListConstructable } from './tools/column-list';
 export { Column, ColumnConstructorOptions, ColumnConstructable } from './tools/column';
-
-// Block tools without dedicated declarations yet
-export const Database: BlockToolConstructable;
-export const DatabaseRow: BlockToolConstructable;  // DatabaseRowTool (block tool), distinct from DatabaseRow interface in types/tools/database.d.ts
-export const Image: BlockToolConstructable;
-export const File: BlockToolConstructable;
-export const Audio: BlockToolConstructable;
-export const Video: BlockToolConstructable;
-export const Code: BlockToolConstructable;
-export const Embed: BlockToolConstructable;
-export const Bookmark: BlockToolConstructable;
+export { Database, DatabaseConstructorOptions } from './tools/database';
+// DatabaseRow is the block tool class, distinct from the DatabaseRow row-shape interface in types/tools/database.d.ts
+export { DatabaseRow, DatabaseRowConstructorOptions } from './tools/database-row';
+export { Image, ImageConstructorOptions } from './tools/image';
+export { File, FileConstructorOptions } from './tools/file';
+export { Audio, AudioConstructorOptions } from './tools/audio';
+export { Video, VideoConstructorOptions } from './tools/video';
+export { Code, CodeConstructorOptions } from './tools/code';
+export { Embed, EmbedConstructorOptions } from './tools/embed';
+export { Bookmark, BookmarkConstructorOptions } from './tools/bookmark';
 /**
  * Columns group manifest: a single registration handle that expands to the
  * `column_list` and `column` block tools. Register as `tools: { columns: Columns }`.
@@ -54,6 +53,9 @@ export { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, Image
 export { FileData, FileConfig, FileUploader, FileUploadContext, FileUploadResult } from './tools/file';
 export { AudioData, AudioConfig, AudioUploader, AudioUploadContext, AudioAlignment } from './tools/audio';
 export { VideoData, VideoConfig, VideoUploader, VideoUploadContext, VideoAlignment, VideoGlow } from './tools/video';
+export { CodeData } from './tools/code';
+export { EmbedData, EmbedKind, EmbedAlignment } from './tools/embed';
+export { BookmarkData, BookmarkConfig, BookmarkMeta } from './tools/bookmark';
 export { MediaSource } from './tools/media-source';
 export { ColumnListData } from './tools/column-list';
 export { ColumnData } from './tools/column';

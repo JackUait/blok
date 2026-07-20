@@ -1,6 +1,11 @@
+import { PasteConfig } from '../configs';
+import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
 import { MediaSource } from './media-source';
+import { MenuConfig } from './menu-config';
+import { PasteEvent } from './paste-events';
+import { ToolboxConfig } from './tool-settings';
 
 /** Persisted data shape for the File block tool. */
 export interface FileData extends BlockToolData {
@@ -78,3 +83,67 @@ export interface FileConfig {
   /** Caption placeholder. */
   captionPlaceholder?: string;
 }
+
+/**
+ * File Tool constructor options
+ */
+export type FileConstructorOptions = BlockToolConstructorOptions<FileData, FileConfig>;
+
+/**
+ * File Tool for the Blok Editor
+ * Provides file attachment Blocks with upload and preview.
+ *
+ * Declared under a local name (`FileTool`) and exported as `File` so that the
+ * DOM `File` type used by {@link FileUploader} keeps resolving to the global
+ * inside this module.
+ */
+declare class FileTool implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Paste substitutions configuration
+   */
+  static pasteConfig?: PasteConfig | false;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  constructor(options: FileConstructorOptions);
+
+  /**
+   * Return Tool's view
+   */
+  render(): HTMLElement;
+
+  /**
+   * Extract Tool's data from the view
+   */
+  save(): FileData;
+
+  /**
+   * Validate File block data
+   */
+  validate(data: FileData): boolean;
+
+  /**
+   * Handle pasted files
+   */
+  onPaste(event: PasteEvent): void;
+
+  /**
+   * Toggle read-only mode
+   */
+  setReadOnly(state: boolean): void;
+
+  /**
+   * Returns file block tunes config
+   */
+  renderSettings(): MenuConfig;
+}
+
+export { FileTool as File };

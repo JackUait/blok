@@ -1,6 +1,11 @@
+import { PasteConfig } from '../configs';
+import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
 import { MediaSource } from './media-source';
+import { MenuConfig } from './menu-config';
+import { PasteEvent } from './paste-events';
+import { ToolboxConfig } from './tool-settings';
 
 /** Horizontal alignment of the video within its container. */
 export type VideoAlignment = 'left' | 'center' | 'right';
@@ -78,4 +83,62 @@ export interface VideoConfig {
   captionPlaceholder?: string;
   /** Ambient glow intensity behind every player. Default 'minimal'. */
   glow?: VideoGlow;
+}
+
+/**
+ * Video Tool constructor options
+ */
+export type VideoConstructorOptions = BlockToolConstructorOptions<VideoData, VideoConfig>;
+
+/**
+ * Video Tool for the Blok Editor
+ * Provides Video Blocks with upload and a YouTube-parity player
+ */
+export declare class Video implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Paste substitutions configuration
+   */
+  static pasteConfig?: PasteConfig | false;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  constructor(options: VideoConstructorOptions);
+
+  /**
+   * Return Tool's view
+   */
+  render(): HTMLElement;
+
+  /**
+   * Extract Tool's data from the view
+   */
+  save(block?: HTMLElement): VideoData;
+
+  /**
+   * Validate Video block data
+   */
+  validate(data: VideoData): boolean;
+
+  /**
+   * Handle pasted video files and URLs
+   */
+  onPaste(event: PasteEvent): void;
+
+  /**
+   * Toggle read-only mode
+   */
+  setReadOnly(state: boolean): void;
+
+  /**
+   * Returns video block tunes config
+   */
+  renderSettings(): MenuConfig;
 }

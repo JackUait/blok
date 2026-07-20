@@ -10,7 +10,6 @@ const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 const BLOCK_CONTENT_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-content"]`;
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
-const SETTINGS_ITEM_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-item"]';
 const BLOCK_TEXT = 'The block with some text';
 
 type SerializableToolConfig = {
@@ -206,11 +205,19 @@ test.describe('saver module', () => {
     await expect(settingsButton).toBeVisible();
     await settingsButton.click();
 
-     
-    const headerLevelOption = page.locator(SETTINGS_ITEM_SELECTOR).nth(2);
+    // Heading 1-6 entries live in a nested 'Heading' submenu; open it first.
+    // dispatchEvent avoids Playwright's pointer-move pre-click phase, which can
+    // generate a mouseover that destroys the nested popover.
+    const headingSubmenu = page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-item-name="header-levels"]');
+
+    await headingSubmenu.dispatchEvent('mouseover');
+
+    const headerLevelOption = page
+      .locator('[data-blok-testid="popover"][data-blok-nested="true"] [data-blok-testid="popover-item"]')
+      .filter({ hasText: 'Heading 3', hasNotText: 'Toggle' });
 
     await headerLevelOption.waitFor({ state: 'visible' });
-    await headerLevelOption.click();
+    await headerLevelOption.dispatchEvent('click');
 
     await page.waitForFunction(
       ({ blokSelector }) => {

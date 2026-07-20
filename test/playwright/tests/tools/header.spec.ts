@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
@@ -153,6 +153,27 @@ const openBlockTunesViaToolbar = async (page: Page): Promise<void> => {
   await waitForBlockTunesPopover(page);
 };
 
+/**
+ * Heading 1-6 entries live inside a nested 'Heading' submenu
+ * (data-blok-item-name="header-levels") since the level converts were grouped.
+ * Opens that submenu via mouseover (dispatchEvent avoids Playwright's
+ * pointer-move pre-click phase, which can destroy the nested popover) and
+ * returns the requested level entry inside the nested popover.
+ */
+const openHeadingLevelOption = async (page: Page, level: number): Promise<Locator> => {
+  const submenuToggle = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-item-name="header-levels"]`);
+
+  await submenuToggle.dispatchEvent('mouseover');
+
+  const option = page
+    .locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`)
+    .filter({ hasText: `Heading ${level}`, hasNotText: 'Toggle' });
+
+  await expect(option).toBeVisible();
+
+  return option;
+};
+
 const openBlockTunesViaShortcut = async (page: Page): Promise<void> => {
   await focusHeaderBlock(page);
   await page.keyboard.press(`${MODIFIER_KEY}+/`);
@@ -248,9 +269,9 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
+      const h1Option = await openHeadingLevelOption(page, 1);
 
-      await h1Option.click();
+      await h1Option.dispatchEvent('click');
 
       const header = page.getByRole('heading', { level: 1, name: 'Test Header' });
 
@@ -264,9 +285,9 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h3Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 3', hasNotText: 'Toggle' });
+      const h3Option = await openHeadingLevelOption(page, 3);
 
-      await h3Option.click();
+      await h3Option.dispatchEvent('click');
 
       const header = page.getByRole('heading', { level: 3, name: 'Test Header' });
 
@@ -280,9 +301,9 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 4', hasNotText: 'Toggle' });
+      const h4Option = await openHeadingLevelOption(page, 4);
 
-      await h4Option.click();
+      await h4Option.dispatchEvent('click');
 
       const header = page.getByRole('heading', { level: 4, name: 'Test Header' });
 
@@ -296,9 +317,9 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h5Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 5', hasNotText: 'Toggle' });
+      const h5Option = await openHeadingLevelOption(page, 5);
 
-      await h5Option.click();
+      await h5Option.dispatchEvent('click');
 
       const header = page.getByRole('heading', { level: 5, name: 'Test Header' });
 
@@ -312,9 +333,9 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h6Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 6', hasNotText: 'Toggle' });
+      const h6Option = await openHeadingLevelOption(page, 6);
 
-      await h6Option.click();
+      await h6Option.dispatchEvent('click');
 
       const header = page.getByRole('heading', { level: 6, name: 'Test Header' });
 
@@ -330,9 +351,9 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
+      const h1Option = await openHeadingLevelOption(page, 1);
 
-      await h1Option.click();
+      await h1Option.dispatchEvent('click');
 
       const header = page.getByRole('heading', { level: 1, name: originalText });
 
@@ -494,9 +515,9 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 4', hasNotText: 'Toggle' });
+      const h4Option = await openHeadingLevelOption(page, 4);
 
-      await h4Option.click();
+      await h4Option.dispatchEvent('click');
 
 
       const savedData: OutputData | undefined = await page.evaluate(async () => {
@@ -517,7 +538,7 @@ test.describe('header Tool', () => {
       await openBlockTunesViaToolbar(page);
 
       for (let level = 1; level <= 6; level++) {
-        const option = page.getByTestId('popover-item').filter({ hasText: `Heading ${level}`, hasNotText: 'Toggle' });
+        const option = await openHeadingLevelOption(page, level);
 
         await expect(option).toBeVisible();
       }
@@ -530,7 +551,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h3Option = page.getByTestId('popover-item').filter({ hasText: 'Heading 3', hasNotText: 'Toggle' });
+      const h3Option = await openHeadingLevelOption(page, 3);
 
       await expect(h3Option).toHaveAttribute('data-blok-popover-item-active', 'true');
     });

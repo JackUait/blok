@@ -559,9 +559,19 @@ test.describe('onChange callback', () => {
 
     await openBlockSettings(page, 0);
 
-    const tuneOption = page.getByTestId('block-tunes-popover').getByTestId('popover-item').filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
+    // Heading 1-6 entries live in a nested 'Heading' submenu; open it first.
+    // dispatchEvent avoids Playwright's pointer-move pre-click phase, which can
+    // generate a mouseover that destroys the nested popover.
+    const headingSubmenu = page.getByTestId('block-tunes-popover').locator('[data-blok-item-name="header-levels"]');
 
-    await tuneOption.click();
+    await headingSubmenu.dispatchEvent('mouseover');
+
+    const tuneOption = page
+      .locator('[data-blok-testid="popover"][data-blok-nested="true"] [data-blok-testid="popover-item"]')
+      .filter({ hasText: 'Heading 1', hasNotText: 'Toggle' });
+
+    await expect(tuneOption).toBeVisible();
+    await tuneOption.dispatchEvent('click');
 
     await waitForOnChangeCallCount(page, 1);
 

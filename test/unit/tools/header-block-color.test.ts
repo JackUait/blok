@@ -44,13 +44,17 @@ const createHeaderOptions = (
  * Invoke the "Heading N" level entry exposed by renderSettings(), mirroring a
  * real user picking a different level from the block-settings menu. setLevel()
  * is private, so we route through the menu entry's onActivate just like the UI.
+ * Level entries live inside the 'header-levels' submenu (children.items).
  */
 const activateLevel = (header: Header, level: number): void => {
-  const items = (Array.isArray(header.renderSettings())
-    ? header.renderSettings()
-    : [header.renderSettings()]) as Array<Record<string, unknown>>;
+  const settings = header.renderSettings();
+  const items = (Array.isArray(settings) ? settings : [settings]) as Array<Record<string, unknown>>;
 
-  const entry = items.find(
+  const headingSubmenu = items.find(s => s.name === 'header-levels');
+  const children = headingSubmenu?.children as { items?: Array<Record<string, unknown>> } | undefined;
+  const levelItems = children?.items ?? [];
+
+  const entry = levelItems.find(
     s => (s.dataset as Record<string, string> | undefined)?.['blok-header-level'] === String(level)
   );
 

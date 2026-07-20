@@ -1231,8 +1231,15 @@ test.describe('blok i18n', () => {
       // Open block settings
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
+      // Heading 1-6 entries live in a nested 'Heading' submenu; open it first.
+      // dispatchEvent avoids Playwright's pointer-move pre-click phase, which
+      // can generate a mouseover that destroys the nested popover.
+      const headingSubmenu = page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-item-name="header-levels"]');
+
+      await headingSubmenu.dispatchEvent('mouseover');
+
       // Check heading level options are translated - use popover-item testid and filter by text
-      const popoverItems = page.getByTestId('popover-item');
+      const popoverItems = page.locator('[data-blok-testid="popover"][data-blok-nested="true"] [data-blok-testid="popover-item"]');
 
       const heading1Option = popoverItems.filter({ hasText: translations['tools.header.heading1'] });
       const heading2Option = popoverItems.filter({ hasText: translations['tools.header.heading2'] });

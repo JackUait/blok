@@ -148,8 +148,15 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Color" is the standard Spanish cognate and names both marker modes.
     'toolNames.marker',
   ]),
-  // "Link" is the standard loanword for a hyperlink in Estonian UIs.
-  et: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.file.emptyLink']),
+  // "Link" is the standard loanword for a hyperlink in Estonian UIs; "OK" is
+  // the conventional compact confirmation label.
+  et: new Set([
+    'toolNames.link',
+    'tools.image.emptyLink',
+    'tools.file.emptyLink',
+    'tools.link.webLink',
+    'notifier.ok',
+  ]),
   // "OK" is the conventional compact confirmation label in Finnish UIs.
   fi: new Set(['notifier.ok']),
   fil: new Set([
@@ -175,6 +182,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'searchTerms.layout',
     // "Bookmark" is the standard loanword in Filipino UIs (Tagalog).
     'toolNames.bookmark',
+    // "Link" (hyperlink) and "OK" are likewise the established English
+    // loanwords in Filipino product UIs.
+    'tools.link.webLink',
+    'notifier.ok',
   ]),
   fr: new Set([
     'tools.colorPicker.color.orange',
@@ -205,8 +216,15 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ]),
   // "OK" is the conventional compact confirmation label in Japanese UIs.
   ja: new Set(['notifier.ok']),
-  // "grid" is a common search keyword loanword for the table tool in Malay UIs.
-  ms: new Set(['tools.database.defaultStatusProperty', 'searchTerms.grid']),
+  // "grid" is a common search keyword loanword for the table tool in Malay UIs;
+  // "OK" is the conventional compact confirmation label in Malay UIs.
+  ms: new Set([
+    'tools.database.defaultStatusProperty',
+    'searchTerms.grid',
+    'notifier.ok',
+  ]),
+  // "OK" is the conventional compact confirmation label in Burmese UIs.
+  my: new Set(['notifier.ok']),
   nl: new Set([
     'toolNames.link',
     'toolNames.database',
@@ -217,6 +235,9 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Link" is the standard loanword for a hyperlink in Dutch UIs.
     'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
+    'tools.link.webLink',
+    // "OK" is the conventional compact confirmation label in Dutch UIs.
+    'notifier.ok',
   ]),
   no: new Set([
     'toolNames.database',
@@ -235,6 +256,9 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Link" is the standard loanword for a hyperlink in Polish UIs.
     'tools.file.emptyLink',
     'tools.database.defaultStatusProperty',
+    'tools.link.webLink',
+    // "OK" is the conventional compact confirmation label in Polish UIs.
+    'notifier.ok',
   ]),
   pt: new Set([
     'toolNames.link',
@@ -243,6 +267,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.image.cropRatioOval',
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
+    // "Link" is the standard loanword and "OK" the conventional compact
+    // confirmation label in Brazilian Portuguese UIs.
+    'tools.link.webLink',
+    'notifier.ok',
   ]),
   ro: new Set([
     'toolNames.text',
@@ -256,8 +284,16 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.propertyTypeText',
     // "Text" is a direct cognate of the English word in Romanian.
     'tools.link.linkText',
+    'tools.link.webLink',
+    // "OK" is the conventional compact confirmation label in Romanian UIs.
+    'notifier.ok',
   ]),
-  sk: new Set(['tools.database.propertyTypeText', 'tools.link.linkText']),
+  // "OK" is the conventional compact confirmation label in Slovak UIs.
+  sk: new Set([
+    'tools.database.propertyTypeText',
+    'tools.link.linkText',
+    'notifier.ok',
+  ]),
   sq: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
   sv: new Set([
     'toolNames.text',
@@ -274,6 +310,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
+  // "OK" is the conventional compact confirmation label in Vietnamese UIs.
+  vi: new Set(['notifier.ok']),
 };
 
 /**

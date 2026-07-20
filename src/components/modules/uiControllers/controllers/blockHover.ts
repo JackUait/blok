@@ -247,10 +247,15 @@ export class BlockHoverController extends Controller {
     }
 
     const contentRect = contentEl.getBoundingClientRect();
-    const distLeft = Math.abs(clientX - contentRect.left);
-    const distRight = Math.abs(clientX - contentRect.right);
-    const withinZone = distLeft <= BlockHoverController.HOVER_ZONE_SIZE
-      || distRight <= BlockHoverController.HOVER_ZONE_SIZE;
+
+    /**
+     * The zone spans the whole content column plus HOVER_ZONE_SIZE on each
+     * side. Comparing absolute distance to each edge instead would exclude
+     * cursors inside a column wider than 2×HOVER_ZONE_SIZE (e.g. hovering
+     * below all blocks at the column's horizontal center).
+     */
+    const withinZone = clientX >= contentRect.left - BlockHoverController.HOVER_ZONE_SIZE
+      && clientX <= contentRect.right + BlockHoverController.HOVER_ZONE_SIZE;
 
     if (withinZone) {
       this.emitNearestBlockHovered(clientY);

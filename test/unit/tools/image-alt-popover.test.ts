@@ -71,8 +71,9 @@ describe('openAltPopover', () => {
     const popover = document.body.querySelector<HTMLElement>(
       '[data-role="image-alt-popover"]'
     )!;
-    expect(popover.textContent).toMatch(/accessible/i);
-    expect(popover.textContent).toMatch(/vision-impaired|screen.reader/i);
+    expect(popover.textContent).toContain(
+      'Describe this image for people who can’t see it.'
+    );
     detach();
   });
 

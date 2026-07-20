@@ -333,7 +333,7 @@ test.describe('Link paste', () => {
 
     await expect(embedItem).toBeVisible();
     // The menu phrases the action per link type instead of a generic "Embed" label.
-    await expect(embedItem).toContainText('Embed YouTube video');
+    await expect(embedItem).toContainText('Embed a video from YouTube');
     await embedItem.click();
 
     const iframe = page.locator('[data-blok-testid="embed-frame"]');

@@ -30,7 +30,7 @@ describe('openAltPopover', () => {
     expect(popover.getAttribute('aria-label')).toBe('Edit alt text');
     const description = popover.querySelector('.blok-image-alt-popover__description');
     expect(description?.textContent).toBe(
-      'Add alt text to describe this image. This makes your page more accessible to people who are vision-impaired or blind.'
+      'Describe this image for people who can’t see it.'
     );
     const textarea = popover.querySelector<HTMLTextAreaElement>('textarea');
     expect(textarea?.placeholder).toBe('Alt text');

@@ -353,6 +353,106 @@ describe('BlockHoverController', () => {
     });
   });
 
+  describe('nearest block detection (hover zone with real content element)', () => {
+    /**
+     * Like createMockBlock, but the holder contains a [data-blok-element-content]
+     * child with a mocked rect, so emitNearestBlockHoveredInZone takes the
+     * zone-check path instead of the no-content fallback.
+     */
+    const createMockBlockWithContent = (
+      id: string,
+      top: number,
+      bottom: number,
+      contentLeft: number,
+      contentRight: number
+    ): Block => {
+      const block = createMockBlock(id, top, bottom);
+      const content = document.createElement('div');
+
+      content.setAttribute('data-blok-element-content', '');
+      vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({
+        left: contentLeft,
+        right: contentRight,
+        top,
+        bottom,
+        width: contentRight - contentLeft,
+        height: bottom - top,
+        x: contentLeft,
+        y: top,
+        toJSON: () => ({}),
+      });
+      block.holder.appendChild(content);
+
+      return block;
+    };
+
+    const dispatchMouseMoveAt = (clientX: number, clientY: number): void => {
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      const event = new MouseEvent('mousemove', {
+        clientX,
+        clientY,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+    };
+
+    it('emits when the cursor is inside the content column, even far from both edges', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      /**
+       * Wide content column (64..784, like a 720px column behind a 56px gutter).
+       * Cursor x=668 sits inside the column but more than 100px from both edges —
+       * the exact geometry of the "toolbar when cursor is below all blocks" e2e.
+       */
+      const block = createMockBlockWithContent('block-1', 100, 138, 64, 784);
+
+      (controller as unknown as { enable: () => void }).enable();
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      dispatchMouseMoveAt(668, 300);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+
+    it('emits when the cursor is within 100px outside the content edge', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block = createMockBlockWithContent('block-1', 100, 138, 64, 784);
+
+      (controller as unknown as { enable: () => void }).enable();
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      dispatchMouseMoveAt(850, 300);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+
+    it('does not emit when the cursor is beyond the zone outside the content edge', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+
+      const block = createMockBlockWithContent('block-1', 100, 138, 64, 784);
+
+      (controller as unknown as { enable: () => void }).enable();
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      dispatchMouseMoveAt(950, 300);
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+  });
+
   describe('nearest block detection (RTL)', () => {
     it('finds nearest block when cursor is to the right of content area (RTL)', () => {
       const { controller, blok, eventsDispatcher } = createBlockHoverController();

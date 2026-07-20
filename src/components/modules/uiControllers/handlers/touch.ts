@@ -124,18 +124,58 @@ export const getClickedNode = (
   if (event instanceof MouseEvent) {
     const nodeFromPoint = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
 
-    return nodeFromPoint ?? initialTarget;
+    return resolveGutterHitToRow(nodeFromPoint ?? initialTarget, event.clientY, redactorElement);
   }
 
   if (event instanceof TouchEvent && event.touches.length > 0) {
     const { clientX, clientY } = event.touches[0];
     const nodeFromPoint = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
 
-    return nodeFromPoint ?? initialTarget;
+    return resolveGutterHitToRow(nodeFromPoint ?? initialTarget, clientY, redactorElement);
   }
 
   return initialTarget;
 }
+
+/**
+ * Resolves a hit on the redactor itself to the block row at that Y position.
+ *
+ * The redactor reserves an inline gutter (--blok-editor-gutter-start/-end
+ * padding housing the floating +/⠿ controls), so a pointer-down in the gutter
+ * lands on the redactor element even though it sits directly beside a block
+ * row. That gutter belongs to the row: before the gutter moved into redactor
+ * padding, block holders reached the editor edge and the same pointer-down hit
+ * the block itself. Re-probe at the redactor's horizontal center at the same Y
+ * (mirroring RectangleSelection.genInfoForMouseSelection) so gutter clicks
+ * resolve to their row instead of being treated as "outside all blocks" (which
+ * would move the caret to the last block and clear any block selection).
+ *
+ * @param node - the node the pointer probe resolved to
+ * @param clientY - viewport Y coordinate of the pointer
+ * @param redactorElement - the redactor DOM element
+ * @returns the block-row element at the same Y, or the original node
+ */
+const resolveGutterHitToRow = (
+  node: HTMLElement,
+  clientY: number,
+  redactorElement: HTMLElement
+): HTMLElement => {
+  if (node !== redactorElement) {
+    return node;
+  }
+
+  const redactorRect = redactorElement.getBoundingClientRect();
+  const centerProbe = document.elementFromPoint(
+    redactorRect.left + redactorRect.width / 2,
+    clientY
+  ) as HTMLElement | null;
+
+  if (centerProbe !== null && centerProbe !== redactorElement && redactorElement.contains(centerProbe)) {
+    return centerProbe;
+  }
+
+  return node;
+};
 
 /**
  * Extracts the clientY coordinate from a mouse or touch event

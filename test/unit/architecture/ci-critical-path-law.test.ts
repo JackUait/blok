@@ -15,6 +15,7 @@ type WorkflowValue = boolean | number | string;
 
 type Step = {
   name?: string;
+  id?: string;
   run?: string;
   uses?: string;
   if?: string;
@@ -111,6 +112,9 @@ const setupNodeDependencies: Step = {
   uses: './.github/actions/setup-node-deps',
 };
 
+const lintCachePaths =
+  'node_modules/.cache/blok-eslint\nnode_modules/.cache/blok-lint.tsbuildinfo\n';
+
 const buildArtifactPaths =
   'dist/\npackages/react/dist/\npackages/vue/dist/\npackages/angular/dist/\n';
 
@@ -178,11 +182,7 @@ describe('CI critical-path law', () => {
     expect(i18n['runs-on']).toBe('ubuntu-latest');
     expectOrderedSteps('ci.i18n', i18n, [
       checkout,
-      {
-        name: 'Setup Node.js',
-        uses: 'actions/setup-node@v4',
-        with: { 'node-version': 24 },
-      },
+      setupNodeDependencies,
       {
         name: 'Check translations',
         run: 'node scripts/i18n/check-translations.mjs',
@@ -198,7 +198,27 @@ describe('CI critical-path law', () => {
     expectOrderedSteps('ci.lint', lint, [
       checkout,
       setupNodeDependencies,
+      {
+        name: 'Restore lint cache',
+        id: 'lint-cache',
+        uses: 'actions/cache/restore@v4',
+        with: {
+          path: lintCachePaths,
+          key: "lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-${{ github.sha }}",
+          'restore-keys':
+            "lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-\n",
+        },
+      },
       { name: 'Lint', run: 'yarn lint' },
+      {
+        name: 'Save lint cache',
+        if: "always() && steps.lint-cache.outputs.cache-hit != 'true'",
+        uses: 'actions/cache/save@v4',
+        with: {
+          path: lintCachePaths,
+          key: '${{ steps.lint-cache.outputs.cache-primary-key }}',
+        },
+      },
     ]);
   });
 

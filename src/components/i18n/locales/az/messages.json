@@ -305,7 +305,7 @@
   "tools.image.errorUploadFailed": "Yükləmə uğursuz oldu",
   "tools.image.errorFileTooLarge": "Şəkil həddindən böyükdür. Ölçüsü: {size}. İcazə verilən hədd: {max}.",
   "tools.image.errorUploadFailedTitle": "Yükləmə alınmadı",
-  "tools.image.errorSourceOffline": "Mənbə faylı köçürülmüş və ya oflayn ola bilər.",
+  "tools.image.errorSourceOffline": "Mənbə faylı köçürülmüş və ya əlçatan olmaya bilər.",
   "tools.image.errorUnavailable": "Şəkil əlçatan deyil",
   "tools.image.errorImageFailedToLoad": "Şəkil yüklənmədi",
   "tools.image.errorDefaultTitle": "Şəkil yüklənə bilmədi",

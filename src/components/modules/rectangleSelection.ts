@@ -585,15 +585,24 @@ export class RectangleSelection extends Module {
 
     if (rootBlock) {
       const holderRect = rootBlock.holder.getBoundingClientRect();
+      const redactorRect = this.Blok.UI.nodes.redactor.getBoundingClientRect();
       const scrollLeft = this.getScrollLeft();
 
       // Selection rectangle horizontal bounds (in page coordinates)
       const rectLeft = Math.min(this.startX, this.mouseX);
       const rectRight = Math.max(this.startX, this.mouseX);
 
-      // Block holder horizontal bounds (convert from viewport to page coordinates)
-      const holderLeft = holderRect.left + scrollLeft;
-      const holderRight = holderRect.right + scrollLeft;
+      /**
+       * Block holder horizontal bounds (converted from viewport to page
+       * coordinates), extended to the redactor's own box. The redactor's
+       * gutter (--blok-editor-gutter-start/-end padding that houses the
+       * floating +/⠿ controls) belongs to the block's row: a lasso drawn
+       * inside the gutter must select the rows it spans, exactly like it
+       * did when block holders reached the editor edge themselves. True
+       * page margins OUTSIDE the editor stay non-selecting.
+       */
+      const holderLeft = Math.min(holderRect.left, redactorRect.left) + scrollLeft;
+      const holderRight = Math.max(holderRect.right, redactorRect.right) + scrollLeft;
 
       // Check for horizontal intersection
       this.rectCrossesBlocks = rectRight >= holderLeft && rectLeft <= holderRight;

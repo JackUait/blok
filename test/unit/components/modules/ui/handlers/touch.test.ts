@@ -79,6 +79,73 @@ describe('Touch Handler', () => {
       expect(result).toBe(redactorElement);
     });
 
+    it('resolves a gutter hit to the block row at the redactor horizontal center', () => {
+      /**
+       * A mousedown in the editor gutter (the redactor's inline padding that
+       * houses the +/⠿ controls) targets the redactor itself, and
+       * elementFromPoint at the pointer also returns the redactor. The gutter
+       * belongs to the block row beside it, so the hit must be re-probed at
+       * the redactor's horizontal center at the same Y and resolve to that
+       * row's element.
+       */
+      const blockChild = document.createElement('div');
+      redactorElement.appendChild(blockChild);
+
+      vi.spyOn(redactorElement, 'getBoundingClientRect').mockReturnValue({
+        left: 8,
+        right: 1272,
+        width: 1264,
+        top: 0,
+        bottom: 500,
+        height: 500,
+        x: 8,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      document.elementFromPoint = vi.fn((x: number) => {
+        // Pointer probe (x=10, in the gutter) hits the redactor; center probe hits the block
+        return x < 100 ? redactorElement : blockChild;
+      }) as unknown as Document['elementFromPoint'];
+
+      const event = new MouseEvent('mousedown', {
+        clientX: 10,
+        clientY: 100,
+      });
+      Object.defineProperty(event, 'target', { value: redactorElement });
+
+      const result = getClickedNode(redactorElement, event, redactorElement);
+
+      expect(result).toBe(blockChild);
+      expect(document.elementFromPoint).toHaveBeenCalledWith(640, 100);
+    });
+
+    it('keeps the redactor when the center probe finds nothing else (below all blocks)', () => {
+      vi.spyOn(redactorElement, 'getBoundingClientRect').mockReturnValue({
+        left: 8,
+        right: 1272,
+        width: 1264,
+        top: 0,
+        bottom: 500,
+        height: 500,
+        x: 8,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      document.elementFromPoint = vi.fn(() => redactorElement) as unknown as Document['elementFromPoint'];
+
+      const event = new MouseEvent('mousedown', {
+        clientX: 10,
+        clientY: 480,
+      });
+      Object.defineProperty(event, 'target', { value: redactorElement });
+
+      const result = getClickedNode(redactorElement, event, redactorElement);
+
+      expect(result).toBe(redactorElement);
+    });
+
     it('returns redactor when TouchEvent has no touches', () => {
       const event = new TouchEvent('touchstart', {
         touches: [],

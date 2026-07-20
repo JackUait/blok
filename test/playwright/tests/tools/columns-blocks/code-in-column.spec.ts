@@ -13,8 +13,7 @@ import {
 /**
  * Code block fixture nested inside the first column of a 2-column layout.
  * The Code block is a leaf (no child blocks): it stores `code`/`language`/
- * `lineNumbers` in its own `data`. `code` MUST be non-empty or validate()
- * drops it on save(). `javascript` keeps the editable code body visible
+ * `lineNumbers` in its own `data`. `javascript` keeps the editable code body visible
  * (previewable langs like mermaid/latex would hide `code-content`).
  */
 const CODE_SNIPPET = "const greet = (name) => `hi ${name}`;\nconsole.log(greet('blok'));";

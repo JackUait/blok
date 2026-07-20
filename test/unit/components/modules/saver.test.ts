@@ -36,6 +36,12 @@ interface BlockMockOptions {
    * WYSIWYG order guard (flat-array vs DOM order of container children).
    */
   holder?: HTMLElement;
+  /**
+   * Drives the single-empty-default-block short-circuit. Both default to the
+   * values that keep a block in the output.
+   */
+  isEmpty?: boolean;
+  isDefault?: boolean;
 }
 
 interface CreateSaverOptions {
@@ -66,6 +72,8 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
     contentIds: options.contentIds ?? [],
     lastEditedAt: options.lastEditedAt,
     lastEditedBy: options.lastEditedBy ?? null,
+    isEmpty: options.isEmpty ?? false,
+    tool: { isDefault: options.isDefault ?? false },
     ...(options.holder !== undefined ? { holder: options.holder } : {}),
   } as unknown as Block;
 
@@ -229,6 +237,39 @@ describe('Saver module', () => {
         preservedData,
       ],
     });
+  });
+
+  it('returns an empty blocks array for a single empty default block', async () => {
+    const emptyBlock = createBlockMock({
+      id: 'block-1',
+      tool: 'paragraph',
+      data: { text: '' },
+      isEmpty: true,
+      isDefault: true,
+    });
+
+    const { saver } = createSaver({ blocks: [emptyBlock.block] });
+
+    const result = await saver.save();
+
+    expect(result?.blocks).toEqual([]);
+  });
+
+  it('keeps a single default block whose text is only a slash', async () => {
+    const slashBlock = createBlockMock({
+      id: 'block-1',
+      tool: 'paragraph',
+      data: { text: '/' },
+      isEmpty: false,
+      isDefault: true,
+    });
+
+    const { saver } = createSaver({ blocks: [slashBlock.block] });
+
+    const result = await saver.save();
+
+    expect(result?.blocks).toHaveLength(1);
+    expect(result?.blocks[0]).toEqual(expect.objectContaining({ data: { text: '/' } }));
   });
 
   it('skips invalid blocks and logs the reason', async () => {

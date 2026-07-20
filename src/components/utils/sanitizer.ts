@@ -38,6 +38,28 @@ import { isSafeRasterImageDataUrl, stripIgnoredUrlChars } from './sanitize-url';
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
 
 /**
+ * Sentinel marking a block-data field as plaintext rather than HTML.
+ *
+ * Sanitization is an HTML parse: it entity-encodes bare `<`/`&` and deletes
+ * text that looks like a stray end tag. That is correct for rich-text fields
+ * and destructive for fields storing literal source text (a code block's
+ * `code`). Declaring the field PLAINTEXT skips both janitor and the URL-scheme
+ * pass, so the value round-trips byte-identical.
+ *
+ * A plain string (not a Symbol) so it survives JSON and structuredClone —
+ * tool sanitize configs are a public surface hosts may serialize.
+ */
+export const PLAINTEXT = 'plaintext';
+
+/**
+ * Whether a resolved rule declares its field as plaintext.
+ * @param rule - sanitizer rule to test
+ */
+const isPlaintextRule = (rule: DeepSanitizerRule): boolean => {
+  return rule === PLAINTEXT;
+};
+
+/**
  * Recursive type for data that can contain nested arrays
  */
 type DeepData = string | Record<string, unknown> | Array<DeepData>;
@@ -94,8 +116,17 @@ export const sanitizeBlocks = (
  * @returns {string} clean HTML
  */
 export const clean = (taintString: string, customConfig: SanitizerConfig = {} as SanitizerConfig): string => {
+  /**
+   * PLAINTEXT is a field-level directive, not a tag rule — html-janitor has no
+   * meaning for it. Drop such entries at the boundary so a config carrying one
+   * can never be handed to the parser.
+   */
+  const tags = Object.fromEntries(
+    Object.entries(customConfig).filter(([, rule]) => !isPlaintextRule(rule))
+  ) as Record<string, TagConfig | ((el: Element) => TagConfig)>;
+
   const sanitizerConfig = {
-    tags: customConfig,
+    tags,
   };
 
   /**
@@ -214,6 +245,15 @@ const cleanOneItem = (
   rule: DeepSanitizerRule,
   globalRules: SanitizerConfig
 ): string => {
+  /**
+   * Plaintext fields are not markup — parsing them is what corrupts them.
+   * Bypasses the global sanitizer too: a host-level config must not be able
+   * to mangle a field the tool declared as literal text.
+   */
+  if (isPlaintextRule(rule)) {
+    return taintString;
+  }
+
   const effectiveRule = getEffectiveRuleForString(rule, globalRules);
 
   if (effectiveRule) {
@@ -238,7 +278,7 @@ const cleanOneItem = (
  * @param {SanitizerConfig} config - config to check
  */
 const isRule = (config: DeepSanitizerRule): boolean => {
-  return isObject(config) || isBoolean(config) || isFunction(config);
+  return isObject(config) || isBoolean(config) || isFunction(config) || isPlaintextRule(config);
 };
 
 /**
@@ -278,17 +318,24 @@ const stripUnsafeUrls = (value: string): string => {
 
     template.innerHTML = value;
 
-    const elements = template.content.querySelectorAll('[href],[src]');
+    const unsafe = Array.from(template.content.querySelectorAll('[href],[src]'))
+      .flatMap((element) => ['href', 'src']
+        .filter((attribute) => hasUnsafeUrlProtocol(element.getAttribute(attribute), attribute))
+        .map((attribute) => ({ element,
+          attribute })));
 
-    elements.forEach((element) => {
-      ['href', 'src'].forEach((attribute) => {
-        const attrValue = element.getAttribute(attribute);
+    /**
+     * The innerHTML round-trip is a parser, not a transform: it entity-encodes
+     * bare `<`/`&` and silently deletes text that looks like a stray end tag.
+     * That destroys plaintext fields (code, captions) which legitimately carry
+     * those characters. Only pay the round-trip when an attribute actually
+     * needs stripping — otherwise the input is returned byte-identical.
+     */
+    if (unsafe.length === 0) {
+      return value;
+    }
 
-        if (hasUnsafeUrlProtocol(attrValue, attribute)) {
-          element.removeAttribute(attribute);
-        }
-      });
-    });
+    unsafe.forEach(({ element, attribute }) => element.removeAttribute(attribute));
 
     return template.innerHTML;
   }
@@ -310,27 +357,39 @@ const stripUnsafeUrls = (value: string): string => {
  * opt-in per tool), and so caller-owned data is never retained by reference.
  * @param data - stored block data
  */
-export const stripUnsafeUrlsDeep = (data: BlockToolData): BlockToolData => {
-  return stripUnsafeUrlsDeepValue(data as DeepData) as BlockToolData;
+export const stripUnsafeUrlsDeep = (
+  data: BlockToolData,
+  rules?: SanitizerConfig | ToolSanitizerConfig
+): BlockToolData => {
+  return stripUnsafeUrlsDeepValue(data as DeepData, rules as DeepSanitizerRule) as BlockToolData;
 };
 
-const stripUnsafeUrlsDeepValue = (value: DeepData): DeepData => {
+const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule): DeepData => {
   if (Array.isArray(value)) {
-    return value.map(stripUnsafeUrlsDeepValue);
+    return value.map((item) => stripUnsafeUrlsDeepValue(item, rules));
   }
 
   if (isObject(value)) {
     const result: Record<string, unknown> = {};
+    const rulesRecord = isObject(rules) ? (rules as Record<string, DeepSanitizerRule>) : undefined;
 
     Object.entries(value).forEach(([key, item]) => {
-      result[key] = stripUnsafeUrlsDeepValue(item as DeepData);
+      const ruleCandidate = rulesRecord?.[key];
+      const ruleForItem = ruleCandidate !== undefined && isRule(ruleCandidate) ? ruleCandidate : rules;
+
+      result[key] = stripUnsafeUrlsDeepValue(item as DeepData, ruleForItem);
     });
 
     return result;
   }
 
   if (isString(value)) {
-    return stripUnsafeUrls(value);
+    /**
+     * A PLAINTEXT field carries no URLs to harden — it carries source text
+     * that may merely look like markup. Running the pass would re-introduce
+     * the corruption this sentinel exists to prevent.
+     */
+    return isPlaintextRule(rules as DeepSanitizerRule) ? value : stripUnsafeUrls(value);
   }
 
   return value;

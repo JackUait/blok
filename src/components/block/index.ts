@@ -791,7 +791,16 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns {boolean}
    */
   public get isEmpty(): boolean {
-    const emptyText = $.isEmpty(this.pluginsContent, '/');
+    /**
+     * No `ignoreChars`: `$.isNodeEmpty` strips EVERY occurrence of the ignored
+     * substring before measuring, so tolerating '/' made any slash-only block
+     * ("/", "//") report empty — which the Saver's single-empty-default-block
+     * short-circuit then discarded as `{ blocks: [] }`. The slash-command flow
+     * that motivated the tolerance (cd29c52e, from upstream Editor.js) no
+     * longer needs it: Toolbox decides in-place replacement from
+     * `blockHasOnlySlashQuery`/`slashQuerySpan`, not from `isEmpty`.
+     */
+    const emptyText = $.isEmpty(this.pluginsContent);
     const emptyMedia = !this.hasMedia;
 
     return emptyText && emptyMedia;

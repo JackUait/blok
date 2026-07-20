@@ -105,6 +105,7 @@ const LOGIC_TESTS = [
   '**/modules/navigation-mode.spec.ts',
   '**/modules/undo-redo.spec.ts',
   '**/tools/code-block-undo-view-mode.spec.ts',
+  '**/tools/code-block-data-loss.spec.ts',
   '**/tools/table-undo-setdata-duplication.spec.ts',
   '**/modules/multi-block-selection-with-toolbar.spec.ts',
   '**/modules/scroll-to-block.spec.ts',

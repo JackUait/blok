@@ -4,7 +4,25 @@
  */
 export type TagConfig = boolean | { [attr: string]: boolean | string };
 
-export type SanitizerRule = TagConfig | ((el: Element) => TagConfig);
+/**
+ * Marks a block-data field as plaintext rather than HTML.
+ *
+ * Sanitization is an HTML parse: it entity-encodes bare `<`/`&` and drops text
+ * shaped like a stray end tag. For a field holding literal source text (a code
+ * block's `code`) that is irrecoverable corruption, so a PLAINTEXT field skips
+ * both tag sanitization and the URL-scheme pass and round-trips byte-identical.
+ *
+ * Declared as a string literal (not a Symbol) so tool sanitize configs survive
+ * JSON and structuredClone.
+ *
+ * @example
+ * static get sanitize(): ToolSanitizerConfig {
+ *   return { code: 'plaintext' };
+ * }
+ */
+export type PlaintextRule = 'plaintext';
+
+export type SanitizerRule = TagConfig | PlaintextRule | ((el: Element) => TagConfig);
 
 export interface SanitizerConfig {
   /**

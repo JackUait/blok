@@ -148,8 +148,12 @@ export class Quote implements BlockTool {
     };
   }
 
+  /**
+   * Integrity predicate, not an emptiness filter — see the note on
+   * CodeTool.validate. An empty quote is content, not corruption.
+   */
   public validate(savedData: QuoteData): boolean {
-    return savedData.text.trim() !== '';
+    return typeof savedData.text === 'string';
   }
 
   public merge(data: QuoteData): void {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../../src/components/utils/sanitizer';
+import { sanitizeBlocks, clean, composeSanitizerConfig, stripUnsafeUrlsDeep, PLAINTEXT } from '../../../src/components/utils/sanitizer';
 import { MarkerInlineTool } from '../../../src/components/inline-tools/inline-tool-marker';
 import type { SanitizerConfig, SanitizerRule } from '../../../types';
 import type { SavedData } from '../../../types/data-formats';
@@ -1247,6 +1247,89 @@ describe('sanitizer', () => {
   });
 });
 
+
+describe('stripUnsafeUrls plaintext preservation', () => {
+  /**
+   * Runs a code block's plaintext through the real sanitizeBlocks pipeline
+   * with the Code tool's own sanitize config.
+   * @param code - plaintext code to sanitize
+   */
+  const sanitizeCode = (code: string): string => {
+    const [result] = sanitizeBlocks(
+      [ { tool: 'code', data: { code } } ],
+      { code: true } as unknown as SanitizerConfig,
+      {}
+    );
+
+    return (result.data as { code: string }).code;
+  };
+
+  it.each([
+    [ 'less-than in a for loop', 'for (let i = 0; i < n; i++)' ],
+    [ 'unspaced comparison (was truncated)', 'if (a<b) { }' ],
+    [ 'ampersand beside less-than', 'a & b < c' ],
+    [ 'lone closing tag (was deleted)', '</div>' ],
+    [ 'mixed operators', '5 < 6 && 7 > 8' ],
+  ])('returns the original string when no unsafe URL was removed: %s', (_label, code) => {
+    expect(sanitizeCode(code)).toBe(code);
+  });
+
+  it('leaves plaintext fields of config-less tools byte-identical', () => {
+    const data = { caption: 'width < height && depth > 0' };
+
+    expect(stripUnsafeUrlsDeep(data)).toEqual(data);
+  });
+});
+
+describe('PLAINTEXT sanitizer rule', () => {
+  const CODE = '<a href="javascript:alert(1)">not a link, just source</a>';
+
+  it('passes a PLAINTEXT field through verbatim instead of parsing it as markup', () => {
+    const [result] = sanitizeBlocks(
+      [ { tool: 'code', data: { code: CODE } } ],
+      { code: PLAINTEXT } as unknown as SanitizerConfig,
+      {}
+    );
+
+    expect((result.data as { code: string }).code).toBe(CODE);
+  });
+
+  it('keeps a PLAINTEXT field verbatim even under a host-supplied global sanitizer', () => {
+    const [result] = sanitizeBlocks(
+      [ { tool: 'code', data: { code: CODE } } ],
+      { code: PLAINTEXT } as unknown as SanitizerConfig,
+      { b: true } as unknown as SanitizerConfig
+    );
+
+    expect((result.data as { code: string }).code).toBe(CODE);
+  });
+
+  it('still sanitizes sibling fields that are not declared PLAINTEXT', () => {
+    const [result] = sanitizeBlocks(
+      [ { tool: 'code', data: { code: CODE, caption: '<a href="javascript:alert(1)">x</a>' } } ],
+      { code: PLAINTEXT, caption: { a: { href: true } } } as unknown as SanitizerConfig,
+      {}
+    );
+
+    expect((result.data as { code: string }).code).toBe(CODE);
+    expect((result.data as { caption: string }).caption).not.toContain('javascript:');
+  });
+
+  it('survives config composition intact', () => {
+    const composed = composeSanitizerConfig(
+      { code: PLAINTEXT } as unknown as SanitizerConfig,
+      { b: true } as unknown as SanitizerConfig
+    );
+
+    expect(composed.code).toBe(PLAINTEXT);
+  });
+
+  it('skips the URL-scheme pass for PLAINTEXT fields on the render path', () => {
+    const data = { code: CODE };
+
+    expect(stripUnsafeUrlsDeep(data, { code: PLAINTEXT } as unknown as SanitizerConfig)).toEqual(data);
+  });
+});
 
 describe('URL scheme hardening (whitespace smuggling)', () => {
   /**

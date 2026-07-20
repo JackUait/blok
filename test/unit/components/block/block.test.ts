@@ -448,6 +448,19 @@ describe('Block', () => {
       expect(block.isEmpty).toBe(false);
     });
 
+    it('treats a slash-only block as non-empty', () => {
+      const { block } = createBlock();
+
+      block.pluginsContent.textContent = '/';
+      expect(block.isEmpty).toBe(false);
+
+      block.pluginsContent.textContent = '//';
+      expect(block.isEmpty).toBe(false);
+
+      block.pluginsContent.textContent = '/cmd';
+      expect(block.isEmpty).toBe(false);
+    });
+
     it('toggles selection class and emits fake cursor events', () => {
       const eventBus = new EventsDispatcher<BlokEventMap>();
       const emitSpy = vi.spyOn(eventBus, 'emit');

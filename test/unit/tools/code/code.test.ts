@@ -234,12 +234,19 @@ describe('CodeTool', () => {
       expect(tool.validate({ code: 'x', language: 'plain text' } as CodeData)).toBe(true);
     });
 
-    it('returns false for empty code', async () => {
+    it('treats an intentionally-empty code block as valid', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());
 
-      expect(tool.validate({ code: '', language: 'plain text' } as CodeData)).toBe(false);
-      expect(tool.validate({ code: '   ', language: 'plain text' } as CodeData)).toBe(false);
+      expect(tool.validate({ code: '', language: 'plain text' } as CodeData)).toBe(true);
+      expect(tool.validate({ code: '   ', language: 'plain text' } as CodeData)).toBe(true);
+    });
+
+    it('rejects non-string code', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions());
+
+      expect(tool.validate({ language: 'plain text' } as CodeData)).toBe(false);
     });
   });
 

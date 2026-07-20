@@ -310,7 +310,7 @@ export class Renderer extends Module {
     // config: run the scheme-only pass unconditionally (tag allowlisting
     // stays opt-in per tool). Also rebuilds the data containers, so stored
     // caller-owned objects are never retained by reference.
-    return stripUnsafeUrlsDeep(sanitized.data);
+    return stripUnsafeUrlsDeep(sanitized.data, Tools.blockTools.get(tool)?.sanitizeConfig);
   }
 
   /**

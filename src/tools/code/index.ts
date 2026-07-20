@@ -15,6 +15,7 @@ import { buildCodeDOM, setActiveViewMode } from './dom-builder';
 import type { CodeDOMRefs } from './dom-builder';
 import { handleCodeKeydown } from './code-keyboard';
 import { PopoverDesktop } from '../../components/utils/popover';
+import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
@@ -405,8 +406,15 @@ export class CodeTool implements BlockTool {
     this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
   }
 
+  /**
+   * `validate()` is a data-integrity predicate, not an emptiness filter — a
+   * false return makes the Saver drop the block entirely. An intentionally
+   * empty code block is valid content the user asked for, so only a missing
+   * or non-string `code` field (a bad migration) is rejected. Mirrors the
+   * house convention in list/header.
+   */
   public validate(savedData: CodeData): boolean {
-    return savedData.code.trim() !== '';
+    return typeof savedData.code === 'string';
   }
 
   public merge(data: CodeData): void {
@@ -850,7 +858,12 @@ export class CodeTool implements BlockTool {
 
   public static get sanitize(): ToolSanitizerConfig {
     return {
-      code: true,
+      /**
+       * `code` is literal source text, not markup. `true` would route it
+       * through the HTML parser, which entity-encodes `<`/`&` and deletes
+       * anything shaped like a stray end tag — irrecoverable corruption.
+       */
+      code: PLAINTEXT,
     };
   }
 

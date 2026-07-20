@@ -200,18 +200,19 @@ describe('Quote Tool', () => {
       expect(tool.validate({ text: 'Something', size: 'default' })).toBe(true);
     });
 
-    it('returns false for empty text', async () => {
+    it('treats an intentionally-empty quote as valid', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
       const tool = new Quote(createQuoteOptions());
 
-      expect(tool.validate({ text: '', size: 'default' })).toBe(false);
+      expect(tool.validate({ text: '', size: 'default' })).toBe(true);
+      expect(tool.validate({ text: '   ', size: 'default' })).toBe(true);
     });
 
-    it('returns false for whitespace-only text', async () => {
+    it('rejects non-string text', async () => {
       const { Quote } = await import('../../../../src/tools/quote');
       const tool = new Quote(createQuoteOptions());
 
-      expect(tool.validate({ text: '   ', size: 'default' })).toBe(false);
+      expect(tool.validate({ size: 'default' } as unknown as QuoteData)).toBe(false);
     });
   });
 

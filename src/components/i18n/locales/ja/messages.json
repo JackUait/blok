@@ -100,7 +100,7 @@
   "a11y.blockMoved": "ブロックを{total}個中{position}番目に移動しました",
   "a11y.blocksMoved": "{count}個のブロックを{position}番目に移動しました",
   "a11y.blockDuplicated": "ブロックを{total}個中{position}番目に複製しました",
-  "a11y.blocksDuplicated": "{count}個のブロックを{position}番目から複製しました",
+  "a11y.blocksDuplicated": "{count}個のブロックを複製しました。複製したブロックの開始位置は{position}番目です。",
   "a11y.movedUp": "上に移動しました。位置：{total}個中{position}番目。",
   "a11y.movedDown": "下に移動しました。位置：{total}個中{position}番目。",
   "a11y.atTop": "上に移動できません。すでに一番上です。",

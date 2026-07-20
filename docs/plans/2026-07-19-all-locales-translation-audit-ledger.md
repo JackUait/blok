@@ -290,7 +290,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
-| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | `root-czech_546_first_pass` | — | pass | pass | pass | `F-ja-001`, `F-ja-004`–`F-ja-092` | first-pass-complete |
+| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
 | `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001` | pending |
@@ -413,7 +413,6 @@ locale returns to `pending`.
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
-| `ja` | `root-czech_546_first_pass` | `sha256:b0986c0340ab3886ba1bc822309db1e5c3058f0ee1721f684e487cd47cbace26` | — | — |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -2110,6 +2109,24 @@ its independent validator passed 5,768 assertions. Japanese is now
 `first-pass-complete` on raw dictionary SHA-256
 `b0986c0340ab3886ba1bc822309db1e5c3058f0ee1721f684e487cd47cbace26`,
 pending a distinct complete second pass.
+
+Reviewer `root` then independently restarted at entry 1 and directly reread
+all 546 English/Japanese pairs in source order as the distinct second pass.
+That read upheld `F-ja-001`, `F-ja-004` through `F-ja-092`, all seven
+retentions, and the previously validated placeholder, alias, provider,
+block-color, migration, changed-English, and caller-partition inventories.
+It found one caller-backed residual: `DragA11y.announceDuplicateComplete`
+passes the first newly duplicated block's destination index as `position`,
+whereas the current `a11y.blocksDuplicated` wording can describe copying
+source blocks from that position. `F-ja-093` explicitly labels the starting
+position of the duplicated blocks, using the standard Japanese position term
+[開始位置](https://support.apple.com/ja-jp/guide/logicpro/lgcpce0833d7/mac).
+The focused expectation failed on exactly the recorded old value before the
+correction and passed afterward; the corrected raw dictionary SHA-256 is
+`8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73`.
+Because applying this correction changes the dictionary bytes, the attempted
+second pass does not complete the locale and the earlier first-pass credit is
+also reset. Both complete passes must restart on the corrected bytes.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -4638,6 +4655,7 @@ follows the global transition rule above.
 | `F-ja-090` | `ja` | `tools.callout.emojiSearchResults` | source synchronization / result count | `"{count} 件の絵文字が見つかりました"` | `"絵文字の検索結果：{count}件"` | Reports the search-result count with Japanese punctuation and counter spacing. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
 | `F-ja-091` | `ja` | `blockSettings.orConjunction` | Japanese composition spacing / naturalness | `" または "` | `"または"` | This fragment is concatenated directly between `クリック` and the highlighted shortcut. Japanese does not insert source-language spaces around the conjunction or key token; the replacement renders the natural `クリックまたは⌘/…`. [Notion Japanese keyboard shortcuts](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts) follows space-less Japanese prose around shortcut tokens. | verified |
 | `F-ja-092` | `ja` | `blockSettings.openMenuAction` | Japanese particle spacing / naturalness | `" でメニューを開く"` | `"でメニューを開く"` | The caller appends this particle-led fragment directly after either `クリック` or the highlighted shortcut. Removing the English boundary space renders natural `クリックでメニューを開く` and `⌘/でメニューを開く`. | verified |
+| `F-ja-093` | `ja` | `a11y.blocksDuplicated` | accessibility / caller destination semantics | `"{count}個のブロックを{position}番目から複製しました"` | `"{count}個のブロックを複製しました。複製したブロックの開始位置は{position}番目です。"` | `DragA11y.announceDuplicateComplete` supplies the first newly duplicated block's destination index, not a source position. The replacement explicitly labels that destination while preserving both placeholders and using the standard Japanese position term [開始位置](https://support.apple.com/ja-jp/guide/logicpro/lgcpce0833d7/mac). | verified |
 | `F-ka-001` | `ka` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"პირდაპირი დაფორმატების გასუფთავება"` | LibreOffice’s Georgian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ka/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-km-001` | `km` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ជម្រះទ្រង់ទ្រាយ"` | LibreOffice’s exact short Clear formatting entry is `ជម្រះ​ទ្រង់ទ្រាយ`; the invisible separator is omitted to match this JSON corpus. An independent pass rejected the longer direct-formatting proposal as needless technical scope. | verified |
 | `F-kn-001` | `kn` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ಫಾರ್ಮ್ಯಾಟಿಂಗ್ ತೆರವುಗೊಳಿಸಿ"` | The replacement combines this dictionary’s and Google’s established `ಫಾರ್ಮ್ಯಾಟಿಂಗ್` terminology with this dictionary’s polite `ತೆರವುಗೊಳಿಸಿ` clear-action register. An independent pass rejected the longer LibreOffice direct-formatting label as needlessly technical. | verified |

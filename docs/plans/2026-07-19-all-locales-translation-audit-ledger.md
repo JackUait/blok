@@ -268,20 +268,20 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-ar-546-first-final` | — | pass | pass | pass | `F-ar-001`–`F-ar-075` | first-pass-complete |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-az-546-first-final` | — | pass | pass | pass | `F-az-001`–`F-az-104` | first-pass-complete |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-071` | pending |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-072` | pending |
 | `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-danish_546_first_pass` | — | pass | pass | pass | `F-bs-001`–`F-bs-181` | first-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-da-546-first-restart` | — | pass | pass | pass | `F-da-001`–`F-da-085` | first-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
-| `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | — | — | pending | pending | pending | `F-el-001`–`F-el-072` | pending |
+| `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | — | pass | pass | pass | `F-el-001`–`F-el-072` | first-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-101` | pending |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
-| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | — | pass | pass | pass | `F-fr-001`–`F-fr-133` | first-pass-complete |
+| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-134` | pending |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-czech_546_first_pass` | — | pass | pass | pass | `F-hi-001`–`F-hi-079` | first-pass-complete |
@@ -409,9 +409,9 @@ locale returns to `pending`.
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-da-546-first-restart` | `sha256:ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f` | — | — |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
+| `el` | `root-czech_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` | — | — |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
-| `fr` | `root-czech_546_first_pass` | `sha256:4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38` | — | — |
 | `hi` | `root-czech_546_first_pass` | `sha256:8e11b2d7043c665a0262c6b8c6d6033144993d63ddf954c7b548181e354b217b` | — | — |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 | `ja` | `root-azeri_proposal_challenge` | `sha256:8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73` | — | — |
@@ -1141,6 +1141,28 @@ Because the correction changes the dictionary bytes, the attempted second
 pass does not complete the locale and the earlier first-pass credit is also
 reset. Both complete passes must restart after remediation.
 
+Reviewer `root-danish_546_first_pass` then restarted at entry 1 and directly
+reread all 546 corrected English/Bengali pairs in source order. It upheld
+`F-bn-001` through `F-bn-071`, all four retentions, and the complete
+placeholder, alias, provider, block-color, migration, changed-English, and
+533+12+1 caller inventories. It found one count-neutrality residual in the
+select-all live-region announcement: `a11y.allBlocksSelected` can receive one,
+but the current wording repeats a fixed block noun after `{count}`.
+`F-bn-072` separates the completed state from the total and removes the
+count-sensitive repetition.
+
+The attempted-pass artifact is
+`/tmp/blok-bn-546-first-pass-post-f071.json` with SHA-256
+`d1d4ec3aa111c9dee0dd3db8c9b85796393000d166d3bb247b4a603832d53f5b`;
+its independent validator passed. It binds to pre-correction Bengali
+dictionary SHA-256
+`f36b6303b8c7839cebee9d5699de12ba70026be77cd24578caf6d00f230caa79`.
+Because the residual changes the bytes, the attempted pass earns no credit and
+both complete current-byte passes must restart after remediation. The focused
+expectation failed on exactly the recorded old value and passes after the
+correction. The corrected raw Bengali dictionary SHA-256 is
+`fc676c15360514421a64b48ea333818b0bba32d9640e68f1ba452834dbc66825`.
+
 ### Bosnian (`bs`) — corrected-byte first pass complete
 
 The current 546-key review found three caller-context residuals after the
@@ -1512,7 +1534,25 @@ Greek findings pass. The corrected dictionary changes exactly the 71 expected
 keys, preserves every placeholder multiset, and has exactly the seven
 documented source-equal values. Its raw SHA-256 is
 `b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61`.
-Greek remains `pending` until two fresh complete current-byte passes finish.
+Greek remained `pending` until fresh complete current-byte passes began.
+
+Reviewer `root-czech_546_first_pass` then restarted at entry 1 and directly
+reread all 546 corrected English/Greek pairs in source order without using
+the earlier artifacts as pair evidence. It independently upheld
+`F-el-001` through `F-el-072`, all seven retentions, all 71 baseline deltas,
+38 placeholder-bearing values with 54 occurrences, 44 aliases in 14 groups
+and 48 references, 117 provider compositions, 20 block-color titles, three
+migrations, 80 changed-English rows covering 78 keys, and the complete
+533+12+1 caller partition. No residual or uncertainty survived.
+
+The sealed current-byte artifact is
+`/tmp/blok-el-546-first-pass-corrected-current.json` with SHA-256
+`5fe33be42773c279c554ddf58b67700458b023128c8c6f0f45ee9e6808b342ad`;
+its independent validator passed and has SHA-256
+`477720f1d1976da04f5c570035ab5a38bc3d14bd85bf323dd4f4f09855e4e3da`.
+This review binds to raw Greek dictionary SHA-256
+`b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61`.
+Greek is `first-pass-complete` pending a distinct complete second pass.
 
 ### Spanish (`es`) — current 546-key second pass complete
 
@@ -1773,6 +1813,29 @@ into `F-fr-062` and contains 133 distinct rows. French is now
 `first-pass-complete` on raw dictionary SHA-256
 `4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38`,
 pending a distinct complete second pass.
+
+Reviewer `root-azeri_proposal_challenge` then independently restarted at entry
+1 and directly reread all 546 English/French pairs as the distinct second
+pass. It upheld `F-fr-001` through `F-fr-133`, all 23 retentions, and the
+complete placeholder, alias, provider, block-color, migration,
+changed-English, and 533+12+1 caller inventories. It found one
+caller-semantic residual in `a11y.blocksDuplicated`: the drag-a11y caller
+supplies the destination index of the first new duplicate, while the current
+French wording can describe duplication from a source position. `F-fr-134`
+states the completed duplication and identifies the first duplicate's
+destination explicitly.
+
+The attempted second-pass artifact is
+`/tmp/blok-fr-546-current-second-pass-residual-f134.json` with SHA-256
+`66b56472c45cdc6c28d88253c9c9037303d5cc7a42b46b64740b3bd1be17cc94`;
+its validator passed 7,197 assertions. It binds to pre-correction French
+dictionary SHA-256
+`4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38`.
+The new correction invalidates the earlier first-pass credit, so both complete
+current-byte passes must restart after remediation. The focused expectation
+failed on exactly the recorded old value and passes after the correction. The
+corrected raw French dictionary SHA-256 is
+`23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696`.
 
 ### Finnish (`fi`) — pending after second-pass residuals
 
@@ -4138,6 +4201,7 @@ follows the global transition rule above.
 | `F-bn-069` | `bn` | `blockSettings.blocksSelected` | number grammar / classifier | `"{count} ব্লক"` | `"{count}টি ব্লক"` | This dynamic selected-block count requires the Bengali classifier `টি`; the replacement matches every sibling block-count announcement and standard Bengali numeral–noun construction. Evidence: [Unicode CLDR Bengali number verification](https://www.unicode.org/cldr/cldr-aux/charts/28/verify/numbers/bn.html); [Google Android accessibility guidance](https://support.google.com/accessibility/android/answer/6151854?hl=bn). | verified |
 | `F-bn-070` | `bn` | `a11y.blocksDuplicated` | caller semantics / accessibility | `"{count}টি ব্লক {position} অবস্থান থেকে কপি করা হয়েছে"` | `"{count}টি ব্লক কপি করা হয়েছে। শুরুর অবস্থান: {position}"` | The drag-a11y caller passes the first newly duplicated block's destination index as `{position}`, not the source position. The replacement announces the completed duplication and labels the new duplicates' starting position without reversing that relationship. | verified |
 | `F-bn-071` | `bn` | `tools.image.errorSourceOffline` | natural error copy / resource state | `"উৎস ফাইলটি সরানো হয়ে থাকতে পারে বা অফলাইন হতে পারে।"` | `"উৎস ফাইলটি সরানো হয়ে থাকতে পারে বা অনুপলব্ধ হতে পারে।"` | A file is not naturally described as being offline. The broken-image caller needs the broader moved-or-unavailable source state, and `অনুপলব্ধ` matches the locale's existing image-unavailable terminology. | verified |
+| `F-bn-072` | `bn` | `a11y.allBlocksSelected` | accessibility / count neutrality | `"সব ব্লক নির্বাচিত হয়েছে, {count}টি ব্লক"` | `"সব ব্লক নির্বাচিত হয়েছে। মোট: {count}"` | The select-all live-region caller can receive one or many blocks. Separating the completion from a noun-free total avoids count-sensitive repetition and matches the corrected source contract. | verified |
 | `F-bs-001` | `bs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti formatiranje"` | LibreOffice’s Bosnian product UI supplies the exact Clear formatting translation [Očisti formatiranje](https://github.com/LibreOffice/translations/blob/master/source/bs/svx/messages.po#L6304-L6305). | verified |
 | `F-bs-002` | `bs` | `blockSettings.convertWithChildrenWarning` | semantic accuracy / locale style | `"Ugniježđeni blokovi: {count}. Konverzijom ovog bloka ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | `"Ugniježđeni blokovi: {count}. Ako pretvorite ovaj blok, ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | Avoid technical nominalization while preserving the count-neutral warning. Frozen 545-key audit index 8; independent disposition: accept-original-proposal. | verified |
 | `F-bs-003` | `bs` | `toolbox.optionAddAbove` | semantic accuracy / locale style | `"Option-klik za dodavanje iznad"` | `"Držite tipku Option i kliknite za dodavanje iznad"` | Replaces the awkward compound and explicitly tells the user to hold Option while clicking. Frozen 545-key audit index 10; independent disposition: adjust. | verified |
@@ -4677,6 +4741,7 @@ follows the global transition rule above.
 | `F-fr-131` | `fr` | `tools.bookmark.error` | context / source synchronization | `"Impossible de charger l’aperçu"` | `"Impossible de charger l’aperçu du lien"` | The rendered error must identify the failed link preview rather than a generic preview; [Microsoft France](https://support.microsoft.com/fr-fr/office/aper%C3%A7u-du-lien-par-bing-1bcfa7f8-a42b-4d59-bc68-2052868c79ab) uses `aperçu du lien`. | verified |
 | `F-fr-132` | `fr` | `tools.image.previewControls` | accessibility / controlled-object context | `"Commandes d’aperçu"` | `"Commandes d’aperçu de l’image"` | This value is the accessible name of the toolbar inside the image lightbox. Naming the controlled image distinguishes it from a generic preview toolbar and follows [W3C accessible-name guidance](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/). | verified |
 | `F-fr-133` | `fr` | `tools.image.errorSourceOffline` | natural error copy / resource state | `"Le fichier source a peut-être été déplacé ou est hors ligne."` | `"Le fichier source a peut-être été déplacé ou n’est plus disponible."` | A file is not naturally described as “offline” in France French; the broken-image caller needs clear wording for a source resource that may have moved or become unavailable. | verified |
+| `F-fr-134` | `fr` | `a11y.blocksDuplicated` | accessibility / caller destination semantics | `"{count} blocs dupliqués à partir de la position {position}"` | `"{count} blocs ont été dupliqués. Le premier bloc dupliqué se trouve à la position {position}."` | The drag-a11y caller supplies the destination index of the first newly duplicated block, not a source position. The replacement states the completed action and identifies that destination without an ambiguous `à partir de` relation. | verified |
 | `F-gu-001` | `gu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ફોર્મેટિંગ સાફ કરો"` | An independent terminology pass rejected LibreOffice’s longer Clear Direct Formatting label because its technical qualifier is absent from this concise source. The replacement combines this dictionary’s established `ફોર્મેટિંગ` noun and `સાફ કરો` action; Google’s Gujarati UI independently uses the same formatting loanword. | verified |
 | `F-he-001` | `he` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"נקה עיצוב"` | Microsoft’s Hebrew editor UI uses the exact concise command [נקה עיצוב](https://support.microsoft.com/he-IL/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hi-001` | `hi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"टेक्स्ट की फ़ॉर्मैटिंग हटाएं"` | Google Docs’ Hindi shortcut action uses this exact wording in [official help](https://support.google.com/docs/answer/179738?hl=hi), NFC-normalized for the corpus. | verified |

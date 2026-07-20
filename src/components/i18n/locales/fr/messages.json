@@ -75,7 +75,7 @@
   "a11y.blockMoved": "Bloc déplacé en position {position} sur {total}",
   "a11y.blocksMoved": "{count} blocs déplacés en position {position}",
   "a11y.blockDuplicated": "Bloc dupliqué en position {position} sur {total}",
-  "a11y.blocksDuplicated": "{count} blocs dupliqués à partir de la position {position}",
+  "a11y.blocksDuplicated": "{count} blocs ont été dupliqués. Le premier bloc dupliqué se trouve à la position {position}.",
   "a11y.movedUp": "Déplacement vers le haut terminé à la position {position} sur {total}.",
   "a11y.movedDown": "Déplacement vers le bas terminé à la position {position} sur {total}.",
   "a11y.atTop": "Impossible de monter davantage. Le haut de la liste est déjà atteint.",

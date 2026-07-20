@@ -494,7 +494,7 @@
   "tools.audio.coverUrlPlaceholder": "ছবির URL পেস্ট করুন…",
   "tools.audio.coverUrlAria": "ছবির URL",
   "tools.audio.coverSourceAria": "প্রচ্ছদের উৎস",
-  "a11y.allBlocksSelected": "সব ব্লক নির্বাচিত হয়েছে, {count}টি ব্লক",
+  "a11y.allBlocksSelected": "সব ব্লক নির্বাচিত হয়েছে। মোট: {count}",
   "a11y.blocksSelected": "{count}টি ব্লক নির্বাচিত হয়েছে",
   "a11y.navigationModeEntered": "নেভিগেশন মোড। ব্লকগুলোর মধ্যে যেতে তীরচিহ্নের কীগুলো ব্যবহার করুন, সম্পাদনা করতে Enter চাপুন এবং বের হতে Escape চাপুন।",
   "a11y.navigationModeExited": "নেভিগেশন মোড থেকে বের হয়েছেন",

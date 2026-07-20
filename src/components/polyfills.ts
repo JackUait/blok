@@ -110,4 +110,29 @@ if (typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'undef
   };
 }
 
+/**
+ * jsdom does not provide animation-frame APIs unless it is configured as a
+ * visual browser. Core rendering uses them during startup, so provide the same
+ * timer-backed fallback that browsers without native support need.
+ */
+if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'undefined') {
+  window.requestAnimationFrame = function (callback) {
+    return window.setTimeout(() => callback(window.performance.now()), 16);
+  };
+}
+
+if (typeof window !== 'undefined' && typeof globalThis.requestAnimationFrame === 'undefined') {
+  globalThis.requestAnimationFrame = window.requestAnimationFrame.bind(window);
+}
+
+if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'undefined') {
+  window.cancelAnimationFrame = function (id) {
+    window.clearTimeout(id);
+  };
+}
+
+if (typeof window !== 'undefined' && typeof globalThis.cancelAnimationFrame === 'undefined') {
+  globalThis.cancelAnimationFrame = window.cancelAnimationFrame.bind(window);
+}
+
 export {};

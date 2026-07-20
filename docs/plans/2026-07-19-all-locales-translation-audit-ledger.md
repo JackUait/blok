@@ -280,7 +280,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `et` | Estonian | Latin | ltr | neutral contemporary Estonian; concise imperatives for user actions; natural impersonal wording for system states and live-region announcements; sentence-case UI; established Estonian product, accessibility, and media terminology; count-neutral variable templates | `root-et_546_corrected_current_first` | `root-et_546_corrected_current_second` | pass | pass | pass | `F-et-001`–`F-et-055` | second-pass-complete |
 | `fa` | Persian (Farsi) | Arabic | rtl | neutral contemporary standard Iranian Persian; polite plural imperatives for instructions and recovery guidance; concise imperative or noun labels for compact controls; Persian punctuation and established Persian product, accessibility, and media terminology; conventional unchanged Latin brands, acronyms, formulas, and shortcut notation | `root-fa_546_lifecycle_replacement` | `root-fa_546_corrected_second` | pass | pass | pass | `F-fa-001`–`F-fa-053` | second-pass-complete |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
-| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-046` | pending |
+| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-058` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001`–`F-gu-002` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001`–`F-he-002` | pending |
@@ -4959,6 +4959,42 @@ the corrected raw Filipino dictionary is bound at SHA-256
 Filipino remains `pending`; both complete reviews must restart at entry 1 on
 this new digest.
 
+### Filipino current-byte 12-residual reread — corrections pending
+
+A new context-free reviewer reread all 546 current English/Filipino pairs on
+raw dictionary SHA-256
+`afc865652fbe99315293aa78f5cf179113f8e44bfb0451841f39a6cd28874382`
+and stopped on 12 residuals. Its reconciled full matrix is bound at SHA-256
+`5545b64923a200276e525c8ea2b69f760ade185843c3cb232e7a3d1f5aff09eb`;
+its sealed pre-ledger manifest is bound at SHA-256
+`e051a0f462c9f653aeef71d6706f43be6538683a9955d5d5767ff9327e929d6c`;
+and its final manifest is bound at SHA-256
+`d4988d02fb8492435ed427ae78fae6a01873f0bee39365905a64caea9390726c`.
+The stopped review authenticates all 546 identities, the exact 533+12+1
+lifecycle, all 38 placeholder-bearing values with 54 occurrences, all 46
+earlier findings, and all 43 existing exact-English retentions.
+
+Proposal-aware independent challenger `root-fil_bookmark_error_challenge`
+adjudicated the 12 proposals as ten keep, two amend, and zero reject, with no
+directly coupled omission. It amended `tools.code.plainText` to
+`Karaniwang teksto` and `tools.database.defaultStatusNotStarted` to
+`Hindi pa nasisimulan`. Its immutable challenge is bound at SHA-256
+`2f20bacd82a2eec90bead472f2812b28787146919f7b00640168a7b66bb5aebd`;
+its validator is bound at SHA-256
+`82b03f933cd363c0fdea6484d6485be5bb4391cd7b8ce9501aa74445719da3e3`
+and freshly passes. The 12 exact corrections were recorded as open
+`F-fil-047`–`F-fil-058` before dictionary mutation: the red gate failed exactly
+those 12 cases while 3,121 existing cases passed. Applying only the challenged
+values produced raw dictionary SHA-256
+`6f961759c51840b4a252a144a62d904d37bca77ee8dd1a9dd1d77265579adb9d`;
+all 3,133 guideline cases and all 182 identical-value cases then pass. The five
+new exact-English technical terms are classified as `R-fil-044`–`R-fil-048`,
+and all 12 findings are verified. The complete nine-file i18n suite passes all
+3,850 cases, and the completeness, integrity, source-coverage, encoding, and
+docs checks pass with only the catalogued warnings. This stopped work earns no
+complete-pass credit; both full reviews must restart at entry 1 on the new
+digest.
+
 ### Persian corrected-byte first pass and detached-UI direction finding
 
 Reviewer `root-fa_546_corrected_first` blindly inspected all 546 Persian
@@ -7795,6 +7831,18 @@ follows the global transition rule above.
 | `F-fil-044` | `fil` | `tools.bookmark.error` | context / source completeness | `"Hindi ma-load ang preview"` | `"Hindi ma-load ang preview ng link"` | This terminal state is specifically a failed link-metadata unfurl. A separate independent challenge confirmed that adding `ng link` restores the omitted source qualifier without an ongoing-state ellipsis and does not conflict with the generic file-preview error. | verified |
 | `F-fil-045` | `fil` | `toolNames.strikethrough` | terminology / control clarity | `"May guhit"` | `"Guhit sa gitna"` | The compact inline control needs a distinct name for a line through text. `May guhit` is ambiguous (“has a line” or “striped”), while the placement-specific replacement contrasts with `Salungguhit`; official Filipino WordPress and LibreOffice terminology independently describes the through-text operation. | verified |
 | `F-fil-046` | `fil` | `tools.code.wrapLines` | terminology / source-only contract | `"Ibalot ang mga linya"` | `"I-wrap ang mga linya"` | `Ibalot` describes physical wrapping or packaging. Mozilla and LibreOffice Filipino software terminology use the hyphenated loan verb `I-wrap` for line/text wrapping. The source-only dictionary contract remains auditable even though the current code view unconditionally uses pre-wrap. | verified |
+| `F-fil-047` | `fil` | `a11y.blockMoved` | accessibility / placeholder relation | `"Inilipat ang block sa posisyon {position} ng {total}"` | `"Inilipat ang block sa posisyon {position} sa kabuuang {total}"` | The literal `ng` relation is ambiguous in a live completion announcement; `sa kabuuang` explicitly identifies the total and matches the established drag-announcement family. The independent challenge kept the exact replacement. | verified |
+| `F-fil-048` | `fil` | `a11y.blockDuplicated` | accessibility / placeholder relation | `"Na-duplicate ang block sa posisyon {position} ng {total}"` | `"Na-duplicate ang block sa posisyon {position} sa kabuuang {total}"` | The duplicated-block announcement needs the same explicit position-within-total relation as movement and prospective drop announcements. The independent challenge kept the exact replacement. | verified |
+| `F-fil-049` | `fil` | `toolNames.database` | terminology / tool scope | `"Talaan ng datos"` | `"Database"` | `Talaan ng datos` can mean a table or list, while the live toolbox entry creates the broader database tool. `Database` is established Filipino product terminology and already appears in the locale family. The independent challenge kept the exact replacement. | verified |
+| `F-fil-050` | `fil` | `tools.code.codeTab` | terminology / family consistency | `"Kodigo"` | `"Code"` | The developer-facing Code/Preview tab is inconsistent with the locale's established `code` terminology. The independent challenge kept the exact-English technical loanword. | verified |
+| `F-fil-051` | `fil` | `toolNames.code` | terminology / family consistency | `"Kodigo"` | `"Code"` | The toolbox name should use the same contemporary developer term as the rest of the code UI rather than the isolated formal `Kodigo`. The independent challenge kept the exact replacement. | verified |
+| `F-fil-052` | `fil` | `toolNames.inlineCode` | terminology / family consistency | `"Kodigo"` | `"Code"` | The inline control belongs to the same visible code-label family and should use its established Filipino/Taglish term. The independent challenge kept the exact replacement. | verified |
+| `F-fil-053` | `fil` | `tools.code.plainText` | semantic precision / terminology | `"Simpleng teksto"` | `"Karaniwang teksto"` | The language option denotes formatting-neutral plain text, not merely easy or simple text. The independent challenge amended the proposal to Microsoft Filipino's technical `karaniwang teksto`. | verified |
+| `F-fil-054` | `fil` | `tools.image.altPlaceholder` | accessibility terminology | `"Tekstong alt"` | `"Alt text"` | The inverted current phrase is unnatural in the alternative-text dialog; `Alt text` is established Filipino accessibility terminology and matches the surrounding edit action. The independent challenge kept the exact replacement. | verified |
+| `F-fil-055` | `fil` | `tools.database.propertyTypeSelect` | grammar / property terminology | `"Pumili"` | `"Isahang pagpili"` | This property-type list requires a noun rather than the imperative “Choose”; the replacement is the singular counterpart to verified `Maramihang pagpili`. The independent challenge kept the exact replacement. | verified |
+| `F-fil-056` | `fil` | `tools.database.defaultStatusNotStarted` | state semantics / aspect | `"Hindi pa nagsisimula"` | `"Hindi pa nasisimulan"` | The schema option names an untouched task state, while the current actor-progressive phrase means “not yet starting.” The independent challenge amended the proposal to the neutral contemporary state expression. | verified |
+| `F-fil-057` | `fil` | `a11y.navigationPosition` | accessibility / placeholder relation | `"{tool}, {position} ng {total}"` | `"{tool}, posisyon {position} sa kabuuang {total}"` | The keyboard-navigation announcement needs an explicit position noun and unambiguous position-within-total relation. The independent challenge kept the exact replacement. | verified |
+| `F-fil-058` | `fil` | `tools.video.seekValueText` | accessibility / placeholder relation | `"{current} ng {total}"` | `"{current} sa {total}"` | The range control speaks elapsed and total times; `x sa y` is the natural concise ratio construction, whereas `ng` is an English “of” calque. The independent challenge kept the exact replacement. | verified |
 | `F-nl-086` | `nl` | `tools.callout.emojiCategoryActivity` | category scope / number | `"Activiteit"` | `"Activiteiten"` | The heading groups many activities rather than naming one activity. The plural matches official Dutch emoji-gallery terminology and the collective/plural sibling categories. Sources: [Microsoft Support — Een emoji of GIF verzenden in Microsoft Teams (gratis)](https://support.microsoft.com/nl-NL/teams/free/chat-calling/send-an-emoji-or-gif-in-microsoft-teams-free). | verified |
 | `F-nl-087` | `nl` | `tools.image.previewControls` | accessibility / specificity | `"Voorbeeldbediening"` | `"Regelaars voor afbeeldingsvoorbeeld"` | The accessible group name must identify both the controls and their image-preview scope. `Regelaars` and `afbeeldingsvoorbeeld` are attested Dutch product terms; the current compact compound is generic and drops the image object. Sources: [W3C WAI-ARIA Authoring Practices — Providing Accessible Names and Descriptions](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/); [Apple Support NL — Finder on Mac Pro](https://support.apple.com/nl-nl/guide/mac-pro/apddf030866a/mac); [Apple Support NL — Belichtings- en kleurinstellingen aanpassen](https://support.apple.com/nl-nl/guide/iphone/-iphebbd067ce/ios); [Microsoft Support NL — Het formaat van het Microsoft SwiftKey-toetsenbord wijzigen](https://support.microsoft.com/nl-nl/swiftkey-keyboard/how-to-resize-microsoft-swiftkey-keyboard); [Google Photos Help NL — Foto’s en video’s verwijderen en herstellen](https://support.google.com/photos/answer/6128850?co=GENIE.Platform%3DAndroid&hl=nl). | verified |
 | `F-nl-088` | `nl` | `tools.image.errorSourceOffline` | natural error copy | `"Het bronbestand is mogelijk verplaatst of offline."` | `"Het bronbestand is mogelijk verplaatst of niet beschikbaar."` | The caller only knows the remote source cannot be loaded; it does not establish a synchronized offline-file state. `niet beschikbaar` accurately describes the unavailable resource and is natural Dutch error copy. Sources: [Microsoft Support NL — Een verbindingsfout corrigeren](https://support.microsoft.com/nl-nl/excel/how-to-correct-a-connect-error); [Microsoft Support NL — De status Off-line bestand wordt onjuist weergegeven](https://support.microsoft.com/nl-nl/topic/de-status-off-line-bestand-wordt-onjuist-weergegeven-in-file-explorer-in-windows-3026cc25-2d68-1202-2d14-d20e63246a5a). | verified |
@@ -8157,3 +8205,8 @@ locale and UI context.
 | `R-fil-041` | `fil` | `tools.video.theater` | established loanword | `Theater mode` is established Filipino video-player terminology and accurately names the expanded player mode. | [YouTube Help — Filipino player shortcuts](https://support.google.com/youtube/answer/7631406?hl=fil) |
 | `R-fil-042` | `fil` | `tools.video.pip` | established loanword | `Picture-in-Picture` is the established unchanged Filipino platform term for the floating-video mode. | [Google Pixel Help — Filipino Picture-in-Picture](https://support.google.com/pixelphone/answer/7444033?hl=fil) |
 | `R-fil-043` | `fil` | `tools.audio.volume` | established loanword | `Volume` is established Filipino media-control vocabulary and is the natural audio slider label. | [YouTube Help — Filipino player shortcuts](https://support.google.com/youtube/answer/7631406?hl=fil) |
+| `R-fil-044` | `fil` | `toolNames.database` | established loanword | `Database` is established Filipino product terminology and precisely names the database tool rather than a single table or list. | [Microsoft language resources](https://learn.microsoft.com/en-us/globalization/reference/microsoft-language-resources) |
+| `R-fil-045` | `fil` | `tools.code.codeTab` | established loanword | `Code` is established Filipino/Taglish developer terminology and the natural label paired with the Preview tab. | [Microsoft Filipino style guide](https://aka.ms/filipino-styleguide) |
+| `R-fil-046` | `fil` | `toolNames.code` | established loanword | `Code` is established contemporary Filipino developer terminology and the concise toolbox name. | [Microsoft Filipino style guide](https://aka.ms/filipino-styleguide) |
+| `R-fil-047` | `fil` | `toolNames.inlineCode` | established loanword | `Code` is established contemporary Filipino developer terminology and keeps the inline control consistent with the block tool. | [Microsoft Filipino style guide](https://aka.ms/filipino-styleguide) |
+| `R-fil-048` | `fil` | `tools.image.altPlaceholder` | established loanword | `Alt text` is established Filipino accessibility terminology and the natural input placeholder within the localized dialog. | [Google Accessibility Help — Filipino alternative text](https://support.google.com/accessibility/android/answer/7158690?hl=fil) |

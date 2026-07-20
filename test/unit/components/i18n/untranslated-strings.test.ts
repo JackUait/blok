@@ -196,6 +196,13 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.file.previewRender',
     // "Bookmark" is the standard loanword in Filipino UIs (Tagalog).
     'toolNames.bookmark',
+    // "Database", "Code", and "Alt text" are established contemporary
+    // Filipino/Taglish product and accessibility terms.
+    'toolNames.database',
+    'tools.code.codeTab',
+    'toolNames.code',
+    'toolNames.inlineCode',
+    'tools.image.altPlaceholder',
     // "Link" (hyperlink) and "OK" are likewise the established English
     // loanwords in Filipino product UIs.
     'tools.link.webLink',

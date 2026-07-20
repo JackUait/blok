@@ -91,10 +91,16 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.image.cropRatioOval',
     'tools.database.defaultStatusProperty',
     'notifier.ok',
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
   ]),
   bg: new Set(['notifier.ok']),
   // "Text" is a direct cognate of the English word in Czech.
-  cs: new Set(['tools.database.propertyTypeText', 'tools.link.linkText']),
+  cs: new Set([
+    'tools.database.propertyTypeText',
+    'tools.link.linkText',
+    'notifier.ok',
+  ]),
   da: new Set([
     'tools.colorPicker.color.orange',
     'toolNames.database',
@@ -109,8 +115,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.defaultStatusProperty',
     'searchTerms.layout',
     'notifier.ok',
-    // Placeholder-only swatch labels read naturally in source order.
-    'tools.colorPicker.defaultSwatchLabel',
+    'tools.link.webLink',
+    // This placeholder-only swatch label reads naturally in source order.
     'tools.colorPicker.colorSwatchLabel',
   ]),
   de: new Set([
@@ -129,6 +135,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.defaultStatusProperty',
     'tools.database.defaultViewBoard',
     'notifier.ok',
+    'tools.link.webLink',
     // "Text" is a direct cognate of the English word in German.
     'tools.link.linkText',
   ]),
@@ -141,6 +148,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ]),
   // "Link" is the standard loanword for a hyperlink in Estonian UIs.
   et: new Set(['toolNames.link', 'tools.image.emptyLink', 'tools.file.emptyLink']),
+  // "OK" is the conventional compact confirmation label in Finnish UIs.
+  fi: new Set(['notifier.ok']),
   fil: new Set([
     'tools.link.emailAddress',
     'tools.code.autoDetected',
@@ -176,6 +185,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'popover.actions',
     'tools.database.propertyTypeDate',
     'tools.file.previewRaw',
+    'notifier.ok',
   ]),
   id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
   it: new Set([
@@ -189,7 +199,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.video.emptyLink',
     'tools.audio.emptyLink',
     'tools.audio.coverLink',
+    'tools.link.webLink',
   ]),
+  // "OK" is the conventional compact confirmation label in Japanese UIs.
+  ja: new Set(['notifier.ok']),
   // "grid" is a common search keyword loanword for the table tool in Malay UIs.
   ms: new Set(['tools.database.defaultStatusProperty', 'searchTerms.grid']),
   nl: new Set([
@@ -212,6 +225,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // Placeholder-only swatch labels follow Bokmål modifier-before-noun order.
     'tools.colorPicker.defaultSwatchLabel',
     'tools.colorPicker.colorSwatchLabel',
+    'notifier.ok',
   ]),
   pl: new Set([
     'toolNames.link',
@@ -255,6 +269,7 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.link.linkText',
     // "Artist" is the established Swedish media noun and Apple Music field label.
     'tools.audio.artistPlaceholder',
+    'notifier.ok',
   ]),
   tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
 };

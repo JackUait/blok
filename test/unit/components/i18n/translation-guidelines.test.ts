@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   findDuplicateJsonKeys,
   findLocaleIntegrityIssues,
+  getBoundaryWhitespaceExceptions,
 } from '../../../../scripts/i18n/check-translations.mjs';
 
 type EnglishMessages = Record<string, string>;
@@ -1126,7 +1127,9 @@ describe('translation guideline corpus integrity', () => {
     const { raw, messages } = readLocale(locale);
     const duplicateKeys = findDuplicateJsonKeys(raw);
     const localeKeys = Object.keys(messages).sort();
-    const integrityIssues = findLocaleIntegrityIssues(english, messages);
+    const integrityIssues = findLocaleIntegrityIssues(english, messages, {
+      boundaryWhitespaceExceptions: getBoundaryWhitespaceExceptions(locale),
+    });
 
     expect(
       duplicateKeys,

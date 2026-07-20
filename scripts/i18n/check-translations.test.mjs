@@ -280,6 +280,17 @@ describe('findLocaleIntegrityIssues', () => {
     );
   });
 
+  it('accepts an explicitly reviewed boundary-whitespace exception', () => {
+    assert.deepEqual(
+      findLocaleIntegrityIssues(
+        { 'message.key': ' or ' },
+        { 'message.key': 'または' },
+        { boundaryWhitespaceExceptions: new Set(['message.key']) }
+      ),
+      []
+    );
+  });
+
   it('accepts localized leading punctuation plus a space on a source fragment', () => {
     assert.deepEqual(
       findLocaleIntegrityIssues(

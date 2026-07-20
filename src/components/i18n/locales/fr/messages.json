@@ -293,7 +293,7 @@
   "tools.image.altDescription": "Décrivez cette image pour les personnes qui ne peuvent pas la voir.",
   "tools.image.altPlaceholder": "Texte alternatif",
   "tools.image.preview": "Aperçu de l’image",
-  "tools.image.previewControls": "Commandes d’aperçu",
+  "tools.image.previewControls": "Commandes d’aperçu de l’image",
   "tools.image.navigationControls": "Navigation entre images",
   "tools.image.previousImage": "Image précédente",
   "tools.image.nextImage": "Image suivante",
@@ -303,7 +303,7 @@
   "tools.image.errorUploadFailed": "Échec de l’envoi",
   "tools.image.errorFileTooLarge": "L’image est trop volumineuse. Sa taille de {size} dépasse la limite de {max}.",
   "tools.image.errorUploadFailedTitle": "Échec de l’envoi",
-  "tools.image.errorSourceOffline": "Le fichier source a peut-être été déplacé ou est hors ligne.",
+  "tools.image.errorSourceOffline": "Le fichier source a peut-être été déplacé ou n’est plus disponible.",
   "tools.image.errorUnavailable": "Image indisponible",
   "tools.image.errorImageFailedToLoad": "Échec du chargement de l’image",
   "tools.image.errorDefaultTitle": "Impossible de charger l’image",
@@ -542,7 +542,7 @@
   "tools.audio.playbackSpeed": "Vitesse de lecture",
   "tools.audio.speedDecrease": "Réduire la vitesse de lecture",
   "tools.audio.speedIncrease": "Augmenter la vitesse de lecture",
-  "tools.callout.emojiSearchResults": "Correspondances d’emojis : {count}",
+  "tools.callout.emojiSearchResults": "Nombre d’emojis correspondants : {count}",
   "tools.database.checkboxChecked": "Cochée",
   "tools.database.checkboxUnchecked": "Décochée"
 }

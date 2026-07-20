@@ -114,10 +114,10 @@
     "a11y.movedDown": "ההעברה למטה הושלמה במיקום {position} מתוך {total}."
   },
   "hi": {
-    "a11y.atTop": "और ऊपर ले जाना संभव नहीं है। पहले से सबसे ऊपर।",
-    "a11y.atBottom": "और नीचे ले जाना संभव नहीं है। पहले से सबसे नीचे।",
-    "a11y.movedUp": "ऊपर की ओर स्थानांतरण {total} में से {position} स्थान पर पूरा हुआ।",
-    "a11y.movedDown": "नीचे की ओर स्थानांतरण {total} में से {position} स्थान पर पूरा हुआ।"
+    "a11y.atTop": "और ऊपर नहीं ले जाया जा सकता। यह पहले से सबसे ऊपर है।",
+    "a11y.atBottom": "और नीचे नहीं ले जाया जा सकता। यह पहले से सबसे नीचे है।",
+    "a11y.movedUp": "ऊपर ले जाया गया। नया स्थान: {total} में से {position}।",
+    "a11y.movedDown": "नीचे ले जाया गया। नया स्थान: {total} में से {position}।"
   },
   "hr": {
     "a11y.atTop": "Pomicanje prema gore nije moguće. Vrh je već dosegnut.",

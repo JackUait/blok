@@ -19,6 +19,25 @@ const LOCALES_DIR = join(__dirname, '../../src/components/i18n/locales');
 const SOURCE_LOCALE = 'en';
 const SRC_DIR = join(__dirname, '../../src');
 
+const EMPTY_KEY_SET = new Set();
+const BOUNDARY_WHITESPACE_EXCEPTIONS_BY_LOCALE = {
+  ja: new Set([
+    'blockSettings.orConjunction',
+    'blockSettings.openMenuAction',
+  ]),
+};
+
+/**
+ * Returns narrowly reviewed exceptions for fragments whose target-language
+ * orthography must not copy the English source's boundary spaces.
+ *
+ * @param {string} locale - Locale code
+ * @returns {ReadonlySet<string>} Translation keys exempted for this locale
+ */
+export function getBoundaryWhitespaceExceptions(locale) {
+  return BOUNDARY_WHITESPACE_EXCEPTIONS_BY_LOCALE[locale] ?? EMPTY_KEY_SET;
+}
+
 // ANSI color codes
 const colors = {
   green: '\x1b[32m',
@@ -158,11 +177,14 @@ export function findDuplicateJsonKeys(raw) {
  *
  * @param {Record<string, string>} sourceTranslation - Source key-values
  * @param {Record<string, unknown>} translation - Target locale key-values
+ * @param {{boundaryWhitespaceExceptions?: ReadonlySet<string>}} [options] - Reviewed structural exceptions
  * @returns {Array<{key: string, kind: string, value: unknown}>} Detected issues
  */
-export function findLocaleIntegrityIssues(sourceTranslation, translation) {
+export function findLocaleIntegrityIssues(sourceTranslation, translation, options = {}) {
   const issues = [];
   const controls = /[\u0000-\u001F\u007F]/u;
+  const boundaryWhitespaceExceptions =
+    options.boundaryWhitespaceExceptions ?? EMPTY_KEY_SET;
   const edgeWhitespace = (value) => ({
     leading: value.match(/^\s*/u)?.[0] ?? '',
     trailing: value.match(/\s*$/u)?.[0] ?? '',
@@ -199,7 +221,8 @@ export function findLocaleIntegrityIssues(sourceTranslation, translation) {
       if (
         JSON.stringify(translatedEdgeWhitespace) !==
           JSON.stringify(sourceEdgeWhitespace) &&
-        !replacesLeadingSpaceWithPunctuation
+        !replacesLeadingSpaceWithPunctuation &&
+        !boundaryWhitespaceExceptions.has(key)
       ) {
         issues.push({ key, kind: 'boundary-whitespace', value });
       }
@@ -568,7 +591,9 @@ function main() {
   for (const locale of availableLocales) {
     const { raw, translation, invalidRoot } = localeFiles.get(locale);
     const duplicateKeys = findDuplicateJsonKeys(raw);
-    const integrityIssues = findLocaleIntegrityIssues(sourceTranslation, translation);
+    const integrityIssues = findLocaleIntegrityIssues(sourceTranslation, translation, {
+      boundaryWhitespaceExceptions: getBoundaryWhitespaceExceptions(locale),
+    });
 
     if (invalidRoot) {
       integrityErrors = true;

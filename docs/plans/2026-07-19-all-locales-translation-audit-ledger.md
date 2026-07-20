@@ -264,11 +264,11 @@ These rules prevent a machine or reviewer from retaining stale completion:
 
 | Locale | Language/variant | Primary script | Direction | Register | First reviewer | Second reviewer | Structural result | Semantic/style result | Exact-English retention result | Finding IDs | Final status |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | — | — | pending | pending | pending | `F-am-001`–`F-am-088` | pending |
+| `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | — | — | pending | pending | pending | `F-am-001`–`F-am-092` | pending |
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-ar-546-first-final` | — | pass | pass | pass | `F-ar-001`–`F-ar-075` | first-pass-complete |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-az-546-first-final` | — | pass | pass | pass | `F-az-001`–`F-az-104` | first-pass-complete |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-068` | pending |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | `root-azeri_proposal_challenge` | — | pass | pass | pass | `F-bn-001`–`F-bn-070` | first-pass-complete |
 | `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-danish_546_first_pass` | — | pass | pass | pass | `F-bs-001`–`F-bs-181` | first-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-da-546-first-restart` | — | pass | pass | pass | `F-da-001`–`F-da-085` | first-pass-complete |
@@ -279,18 +279,18 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
 | `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001` | pending |
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
-| `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-098` | pending |
+| `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-101` | pending |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
-| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-131` | pending |
+| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-133` | pending |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
-| `hi` | Hindi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-hi-001` | pending |
+| `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | — | — | pending | pending | pending | `F-hi-001`–`F-hi-078` | pending |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001` | pending |
-| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | — | pass | pass | pass | `F-it-001`–`F-it-095` | first-pass-complete |
-| `ja` | Japanese | Han, Hiragana, Katakana | ltr | to-audit | — | — | pending | pending | pending | `F-ja-001` | pending |
+| `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
+| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | `root-czech_546_first_pass` | — | pass | pass | pass | `F-ja-001`, `F-ja-004`–`F-ja-092` | first-pass-complete |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001` | pending |
 | `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001` | pending |
@@ -307,7 +307,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `my` | Burmese (Myanmar) | Myanmar | ltr | to-audit | — | — | pending | pending | pending | `F-my-001` | pending |
 | `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001` | pending |
 | `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | — | — | pending | pending | pending | `F-nl-001`–`F-nl-085` | pending |
-| `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-no-001`–`F-no-081` | pending |
+| `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-no-001`–`F-no-085` | pending |
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001` | pending |
 | `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-pl-001`–`F-pl-126` | pending |
 | `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001` | pending |
@@ -320,7 +320,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `sl` | Slovenian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sl-001` | pending |
 | `sq` | Albanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sq-001` | pending |
 | `sr` | Serbian (Cyrillic) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-sr-001` | pending |
-| `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | — | — | pending | pending | pending | `F-sv-001`–`F-sv-094` | pending |
+| `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | — | — | pending | pending | pending | `F-sv-001`–`F-sv-097` | pending |
 | `sw` | Swahili | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sw-001` | pending |
 | `ta` | Tamil | Tamil | ltr | to-audit | — | — | pending | pending | pending | `F-ta-001` | pending |
 | `te` | Telugu | Telugu | ltr | to-audit | — | — | pending | pending | pending | `F-te-001` | pending |
@@ -351,6 +351,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `R-sv-015` | `sv` | `tools.database.propertyTypeText` | established cognate | `Text` is the normal unchanged Swedish noun for this database property type. | [Svenska Akademiens ordlista — text](https://svenska.se/saol/?sok=text) |
 | `R-sv-016` | `sv` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Swedish product interfaces. | [Svenska Akademiens ordlista — URL](https://svenska.se/saol/?sok=url) |
 | `R-sv-017` | `sv` | `tools.database.defaultStatusProperty` | established cognate | `Status` is the normal unchanged Swedish noun for this workflow property. | [Svenska Akademiens ordlista — status](https://svenska.se/saol/?sok=status) |
+| `R-sv-018` | `sv` | `notifier.ok` | established loanword | `OK` is the conventional unchanged Swedish confirmation-button label and the natural compact action in the built-in prompt dialog. | [Apple Sweden — confirmation dialog](https://support.apple.com/sv-se/guide/mac-help/mh35859/mac) |
 | `R-zh-001` | `zh` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Apple’s Simplified Chinese guidance retains the `⌘` platform symbol. | [Apple — Mac 键盘快捷键](https://support.apple.com/zh-cn/102650) |
 | `R-zh-002` | `zh` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Microsoft’s Simplified Chinese shortcut guidance retains `Ctrl` in key combinations. | [Microsoft — Windows 的键盘快捷方式](https://support.microsoft.com/zh-cn/windows/windows-%E7%9A%84%E9%94%AE%E7%9B%98%E5%BF%AB%E6%8D%B7%E6%96%B9%E5%BC%8F-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-zh-003` | `zh` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation used unchanged in Simplified Chinese media interfaces. | [Apple — 使用 iPhone 相机工具设置照片](https://support.apple.com/zh-cn/guide/iphone/iph3dc593597/ios) |
@@ -404,13 +405,15 @@ locale returns to `pending`.
 | `ar` | `root-ar-546-first-final` | `sha256:4ca1701da68e8ec214b28f1174e87ec6cfa7e57b45c090701e9e5c4b4619588d` | — | — |
 | `az` | `root-az-546-first-final` | `sha256:38d2ab7bbda7564efef6a56e99ff3fdc0f3a3479b39fe58fd507e5d8e1a6351a` | — | — |
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
+| `bn` | `root-azeri_proposal_challenge` | `sha256:da595ac5640a884103f9862f232f4006bc8898f44847c27fbf84eefb1828dd40` | — | — |
 | `bs` | `root-danish_546_first_pass` | `sha256:e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc` | — | — |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-da-546-first-restart` | `sha256:ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f` | — | — |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
-| `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | — | — |
+| `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
+| `ja` | `root-czech_546_first_pass` | `sha256:b0986c0340ab3886ba1bc822309db1e5c3058f0ee1721f684e487cd47cbace26` | — | — |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -919,6 +922,30 @@ Because the bytes changed again, the completed first-pass evidence and digest
 were removed; Amharic is `pending` until both complete passes restart on this
 new SHA.
 
+A later caller challenge added three more verified corrections:
+`F-am-089` replaces a literal bulleted-list title with the established editor
+term, `F-am-090` does the same for the numbered-list title, and `F-am-091`
+changes the database Select property type from an imperative to the required
+noun label. The resulting dictionary SHA-256 is
+`a202f084aac6518abb3b5dea54eddcb819cf24afdddc0ed36423716d82b93ec8`.
+
+Reviewer `root-am-546-first-pass-restart` then restarted at entry 1 and directly
+reread all 546 pairs on those bytes. Its artifact,
+`/tmp/blok-am-546-first-pass-restart.json`, has SHA-256
+`6facb09b609b1fa500f656a2bf99f22301445345901419e375f7489b98fae520`
+and proposed three residual changes. A separate root challenge rejected both
+checkbox proposals: although glossary entry 508 translates the spaced source
+“check box” as `አመልካች ሳጥን`, entry 513 translates the exact source
+“checkbox” as the current `የማመልከቻ ሳጥን`; the existing `F-am-061` and
+`F-am-070` therefore remain supported. The challenge accepted only the visible
+Oval crop option: `F-am-092` replaces the avoidable English transliteration
+with native `ሞላላ`, attested for the oval shape in Amharic government and
+education materials. Its focused expectation failed on exactly the old value
+before remediation and passes afterward. The corrected dictionary SHA-256 is
+`6b86c6ad9c2bb88b3b696b22b9ef7558d1751fad97c0e1e5538e723e25a8adf8`.
+This accepted residual resets both completion passes; Amharic remains
+`pending`.
+
 ### Arabic (`ar`) — current first pass complete
 
 Reviewer `codex-wire-ui-ar-first-545` initially inspected all 545
@@ -1034,6 +1061,67 @@ the independent second-pass artifact is
 `bcfa2bd4ae234dc571bbc2fcb274f4dee14413d1902d25e587d73a6caa7eaf1e`.
 Fresh translation-guideline, block-color, and live translation-checker gates
 pass. The terminal repository-wide gates remain pending.
+
+### Bengali (`bn`) — corrected-byte first pass complete
+
+The current Bengali audit had recorded 68 corrections and four supported
+exact-English retentions before a final count-grammar check found one
+additional caller-backed residual. `blockSettings.blocksSelected` is a dynamic
+selected-block count, so the bare `"{count} ব্লক"` now includes the required
+Bengali classifier as `"{count}টি ব্লক"`. Finding `F-bn-069` records that
+correction. Its focused expectation failed on the old value and passed after
+remediation.
+
+Reviewer `root-danish_546_first_pass` then restarted at entry 1 and directly
+reread all 546 corrected English/Bengali pairs in English insertion order.
+The pass revalidated all 69 findings, the exact four-retention inventory, all
+38 placeholder-bearing values with 54 occurrences, all 44 aliases in 14
+caller groups and 48 references, all 117 provider compositions, all 20 live
+block-color command titles, the three later dictionary migrations, all 80
+changed-English findings covering 78 unique dependencies, and the complete
+533+12+1 caller/source-only/dormant partition. Separate caller and official
+source checks retained the questioned cell-centering, comfortable-text,
+mention, and full-screen terminology. No residual finding or documentation
+gap survived.
+
+The self-validating first-pass artifact is
+`/tmp/blok-bn-546-first-pass-restart.json` with SHA-256
+`29f49772297ac9ebd157d0a9ad7ef750e54c8b9e94f60dd9af03db90c983e484`;
+its validator passed 4,044 assertions. This review binds to raw dictionary
+SHA-256
+`6fb4257cb3be9aa0cb624a32862ba776c3201c6d9cacc3c6166fe8539a04f43e`.
+Bengali was `first-pass-complete` pending a distinct complete second pass.
+That second pass directly reread all 546 pairs and upheld every existing
+finding and retention, but found one caller-backed residual. The drag
+duplicate caller passes the first newly duplicated block's destination index
+as `{position}`; `F-bn-070` removes the old wording that incorrectly described
+it as the source position. Because that correction changes the dictionary
+bytes, both current-byte passes must restart after remediation.
+
+The second-pass evidence is
+`/tmp/blok-bn-546-second-pass-restart.json` with SHA-256
+`f14609c229a87e79c1e4e6d5a8a8399fbba5fd36d00d14db3275f2525023bd25`;
+its independent validator passed 4,126 assertions. The artifact binds to the
+pre-correction dictionary SHA-256
+`6fb4257cb3be9aa0cb624a32862ba776c3201c6d9cacc3c6166fe8539a04f43e`.
+The focused regression failed on exactly the old relationship, passes after
+remediation, and the corrected raw dictionary SHA-256 is
+`da595ac5640a884103f9862f232f4006bc8898f44847c27fbf84eefb1828dd40`.
+
+Reviewer `root-azeri_proposal_challenge` then restarted at entry 1 and
+directly reread all 546 corrected English/Bengali pairs in source order. The
+pass independently upheld all 70 findings and four retentions, reverified the
+38-value/54-occurrence placeholder inventory, 44 aliases in 14 groups and 48
+references, 117 provider compositions, 20 live block-color titles, three
+migrations, 80 changed-English rows covering 78 keys, and the complete
+533+12+1 caller/source-only/dormant partition. No residual survived.
+
+The current-byte first-pass artifact is
+`/tmp/blok-bn-546-first-pass-post-f070.json` with SHA-256
+`23aa537e1b676dfe4bddb66ca429fed6ce4ea47533c83420d2a7ece826dc5281`;
+its validator passed 4,118 assertions. Bengali is
+`first-pass-complete` pending a distinct complete second pass on the same
+dictionary bytes.
 
 ### Bosnian (`bs`) — corrected-byte first pass complete
 
@@ -1461,7 +1549,7 @@ passes. Its artifact is `/tmp/blok-es-546-second-pass.json` with SHA-256
 `4c199de6f5dca7d264943f0c82fcb50ccc46154f9b08a99afd1243f32c49c71b`.
 Spanish is `second-pass-complete`.
 
-### French (`fr`) — current 539-key first pass complete
+### French (`fr`) — pending after current 546-key residuals
 
 The first reviewer inspected 538/538 current French values in the shipped
 France-French (`fr-FR`) dictionary. This pre-correction inspection covered all
@@ -1574,6 +1662,38 @@ aliases in 14 groups, all 29 source-only contracts, the 509+29+1 caller
 partition, and the complete structural manifest without finding a residual.
 French is therefore `second-pass-complete` on these exact bytes.
 
+That conclusion predates the 546-key dictionary and is historical. A complete
+current-byte proposal review identified a generic accessible toolbar name, and
+the distinct challenge found one additional caller-backed miss. It accepted
+`F-fr-132`, which identifies the image controlled by the lightbox preview
+toolbar, and `F-fr-133`, which replaces the unnatural claim that a source file
+is “offline” with the established unavailable-resource wording. The challenge
+artifact is `/tmp/blok-fr-546-proposal-challenge.json` with SHA-256
+`148ae3b60d8788a80b99ebf79f557a3d9a1f3329e25fd111ea0edcb579a9dbeb`.
+It also corrected proposal metadata: the raw dictionary contains 23, not 24,
+exact-English values, all represented by the 23 sourced retention rows (whose
+IDs intentionally skip `R-fr-012`). Both focused expectations failed on
+exactly the old values before remediation and pass afterward. The corrected
+dictionary SHA-256 is
+`562d8dbd3ef79f9b097b13f8fc1939bc0cc1d9bbeed72dfec7e51624c4772ec1`.
+The two accepted residuals reset both completion passes; French remains
+`pending`.
+
+A fresh current-byte first-pass restart then directly reread all 546 pairs
+and upheld the prior 133 findings and exact 23-retention inventory, but found
+one live-region residual. The visually hidden emoji-search `role=status`
+announcer speaks a dynamic count; amended finding `F-fr-062` replaces the potentially
+relational `Correspondances d’emojis` wording with an explicit number of
+matching emojis. This follows official French search guidance that announces
+`le nombre de correspondances`. The artifact is
+`/tmp/blok-fr-546-first-pass-restart.json` with SHA-256
+`b2fdd988f206fdad2141172cbe305a2a331b3764f0a00d4f4c5deed466cbb728`;
+its validator passed 137 assertions. The focused expectation failed on
+exactly the old value and passes after remediation. The corrected dictionary
+SHA-256 is
+`4df833670fb274683b3eb1dad03280223f479d015383b7d6b86aea13cbd51b38`;
+French remains `pending` until two fresh complete passes.
+
 ### Finnish (`fi`) — pending after second-pass residuals
 
 The earlier current-byte reviewer inspected 539/539 Finnish values in source
@@ -1629,6 +1749,57 @@ A fresh current-byte replay after those six corrections then found
 the registered Finnish tool name. The locale remains `pending`, with no
 reviewer or digest evidence, until that correction is followed by two new
 complete passes.
+
+A subsequent complete 546-pair proposal review and independent challenge
+found three further residuals. `F-fi-099` distinguishes the inline formatter
+from the separate code-block tool with WordPress Finnish's concise
+`Sisäinen koodi`; `F-fi-100` replaces the numbered-list-only generic-number
+alias with the editor operation `numerointi`; and `F-fi-101` replaces the
+unnatural claim that a source file itself is offline with Microsoft Finnish's
+moved-or-unavailable construction. The challenger rejected a proposed change
+from the already-correct paired source-tab label `Lähde`, and it documented
+the sole previously unrecorded exact-English value `notifier.ok` as the
+conventional Finnish dialog label `R-fi-009`. The challenge artifact is
+`/tmp/blok-fi-546-proposal-challenge.json` with SHA-256
+`199051a2275cde23ee8bb771ae331e42a69ba3172640a37ecc1ecaf22bce232e`.
+Finnish remains `pending`; after these three expectations are remediated,
+both complete current-byte passes must restart.
+
+### Hindi (`hi`) — corrected bytes pending current-byte passes
+
+The root proposal review directly read all 546 English/Hindi pairs and
+proposed 60 corrections. A distinct challenge reviewer repeated the complete
+source-order read without treating that proposal as pair evidence, inspected
+the callers and official terminology sources, accepted 53 proposals,
+amended seven, rejected none, and found 17 additional residuals. Findings
+`F-hi-002` through `F-hi-078` record the resulting 77-key correction set;
+`F-hi-001` was independently revalidated unchanged.
+
+The challenge specifically corrected four incomplete file-size sentences,
+replaced an unsupported audio-title term with the wording actually used by
+Google's Hindi YouTube Audio Library, supplied the cover-image object in its
+accessible source-group name, recovered six table-position and four
+block-movement changed-English dependencies, and found seven other
+caller-visible grammar or terminology defects. Its projected dictionary has
+exactly seven English-equal values, all recorded as `R-hi-001` through
+`R-hi-007`.
+
+The root proposal artifact is `/tmp/blok-hi-546-root-proposals.json` with
+SHA-256
+`74c91988e771f831fae1760bda7fc0e900bf45d71d1372e931c644c3634d5239`.
+The independent challenge is
+`/tmp/blok-hi-546-proposal-challenge.json` with SHA-256
+`afda378f7674cfb52a081439a84d2d26489c41bada919b1b2357f72439b5b6fb`;
+all 47 of its gates pass. It binds to pre-correction Hindi dictionary
+SHA-256
+`d9925600421dae4e0067d4dae404bee21dc1f32066aebc61c8ba05d8e9f63da8`
+and projects corrected SHA-256
+`1f7e8c91f631492ece62f737c23979ede4d3d552437e9ea221c7ef378a00a636`.
+All 77 focused expectations failed on exactly the pre-correction values and
+pass after remediation. The corrected raw dictionary matches that projected
+SHA-256 exactly; its placeholder contracts all match English, and its exact
+English inventory is exactly the seven documented universal values. Hindi
+remains `pending` until two fresh complete current-byte passes finish.
 
 ### Italian (`it`) — current 546-key first pass complete
 
@@ -1838,7 +2009,107 @@ The complete first-pass artifact is
 `3c7765fddc6f28799c37d27a5579b7adf2e5dacda9f5f1926dbba3d5b8649700`.
 This pass binds to corrected raw dictionary SHA-256
 `2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e`;
-Italian is `first-pass-complete` pending a distinct complete second pass.
+Italian was `first-pass-complete` pending a distinct complete second pass.
+
+Reviewer `root-it-546-second-final` then independently restarted at entry 1
+and directly reread all 546 English/Italian pairs on those exact bytes. The
+second pass revalidated every `F-it-001` through `F-it-095` correction and
+the exact 22-retention inventory, all 38 placeholder-bearing values with 54
+occurrences, all 44 aliases in 14 caller groups and 48 references, all 117
+provider compositions, all 20 block-color command titles, the three later
+dictionary migrations, and the complete 533+12+1
+caller/source-only/dormant partition. Caller tracing confirmed that both
+selected-block plural labels are reachable only above one, that the loop
+labels are conventional toggle actions, and that `searchTerms.number` is a
+relevant registered alias. Structural, finding, retention, search, and video
+verification found no residual or documentation gap. Both complete reviews
+bind to raw SHA-256
+`2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e`;
+Italian is therefore `second-pass-complete`.
+
+### Japanese (`ja`) — pending after current remediation
+
+The baseline proposal review directly inspected all 546 English/Japanese
+pairs and the complete 533+12+1 caller/source-only/dormant partition. Its
+independent challenge disposed all 61 proposed corrections: 54 were accepted,
+five were amended for more natural or concise Japanese, and two were rejected
+because the existing `メンション` and `ソース` labels fit their concrete
+callers. A further source-order sweep proposed 30 additional defects. Two
+Japanese-spacing proposals were reversed after integration validation, leaving
+28 additional defects and 87 accepted corrections recorded as `F-ja-004`
+through `F-ja-090`, while preserving the historical clear-format correction
+`F-ja-001`.
+
+The challenge also revalidated all 38 placeholder-bearing values and their 54
+occurrences, 44 translated aliases in 14 caller groups and 48 references, all
+117 provider compositions, all 20 block-color command titles, the three later
+dictionary migrations, and the complete key/caller partition. The projected
+exact-English inventory contains exactly the seven supported shortcut,
+aspect-ratio, acronym, and confirmation-label retentions `R-ja-001` through
+`R-ja-007`; all 15 obvious English fallbacks are removed by the remediation.
+The proposal-challenge artifact is
+`/tmp/blok-ja-546-proposal-challenge.json` with SHA-256
+`28076b36855b5d0f530da8068adf64e522d45123d8b7ad686ea0f229173fd379`.
+
+Before remediation, the 87 surviving focused expectations failed on exactly
+their recorded old values while `F-ja-001` passed. The challenge had also
+proposed removing the boundary spaces from `blockSettings.orConjunction` and
+`blockSettings.openMenuAction`: although the joined output without spaces is
+idiomatic Japanese, these values are runtime-concatenated fragments, and the
+repository checker requires their leading and trailing whitespace to match the
+English composition contract. The padded localized fragments are therefore
+retained and the invalid `F-ja-002` and `F-ja-003` proposals are removed. After
+applying the corrected 87-key replacement set, all 88 recorded Japanese
+finding expectations pass. The corrected dictionary's raw SHA-256 is
+`dbbbb485e803d02fc77ca2b2d3a8a3dc4eab1db7f4b6c508bde8fcee2c838aae`.
+
+Japanese remains `pending` with both reviewer and reviewed-digest fields
+unassigned. Applying corrections changes the dictionary bytes, so neither the
+proposal review nor its independent challenge can serve as a complete
+current-byte first or second pass. Both complete source-order reviews must be
+performed afresh after remediation.
+
+Reviewer `root-danish_546_first_pass` then restarted at entry 1 and directly
+reread all 546 current pairs. That audit independently reopened the two
+spacing decisions and showed that their prior reversal enforced an
+English-specific structural policy rather than natural Japanese. The caller
+concatenates the fragments literally: the padded values render
+`クリック でメニューを開く`, while Japanese product guidance attaches the
+particles without spaces. `F-ja-091` and `F-ja-092` therefore require
+`クリックまたは⌘/でメニューを開く` in the shortcut path and
+`クリックでメニューを開く` in read-only mode. The integrity checker now
+keeps its boundary-space rule globally but grants a narrow, reviewed Japanese
+exception for exactly these two composition keys. The same audit identified
+that sourced retention `R-ja-007` was absent from the executable exact-English
+allowlist; the `notifier.ok = OK` entry is now represented there.
+
+The fresh audit artifact is `/tmp/blok-ja-546-first-pass-restart.json` with
+SHA-256
+`56dbca0896ea24fbbc0cee3eac15fa65e0084f38c6616965a9edd7c1ec77f574`.
+It revalidated the other 88 findings, all seven retentions, and every requested
+mechanical inventory without another residual. Because the two accepted
+spacing expectations failed on exactly the padded old values before
+remediation and pass afterward. The corrected dictionary SHA-256 is
+`b0986c0340ab3886ba1bc822309db1e5c3058f0ee1721f684e487cd47cbace26`.
+Because the corrections change the dictionary bytes, Japanese remains
+`pending` until both complete passes restart again.
+
+Reviewer `root-czech_546_first_pass` then restarted from entry 1 on those
+final bytes and directly reread all 546 English/Japanese pairs in source
+order. It independently upheld all 90 recorded findings and seven retentions,
+the 38-value/54-occurrence placeholder inventory, 44 aliases in 14 groups and
+48 references, 117 provider compositions, 20 block-color titles, three
+migrations, 80 changed-English rows covering 78 keys, and the complete
+533+12+1 caller partition. It also reverified the exact two-key whitespace
+exception and all three composed outputs without a residual.
+
+The current-byte first-pass artifact is
+`/tmp/blok-ja-546-first-pass-final-natural.json` with SHA-256
+`74a016c153411e4d9817f9e6e5b83a508b0409ec085683df08281e936b29f771`;
+its independent validator passed 5,768 assertions. Japanese is now
+`first-pass-complete` on raw dictionary SHA-256
+`b0986c0340ab3886ba1bc822309db1e5c3058f0ee1721f684e487cd47cbace26`,
+pending a distinct complete second pass.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -2142,6 +2413,24 @@ reset to `pending`, and both complete passes must be repeated after
 remediation. Historical `509+29+1` counts above predate the live localized
 database close button; the current partition is `510+28+1`.
 
+A complete 546-pair proposal review and distinct challenge subsequently
+accepted four more residual corrections. `F-no-082` distinguishes inline code
+from the separate code block, `F-no-083` uses the numbered-list operation as
+the hidden alias, `F-no-084` makes the previous/next image group explicit for
+screen readers, and `F-no-085` replaces the unnatural claim that a file is
+offline with an unavailable-resource state. The challenge rejected changing
+`tools.file.previewRaw`: concise `Kilde` is the reviewed counterpart to
+`Forhåndsvisning`, while the cited BASIC-specific `kildetekst` evidence did
+not establish a generic raw-Markdown tab convention. It also accepted
+unchanged `notifier.ok` as `R-no-017`. The challenge artifact is
+`/tmp/blok-no-546-proposal-challenge.json` with SHA-256
+`9f978b2a48417f21679657780d1e2f7d537699c9594e7f768f2018d5aad7d2f8`.
+All four focused expectations failed on exactly their old values before
+remediation and pass afterward. The corrected dictionary SHA-256 is
+`099829a6c5cf18fcf90a79f22deb5f2b614326e4642f2a4e26d2eff85c8de4a1`,
+with exactly the 17 documented English-identical retentions. Norwegian remains
+`pending`.
+
 ### Polish (`pl`) — pending after second-pass residuals
 
 The first reviewer read all 539 English/Polish pairs in source order, traced
@@ -2322,6 +2611,24 @@ video embedding. The expanded English category source adds three more
 required Swedish corrections as `F-sv-092` through `F-sv-094`; the
 travel-and-places value was already complete. All reviewer and digest evidence
 remains reset.
+
+A complete 546-pair proposal review and distinct challenge then found three
+more current residuals. The challenge accepted `F-sv-095`, which distinguishes
+the inline formatter from the separate code-block tool; `F-sv-096`, which
+names the raw Markdown representation as source text rather than an origin;
+and `F-sv-097`, which describes an inaccessible source file naturally instead
+of calling the file “offline.” It rejected changing the hidden
+`searchTerms.number` alias: `nummer` is a valid, unique associative query, so
+replacing it with another valid preference was not a correction. It also
+accepted unchanged `notifier.ok` as `R-sv-018`, amending the proposed category
+to the ledger-supported “established loanword.” The challenge artifact is
+`/tmp/blok-sv-546-proposal-challenge.json` with SHA-256
+`5ebd37718dc8e33374520575d5caedcfdd2a2393a9fcb227dc4364ee60d5febc`.
+All three focused expectations failed on exactly their old values before
+remediation and pass afterward. The corrected dictionary SHA-256 is
+`6489221075d6bd474a3f31202df78c4811dd54917e2093c3b5ef76b9cc6b2b79`,
+with exactly the 18 documented English-identical retentions. Swedish remains
+`pending`.
 
 ### Russian (`ru`) — current 545-key first pass complete
 
@@ -2952,7 +3259,7 @@ follows the global transition rule above.
 | `F-fr-059` | `fr` | `tools.callout.filterEmojis` | search / punctuation | `"Filtrer…"` | `"Rechercher des emojis…"` | Emoji picker field performs text search, not a category filter, and needs an explicit object. | verified |
 | `F-fr-060` | `fr` | `tools.callout.calloutEmojiCategory` | terminology / consistency | `"Mise en avant"` | `"Encadré"` | Emoji category for the callout tool must use the same established `Encadré` term. | verified |
 | `F-fr-061` | `fr` | `tools.callout.pickRandom` | action clarity | `"Aléatoire"` | `"Choisir un emoji au hasard"` | Button performs an action; the replacement names both the choice and its emoji object. | verified |
-| `F-fr-062` | `fr` | `tools.callout.emojiSearchResults` | number / accessibility | `"{count} emojis trouvés"` | `"Correspondances d’emojis : {count}"` | Live-region count can equal one; count-neutral wording avoids incorrect plural agreement. | verified |
+| `F-fr-062` | `fr` | `tools.callout.emojiSearchResults` | number / accessibility | `"{count} emojis trouvés"` | `"Nombre d’emojis correspondants : {count}"` | The live-region count can equal one, so label-before-count wording avoids incorrect plural agreement. Explicitly naming the number of matching emojis follows [Apple France search guidance](https://support.apple.com/fr-fr/guide/pages-iphone/tan72486d0d/ios) and avoids reading `correspondances d’emojis` as relationships between emojis. | verified |
 | `F-fr-063` | `fr` | `tools.quote.largeSize` | grammar | `"Grand"` | `"Grande"` | Size option agrees with the omitted feminine noun `taille`. | verified |
 | `F-fr-064` | `fr` | `tools.code.copied` | punctuation | `"Copié !"` | `"Copié !"` | French punctuation requires U+00A0 before the exclamation mark. | verified |
 | `F-fr-065` | `fr` | `tools.code.wrapLines` | terminology | `"Retour à la ligne"` | `"Retour automatique à la ligne"` | Toggle controls automatic wrapping rather than inserting a single line break; Microsoft France uses automatic-wrap terminology. | verified |
@@ -3326,6 +3633,10 @@ follows the global transition rule above.
 | `F-am-086` | `am` | `tools.image.preview` | native orthography / terminology consistency | `"የምስል ቅድመ-ዕይታ"` | `"የምስል ቅድመ ዕይታ"` | The image-preview label used a nonstandard hyphenated compound. Official [Google Amharic product guidance](https://support.google.com/googleplay/android-developer/answer/16909972?hl=am) uses the open form `ቅድመ ዕይታ`, matching this dictionary’s already-reviewed preview controls and loading states. | verified |
 | `F-am-087` | `am` | `tools.audio.emptyOrDropHere` | drop-target object clarity | `"ወይም ኦዲዮ እዚህ ይጣሉ"` | `"ወይም ኦዲዮ ፋይል እዚህ ይጣሉ"` | The drop target accepts a file, not abstract audio. Official [YouTube Amharic format guidance](https://support.google.com/youtube/troubleshooter/2888402?hl=am) uses the concrete term `የኦዲዮ ፋይሎች`; the replacement restores the source object while preserving the selected polite imperative. | verified |
 | `F-am-088` | `am` | `tools.bookmark.error` | native orthography / terminology consistency | `"የአገናኝ ቅድመ-እይታ መጫን አልተቻለም"` | `"የአገናኝ ቅድመ ዕይታ መጫን አልተቻለም"` | The error used both a nonstandard hyphen and the wrong initial Ethiopic character for the established preview term. The replacement exactly matches the adjacent bookmark-loading label and official Google usage. | verified |
+| `F-am-089` | `am` | `toolNames.bulletedList` | established list terminology / tool title | `"ነጥብ ያለው ዝርዝር"` | `"ነጥበ ምልክት ዝርዝር"` | The visible list-style title should use the established editor term rather than the literal “list with points.” Official [Google Amharic accessibility guidance](https://support.google.com/accessibility/answer/90559?hl=am) and [Abyssinica](https://dictionary.abyssinica.com/bulleted-list) use the replacement. | verified |
+| `F-am-090` | `am` | `toolNames.numberedList` | established list terminology / tool title | `"ቁጥር ያለው ዝርዝር"` | `"ቁጥራዊ ዝርዝር"` | The visible list-style title should use the established concise Amharic editor term rather than a literal “list with a number.” Google’s Amharic editor guidance and the [Ethiopian ICT glossary](https://oromianeconomist.com/wp-content/uploads/2017/08/ict-glossary-in-afaan-oromoo-amharic-and-tigarinya.pdf) attest the replacement. | verified |
+| `F-am-091` | `am` | `tools.database.propertyTypeSelect` | noun-role grammar / sibling consistency | `"ምረጥ"` | `"ምርጫ"` | This property-type option is a noun label beside Text, Number, and `ብዙ ምርጫ`; the current value is the imperative “select.” Official [Google Amharic UI guidance](https://support.google.com/accessibility/answer/90559?hl=am) uses `ምርጫ` for a selection or choice. | verified |
+| `F-am-092` | `am` | `tools.image.cropRatioOval` | avoidable transliteration / established shape term | `"ኦቫል"` | `"ሞላላ"` | The visible crop-shape option should use the native Amharic oval term rather than transliterating English. An official [King County Amharic voting guide](https://kingcounty.gov/en/legacy/depts/elections/education-and-outreach/-/media/depts/elections/education-and-outreach/kc-voting-guide/voting-guide-amharic.ashx?hash=F4012359E9D70B8F83EF067F2BCBCEBD&la=en) repeatedly labels the ballot oval `ሞላላ`, and Ethiopian art education likewise uses `ሞላላ ቅርፅ` for oval shapes. | verified |
 | `F-ar-001` | `ar` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"مسح التنسيق"` | Microsoft’s Arabic editor UI uses the exact concise command [مسح التنسيق](https://support.microsoft.com/ar-SA/Excel/format-text-in-cells). | verified |
 | `F-ar-002` | `ar` | `toolbox.optionAddAbove` | shortcut / action clarity | `"⌥ — إضافة أعلى"` | `"انقر مع الضغط على ⌥ للإضافة في الأعلى"` | The plus-button tooltip requires an Option-modified click; the current key-plus-label fragment omits the click gesture. | verified |
 | `F-ar-003` | `ar` | `toolbox.ctrlAddAbove` | shortcut / action clarity | `"Ctrl — إضافة أعلى"` | `"انقر مع الضغط على Ctrl للإضافة في الأعلى"` | The plus-button tooltip requires a Ctrl-modified click; the current key-plus-label fragment omits the click gesture. | verified |
@@ -3671,6 +3982,8 @@ follows the global transition rule above.
 | `F-bn-066` | `bn` | `tools.image.downloadOriginal` | action grammar / object clarity | `"মূল ডাউনলোড"` | `"আসল ছবি ডাউনলোড করুন"` | The old noun fragment could mean a primary download and omitted what is downloaded. The replacement is a complete imperative naming the uncropped original image. | verified |
 | `F-bn-067` | `bn` | `tools.image.navigationControls` | accessibility / navigation relationship | `"ছবি নেভিগেশন"` | `"ছবিগুলোর মধ্যে নেভিগেশন"` | The ARIA group contains previous-image and next-image controls. `ছবিগুলোর মধ্যে` states navigation among multiple images and matches the locale’s reviewed block-navigation construction. | verified |
 | `F-bn-068` | `bn` | `tools.audio.emptyOrDropHere` | drop-target object clarity | `"অথবা এখানে অডিও ফেলুন"` | `"অথবা এখানে অডিও ফাইল ফেলুন"` | The drop target accepts a file, not abstract audio. Official [Files by Google Bengali help](https://support.google.com/files/answer/10018943?hl=bn) uses the exact product term `অডিও ফাইল`. | verified |
+| `F-bn-069` | `bn` | `blockSettings.blocksSelected` | number grammar / classifier | `"{count} ব্লক"` | `"{count}টি ব্লক"` | This dynamic selected-block count requires the Bengali classifier `টি`; the replacement matches every sibling block-count announcement and standard Bengali numeral–noun construction. Evidence: [Unicode CLDR Bengali number verification](https://www.unicode.org/cldr/cldr-aux/charts/28/verify/numbers/bn.html); [Google Android accessibility guidance](https://support.google.com/accessibility/android/answer/6151854?hl=bn). | verified |
+| `F-bn-070` | `bn` | `a11y.blocksDuplicated` | caller semantics / accessibility | `"{count}টি ব্লক {position} অবস্থান থেকে কপি করা হয়েছে"` | `"{count}টি ব্লক কপি করা হয়েছে। শুরুর অবস্থান: {position}"` | The drag-a11y caller passes the first newly duplicated block's destination index as `{position}`, not the source position. The replacement announces the completed duplication and labels the new duplicates' starting position without reversing that relationship. | verified |
 | `F-bs-001` | `bs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti formatiranje"` | LibreOffice’s Bosnian product UI supplies the exact Clear formatting translation [Očisti formatiranje](https://github.com/LibreOffice/translations/blob/master/source/bs/svx/messages.po#L6304-L6305). | verified |
 | `F-bs-002` | `bs` | `blockSettings.convertWithChildrenWarning` | semantic accuracy / locale style | `"Ugniježđeni blokovi: {count}. Konverzijom ovog bloka ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | `"Ugniježđeni blokovi: {count}. Ako pretvorite ovaj blok, ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | Avoid technical nominalization while preserving the count-neutral warning. Frozen 545-key audit index 8; independent disposition: accept-original-proposal. | verified |
 | `F-bs-003` | `bs` | `toolbox.optionAddAbove` | semantic accuracy / locale style | `"Option-klik za dodavanje iznad"` | `"Držite tipku Option i kliknite za dodavanje iznad"` | Replaces the awkward compound and explicitly tells the user to hold Option while clicking. Frozen 545-key audit index 10; independent disposition: adjust. | verified |
@@ -4126,6 +4439,9 @@ follows the global transition rule above.
 | `F-fi-096` | `fi` | `tools.image.previewControls` | accessibility / object context | `"Esikatselun hallinta"` | `"Kuvan esikatselun säätimet"` | This is the accessible name of a concrete image-preview toolbar; the old abstract “preview management” wording omits the image object and does not name controls. | verified |
 | `F-fi-097` | `fi` | `tools.video.seek` | accessibility / media terminology | `"Kelaa"` | `"Toistokohta"` | The caller is a range slider, so its accessible label must name the controlled playback position rather than issue a seek command; [Apple’s Finnish player guidance](https://support.apple.com/fi-fi/guide/iphone/iphebbd067ce/ios) uses `toistokohta` for the timeline position. | verified |
 | `F-fi-098` | `fi` | `tools.toggle.placeholder` | grammar / caller context / terminology | `"Avattava"` | `"Avattava lista"` | The caller renders this as the visible title of an empty toggle block, so the bare adjective is incomplete; the replacement matches this dictionary’s registered tool name and [Notion’s Finnish toggle-list terminology](https://www.notion.com/fi/help/writing-and-editing-basics). | verified |
+| `F-fi-099` | `fi` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Koodi"` | `"Sisäinen koodi"` | The inline formatter and separate code-block tool currently expose the same `Koodi` title. Official WordPress Finnish maps the exact compact UI label “Inline code” to [`Sisäinen koodi`](https://translate.wordpress.org/projects/wp/dev/fi/default/export-translations/?format=json), while the block tool remains `Koodi`. | verified |
+| `F-fi-100` | `fi` | `searchTerms.number` | search alias / numbered-list semantics | `"numero"` | `"numerointi"` | This alias is registered only for the numbered-list tool. `numero` is a generic number, while official [Microsoft Finnish editor guidance](https://support.microsoft.com/fi-fi/office/numeroidun-tai-luettelomerkeill%C3%A4-varustetun-luettelon-lis%C3%A4%C3%A4minen-viestiin-732479eb-ad2b-4478-aff0-0c6251acc037) uses `Numerointi` for the discoverable editor operation. | verified |
+| `F-fi-101` | `fi` | `tools.image.errorSourceOffline` | natural error copy / source synchronization | `"Lähdetiedosto on voitu siirtää tai se voi olla offline-tilassa."` | `"Lähdetiedosto on ehkä siirretty tai se ei ehkä ole käytettävissä."` | A file is not naturally described as being offline. Official [Microsoft Finnish recovery guidance](https://support.microsoft.com/fi-fi/office/kuinka-korjataan-yhdist%C3%A4-virhe-584f7de9-b238-480c-8e8f-de0ba2c1aac9) uses the direct uncertainty construction `Tiedosto on ehkä siirretty`; the replacement preserves uncertainty and expresses source unavailability. | verified |
 | `F-fil-001` | `fil` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"I-clear ang pag-format"` | Google’s official Filipino Gmail UI uses the exact toolbar option [I-clear ang pag-format](https://support.google.com/mail/answer/8260?co=GENIE.Platform%3DAndroid&hl=fil), matching this dictionary’s existing clear-action register. | verified |
 | `F-fr-125` | `fr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Effacer la mise en forme"` | Microsoft’s French editor UI uses the exact concise command [Effacer la mise en forme](https://support.microsoft.com/fr-fr/office/effacer-toute-la-mise-en-forme-du-texte-c094c4da-7f09-4cea-9a8d-c166949c9c80). | verified |
 | `F-fr-126` | `fr` | `tools.colorPicker.defaultSwatchLabel` | punctuation / caller composition | `"{mode} {default}"` | `"{mode} : {default}"` | The caller otherwise produces an ungrammatical adjacency such as `Couleur du texte Par défaut`; the French non-breaking-space colon creates a clear label/value relationship. | verified |
@@ -4134,9 +4450,88 @@ follows the global transition rule above.
 | `F-fr-129` | `fr` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Activité"` | `"Activités"` | The emoji picker renders a category heading rather than one activity; [Microsoft Teams France](https://support.microsoft.com/fr-fr/teams/free/chat-calling/send-an-emoji-or-gif-in-microsoft-teams-free) uses the plural category label `Activités`. | verified |
 | `F-fr-130` | `fr` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"L’URL a renvoyé une erreur. Essayez une autre source ou importez de nouveau le fichier."` | `"Impossible de charger l’image depuis cette URL. Essayez une autre source ou importez de nouveau le fichier."` | The corrected source identifies the failed image load; the current text instead personifies the URL and obscures what failed. | verified |
 | `F-fr-131` | `fr` | `tools.bookmark.error` | context / source synchronization | `"Impossible de charger l’aperçu"` | `"Impossible de charger l’aperçu du lien"` | The rendered error must identify the failed link preview rather than a generic preview; [Microsoft France](https://support.microsoft.com/fr-fr/office/aper%C3%A7u-du-lien-par-bing-1bcfa7f8-a42b-4d59-bc68-2052868c79ab) uses `aperçu du lien`. | verified |
+| `F-fr-132` | `fr` | `tools.image.previewControls` | accessibility / controlled-object context | `"Commandes d’aperçu"` | `"Commandes d’aperçu de l’image"` | This value is the accessible name of the toolbar inside the image lightbox. Naming the controlled image distinguishes it from a generic preview toolbar and follows [W3C accessible-name guidance](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/). | verified |
+| `F-fr-133` | `fr` | `tools.image.errorSourceOffline` | natural error copy / resource state | `"Le fichier source a peut-être été déplacé ou est hors ligne."` | `"Le fichier source a peut-être été déplacé ou n’est plus disponible."` | A file is not naturally described as “offline” in France French; the broken-image caller needs clear wording for a source resource that may have moved or become unavailable. | verified |
 | `F-gu-001` | `gu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ફોર્મેટિંગ સાફ કરો"` | An independent terminology pass rejected LibreOffice’s longer Clear Direct Formatting label because its technical qualifier is absent from this concise source. The replacement combines this dictionary’s established `ફોર્મેટિંગ` noun and `સાફ કરો` action; Google’s Gujarati UI independently uses the same formatting loanword. | verified |
 | `F-he-001` | `he` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"נקה עיצוב"` | Microsoft’s Hebrew editor UI uses the exact concise command [נקה עיצוב](https://support.microsoft.com/he-IL/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hi-001` | `hi` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"टेक्स्ट की फ़ॉर्मैटिंग हटाएं"` | Google Docs’ Hindi shortcut action uses this exact wording in [official help](https://support.google.com/docs/answer/179738?hl=hi), NFC-normalized for the corpus. | verified |
+| `F-hi-002` | `hi` | `toolbox.addBelow` | caller role / Hindi UI accuracy | `"नीचे जोड़ें"` | `"नीचे जोड़ने के लिए क्लिक करें"` | The live plus-button caller needs an accurate Hindi action for “Click to add below”; the old wording omits the click instruction. | verified |
+| `F-hi-003` | `hi` | `popover.convertTo` | caller role / Hindi UI accuracy | `"रूपांतरित करें"` | `"इसमें बदलें"` | The conversion popover introduces a target type; direct caller review accepted the more natural Hindi construction “change into this.” | verified |
+| `F-hi-004` | `hi` | `tools.marker.textColor` | source synchronization / caller semantics | `"टेक्स्ट"` | `"टेक्स्ट का रंग"` | The corrected source and live marker caller name text color; the old wording names only text. | verified |
+| `F-hi-005` | `hi` | `tools.colorPicker.defaultSwatchLabel` | caller composition / accessibility | `"{mode} {default}"` | `"{mode}: {default}"` | The swatch accessible-name formatter needs an explicit label/value boundary; the colon disambiguates the runtime mode and default value while preserving both placeholders. | verified |
+| `F-hi-006` | `hi` | `tools.colorPicker.colorSwatchLabel` | caller composition / accessibility | `"{mode} {color}"` | `"{mode}: {color}"` | The color-swatch accessible-name formatter needs the same explicit mode/value boundary for every runtime color while preserving both placeholders. | verified |
+| `F-hi-007` | `hi` | `tools.paragraph.placeholder` | caller role / instruction completeness | `"कुछ लिखें या चुनने के लिए / दबाएं"` | `"कुछ लिखें या कोई टूल चुनने के लिए / दबाएं"` | The paragraph hint's old instruction omits what the slash action selects; the replacement names a tool. | verified |
+| `F-hi-008` | `hi` | `tools.toggle.bodyPlaceholder` | source synchronization / caller semantics | `"खाली टॉगल। क्लिक करें या ब्लॉक अंदर खींचें।"` | `"खाली टॉगल। ब्लॉक जोड़ने के लिए क्लिक करें या ब्लॉक यहां खींचें।"` | The live toggle supports two distinct actions: click to add a block or drag blocks into the target. The replacement states both corrected-source contracts. | verified |
+| `F-hi-009` | `hi` | `tools.table.clearSelection` | source synchronization / caller semantics | `"साफ़ करें"` | `"सामग्री साफ़ करें"` | Both table callers clear cell contents, not the selection itself; the replacement names the affected content. | verified |
+| `F-hi-010` | `hi` | `tools.table.headerColumn` | established product terminology | `"शीर्ष स्तंभ"` | `"हेडर कॉलम"` | Official Hindi Google Docs editor documentation uses `हेडर`; the old literal “top column” wording misstates the table option. | verified |
+| `F-hi-011` | `hi` | `tools.table.headerRow` | established product terminology | `"शीर्ष पंक्ति"` | `"हेडर पंक्ति"` | Official Hindi Google Docs editor documentation uses `हेडर`; the old literal “top row” wording misstates the table option. | verified |
+| `F-hi-012` | `hi` | `tools.table.placement` | source synchronization / caller semantics | `"स्थिति"` | `"संरेखण"` | The picker changes cell-content alignment, not location; the replacement uses the established Hindi alignment term. | verified |
+| `F-hi-013` | `hi` | `tools.table.placementTopLeft` | grammar / source synchronization | `"ऊपर बाएं"` | `"ऊपर बाईं ओर"` | The directional label needs the oblique feminine form `बाईं ओर`; bare `बाएं` is the action-label form. This is an `F-en-010` dependency. | verified |
+| `F-hi-014` | `hi` | `tools.table.placementTopRight` | grammar / source synchronization | `"ऊपर दाएं"` | `"ऊपर दाईं ओर"` | The directional label needs `दाईं ओर` rather than bare `दाएं`. This is an `F-en-012` dependency. | verified |
+| `F-hi-015` | `hi` | `tools.table.placementMiddleLeft` | grammar / source synchronization | `"बीच में बाएं"` | `"बीच में बाईं ओर"` | The two-axis position is naturally `बीच में बाईं ओर`. This is an `F-en-013` dependency. | verified |
+| `F-hi-016` | `hi` | `tools.table.placementMiddleRight` | grammar / source synchronization | `"बीच में दाएं"` | `"बीच में दाईं ओर"` | The two-axis position is naturally `बीच में दाईं ओर`. This is an `F-en-014` dependency. | verified |
+| `F-hi-017` | `hi` | `tools.table.placementBottomLeft` | grammar / source synchronization | `"नीचे बाएं"` | `"नीचे बाईं ओर"` | The two-axis position is naturally `नीचे बाईं ओर`. This is an `F-en-015` dependency. | verified |
+| `F-hi-018` | `hi` | `tools.table.placementBottomRight` | grammar / source synchronization | `"नीचे दाएं"` | `"नीचे दाईं ओर"` | The two-axis position is naturally `नीचे दाईं ओर`. This is an `F-en-017` dependency. | verified |
+| `F-hi-019` | `hi` | `a11y.movedUp` | accessibility / natural announcement | `"ऊपर की ओर स्थानांतरण {total} में से {position} स्थान पर पूरा हुआ।"` | `"ऊपर ले जाया गया। नया स्थान: {total} में से {position}।"` | The abstract nominal phrase is unnatural spoken Hindi. The replacement is cardinality-neutral, states the completed direction, and announces the new position while preserving both placeholders. | verified |
+| `F-hi-020` | `hi` | `a11y.movedDown` | accessibility / natural announcement | `"नीचे की ओर स्थानांतरण {total} में से {position} स्थान पर पूरा हुआ।"` | `"नीचे ले जाया गया। नया स्थान: {total} में से {position}।"` | The abstract nominal phrase is unnatural spoken Hindi. The replacement is cardinality-neutral, states the completed direction, and announces the new position while preserving both placeholders. | verified |
+| `F-hi-021` | `hi` | `a11y.atTop` | accessibility / complete count-neutral sentence | `"और ऊपर ले जाना संभव नहीं है। पहले से सबसे ऊपर।"` | `"और ऊपर नहीं ले जाया जा सकता। यह पहले से सबसे ऊपर है।"` | The old second sentence is a fragment. The replacement is a complete count-neutral boundary announcement for one block or a selected group. | verified |
+| `F-hi-022` | `hi` | `a11y.atBottom` | accessibility / complete count-neutral sentence | `"और नीचे ले जाना संभव नहीं है। पहले से सबसे नीचे।"` | `"और नीचे नहीं ले जाया जा सकता। यह पहले से सबसे नीचे है।"` | The old second sentence is a fragment. The replacement is a complete count-neutral boundary announcement for one block or a selected group. | verified |
+| `F-hi-023` | `hi` | `a11y.searchResults` | source synchronization / count-neutral accessibility | `"{count} परिणाम"` | `"खोज के नतीजे: {count}"` | The live region can announce one or many results; the label-before-count construction follows the corrected source and remains count-neutral. | verified |
+| `F-hi-024` | `hi` | `a11y.allBlocksSelected` | source synchronization / count-neutral accessibility | `"सभी ब्लॉक चयनित, {count} ब्लॉक"` | `"सभी ब्लॉक चुने गए। कुल: {count}"` | The select-all live region can announce one or many blocks; the corrected label-before-count construction avoids a fixed noun form. | verified |
+| `F-hi-025` | `hi` | `a11y.dropCreateColumnLeft` | caller role / accessibility | `"बाईं ओर कॉलम बनाएगा"` | `"बाईं ओर एक कॉलम बनेगा"` | The drag live region announces a prospective result, not an unnamed agent's action; the replacement naturally states that a column will be created. | verified |
+| `F-hi-026` | `hi` | `a11y.dropCreateColumnRight` | caller role / accessibility | `"दाईं ओर कॉलम बनाएगा"` | `"दाईं ओर एक कॉलम बनेगा"` | The drag live region announces a prospective result, not an unnamed agent's action; the replacement naturally states that a column will be created. | verified |
+| `F-hi-027` | `hi` | `searchTerms.header` | search terminology / semantic accuracy | `"शीर्ष"` | `"हेडर"` | This hidden heading-tool alias uses `शीर्ष` (“top/head”), not the established UI noun `हेडर` used by Google's Hindi editor documentation. | verified |
+| `F-hi-028` | `hi` | `searchTerms.number` | search terminology / numbered-list semantics | `"अंक"` | `"क्रमांकन"` | This alias belongs only to the numbered-list search group; `अंक` is a generic digit, while `क्रमांकन` names numbering as an editor operation. | verified |
+| `F-hi-029` | `hi` | `tools.callout.addEmoji` | source synchronization / caller semantics | `"इमोजी जोड़ें"` | `"आइकन जोड़ें"` | The corrected source and callout action say Add icon; the chosen emoji functions as the callout icon. | verified |
+| `F-hi-030` | `hi` | `tools.callout.filterEmojis` | source synchronization / accessibility | `"फ़िल्टर…"` | `"इमोजी खोजें…"` | This is a searchbox placeholder and accessible name; the replacement states that it searches emojis and retains the continuing-action ellipsis. | verified |
+| `F-hi-031` | `hi` | `tools.callout.pickRandom` | source synchronization / action completeness | `"यादृच्छिक"` | `"कोई रैंडम इमोजी चुनें"` | The button needs a complete action and object rather than a bare adjective. | verified |
+| `F-hi-032` | `hi` | `tools.quote.size` | grammar / caller context | `"उद्धरण आकार"` | `"उद्धरण का आकार"` | The old value is a clipped noun stack; Hindi requires the genitive relation `उद्धरण का आकार` for the quote-size submenu heading. | verified |
+| `F-hi-033` | `hi` | `toolNames.inlineCode` | tool distinction / caller role | `"कोड"` | `"इनलाइन कोड"` | The inline formatter otherwise has the same title as the separate code-block tool; the replacement preserves their distinct roles. | verified |
+| `F-hi-034` | `hi` | `toolNames.equation` | untranslated fallback / Hindi localization | `"Equation"` | `"समीकरण"` | The live tool name retained English; official Hindi Google Docs documentation uses `समीकरण`. | verified |
+| `F-hi-035` | `hi` | `tools.equation.placeholder` | untranslated fallback / Hindi localization | `"Enter a LaTeX formula…"` | `"LaTeX फ़ॉर्मूला दर्ज करें…"` | The live instruction retained English. The replacement localizes the action while preserving the LaTeX product name and continuing-action ellipsis. | verified |
+| `F-hi-036` | `hi` | `tools.code.searchLanguage` | source synchronization / number and punctuation | `"भाषा खोजें..."` | `"भाषाएं खोजें…"` | The search covers a list of languages, so the object must be plural; the replacement also uses the corpus-standard U+2026 ellipsis. | verified |
+| `F-hi-037` | `hi` | `tools.link.linkTitle` | source synchronization / field semantics | `"लिंक शीर्षक"` | `"लिंक टेक्स्ट"` | The field changes visible link text, not title metadata. | verified |
+| `F-hi-038` | `hi` | `tools.code.autoDetected` | orthography / established product terminology | `"स्वत:"` | `"अपने आप"` | `स्वत:` uses a colon instead of a visarga and is malformed. Official Chromium Hindi uses the contemporary phrase `अपने आप` for automatic behavior. | verified |
+| `F-hi-039` | `hi` | `tools.image.downloadOriginal` | caller role / object clarity | `"मूल डाउनलोड करें"` | `"मूल छवि डाउनलोड करें"` | The image action must name the original image being downloaded; the old wording omits its object. | verified |
+| `F-hi-040` | `hi` | `tools.image.converting` | untranslated fallback / Hindi localization | `"Converting…"` | `"रूपांतरित किया जा रहा है…"` | The visible image-processing state retained English; the replacement localizes the ongoing progress message. | verified |
+| `F-hi-041` | `hi` | `tools.image.uploadProgress` | accessibility / grammar | `"अपलोड प्रगति"` | `"अपलोड की प्रगति"` | The ARIA label names progress belonging to the upload; the replacement supplies the required genitive relation. | verified |
+| `F-hi-042` | `hi` | `tools.image.altEdit` | accessibility / established terminology | `"alt टेक्स्ट संपादित करें"` | `"वैकल्पिक टेक्स्ट संपादित करें"` | Official Google Hindi accessibility documentation uses `वैकल्पिक टेक्स्ट`; localizing the term avoids a mixed lowercase-English action label. | verified |
+| `F-hi-043` | `hi` | `tools.image.altDescription` | source synchronization / accessibility | `"इस छवि का वर्णन करने के लिए alt टेक्स्ट जोड़ें। इससे आपका पेज दृष्टिबाधित या नेत्रहीन लोगों के लिए अधिक सुलभ बनता है।"` | `"जो लोग इस छवि को नहीं देख सकते, उनके लिए इसका वर्णन करें।"` | The corrected source is a concise, user-centered instruction; the replacement accurately addresses people who cannot see the image. | verified |
+| `F-hi-044` | `hi` | `tools.image.altPlaceholder` | accessibility / established terminology | `"Alt टेक्स्ट"` | `"वैकल्पिक टेक्स्ट"` | Official Google Hindi accessibility documentation uses `वैकल्पिक टेक्स्ट`; the field should use the full term while the compact Alt button remains retained. | verified |
+| `F-hi-045` | `hi` | `tools.image.previewControls` | accessibility / controlled-object context | `"पूर्वावलोकन नियंत्रण"` | `"छवि के पूर्वावलोकन के नियंत्रण"` | This is the accessible name of the image lightbox toolbar; the replacement identifies both the image object and its controls. | verified |
+| `F-hi-046` | `hi` | `tools.image.navigationControls` | accessibility / navigation relationship | `"छवि नेविगेशन"` | `"छवियों के बीच नेविगेशन"` | The group contains previous/next controls for moving among gallery images; the replacement states navigation between images. | verified |
+| `F-hi-047` | `hi` | `tools.image.resetZoom` | action grammar / caller role | `"ज़ूम रीसेट"` | `"ज़ूम रीसेट करें"` | The toolbar control performs an action; the replacement is a complete respectful imperative. | verified |
+| `F-hi-048` | `hi` | `tools.image.errorFileTooLarge` | untranslated fallback / Hindi localization | `"Image is too large. {size} exceeds the {max} limit."` | `"छवि बहुत बड़ी है। इसका आकार {size} है, जो {max} की सीमा से ज़्यादा है।"` | The live error retained English. The challenged wording includes the copula after `{size}`, forms a complete Hindi sentence, and preserves both placeholders. | verified |
+| `F-hi-049` | `hi` | `tools.image.errorSourceOffline` | natural error copy / resource state | `"स्रोत फ़ाइल कहीं और ले जाई गई हो सकती है या ऑफ़लाइन हो सकती है।"` | `"हो सकता है कि स्रोत फ़ाइल को कहीं और ले जाया गया हो या वह उपलब्ध न हो।"` | Hindi naturally fronts the uncertainty as `हो सकता है कि`; the replacement keeps the source-file object explicit and avoids describing a file itself as offline. | verified |
+| `F-hi-050` | `hi` | `tools.image.errorDefaultMessage` | source synchronization / error clarity | `"URL ने त्रुटि लौटाई। कोई अन्य स्रोत आज़माएं या फ़ाइल फिर से अपलोड करें।"` | `"इस URL से छवि लोड नहीं की जा सकी। कोई दूसरा स्रोत आज़माएं या फ़ाइल फिर से अपलोड करें।"` | The corrected source identifies the failed image load; the old text personifies the URL and obscures what failed. | verified |
+| `F-hi-051` | `hi` | `tools.file.uploadProgress` | accessibility / grammar | `"अपलोड प्रगति"` | `"अपलोड की प्रगति"` | The file uploader uses the same ARIA concept as image upload; the replacement supplies the natural genitive relation. | verified |
+| `F-hi-052` | `hi` | `tools.file.errorFileTooLarge` | untranslated fallback / Hindi localization | `"File is too large. {size} exceeds the {max} limit."` | `"फ़ाइल बहुत बड़ी है। इसका आकार {size} है, जो {max} की सीमा से ज़्यादा है।"` | The live error retained English. The challenged wording supplies the copula after `{size}` and preserves the recovery-relevant size and limit. | verified |
+| `F-hi-053` | `hi` | `tools.file.previewRaw` | source synchronization / tab terminology | `"कोड"` | `"स्रोत"` | The Markdown tab shows source text, not necessarily program code; the replacement follows the corrected Source contract. | verified |
+| `F-hi-054` | `hi` | `tools.video.alignmentLeft` | action terminology / caller role | `"बाएं"` | `"बाएं संरेखित करें"` | The video settings item performs an alignment action and needs the complete imperative used in Hindi editor UI. | verified |
+| `F-hi-055` | `hi` | `tools.video.alignmentCenter` | action terminology / caller role | `"मध्य"` | `"बीच में संरेखित करें"` | The video settings item performs an alignment action; the old noun only describes a position. | verified |
+| `F-hi-056` | `hi` | `tools.video.alignmentRight` | action terminology / caller role | `"दाएं"` | `"दाएं संरेखित करें"` | The video settings item performs an alignment action and needs the complete imperative used in Hindi editor UI. | verified |
+| `F-hi-057` | `hi` | `tools.video.errorFileTooLarge` | untranslated fallback / Hindi localization | `"Video is too large. {size} exceeds the {max} limit."` | `"वीडियो बहुत बड़ा है। इसका आकार {size} है, जो {max} की सीमा से ज़्यादा है।"` | The live error retained English. The challenged wording supplies the copula after `{size}` and preserves both placeholders. | verified |
+| `F-hi-058` | `hi` | `tools.audio.alignmentLeft` | action terminology / caller role | `"बाएं"` | `"बाएं संरेखित करें"` | The audio settings item performs the same alignment action as its video counterpart. | verified |
+| `F-hi-059` | `hi` | `tools.audio.alignmentCenter` | action terminology / caller role | `"मध्य"` | `"बीच में संरेखित करें"` | The audio settings item performs the same center-alignment action as its video counterpart. | verified |
+| `F-hi-060` | `hi` | `tools.audio.alignmentRight` | action terminology / caller role | `"दाएं"` | `"दाएं संरेखित करें"` | The audio settings item performs the same alignment action as its video counterpart. | verified |
+| `F-hi-061` | `hi` | `tools.audio.errorFileTooLarge` | untranslated fallback / Hindi localization | `"Audio is too large. {size} exceeds the {max} limit."` | `"ऑडियो फ़ाइल बहुत बड़ी है। इसका आकार {size} है, जो {max} की सीमा से ज़्यादा है।"` | The live error retained English. The challenged wording supplies the copula after `{size}`, names the audio file, and preserves both placeholders. | verified |
+| `F-hi-062` | `hi` | `tools.audio.titlePlaceholder` | untranslated fallback / official product terminology | `"Track title"` | `"ट्रैक का टाइटल"` | Google's current Hindi YouTube Audio Library page uses `ट्रैक का टाइटल`; the challenge amended the root proposal to match that official product term. | verified |
+| `F-hi-063` | `hi` | `tools.audio.artistPlaceholder` | untranslated fallback / Hindi localization | `"Artist"` | `"कलाकार"` | The live metadata field retained English; Google's Hindi YouTube Audio Library uses `कलाकार`. | verified |
+| `F-hi-064` | `hi` | `tools.audio.emptyOrDropHere` | caller role / object clarity | `"या यहां ऑडियो छोड़ें"` | `"या यहां ऑडियो फ़ाइल छोड़ें"` | The drop target accepts an audio file, not abstract audio; the replacement names the object. | verified |
+| `F-hi-065` | `hi` | `tools.audio.coverChange` | untranslated fallback / Hindi localization | `"Change cover"` | `"कवर बदलें"` | The live cover-picker action retained English; the replacement is a concise Hindi imperative. | verified |
+| `F-hi-066` | `hi` | `tools.audio.coverSet` | untranslated fallback / Hindi localization | `"Set cover image"` | `"कवर छवि सेट करें"` | The live cover-picker action retained English; the replacement names the cover image and localizes the imperative. | verified |
+| `F-hi-067` | `hi` | `tools.audio.coverRemove` | untranslated fallback / Hindi localization | `"Remove cover"` | `"कवर हटाएं"` | The live cover-picker action retained English; the replacement is a concise Hindi imperative. | verified |
+| `F-hi-068` | `hi` | `tools.audio.coverErrorType` | untranslated fallback / Hindi localization | `"Choose an image file"` | `"छवि फ़ाइल चुनें"` | The live cover validation error retained English; the replacement localizes the recovery instruction. | verified |
+| `F-hi-069` | `hi` | `tools.audio.coverErrorTooLarge` | untranslated fallback / Hindi localization | `"Image is too large"` | `"छवि बहुत बड़ी है"` | The live cover validation error retained English; the replacement states the failure in natural Hindi. | verified |
+| `F-hi-070` | `hi` | `tools.audio.coverAdd` | untranslated fallback / Hindi localization | `"Add a cover"` | `"कवर जोड़ें"` | The live empty-cover action retained English; the replacement is a concise Hindi imperative. | verified |
+| `F-hi-071` | `hi` | `tools.audio.coverSourceAria` | accessibility / controlled-object context | `"छवि स्रोत"` | `"कवर छवि का स्रोत"` | The accessible group labels upload/link sources inside the cover-image picker; the replacement names the controlled cover-image object. | verified |
+| `F-hi-072` | `hi` | `tools.database.viewTypeListDescription` | source synchronization / caller semantics | `"एक सरल रैखिक दृश्य"` | `"आइटम को सरल सूची में दिखाएं"` | The corrected source describes showing items in a list; the old abstract “linear view” changes both the object and action. | verified |
+| `F-hi-073` | `hi` | `tools.database.propertyTypeHeading` | caller role / established terminology | `"गुण प्रकार"` | `"प्रॉपर्टी का प्रकार"` | The property-type menu heading needs the established Hindi product loanword and a natural genitive relation. | verified |
+| `F-hi-074` | `hi` | `tools.bookmark.loading` | source synchronization / progress punctuation | `"लिंक पूर्वावलोकन लोड हो रहा है"` | `"लिंक पूर्वावलोकन लोड हो रहा है…"` | The rendered loading state is ongoing; the replacement follows the corrected source by retaining the ellipsis. | verified |
+| `F-hi-075` | `hi` | `tools.embed.empty` | source synchronization / read-only context | `"एम्बेड करने के लिए लिंक पेस्ट करें"` | `"कोई एम्बेड लिंक नहीं"` | The caller renders a read-only empty state where a paste instruction is impossible; the replacement states that no embed link exists. | verified |
+| `F-hi-076` | `hi` | `tools.video.toggleTimeDisplay` | source synchronization / accessibility | `"समय प्रदर्शन टॉगल करें"` | `"बीते और बचे हुए समय के बीच बदलें"` | The accessible name must identify the two time-display states the control switches between. | verified |
+| `F-hi-077` | `hi` | `tools.video.ctxStats` | source synchronization / neutral terminology | `"विस्तृत आंकड़े"` | `"प्लेबैक के आंकड़े"` | The corrected source is neutral Playback statistics; the replacement names the playback context rather than merely “detailed statistics.” | verified |
+| `F-hi-078` | `hi` | `tools.callout.emojiSearchResults` | source synchronization / count-neutral accessibility | `"{count} इमोजी मिलीं"` | `"मिलते-जुलते इमोजी: {count}"` | The emoji-search live region can announce one or many matches; the label-before-count construction follows the corrected source without fixing the noun to one number. | verified |
 | `F-hr-001` | `hr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti oblikovanje"` | Microsoft’s Croatian editor UI uses the exact concise command [Očisti oblikovanje](https://support.microsoft.com/hr-HR/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hu-001` | `hu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Formázás törlése"` | Microsoft’s Hungarian editor UI uses the exact command [Formázás törlése](https://support.microsoft.com/hu-HU/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hy-001` | `hy` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Մաքրել ուղղակի ձևաչափումը"` | LibreOffice’s Armenian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/hy/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
@@ -4154,6 +4549,95 @@ follows the global transition rule above.
 | `F-it-094` | `it` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Codice"` | `"Codice in linea"` | The inline formatter shared the separate code-block tool’s generic title. Official [Microsoft Teams Italian Markdown guidance](https://support.microsoft.com/it-it/office/usa-la-formattazione-markdown-in-microsoft-teams-4d10bd65-55e2-4b2d-a1f3-2bebdcd2c772) distinguishes `codice in linea` from `blocco di codice`, so the replacement preserves the actual caller distinction. | verified |
 | `F-it-095` | `it` | `popover.search` | native punctuation / consistency | `"Cerca un'azione…"` | `"Cerca un’azione…"` | The newly localized action-search placeholder was the sole remaining ASCII apostrophe in the Italian dictionary. The U+2019 apostrophe matches every other reviewed Italian elision and the established punctuation findings `F-it-038`, `F-it-042`, `F-it-044`, `F-it-064`, and `F-it-090`–`F-it-092`. | verified |
 | `F-ja-001` | `ja` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"文字書式をクリア"` | Google Docs’ Japanese shortcut action uses the exact character-formatting command [文字書式をクリア](https://support.google.com/docs/answer/179738?hl=ja). | verified |
+| `F-ja-004` | `ja` | `blockSettings.convertWithChildrenWarning` | source-only warning / counter / punctuation | `"ネストされたブロック: {count}。このブロックを変換すると、ネストされた内容が最上位に移動します。続けますか？"` | `"ネストされたブロック：{count}個。このブロックを変換すると、ネストされた内容が最上位に移動します。続けますか？"` | Use Japanese punctuation and the 個 counter so the interpolated count is complete; preserve the source-only warning’s action and consequence. [ブロックとは — Notion](https://www.notion.com/ja/help/what-is-a-block?nxtPslug=what-is-a-block). | verified |
+| `F-ja-005` | `ja` | `toolbox.optionAddAbove` | shortcut omits click gesture | `"⌥ 上に追加"` | `"⌥+クリックで上に追加"` | The root correction restores the missing click gesture but is unnecessarily long for a hover tooltip. The compact, fully explicit modifier-click form follows Japanese shortcut conventions. [Mac のキーボードショートカット — Apple](https://support.apple.com/ja-jp/102650); [テキストの書式設定に関するガイドライン — Microsoft Learn](https://learn.microsoft.com/ja-jp/contribute/content/text-formatting-guidelines). | verified |
+| `F-ja-006` | `ja` | `toolbox.ctrlAddAbove` | shortcut omits click gesture | `"Ctrl 上に追加"` | `"Ctrl+クリックで上に追加"` | The root correction restores the missing click gesture but is unnecessarily long for a hover tooltip. The compact, fully explicit modifier-click form follows Japanese shortcut conventions. [Mac のキーボードショートカット — Apple](https://support.apple.com/ja-jp/102650); [テキストの書式設定に関するガイドライン — Microsoft Learn](https://learn.microsoft.com/ja-jp/contribute/content/text-formatting-guidelines). | verified |
+| `F-ja-007` | `ja` | `tools.marker.textColor` | color mode omits property | `"テキスト"` | `"文字色"` | Confirmed against the concrete caller/source contract: color mode omits property. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-008` | `ja` | `tools.marker.background` | color mode should name color property | `"背景"` | `"背景色"` | Confirmed against the concrete caller/source contract: color mode should name color property. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-009` | `ja` | `tools.colorPicker.defaultSwatchLabel` | live standalone label-value composition | `"{mode} {default}"` | `"{mode}：{default}"` | Confirmed against the concrete caller/source contract: live standalone label-value composition. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-010` | `ja` | `tools.colorPicker.colorSwatchLabel` | live standalone label-value composition | `"{mode} {color}"` | `"{mode}：{color}"` | Confirmed against the concrete caller/source contract: live standalone label-value composition. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-011` | `ja` | `tools.header.heading1` | product label / Japanese numeric spacing | `"見出し 1"` | `"見出し1"` | Japanese product labels attach the numeric level directly to 見出し. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-012` | `ja` | `tools.header.heading2` | product label / Japanese numeric spacing | `"見出し 2"` | `"見出し2"` | Japanese product labels attach the numeric level directly to 見出し. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-013` | `ja` | `tools.header.heading3` | product label / Japanese numeric spacing | `"見出し 3"` | `"見出し3"` | Japanese product labels attach the numeric level directly to 見出し. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-014` | `ja` | `tools.header.heading4` | product label / Japanese numeric spacing | `"見出し 4"` | `"見出し4"` | Apply the same no-space Japanese level-label pattern consistently through all six supported levels. [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-015` | `ja` | `tools.header.heading5` | product label / Japanese numeric spacing | `"見出し 5"` | `"見出し5"` | Apply the same no-space Japanese level-label pattern consistently through all six supported levels. [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-016` | `ja` | `tools.header.heading6` | product label / Japanese numeric spacing | `"見出し 6"` | `"見出し6"` | Apply the same no-space Japanese level-label pattern consistently through all six supported levels. [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-017` | `ja` | `tools.header.toggleHeading1` | product label / Japanese numeric spacing | `"トグル見出し 1"` | `"トグル見出し1"` | Japanese product labels attach the numeric level directly to トグル見出し. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-018` | `ja` | `tools.header.toggleHeading2` | product label / Japanese numeric spacing | `"トグル見出し 2"` | `"トグル見出し2"` | Japanese product labels attach the numeric level directly to トグル見出し. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-019` | `ja` | `tools.header.toggleHeading3` | product label / Japanese numeric spacing | `"トグル見出し 3"` | `"トグル見出し3"` | Japanese product labels attach the numeric level directly to トグル見出し. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-020` | `ja` | `tools.header.toggleHeading4` | product label / Japanese numeric spacing | `"トグル見出し 4"` | `"トグル見出し4"` | Apply the same no-space Japanese level-label pattern consistently through all six supported levels. [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-021` | `ja` | `tools.header.toggleHeading5` | product label / Japanese numeric spacing | `"トグル見出し 5"` | `"トグル見出し5"` | Apply the same no-space Japanese level-label pattern consistently through all six supported levels. [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-022` | `ja` | `tools.header.toggleHeading6` | product label / Japanese numeric spacing | `"トグル見出し 6"` | `"トグル見出し6"` | Apply the same no-space Japanese level-label pattern consistently through all six supported levels. [カラム、見出し、区切り線 — Notion](https://www.notion.com/ja-jp/help/columns-headings-and-dividers?nxtPslug=columns-headings-and-dividers). | verified |
+| `F-ja-023` | `ja` | `tools.paragraph.placeholder` | instruction completeness / key notation | `"入力するか / を押してツールを選択"` | `"何か入力するか、/キーを押してツールを選択"` | Restore “something,” remove English-style slash spacing, and use natural Japanese punctuation and key terminology. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [ブロックとは — Notion](https://www.notion.com/ja/help/what-is-a-block?nxtPslug=what-is-a-block). | verified |
+| `F-ja-024` | `ja` | `tools.toggle.placeholder` | visible empty-title placeholder needs content noun | `"トグル"` | `"トグルリスト"` | Confirmed against the concrete caller/source contract: visible empty-title placeholder needs content noun. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [ブロックとは — Notion](https://www.notion.com/ja/help/what-is-a-block?nxtPslug=what-is-a-block). | verified |
+| `F-ja-025` | `ja` | `tools.toggle.bodyPlaceholder` | must distinguish click-to-create and drag-to-drop | `"空のトグル。クリックまたはブロックをドロップしてください。"` | `"空のトグルリストです。クリックしてブロックを追加するか、ここにブロックをドラッグしてください。"` | Preserves both distinct operations from the corrected source while using the established Japanese ドラッグ terminology instead of the root proposal’s narrower ドロップ wording. [キーボードショートカット — Notion](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts); [ブロックとは — Notion](https://www.notion.com/ja/help/what-is-a-block?nxtPslug=what-is-a-block). | verified |
+| `F-ja-026` | `ja` | `tools.table.clearSelection` | operation preserves cells and formatting | `"クリア"` | `"内容をクリア"` | Confirmed against the concrete caller/source contract: operation preserves cells and formatting. Caller contract: [src/tools/table/index.ts](../../src/tools/table/index.ts). | verified |
+| `F-ja-027` | `ja` | `blockSettings.lastEditedBy` | current fragment is grammatically incomplete | `"{name} が最終編集"` | `"最終編集者：{name}"` | Confirmed against the concrete caller/source contract: current fragment is grammatically incomplete. Caller contract: [src/components/modules/toolbar/blockSettings.ts](../../src/components/modules/toolbar/blockSettings.ts). | verified |
+| `F-ja-028` | `ja` | `a11y.dragHandle` | accessible instruction omits both objects | `"ドラッグで移動、クリックでメニュー"` | `"ドラッグしてブロックを移動するか、クリックしてメニューを開く"` | Confirmed against the concrete caller/source contract: accessible instruction omits both objects. Caller contract: [src/components/modules/toolbar/settings-toggler.ts](../../src/components/modules/toolbar/settings-toggler.ts). | verified |
+| `F-ja-029` | `ja` | `a11y.dropPosition` | prospective drop position is mislabeled as completed move | `"{total}個中{position}番目に移動"` | `"ドロップ位置：全{total}個中{position}番目"` | Confirmed against the concrete caller/source contract: prospective drop position is mislabeled as completed move. Caller contract: [src/components/modules/drag/a11y/DragA11y.ts](../../src/components/modules/drag/a11y/DragA11y.ts). | verified |
+| `F-ja-030` | `ja` | `a11y.searchResults` | accessibility / result scope / counter | `"{count} 件の結果"` | `"検索結果：{count}件"` | The reusable live announcement should identify search results and use the Japanese 件 counter with native punctuation. Caller contract: [src/components/utils/popover/popover-desktop.ts](../../src/components/utils/popover/popover-desktop.ts). | verified |
+| `F-ja-031` | `ja` | `a11y.allBlocksSelected` | count-neutral completion announcement | `"すべてのブロックを選択、{count}個のブロック"` | `"すべてのブロックを選択しました。合計：{count}個"` | Confirmed against the concrete caller/source contract: count-neutral completion announcement. Caller contract: [src/components/modules/rectangleSelection.ts](../../src/components/modules/rectangleSelection.ts). | verified |
+| `F-ja-032` | `ja` | `a11y.blocksSelected` | accessibility / completed state | `"{count}個のブロックを選択"` | `"{count}個のブロックを選択しました"` | This live announcement reports a completed selection state, so the verb must express completion rather than an action fragment. Caller contract: [src/components/modules/rectangleSelection.ts](../../src/components/modules/rectangleSelection.ts). | verified |
+| `F-ja-033` | `ja` | `a11y.navigationModeEntered` | complete grammar and current platform key label | `"ナビゲーションモード。矢印キーでブロック間を移動、Enterで編集、Escapeで終了します。"` | `"ナビゲーションモードです。矢印キーでブロック間を移動できます。Enterキーで編集し、Escキーで終了します。"` | Splitting the instructions removes the root proposal’s list-like grammatical compression and yields a complete, easily announced keyboard sequence. Caller contract: [src/components/modules/blockSelection.ts](../../src/components/modules/blockSelection.ts). | verified |
+| `F-ja-034` | `ja` | `toolNames.spacer` | component terminology / caller consistency | `"スペース"` | `"スペーサー"` | The block is a spacer component, not generic space; official Japanese block-editor terminology is スペーサー. [スペーサーブロック — WordPress.org 日本語](https://ja.wordpress.org/support/article/spacer-block/). | verified |
+| `F-ja-035` | `ja` | `tools.columns.col2` | product label / Japanese numeric spacing | `"2 列"` | `"2列"` | Japanese numeric column labels do not take an intervening source-language space. Caller contract: [src/tools/column-list/index.ts](../../src/tools/column-list/index.ts). | verified |
+| `F-ja-036` | `ja` | `tools.columns.col3` | product label / Japanese numeric spacing | `"3 列"` | `"3列"` | Japanese numeric column labels do not take an intervening source-language space. Caller contract: [src/tools/column-list/index.ts](../../src/tools/column-list/index.ts). | verified |
+| `F-ja-037` | `ja` | `tools.columns.col4` | product label / Japanese numeric spacing | `"4 列"` | `"4列"` | Japanese numeric column labels do not take an intervening source-language space. Caller contract: [src/tools/column-list/index.ts](../../src/tools/column-list/index.ts). | verified |
+| `F-ja-038` | `ja` | `tools.columns.col5` | product label / Japanese numeric spacing | `"5 列"` | `"5列"` | Japanese numeric column labels do not take an intervening source-language space. Caller contract: [src/tools/column-list/index.ts](../../src/tools/column-list/index.ts). | verified |
+| `F-ja-039` | `ja` | `tools.spacer.resizeAriaLabel` | component terminology / caller consistency | `"スペースのサイズを変更"` | `"スペーサーのサイズを変更"` | Keep the resize-handle ARIA label consistent with the corrected spacer component name. [スペーサーブロック — WordPress.org 日本語](https://ja.wordpress.org/support/article/spacer-block/). | verified |
+| `F-ja-040` | `ja` | `tools.columns.turnInto` | source-only contract / established terminology | `"列に変換"` | `"段組みに変換"` | The source-only conversion label must match the established visible tool name 段組み rather than the ambiguous singular 列. Source-only contract: [translation guideline tests](../../test/unit/components/i18n/translation-guidelines.test.ts). | verified |
+| `F-ja-041` | `ja` | `tools.callout.addEmoji` | caller adds callout icon | `"絵文字を追加"` | `"アイコンを追加"` | Confirmed against the concrete caller/source contract: caller adds callout icon. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-042` | `ja` | `tools.callout.filterEmojis` | searchbox omits object | `"検索…"` | `"絵文字を検索…"` | Confirmed against the concrete caller/source contract: searchbox omits object. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-043` | `ja` | `tools.callout.pickRandom` | bare adjective omits action and object | `"ランダム"` | `"ランダムな絵文字を選択"` | Confirmed against the concrete caller/source contract: bare adjective omits action and object. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-044` | `ja` | `toolNames.inlineCode` | tool distinction / established product terminology | `"コード"` | `"インライン コード"` | The inline formatter must differ from the separate code-block tool; Microsoft Japanese uses the accepted term. [テキストの書式設定に関するガイドライン — Microsoft Learn](https://learn.microsoft.com/ja-jp/contribute/content/text-formatting-guidelines). | verified |
+| `F-ja-045` | `ja` | `toolNames.equation` | pending translation / tool name | `"Equation"` | `"数式"` | Replaces the English fallback with the established Japanese mathematical tool label. [Word で UnicodeMath および LaTeX を使用して行形式の数式を入力する — Microsoft](https://support.microsoft.com/ja-jp/office/word-%E3%81%A7-unicodemath-%E3%81%8A%E3%82%88%E3%81%B3-latex-%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6%E8%A1%8C%E5%BD%A2%E5%BC%8F%E3%81%AE%E6%95%B0%E5%BC%8F%E3%82%92%E5%85%A5%E5%8A%9B%E3%81%99%E3%82%8B-2e00618d-b1fd-49d8-8cb4-8d17f25754f8). | verified |
+| `F-ja-046` | `ja` | `tools.equation.placeholder` | pending translation / LaTeX terminology | `"Enter a LaTeX formula…"` | `"LaTeX 数式を入力…"` | Localizes the input instruction while retaining the LaTeX product term. [Word で UnicodeMath および LaTeX を使用して行形式の数式を入力する — Microsoft](https://support.microsoft.com/ja-jp/office/word-%E3%81%A7-unicodemath-%E3%81%8A%E3%82%88%E3%81%B3-latex-%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%97%E3%81%A6%E8%A1%8C%E5%BD%A2%E5%BC%8F%E3%81%AE%E6%95%B0%E5%BC%8F%E3%82%92%E5%85%A5%E5%8A%9B%E3%81%99%E3%82%8B-2e00618d-b1fd-49d8-8cb4-8d17f25754f8). | verified |
+| `F-ja-047` | `ja` | `tools.code.searchLanguage` | native ellipsis | `"言語を検索..."` | `"言語を検索…"` | Uses the dictionary’s native Japanese ellipsis in the visible language-search placeholder. Caller contract: [src/tools/code/index.ts](../../src/tools/code/index.ts). | verified |
+| `F-ja-048` | `ja` | `blockSettings.blocksSelected` | counter spacing / interpolation | `"{count} 個のブロック"` | `"{count}個のブロック"` | Remove the English-style space between the interpolated number and Japanese counter. Caller contract: [src/components/modules/toolbar/blockSettings.ts](../../src/components/modules/toolbar/blockSettings.ts). | verified |
+| `F-ja-049` | `ja` | `tools.link.linkTitle` | caller context / field semantics | `"リンクのタイトル"` | `"リンクテキスト"` | The field edits visible anchor text rather than a document or page title. Caller contract: [src/components/inline-tools/inline-tool-link.ts](../../src/components/inline-tools/inline-tool-link.ts). | verified |
+| `F-ja-050` | `ja` | `tools.image.exitFullscreen` | established full-screen terminology | `"全画面を終了"` | `"全画面表示を終了"` | Name the full-screen display state explicitly; 全画面を終了 is an unnatural object/action pairing. [Surface Hub 2S の通知とクイック操作 — Microsoft](https://support.microsoft.com/ja-jp/surface/notifications-and-quick-actions-on-surface-hub-2s). | verified |
+| `F-ja-051` | `ja` | `tools.image.converting` | pending translation / progress state | `"Converting…"` | `"変換中…"` | Replaces the visible English progress fallback with concise Japanese. Caller contract: [src/tools/image/index.ts](../../src/tools/image/index.ts). | verified |
+| `F-ja-052` | `ja` | `tools.image.altDescription` | accessibility / natural direct guidance | `"画像を説明する代替テキストを追加します。視覚に障がいのある方にもページを利用しやすくします。"` | `"この画像を見られない人のために、画像の内容を説明してください。"` | Keeps the corrected source’s direct accessibility guidance while replacing the root proposal’s wordier 見ることができない with natural contemporary Japanese. [Google ドキュメント エディタのアクセシビリティ — Google](https://support.google.com/docs/answer/6199477?hl=ja); [効果的な代替テキストを記述するために知っておくべきこと — Microsoft](https://support.microsoft.com/ja-JP/accessibility/office-accessibility/everything-you-need-to-know-to-write-effective-alt-text). | verified |
+| `F-ja-053` | `ja` | `tools.image.errorFileTooLarge` | pending translation / image error | `"Image is too large. {size} exceeds the {max} limit."` | `"画像が大きすぎます。{size}は上限の{max}を超えています。"` | Localizes the complete error while preserving both placeholders. Caller contract: [src/tools/image/index.ts](../../src/tools/image/index.ts). | verified |
+| `F-ja-054` | `ja` | `tools.image.errorSourceOffline` | natural error copy / source synchronization | `"ソースファイルが移動されたか、オフラインの可能性があります。"` | `"元のファイルが移動されたか、利用できない可能性があります。"` | A file cannot naturally be offline; the replacement expresses the unavailable-source condition in Japanese. Caller contract: [src/tools/image/index.ts](../../src/tools/image/index.ts). | verified |
+| `F-ja-055` | `ja` | `tools.image.errorDefaultMessage` | natural error copy / source synchronization | `"URL がエラーを返しました。別のソースを試すか、ファイルを再アップロードしてください。"` | `"この URL から画像を読み込めませんでした。別のソースを試すか、ファイルを再アップロードしてください。"` | Identifies the failed image load instead of personifying the URL. Caller contract: [src/tools/image/index.ts](../../src/tools/image/index.ts). | verified |
+| `F-ja-056` | `ja` | `tools.file.errorFileTooLarge` | pending translation / file error | `"File is too large. {size} exceeds the {max} limit."` | `"ファイルが大きすぎます。{size}は上限の{max}を超えています。"` | Localizes the complete file error while preserving both placeholders. Caller contract: [src/tools/file/index.ts](../../src/tools/file/index.ts). | verified |
+| `F-ja-057` | `ja` | `tools.file.previewRender` | caller context / source synchronization | `"表示"` | `"プレビュー"` | The rendered Markdown tab should use the familiar preview label paired with the retained `ソース` tab. Caller contract: [src/tools/file/preview-modal.ts](../../src/tools/file/preview-modal.ts). | verified |
+| `F-ja-058` | `ja` | `tools.video.alignmentLeft` | action grammar / settings child | `"左"` | `"左揃え"` | The settings child is a standalone alignment action, not a direction-only noun. Caller contract: [src/tools/video/index.ts](../../src/tools/video/index.ts). | verified |
+| `F-ja-059` | `ja` | `tools.video.alignmentCenter` | action grammar / settings child | `"中央"` | `"中央揃え"` | The settings child is a standalone alignment action, not a direction-only noun. Caller contract: [src/tools/video/index.ts](../../src/tools/video/index.ts). | verified |
+| `F-ja-060` | `ja` | `tools.video.alignmentRight` | action grammar / settings child | `"右"` | `"右揃え"` | The settings child is a standalone alignment action, not a direction-only noun. Caller contract: [src/tools/video/index.ts](../../src/tools/video/index.ts). | verified |
+| `F-ja-061` | `ja` | `tools.video.errorFileTooLarge` | pending translation / video error | `"Video is too large. {size} exceeds the {max} limit."` | `"動画が大きすぎます。{size}は上限の{max}を超えています。"` | Localizes the complete video error while preserving both placeholders. Caller contract: [src/tools/video/index.ts](../../src/tools/video/index.ts). | verified |
+| `F-ja-062` | `ja` | `tools.audio.alignmentLeft` | action grammar / settings child | `"左"` | `"左揃え"` | The settings child is a standalone alignment action, not a direction-only noun. Caller contract: [src/tools/audio/index.ts](../../src/tools/audio/index.ts). | verified |
+| `F-ja-063` | `ja` | `tools.audio.alignmentCenter` | action grammar / settings child | `"中央"` | `"中央揃え"` | The settings child is a standalone alignment action, not a direction-only noun. Caller contract: [src/tools/audio/index.ts](../../src/tools/audio/index.ts). | verified |
+| `F-ja-064` | `ja` | `tools.audio.alignmentRight` | action grammar / settings child | `"右"` | `"右揃え"` | The settings child is a standalone alignment action, not a direction-only noun. Caller contract: [src/tools/audio/index.ts](../../src/tools/audio/index.ts). | verified |
+| `F-ja-065` | `ja` | `tools.audio.errorFileTooLarge` | pending translation / audio error | `"Audio is too large. {size} exceeds the {max} limit."` | `"音声ファイルが大きすぎます。{size}は上限の{max}を超えています。"` | Localizes the complete audio error while preserving both placeholders. Caller contract: [src/tools/audio/index.ts](../../src/tools/audio/index.ts). | verified |
+| `F-ja-066` | `ja` | `tools.audio.titlePlaceholder` | pending translation / metadata | `"Track title"` | `"曲名"` | Replaces the visible English metadata fallback with the natural compact Japanese label. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-067` | `ja` | `tools.audio.artistPlaceholder` | pending translation / metadata | `"Artist"` | `"アーティスト"` | Replaces the visible English metadata fallback with the established Japanese loanword. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-068` | `ja` | `tools.audio.emptyOrDropHere` | object completeness / drop target | `"またはここに音声をドロップ"` | `"またはここに音声ファイルをドロップ"` | The concrete drop target accepts a file, so the instruction must retain the file object. Caller contract: [src/tools/audio/index.ts](../../src/tools/audio/index.ts). | verified |
+| `F-ja-069` | `ja` | `tools.audio.coverChange` | pending translation / cover action | `"Change cover"` | `"カバー画像を変更"` | Localizes the complete cover-image action. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-070` | `ja` | `tools.audio.coverSet` | pending translation / cover action | `"Set cover image"` | `"カバー画像を設定"` | Localizes the complete cover-image action. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-071` | `ja` | `tools.audio.coverRemove` | pending translation / cover action | `"Remove cover"` | `"カバー画像を削除"` | Localizes the complete cover-image action. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-072` | `ja` | `tools.audio.coverErrorType` | pending translation / cover error | `"Choose an image file"` | `"画像ファイルを選択してください"` | Localizes the complete cover-file recovery instruction. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-073` | `ja` | `tools.audio.coverErrorTooLarge` | pending translation / cover error | `"Image is too large"` | `"画像が大きすぎます"` | Localizes the complete cover-image size error. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-074` | `ja` | `tools.audio.coverAdd` | pending translation / cover action | `"Add a cover"` | `"カバー画像を追加"` | Localizes the complete cover-image action. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-075` | `ja` | `tools.audio.coverSourceAria` | accessibility / object scope | `"画像ソース"` | `"カバー画像のソース"` | The accessible group label needs the cover-image scope. Caller contract: [src/tools/audio/ui.ts](../../src/tools/audio/ui.ts). | verified |
+| `F-ja-076` | `ja` | `tools.database.viewTypeListDescription` | description completeness / rendered result | `"シンプルなリスト表示"` | `"アイテムをシンプルなリストで表示"` | The list-view option description should state what it renders. Caller contract: [src/tools/database/database-view-popover.ts](../../src/tools/database/database-view-popover.ts). | verified |
+| `F-ja-077` | `ja` | `tools.bookmark.loading` | caller scope / progress punctuation | `"プレビューを読み込み中"` | `"リンクのプレビューを読み込み中…"` | Restores link scope and the progress ellipsis in the visible bookmark state. Caller contract: [src/tools/link/bookmark/index.ts](../../src/tools/link/bookmark/index.ts). | verified |
+| `F-ja-078` | `ja` | `tools.bookmark.error` | caller scope / error copy | `"プレビューを読み込めませんでした"` | `"リンクのプレビューを読み込めませんでした"` | Identifies the failed link preview rather than a generic preview. Caller contract: [src/tools/link/bookmark/index.ts](../../src/tools/link/bookmark/index.ts). | verified |
+| `F-ja-079` | `ja` | `tools.embed.empty` | read-only state / action distinction | `"埋め込むリンクを貼り付け"` | `"埋め込みリンクがありません"` | The read-only empty state reports absence and must not instruct the user to paste. Caller contract: [src/tools/link/embed/index.ts](../../src/tools/link/embed/index.ts). | verified |
+| `F-ja-080` | `ja` | `tools.embed.openOriginal` | object scope / embed action | `"元のページを開く"` | `"元のコンテンツを開く"` | An embed can represent arbitrary content rather than only a page. Caller contract: [src/tools/link/embed/index.ts](../../src/tools/link/embed/index.ts). | verified |
+| `F-ja-081` | `ja` | `tools.linkPaste.embedAudio` | terminology / provider composition | `"{provider}からオーディオを埋め込む"` | `"{provider}から音声を埋め込む"` | Matches the established audio-tool terminology and remains grammatical for all 26 audio providers. [埋め込み、ブックマーク、リンクメンション — Notion](https://www.notion.com/ja/help/embed-and-connect-other-apps). | verified |
+| `F-ja-082` | `ja` | `tools.video.seek` | accessibility / media terminology | `"シーク"` | `"再生位置"` | The range label should name the controlled playback position rather than expose seek jargon. Caller contract: [src/tools/video/controls.ts](../../src/tools/video/controls.ts). | verified |
+| `F-ja-083` | `ja` | `tools.video.seekValueText` | accessibility / Japanese spacing | `"{total} 中 {current}"` | `"{total}中{current}"` | Preserve the correct Japanese total/current order but remove source-language spaces from the ARIA value text. [動画やチャンネルを共有する — YouTube](https://support.google.com/youtube/answer/57741?hl=ja). | verified |
+| `F-ja-084` | `ja` | `tools.video.toggleTimeDisplay` | accessibility / state completeness | `"時間表示を切り替え"` | `"経過時間と残り時間の表示を切り替える"` | The accessible action must state both elapsed and remaining time states. Caller contract: [src/tools/video/controls.ts](../../src/tools/video/controls.ts). | verified |
+| `F-ja-085` | `ja` | `tools.video.fullscreen` | established full-screen terminology | `"全画面"` | `"全画面表示"` | Use the established Japanese label for the display mode rather than the clipped 全画面 noun. [Surface Hub 2S の通知とクイック操作 — Microsoft](https://support.microsoft.com/ja-jp/surface/notifications-and-quick-actions-on-surface-hub-2s). | verified |
+| `F-ja-086` | `ja` | `tools.video.fullscreenExit` | established full-screen terminology | `"全画面を終了"` | `"全画面表示を終了"` | Use the established Japanese action for leaving full-screen display. [Surface Hub 2S の通知とクイック操作 — Microsoft](https://support.microsoft.com/ja-jp/surface/notifications-and-quick-actions-on-surface-hub-2s). | verified |
+| `F-ja-087` | `ja` | `tools.video.ctxCopyUrl` | Japanese spacing consistency | `"動画のURLをコピー"` | `"動画の URL をコピー"` | Applies consistent Japanese spacing around the technical acronym. [動画やチャンネルを共有する — YouTube](https://support.google.com/youtube/answer/57741?hl=ja); [Microsoft Edge での URL のコピーと貼り付けの改善 — Microsoft](https://support.microsoft.com/ja-jp/edge/improved-copy-and-paste-of-urls-in-microsoft-edge). | verified |
+| `F-ja-088` | `ja` | `tools.video.ctxCopyUrlAtTime` | playback context / Japanese spacing | `"現在の時間の動画URLをコピー"` | `"現在の再生位置で動画の URL をコピー"` | Current time could mean wall-clock time; the replacement explicitly names the playback position. [動画やチャンネルを共有する — YouTube](https://support.google.com/youtube/answer/57741?hl=ja); [Microsoft Edge での URL のコピーと貼り付けの改善 — Microsoft](https://support.microsoft.com/ja-jp/edge/improved-copy-and-paste-of-urls-in-microsoft-edge). | verified |
+| `F-ja-089` | `ja` | `tools.video.ctxStats` | caller context / media terminology | `"詳細統計情報"` | `"再生統計"` | The context-menu item opens playback statistics and should name that scope. Caller contract: [src/tools/video/controls.ts](../../src/tools/video/controls.ts). | verified |
+| `F-ja-090` | `ja` | `tools.callout.emojiSearchResults` | source synchronization / result count | `"{count} 件の絵文字が見つかりました"` | `"絵文字の検索結果：{count}件"` | Reports the search-result count with Japanese punctuation and counter spacing. [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content). | verified |
+| `F-ja-091` | `ja` | `blockSettings.orConjunction` | Japanese composition spacing / naturalness | `" または "` | `"または"` | This fragment is concatenated directly between `クリック` and the highlighted shortcut. Japanese does not insert source-language spaces around the conjunction or key token; the replacement renders the natural `クリックまたは⌘/…`. [Notion Japanese keyboard shortcuts](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts) follows space-less Japanese prose around shortcut tokens. | verified |
+| `F-ja-092` | `ja` | `blockSettings.openMenuAction` | Japanese particle spacing / naturalness | `" でメニューを開く"` | `"でメニューを開く"` | The caller appends this particle-led fragment directly after either `クリック` or the highlighted shortcut. Removing the English boundary space renders natural `クリックでメニューを開く` and `⌘/でメニューを開く`. | verified |
 | `F-ka-001` | `ka` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"პირდაპირი დაფორმატების გასუფთავება"` | LibreOffice’s Georgian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ka/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-km-001` | `km` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ជម្រះទ្រង់ទ្រាយ"` | LibreOffice’s exact short Clear formatting entry is `ជម្រះ​ទ្រង់ទ្រាយ`; the invisible separator is omitted to match this JSON corpus. An independent pass rejected the longer direct-formatting proposal as needless technical scope. | verified |
 | `F-kn-001` | `kn` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ಫಾರ್ಮ್ಯಾಟಿಂಗ್ ತೆರವುಗೊಳಿಸಿ"` | The replacement combines this dictionary’s and Google’s established `ಫಾರ್ಮ್ಯಾಟಿಂಗ್` terminology with this dictionary’s polite `ತೆರವುಗೊಳಿಸಿ` clear-action register. An independent pass rejected the longer LibreOffice direct-formatting label as needlessly technical. | verified |
@@ -4195,6 +4679,10 @@ follows the global transition rule above.
 | `F-no-079` | `no` | `tools.linkPaste.mention` | action grammar / source-only contract | `"Omtale"` | `"Omtal"` | `buildPasteMenuItems` defines an action title alongside imperatives such as `Behold`, `Opprett`, and `Bygg inn`. Notion Bokmål uses the imperative phrases [Omtal en person and Omtal en side](https://www.notion.com/nb/help/writing-and-editing-basics). | verified |
 | `F-no-080` | `no` | `tools.callout.emojiCategoryActivity` | established emoji-category terminology / number | `"Aktivitet"` | `"Aktiviteter"` | The emoji picker renders a category heading rather than a single activity; [Microsoft Teams Bokmål](https://support.microsoft.com/nb-no/teams/chat/send-an-emoji-gif-or-sticker-in-microsoft-teams) uses the plural category label `Aktiviteter`. | verified |
 | `F-no-081` | `no` | `tools.image.previewControls` | accessibility / object context | `"Kontroller for forhåndsvisning"` | `"Kontroller for forhåndsvisning av bilde"` | The value labels the live image-preview toolbar, so the accessible name must retain the controlled image object; [Apple’s Bokmål guidance](https://support.apple.com/no-no/guide/pages-iphone/tana6bcd99e0/ios) corroborates the `Kontroller for … av …` construction. | verified |
+| `F-no-082` | `no` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Kode"` | `"Innebygd kode"` | The inline formatter currently shares the separate code-block tool’s generic title. [Notion Bokmål](https://www.notion.com/nb/help/writing-and-editing-basics) distinguishes `innebygd kode` from a code block. | verified |
+| `F-no-083` | `no` | `searchTerms.number` | search alias / numbered-list semantics | `"nummer"` | `"nummerering"` | This hidden alias belongs only to the numbered-list entry. Microsoft’s Bokmål editor UI uses [nummerering](https://support.microsoft.com/nb-no/office/legge-til-en-nummerert-liste-eller-punktliste-i-en-melding-732479eb-ad2b-4478-aff0-0c6251acc037) for the operation, distinct from sibling aliases `ordnet` and `liste`. | verified |
+| `F-no-084` | `no` | `tools.image.navigationControls` | accessibility / group-purpose clarity | `"Bildenavigering"` | `"Navigering mellom bilder"` | The accessible group contains previous-image and next-image controls. The explicit relation states its purpose clearly and follows official Bokmål wording for navigation between images. | verified |
+| `F-no-085` | `no` | `tools.image.errorSourceOffline` | natural error copy / resource state | `"Kildefilen kan ha blitt flyttet eller være offline."` | `"Kildefilen kan ha blitt flyttet eller være utilgjengelig."` | A file is not naturally described as offline in Bokmål; the broken-image caller needs the broader moved-or-unavailable source state. | verified |
 | `F-pa-001` | `pa` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ"` | LibreOffice Punjabi uses `ਸਿੱਧੀ ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ` for Clear Direct Formatting in its [official product source](https://github.com/LibreOffice/translations/blob/master/source/pa-IN/officecfg/registry/data/org/openoffice/Office/UI.po#L34689-L34695); the direct qualifier and accelerator are omitted for this compact inline command. | verified |
 | `F-pl-001` | `pl` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Wyczyść formatowanie"` | Microsoft’s Polish editor UI uses the exact command [Wyczyść formatowanie](https://support.microsoft.com/pl-PL/PowerPoint/clear-all-text-formatting). | verified |
 | `F-pl-002` | `pl` | `blockSettings.convertWithChildrenWarning` | number / terminology / source synchronization | `"Ten blok zawiera {count} zagnieżdżonych bloków. Po konwersji zostaną one przeniesione na poziom główny. Kontynuować?"` | `"Liczba zagnieżdżonych bloków: {count}. Przekształcenie tego bloku przeniesie zagnieżdżoną zawartość na poziom główny. Kontynuować?"` | The source-only count can be one or many; label-before-count wording avoids numeral inflection, and count-neutral `zagnieżdżoną zawartość` remains grammatical when `{count}=1`, unlike plural `je`. | verified |
@@ -4636,6 +5124,9 @@ follows the global transition rule above.
 | `F-sv-092` | `sv` | `tools.callout.emojiCategoryPeople` | category scope / accessibility | `"Människor"` | `"Smileys och människor"` | The visible heading and navigation accessible name cover smileys as well as people; Unicode CLDR’s Swedish category names both scopes. | verified |
 | `F-sv-093` | `sv` | `tools.callout.emojiCategoryNature` | category scope / accessibility | `"Natur"` | `"Djur och natur"` | The runtime category begins with and contains animals as well as plants; Unicode CLDR’s Swedish category names both scopes. | verified |
 | `F-sv-094` | `sv` | `tools.callout.emojiCategoryFood` | category scope / accessibility | `"Mat"` | `"Mat och dryck"` | The category contains food and beverages; Unicode CLDR’s Swedish category names both scopes. | verified |
+| `F-sv-095` | `sv` | `toolNames.inlineCode` | tool distinction / established product terminology | `"Kod"` | `"Infogad kod"` | The inline formatter and separate code-block tool currently expose the same title. Microsoft’s Swedish product terminology distinguishes [inline embedded code](https://support.microsoft.com/sv-SE/accessibility/loop/keyboard-shortcuts-for-microsoft-loop) from a code block. | verified |
+| `F-sv-096` | `sv` | `tools.file.previewRaw` | preview-tab semantics / terminology | `"Källa"` | `"Källtext"` | The tab displays raw Markdown source text opposite the rendered preview; bare `Källa` suggests an origin or citation rather than the shown representation. | verified |
+| `F-sv-097` | `sv` | `tools.image.errorSourceOffline` | natural error copy / resource state | `"Källfilen kan ha flyttats eller vara offline."` | `"Källfilen kan ha flyttats eller vara otillgänglig."` | The broken-image caller covers moved, removed, forbidden, and temporarily unreachable resources; `otillgänglig` naturally expresses the file’s broad availability state. | verified |
 | `F-sw-001` | `sw` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Ondoa uumbizaji"` | WordPress Swahili’s literal catalog label is `Fomati safi` in its [official catalog](https://translate.wordpress.org/projects/wp/dev/sw/default/export-translations/?format=po); `Ondoa uumbizaji` is the more natural action built from this dictionary’s vocabulary and remains explicitly flagged for independent full-language review. | verified |
 | `F-ta-001` | `ta` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"வடிவமைப்பை அகற்று"` | Google Docs’ Tamil UI uses the exact command [வடிவமைப்பை அகற்று](https://support.google.com/docs/answer/4492226?hl=ta). | verified |
 | `F-te-001` | `te` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ఫార్మాటింగ్‌ను తొలగించు"` | The wording combines this dictionary’s established `ఫార్మాటింగ్` with LibreOffice’s native removal verb in its [official Telugu source](https://github.com/LibreOffice/translations/blob/master/source/te/officecfg/registry/data/org/openoffice/Office/UI.po#L34966-L34972); [Google Docs](https://support.google.com/docs/answer/179738?co=GENIE.Platform%3DDesktop&hl=te) corroborates the construction. | verified |
@@ -4861,6 +5352,7 @@ locale and UI context.
 | `R-fi-006` | `fi` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Finnish media interfaces. | [Apple — Kuvan tai videon rajaaminen](https://support.apple.com/fi-fi/guide/iphone/iph3dc593597/ios) |
 | `R-fi-007` | `fi` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Finnish media interfaces. | [Apple — Kuvan tai videon rajaaminen](https://support.apple.com/fi-fi/guide/iphone/iph3dc593597/ios) |
 | `R-fi-008` | `fi` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Finnish product interfaces. | [MDN — Mikä on URL?](https://developer.mozilla.org/fi/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL) |
+| `R-fi-009` | `fi` | `notifier.ok` | established loanword | `OK` is the conventional Finnish affirmative dialog label and is clearer and more familiar than a forced expansion. | [Apple Finnish — Apple Watch controls](https://support.apple.com/fi-fi/guide/watch/apd34c409704/watchos); [LibreOffice Finnish — OK button](https://help.libreoffice.org/latest/fi/text/smath/01/06010100.html) |
 | `R-fr-001` | `fr` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; France-French Apple guidance retains the `⌘` platform symbol. | [Apple — Raccourcis clavier sur Mac](https://support.apple.com/fr-fr/guide/mac-help/mchlp2262/mac) |
 | `R-fr-002` | `fr` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; France-French Windows guidance retains `Ctrl` in key combinations. | [Microsoft — Raccourcis clavier dans Windows](https://support.microsoft.com/fr-fr/windows/raccourcis-clavier-dans-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-fr-003` | `fr` | `popover.actions` | established cognate | `Actions` is the normal French plural heading for the available operations. | [Académie française — action](https://www.dictionnaire-academie.fr/article/A9A0471) |
@@ -4884,6 +5376,13 @@ locale and UI context.
 | `R-fr-022` | `fr` | `tools.video.volume` | established cognate | `Volume` is the standard unchanged France-French media-control label. | [Apple — Écouter de la musique sur l’iPhone](https://support.apple.com/fr-fr/guide/iphone/iph676daac9b/ios) |
 | `R-fr-023` | `fr` | `tools.file.previewRaw` | established cognate | `Source` is the standard French term for a source-text view and pairs naturally with the adjacent `Aperçu` tab. | [MDN — Déboguer du CSS](https://developer.mozilla.org/fr/docs/Learn_web_development/Core/Styling_basics/Debugging_CSS) |
 | `R-fr-024` | `fr` | `notifier.ok` | established loanword | `OK` is the conventional unchanged France-French confirmation-button label. | [Apple France — bouton OK](https://support.apple.com/fr-fr/guide/iphone/iph3d1110d4/ios) |
+| `R-hi-001` | `hi` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is a language-independent macOS shortcut chord rather than English prose. | [Apple — Mac कीबोर्ड शॉर्टकट](https://support.apple.com/hi-in/102650) |
+| `R-hi-002` | `hi` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is a language-independent Windows shortcut chord; Hindi product interfaces retain `Ctrl` in key combinations. | [Google Docs — कीबोर्ड शॉर्टकट](https://support.google.com/docs/answer/179738?hl=hi) |
+| `R-hi-003` | `hi` | `tools.image.altButton` | acronym | `Alt` is the conventional compact abbreviation paired with the fully localized `वैकल्पिक टेक्स्ट` dialog. | [Google — सुलभ दस्तावेज़ बनाएं](https://support.google.com/accessibility/answer/6199477?hl=hi) |
+| `R-hi-004` | `hi` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation, not lexical English. | [Google Photos — फ़ोटो काटना](https://support.google.com/photos/answer/6128850?hl=hi) |
+| `R-hi-005` | `hi` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation, not lexical English. | [Google Photos — फ़ोटो काटना](https://support.google.com/photos/answer/6128850?hl=hi) |
+| `R-hi-006` | `hi` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation, not lexical English. | [Google Photos — फ़ोटो काटना](https://support.google.com/photos/answer/6128850?hl=hi) |
+| `R-hi-007` | `hi` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in Hindi product interfaces. | [Google Search Help — यूआरएल](https://support.google.com/websearch/answer/118238?hl=hi) |
 | `R-it-001` | `it` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Italian Apple guidance retains the `⌘` platform symbol. | [Apple — Abbreviazioni da tastiera del Mac](https://support.apple.com/it-it/102650) |
 | `R-it-002` | `it` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Italian Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Scelte rapide da tastiera in Windows](https://support.microsoft.com/it-it/windows/scelte-rapide-da-tastiera-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-it-003` | `it` | `toolNames.link` | established loanword | `Link` is the established Italian computing term and the natural concise toolbox label. | [Treccani — link](https://www.treccani.it/vocabolario/link/) |
@@ -4905,6 +5404,13 @@ locale and UI context.
 | `R-it-019` | `it` | `tools.video.volume` | established cognate | `Volume` is the standard unchanged Italian media-control label. | [Treccani — volume](https://www.treccani.it/vocabolario/volume/) |
 | `R-it-020` | `it` | `tools.video.pip` | established loanword | `Picture-in-Picture` is the established unchanged platform feature name in this Italian product context. | [Apple — Guardare due eventi contemporaneamente](https://support.apple.com/it-it/guide/tv/atvb7944597f/tvos) |
 | `R-it-021` | `it` | `tools.audio.volume` | established cognate | `Volume` is the standard unchanged Italian media-control label. | [Treccani — volume](https://www.treccani.it/vocabolario/volume/) |
+| `R-ja-001` | `ja` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is an app-defined Mac key chord; translating or spelling it out would reduce recognition and alter the shortcut. | [Mac のキーボードショートカット — Apple](https://support.apple.com/ja-jp/102650); [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content) |
+| `R-ja-002` | `ja` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is an app-defined Windows key chord; translating it would alter the shortcut. | [テキストの書式設定に関するガイドライン — Microsoft Learn](https://learn.microsoft.com/ja-jp/contribute/content/text-formatting-guidelines); [ページのスタイル設定とカスタマイズ — Notion](https://www.notion.com/ja/help/customize-and-style-your-content) |
+| `R-ja-003` | `ja` | `tools.image.cropRatio1to1` | universal notation | `1:1` is the exact Japanese product label used for this aspect ratio. | [iPhone のカメラツールを使って撮影を設定する — Apple](https://support.apple.com/ja-jp/guide/iphone/iph3dc593597/ios) |
+| `R-ja-004` | `ja` | `tools.image.cropRatio4to3` | universal notation | `4:3` is the exact Japanese product label used for this aspect ratio. | [iPhone のカメラツールを使って撮影を設定する — Apple](https://support.apple.com/ja-jp/guide/iphone/iph3dc593597/ios) |
+| `R-ja-005` | `ja` | `tools.image.cropRatio16to9` | universal notation | `16:9` is the exact Japanese product label used for this aspect ratio. | [iPhone のカメラツールを使って撮影を設定する — Apple](https://support.apple.com/ja-jp/guide/iphone/iph3dc593597/ios) |
+| `R-ja-006` | `ja` | `tools.database.propertyTypeUrl` | acronym | `URL` is the standard Japanese UI acronym and should remain unchanged. | [Microsoft Edge での URL のコピーと貼り付けの改善 — Microsoft](https://support.microsoft.com/ja-jp/edge/improved-copy-and-paste-of-urls-in-microsoft-edge); [動画やチャンネルを共有する — YouTube](https://support.google.com/youtube/answer/57741?hl=ja) |
+| `R-ja-007` | `ja` | `notifier.ok` | established loanword | `OK` is a conventional Japanese confirmation-button label and is more familiar and compact than a forced expansion. | [ボタンにマクロを割り当てる — Microsoft](https://support.microsoft.com/ja-jp/excel/assign-a-macro-to-a-button) |
 | `R-nl-001` | `nl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Dutch Apple guidance retains the `⌘` platform symbol. | [Apple — Mac-toetscombinaties](https://support.apple.com/nl-nl/102650) |
 | `R-nl-002` | `nl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Dutch Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Sneltoetsen in Windows](https://support.microsoft.com/nl-nl/windows/sneltoetsen-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-nl-003` | `nl` | `toolNames.link` | established loanword | `Link` is the standard concise Dutch web term and the natural toolbox label. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |
@@ -4943,6 +5449,7 @@ locale and UI context.
 | `R-no-014` | `no` | `tools.audio.pause` | established cognate | `Pause` is the established unchanged Bokmål noun and the standard concise audio-player control label in Norwegian media interfaces. | [Bokmålsordboka — pause](https://ordbokene.no/bm/pause); [Apple — Bruk avspillingskontrollene](https://support.apple.com/no-no/guide/iphone/iphaec9fc22f/ios) |
 | `R-no-015` | `no` | `tools.colorPicker.defaultSwatchLabel` | universal notation | The placeholder-only template contains no English words. Bokmål modifier-before-noun order renders the caller output as idiomatic `Standard tekstfarge`. | [Microsoft — Endre standard tekstfarge](https://support.microsoft.com/nb-no/office/endre-standard-tekstfarge-skriftfarge-i-word-59f83009-12c2-4feb-b548-93621dfe6f2f) |
 | `R-no-016` | `no` | `tools.colorPicker.colorSwatchLabel` | universal notation | The placeholder-only template contains no English words. Bokmål modifier-before-noun order renders caller values such as `Rød tekstfarge` naturally. | [Microsoft — Endre standard tekstfarge](https://support.microsoft.com/nb-no/office/endre-standard-tekstfarge-skriftfarge-i-word-59f83009-12c2-4feb-b548-93621dfe6f2f) |
+| `R-no-017` | `no` | `notifier.ok` | established loanword | `OK` is the conventional unchanged compact Bokmål confirmation-button label used by the built-in prompt dialog. | [Microsoft Bokmål — OK button](https://support.microsoft.com/nb-no/office/opprette-eller-kj%C3%B8re-en-makro-c6b99036-905c-49a6-818a-dfb98b7c3c9c) |
 | `R-pl-001` | `pl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Apple’s Polish guidance retains the `⌘` platform symbol. | [Apple — Skróty klawiszowe na Macu](https://support.apple.com/pl-pl/102650) |
 | `R-pl-002` | `pl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than translatable prose; Microsoft’s Polish guidance retains `Ctrl` in key combinations. | [Microsoft — Skróty klawiaturowe w systemie Windows](https://support.microsoft.com/pl-pl/windows/skr%C3%B3ty-klawiaturowe-w-systemie-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-pl-003` | `pl` | `toolNames.link` | established loanword | `Link` is the standard unchanged Polish web noun and the natural concise toolbox label. | [Microsoft — Dostosowywanie immersywnego wydarzenia](https://support.microsoft.com/pl-PL/teams/meetings/customize-an-immersive-event-in-microsoft-teams) |

@@ -312,7 +312,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
 | `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-fil-001`–`F-fil-099` | first-pass-complete |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
-| `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | — | pass | pass | pass | `F-gu-001`–`F-gu-054` | first-pass-complete |
+| `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | `root-fil_2c9_proposal_challenge` | pass | pass | pass | `F-gu-001`–`F-gu-054` | second-pass-complete |
 | `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-he-001`–`F-he-047` | first-pass-complete |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-004` | pending |
@@ -450,7 +450,7 @@ locale returns to `pending`.
 | `fi` | `root-fi_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` | `root-fil_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` |
 | `fil` | `root-dv_corrected_46c_second` | `sha256:8240e764e995550e70707d56ce20c703113b359504af38db559e1bab0bd8af8d` | — | — |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
-| `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | — | — |
+| `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | `root-fil_2c9_proposal_challenge` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` |
 | `he` | `root-dv_corrected_46c_second` | `sha256:91ca89a271bda90e01e7b0d8285f742de6a336f6a108e70654e7cd3f6ec89d7d` | — | — |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
@@ -4983,6 +4983,60 @@ registered-namespace-compatible, and two without a uniform route. A root
 replay passes all 26 validator checks, all 12 bundle checksums, both immutable
 file flags, and the current dictionary digest. This exact-byte review earns
 first-pass credit only; a distinct complete second review is still required.
+
+### Gujarati corrected-byte complete review 2 — clean
+
+Distinct fresh reviewer `/root/fil_2c9_proposal_challenge` independently reread
+all 546 source-order pairs on the same raw dictionary SHA-256
+`4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7`
+without consulting the first-review bundle or prior Gujarati audit, proposal,
+or ledger evidence. The primary sealed bundle is
+`/Users/jackuait/.codex/audit-evidence/blok-gu-4cd1906ef970-review2-complete-20260720T163514Z`;
+its complete matrix is bound at SHA-256
+`95120f8672571ea6af55991f958fcb8f78fd3e700e0522391d813b089608154c`;
+its manifest is bound at SHA-256
+`216846b0864176de0b85ffe308a45d9f36d7457d83db4677d78f6f0397824dbb`;
+its checksum file is bound at SHA-256
+`a6431a5e5828faed93cafa4c8b61f83fc25ddfee52437a0974e67b85bd74bed9`;
+its payload tree is bound at SHA-256
+`cd1f6b2460f9d894f765ef6c3db714597d65a8a2e881434d67989a6ffdd75d1b`;
+and its bundle seal is
+`c6b21e4dff5dde96a4396756a9cffabf34b06129580448c9259ce16aea52344d`.
+
+The primary review reports 546 pass and zero fail, zero residual proposals,
+all 38 placeholder-bearing values exact, all seven exact-English retentions
+justified, all 29 embedded-Latin values classified, and zero Unicode, NFC, or
+script defects. Root replay accepted those linguistic and structural results
+but rejected its lifecycle appendix: aggregate counts concealed exactly two
+swapped identities, marking literal `toolNames.text` finite dynamic and
+identifier-consumed `tools.video.seekValueText` literal. The immutable primary
+bundle was not modified.
+
+The reviewer instead produced the separate sealed supplement
+`/Users/jackuait/.codex/audit-evidence/blok-gu-4cd1906ef970-review2-lifecycle-supplement-20260720T165445Z`.
+Its corrected 546-key lifecycle matrix is bound at SHA-256
+`aa6f094893af3314b70842af684e84fca3083cee563d279f23c6b145b0e32b79`;
+its raw-to-semantic reconciliation is bound at SHA-256
+`189f5f581aeff003ec96e9e3c38d31a1ef85bd82eeef0ffcf6ffdb6c7b9ba7e6`;
+its exact residual identities are bound at SHA-256
+`0a2190fffa640c66690ddbd0c87442be67fc8bbfd052d6f53196ea3c4a051c8b`;
+its validator is bound at SHA-256
+`4b566314a8fb9a2302794fa9be24eeb05dcd9bce6f54d624d7e28de4eb2c02ee`;
+its manifest is bound at SHA-256
+`37b94c59553457907776a199464163d07eb54e375856b2e280930ceff9fbd4e0`;
+its checksum file is bound at SHA-256
+`e4305c075d44585a4418f5c523329c1c632148ebb8fef8ce268d7d211f22c786`;
+and its seal is
+`0674b8f6bf5cb27687be29151452f8dbdf48ee9a1c165e142b607335ec5f4799`.
+It proves the raw 398 literal-candidate + 121 literal-absent finite-route + 27
+residual scan, then the uniform semantic 397 literal + 122 finite dynamic + 25
+registered-namespace-compatible + two without-uniform-route closure. Exactly
+one raw identity crosses semantic classes: `tools.video.seekValueText`.
+
+A root replay passes both sealed validators, every checksum, both immutable
+file-state seals, 546 unique source-order identities, the exact 25/2 residual
+split, and the current dictionary digest. Together the clean primary review
+and corrected lifecycle supplement earn identical-byte second-pass credit.
 
 ### Hebrew 546-key current-byte findings — corrections pending
 

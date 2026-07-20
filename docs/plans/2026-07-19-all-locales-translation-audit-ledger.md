@@ -313,7 +313,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-084` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-gu-001`–`F-gu-054` | pending |
-| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-038` | pending |
+| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-043` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-004` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
@@ -4976,6 +4976,63 @@ across the complete nine-file i18n suite pass; both findings are verified.
 This stopped work earns no complete-pass credit, and both full 546-entry
 reviews must restart at entry 1 on the corrected bytes.
 
+### Hebrew 743a fresh full-audit caller-role residual — remediated
+
+Fresh reviewer
+`/root/dhivehi_postfix_first_blind/he_corrected_first_743` restarted at entry
+1 and reread all 546 English/Hebrew pairs on raw dictionary SHA-256
+`743a444255897a5a46d741732310d5071051ed12e8d77657cad6fee97f1cf0f9`.
+Its sealed bundle is `/tmp/blok-he-corrected-audit1-qvk7GALi`; the source-order
+matrix is bound at SHA-256
+`88d2f06c47fdf7ebd8e0efdc0456ad4e2d2fbf0758eb858ac77484a0efcfd565`;
+the five-row residual artifact is bound at SHA-256
+`d49806c7311cbddd9ba79746e3a7229d1d8e867c42398b3150f220afd48680ae`;
+the validator is bound at SHA-256
+`bd2923f37d822a3ce3b6f968b5f588360e2e5fea310aded11ea28fe5b7c8c4b9`;
+and its sealed manifest is bound at SHA-256
+`adb4016db1aeb22d1fd974e5c178c8f712ae283abb26094465078934d79b6f30`.
+A fresh replay reports 546 identities checked, 541 pass, five fail, all 38
+placeholder-bearing values intact, and all six exact-English retentions
+accounted for. Its lifecycle artifact proves the uniform 397 literal + 122
+finite dynamic + 27 residual closure and explicitly disclaims the historical
+14/12/1 subdivision as source-derived; the repository-wide reconciliation
+classifies that residual uniformly as 25 registered-namespace-compatible keys
+and two keys without a uniform route.
+
+Distinct proposal-aware challenger
+`/root/dhivehi_postfix_first_blind/he_five_proposal_challenge` accepted all
+five corrections without amendment, rejection, addition, or removal. Its
+sealed bundle is `/tmp/blok-he-five-challenge.aarsJ5r8`; the accepted map is
+bound at SHA-256
+`dd42261690053a68fb065cdb9af391c59442c0da0fb5ef2b17977d453e657a95`;
+the challenge map is bound at SHA-256
+`e858c236081eb15c9609fd063598efeba2482b3976d830bf7bbe903e48c99c9e`;
+the validator is bound at SHA-256
+`47c2976bca3abdc368b3ee0c8929cfd67813be9d661992582920e88d5ebe552f`;
+and the sealed manifest is bound at SHA-256
+`d5734b9884a6a670de0cc09a014f1b8bfdc661d999ce9c68cc0dc837d909c3f8`.
+Two independent post-seal replays report `SEALED_REPLAY_OK`, with all 546
+values checked, 30 coupled media-source family rows closed, zero placeholder,
+NFC, bidi, identity, omission, or overreach defects, all ten custom caller
+checks passing, and all 183 focused existing tests passing.
+
+Findings `F-he-039`–`F-he-043` were recorded as open before any dictionary
+edit. Four upload values were action imperatives even though their concrete
+caller renders them as `role=tab` labels; the file insert value had the inverse
+defect, using an action noun on a concrete URL-submit button. The red gate
+failed exactly those five reviewed-value assertions while the other 3,267
+cases passed. Applying the sealed map changed exactly those five keys, with
+zero missing, unexpected, or wrong values, and produced raw dictionary
+SHA-256
+`1e5153e993ff6b6c01e6102dfb5182c9a763db88677e05e9cb7273b9bb3f2504`.
+All 3,272 guideline cases, all 182 exact-retention cases, and all 183 focused
+existing caller tests then pass; all five findings are verified. The complete
+i18n suite passes all 3,989 cases across nine files, and translation
+completeness, integrity, source coverage, docs translation, encoding, and
+whitespace checks pass with only the repository's known warnings. This stopped
+review earns no complete-pass credit: both full 546-entry reviews must restart
+at entry 1 on the corrected bytes.
+
 ### Estonian, Persian, Filipino, and Dutch correction closure
 
 The correction pass closed all 135 current-byte findings: 42 Estonian rows
@@ -8133,6 +8190,11 @@ follows the global transition rule above.
 | `F-he-036` | `he` | `tools.video.ctxCopyUrlAtTime` | caller-aware translation quality | `"העתק כתובת URL של הסרטון בזמן הנוכחי"` | `"העתק את כתובת ה-URL של הסרטון בנקודת הזמן הנוכחית"` | בזמן הנוכחי can mean the present clock time. בנקודת הזמן הנוכחית explicitly denotes the current playback point, while ה-URL gives the mixed-script acronym its normal Hebrew definite construction. Independent disposition: keep. | verified |
 | `F-he-037` | `he` | `tools.video.ctxStats` | caller-aware translation quality | `"נתונים למתקדמים"` | `"סטטיסטיקות הפעלה"` | The context-menu item opens playback statistics. נתונים למתקדמים means “advanced data” and loses both statistics and playback; סטטיסטיקות הפעלה restores the feature. Independent disposition: keep. | verified |
 | `F-he-038` | `he` | `tools.callout.emojiSearchResults` | caller-aware translation quality | `"נמצאו {count} אימוג'ים"` | `"התאמות אימוג׳י: {count}"` | The count-neutral “matches” live-region template avoids number agreement failure at 1, preserves `{count}`, and replaces the ASCII apostrophe with Hebrew geresh. The [Hebrew Academy’s record](https://hebrew-academy.org.il/wp-content/uploads/meeting-367.pdf) supports the proposal’s initial-yod אימוג׳י spelling. Independent disposition: keep. | verified |
+| `F-he-039` | `he` | `tools.image.emptyUpload` | caller role / label grammar | `"העלה"` | `"העלאה"` | The image empty-state passes this value to `makeTab`, which renders a `role=tab` source label. The current masculine-singular imperative means “upload”; the accepted action noun names the tab and matches the equivalent file-source label. | verified |
+| `F-he-040` | `he` | `tools.video.emptyUpload` | caller role / label grammar | `"העלה"` | `"העלאה"` | The video empty-state renders this value as a `role=tab` source label, not a command button. The accepted action noun fits that concrete role and closes the media-source label family. | verified |
+| `F-he-041` | `he` | `tools.audio.emptyUpload` | caller role / label grammar | `"העלה"` | `"העלאה"` | The audio empty-state renders this value through the shared `role=tab` caller. The accepted nominal label replaces the imperative outlier and matches the equivalent file source tab. | verified |
+| `F-he-042` | `he` | `tools.audio.coverUpload` | caller role / label grammar | `"העלה"` | `"העלאה"` | The audio cover picker also passes this value to the shared `role=tab` renderer. The accepted action noun correctly names the cover-source tab and aligns all four upload labels. | verified |
+| `F-he-043` | `he` | `tools.file.emptyInsert` | caller role / command grammar | `"הוספה"` | `"הוסף"` | The file empty-state places this value on the concrete URL-submit button. The current action noun means “insertion”; the accepted masculine-singular imperative issues the command and matches the image, video, audio, and cover submit buttons. | verified |
 | `F-ku-003` | `ku` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"داشکاندنی بەتاڵ. کلیک بکە یان بلۆک بخەرە ناوی."` | `"داشکاندنی بەتاڵ. کلیک بکە بۆ زیادکردنی بلۆکێک یان بلۆکەکان ڕاکێشە بۆ ئێرە."` | The old Sorani copy says only click or put a block inside. The replacement uses established repository morphology to name singular click-to-add, plural drag, and the target explicitly. | verified |
 | `F-ps-002` | `ps` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"خالي راټولېدونکی. د بلاکونو د دننه کولو لپاره کلیک وکړئ یا کش کړئ."` | `"خالي راټولېدونکی. د یوه بلاک اضافه کولو لپاره کلیک وکړئ یا بلاکونه دلته کش کړئ."` | The old purpose phrase ambiguously applies clicking to putting plural blocks inside. The replacement uses correct oblique singular `یوه`, plural drag object, and an explicit destination in the locale's established formal register. | verified |
 | `F-sd-002` | `sd` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"خالي سمٽيل بلاڪ. ڪلڪ ڪريو يا بلاڪ اندر ڏانهن ڇڪيو."` | `"خالي سمٽيل بلاڪ. هڪ بلاڪ شامل ڪرڻ لاءِ ڪلڪ ڪريو يا بلاڪن کي هتي ڇڪيو."` | The old Sindhi copy omits the click result and does not distinguish singular creation from plural dragging. The replacement uses natural singular `هڪ بلاڪ`, plural oblique `بلاڪن کي`, and the established formal imperatives. | verified |

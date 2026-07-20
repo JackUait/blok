@@ -447,6 +447,57 @@ describe('createReactBlock (React authoring factory)', () => {
     expect((Tool.toolbox as { icon: string }).icon).toBe(toolbox.icon);
   });
 
+  it('preserves SVG camelCase props and namespace attributes in serialized icons', () => {
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      toolbox: {
+        title: 'Counter',
+        icon: (
+          <svg viewBox="0 0 20 20" strokeWidth={1.25} fillRule="evenodd">
+            <path d="M1 1h18" />
+          </svg>
+        ),
+      },
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <span />,
+    });
+
+    const toolbox = Tool.toolbox as { icon: string };
+
+    expect(toolbox.icon).toContain('viewBox="0 0 20 20"');
+    expect(toolbox.icon).toContain('stroke-width="1.25"');
+    expect(toolbox.icon).toContain('fill-rule="evenodd"');
+  });
+
+  it('does not throw without a DOM and does not poison the cache (SSR-safe toolbox access)', () => {
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      toolbox: { title: 'Counter', icon: <svg data-icon="late" /> },
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <span />,
+    });
+
+    const realDocument = globalThis.document;
+
+    vi.stubGlobal('document', undefined);
+    try {
+      // Server-side access must not crash; the element is returned unserialized.
+      const ssrToolbox = Tool.toolbox as { title: string; icon: unknown };
+
+      expect(ssrToolbox.title).toBe('Counter');
+      expect(typeof ssrToolbox.icon).not.toBe('string');
+    } finally {
+      vi.stubGlobal('document', realDocument);
+    }
+
+    // The DOM-less access must NOT have been cached: with the DOM back, the
+    // icon serializes properly.
+    const browserToolbox = Tool.toolbox as { icon: string };
+
+    expect(typeof browserToolbox.icon).toBe('string');
+    expect(browserToolbox.icon).toContain('data-icon="late"');
+  });
+
   it('serializes element icons inside array toolbox specs, passing string icons through', () => {
     const Tool = createReactBlock<CounterData>({
       type: 'counter',
@@ -591,6 +642,89 @@ describe('createReactBlock (React authoring factory)', () => {
 
     expect(host.querySelector('.edit')?.textContent).toBe('9');
     expect(host.querySelector('.display')).toBeNull();
+
+    unmount();
+  });
+
+  it('setData while read-only re-renders viewComponent with the new data', async () => {
+    const { registry, unmount } = mountHost();
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ data }: ReactBlockRenderProps<CounterData>) => (
+        <span className="edit">{data.count}</span>
+      ),
+      viewComponent: ({ data }) => <span className="display">{data.count}</span>,
+    });
+
+    const tool = new Tool({
+      data: { count: 1 },
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: true,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+    expect(host.querySelector('.display')?.textContent).toBe('1');
+
+    await act(async () => {
+      await tool.setData({ count: 2, label: 'n' });
+    });
+
+    // readOnly is preserved through the partial props merge — still the view
+    // renderer, now with the new data.
+    expect(host.querySelector('.display')?.textContent).toBe('2');
+    expect(host.querySelector('.edit')).toBeNull();
+
+    unmount();
+  });
+
+  it('data changes while editable do not remount a tool that HAS a viewComponent', async () => {
+    const { registry, unmount } = mountHost();
+    const mountRuns = vi.fn();
+
+    function Edit({ data }: ReactBlockRenderProps<CounterData>): ReactElement {
+      const [seed] = useState(() => {
+        mountRuns();
+
+        return 'kept';
+      });
+
+      return <span className="edit">{`${data.count}:${seed}`}</span>;
+    }
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: Edit,
+      viewComponent: ({ data }) => <span className="display">{data.count}</span>,
+    });
+
+    const tool = new Tool({
+      data: { count: 1 },
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+    expect(host.querySelector('.edit')?.textContent).toBe('1:kept');
+
+    await act(async () => {
+      await tool.setData({ count: 2, label: 'n' });
+    });
+
+    // The ReadOnlySwitch wrapper keeps a stable component identity, so a data
+    // update reconciles in place — ephemeral state survives.
+    expect(host.querySelector('.edit')?.textContent).toBe('2:kept');
+    expect(mountRuns).toHaveBeenCalledTimes(1);
 
     unmount();
   });

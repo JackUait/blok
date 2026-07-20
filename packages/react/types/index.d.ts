@@ -602,7 +602,8 @@ export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
    * Toolbox icon. Accepts the markup string core consumes directly, or the same
    * React element rendered in the block body — the factory serializes elements
    * to markup once (lazily, cached), so icons are never duplicated as parallel
-   * raw SVG strings.
+   * raw SVG strings. Without a DOM (SSR) the element is returned as-is and
+   * serialization retries on the next browser-side access.
    */
   icon?: string | React.ReactElement;
 };

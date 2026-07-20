@@ -67,7 +67,8 @@ export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
    * Toolbox icon. Core's toolbox chrome consumes markup strings, but React
    * authors may pass the same element they render in the block body — the
    * factory serializes it to markup once (lazily, cached) so icons are never
-   * duplicated as parallel raw SVG strings.
+   * duplicated as parallel raw SVG strings. Without a DOM (SSR) the element is
+   * returned as-is and serialization retries on the next browser-side access.
    */
   icon?: string | ReactElement;
 };
@@ -89,7 +90,7 @@ export interface CreateReactBlockSpec<Data = BlockToolData, Config = Record<stri
    * Optional read-only renderer: when the editor is read-only, this component
    * is rendered INSTEAD of `component`, so blocks don't hand-plumb a
    * display-vs-edit ternary. It receives the entry props minus `commit` (no
-   * write path) and `readOnly` (always true by definition). Toggling read-only
+   * write path) and minus `readOnly` (always true by definition). Toggling read-only
    * swaps renderers — ephemeral state does not survive the swap; omit
    * `viewComponent` to keep the single-component in-place toggle instead.
    */
@@ -136,10 +137,17 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 } {
   /**
    * Serialize a React element (an icon) to markup with a throwaway synchronous
-   * root. Runs outside any React render (core reads `toolbox` imperatively), so
-   * the sync flush is legal; the result is cached by `resolveToolbox`.
+   * root. Returns null when serialization cannot complete: without a DOM
+   * (SSR — core never reads `toolbox` server-side, but a consumer may), or
+   * when the flush was deferred because React was already rendering (flushSync
+   * inside a render is a no-op with a warning, leaving the mount empty). A
+   * null result is NOT cached, so the next access retries.
    */
-  const renderElementToMarkup = (element: ReactElement): string => {
+  const renderElementToMarkup = (element: ReactElement): string | null => {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
     const mount = document.createElement('div');
     const root = createRoot(mount);
 
@@ -151,18 +159,38 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
     root.unmount();
 
-    return markup;
+    return markup === '' ? null : markup;
   };
 
-  const convertToolbox = (): ToolboxConfig | undefined => {
-    const toEntry = (entry: ReactToolboxConfigEntry): ToolboxConfigEntry =>
-      isValidElement(entry.icon) ? { ...entry, icon: renderElementToMarkup(entry.icon) } : (entry as ToolboxConfigEntry);
+  const convertToolbox = (): { value: ToolboxConfig | undefined; complete: boolean } => {
+    const status = { complete: true };
+
+    const toEntry = (entry: ReactToolboxConfigEntry): ToolboxConfigEntry => {
+      if (!isValidElement(entry.icon)) {
+        return entry as ToolboxConfigEntry;
+      }
+
+      const markup = renderElementToMarkup(entry.icon);
+
+      if (markup === null) {
+        // Leave the element in place (a consumer reading `toolbox` outside the
+        // browser can still use it) and skip caching so a later browser-side
+        // access serializes it properly.
+        status.complete = false;
+
+        return entry as ToolboxConfigEntry;
+      }
+
+      return { ...entry, icon: markup };
+    };
 
     if (spec.toolbox === undefined) {
-      return undefined;
+      return { value: undefined, complete: status.complete };
     }
 
-    return Array.isArray(spec.toolbox) ? spec.toolbox.map(toEntry) : toEntry(spec.toolbox);
+    const value = Array.isArray(spec.toolbox) ? spec.toolbox.map(toEntry) : toEntry(spec.toolbox);
+
+    return { value, complete: status.complete };
   };
 
   /** Lazily-computed core-compatible toolbox (React element icons serialized once). */
@@ -172,12 +200,20 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
   };
 
   const resolveToolbox = (): ToolboxConfig | undefined => {
-    if (!toolboxCache.resolved) {
-      toolboxCache.value = convertToolbox();
+    if (toolboxCache.resolved) {
+      return toolboxCache.value;
+    }
+
+    const { value, complete } = convertToolbox();
+
+    // Only a fully-serialized toolbox is cached; an incomplete pass (no DOM,
+    // deferred flush) is returned as-is and recomputed on the next access.
+    if (complete) {
+      toolboxCache.value = value;
       toolboxCache.resolved = true;
     }
 
-    return toolboxCache.value;
+    return value;
   };
 
   /**

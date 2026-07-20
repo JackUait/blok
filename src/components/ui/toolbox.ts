@@ -566,10 +566,15 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * without recreating the editor.
    */
   public refreshItems(): void {
+    // Shortcuts are registered per displayed tool, so they must be re-synced
+    // with the recomputed list: a gated tool's insertion shortcut is removed,
+    // a re-enabled tool's shortcut is registered.
+    this.removeAllShortcuts();
     this._toolsToBeDisplayed = undefined;
     this._toolboxItemsToBeDisplayed = undefined;
     this.destroyPopover();
     this.initPopover();
+    this.enableShortcuts();
   }
 
   /**
@@ -883,6 +888,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
+   * Shortcuts actually registered on the redactor. Tracked explicitly so
+   * removal never depends on re-deriving `toolsToBeDisplayed` — after a
+   * runtime `toolbox` flip the derived list no longer matches what was
+   * registered, which would leak the gated tool's shortcut.
+   */
+  private registeredShortcuts: string[] = [];
+
+  /**
    * Iterate all tools and enable theirs shortcuts if specified
    */
   private enableShortcuts(): void {
@@ -901,6 +914,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * @param {string} shortcut - shortcut according to the ShortcutData Module format
    */
   private enableShortcutForTool(toolName: string, shortcut: string): void {
+    this.registeredShortcuts.push(shortcut);
     Shortcuts.add({
       name: shortcut,
       on: this.api.ui.nodes.redactor,
@@ -937,13 +951,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Fired when the Read-Only mode is activated
    */
   private removeAllShortcuts(): void {
-    this.toolsToBeDisplayed.forEach((tool: BlockToolAdapter) => {
-      const shortcut = tool.shortcut;
+    for (const shortcut of this.registeredShortcuts) {
+      Shortcuts.remove(this.api.ui.nodes.redactor, shortcut);
+    }
 
-      if (shortcut) {
-        Shortcuts.remove(this.api.ui.nodes.redactor, shortcut);
-      }
-    });
+    this.registeredShortcuts = [];
   }
 
   /**

@@ -433,6 +433,43 @@ describe('Toolbox', () => {
       expect(lastPopoverItems.value).toHaveLength(0);
       expect(toolbox.isEmpty).toBe(true);
     });
+
+    it('re-syncs tool shortcuts: a gated tool loses its shortcut, a re-enabled tool regains it', () => {
+      let toolboxVisible = true;
+      const dynamicAdapter = {
+        name: 'dynamicTool',
+        shortcut: 'CMD+SHIFT+G',
+        get toolbox(): { title: string; icon: string } | undefined {
+          return toolboxVisible
+            ? { title: 'Dynamic Tool',
+              icon: '<svg>dynamic</svg>' }
+            : undefined;
+        },
+      } as unknown as BlockToolAdapter;
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: createToolsCollection([['dynamicTool', dynamicAdapter]]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      // Registered once at construction while visible.
+      expect(Shortcuts.add).toHaveBeenCalledTimes(1);
+      expect(Shortcuts.add).toHaveBeenCalledWith(expect.objectContaining({ name: 'CMD+SHIFT+G' }));
+
+      toolboxVisible = false;
+      toolbox.refreshItems();
+
+      // The insertion shortcut must be gated along with the menu entry.
+      expect(Shortcuts.remove).toHaveBeenCalledWith(expect.anything(), 'CMD+SHIFT+G');
+      expect(Shortcuts.add).toHaveBeenCalledTimes(1);
+
+      toolboxVisible = true;
+      toolbox.refreshItems();
+
+      expect(Shortcuts.add).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('getElement', () => {

@@ -105,7 +105,7 @@
     "build:angular": "node scripts/build-angular.mjs",
     "build:cli": "node scripts/build-cli.mjs",
     "build:test": "node scripts/generate-fonts.mjs && vite build --mode test && vite build --config vite.config.iife.mjs --mode test && vite build --config vite.config.umd.mjs --mode test && node scripts/build-locales.mjs test && node scripts/build-react-vendor.mjs && node scripts/build-vue-vendor.mjs && node scripts/build-angular.mjs && node scripts/build-angular-vendor.mjs && yarn workspace @bloklabs/react build && yarn workspace @bloklabs/vue build",
-    "lint": "sh -c 'eslint .; ESLINT_EXIT=$?; tsc --noEmit; TSC_EXIT=$?; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
+    "lint": "sh -c 'ESLINT_CONCURRENCY=off; ESLINT_CACHE=warm; if [ ! -f node_modules/.cache/blok-eslint ]; then ESLINT_CONCURRENCY=4; ESLINT_CACHE=cold; fi; ESLINT_STARTED=$(date +%s); echo \"Lint: ESLint ($ESLINT_CACHE cache, concurrency=$ESLINT_CONCURRENCY)\"; eslint . --concurrency=$ESLINT_CONCURRENCY --cache --cache-location node_modules/.cache/blok-eslint --cache-strategy content; ESLINT_EXIT=$?; ESLINT_SECONDS=$(($(date +%s) - ESLINT_STARTED)); echo \"Lint: ESLint finished in ${ESLINT_SECONDS}s (exit $ESLINT_EXIT)\"; TSC_STARTED=$(date +%s); echo \"Lint: TypeScript (incremental)\"; tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/blok-lint.tsbuildinfo; TSC_EXIT=$?; TSC_SECONDS=$(($(date +%s) - TSC_STARTED)); echo \"Lint: TypeScript finished in ${TSC_SECONDS}s (exit $TSC_EXIT)\"; if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'",
     "lint:fix": "eslint . --fix",
     "lint:tests": "eslint test/",
     "lint:types": "tsc --noEmit",

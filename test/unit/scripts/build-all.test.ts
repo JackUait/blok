@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, it, expect } from 'vitest';
 import { buildTasks } from '../../../scripts/build-all.mjs';
 import { preflightTasks } from '../../../scripts/release-preflight.mjs';
@@ -10,6 +13,50 @@ interface GraphTask {
 }
 
 const byName = (tasks: GraphTask[]): Map<string, GraphTask> => new Map(tasks.map((t) => [t.name, t]));
+
+describe('lint script', () => {
+  it('uses full-project native caches and bounded ESLint concurrency', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(process.cwd(), 'package.json'), 'utf8')
+    ) as { scripts?: Record<string, string> };
+    const lint = manifest.scripts?.lint;
+
+    expect(lint).toContain('ESLINT_CONCURRENCY=off');
+    expect(lint).toContain(
+      'if [ ! -f node_modules/.cache/blok-eslint ]; then ESLINT_CONCURRENCY=4; ESLINT_CACHE=cold; fi'
+    );
+    expect(lint).toContain(
+      'eslint . --concurrency=$ESLINT_CONCURRENCY --cache --cache-location node_modules/.cache/blok-eslint --cache-strategy content'
+    );
+    expect(lint).toContain(
+      'tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/blok-lint.tsbuildinfo'
+    );
+    expect(lint).toContain('Lint: ESLint');
+    expect(lint).toContain('Lint: TypeScript');
+    expect(lint).toContain('ESLINT_SECONDS=');
+    expect(lint).toContain('TSC_SECONDS=');
+    expect(lint).toContain('ESLINT_EXIT=$?');
+    expect(lint).toContain('TSC_EXIT=$?');
+    expect(lint).toContain(
+      'if [ $ESLINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi'
+    );
+  });
+
+  it('restores and saves native lint caches in CI even when lint fails', () => {
+    const workflow = readFileSync(
+      join(process.cwd(), '.github/workflows/ci.yml'),
+      'utf8'
+    );
+
+    expect(workflow).toContain('uses: actions/cache/restore@v4');
+    expect(workflow).toContain('node_modules/.cache/blok-eslint');
+    expect(workflow).toContain('node_modules/.cache/blok-lint.tsbuildinfo');
+    expect(workflow).toContain('restore-keys:');
+    expect(workflow).toContain('uses: actions/cache/save@v4');
+    expect(workflow).toContain("if: always() && steps.lint-cache.outputs.cache-hit != 'true'");
+    expect(workflow).toContain('key: ${{ steps.lint-cache.outputs.cache-primary-key }}');
+  });
+});
 
 describe('buildTasks', () => {
   it('covers every step of the former serial `yarn build` chain, unchanged', () => {

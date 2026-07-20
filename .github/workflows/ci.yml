@@ -39,8 +39,28 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
+      - name: Restore lint cache
+        id: lint-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules/.cache/blok-eslint
+            node_modules/.cache/blok-lint.tsbuildinfo
+          key: lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-${{ github.sha }}
+          restore-keys: |
+            lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-
+
       - name: Lint
         run: yarn lint
+
+      - name: Save lint cache
+        if: always() && steps.lint-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules/.cache/blok-eslint
+            node_modules/.cache/blok-lint.tsbuildinfo
+          key: ${{ steps.lint-cache.outputs.cache-primary-key }}
 
   unit-tests:
     name: Unit Tests (${{ matrix.shard }})

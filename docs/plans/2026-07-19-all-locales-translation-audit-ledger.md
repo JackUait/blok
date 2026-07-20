@@ -26,10 +26,12 @@ A locale may be marked `verified` only when all of the following are true:
    transliteration, and unnecessary jargon; and correct language-specific
    capitalization, grammar, register, punctuation, shortcuts, gender, number,
    and established product terminology. When an exhaustive caller search finds
-   no production consumer, the entry must instead be inventoried as
-   source-only or localization-bypassed and reviewed against its documented
-   namespace, key, intended role, and any equivalent hardcoded UI context.
-   Absence of a caller never waives the wording requirements.
+   no concrete production consumer, the entry must instead be inventoried as
+   registered-namespace-compatible, catalog-only/source-only, or
+   localization-bypassed and reviewed against its documented namespace, key,
+   intended role, and any equivalent hardcoded UI context. A generic namespace
+   resolver proves compatibility, not live consumption. Absence of a caller
+   never waives the wording requirements.
 2. Its flat JSON shape and key set match the English source; every value is a
    non-empty string; duplicate keys, encoding defects, and Unicode
    normalization defects are absent; and every placeholder name and occurrence
@@ -124,15 +126,43 @@ Dimension-specific guards are:
   checked in UI context for meaning, naturalness, brevity, action wording,
   terminology, accessibility wording, grammar, register, punctuation, and all
   other applicable guideline rules at the completed review stage. An entry
-  with no production consumer must have the explicit source-only disposition
-  required by completion rule 1. Any known defect or unresolved language
-  judgment makes the result `open`; incomplete or invalidated review makes it
-  `pending`.
+  with no concrete production consumer must have one of the explicit non-live
+  dispositions required by completion rule 1. Any known defect or unresolved
+  language judgment makes the result `open`; incomplete or invalidated review
+  makes it `pending`.
 - **Exact-English retention result:** `pass` requires a current exact-match
   inventory, no pending-translation exemption, and one allowed category,
   locale-specific justification, and source for every retained match. Any
   unexplained or disallowed retention makes it `open`; an absent or invalidated
   inventory makes it `pending`.
+
+## Lifecycle Coverage Evidence
+
+Lifecycle labels are coverage evidence, not linguistic decisions and not proof
+that a string currently renders. The source-derived current 546-key inventory
+has 397 executable literal references and 122 finite dynamic constructions.
+Of the remaining 27 keys, 25 belong to namespaces registered in
+`defaultBlockTools` and can be resolved uniformly by `createToolApi`; the other
+two, `tools.columns.turnInto` and
+`blockSettings.convertWithChildrenWarning`, have no equivalent uniform
+namespace route and require individually documented catalog-only dispositions.
+The mechanically reproducible closure is therefore `397 + 122 + 25 + 2 = 546`.
+
+The earlier `397 + 122 + 14 + 12 + 1` or `533 + 12 + 1` split selected only 14
+of those 25 registered-namespace residuals as built-compatible. Current source
+contains no marker that distinguishes those 14 from the other 11. That split
+may remain in historical reviewer narratives only as a parent-supplied policy
+taxonomy; it is not accepted as independent source-derived lifecycle proof and
+earns no completion credit beyond showing that every key was inventoried.
+Likewise, an executable literal reference does not prove a live consumer:
+`notifier.dismiss` and `tools.code.placeholder` remain explicitly tracked as
+literal-reference reachability exceptions.
+
+This clarification does not reset a completed linguistic pass by itself:
+dictionary bytes and the required 546 row-level language decisions are
+unchanged. From this point forward, a lifecycle artifact must either reproduce
+the uniform source-derived partition above or clearly label any finer
+source-only/dormant subdivision as external policy provenance.
 
 ## Finding Closure and Reopening
 
@@ -5258,12 +5288,21 @@ retentions. The widened-timeout guideline gate passes all 3,264 cases; the
 focused identical-value gate passes all 182 cases; and the complete nine-file
 i18n suite passes all 3,981 cases. All 29 findings are verified.
 
-The separate lifecycle artifact's 396 literal + 122 dynamic + 15
-built-compatible partition and dormant-key identity conflict with the required
-397 + 122 + 14, 12 source-only, and 1 dormant closure, so it remains explicitly
-rejected as completion evidence. This stopped work earns no complete-pass
-credit, and both full 546-entry reviews must restart at entry 1 on the corrected
-bytes.
+The separate first lifecycle artifact's 396 literal + 122 dynamic + 15
+built-compatible partition remains rejected. A fresh isolated reconciliation
+then rebuilt the current source without prior lifecycle lists and proved the
+uniform 397 literal + 122 finite-dynamic + 25 registered-namespace-compatible
+and 2 catalog-only closure. Its sealed bundle is
+`/tmp/blok-fil-lifecycle-discrepancy-20260720.cnaMVs`; the source tree is bound
+at SHA-256
+`2ea53755d1eae11b5ff5e558cc10d5319936c79649c0e340f152b263aea44724`
+and its manifest at SHA-256
+`f006b0904b0621d54069c7ec72e5c28fcff4963619fcf01982c4436f1a8c6b5b`.
+The validator reports `ok: true` and `requestedTaxonomyProven: false`: current
+source cannot select only 14 of the 25 uniformly compatible tool-namespace
+keys without an external policy list. `F-global-010` therefore supersedes the
+earlier lifecycle-credit rule. This stopped work earns no complete-pass credit,
+and both full 546-entry reviews must restart at entry 1 on the corrected bytes.
 
 ### Persian corrected-byte first pass and detached-UI direction finding
 
@@ -8261,6 +8300,7 @@ follows the global transition rule above.
 
 | `F-global-008` | all non-English | drag move destination contract | caller / accessibility / move indexing / structural integrity | Drop previews announced a raw pre-removal boundary instead of the first moved block's final position, producing overstated or impossible values; multiple execution also returned the raw slot and misordered supported non-contiguous or variable-width nested groups. Invalid descendant and stale targets could still display indicators, and side-drop source filtering could detach nested children. | Resolve one move contract from the live flat array, explicit sources, physical carried footprint, logical ancestry, target, and edge; use its final first index for previews and results, anchor execution to the live target, preserve nested/non-contiguous order, validate indicators in every mode, and keep nested children attached during side drops. | The frozen Estonian caller challenge records six exact numeric scenarios. Red-first unit and integration cases cover formula, execution, lifecycle, staleness, duplicate, physical/logical descendant, indicator, and horizontal source-filter contracts. A distinct read-only reviewer found no blocker and independently passed the 132-case focused gate, scoped ESLint, full TypeScript, and whitespace checks. | verified |
 | `F-global-009` | all non-English | tool API interpolation contract | caller / interpolation / public API / accessibility | The tool-facing API and per-tool namespace wrapper accept and forward only a dictionary key, so the live image, video, and audio callers can expose raw `{size}`, `{current}`, and `{total}` placeholders. | Accept optional `Record<string, string \| number>` interpolation variables in the public tool API and forward the same object unchanged through the API module and both namespace-wrapper branches; document and regression-test the contract. | Independent complete Dhivehi and Filipino audits found the same defect and an AST-closed caller review identified exactly four affected live calls. Three focused propagation assertions and one docs contract failed before remediation. After both boundaries began forwarding the identical object without changing one-argument calls, focused API/factory tests pass 19/19, docs API tests pass 59/59, four affected tool-family files pass 256/256, and the complete i18n gate passes 3,938/3,938. Type, scoped lint, translation, docs, and whitespace checks pass; distinct reviewer `root-dhivehi_postfix_first_blind` found no blocker or non-blocker and freshly passed the focused gate. | verified |
+| `F-global-010` | all non-English | lifecycle coverage taxonomy | audit evidence / source provenance / reachability | Historical reviews presented the `397 + 122 + 14 + 12 + 1` subdivision as independently source-derived even though the same registered-tool namespace rule applies uniformly to 25 residual keys; selecting only 14 requires an external policy list. | Require the mechanically reproducible `397` executable-literal + `122` finite-dynamic + `25` registered-namespace-compatible + `2` catalog-only closure, distinguish compatibility from live consumption, and label any finer 14/12/1 subdivision as parent-supplied policy provenance. | Fresh isolated reconciliation on current English and Filipino bytes rebuilt every set from source and sealed `/tmp/blok-fil-lifecycle-discrepancy-20260720.cnaMVs`. Its validator exits zero with `ok: true` and `requestedTaxonomyProven: false`; the source tree is bound at SHA-256 `2ea53755d1eae11b5ff5e558cc10d5319936c79649c0e340f152b263aea44724` and the immutable manifest at `f006b0904b0621d54069c7ec72e5c28fcff4963619fcf01982c4436f1a8c6b5b`. | verified |
 
 ## Exact-English Retentions
 

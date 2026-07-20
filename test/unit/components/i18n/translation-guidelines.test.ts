@@ -115,6 +115,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'detached editor UI direction contract',
   'drag move destination contract',
   'tool API interpolation contract',
+  'lifecycle coverage taxonomy',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {

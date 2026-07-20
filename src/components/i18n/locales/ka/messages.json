@@ -24,7 +24,7 @@
   "toolNames.database": "მონაცემთა ბაზა",
   "tools.link.addLink": "ბმულის დამატება",
   "tools.link.invalidLink": "არასწორი ბმული",
-  "tools.marker.textColor": "ტექსტი",
+  "tools.marker.textColor": "ტექსტის ფერი",
   "tools.marker.background": "ფონი",
   "tools.marker.default": "ნაგულისხმევი",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

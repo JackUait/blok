@@ -513,7 +513,7 @@
   "tools.video.play": "চালান",
   "tools.video.pause": "বিরতি",
   "tools.video.seek": "প্লেব্যাকের অবস্থান",
-  "tools.video.seekValueText": "{total} এর মধ্যে {current}",
+  "tools.video.seekValueText": "{total}-এর মধ্যে {current}",
   "tools.video.toggleTimeDisplay": "অতিবাহিত ও অবশিষ্ট সময়ের মধ্যে বদলান",
   "tools.video.mute": "নিঃশব্দ করুন",
   "tools.video.unmute": "শব্দ চালু করুন",

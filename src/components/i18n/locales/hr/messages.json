@@ -24,7 +24,7 @@
   "toolNames.database": "Baza podataka",
   "tools.link.addLink": "Dodaj poveznicu",
   "tools.link.invalidLink": "Nevažeća poveznica",
-  "tools.marker.textColor": "Tekst",
+  "tools.marker.textColor": "Boja teksta",
   "tools.marker.background": "Pozadina",
   "tools.marker.default": "Zadano",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

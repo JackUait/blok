@@ -24,7 +24,7 @@
   "toolNames.database": "Basis data",
   "tools.link.addLink": "Tambahkan tautan",
   "tools.link.invalidLink": "Tautan tidak valid",
-  "tools.marker.textColor": "Teks",
+  "tools.marker.textColor": "Warna teks",
   "tools.marker.background": "Latar belakang",
   "tools.marker.default": "Bawaan",
   "tools.colorPicker.defaultSwatchLabel": "{mode} {default}",

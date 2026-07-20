@@ -313,7 +313,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-084` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-gu-001`–`F-gu-054` | pending |
-| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-043` | pending |
+| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-047` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-004` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
@@ -5063,6 +5063,56 @@ whitespace checks pass with only the repository's known warnings. This stopped
 review earns no complete-pass credit: both full 546-entry reviews must restart
 at entry 1 on the corrected bytes.
 
+### Hebrew 1e5 fresh full-audit speed residual — remediated
+
+Fresh reviewer `/root/he_corrected_1e5_first` restarted at entry 1 and reread
+all 546 English/Hebrew pairs on raw dictionary SHA-256
+`1e5153e993ff6b6c01e6102dfb5182c9a763db88677e05e9cb7273b9bb3f2504`.
+Its sealed bundle is
+`/Users/jackuait/.codex/evidence/blok-he-1e5153e993ff-20260720T153126Z`;
+the source-order matrix is bound at SHA-256
+`b1601dcb22877b033276c50518fdef075245601cc48aaacc6e1c5889c533ac76`;
+the four-row residual artifact is bound at SHA-256
+`e8a0ed644dd6d7f3e989a09e0abef0fb3f5823b4e97d021a88c0695c5102409c`;
+the validator is bound at SHA-256
+`1e8e3e48959b624e4d027f031b19e79ace68937eb848d65cb3c831b473b9d8ab`;
+and the sealed manifest is bound at SHA-256
+`51af836eb270f86b1fb278c29157b20ecb705d22291255a3cf7fa430d18b1b2f`.
+Two validator/checksum replays pass. The full reread reports 542 pass and four
+fail, zero placeholder mismatches, all six exact-English retentions reviewed,
+and the uniform source-derived 397 literal + 122 finite dynamic + 25
+registered-namespace-compatible + two without-uniform-route lifecycle closure.
+
+Distinct proposal-aware challenger `/root/dv_corrected_46c_first` accepted all
+four proposals without amendment or rejection. Its separate sealed bundle is
+`/Users/jackuait/.codex/evidence/blok-he-speed-challenge-1e5153e993ff-20260720T153711Z`;
+the effective map is bound at SHA-256
+`cd445b110d3c4d2ba2907ed6af8a0a85ce76b37a028b884591b83482dab0e6cb`;
+the adjudications are bound at SHA-256
+`a1ea137693cc21b20f6bfa6ae837fbcfc8f3181a356375de00538e19790dcbeb`;
+the exact seven-key speed closure is bound at SHA-256
+`733664937d08099aad88dfb8434e64d223eb8dd72870c188824d2c2ce2691d09`;
+the validator is bound at SHA-256
+`598bcde379cb22ff1152d8834021d36e717a7bb5c135c17f95c340a57b0613a3`;
+and the sealed manifest is bound at SHA-256
+`c0eb6a9b928a4fc2b224b4c8d0ace2d8b7966e8a245940c4f01e3288f27968d8`.
+A root replay passes the sealed validator and every checksum. The concrete
+video and audio plus/minus controls consume the four values as ARIA commands;
+the two standalone playback-speed labels and video preset-group label remain
+correct noun phrases, so the scan finds no coupled omission or overreach.
+
+Before the dictionary edit, the red guideline gate passed 3,272 cases and
+failed exactly `F-he-044`–`F-he-047`. Applying only the accepted four-key map
+produced raw dictionary SHA-256
+`91ca89a271bda90e01e7b0d8285f742de6a336f6a108e70654e7cd3f6ec89d7d`.
+The green guideline gate then passes all 3,276 cases; all 182 exact-retention
+cases and all 173 focused video/audio caller tests also pass. The four findings
+are verified. The complete i18n suite passes all 3,993 cases across nine files;
+translation completeness, integrity, source coverage, docs translation, and
+encoding checks also pass with only the repository's known warnings. This
+correction invalidates the stopped review for completion credit, so both
+complete 546-entry reviews must restart at entry 1 on the corrected bytes.
+
 ### Estonian, Persian, Filipino, and Dutch correction closure
 
 The correction pass closed all 135 current-byte findings: 42 Estonian rows
@@ -8225,6 +8275,10 @@ follows the global transition rule above.
 | `F-he-041` | `he` | `tools.audio.emptyUpload` | caller role / label grammar | `"העלה"` | `"העלאה"` | The audio empty-state renders this value through the shared `role=tab` caller. The accepted nominal label replaces the imperative outlier and matches the equivalent file source tab. | verified |
 | `F-he-042` | `he` | `tools.audio.coverUpload` | caller role / label grammar | `"העלה"` | `"העלאה"` | The audio cover picker also passes this value to the shared `role=tab` renderer. The accepted action noun correctly names the cover-source tab and aligns all four upload labels. | verified |
 | `F-he-043` | `he` | `tools.file.emptyInsert` | caller role / command grammar | `"הוספה"` | `"הוסף"` | The file empty-state places this value on the concrete URL-submit button. The current action noun means “insertion”; the accepted masculine-singular imperative issues the command and matches the image, video, audio, and cover submit buttons. | verified |
+| `F-he-044` | `he` | `tools.video.speedDecrease` | accessibility / command grammar | `"הקטן מהירות הפעלה"` | `"הפחת את מהירות ההפעלה"` | The minus stepper exposes this value as an ARIA command. The accepted phrasing supplies a natural reduce verb, the definite direct-object marker, and Apple Hebrew's established `מהירות ההפעלה` term; Google Hebrew independently uses the same `הפחת את מהירות…` command grammar. | verified |
+| `F-he-045` | `he` | `tools.video.speedIncrease` | accessibility / command grammar | `"הגדל מהירות הפעלה"` | `"הגבר את מהירות ההפעלה"` | The plus stepper exposes this value as an ARIA command. The accepted phrasing replaces the telegraphic calque with the natural `הגבר את` command construction while preserving the established playback-speed term. | verified |
+| `F-he-046` | `he` | `tools.audio.speedDecrease` | accessibility / media-family consistency | `"הקטן מהירות הפעלה"` | `"הפחת את מהירות ההפעלה"` | The audio minus stepper has the same concrete role as its video sibling. The accepted value closes the decrease-command family, while the standalone speed label correctly remains nominal. | verified |
+| `F-he-047` | `he` | `tools.audio.speedIncrease` | accessibility / media-family consistency | `"הגדל מהירות הפעלה"` | `"הגבר את מהירות ההפעלה"` | The audio plus stepper has the same concrete role as its video sibling. The accepted value closes the increase-command family without changing the noun labels or preset-group label. | verified |
 | `F-ku-003` | `ku` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"داشکاندنی بەتاڵ. کلیک بکە یان بلۆک بخەرە ناوی."` | `"داشکاندنی بەتاڵ. کلیک بکە بۆ زیادکردنی بلۆکێک یان بلۆکەکان ڕاکێشە بۆ ئێرە."` | The old Sorani copy says only click or put a block inside. The replacement uses established repository morphology to name singular click-to-add, plural drag, and the target explicitly. | verified |
 | `F-ps-002` | `ps` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"خالي راټولېدونکی. د بلاکونو د دننه کولو لپاره کلیک وکړئ یا کش کړئ."` | `"خالي راټولېدونکی. د یوه بلاک اضافه کولو لپاره کلیک وکړئ یا بلاکونه دلته کش کړئ."` | The old purpose phrase ambiguously applies clicking to putting plural blocks inside. The replacement uses correct oblique singular `یوه`, plural drag object, and an explicit destination in the locale's established formal register. | verified |
 | `F-sd-002` | `sd` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"خالي سمٽيل بلاڪ. ڪلڪ ڪريو يا بلاڪ اندر ڏانهن ڇڪيو."` | `"خالي سمٽيل بلاڪ. هڪ بلاڪ شامل ڪرڻ لاءِ ڪلڪ ڪريو يا بلاڪن کي هتي ڇڪيو."` | The old Sindhi copy omits the click result and does not distinguish singular creation from plural dragging. The replacement uses natural singular `هڪ بلاڪ`, plural oblique `بلاڪن کي`, and the established formal imperatives. | verified |

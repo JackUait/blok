@@ -7,7 +7,7 @@ import type { BlockToolAdapter } from '../../../tools/block';
 import { isObject } from '../../../utils';
 import { applyLinkConfig } from '../../../utils/apply-link-config';
 import { clean } from '../../../utils/sanitizer';
-import { SAFE_STRUCTURAL_TAGS, collectTagNames } from '../constants';
+import { COLUMNS_CANDIDATE_ATTR, SAFE_STRUCTURAL_TAGS, collectTagNames } from '../constants';
 import type { SanitizerConfigBuilder } from '../sanitizer-config';
 import type { ToolRegistry } from '../tool-registry';
 import type { HandlerContext, PasteData } from '../types';
@@ -15,6 +15,22 @@ import type { HandlerContext, PasteData } from '../types';
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
 
+
+/**
+ * A node queued for block mapping, optionally expanded out of a container
+ * (DETAILS/ASIDE children, columns-candidate table cells).
+ */
+interface ExpandedNodeEntry {
+  node: Node;
+  /** Index of this entry's parent within the expanded list. */
+  parentExpandedIndex?: number;
+  /** Fixed tool name bypassing tag substitution (column_list / column). */
+  toolOverride?: string;
+  /** Creation-time tool data (e.g. noSeed) for synthesized containers. */
+  toolData?: Record<string, unknown>;
+  /** Keep the entry even though its content is empty (layout containers). */
+  keepEmpty?: boolean;
+}
 
 /**
  * HTML Handler Priority.
@@ -107,11 +123,16 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     // Pre-expand DETAILS nodes: extract child elements (non-summary) before
     // sanitization strips them, and carry a parentExpandedIndex reference so
     // we can remap to final post-filter indices later.
-    type NodeEntry = { node: Node; parentExpandedIndex?: number };
-
-    const expandedNodes: NodeEntry[] = [];
+    const expandedNodes: ExpandedNodeEntry[] = [];
 
     for (const node of nodes) {
+      // A Google-Docs single-row table stamped as a columns candidate becomes
+      // a column layout instead of a table block.
+      if (this.isColumnsCandidateTable(node)) {
+        this.expandTableToColumnEntries(node as HTMLElement, expandedNodes);
+        continue;
+      }
+
       const isDetailsElement =
         node.nodeType === Node.ELEMENT_NODE &&
         (node as HTMLElement).tagName === 'DETAILS';
@@ -141,9 +162,29 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
     }
 
     // Map expanded nodes to intermediate results, preserving original index.
-    type MappedEntry = { data: PasteData; originalIndex: number } | null;
+    type MappedEntry = { data: PasteData; originalIndex: number; keepEmpty?: boolean } | null;
 
-    const mapped: MappedEntry[] = expandedNodes.map(({ node, parentExpandedIndex }, originalIndex) => {
+    const mapped: MappedEntry[] = expandedNodes.map(({ node, parentExpandedIndex, toolOverride, toolData, keepEmpty }, originalIndex) => {
+      // Synthesized container entries (column_list / column) bypass the tag
+      // substitution and sanitization below: their tool is fixed, and their
+      // content is an empty placeholder the tool never reads.
+      if (toolOverride !== undefined) {
+        const content = node as HTMLElement;
+
+        return {
+          data: {
+            content,
+            isBlock: true,
+            tool: toolOverride,
+            event: this.composePasteEvent('tag', { data: content }),
+            parentPasteIndex: parentExpandedIndex,
+            toolData,
+          },
+          originalIndex,
+          keepEmpty,
+        };
+      }
+
       const nodeData = (() => {
         switch (node.nodeType) {
           case Node.DOCUMENT_FRAGMENT_NODE: {
@@ -214,11 +255,11 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
       if (!entry) {
         continue;
       }
-      const { data, originalIndex } = entry;
+      const { data, originalIndex, keepEmpty } = entry;
       const isContentEmpty = dom$.isEmpty(data.content);
       const isSingleTag = dom$.isSingleTag(data.content);
 
-      if (!isContentEmpty || isSingleTag) {
+      if (!isContentEmpty || isSingleTag || keepEmpty === true) {
         oldToNewIndex.set(originalIndex, filtered.length);
         filtered.push(data);
       }
@@ -252,6 +293,145 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
    * Existing `aria-level`/`data-list-style` (e.g. from Google Docs) win and are
    * never overwritten.
    */
+  /**
+   * Whether a node is a table stamped by the Google Docs preprocessor as a
+   * columns candidate that can actually be expanded: 2 or 3 uniform columns
+   * and both column tools registered. Anything else falls back to the
+   * regular table substitution.
+   */
+  private isColumnsCandidateTable(node: Node): boolean {
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return false;
+    }
+
+    const table = node as HTMLElement;
+
+    if (table.tagName !== 'TABLE' || !table.hasAttribute(COLUMNS_CANDIDATE_ATTR)) {
+      return false;
+    }
+
+    const { blockTools } = this.Blok.Tools;
+
+    if (!blockTools.has('column_list') || !blockTools.has('column')) {
+      return false;
+    }
+
+    return this.columnCellGroups(table).length >= 2;
+  }
+
+  /**
+   * The table's cells grouped by column: element `j` holds column `j`'s cells
+   * in row order. Returns an empty array unless every row has the same cell
+   * count of 2 or 3 (defensive re-check of the preprocessor's stamp — ragged
+   * rows or merged cells mean genuinely tabular data).
+   */
+  private columnCellGroups(table: HTMLElement): HTMLElement[][] {
+    const ownRows = Array.from(table.querySelectorAll('tr'))
+      .filter((row) => row.closest('table') === table);
+
+    const rowCells = ownRows.map((row) => Array.from(row.children)
+      .filter((child): child is HTMLElement => child.tagName === 'TD' || child.tagName === 'TH'));
+
+    const columnCount = rowCells[0]?.length ?? 0;
+
+    if ((columnCount !== 2 && columnCount !== 3) || rowCells.some((cells) => cells.length !== columnCount)) {
+      return [];
+    }
+
+    return Array.from({ length: columnCount }, (_, columnIndex) =>
+      rowCells.map((cells) => cells[columnIndex]));
+  }
+
+  /**
+   * Expand a columns-candidate table into a column layout: one `column_list`
+   * entry, one `column` entry per table column, and the column's cells'
+   * content (top-to-bottom across rows) as entries parented to its column.
+   * The containers carry `noSeed` so they don't self-populate before the
+   * pasted children are parented to them; a column whose cells are all EMPTY
+   * omits it so the column seeds its own paragraph instead of lingering as a
+   * dead empty box.
+   */
+  private expandTableToColumnEntries(table: HTMLElement, expandedNodes: ExpandedNodeEntry[]): void {
+    const listIndex = expandedNodes.length;
+
+    expandedNodes.push({
+      node: dom$.make('div'),
+      toolOverride: 'column_list',
+      toolData: { noSeed: true },
+      keepEmpty: true,
+    });
+
+    for (const cells of this.columnCellGroups(table)) {
+      const contentEntries = cells.flatMap((cell) => this.collectCellContentEntries(cell));
+      const columnIndex = expandedNodes.length;
+
+      expandedNodes.push({
+        node: dom$.make('div'),
+        toolOverride: 'column',
+        // noFocus: pasted columns must never grab the caret away from the
+        // paste position (mirrors ColumnList.seedColumns' focus discipline).
+        toolData: contentEntries.length > 0 ? { noSeed: true, noFocus: true } : { noFocus: true },
+        keepEmpty: true,
+        parentExpandedIndex: listIndex,
+      });
+
+      for (const entry of contentEntries) {
+        expandedNodes.push({ ...entry, parentExpandedIndex: columnIndex });
+      }
+    }
+  }
+
+  /**
+   * Split a cell's content into block-mappable entries: block-level or
+   * tool-substitutable element children become their own entries; runs of
+   * inline content between them are grouped into a wrapper that maps to the
+   * default tool (paragraph). A `<br>` splits inline runs — the Google Docs
+   * preprocessor encodes the cell's original `<p>` boundaries as `<br>`
+   * (html-janitor unwraps block elements nested in `<td>`), so each line
+   * becomes its own paragraph block again.
+   */
+  private collectCellContentEntries(cell: HTMLElement): ExpandedNodeEntry[] {
+    const tags = Object.keys(this.toolRegistry.toolsTags);
+    const entries: ExpandedNodeEntry[] = [];
+    const inlineRun: { current: HTMLElement | null } = { current: null };
+
+    const flushInlineRun = (): void => {
+      const run = inlineRun.current;
+
+      if (run !== null && (!dom$.isEmpty(run) || dom$.isSingleTag(run))) {
+        entries.push({ node: run });
+      }
+      inlineRun.current = null;
+    };
+
+    for (const child of Array.from(cell.childNodes)) {
+      const isElement = child.nodeType === Node.ELEMENT_NODE;
+
+      if (isElement && (child as HTMLElement).tagName === 'BR') {
+        flushInlineRun();
+        continue;
+      }
+
+      const isBlockChild =
+        isElement &&
+        (tags.includes((child as HTMLElement).tagName) ||
+          dom$.blockElements.includes((child as HTMLElement).tagName.toLowerCase()));
+
+      if (isBlockChild) {
+        flushInlineRun();
+        entries.push({ node: child });
+        continue;
+      }
+
+      inlineRun.current = inlineRun.current ?? dom$.make('div');
+      inlineRun.current.appendChild(child.cloneNode(true));
+    }
+
+    flushInlineRun();
+
+    return entries;
+  }
+
   /**
    * Split direct-child `<ul>`/`<ol>` elements out of every `<blockquote>`,
    * preserving document order: lead content stays in the quote, the list

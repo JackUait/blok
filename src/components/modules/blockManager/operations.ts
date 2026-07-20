@@ -293,14 +293,16 @@ export class BlockOperations implements OperationsContext {
    * @param pasteEvent - Pasted data
    * @param replace - Should replace current block
    * @param blocksStore - The blocks store to modify
+   * @param data - Initial tool data for the inserted block
    */
   public paste(
     toolName: string,
     pasteEvent: PasteEvent,
     replace = false,
-    blocksStore: BlocksStore
+    blocksStore: BlocksStore,
+    data?: BlockToolData
   ): Promise<Block> {
-    return this.insertion.paste(toolName, pasteEvent, replace, blocksStore);
+    return this.insertion.paste(toolName, pasteEvent, replace, blocksStore, data);
   }
 
   /**

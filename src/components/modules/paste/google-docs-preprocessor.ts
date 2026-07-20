@@ -4,6 +4,8 @@ import {
   isDefaultWhiteBackground as isDefaultWhiteBackgroundShared,
 } from '../../utils/default-page-colors';
 
+import { COLUMNS_CANDIDATE_ATTR } from './constants';
+
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
  *
@@ -26,6 +28,7 @@ export function preprocessGoogleDocsHtml(html: string): string {
   convertGoogleDocsStyles(wrapper, isGoogleDocs);
 
   if (isGoogleDocs) {
+    stampColumnsCandidateTables(wrapper);
     convertTableCellParagraphs(wrapper);
     promoteImages(wrapper);
   }
@@ -496,6 +499,49 @@ function convertAnchorColorStyles(wrapper: HTMLElement): void {
 
     el.innerHTML = `<mark style="background-color: ${mappedBg};">${el.innerHTML}</mark>`;
     el.style.removeProperty('background-color');
+  }
+}
+
+/**
+ * Stamp every 2- or 3-column Google Docs table as a columns-layout candidate.
+ * Docs has no native column layout, so writers fake columns with a narrow
+ * table; the HTML paste handler expands stamped tables into
+ * `column_list`/`column` blocks instead of a table block (each table column's
+ * cells stack top-to-bottom inside one Blok column).
+ *
+ * Only tables whose rows ALL have the same cell count of 2 or 3 qualify —
+ * ragged rows or merged cells mean genuinely tabular data. Also not stamped:
+ * Google Sheets pastes (a selection there is tabular data, marked by
+ * `<google-sheets-html-origin>`) and tables nested inside another table
+ * (columns cannot live in a table cell).
+ */
+function stampColumnsCandidateTables(wrapper: HTMLElement): void {
+  if (wrapper.querySelector('google-sheets-html-origin') !== null) {
+    return;
+  }
+
+  for (const table of Array.from(wrapper.querySelectorAll('table'))) {
+    if (table.parentElement?.closest('table') !== null) {
+      continue;
+    }
+
+    const ownRows = Array.from(table.querySelectorAll('tr'))
+      .filter((row) => row.closest('table') === table);
+
+    if (ownRows.length === 0) {
+      continue;
+    }
+
+    const cellCounts = ownRows.map((row) => Array.from(row.children)
+      .filter((child) => child.tagName === 'TD' || child.tagName === 'TH')
+      .length);
+
+    const columnCount = cellCounts[0];
+    const isUniform = cellCounts.every((count) => count === columnCount);
+
+    if (isUniform && (columnCount === 2 || columnCount === 3)) {
+      table.setAttribute(COLUMNS_CANDIDATE_ATTR, '');
+    }
   }
 }
 

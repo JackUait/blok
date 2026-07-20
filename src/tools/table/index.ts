@@ -402,8 +402,11 @@ export class Table implements BlockTool {
     return {
       // colspan/rowspan must be whitelisted here or the paste sanitizer strips
       // them before onPaste runs, silently flattening merged cells.
+      // The columns-candidate stamp (set by the Google Docs preprocessor on
+      // single-row tables) must survive the whole-document sanitize pass so
+      // the HTML handler can expand the table into column blocks.
       tags: [
-        'TABLE',
+        { TABLE: { 'data-blok-columns-candidate': true } },
         'TR',
         { TH: { style: true, colspan: true, rowspan: true } },
         { TD: { style: true, colspan: true, rowspan: true } },

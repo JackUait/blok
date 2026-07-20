@@ -94,7 +94,7 @@ type BlockManagerMock = {
     name?: string;
     currentInput?: HTMLElement | null;
   } | null;
-  paste: ReturnType<typeof vi.fn<(tool: string, event: CustomEvent, replace?: boolean) => unknown>>;
+  paste: ReturnType<typeof vi.fn<(tool: string, event: CustomEvent, replace?: boolean, data?: Record<string, unknown>) => unknown>>;
   insert: ReturnType<typeof vi.fn<(payload: { tool: string; data: unknown; replace: boolean }) => unknown>>;
   setCurrentBlockByChildNode: ReturnType<typeof vi.fn<(node: HTMLElement) => unknown>>;
   setBlockParent: ReturnType<typeof vi.fn<(block: unknown, parentId: string | null) => void>>;
@@ -151,7 +151,7 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
 
   const blockManager: BlockManagerMock = {
     currentBlock: null,
-    paste: vi.fn<(tool: string, event: CustomEvent, replace?: boolean) => unknown>(),
+    paste: vi.fn<(tool: string, event: CustomEvent, replace?: boolean, data?: Record<string, unknown>) => unknown>(),
     insert: vi.fn<(payload: { tool: string; data: unknown; replace: boolean }) => unknown>(),
     setCurrentBlockByChildNode: vi.fn<(node: HTMLElement) => unknown>(),
     setBlockParent: vi.fn<(block: unknown, parentId: string | null) => void>(),
@@ -1724,19 +1724,21 @@ describe('Paste module', () => {
       expect(event1.type).toBe('tag');
       expect(shouldReplace1).toBe(true);
 
-      // Verify second call: div (inserted without replacement)
-      const [tool2, event2] = mocks.BlockManager.paste.mock.calls[1];
+      // Verify second call: div (inserted without replacement, no initial data)
+      const [tool2, event2, shouldReplace2, toolData2] = mocks.BlockManager.paste.mock.calls[1];
       expect(tool2).toBe('paragraph');
       expect(event2).toBeInstanceOf(CustomEvent);
       expect(event2.type).toBe('tag');
-      expect(mocks.BlockManager.paste.mock.calls[1].length).toBe(2);
+      expect(shouldReplace2).toBe(false);
+      expect(toolData2).toBeUndefined();
 
       // Verify third call: h1 (substituted with header tool, inserted without replacement)
-      const [tool3, event3] = mocks.BlockManager.paste.mock.calls[2];
+      const [tool3, event3, shouldReplace3, toolData3] = mocks.BlockManager.paste.mock.calls[2];
       expect(tool3).toBe('header');
       expect(event3).toBeInstanceOf(CustomEvent);
       expect(event3.type).toBe('tag');
-      expect(mocks.BlockManager.paste.mock.calls[2].length).toBe(2);
+      expect(shouldReplace3).toBe(false);
+      expect(toolData3).toBeUndefined();
     });
 
     it('processes multi-table HTML as separate table blocks via processText', async () => {

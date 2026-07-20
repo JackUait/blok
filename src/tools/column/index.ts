@@ -86,6 +86,17 @@ export class Column implements BlockTool {
       return;
     }
 
+    // NEVER seed (or self-delete) while the editor is replaying Yjs history or
+    // applying a remote/echo update. A re-applied column renders as a FRESH
+    // instance — `populated` reset, `noSeed` absent from its synced data — and
+    // its restored children's add events land AFTER this rendered() call, so
+    // getChildren() is only TRANSIENTLY empty here. Seeding now fabricates a
+    // phantom empty paragraph inside the column (the pasted-columns trailing
+    // ghost). Mirrors the identical guard in ColumnList.rendered().
+    if (this.api.blocks.isSyncingFromYjs) {
+      return;
+    }
+
     // Empty AFTER having held content: the column's last block was dragged out,
     // which re-fires rendered(). A column is pure layout, never standalone — so
     // it removes itself rather than lingering as a dead, uninteractable box.

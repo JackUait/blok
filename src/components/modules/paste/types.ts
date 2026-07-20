@@ -41,6 +41,12 @@ export interface PasteData {
    * When set, `insertPasteData` will call `setBlockParent` after inserting.
    */
   parentPasteIndex?: number;
+  /**
+   * Initial tool data for the inserted block. Used for container tools that
+   * need creation-time hints (e.g. `noSeed` on column/column_list so they
+   * don't self-populate before their pasted children are parented).
+   */
+  toolData?: Record<string, unknown>;
 }
 
 /**

@@ -594,12 +594,16 @@ export class BlockInsertion {
    * @param pasteEvent - Pasted data
    * @param replace - Should replace current block
    * @param blocksStore - The blocks store to modify
+   * @param data - Initial tool data for the inserted block, available to the
+   * tool's constructor/render BEFORE onPaste runs (creation-time hints such
+   * as `noSeed` on column containers)
    */
   public async paste(
     toolName: string,
     pasteEvent: PasteEvent,
     replace = false,
-    blocksStore: BlocksStore
+    blocksStore: BlocksStore,
+    data?: BlockToolData
   ): Promise<Block> {
     // Capture predecessor's parentId and id BEFORE insert. The predecessor is
     // the current block — whether we're replacing it in place or inserting
@@ -639,6 +643,7 @@ export class BlockInsertion {
     const block = this.yjsSync.withAtomicOperation(() => {
       return this.ctx.insert({
         tool: toolName,
+        data,
         replace,
         needToFocus: false,
         skipYjsSync: true,

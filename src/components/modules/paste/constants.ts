@@ -26,6 +26,15 @@ export const SAFE_STRUCTURAL_TAGS = new Set<string>([
 ]);
 
 /**
+ * Stamp set by the Google Docs preprocessor on a pasted `<table>` whose rows
+ * all have exactly 2 or 3 cells. The HTML handler expands a stamped table
+ * into a column layout (`column_list` + `column` blocks) instead of a table
+ * block, stacking each table column's cells top-to-bottom. Survives the
+ * whole-document sanitize pass via the Table tool's pasteConfig whitelist.
+ */
+export const COLUMNS_CANDIDATE_ATTR = 'data-blok-columns-candidate';
+
+/**
  * Attributes preserved on structural tags during paste sanitization.
  *
  * The paste pre-pass (preprocessNestedLists) deliberately stamps `aria-level`

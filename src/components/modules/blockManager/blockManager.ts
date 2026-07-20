@@ -646,13 +646,15 @@ export class BlockManager extends Module {
    * @param {string} toolName - name of Tool to insert
    * @param {PasteEvent} pasteEvent - pasted data
    * @param {boolean} replace - should replace current block
+   * @param {BlockToolData} data - initial tool data for the inserted block
    */
   public async paste(
     toolName: string,
     pasteEvent: PasteEvent,
-    replace = false
+    replace = false,
+    data?: BlockToolData
   ): Promise<Block> {
-    return this.operations.paste(toolName, pasteEvent, replace, this.blocksStore);
+    return this.operations.paste(toolName, pasteEvent, replace, this.blocksStore, data);
   }
 
   /**

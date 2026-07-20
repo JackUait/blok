@@ -241,9 +241,12 @@ export abstract class BasePasteHandler implements PasteHandler {
             const shouldReplace = index === 0 &&
               (canReplaceCurrentBlock || allowReplaceEmptyList) &&
               BlockManager.currentBlock?.isEmpty === true;
-            const pastedBlock = shouldReplace
-              ? await BlockManager.paste(pasteData.tool, pasteData.event, true)
-              : await BlockManager.paste(pasteData.tool, pasteData.event);
+            const pastedBlock = await BlockManager.paste(
+              pasteData.tool,
+              pasteData.event,
+              shouldReplace,
+              pasteData.toolData
+            );
 
             // Stamp the inherited list style/depth/checked onto the freshly
             // pasted list block. The list tool's onPaste only sets text + a
@@ -376,14 +379,14 @@ export abstract class BasePasteHandler implements PasteHandler {
     const { currentBlock } = BlockManager;
 
     if (canReplaceCurrentBlock && currentBlock && currentBlock.isEmpty) {
-      const replacedBlock = await BlockManager.paste(data.tool, data.event, true);
+      const replacedBlock = await BlockManager.paste(data.tool, data.event, true, data.toolData);
 
       Caret.setToBlock(replacedBlock, Caret.positions.END);
 
       return;
     }
 
-    const block = await BlockManager.paste(data.tool, data.event);
+    const block = await BlockManager.paste(data.tool, data.event, false, data.toolData);
 
     Caret.setToBlock(block, Caret.positions.END);
   }

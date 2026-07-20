@@ -152,7 +152,9 @@ describe('Table Tool', () => {
       expect(config).not.toBe(false);
 
       if (config !== false) {
-        expect(config.tags).toContain('TABLE');
+        // TABLE is declared as a config object so the columns-candidate stamp
+        // (data-blok-columns-candidate) survives paste sanitization.
+        expect(config.tags).toContainEqual({ TABLE: { 'data-blok-columns-candidate': true } });
       }
     });
   });

@@ -211,6 +211,15 @@ const EXPECTED_DYNAMIC_READS: ExpectedDynamicReads[] = [
       'getCellPosition reads CELL_COL_ATTR from the rendered grid (own DOM); ' +
       'parseSpan reads colspan/rowspan from pasted cells via parsePastedTable',
   },
+  {
+    file: 'src/components/modules/paste/handlers/html-handler.ts',
+    count: 1,
+    pastedAttrs: ['data-blok-columns-candidate'],
+    reason:
+      'isColumnsCandidateTable reads COLUMNS_CANDIDATE_ATTR — the stamp the ' +
+      'Google Docs preprocessor sets on single-row tables so they expand ' +
+      'into column blocks; whitelisted on TABLE in the table pasteConfig',
+  },
 ];
 
 /* ------------------------------------------------------------------ */

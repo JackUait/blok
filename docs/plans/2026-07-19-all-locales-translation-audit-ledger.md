@@ -313,7 +313,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-100` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | `root-fil_2c9_proposal_challenge` | pass | pass | pass | `F-gu-001`–`F-gu-054` | second-pass-complete |
-| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-069` | pending |
+| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-he_9dc_first_fresh` | `root-he_9dc_second_fresh` | pass | pass | pass | `F-he-001`–`F-he-069` | second-pass-complete |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-052` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
@@ -450,6 +450,7 @@ locale returns to `pending`.
 | `fi` | `root-fi_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` | `root-fil_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
 | `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | `root-fil_2c9_proposal_challenge` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` |
+| `he` | `root-he_9dc_first_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` | `root-he_9dc_second_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
@@ -5385,6 +5386,48 @@ This correction invalidates both reviews on the `91ca89a…` bytes for
 completion credit. Hebrew remains `pending` with no review digest, and two
 fresh independent 546-entry reviews must restart at entry 1 on the
 `9dc2d5fe…` bytes.
+
+### Hebrew 9dc corrected-byte complete reviews — clean
+
+Fresh reviewer `root-he_9dc_first_fresh` independently read all 546
+English/Hebrew pairs twice from entry 1 on raw Hebrew SHA-256
+`9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d`,
+without consulting tests, plans, Git metadata, other locales, or prior Hebrew
+evidence. The sealed read-only bundle is
+`/private/tmp/blok-he-audit-9dc2d5fe-first-fresh`. It records 546/546 accepted
+rows and zero proposals, reproduces raw lifecycle 398 + 121 + 27 and semantic
+lifecycle 397 literal + 122 finite + 25 registered-compatible + two no-route,
+and explicitly classifies `toolNames.text` as literal,
+`tools.video.seekValueText` as finite, and only
+`blockSettings.convertWithChildrenWarning` and `tools.columns.turnInto` as
+no-route. Root replay reproduced both complete passes and both byte-identical
+artifact replays. The replay digest, manifest, and checksum manifest are
+respectively SHA-256
+`bc76b3f985ef484e7f6eb36a1b94b7a9359e4f869a02d071137d6bc572cf4a63`,
+`eca7334f8e95d75472da206d3bebfaabc0fc8861a73e05545de97c01d40079d2`,
+and
+`d4b14adb339c7aa16dc6bf98a2e50c5bd6f68b522da6a59561bd361c42b83ee8`.
+
+Distinct reviewer `root-he_9dc_second_fresh` then independently repeated the
+complete two-pass 546-row review on the same raw bytes under the same
+clean-room exclusions and also found zero residuals. Its immutable read-only
+bundle is `/private/tmp/blok-he-9dc-second-fresh-review`. Both replay records
+are byte-identical at SHA-256
+`1f07f25065a674527c9dd3ffb5bda0c5770fba7460a92cf259b24b456ad03126`;
+the matrix is SHA-256
+`2c2f4d0e6934d47777dbd92599ce0d6b114663d3b4ad7c249868894db745e293`;
+the payload manifest, checksum manifest, and final seal are respectively
+SHA-256
+`b725688310f13f5e075f191d4c270d8a9fde5007b88208673ed50438cbf366d4`,
+`3ebfe1c63a49dd6ac12faefcd2239700f2c30ab68225125d12f5c7e27c358e35`,
+and
+`b29de75ec4cae20a25e9a4a7f4a0276278671516b26edb04839599611b37e95d`.
+Root validation freshly recomputed every core artifact, verified all 15
+sealed files, confirmed both replays match current source, and found every
+bundle file read-only. Both reviewers independently confirm all six recorded
+exact-English retentions and the same canonical lifecycle closure. Hebrew
+therefore earns structural, semantic/style, and exact-retention passes and is
+now `second-pass-complete` on the bound `9dc2d5fe…` bytes.
 
 ### Estonian, Persian, Filipino, and Dutch correction closure
 

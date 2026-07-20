@@ -144,6 +144,9 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   const liveRegistryRef = useRef<BlockPortalRegistry | null>(null);
   const wrappedToolsRef = useRef<unknown>(undefined);
   const pushedBlockConfigsRef = useRef<Map<string, Record<string, unknown>>>(new Map());
+  // Last-applied tool-level `toolbox` setting per tool name (dedupe baseline for
+  // the reactive toolbox effect below). Seeded from the construction-time tools.
+  const appliedToolboxRef = useRef<Map<string, unknown>>(new Map());
 
   // Main lifecycle effect
   useEffect(() => {
@@ -224,6 +227,12 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     liveRegistryRef.current = registry;
     wrappedToolsRef.current = wrappedTools;
     pushedBlockConfigsRef.current = new Map();
+    appliedToolboxRef.current = new Map(
+      Object.entries((currentConfig.tools ?? {}) as Record<string, unknown>).map(([name, entry]) => [
+        name,
+        entry !== null && typeof entry === 'object' ? (entry as { toolbox?: unknown }).toolbox : undefined,
+      ])
+    );
 
     const blokConfig = {
       ...currentConfig,
@@ -358,6 +367,48 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     }
   });
 
+  // Live tool-level `toolbox` setting. Toolbox membership was construction-only,
+  // which forced permission-style gating (`toolbox: false` for users who may not
+  // insert a tool) into `deps` — recreating the whole editor on a permission
+  // flip. Instead, diff each tool's `toolbox` setting against the last applied
+  // value on every render and push genuine changes through the runtime
+  // `tools.update` API (which reaches the live adapter and rebuilds the Toolbox
+  // UI). Applies only once the editor is ready — module APIs attach at isReady —
+  // and the ready transition re-renders, so a change made earlier is not lost.
+  useEffect(() => {
+    const state = stateRef.current;
+
+    if (state.editor === null || state.isDestroyed || !state.isEditorReady) {
+      return;
+    }
+
+    const latestTools = configRef.current.tools as Record<string, unknown> | undefined;
+
+    if (latestTools === null || typeof latestTools !== 'object') {
+      return;
+    }
+
+    for (const [name, entry] of Object.entries(latestTools)) {
+      // Only tools the editor was constructed with can be updated at runtime.
+      if (!appliedToolboxRef.current.has(name)) {
+        continue;
+      }
+
+      const latest =
+        entry !== null && typeof entry === 'object' ? (entry as { toolbox?: unknown }).toolbox : undefined;
+      const applied = appliedToolboxRef.current.get(name);
+
+      if (deepEqual(latest, applied)) {
+        continue;
+      }
+
+      appliedToolboxRef.current.set(name, latest);
+      (state.editor as unknown as {
+        tools?: { update: (toolName: string, config: Record<string, unknown>) => void };
+      }).tools?.update(name, { toolbox: latest });
+    }
+  });
+
   // Reactive: readOnly (object form normalized so the effect dep is a stable boolean)
   const readOnlyEnabled = normalizeReadOnlyConfig(config.readOnly).enabled;
   useEffect(() => {
@@ -393,6 +444,33 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     }
     editor.width.set(width);
   }, [editor, width]);
+
+  // Reactive: style.tokens
+  //
+  // Theme tokens were construction-only, so a host with a live light/dark
+  // toggle had to bump `deps` (destroying the editor, losing caret/history) or
+  // hand-write the global stylesheet Blok already injects. Push genuine changes
+  // through the runtime `tokens` API instead, deep-equal–deduped because
+  // `tokens` is almost always a fresh object literal each render.
+  const styleTokens = config.style?.tokens;
+  /*
+   * Seeded with the mount-time value: construction already injected those
+   * tokens, so the first effect run is a no-op and only genuine changes push.
+   */
+  const appliedTokensRef = useRef<Record<string, string> | undefined>(config.style?.tokens);
+
+  useEffect(() => {
+    if (editor === null || styleTokens === undefined) {
+      return;
+    }
+
+    if (deepEqual(styleTokens, appliedTokensRef.current)) {
+      return;
+    }
+
+    appliedTokensRef.current = styleTokens;
+    editor.tokens.set(styleTokens);
+  }, [editor, styleTokens]);
 
   // Reactive: placeholder
   const { placeholder } = config;

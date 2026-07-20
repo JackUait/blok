@@ -62,6 +62,16 @@ export class ToolsFactory {
       throw new Error(`Tool "${name}" is not registered.`);
     }
 
+    // `toolbox` is a tool-level SETTING (like `class`/`shortcut`), not nested
+    // tool config: route it to the settings level so future adapters built from
+    // this config observe the new toolbox visibility, and keep it out of the
+    // config object handed to tool constructors.
+    const { toolbox, ...nestedConfig } = config;
+
+    if ('toolbox' in config) {
+      settings.toolbox = toolbox as ToolSettings['toolbox'];
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: mutating legacy nested config in place to keep live + future adapters in sync
     if (settings.config === undefined) {
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: initialize nested config object before merging
@@ -69,7 +79,7 @@ export class ToolsFactory {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- Internal: in-place merge so the shared nested config reference reflects the update
-    Object.assign(settings.config, config);
+    Object.assign(settings.config, nestedConfig);
   }
 
   /**

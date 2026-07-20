@@ -561,6 +561,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   };
 
   /**
+   * Drops the cached tool/item lists and rebuilds the popover so runtime
+   * changes to a tool's `toolbox` setting (via `tools.update`) become visible
+   * without recreating the editor.
+   */
+  public refreshItems(): void {
+    this._toolsToBeDisplayed = undefined;
+    this._toolboxItemsToBeDisplayed = undefined;
+    this.destroyPopover();
+    this.initPopover();
+  }
+
+  /**
    * Creates toolbox popover and appends it inside wrapper element
    */
   private initPopover(): void {

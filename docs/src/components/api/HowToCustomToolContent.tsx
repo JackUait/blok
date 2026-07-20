@@ -104,11 +104,16 @@ const COMPONENT_AUTHORING_CODE: Partial<Record<string, { code: string; language:
 
 export const CalloutTool = createReactBlock<{ text: string }, { accent: string }>({
   type: 'callout',
-  toolbox: { title: 'Callout', icon: '💡' },
+  // The toolbox icon may be a React element — reuse the component you render
+  // in the block body; no parallel raw-SVG string to maintain.
+  toolbox: { title: 'Callout', icon: <CalloutIcon /> },
   // Declares the saved data shape and its defaults — this IS your save() schema.
   propSchema: { text: { default: '' } },
   // \`config\` is the tool's config from your \`tools\` map — host props
   // (permissions, URLs…) flow in here, live, no context provider needed.
+  // App-level React context (themes, stores) also reaches the component.
+  // \`commit\` is idempotent: a patch that changes nothing is a full no-op,
+  // so effects may echo current values (even on mount) without a guard.
   component: ({ data, commit, config }) => (
     <input
       className="callout"
@@ -117,6 +122,9 @@ export const CalloutTool = createReactBlock<{ text: string }, { accent: string }
       onChange={(e) => commit({ text: e.target.value })}
     />
   ),
+  // Optional read-only renderer: shown instead of \`component\` while the
+  // editor is read-only — no display-vs-edit ternary inside the block.
+  viewComponent: ({ data }) => <aside className="callout">{data.text}</aside>,
 });`,
   },
   vue: {

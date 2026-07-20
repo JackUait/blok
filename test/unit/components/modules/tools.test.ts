@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Tools } from '../../../../src/components/modules/tools';
 import { BlockToolAdapter } from '../../../../src/components/tools/block';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
@@ -837,6 +837,108 @@ describe('tools module', () => {
       expect(() => module.updateToolConfig('missing', { foo: 'bar' })).toThrowError(
         'Tool "missing" is not registered.'
       );
+    });
+
+    describe('toolbox setting updates', () => {
+      class ToolboxBlockTool {
+        public static get toolbox(): { title: string; icon: string } {
+          return {
+            title: 'Goods',
+            icon: '<svg>goods</svg>',
+          };
+        }
+
+        /**
+         *
+         */
+        public render(): HTMLElement {
+          return document.createElement('div');
+        }
+
+        /**
+         *
+         */
+        public save(): void {}
+      }
+
+      it('routes the toolbox key to the settings level so the live adapter hides its toolbox entry', async () => {
+        const module = createModule({
+          defaultBlock: 'goods',
+          tools: {
+            goods: {
+              class: ToolboxBlockTool as unknown as ToolConstructable,
+              config: { keep: 'me' },
+            },
+          },
+        });
+
+        await module.prepare();
+
+        expect(module.blockTools.get('goods')?.toolbox).toBeDefined();
+
+        module.updateToolConfig('goods', { toolbox: false });
+
+        expect(module.blockTools.get('goods')?.toolbox).toBeUndefined();
+
+        // The toolbox key is a tool-level SETTING, not nested tool config: it
+        // must never leak into the config the tool constructor receives.
+        const settings = module.blockTools.get('goods')?.settings as Record<string, unknown>;
+
+        expect(settings).not.toHaveProperty('toolbox');
+        expect(settings.keep).toBe('me');
+      });
+
+      it('re-enables the toolbox entry when a toolbox object replaces false', async () => {
+        const module = createModule({
+          defaultBlock: 'goods',
+          tools: {
+            goods: {
+              class: ToolboxBlockTool as unknown as ToolConstructable,
+            },
+          },
+        });
+
+        await module.prepare();
+
+        module.updateToolConfig('goods', { toolbox: false });
+        expect(module.blockTools.get('goods')?.toolbox).toBeUndefined();
+
+        module.updateToolConfig('goods', { toolbox: { title: 'Custom goods' } });
+
+        const entries = module.blockTools.get('goods')?.toolbox;
+
+        expect(entries).toHaveLength(1);
+        // User title overrides, tool-provided icon is preserved (standard merge).
+        expect(entries?.[0].title).toBe('Custom goods');
+        expect(entries?.[0].icon).toBe('<svg>goods</svg>');
+      });
+
+      it('notifies the Toolbar to refresh toolbox items only when toolbox changes', async () => {
+        const module = createModule({
+          defaultBlock: 'goods',
+          tools: {
+            goods: {
+              class: ToolboxBlockTool as unknown as ToolConstructable,
+            },
+          },
+        });
+
+        const refreshToolboxItems = vi.fn();
+
+        // `state` is setter-only; reach the stored modules object through the
+        // protected field to graft a Toolbar stub onto the same reference.
+        (module as unknown as { Blok: { Toolbar?: { refreshToolboxItems: () => void } } }).Blok.Toolbar = {
+          refreshToolboxItems,
+        };
+
+        await module.prepare();
+
+        module.updateToolConfig('goods', { plainConfigKey: 1 });
+        expect(refreshToolboxItems).not.toHaveBeenCalled();
+
+        module.updateToolConfig('goods', { toolbox: false });
+        expect(refreshToolboxItems).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

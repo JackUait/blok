@@ -1,5 +1,5 @@
 import type { BlokConfig, BlockToolData, OutputBlockData, OutputData } from '@bloklabs/core';
-import type { BlockAPI, BlockToolConstructable, ToolboxConfig } from '@bloklabs/core';
+import type { BlockAPI, BlockToolConstructable, ToolboxConfigEntry } from '@bloklabs/core';
 import type { InlineToolConstructable, SanitizerConfig } from '@bloklabs/core';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from '@bloklabs/core';
 import type { BlockTuneData } from '@bloklabs/core';
@@ -587,15 +587,45 @@ export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   BlockChildren: React.ComponentType;
 }
 
+/**
+ * Props handed to a React block's `viewComponent` (the read-only renderer):
+ * the entry props minus `commit` (no write path) and `readOnly` (always true).
+ */
+export type ReactBlockViewProps<Data, Config = Record<string, unknown>> = Omit<
+  ReactBlockRenderProps<Data, Config>,
+  'commit' | 'readOnly'
+>;
+
+/** A toolbox entry whose `icon` may be a React element instead of an SVG string. */
+export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
+  /**
+   * Toolbox icon. Accepts the markup string core consumes directly, or the same
+   * React element rendered in the block body — the factory serializes elements
+   * to markup once (lazily, cached), so icons are never duplicated as parallel
+   * raw SVG strings.
+   */
+  icon?: string | React.ReactElement;
+};
+
+/** Toolbox config for React blocks: single entry or several variants. */
+export type ReactToolboxConfig = ReactToolboxConfigEntry | ReactToolboxConfigEntry[];
+
 /** Spec for {@link createReactBlock}. */
 export interface CreateReactBlockSpec<
   Data extends BlockToolData = BlockToolData,
   Config = Record<string, unknown>
 > {
   type: string;
-  toolbox?: ToolboxConfig;
+  toolbox?: ReactToolboxConfig;
   propSchema: PropSchema;
   component: React.ComponentType<ReactBlockRenderProps<Data, Config>>;
+  /**
+   * Optional read-only renderer: rendered INSTEAD of `component` while the
+   * editor is read-only, so blocks need no display-vs-edit ternary. Toggling
+   * read-only swaps renderers (ephemeral state does not survive the swap);
+   * omit it to keep the single-component in-place toggle.
+   */
+  viewComponent?: React.ComponentType<ReactBlockViewProps<Data, Config>>;
   onRendered?: (block: BlockAPI) => void;
   onMoved?: (block: BlockAPI) => void;
   onRemoved?: (block: BlockAPI) => void;

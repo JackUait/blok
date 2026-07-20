@@ -250,6 +250,15 @@ export class Toolbar extends Module<ToolbarNodes> {
   /**
    * Public interface for accessing the Toolbox
    */
+  /**
+   * Rebuilds the Toolbox item list. Called by the Tools module when a tool's
+   * `toolbox` setting changes at runtime (`tools.update(name, { toolbox })`) —
+   * the Toolbox caches its items, so visibility changes need an explicit rebuild.
+   */
+  public refreshToolboxItems(): void {
+    this.toolboxInstance?.refreshItems();
+  }
+
   public get toolbox(): {
     opened: boolean | undefined; // undefined is for the case when Toolbox is not initialized yet
     close: () => void;

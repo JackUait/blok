@@ -422,6 +422,49 @@ describe('createReactBlock (React authoring factory)', () => {
     expect(Tool.__isBlokReactBlock).toBe(true);
   });
 
+  it('serializes a React element toolbox icon to markup (no parallel SVG strings)', () => {
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      toolbox: {
+        title: 'Counter',
+        icon: (
+          <svg data-icon="cart" viewBox="0 0 20 20">
+            <path d="M1 1h18" />
+          </svg>
+        ),
+      },
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <span />,
+    });
+
+    const toolbox = Tool.toolbox as { title: string; icon: string };
+
+    expect(toolbox.title).toBe('Counter');
+    expect(typeof toolbox.icon).toBe('string');
+    expect(toolbox.icon).toContain('data-icon="cart"');
+    expect(toolbox.icon).toContain('<path');
+    // Stable across accesses (serialized once, cached).
+    expect((Tool.toolbox as { icon: string }).icon).toBe(toolbox.icon);
+  });
+
+  it('serializes element icons inside array toolbox specs, passing string icons through', () => {
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      toolbox: [
+        { title: 'A', icon: '<svg>a</svg>' },
+        { title: 'B', icon: <svg data-icon="b" /> },
+      ],
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <span />,
+    });
+
+    const entries = Tool.toolbox as Array<{ title: string; icon: string }>;
+
+    expect(entries[0].icon).toBe('<svg>a</svg>');
+    expect(typeof entries[1].icon).toBe('string');
+    expect(entries[1].icon).toContain('data-icon="b"');
+  });
+
   it('supports read-only: setReadOnly toggles IN PLACE without remounting', () => {
     const { registry, unmount } = mountHost();
     const mountRuns = vi.fn();
@@ -465,6 +508,89 @@ describe('createReactBlock (React authoring factory)', () => {
 
     expect(host.querySelector('.view')?.textContent).toBe('ro:kept');
     expect(mountRuns).toHaveBeenCalledTimes(1);
+
+    unmount();
+  });
+
+  it('renders viewComponent (no commit prop) when constructed read-only', () => {
+    const { registry, unmount } = mountHost();
+    const seenViewProps: Record<string, unknown>[] = [];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ data }: ReactBlockRenderProps<CounterData>) => (
+        <span className="edit">{data.count}</span>
+      ),
+      viewComponent: props => {
+        seenViewProps.push(props as unknown as Record<string, unknown>);
+
+        return <span className="display">{props.data.count}</span>;
+      },
+    });
+
+    const tool = new Tool({
+      data: { count: 3 },
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: true,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    expect(host.querySelector('.display')?.textContent).toBe('3');
+    expect(host.querySelector('.edit')).toBeNull();
+    // A view renderer has no write path.
+    expect(seenViewProps.at(-1)).not.toHaveProperty('commit');
+    // But it keeps the rest of the entry props (data/block/config/BlockChildren).
+    expect(seenViewProps.at(-1)).toHaveProperty('block');
+    expect(seenViewProps.at(-1)).toHaveProperty('config');
+
+    unmount();
+  });
+
+  it('setReadOnly swaps between component and viewComponent in both directions', () => {
+    const { registry, unmount } = mountHost();
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ data }: ReactBlockRenderProps<CounterData>) => (
+        <span className="edit">{data.count}</span>
+      ),
+      viewComponent: ({ data }) => <span className="display">{data.count}</span>,
+    });
+
+    const tool = new Tool({
+      data: { count: 9 },
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+    expect(host.querySelector('.edit')?.textContent).toBe('9');
+    expect(host.querySelector('.display')).toBeNull();
+
+    act(() => {
+      tool.setReadOnly(true);
+    });
+
+    expect(host.querySelector('.display')?.textContent).toBe('9');
+    expect(host.querySelector('.edit')).toBeNull();
+
+    act(() => {
+      tool.setReadOnly(false);
+    });
+
+    expect(host.querySelector('.edit')?.textContent).toBe('9');
+    expect(host.querySelector('.display')).toBeNull();
 
     unmount();
   });

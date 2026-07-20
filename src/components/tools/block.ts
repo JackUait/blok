@@ -116,6 +116,18 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * Additionally, if the tool's config contains a `toolboxStyles` array, only toolbox entries
    * whose `data.style` matches one of the specified styles will be included.
    */
+  /**
+   * Replaces the USER-level toolbox setting on this live adapter, so runtime
+   * `tools.update(name, { toolbox })` calls reach an already-built adapter
+   * (its settings were spread-copied at construction and would otherwise stay
+   * frozen). `false` hides the tool from insertion surfaces; an object merges
+   * over the tool's internal toolbox config; `undefined` restores defaults.
+   * @param toolbox - new user toolbox setting
+   */
+  public setUserToolboxSetting(toolbox: ToolboxConfig | false | undefined): void {
+    this.config[UserSettings.Toolbox] = toolbox;
+  }
+
   public get toolbox(): ToolboxConfigEntry[] | undefined {
     const toolToolboxSettings = (this.constructable as BlockToolConstructable)[InternalBlockToolSettings.Toolbox];
     const userToolboxSettings = this.config[UserSettings.Toolbox];

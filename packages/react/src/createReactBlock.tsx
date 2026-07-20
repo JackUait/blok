@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ComponentType, type ReactElement } from 'react';
+import { isValidElement, useEffect, useRef, type ComponentType, type ReactElement } from 'react';
 import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { DATA_ATTR, deepEqual, fillDefaults, mountChildBlocks, type PropSchema } from '@bloklabs/core/adapters';
 import {
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
@@ -7,7 +8,7 @@ import {
   type BlockPortalRegistry,
 } from './block-portal-registry';
 import type { BlockAPI } from '@/types/api';
-import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig } from '@/types/tools';
+import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig, ToolboxConfigEntry } from '@/types/tools';
 
 export type { PropSchema, PropSchemaEntry } from '@bloklabs/core/adapters';
 
@@ -21,7 +22,12 @@ const INTERNAL_CONFIG_KEYS: readonly string[] = [
 export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   /** Frozen snapshot of the block data. Re-rendered with a new value on change; never mutate. */
   data: Readonly<Data>;
-  /** The ONLY data write path: merge a partial patch and sync once. */
+  /**
+   * The ONLY data write path: merge a partial patch and sync once. Idempotency
+   * is part of the public contract — a patch that changes nothing is a FULL
+   * no-op (no re-render, no change event), so effects may echo current values
+   * through `commit` on any render, including mount, without a guard.
+   */
   commit: (patch: Partial<Data>) => void;
   /** This block's per-block API (id, connection methods, dispatchChange…). */
   block: BlockAPI;
@@ -46,16 +52,48 @@ export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   BlockChildren: ComponentType;
 }
 
+/**
+ * Props handed to a React block's `viewComponent` (the read-only renderer):
+ * the entry props minus `commit` — a display renderer has no write path.
+ */
+export type ReactBlockViewProps<Data, Config = Record<string, unknown>> = Omit<
+  ReactBlockRenderProps<Data, Config>,
+  'commit' | 'readOnly'
+>;
+
+/** A toolbox entry whose `icon` may be a React element instead of an SVG string. */
+export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
+  /**
+   * Toolbox icon. Core's toolbox chrome consumes markup strings, but React
+   * authors may pass the same element they render in the block body — the
+   * factory serializes it to markup once (lazily, cached) so icons are never
+   * duplicated as parallel raw SVG strings.
+   */
+  icon?: string | ReactElement;
+};
+
+/** Toolbox config for React blocks: single entry or several variants. */
+export type ReactToolboxConfig = ReactToolboxConfigEntry | ReactToolboxConfigEntry[];
+
 /** Spec for {@link createReactBlock}. */
 export interface CreateReactBlockSpec<Data = BlockToolData, Config = Record<string, unknown>> {
   /** Tool type name (registered key). */
   type: string;
-  /** Optional toolbox entry. */
-  toolbox?: ToolboxConfig;
+  /** Optional toolbox entry; `icon` accepts a React element (see {@link ReactToolboxConfigEntry}). */
+  toolbox?: ReactToolboxConfig;
   /** Declarative defaults that also define the exact `save()` key set. */
   propSchema: PropSchema;
   /** The component rendered for each block instance. */
   component: ComponentType<ReactBlockRenderProps<Data, Config>>;
+  /**
+   * Optional read-only renderer: when the editor is read-only, this component
+   * is rendered INSTEAD of `component`, so blocks don't hand-plumb a
+   * display-vs-edit ternary. It receives the entry props minus `commit` (no
+   * write path) and `readOnly` (always true by definition). Toggling read-only
+   * swaps renderers — ephemeral state does not survive the swap; omit
+   * `viewComponent` to keep the single-component in-place toggle instead.
+   */
+  viewComponent?: ComponentType<ReactBlockViewProps<Data, Config>>;
   /** Optional lifecycle callbacks mapped from Blok's block hooks. */
   onRendered?: (block: BlockAPI) => void;
   onMoved?: (block: BlockAPI) => void;
@@ -96,12 +134,81 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
   readonly toolbox: ToolboxConfig | undefined;
   readonly isReadOnlySupported: boolean;
 } {
+  /**
+   * Serialize a React element (an icon) to markup with a throwaway synchronous
+   * root. Runs outside any React render (core reads `toolbox` imperatively), so
+   * the sync flush is legal; the result is cached by `resolveToolbox`.
+   */
+  const renderElementToMarkup = (element: ReactElement): string => {
+    const mount = document.createElement('div');
+    const root = createRoot(mount);
+
+    flushSync(() => {
+      root.render(element);
+    });
+
+    const markup = mount.innerHTML;
+
+    root.unmount();
+
+    return markup;
+  };
+
+  const convertToolbox = (): ToolboxConfig | undefined => {
+    const toEntry = (entry: ReactToolboxConfigEntry): ToolboxConfigEntry =>
+      isValidElement(entry.icon) ? { ...entry, icon: renderElementToMarkup(entry.icon) } : (entry as ToolboxConfigEntry);
+
+    if (spec.toolbox === undefined) {
+      return undefined;
+    }
+
+    return Array.isArray(spec.toolbox) ? spec.toolbox.map(toEntry) : toEntry(spec.toolbox);
+  };
+
+  /** Lazily-computed core-compatible toolbox (React element icons serialized once). */
+  const toolboxCache: { resolved: boolean; value: ToolboxConfig | undefined } = {
+    resolved: false,
+    value: undefined,
+  };
+
+  const resolveToolbox = (): ToolboxConfig | undefined => {
+    if (!toolboxCache.resolved) {
+      toolboxCache.value = convertToolbox();
+      toolboxCache.resolved = true;
+    }
+
+    return toolboxCache.value;
+  };
+
+  /**
+   * The component actually registered with the portal: when the spec provides a
+   * `viewComponent`, this chooser swaps to it while read-only (dropping the
+   * write-path props); otherwise the edit component is registered directly and
+   * keeps its in-place read-only toggle semantics.
+   */
+  const ReadOnlySwitch = (props: ReactBlockRenderProps<Data, Config>): ReactElement => {
+    const ViewComponent = spec.viewComponent;
+
+    if (props.readOnly && ViewComponent !== undefined) {
+      const { commit: _commit, readOnly: _readOnly, ...viewProps } = props;
+
+      return <ViewComponent {...(viewProps as ReactBlockViewProps<Data, Config>)} />;
+    }
+
+    const EditComponent = spec.component;
+
+    return <EditComponent {...props} />;
+  };
+
+  const entryComponent: ComponentType<ReactBlockRenderProps<Data, Config>> =
+    spec.viewComponent === undefined ? spec.component : ReadOnlySwitch;
+
   return class ReactBlockTool {
     /** Marker so `useBlok` can detect react-block tools and inject the registry. */
     public static readonly __isBlokReactBlock = true as const;
 
     public static get toolbox(): ToolboxConfig | undefined {
-      return spec.toolbox;
+      return resolveToolbox();
     }
 
     /**
@@ -190,7 +297,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
       this.registry?.register(this.blockApi.id, {
         hostEl: host,
-        component: spec.component as unknown as ComponentType<Record<string, unknown>>,
+        component: entryComponent as unknown as ComponentType<Record<string, unknown>>,
         props: this.buildProps(),
         toolName: this.toolName,
       });

@@ -1,11 +1,11 @@
-import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings } from '../../../types';
+import type { SanitizerConfig, ToolConfig, ToolConstructable, ToolSettings, ToolboxConfig } from '../../../types';
 import { Stub } from '../../tools/stub';
 import { Module } from '../__module';
 import { CopyLinkTune } from '../block-tunes/block-tune-copy-link';
 import { DeleteTune } from '../block-tunes/block-tune-delete';
 import { CriticalError } from '../errors/critical';
 import { ConvertInlineTool } from '../inline-tools/inline-tool-convert';
-import type { BlockToolAdapter } from '../tools/block';
+import { BlockToolAdapter } from '../tools/block';
 import { ToolsCollection } from '../tools/collection';
 import { ToolsFactory } from '../tools/factory';
 import type { InlineToolAdapter } from '../tools/inline';
@@ -228,6 +228,20 @@ export class Tools extends Module {
     }
 
     this.getFactory().updateConfig(name, config);
+
+    // A `toolbox` key is a tool-level setting: the factory stores it for future
+    // adapters, but the LIVE adapter holds a spread-copied settings object, so
+    // it must be updated explicitly — and the Toolbox UI caches its item list,
+    // so it must be told to rebuild.
+    if ('toolbox' in config) {
+      const adapter = this.available.get(name) ?? this.unavailable.get(name);
+
+      if (adapter instanceof BlockToolAdapter) {
+        adapter.setUserToolboxSetting(config.toolbox as ToolboxConfig | false | undefined);
+      }
+
+      this.Blok?.Toolbar?.refreshToolboxItems();
+    }
   }
 
   /**

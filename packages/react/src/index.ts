@@ -9,6 +9,9 @@ export { createReactBlock } from './createReactBlock';
 export type {
   CreateReactBlockSpec,
   ReactBlockRenderProps,
+  ReactBlockViewProps,
+  ReactToolboxConfig,
+  ReactToolboxConfigEntry,
   PropSchema,
   PropSchemaEntry,
 } from './createReactBlock';

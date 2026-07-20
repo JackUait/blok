@@ -400,6 +400,41 @@ describe('Toolbox', () => {
     });
   });
 
+  describe('refreshItems', () => {
+    it('recomputes displayed tools and rebuilds the popover with fresh items', () => {
+      // Adapter whose toolbox visibility can be flipped at runtime (the shape
+      // `tools.update(name, { toolbox: false })` produces on a live adapter).
+      let toolboxVisible = true;
+      const dynamicAdapter = {
+        name: 'dynamicTool',
+        get toolbox(): { title: string; icon: string } | undefined {
+          return toolboxVisible
+            ? { title: 'Dynamic Tool',
+              icon: '<svg>dynamic</svg>' }
+            : undefined;
+        },
+      } as unknown as BlockToolAdapter;
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: createToolsCollection([['dynamicTool', dynamicAdapter]]),
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      expect(lastPopoverItems.value).toHaveLength(1);
+      expect(toolbox.isEmpty).toBe(false);
+
+      toolboxVisible = false;
+      toolbox.refreshItems();
+
+      // The stale popover was torn down and a new one built without the tool.
+      expect(mockPopoverInstance.destroy).toHaveBeenCalled();
+      expect(lastPopoverItems.value).toHaveLength(0);
+      expect(toolbox.isEmpty).toBe(true);
+    });
+  });
+
   describe('getElement', () => {
     it('should return the toolbox element', () => {
       const toolbox = new Toolbox({

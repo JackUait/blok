@@ -1,5 +1,5 @@
 import { BlockToolAdapter } from '../tools/adapters/block-tool-adapter';
-import { ToolConfig, ToolConstructable, ToolSettings } from '../tools';
+import { ToolConfig, ToolConstructable, ToolSettings, ToolboxConfig } from '../tools';
 import { ThemeMode } from './theme';
 
 /**
@@ -36,9 +36,16 @@ export interface Tools {
    * constructor). Blocks created after the call (and the next operation on the
    * live tool) pick up the new config; blocks already mounted keep their current
    * config until they are re-rendered.
+   *
+   * A `toolbox` key is treated as the tool-level SETTING (same as `toolbox` in
+   * the `tools` map), not nested tool config: pass `toolbox: false` to hide the
+   * tool from insertion surfaces at runtime (existing blocks keep rendering) or
+   * a toolbox object to (re)show it — e.g. permission-based insert gating
+   * without recreating the editor.
    * @param name - registered tool name
-   * @param config - partial tool config to merge in
+   * @param config - partial tool config to merge in, optionally with a
+   * tool-level `toolbox` setting
    * @throws if `name` is not a registered tool
    */
-  update(name: string, config: Partial<ToolConfig>): void;
+  update(name: string, config: Partial<ToolConfig> & { toolbox?: ToolboxConfig | false }): void;
 }

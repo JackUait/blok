@@ -16,6 +16,7 @@ interface MockInstance {
   width: { set: ReturnType<typeof vi.fn> };
   placeholder: { set: ReturnType<typeof vi.fn> };
   render: ReturnType<typeof vi.fn>;
+  tools: { update: ReturnType<typeof vi.fn> };
   config: { data?: unknown; onSave?: (...args: unknown[]) => void };
 }
 
@@ -35,6 +36,7 @@ vi.mock('../../../src/blok', () => ({
     public theme = { set: vi.fn() };
     public width = { set: vi.fn() };
     public placeholder = { set: vi.fn() };
+    public tools = { update: vi.fn() };
     public render = vi.fn();
     public config: { holder: HTMLElement; data?: unknown; onSave?: (...args: unknown[]) => void };
     constructor(config: { holder: HTMLElement; data?: unknown; onSave?: (...args: unknown[]) => void }) {
@@ -350,5 +352,79 @@ describe('useBlok reactive data', () => {
     expect(instances[0].render).toHaveBeenCalledWith(v2);
     expect(v1).toEqual(v1Snapshot);
     expect(v2).toEqual(v2Snapshot);
+  });
+});
+
+describe('useBlok reactive tool-level toolbox setting', () => {
+  beforeEach(() => {
+    instances = [];
+    deferReady = false;
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  class GoodsTool {}
+
+  const toolsFor = (canManage: boolean): UseBlokConfig['tools'] =>
+    ({
+      goods: {
+        class: GoodsTool,
+        config: { canManage },
+        ...(canManage ? {} : { toolbox: false as const }),
+      },
+    }) as unknown as UseBlokConfig['tools'];
+
+  it('applies a toolbox visibility flip via tools.update without recreating the editor', async () => {
+    const { rerender } = render(<Harness config={{ tools: toolsFor(true) }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances).toHaveLength(1);
+    expect(instances[0].tools.update).not.toHaveBeenCalled();
+
+    rerender(<Harness config={{ tools: toolsFor(false) }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances).toHaveLength(1); // no recreate
+    expect(instances[0].tools.update).toHaveBeenCalledWith('goods', { toolbox: false });
+
+    rerender(<Harness config={{ tools: toolsFor(true) }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances[0].tools.update).toHaveBeenLastCalledWith('goods', { toolbox: undefined });
+  });
+
+  it('does not call tools.update when the toolbox setting is unchanged (new object, same content)', async () => {
+    const withEntry = (): UseBlokConfig['tools'] =>
+      ({ goods: { class: GoodsTool, toolbox: { title: 'Goods' } } }) as unknown as UseBlokConfig['tools'];
+
+    const { rerender } = render(<Harness config={{ tools: withEntry() }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    rerender(<Harness config={{ tools: withEntry() }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances[0].tools.update).not.toHaveBeenCalled();
+  });
+
+  it('defers a toolbox change until the editor is ready, then applies it', async () => {
+    deferReady = true;
+
+    const { rerender } = render(<Harness config={{ tools: toolsFor(true) }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    rerender(<Harness config={{ tools: toolsFor(false) }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    // Editor not ready yet: the tools API is not attached, so nothing is applied.
+    expect(instances[0].tools.update).not.toHaveBeenCalled();
+
+    await act(async () => {
+      instances[0].resolveReady();
+      await Promise.resolve();
+    });
+
+    expect(instances[0].tools.update).toHaveBeenCalledWith('goods', { toolbox: false });
   });
 });

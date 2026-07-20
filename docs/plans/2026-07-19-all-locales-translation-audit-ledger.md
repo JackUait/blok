@@ -273,7 +273,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | `root-arabic_546_current_first` | pass | pass | pass | `F-da-001`–`F-da-088` | second-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
-| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-dv-001`–`F-dv-042` | pending |
+| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-dv-001`–`F-dv-059` | pending |
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
@@ -4716,6 +4716,49 @@ encoding checks pass with only the catalogued identical-value warnings. This
 stopped work earns no complete-pass credit: Dhivehi must restart both complete
 546-entry reviews at entry 1 on the new digest.
 
+### Dhivehi corrected-byte fresh first-pass residual — remediated
+
+Reviewer `root-dhivehi_postfix_first_blind` restarted at entry 1 and reread
+all 546 English/Dhivehi pairs on raw dictionary SHA-256
+`e4ac1a27c6bb61f7fe228734eb6636754da99bee16994eaa20519a7a346ec9be`.
+The source-order matrix is bound at SHA-256
+`1b0983bb0c4b5b3c4d1f422354d2b11ca09a10f3be3c2928c4352c9217685bf8`;
+the 17-row residual artifact is bound at SHA-256
+`a406e325b300d69a422bc96576e2178a483c91e1f23b8a57f9091e0e3273c9bd`.
+The stopped complete review independently verifies all 546 identities, the
+exact 533 consumed-or-built-compatible + 12 source-only + 1 dormant lifecycle,
+all 38 placeholder-bearing values with 54 occurrences, all 42 earlier
+findings, and all nine exact-English retentions.
+
+Distinct proposal-aware reviewer
+`root-dhivehi_postfix_first_blind-dv_proposal_challenge` accepted all 17
+corrections without amendment or rejection. Its challenge map is bound at
+SHA-256
+`ccc1f1e0b6e0b8dcadf9b5f8dac2b95a5ea3ea646476c595c0b82cdb9b91b616`;
+the exact correction map is bound at SHA-256
+`c5035def9828120e8edb4d0833c32dc79e16167eb531c1a40a4ad9fb70c79808`;
+and its validator is bound at SHA-256
+`2624b3f3932e7efaf374d89164b7b4ad5d40d5db421a60a2516b3ef980e418a6`
+and freshly reports `VALID`. Every accepted value is NFC and free of forbidden
+or bidi control characters, and `tools.video.seekValueText` preserves both
+placeholder identities while using valid Dhivehi order.
+
+The same review lineage independently reproduced the four-key
+locale-independent interpolation defect now closed by `F-global-009`.
+`tools.video.seekValueText` also has a separate Dhivehi connector defect, so
+its localized correction remained necessary after caller remediation. The 17
+copy findings were recorded as open `F-dv-043`–`F-dv-059` before the dictionary
+edit. That red gate failed exactly those 17 cases while the other 3,221 cases
+passed. Applying the exact accepted map changed only those 17 keys and produced
+raw dictionary SHA-256
+`a5735ad7aaef35116c938b341f6d5444a37df32bf3949dfac88960e7ca71df19`;
+the gate then passed all 3,238 cases. All 17 findings are verified. The stopped
+review still earns no complete-pass credit. The complete i18n suite passes all
+3,955 cases across nine files; translation completeness, integrity, source
+coverage, docs translation, encoding, exact-retention, and whitespace checks
+also pass with only the repository's known warnings. Both full 546-entry
+reviews must restart at entry 1 on these new bytes.
+
 ### Gujarati 546-key current-byte findings — corrections pending
 
 A strict-blind reviewer reread all 546 current English/Gujarati pairs on raw
@@ -7840,6 +7883,23 @@ follows the global transition rule above.
 | `F-dv-040` | `dv` | `tools.video.toggleTimeDisplay` | accessibility / semantic omission | `"ވަގުތު ދެއްކުން ބަދަލުކުރޭ"` | `"ވޭތުވެދިޔަ ވަގުތާއި ބާކީ ހުރި ވަގުތުގެ ދެމެދު ބަދަލުކުރޭ"` | The current label says only “change time display” and omits the elapsed-versus-remaining states. The independent challenge kept the exact replacement. | verified |
 | `F-dv-041` | `dv` | `tools.video.ctxCopyUrlAtTime` | media semantics | `"މިހާރުގެ ވަގުތުގައި ވީޑިއޯ URL ކޮޕީކުރޭ"` | `"މިހާރުގެ ވަގުތު ހިމެނޭ ވީޑިއޯ URL ކޮޕީކުރޭ"` | The current adverbial wording reads as copying now rather than copying a URL containing the current playback timestamp. The independent challenge kept the exact replacement. | verified |
 | `F-dv-042` | `dv` | `tools.video.ctxStats` | source drift / media terminology | `"ތަފްޞީލީ ތަފާސްހިސާބު"` | `"ޖެއްސުމުގެ ތަފާސްހިސާބު"` | The current “detailed statistics” omits that these are playback statistics. The independent challenge kept the exact replacement. | verified |
+| `F-dv-043` | `dv` | `tools.columns.resizeAriaLabel` | accessibility / semantic scope | `"ކޮލަމްތައް ބަދަލުކުރޭ"` | `"ކޮލަމްތަކުގެ ފުޅާމިން ބަދަލުކުރޭ"` | The separator changes and exposes column width; the current accessible label says only to change columns. The independent challenge accepted the explicit width label. | verified |
+| `F-dv-044` | `dv` | `tools.spacer.resizeAriaLabel` | accessibility / semantic scope | `"ހުސް ޖާގަ ބަދަލުކުރޭ"` | `"ހުސް ޖާގަގެ އުސްމިން ބަދަލުކުރޭ"` | The separator changes and exposes spacer height; the accepted label supplies the missing genitive relation and height dimension. | verified |
+| `F-dv-045` | `dv` | `tools.callout.noEmojisFound` | spelling / terminology consistency | `"އީމޯޖީ ނުފެނުނު"` | `"އިމޯޖީ ނުފެނުނު"` | The current initial-vowel spelling is the only outlier on the emoji-picker surface; the accepted form matches all adjacent emoji strings. | verified |
+| `F-dv-046` | `dv` | `tools.link.jumpToSection` | action grammar / register | `"ބަޔަކަށް ދާންވީ"` | `"ބަޔަށް ދޭ"` | The current future-or-obligation construction is awkward as an action label; the accepted concise imperative directly names the jump action. | verified |
+| `F-dv-047` | `dv` | `tools.image.errorUploadFailed` | failure terminology / naturalness | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The current phrase imports the English failure verb; the accepted native status already names the same image-upload failure elsewhere in the catalog. | verified |
+| `F-dv-048` | `dv` | `tools.file.errorUploadFailed` | failure terminology / family consistency | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The accepted native failure status aligns the file error with the established media-family terminology. | verified |
+| `F-dv-049` | `dv` | `tools.video.errorUploadFailed` | failure terminology / family consistency | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The accepted native failure status removes the mixed-language verb and aligns the video upload state with its media family. | verified |
+| `F-dv-050` | `dv` | `tools.audio.errorUploadFailed` | failure terminology / family consistency | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The accepted native failure status removes the mixed-language verb and aligns both audio upload-error surfaces. | verified |
+| `F-dv-051` | `dv` | `tools.image.errorDefaultMessage` | source fidelity / recovery guidance | `"URL އިން ގޯހެއް ދިނީ. އެހެން މަޞްދަރެއް ޓެސްޓްކުރޭ ނުވަތަ ފައިލް އަލުން އަޕްލޯޑް ކުރޭ."` | `"މި URL އިން ފޮޓޯ ލޯޑެއް ނުވި. އެހެން މަޞްދަރެއް ބޭނުންކޮށް ބަލާ ނުވަތަ ފައިލް އަލުން އަޕްލޯޑް ކުރޭ."` | The current copy describes a generic URL error and tells the user to test a source; the accepted message restores the failed image load and intended recovery actions. | verified |
+| `F-dv-052` | `dv` | `tools.image.errorRetry` | action terminology / transliteration | `"އަލުން ޓްރައި"` | `"އަލުން ބަލާ"` | The accepted native imperative is clearer on the retry button and removes an avoidable English transliteration. | verified |
+| `F-dv-053` | `dv` | `tools.file.previewBackToContent` | navigation grammar / action clarity | `"ކޮންޓެންޓަށް ފަހަތަށް"` | `"ކޮންޓެންޓަށް އެނބުރޭ"` | The current fragment is not a finite action; the accepted return imperative is grammatical and unambiguous in preview navigation. | verified |
+| `F-dv-054` | `dv` | `tools.audio.titlePlaceholder` | tool scope / terminology | `"ލަވައިގެ ނަން"` | `"އޯޑިއޯގެ ނަން"` | The audio block accepts arbitrary audio, while the current placeholder restricts the field to a song title. | verified |
+| `F-dv-055` | `dv` | `tools.database.renameView` | action terminology / naturalness | `"ރީނޭމް"` | `"ނަން ބަދަލުކުރޭ"` | The accepted native rename action is already established in the catalog and is clearer as both an action and input label. | verified |
+| `F-dv-056` | `dv` | `tools.database.duplicateView` | action terminology / naturalness | `"ޑުޕްލިކޭޓް"` | `"ކޮޕީ ހަދާ"` | The accepted native duplicate action matches adjacent product terminology and is clearer than the current transliteration. | verified |
+| `F-dv-057` | `dv` | `tools.database.deleteView` | action terminology / naturalness | `"ޑިލީޓް"` | `"ފޮހެލާ"` | The accepted native delete action matches adjacent destructive-action terminology and removes the isolated transliteration. | verified |
+| `F-dv-058` | `dv` | `tools.database.propertyTypeNumber` | spelling / terminology consistency | `"ނަންބަރ"` | `"ނަންބަރު"` | The accepted spelling is the catalog’s consistent standalone form of the number property term. | verified |
+| `F-dv-059` | `dv` | `tools.video.seekValueText` | accessibility / placeholder relation / grammar | `"{total} ން {current}"` | `"{total} އިން {current}"` | The full ablative connector is required between the total and current time values. Dhivehi validly orders total before current, and both placeholders remain exact. | verified |
 | `F-fa-002` | `fa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"بازشوی خالی. برای افزودن بلوک‌ها کلیک کنید یا آن‌ها را اینجا رها کنید."` | `"بازشوی خالی. برای افزودن یک بلوک کلیک کنید یا بلوک‌ها را اینجا بکشید."` | The old click clause incorrectly refers to plural blocks and the drop clause uses release rather than drag. The replacement names singular `یک بلوک`, preserves ZWNJ plural, and follows Google's Persian [`کلیک کنید` and `بکشید`](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=fa) terminology. | verified |
 | `F-he-002` | `he` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"מתקפל ריק. לחץ או גרור בלוקים פנימה."` | `"מקטע מתקפל ריק. לחץ להוספת בלוק או גרור בלוקים לכאן."` | The earlier correction supplied the click-created singular block and plural drag destination. A fresh 546-entry reread independently found that the remaining adjective-as-noun opener was still unnatural; the challenged final adds the head noun `מקטע` while preserving the verified click/drag clause exactly. | verified |
 | `F-he-003` | `he` | `toolbox.optionAddAbove` | caller-aware translation quality | `"Option-לחץ להוספה מעל"` | `"לחץ עם Option כדי להוסיף מעל"` | The current LTR key name immediately hyphenated to an RTL imperative is a fragile mixed-direction compound. The proposal uses natural Hebrew modifier order, removes the bidi-sensitive hyphen, and preserves the literal Option key name. Independent disposition: keep. | verified |

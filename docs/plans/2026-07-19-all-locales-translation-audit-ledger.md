@@ -281,10 +281,10 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-101` | pending |
 | `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
-| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-fr-001`–`F-fr-134` | pending |
+| `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | — | pass | pass | pass | `F-fr-001`–`F-fr-134` | first-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
-| `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-czech_546_first_pass` | — | pass | pass | pass | `F-hi-001`–`F-hi-079` | first-pass-complete |
+| `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | — | — | pending | pending | pending | `F-hi-001`–`F-hi-085` | pending |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001` | pending |
@@ -412,7 +412,7 @@ locale returns to `pending`.
 | `el` | `root-czech_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` | — | — |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
-| `hi` | `root-czech_546_first_pass` | `sha256:8e11b2d7043c665a0262c6b8c6d6033144993d63ddf954c7b548181e354b217b` | — | — |
+| `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | — | — |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 | `ja` | `root-azeri_proposal_challenge` | `sha256:8287249e1bdf53138cf0d0d95890a7ffc3fcfcefbd55d1985c144c316fa3bd73` | — | — |
 
@@ -1837,6 +1837,25 @@ failed on exactly the recorded old value and passes after the correction. The
 corrected raw French dictionary SHA-256 is
 `23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696`.
 
+Reviewer `root-czech_546_first_pass` then restarted at entry 1 and directly
+reread all 546 corrected English/French pairs in source order without using
+the earlier artifacts as pair evidence. It independently upheld
+`F-fr-001` through `F-fr-134`, all 23 retentions with the intentional
+`R-fr-012` gap, 38 placeholder-bearing values with 54 occurrences, 44 aliases
+in 14 groups and 48 references, 117 provider compositions, 20 block-color
+titles, three migrations, 80 changed-English rows covering 78 keys, nine
+dynamic-count contracts, and the complete 533+12+1 caller partition. No
+residual or uncertainty survived.
+
+The sealed current-byte artifact is
+`/tmp/blok-fr-546-first-pass-post-f134-clean.json` with SHA-256
+`6a0316d50229ab24e5dab5c282037c14b8091163b80d3875566bdd5fcae49b98`;
+its independent validator passed and has SHA-256
+`d603918fe97f505da5fb53dc69acd230e551535a65f6f220a0463fb27b3192a4`.
+This review binds to raw French dictionary SHA-256
+`23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696`.
+French is `first-pass-complete` pending a distinct complete second pass.
+
 ### Finnish (`fi`) — pending after second-pass residuals
 
 The earlier current-byte reviewer inspected 539/539 Finnish values in source
@@ -1979,6 +1998,49 @@ its independent validator passed 3,997 assertions. This review binds to raw
 Hindi dictionary SHA-256
 `8e11b2d7043c665a0262c6b8c6d6033144993d63ddf954c7b548181e354b217b`.
 Hindi is `first-pass-complete` pending a distinct complete second pass.
+
+Reviewer `root-danish_546_first_pass` then began the distinct second pass at
+entry 1 and directly reread all 546 English/Hindi pairs on those bytes. It
+independently upheld `F-hi-001` through `F-hi-079`, all seven retentions, 38
+placeholder-bearing values with 54 occurrences, 44 aliases in 14 groups and
+48 references, 117 provider compositions, 20 block-color titles, three
+migrations, 80 changed-English rows covering 78 keys, and the complete
+533+12+1 caller partition. It nevertheless found six residuals:
+`F-hi-080` through `F-hi-085`. These correct the drag-handle instruction, name
+the video range slider by its playback-position value, state that the copied
+timestamped video URL starts from the current playback time, and repair the
+three coupled settings-tooltip fragments.
+
+The six corrections were challenged against their callers and rendered
+compositions. In particular, the settings fragments now produce
+`एक क्लिक से मेनू खोलें`,
+`एक क्लिक या कीबोर्ड शॉर्टकट ⌘/ से मेनू खोलें`, and
+`एक क्लिक या कीबोर्ड शॉर्टकट Ctrl+/ से मेनू खोलें`. The video seek value
+remains a range-control name rather than an imperative because the separate
+value text announces the current and total times. The timestamp wording also
+matches the starting-time relation in Google's cited Hindi sharing
+instructions.
+
+The sealed attempted-pass artifact is
+`/tmp/blok-hi-546-second-pass-post-f079.json` with SHA-256
+`e2236dc9f8b52c51a7fe8a51228de0b72de137a0bc35ca7f466180b8e8c3ea65`;
+its canonical payload SHA-256 is
+`5dc46cd54fcd25d5bf49489d17becfd57ce26ffe0e371847cab900a1a17d4077`.
+The independent validator has SHA-256
+`192cff3a682a0c7586cbbdec1c787f4497c038ab9bce10db5744ffa2ed0c92ed`
+and passed 9,553 assertions. It binds to the superseded raw dictionary
+SHA-256
+`8e11b2d7043c665a0262c6b8c6d6033144993d63ddf954c7b548181e354b217b`
+and independently projects the final corrected SHA-256
+`3c874d1cfb128805aff1293724a52d3154fc028b5299152a53418458a9aaaa4d`.
+
+Each focused expectation failed on exactly its recorded old value before
+remediation and all six pass afterward. The full guideline suite, translation
+checker, checker unit suite, exact-English gate, and 239 relevant caller tests
+also pass on the corrected bytes. Because these corrections invalidate the
+earlier first-pass credit, Hindi returns to `pending`; two fresh complete
+current-byte passes must restart on SHA-256
+`3c874d1cfb128805aff1293724a52d3154fc028b5299152a53418458a9aaaa4d`.
 
 ### Italian (`it`) — current 546-key first pass complete
 
@@ -4823,6 +4885,12 @@ follows the global transition rule above.
 | `F-hi-077` | `hi` | `tools.video.ctxStats` | source synchronization / neutral terminology | `"विस्तृत आंकड़े"` | `"प्लेबैक के आंकड़े"` | The corrected source is neutral Playback statistics; the replacement names the playback context rather than merely “detailed statistics.” | verified |
 | `F-hi-078` | `hi` | `tools.callout.emojiSearchResults` | source synchronization / count-neutral accessibility | `"{count} इमोजी मिलीं"` | `"मिलते-जुलते इमोजी: {count}"` | The emoji-search live region can announce one or many matches; the label-before-count construction follows the corrected source without fixing the noun to one number. | verified |
 | `F-hi-079` | `hi` | `a11y.blocksDuplicated` | accessibility / caller destination semantics | `"{count} ब्लॉक {position} से कॉपी किए गए"` | `"{count} ब्लॉक कॉपी किए गए। शुरुआती स्थान: {position}"` | `DragA11y.announceDuplicateComplete` supplies the first newly duplicated block's destination index, not a source position. The replacement removes the misleading “copied from” construction while preserving both placeholders. | verified |
+| `F-hi-080` | `hi` | `a11y.dragHandle` | accessibility / action result / natural word order | `"खींचकर ब्लॉक ले जाएं या मेनू के लिए क्लिक करें"` | `"ब्लॉक को खींचकर ले जाएं या मेनू खोलने के लिए क्लिक करें"` | The settings toggler is both the drag handle and the menu-opening control. The replacement marks the dragged block as the object, places it before the conjunctive verb, and reuses this locale's established `मेनू खोलने के लिए क्लिक करें` instruction. | verified |
+| `F-hi-081` | `hi` | `tools.video.seek` | accessibility / media-control role | `"सीक करें"` | `"प्लेबैक की पोज़िशन"` | This value is the accessible name of a range slider, not a one-shot seek command. The replacement names the playback-position value exposed by the control and avoids unexplained transliterated jargon. | verified |
+| `F-hi-082` | `hi` | `tools.video.ctxCopyUrlAtTime` | media context / action precision | `"मौजूदा समय पर वीडियो URL कॉपी करें"` | `"इस समय से वीडियो URL कॉपी करें"` | The context action appends `#t=` with the video's current playback time. The `इस समय से` relation identifies the link's starting point instead of the current wall-clock time and follows [Google Drive's Hindi instructions for sharing a video from a specific time](https://support.google.com/drive/answer/2423694?hl=hi). | verified |
+| `F-hi-083` | `hi` | `blockSettings.clickAction` | caller composition / natural word order | `"क्लिक करें"` | `"एक क्लिक"` | This fragment begins both settings-tooltip compositions. The noun phrase lets the caller produce the natural read-only instruction `एक क्लिक से मेनू खोलें` and coordinate cleanly with an optional shortcut. | verified |
+| `F-hi-084` | `hi` | `blockSettings.orConjunction` | caller composition / shortcut wording | `" या यह कीबोर्ड शॉर्टकट इस्तेमाल करें: "` | `" या कीबोर्ड शॉर्टकट "` | The current imperative is inserted inside another instruction and preserves English clause order. The replacement coordinates the click and shortcut as parallel means while retaining the required boundary spaces. | verified |
+| `F-hi-085` | `hi` | `blockSettings.openMenuAction` | caller composition / natural word order | `" मेनू खोलने के लिए"` | `" से मेनू खोलें"` | This final fragment must complete both `एक क्लिक से मेनू खोलें` and `एक क्लिक या कीबोर्ड शॉर्टकट Ctrl+/ से मेनू खोलें`; the postpositional construction gives Hindi its natural means-before-action order. | verified |
 | `F-hr-001` | `hr` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti oblikovanje"` | Microsoft’s Croatian editor UI uses the exact concise command [Očisti oblikovanje](https://support.microsoft.com/hr-HR/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hu-001` | `hu` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Formázás törlése"` | Microsoft’s Hungarian editor UI uses the exact command [Formázás törlése](https://support.microsoft.com/hu-HU/PowerPoint/clear-all-text-formatting). | verified |
 | `F-hy-001` | `hy` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Մաքրել ուղղակի ձևաչափումը"` | LibreOffice’s Armenian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/hy/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |

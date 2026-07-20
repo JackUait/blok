@@ -303,7 +303,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | `root-arabic_546_current_first` | pass | pass | pass | `F-da-001`–`F-da-088` | second-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
-| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-dv-001`–`F-dv-059` | pending |
+| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-dv-001`–`F-dv-062` | pending |
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
@@ -4789,6 +4789,54 @@ coverage, docs translation, encoding, exact-retention, and whitespace checks
 also pass with only the repository's known warnings. Both full 546-entry
 reviews must restart at entry 1 on these new bytes.
 
+### Dhivehi a573 fresh full-audit spelling residual — remediated
+
+Fresh reviewer `root-dv_corrected_a573_first` restarted at entry 1 and reread
+all 546 English/Dhivehi pairs on raw dictionary SHA-256
+`a5735ad7aaef35116c938b341f6d5444a37df32bf3949dfac88960e7ca71df19`.
+The immutable source-order matrix is bound at SHA-256
+`3923e9ed6a02a7cd7522d643eea1f497da0c81ec2e4bc2e5650a6a98f5ad8058`;
+its validator is bound at SHA-256
+`831e1e6095bfa2177f097c3d0c7bc99b8af4a46ce7081e096ef13434ff192b09`
+and freshly passes. The complete reread classified 539 values as pass and
+stopped on seven spelling residuals: the two-key brown family and the five-key
+upload-failure family. Its lifecycle evidence uses the uniformly
+source-reproducible taxonomy of 397 literal references, 122 finite dynamic
+references, 25 remaining keys compatible with the registered tool namespace,
+and two remaining keys without a uniform source route; it does not claim the
+historical finer split as source-derived.
+
+Distinct proposal-aware challenger `root-dv-a573-residual-challenge` accepted
+all seven proposals without amendment or rejection after an exhaustive
+546-value coupled-family scan. Its sealed bundle is
+`/tmp/blok-dv-a573-residual-challenge-20260720T144628Z`; the exact correction
+map is bound at SHA-256
+`d914be989b0449d14afe285a873ea07d02a21ddb92799e8bba4dc30bbf4ce0e8`;
+the decision artifact is bound at SHA-256
+`a48151cf860251558769a4b116bf4cb69fb39c14f0b2b0fc8a9bc1fa934dfcb5`;
+and the validator is bound at SHA-256
+`12d7940bcaffa18437bfdc1e49f97c5395ea14be64efbd6615322e413ba94c46`
+and freshly reports 289 checks passed, seven accepted, zero amended, zero
+rejected, zero coupled omissions, and zero overreach removals. The sealed
+Dhivehi Language Academy-hosted *Basfoiy* dictionary attests
+`މުށިކުލަ` 184 times and `ނާކާމިޔާބު` five times, with zero occurrences of
+either current spelling; sealed Radheef evidence agrees, and supplementary
+English–Dhivehi evidence directly maps “brown” to `މުށިކުލަ`.
+
+The four reopened upload-family findings `F-dv-047`–`F-dv-050` and three new
+findings `F-dv-060`–`F-dv-062` were recorded as open before any dictionary
+edit. That red gate failed exactly those seven cases while the other 3,260
+cases passed. Applying the sealed map changed exactly those seven keys, with
+zero missing, unexpected, or wrong values, and produced raw dictionary
+SHA-256
+`46c41eed53047a5e4e6f2365867fd254370adb18602fa09f512819374e3905b4`.
+The gate then passed all 3,267 cases, and all seven findings are verified.
+The complete i18n suite passes all 3,984 cases across nine files; translation
+completeness, integrity, source coverage, docs translation, encoding,
+exact-retention, and whitespace checks also pass with only the repository's
+known warnings. This stopped review earns no complete-pass credit: both
+complete 546-entry reviews must restart at entry 1 on the corrected bytes.
+
 ### Gujarati 546-key current-byte findings — corrections pending
 
 A strict-blind reviewer reread all 546 current English/Gujarati pairs on raw
@@ -8031,10 +8079,10 @@ follows the global transition rule above.
 | `F-dv-044` | `dv` | `tools.spacer.resizeAriaLabel` | accessibility / semantic scope | `"ހުސް ޖާގަ ބަދަލުކުރޭ"` | `"ހުސް ޖާގަގެ އުސްމިން ބަދަލުކުރޭ"` | The separator changes and exposes spacer height; the accepted label supplies the missing genitive relation and height dimension. | verified |
 | `F-dv-045` | `dv` | `tools.callout.noEmojisFound` | spelling / terminology consistency | `"އީމޯޖީ ނުފެނުނު"` | `"އިމޯޖީ ނުފެނުނު"` | The current initial-vowel spelling is the only outlier on the emoji-picker surface; the accepted form matches all adjacent emoji strings. | verified |
 | `F-dv-046` | `dv` | `tools.link.jumpToSection` | action grammar / register | `"ބަޔަކަށް ދާންވީ"` | `"ބަޔަށް ދޭ"` | The current future-or-obligation construction is awkward as an action label; the accepted concise imperative directly names the jump action. | verified |
-| `F-dv-047` | `dv` | `tools.image.errorUploadFailed` | failure terminology / naturalness | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The current phrase imports the English failure verb; the accepted native status already names the same image-upload failure elsewhere in the catalog. | verified |
-| `F-dv-048` | `dv` | `tools.file.errorUploadFailed` | failure terminology / family consistency | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The accepted native failure status aligns the file error with the established media-family terminology. | verified |
-| `F-dv-049` | `dv` | `tools.video.errorUploadFailed` | failure terminology / family consistency | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The accepted native failure status removes the mixed-language verb and aligns the video upload state with its media family. | verified |
-| `F-dv-050` | `dv` | `tools.audio.errorUploadFailed` | failure terminology / family consistency | `"އަޕްލޯޑް ފެއިލްވީ"` | `"އަޕްލޯޑް ނާކަމިޔާބު"` | The accepted native failure status removes the mixed-language verb and aligns both audio upload-error surfaces. | verified |
+| `F-dv-047` | `dv` | `tools.image.errorUploadFailed` | spelling / failure terminology | `"އަޕްލޯޑް ނާކަމިޔާބު"` | `"އަޕްލޯޑް ނާކާމިޔާބު"` | The earlier correction replaced an imported English failure verb with the native term. A fresh complete reread found its remaining short-vowel spelling defect; sealed Basfoiy and Radheef evidence require `ނާކާމިޔާބު`, and the independent challenger accepted the correction. | verified |
+| `F-dv-048` | `dv` | `tools.file.errorUploadFailed` | spelling / failure-family consistency | `"އަޕްލޯޑް ނާކަމިޔާބު"` | `"އަޕްލޯޑް ނާކާމިޔާބު"` | The earlier native-term correction retained a short-vowel spelling defect. Official dictionary evidence requires the long-vowel form, and the accepted correction keeps the file error aligned with all upload-failure labels. | verified |
+| `F-dv-049` | `dv` | `tools.video.errorUploadFailed` | spelling / failure-family consistency | `"އަޕްލޯޑް ނާކަމިޔާބު"` | `"އަޕްލޯޑް ނާކާމިޔާބު"` | The earlier native-term correction retained a short-vowel spelling defect. Official dictionary evidence requires the long-vowel form, and the accepted correction keeps the video error aligned with all upload-failure labels. | verified |
+| `F-dv-050` | `dv` | `tools.audio.errorUploadFailed` | spelling / failure-family consistency | `"އަޕްލޯޑް ނާކަމިޔާބު"` | `"އަޕްލޯޑް ނާކާމިޔާބު"` | The earlier native-term correction retained a short-vowel spelling defect. Official dictionary evidence requires the long-vowel form, and the accepted correction keeps both audio upload-error surfaces aligned with the full family. | verified |
 | `F-dv-051` | `dv` | `tools.image.errorDefaultMessage` | source fidelity / recovery guidance | `"URL އިން ގޯހެއް ދިނީ. އެހެން މަޞްދަރެއް ޓެސްޓްކުރޭ ނުވަތަ ފައިލް އަލުން އަޕްލޯޑް ކުރޭ."` | `"މި URL އިން ފޮޓޯ ލޯޑެއް ނުވި. އެހެން މަޞްދަރެއް ބޭނުންކޮށް ބަލާ ނުވަތަ ފައިލް އަލުން އަޕްލޯޑް ކުރޭ."` | The current copy describes a generic URL error and tells the user to test a source; the accepted message restores the failed image load and intended recovery actions. | verified |
 | `F-dv-052` | `dv` | `tools.image.errorRetry` | action terminology / transliteration | `"އަލުން ޓްރައި"` | `"އަލުން ބަލާ"` | The accepted native imperative is clearer on the retry button and removes an avoidable English transliteration. | verified |
 | `F-dv-053` | `dv` | `tools.file.previewBackToContent` | navigation grammar / action clarity | `"ކޮންޓެންޓަށް ފަހަތަށް"` | `"ކޮންޓެންޓަށް އެނބުރޭ"` | The current fragment is not a finite action; the accepted return imperative is grammatical and unambiguous in preview navigation. | verified |
@@ -8044,6 +8092,9 @@ follows the global transition rule above.
 | `F-dv-057` | `dv` | `tools.database.deleteView` | action terminology / naturalness | `"ޑިލީޓް"` | `"ފޮހެލާ"` | The accepted native delete action matches adjacent destructive-action terminology and removes the isolated transliteration. | verified |
 | `F-dv-058` | `dv` | `tools.database.propertyTypeNumber` | spelling / terminology consistency | `"ނަންބަރ"` | `"ނަންބަރު"` | The accepted spelling is the catalog’s consistent standalone form of the number property term. | verified |
 | `F-dv-059` | `dv` | `tools.video.seekValueText` | accessibility / placeholder relation / grammar | `"{total} ން {current}"` | `"{total} އިން {current}"` | The full ablative connector is required between the total and current time values. Dhivehi validly orders total before current, and both placeholders remain exact. | verified |
+| `F-dv-060` | `dv` | `tools.colorPicker.color.brown` | spelling / color terminology | `"މިށިކުލަ"` | `"މުށިކުލަ"` | Sealed Basfoiy and Radheef evidence supports `މުށިކުލަ`, while the current first vowel is unattested. The independent challenger accepted the spelling for the live shared brown swatch. | verified |
+| `F-dv-061` | `dv` | `tools.callout.colorBrown` | spelling / color-family consistency | `"މިށިކުލަ"` | `"މުށިކުލަ"` | The source-only legacy callout label shares the same brown-color concept and spelling family as the live swatch. The exhaustive coupled scan accepted its correction and found no third occurrence. | verified |
+| `F-dv-062` | `dv` | `tools.image.errorUploadFailedTitle` | spelling / failure-family consistency | `"އަޕްލޯޑް ނާކަމިޔާބު"` | `"އަޕްލޯޑް ނާކާމިޔާބު"` | This image error title belongs to the same five-key upload-failure spelling family. Sealed official evidence and the independent challenge require the long-vowel form and found no coupled omission. | verified |
 | `F-fa-002` | `fa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"بازشوی خالی. برای افزودن بلوک‌ها کلیک کنید یا آن‌ها را اینجا رها کنید."` | `"بازشوی خالی. برای افزودن یک بلوک کلیک کنید یا بلوک‌ها را اینجا بکشید."` | The old click clause incorrectly refers to plural blocks and the drop clause uses release rather than drag. The replacement names singular `یک بلوک`, preserves ZWNJ plural, and follows Google's Persian [`کلیک کنید` and `بکشید`](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=fa) terminology. | verified |
 | `F-he-002` | `he` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"מתקפל ריק. לחץ או גרור בלוקים פנימה."` | `"מקטע מתקפל ריק. לחץ להוספת בלוק או גרור בלוקים לכאן."` | The earlier correction supplied the click-created singular block and plural drag destination. A fresh 546-entry reread independently found that the remaining adjective-as-noun opener was still unnatural; the challenged final adds the head noun `מקטע` while preserving the verified click/drag clause exactly. | verified |
 | `F-he-003` | `he` | `toolbox.optionAddAbove` | caller-aware translation quality | `"Option-לחץ להוספה מעל"` | `"לחץ עם Option כדי להוסיף מעל"` | The current LTR key name immediately hyphenated to an RTL imperative is a fragile mixed-direction compound. The proposal uses natural Hebrew modifier order, removes the bidi-sensitive hyphen, and preserves the literal Option key name. Independent disposition: keep. | verified |

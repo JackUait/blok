@@ -103,7 +103,7 @@
   "a11y.movedDown": "Aşağı köçürmə tamamlandı: mövqe {position}, cəmi {total}.",
   "a11y.atTop": "Yuxarı köçürmək mümkün deyil. Ən yuxarı mövqeyə artıq çatılıb.",
   "a11y.atBottom": "Aşağı köçürmək mümkün deyil. Ən aşağı mövqeyə artıq çatılıb.",
-  "a11y.searchResults": "{count} nəticə",
+  "a11y.searchResults": "Axtarış nəticələri: {count}",
   "a11y.blockToolbar": "Blok alətlər paneli",
   "a11y.textFormatting": "Mətn formatlaması",
   "blockSettings.convertWithChildrenWarning": "İç-içə blokların sayı: {count}. Bu blok çevrildikdə iç-içə məzmun ən yuxarı səviyyəyə köçürüləcək. Davam edilsin?",

@@ -266,7 +266,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `root-amharic_546_current_first` | — | pass | pass | pass | `F-am-001`–`F-am-096` | first-pass-complete |
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-arabic_546_current_first` | — | pass | pass | pass | `F-ar-001`–`F-ar-076`, `F-ar-078` | first-pass-complete |
-| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-105` | pending |
+| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-106` | pending |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
 | `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-076` | pending |
 | `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-danish_546_first_pass` | — | pass | pass | pass | `F-bs-001`–`F-bs-181` | first-pass-complete |
@@ -1125,7 +1125,7 @@ first-pass credit on raw SHA-256
 `c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab`;
 a distinct second pass remains required.
 
-### Azerbaijani (`az`) — pending after attempted second-pass residual
+### Azerbaijani (`az`) — pending after current-byte residuals
 
 Reviewer `root-az-546-first-final` restarted at entry 1 and directly read all
 546 current English/Azerbaijani pairs in English insertion order. The pass
@@ -1190,6 +1190,41 @@ full exact-English inventory remains 14 because two placeholder-only color
 templates are also findings. The attempted pass earns no credit, and
 Azerbaijani remains `pending` until two complete passes restart on the
 corrected bytes.
+
+Reviewer `root` then restarted again at English entry 1 on that corrected
+dictionary and directly reread all 546 English/Azerbaijani pairs in three
+complete source-order partitions before consulting the prior Azerbaijani
+artifacts or dispositions. The attempted current-byte first pass upheld all
+105 prior findings and all 14 exact-English retentions, including the two
+placeholder-only block-color templates. It also replayed 38
+placeholder-bearing values with 54 occurrences, 44 aliases in 14 caller
+groups and 48 references, 117 provider compositions, 20 block-color titles,
+three migrations, 80 changed-English rows over 78 keys, the 42-file caller
+manifest, and the complete 533+12+1 caller/source-only/dormant partition.
+
+One residual survived. Toolbox, block-settings, and code-language search all
+send `a11y.searchResults` to a shared live region, but the old `{count}
+nəticə` announced only a bare count and lost the explicit search context
+introduced by corrected English finding `F-en-021`. `F-az-106` changes the
+count-neutral template to `Axtarış nəticələri: {count}`. Its focused
+expectation failed on exactly the recorded old value before remediation and
+passes afterward. The corrected raw Azerbaijani dictionary SHA-256 is
+`d38942a860e4faf81ee17865ce2dc1f604f7b3f596969398a75c395983b19292`.
+
+The sealed attempted-pass artifact is
+`/tmp/blok-az-546-first-attempt-f106.json` with SHA-256
+`5879b02e16ca1f9ece90b25367035cc4550ad9a44c83d10d62d8d8ba44413ff8`;
+its canonical payload SHA-256 is
+`18904967f403b7aa3deab24583ea77297bfa3c4340578fd6e9787533df4b20a1`.
+The read-only builder has SHA-256
+`738b07545a727a23c8be72c45c682b03b3b8b39fe4ee766b7b1269dc1504fa56`;
+the independent read-only validator has SHA-256
+`323595ff433d45683a7daf530c0c17d0a11b47b8f88676a59bd3b957117833f9`
+and passed 6,927 assertions. Its mutually exclusive partition is 428 plain
+passes, 105 upheld findings, 12 retention-only pairs, and one residual,
+covering all 546 entries. The attempt earns no pass credit. Because the
+correction changes the reviewed dictionary bytes, Azerbaijani remains
+`pending` and must restart both complete passes on the new SHA-256.
 
 ### Bulgarian (`bg`) — current second pass complete
 
@@ -4469,6 +4504,7 @@ follows the global transition rule above.
 | `F-az-103` | `az` | `tools.colorPicker.defaultSwatchLabel` | word order / live block-color composition | `"{mode} {default}"` | `"{default} {mode}"` | The newly live slash-menu command titles are standalone noun phrases. Azerbaijani modifiers precede the noun phrase, so the old template produced the predicate-like `Mətn rəngi Standart`; the replacement produces `Standart mətn rəngi` and `Standart arxa fon` while preserving both runtime placeholders. [Azerbaijani red-text-color usage](https://code.mu/az/javascript/book/prime/inbuilt/string/substring-replacement/) | verified |
 | `F-az-104` | `az` | `tools.colorPicker.colorSwatchLabel` | word order / live block-color composition | `"{mode} {color}"` | `"{color} {mode}"` | The same live composition contract applies to every named swatch. Placing the color modifier first yields natural titles such as `Qırmızı mətn rəngi` and `Qırmızı arxa fon`; the old bare sequence lacked the copular clause required for a predicate reading. [Azerbaijani red-text-color usage](https://code.mu/az/javascript/book/prime/inbuilt/string/substring-replacement/) | verified |
 | `F-az-105` | `az` | `tools.image.errorSourceOffline` | natural error copy / resource availability | `"Mənbə faylı köçürülmüş və ya oflayn ola bilər."` | `"Mənbə faylı köçürülmüş və ya əlçatan olmaya bilər."` | The broken-image caller only observes that a remote image resource failed to load; a file itself is not naturally “offline.” The replacement states the user-relevant moved-or-unavailable condition, using the same `əlçatan olmaya bilər` availability wording found in [Google's Azerbaijani product guidance](https://support.google.com/youtube/answer/57407?co=GENIE.Platform%3DDesktop&hl=az). | verified |
+| `F-az-106` | `az` | `a11y.searchResults` | accessibility / source synchronization / count neutrality | `"{count} nəticə"` | `"Axtarış nəticələri: {count}"` | Toolbox, block-settings, and code-language search all pass this template to the same live-region caller. The terse old value drops the explicit search context added by `F-en-021`; the label-before-count replacement remains grammatical for every count and uses the established phrase in [Google's Azerbaijani search guidance](https://support.google.com/youtube/answer/58097?hl=az). | verified |
 | `F-bg-001` | `bg` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Изчисти форматирането"` | Microsoft’s Bulgarian Word UI uses the exact command [Изчисти форматирането](https://support.microsoft.com/bg-BG/Word/format-your-word-document). | verified |
 | `F-bg-002` | `bg` | `blockSettings.convertWithChildrenWarning` | confirmation register / caller context | `"Вложени блокове: {count}. Преобразуването на този блок ще премести вложеното съдържание на най-горното ниво. Продължи?"` | `"Вложени блокове: {count}. Преобразуването на този блок ще премести вложеното съдържание на най-горното ниво. Искате ли да продължите?"` | The source-only confirmation must retain the selected polite plural register. Independent review selected Microsoft’s standard Bulgarian confirmation pattern `Искате ли да продължите?` and preserved `{count}` exactly. | verified |
 | `F-bg-003` | `bg` | `popover.convertTo` | terminology / caller context | `"Конвертирай в"` | `"Преобразувай в"` | The complete 545-entry first-pass caller review found the current Bulgarian wording inaccurate, incomplete, untranslated, ungrammatical, or inconsistent with the selected register in this UI contract; the replacement preserves every runtime placeholder. | verified |

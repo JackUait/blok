@@ -57,7 +57,7 @@
   "tools.list.placeholder": "ލިސްޓް",
   "tools.paragraph.placeholder": "އެއްޗެއް ލިޔޭ ނުވަތަ ޓޫލެއް ހޮވަން / ފިތާލާ",
   "tools.toggle.placeholder": "ޓޮގަލް",
-  "tools.toggle.bodyPlaceholder": "ހުސް ޓޮގަލް. ކްލިކް ކުރޭ ނުވަތަ ބްލޮކްތައް ތެރެއަށް ދޫކޮށްލާ.",
+  "tools.toggle.bodyPlaceholder": "ހުސް ޓޮގަލް. ބްލޮކެއް އިތުރުކުރަން ކްލިކް ކުރޭ ނުވަތަ ބްލޮކްތައް މިތަނަށް ދަމާލާ.",
   "tools.toggle.ariaLabelCollapse": "ތިރިކުރޭ",
   "tools.toggle.ariaLabelExpand": "ފުޅާ ކުރޭ",
   "blockSettings.delete": "ފޮހެލާ",

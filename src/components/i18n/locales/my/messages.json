@@ -55,7 +55,7 @@
   "tools.list.placeholder": "စာရင်း",
   "tools.paragraph.placeholder": "တစ်ခုခုရေးပါ သို့မဟုတ် / ကိုနှိပ်၍ ကိရိယာရွေးပါ",
   "tools.toggle.placeholder": "ခေါက်",
-  "tools.toggle.bodyPlaceholder": "ဗလာ ခေါက်စာ။ နှိပ်ပါ သို့မဟုတ် ဘလောက်များကို ထဲသို့ ဆွဲချပါ။",
+  "tools.toggle.bodyPlaceholder": "ဗလာ ခေါက်စာ။ ဘလောက်တစ်ခုထည့်ရန် နှိပ်ပါ သို့မဟုတ် ဘလောက်များကို ဤနေရာသို့ ဆွဲယူပါ။",
   "tools.toggle.ariaLabelCollapse": "ခေါ်သိမ်းရန်",
   "tools.toggle.ariaLabelExpand": "ချဲ့ရန်",
   "tools.table.title": "ဇယား",

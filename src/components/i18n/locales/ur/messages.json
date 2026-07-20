@@ -80,7 +80,7 @@
   "a11y.textFormatting": "متن کی فارمیٹنگ",
   "tools.paragraph.placeholder": "کچھ لکھیں یا منتخب کرنے کیلئے / دبائیں",
   "tools.toggle.placeholder": "ٹوگل",
-  "tools.toggle.bodyPlaceholder": "خالی ٹوگل۔ بلاکس کو اندر کلک کریں یا گھسیٹیں۔",
+  "tools.toggle.bodyPlaceholder": "خالی ٹوگل۔ ایک بلاک شامل کرنے کے لیے کلک کریں یا بلاکس کو یہاں گھسیٹیں۔",
   "tools.toggle.ariaLabelCollapse": "سمیٹیں",
   "tools.toggle.ariaLabelExpand": "پھیلائیں",
   "tools.table.title": "ٹیبل",

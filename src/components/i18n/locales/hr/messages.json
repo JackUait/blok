@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Popis",
   "tools.paragraph.placeholder": "Napiši nešto ili pritisni / za odabir",
   "tools.toggle.placeholder": "Preklopnik",
-  "tools.toggle.bodyPlaceholder": "Prazan preklopnik. Klikni ili ispusti blokove unutra.",
+  "tools.toggle.bodyPlaceholder": "Prazan preklopnik. Klikni za dodavanje bloka ili povuci blokove ovdje.",
   "tools.toggle.ariaLabelCollapse": "Sažmi",
   "tools.toggle.ariaLabelExpand": "Proširi",
   "tools.table.title": "Tablica",

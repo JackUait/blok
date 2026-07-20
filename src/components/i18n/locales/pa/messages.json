@@ -78,7 +78,7 @@
   "a11y.textFormatting": "ਟੈਕਸਟ ਫਾਰਮੈਟਿੰਗ",
   "tools.paragraph.placeholder": "ਕੁਝ ਲਿਖੋ ਜਾਂ ਚੁਣਨ ਲਈ / ਦਬਾਓ",
   "tools.toggle.placeholder": "ਟੌਗਲ",
-  "tools.toggle.bodyPlaceholder": "ਖਾਲੀ ਟੌਗਲ। ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਅੰਦਰ ਖਿੱਚੋ।",
+  "tools.toggle.bodyPlaceholder": "ਖਾਲੀ ਟੌਗਲ। ਬਲਾਕ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਇੱਥੇ ਖਿੱਚੋ।",
   "tools.toggle.ariaLabelCollapse": "ਸੰਕੁਚਿਤ ਕਰੋ",
   "tools.toggle.ariaLabelExpand": "ਵਿਸਤਾਰ ਕਰੋ",
   "tools.table.title": "ਟੇਬਲ",

@@ -78,7 +78,7 @@
   "a11y.textFormatting": "පෙළ හැඩතල ගැන්වීම",
   "tools.paragraph.placeholder": "යමක් ලියන්න හෝ තෝරා ගැනීමට / ඔබන්න",
   "tools.toggle.placeholder": "හැකිලෙන",
-  "tools.toggle.bodyPlaceholder": "හිස් හැකිලෙන කොටස. ක්ලික් කරන්න හෝ කොටස් ඇතුළට ඇදගෙන දමන්න.",
+  "tools.toggle.bodyPlaceholder": "හිස් හැකිලෙන කොටස. කොටසක් එක් කිරීමට ක්ලික් කරන්න හෝ කොටස් මෙතැනට ඇදගෙන දමන්න.",
   "tools.toggle.ariaLabelCollapse": "හකුළන්න",
   "tools.toggle.ariaLabelExpand": "පුළුල් කරන්න",
   "tools.table.title": "වගුව",

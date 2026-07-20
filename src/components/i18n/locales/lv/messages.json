@@ -91,7 +91,7 @@
   "blockSettings.openMenuAction": " lai atvērtu izvēlni",
   "tools.paragraph.placeholder": "Rakstiet kaut ko vai nospiediet / lai izvēlētos",
   "tools.toggle.placeholder": "Pārslēdzams",
-  "tools.toggle.bodyPlaceholder": "Tukšs pārslēdzamais bloks. Noklikšķiniet vai nometiet blokus iekšpusē.",
+  "tools.toggle.bodyPlaceholder": "Tukšs pārslēdzams bloks. Noklikšķiniet, lai pievienotu bloku, vai velciet blokus šeit.",
   "tools.toggle.ariaLabelCollapse": "Sakļaut",
   "tools.toggle.ariaLabelExpand": "Izvērst",
   "tools.table.title": "Tabula",

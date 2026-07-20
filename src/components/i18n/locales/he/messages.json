@@ -57,7 +57,7 @@
   "tools.list.placeholder": "רשימה",
   "tools.paragraph.placeholder": "כתוב משהו או הקש / לבחירה",
   "tools.toggle.placeholder": "מתקפל",
-  "tools.toggle.bodyPlaceholder": "מתקפל ריק. לחץ או גרור בלוקים פנימה.",
+  "tools.toggle.bodyPlaceholder": "מתקפל ריק. לחץ להוספת בלוק או גרור בלוקים לכאן.",
   "tools.toggle.ariaLabelCollapse": "כווץ",
   "tools.toggle.ariaLabelExpand": "הרחב",
   "tools.table.title": "טבלה",

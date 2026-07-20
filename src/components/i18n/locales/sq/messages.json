@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Listë",
   "tools.paragraph.placeholder": "Shkruaj diçka ose shtyp / për të zgjedhur",
   "tools.toggle.placeholder": "Palosje",
-  "tools.toggle.bodyPlaceholder": "Palosje bosh. Klikoni ose hidhni blloqe brenda.",
+  "tools.toggle.bodyPlaceholder": "Palosje bosh. Klikoni për të shtuar një bllok ose tërhiqni blloqe këtu.",
   "tools.toggle.ariaLabelCollapse": "Mbyll",
   "tools.toggle.ariaLabelExpand": "Hap",
   "tools.table.title": "Tabelë",

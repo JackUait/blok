@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Ցուցակ",
   "tools.paragraph.placeholder": "Գրեք ինչ-որ բան կամ սեղմեք / գործիք ընտրելու համար",
   "tools.toggle.placeholder": "Ծալվող",
-  "tools.toggle.bodyPlaceholder": "Դատարկ ծալվող բլոկ։ Սեղմեք կամ քաշեք բլոկներն այստեղ։",
+  "tools.toggle.bodyPlaceholder": "Դատարկ ծալվող բլոկ։ Սեղմեք՝ բլոկ ավելացնելու համար կամ քաշեք բլոկներն այստեղ։",
   "tools.toggle.ariaLabelCollapse": "Ծալել",
   "tools.toggle.ariaLabelExpand": "Ծավալել",
   "blockSettings.delete": "Ջնջել",

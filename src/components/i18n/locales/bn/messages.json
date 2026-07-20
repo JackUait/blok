@@ -68,7 +68,7 @@
   "a11y.dragHandleRole": "টেনে সরানোর হাতল",
   "a11y.dragStarted": "ব্লক টানা হচ্ছে",
   "a11y.dragStartedMultiple": "{count}টি ব্লক টানা হচ্ছে",
-  "a11y.dropPosition": "{total}টির মধ্যে {position} অবস্থানে রাখা হবে",
+  "a11y.dropPosition": "{total}টির মধ্যে {position} নম্বর অবস্থানে রাখা হবে",
   "a11y.dropCancelled": "টানা বাতিল হয়েছে",
   "a11y.blockMoved": "ব্লক {total}টির মধ্যে {position} অবস্থানে সরানো হয়েছে",
   "a11y.blocksMoved": "{count}টি ব্লক {position} অবস্থানে সরানো হয়েছে",

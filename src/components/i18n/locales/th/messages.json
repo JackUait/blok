@@ -80,7 +80,7 @@
   "a11y.textFormatting": "การจัดรูปแบบข้อความ",
   "tools.paragraph.placeholder": "เขียนอะไรสักอย่าง หรือกด / เพื่อเลือกเครื่องมือ",
   "tools.toggle.placeholder": "พับได้",
-  "tools.toggle.bodyPlaceholder": "บล็อกพับว่างเปล่า คลิกหรือวางบล็อกไว้ข้างใน",
+  "tools.toggle.bodyPlaceholder": "ส่วนที่พับได้นี้ว่างเปล่า คลิกเพื่อเพิ่มบล็อก หรือลากบล็อกมาที่นี่",
   "tools.toggle.ariaLabelCollapse": "ยุบ",
   "tools.toggle.ariaLabelExpand": "ขยาย",
   "tools.table.title": "ตาราง",

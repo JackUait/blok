@@ -80,7 +80,7 @@
   "a11y.textFormatting": "Formátovanie textu",
   "tools.paragraph.placeholder": "Napíšte niečo alebo stlačte / pre výber",
   "tools.toggle.placeholder": "Prepínač",
-  "tools.toggle.bodyPlaceholder": "Prázdny prepínač. Kliknite alebo presuňte bloky dovnútra.",
+  "tools.toggle.bodyPlaceholder": "Prázdny prepínač. Kliknutím pridáte blok alebo sem presuňte bloky.",
   "tools.toggle.ariaLabelCollapse": "Zbaliť",
   "tools.toggle.ariaLabelExpand": "Rozbaliť",
   "tools.table.title": "Tabuľka",

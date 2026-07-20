@@ -89,7 +89,7 @@
   "blockSettings.openMenuAction": " मेनु खोल्न",
   "tools.paragraph.placeholder": "केही लेख्नुहोस् वा उपकरण छान्न / थिच्नुहोस्",
   "tools.toggle.placeholder": "मोड्ने",
-  "tools.toggle.bodyPlaceholder": "खाली मोड्ने। ब्लकहरू भित्र क्लिक गर्नुहोस् वा तान्नुहोस्।",
+  "tools.toggle.bodyPlaceholder": "खाली मोड्ने। ब्लक थप्न क्लिक गर्नुहोस् वा ब्लकहरू यहाँ तान्नुहोस्।",
   "tools.toggle.ariaLabelCollapse": "संकुचित गर्नुहोस्",
   "tools.toggle.ariaLabelExpand": "विस्तार गर्नुहोस्",
   "tools.table.title": "तालिका",

@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Danh sách",
   "tools.paragraph.placeholder": "Viết gì đó hoặc nhấn / để chọn công cụ",
   "tools.toggle.placeholder": "Thu gọn",
-  "tools.toggle.bodyPlaceholder": "Khối thu gọn trống. Nhấp hoặc kéo thả khối vào bên trong.",
+  "tools.toggle.bodyPlaceholder": "Khối thu gọn trống. Nhấp để thêm một khối hoặc kéo các khối vào đây.",
   "tools.toggle.ariaLabelCollapse": "Thu gọn",
   "tools.toggle.ariaLabelExpand": "Mở rộng",
   "tools.table.title": "Bảng",

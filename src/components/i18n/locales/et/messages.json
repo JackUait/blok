@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Loend",
   "tools.paragraph.placeholder": "Kirjuta midagi või vajuta / valimiseks",
   "tools.toggle.placeholder": "Avatav",
-  "tools.toggle.bodyPlaceholder": "Tühi avatav plokk. Klõpsa või lohista plokke sisse.",
+  "tools.toggle.bodyPlaceholder": "Tühi avatav plokk. Klõpsa ploki lisamiseks või lohista plokid siia.",
   "tools.toggle.ariaLabelCollapse": "Ahenda",
   "tools.toggle.ariaLabelExpand": "Laienda",
   "tools.table.title": "Tabel",

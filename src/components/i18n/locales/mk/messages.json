@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Список",
   "tools.paragraph.placeholder": "Напишете нешто или притиснете / за избор",
   "tools.toggle.placeholder": "Расклоплив список",
-  "tools.toggle.bodyPlaceholder": "Празен расклоплив блок. Кликнете или испуштете блокови внатре.",
+  "tools.toggle.bodyPlaceholder": "Празен расклоплив блок. Кликнете за да додадете блок или повлечете блокови овде.",
   "tools.toggle.ariaLabelCollapse": "Собери",
   "tools.toggle.ariaLabelExpand": "Прошири",
   "tools.table.title": "Табела",

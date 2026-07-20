@@ -78,7 +78,7 @@
   "a11y.textFormatting": "టెక్స్ట్ ఫార్మాటింగ్",
   "tools.paragraph.placeholder": "ఏదైనా రాయండి లేదా సాధనం ఎంచుకోడానికి / నొక్కండి",
   "tools.toggle.placeholder": "మడత",
-  "tools.toggle.bodyPlaceholder": "ఖాళీ మడత. నొక్కండి లేదా బ్లాకులను లోపలకు లాగండి.",
+  "tools.toggle.bodyPlaceholder": "ఖాళీ మడత. బ్లాక్‌ను జోడించడానికి నొక్కండి లేదా బ్లాక్‌లను ఇక్కడికి లాగండి.",
   "tools.toggle.ariaLabelCollapse": "సంకుచించు",
   "tools.toggle.ariaLabelExpand": "విస్తరించు",
   "tools.table.title": "పట్టిక",

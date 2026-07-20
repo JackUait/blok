@@ -80,7 +80,7 @@
   "a11y.textFormatting": "Formatarea textului",
   "tools.paragraph.placeholder": "Scrie ceva sau apasă / pentru a selecta",
   "tools.toggle.placeholder": "Reductibil",
-  "tools.toggle.bodyPlaceholder": "Bloc reductibil gol. Faceți clic sau trageți blocuri înăuntru.",
+  "tools.toggle.bodyPlaceholder": "Bloc reductibil gol. Faceți clic pentru a adăuga un bloc sau trageți blocuri aici.",
   "tools.toggle.ariaLabelCollapse": "Restrânge",
   "tools.toggle.ariaLabelExpand": "Extinde",
   "tools.table.title": "Tabel",

@@ -268,69 +268,69 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-arabic_546_current_first` | `root-amharic_546_current_first` | pass | pass | pass | `F-ar-001`–`F-ar-076`, `F-ar-078` | second-pass-complete |
 | `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | — | — | pending | pending | pending | `F-az-001`–`F-az-107` | pending |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | `root-arabic_546_current_first` | — | pass | pass | pass | `F-bn-001`–`F-bn-077` | first-pass-complete |
-| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-hindi_546_current_second` | — | pass | pass | pass | `F-bs-001`–`F-bs-182` | first-pass-complete |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-078` | pending |
+| `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-hindi_546_current_second` | `root-amharic_546_current_first` | pass | pass | pass | `F-bs-001`–`F-bs-182` | second-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | `root-arabic_546_current_first` | pass | pass | pass | `F-da-001`–`F-da-088` | second-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
-| `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
+| `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001`–`F-dv-002` | pending |
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
-| `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001`–`F-et-002` | pending |
-| `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001` | pending |
+| `et` | Estonian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-et-001`–`F-et-003` | pending |
+| `fa` | Persian (Farsi) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-fa-001`–`F-fa-002` | pending |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | — | — | pending | pending | pending | `F-fi-001`–`F-fi-101` | pending |
-| `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001` | pending |
+| `fil` | Filipino | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-fil-001`–`F-fil-002` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
-| `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001` | pending |
-| `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001` | pending |
+| `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001`–`F-gu-002` | pending |
+| `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001`–`F-he-002` | pending |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
-| `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-003` | pending |
-| `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-003` | pending |
-| `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-003` | pending |
+| `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-004` | pending |
+| `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
+| `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-004` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-004` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
-| `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001`–`F-ka-003` | pending |
-| `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001`–`F-km-002` | pending |
-| `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001`–`F-kn-002` | pending |
-| `ko` | Korean | Hangul | ltr | to-audit | — | — | pending | pending | pending | `F-ko-001`–`F-ko-002` | pending |
-| `ku` | Sorani (Central Kurdish) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ku-001`–`F-ku-002` | pending |
+| `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001`–`F-ka-004` | pending |
+| `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001`–`F-km-003` | pending |
+| `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001`–`F-kn-003` | pending |
+| `ko` | Korean | Hangul | ltr | to-audit | — | — | pending | pending | pending | `F-ko-001`–`F-ko-003` | pending |
+| `ku` | Sorani (Central Kurdish) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ku-001`–`F-ku-003` | pending |
 | `lo` | Lao | Lao | ltr | to-audit | — | — | pending | pending | pending | `F-lo-001`–`F-lo-003` | pending |
 | `lt` | Lithuanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lt-001`–`F-lt-003` | pending |
-| `lv` | Latvian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lv-001`–`F-lv-003` | pending |
-| `mk` | Macedonian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mk-001` | pending |
-| `ml` | Malayalam | Malayalam | ltr | to-audit | — | — | pending | pending | pending | `F-ml-001`–`F-ml-002` | pending |
-| `mn` | Mongolian (current Cyrillic wording) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mn-001` | pending |
-| `mr` | Marathi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-mr-001` | pending |
-| `ms` | Malay | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ms-001` | pending |
-| `my` | Burmese (Myanmar) | Myanmar | ltr | to-audit | — | — | pending | pending | pending | `F-my-001` | pending |
-| `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001` | pending |
+| `lv` | Latvian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lv-001`–`F-lv-004` | pending |
+| `mk` | Macedonian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mk-001`–`F-mk-002` | pending |
+| `ml` | Malayalam | Malayalam | ltr | to-audit | — | — | pending | pending | pending | `F-ml-001`–`F-ml-003` | pending |
+| `mn` | Mongolian (current Cyrillic wording) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mn-001`–`F-mn-002` | pending |
+| `mr` | Marathi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-mr-001`–`F-mr-002` | pending |
+| `ms` | Malay | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ms-001`–`F-ms-002` | pending |
+| `my` | Burmese (Myanmar) | Myanmar | ltr | to-audit | — | — | pending | pending | pending | `F-my-001`–`F-my-002` | pending |
+| `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001`–`F-ne-002` | pending |
 | `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | — | — | pending | pending | pending | `F-nl-001`–`F-nl-085` | pending |
 | `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-no-001`–`F-no-085` | pending |
-| `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001` | pending |
+| `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001`–`F-pa-002` | pending |
 | `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-pl-001`–`F-pl-126` | pending |
-| `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001` | pending |
+| `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001`–`F-ps-002` | pending |
 | `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | — | — | pending | pending | pending | `F-pt-001`–`F-pt-085` | pending |
-| `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001` | pending |
+| `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001`–`F-ro-002` | pending |
 | `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | — | — | pending | pending | pending | `F-ru-001`–`F-ru-127` | pending |
-| `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001` | pending |
-| `si` | Sinhala | Sinhala | ltr | to-audit | — | — | pending | pending | pending | `F-si-001` | pending |
-| `sk` | Slovak | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sk-001` | pending |
-| `sl` | Slovenian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sl-001` | pending |
-| `sq` | Albanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sq-001` | pending |
-| `sr` | Serbian (Cyrillic) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-sr-001` | pending |
+| `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001`–`F-sd-002` | pending |
+| `si` | Sinhala | Sinhala | ltr | to-audit | — | — | pending | pending | pending | `F-si-001`–`F-si-002` | pending |
+| `sk` | Slovak | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sk-001`–`F-sk-002` | pending |
+| `sl` | Slovenian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sl-001`–`F-sl-002` | pending |
+| `sq` | Albanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sq-001`–`F-sq-002` | pending |
+| `sr` | Serbian (Cyrillic) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-sr-001`–`F-sr-002` | pending |
 | `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | — | — | pending | pending | pending | `F-sv-001`–`F-sv-097` | pending |
-| `sw` | Swahili | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sw-001` | pending |
-| `ta` | Tamil | Tamil | ltr | to-audit | — | — | pending | pending | pending | `F-ta-001` | pending |
-| `te` | Telugu | Telugu | ltr | to-audit | — | — | pending | pending | pending | `F-te-001` | pending |
-| `th` | Thai | Thai | ltr | to-audit | — | — | pending | pending | pending | `F-th-001` | pending |
-| `tr` | Turkish | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-tr-001` | pending |
-| `ug` | Uyghur | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ug-001` | pending |
-| `uk` | Ukrainian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-uk-001` | pending |
-| `ur` | Urdu | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ur-001` | pending |
-| `vi` | Vietnamese | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-vi-001` | pending |
-| `yi` | Yiddish | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-yi-001` | pending |
+| `sw` | Swahili | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sw-001`–`F-sw-002` | pending |
+| `ta` | Tamil | Tamil | ltr | to-audit | — | — | pending | pending | pending | `F-ta-001`–`F-ta-002` | pending |
+| `te` | Telugu | Telugu | ltr | to-audit | — | — | pending | pending | pending | `F-te-001`–`F-te-002` | pending |
+| `th` | Thai | Thai | ltr | to-audit | — | — | pending | pending | pending | `F-th-001`–`F-th-002` | pending |
+| `tr` | Turkish | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-tr-001`–`F-tr-002` | pending |
+| `ug` | Uyghur | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ug-001`–`F-ug-002` | pending |
+| `uk` | Ukrainian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-uk-001`–`F-uk-002` | pending |
+| `ur` | Urdu | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ur-001`–`F-ur-002` | pending |
+| `vi` | Vietnamese | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-vi-001`–`F-vi-002` | pending |
+| `yi` | Yiddish | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-yi-001`–`F-yi-002` | pending |
 | `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-001`–`F-zh-058` | pending |
 | `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-TW-001`–`F-zh-TW-032` | pending |
 
@@ -405,8 +405,7 @@ locale returns to `pending`.
 | `am` | `root-amharic_546_current_first` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` | `root-hindi_546_current_second` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` |
 | `ar` | `root-arabic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` | `root-amharic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` |
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
-| `bn` | `root-arabic_546_current_first` | `sha256:d4759d613e1f146d80f6a593ea300d187adf7538c25390dcab6e4bf17d5997ea` | — | — |
-| `bs` | `root-hindi_546_current_second` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` | — | — |
+| `bs` | `root-hindi_546_current_second` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` | `root-amharic_546_current_first` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-amharic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` | `root-arabic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
@@ -1376,7 +1375,7 @@ the independent second-pass artifact is
 Fresh translation-guideline, block-color, and live translation-checker gates
 pass. The terminal repository-wide gates remain pending.
 
-### Bengali (`bn`) — current first pass complete
+### Bengali (`bn`) — pending after current-byte second-pass residual
 
 The current Bengali audit had recorded 68 corrections and four supported
 exact-English retentions before a final count-grammar check found one
@@ -1603,7 +1602,27 @@ checker passed all required checks. The pass binds to raw Bengali SHA-256
 `d4759d613e1f146d80f6a593ea300d187adf7538c25390dcab6e4bf17d5997ea`;
 Bengali is `first-pass-complete` pending a distinct complete second pass.
 
-### Bosnian (`bs`) — current first pass complete
+Distinct reviewer `root-hindi_546_current_second` then restarted at English
+entry 1 on clean current master and personally read all 546 bound
+English/Bengali pairs before opening first-pass evidence. It independently
+upheld all 77 existing findings and all four retentions and replayed the
+12,654-assertion first-pass validator, but its linguistic challenge found a
+genuine residual at entry 109. The polite drag announcement receives a
+one-based numeric `{position}` and numeric `{total}`; the old bare
+`{position} অবস্থানে` can read as a cardinal count of positions rather than
+the intended numbered position. `F-bn-078` adds the explicit ordinal marker
+`নম্বর`.
+
+The stopped second pass binds to pre-correction raw Bengali SHA-256
+`d4759d613e1f146d80f6a593ea300d187adf7538c25390dcab6e4bf17d5997ea`.
+The focused expectation failed on exactly the bare-cardinal wording before
+remediation and passes afterward. The corrected raw Bengali SHA-256 is
+`991d522f8e606b41af8409f1839a4871214ecd49854213e72a304030348fafc3`.
+The attempted second pass earns no credit, and the correction invalidates
+the earlier first-pass boundary. Both complete passes must restart from entry
+1 on the corrected bytes.
+
+### Bosnian (`bs`) — current second pass complete
 
 The current 546-key review found three caller-context residuals after the
 earlier Bosnian corpus work. The inline formatter still shared the generic
@@ -1681,6 +1700,30 @@ Bosnian, and concrete caller bytes remain identical to the sealed evidence.
 This earns first-pass credit on raw Bosnian SHA-256
 `cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3`;
 a distinct complete second pass remains required.
+
+Distinct reviewer `root-amharic_546_current_first` then restarted at English
+entry 1 on clean current master and personally read all 546 bound
+English/Bosnian pairs before opening first-pass evidence. It independently
+upheld all 182 findings and all nine exact-English retentions. Its replay
+covered 38 placeholder-bearing values with 54 occurrences, 44 aliases in 14
+groups and 48 references, 117 provider compositions, and the complete
+533+12+1 caller/source-only/dormant partition. No residual survived.
+
+The read-only second-pass artifact is
+`/tmp/blok-bs-546-current-second-pass.json` with SHA-256
+`021cf82e867475f7db7acdd604056b7cedc2f3cde11472467c132af7a6a32996`;
+its canonical payload SHA-256 is
+`74d821dd877f383280e2ea5d76c153b7b45fb152824f861f36c221f638bb7b35`.
+The builder has SHA-256
+`ac13828e91375be472388534eec518c2442f6851c04488056733676a3b1cd5a1`;
+the independent validator has SHA-256
+`a26e6718be6077010374bde0db29f1d9464cddc02c60685959fcd47c6dc53270`
+and freshly replayed 14,385 assertions against 92 source-evidence files.
+The checker passed 88 tests, the focused i18n suite passed 3,017, the full
+unit suite passed 17,602 with one skipped, and the live checker passed all
+required checks. Both passes bind to raw Bosnian SHA-256
+`cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3`;
+Bosnian is `second-pass-complete`.
 
 ### German (`de`) — current second pass complete
 
@@ -3325,6 +3368,23 @@ remediation and passes afterward. The corrected raw Georgian SHA-256 is
 The attempted review earns no pass credit; both complete passes must restart
 from entry 1 on the corrected bytes.
 
+Reviewer `root-arabic_546_current_first` then restarted at English entry 1
+on clean current master and personally read all 546 corrected
+English/Georgian pairs before consulting prior Georgian evidence. The
+attempted first pass stopped on its first genuine residual at entry 61.
+Georgian still translated the superseded “Click or drop blocks inside”
+source, while both live toggle providers create and focus a child block when
+the prompt is clicked. `F-ka-004` restores the current click-to-add and
+drag-here actions with established Georgian product constructions.
+
+The stopped review binds to pre-correction raw Georgian SHA-256
+`7ee6bf185ab832f8917e9f63870db76efed02704772cacb354f69b60f0e09153`.
+The focused expectation failed on exactly the former-source prompt before
+remediation and passes afterward. The corrected raw Georgian SHA-256 is
+`729d2982b8db5ae198714a6011f7c2499f171604c18c82fad41aba8ad24ff4de`.
+The attempted review earns no pass credit; both complete passes must restart
+from entry 1 on the corrected bytes.
+
 ### Khmer (`km`) — pending after first-pass residual
 
 Reviewer `root-amharic_546_current_first` directly read all 546
@@ -4294,6 +4354,175 @@ binds to raw SHA-256
 `2295357fbc1931aaff5ffc14b3a990d0ad4c8058ca4e65d789b282f0f666ffc4`.
 Taiwan Traditional Chinese is `first-pass-complete` and requires a distinct
 full second review on these exact bytes.
+
+### Shared toggle-placeholder challenge — 13 corrected locales pending passes
+
+The root caller review established that `tools.toggle.bodyPlaceholder` is
+rendered by both the toggle-list tool and the toggle-heading provider. A click
+creates and focuses one child block, while the drag target reparents existing
+blocks into the child editor. Reviewer `root-amharic_546_current_first`
+independently challenged the 13-locale European matrix against both callers,
+the live dictionaries, in-repository terminology, and the primary product
+sources cited in the finding rows. All 13 values required correction. The
+challenge additionally changed Swedish `lista` and Slovenian `seznam` to
+provider-neutral `block`/`blok`, and corrected Latvian adjective definiteness.
+The Swedish recurrence reopens the existing unique locale/key finding
+`F-sv-008`: its row retains the original defective value and records both the
+intermediate action-only closure and the final shared-provider correction.
+
+The executable finding expectations failed red in exactly 13 cases while the
+other 2,886 guideline cases passed. After only those 13 dictionary values
+changed, all 2,899 cases passed and `F-et-003`, `F-hr-004`, `F-hu-004`,
+`F-lv-004`, `F-mk-002`, `F-ro-002`, `F-sk-002`, `F-sl-002`, `F-sq-002`,
+`F-sr-002`, `F-sv-008`, `F-tr-002`, and `F-uk-002` closed. The corrected raw
+SHA-256 values are:
+
+- `et`:
+  `2a0bf5374e33dc856df778b577a1a078cc6a08635a61a9243563bdc06e3994e3`
+- `hr`:
+  `559afacc7edc3fd062348f3f73f43c02c667b30a8500640819d8134a04c580fa`
+- `hu`:
+  `2b94e6532cd6c1b5cdb5a2f08288114f349bccb4136e091f1c75d61d27a531a4`
+- `lv`:
+  `e706fe0d4686ba829bbbdfedfc3094519e011962dce4c70178c9a04cd3bf3627`
+- `mk`:
+  `0bd4a842bfbd8cf5691f80425f75eab3c879cd64c3e1604060e7de68a4025d25`
+- `ro`:
+  `3ce8d199873f1f09e77b5c2e63c77bcf2bb9ce56b2489fc9fc0c7af61debad3c`
+- `sk`:
+  `888dfef7d3ccf2e63d0e230756e9999414e2cd69ee4b67031ada608b6e60fe3b`
+- `sl`:
+  `3decaee3677282343cb6d167e9611102672cd42b8022eb0667b62a06a9ca9948`
+- `sq`:
+  `5727e5a54dbc65986f4ca7e4032dfc6940a8a11864bd36c2cbb905eac19bc825`
+- `sr`:
+  `8f7771a6bba6adf6ba48fc2891b0687db9d55c4c56c600d830357381007110de`
+- `sv`:
+  `4effe29a040daedee29cce750583347784a6ce795f0e93f5b6f638d9b55a9048`
+- `tr`:
+  `cfb5aeacdda54d7ee5df015453f16b857f49a50060e92ace72e164ee4c8b6746`
+- `uk`:
+  `1adf9debaeadbd5be49082c078a06705996110719680df96727b6c65eda83c6b`
+
+Because every dictionary byte change invalidates prior complete-pass evidence,
+all 13 locale rows remain `pending`, with no reviewer or pass credit. Each now
+requires two complete blind reviews of all 546 current entries.
+
+### Indic toggle-placeholder challenge — nine corrected locales pending passes
+
+Reviewer `root-arabic_546_current_first` challenged the Gujarati, Kannada,
+Malayalam, Marathi, Nepali, Punjabi, Sinhala, Tamil, and Telugu proposals
+against both callers, current in-repository morphology, and the primary product
+sources cited in the finding rows. A separate south-Indic challenge accepted
+Malayalam, Sinhala, and Tamil and amended Telugu plural accusative
+`బ్లాకులను` to the loan-stem-consistent `బ్లాక్‌లను`; the consolidated verdict
+accepted the other five values.
+
+The nine finding expectations then failed red in exactly nine cases while the
+other 2,899 guideline cases passed. After only those nine dictionary values
+changed, all 2,908 cases passed and `F-gu-002`, `F-kn-003`, `F-ml-003`,
+`F-mr-002`, `F-ne-002`, `F-pa-002`, `F-si-002`, `F-ta-002`, and `F-te-002`
+closed. The corrected raw SHA-256 values are:
+
+- `gu`:
+  `0d4e27ae3e20e889db83639b447e4663fa8296899c48991f4d44e5da9cd8fe73`
+- `kn`:
+  `4ea8f2a8351d39872fb94db72ef60622a17336d552481a73b56b1563205087c6`
+- `ml`:
+  `18677478f72d0a9343aaf18536b38aa82bd313b468ae21342dfaee0607334f01`
+- `mr`:
+  `689e9172097fc6ef10ac39b7e3f4ff4be2770a5e47709eb27c1b2fd0584536dc`
+- `ne`:
+  `30ac43ef732cd5e93d9aba158d3a6f5818a8d5d0c8c4a3345b6781e8adeb9775`
+- `pa`:
+  `89b357cddf3d8e8f794858364201823d5c86af745f9db60b2acdbb82123ce400`
+- `si`:
+  `9422512a162aebfdbace0c76c203190c86971637ded785cb96514c9210bc4ac3`
+- `ta`:
+  `dff7e4ac74fa1d904b1ffcd1c552c531bd750c984485ede5dd7fb6063451fe0c`
+- `te`:
+  `c098682255a633cba30a84b513e624c14493cf6ab7a062feb063be4498edd924`
+
+These focused challenges are not complete dictionary passes. All nine locale
+rows remain `pending`, with reviewer and result cells cleared, and require two
+blind reviews of all 546 corrected entries.
+
+### RTL toggle-placeholder challenge — nine corrected locales pending passes
+
+The Dhivehi, Persian, Hebrew, Sorani, Pashto, Sindhi, Uyghur, Urdu, and
+Yiddish proposals received a distinct whole-matrix challenge from
+`root-amharic_546_current_first`. The reviewer accepted all nine exact strings
+after checking singular click-created objects, plural drag objects, explicit
+destinations, provider-neutral terminology, NFC, control characters, current
+repository morphology, and the primary sources cited where available.
+
+The nine executable expectations failed red in exactly nine cases while the
+other 2,908 guideline cases passed. After only those nine dictionary values
+changed, all 2,917 cases passed and `F-dv-002`, `F-fa-002`, `F-he-002`,
+`F-ku-003`, `F-ps-002`, `F-sd-002`, `F-ug-002`, `F-ur-002`, and `F-yi-002`
+closed. The corrected raw SHA-256 values are:
+
+- `dv`:
+  `defec539838feef843e13998f1f2860e0b0b060e722a28e787c39eabbf00720a`
+- `fa`:
+  `c173082216086d686789f5c876870a38cb85dc0213a7a8a147ba8e2133adf749`
+- `he`:
+  `67458e6f854dfc7f0aef975211651f6cf7dd5b9babee4977baebde7429541a53`
+- `ku`:
+  `3c9e0df92ddc07ca3c378bfd3abcf778b3b00475a354ede9e84b32f709d9ae45`
+- `ps`:
+  `268323406cc01f412d4c4ef71207f819d76dece8e7cbbb27931b12ea05bf2953`
+- `sd`:
+  `462ff59820251b862656cc142a5e1fec66ce9a7286bac4b9a6edd3a44b219e3a`
+- `ug`:
+  `ab91985412a44cc2fea5a9838fe8d6c55a1b082d8f4711a1302a74ec257fad63`
+- `ur`:
+  `c21e89bb8a86042087e3f71c311a3fcc8170e39945e3d16cf0e700a58ca9bebb`
+- `yi`:
+  `172682d3c88497839041763184ada52f0b562039623e178c025eb35172912811`
+
+This focused matrix earns no complete-pass credit. All nine rows remain
+`pending` and require two blind reviews of every corrected dictionary entry.
+
+### Cross-script toggle-placeholder challenge — ten corrected locales pending passes
+
+Reviewer `root-arabic_546_current_first` reviewed the Filipino, Armenian,
+Khmer, Korean, Mongolian, Malay, Burmese, Swahili, Thai, and Vietnamese
+callers and proposals. Separate script-specific and Latin-family challengers
+amended Thai to provider-neutral `ส่วนที่พับได้`, required Swahili class-7
+predicate `ni kitupu`, and retained Vietnamese's explicit `một`/`các`
+singular-plural contrast. The final consolidated verdict was `KEEP 0 /
+CORRECT 10` and superseded every intermediate wording.
+
+The ten executable expectations failed red in exactly ten cases while the
+other 2,917 guideline cases passed. After only those ten dictionary values
+changed, all 2,927 cases passed and `F-fil-002`, `F-hy-004`, `F-km-003`,
+`F-ko-003`, `F-mn-002`, `F-ms-002`, `F-my-002`, `F-sw-002`, `F-th-002`, and
+`F-vi-002` closed. The corrected raw SHA-256 values are:
+
+- `fil`:
+  `feb209e9fcba109d299ed06361736ab89f8390daa5eb4472878d030d024247d8`
+- `hy`:
+  `238f124455486d09390c396fa8c46bd2e5e11b3ae0bcb022ce9a91d886a43d4c`
+- `km`:
+  `dd0a4ee2867510ca2add425652c85327bb7076c72a2cd6393e8f87fc7056e083`
+- `ko`:
+  `276075f3821d75d5b703b5baebe1d9f8b5f7ea4c764de175fdca01c8725f0185`
+- `mn`:
+  `6c1523770804d2eccec24b1400357d042cf076cb46072b4fd772ba2ce1aa2a8c`
+- `ms`:
+  `3220488cea0333545d9889c5c9762de81c6f0b7d60069e7191e2205d3cdf9396`
+- `my`:
+  `3d89b2e89d18c4517deb5816602005a650b43820cd6c907f1a9b2a27972476df`
+- `sw`:
+  `34bdb4558b9015284376b09bcc0873453ffcdc578368105a9075fc4a6eb50724`
+- `th`:
+  `fd371869576ed70515b0fdf7cda58ca84c918d94df7c6f0f968357b36cd5a3d3`
+- `vi`:
+  `5f159e7d711a92d326de10ec0a49d071f82c79500bef43b82179c654b9ddf748`
+
+These ten corrected dictionaries remain `pending`, with no complete-pass
+reviewer or result credit. Each requires two blind reviews of all 546 entries.
 
 ## Findings
 
@@ -5416,6 +5645,7 @@ follows the global transition rule above.
 | `F-bn-075` | `bn` | `blockSettings.openMenuAction` | caller composition / complete instruction | `" মেনু খুলতে"` | `" দিয়ে মেনু খুলুন"` | This fragment closes both composed instructions. The replacement turns the trailing infinitive into a complete imperative and supplies the instrumental connective required after either the click or shortcut phrase. | verified |
 | `F-bn-076` | `bn` | `a11y.dragHandle` | action clarity / accessibility | `"ব্লক সরাতে টানুন বা মেনুর জন্য ক্লিক করুন"` | `"ব্লক সরাতে টানুন বা মেনু খুলতে ক্লিক করুন"` | The drag-handle button opens the block menu when clicked. Naming that action directly is clearer than the vague “click for the menu” construction. | verified |
 | `F-bn-077` | `bn` | `tools.video.seekValueText` | numeric suffix attachment / accessibility | `"{total} এর মধ্যে {current}"` | `"{total}-এর মধ্যে {current}"` | The video seek caller interpolates Latin-digit `M:SS` values into this slider `aria-valuetext`. Bengali attaches the genitive suffix to numeric or non-Bengali tokens with a hyphen; Google’s Bengali progress UI uses the exact pattern [`5-এর মধ্যে 1`](https://support.google.com/files/answer/9765316?hl=bn). | verified |
+| `F-bn-078` | `bn` | `a11y.dropPosition` | numeric ordinal semantics / accessibility | `"{total}টির মধ্যে {position} অবস্থানে রাখা হবে"` | `"{total}টির মধ্যে {position} নম্বর অবস্থানে রাখা হবে"` | The polite drag announcement receives one-based numeric `position` and numeric `total`; the bare cardinal can read as a count of positions rather than “position 3.” Bangladesh’s Press Information Department uses [`এক নম্বর অবস্থানে`](https://pressinform.gov.bd/site/allnotes/cbadeb77-c1c0-4e3e-b102-1b1ea0cb35ae), explicitly marking the numeric position with `নম্বর`. | verified |
 | `F-bs-001` | `bs` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Očisti formatiranje"` | LibreOffice’s Bosnian product UI supplies the exact Clear formatting translation [Očisti formatiranje](https://github.com/LibreOffice/translations/blob/master/source/bs/svx/messages.po#L6304-L6305). | verified |
 | `F-bs-002` | `bs` | `blockSettings.convertWithChildrenWarning` | semantic accuracy / locale style | `"Ugniježđeni blokovi: {count}. Konverzijom ovog bloka ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | `"Ugniježđeni blokovi: {count}. Ako pretvorite ovaj blok, ugniježđeni sadržaj bit će premješten na najviši nivo. Nastaviti?"` | Avoid technical nominalization while preserving the count-neutral warning. Frozen 545-key audit index 8; independent disposition: accept-original-proposal. | verified |
 | `F-bs-003` | `bs` | `toolbox.optionAddAbove` | semantic accuracy / locale style | `"Option-klik za dodavanje iznad"` | `"Držite tipku Option i kliknite za dodavanje iznad"` | Replaces the awkward compound and explicitly tells the user to hold Option while clicking. Frozen 545-key audit index 10; independent disposition: adjust. | verified |
@@ -6168,6 +6398,7 @@ follows the global transition rule above.
 | `F-ka-001` | `ka` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"პირდაპირი დაფორმატების გასუფთავება"` | LibreOffice’s Georgian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ka/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-ka-002` | `ka` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"ტექსტი"` | `"ტექსტის ფერი"` | English changed from “Text” to “Text color,” while Georgian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Google’s Georgian product UI uses the exact term [`ტექსტის ფერი`](https://support.google.com/youtube/answer/16215842?co=GENIE.Platform%3DiOS&hl=ka). | verified |
 | `F-ka-003` | `ka` | `tools.paragraph.placeholder` | source completeness / omitted object | `"დაწერეთ რამე ან დააჭირეთ / ასარჩევად"` | `"დაწერეთ რამე ან დააჭირეთ / ხელსაწყოს ასარჩევად"` | The focus-only paragraph placeholder is a complete instruction, but the old purposive phrase ends at “press / to select” and omits the source object “a tool.” The replacement restores the genitive object using this dictionary’s established `ხელსაწყო` terminology, also used in [Google’s Georgian product UI](https://support.google.com/youtube/answer/9346683?hl=ka). | verified |
+| `F-ka-004` | `ka` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / omitted click result | `"ცარიელი ჩამოსაშლელი. დააწკაპუნეთ ან ჩააგდეთ ბლოკები შიგნით."` | `"ცარიელი ჩამოსაშლელი. დააწკაპუნეთ ბლოკის დასამატებლად ან ჩავლებით გადაიტანეთ ბლოკები აქ."` | Georgian still translated the superseded “Click or drop blocks inside” source and omitted the current click result “add a block.” Both toggle providers expose this clickable prompt and create and focus a child on click; Google’s Georgian UI uses the purposive [`… დასამატებლად … დააწკაპუნეთ`](https://support.google.com/youtube/answer/3219384?hl=ka) construction and [`ჩავლებით გადაიტანეთ`](https://support.google.com/youtube/answer/3077589?hl=ka) for dragging. | verified |
 | `F-km-001` | `km` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ជម្រះទ្រង់ទ្រាយ"` | LibreOffice’s exact short Clear formatting entry is `ជម្រះ​ទ្រង់ទ្រាយ`; the invisible separator is omitted to match this JSON corpus. An independent pass rejected the longer direct-formatting proposal as needless technical scope. | verified |
 | `F-km-002` | `km` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"អត្ថបទ"` | `"ពណ៌អត្ថបទ"` | English changed from “Text” to “Text color,” while Khmer retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Collabora Office’s Khmer product help uses the exact term [`ពណ៌អត្ថបទ`](https://help.collaboraoffice.com/22.05/km/text/shared/01/05020200.html). | verified |
 | `F-kn-001` | `kn` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ಫಾರ್ಮ್ಯಾಟಿಂಗ್ ತೆರವುಗೊಳಿಸಿ"` | The replacement combines this dictionary’s and Google’s established `ಫಾರ್ಮ್ಯಾಟಿಂಗ್` terminology with this dictionary’s polite `ತೆರವುಗೊಳಿಸಿ` clear-action register. An independent pass rejected the longer LibreOffice direct-formatting label as needlessly technical. | verified |
@@ -6577,7 +6808,7 @@ follows the global transition rule above.
 | `F-sv-005` | `sv` | `tools.colorPicker.defaultSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {default}"` | `"{mode}: {default}"` | The template is a swatch accessible name; the colon makes caller output such as `Textfärg: Standard` an unambiguous label-value pair. | verified |
 | `F-sv-006` | `sv` | `tools.colorPicker.colorSwatchLabel` | accessibility / spoken-label clarity | `"{mode} {color}"` | `"{mode}: {color}"` | The template is a swatch accessible name; the colon makes values such as `Textfärg: Grå` unambiguous. | verified |
 | `F-sv-007` | `sv` | `tools.paragraph.placeholder` | hint clarity | `"Skriv något eller tryck / för att välja"` | `"Skriv något eller tryck / för att välja ett verktyg"` | The current sentence is incomplete because it omits what the slash command selects. | verified |
-| `F-sv-008` | `sv` | `tools.toggle.bodyPlaceholder` | action clarity / source synchronization | `"Tom vikbar lista. Klicka eller släpp block här."` | `"Tom vikbar lista. Klicka för att lägga till ett block eller dra block hit."` | The click creates a child block while drag accepts existing blocks; the replacement names both distinct actions. | verified |
+| `F-sv-008` | `sv` | `tools.toggle.bodyPlaceholder` | shared-caller scope / action clarity | `"Tom vikbar lista. Klicka eller släpp block här."` | `"Tomt vikbart block. Klicka för att lägga till ett block eller dra block hit."` | The first closure corrected the original action clause to intermediate `Tom vikbar lista. Klicka för att lägga till ett block eller dra block hit.` A current-byte shared-caller review reopened the same unique locale/key finding because `lista` still mislabels the toggle-heading provider. Provider-neutral `block` covers both callers and requires neuter agreement `Tomt vikbart`; Notion likewise treats a toggle list as one specific [list block](https://www.notion.com/sv/help/writing-and-editing-basics). | verified |
 | `F-sv-009` | `sv` | `tools.toggle.ariaLabelCollapse` | action terminology / accessibility | `"Dölj"` | `"Fäll ihop"` | The control collapses a disclosure; `Dölj` only says hide and loses the paired expand/collapse model. | verified |
 | `F-sv-010` | `sv` | `tools.toggle.ariaLabelExpand` | action terminology / accessibility | `"Visa"` | `"Fäll ut"` | The control expands a disclosure; `Visa` only says show and loses the paired expand/collapse model. | verified |
 | `F-sv-011` | `sv` | `tools.table.clearSelection` | context / action accuracy | `"Rensa"` | `"Rensa innehåll"` | Both table callers clear selected cell, row, or column contents rather than merely clearing the painted selection. | verified |
@@ -6767,6 +6998,46 @@ follows the global transition rule above.
 | `F-zh-TW-030` | `zh-TW` | `tools.colorPicker.defaultSwatchLabel` | accessibility / label-value punctuation | `"{mode} {default}"` | `"{mode}：{default}"` | The color-picker caller inserts localized mode and default labels into one spoken tooltip; W3C’s [Chinese Layout Requirements](https://www.w3.org/TR/clreq/#punctuation_marks) identifies the native colon as U+FF1A `：`. Both placeholders remain intact. | verified |
 | `F-zh-TW-031` | `zh-TW` | `tools.colorPicker.colorSwatchLabel` | accessibility / label-value punctuation | `"{mode} {color}"` | `"{mode}：{color}"` | The swatch caller composes values such as “文字顏色：灰色”; a bare space leaves the adjacent nouns ambiguous, while W3C documents `：` as the native Chinese colon. Both placeholders remain intact. | verified |
 | `F-zh-TW-032` | `zh-TW` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖曳控制項"` | `"拖曳控點"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Taiwan Fluent UI guidance uses the handle-specific term [拖曳控點](https://learn.microsoft.com/zh-tw/power-apps/teams/use-the-fluent-ui-controls). | verified |
+| `F-et-003` | `et` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Tühi avatav plokk. Klõpsa või lohista plokke sisse."` | `"Tühi avatav plokk. Klõpsa ploki lisamiseks või lohista plokid siia."` | Both toggle providers create a child on click and accept existing blocks by drag. The replacement names both outcomes; Microsoft Estonian uses the same [drag-here construction](https://support.microsoft.com/et-ee/sharepoint/documents-and-library/top-questions-about-check-out-check-in-and-versions). | verified |
+| `F-hr-004` | `hr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Prazan preklopnik. Klikni ili ispusti blokove unutra."` | `"Prazan preklopnik. Klikni za dodavanje bloka ili povuci blokove ovdje."` | `ispusti` describes only dropping and the old copy never states what clicking creates. The replacement preserves the locale's informal imperative and established [drag terminology](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=hr). | verified |
+| `F-hu-004` | `hu` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Üres lenyíló. Kattintson rá, vagy húzzon bele blokkokat."` | `"Üres lenyíló. Kattintson egy blokk hozzáadásához, vagy húzzon ide blokkokat."` | `Kattintson rá` omits that clicking adds one block. The replacement keeps the formal register and attested Microsoft [click-to-add construction](https://support.microsoft.com/hu-hu/office/hely%C5%91rz%C5%91-hozz%C3%A1ad%C3%A1sa-szerkeszt%C3%A9se-vagy-elt%C3%A1vol%C3%ADt%C3%A1sa-a-diaelrendez%C3%A9sben-a8d93d28-66cb-43fd-9f9d-e12d0a7a1f06). | verified |
+| `F-lv-004` | `lv` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / grammar / action clarity | `"Tukšs pārslēdzamais bloks. Noklikšķiniet vai nometiet blokus iekšpusē."` | `"Tukšs pārslēdzams bloks. Noklikšķiniet, lai pievienotu bloku, vai velciet blokus šeit."` | The replacement separates click-to-add from drag-here and fixes mixed adjective definiteness for a first-mentioned indefinite block. Microsoft Latvian uses the same [click-to-add construction](https://support.microsoft.com/lv-lv/office/viettura-pievieno%C5%A1ana-redi%C4%A3%C4%93%C5%A1ana-vai-no%C5%86em%C5%A1ana-slaida-izk%C4%81rtojum%C4%81-a8d93d28-66cb-43fd-9f9d-e12d0a7a1f06). | verified |
+| `F-mk-002` | `mk` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Празен расклоплив блок. Кликнете или испуштете блокови внатре."` | `"Празен расклоплив блок. Кликнете за да додадете блок или повлечете блокови овде."` | The old wording conflates clicking with dropping and omits the created block. LibreOffice Macedonian uses the exact [`Кликнете … за да додадете`](https://help.libreoffice.org/latest/mk/text/simpress/02/13060000.html) construction. | verified |
+| `F-ro-002` | `ro` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Bloc reductibil gol. Faceți clic sau trageți blocuri înăuntru."` | `"Bloc reductibil gol. Faceți clic pentru a adăuga un bloc sau trageți blocuri aici."` | The replacement preserves the formal register while explicitly naming the click result and drag destination, following established Romanian [product wording](https://docs.oracle.com/cloud/help/ro/content-cloud/CECMC/GUID-4046476C-3D87-4685-AAEB-9902DF815060.htm). | verified |
+| `F-sk-002` | `sk` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Prázdny prepínač. Kliknite alebo presuňte bloky dovnútra."` | `"Prázdny prepínač. Kliknutím pridáte blok alebo sem presuňte bloky."` | The replacement uses established Slovak product patterns to distinguish adding one block by click from moving blocks into the drop target. [Microsoft Slovak](https://support.microsoft.com/sk-sk/office/pou%C5%BE%C3%ADvanie-webovej-%C4%8Dasti-naj%C4%8Dastej%C5%A1ie-ot%C3%A1zky-v-sharepointe-fd499cde-5db8-419d-a00a-bf87a43c79fb). | verified |
+| `F-sl-002` | `sl` | `tools.toggle.bodyPlaceholder` | shared-caller scope / changed-English synchronization | `"Prazen preklopni seznam. Kliknite ali spustite bloke vanj."` | `"Prazen preklopni blok. Kliknite za dodajanje bloka ali povlecite bloke sem."` | `seznam` mislabels the toggle-heading provider that shares this prompt, while the old actions omit click-to-create. Provider-neutral `blok` and established [`povlecite`](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=sl) cover both callers and actions. | verified |
+| `F-sq-002` | `sq` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Palosje bosh. Klikoni ose hidhni blloqe brenda."` | `"Palosje bosh. Klikoni për të shtuar një bllok ose tërhiqni blloqe këtu."` | `hidhni` means throw or drop and the old wording never states what clicking creates. The replacement consistently uses formal-plural product imperatives and attested Albanian [drag terminology](https://geoportal.asig.gov.al/sites/default/files/2024-07/ASIG%20Geoportal%20-%20Manuali%20Perdoruesit.pdf). | verified |
+| `F-sr-002` | `sr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Празан склопиви блок. Кликните или превуците блокове унутра."` | `"Празан склопиви блок. Кликните за додавање блока или превуците блокове овде."` | The formal Cyrillic replacement explicitly states both click-to-add and drag-here outcomes while retaining established Serbian [drag terminology](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=sr). | verified |
+| `F-tr-002` | `tr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Boş açılır blok. İçine tıklayın veya blok bırakın."` | `"Boş açılır blok. Blok eklemek için tıklayın veya blokları buraya sürükleyin."` | The old copy says only click inside or drop a block; the replacement states the created block and drag target in the established formal register. [Microsoft Turkish](https://support.microsoft.com/tr-TR/PowerPoint/add-edit-or-remove-a-placeholder-on-a-slide-layout). | verified |
+| `F-uk-002` | `uk` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Порожній згортний блок. Натисніть або перетягніть блоки всередину."` | `"Порожній згортний блок. Натисніть, щоб додати блок, або перетягніть блоки сюди."` | The replacement preserves established Ukrainian imperatives while naming the missing click result and explicit drag destination. [Google Android Ukrainian](https://support.google.com/android/answer/9450271?hl=uk). | verified |
+| `F-gu-002` | `gu` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ખાલી ટૉગલ. ક્લિક કરો અથવા બ્લૉક અંદર ખેંચો."` | `"ખાલી ટૉગલ. બ્લૉક ઉમેરવા માટે ક્લિક કરો અથવા બ્લૉક્સને અહીં ખેંચો."` | The old copy makes `બ્લૉક` the object of both actions and omits what clicking creates. The replacement distinguishes a bare singular block from the plural drag object and uses Google Gujarati's established [`ખેંચો`](https://support.google.com/files/answer/13530280?hl=gu) terminology. | verified |
+| `F-kn-003` | `kn` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ಖಾಲಿ ಟಾಗಲ್. ಕ್ಲಿಕ್ ಮಾಡಿ ಅಥವಾ ಬ್ಲಾಕ್‌ಗಳನ್ನು ಒಳಗೆ ಎಳೆಯಿರಿ."` | `"ಖಾಲಿ ಟಾಗಲ್. ಬ್ಲಾಕ್ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ ಅಥವಾ ಬ್ಲಾಕ್‌ಗಳನ್ನು ಇಲ್ಲಿಗೆ ಎಳೆಯಿರಿ."` | The old wording omits the click-created singular block. The replacement separates bare singular `ಬ್ಲಾಕ್` from plural accusative `ಬ್ಲಾಕ್‌ಗಳನ್ನು` and makes the drag destination explicit using the dictionary's established register. | verified |
+| `F-ml-003` | `ml` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ഒഴിഞ്ഞ ടോഗിൾ. ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ ബ്ലോക്കുകൾ ഉള്ളിലേക്ക് ഇടുക."` | `"ഒഴിഞ്ഞ ടോഗിൾ. ഒരു ബ്ലോക്ക് ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ ബ്ലോക്കുകൾ ഇവിടേക്ക് വലിച്ചിടുക."` | The replacement names the explicit singular click result, plural drag object, and destination while retaining formal Malayalam UI imperatives attested in [Google's product help](https://support.google.com/youtube/answer/112085?hl=ml). | verified |
+| `F-mr-002` | `mr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"रिकामा संकुचित ब्लॉक. क्लिक करा किंवा आत ब्लॉक टाका."` | `"रिकामा संकुचित ब्लॉक. ब्लॉक जोडण्यासाठी क्लिक करा किंवा ब्लॉक येथे ओढा."` | The old copy says only click or put inside. The replacement states click-to-add and drag-here while preserving the locale's number-invariant `ब्लॉक` and official Android Marathi [`ओढा`](https://support.google.com/android/answer/9346420?hl=mr) drag term. | verified |
+| `F-ne-002` | `ne` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"खाली मोड्ने। ब्लकहरू भित्र क्लिक गर्नुहोस् वा तान्नुहोस्।"` | `"खाली मोड्ने। ब्लक थप्न क्लिक गर्नुहोस् वा ब्लकहरू यहाँ तान्नुहोस्।"` | The old plural object incorrectly applies to clicking and omits the created block. The replacement contrasts singular `ब्लक` with plural `ब्लकहरू`, retains formal imperatives, and follows Google Nepali's product register. [Google YouTube Help](https://support.google.com/youtube/answer/112085?hl=ne). | verified |
+| `F-pa-002` | `pa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ਖਾਲੀ ਟੌਗਲ। ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਅੰਦਰ ਖਿੱਚੋ।"` | `"ਖਾਲੀ ਟੌਗਲ। ਬਲਾਕ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਇੱਥੇ ਖਿੱਚੋ।"` | The replacement restores the singular click result, preserves plural oblique-object `ਬਲਾਕਾਂ ਨੂੰ`, and makes the drag destination explicit using established Punjabi product phrasing. [Google YouTube Help](https://support.google.com/youtube/answer/171780?hl=pa). | verified |
+| `F-si-002` | `si` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"හිස් හැකිලෙන කොටස. ක්ලික් කරන්න හෝ කොටස් ඇතුළට ඇදගෙන දමන්න."` | `"හිස් හැකිලෙන කොටස. කොටසක් එක් කිරීමට ක්ලික් කරන්න හෝ කොටස් මෙතැනට ඇදගෙන දමන්න."` | The replacement supplies indefinite singular `කොටසක්` for click-to-add, plural `කොටස්` for dragged items, and directional `මෙතැනට` while retaining the established drag-and-drop collocation. [Google YouTube Help](https://support.google.com/youtube/answer/10191533?hl=si). | verified |
+| `F-ta-002` | `ta` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"காலி மடிப்பு. தொகுதிகளை உள்ளே கிளிக் செய்யவும் அல்லது இழுக்கவும்."` | `"காலி மடிப்பு. ஒரு தொகுதியைச் சேர்க்க கிளிக் செய்யவும் அல்லது தொகுதிகளை இங்கே இழுக்கவும்."` | The old plural object incorrectly scopes over clicking. The replacement uses precise singular accusative and sandhi for the added block, plural accusative for dragged blocks, and formal UI imperatives attested in [Google Tamil product help](https://support.google.com/docs/answer/179740?co=GENIE.Platform%3DDesktop&hl=ta). | verified |
+| `F-te-002` | `te` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / morphology / action clarity | `"ఖాళీ మడత. నొక్కండి లేదా బ్లాకులను లోపలకు లాగండి."` | `"ఖాళీ మడత. బ్లాక్‌ను జోడించడానికి నొక్కండి లేదా బ్లాక్‌లను ఇక్కడికి లాగండి."` | The replacement distinguishes singular accusative `బ్లాక్‌ను` from plural accusative `బ్లాక్‌లను`, explicitly names click-to-add and drag-here, and preserves the loan stem attested in [Google Telugu product help](https://support.google.com/docs/answer/10710316?hl=te). | verified |
+| `F-dv-002` | `dv` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ހުސް ޓޮގަލް. ކްލިކް ކުރޭ ނުވަތަ ބްލޮކްތައް ތެރެއަށް ދޫކޮށްލާ."` | `"ހުސް ޓޮގަލް. ބްލޮކެއް އިތުރުކުރަން ކްލިކް ކުރޭ ނުވަތަ ބްލޮކްތައް މިތަނަށް ދަމާލާ."` | The old Dhivehi copy says only click or drop blocks inside. The replacement uses the dictionary's established terms to distinguish adding one block by click from dragging plural blocks here. | verified |
+| `F-fa-002` | `fa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"بازشوی خالی. برای افزودن بلوک‌ها کلیک کنید یا آن‌ها را اینجا رها کنید."` | `"بازشوی خالی. برای افزودن یک بلوک کلیک کنید یا بلوک‌ها را اینجا بکشید."` | The old click clause incorrectly refers to plural blocks and the drop clause uses release rather than drag. The replacement names singular `یک بلوک`, preserves ZWNJ plural, and follows Google's Persian [`کلیک کنید` and `بکشید`](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=fa) terminology. | verified |
+| `F-he-002` | `he` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"מתקפל ריק. לחץ או גרור בלוקים פנימה."` | `"מתקפל ריק. לחץ להוספת בלוק או גרור בלוקים לכאן."` | The replacement states that clicking adds a singular block and gives the plural drag destination, using established Hebrew product constructions corroborated by [Microsoft](https://support.microsoft.com/he-il/topic/%D7%94%D7%95%D7%A1%D7%A4%D7%AA-%D7%A9%D7%93%D7%94-%D7%9C%D7%98%D7%95%D7%A4%D7%A1-%D7%90%D7%95-%D7%9C%D7%93%D7%95%D7%97-0d5e2740-3b39-4341-8ec2-32c9f82cbfce) and [Apple](https://support.apple.com/he-il/guide/transporter-app/apdadff4f5ff/mac). | verified |
+| `F-ku-003` | `ku` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"داشکاندنی بەتاڵ. کلیک بکە یان بلۆک بخەرە ناوی."` | `"داشکاندنی بەتاڵ. کلیک بکە بۆ زیادکردنی بلۆکێک یان بلۆکەکان ڕاکێشە بۆ ئێرە."` | The old Sorani copy says only click or put a block inside. The replacement uses established repository morphology to name singular click-to-add, plural drag, and the target explicitly. | verified |
+| `F-ps-002` | `ps` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"خالي راټولېدونکی. د بلاکونو د دننه کولو لپاره کلیک وکړئ یا کش کړئ."` | `"خالي راټولېدونکی. د یوه بلاک اضافه کولو لپاره کلیک وکړئ یا بلاکونه دلته کش کړئ."` | The old purpose phrase ambiguously applies clicking to putting plural blocks inside. The replacement uses correct oblique singular `یوه`, plural drag object, and an explicit destination in the locale's established formal register. | verified |
+| `F-sd-002` | `sd` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"خالي سمٽيل بلاڪ. ڪلڪ ڪريو يا بلاڪ اندر ڏانهن ڇڪيو."` | `"خالي سمٽيل بلاڪ. هڪ بلاڪ شامل ڪرڻ لاءِ ڪلڪ ڪريو يا بلاڪن کي هتي ڇڪيو."` | The old Sindhi copy omits the click result and does not distinguish singular creation from plural dragging. The replacement uses natural singular `هڪ بلاڪ`, plural oblique `بلاڪن کي`, and the established formal imperatives. | verified |
+| `F-ug-002` | `ug` | `tools.toggle.bodyPlaceholder` | shared-caller scope / changed-English synchronization | `"بوش تىزىملىك. بلوكلارنى ئىچىگە چەككىلى ياكى سۆرىگىلى بولىدۇ."` | `"بوش يىغىلما. بىر بۆلەك قوشۇش ئۈچۈن چېكىڭ ياكى بۆلەكلەرنى بۇ يەرگە سۆرەڭ."` | `تىزىملىك` mislabels the toggle-heading provider and the old action wording applies a plural object to clicking. Provider-neutral `يىغىلما` plus the repository's normalized `بۆلەك` distinguishes singular add from plural drag. | verified |
+| `F-ur-002` | `ur` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"خالی ٹوگل۔ بلاکس کو اندر کلک کریں یا گھسیٹیں۔"` | `"خالی ٹوگل۔ ایک بلاک شامل کرنے کے لیے کلک کریں یا بلاکس کو یہاں گھسیٹیں۔"` | The old Urdu wording incorrectly tells users to click blocks inside. The replacement states singular click-to-add and plural drag-here using Google Urdu's established [`کلک کریں`, `شامل`, and `گھسیٹیں`](https://support.google.com/edu/classroom/answer/13455315?hl=ur) terminology. | verified |
+| `F-yi-002` | `yi` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ליידיקער אויפֿקלאַפּ. קליק אָדער צי אַרײַן בלאָקן."` | `"ליידיקער אויפֿקלאַפּ. קליק צו צולייגן אַ בלאָק אָדער שלעפּ בלאָקן אַהער."` | The replacement names the singular click result and plural drag destination using repository-consistent Yiddish vocabulary; the Yiddish Book Center corroborates the [`שלעפּ`](https://www.yiddishbookcenter.org/language-literature-culture/heymarbet-homework/leshone-toyves) drag verb. | verified |
+| `F-fil-002` | `fil` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Walang laman na toggle. Mag-click o mag-drag ng mga block sa loob."` | `"Walang laman na toggle. I-click para magdagdag ng block o i-drag ang mga block dito."` | The old Filipino copy omits the click result and gives only an interior destination. The replacement contrasts one bare indefinite `block` with plural `mga block`, uses directional `dito`, and follows Google's established [`i-click`/`i-drag`](https://support.google.com/chat/answer/16059854?hl=fil) register. | verified |
+| `F-hy-004` | `hy` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"Դատարկ ծալվող բլոկ։ Սեղմեք կամ քաշեք բլոկներն այստեղ։"` | `"Դատարկ ծալվող բլոկ։ Սեղմեք՝ բլոկ ավելացնելու համար կամ քաշեք բլոկներն այստեղ։"` | The old coordinated object leaves clicking incorrectly scoped over plural definite blocks. The replacement makes bare singular `բլոկ` the click-created object while retaining plural-definite `բլոկներն` for dragging and the formal imperative. | verified |
+| `F-km-003` | `km` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"បត់បានទទេ។ ចុច ឬទម្លាក់ប្លុកនៅខាងក្នុង។"` | `"បត់បានទទេ។ ចុចដើម្បីបន្ថែមប្លុកមួយ ឬអូសប្លុកមកទីនេះ។"` | The replacement explicitly marks the one created block with `ប្លុកមួយ`, changes passive drop to active drag `អូស`, and identifies the destination while preserving the established formal register. | verified |
+| `F-ko-003` | `ko` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"빈 토글입니다. 블록을 클릭하거나 안으로 드롭하세요."` | `"빈 토글입니다. 클릭하여 블록을 추가하거나 블록을 여기로 드래그하세요."` | The old Korean copy tells users to click a block and uses drop rather than drag. The replacement states click-to-add and active drag-here under one natural polite imperative; bare `블록` is number-neutral in both clauses. | verified |
+| `F-mn-002` | `mn` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"Хоосон эвхмэл хэсэг. Дотор нь блок дарж эсвэл чирж оруулна уу."` | `"Хоосон эвхмэл хэсэг. Блок нэмэхийн тулд дарна уу эсвэл блокуудыг энд чирнэ үү."` | The old Mongolian wording ambiguously tells users to press a block inside. The replacement contrasts singular `Блок` for creation with plural accusative `блокуудыг` for dragging and keeps the polite instruction register. | verified |
+| `F-ms-002` | `ms` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"Togol kosong. Klik atau seret blok ke dalam."` | `"Togol kosong. Klik untuk tambah satu blok atau seret blok ke sini."` | The old Malay copy never states the click result. `satu blok` fixes that result at one, while number-neutral drag object `blok`, directional `ke sini`, and terse imperatives match the locale's product register and established [`Seret`](https://support.google.com/chrome/answer/188842?co=GENIE.Platform%3DAndroid&hl=ms) terminology. | verified |
+| `F-my-002` | `my` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"ဗလာ ခေါက်စာ။ နှိပ်ပါ သို့မဟုတ် ဘလောက်များကို ထဲသို့ ဆွဲချပါ။"` | `"ဗလာ ခေါက်စာ။ ဘလောက်တစ်ခုထည့်ရန် နှိပ်ပါ သို့မဟုတ် ဘလောက်များကို ဤနေရာသို့ ဆွဲယူပါ။"` | The replacement explicitly distinguishes singular `တစ်ခု` for the click-created block from plural-object `များကို` for active dragging, adds the destination, and retains established Burmese shared-toggle terminology. | verified |
+| `F-sw-002` | `sw` | `tools.toggle.bodyPlaceholder` | grammar / changed-English synchronization / number | `"Kinachokunjuka tupu. Bofya au dondosha vizuizi ndani."` | `"Kinachokunjuka ni kitupu. Bofya ili kuongeza kizuizi au buruta vizuizi hapa."` | The opening needs a complete class-7 predicate: Tanzania's Institute of Education attests concordant [`kitupu`](https://ol.tie.go.tz/uploaded_files/books/adv_secondary/frmv/Stud_Book/Fasihi_Kisw/files/basic-html/page146.html). The replacement also contrasts singular `kizuizi` click creation with plural `vizuizi` active dragging and an explicit destination. | verified |
+| `F-th-002` | `th` | `tools.toggle.bodyPlaceholder` | shared-caller scope / changed-English synchronization | `"บล็อกพับว่างเปล่า คลิกหรือวางบล็อกไว้ข้างใน"` | `"ส่วนที่พับได้นี้ว่างเปล่า คลิกเพื่อเพิ่มบล็อก หรือลากบล็อกมาที่นี่"` | `บล็อกพับ` is an incomplete technical classification and the old actions omit creation and active dragging. Provider-neutral `ส่วนที่พับได้` follows Microsoft Thai's [collapsible-section pattern](https://support.microsoft.com/th-th/office/%E0%B9%80%E0%B8%9E%E0%B8%B4%E0%B9%88%E0%B8%A1%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%84%E0%B8%AD%E0%B8%A5%E0%B8%B1%E0%B8%A1%E0%B8%99%E0%B9%8C%E0%B8%9A%E0%B8%99%E0%B8%AB%E0%B8%99%E0%B9%89%E0%B8%B2%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%97%E0%B8%B1%E0%B8%99%E0%B8%AA%E0%B8%A1%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%87-sharepoint-a54ecb22-ce73-46db-8d08-95a810ffcbde), while bare `บล็อก` is number-neutral across both actions. | verified |
+| `F-vi-002` | `vi` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"Khối thu gọn trống. Nhấp hoặc kéo thả khối vào bên trong."` | `"Khối thu gọn trống. Nhấp để thêm một khối hoặc kéo các khối vào đây."` | The replacement explicitly contrasts one click-created block `một khối` with the generic plural drag set `các khối`, uses active drag, and supplies the directional goal attested by Microsoft's Vietnamese [`Kéo vào đây`](https://support.microsoft.com/vi-vn/office/s%E1%BA%AFp-x%E1%BA%BFp-danh-s%C3%A1ch-c%E1%BB%A7a-b%E1%BA%A1n-14eb65d0-d1b1-4321-83e5-5f952196ce1a). | verified |
 | `F-global-001` | all non-English | 77 changed English source keys | source dependency | Localized values have not been re-reviewed against the 70 corrected source values and seven new keys. | All 5,236 dependent values have a current reviewed disposition, and every required localized correction is applied. | All 77 dependencies were inspected in all 68 localized dictionaries against their callers or documented contracts. Executable emoji and movement matrices, exact placeholder and NFC checks, all 1,448 synchronized localized findings, the 1,743-case guideline contract, and the live 545-key checker verify the final state; complete locale passes remain separately required. | verified |
 | `F-global-002` | all non-English | four expanded emoji category keys | source dependency / category scope / accessibility | The 68 localized dictionaries still use one-part labels for some or all of the newly expanded smileys-and-people, animals-and-nature, food-and-drink, and travel-and-places source categories. | Apply the independently reviewed native four-label matrix to all 68 localized dictionaries, retaining a current value only when it already expresses both scopes. | Three independent language-family reviews inspected all 272 visible and ARIA labels against runtime category contents, bundled Emoji Mart data, Unicode CLDR, and official Apple, Google, Microsoft, Android, and native-language product terminology. The executable 68-locale matrix records all 253 required corrections and 19 valid retentions. | verified |
 | `F-global-003` | all non-English | tools.colorPicker.recentlyUsed localized labels | source dependency / missing key / hard-coded fallback / false friend | The committed recently-used color section had no localized dictionary key and fell back to raw English in every non-English locale; the first matrix also used Yiddish `לעצטנס געוויינט`, whose participle means “cried/wept,” not product “used.” | Add the independently reviewed context-aware label to all 68 localized dictionaries, use Yiddish `לעצטנס געניצט`, and require direct dictionary resolution in the caller. | Two context challenges corrected Norwegian plural agreement and completed the Burmese attributive phrase; a third independent challenge caught the Yiddish false friend and explicitly accepted the other 67 values. The corrected Yiddish expectation failed before remediation. The final 69/69 matrix cases, 59/59 caller cases, 87/87 scanner cases, live 546-key checker, and full guideline contract pass. | verified |

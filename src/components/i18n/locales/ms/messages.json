@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Senarai",
   "tools.paragraph.placeholder": "Tulis sesuatu atau tekan / untuk pilih alat",
   "tools.toggle.placeholder": "Togol",
-  "tools.toggle.bodyPlaceholder": "Togol kosong. Klik atau seret blok ke dalam.",
+  "tools.toggle.bodyPlaceholder": "Togol kosong. Klik untuk tambah satu blok atau seret blok ke sini.",
   "tools.toggle.ariaLabelCollapse": "Runtuhkan",
   "tools.toggle.ariaLabelExpand": "Kembangkan",
   "tools.table.title": "Jadual",

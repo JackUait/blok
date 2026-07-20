@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Жагсаалт",
   "tools.paragraph.placeholder": "Бичих эсвэл / дарж хэрэгсэл сонгоно уу",
   "tools.toggle.placeholder": "Эвхмэл",
-  "tools.toggle.bodyPlaceholder": "Хоосон эвхмэл хэсэг. Дотор нь блок дарж эсвэл чирж оруулна уу.",
+  "tools.toggle.bodyPlaceholder": "Хоосон эвхмэл хэсэг. Блок нэмэхийн тулд дарна уу эсвэл блокуудыг энд чирнэ үү.",
   "tools.toggle.ariaLabelCollapse": "Нугалах",
   "tools.toggle.ariaLabelExpand": "Задлах",
   "tools.table.title": "Хүснэгт",

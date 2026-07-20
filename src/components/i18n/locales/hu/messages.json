@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Írjon valamit, vagy nyomja meg a / billentyűt",
   "tools.toggle.placeholder": "Lenyíló",
-  "tools.toggle.bodyPlaceholder": "Üres lenyíló. Kattintson rá, vagy húzzon bele blokkokat.",
+  "tools.toggle.bodyPlaceholder": "Üres lenyíló. Kattintson egy blokk hozzáadásához, vagy húzzon ide blokkokat.",
   "tools.toggle.ariaLabelCollapse": "Összecsuk",
   "tools.toggle.ariaLabelExpand": "Kinyit",
   "tools.table.title": "Táblázat",

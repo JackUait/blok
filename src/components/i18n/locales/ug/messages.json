@@ -57,7 +57,7 @@
   "tools.list.placeholder": "تىزىملىك",
   "tools.paragraph.placeholder": "بىر نەرسە يېزىڭ ياكى / نى بېسىپ قورال تاللاڭ",
   "tools.toggle.placeholder": "يىغىلما",
-  "tools.toggle.bodyPlaceholder": "بوش تىزىملىك. بلوكلارنى ئىچىگە چەككىلى ياكى سۆرىگىلى بولىدۇ.",
+  "tools.toggle.bodyPlaceholder": "بوش يىغىلما. بىر بۆلەك قوشۇش ئۈچۈن چېكىڭ ياكى بۆلەكلەرنى بۇ يەرگە سۆرەڭ.",
   "tools.toggle.ariaLabelCollapse": "يىغىش",
   "tools.toggle.ariaLabelExpand": "يېيىش",
   "tools.table.title": "جەدۋەل",

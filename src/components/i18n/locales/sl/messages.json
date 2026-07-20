@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Seznam",
   "tools.paragraph.placeholder": "Napišite nekaj ali pritisnite / za izbiro",
   "tools.toggle.placeholder": "Preklop",
-  "tools.toggle.bodyPlaceholder": "Prazen preklopni seznam. Kliknite ali spustite bloke vanj.",
+  "tools.toggle.bodyPlaceholder": "Prazen preklopni blok. Kliknite za dodajanje bloka ali povlecite bloke sem.",
   "tools.toggle.ariaLabelCollapse": "Strni",
   "tools.toggle.ariaLabelExpand": "Razširi",
   "tools.table.title": "Tabela",

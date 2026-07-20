@@ -55,7 +55,7 @@
   "tools.list.placeholder": "பட்டியல்",
   "tools.paragraph.placeholder": "ஏதாவது எழுதவும் அல்லது கருவி தேர்வு செய்ய / அழுத்தவும்",
   "tools.toggle.placeholder": "மடிப்பு",
-  "tools.toggle.bodyPlaceholder": "காலி மடிப்பு. தொகுதிகளை உள்ளே கிளிக் செய்யவும் அல்லது இழுக்கவும்.",
+  "tools.toggle.bodyPlaceholder": "காலி மடிப்பு. ஒரு தொகுதியைச் சேர்க்க கிளிக் செய்யவும் அல்லது தொகுதிகளை இங்கே இழுக்கவும்.",
   "tools.toggle.ariaLabelCollapse": "சுருக்கு",
   "tools.toggle.ariaLabelExpand": "விரிவாக்கு",
   "tools.table.title": "அட்டவணை",

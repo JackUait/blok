@@ -57,7 +57,7 @@
   "tools.list.placeholder": "Lista",
   "tools.paragraph.placeholder": "Skriv något eller tryck / för att välja ett verktyg",
   "tools.toggle.placeholder": "Vikbar lista",
-  "tools.toggle.bodyPlaceholder": "Tom vikbar lista. Klicka för att lägga till ett block eller dra block hit.",
+  "tools.toggle.bodyPlaceholder": "Tomt vikbart block. Klicka för att lägga till ett block eller dra block hit.",
   "tools.toggle.ariaLabelCollapse": "Fäll ihop",
   "tools.toggle.ariaLabelExpand": "Fäll ut",
   "tools.table.title": "Tabell",

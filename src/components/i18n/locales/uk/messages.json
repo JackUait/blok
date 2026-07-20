@@ -80,7 +80,7 @@
   "a11y.textFormatting": "Форматування тексту",
   "tools.paragraph.placeholder": "Напишіть щось або натисніть / для вибору",
   "tools.toggle.placeholder": "Згортний",
-  "tools.toggle.bodyPlaceholder": "Порожній згортний блок. Натисніть або перетягніть блоки всередину.",
+  "tools.toggle.bodyPlaceholder": "Порожній згортний блок. Натисніть, щоб додати блок, або перетягніть блоки сюди.",
   "tools.toggle.ariaLabelCollapse": "Згорнути",
   "tools.toggle.ariaLabelExpand": "Розгорнути",
   "tools.table.title": "Таблиця",

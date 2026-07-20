@@ -57,7 +57,7 @@
   "tools.list.placeholder": "لیست",
   "tools.paragraph.placeholder": "چیزی بنویسید یا / را برای انتخاب بزنید",
   "tools.toggle.placeholder": "بازشو",
-  "tools.toggle.bodyPlaceholder": "بازشوی خالی. برای افزودن بلوک‌ها کلیک کنید یا آن‌ها را اینجا رها کنید.",
+  "tools.toggle.bodyPlaceholder": "بازشوی خالی. برای افزودن یک بلوک کلیک کنید یا بلوک‌ها را اینجا بکشید.",
   "tools.toggle.ariaLabelCollapse": "جمع کردن",
   "tools.toggle.ariaLabelExpand": "گسترش",
   "blockSettings.delete": "حذف",

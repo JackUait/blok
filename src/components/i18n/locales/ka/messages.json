@@ -80,7 +80,7 @@
   "a11y.textFormatting": "ტექსტის ფორმატირება",
   "tools.paragraph.placeholder": "დაწერეთ რამე ან დააჭირეთ / ხელსაწყოს ასარჩევად",
   "tools.toggle.placeholder": "ჩამოსაშლელი",
-  "tools.toggle.bodyPlaceholder": "ცარიელი ჩამოსაშლელი. დააწკაპუნეთ ან ჩააგდეთ ბლოკები შიგნით.",
+  "tools.toggle.bodyPlaceholder": "ცარიელი ჩამოსაშლელი. დააწკაპუნეთ ბლოკის დასამატებლად ან ჩავლებით გადაიტანეთ ბლოკები აქ.",
   "tools.toggle.ariaLabelCollapse": "ჩახვევა",
   "tools.toggle.ariaLabelExpand": "გაშლა",
   "tools.table.title": "ცხრილი",

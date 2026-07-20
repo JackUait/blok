@@ -57,7 +57,7 @@
   "tools.list.placeholder": "لیست",
   "tools.paragraph.placeholder": "یو څه ولیکئ یا / فشار ورکړئ د وسیلې غوره کولو لپاره",
   "tools.toggle.placeholder": "پرانستل",
-  "tools.toggle.bodyPlaceholder": "خالي راټولېدونکی. د بلاکونو د دننه کولو لپاره کلیک وکړئ یا کش کړئ.",
+  "tools.toggle.bodyPlaceholder": "خالي راټولېدونکی. د یوه بلاک اضافه کولو لپاره کلیک وکړئ یا بلاکونه دلته کش کړئ.",
   "tools.toggle.ariaLabelCollapse": "راټول کړئ",
   "tools.toggle.ariaLabelExpand": "پراخ کړئ",
   "tools.table.title": "جدول",

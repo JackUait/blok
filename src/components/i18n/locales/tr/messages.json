@@ -80,7 +80,7 @@
   "a11y.textFormatting": "Metin biçimlendirme",
   "tools.paragraph.placeholder": "Bir şeyler yazın veya seçmek için / tuşuna basın",
   "tools.toggle.placeholder": "Açılır",
-  "tools.toggle.bodyPlaceholder": "Boş açılır blok. İçine tıklayın veya blok bırakın.",
+  "tools.toggle.bodyPlaceholder": "Boş açılır blok. Blok eklemek için tıklayın veya blokları buraya sürükleyin.",
   "tools.toggle.ariaLabelCollapse": "Daralt",
   "tools.toggle.ariaLabelExpand": "Genişlet",
   "tools.table.title": "Tablo",

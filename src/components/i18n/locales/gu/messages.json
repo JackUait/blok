@@ -55,7 +55,7 @@
   "tools.list.placeholder": "યાદી",
   "tools.paragraph.placeholder": "કંઈક લખો અથવા પસંદ કરવા / દબાવો",
   "tools.toggle.placeholder": "ટૉગલ",
-  "tools.toggle.bodyPlaceholder": "ખાલી ટૉગલ. ક્લિક કરો અથવા બ્લૉક અંદર ખેંચો.",
+  "tools.toggle.bodyPlaceholder": "ખાલી ટૉગલ. બ્લૉક ઉમેરવા માટે ક્લિક કરો અથવા બ્લૉક્સને અહીં ખેંચો.",
   "tools.toggle.ariaLabelCollapse": "સંકોચો",
   "tools.toggle.ariaLabelExpand": "વિસ્તૃત કરો",
   "blockSettings.delete": "કાઢી નાખો",

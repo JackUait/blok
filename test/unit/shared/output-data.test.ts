@@ -50,6 +50,40 @@ describe('equalsOutputData', () => {
   it('does not equate a nullish document with real content', () => {
     expect(equalsOutputData(null, doc([{ id: 'b1', type: 'paragraph', data: { text: 'Hi' } }]))).toBe(false);
   });
+
+  it('ignores the id when one side lacks it (editor mints ids for id-less content)', () => {
+    const origin = { blocks: [{ type: 'paragraph', data: { text: 'Hello' } }] };
+    const saved = doc([{ id: 'minted-1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+    expect(equalsOutputData(origin, saved)).toBe(true);
+    expect(equalsOutputData(saved, origin)).toBe(true);
+  });
+
+  it('ignores nullish and empty-string ids the same way as missing ones', () => {
+    const origin = { blocks: [{ id: null, type: 'paragraph', data: { text: 'Hello' } }] };
+    const emptyId = { blocks: [{ id: '', type: 'paragraph', data: { text: 'Hello' } }] };
+    const saved = doc([{ id: 'minted-1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+    expect(equalsOutputData(origin, saved)).toBe(true);
+    expect(equalsOutputData(emptyId, saved)).toBe(true);
+  });
+
+  it('still detects content differences when ids are absent', () => {
+    const a = { blocks: [{ type: 'paragraph', data: { text: 'Hello' } }] };
+    const b = doc([{ id: 'minted-1', type: 'paragraph', data: { text: 'Changed' } }]);
+
+    expect(equalsOutputData(a, b)).toBe(false);
+  });
+
+  it('still detects differing block counts when ids are absent', () => {
+    const a = { blocks: [{ type: 'paragraph', data: { text: 'Hello' } }] };
+    const b = doc([
+      { id: 'minted-1', type: 'paragraph', data: { text: 'Hello' } },
+      { id: 'minted-2', type: 'paragraph', data: { text: 'More' } },
+    ]);
+
+    expect(equalsOutputData(a, b)).toBe(false);
+  });
 });
 
 describe('normalizeOutputBlocks', () => {
@@ -117,5 +151,56 @@ describe('isEmptyOutputData', () => {
     ]);
 
     expect(isEmptyOutputData(mixed)).toBe(false);
+  });
+});
+
+describe('createEmittedEchoWindow', () => {
+  const para = (text: string, id?: string): OutputData['blocks'][number] =>
+    ({ ...(id === undefined ? {} : { id }), type: 'paragraph', data: { text } });
+
+  it('matches any recently recorded payload, not just the last one', async () => {
+    const { createEmittedEchoWindow } = await import('../../../src/shared/output-data');
+    const window = createEmittedEchoWindow();
+
+    window.record(doc([para('A', 'b1')]));
+    window.record(doc([para('AB', 'b1')]));
+
+    // A stale server refetch echoes the FIRST save after a newer one replaced it.
+    expect(window.matches({ blocks: [para('A', 'b1')] })).toBe(true);
+    expect(window.matches({ blocks: [para('AB', 'b1')] })).toBe(true);
+    expect(window.matches({ blocks: [para('external edit', 'b1')] })).toBe(false);
+  });
+
+  it('matches content-equal echoes whose envelope or ids were reshaped in transit', async () => {
+    const { createEmittedEchoWindow } = await import('../../../src/shared/output-data');
+    const window = createEmittedEchoWindow();
+
+    window.record({ time: 1, version: '1.0.0', blocks: [para('A', 'minted-1')] });
+
+    // Round-trip through a backend that strips ids and stamps its own time.
+    expect(window.matches({ time: 99, blocks: [para('A')] })).toBe(true);
+  });
+
+  it('forgets everything on clear()', async () => {
+    const { createEmittedEchoWindow } = await import('../../../src/shared/output-data');
+    const window = createEmittedEchoWindow();
+
+    window.record(doc([para('A', 'b1')]));
+    window.clear();
+
+    expect(window.matches(doc([para('A', 'b1')]))).toBe(false);
+  });
+
+  it('evicts the oldest payload once capacity is exceeded', async () => {
+    const { createEmittedEchoWindow } = await import('../../../src/shared/output-data');
+    const window = createEmittedEchoWindow(2);
+
+    window.record(doc([para('one', 'b1')]));
+    window.record(doc([para('two', 'b1')]));
+    window.record(doc([para('three', 'b1')]));
+
+    expect(window.matches(doc([para('one', 'b1')]))).toBe(false);
+    expect(window.matches(doc([para('two', 'b1')]))).toBe(true);
+    expect(window.matches(doc([para('three', 'b1')]))).toBe(true);
   });
 });

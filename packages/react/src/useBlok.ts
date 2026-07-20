@@ -11,7 +11,7 @@ import {
 } from './block-portal-registry';
 import { setRegistry, removeRegistry } from './registry-map';
 import { bindLiveToolConfigFunctions, buildLiveBlockConfig } from './live-tool-config';
-import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
+import { createEmittedEchoWindow, normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
 
@@ -124,6 +124,13 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // otherwise reset the caret). Declared here so the `onSave` wrapper below can
   // update it before the consumer's setState re-runs the data effect.
   const lastRenderedDataRef = useRef(config.data);
+  // Window of recently emitted `onSave` payloads. The baseline above only
+  // remembers the LAST one, but a host that persists on save and refetches can
+  // echo an EARLIER save after a newer one replaced the baseline (the user kept
+  // typing). Such a stale echo is still the editor's own output — re-rendering
+  // it would clobber the caret and the content typed since — so the data effect
+  // treats a match against ANY windowed payload as a no-op.
+  const echoWindowRef = useRef(createEmittedEchoWindow());
   const seededEditorRef = useRef<Blok | null>(null);
   // The `data` the live editor was actually constructed with. The seed gate in
   // the reactive-`data` effect compares the current prop against THIS (not mere
@@ -258,6 +265,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
         // controlled consumer echoing it straight back into `data` is a no-op —
         // no redundant render(), no caret reset, no round-trip recursion.
         lastRenderedDataRef.current = args[0];
+        echoWindowRef.current.record(args[0]);
         configRef.current.onSave?.(...args);
       };
     }
@@ -519,6 +527,8 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       // A render still pending on a PRIOR editor is moot for this fresh instance;
       // clear it so its content can't dedupe a needed render on the new editor.
       pendingDataRef.current = undefined;
+      // Payloads emitted by a PRIOR editor are likewise moot for this one.
+      echoWindowRef.current.clear();
 
       if (deepEqual(data, constructedDataRef.current)) {
         lastRenderedDataRef.current = data;
@@ -533,6 +543,17 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     if (deepEqual(data, lastRenderedDataRef.current) || deepEqual(data, pendingDataRef.current)) {
       return;
     }
+
+    // Skip stale echoes: content the editor itself emitted via `onSave` recently,
+    // arriving back reshaped (fresh envelope, stripped ids) and/or late — after a
+    // newer save already replaced the baseline above.
+    if (echoWindowRef.current.matches(data)) {
+      return;
+    }
+
+    // Genuinely external content takes over: earlier emitted payloads are moot,
+    // and keeping them could wrongly no-op a later deliberate revert to one.
+    echoWindowRef.current.clear();
 
     // Mark the content in-flight, but DON'T advance the success baseline until the
     // render actually resolves. A failed render leaves the editor on its last

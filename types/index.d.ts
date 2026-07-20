@@ -199,9 +199,11 @@ export const version: string;
 /**
  * Structural equality for saved documents. Compares the `blocks` arrays
  * deeply; the volatile `time` and `version` envelope fields are ignored, so a
- * document round-tripped through `save()` compares equal to its echo. Nullish
- * documents compare equal to `{ blocks: [] }`. Accepts the loose wire shape
- * ({@link LooseOutputData}) as-is.
+ * document round-tripped through `save()` compares equal to its echo. Block
+ * ids participate only when BOTH sides carry one — the editor mints fresh ids
+ * for id-less content, so a legacy document still compares equal to its saved
+ * echo. Nullish documents compare equal to `{ blocks: [] }`. Accepts the
+ * loose wire shape ({@link LooseOutputData}) as-is.
  * @param a - first document to compare
  * @param b - second document to compare
  */
@@ -325,7 +327,7 @@ export class Blok {
   /**
    * @see Blocks.clear
    */
-  public clear(): void;
+  public clear(): Promise<void>;
 
   /**
    * @see Blocks.render

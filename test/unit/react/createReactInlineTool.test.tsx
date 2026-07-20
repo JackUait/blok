@@ -86,6 +86,25 @@ describe('createReactInlineTool', () => {
     expect(Tool.isInline).toBe(true);
   });
 
+  it('exposes the spec titleKey as a static so core i18n resolves the toolbar label', () => {
+    // Core's inline-tool adapter reads a static `titleKey` and resolves it via
+    // `toolNames.{titleKey}` — without this static the only way to localize a
+    // React inline tool's label is the legacy capitalized-tool-name fallback.
+    const Tool = createReactInlineTool({
+      type: 'descriptionColor',
+      titleKey: 'descriptionColor',
+      component: ColorIcon,
+    });
+
+    expect(Tool.titleKey).toBe('descriptionColor');
+  });
+
+  it('leaves titleKey undefined when the spec does not declare one', () => {
+    const Tool = createReactInlineTool({ type: 'descriptionColor', component: ColorIcon });
+
+    expect(Tool.titleKey).toBeUndefined();
+  });
+
   it('render() returns a MenuConfig with a mutation-free host icon and registers ONE portal entry', () => {
     const registry = createBlockPortalRegistry();
     const Tool = createReactInlineTool({ type: 'descriptionColor', title: 'Color', component: ColorIcon });

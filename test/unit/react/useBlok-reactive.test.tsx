@@ -215,6 +215,76 @@ describe('useBlok reactive data', () => {
     expect(instances[0].render).not.toHaveBeenCalled(); // no render -> caret preserved
   });
 
+  it('does not re-render a STALE echo — an earlier onSave payload arriving after a newer one', async () => {
+    // The persist-and-refetch pattern: every save PUTs to a server whose
+    // refetch feeds `data` back. The user keeps typing, so by the time the
+    // refetch for save #1 resolves, save #2 already replaced the baseline.
+    // Rendering that stale echo would clobber the caret AND the content typed
+    // since — it is still the editor's own output, so it must be a no-op.
+    const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const save1 = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'ab' } }], time: 1, version: '1' };
+    const save2 = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'abc' } }], time: 2, version: '1' };
+    const onSave = vi.fn();
+
+    const { rerender } = render(<Harness config={{ data: seed, onSave }} />);
+    await act(async () => { await flush(); });
+
+    act(() => { instances[0].config.onSave?.(save1); });
+    act(() => { instances[0].config.onSave?.(save2); });
+
+    // Refetch for save #1 resolves LAST — a fresh object with save #1's content
+    // (server round-trips stamp their own envelope).
+    const staleEcho = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'ab' } }], time: 99 };
+    rerender(<Harness config={{ data: staleEcho, onSave }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances).toHaveLength(1);
+    expect(instances[0].render).not.toHaveBeenCalled();
+  });
+
+  it('does not re-render an echo whose ids were stripped by the backend', async () => {
+    const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const payload = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'ab' } }], time: 1, version: '1' };
+    const onSave = vi.fn();
+
+    const { rerender } = render(<Harness config={{ data: seed, onSave }} />);
+    await act(async () => { await flush(); });
+
+    act(() => { instances[0].config.onSave?.(payload); });
+
+    // Legacy backends drop block ids; the content is still the editor's own.
+    const idlessEcho = { blocks: [{ type: 'paragraph', data: { text: 'ab' } }] };
+    rerender(<Harness config={{ data: idlessEcho, onSave }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances[0].render).not.toHaveBeenCalled();
+  });
+
+  it('renders emitted-window content again once external content has taken over', async () => {
+    // After a genuine external render, earlier onSave payloads are moot: a
+    // host that deliberately reverts to one of them must get a real render.
+    const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const payload = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'ab' } }], time: 1, version: '1' };
+    const external = { blocks: [{ id: '2', type: 'paragraph', data: { text: 'external' } }] };
+    const revert = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'ab' } }], time: 5 };
+    const onSave = vi.fn();
+
+    const { rerender } = render(<Harness config={{ data: seed, onSave }} />);
+    await act(async () => { await flush(); });
+
+    act(() => { instances[0].config.onSave?.(payload); });
+
+    rerender(<Harness config={{ data: external, onSave }} />);
+    await act(async () => { await flush(); });
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+
+    rerender(<Harness config={{ data: revert, onSave }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances[0].render).toHaveBeenCalledTimes(2);
+    expect(instances[0].render).toHaveBeenLastCalledWith(revert);
+  });
+
   it('still renders a genuine external change that differs from the last onSave payload', async () => {
     const seed = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
     const payload = {

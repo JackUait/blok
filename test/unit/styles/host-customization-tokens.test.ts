@@ -119,6 +119,40 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(body).toMatch(/--blok-editor-gutter-start:\s*0px/);
       expect(body).toMatch(/--blok-editor-gutter-end:\s*0px/);
     });
+
+    it('declares the default gutter width at zero specificity', () => {
+      const body = findRuleBody(css, ':where([data-blok-interface])');
+
+      expect(body).not.toBeNull();
+      expect(body).toMatch(/--blok-editor-gutter-start:\s*56px/);
+    });
+
+    it('keeps EVERY Blok-side gutter-token declaration at zero specificity (public contract)', () => {
+      // PUBLIC CONTRACT: a host declaration at any positive specificity — e.g.
+      // `[data-blok-interface] { --blok-editor-gutter-start: 16px }` on the
+      // editor wrapper — must always beat Blok's own defaults and state
+      // collapses. Hosts rely on this (documented in the theming docs), so
+      // every rule in which Blok DECLARES a gutter token must keep a
+      // zero-specificity `:where(...)` selector. Reading the tokens via var()
+      // is unrestricted.
+      const declaringSelectors: string[] = [];
+      const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+      for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const [, selector, body] = match;
+
+        if (/--blok-editor-gutter-(?:start|end)\s*:/.test(body)) {
+          declaringSelectors.push(selector.trim());
+        }
+      }
+
+      expect(declaringSelectors.length).toBeGreaterThanOrEqual(3);
+      for (const selector of declaringSelectors) {
+        expect(selector, `gutter token declared with a non-zero-specificity selector: "${selector}"`).toMatch(
+          /^:where\(.*\)$/
+        );
+      }
+    });
   });
 
   describe('block placeholder color', () => {

@@ -681,6 +681,13 @@ export interface CreateReactInlineToolSpec<Config = Record<string, unknown>> {
   type: string;
   /** Optional toolbar item title (shown in overflow/search contexts). */
   title?: string;
+  /**
+   * Translation key for the toolbar label, resolved by core i18n as
+   * `toolNames.{titleKey}` (or used verbatim when it contains a dot). Without
+   * it a custom tool's label is only localizable through the legacy
+   * capitalized-tool-name fallback.
+   */
+  titleKey?: string;
   /** The component rendered as the tool's toolbar icon/UI. */
   component: React.ComponentType<ReactInlineToolRenderProps<Config>>;
   /** Applies/removes the formatting on the LIVE selection's range (captured at activation time). */

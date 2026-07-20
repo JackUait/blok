@@ -19,16 +19,85 @@ import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData
 type AnyOutputData = OutputData | LooseOutputData | null | undefined;
 
 /**
+ * Compares two blocks structurally. The `id` participates only when BOTH
+ * blocks carry one: the editor mints a fresh id whenever content arrives
+ * without one (see {@link normalizeOutputBlocks}), so an id-less origin
+ * document must still compare equal to its saved echo.
+ * @param a - first block to compare
+ * @param b - second block to compare
+ * @returns true when the blocks are structurally equal
+ */
+function equalsOutputBlock(
+  a: OutputBlockData | LooseOutputBlockData,
+  b: OutputBlockData | LooseOutputBlockData
+): boolean {
+  const { id: idA, ...restA } = a;
+  const { id: idB, ...restB } = b;
+
+  const hasIdA = typeof idA === 'string' && idA !== '';
+  const hasIdB = typeof idB === 'string' && idB !== '';
+
+  if (hasIdA && hasIdB && idA !== idB) {
+    return false;
+  }
+
+  return deepEqual(restA, restB);
+}
+
+/**
  * Structural equality for saved documents. Compares the `blocks` arrays
  * deeply; the volatile `time` and `version` envelope fields are ignored, so a
- * document round-tripped through `save()` compares equal to its echo. Nullish
- * documents compare equal to `{ blocks: [] }`.
+ * document round-tripped through `save()` compares equal to its echo. Block
+ * ids are compared only when both sides carry one — the editor mints fresh
+ * ids for id-less content, so a legacy document still equals its saved echo.
+ * Nullish documents compare equal to `{ blocks: [] }`.
  * @param a - first document to compare
  * @param b - second document to compare
  * @returns true when both documents hold structurally equal blocks
  */
 export function equalsOutputData(a: AnyOutputData, b: AnyOutputData): boolean {
-  return deepEqual(a?.blocks ?? [], b?.blocks ?? []);
+  const blocksA = a?.blocks ?? [];
+  const blocksB = b?.blocks ?? [];
+
+  return blocksA.length === blocksB.length && blocksA.every((block, index) => equalsOutputBlock(block, blocksB[index]));
+}
+
+/**
+ * A bounded window of the editor's recently emitted `onSave` payloads, used by
+ * the framework adapters to recognize controlled-`data` echoes. Deduping
+ * against only the LAST emitted payload is not enough: a host that persists on
+ * save and refetches can hand the adapter a STALE echo — an earlier save
+ * arriving after a newer one already replaced the baseline — and re-rendering
+ * it would clobber the caret and any content typed since. Matching is
+ * structural ({@link equalsOutputData}), so envelopes reshaped in transit
+ * (fresh `time`, stripped ids) still count as echoes.
+ * @param capacity - number of payloads retained before the oldest is evicted
+ * @returns the echo window
+ */
+export function createEmittedEchoWindow(capacity: number = 20): {
+  /** Records a payload the editor emitted via `onSave`. */
+  record(data: OutputData | LooseOutputData): void;
+  /** True when the document content-equals any recorded payload. */
+  matches(data: AnyOutputData): boolean;
+  /** Forgets all recorded payloads (external content took over). */
+  clear(): void;
+} {
+  const emitted: Array<OutputData | LooseOutputData> = [];
+
+  return {
+    record(data: OutputData | LooseOutputData): void {
+      emitted.push(data);
+      if (emitted.length > capacity) {
+        emitted.shift();
+      }
+    },
+    matches(data: AnyOutputData): boolean {
+      return emitted.some((payload) => equalsOutputData(payload, data));
+    },
+    clear(): void {
+      emitted.length = 0;
+    },
+  };
 }
 
 /**

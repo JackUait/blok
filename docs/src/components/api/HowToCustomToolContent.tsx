@@ -181,6 +181,9 @@ const INLINE_TOOL_AUTHORING_CODE = `import { createReactInlineTool } from '@blok
 export const TextColor = createReactInlineTool({
   type: 'textColor',
   title: 'Text color',
+  // i18n: the toolbar label resolves via toolNames.textColor in your
+  // i18n.messages — no reliance on the legacy capitalized-name fallback.
+  titleKey: 'textColor',
   shortcut: 'CMD+SHIFT+C',
   // The toolbar icon is a real React component — theme providers and
   // styled-components reach it; the editor unmounts it when the toolbar

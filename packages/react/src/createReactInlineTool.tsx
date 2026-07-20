@@ -43,6 +43,13 @@ export interface CreateReactInlineToolSpec<Config = Record<string, unknown>> {
   type: string;
   /** Optional toolbar item title (shown in overflow/search contexts). */
   title?: string;
+  /**
+   * Translation key for the toolbar label, resolved by core i18n as
+   * `toolNames.{titleKey}` (or used verbatim when it contains a dot). Without
+   * it a custom tool's label is only localizable through the legacy
+   * capitalized-tool-name fallback.
+   */
+  titleKey?: string;
   /** The component rendered as the tool's toolbar icon/UI. */
   component: ComponentType<ReactInlineToolRenderProps<Config>>;
   /** Applies/removes the formatting on the LIVE selection's range (captured at activation time). */
@@ -78,6 +85,7 @@ export function createReactInlineTool<Config = Record<string, unknown>>(
   readonly __isBlokReactInlineTool: true;
   readonly isInline: true;
   readonly title: string | undefined;
+  readonly titleKey: string | undefined;
   readonly shortcut: string | undefined;
   readonly sanitize: SanitizerConfig | undefined;
   readonly isReadOnlySupported: boolean;
@@ -89,6 +97,10 @@ export function createReactInlineTool<Config = Record<string, unknown>>(
 
     public static get title(): string | undefined {
       return spec.title;
+    }
+
+    public static get titleKey(): string | undefined {
+      return spec.titleKey;
     }
 
     public static get shortcut(): string | undefined {

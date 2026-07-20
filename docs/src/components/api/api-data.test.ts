@@ -214,6 +214,16 @@ describe("API_SECTIONS", () => {
       expect(description).toContain("read-only state");
       expect(description).toContain("--blok-editor-gutter-*");
     });
+
+    it("documents the zero-specificity gutter override contract as guaranteed", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("guaranteed, not incidental");
+      expect(description).toContain("zero specificity");
+      expect(description).toContain("any positive specificity always wins");
+    });
   });
 
   describe("Blocks API", () => {

@@ -316,7 +316,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-he_9dc_first_fresh` | `root-he_9dc_second_fresh` | pass | pass | pass | `F-he-001`–`F-he-069` | second-pass-complete |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | neutral contemporary Croatian; concise direct singular imperatives for actions and recovery instructions; sentence-case noun/state labels; count-neutral accessibility wording; established Croatian product/media terminology; conventional unchanged shortcut, ratio, and acronym notation | `root-hr_b4f_first_final_clean` | `root-hr_b4f_second_replacement` | pass | pass | pass | `F-hr-001`–`F-hr-052` | second-pass-complete |
-| `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-114` | pending |
+| `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-117` | pending |
 | `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-069` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-061` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
@@ -2922,6 +2922,50 @@ and reconstructs the expected 28,722-byte catalog at SHA-256
 The predicted exact-English inventory contains nine reviewed entries.
 Updated findings `F-hu-002` through `F-hu-004` and new findings
 `F-hu-005` through `F-hu-114` record the red-first remediation contract.
+
+Fresh current-byte reviewer `root/hu_1bf_clean_a` then read all 546
+English/Hungarian pairs in English insertion order on raw Hungarian SHA-256
+`1bf534bdc09238bef3464185ba2b70cdc873fcc513a155ccab5d07bef58f8c0a`.
+Its frozen bundle is
+`/private/tmp/blok-hu-1bf-review-alpha-20260721-q6n8`, with manifest SHA-256
+`c44f95775d04b7d522bf322a449ebce8eac343bd1bc4807386103b0864d3b29c`.
+The attempted pass preserved all placeholder, boundary-space, NFC, and nine
+exact-English contracts but found three residuals: a table density label
+that described concise content, a multi-block live-region message containing
+the written `a(z)` workaround, and a navigation announcement dependent on
+slash pronunciation. The attempted review earns no pass credit.
+
+Independent challenger `root/hu_3_residual_review` accepted all three exact
+corrections without amendment. Its immutable derivative is
+`/private/tmp/blok-hu-1bf-residual-3-review-20260721`; the three-row effective
+map is SHA-256
+`588f97c39b39038420684802c27e39bfbc875379e21b060546609ee1403a0dde`.
+The source-mechanism partition is 397 literal + 95 registry-backed + 52
+computed + two genuine no-route keys: the 95 consist of 26 tool-title
+enumerations, 44 search-alias enumerations, and 25 default-tool namespace
+compatibility keys. Regrouped by the canonical semantic contract, this is
+397 literal + 122 finite-dynamic + 25 registered-compatible + two
+catalog-only keys; only `blockSettings.convertWithChildrenWarning` and
+`tools.columns.turnInto` are no-route. The predicted catalog, manifest, and
+seal are respectively SHA-256
+`5c82c1096ac384222e9769fd2c70a2418179e71b14ff4afee3cd6618cc90e4f7`,
+`7efaa1e209d579a485890ad2a1544a1cf7423303f83d73be4cf318850e66f2ef`,
+and
+`7f3ce4c31b6bb44357ba68411b3fc7213b11141ba678afa0a95959db0abc1178`.
+Root replay passed the frozen validator, all 11 manifest entries, and
+read-only mode checks.
+
+Findings `F-hu-115` through `F-hu-117` record the new red-first contract.
+Before remediation, exactly those three expectations failed and the other
+3,594 guideline cases passed. Applying only the sealed map produces a
+byte-identical 28,743-byte catalog at the predicted `5c82c109…` hash and
+passes all 3,597 focused cases; the nine exact-English values remain
+unchanged. The exact-retention test passes 182/182, the complete nine-file
+i18n gate passes 4,314/4,314, and both translation checkers pass with only
+their known warnings. These review and remediation artifacts earn no
+complete-pass credit. Hungarian remains `pending` with no digest row, and
+both fresh complete reviews must restart from English entry 1 on the new
+bytes.
 
 ### Armenian (`hy`) — pending after current-byte residuals
 
@@ -9436,6 +9480,9 @@ follows the global transition rule above.
 | `F-hu-112` | `hu` | `tools.video.ctxCopyUrlAtTime` | consistency and clarity | `"Videó URL másolása az aktuális időpontnál"` | `"Videó URL-címének másolása az aktuális időponttól"` | The context-menu label preserves the source-time meaning with “az aktuális időponttól” and the same concise URL-cím construction. | verified |
 | `F-hu-113` | `hu` | `tools.video.ctxStats` | terminology | `"Részletes statisztika"` | `"Lejátszási statisztikák"` | The final “Lejátszási statisztikák” preserves the media caller’s exact action or accessible name in idiomatic Hungarian; current “Részletes statisztika” is narrower, less precise, or uses inconsistent product terminology. | verified |
 | `F-hu-114` | `hu` | `tools.callout.emojiSearchResults` | semantic scope and product style | `"{count} emodzsi található"` | `"{count} emoji található"` | The final follows current Hungarian product usage of “emoji/emojik”, preserves the picker action or count, and avoids the inconsistent “emodzsi” spelling. | verified |
+| `F-hu-115` | `hu` | `tools.table.compactText` | terminology / density semantics | `"Tömör szöveg"` | `"Kompakt szöveg"` | The visible table text-size choice controls compact display density; `Tömör` normally characterizes concise content rather than a visual size mode. `Kompakt` is the established counterpart to the existing `Kényelmes szöveg`, matching the paired density labels used by [Gmail](https://support.google.com/mail/answer/5900?co=GENIE.Platform%3DDesktop&hl=hu) and [Microsoft Teams](https://support.microsoft.com/hu-HU/teams/chat/change-the-spacing-of-your-chat-messages-in-microsoft-teams). | verified |
+| `F-hu-116` | `hu` | `a11y.blocksMoved` | accessibility / spoken grammar / count neutrality | `"{count} blokk áthelyezve a(z) {position}. pozícióba"` | `"{count} blokk áthelyezve. Új pozíció: {position}."` | The assertive multi-block drop announcement receives `count >= 2` and the first moved block’s new one-based position. Hungarian keeps `blokk` singular after a cardinal, while the two-clause final removes speech-hostile written `a(z)`, preserves placeholder order, and matches the corrected single-block family. [Google Accessibility explains that screen-reader punctuation output is configurable](https://support.google.com/accessibility/answer/90559?hl=hu). | verified |
+| `F-hu-117` | `hu` | `a11y.navigationPosition` | accessibility / spoken numeric relation | `"{tool}, {position}/{total}"` | `"{tool}, {position}. pozíció, összesen {total}"` | This throttled polite live-region message announces the localized tool, one-based position, and current total. Lexical labels avoid relying on slash pronunciation, preserve all placeholders in caller order, and align with the existing Hungarian `movedUp`, `movedDown`, and seek-value wording. [Microsoft’s Hungarian screen-reader guidance describes hearing a task’s new position](https://support.microsoft.com/hu-HU/accessibility/todo/use-a-screen-reader-to-move-tasks-between-or-within-lists-in-to-do). | verified |
 
 | `F-id-005` | `id` | `toolbox.addBelow` | grammar | `"Klik untuk tambah di bawah"` | `"Klik untuk menambahkan di bawah"` | Sesudah “untuk”, verba berimbuhan “menambahkan” lebih alami untuk instruksi antarmuka daripada bentuk pangkas “tambah”. Baris ini menjadi baris pertama tooltip tombol plus dan menjelaskan hasil klik biasa: menambahkan blok di bawah. [Sumber primer](https://support.microsoft.com/id-id/office/menambahkan-mengedit-atau-menghapus-tempat-penampung-pada-tata-letak-slide-a8d93d28-66cb-43fd-9f9d-e12d0a7a1f06). | verified |
 | `F-id-006` | `id` | `toolbox.optionAddAbove` | grammar | `"⌥-klik untuk tambah di atas"` | `"⌥-klik untuk menambahkan di atas"` | Nama tombol dan arah tetap dipertahankan; verba “menambahkan” melengkapi konstruksi “untuk” secara alami. Tooltip memilih instruksi Option-click pada platform non-Windows untuk menambahkan blok di atas. [Sumber primer](https://support.microsoft.com/id-id/office/menambahkan-mengedit-atau-menghapus-tempat-penampung-pada-tata-letak-slide-a8d93d28-66cb-43fd-9f9d-e12d0a7a1f06). | verified |

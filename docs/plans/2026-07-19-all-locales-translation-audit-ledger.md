@@ -310,7 +310,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `et` | Estonian | Latin | ltr | neutral contemporary Estonian; concise imperatives for user actions; natural impersonal wording for system states and live-region announcements; sentence-case UI; established Estonian product, accessibility, and media terminology; count-neutral variable templates | `root-et_546_corrected_current_first` | `root-et_546_corrected_current_second` | pass | pass | pass | `F-et-001`–`F-et-055` | second-pass-complete |
 | `fa` | Persian (Farsi) | Arabic | rtl | neutral contemporary standard Iranian Persian; polite plural imperatives for instructions and recovery guidance; concise imperative or noun labels for compact controls; Persian punctuation and established Persian product, accessibility, and media terminology; conventional unchanged Latin brands, acronyms, formulas, and shortcut notation | `root-fa_546_lifecycle_replacement` | `root-fa_546_corrected_second` | pass | pass | pass | `F-fa-001`–`F-fa-053` | second-pass-complete |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
-| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-fil-001`–`F-fil-099` | first-pass-complete |
+| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-100` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | `root-fil_2c9_proposal_challenge` | pass | pass | pass | `F-gu-001`–`F-gu-054` | second-pass-complete |
 | `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-069` | pending |
@@ -448,7 +448,6 @@ locale returns to `pending`.
 | `et` | `root-et_546_corrected_current_first` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` | `root-et_546_corrected_current_second` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` |
 | `fa` | `root-fa_546_lifecycle_replacement` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` | `root-fa_546_corrected_second` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` |
 | `fi` | `root-fi_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` | `root-fil_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` |
-| `fil` | `root-dv_corrected_46c_second` | `sha256:8240e764e995550e70707d56ce20c703113b359504af38db559e1bab0bd8af8d` | — | — |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
 | `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | `root-fil_2c9_proposal_challenge` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
@@ -5812,6 +5811,80 @@ the translation checker, and all 182 focused retention tests. This exact-byte
 review earns first-pass credit only; a distinct complete second review is still
 required.
 
+### Filipino 824 second-review residual and 42e correction — remediated
+
+A strict blind second reviewer restarted at entry 1 on Filipino SHA-256
+`8240e764e995550e70707d56ce20c703113b359504af38db559e1bab0bd8af8d`
+and reread all 546 source-order pairs. Its sealed bundle is
+`/Users/jackuait/.codex/audit-evidence/fil-second-blind-8240e764-20260720T200839+0300-fil824`;
+the 546-row matrix is bound at SHA-256
+`26b2dba59aabf97079114b5e6fb85393690ed68b9db15631144772fc4a3e4045`,
+the one-row proposal artifact at
+`df493919b17d80e4bc2c27b8b1f180bfe785d177dd938d023264602e73a6de02`,
+and the manifest at
+`28e7d98940768dd53ee10ac89c9ffb9f66ba878d917853a9ebfcaa9266d9e3ad`.
+It reports 545 pass and one fail, exact placeholder parity across all 38
+placeholder-bearing keys, all 50 exact-English retentions reviewed, and the
+uniform semantic lifecycle closure of 397 literal + 122 finite dynamic + 25
+registered-compatible + two no-route identities. Its only residual is
+`tools.embed.urlPlaceholder`: `Mag-paste ng link na ie-embed…` must become
+`Mag-paste ng link na i-e-embed…`.
+
+An independent final challenger then reread all 546 pairs and the complete
+caller, placeholder, retention, and lifecycle evidence without consulting the
+prior Filipino ledger. Its bundle is
+`/Users/jackuait/.codex/audit-evidence/fil-8240e764-embed-challenge-final-independent`.
+It accepted that single proposal without amendment, rejection, omission, or
+overreach: the input placeholder and accessible-name callers at
+`src/tools/link/embed/index.ts:428-429` describe the link that will be embedded,
+and KWF's vowel-initial-root rule requires prospective `i-e-embed`, distinct
+from imperative or infinitive `i-embed`. The complete matrix is bound at
+`fc668cd58d6df628ec20f0890a2c6abc0426b7602152c1fdf96f8705e2fd8616`,
+the adjudication at
+`1c7f52032d8b155e479e9adba5ea7f250c0cba7474c9432c661ebcda3142f182`,
+the exact effective map at
+`f4a4be6c1981ccf983f0e46011555303c4b3df8a2f1785fcad1545de9e76a706`,
+the manifest at
+`5548d5dbf421222c945cfd126a4aad8d0d2ecd65a1295066cc914f4fb10349e6`,
+the payload aggregate at
+`eb361258b5453a8533c52a55109fc8309595e9935387a9860656c44d9b0b7347`,
+and the seal at
+`1e32471b67bac9450958d86ee0eb3a2af2d926490c9c24ccfe9335e4fa1e65a9`.
+
+One unrelated source file changed after that seal:
+`src/shared/output-data.ts` moved from 6,196 to 6,204 bytes and SHA-256
+`0a4b2462d6cc7fa639c7549d82cedeb5ef4e2d0906bc0f319e2c45835dfba74b`.
+The read-only current-source supplement at
+`/Users/jackuait/.codex/audit-evidence/fil-8240e764-embed-challenge-current-source-supplement-0a4b2462`
+pins 550 current files twice at aggregate
+`167312e80c2372b869e02b4b60a21b65d51f152bf49164bc7a590a6485e2061d`
+and proves that this is the only drift, that the changed module has no i18n
+key, call, title, or search registration, and that all 546 lifecycle and caller
+identities remain byte-identical. Both validation replays match at
+`52a098c9389deeabe6856c09108b5eda70057043ed2ae1ed747b2c64a19033af`.
+The supplement manifest is
+`538477230e1e86369c328ad15bb741a4d4b4edbe94b6b97e5b711b63f21ce48f`,
+its payload aggregate is
+`9b7d963ef4a68d1602747deaf4077519a068b5fb7cd21c68eb350ba0d74c7b36`,
+and its seal is
+`4904f43efa97acf873236c21a8db1c05369d35e7ebad5a9a9004939db454cb2e`.
+A root replay passes all 67 assertions, all 27 manifest checks, every checksum,
+and the immutable-file checks.
+
+Finding `F-fil-100` was recorded open before mutation. The red guideline gate
+passed 3,313 cases and failed exactly that finding. Applying only the accepted
+one-key map preserves all 546 keys, their order, and every placeholder and
+produces the challenger's exact effective dictionary SHA-256
+`42eec4aa3c9f28922ed204a8f37280b5c624b8fb399664d01f1ec008867ae5b3`.
+The green guideline gate passes all 3,314 cases; the 182 exact-retention cases
+and 65 focused embed-caller cases pass; and the complete nine-file i18n suite
+passes all 4,031 cases. Translation completeness, integrity, source coverage,
+docs translation, and encoding checks also pass with only the repository's
+known warnings. `F-fil-100` is verified. Because the dictionary bytes changed,
+both prior complete reviews are invalid for completion credit: Filipino remains
+`pending` with no reviewed-dictionary digest, and two fresh full 546-entry
+reviews must restart at entry 1 on the corrected bytes.
+
 ### Persian corrected-byte first pass and detached-UI direction finding
 
 Reviewer `root-fa_546_corrected_first` blindly inspected all 546 Persian
@@ -8840,6 +8913,7 @@ follows the global transition rule above.
 | `F-fil-097` | `fil` | `tools.image.viewFullscreen` | action grammar / media terminology | `"Tingnan nang fullscreen"` | `"Tingnan sa full screen"` | `nang fullscreen` is the wrong relation for entering a display mode. The accepted locative command matches the established Filipino media-control family. | verified |
 | `F-fil-098` | `fil` | `tools.image.exitFullscreen` | media terminology / family consistency | `"Lumabas sa fullscreen"` | `"Lumabas sa full screen"` | The accepted spelling matches the identical video exit action and [YouTube's exact Filipino `Lumabas sa full screen` control](https://support.google.com/youtube/answer/72689?co=GENIE.Platform%3DDesktop&hl=fil). | verified |
 | `F-fil-099` | `fil` | `tools.video.fullscreen` | media terminology / exact retention | `"Buong screen"` | `"Full screen"` | The current half-translation is unnatural and conflicts with the paired exit control. [YouTube's Filipino player](https://support.google.com/youtube/answer/72689?co=GENIE.Platform%3DDesktop&hl=fil) uses exact `Full screen`; the post-edit identity is explicitly classified as `R-fil-051`. | verified |
+| `F-fil-100` | `fil` | `tools.embed.urlPlaceholder` | orthography / prospective aspect / caller fit | `"Mag-paste ng link na ie-embed…"` | `"Mag-paste ng link na i-e-embed…"` | The placeholder and accessible name describe the link that will be embedded, so the prospective form needs the repeated initial vowel and hyphenated boundary before the unchanged foreign root: `i-e-embed`. The [KWF Manwal sa Masinop na Pagsulat](https://kwf.gov.ph/wp-content/uploads/MMP_Full.pdf?AxCArs=PHIQUMr) §2.3 requires a vowel-initial root to repeat its first vowel and applies the rule even to an unrespelt foreign root. This is distinct from the locale's imperative or infinitive `i-embed`, and it matches both callers in `src/tools/link/embed/index.ts`. | verified |
 | `F-nl-086` | `nl` | `tools.callout.emojiCategoryActivity` | category scope / number | `"Activiteit"` | `"Activiteiten"` | The heading groups many activities rather than naming one activity. The plural matches official Dutch emoji-gallery terminology and the collective/plural sibling categories. Sources: [Microsoft Support — Een emoji of GIF verzenden in Microsoft Teams (gratis)](https://support.microsoft.com/nl-NL/teams/free/chat-calling/send-an-emoji-or-gif-in-microsoft-teams-free). | verified |
 | `F-nl-087` | `nl` | `tools.image.previewControls` | accessibility / specificity | `"Voorbeeldbediening"` | `"Regelaars voor afbeeldingsvoorbeeld"` | The accessible group name must identify both the controls and their image-preview scope. `Regelaars` and `afbeeldingsvoorbeeld` are attested Dutch product terms; the current compact compound is generic and drops the image object. Sources: [W3C WAI-ARIA Authoring Practices — Providing Accessible Names and Descriptions](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/); [Apple Support NL — Finder on Mac Pro](https://support.apple.com/nl-nl/guide/mac-pro/apddf030866a/mac); [Apple Support NL — Belichtings- en kleurinstellingen aanpassen](https://support.apple.com/nl-nl/guide/iphone/-iphebbd067ce/ios); [Microsoft Support NL — Het formaat van het Microsoft SwiftKey-toetsenbord wijzigen](https://support.microsoft.com/nl-nl/swiftkey-keyboard/how-to-resize-microsoft-swiftkey-keyboard); [Google Photos Help NL — Foto’s en video’s verwijderen en herstellen](https://support.google.com/photos/answer/6128850?co=GENIE.Platform%3DAndroid&hl=nl). | verified |
 | `F-nl-088` | `nl` | `tools.image.errorSourceOffline` | natural error copy | `"Het bronbestand is mogelijk verplaatst of offline."` | `"Het bronbestand is mogelijk verplaatst of niet beschikbaar."` | The caller only knows the remote source cannot be loaded; it does not establish a synchronized offline-file state. `niet beschikbaar` accurately describes the unavailable resource and is natural Dutch error copy. Sources: [Microsoft Support NL — Een verbindingsfout corrigeren](https://support.microsoft.com/nl-nl/excel/how-to-correct-a-connect-error); [Microsoft Support NL — De status Off-line bestand wordt onjuist weergegeven](https://support.microsoft.com/nl-nl/topic/de-status-off-line-bestand-wordt-onjuist-weergegeven-in-file-explorer-in-windows-3026cc25-2d68-1202-2d14-d20e63246a5a). | verified |

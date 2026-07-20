@@ -17,13 +17,14 @@ export const ORDERED_INDENT_PER_LEVEL = 26;
 /**
  * Base styles for list wrapper
  *
- * Matches paragraph spacing: py-[7px] from blok-block + mt-[2px] mb-px
+ * Matches paragraph spacing: --blok-block-padding-top/-bottom (7px fallbacks,
+ * same as blok-block) + mt-[2px] mb-px.
  * Start padding routes through the private --_blok-list-pad indirection
  * (declared in main.css) so checklists can be indented independently via
  * --blok-checklist-padding-start while ordered/unordered follow
  * --blok-list-padding-start.
  */
-export const BASE_STYLES = 'outline-hidden py-[7px] mt-[2px] mb-px ps-[var(--_blok-list-pad,0px)]';
+export const BASE_STYLES = 'outline-hidden pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] mt-[2px] mb-px ps-[var(--_blok-list-pad,0px)]';
 
 /**
  * Styles for standard list items (unordered, ordered)

@@ -28,9 +28,11 @@ export const ARIA_LABEL_EXPAND_KEY = 'tools.toggle.ariaLabelExpand';
 /**
  * Base styles for toggle wrapper
  *
- * py-[7px] matches blok-block (paragraph); mt-[2px] mb-px provides block margin.
+ * Vertical padding matches blok-block (paragraph) via the public
+ * --blok-block-padding-top/-bottom tokens (7px fallbacks); mt-[2px] mb-px
+ * provides block margin.
  */
-export const BASE_STYLES = 'outline-hidden py-[7px] mt-[2px] mb-px';
+export const BASE_STYLES = 'outline-hidden pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] mt-[2px] mb-px';
 
 /**
  * Styles for toggle content area

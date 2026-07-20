@@ -90,6 +90,22 @@ describe('HowToCustomToolContent', () => {
     });
   });
 
+  describe('inline tool authoring section (react only)', () => {
+    it('is absent for vanilla — there is no inline-tool factory to show', () => {
+      renderHowTo();
+      expect(screen.queryByText('Inline tools as components')).toBeNull();
+    });
+
+    it('shows createReactInlineTool for react with the surround/checkState contract', () => {
+      const { container } = renderHowTo('react');
+      expect(screen.getByText('Inline tools as components')).toBeInTheDocument();
+      const code = container.textContent ?? '';
+      expect(code).toContain('createReactInlineTool');
+      expect(code).toContain('surround');
+      expect(code).toContain('checkState');
+    });
+  });
+
   it('does not draw its own bordered/card box around the Going further panel (a divider separates it instead)', () => {
     renderHowTo();
     const heading = screen.getByText('Going further');

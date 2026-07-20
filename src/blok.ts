@@ -11,6 +11,7 @@ import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { announce } from './components/utils/announcer';
+import { registerPendingInstance, whenAllReady } from './components/utils/ready-registry';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
@@ -79,6 +80,26 @@ class Blok {
    * block.getAttribute(Blok.DATA_ATTR.selected) === 'true';
    */
   public static DATA_ATTR = DATA_ATTR;
+
+  /**
+   * Resolves once every Blok instance constructed so far has finished booting
+   * (each instance's `isReady` has settled — rejections count as settled, so a
+   * failed boot never wedges the aggregate).
+   *
+   * Collective-readiness signal for pages hosting several instances (e.g. a
+   * comments list of read-only editors plus a composer): await it before
+   * autofocusing or measuring layout, instead of hand-aggregating per-instance
+   * `onReady` callbacks.
+   *
+   * Instances constructed while the returned promise is pending extend the
+   * wait. Instances constructed *after* it resolves are not covered — call
+   * `whenAllReady()` again for a fresh aggregate (in React, a parent effect
+   * runs after its children's effects, so children's editors are already
+   * registered when the parent calls this).
+   */
+  public static whenAllReady(): Promise<void> {
+    return whenAllReady();
+  }
 
   /**
    * @param {BlokConfig|string|undefined} [configuration] - user configuration
@@ -352,6 +373,18 @@ class Blok {
 
       return this;
     });
+
+    /**
+     * Register this instance with the collective-readiness registry (backing
+     * the static whenAllReady()) and settle it when the outer isReady chain
+     * settles — after exportAPI and onReady have run, and on rejection too so
+     * a failed boot never wedges the aggregate. Registered here, after the
+     * isReady assignment, so a synchronous constructor throw above cannot
+     * leak a pending count.
+     */
+    const settleReadyRegistry = registerPendingInstance();
+
+    this.isReady.then(settleReadyRegistry, settleReadyRegistry);
   }
 
   /**

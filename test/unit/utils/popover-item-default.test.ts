@@ -551,4 +551,83 @@ describe('PopoverItemDefault', () => {
       expect(chevron?.getAttribute('aria-hidden')).toBe('true');
     });
   });
+
+  describe('HTMLElement icon (live element, not an innerHTML string)', () => {
+    const createElementIcon = (): HTMLElement => {
+      const iconNode = document.createElement('span');
+
+      iconNode.setAttribute('data-blok-testid', 'live-icon');
+
+      return iconNode;
+    };
+
+    it('appends the SAME element node into the icon container (identity preserved, no clone)', () => {
+      const iconNode = createElementIcon();
+      const { element } = createItem({ icon: iconNode });
+
+      const iconContainer = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+      expect(iconContainer).not.toBeNull();
+      // Node IDENTITY matters: a live renderer (e.g. a React portal target)
+      // must keep owning this exact node — an innerHTML clone would orphan it.
+      expect(iconContainer?.firstChild).toBe(iconNode);
+      expect(iconContainer?.childNodes).toHaveLength(1);
+    });
+
+    it('confirmation-state updateIcon with a string does not clobber a live element icon', () => {
+      const iconNode = createElementIcon();
+      const confirmation = {
+        title: 'Confirm',
+        icon: '<svg data-blok-testid="confirm-icon"></svg>',
+        onActivate: vi.fn(),
+      };
+      const { item, element } = createItem({ icon: iconNode, confirmation });
+
+      item.handleClick();
+      expect(item.isConfirmationStateEnabled).toBe(true);
+
+      const iconContainer = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+      // The live element stays mounted — stringifying over it would detach the
+      // node a live renderer still owns.
+      expect(iconContainer?.firstChild).toBe(iconNode);
+    });
+
+    it('restores the SAME element node when leaving confirmation state', () => {
+      const iconNode = createElementIcon();
+      const confirmation = {
+        title: 'Confirm',
+        onActivate: vi.fn(),
+      };
+      const { item, element } = createItem({ icon: iconNode, confirmation });
+
+      item.handleClick();
+      item.reset();
+
+      const iconContainer = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+      expect(iconContainer?.firstChild).toBe(iconNode);
+      expect(iconContainer?.childNodes).toHaveLength(1);
+    });
+
+    it('confirmation-state updateIcon with an element swaps to that exact node and restore brings the original back', () => {
+      const iconNode = createElementIcon();
+      const confirmIconNode = document.createElement('em');
+      const confirmation = {
+        title: 'Confirm',
+        icon: confirmIconNode,
+        onActivate: vi.fn(),
+      };
+      const { item, element } = createItem({ icon: iconNode, confirmation });
+
+      item.handleClick();
+
+      const iconContainer = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
+
+      expect(iconContainer?.firstChild).toBe(confirmIconNode);
+
+      item.reset();
+      expect(iconContainer?.firstChild).toBe(iconNode);
+    });
+  });
 });

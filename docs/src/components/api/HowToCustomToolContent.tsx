@@ -166,6 +166,27 @@ export const CalloutTool = createAngularBlock<{ text: string }>({
   },
 };
 
+// React-only: inline (selection) tools authored as components. Other adapters
+// don't ship an inline-tool factory yet, so the section renders only for react.
+const INLINE_TOOL_AUTHORING_CODE = `import { createReactInlineTool } from '@bloklabs/react';
+
+export const TextColor = createReactInlineTool({
+  type: 'textColor',
+  title: 'Text color',
+  shortcut: 'CMD+SHIFT+C',
+  // The toolbar icon is a real React component — theme providers and
+  // styled-components reach it; the editor unmounts it when the toolbar
+  // closes, so there is nothing to clean up by hand.
+  component: ({ active }) => <FontColorIcon active={active} />,
+  // Applies the formatting to the live selection's range.
+  surround: (range) => applyColor(range),
+  // Drives the \`active\` prop the icon receives.
+  checkState: (selection) => hasColor(selection),
+  sanitize: { span: { style: true } },
+});
+
+// Register like any tool: tools: { textColor: TextColor }`;
+
 interface HowToStep {
   key: string;
   /** Raw vanilla example, adapted to the active framework at render time. */
@@ -245,6 +266,19 @@ export const HowToCustomToolContent: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Inline tool authoring — react only */}
+      {framework === 'react' && (
+        <div className="flex flex-col gap-4 border-t border-border pt-8">
+          <h2 className={headingClass}>
+            <Typo>{t('api.howToCustomTool.inlineTool.title')}</Typo>
+          </h2>
+          <p className={proseClass}>
+            {renderInline(t('api.howToCustomTool.inlineTool.body'))}
+          </p>
+          <CodeBlock code={INLINE_TOOL_AUTHORING_CODE} language="tsx" />
+        </div>
+      )}
 
       {/* Going further */}
       <div className="flex flex-col gap-4 border-t border-border pt-8">

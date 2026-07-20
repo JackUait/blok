@@ -17,6 +17,10 @@ describe('@bloklabs/react exports', () => {
     expect(typeof ReactApi.useBlocks).toBe('function');
   });
 
+  it('exports the inline-tool-authoring surface (createReactInlineTool)', () => {
+    expect(typeof ReactApi.createReactInlineTool).toBe('function');
+  });
+
   it('exports the block-authoring surface (createReactBlock + portal host)', () => {
     expect(typeof ReactApi.createReactBlock).toBe('function');
     expect(typeof ReactApi.createBlockPortalRegistry).toBe('function');

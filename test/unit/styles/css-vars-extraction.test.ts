@@ -289,6 +289,16 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // back to the general list token so checklists follow it unless overridden.
   '--blok-list-padding-start',
   '--blok-checklist-padding-start',
+  // Consumer-supplied block wrapper padding (read-only hosts tighten block
+  // rhythm with these); fall back to the historical per-tool values
+  // (blok-block/header: 7px/7px/2px, quote: 0.2em vertical, callout: 5px
+  // vertical). Deliberately never declared in the palette — a wrapper
+  // declaration would shadow ancestor-level host overrides via
+  // nearest-ancestor custom-property inheritance (--blok-placeholder-color
+  // precedent).
+  '--blok-block-padding-top',
+  '--blok-block-padding-bottom',
+  '--blok-block-padding-inline',
   // Consumer-supplied empty-block placeholder color; falls back to
   // --blok-gray-text. Deliberately never declared in the palette — a wrapper
   // declaration would shadow ancestor-level host overrides via

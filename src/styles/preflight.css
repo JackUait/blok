@@ -318,8 +318,11 @@
      selection colour: the fake-background highlight (shown while a Link/Equation
      menu input holds focus) reads the SAME token, so opening a menu never changes
      the highlight colour. `color` stays reverted so selected text keeps its own
-     colour on the light highlight. */
-  [data-blok-interface] ::selection,
+     colour on the light highlight.
+     Hosts opt out per editor via config.style.nativeSelection, which stamps
+     data-blok-native-selection on the wrapper (UI.make) — the :where(:not())
+     gate adds zero specificity, and popovers keep Blok's selection colour. */
+  [data-blok-interface]:where(:not([data-blok-native-selection])) ::selection,
   [data-blok-popover] ::selection {
     background-color: var(--blok-selection-inline);
     color: revert;

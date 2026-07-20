@@ -1000,7 +1000,7 @@
   border-radius: revert;
 }
 
-[@layer base] [data-blok-interface] ::selection, [data-blok-popover] ::selection {
+[@layer base] [data-blok-interface]:where(:not([data-blok-native-selection])) ::selection, [data-blok-popover] ::selection {
   background-color: var(--blok-selection-inline);
   color: revert;
 }
@@ -1633,6 +1633,10 @@
   --blok-database-card-actions-divider: rgba(255, 255, 255, 0.4);
 }
 
+:where([data-blok-native-selection]) {
+  --blok-selection-inline: Highlight;
+}
+
 [data-blok-interface] [data-list-style="checklist"] input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
@@ -1693,7 +1697,7 @@
   border-color: var(--color-gray-200, currentcolor);
 }
 
-[@utility blok-block] @apply py-[7px] px-[2px] [&::-webkit-input-placeholder]:leading-normal! {
+[@utility blok-block] @apply pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] px-[var(--blok-block-padding-inline,2px)] [&::-webkit-input-placeholder]:leading-normal! {
 
 }
 

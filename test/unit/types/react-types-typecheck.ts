@@ -23,6 +23,8 @@ import type {
   BlockPortalEntry as PublishedBlockPortalEntry,
   BlockPortalRegistry as PublishedBlockPortalRegistry,
   BlockPortalHostProps as PublishedBlockPortalHostProps,
+  ReactInlineToolRenderProps as PublishedReactInlineToolRenderProps,
+  CreateReactInlineToolSpec as PublishedCreateReactInlineToolSpec,
 } from '../../../packages/react/types/index';
 import type {
   ReactBlockRenderProps as SourceReactBlockRenderProps,
@@ -30,6 +32,10 @@ import type {
   PropSchema as SourcePropSchema,
   PropSchemaEntry as SourcePropSchemaEntry,
 } from '../../../packages/react/src/createReactBlock';
+import type {
+  ReactInlineToolRenderProps as SourceReactInlineToolRenderProps,
+  CreateReactInlineToolSpec as SourceCreateReactInlineToolSpec,
+} from '../../../packages/react/src/createReactInlineTool';
 import type {
   BlockPortalEntry as SourceBlockPortalEntry,
   BlockPortalRegistry as SourceBlockPortalRegistry,
@@ -91,6 +97,14 @@ const _portalEntry: AssertExact<PublishedBlockPortalEntry, SourceBlockPortalEntr
 const _portalRegistry: AssertExact<PublishedBlockPortalRegistry, SourceBlockPortalRegistry> = true;
 const _portalHostProps: AssertExact<PublishedBlockPortalHostProps, SourceBlockPortalHostProps> = true;
 
+// Inline-tool-authoring surface (createReactInlineTool) — published
+// declarations must not drift from the source of truth.
+const _inlineToolRenderProps: AssertExact<
+  PublishedReactInlineToolRenderProps<{ palette: string }>,
+  SourceReactInlineToolRenderProps<{ palette: string }>
+> = true;
+const _inlineToolSpec: AssertExact<PublishedCreateReactInlineToolSpec, SourceCreateReactInlineToolSpec> = true;
+
 void _useBlokConfig;
 void _renderProps;
 void _blockSpec;
@@ -99,6 +113,8 @@ void _propSchemaEntry;
 void _portalEntry;
 void _portalRegistry;
 void _portalHostProps;
+void _inlineToolRenderProps;
+void _inlineToolSpec;
 void _contentProps;
 void _editorProps;
 void _blockNode;

@@ -29,7 +29,13 @@ const BASE_CLASSES = [
   'border-current',
   'pl-[0.9em]',
   'pr-[0.9em]',
-  'py-[0.2em]',
+  // Vertical padding follows the public --blok-block-padding-top/-bottom
+  // tokens with the quote's own 0.2em defaults as fallbacks. These win over
+  // the blok-block declarations by generated-utility source order (equal
+  // specificity) — pinned by the compiled-cascade test in
+  // test/unit/styles/host-customization-tokens.test.ts.
+  'pt-[var(--blok-block-padding-top,0.2em)]',
+  'pb-[var(--blok-block-padding-bottom,0.2em)]',
   'leading-[1.5]',
   'outline-hidden',
   'mt-[0.3em]',

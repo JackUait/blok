@@ -1,5 +1,6 @@
 import type { BlokConfig, BlockToolData, OutputBlockData, OutputData } from '@bloklabs/core';
 import type { BlockAPI, BlockToolConstructable, ToolboxConfig } from '@bloklabs/core';
+import type { InlineToolConstructable, SanitizerConfig } from '@bloklabs/core';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from '@bloklabs/core';
 import type { BlockTuneData } from '@bloklabs/core';
 import type { MarkdownImportConfig } from '@bloklabs/core/markdown';
@@ -623,6 +624,70 @@ export declare function createReactBlock<
   Data extends BlockToolData = BlockToolData,
   Config = Record<string, unknown>
 >(spec: CreateReactBlockSpec<Data, Config>): BlockToolConstructable;
+
+// ---------------------------------------------------------------------------
+// Inline-tool authoring (createReactInlineTool)
+// ---------------------------------------------------------------------------
+
+/** Props handed to a React inline tool's `component` (its toolbar icon/UI). */
+export interface ReactInlineToolRenderProps<Config = Record<string, unknown>> {
+  /**
+   * Whether the tool's formatting is active for the current selection —
+   * derived from the spec's `checkState` every time the toolbar queries it.
+   * Pushed IN PLACE (no remount), so the icon restyles live.
+   */
+  active: boolean;
+  /**
+   * The tool's `config` from the consumer's `tools` map (adapter-internal
+   * keys stripped) — the channel for host props (palette, locale…).
+   */
+  config: Readonly<Partial<Config>>;
+}
+
+/** Spec for {@link createReactInlineTool}. */
+export interface CreateReactInlineToolSpec<Config = Record<string, unknown>> {
+  /** Tool type name — the MenuConfig item name (fallback when the tools-map key is unavailable). */
+  type: string;
+  /** Optional toolbar item title (shown in overflow/search contexts). */
+  title?: string;
+  /** The component rendered as the tool's toolbar icon/UI. */
+  component: React.ComponentType<ReactInlineToolRenderProps<Config>>;
+  /** Applies/removes the formatting on the LIVE selection's range (captured at activation time). */
+  surround?: (range: Range) => void;
+  /** Reports whether the formatting is active for the given selection. */
+  checkState?: (selection: Selection | null) => boolean;
+  /** Keyboard shortcut (e.g. `CMD+SHIFT+C`). */
+  shortcut?: string;
+  /** Inline sanitizer config declaring the markup this tool produces. */
+  sanitize?: SanitizerConfig;
+  /** Whether the tool stays available in read-only mode. */
+  isReadOnlySupported?: boolean;
+}
+
+/**
+ * Author a first-party React inline tool: returns an inline-tool
+ * constructable registered exactly like a vanilla tool
+ * (`tools: { color: createReactInlineTool(...) }`). The tool's toolbar icon is
+ * a React component portaled through the editor's shared portal host INSIDE
+ * the React tree that renders `BlokContent`/`BlokEditor` — app-level context
+ * (themes, styled-components providers) reaches the icon with no
+ * consumer-managed `createRoot`, and the inline toolbar's teardown unmounts it
+ * deterministically (no leaked React roots).
+ *
+ * @example
+ * ```tsx
+ * const DescriptionColor = createReactInlineTool({
+ *   type: 'descriptionColor',
+ *   title: 'Text color',
+ *   component: ({ active }) => <FontColorIcon active={active} />,
+ *   surround: (range) => applyColor(range),
+ *   checkState: (selection) => hasColor(selection),
+ * });
+ * ```
+ */
+export declare function createReactInlineTool<Config = Record<string, unknown>>(
+  spec: CreateReactInlineToolSpec<Config>
+): InlineToolConstructable;
 
 /**
  * Tool-config key carrying the editor's portal registry into a

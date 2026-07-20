@@ -413,8 +413,20 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // --blok-placeholder-color / --color-block-placeholder so hosts recolor
     // empty-block placeholders without targeting internals. Bumps the
     // multiplier to 1.405.
+    // 2026-07-20: native selection opt-out — preflight.css gained the
+    // :where(:not([data-blok-native-selection])) gate on the editor
+    // ::selection rule and colors.css gained the source-order-sensitive
+    // :where([data-blok-native-selection]) { --blok-selection-inline:
+    // Highlight } block (plus doc comments) so hosts can fall back to
+    // native/UA selection colors instead of fighting Blok's repaint with
+    // `revert !important`. Bumps the multiplier to 1.408.
+    // 2026-07-20: block padding tokens — the blok-block utility in main.css
+    // routes its padding through --blok-block-padding-top/-bottom/-inline
+    // (plus a doc comment) so read-only hosts get tight inline rendering
+    // without blanket-overriding [data-blok-tool]. Bumps the multiplier
+    // to 1.409.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.405);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.409);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -285,6 +285,18 @@ export class Blok {
    */
   public readonly isRendered: boolean;
 
+  /**
+   * Resolves once every Blok instance constructed so far has finished booting
+   * (each instance's `isReady` has settled — rejections count as settled).
+   * Collective-readiness signal for pages hosting several instances (e.g. a
+   * list of read-only editors plus a composer): await it before autofocusing
+   * or measuring layout, instead of hand-aggregating per-instance `onReady`
+   * callbacks. Instances constructed while the returned promise is pending
+   * extend the wait; instances constructed after it resolves are not covered —
+   * call again for a fresh aggregate.
+   */
+  public static whenAllReady(): Promise<void>;
+
   public blocks: Blocks;
   public caret: Caret;
   public history: History;

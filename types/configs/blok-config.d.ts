@@ -441,6 +441,20 @@ export interface BlokConfig {
      * @example { '--blok-selection': 'rgba(35, 131, 226, 0.28)' }
      */
     tokens?: Record<string, string>;
+
+    /**
+     * Opt out of Blok's text-selection repaint inside the editor.
+     * When true, the editor wrapper is stamped with `data-blok-native-selection`,
+     * Blok's `::selection` rules skip the editor, and selection falls back to the
+     * browser/host-defined colors. The fake-background highlight (shown while a
+     * menu input holds focus) follows along by using the UA `Highlight` color.
+     * Popovers keep Blok's selection color.
+     *
+     * This is a static config flag rather than a `tokens` key because CSS-wide
+     * keywords like `revert` cannot be expressed through a custom property.
+     * @default false
+     */
+    nativeSelection?: boolean;
   }
 
   /**

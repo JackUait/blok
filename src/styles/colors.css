@@ -811,3 +811,22 @@
   --blok-database-card-actions-icon: rgba(255, 255, 255, 0.75);
   --blok-database-card-actions-divider: rgba(255, 255, 255, 0.4);
 }
+
+/* ─── Native selection opt-out ──────────────────────── */
+/*
+ * config.style.nativeSelection stamps data-blok-native-selection on the
+ * editor wrapper (UI.make). preflight.css skips its ::selection repaint for
+ * such editors; this block keeps the fake-background highlight — which reads
+ * the SAME --blok-selection-inline token via inline style (see
+ * selection/fake-background/shadows.ts) — consistent by re-pointing the token
+ * at the UA's native Highlight system color.
+ *
+ * MUST stay after BOTH dark-theme palette blocks above: every palette block
+ * is zero-specificity on purpose (see the light-theme comment), so
+ * Blok-internal resolution is by source order — declared any earlier, the
+ * dark palettes would win in dark mode and paint the fake-background
+ * highlight Blok-blue under the opt-out.
+ */
+:where([data-blok-native-selection]) {
+  --blok-selection-inline: Highlight;
+}

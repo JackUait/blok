@@ -542,10 +542,12 @@ describe('Header Tool - Custom Configurations', () => {
 
         // top-1/2 centres the arrow across the WHOLE heading, so on a multi-line toggle
         // heading it drifts to the middle line. Anchor its centre to the first line:
-        // top-[calc(7px+0.65em)] = heading top padding + half a line, then -translate-y-1/2
-        // pulls the fixed-size pill up so its own centre lands there.
+        // top-[calc(var(--blok-block-padding-top,7px)+0.65em)] = heading top padding
+        // (token-driven so host padding overrides keep the arrow aligned) + half a
+        // line, then -translate-y-1/2 pulls the fixed-size pill up so its own centre
+        // lands there.
         expect(arrow.className).not.toContain('top-1/2');
-        expect(arrow.className).toContain('top-[calc(7px_+_0.65em)]');
+        expect(arrow.className).toContain('top-[calc(var(--blok-block-padding-top,7px)_+_0.65em)]');
         expect(arrow.className).toContain('-translate-y-1/2');
         // The em in the calc must resolve against the heading font-size (arrow is a
         // sibling, not a child), so the level's text-size class is copied onto it.

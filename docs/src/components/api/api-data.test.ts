@@ -146,6 +146,21 @@ describe("API_SECTIONS", () => {
       expect(example).toContain("--blok-embed-margin-top");
     });
 
+    it("documents the block wrapper padding tokens for compact read-only rendering", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const example = stylesSection!.example ?? "";
+      expect(example).toContain("--blok-block-padding-top");
+      expect(example).toContain("--blok-block-padding-bottom");
+      expect(example).toContain("--blok-block-padding-inline");
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("--blok-block-padding-top");
+      // Non-default padding shifts derived geometry (toggle-heading arrow).
+      expect(description).toContain("toggle-heading arrow");
+    });
+
     it("documents the zero-specificity theming, content-max-width authority, and readonly gutter facts", () => {
       const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
       expect(stylesSection).toBeDefined();
@@ -175,6 +190,19 @@ describe("API_SECTIONS", () => {
 
       const description = stylesSection!.description ?? "";
       expect(description).toContain("56px");
+    });
+
+    it("documents the style.nativeSelection opt-out for Blok's ::selection repaint", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("style.nativeSelection");
+      expect(description).toContain("data-blok-native-selection");
+      expect(description).toContain("--blok-selection-inline");
+
+      const example = stylesSection!.example ?? "";
+      expect(example).toContain("nativeSelection: true");
     });
 
     it("documents that style.tokens values are fixed across theme/read-only state and that gutter keys are ignored", () => {

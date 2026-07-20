@@ -630,8 +630,8 @@ export class UI extends Module<UINodes> {
       // SVG defaults
       '[&_svg]:max-h-full',
       '[&_path]:stroke-current',
-      // Native selection color
-      '[&_::selection]:bg-selection-inline',
+      // Native selection color (omitted when the host opts out via style.nativeSelection)
+      ...(this.config.style?.nativeSelection === true ? [] : [ '[&_::selection]:bg-selection-inline' ]),
       // Hide placeholder when toolbox is opened
       ...PLACEHOLDER_HIDE_ON_TOOLBOX_CLASSES,
       ...(this.isRtl ? [ '[direction:rtl]' ] : []),
@@ -649,6 +649,15 @@ export class UI extends Module<UINodes> {
        * with the hover toolbar disabled there are no +/⠿ controls to house.
        */
       this.nodes.wrapper.setAttribute(DATA_ATTR.toolbarHidden, '');
+    }
+    if (this.config.style?.nativeSelection === true) {
+      /**
+       * Public styling hook: opts out of Blok's ::selection repaint. Gates the
+       * preflight.css selection rule and re-points --blok-selection-inline at
+       * the UA Highlight color (colors.css) so the fake-background highlight
+       * stays consistent with the native selection colour.
+       */
+      this.nodes.wrapper.setAttribute(DATA_ATTR.nativeSelection, '');
     }
     this.nodes.redactor = $.make('div', [
       // Firefox empty contenteditable fix

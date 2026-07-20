@@ -134,6 +134,12 @@
           "returnType": "void",
           "description": "Destroys the editor instance and removes all DOM elements and event listeners.",
           "note": "Call from your framework's unmount hook to avoid leaked listeners. The instance is unusable afterwards — create a new `Blok` to start again."
+        },
+        "whenAllReady": {
+          "name": "whenAllReady()",
+          "returnType": "Promise<void>",
+          "description": "Static method — resolves once every Blok instance constructed so far has finished booting (each instance's `isReady` has settled; rejections count as settled). A collective-readiness signal for pages hosting several instances, replacing hand-aggregated per-instance `onReady` callbacks. Instances constructed while the promise is pending extend the wait; instances constructed after it resolves are not covered — call again for a fresh aggregate.",
+          "note": "Call it as `Blok.whenAllReady()` on the class, not on an instance. In React, a parent's effect runs after its children's effects, so the children's editors are already registered when the parent calls it."
         }
       },
       "properties": {
@@ -899,6 +905,10 @@
           "angular": "`createAngularBlock` from `@bloklabs/angular` turns a standalone Angular component into a block tool — no class needed. Each block instance injects its context via `inject(BLOK_BLOCK_CONTEXT)`: `data()` is a signal holding the frozen snapshot, `commit()` is the only write path, and `readOnly()` mirrors the editor's read-only state."
         },
         "registerNote": "Register the result exactly like the class from step 2 — `tools: { callout: CalloutTool }`. Saving, validation, and lifecycle all round-trip the same way; the factory implements the `BlockTool` contract for you."
+      },
+      "inlineTool": {
+        "title": "Inline tools as components",
+        "body": "`createReactInlineTool` does the same for inline (selection) tools. The toolbar icon is a React component rendered through your app's tree — it receives an `active` prop reflecting the current selection, and the editor mounts and unmounts it for you, so no hand-rolled `createRoot` and no leaked roots. `surround` applies the formatting to the live selection's range; `checkState` reports whether it is active."
       },
       "further": {
         "title": "Going further",

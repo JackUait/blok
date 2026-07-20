@@ -18,11 +18,14 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { compile } from 'tailwindcss';
 import { describe, expect, it } from 'vitest';
 
 import { css as searchInputCss } from '../../../src/components/utils/popover/components/search-input/search-input.const';
 import { PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES } from '../../../src/components/utils/placeholder';
+import { WRAPPER_STYLES as CALLOUT_WRAPPER_STYLES } from '../../../src/tools/callout/constants';
 import { BASE_STYLES, CHECKLIST_ITEM_STYLES, ITEM_STYLES } from '../../../src/tools/list/constants';
+import { BASE_STYLES as TOGGLE_BASE_STYLES } from '../../../src/tools/toggle/constants';
 
 import { readMainCss } from './helpers/read-main-css';
 
@@ -209,6 +212,149 @@ describe('Host customization tokens (public --blok-* contract)', () => {
   describe('embed spacing token', () => {
     it('drives the embed top margin from --blok-embed-margin-top', () => {
       expect(css).toMatch(/\[data-blok-tool="embed"\]\s*\{[^}]*margin-top:\s*var\(--blok-embed-margin-top,\s*0\.5rem\)/);
+    });
+  });
+
+  describe('block vertical padding (public --blok-block-padding-top/-bottom contract)', () => {
+    /*
+     * Read-only hosts were found blanket-overriding `[data-blok-tool]
+     * { padding: 0 0 0.2em }` because per-block padding was hardcoded as
+     * Tailwind arbitrary values (py-[7px] px-[2px], py-[0.2em], py-[5px]).
+     * These tests pin the token indirection that makes the hack deletable:
+     * every block tool wrapper routes its padding through
+     * --blok-block-padding-top / -bottom / -inline, keeping its own
+     * historical value as the fallback.
+     */
+    const readToolSource = (rel: string): string =>
+      readFileSync(resolve(__dirname, '../../../src/tools', rel), 'utf8');
+
+    const blokBlockUtility = (): string =>
+      css.match(/@utility blok-block\s*\{[\s\S]*?\}/)?.[0] ?? '';
+
+    it('drives the blok-block utility from the three tokens (7px/7px/2px fallbacks) instead of hardcoded padding', () => {
+      const utility = blokBlockUtility();
+
+      expect(utility).toContain('pt-[var(--blok-block-padding-top,7px)]');
+      expect(utility).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
+      expect(utility).toContain('px-[var(--blok-block-padding-inline,2px)]');
+      expect(utility).not.toContain('py-[7px]');
+      expect(utility).not.toContain('px-[2px]');
+    });
+
+    it('keeps the tokens out of the palette so ancestor-level host overrides are not shadowed by the wrapper (placeholder-color precedent)', () => {
+      expect(css).not.toMatch(/--blok-block-padding-(?:top|bottom|inline):\s*[^;]+;/);
+    });
+
+    it('routes list wrapper vertical padding through the tokens with 7px fallbacks', () => {
+      expect(BASE_STYLES).toContain('pt-[var(--blok-block-padding-top,7px)]');
+      expect(BASE_STYLES).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
+      expect(BASE_STYLES).not.toContain('py-[7px]');
+    });
+
+    it('routes toggle wrapper vertical padding through the tokens with 7px fallbacks', () => {
+      expect(TOGGLE_BASE_STYLES).toContain('pt-[var(--blok-block-padding-top,7px)]');
+      expect(TOGGLE_BASE_STYLES).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
+      expect(TOGGLE_BASE_STYLES).not.toContain('py-[7px]');
+    });
+
+    it('routes callout wrapper vertical padding through the tokens with callout-specific 5px fallbacks', () => {
+      expect(CALLOUT_WRAPPER_STYLES).toContain('pt-[var(--blok-block-padding-top,5px)]');
+      expect(CALLOUT_WRAPPER_STYLES).toContain('pb-[var(--blok-block-padding-bottom,5px)]');
+      expect(CALLOUT_WRAPPER_STYLES).not.toContain('py-[5px]');
+    });
+
+    it('routes header padding through the three tokens with 7px/7px/2px fallbacks (BASE_STYLES is module-local — source scan)', () => {
+      const headerSource = readToolSource('header/index.ts');
+
+      expect(headerSource).toContain('pt-[var(--blok-block-padding-top,7px)]');
+      expect(headerSource).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
+      expect(headerSource).toContain('px-[var(--blok-block-padding-inline,2px)]');
+      expect(headerSource).not.toContain('py-[7px] px-[2px]');
+    });
+
+    it('anchors the toggle-heading arrow offset to the top-padding token so a host override keeps the arrow aligned', () => {
+      const headerSource = readToolSource('header/index.ts');
+
+      expect(headerSource).toContain('top-[calc(var(--blok-block-padding-top,7px)_+_0.65em)]');
+      expect(headerSource).not.toContain('top-[calc(7px_+_0.65em)]');
+    });
+
+    it('routes quote vertical padding through the tokens with quote-specific 0.2em fallbacks (BASE_CLASSES is module-local — source scan)', () => {
+      const quoteSource = readToolSource('quote/index.ts');
+
+      expect(quoteSource).toContain('pt-[var(--blok-block-padding-top,0.2em)]');
+      expect(quoteSource).toContain('pb-[var(--blok-block-padding-bottom,0.2em)]');
+      expect(quoteSource).not.toContain('py-[0.2em]');
+    });
+
+    it('keeps the quote 0.2em fallbacks winning over the blok-block defaults in the compiled cascade (equal specificity — source order decides)', async () => {
+      // Quote merges api.styles.block ('blok-block') with its own padding
+      // classes. twMerge cannot see inside a custom utility, so BOTH classes
+      // land on the element and the winner is decided by the cascade order of
+      // the GENERATED utilities (the build-time :where() scoping adds zero
+      // specificity to each, uniformly). Compile the real utility definition
+      // with the real quote candidates and pin that quote's padding rules are
+      // emitted after .blok-block.
+      const utility = blokBlockUtility();
+      const quoteSource = readToolSource('quote/index.ts');
+      const quotePt = quoteSource.match(/pt-\[var\(--blok-block-padding-top,[^\]]+\)\]/)?.[0];
+      const quotePb = quoteSource.match(/pb-\[var\(--blok-block-padding-bottom,[^\]]+\)\]/)?.[0];
+
+      expect(utility).not.toBe('');
+      expect(quotePt).toBeDefined();
+      expect(quotePb).toBeDefined();
+
+      if (quotePt === undefined || quotePb === undefined) {
+        return;
+      }
+
+      const theme = readFileSync(
+        resolve(__dirname, '../../../node_modules/tailwindcss/theme.css'),
+        'utf8'
+      );
+      const compiler = await compile(
+        `@import 'tailwindcss/theme.css' theme(reference);\n${utility}\n@tailwind utilities;`,
+        { loadStylesheet: async (id, base) => ({ path: id, base, content: theme }) }
+      );
+      const output = compiler.build(['blok-block', quotePt, quotePb]);
+
+      const blokBlockIndex = output.indexOf('.blok-block');
+      const quotePtIndex = output.indexOf('padding-top: var(--blok-block-padding-top,0.2em)');
+      const quotePbIndex = output.indexOf('padding-bottom: var(--blok-block-padding-bottom,0.2em)');
+
+      expect(blokBlockIndex).toBeGreaterThan(-1);
+      expect(quotePtIndex).toBeGreaterThan(blokBlockIndex);
+      expect(quotePbIndex).toBeGreaterThan(blokBlockIndex);
+    });
+  });
+
+  describe('native selection opt-out', () => {
+    it('gates the editor ::selection repaint behind :not([data-blok-native-selection]) at zero added specificity', () => {
+      expect(css).toMatch(
+        /\[data-blok-interface\]:where\(:not\(\[data-blok-native-selection\]\)\)\s+::selection/
+      );
+    });
+
+    it('keeps the popover ::selection repaint unconditional', () => {
+      expect(css).toMatch(/\[data-blok-popover\]\s+::selection/);
+    });
+
+    it('re-points --blok-selection-inline at the UA Highlight color under the opt-out', () => {
+      expect(css).toMatch(
+        /:where\(\[data-blok-native-selection\]\)\s*\{[^}]*--blok-selection-inline:\s*Highlight/
+      );
+    });
+
+    it('declares the Highlight redeclaration AFTER the last dark-theme --blok-selection-inline declaration (palette blocks are zero-specificity; source order is the override mechanism)', () => {
+      const optOutIndex = css.indexOf('--blok-selection-inline: Highlight');
+      const darkDeclarations = [...css.matchAll(/--blok-selection-inline:\s*rgba\(35, 131, 226, 0\.3\)/g)];
+
+      expect(optOutIndex).toBeGreaterThan(-1);
+      expect(darkDeclarations.length).toBeGreaterThanOrEqual(2);
+
+      const lastDarkIndex = darkDeclarations[darkDeclarations.length - 1].index;
+
+      expect(optOutIndex).toBeGreaterThan(lastDarkIndex);
     });
   });
 });

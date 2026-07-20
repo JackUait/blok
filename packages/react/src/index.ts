@@ -12,6 +12,11 @@ export type {
   PropSchema,
   PropSchemaEntry,
 } from './createReactBlock';
+export { createReactInlineTool } from './createReactInlineTool';
+export type {
+  CreateReactInlineToolSpec,
+  ReactInlineToolRenderProps,
+} from './createReactInlineTool';
 export {
   createBlockPortalRegistry,
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,

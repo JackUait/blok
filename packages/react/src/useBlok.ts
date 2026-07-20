@@ -42,6 +42,16 @@ const isReactBlockEntry = (entry: unknown): boolean => {
   );
 };
 
+/** React inline tools (createReactInlineTool) need the same registry bridge. */
+const isReactInlineToolEntry = (entry: unknown): boolean => {
+  const toolClass = typeof entry === 'function' ? entry : (entry as { class?: unknown })?.class;
+
+  return (
+    typeof toolClass === 'function' &&
+    (toolClass as { __isBlokReactInlineTool?: boolean }).__isBlokReactInlineTool === true
+  );
+};
+
 const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): unknown => {
   if (tools === null || typeof tools !== 'object') {
     return tools;
@@ -50,7 +60,7 @@ const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): un
   const result: Record<string, unknown> = {};
 
   for (const [name, entry] of Object.entries(tools as Record<string, unknown>)) {
-    if (!isReactBlockEntry(entry)) {
+    if (!isReactBlockEntry(entry) && !isReactInlineToolEntry(entry)) {
       result[name] = entry;
 
       continue;

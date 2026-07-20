@@ -43,6 +43,20 @@ function hasApplyShortcut(tool: unknown): tool is ShortcutApplicableTool {
 }
 
 /**
+ * Destroy an inline tool instance, tolerating tools without a destroy hook
+ * and tools whose destroy throws — a broken tool must never break toolbar
+ * teardown (or leak its siblings' resources by aborting the loop).
+ * @param instance - inline tool instance to tear down
+ */
+function destroyToolInstance(instance: IInlineTool): void {
+  try {
+    instance.destroy?.();
+  } catch {
+    // Swallowed: teardown must complete for the remaining instances.
+  }
+}
+
+/**
  * Inline toolbar with actions that modifies selected text fragment
  *
  * |¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯|
@@ -242,6 +256,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     try {
       await this.openingPromise;
     } catch {
+      this.destroyToolsInstances();
       this.opened = false;
 
       if (this.popover) {
@@ -290,7 +305,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
     this.directToolName = null;
 
-    this.tools = new Map();
+    this.destroyToolsInstances();
     this.opened = false;
     this.openingPromise = null;
 
@@ -344,6 +359,10 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
    * Removes UI and its components
    */
   public destroy(): void {
+    // Destroy tool instances still alive (toolbar destroyed while open):
+    // close() empties this.tools after destroying, so this never double-fires.
+    this.destroyToolsInstances();
+
     if (this.popover) {
       this.popover.hide?.();
       this.popover.destroy?.();
@@ -352,6 +371,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
 
     this.shortcutManager.destroy();
     this.removeAllNodes();
+  }
+
+  /**
+   * Destroys every currently visible tool instance and empties this.tools.
+   * Inline tool instances are created fresh per toolbar open, so this is the
+   * only teardown signal they ever get (e.g. a React inline tool unmounts its
+   * portaled icon here).
+   */
+  private destroyToolsInstances(): void {
+    this.tools.forEach((instance) => destroyToolInstance(instance));
+    this.tools = new Map();
   }
 
 
@@ -560,10 +590,13 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     const instance = tool.create();
 
     if (!hasApplyShortcut(instance)) {
+      destroyToolInstance(instance);
+
       return false;
     }
 
     instance.applyShortcut();
+    destroyToolInstance(instance);
 
     return true;
   }
@@ -581,10 +614,17 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       return false;
     }
 
-    const rendered = tool.create().render();
-    const items = Array.isArray(rendered) ? rendered : [rendered];
+    const instance = tool.create();
 
-    return items.some((item) => 'children' in item && Boolean(item.children));
+    try {
+      const rendered = instance.render();
+      const items = Array.isArray(rendered) ? rendered : [rendered];
+
+      return items.some((item) => 'children' in item && Boolean(item.children));
+    } finally {
+      // The instance was a render probe only — release whatever render() allocated.
+      destroyToolInstance(instance);
+    }
   }
 
   /**
@@ -617,6 +657,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     try {
       await this.openingPromise;
     } catch {
+      this.destroyToolsInstances();
       this.opened = false;
       this.directToolName = null;
       this.directMenuChildren = null;
@@ -719,15 +760,20 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     }
 
     const instance = tool.create();
-    const rendered = instance.render();
-    const items = Array.isArray(rendered) ? rendered : [rendered];
 
-    for (const item of items) {
-      if ('onActivate' in item && typeof item.onActivate === 'function') {
-        item.onActivate(item);
+    try {
+      const rendered = instance.render();
+      const items = Array.isArray(rendered) ? rendered : [rendered];
+      const activatable = items.find(
+        (item) => 'onActivate' in item && typeof item.onActivate === 'function'
+      );
 
-        return;
+      if (activatable !== undefined && 'onActivate' in activatable) {
+        activatable.onActivate?.(activatable);
       }
+    } finally {
+      // Throwaway instance created just for this invocation — tear it down.
+      destroyToolInstance(instance);
     }
   }
 }

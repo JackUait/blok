@@ -349,20 +349,38 @@ export class PopoverItemDefault extends PopoverItem {
   /**
    * Creates an icon element
    */
-  private createIconElement(icon: string, iconWithGap: boolean, isInline: boolean, isNestedInline: boolean): HTMLElement {
+  private createIconElement(icon: string | HTMLElement, iconWithGap: boolean, isInline: boolean, isNestedInline: boolean): HTMLElement {
     const iconEl = document.createElement('div');
 
     iconEl.className = this.getIconClass(iconWithGap, isInline, isNestedInline);
     iconEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
     iconEl.setAttribute('data-blok-testid', 'popover-item-icon');
     iconEl.setAttribute('aria-hidden', 'true');
-    iconEl.innerHTML = icon;
+    PopoverItemDefault.setIconContent(iconEl, icon);
 
     if (iconWithGap) {
       iconEl.setAttribute(DATA_ATTR.tool, '');
     }
 
     return iconEl;
+  }
+
+  /**
+   * Writes an icon into its container. A live HTMLElement is appended as-is —
+   * node identity preserved so an external renderer (e.g. a React portal) can
+   * keep owning it; a string keeps the historical innerHTML contract.
+   * @param container - the icon container element
+   * @param icon - icon markup string or live element
+   */
+  private static setIconContent(container: HTMLElement, icon: string | HTMLElement): void {
+    if (icon instanceof HTMLElement) {
+      container.replaceChildren(icon);
+
+      return;
+    }
+
+    container.replaceChildren();
+    container.insertAdjacentHTML('afterbegin', icon);
   }
 
   /**
@@ -633,7 +651,9 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    this.nodes.icon.innerHTML = this.params.icon;
+    // A live element icon is restored by re-appending the SAME node (identity
+    // preserved for its external owner); a string icon via innerHTML.
+    PopoverItemDefault.setIconContent(this.nodes.icon, this.params.icon);
   }
 
   /**
@@ -664,8 +684,23 @@ export class PopoverItemDefault extends PopoverItem {
   /**
    * Updates the icon with new content
    */
-  private updateIcon(icon: string | undefined): void {
+  private updateIcon(icon: string | HTMLElement | undefined): void {
     if (!this.nodes.icon || !icon) {
+      return;
+    }
+
+    if (icon instanceof HTMLElement) {
+      this.nodes.icon.replaceChildren(icon);
+
+      return;
+    }
+
+    /**
+     * Never stringify over a live element icon: assigning innerHTML would
+     * detach the node its external renderer (e.g. a React portal) still owns.
+     * The original element stays visible instead of the confirmation string.
+     */
+    if (this.params.icon instanceof HTMLElement) {
       return;
     }
 

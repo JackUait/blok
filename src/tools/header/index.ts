@@ -273,7 +273,11 @@ export class Header implements BlockTool {
   /**
    * Base styles for all header levels
    */
-  private static readonly BASE_STYLES = 'py-[7px] px-[2px] m-0 outline-hidden [&_p]:p-0! [&_p]:m-0! [&_div]:p-0! [&_div]:m-0!';
+  /**
+   * Padding routes through the public --blok-block-padding-top/-bottom/-inline
+   * tokens (fallbacks preserve the historical 7px/7px/2px, matching blok-block).
+   */
+  private static readonly BASE_STYLES = 'pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] px-[var(--blok-block-padding-inline,2px)] m-0 outline-hidden [&_p]:p-0! [&_p]:m-0! [&_div]:p-0! [&_div]:m-0!';
 
   /**
    * Styles
@@ -948,7 +952,8 @@ export class Header implements BlockTool {
    * The pill keeps the shared fixed 28px square (h-7 w-7 from ARROW_STYLES) so its
    * height is identical at every heading level. To sit on the FIRST line of a
    * (possibly multi-line) heading its CENTER is anchored there, not its box sized
-   * to it: top-[calc(7px+0.65em)] = the heading's py-[7px] top padding plus half a
+   * to it: top-[calc(var(--blok-block-padding-top,7px)+0.65em)] = the heading's
+   * top padding (the same token BASE_STYLES uses, 7px default) plus half a
    * line (the heading's rendered line-height is 1.3, set via the
    * --blok-heading-line-height token in src/styles/heading.css, not a Tailwind
    * class on this element), and -translate-y-1/2 pulls the fixed pill up so its own
@@ -967,7 +972,7 @@ export class Header implements BlockTool {
     });
     const textSizeClass = this.currentLevel.styles.match(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/)?.[0] ?? '';
 
-    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[calc(7px_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
+    arrow.className = twMerge(arrow.className, 'absolute left-0 top-[calc(var(--blok-block-padding-top,7px)_+_0.65em)] -translate-y-1/2 mt-0', textSizeClass);
 
     return arrow;
   }

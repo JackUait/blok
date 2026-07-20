@@ -147,9 +147,13 @@ export interface PopoverItemDefaultBaseParams {
   title?: string;
 
   /**
-   * Item icon to be appeared near a title
+   * Item icon to be appeared near a title.
+   *
+   * Either an HTML string (rendered via innerHTML) or a live HTMLElement —
+   * the element is appended as-is with its node identity preserved, so an
+   * external renderer (e.g. a React portal) can keep owning and updating it.
    */
-  icon?: string;
+  icon?: string | HTMLElement;
 
   /**
    * Icon to be displayed on the trailing (right) side of the item.

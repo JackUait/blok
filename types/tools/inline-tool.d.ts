@@ -10,6 +10,17 @@ export interface InlineTool extends BaseTool<MenuConfig> {
    * @type {string}
    */
   shortcut?: string;
+
+  /**
+   * Teardown hook. Inline tool instances are constructed fresh on every
+   * toolbar open (and for shortcut probes); the toolbar calls destroy() on
+   * every instance it created once that instance is no longer needed —
+   * on toolbar close, on editor destroy, and right after throwaway probe
+   * instances served their purpose. Use it to release anything render()
+   * allocated (event listeners, mounted UI such as React roots, timers).
+   * Must be safe to call multiple times.
+   */
+  destroy?(): void;
 }
 
 

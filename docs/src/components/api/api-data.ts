@@ -171,6 +171,20 @@ await editor.clear();`,
         example: `// Clean up on component unmount
 editor.destroy();`,
       },
+      {
+        name: "whenAllReady()",
+        returnType: "Promise<void>",
+        description:
+          "Static method — resolves once every Blok instance constructed so far has finished booting (each instance's `isReady` has settled; rejections count as settled). A collective-readiness signal for pages hosting several instances, replacing hand-aggregated per-instance `onReady` callbacks. Instances constructed while the promise is pending extend the wait; instances constructed after it resolves are not covered — call again for a fresh aggregate.",
+        example: `// A comments list: N read-only bodies + a composer.
+// Wait for every instance before autofocusing.
+await Blok.whenAllReady();
+composer.focus();
+
+// In React, a parent's effect runs after its children's
+// effects, so the children's editors are already registered
+// when the parent calls whenAllReady().`,
+      },
     ],
     properties: [
       {
@@ -1171,7 +1185,7 @@ editor.selection.restore();`,
     badge: "Styles",
     title: "Styles API",
     description:
-      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are fixed — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active, collapsing the gutter to 0 automatically. The same collapse applies with `hideToolbar: true` in the constructor config — the hover toolbar never opens and the wrapper carries `data-blok-toolbar-hidden`, so no gutter space is reserved. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config.",
+      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are fixed — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active, collapsing the gutter to 0 automatically. The same collapse applies with `hideToolbar: true` in the constructor config — the hover toolbar never opens and the wrapper carries `data-blok-toolbar-hidden`, so no gutter space is reserved. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config. Blok also repaints native text selection inside the editor with `--blok-selection-inline` — override that token to recolor it, or pass `style.nativeSelection: true` (default `false`) to opt out entirely and fall back to the browser/host-defined selection colors (a token override cannot express CSS-wide keywords like `revert`, so reverting needs this flag). With the flag on, the wrapper carries `data-blok-native-selection`, Blok's `::selection` rules skip the editor, and the fake-background highlight (shown while a menu input holds focus) follows the UA `Highlight` color; popovers keep Blok's selection color. Block rhythm is public too: `--blok-block-padding-top`, `--blok-block-padding-bottom` and `--blok-block-padding-inline` drive the padding of every block tool wrapper (paragraph, heading, list, toggle, quote, callout). Each tool keeps its historical value as the fallback — 7px/7px/2px for most blocks, 0.2em vertical for quotes, 5px vertical for callouts — so one override retunes all blocks at once, which is exactly what a read-only host needs for tight inline-style rendering (previously only possible by overriding `[data-blok-tool]` internals). Note that non-default padding slightly shifts derived geometry such as the toggle-heading arrow offset, which follows `--blok-block-padding-top`.",
     example: `// Customize the editor from your host app via CSS custom properties —
 // no need to target Blok's internal test IDs or data attributes.
 .my-editor-container {
@@ -1193,6 +1207,14 @@ editor.selection.restore();`,
 
   /* Gap between a list marker/checkbox and its content (default: 0px) */
   --blok-list-gap: 6px;
+
+  /* Padding of every block tool wrapper. Fallbacks keep each tool's own
+     default (7px/7px/2px for most blocks; quotes fall back to 0.2em
+     vertical, callouts to 5px). Tighten all three for compact read-only
+     inline rendering — no need to override [data-blok-tool]: */
+  --blok-block-padding-top: 0;
+  --blok-block-padding-bottom: 0.2em;
+  --blok-block-padding-inline: 0;
 
   /* Placeholder color of popover search inputs */
   --blok-search-input-placeholder: rgba(112, 118, 132, 0.8);
@@ -1245,6 +1267,14 @@ new Blok({
 const editor = new Blok({
   holder: 'editor',
   style: { contentAlign: 'center' },
+});
+
+// Opt out of Blok's ::selection repaint and use the native/host-defined
+// selection colors instead (recoloring is possible via
+// --blok-selection-inline; reverting to the UA default needs this flag)
+new Blok({
+  holder: 'editor',
+  style: { nativeSelection: true },
 });
 
 // Access CSS class names for styling custom tools

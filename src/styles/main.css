@@ -122,8 +122,11 @@
  * Each class bundles multiple Tailwind utilities using @apply.
  */
 @utility blok-block {
-  /* Base Blok styles - applied to block tool wrappers */
-  @apply py-[7px] px-[2px] [&::-webkit-input-placeholder]:leading-normal!;
+  /* Base Blok styles - applied to block tool wrappers.
+     Padding routes through the public --blok-block-padding-top/-bottom/-inline
+     tokens (fallbacks preserve the historical 7px/7px/2px) so read-only hosts
+     can tighten block rhythm without overriding [data-blok-tool]. */
+  @apply pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] px-[var(--blok-block-padding-inline,2px)] [&::-webkit-input-placeholder]:leading-normal!;
 }
 @utility blok-inline-tool-button {
   /* Inline Tools styles */

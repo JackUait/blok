@@ -83,6 +83,11 @@ export const DATA_ATTR = {
   rtl: 'data-blok-rtl',
   /** Editor content width mode (present with value "full" for wide mode; absent = narrow) */
   width: 'data-blok-width',
+  /** Present on the editor wrapper when config.style.nativeSelection is true.
+   *  Public styling hook — disables Blok's ::selection repaint (preflight.css)
+   *  and re-points the fake-background highlight at the UA Highlight color
+   *  (colors.css), so selection falls back to native/host-defined colors. */
+  nativeSelection: 'data-blok-native-selection',
 
   // ============================================
   // Drag and Drop

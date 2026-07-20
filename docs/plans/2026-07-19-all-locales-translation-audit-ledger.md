@@ -303,7 +303,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | `root-arabic_546_current_first` | pass | pass | pass | `F-da-001`–`F-da-088` | second-pass-complete |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
-| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-dv_corrected_46c_first` | — | pass | pass | pass | `F-dv-001`–`F-dv-062` | first-pass-complete |
+| `dv` | Dhivehi (Maldivian) | Thaana | rtl | contemporary Maldivian product UI in Thaana; concise informal-singular actions; established Dhivehi technical loanwords; native RTL punctuation; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-dv_corrected_46c_first` | `root-dv_corrected_46c_second` | pass | pass | pass | `F-dv-001`–`F-dv-062` | second-pass-complete |
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
 | `en` | English | Latin | ltr | concise US English; sentence-case UI | `root-en-546-first-final` | `root-en-546-second-independent` | pass | pass | pass | `F-en-001`–`F-en-080` | second-pass-complete |
 | `es` | Spanish | Latin | ltr | informal Spain Spanish; `tú` imperatives for instructions; infinitive menu actions; Spain terminology and spelling | `root-es-546-first-final` | `root-es-546-second-final` | pass | pass | pass | `F-es-001`–`F-es-103` | second-pass-complete |
@@ -312,8 +312,8 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
 | `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-099` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
-| `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | — | — | pending | pending | pending | `F-gu-001`–`F-gu-054` | pending |
-| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | — | — | pending | pending | pending | `F-he-001`–`F-he-047` | pending |
+| `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | — | pass | pass | pass | `F-gu-001`–`F-gu-054` | first-pass-complete |
+| `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-he-001`–`F-he-047` | first-pass-complete |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hr-001`–`F-hr-004` | pending |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-004` | pending |
@@ -441,7 +441,7 @@ locale returns to `pending`.
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-amharic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` | `root-arabic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
-| `dv` | `root-dv_corrected_46c_first` | `sha256:46c41eed53047a5e4e6f2365867fd254370adb18602fa09f512819374e3905b4` | — | — |
+| `dv` | `root-dv_corrected_46c_first` | `sha256:46c41eed53047a5e4e6f2365867fd254370adb18602fa09f512819374e3905b4` | `root-dv_corrected_46c_second` | `sha256:46c41eed53047a5e4e6f2365867fd254370adb18602fa09f512819374e3905b4` |
 | `el` | `root-czech_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` | `root-danish_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
 | `es` | `root-es-546-first-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` | `root-es-546-second-final` | `sha256:862410add25e4c82fa5baf5773d31a6ac1b612cb0ee8cc643d96c4336802bc58` |
@@ -449,6 +449,8 @@ locale returns to `pending`.
 | `fa` | `root-fa_546_lifecycle_replacement` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` | `root-fa_546_corrected_second` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` |
 | `fi` | `root-fi_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` | `root-fil_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
+| `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | — | — |
+| `he` | `root-dv_corrected_46c_second` | `sha256:91ca89a271bda90e01e7b0d8285f742de6a336f6a108e70654e7cd3f6ec89d7d` | — | — |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
@@ -4867,6 +4869,50 @@ translation completeness, integrity, source-coverage, and encoding checks also
 pass. This exact-byte review earns first-pass credit only; a distinct complete
 second review is still required.
 
+### Dhivehi corrected-byte complete review 2 — clean
+
+Distinct fresh reviewer `/root/dv_corrected_46c_second` independently reread
+all 546 source-order pairs on the same raw dictionary SHA-256
+`46c41eed53047a5e4e6f2365867fd254370adb18602fa09f512819374e3905b4`
+without consulting prior Dhivehi audit artifacts. The immutable primary bundle
+is `/tmp/blok-dv-46c41eed-second-strict-fresh`; its 546-row matrix is bound at
+SHA-256
+`bf6f407f309bce921ad3dbb2d112324542d8eb6e2c6127d0f58c688a1e2dc292`;
+its empty residual artifact is bound at SHA-256
+`f3e512eaa4a132737bde72330e808f53d7ab726134642128d1f9d106b0d350c9`;
+its exact-retention inventory is bound at SHA-256
+`e6b7b3a7eb30b77382df3b7489a75ceec467f0a74148c16f9f041c2faf9e7261`;
+its placeholder closure is bound at SHA-256
+`39e4299a7b1bbdd2b6ec8af38858742197dcb1aa98b1351a3874b2fbb47ec7ce`;
+its caller evidence is bound at SHA-256
+`b329a6c0de53db9d8cf7d7a8ef9581ec7977d58a8273afd2a532f36322b62860`;
+its validator is bound at SHA-256
+`9196c6bde620c35acc5f099e2910be29b3d19c77e32a33b5883cc1c3ead7cf42`;
+and its checksum seal is bound at SHA-256
+`24a6427a5fd63a3beeba7473f18bb2d041aa08c65ac2ff6faab1cf025abbb19f`.
+
+The review reports 546 pass and zero fail, zero residual corrections, exact
+closure for all 38 placeholder-bearing values and 54 placeholder occurrences,
+all nine exact-English retentions justified, and all 67 Latin-bearing values
+classified. Its original file-position lifecycle appendix was not accepted
+for lifecycle credit. The reviewer therefore produced the separate immutable
+supplement
+`/tmp/blok-dv-46c41eed-second-lifecycle-supplemental`, derived uniformly from
+source call sites. That supplement reproduces 397 literal, 122 finite dynamic,
+25 registered-namespace-compatible, and two without a uniform route; explains
+the semantic `tools.video.seekValueText` override; and rejects the historical
+partitions as non-uniform. Its lifecycle artifact is bound at SHA-256
+`7aaeeaa09e17b3406c578d616af605baf86dfa28b792a25fa9960c8b1ea66ba4`,
+its reconciliation at SHA-256
+`9f688370311d00a00dec1c5e48e466309627b32e0e3e06c5dcd02da9efbff735`,
+its validator at SHA-256
+`12c4d9316fc7114a472fa2cf181c34ff27b1caee375c671ecc1822de6be21e1a`,
+and its checksum seal at SHA-256
+`63e50f418e79b3b38b0d460d95675e592841fee4c761d6bf5468a8867d0c3321`.
+A root replay of both validators, every checksum, both file-state seals, and
+the current dictionary digest passes. This identical-byte independent review
+earns second-pass credit.
+
 ### Gujarati 546-key current-byte findings — corrections pending
 
 A strict-blind reviewer reread all 546 current English/Gujarati pairs on raw
@@ -4906,6 +4952,36 @@ complete nine-file i18n suite passes all 3,902 cases, and the completeness,
 integrity, source-coverage, encoding, and docs checks pass with only the
 catalogued warnings. This findings work earns no complete-pass credit; both
 full reviews must restart at entry 1 on the new digest.
+
+### Gujarati corrected-byte complete review 1 — clean
+
+Fresh reviewer `/root-gu_corrected_4cd_first` reread every source-order pair on
+raw dictionary SHA-256
+`4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7`
+without consulting prior Gujarati audit, proposal, or ledger evidence. The
+sealed bundle is
+`/Users/jackuait/.codex/audit-evidence/blok-gu-4cd1906-first-20260720T160730Z-v5`;
+its 546-row matrix is bound at SHA-256
+`4eac209b220c373ff189a2b87b42e8cf04923d5640b521ea417129a769995660`;
+its uniform lifecycle artifact is bound at SHA-256
+`b7ec7c310e49275c1625602257d8fb0b18a9030e163a22c22aedb8425f19a04a`;
+its embedded-Latin inventory is bound at SHA-256
+`99afca40337693ca298efe35c93e447354bf871f3b0e242b872a19344a1b39b4`;
+its validator is bound at SHA-256
+`571738742feee5076c420805c61bb3be78c1391d70e9d9c8ed80bd06d0c7a67f`;
+its manifest is bound at SHA-256
+`5ef65b12d8379cb244d009919c002c3f406c1a04ee0c4e6b362ab6a0a2bd9815`;
+and its checksum seal is bound at SHA-256
+`b3ea67b9641e46cb71dcfcf1bfb0384bbd047f6ff8312cf686f6650311a04dfc`.
+
+The review reports 546 pass and zero fail, zero residual proposals, all 38
+placeholder-bearing values exact, all seven exact-English retentions
+justified, all 29 embedded-Latin values classified, and the uniform
+source-derived lifecycle closure of 397 literal, 122 finite dynamic, 25
+registered-namespace-compatible, and two without a uniform route. A root
+replay passes all 26 validator checks, all 12 bundle checksums, both immutable
+file flags, and the current dictionary digest. This exact-byte review earns
+first-pass credit only; a distinct complete second review is still required.
 
 ### Hebrew 546-key current-byte findings — corrections pending
 
@@ -5112,6 +5188,40 @@ translation completeness, integrity, source coverage, docs translation, and
 encoding checks also pass with only the repository's known warnings. This
 correction invalidates the stopped review for completion credit, so both
 complete 546-entry reviews must restart at entry 1 on the corrected bytes.
+
+### Hebrew 91c corrected-byte complete review 1 — clean
+
+Fresh reviewer `/root/dv_corrected_46c_second` independently reread all 546
+source-order pairs on raw dictionary SHA-256
+`91ca89a271bda90e01e7b0d8285f742de6a336f6a108e70654e7cd3f6ec89d7d`
+without consulting prior Hebrew audit or proposal artifacts. The sealed bundle
+is `/tmp/blok-he-91ca89a-first-strict-fresh`; its complete matrix is bound at
+SHA-256
+`d06787deb23b819be8144d61fe219a7ace7d590a20009ba2c32b5d27f92b2861`;
+its empty residual artifact is bound at SHA-256
+`9cc25f467b1da1bb22548d7bd9037d4d8d82dac82f1ce471eee265ab91870d23`;
+its lifecycle artifact is bound at SHA-256
+`55bc3426528df92f61de068f6333cf60f5bc6b0c8ea2d4031d5e29543102061a`;
+its exact-retention inventory is bound at SHA-256
+`b5a1310ada811c16f3effe6a4e58b036e45b3f45103a6d55b778dcab0b03dd35`;
+its placeholder closure is bound at SHA-256
+`f155f7f41bf31c16bb228d58529c2e0f747f5363ef827f228ee8586de1434e18`;
+its caller evidence is bound at SHA-256
+`23190d8c25be6573b58df128cc1eb5975b752914ec62e650e5ba742c878a43af`;
+its validator is bound at SHA-256
+`5eb15373ac175b0a15428e4ea8dad25c8f3b569df6e86a8db4e0de1782e95e15`;
+and its checksum seal and manifest identity are bound at SHA-256
+`75cc81b7a4b1a9d71e0765df284cab1d37adfa8092d94321a5bc73e076be1033`.
+
+The review reports 546 pass and zero fail, zero residual corrections, exact
+closure for all 38 placeholder-bearing values and 54 placeholder occurrences,
+all six exact-English retentions justified, all 53 Latin-bearing values
+classified, and the uniform source-derived lifecycle closure of 397 literal,
+122 finite dynamic, 25 registered-namespace-compatible, and two without a
+uniform route. A root replay passes every checksum and file-state check,
+confirms 546 unique passing identities, and rebinds the current dictionary
+digest. This exact-byte review earns first-pass credit only; a distinct
+complete second review is still required.
 
 ### Estonian, Persian, Filipino, and Dutch correction closure
 

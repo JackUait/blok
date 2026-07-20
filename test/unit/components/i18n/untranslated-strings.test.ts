@@ -139,6 +139,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Text" is a direct cognate of the English word in German.
     'tools.link.linkText',
   ]),
+  // Placeholder-only swatch templates contain no English lexical material;
+  // Dhivehi independently requires the same modifier-before-noun token order.
+  dv: new Set([
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
+  ]),
   // "OK" is the conventional compact confirmation label in Greek UIs.
   el: new Set(['notifier.ok']),
   es: new Set([

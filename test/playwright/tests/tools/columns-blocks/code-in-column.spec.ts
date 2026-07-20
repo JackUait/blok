@@ -39,7 +39,7 @@ interface CodeData {
   lineNumbers?: boolean;
 }
 
-const codeData = (block: OutputBlockData | undefined): CodeData => (block?.data ?? {}) as CodeData;
+const codeData = (block: OutputBlockData | undefined): CodeData => (block?.data ?? {});
 
 /**
  * The meaningful, non-volatile subset of a block used for deep round-trip

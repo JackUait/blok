@@ -122,7 +122,7 @@ const createTableOptions = (
   data: Partial<TableData> = {},
   config: TableConfig = {}
 ): BlockToolConstructorOptions<TableData, TableConfig> => ({
-  data: { withHeadings: false, withHeadingColumn: false, content: [], ...data } as TableData,
+  data: { withHeadings: false, withHeadingColumn: false, content: [], ...data },
   config,
   api: createMockAPI(),
   readOnly: false,
@@ -172,7 +172,7 @@ describe('Table Tool', () => {
         },
       };
       const table = new Table({
-        data: { withHeadings: false, withHeadingColumn: false, stretched, content: [['A']] } as TableData,
+        data: { withHeadings: false, withHeadingColumn: false, stretched, content: [['A']] },
         config: {},
         api: createMockAPI(),
         readOnly: false,
@@ -462,7 +462,7 @@ describe('Table Tool', () => {
           withHeadings: false,
           withHeadingColumn: false,
           content: [[{ blocks: ['list-1', 'list-2', 'list-3'] }]],
-        } as TableData,
+        },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -501,7 +501,7 @@ describe('Table Tool', () => {
           content: [
             [{ blocks: [foreignBlock1, foreignBlock2] }],
           ],
-        } as TableData,
+        },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -551,7 +551,7 @@ describe('Table Tool', () => {
           content: [
             [{ blocks: [ownedBlock, foreignBlock] }, { blocks: [ownedBlock2] }],
           ],
-        } as TableData,
+        },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -670,7 +670,7 @@ describe('Table Tool', () => {
           withHeadings: false,
           withHeadingColumn: false,
           content: [[{ blocks: [SHARED_ID] }]],
-        } as TableData,
+        },
         config: {},
         api: sharedApi,
         readOnly: false,
@@ -740,7 +740,7 @@ describe('Table Tool', () => {
           content: [
             [{ blocks: [phantomBlock, realBlock] }],
           ],
-        } as TableData,
+        },
         config: {},
         api: mockApi,
         readOnly: false,
@@ -3083,7 +3083,7 @@ describe('Table Tool', () => {
           withHeadings: false,
           withHeadingColumn: false,
           content: savedContent,
-        } as TableData,
+        },
         config: {},
         api: mockApi,
         readOnly: true,
@@ -3162,7 +3162,7 @@ describe('Table Tool', () => {
           withHeadings: false,
           withHeadingColumn: false,
           content: savedContent,
-        } as TableData,
+        },
         config: {},
         api: mockApi,
         readOnly: true,
@@ -4764,7 +4764,7 @@ describe('Table Tool', () => {
 
     it('removes data-blok-table-readonly attribute when exiting readonly', () => {
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
         config: {},
         api: createMockAPI(),
         readOnly: true,
@@ -4814,7 +4814,7 @@ describe('Table Tool', () => {
 
     it('adds WRAPPER_EDIT_CLASSES when exiting readonly', () => {
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
         config: {},
         api: createMockAPI(),
         readOnly: true,
@@ -4864,7 +4864,7 @@ describe('Table Tool', () => {
 
     it('creates grip overlay when exiting readonly', () => {
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
-        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] } as TableData,
+        data: { withHeadings: false, withHeadingColumn: false, content: [['A', 'B'], ['C', 'D']] },
         config: {},
         api: createMockAPI(),
         readOnly: true,

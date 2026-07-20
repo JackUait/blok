@@ -308,7 +308,7 @@ test.describe('toolbox', () => {
 
       await createBlokWithTools(page, {
         convertableTool: {
-          class: ConvertableTool as unknown as BlockToolConstructable,
+          class: ConvertableTool,
           shortcut: 'CMD+SHIFT+H',
         },
       });
@@ -425,7 +425,7 @@ test.describe('toolbox', () => {
 
       await createBlokWithTools(page, {
         nonConvertableTool: {
-          class: ToolWithoutConversionConfig as unknown as BlockToolConstructable,
+          class: ToolWithoutConversionConfig,
           shortcut: 'CMD+SHIFT+H',
         },
       });
@@ -507,7 +507,7 @@ test.describe('toolbox', () => {
 
       await createBlokWithTools(page, {
         severalToolboxItemsTool: {
-          class: ToolWithSeveralToolboxItems as unknown as BlockToolConstructable,
+          class: ToolWithSeveralToolboxItems,
           shortcut: 'CMD+SHIFT+L',
         },
       });
@@ -607,7 +607,7 @@ test.describe('toolbox', () => {
 
       await createBlokWithTools(page, {
         oneToolboxItemTool: {
-          class: ToolWithOneToolboxItems as unknown as BlockToolConstructable,
+          class: ToolWithOneToolboxItems,
           shortcut: 'CMD+SHIFT+L',
         },
       });
@@ -811,10 +811,10 @@ test.describe('toolbox keyboard navigation', () => {
     test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
     await createBlokWithTools(page, {
       simpleTool: {
-        class: SimpleTestTool as unknown as BlockToolConstructable,
+        class: SimpleTestTool,
       },
       anotherTool: {
-        class: AnotherTestTool as unknown as BlockToolConstructable,
+        class: AnotherTestTool,
       },
     });
 
@@ -852,10 +852,10 @@ test.describe('toolbox keyboard navigation', () => {
     test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
     await createBlokWithTools(page, {
       simpleTool: {
-        class: SimpleTestTool as unknown as BlockToolConstructable,
+        class: SimpleTestTool,
       },
       anotherTool: {
-        class: AnotherTestTool as unknown as BlockToolConstructable,
+        class: AnotherTestTool,
       },
     });
 
@@ -948,7 +948,7 @@ test.describe('toolbox keyboard navigation', () => {
 
     await createBlokWithTools(page, {
       testTool: {
-        class: TestTool as unknown as BlockToolConstructable,
+        class: TestTool,
       },
     });
 
@@ -986,7 +986,7 @@ test.describe('toolbox keyboard navigation', () => {
   test('@smoke closes toolbox with Escape key', async ({ page }) => {
     await createBlokWithTools(page, {
       simpleTool: {
-        class: SimpleTestTool as unknown as BlockToolConstructable,
+        class: SimpleTestTool,
       },
     });
 
@@ -1006,10 +1006,10 @@ test.describe('toolbox keyboard navigation', () => {
     test.skip(browserName === 'firefox', 'Firefox has different Tab behavior when focus is in contenteditable');
     await createBlokWithTools(page, {
       simpleTool: {
-        class: SimpleTestTool as unknown as BlockToolConstructable,
+        class: SimpleTestTool,
       },
       anotherTool: {
-        class: AnotherTestTool as unknown as BlockToolConstructable,
+        class: AnotherTestTool,
       },
     });
 

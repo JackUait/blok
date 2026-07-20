@@ -55,7 +55,7 @@ function createThemeManager(
 
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const manager = new ThemeManager({
-    config: config as BlokConfig,
+    config: config,
     eventsDispatcher,
   });
 

@@ -31,7 +31,7 @@ describe('PasteMenuController virtual anchor lifecycle', () => {
         callback(0);
 
         return 0;
-      }) as typeof window.requestAnimationFrame;
+      });
     }
 
     rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
@@ -92,7 +92,7 @@ describe('PasteMenuController virtual anchor lifecycle', () => {
       direction: 'rtl',
       onSelect: vi.fn(),
       onDismiss: vi.fn(),
-    } as Parameters<PasteMenuController['open']>[0] & { direction: 'rtl' });
+    });
 
     const openPopover = document.querySelector<HTMLElement>('[data-blok-popover-opened]');
 

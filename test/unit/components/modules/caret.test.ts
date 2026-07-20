@@ -3,7 +3,6 @@ import { Caret } from '../../../../src/components/modules/caret';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import { SelectionUtils as Selection } from '../../../../src/components/selection';
 import * as caretUtils from '../../../../src/components/utils/caret/index';
@@ -125,7 +124,7 @@ const createCaret = (overrides: Partial<BlokModules> = {}): CaretSetup => {
   };
 
   const caret = new Caret({
-    config: { sanitizer: {} } as BlokConfig,
+    config: { sanitizer: {} },
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 

@@ -412,7 +412,7 @@ describe('ToolbarPositioner', () => {
         public observe(el: Element): void { this.entry.observed.push(el); }
         public unobserve(): void {}
         public disconnect(): void { this.entry.observed = []; }
-      } as unknown as typeof ResizeObserver;
+      };
     });
 
     afterEach(() => {
@@ -428,7 +428,7 @@ describe('ToolbarPositioner', () => {
       expect(callbacks).toHaveLength(1);
       expect(callbacks[0].observed).toContain(holder);
 
-      callbacks[0].cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      callbacks[0].cb([], {} as ResizeObserver);
       expect(onResize).toHaveBeenCalledTimes(1);
     });
 

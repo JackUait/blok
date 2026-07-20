@@ -156,7 +156,7 @@ describe('editorjs-map-list — list family migration', () => {
               },
               { content: 'Sibling', items: [] },
             ],
-          } as unknown as OutputBlockData['data'],
+          },
         },
       ];
 
@@ -209,7 +209,7 @@ describe('editorjs-map-list — list family migration', () => {
               'Plain string item',
               { text: 'Trailing text item' },
             ],
-          } as unknown as OutputBlockData['data'],
+          },
         },
       ];
 
@@ -249,7 +249,7 @@ describe('editorjs-map-list — list family migration', () => {
                 items: [{ text: 'Old nested child' }],
               },
             ],
-          } as unknown as OutputBlockData['data'],
+          },
         },
       ];
 
@@ -274,7 +274,7 @@ describe('editorjs-map-list — list family migration', () => {
                 items: [{ content: 'New nested child' }],
               },
             ],
-          } as unknown as OutputBlockData['data'],
+          },
         },
       ];
 
@@ -302,7 +302,7 @@ describe('editorjs-map-list — list family migration', () => {
               { text: 'Done item', checked: true },
               { text: 'Pending item', checked: false },
             ],
-          } as unknown as OutputBlockData['data'],
+          },
         },
       ];
 
@@ -342,7 +342,7 @@ describe('editorjs-map-list — list family migration', () => {
                 ],
               },
             ],
-          } as unknown as OutputBlockData['data'],
+          },
         },
       ];
 

@@ -33,7 +33,7 @@ const createOptions = (
   data: Partial<CalloutData> = {},
   overrides: { readOnly?: boolean } = {}
 ): BlockToolConstructorOptions<CalloutData, CalloutConfig> => ({
-  data: { emoji: '💡', textColor: null, backgroundColor: null, ...data } as CalloutData,
+  data: { emoji: '💡', textColor: null, backgroundColor: null, ...data },
   config: {},
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,
@@ -106,7 +106,7 @@ describe('CalloutTool', () => {
 
     it('seeds the initial child paragraph with imported text when converting from another tool', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
-      const opts = createOptions({ __importedText: 'Converted paragraph text' } as Partial<CalloutData>);
+      const opts = createOptions({ __importedText: 'Converted paragraph text' });
       const tool = new CalloutTool(opts);
 
       tool.render();
@@ -123,7 +123,7 @@ describe('CalloutTool', () => {
 
     it('clears pending child text after the first seed so re-renders do not duplicate it', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
-      const opts = createOptions({ __importedText: 'Once only' } as Partial<CalloutData>);
+      const opts = createOptions({ __importedText: 'Once only' });
       const tool = new CalloutTool(opts);
 
       tool.render();
@@ -143,7 +143,7 @@ describe('CalloutTool', () => {
 
     it('does NOT persist __importedText to saved data', async () => {
       const { CalloutTool } = await import('../../../../src/tools/callout');
-      const opts = createOptions({ __importedText: 'transient' } as Partial<CalloutData>);
+      const opts = createOptions({ __importedText: 'transient' });
       const tool = new CalloutTool(opts);
 
       const saved = tool.save();
@@ -437,7 +437,7 @@ describe('CalloutTool', () => {
       const options = createOptions({
         variant: 'note',
         backgroundColor: undefined,
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -450,7 +450,7 @@ describe('CalloutTool', () => {
       const options = createOptions({
         isEmojiVisible: false,
         emoji: '💡',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -491,7 +491,7 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout/index');
       const options = createOptions({
         variant: 'general',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -503,7 +503,7 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout/index');
       const options = createOptions({
         variant: 'important',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -515,7 +515,7 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout/index');
       const options = createOptions({
         variant: 'warning',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -527,7 +527,7 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout/index');
       const options = createOptions({
         variant: 'additional',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -539,7 +539,7 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout/index');
       const options = createOptions({
         variant: 'recommendation',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -551,7 +551,7 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout/index');
       const options = createOptions({
         variant: 'caution',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -563,7 +563,7 @@ describe('CalloutTool', () => {
       const { CalloutTool } = await import('../../../../src/tools/callout/index');
       const options = createOptions({
         variant: 'unknown_variant',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -576,7 +576,7 @@ describe('CalloutTool', () => {
       const options = createOptions({
         variant: 'warning',
         backgroundColor: 'blue',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();
@@ -589,7 +589,7 @@ describe('CalloutTool', () => {
       const options = createOptions({
         isEmojiVisible: true,
         emoji: '',
-      } as unknown as Partial<CalloutData>);
+      });
 
       const tool = new CalloutTool(options);
       const saved = tool.save();

@@ -49,7 +49,7 @@ export async function readTrackMetadata(file: File): Promise<TrackMeta> {
     const buf = new Uint8Array(await file.arrayBuffer());
     // parseBuffer(uint8Array, fileInfo?: IFileInfo | string) — passing mimeType string is valid
     const parsed = await mm.parseBuffer(buf, file.type);
-    return mapMetadata(parsed as RawTags);
+    return mapMetadata(parsed);
   } catch {
     return {};
   }

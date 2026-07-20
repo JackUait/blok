@@ -21,7 +21,7 @@ class FakeLegacyTool {
   public static title = 'My Fake';
   public static shortcut = 'CMD+M';
   public static get sanitize(): SanitizerConfig {
-    return { mark: {} } as SanitizerConfig;
+    return { mark: {} };
   }
 
   public receivedArgs: FakeConstructorArgs;

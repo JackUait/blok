@@ -425,7 +425,11 @@ describe('FakeBackgroundShadows', () => {
     it('handles span with no client rects', () => {
       const span = createSpan();
 
-      vi.spyOn(span, 'getClientRects').mockReturnValue({ length: 0, item: () => null } as unknown as DOMRectList);
+      vi.spyOn(span, 'getClientRects').mockReturnValue({
+        length: 0,
+        item: () => null,
+        [Symbol.iterator]: () => ([] as DOMRect[]).values(),
+      });
 
       expect(() => FakeBackgroundShadows.collectAllLineRects([span])).not.toThrow();
     });

@@ -1251,8 +1251,8 @@ export default defineConfig(
     },
     settings: {
       tailwindcss: {
-        // Tailwind v4 uses CSS-based config; suppress "Cannot resolve default config path" warning
-        config: {},
+        // Tailwind v4 uses CSS-based config; v4 stable of the plugin requires cssConfigPath
+        cssConfigPath: './src/styles/main.css',
       },
     },
     rules: {

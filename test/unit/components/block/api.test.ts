@@ -51,13 +51,13 @@ const createMockBlock = (): {
   const savedData: SavedData = {
     id: 'block-id',
     tool: 'paragraph',
-    data: { text: 'saved text' } as BlockToolData,
+    data: { text: 'saved text' },
     time: 42,
   };
   const toolboxEntry: ToolboxConfigEntry = {
     title: 'Paragraph',
     icon: '<svg></svg>',
-    data: { preset: 'default' } as BlockToolData,
+    data: { preset: 'default' },
   };
 
   const callMock = vi.fn<MockBlockShape['call']>()
@@ -71,7 +71,7 @@ const createMockBlock = (): {
     .mockResolvedValue(toolboxEntry);
   const setStretchStateMock = vi.fn<MockBlockShape['setStretchState']>();
 
-  const preservedData: BlockToolData = { text: 'preserved text' } as BlockToolData;
+  const preservedData: BlockToolData = { text: 'preserved text' };
   const preservedTunes: { [name: string]: BlockTuneData } = { alignment: { align: 'center' } };
 
   const shape: MockBlockShape = {

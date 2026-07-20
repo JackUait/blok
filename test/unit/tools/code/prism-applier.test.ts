@@ -102,7 +102,7 @@ describe('prism-applier', () => {
     beforeEach(async () => {
       // Read the raw module source to check hex values before JSDOM normalization
       const src = await import('../../../../src/tools/code/prism-applier?raw');
-      const text: string = (src as unknown as { default: string }).default;
+      const text: string = (src).default;
       // Split on the DARK_RULES assignment to separate light and dark sections
       const darkIdx = text.indexOf('DARK_RULES');
       lightRules = text.slice(0, darkIdx).toLowerCase();

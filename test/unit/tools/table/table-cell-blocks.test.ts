@@ -325,7 +325,7 @@ describe('TableCellBlocks', () => {
         } as unknown as API;
 
         new TableCellBlocks({
-          api: api as never,
+          api: api,
           gridElement: gridEl,
           tableBlockId: 'table-1',
           model,
@@ -2539,7 +2539,7 @@ describe('TableCellBlocks', () => {
         configurable: true,
       });
 
-      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}) as typeof window.scrollTo);
+      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}));
 
       /**
        * Mock delete as async (matching the real api.blocks.delete signature).
@@ -2589,7 +2589,7 @@ describe('TableCellBlocks', () => {
         configurable: true,
       });
 
-      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}) as typeof window.scrollTo);
+      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation((() => {}));
 
       const mockDelete = vi.fn(async () => {});
 

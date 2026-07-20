@@ -16,7 +16,6 @@ import type { BlockTool } from '@/types/tools/block-tool';
 import type { BlockToolConstructable } from '@/types/tools/block-tool';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
-import type { BlokConfig } from '@/types/configs';
 import type { API } from '../../../../../src/components/modules/api';
 import type { YjsManager } from '../../../../../src/components/modules/yjs';
 import type { Caret } from '../../../../../src/components/modules/caret';
@@ -41,7 +40,7 @@ const projectRepositoryForInvariant = (repo: BlockRepository): OutputBlockData[]
     data: {},
     ...(b.parentId !== null ? { parent: b.parentId } : {}),
     ...(b.contentIds.length > 0 ? { content: [...b.contentIds] } : {}),
-  } as OutputBlockData));
+  }));
 
 /**
  * Create a mock Block for testing
@@ -137,7 +136,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
     config: {
       defaultBlock: 'paragraph',
       sanitizer: {},
-    } as BlokConfig,
+    },
     YjsManager: {
       addBlock: vi.fn(),
       removeBlock: vi.fn(),

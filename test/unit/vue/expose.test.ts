@@ -62,6 +62,6 @@ describe('BlokEditor exposed instance + facade', () => {
 
     expect(() => vm.save()).not.toThrow();
     expect(() => vm.focus()).not.toThrow();
-    expect(() => vm.render({ blocks: [] } as OutputData)).not.toThrow();
+    expect(() => vm.render({ blocks: [] })).not.toThrow();
   });
 });

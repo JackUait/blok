@@ -307,7 +307,6 @@ describe('CI critical-path law', () => {
       {
         name: 'Setup Node.js and Dependencies',
         uses: './.github/actions/setup-node-deps',
-        with: { 'node-version': '24.14.1' },
       },
       {
         name: 'Setup Playwright Browsers',
@@ -347,7 +346,6 @@ describe('CI critical-path law', () => {
       {
         name: 'Setup Node.js and Dependencies',
         uses: './.github/actions/setup-node-deps',
-        with: { 'node-version': '24.14.1' },
       },
       {
         name: 'Setup Playwright Browsers',

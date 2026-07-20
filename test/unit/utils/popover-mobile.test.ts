@@ -380,7 +380,7 @@ describe('PopoverMobile', () => {
         children: {
           items: nestedItems,
         },
-      } as PopoverItemDefaultParams);
+      });
 
       // Show nested items
       popoverPrivate.showNestedItems(parentItem);
@@ -442,7 +442,7 @@ describe('PopoverMobile', () => {
       const parentItem = new PopoverItemDefault({
         title: 'Parent',
         children: { items: nestedItems },
-      } as PopoverItemDefaultParams);
+      });
 
       popoverPrivate.showNestedItems(parentItem);
 
@@ -573,7 +573,7 @@ describe('PopoverMobile', () => {
         title: 'Parent',
         children: { items: [ { title: 'Child',
           onActivate: vi.fn() } ] },
-      } as PopoverItemDefaultParams);
+      });
 
       popoverPrivate.showNestedItems(parentItem);
 
@@ -590,7 +590,7 @@ describe('PopoverMobile', () => {
         title: 'Parent',
         children: { items: [ { title: 'Child',
           onActivate: vi.fn() } ] },
-      } as PopoverItemDefaultParams);
+      });
 
       popoverPrivate.showNestedItems(parentItem);
 
@@ -607,7 +607,7 @@ describe('PopoverMobile', () => {
         title: 'Parent',
         children: { items: [ { title: 'Child',
           onActivate: vi.fn() } ] },
-      } as PopoverItemDefaultParams);
+      });
 
       popoverPrivate.showNestedItems(parentItem);
       expect(nodes.items.hasAttribute('aria-labelledby')).toBe(true);
@@ -627,7 +627,7 @@ describe('PopoverMobile', () => {
         title: 'Parent',
         children: { items: [ { title: 'Child',
           onActivate: vi.fn() } ] },
-      } as PopoverItemDefaultParams);
+      });
 
       popoverPrivate.showNestedItems(parentItem);
 

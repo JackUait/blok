@@ -449,7 +449,7 @@ test.describe('Link paste', () => {
     // is inserted inline at the caret, never by replacing the whole block.
     await createBlok(page, {
       blocks: [{ type: 'paragraph', data: { text: 'Check this out ' } }],
-    } as OutputData);
+    });
 
     const editable = firstEditable(page);
 
@@ -484,7 +484,7 @@ test.describe('Link paste', () => {
     // the bookmark card is appended as a NEW block, with the inline link dropped.
     await createBlok(page, {
       blocks: [{ type: 'paragraph', data: { text: 'Read this ' } }],
-    } as OutputData);
+    });
 
     const editable = firstEditable(page);
 

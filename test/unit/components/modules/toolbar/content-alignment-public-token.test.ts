@@ -26,7 +26,7 @@ const makeRect = (left: number, width: number): DOMRect =>
     x: left,
     y: 0,
     toJSON: () => ({}),
-  }) as DOMRect;
+  });
 
 const stretchedHolder = (): HTMLElement => {
   const holder = document.createElement('div');

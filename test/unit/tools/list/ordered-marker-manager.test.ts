@@ -86,7 +86,7 @@ const createMockBlocksAPI = (blocks: Array<{ id: string; name: string; holder: H
     getBlockIndex,
     getBlocksCount: () => blocks.length,
     getCurrentBlockIndex: () => 0,
-  } as unknown as BlocksAPI;
+  };
 };
 
 describe('ordered-marker-manager', () => {

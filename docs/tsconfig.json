@@ -21,8 +21,8 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* Path aliases */
-    "baseUrl": ".",
+    /* Path aliases — no `baseUrl` (deprecated in TS 6, removed in 7); the
+       "./"-prefixed mapping resolves relative to this file's directory. */
     "paths": {
       "@/*": ["./src/*"]
     }

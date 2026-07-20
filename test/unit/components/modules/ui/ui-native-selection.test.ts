@@ -28,7 +28,7 @@ const makeWrapper = (configOverrides: Partial<BlokConfig> = {}): HTMLElement => 
       holder,
       minHeight: 50,
       ...configOverrides,
-    } as BlokConfig,
+    },
     eventsDispatcher: {
       on: vi.fn(),
       off: vi.fn(),

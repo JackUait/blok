@@ -31,6 +31,6 @@
     "directory": "packages/cli"
   },
   "dependencies": {
-    "jsdom": "28.1.0"
+    "jsdom": "29.1.1"
   }
 }

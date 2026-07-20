@@ -188,6 +188,6 @@ export class InlineSelectionValidator {
       return null;
     }
 
-    return $.isElement(node) ? node as HTMLElement : node.parentElement;
+    return $.isElement(node) ? node : node.parentElement;
   }
 }

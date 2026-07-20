@@ -92,7 +92,7 @@ function textContent(nodes: InlineNode[]): string {
       return node.value;
     }
     if ('children' in node && Array.isArray(node.children)) {
-      return textContent(node.children as InlineNode[]);
+      return textContent(node.children);
     }
 
     return '';
@@ -212,7 +212,7 @@ async function nodeToHtml(node: BlockNode, ctx: RenderContext): Promise<string> 
 
 async function headingToHtml(node: Heading, ctx: RenderContext): Promise<string> {
   const inner = await phrasingToHtml(node.children, ctx);
-  const id = ctx.slug(textContent(node.children as InlineNode[]));
+  const id = ctx.slug(textContent(node.children));
 
   return `<h${node.depth} id="${escapeHtml(id)}">${inner}</h${node.depth}>`;
 }
@@ -220,14 +220,14 @@ async function headingToHtml(node: Heading, ctx: RenderContext): Promise<string>
 async function blockquoteToHtml(node: Blockquote, ctx: RenderContext): Promise<string> {
   const alert = matchAlert(node);
   if (alert !== null) {
-    const inner = await nodesToHtml(alert.children as BlockNode[], ctx);
+    const inner = await nodesToHtml(alert.children, ctx);
     const label = alert.kind.charAt(0).toUpperCase() + alert.kind.slice(1);
 
     return `<div class="blok-md-alert blok-md-alert-${alert.kind}">`
       + `<p class="blok-md-alert-title">${label}</p>${inner}</div>`;
   }
 
-  return `<blockquote>${await nodesToHtml(node.children as BlockNode[], ctx)}</blockquote>`;
+  return `<blockquote>${await nodesToHtml(node.children, ctx)}</blockquote>`;
 }
 
 /**
@@ -277,7 +277,7 @@ async function listToHtml(list: List, ctx: RenderContext): Promise<string> {
 }
 
 async function itemToHtml(item: ListItem, ctx: RenderContext): Promise<string> {
-  const inner = await nodesToHtml(item.children as BlockNode[], ctx);
+  const inner = await nodesToHtml(item.children, ctx);
   if (item.checked === true || item.checked === false) {
     const checked = item.checked ? ' checked' : '';
 
@@ -432,7 +432,7 @@ async function renderFootnotes(ctx: RenderContext): Promise<string> {
   const items = await Promise.all(ctx.footnoteOrder.map(async (identifier) => {
     const id = escapeHtml(identifier);
     const def = ctx.footnoteDefs.get(identifier);
-    const inner = def !== undefined ? await nodesToHtml(def.children as BlockNode[], ctx) : '';
+    const inner = def !== undefined ? await nodesToHtml(def.children, ctx) : '';
 
     return `<li id="fn-${id}">${inner}`
       + `<a class="blok-md-fnback" href="#fnref-${id}" aria-label="${escapeHtml(ctx.backToContentLabel)}">↩</a></li>`;

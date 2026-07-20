@@ -16,7 +16,7 @@ function injectCss(): void {
 
   link.rel = 'stylesheet';
   link.setAttribute('data-katex-css', '');
-  link.href = 'https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css';
+  link.href = 'https://cdn.jsdelivr.net/npm/katex@0.18.1/dist/katex.min.css';
 
   document.head.appendChild(link);
 }

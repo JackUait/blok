@@ -6,7 +6,6 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { BlokEventMap } from '../../../../../src/components/events';
-import type { BlokConfig } from '../../../../../types';
 
 type BlokStub = {
   UI: {
@@ -25,7 +24,7 @@ const createUiApi = (): {
 } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher,
   };
 

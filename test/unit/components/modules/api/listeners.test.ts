@@ -5,7 +5,6 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { BlokConfig } from '../../../../../types';
 
 type ListenersMock = {
   on: Mock<(element: HTMLElement, eventType: string, handler: () => void, useCapture?: boolean) => string | undefined>;
@@ -16,7 +15,7 @@ type ListenersMock = {
 const createListenersApi = (): ListenersAPI => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher,
   };
 

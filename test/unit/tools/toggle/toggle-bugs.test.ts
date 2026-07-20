@@ -5,11 +5,10 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type { API, BlockAPI, PasteEvent } from '@/types';
-import type { BlockToolConstructorOptions } from '@/types/tools/block-tool';
 import { ToggleItem } from '../../../../src/tools/toggle/index';
-import type { ToggleItemData, ToggleItemConfig } from '../../../../src/tools/toggle/types';
+import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 import { Header } from '../../../../src/tools/header/index';
-import type { HeaderData, HeaderConfig } from '../../../../src/tools/header/index';
+import type { HeaderData } from '../../../../src/tools/header/index';
 import { buildArrow } from '../../../../src/tools/toggle/dom-builder';
 
 // ---------------------------------------------------------------------------
@@ -66,11 +65,11 @@ const createToggle = (
 
   const toggle = new ToggleItem({
     data: { text: '', ...data },
-    config: {} as ToggleItemConfig,
+    config: {},
     api,
     readOnly: opts.readOnly ?? false,
     block: makeBlock(blockId),
-  } as BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig>);
+  });
 
   return { toggle, api, blocks };
 };
@@ -90,11 +89,11 @@ const createHeader = (
 
   const header = new Header({
     data: { text: '', level: 2, ...data },
-    config: {} as HeaderConfig,
+    config: {},
     api,
     readOnly: opts.readOnly ?? false,
     block: makeBlock(blockId),
-  } as BlockToolConstructorOptions<HeaderData, HeaderConfig>);
+  });
 
   return { header, api, blocks };
 };
@@ -171,11 +170,11 @@ describe('Bug 9: Body placeholder reappears after last child block is deleted', 
 
     const toggle = new ToggleItem({
       data: { text: '', isOpen: true },
-      config: {} as ToggleItemConfig,
+      config: {},
       api,
       readOnly: false,
       block: makeBlock('toggle-1'),
-    } as BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig>);
+    });
 
     const element = toggle.render();
     toggle.rendered();

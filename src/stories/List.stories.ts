@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/html-vite';
 import { userEvent, waitFor, expect } from 'storybook/test';
 
-import type { ListConfig } from '../../types/tools/list';
 import { Paragraph, List } from '../tools';
 
 import { createEditorContainer } from './helpers';
@@ -95,7 +94,7 @@ const createEditor = (args: ListCustomStylesArgs): HTMLElement => {
         config: {
           itemColor: args.itemColor,
           itemSize: args.itemSize,
-        } as ListConfig,
+        },
       } as ToolSettings)
     : ({
         class: List,

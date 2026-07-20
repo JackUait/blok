@@ -64,7 +64,7 @@ describe('createVueBlock end-to-end wiring', () => {
 
   it('injects the editor portal registry into a vue-block tool config', () => {
     const { unmount } = mountUseBlok({
-      tools: { vblock: { class: VueBlock } } as unknown as UseBlokConfig['tools'],
+      tools: { vblock: { class: VueBlock } },
     });
 
     const tools = coreConfig().tools as Record<string, { config?: Record<string, unknown> }>;
@@ -79,7 +79,7 @@ describe('createVueBlock end-to-end wiring', () => {
 
   it('does NOT inject a registry into a vanilla tool config', () => {
     const { unmount } = mountUseBlok({
-      tools: { vanilla: { class: VanillaTool } } as unknown as UseBlokConfig['tools'],
+      tools: { vanilla: { class: VanillaTool } },
     });
 
     const tools = coreConfig().tools as Record<string, { config?: Record<string, unknown> }>;

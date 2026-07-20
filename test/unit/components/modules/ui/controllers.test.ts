@@ -152,7 +152,7 @@ describe('KeyboardController', () => {
         holder: document.createElement('div'),
         minHeight: 50,
         ...options?.configOverrides,
-      } as BlokConfig,
+      },
       eventsDispatcher: eventsDispatcher,
       someToolbarOpened: options?.someToolbarOpened ?? (() => false),
     });
@@ -652,7 +652,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = createTurnIntoEvent('Digit1');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -669,7 +669,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = createTurnIntoEvent('Digit2');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -686,7 +686,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = createTurnIntoEvent('Digit3');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -710,7 +710,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = createTurnIntoEvent(code);
       Object.defineProperty(event, 'target', { value: document.body });
@@ -727,7 +727,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = createTurnIntoEvent('Digit0');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -743,7 +743,7 @@ describe('KeyboardController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = makeBlock();
 
       const event = createTurnIntoEvent('Digit1');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -759,7 +759,7 @@ describe('KeyboardController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = makeBlock();
 
       const event = createTurnIntoEvent('Digit1');
       const preventDefaultSpy = vi.fn().mockImplementation(() => {
@@ -779,7 +779,7 @@ describe('KeyboardController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = makeBlock();
 
       const event = new KeyboardEvent('keydown', { key: '1', code: 'Digit1' });
       Object.defineProperty(event, 'target', { value: document.body });
@@ -798,7 +798,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const newBlock = { id: 'converted' };
       (blok.BlockManager.convert as ReturnType<typeof vi.fn>).mockResolvedValue(newBlock);
@@ -861,7 +861,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = createListEvent(code);
       Object.defineProperty(event, 'target', { value: document.body });
@@ -878,7 +878,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = createListEvent('Digit7');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -894,7 +894,7 @@ describe('KeyboardController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = makeBlock();
 
       const event = createListEvent('Digit5');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -910,7 +910,7 @@ describe('KeyboardController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = makeBlock();
 
       const event = createListEvent('Digit5');
       const preventDefaultSpy = vi.fn();
@@ -946,7 +946,7 @@ describe('KeyboardController', () => {
       // Read-only toggle disables the controller.
       (controller as unknown as { disable: () => void }).disable();
 
-      blok.BlockManager.currentBlock = makeBlock() as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = makeBlock();
 
       const event = createListEvent('Digit5');
       Object.defineProperty(event, 'target', { value: document.body });
@@ -963,7 +963,7 @@ describe('KeyboardController', () => {
       (controller as unknown as { enable: () => void }).enable();
 
       const block = makeBlock();
-      blok.BlockManager.currentBlock = block as unknown as typeof blok.BlockManager.currentBlock;
+      blok.BlockManager.currentBlock = block;
 
       const event = new KeyboardEvent('keydown', { key: '5', code: 'Digit5', ctrlKey: true, shiftKey: true });
       Object.defineProperty(event, 'target', { value: document.body });

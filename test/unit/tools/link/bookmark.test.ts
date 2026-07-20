@@ -20,7 +20,7 @@ const createOptions = (
     config,
     readOnly: false,
     data: data as BookmarkData,
-  }) as BlockToolConstructorOptions<BookmarkData, BookmarkConfig>;
+  });
 
 const patternEvent = (url: string): PatternPasteEvent =>
   ({ type: 'pattern', detail: { key: 'bookmark', data: url } }) as PatternPasteEvent;
@@ -132,8 +132,8 @@ describe('Bookmark tool', () => {
   it('validates only when a url is present', () => {
     const tool = new Bookmark(createOptions());
 
-    expect(tool.validate({ url: 'https://example.com' } as BookmarkData)).toBe(true);
-    expect(tool.validate({ url: '' } as BookmarkData)).toBe(false);
+    expect(tool.validate({ url: 'https://example.com' })).toBe(true);
+    expect(tool.validate({ url: '' })).toBe(false);
   });
 
   it('renders a card directly when constructed with stored metadata', () => {

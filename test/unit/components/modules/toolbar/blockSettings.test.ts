@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vite
 import { BlockSettings } from '../../../../../src/components/modules/toolbar/blockSettings';
 import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../../types';
 import type { MenuConfigItem } from '../../../../../types/tools';
 import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
@@ -315,7 +314,7 @@ describe('BlockSettings', () => {
     };
 
     blockSettings = new BlockSettings({
-      config: {} as BlokConfig,
+      config: {},
       eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
     });
 
@@ -1389,7 +1388,7 @@ describe('BlockSettings', () => {
       });
 
       blockSettings = new BlockSettings({
-        config: { resolveUser } as unknown as BlokConfig,
+        config: { resolveUser },
         eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
       });
 
@@ -1455,7 +1454,7 @@ describe('BlockSettings', () => {
       });
 
       blockSettings = new BlockSettings({
-        config: { resolveUser } as unknown as BlokConfig,
+        config: { resolveUser },
         eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
       });
 
@@ -1493,7 +1492,7 @@ describe('BlockSettings', () => {
       const resolveUser = vi.fn(() => null);
 
       blockSettings = new BlockSettings({
-        config: { resolveUser } as unknown as BlokConfig,
+        config: { resolveUser },
         eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
       });
 

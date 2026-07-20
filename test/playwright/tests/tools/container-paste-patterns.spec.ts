@@ -178,7 +178,7 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
     expect(rootBlocks.map(b => b.type), 'root should only contain the callout').toStrictEqual(['callout']);
 
     // Reload cycle.
-    await createBlok(page, saved as OutputData);
+    await createBlok(page, saved);
     const reloaded = await saveBlok(page);
 
     const reloadedCallout = reloaded.blocks.find(b => b.type === 'callout');
@@ -245,7 +245,7 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
     expect(rootBlocks.map(b => b.type), 'root should only contain the callout').toStrictEqual(['callout']);
 
     // Reload cycle.
-    await createBlok(page, saved as OutputData);
+    await createBlok(page, saved);
     const reloaded = await saveBlok(page);
 
     const reloadedCallout = reloaded.blocks.find(b => b.type === 'callout');

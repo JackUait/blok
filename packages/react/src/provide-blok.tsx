@@ -66,5 +66,5 @@ export function mergeBlokDefaults(
     merged.tools = { ...defaults.tools, ...config.tools };
   }
 
-  return merged as UseBlokConfig;
+  return merged;
 }

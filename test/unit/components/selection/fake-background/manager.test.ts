@@ -140,7 +140,7 @@ describe('FakeBackgroundManager', () => {
       const mockState = createMockState();
       const manager = new FakeBackgroundManager(mockState);
 
-      vi.spyOn(window, 'getSelection').mockReturnValue(null as unknown as Selection);
+      vi.spyOn(window, 'getSelection').mockReturnValue(null);
 
       manager.setFakeBackground();
 

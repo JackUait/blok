@@ -171,7 +171,7 @@ describe('editorjs map: image + embed media blocks', () => {
             withBorder: true,
             stretched: true,
             withBackground: true,
-          } as unknown as OutputBlockData['data'],
+          },
         },
       ];
 
@@ -216,7 +216,7 @@ describe('editorjs map: image + embed media blocks', () => {
         {
           id: 'blok-img',
           type: 'image',
-          data: { url: 'https://cdn.example.com/native.png', frame: 'border', size: 'full' } as unknown as OutputBlockData['data'],
+          data: { url: 'https://cdn.example.com/native.png', frame: 'border', size: 'full' },
         },
       ];
 

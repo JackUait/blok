@@ -5,7 +5,6 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import { BlockChanged } from '../../../../../src/components/events/BlockChanged';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlockChangedPayload } from '../../../../../src/components/events/BlockChanged';
 import type { BlockMutationEvent } from '../../../../../types/events/block';
@@ -16,7 +15,7 @@ const createEventsApi = (): {
 } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher,
   };
 

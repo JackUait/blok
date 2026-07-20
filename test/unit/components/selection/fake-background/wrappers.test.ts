@@ -40,7 +40,8 @@ const createDOMRectList = (rects: DOMRect[]): DOMRectList => {
     [2]: rects[2] ?? null,
     [3]: rects[3] ?? null,
     [4]: rects[4] ?? null,
-  } as unknown as DOMRectList;
+    [Symbol.iterator]: () => rects.values(),
+  };
 };
 
 describe('FakeBackgroundWrappers', () => {

@@ -53,7 +53,7 @@ const createToggleOptions = (
   config: ToggleItemConfig = {},
   overrides: { readOnly?: boolean } = {}
 ): BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig> => ({
-  data: { text: '', ...data } as ToggleItemData,
+  data: { text: '', ...data },
   config,
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,

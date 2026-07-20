@@ -36,7 +36,7 @@ describe('InlineShortcutManager', () => {
     vi.restoreAllMocks();
     vi.useFakeTimers();
 
-    onShortcutPressedCallback = vi.fn(async (_toolName: string) => {}) as unknown as (toolName: string) => Promise<void>;
+    onShortcutPressedCallback = vi.fn(async (_toolName: string) => {});
 
     mockBlok = {
       Tools: {

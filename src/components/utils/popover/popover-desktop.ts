@@ -1613,7 +1613,7 @@ export class PopoverDesktop extends PopoverAbstract {
         this.cleanupPromotedItems();
         this.onSearch({
           query: searchData.query,
-          topLevelItems: searchData.items as unknown as PopoverItemDefault[],
+          topLevelItems: searchData.items,
           promotedItems: [],
         });
 
@@ -1638,7 +1638,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
       this.onSearch({
         query: searchData.query,
-        topLevelItems: searchData.items as unknown as PopoverItemDefault[],
+        topLevelItems: searchData.items,
         promotedItems: promotedScored,
       });
     });
@@ -1787,13 +1787,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
       for (const entry of data.promotedItems) {
         const label = entry.chain.join(' \u203A ');
-        const existing = groups.get(label);
+        const group = groups.get(label) ?? [];
 
-        if (existing !== undefined) {
-          existing.push({ item: entry.item, score: entry.score });
-        } else {
-          groups.set(label, [{ item: entry.item, score: entry.score }]);
-        }
+        group.push({ item: entry.item, score: entry.score });
+        groups.set(label, group);
       }
 
       // Sort groups by best score in each group

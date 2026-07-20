@@ -141,7 +141,7 @@ export const isIosDevice = (() => {
   // Only access deprecated platform property when necessary
   const hasTouchSupport = (navigatorRef.maxTouchPoints ?? 0) > 1;
   const getLegacyPlatform = (): string | undefined =>
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for older browsers that don't support User-Agent Client Hints
+     
     (navigatorRef as Navigator & { platform?: string })['platform'];
   const platformHint = platform !== undefined && platform !== '' ? platform : undefined;
   const platformValue = hasTouchSupport ? platformHint ?? getLegacyPlatform() : undefined;

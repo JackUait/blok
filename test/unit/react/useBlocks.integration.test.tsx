@@ -87,7 +87,7 @@ const createRealEditorHarness = (
 
   // Seed initial blocks into the real store
   for (const cfg of initialBlocks) {
-    blocksStore.push(createBlockStub(cfg) as unknown as Block);
+    blocksStore.push(createBlockStub(cfg));
   }
 
   // Minimal event bus for the 'block changed' subscription in useBlocks
@@ -157,7 +157,7 @@ const createRealEditorHarness = (
         if (replaced !== undefined) {
           blocksStore.remove(insertAt);
         }
-        blocksStore.insert(insertAt, stub as unknown as Block);
+        blocksStore.insert(insertAt, stub);
 
         const reparentChildrenTo = (ids: string[], newParentId: string): void => {
           for (const childId of ids) {
@@ -176,7 +176,7 @@ const createRealEditorHarness = (
         return { id: stub.id, name: stub.name, parentId: stub.parentId };
       }
 
-      blocksStore.insert(insertAt, stub as unknown as Block);
+      blocksStore.insert(insertAt, stub);
 
       // Faithful to core block-insertion.ts: a non-parented insert whose flat
       // PREDECESSOR lives inside a `column` auto-inherits that column as its
@@ -189,7 +189,7 @@ const createRealEditorHarness = (
           : undefined;
 
       if (predecessorParent !== undefined && predecessorParent.name === 'column') {
-        hierarchy.setBlockParent(stub as unknown as Block, predecessorParent.id);
+        hierarchy.setBlockParent(stub, predecessorParent.id);
       }
 
       notify();
@@ -228,10 +228,10 @@ const createRealEditorHarness = (
         const stub = createBlockStub({ id, name: cfg.type ?? 'paragraph', parentId: null });
 
         (stub as unknown as { data: unknown }).data = cfg.data;
-        blocksStore.insert(startAt + offset, stub as unknown as Block);
+        blocksStore.insert(startAt + offset, stub);
 
         if (cfg.parent !== null && cfg.parent !== undefined) {
-          hierarchy.setBlockParent(stub as unknown as Block, cfg.parent);
+          hierarchy.setBlockParent(stub, cfg.parent);
         }
 
         return { id };
@@ -364,7 +364,7 @@ const createRealEditorHarness = (
       blocksStore.remove(idx);
       const stub = createBlockStub({ id: newId, name: newType, parentId });
 
-      blocksStore.insert(idx, stub as unknown as Block);
+      blocksStore.insert(idx, stub);
       notify();
       await Promise.resolve();
 
@@ -394,7 +394,7 @@ const createRealEditorHarness = (
       const stub = createBlockStub({ id: newId, name: newBlockType, parentId: null });
 
       (stub as unknown as { data: unknown }).data = newBlockData;
-      blocksStore.insert(Math.min(Math.max(insertIndex, 0), blocksStore.length), stub as unknown as Block);
+      blocksStore.insert(Math.min(Math.max(insertIndex, 0), blocksStore.length), stub);
       notify();
 
       return { id: newId, name: newBlockType, parentId: null };
@@ -1321,7 +1321,7 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     expect(rootId).not.toBeNull();
 
-    const children = result.current.getChildren(rootId as unknown as string);
+    const children = result.current.getChildren(rootId);
 
     expect(children).toHaveLength(1);
     expect(children[0].parentId).toBe(rootId);
@@ -1349,7 +1349,7 @@ describe('useBlocks — real BlockHierarchy integration', () => {
 
     expect(rootId).not.toBeNull();
 
-    const level1 = result.current.getChildren(rootId as unknown as string);
+    const level1 = result.current.getChildren(rootId);
 
     expect(level1).toHaveLength(1);
 
@@ -1415,7 +1415,7 @@ describe('useBlocks — real BlockHierarchy integration', () => {
     expect(result.current.getById(rootId as unknown as string)?.parentId).toBe('container');
     expect(result.current.getChildren('container').map((n) => n.id)).toEqual([rootId]);
 
-    const grandchildren = result.current.getChildren(rootId as unknown as string);
+    const grandchildren = result.current.getChildren(rootId);
 
     expect(grandchildren).toHaveLength(1);
 

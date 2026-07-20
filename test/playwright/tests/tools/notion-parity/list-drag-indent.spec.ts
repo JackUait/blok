@@ -115,14 +115,14 @@ const seedThreeRootItems = (): OutputData => ({
     { id: 'second', type: 'list', data: { text: 'Second', style: 'unordered' } },
     { id: 'third', type: 'list', data: { text: 'Third', style: 'unordered' } },
   ],
-}) as OutputData;
+});
 
 const seedParagraphThenBullet = (): OutputData => ({
   blocks: [
     { id: 'para', type: 'paragraph', data: { text: 'Heading para' } },
     { id: 'bullet', type: 'list', data: { text: 'Bullet', style: 'unordered' } },
   ],
-}) as OutputData;
+});
 
 test.describe('Notion parity: list drag-to-indent (horizontal motion picks nesting depth)', () => {
   test.beforeAll(() => {

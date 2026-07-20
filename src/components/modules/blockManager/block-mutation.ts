@@ -20,7 +20,7 @@ import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
-import type { BlockMutationEventDetailWithoutTarget, BlocksStore } from './types';
+import type { BlocksStore } from './types';
 import type { BlockYjsSync } from './yjs-sync';
 
 /**
@@ -480,7 +480,7 @@ export class BlockMutation {
       this.blockDidMutated(BlockMovedMutationType, movedBlock, {
         fromIndex,
         toIndex: resolvedIndex,
-      } as BlockMutationEventDetailWithoutTarget<typeof BlockMovedMutationType>);
+      });
 
       // Sync to Yjs using the actual resolved index
       this.dependencies.YjsManager.moveBlock(movedBlock.id, resolvedIndex);
@@ -626,7 +626,7 @@ export class BlockMutation {
       const [cleanBlock] = sanitizeBlocks(
         [{ data: blockToMergeDataRaw, tool: blockToMerge.name }],
         targetBlock.tool.sanitizeConfig,
-        this.dependencies.config.sanitizer as SanitizerConfig
+        this.dependencies.config.sanitizer
       );
 
       await completeMerge(cleanBlock.data);

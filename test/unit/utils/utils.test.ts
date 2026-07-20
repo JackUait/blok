@@ -1003,7 +1003,7 @@ describe('utils', () => {
     it('should return true for mobile screen', () => {
       (window.matchMedia as ReturnType<typeof vi.fn>).mockReturnValue({
         matches: true,
-      } as MediaQueryList);
+      });
 
       expect(isMobileScreen()).toBe(true);
     });
@@ -1011,7 +1011,7 @@ describe('utils', () => {
     it('should return false for desktop screen', () => {
       (window.matchMedia as ReturnType<typeof vi.fn>).mockReturnValue({
         matches: false,
-      } as MediaQueryList);
+      });
 
       expect(isMobileScreen()).toBe(false);
     });

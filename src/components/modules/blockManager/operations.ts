@@ -464,7 +464,7 @@ export class BlockOperations implements OperationsContext {
       data: {},
       ...(b.parentId !== null && b.parentId !== undefined ? { parent: b.parentId } : {}),
       ...(Array.isArray(b.contentIds) && b.contentIds.length > 0 ? { content: [...b.contentIds] } : {}),
-    } as OutputBlockData));
+    }));
 
     const violations = validateHierarchy(blocks).filter(v =>
       v.kind === 'child-not-in-parent-content' ||

@@ -4,7 +4,7 @@ import { preprocessGoogleDocsHtml } from '../../../../../src/components/modules/
 import { COLUMNS_CANDIDATE_ATTR, SAFE_STRUCTURAL_TAGS } from '../../../../../src/components/modules/paste/constants';
 import { clean, composeSanitizerConfig } from '../../../../../src/components/utils/sanitizer';
 import { Table } from '../../../../../src/tools/table';
-import type { SanitizerConfig, SanitizerRule } from '../../../../../types/configs/sanitizer-config';
+import type { SanitizerRule } from '../../../../../types/configs/sanitizer-config';
 
 /** Wraps HTML in a Google Docs wrapper, as Google Docs does on copy */
 const gdocs = (html: string): string => `<b id="docs-internal-guid-test">${html}</b>`;
@@ -169,7 +169,7 @@ describe('preprocessGoogleDocsHtml — 2/3-column table columns candidate stampi
     // composed last — the Table entry is what must carry the stamp whitelist.
     const structuralTagsConfig = Object.fromEntries(
       [...SAFE_STRUCTURAL_TAGS].map((tag) => [tag, {}])
-    ) as SanitizerConfig;
+    );
 
     const tablePasteConfig = Table.pasteConfig;
     const tablePasteTags = tablePasteConfig === false ? [] : tablePasteConfig.tags ?? [];
@@ -179,10 +179,10 @@ describe('preprocessGoogleDocsHtml — 2/3-column table columns candidate stampi
           ? [[tagOrConfig.toLowerCase(), {}]]
           : Object.entries(tagOrConfig).map(([tag, attrs]): [string, SanitizerRule] => [tag.toLowerCase(), attrs])
       )
-    ) as SanitizerConfig;
+    );
 
     const config = composeSanitizerConfig(
-      {} as SanitizerConfig,
+      {},
       structuralTagsConfig,
       tableToolTags,
       { br: {}, p: {} }

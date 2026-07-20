@@ -819,10 +819,7 @@ export class Header implements BlockTool {
          * Toggle was just disabled: remove the wrapper and put the heading directly
          * in the wrapper's parent.
          */
-        const parent = this._wrapper.parentNode;
-        if (parent) {
-          parent.replaceChild(this._element, this._wrapper);
-        }
+        this._wrapper.parentNode?.replaceChild(this._element, this._wrapper);
         this._wrapper = null;
         this._headerRow = null;
       }
@@ -1211,8 +1208,8 @@ export class Header implements BlockTool {
       typeof data === 'object' &&
       data !== null &&
       'event' in data &&
-      typeof (data as { event: unknown }).event === 'object' &&
-      (data as { event: unknown }).event !== null &&
+      typeof (data).event === 'object' &&
+      (data).event !== null &&
       'type' in (data as { event: { type: unknown } }).event &&
       typeof (data as { event: { type: unknown } }).event.type === 'string'
     );

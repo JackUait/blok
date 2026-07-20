@@ -2067,7 +2067,7 @@ describe('data-model-transform', () => {
     it('keeps null/undefined-id table blocks safe (skipped, not crashing)', () => {
       const blocks: OutputBlockData[] = [
         // table block without an id — cannot be a parent target
-        { type: 'table', data: { content: [[{ blocks: ['child-a'] }]] } } as OutputBlockData,
+        { type: 'table', data: { content: [[{ blocks: ['child-a'] }]] } },
         { id: 'child-a', type: 'paragraph', data: { text: 'A' } },
       ];
 
@@ -3193,7 +3193,7 @@ describe('data-model-transform', () => {
     it('preserves an existing id on a legacy image block', () => {
       const blocks: OutputBlockData[] = [
         {
-          id: 'img-1' as BlockId,
+          id: 'img-1',
           type: 'image',
           data: { file: { url: 'https://example.com/pic.png' } },
         },
@@ -3328,7 +3328,7 @@ describe('data-model-transform', () => {
 
     it('does not throw on garbage image data and preserves the block', () => {
       const blocks: OutputBlockData[] = [
-        { id: 'broken', type: 'image', data: { nonsense: 42 } as unknown as Record<string, unknown> },
+        { id: 'broken', type: 'image', data: { nonsense: 42 } },
       ];
 
       expect(() => expandToHierarchical(blocks)).not.toThrow();
@@ -3448,7 +3448,7 @@ describe('data-model-transform', () => {
     it('preserves an existing id on a linkTool block', () => {
       const blocks: OutputBlockData[] = [
         {
-          id: 'lt-1' as BlockId,
+          id: 'lt-1',
           type: 'linkTool',
           data: { link: 'https://example.com' },
         },
@@ -3547,7 +3547,7 @@ describe('data-model-transform', () => {
     it('migrates a quote caption into a following paragraph (no caption warning)', () => {
       const blocks: OutputBlockData[] = [
         {
-          id: 'q-1' as BlockId,
+          id: 'q-1',
           type: 'quote',
           data: { text: 'To be or not to be', caption: 'Shakespeare', size: 'default' },
         },
@@ -3574,7 +3574,7 @@ describe('data-model-transform', () => {
     it('does NOT emit a paragraph for a quote with an empty caption', () => {
       const blocks: OutputBlockData[] = [
         {
-          id: 'q-2' as BlockId,
+          id: 'q-2',
           type: 'quote',
           data: { text: 'Quote text', caption: '', size: 'large' },
         },
@@ -3589,7 +3589,7 @@ describe('data-model-transform', () => {
 
     it('does NOT emit a paragraph for a quote with no caption at all', () => {
       const blocks: OutputBlockData[] = [
-        { id: 'q-3' as BlockId, type: 'quote', data: { text: 'Quote text' } },
+        { id: 'q-3', type: 'quote', data: { text: 'Quote text' } },
       ];
 
       const result = expandToHierarchical(blocks);
@@ -3601,7 +3601,7 @@ describe('data-model-transform', () => {
     it('still migrates the caption when alignment is also present (alignment dropped + warned, caption not warned)', () => {
       const blocks: OutputBlockData[] = [
         {
-          id: 'q-4' as BlockId,
+          id: 'q-4',
           type: 'quote',
           data: { text: 'Quote text', caption: 'Author', alignment: 'center' },
         },

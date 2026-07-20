@@ -64,7 +64,7 @@ const createBlokModulesMock = (): {
         } as unknown as Block & { parentId: string | null; contentIds: string[] };
 
         blockInstances.push(newBlock);
-        blockLookup.set(newBlock.id as unknown as string, newBlock);
+        blockLookup.set(newBlock.id, newBlock);
 
         return newBlock;
       }),

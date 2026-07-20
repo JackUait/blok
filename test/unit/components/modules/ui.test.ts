@@ -216,7 +216,7 @@ const createUI = (options: CreateUIOptions = {}): CreateUIResult => {
       holder,
       minHeight: 50,
       ...options.configOverrides,
-    } as BlokConfig,
+    },
     eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
   });
 
@@ -293,7 +293,7 @@ describe("UI module", () => {
 
     it("throws when holder is missing", () => {
       const holderLessUI = new UI({
-        config: {} as BlokConfig,
+        config: {},
         eventsDispatcher: {
           on: vi.fn(),
           off: vi.fn(),
@@ -529,7 +529,7 @@ describe("UI module", () => {
       const idleCallback = vi.fn();
 
       (window as Partial<Window>).requestIdleCallback =
-        idleCallback as unknown as typeof window.requestIdleCallback;
+        idleCallback;
 
       ui.toggleReadOnly(false);
 
@@ -1338,7 +1338,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamily: "Georgia, serif" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1375,7 +1375,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamily: "Roboto, sans-serif" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1410,7 +1410,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamily: "Arial" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1447,7 +1447,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamily: "Times New Roman" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1483,7 +1483,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamily: "Courier New", nonce: "abc-nonce-123" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1518,7 +1518,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamily: "Verdana" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1553,7 +1553,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamilySans: "'Roboto', sans-serif" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1583,7 +1583,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamilySerif: "'Merriweather', serif" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1613,7 +1613,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamilyMono: "'Fira Code', monospace" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1643,7 +1643,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { fontFamilyHandwriting: "'Caveat', cursive" },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1679,7 +1679,7 @@ describe("UI module", () => {
             fontFamilyMono: "'Fira Code', monospace",
             fontFamilyHandwriting: "'Caveat', cursive",
           },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1758,7 +1758,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { tokens: { "--blok-selection": "rgba(35, 131, 226, 0.28)" } },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1801,7 +1801,7 @@ describe("UI module", () => {
           style: {
             tokens: { color: "red", "--evil": "x", "--blok-bg": "#fff" },
           },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1843,7 +1843,7 @@ describe("UI module", () => {
               "--blok-selection": "blue",
             },
           },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1882,7 +1882,7 @@ describe("UI module", () => {
             tokens: { "--blok-selection": "blue" },
             nonce: "abc-nonce-123",
           },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -1917,7 +1917,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { tokens: { "--blok-selection": "blue" } },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -2005,7 +2005,7 @@ describe("UI module", () => {
               "--blok-selection": "green",
             },
           },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -2042,7 +2042,7 @@ describe("UI module", () => {
           holder,
           minHeight: 50,
           style: { tokens: { "--blok-editor-gutter-start": "40px" } },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();
@@ -2099,7 +2099,7 @@ describe("UI module", () => {
               "--blok-selection": "green",
             },
           },
-        } as BlokConfig,
+        },
         eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
       });
       const blok = createBlokStub();

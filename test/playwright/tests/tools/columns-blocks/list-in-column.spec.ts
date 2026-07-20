@@ -51,7 +51,7 @@ interface ListData {
 const listDataOf = (saved: OutputData, id: string): ListData => {
   const block = findBlock(saved, id);
 
-  return (block?.data ?? {}) as ListData;
+  return (block?.data ?? {});
 };
 
 test.beforeAll(() => {

@@ -315,7 +315,7 @@ describe('SelectionNavigation', () => {
 
   describe('expandToTag', () => {
     it('does nothing when there is no selection', () => {
-      vi.spyOn(window, 'getSelection').mockReturnValue(null as unknown as Selection);
+      vi.spyOn(window, 'getSelection').mockReturnValue(null);
 
       const element = document.createElement('div');
 

@@ -499,7 +499,7 @@ export class TableRowColControls {
     const rows = this.grid.querySelectorAll(`[${ROW_ATTR}]`);
 
     rows.forEach(row => {
-      this.rowResizeObserver?.observe(row as HTMLElement);
+      this.rowResizeObserver?.observe(row);
     });
   }
 

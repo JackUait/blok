@@ -67,7 +67,7 @@ export class DatabaseTool implements BlockTool {
     this.config = config ?? {};
 
     this.title = (data as DatabaseData | undefined)?.title ?? '';
-    this.model = new DatabaseModel(data as DatabaseData | undefined);
+    this.model = new DatabaseModel(data);
     const views = this.model.getViews();
     this.activeViewId = (data as DatabaseData | undefined)?.activeViewId ?? (views.length > 0 ? views[0].id : '');
 
@@ -829,7 +829,9 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const existingOptions = prop.config.options;
+    // Sort by position, not array order: a column reorder rewrites a position in
+    // place, so the last array element is not necessarily the last column.
+    const existingOptions = [...prop.config.options].sort((a, b) => (a.position < b.position ? -1 : 1));
     const lastPos = existingOptions.length > 0 ? existingOptions[existingOptions.length - 1].position : null;
     const newOption: SelectOption = {
       id: nanoid(),
@@ -1079,7 +1081,9 @@ export class DatabaseTool implements BlockTool {
       return;
     }
 
-    const options = [...prop.config.options];
+    // Keep the stored array in position order so every later reader (add-column,
+    // neighbour lookup) sees the same order the board renders in.
+    const options = [...prop.config.options].sort((a, b) => (a.position < b.position ? -1 : 1));
     const draggedIdx = options.findIndex((o) => o.id === optionId);
 
     if (draggedIdx === -1) {
@@ -1091,6 +1095,7 @@ export class DatabaseTool implements BlockTool {
     const newPosition = DatabaseModel.positionBetween(afterOpt?.position ?? null, beforeOpt?.position ?? null);
 
     options[draggedIdx] = { ...options[draggedIdx], position: newPosition };
+    options.sort((a, b) => (a.position < b.position ? -1 : 1));
     this.model.updateProperty(groupByPropId, { config: { options } });
 
     this.moveColumnInDom(optionId, beforeOptionId);

@@ -21,7 +21,7 @@ const TWO_PARAGRAPHS: OutputData = {
     { type: 'paragraph', data: { text: 'First block' } },
     { type: 'paragraph', data: { text: 'Second block' } },
   ],
-} as OutputData;
+};
 
 /**
  * Build a Blok instance with a non-English locale so we can assert the

@@ -63,7 +63,7 @@ const createOptions = (
   data: Partial<TableData> = {},
   config: TableConfig = {}
 ): BlockToolConstructorOptions<TableData, TableConfig> => ({
-  data: { withHeadings: false, withHeadingColumn: false, content: [], ...data } as TableData,
+  data: { withHeadings: false, withHeadingColumn: false, content: [], ...data },
   config,
   api: createMockAPI(),
   readOnly: false,

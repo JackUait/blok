@@ -246,7 +246,7 @@ describe('DataPersistenceManager', () => {
       expect(firstResult).toBe('saved content');
 
       // Simulate the tool content changing (e.g., user typed more text)
-      vi.mocked(toolInstance.save).mockResolvedValue({ text: 'updated content' } as BlockToolData);
+      vi.mocked(toolInstance.save).mockResolvedValue({ text: 'updated content' });
 
       // exportDataAsString should use the fresh data, not the cached initialData
       const secondResult = await dataPersistenceManager.exportDataAsString(conversionConfig);
@@ -269,7 +269,7 @@ describe('DataPersistenceManager', () => {
     });
 
     it('data returns saved data even when empty string', async () => {
-      vi.mocked(toolInstance.save).mockResolvedValue({ text: '' } as BlockToolData);
+      vi.mocked(toolInstance.save).mockResolvedValue({ text: '' });
 
       const data = await dataPersistenceManager.data;
 
@@ -321,7 +321,7 @@ describe('DataPersistenceManager', () => {
       vi.mocked(toolInstance.save).mockResolvedValue({
         text: '<div></div>',
         html: '<span></span>',
-      } as BlockToolData);
+      });
 
       const result = await manager.save();
 

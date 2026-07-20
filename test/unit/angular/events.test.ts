@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { BlockRenderedPayload, BlocksRenderedPayload } from '@/types';
@@ -9,6 +9,7 @@ import { blokRegistry, type MockBlokRecord } from './_mock-blok';
 import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
   template: `<blok-editor
@@ -22,6 +23,7 @@ class EventsHost {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
   template: `<blok-editor></blok-editor>`,

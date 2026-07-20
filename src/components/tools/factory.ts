@@ -88,7 +88,7 @@ export class ToolsFactory {
    */
   public get(name: string): InlineToolAdapter | BlockToolAdapter | BlockTuneAdapter {
     const { class: constructableCandidate, isInternal = false, ...config } = this.config[name];
-    const constructable = constructableCandidate as ToolConstructable | undefined;
+    const constructable = constructableCandidate;
 
     if (constructable === undefined) {
       throw new Error(`Tool "${name}" does not provide a class.`);

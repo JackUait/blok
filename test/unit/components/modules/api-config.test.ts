@@ -4,7 +4,7 @@ import type { BlokConfig } from '../../../../types';
 
 const makeApi = (config: Partial<BlokConfig>): API => {
   const api = new API({
-    config: config as BlokConfig,
+    config: config,
     eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as never,
   });
 

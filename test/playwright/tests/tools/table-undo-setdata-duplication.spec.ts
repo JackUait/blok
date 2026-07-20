@@ -70,7 +70,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
     const blok = new window.Blok({
       holder,
       data: initialData,
-    } as ConstructorParameters<typeof window.Blok>[0]);
+    });
 
     window.blokInstance = blok;
     await blok.isReady;

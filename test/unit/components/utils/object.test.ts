@@ -94,17 +94,17 @@ describe('object', () => {
       const target = {
         level1: {
           level2: {
-            level3: { value: 'original' } as Record<string, unknown>,
-          } as Record<string, unknown>,
+            level3: { value: 'original' },
+          },
         } as Record<string, unknown>,
       };
       const source = {
         level1: {
           level2: {
-            level3: { value: 'updated' } as Record<string, unknown>,
+            level3: { value: 'updated' },
             newValue: 'added',
-          } as Record<string, unknown>,
-        } as Record<string, unknown>,
+          },
+        },
       } as Record<string, unknown>;
 
       const result = deepMerge(target, source);

@@ -7,7 +7,6 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vite
 import { BlockSettings } from '../../../../../src/components/modules/toolbar/blockSettings';
 import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../../types';
 import type { MenuConfigItem } from '../../../../../types/tools';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
 import { beautifyShortcut } from '../../../../../src/components/utils/string';
@@ -154,7 +153,7 @@ describe('BlockSettings — Duplicate menu item (BUG #8)', () => {
     getConvertibleToolsForBlocksMock.mockReset();
 
     blockSettings = new BlockSettings({
-      config: {} as BlokConfig,
+      config: {},
       eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as typeof blockSettings['eventsDispatcher'],
     });
 

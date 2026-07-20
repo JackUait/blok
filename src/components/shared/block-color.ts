@@ -130,7 +130,7 @@ export const getBlockColorToolboxEntries = (i18n: I18n): BlockColorToolboxEntry[
       englishTitle: formatSwatchLabel(english, axis.labelKey, preset.name),
       icon: swatch(colorVarName(preset.name, axis.mode), axis.field === 'backgroundColor'),
       field: axis.field,
-      value: preset.name as string | undefined,
+      value: preset.name,
       searchTerms: ['color', axis.keyword, preset.name],
     }));
 

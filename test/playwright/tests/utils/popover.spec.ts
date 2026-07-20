@@ -253,7 +253,7 @@ const createBlokWithBlocks = async (
                *
                */
               public render(): HTMLElement {
-                return (menu as { render: () => HTMLElement }).render();
+                return (menu).render();
               }
             };
 

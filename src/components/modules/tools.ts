@@ -252,7 +252,7 @@ export class Tools extends Module {
       return this.inlineToolsSanitizeConfigCache;
     }
 
-    const config: SanitizerConfig = {} as SanitizerConfig;
+    const config: SanitizerConfig = {};
 
     Array.from(this.inlineTools.values())
       .forEach(inlineTool => {
@@ -341,7 +341,7 @@ export class Tools extends Module {
       }
 
       const entry = tools[name];
-      const toolClass = isObject(entry) ? (entry as ToolSettings).class : entry;
+      const toolClass = isObject(entry) ? (entry).class : entry;
       const provides = (toolClass as { provides?: Record<string, ToolConstructable> } | undefined)?.provides;
 
       if (!provides) {
@@ -431,7 +431,7 @@ export class Tools extends Module {
         };
 
         const prepareFunction: ChainData['function'] = async (payload?: unknown) => {
-          const constructable = settings.class as ToolConstructable | undefined;
+          const constructable: ToolConstructable | undefined = settings.class;
 
           if (!constructable || !isFunction(constructable.prepare)) {
             return;
@@ -639,7 +639,7 @@ export class Tools extends Module {
       const tool = toolsConfig[toolName];
 
       if (isObject(tool)) {
-        config[toolName] = tool as ToolSettings;
+        config[toolName] = tool;
 
         continue;
       }

@@ -10,7 +10,6 @@ import { DragController as DragManager } from '../../../../../src/components/mod
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../../types';
 import type { Block } from '../../../../../src/components/block';
 import { DATA_ATTR } from '../../../../../src/components/constants';
 import * as tooltip from '../../../../../src/components/utils/tooltip';
@@ -198,7 +197,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
     YjsManager: yjsManager as unknown as BlokModules['YjsManager'],
   } as BlokModules;
   const dragManager = new DragManager({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 

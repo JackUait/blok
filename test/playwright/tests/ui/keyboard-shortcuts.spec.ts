@@ -285,7 +285,7 @@ test.describe('keyboard shortcuts', () => {
       tools: [
         {
           name: 'shortcutBlock',
-          class: ShortcutBlockTool as unknown as BlockToolConstructable,
+          class: ShortcutBlockTool,
           config: {
             shortcut: 'CMD+SHIFT+M',
           },
@@ -423,7 +423,7 @@ test.describe('keyboard shortcuts', () => {
       tools: [
         {
           name: 'cmdShortcutBlock',
-          class: CmdShortcutBlockTool as unknown as BlockToolConstructable,
+          class: CmdShortcutBlockTool,
           config: {
             shortcut: 'CMD+SHIFT+Y',
           },

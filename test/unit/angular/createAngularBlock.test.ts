@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { createAngularBlock } from '../../../packages/angular/src/createAngularBlock';
@@ -14,7 +14,7 @@ interface CounterData {
   label: string;
 }
 
-@Component({ standalone: true, template: '' })
+@Component({ standalone: true, template: '', changeDetection: ChangeDetectionStrategy.Default })
 class CounterComponent {
   readonly ctx = inject(BLOK_BLOCK_CONTEXT) as AngularBlockRenderContext<CounterData>;
 }

@@ -16,7 +16,9 @@
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
     "jsx": "react-jsx",
-    "baseUrl": "./",
+    // No `baseUrl`: it is deprecated in TypeScript 6 (TS5101) and removed in 7.
+    // Every mapping below is "./"-prefixed, so it resolves relative to this
+    // file's directory without it.
     "paths": {
       "@/types": [ "./types/", "./docs/src/types" ],
       "@bloklabs/core": [ "./types/index.d.ts" ],

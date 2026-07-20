@@ -9,7 +9,6 @@ import type { Block } from '../../../../../src/components/block';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { BlokConfig } from '../../../../../types';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import { BlockChangedMutationType } from '../../../../../types/events/block/BlockChanged';
 import { BlockAddedMutationType } from '../../../../../types/events/block/BlockAdded';
@@ -18,7 +17,7 @@ import { BlockAddedMutationType } from '../../../../../types/events/block/BlockA
  * Create a minimal ModuleConfig for constructing BlockManager without calling prepare().
  */
 const createModuleConfig = (): ModuleConfig => ({
-  config: { defaultBlock: 'paragraph' } as BlokConfig,
+  config: { defaultBlock: 'paragraph' },
   eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
 });
 

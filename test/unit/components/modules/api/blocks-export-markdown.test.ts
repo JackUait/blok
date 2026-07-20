@@ -4,7 +4,7 @@ import { BlocksAPI } from '../../../../../src/components/modules/api/blocks'
 import { EventsDispatcher } from '../../../../../src/components/utils/events'
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config'
-import type { BlokConfig, OutputData } from '../../../../../types'
+import type { OutputData } from '../../../../../types'
 import type { BlokEventMap } from '../../../../../src/components/events'
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules'
 
@@ -17,7 +17,7 @@ describe('BlocksAPI.exportMarkdown', () => {
   const createBlocksApi = (saved: OutputData | undefined): BlocksAPI => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>()
     const moduleConfig: ModuleConfig = {
-      config: { defaultBlock: 'paragraph' } as BlokConfig,
+      config: { defaultBlock: 'paragraph' },
       eventsDispatcher,
     }
 

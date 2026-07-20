@@ -186,7 +186,19 @@ export class DatabaseModel {
     return '';
   }
 
+  /**
+   * Generates a fractional index strictly between `after` and `before`.
+   *
+   * The ordering guard is load-bearing: fractional-indexing >= 4 silently swaps
+   * out-of-order arguments instead of throwing, which would turn a caller-side
+   * ordering bug (stale/unsorted neighbour lookup) into silently corrupted
+   * positions. Callers must pass neighbours read from a position-sorted list.
+   */
   static positionBetween(after: string | null, before: string | null): string {
+    if (after !== null && before !== null && after >= before) {
+      throw new Error(`DatabaseModel.positionBetween: keys out of order (${after} >= ${before})`);
+    }
+
     return generateKeyBetween(after, before);
   }
 

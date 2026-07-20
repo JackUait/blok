@@ -10,7 +10,6 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { KeyboardController } from '../../../../../src/components/modules/uiControllers/controllers/keyboard';
 import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../../types';
 import { SelectionUtils } from '../../../../../src/components/selection/index';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 
@@ -28,7 +27,7 @@ type Mocks = {
 
 const createController = (mocks: Mocks): KeyboardController => {
   const controller = new KeyboardController({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as KeyboardController['eventsDispatcher'],
     someToolbarOpened: () => false,
   });

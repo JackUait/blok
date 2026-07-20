@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 /**
@@ -7,6 +7,7 @@ import { TestBed } from '@angular/core/testing';
  * Every later Angular adapter test depends on this being green.
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   selector: 'harness-smoke',
   standalone: true,
   template: `<span data-testid="msg">harness {{ status() }}</span>`,

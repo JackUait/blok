@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { BlockOperations } from '../../../../../src/components/modules/blockManager/operations';
-import type { BlockOperationsDependencies, BlockDidMutated } from '../../../../../src/components/modules/blockManager/operations';
+import type { BlockOperationsDependencies } from '../../../../../src/components/modules/blockManager/operations';
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
 import { BlockHierarchy } from '../../../../../src/components/modules/blockManager/hierarchy';
@@ -14,7 +14,6 @@ import { ToolType } from '@/types/tools/adapters/tool-type';
 import type { BlockTool, BlockToolConstructable } from '@/types/tools/block-tool';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
-import type { BlokConfig } from '@/types/configs';
 import type { API } from '../../../../../src/components/modules/api';
 import type { YjsManager } from '../../../../../src/components/modules/yjs';
 import type { Caret } from '../../../../../src/components/modules/caret';
@@ -76,7 +75,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
 
   return {
-    config: { defaultBlock: 'paragraph', sanitizer: {} } as BlokConfig,
+    config: { defaultBlock: 'paragraph', sanitizer: {} },
     YjsManager: {
       addBlock: vi.fn(),
       removeBlock: vi.fn(),
@@ -198,7 +197,7 @@ describe('convert() into a function-import tool (list)', () => {
       repository,
       createMockBlockFactory(),
       new BlockHierarchy(repository),
-      vi.fn(<Type extends BlockMutationType>(_t: Type, block: Block) => block) as unknown as BlockDidMutated,
+      vi.fn(<Type extends BlockMutationType>(_t: Type, block: Block) => block),
       0
     );
     operations.setYjsSync(createMockYjsSync());

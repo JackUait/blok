@@ -279,7 +279,7 @@ test.describe('inlineToolAdapter', () => {
       const options = createInlineToolOptions();
       const tool = new InlineToolAdapter(options);
 
-      expect(tool.create()).toBeInstanceOf(options.constructable as { new(): unknown });
+      expect(tool.create()).toBeInstanceOf(options.constructable);
     });
 
     test('returns Tool instance with passed API object', () => {

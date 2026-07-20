@@ -8,6 +8,25 @@ import angular from '@analogjs/vite-plugin-angular';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 const cliPkg = JSON.parse(readFileSync(path.resolve(dirname, 'packages/cli/package.json'), 'utf-8')) as { version: string };
 
+// Node 26 enables Web Storage by default, and its built-in `localStorage` global
+// shadows the one jsdom installs. `--localstorage-file` is never provided, so
+// Node's own is `undefined` and every `localStorage.*` call in a jsdom test
+// throws "Cannot read properties of undefined" — frequently surfacing as an
+// unrelated-looking teardown error, because construction already failed earlier.
+// Disabling Node's implementation lets jsdom's through.
+//
+// This goes through NODE_OPTIONS rather than `poolOptions.*.execArgv`: the
+// threads pool runs workers via worker_threads, which rejects execArgv entries
+// that affect the process, so the flag was silently dropped there. Setting it
+// here covers every pool, plus direct `vitest` and IDE runs (which a NODE_OPTIONS
+// prefix on the package.json `test` script would miss).
+// jsdom 29 does NOT remove the need for this.
+const WEBSTORAGE_OFF = '--no-experimental-webstorage';
+
+if (!(process.env.NODE_OPTIONS ?? '').includes(WEBSTORAGE_OFF)) {
+  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS ?? ''} ${WEBSTORAGE_OFF}`.trim();
+}
+
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   define: {

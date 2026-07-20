@@ -288,7 +288,7 @@ describe('useBlocks (Vue) — React parity surface', () => {
     const { editor, spies } = makeFakeEditor([{ id: 'a', name: 'paragraph', parentId: null }]);
     const { api } = mountUseBlocks(ref<Blok | null>(editor));
 
-    await api.render({ blocks: [] } as never);
+    await api.render({ blocks: [] });
     await api.clear();
     await api.renderFromHTML('<p>x</p>');
     await api.composeBlockData('paragraph');
@@ -303,7 +303,7 @@ describe('useBlocks (Vue) — React parity surface', () => {
     const { editor, spies } = makeFakeEditor([{ id: 'a', name: 'paragraph', parentId: null }]);
     const { api } = mountUseBlocks(ref<Blok | null>(editor));
 
-    const created = api.insertOutputData([{ id: 'x', type: 'paragraph', data: {} } as never]);
+    const created = api.insertOutputData([{ id: 'x', type: 'paragraph', data: {} }]);
 
     expect(spies.insertMany).toHaveBeenCalledTimes(1);
     expect(created).toHaveLength(1);

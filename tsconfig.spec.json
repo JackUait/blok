@@ -17,7 +17,10 @@
     "paths": {
       "@/types": ["./types/", "./docs/src/types"],
       "@/types/*": ["./types/*", "./docs/src/types/*"],
-      "@bloklabs/core": ["./types/index.d.ts"]
+      "@bloklabs/core": ["./types/index.d.ts"],
+      // The shared adapter core is source-only (no published .d.ts); mirror the
+      // root config's mapping, which `paths` would otherwise drop.
+      "@bloklabs/core/adapters": ["./src/adapters.ts"]
     }
   },
   "angularCompilerOptions": {

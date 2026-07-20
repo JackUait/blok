@@ -15,7 +15,7 @@ const fakeRanges = (pairs: [number, number][]): TimeRanges => ({
   length: pairs.length,
   start: (i: number): number => pairs[i][0],
   end: (i: number): number => pairs[i][1],
-}) as TimeRanges;
+});
 
 interface Harness {
   figure: HTMLElement;
@@ -725,7 +725,7 @@ describe('video controls — hover frame preview', () => {
   let h: Harness;
   const wideRect = (width: number): DOMRect => ({
     left: 0, right: width, width, top: 0, bottom: 0, height: 0, x: 0, y: 0, toJSON: () => ({}),
-  }) as DOMRect;
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     h = mount();

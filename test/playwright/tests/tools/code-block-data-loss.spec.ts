@@ -98,7 +98,7 @@ test.describe('code block data loss', () => {
           data: { code,
             language: 'javascript',
             lineNumbers: false } } ],
-      } as OutputData);
+      });
 
       const rendered = await page.evaluate(() => {
         const el = document.querySelector<HTMLElement>('[data-blok-testid="code-content"]');
@@ -120,7 +120,7 @@ test.describe('code block data loss', () => {
         data: { code: '',
           language: 'javascript',
           lineNumbers: false } } ],
-    } as OutputData);
+    });
 
     const saved = await save(page);
 

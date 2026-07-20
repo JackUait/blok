@@ -201,7 +201,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
 
     // Reload with the saved data — any drift that hides behind insertMany /
     // Renderer round-trip surfaces here.
-    await createBlok(page, saved as OutputData);
+    await createBlok(page, saved);
     const reloaded = await saveBlok(page);
 
     const reloadedCallout = reloaded.blocks.find(b => b.type === 'callout');
@@ -250,7 +250,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
     expect(rootBlocks.map(b => b.type), 'root should only contain the toggle').toStrictEqual(['toggle']);
 
     // Reload cycle.
-    await createBlok(page, saved as OutputData);
+    await createBlok(page, saved);
     const reloaded = await saveBlok(page);
 
     const reloadedToggle = reloaded.blocks.find(b => b.type === 'toggle');
@@ -307,7 +307,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
     expect(rootBlocks[0]?.id).toBe(parentHeader?.id);
 
     // Reload cycle.
-    await createBlok(page, saved as OutputData);
+    await createBlok(page, saved);
     const reloaded = await saveBlok(page);
 
     const reloadedParent = reloaded.blocks.find(b => b.type === 'header' && b.data?.text === 'Section');
@@ -392,7 +392,7 @@ test.describe('paste-into-container-child replace=true regression', () => {
 
     // Reload cycle — any drift hidden behind the table's collapseToLegacy /
     // insertMany round-trip is caught here.
-    await createBlok(page, saved as OutputData, ['Table']);
+    await createBlok(page, saved, ['Table']);
     const reloaded = await saveBlok(page);
 
     const reloadedTable = reloaded.blocks.find(b => b.type === 'table');

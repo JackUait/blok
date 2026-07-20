@@ -94,7 +94,7 @@ test.describe('toggle heading turn-into releases children', () => {
         { id: 'toggle-h', type: 'header', data: { text: 'Toggle parent', level: 2, isToggleable: true, isOpen: true }, content: ['child-1'] },
         { id: 'child-1', type: 'paragraph', data: { text: 'Nested child' }, parent: 'toggle-h' },
       ],
-    } as unknown as OutputData);
+    });
 
     await openBlockTunes(page, 'Toggle parent');
 

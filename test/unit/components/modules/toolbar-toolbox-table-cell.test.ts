@@ -20,7 +20,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import { Toolbar } from '../../../../src/components/modules/toolbar';
 import type { BlokEventMap } from '../../../../src/components/events';
-import type { BlokConfig } from '../../../../types';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../src/components/block';
 
@@ -55,7 +54,7 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
   wrapper: HTMLDivElement;
 } {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
-  const toolbar = new Toolbar({ config: {} as BlokConfig, eventsDispatcher });
+  const toolbar = new Toolbar({ config: {}, eventsDispatcher });
 
   const wrapper = document.createElement('div');
   const plusButton = document.createElement('button');

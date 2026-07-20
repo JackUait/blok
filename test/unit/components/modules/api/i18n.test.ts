@@ -4,14 +4,13 @@ import { I18nAPI } from '../../../../../src/components/modules/api/i18n';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
 const createI18nApi = (): { api: I18nAPI; i18nMock: { t: ReturnType<typeof vi.fn>; has: ReturnType<typeof vi.fn>; getLocale: ReturnType<typeof vi.fn> } } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher,
   };
 

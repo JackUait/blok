@@ -66,7 +66,7 @@ const createOptions = (
     code: data.code ?? '',
     language: data.language ?? 'plain text',
     ...(data.lineNumbers !== undefined ? { lineNumbers: data.lineNumbers } : {}),
-  } as CodeData,
+  },
   config: {},
   api: createMockAPI(overrides.translations),
   readOnly: overrides.readOnly ?? false,
@@ -231,15 +231,15 @@ describe('CodeTool', () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());
 
-      expect(tool.validate({ code: 'x', language: 'plain text' } as CodeData)).toBe(true);
+      expect(tool.validate({ code: 'x', language: 'plain text' })).toBe(true);
     });
 
     it('treats an intentionally-empty code block as valid', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions());
 
-      expect(tool.validate({ code: '', language: 'plain text' } as CodeData)).toBe(true);
-      expect(tool.validate({ code: '   ', language: 'plain text' } as CodeData)).toBe(true);
+      expect(tool.validate({ code: '', language: 'plain text' })).toBe(true);
+      expect(tool.validate({ code: '   ', language: 'plain text' })).toBe(true);
     });
 
     it('rejects non-string code', async () => {
@@ -256,7 +256,7 @@ describe('CodeTool', () => {
       const tool = new CodeTool(createOptions({ code: 'line 1' }));
 
       tool.render();
-      tool.merge({ code: 'line 2', language: 'plain text' } as CodeData);
+      tool.merge({ code: 'line 2', language: 'plain text' });
 
       const el = tool.render();
       const data = tool.save(el);
@@ -273,7 +273,7 @@ describe('CodeTool', () => {
       const codeEl = el.querySelector('[data-blok-testid="code-content"]') as HTMLElement;
 
       // Merge code that ends with a newline
-      tool.merge({ code: 'line 2\n', language: 'plain text' } as CodeData);
+      tool.merge({ code: 'line 2\n', language: 'plain text' });
 
       // The resulting text is 'line 1\nline 2\n' — ends with newline
       // syncTrailingBr() must add a sentinel <br> so the last empty line is visible
@@ -1135,7 +1135,7 @@ describe('CodeTool', () => {
 
     it('restores lineNumbers false from saved data', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
-      const tool = new CodeTool(createOptions({ code: 'hello', lineNumbers: false } as Partial<CodeData>));
+      const tool = new CodeTool(createOptions({ code: 'hello', lineNumbers: false }));
       const el = tool.render();
       const gutter = el.querySelector('[data-blok-testid="code-gutter"]') as HTMLElement;
 
@@ -1156,7 +1156,7 @@ describe('CodeTool', () => {
       const tool = new CodeTool(createOptions({ code: 'line 1' }));
       tool.render();
 
-      tool.merge({ code: 'line 2\nline 3', language: 'plain text' } as CodeData);
+      tool.merge({ code: 'line 2\nline 3', language: 'plain text' });
 
       const el = tool.render();
       const gutter = el.querySelector('[data-blok-testid="code-gutter"]')!;
@@ -1176,7 +1176,7 @@ describe('CodeTool', () => {
       expect(gutter.children).toHaveLength(1);
 
       // Merge adds two more lines — gutter must update in-place, no re-render
-      tool.merge({ code: 'line 2\nline 3', language: 'plain text' } as CodeData);
+      tool.merge({ code: 'line 2\nline 3', language: 'plain text' });
 
       expect(gutter.children).toHaveLength(3);
 

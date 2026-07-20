@@ -54,7 +54,7 @@ export class ClearFormatInlineTool implements InlineTool {
    * This tool introduces no tags of its own
    */
   public static get sanitize(): SanitizerConfig {
-    return {} as SanitizerConfig;
+    return {};
   }
 
   /**

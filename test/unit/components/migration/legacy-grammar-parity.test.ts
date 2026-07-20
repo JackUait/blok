@@ -53,13 +53,13 @@ const normalizeIds = (blocks: OutputBlockData[]): OutputBlockData[] => {
     const next: OutputBlockData = { ...block };
 
     if (block.id != null) {
-      next.id = tok(block.id) as unknown as OutputBlockData['id'];
+      next.id = tok(block.id);
     }
     if (block.parent != null) {
-      next.parent = tok(block.parent) as unknown as OutputBlockData['parent'];
+      next.parent = tok(block.parent);
     }
     if (Array.isArray(block.content)) {
-      next.content = block.content.map((c) => tok(c)) as unknown as OutputBlockData['content'];
+      next.content = block.content.map((c) => tok(c));
     }
 
     // Table cell block-refs (data.content[r][c].blocks = [id, ...]).
@@ -102,12 +102,12 @@ const FIXTURES: Record<string, OutputBlockData> = {
       ],
     },
     tunes: { align: { alignment: 'left' } },
-  } as unknown as OutputBlockData,
+  },
   checklist: {
     id: 'check-1',
     type: 'checklist',
     data: { items: [{ text: 'Done', checked: true }, { text: 'Todo', checked: false }, 'bare string item'] },
-  } as unknown as OutputBlockData,
+  },
   linkTool: {
     id: 'link-1',
     type: 'linkTool',
@@ -122,7 +122,7 @@ const FIXTURES: Record<string, OutputBlockData> = {
         site_name: 'Example',
       },
     },
-  } as unknown as OutputBlockData,
+  },
   toggleList: {
     id: 'tog-1',
     type: 'toggleList',
@@ -136,7 +136,7 @@ const FIXTURES: Record<string, OutputBlockData> = {
         ],
       },
     },
-  } as unknown as OutputBlockData,
+  },
   callout: {
     id: 'call-1',
     type: 'callout',
@@ -146,37 +146,37 @@ const FIXTURES: Record<string, OutputBlockData> = {
       isEmojiVisible: true,
       body: { blocks: [{ id: 'call-p', type: 'paragraph', data: { text: 'note body' } }] },
     },
-  } as unknown as OutputBlockData,
+  },
   image: {
     id: 'img-1',
     type: 'image',
     data: { file: { url: 'https://example.com/p.png' }, caption: 'cap', withBorder: true, withBackground: true, stretched: true },
-  } as unknown as OutputBlockData,
+  },
   quote: {
     id: 'quote-1',
     type: 'quote',
     data: { text: 'the body', caption: 'the author', alignment: 'center' },
-  } as unknown as OutputBlockData,
+  },
   table: {
     id: 'tab-1',
     type: 'table',
     data: { withHeadings: true, content: [['A', ''], ['B', 'C']] },
-  } as unknown as OutputBlockData,
+  },
   raw: {
     id: 'raw-1',
     type: 'raw',
     data: { html: '<div>markup</div>' },
-  } as unknown as OutputBlockData,
+  },
   warning: {
     id: 'warn-1',
     type: 'warning',
     data: { title: 'Heads up', message: 'be careful' },
-  } as unknown as OutputBlockData,
+  },
   attaches: {
     id: 'att-1',
     type: 'attaches',
     data: { file: { url: 'https://example.com/file.pdf', name: 'file.pdf', size: 1234, extension: 'pdf' }, title: 'A file' },
-  } as unknown as OutputBlockData,
+  },
 };
 
 describe('legacy-grammar parity: shared interpreter reproduces runtime output', () => {

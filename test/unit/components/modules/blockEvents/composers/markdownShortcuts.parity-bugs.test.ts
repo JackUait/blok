@@ -155,7 +155,7 @@ describe('MarkdownShortcuts — Notion parity bugs', () => {
         firstInput: input,
         lastInput: input,
         inputs: [input],
-      } as unknown as Partial<Block>);
+      });
       const blok = createBlokModules(block);
       const markdownShortcuts = new MarkdownShortcuts(blok);
 

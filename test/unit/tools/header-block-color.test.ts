@@ -33,7 +33,7 @@ const createHeaderOptions = (
   data: Partial<HeaderData> = {},
   config: HeaderConfig = {}
 ): BlockToolConstructorOptions<HeaderData, HeaderConfig> => ({
-  data: { text: '', level: 2, ...data } as HeaderData,
+  data: { text: '', level: 2, ...data },
   config,
   api: createMockAPI(),
   readOnly: false,

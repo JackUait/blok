@@ -112,7 +112,7 @@ const createConstructable = (overrides: Record<string, unknown> = {}): BlockTool
 
   Object.assign(MockBlockTool, overrides);
 
-  return MockBlockTool as BlockToolConstructable;
+  return MockBlockTool;
 };
 
 /**

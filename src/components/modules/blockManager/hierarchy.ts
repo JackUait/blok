@@ -358,11 +358,9 @@ export class BlockHierarchy {
           b => b.holder.parentElement === newContainer
         )?.holder ?? null;
 
-        if (nextSiblingHolder !== null) {
-          moveElementBefore(block.holder, nextSiblingHolder);
-        } else {
-          moveElementToEnd(newContainer, block.holder);
-        }
+        nextSiblingHolder !== null
+          ? moveElementBefore(block.holder, nextSiblingHolder)
+          : moveElementToEnd(newContainer, block.holder);
       }
     }
 

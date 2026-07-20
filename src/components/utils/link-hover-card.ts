@@ -440,7 +440,7 @@ export class LinkHoverCard {
       // Enter/leave: fade + very subtle rise. Base (closed) state is hidden and
       // nudged up 1px; data-state="open" (set a frame after mount) animates it
       // in, and hide() flips back to closed so the transition plays in reverse.
-      'opacity-0 translate-y-[-1px] transition-[opacity,transform] duration-150 ease-out',
+      'opacity-0 -translate-y-px transition-[opacity,transform] duration-150 ease-out',
       'data-[state=open]:opacity-100 data-[state=open]:translate-y-0',
       'mobile:hidden'
     );
@@ -485,7 +485,7 @@ export class LinkHoverCard {
     url.type = 'button';
     url.className = twJoin(
       'appearance-none border-0 bg-transparent m-0 p-0 font-[inherit] cursor-pointer',
-      'min-w-0 max-w-[280px] truncate text-left text-gray-text',
+      'min-w-0 max-w-70 truncate text-left text-gray-text',
       'underline-offset-2 can-hover:hover:underline can-hover:hover:text-text-primary'
     );
     url.setAttribute('data-blok-testid', 'link-hover-card-url');

@@ -49,7 +49,7 @@ const createTable2x2 = async (page: Page): Promise<void> => {
           },
         },
       ],
-    } as OutputData;
+    };
 
     const tableClass: unknown = (window as unknown as { Blok: Record<string, unknown> }).Blok.Table;
     const blokConfig: Record<string, unknown> = {

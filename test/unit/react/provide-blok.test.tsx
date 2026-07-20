@@ -33,7 +33,7 @@ vi.mock('../../../src/blok', () => ({
     constructor(config: Record<string, unknown>) {
       this.config = config;
       this.isReady = Promise.resolve();
-      instances.push(this as unknown as MockInstance);
+      instances.push(this);
     }
   },
 }));
@@ -85,8 +85,8 @@ describe('React provideBlok / BlokProvider', () => {
     const localTool = { class: class B {} };
 
     render(
-      <BlokProvider defaults={{ tools: { shared: sharedTool } as UseBlokConfig['tools'] }}>
-        <Harness config={{ tools: { local: localTool } as UseBlokConfig['tools'] }} />
+      <BlokProvider defaults={{ tools: { shared: sharedTool } }}>
+        <Harness config={{ tools: { local: localTool } }} />
       </BlokProvider>
     );
     await act(async () => {

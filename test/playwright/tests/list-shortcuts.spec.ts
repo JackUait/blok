@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import type { Blok, BlokConfig, OutputData } from '@/types';
+import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
 
 /**
@@ -36,7 +36,7 @@ const boot = async (page: Page, blocks: OutputData['blocks']): Promise<void> => 
       container.setAttribute('data-blok-testid', holder);
       document.body.appendChild(container);
 
-      const blok = new window.Blok({ holder, data: { blocks: seed } } as BlokConfig);
+      const blok = new window.Blok({ holder, data: { blocks: seed } });
 
       window.d = blok;
       await blok.isReady;
@@ -128,8 +128,8 @@ test.describe('list keyboard shortcuts', () => {
 
   test('moving a list item carries its nested subtree and preserves the nesting', async ({ page }) => {
     await boot(page, [
-      { id: 'pa', type: 'list', data: { style: 'unordered', text: 'a' }, content: ['ch'] } as OutputData['blocks'][number],
-      { id: 'ch', type: 'list', data: { style: 'unordered', text: 'b', depth: 1 }, parent: 'pa' } as OutputData['blocks'][number],
+      { id: 'pa', type: 'list', data: { style: 'unordered', text: 'a' }, content: ['ch'] },
+      { id: 'ch', type: 'list', data: { style: 'unordered', text: 'b', depth: 1 }, parent: 'pa' },
       li('c'),
     ]);
 
@@ -162,8 +162,8 @@ test.describe('list keyboard shortcuts', () => {
     // selected together. Tab must indent BOTH: 'b' nests structurally under 'a',
     // and 'c' gains one list depth level — instead of doing nothing.
     await boot(page, [
-      { type: 'paragraph', data: { text: 'a' } } as OutputData['blocks'][number],
-      { type: 'paragraph', data: { text: 'b' } } as OutputData['blocks'][number],
+      { type: 'paragraph', data: { text: 'a' } },
+      { type: 'paragraph', data: { text: 'b' } },
       li('c'),
     ]);
 

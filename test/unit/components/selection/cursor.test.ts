@@ -215,7 +215,7 @@ describe('SelectionCursor', () => {
     it('returns element bounding rect when selection is unavailable', () => {
       const { element } = createContentEditable();
 
-      vi.spyOn(window, 'getSelection').mockReturnValue(null as unknown as Selection);
+      vi.spyOn(window, 'getSelection').mockReturnValue(null);
 
       const result = SelectionCursor.setCursor(element, 0);
       const expected = element.getBoundingClientRect();
@@ -295,7 +295,7 @@ describe('SelectionCursor', () => {
 
   describe('collapseToEnd', () => {
     it('does nothing when there is no selection', () => {
-      vi.spyOn(window, 'getSelection').mockReturnValue(null as unknown as Selection);
+      vi.spyOn(window, 'getSelection').mockReturnValue(null);
 
       expect(() => SelectionCursor.collapseToEnd()).not.toThrow();
 

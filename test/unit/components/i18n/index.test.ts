@@ -16,7 +16,7 @@ import { EventsDispatcher } from '../../../../src/components/utils/events';
  */
 const createI18nModule = (config: Partial<BlokConfig> = {}): I18n => {
   return new I18n({
-    config: config as BlokConfig,
+    config: config,
     eventsDispatcher: new EventsDispatcher(),
   });
 };

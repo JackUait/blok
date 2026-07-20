@@ -90,7 +90,7 @@ const URL_ATTR_FALLBACK_PATTERN = /\s*(href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([
 export const sanitizeBlocks = (
   blocksData: Array<Pick<SavedData, 'data' | 'tool'>>,
   sanitizeConfig: SanitizerConfig | ToolSanitizerConfig | ((toolName: string) => SanitizerConfig | ToolSanitizerConfig | undefined),
-  globalSanitizer: SanitizerConfig = {} as SanitizerConfig
+  globalSanitizer: SanitizerConfig = {}
 ): Array<Pick<SavedData, 'data' | 'tool'>> => {
   return blocksData.map((block) => {
     const toolConfig = isFunction(sanitizeConfig) ? sanitizeConfig(block.tool) : sanitizeConfig;
@@ -115,7 +115,7 @@ export const sanitizeBlocks = (
  * @param {SanitizerConfig} customConfig - allowed tags
  * @returns {string} clean HTML
  */
-export const clean = (taintString: string, customConfig: SanitizerConfig = {} as SanitizerConfig): string => {
+export const clean = (taintString: string, customConfig: SanitizerConfig = {}): string => {
   /**
    * PLAINTEXT is a field-level directive, not a tag rule — html-janitor has no
    * meaning for it. Drop such entries at the boundary so a config carrying one
@@ -230,7 +230,7 @@ const cleanObject = (
     cleanData[fieldName] = deepSanitize(currentIterationItem as DeepData, ruleForItem as DeepSanitizerRule, globalRules);
   }
 
-  return cleanData as Record<string, unknown>;
+  return cleanData;
 };
 
 /**
@@ -361,7 +361,7 @@ export const stripUnsafeUrlsDeep = (
   data: BlockToolData,
   rules?: SanitizerConfig | ToolSanitizerConfig
 ): BlockToolData => {
-  return stripUnsafeUrlsDeepValue(data as DeepData, rules as DeepSanitizerRule) as BlockToolData;
+  return stripUnsafeUrlsDeepValue(data, rules as DeepSanitizerRule) as BlockToolData;
 };
 
 const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule): DeepData => {
@@ -401,10 +401,10 @@ const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule): D
  */
 const cloneSanitizerConfig = (config: SanitizerConfig): SanitizerConfig => {
   if (isEmpty(config)) {
-    return {} as SanitizerConfig;
+    return {};
   }
 
-  const cloned: SanitizerConfig = {} as SanitizerConfig;
+  const cloned: SanitizerConfig = {};
 
   for (const tag in config) {
     if (!Object.prototype.hasOwnProperty.call(config, tag)) {
@@ -475,7 +475,7 @@ const cloneTagConfig = (rule: SanitizerRule): SanitizerRule => {
   }
 
   if (isObject(rule)) {
-    return deepMerge({}, rule as Record<string, unknown>) as SanitizerRule;
+    return deepMerge({}, rule as Record<string, unknown>);
   }
 
   return rule;
@@ -491,7 +491,7 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
     return cloneSanitizerConfig(fieldRules);
   }
 
-  const merged: SanitizerConfig = {} as SanitizerConfig;
+  const merged: SanitizerConfig = {};
 
   for (const tag in globalRules) {
     if (!Object.prototype.hasOwnProperty.call(globalRules, tag)) {
@@ -510,13 +510,13 @@ const mergeTagRules = (globalRules: SanitizerConfig, fieldRules: SanitizerConfig
      * user allowed globally.
      */
     if (isFunction(fieldValue) && isFunction(globalValue)) {
-      merged[tag] = cloneTagConfig(fieldValue as SanitizerRule);
+      merged[tag] = cloneTagConfig(fieldValue);
 
       continue;
     }
 
     if (isFunction(globalValue)) {
-      merged[tag] = cloneTagConfig(globalValue as SanitizerRule);
+      merged[tag] = cloneTagConfig(globalValue);
 
       continue;
     }
@@ -574,7 +574,7 @@ const getEffectiveRuleForString = (
   }
 
   if (rule === false) {
-    return {} as SanitizerConfig;
+    return {};
   }
 
   if (isEmpty(globalRules)) {
@@ -635,7 +635,7 @@ export const composeSanitizerConfig = (
 
         base[tag] = targetIsPlainObject
           ? deepMerge({}, targetValue as SanitizerConfig)
-          : cloneTagConfig(sourceValue as SanitizerRule);
+          : cloneTagConfig(sourceValue);
 
         continue;
       }
@@ -646,7 +646,7 @@ export const composeSanitizerConfig = (
         continue;
       }
 
-      base[tag] = cloneTagConfig(sourceValue as SanitizerRule);
+      base[tag] = cloneTagConfig(sourceValue);
     }
   });
 

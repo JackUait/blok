@@ -53,7 +53,7 @@ function makeRect(width: number, left = 0): DOMRect {
     x: left,
     y: 0,
     toJSON: () => ({}),
-  } as DOMRect;
+  };
 }
 
 const patternEvent = (key: string, url: string): PatternPasteEvent =>
@@ -220,9 +220,9 @@ describe('Embed tool', () => {
         service: 'youtube',
         source: 'https://youtu.be/dQw4w9WgXcQ',
         embed: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      } as EmbedData)
+      })
     ).toBe(true);
-    expect(tool.validate({ service: 'youtube', source: '', embed: '' } as EmbedData)).toBe(false);
+    expect(tool.validate({ service: 'youtube', source: '', embed: '' })).toBe(false);
   });
 });
 
@@ -1105,7 +1105,7 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
         service: 'youtube',
         source: 'https://youtu.be/dQw4w9WgXcQ',
         embed: 'javascript:alert(1)',
-      } as EmbedData)
+      })
     ).toBe(false);
   });
 });

@@ -173,7 +173,7 @@ test.describe('Container paste regression: no ejection on save (toggle, toggleab
 
     expect(firstSave).toBeDefined();
 
-    await createBlok(page, firstSave as OutputData);
+    await createBlok(page, firstSave);
 
     const secondSave = await page.evaluate(async () => window.blokInstance?.save());
     const orphaned = secondSave?.blocks.filter(b => b.type !== 'toggle' && b.parent === undefined);

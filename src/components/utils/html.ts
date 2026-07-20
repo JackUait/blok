@@ -37,9 +37,16 @@ export const stripFakeBackgroundElements = (html: string): string => {
   return tempDiv.innerHTML;
 };
 
-interface StatefulMoveParent extends Element {
+/**
+ * An intersection rather than `interface extends Element`: TypeScript 6's
+ * lib.dom.d.ts declares `moveBefore` as a required member of ParentNode, and an
+ * interface may not redeclare an inherited member as optional. Intersections
+ * skip that declaration-compatibility check, so this compiles on both the 5.9
+ * libs (no `moveBefore` at all) and the 6.0 libs (required `moveBefore`).
+ */
+type StatefulMoveParent = Element & {
   moveBefore?(node: Node, reference: Node | null): void;
-}
+};
 
 /**
  * Repositions an already-attached node within `parent`, inserting it before

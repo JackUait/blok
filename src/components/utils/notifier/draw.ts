@@ -16,7 +16,7 @@ export const CSS = {
   notification: twJoin(
     'relative flex items-center justify-center mt-2 py-2 px-6',
     'bg-[#1c1c1e] text-[#f5f5f5]',
-    'text-[15px] font-normal leading-[1.4] tracking-[-0.015em] wrap-break-word overflow-hidden',
+    'text-[15px] font-normal leading-1.4 tracking-[-0.015em] wrap-break-word overflow-hidden',
     'rounded-[14px]',
     'shadow-[0_8px_32px_rgba(0,0,0,0.4),0_1px_4px_rgba(0,0,0,0.25)]',
     'border border-white/[0.08]'
@@ -27,7 +27,7 @@ export const CSS = {
   okBtn: 'bg-white/15 text-[#f5f5f5] hover:bg-white/25',
   cancelBtn: 'bg-white/8 text-[#a1a1aa] hover:bg-white/12',
   input: twJoin(
-    'max-w-[140px] py-[5px] px-3 bg-white/10 border border-white/10 rounded-[7px]',
+    'max-w-35 py-[5px] px-3 bg-white/10 border border-white/10 rounded-[7px]',
     'text-[13px] text-[#e4e4e7] outline-hidden',
     'placeholder:text-white/30 focus:border-white/20'
   ),

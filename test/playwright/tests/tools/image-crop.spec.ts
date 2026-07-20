@@ -38,7 +38,7 @@ const seedImage = async (
       type: 'image',
       data: { url: SAMPLE_IMAGE_URL, ...(crop ? { crop } : {}) },
     }],
-  } as OutputData;
+  };
   await page.goto(TEST_PAGE_URL);
   await page.evaluate(async ({ holder, initialData }) => {
     document.getElementById(holder)?.remove();

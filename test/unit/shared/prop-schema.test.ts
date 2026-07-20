@@ -16,13 +16,13 @@ describe('fillDefaults', () => {
   });
 
   it('returns ONLY schema keys, dropping unknown incoming keys', () => {
-    const result = fillDefaults<CounterData>(schema, { count: 1, extra: 'x' } as Record<string, unknown>);
+    const result = fillDefaults<CounterData>(schema, { count: 1, extra: 'x' });
 
     expect(Object.keys(result).sort()).toEqual(['count', 'label']);
   });
 
   it('refills a cleared (undefined) key with its default, never dropping it', () => {
-    const result = fillDefaults<CounterData>(schema, { count: undefined, label: 'hi' } as Record<string, unknown>);
+    const result = fillDefaults<CounterData>(schema, { count: undefined, label: 'hi' });
 
     expect(result).toEqual({ count: 0, label: 'hi' });
   });

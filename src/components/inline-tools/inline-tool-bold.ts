@@ -57,7 +57,7 @@ export class BoldInlineTool implements InlineTool {
     return {
       strong: {},
       b: {},
-    } as SanitizerConfig;
+    };
   }
 
   private static markerSequence = 0;

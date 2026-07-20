@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
-import type { BlokConfig, OutputData } from '@/types';
+import type { OutputData } from '@/types';
 import { modificationsObserverBatchTimeout, BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
 import { BlockAddedMutationType } from '../../../types/events/block/BlockAdded';
@@ -229,7 +229,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         }
       };
 
-      const blok = new window.Blok(blokConfig as BlokConfig);
+      const blok = new window.Blok(blokConfig);
 
       windowObj.blokInstance = blok;
 

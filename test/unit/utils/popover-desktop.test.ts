@@ -295,7 +295,7 @@ beforeEach(() => {
       callback(0);
 
       return 0;
-    }) as typeof window.requestAnimationFrame;
+    });
   }
 
   rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {

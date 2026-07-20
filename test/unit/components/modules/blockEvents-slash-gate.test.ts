@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockEvents } from '../../../../src/components/modules/blockEvents';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../types';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { Block } from '../../../../src/components/block';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
@@ -25,7 +24,7 @@ const createBlockEvents = (currentBlock: Block | undefined, overrides: {
   wrapper?: HTMLElement;
 } = {}): BlockEvents => {
   const blockEvents = new BlockEvents({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 

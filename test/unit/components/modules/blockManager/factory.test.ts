@@ -235,7 +235,7 @@ const createMockConstructable = (): BlockToolConstructable => {
     rendered?(): void {}
   }
 
-  return MockBlockTool as BlockToolConstructable;
+  return MockBlockTool;
 };
 
 /**

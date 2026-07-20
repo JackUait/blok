@@ -227,7 +227,7 @@ test.describe('blockTuneAdapter', () => {
 
       expect(tool.create(data, blockApi)).toBeInstanceOf(
         // Test: checking instance of mock class, cast to class type
-        options.constructable as unknown as typeof MockBlockTune
+        options.constructable
       );
     });
 

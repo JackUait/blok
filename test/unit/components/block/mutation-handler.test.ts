@@ -3,7 +3,6 @@ import { MutationHandler } from '../../../../src/components/block/mutation-handl
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import { RedactorDomChanged } from '../../../../src/components/events';
-import type { RedactorDomChangedPayload } from '../../../../src/components/events/RedactorDomChanged';
 
 describe('MutationHandler', () => {
   let toolElement: HTMLElement | null;
@@ -67,7 +66,7 @@ describe('MutationHandler', () => {
       // Emit event with both mutations
       eventBus.emit(RedactorDomChanged, {
         mutations: [toolMutation, otherMutation],
-      } as RedactorDomChangedPayload);
+      });
 
       expect(onMutation).toHaveBeenCalledTimes(1);
       expect(onMutation).toHaveBeenCalledWith([toolMutation]);
@@ -85,7 +84,7 @@ describe('MutationHandler', () => {
 
       eventBus.emit(RedactorDomChanged, {
         mutations: [mutation],
-      } as RedactorDomChangedPayload);
+      });
 
       expect(onMutation).toHaveBeenCalledWith([mutation]);
     });
@@ -100,7 +99,7 @@ describe('MutationHandler', () => {
 
       eventBus.emit(RedactorDomChanged, {
         mutations: [mutation],
-      } as RedactorDomChangedPayload);
+      });
 
       expect(onMutation).not.toHaveBeenCalled();
     });
@@ -114,7 +113,7 @@ describe('MutationHandler', () => {
 
       eventBus.emit(RedactorDomChanged, {
         mutations: [otherMutation],
-      } as RedactorDomChangedPayload);
+      });
 
       expect(onMutation).not.toHaveBeenCalled();
     });
@@ -130,7 +129,7 @@ describe('MutationHandler', () => {
 
       eventBus.emit(RedactorDomChanged, {
         mutations: [createMutationRecord()],
-      } as RedactorDomChangedPayload);
+      });
 
       expect(onMutation).toHaveBeenCalledTimes(1);
     });
@@ -143,7 +142,7 @@ describe('MutationHandler', () => {
 
       eventBus.emit(RedactorDomChanged, {
         mutations: [createMutationRecord()],
-      } as RedactorDomChangedPayload);
+      });
 
       expect(onMutation).toHaveBeenCalledTimes(1);
     });

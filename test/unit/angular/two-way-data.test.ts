@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { OutputData } from '@/types';
@@ -15,6 +15,7 @@ function doc(text: string): OutputData {
 type CoreOnSave = (data: OutputData) => void;
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
   template: `<blok-editor [(data)]="data"></blok-editor>`,
@@ -24,6 +25,7 @@ class TwoWayHost {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
   template: `<blok-editor [data]="data"></blok-editor>`,

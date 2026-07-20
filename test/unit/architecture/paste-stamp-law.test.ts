@@ -55,7 +55,6 @@ import { Quote } from '../../../src/tools/quote';
 import { Table } from '../../../src/tools/table';
 import { ToggleItem } from '../../../src/tools/toggle';
 import { VideoTool } from '../../../src/tools/video';
-import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { PasteConfig } from '../../../types/configs/paste-config';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
@@ -97,7 +96,7 @@ const TOOL_CLASSES: unknown[] = [
 
 const builder = new SanitizerConfigBuilder(
   {} as unknown as ToolsCollection<BlockToolAdapter>,
-  {} as BlokConfig
+  {}
 );
 
 const pasteConfigUnion = (): Set<string> => {

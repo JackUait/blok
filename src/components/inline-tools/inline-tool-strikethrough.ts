@@ -50,7 +50,7 @@ export class StrikethroughInlineTool implements InlineTool {
   public static get sanitize(): SanitizerConfig {
     return {
       s: {},
-    } as SanitizerConfig;
+    };
   }
 
   /**

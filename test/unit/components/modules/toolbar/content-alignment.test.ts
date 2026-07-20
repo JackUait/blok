@@ -33,7 +33,7 @@ describe('toolbar content-alignment helpers', () => {
       x: left,
       y: 0,
       toJSON: () => ({}),
-    } as DOMRect;
+    };
   };
 
   beforeEach(() => {

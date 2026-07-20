@@ -1,4 +1,4 @@
-import { Component, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -8,6 +8,7 @@ import { blokRegistry } from './_mock-blok';
 import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
   template: `<blok-editor></blok-editor>`,

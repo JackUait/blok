@@ -6,7 +6,6 @@ import type { DragPreview } from '../../../../src/components/modules/drag/previe
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../types';
 import type { Block } from '../../../../src/components/block';
 import { DATA_ATTR } from '../../../../src/components/constants';
 import * as tooltip from '../../../../src/components/utils/tooltip';
@@ -186,7 +185,7 @@ const createDragManager = (overrides: ModuleOverrides = {}): DragManagerSetup =>
     YjsManager: yjsManager as unknown as BlokModules['YjsManager'],
   } as BlokModules;
   const dragManager = new DragManager({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
@@ -1605,7 +1604,7 @@ describe('DragManager', () => {
 
       // Drop with Alt key held
        
-      document.dispatchEvent(createMouseEvent('mouseup', { altKey: true } as MouseEventInit));
+      document.dispatchEvent(createMouseEvent('mouseup', { altKey: true }));
 
       // Wait for async duplication
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -1659,7 +1658,7 @@ describe('DragManager', () => {
 
       // Drop with Alt key held but no target
 
-      document.dispatchEvent(createMouseEvent('mouseup', { altKey: true } as MouseEventInit));
+      document.dispatchEvent(createMouseEvent('mouseup', { altKey: true }));
 
       // Wait for async duplication
       await new Promise(resolve => setTimeout(resolve, 0));

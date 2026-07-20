@@ -1812,4 +1812,104 @@ describe('DatabaseTool', () => {
       tool.destroy();
     });
   });
+
+  describe('column position ordering (regression)', () => {
+    /** Reads the current select options of the group-by property off the tool's model. */
+    const readOptions = (tool: DatabaseTool): Array<{ id: string; position: string }> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const model = (tool as any).model as DatabaseModel;
+      const prop = model.getProperty('prop-status');
+
+      return (prop?.config?.options ?? []).map((o) => ({ id: o.id, position: o.position }));
+    };
+
+    /** Fires the private column-drag onDrop callback. */
+    const dropColumn = (tool: DatabaseTool, result: GroupDragResult): void => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const columnDrag = (tool as any).columnDrag as DatabaseColumnDrag;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onDrop = (columnDrag as any).onDrop as (r: GroupDragResult) => void;
+
+      onDrop(result);
+    };
+
+    it('keeps stored option array sorted by position after a column drop', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const container = document.createElement('div');
+
+      container.appendChild(element);
+      document.body.appendChild(container);
+
+      // Move the last column (opt-done, position a2) to the very front.
+      dropColumn(tool, { optionId: 'opt-done', beforeOptionId: 'opt-todo', afterOptionId: null });
+
+      const positions = readOptions(tool).map((o) => o.position);
+      const sorted = [...positions].sort((a, b) => (a < b ? -1 : 1));
+
+      expect(positions).toEqual(sorted);
+
+      tool.destroy();
+      container.remove();
+    });
+
+    it('gives a newly added column a position after every existing column', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const container = document.createElement('div');
+
+      container.appendChild(element);
+      document.body.appendChild(container);
+
+      // Reorder first: this leaves the stored array order stale relative to positions.
+      dropColumn(tool, { optionId: 'opt-done', beforeOptionId: 'opt-todo', afterOptionId: null });
+
+      const before = readOptions(tool);
+
+      queryByData(element, 'data-blok-database-add-column')!.click();
+
+      const after = readOptions(tool);
+      const added = after.filter((o) => !before.some((b) => b.id === o.id));
+
+      expect(added).toHaveLength(1);
+
+      const maxExisting = before.map((o) => o.position).sort((a, b) => (a < b ? -1 : 1)).pop()!;
+
+      expect(added[0].position > maxExisting).toBe(true);
+
+      // No duplicate positions may exist.
+      expect(new Set(after.map((o) => o.position)).size).toBe(after.length);
+
+      tool.destroy();
+      container.remove();
+    });
+
+    it('never asks positionBetween for an out-of-order key pair after reorder + add column', () => {
+      const tool = new DatabaseTool(createDatabaseOptions());
+      const element = tool.render();
+      const container = document.createElement('div');
+
+      container.appendChild(element);
+      document.body.appendChild(container);
+
+      dropColumn(tool, { optionId: 'opt-done', beforeOptionId: 'opt-todo', afterOptionId: null });
+      queryByData(element, 'data-blok-database-add-column')!.click();
+
+      // DOM order is now: done, todo, doing, <new>. Dragging `done` between the
+      // last two DOM neighbours must not produce after > before.
+      const newId = readOptions(tool).map((o) => o.id).find((id) => !['opt-todo', 'opt-doing', 'opt-done'].includes(id))!;
+
+      expect(() => {
+        dropColumn(tool, { optionId: 'opt-done', beforeOptionId: newId, afterOptionId: 'opt-doing' });
+      }).not.toThrow();
+
+      const positions = readOptions(tool).map((o) => o.position);
+
+      expect(new Set(positions).size).toBe(positions.length);
+      expect(positions).toEqual([...positions].sort((a, b) => (a < b ? -1 : 1)));
+
+      tool.destroy();
+      container.remove();
+    });
+  });
 });

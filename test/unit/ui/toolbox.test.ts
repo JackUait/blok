@@ -60,7 +60,7 @@ const lastPopoverItems = vi.hoisted(() => ({ value: [] as unknown[] }));
 /**
  * Captures all params passed to the last PopoverDesktop constructor call
  */
-const lastPopoverParams = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+const lastPopoverParams = vi.hoisted<{ value: Record<string, unknown> }>(() => ({ value: {} }));
 
 vi.mock('../../../src/components/dom', () => ({
   Dom: {
@@ -569,7 +569,7 @@ describe('Toolbox', () => {
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
         ...mocks.blockAPI,
         holder,
-      } as unknown as typeof mocks.blockAPI);
+      });
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -611,7 +611,7 @@ describe('Toolbox', () => {
         holder,
       };
 
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nestedBlock as unknown as typeof mocks.blockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nestedBlock);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -653,7 +653,7 @@ describe('Toolbox', () => {
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
         ...mocks.blockAPI,
         holder,
-      } as unknown as typeof mocks.blockAPI);
+      });
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -696,7 +696,7 @@ describe('Toolbox', () => {
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
         ...mocks.blockAPI,
         holder,
-      } as unknown as typeof mocks.blockAPI);
+      });
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -746,7 +746,7 @@ describe('Toolbox', () => {
       vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue({
         ...mocks.blockAPI,
         holder,
-      } as unknown as typeof mocks.blockAPI);
+      });
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1292,7 +1292,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(emptyBlock as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(emptyBlock);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1320,7 +1320,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1416,7 +1416,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(childBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(childBlock);
       vi.mocked(mocks.api.blocks.insert).mockReturnValue(newBlockAPI);
 
       const toolbox = new Toolbox({
@@ -1487,7 +1487,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(blockWithSearchText as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(blockWithSearchText);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1534,7 +1534,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock);
       vi.mocked(mocks.api.blocks.convert).mockResolvedValue({ id: 'converted-block-id' } as BlockAPI);
 
       const toolbox = new Toolbox({
@@ -1571,7 +1571,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(slashOnlyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(slashOnlyBlock);
 
       const toolbox = new Toolbox({
         api: mocks.api,
@@ -1619,7 +1619,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock);
       vi.mocked(mocks.api.blocks.convert).mockResolvedValue({ id: 'converted-block-id' } as BlockAPI);
 
       const toolbox = new Toolbox({
@@ -1681,7 +1681,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock);
       vi.mocked(mocks.api.blocks.convert).mockResolvedValue({ id: 'converted-block-id' } as BlockAPI);
 
       const toolbox = new Toolbox({
@@ -1749,7 +1749,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock);
       vi.mocked(mocks.api.blocks.convert).mockResolvedValue(convertedBlock);
 
       const toolbox = new Toolbox({
@@ -1800,7 +1800,7 @@ describe('Toolbox', () => {
       };
 
       vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
-      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock as unknown as BlockAPI);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(nonEmptyBlock);
       vi.mocked(mocks.api.blocks.convert).mockRejectedValue(new Error('not convertable'));
 
       const toolbox = new Toolbox({

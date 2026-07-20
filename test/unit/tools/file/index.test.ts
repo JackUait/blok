@@ -26,7 +26,7 @@ const createOptions = (
   block?: BlockAPI,
   api?: API
 ): BlockToolConstructorOptions<FileData, FileConfig> => ({
-  data: { url: '', ...data } as FileData,
+  data: { url: '', ...data },
   config,
   api: api ?? createMockApi(),
   block: block ?? createMockBlock(),
@@ -123,11 +123,11 @@ describe('FileTool — save & validate', () => {
   });
 
   it('validate() is false for an empty url', () => {
-    expect(new FileTool(createOptions()).validate({ url: '' } as FileData)).toBe(false);
+    expect(new FileTool(createOptions()).validate({ url: '' })).toBe(false);
   });
 
   it('validate() is true for a non-empty url', () => {
-    expect(new FileTool(createOptions()).validate({ url: 'https://cdn/x' } as FileData)).toBe(true);
+    expect(new FileTool(createOptions()).validate({ url: 'https://cdn/x' })).toBe(true);
   });
 });
 

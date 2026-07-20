@@ -246,7 +246,7 @@ describe('block-operations', () => {
       const element = createMockElement('Saved content');
       const data: ListItemData = { text: '', style: 'unordered', checked: false };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]'));
 
       expect(result.text).toBe('Saved content');
       expect(result.style).toBe('unordered');
@@ -264,7 +264,7 @@ describe('block-operations', () => {
       const element = createMockElement('Content', 'checklist');
       const data: ListItemData = { text: '', style: 'checklist', checked: true };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-checklist-content"]') as HTMLElement);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-checklist-content"]'));
 
       expect(result.checked).toBe(true);
     });
@@ -273,7 +273,7 @@ describe('block-operations', () => {
       const element = createMockElement('Content', 'ordered');
       const data: ListItemData = { text: '', style: 'ordered', checked: false, start: 5 };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]'));
 
       expect(result.start).toBe(5);
     });
@@ -282,7 +282,7 @@ describe('block-operations', () => {
       const element = createMockElement('Content', 'ordered');
       const data: ListItemData = { text: '', style: 'ordered', checked: false, start: 1 };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]'));
 
       expect(result.start).toBeUndefined();
     });
@@ -291,7 +291,7 @@ describe('block-operations', () => {
       const element = createMockElement('Content', 'unordered', 2);
       const data: ListItemData = { text: '', style: 'unordered', checked: false, depth: 2 };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]'));
 
       expect(result.depth).toBe(2);
     });
@@ -300,7 +300,7 @@ describe('block-operations', () => {
       const element = createMockElement('Content', 'unordered', 0);
       const data: ListItemData = { text: '', style: 'unordered', checked: false, depth: 0 };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]'));
 
       expect(result.depth).toBeUndefined();
     });
@@ -312,7 +312,7 @@ describe('block-operations', () => {
       const element = createMockElement('Content', 'unordered', 0);
       const data: ListItemData = { text: '', style: 'unordered', checked: false, depth: 0 };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement, 2);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]'), 2);
 
       expect(result.depth).toBe(2);
     });
@@ -323,7 +323,7 @@ describe('block-operations', () => {
       const element = createMockElement('Content', 'unordered', 2);
       const data: ListItemData = { text: '', style: 'unordered', checked: false, depth: 2 };
 
-      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]') as HTMLElement, 0);
+      const result = saveListItem(data, element, () => element.querySelector('[data-blok-testid="list-content-container"]'), 0);
 
       expect(result.depth).toBeUndefined();
     });

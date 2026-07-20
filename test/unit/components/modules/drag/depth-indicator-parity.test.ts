@@ -104,7 +104,7 @@ const validatorBlock = (kind: 'list' | 'other', depth: number): ReturnType<Block
     id: `${kind}-${Math.random()}`,
     name: kind === 'list' ? 'list' : 'paragraph',
     holder: { querySelector: (s: string) => (s === '[role="listitem"]' ? roleItem : null) },
-  } as unknown as ReturnType<BlocksAPI['getBlockByIndex']>;
+  };
 };
 
 /**

@@ -105,7 +105,7 @@ const createBlok = async (
       holder,
       data: initialData,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
-    } as ConstructorParameters<typeof window.Blok>[0]);
+    });
 
     window.blokInstance = blok;
     await blok.isReady;

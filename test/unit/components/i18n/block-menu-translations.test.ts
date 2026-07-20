@@ -19,7 +19,7 @@ import type { BlokConfig, ToolboxConfigEntry } from '../../../../types';
 
 const createI18nModule = (config: Partial<BlokConfig> = {}): I18n => {
   return new I18n({
-    config: config as BlokConfig,
+    config: config,
     eventsDispatcher: new EventsDispatcher(),
   });
 };

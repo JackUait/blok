@@ -46,8 +46,15 @@ vi.mock('@/utils/search', async (importOriginal) => {
 });
 
 describe('Search', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // clearAllMocks does NOT drain a pending mockReturnValueOnce queue, so an
+    // unconsumed stub would leak into the next test and silently change its
+    // results. Reset each mock and reinstate the real implementation so every
+    // test starts from the same state regardless of ordering.
+    const actual = await vi.importActual<typeof import('@/utils/search')>('@/utils/search');
+    vi.mocked(searchUtils.search).mockReset().mockImplementation(actual.search);
+    vi.mocked(searchUtils.getSearchIndex).mockReset().mockImplementation(actual.getSearchIndex);
     localStorage.clear();
   });
 
@@ -236,7 +243,7 @@ describe('Search', () => {
     });
 
     it('traps Tab focus within the panel while open', async () => {
-      vi.mocked(searchUtils.search).mockReturnValueOnce(buildResults(2));
+      vi.mocked(searchUtils.search).mockReturnValue(buildResults(2));
 
       render(
         <I18nProvider>
@@ -284,7 +291,7 @@ describe('Search', () => {
     });
 
     it('returns focus to the trigger element after selecting a result', async () => {
-      vi.mocked(searchUtils.search).mockReturnValueOnce(buildResults(1));
+      vi.mocked(searchUtils.search).mockReturnValue(buildResults(1));
 
       render(
         <I18nProvider>
@@ -326,7 +333,7 @@ describe('Search', () => {
         hash: 'test-single',
         rank: 1,
       };
-      vi.mocked(searchUtils.search).mockReturnValueOnce([singleResult]);
+      vi.mocked(searchUtils.search).mockReturnValue([singleResult]);
 
       render(
         <I18nProvider>
@@ -375,7 +382,7 @@ describe('Search', () => {
         [5, 'результатов'],
       ])('shows "%i %s" for the matching count', async (count, expectedWord) => {
         localStorage.setItem('blok-docs-locale', 'ru');
-        vi.mocked(searchUtils.search).mockReturnValueOnce(buildResults(count));
+        vi.mocked(searchUtils.search).mockReturnValue(buildResults(count));
 
         render(
           <I18nProvider>

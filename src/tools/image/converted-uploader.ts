@@ -9,7 +9,7 @@ export type ConvertedUploadFn = (
 interface UploaderHolder { uploader?: { uploadByFile?: ConvertedUploadFn } }
 
 function asUploaderHolder(value: unknown): UploaderHolder | undefined {
-  return typeof value === 'object' && value !== null ? (value as UploaderHolder) : undefined;
+  return typeof value === 'object' && value !== null ? (value) : undefined;
 }
 
 /**

@@ -179,7 +179,7 @@ test.describe('Duplicate / undo / redo after dropping a block into a column', ()
         { id: 'p1', type: 'paragraph', data: { text: 'Left para' } },
         { id: 'header1', type: 'header', data: { text: 'Dropped header', level: 3 } },
       ],
-    } as OutputData);
+    });
 
     // No columns yet.
     await expect(page.locator('[data-blok-column]')).toHaveCount(0);
@@ -291,7 +291,7 @@ test.describe('Duplicate / undo / redo after dropping a block into a column', ()
         { id: 'p1', type: 'paragraph', data: { text: 'Left para' } },
         { id: 'header1', type: 'header', data: { text: 'Dropped header', level: 3 } },
       ],
-    } as OutputData);
+    });
 
     await expect(page.locator('[data-blok-column]')).toHaveCount(0);
 

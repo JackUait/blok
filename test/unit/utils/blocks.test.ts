@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { BlockAPI, ToolConfig } from '../../../types';
 import type { ConversionConfig } from '../../../types/configs/conversion-config';
-import type { SavedData } from '../../../types/data-formats';
 import type { BlockToolData } from '../../../types/tools/block-tool-data';
 import type { Block } from '../../../src/components/block';
 import type { BlockToolAdapter } from '../../../src/components/tools/block';
@@ -280,7 +279,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -322,7 +321,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -366,7 +365,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -404,7 +403,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -437,7 +436,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -478,7 +477,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { level: 1 },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -509,7 +508,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -549,7 +548,7 @@ describe('blocks utilities', () => {
         tool: 'header',
         data: { level: 1 },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -605,7 +604,7 @@ describe('blocks utilities', () => {
         tool: 'header',
         data: { text: 'Test', level: 2 },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -662,7 +661,7 @@ describe('blocks utilities', () => {
         tool: 'header',
         data: { text: 'Test', level: 2, isToggleable: true },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -696,7 +695,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -726,7 +725,7 @@ describe('blocks utilities', () => {
         tool: 'unknown-tool',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlock(mockBlock, allBlockTools);
 
@@ -1166,7 +1165,7 @@ describe('blocks utilities', () => {
         tool: 'paragraph',
         data: { text: 'Test' },
         time: Date.now(),
-      } as SavedData);
+      });
 
       const result = await getConvertibleToolsForBlocks([mockBlock], allBlockTools);
 

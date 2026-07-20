@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -15,7 +15,7 @@ void BLOK_BLOCK_CONTEXT;
 
 const REGISTRY_CONFIG_KEY = '__blokAngularPortalRegistry';
 
-@Component({ standalone: true, template: '' })
+@Component({ standalone: true, template: '', changeDetection: ChangeDetectionStrategy.Default })
 class NgBlockComponent {}
 
 const NgBlock = createAngularBlock({
@@ -27,6 +27,7 @@ const NgBlock = createAngularBlock({
 class VanillaTool {}
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokContentDirective],
   template: `<div blokContent [config]="cfg"></div>`,

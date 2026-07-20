@@ -42,7 +42,7 @@ class MutationObserverStub {
    * @param mutations Mutation records that simulate DOM changes.
    */
   public trigger(mutations: MutationRecord[]): void {
-    this.callback(mutations, this as unknown as MutationObserver);
+    this.callback(mutations, this);
   }
 }
 
@@ -51,7 +51,7 @@ const createBlockMutationEvent = (
   type: BlockMutationType = 'block-changed'
 ): BlockMutationEvent => new CustomEvent(type, {
   detail: {
-    target: { id } as unknown,
+    target: { id },
   },
 }) as BlockMutationEvent;
 
@@ -68,7 +68,7 @@ describe('ModificationsObserver', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     originalMutationObserver = globalThis.MutationObserver;
-    globalThis.MutationObserver = MutationObserverStub as unknown as typeof MutationObserver;
+    globalThis.MutationObserver = MutationObserverStub;
     MutationObserverStub.lastInstance = null;
   });
 
@@ -238,7 +238,7 @@ describe('ModificationsObserver', () => {
 
     it('serializes the editor and emits onSave with the full OutputData after batching', async () => {
       const onSave = vi.fn();
-      const { eventsDispatcher, apiMethods, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+      const { eventsDispatcher, apiMethods, saverSave } = createObserver({ onSave });
 
       saverSave.mockResolvedValue(sampleOutput);
 
@@ -255,7 +255,7 @@ describe('ModificationsObserver', () => {
       const { eventsDispatcher, saverSave } = createObserver({
         onChange: undefined,
         onSave,
-      } as Partial<BlokConfig>);
+      });
 
       saverSave.mockResolvedValue(sampleOutput);
 
@@ -268,7 +268,7 @@ describe('ModificationsObserver', () => {
 
     it('serializes only once per batch of multiple events (debounced)', async () => {
       const onSave = vi.fn();
-      const { eventsDispatcher, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+      const { eventsDispatcher, saverSave } = createObserver({ onSave });
 
       saverSave.mockResolvedValue(sampleOutput);
 
@@ -282,7 +282,7 @@ describe('ModificationsObserver', () => {
 
     it('does not serialize or emit onSave while disabled', async () => {
       const onSave = vi.fn();
-      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave });
 
       saverSave.mockResolvedValue(sampleOutput);
       observer.disable();
@@ -297,7 +297,7 @@ describe('ModificationsObserver', () => {
     it('does not emit onSave after destroy even if serialization was already in flight', async () => {
       const onSave = vi.fn();
       let resolveSave: (data: OutputData) => void = () => {};
-      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave } as Partial<BlokConfig>);
+      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave });
 
       saverSave.mockReturnValue(
         new Promise<OutputData>((resolve) => {

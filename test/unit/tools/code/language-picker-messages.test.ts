@@ -43,7 +43,7 @@ const createMockAPI = (): API =>
   }) as unknown as API;
 
 const createOptions = (): BlockToolConstructorOptions<CodeData> => ({
-  data: { code: '', language: 'plain text' } as CodeData,
+  data: { code: '', language: 'plain text' },
   config: {},
   api: createMockAPI(),
   readOnly: false,

@@ -221,7 +221,7 @@ describe('attachResizeHandle', () => {
       x: left,
       y: 0,
       toJSON: () => ({}),
-    } as DOMRect;
+    };
   }
 
   it('captures starting width on pointerdown so first move does not jump (center symmetric)', () => {

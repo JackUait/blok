@@ -144,7 +144,7 @@ describe('Uploader — endpoint upload (handleFile)', () => {
   });
 
   it('throws UPLOAD_FAILED when the endpoint responds non-ok', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) } as unknown as Response));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }));
     await expect(new Uploader({ endpoints: '/up' }).handleFile(makeFile()))
       .rejects.toMatchObject({ code: 'UPLOAD_FAILED' });
   });

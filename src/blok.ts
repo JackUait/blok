@@ -1,11 +1,6 @@
 'use strict';
 
-/**
- * Apply polyfills
- */
-import '@babel/register';
-
-import type { BlokConfig, API, EditorWidth, Tokens, Blok as PublicBlok } from '../types';
+import type { BlokConfig, API, EditorWidth, Tokens } from '../types';
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
@@ -428,7 +423,7 @@ class Blok {
       // editor's API the moment it's ready (parity with the React/Vue/Angular
       // adapters, whose `ready` events all emit the live instance). The argument
       // is optional, so existing zero-arg `onReady` handlers are unaffected.
-      onReady(this as unknown as PublicBlok);
+      onReady(this);
 
       return this;
     });

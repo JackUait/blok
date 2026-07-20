@@ -228,7 +228,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
     if (props.readOnly && ViewComponent !== undefined) {
       const { commit: _commit, readOnly: _readOnly, ...viewProps } = props;
 
-      return <ViewComponent {...(viewProps as ReactBlockViewProps<Data, Config>)} />;
+      return <ViewComponent {...(viewProps)} />;
     }
 
     const EditComponent = spec.component;
@@ -348,7 +348,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
     public save(): BlockToolData {
       // The complete, frozen mirror — never the DOM, never partial.
-      return this.mirror as BlockToolData;
+      return this.mirror;
     }
 
     public async setData(newData: BlockToolData): Promise<boolean> {

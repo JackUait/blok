@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
-import type { OutputData } from '@/types';
 import {
   ensureBlokBundleBuilt,
   TEST_PAGE_URL,
@@ -132,7 +131,7 @@ test.describe('Dragging a container block into / between / out of columns', () =
         },
         { id: 'callout1-child', type: 'paragraph', data: { text: 'Inside the callout' }, parent: 'callout1' },
       ],
-    } as OutputData);
+    });
 
     // No columns yet.
     await expect(page.locator('[data-blok-column]')).toHaveCount(0);
@@ -204,7 +203,7 @@ test.describe('Dragging a container block into / between / out of columns', () =
         { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['anchor'] },
         { id: 'anchor', type: 'paragraph', data: { text: 'Right anchor' }, parent: 'c2' },
       ],
-    } as OutputData);
+    });
 
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 
@@ -313,7 +312,7 @@ test.describe('Dragging a container block into / between / out of columns', () =
         { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['c2p1'] },
         { id: 'c2p1', type: 'paragraph', data: { text: 'Right keeper' }, parent: 'c2' },
       ],
-    } as OutputData);
+    });
 
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 

@@ -278,7 +278,7 @@ describe('sanitizer', () => {
         strong: {
           class: true,
         },
-        span: {} as unknown as SanitizerRule,
+        span: {},
       };
 
       const config1: SanitizerConfig = {
@@ -313,7 +313,7 @@ describe('sanitizer', () => {
         span: {},
       };
 
-      const result = composeSanitizerConfig({} as SanitizerConfig, config1, config2);
+      const result = composeSanitizerConfig({}, config1, config2);
 
       expect(result.strong).toBeDefined();
       expect(result.span).toBeDefined();
@@ -636,7 +636,7 @@ describe('sanitizer', () => {
       const paragraphSanitizeConfigWithoutImg: SanitizerConfig = {
         text: {
           br: true,
-        } as unknown as SanitizerRule,
+        },
       };
 
       const result = sanitizeBlocks(blocksData, paragraphSanitizeConfigWithoutImg, {});
@@ -736,7 +736,7 @@ describe('sanitizer', () => {
           p: true,
           ul: true,
           li: true,
-        } as unknown as SanitizerRule,
+        },
       };
 
       const globalSanitizer: SanitizerConfig = {
@@ -1228,7 +1228,7 @@ describe('sanitizer', () => {
         a: 'custom-string' as unknown as SanitizerRule,
       };
 
-      const result = composeSanitizerConfig({} as SanitizerConfig, config);
+      const result = composeSanitizerConfig({}, config);
 
       expect(result.a).toBe('custom-string');
     });
@@ -1240,7 +1240,7 @@ describe('sanitizer', () => {
         a: fn,
       };
 
-      const result = composeSanitizerConfig({} as SanitizerConfig, config);
+      const result = composeSanitizerConfig({}, config);
 
       expect(result.a).toBe(fn);
     });
@@ -1257,7 +1257,7 @@ describe('stripUnsafeUrls plaintext preservation', () => {
   const sanitizeCode = (code: string): string => {
     const [result] = sanitizeBlocks(
       [ { tool: 'code', data: { code } } ],
-      { code: true } as unknown as SanitizerConfig,
+      { code: true },
       {}
     );
 
@@ -1298,7 +1298,7 @@ describe('PLAINTEXT sanitizer rule', () => {
     const [result] = sanitizeBlocks(
       [ { tool: 'code', data: { code: CODE } } ],
       { code: PLAINTEXT } as unknown as SanitizerConfig,
-      { b: true } as unknown as SanitizerConfig
+      { b: true }
     );
 
     expect((result.data as { code: string }).code).toBe(CODE);
@@ -1318,7 +1318,7 @@ describe('PLAINTEXT sanitizer rule', () => {
   it('survives config composition intact', () => {
     const composed = composeSanitizerConfig(
       { code: PLAINTEXT } as unknown as SanitizerConfig,
-      { b: true } as unknown as SanitizerConfig
+      { b: true }
     );
 
     expect(composed.code).toBe(PLAINTEXT);

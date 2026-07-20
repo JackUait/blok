@@ -38,7 +38,7 @@ const TABLE_DATA: OutputData = {
       },
     },
   ],
-} as OutputData;
+};
 
 const create3x3Table = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder, data }) => {

@@ -20,7 +20,7 @@ function stubRect(el: HTMLElement, rect: Partial<DOMRect>): void {
     x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0,
     width: 0, height: 0, toJSON: () => ({}),
     ...rect,
-  } as DOMRect;
+  };
   // eslint-disable-next-line no-param-reassign -- test stub overrides DOM method on the element under test
   el.getBoundingClientRect = () => full;
 }

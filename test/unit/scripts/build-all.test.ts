@@ -77,7 +77,7 @@ describe('buildTasks', () => {
   });
 
   it('orders dist/ writers after the main build (which empties dist/) and everything after fonts', () => {
-    const tasks = byName(buildTasks({ mode: 'production' }) as GraphTask[]);
+    const tasks = byName(buildTasks({ mode: 'production' }));
 
     expect(tasks.get('main')?.deps).toContain('fonts');
 
@@ -87,14 +87,14 @@ describe('buildTasks', () => {
   });
 
   it('lets react and vue build independently of the core dist (core is external)', () => {
-    const tasks = byName(buildTasks({ mode: 'production' }) as GraphTask[]);
+    const tasks = byName(buildTasks({ mode: 'production' }));
 
     expect(tasks.get('react')?.deps ?? []).not.toContain('main');
     expect(tasks.get('vue')?.deps ?? []).not.toContain('main');
   });
 
   it('includes the CLI build when requested, independent of the core dist', () => {
-    const tasks = byName(buildTasks({ mode: 'production', withCli: true }) as GraphTask[]);
+    const tasks = byName(buildTasks({ mode: 'production', withCli: true }));
 
     expect(tasks.get('cli')?.cmd).toBe('node scripts/build-cli.mjs');
     expect(tasks.get('cli')?.deps ?? []).not.toContain('main');

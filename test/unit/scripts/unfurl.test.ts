@@ -284,7 +284,7 @@ describe('createUnfurlHandler', () => {
     expect(target).toBe('https://example.com/start');
     expect(init?.redirect).toBe('follow');
     expect(init?.headers).toMatchObject({
-      'user-agent': expect.stringContaining('BlokDevUnfurl') as unknown as string,
+      'user-agent': expect.stringContaining('BlokDevUnfurl'),
     });
   });
 
@@ -338,7 +338,7 @@ describe('createUnfurlHandler', () => {
 
   it('responds with success: 0 for a non-ok upstream status', async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(htmlResponse('', { ok: false, status: 404 } as Partial<Response>))
+      Promise.resolve(htmlResponse('', { ok: false, status: 404 }))
     );
     const handler = createUnfurlHandler(fetchMock);
     const res = createFakeRes();
@@ -394,7 +394,7 @@ describe('createUnfurlHandler', () => {
       const retryInit = fetchMock.mock.calls[1][1];
 
       expect(retryInit?.headers).toMatchObject({
-        'user-agent': expect.stringContaining('facebookexternalhit') as unknown as string,
+        'user-agent': expect.stringContaining('facebookexternalhit'),
       });
 
       const payload = parsePayload(res);
@@ -408,7 +408,7 @@ describe('createUnfurlHandler', () => {
       const fetchMock = vi
         .fn<(url: string, init?: RequestInit) => Promise<Response>>()
         .mockResolvedValueOnce(htmlResponse('<title>Primary Title</title>'))
-        .mockResolvedValueOnce(htmlResponse('', { ok: false, status: 403 } as Partial<Response>));
+        .mockResolvedValueOnce(htmlResponse('', { ok: false, status: 403 }));
       const handler = createUnfurlHandler(fetchMock);
       const res = createFakeRes();
 

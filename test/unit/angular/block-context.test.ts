@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
@@ -11,7 +11,7 @@ describe('BLOK_BLOCK_CONTEXT', () => {
   it('is injectable and delivers the provided render context', () => {
     const ctx = { commit: vi.fn() } as unknown as AngularBlockRenderContext<unknown>;
 
-    @Component({ standalone: true, template: '' })
+    @Component({ standalone: true, template: '', changeDetection: ChangeDetectionStrategy.Default })
     class Probe {
       readonly received = inject(BLOK_BLOCK_CONTEXT);
     }

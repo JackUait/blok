@@ -51,7 +51,7 @@ const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): un
       typeof entry === 'function' ? { class: entry } : { ...(entry as Record<string, unknown>) };
 
     base.config = {
-      ...((base.config as Record<string, unknown> | undefined) ?? {}),
+      ...((base.config) ?? {}),
       [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry,
     };
     result[name] = base;
@@ -176,7 +176,7 @@ export function useBlok(
       };
     }
 
-    const blok = new BlokRuntime({ ...snapshot, holder }) as unknown as Blok;
+    const blok = new BlokRuntime({ ...snapshot, holder });
 
     state.current = blok;
     setHolder(blok, holder);

@@ -44,7 +44,7 @@ const createToggleOptions = (
   data: Partial<ToggleItemData> = {},
   config: ToggleItemConfig = {}
 ): BlockToolConstructorOptions<ToggleItemData, ToggleItemConfig> => ({
-  data: { text: '', ...data } as ToggleItemData,
+  data: { text: '', ...data },
   config,
   api: createMockAPI(),
   readOnly: false,

@@ -442,7 +442,7 @@ export class Saver extends Module {
       data: {
         ...(item.data as Record<string, unknown>),
         content: content.map(row => row.map(pruneCell)),
-      } as SaverValidatedData['data'],
+      },
     };
   }
 
@@ -653,7 +653,7 @@ export class Saver extends Module {
         data: {
           ...(item.data as Record<string, unknown>),
           content: repairedContent,
-        } as SaverValidatedData['data'],
+        },
       };
     });
   }

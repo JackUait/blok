@@ -10,7 +10,7 @@ import type { UseBlokConfig } from '../../../packages/vue/src/types';
 
 /** Mounts useBlok over a reactive config and resolves the editor immediately. */
 async function mountReady(initial: UseBlokConfig): Promise<{ config: UseBlokConfig; unmount: () => void }> {
-  const config = reactive({ ...initial }) as UseBlokConfig;
+  const config = reactive({ ...initial });
 
   const Harness = defineComponent({
     setup() {
@@ -99,7 +99,7 @@ describe('useBlok reactive props', () => {
   });
 
   it('applies reactive props once after the instance appears (not before ready)', async () => {
-    const config = reactive({ readOnly: true } as UseBlokConfig);
+    const config = reactive({ readOnly: true });
 
     const Harness = defineComponent({
       setup() {

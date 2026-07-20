@@ -44,7 +44,7 @@ const createOptions = (
   data: { withHeadings: false,
     withHeadingColumn: false,
     content: [],
-    ...data } as TableData,
+    ...data },
   config: {},
   api: createMockAPI(),
   readOnly,

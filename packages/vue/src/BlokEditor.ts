@@ -131,7 +131,7 @@ export const BlokEditor = defineComponent({
         };
       }
 
-      return config as UseBlokConfig;
+      return config;
     };
 
     const editor = useBlok(

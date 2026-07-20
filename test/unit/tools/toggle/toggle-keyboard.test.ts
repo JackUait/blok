@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import type { API } from '../../../../types';
 import type { ToggleKeyboardContext } from '../../../../src/tools/toggle/toggle-keyboard';
-import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 
 /**
  * Mock isCaretAtStartOfInput from caret utilities.
@@ -35,7 +34,7 @@ const createMockContext = (overrides: Partial<ToggleKeyboardContext> = {}): Togg
       },
     } as unknown as API,
     blockId: 'test-block-id',
-    data: { text: '' } as ToggleItemData,
+    data: { text: '' },
     element: document.createElement('div'),
     getContentElement: () => contentElement,
     syncContentFromDOM: vi.fn(),

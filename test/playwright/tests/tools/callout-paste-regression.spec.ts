@@ -188,7 +188,7 @@ test.describe('Callout paste regression: children never ejected on save', () => 
 
     // Reload the editor with the saved output — this exercises the insertMany
     // load-time reconciliation.
-    await createBlok(page, firstSave as OutputData);
+    await createBlok(page, firstSave);
 
     const secondSave = await page.evaluate(async () => window.blokInstance?.save());
 

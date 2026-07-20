@@ -279,7 +279,7 @@ test.describe('Dragging a block OUT of a column back to root', () => {
         { id: 'c2', type: 'column', data: {}, parent: 'cl1', content: ['keeper'] },
         { id: 'keeper', type: 'paragraph', data: { text: 'Right keeper' }, parent: 'c2' },
       ],
-    } as OutputData);
+    });
 
     await expect(page.locator('[data-blok-column]')).toHaveCount(2);
 

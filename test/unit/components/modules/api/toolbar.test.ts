@@ -4,7 +4,6 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import * as utils from '../../../../../src/components/utils';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
 
 type ToolbarBlokMock = {
@@ -36,7 +35,7 @@ describe('ToolbarAPI', () => {
   const createToolbarApi = (overrides?: Partial<ToolbarBlokMock>): void => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
     const moduleConfig: ModuleConfig = {
-      config: {} as BlokConfig,
+      config: {},
       eventsDispatcher,
     };
 

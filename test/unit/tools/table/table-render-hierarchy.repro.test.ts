@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('@babel/register', () => ({}));
 
 import Blok from '../../../../src/blok';
 import { Table } from '../../../../src/tools/table/index';

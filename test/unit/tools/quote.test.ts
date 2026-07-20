@@ -23,7 +23,7 @@ const createQuoteOptions = (
   data: Partial<QuoteData> = {},
   readOnly = false
 ): BlockToolConstructorOptions<QuoteData> => ({
-  data: { text: '', size: 'default', ...data } as QuoteData,
+  data: { text: '', size: 'default', ...data },
   api: createMockAPI(),
   readOnly,
   block: {} as never,

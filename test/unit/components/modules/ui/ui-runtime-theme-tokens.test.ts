@@ -32,7 +32,7 @@ const createUI = (configOverrides: Partial<BlokConfig> = {}): UI => {
       holder,
       minHeight: 50,
       ...configOverrides,
-    } as BlokConfig,
+    },
     eventsDispatcher: {
       on: vi.fn(),
       off: vi.fn(),
@@ -161,7 +161,7 @@ describe('UI theme tokens before nodes exist', () => {
     document.body.appendChild(holder);
 
     return new UI({
-      config: { holder, minHeight: 50 } as BlokConfig,
+      config: { holder, minHeight: 50 },
       eventsDispatcher: {
         on: vi.fn(),
         off: vi.fn(),
@@ -207,7 +207,7 @@ describe('UI theme tokens before nodes exist', () => {
         holder,
         minHeight: 50,
         style: { tokens: { '--blok-popover-bg': '#ffffff' } },
-      } as BlokConfig,
+      },
       eventsDispatcher: {
         on: vi.fn(),
         off: vi.fn(),

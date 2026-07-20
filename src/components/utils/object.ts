@@ -56,7 +56,7 @@ export const deepMerge = <T extends Record<string, unknown>> (target: T, ...sour
       return acc;
     }
 
-    return deepMergeTwo(acc, source as Record<string, unknown>);
+    return deepMergeTwo(acc, source);
   }, target as Record<string, unknown>);
 
   Object.assign(target, merged);

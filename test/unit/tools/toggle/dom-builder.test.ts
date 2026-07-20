@@ -7,10 +7,9 @@ import {
 } from '../../../../src/tools/toggle/constants';
 import { buildToggleItem, buildArrow } from '../../../../src/tools/toggle/dom-builder';
 import type { ToggleDOMBuilderContext } from '../../../../src/tools/toggle/dom-builder';
-import type { ToggleItemData } from '../../../../src/tools/toggle/types';
 
 const createDefaultContext = (overrides: Partial<ToggleDOMBuilderContext> = {}): ToggleDOMBuilderContext => ({
-  data: { text: 'Hello toggle' } as ToggleItemData,
+  data: { text: 'Hello toggle' },
   readOnly: false,
   isOpen: false,
   keydownHandler: null,

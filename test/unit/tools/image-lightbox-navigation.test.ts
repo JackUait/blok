@@ -180,7 +180,7 @@ describe('openLightbox navigation', () => {
       document.body.appendChild(el);
       vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
         left, top: 0, right: left + 100, bottom: 100, width: 100, height: 100, x: left, y: 0, toJSON: () => ({}),
-      } as DOMRect);
+      });
       return el;
     };
 

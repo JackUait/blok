@@ -13,7 +13,7 @@ import { NotifierAPI } from '../../../../../src/components/modules/api/notifier'
 const makeConfig = (notifierOverride?: (opts: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void): ModuleConfig => ({
   config: {
     notifier: notifierOverride,
-  } as never,
+  },
   eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as never,
 });
 

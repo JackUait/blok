@@ -82,8 +82,6 @@ vi.mock('../../src/components/core', () => {
   };
 });
 
-// Mock @babel/register
-vi.mock('@babel/register', () => ({}));
 
 // Mock polyfills
 vi.mock('../../src/components/polyfills', () => ({}));

@@ -39,7 +39,7 @@ describe('Touch Handler', () => {
 
     // Mock document.elementFromPoint which is not always available in jsdom
     originalElementFromPoint = document.elementFromPoint;
-    document.elementFromPoint = vi.fn(() => null) as unknown as Document['elementFromPoint'];
+    document.elementFromPoint = vi.fn(() => null);
 
     redactorElement = document.createElement('div');
     document.body.appendChild(redactorElement);
@@ -101,12 +101,12 @@ describe('Touch Handler', () => {
         x: 8,
         y: 0,
         toJSON: () => ({}),
-      } as DOMRect);
+      });
 
       document.elementFromPoint = vi.fn((x: number) => {
         // Pointer probe (x=10, in the gutter) hits the redactor; center probe hits the block
         return x < 100 ? redactorElement : blockChild;
-      }) as unknown as Document['elementFromPoint'];
+      });
 
       const event = new MouseEvent('mousedown', {
         clientX: 10,
@@ -131,9 +131,9 @@ describe('Touch Handler', () => {
         x: 8,
         y: 0,
         toJSON: () => ({}),
-      } as DOMRect);
+      });
 
-      document.elementFromPoint = vi.fn(() => redactorElement) as unknown as Document['elementFromPoint'];
+      document.elementFromPoint = vi.fn(() => redactorElement);
 
       const event = new MouseEvent('mousedown', {
         clientX: 10,

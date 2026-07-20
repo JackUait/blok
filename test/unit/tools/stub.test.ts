@@ -4,7 +4,7 @@ import type { API, BlockAPI } from '@/types';
 import type { BlockToolConstructorOptions } from '@/types/tools/block-tool';
 import { Stub, type StubData } from '../../../src/tools/stub';
 import { Blok } from '../../../src/blok';
-import type { Blok as PublicBlok, BlokConfig, OutputData } from '../../../types';
+import type { Blok as PublicBlok, OutputData } from '../../../types';
 
 const isSaveableBlok = (candidate: Blok): candidate is Blok & Pick<PublicBlok, 'save'> => {
   return 'save' in candidate && typeof candidate.save === 'function';
@@ -181,7 +181,7 @@ describe('Stub tool save output through editor.save()', () => {
     return new Blok({
       holder,
       data,
-    } as unknown as BlokConfig);
+    });
   };
 
   it('mutating a save() result does not corrupt subsequent saves', async () => {

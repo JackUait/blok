@@ -155,7 +155,7 @@ export class TunesManager {
    */
   public extractTunesData(): { [name: string]: BlockTuneData } {
     const tunesData: { [name: string]: BlockTuneData } =
-      { ...this.unavailableTunesData } as { [name: string]: BlockTuneData };
+      { ...this.unavailableTunesData };
 
     [
       ...this.tunesInstances.entries(),

@@ -61,7 +61,7 @@ describe('SelectionController', () => {
         holder: document.createElement('div'),
         minHeight: 50,
         ...options?.configOverrides,
-      } as BlokConfig,
+      },
       eventsDispatcher: eventsDispatcher,
     });
 

@@ -49,7 +49,7 @@ export class CodeInlineTool implements InlineTool {
   public static get sanitize(): SanitizerConfig {
     return {
       code: {},
-    } as SanitizerConfig;
+    };
   }
 
   /**

@@ -167,7 +167,7 @@ describe('DomIterator', () => {
 
       expect(id).toBeTruthy();
       expect(items[0]).toHaveAttribute('aria-selected', 'true');
-      expect(host).toHaveAttribute('aria-activedescendant', id as string);
+      expect(host).toHaveAttribute('aria-activedescendant', id);
     });
 
     it('accepts host via setActiveDescendantHost setter', () => {
@@ -181,7 +181,7 @@ describe('DomIterator', () => {
       const id = items[1].getAttribute('id');
 
       expect(id).toBeTruthy();
-      expect(host).toHaveAttribute('aria-activedescendant', id as string);
+      expect(host).toHaveAttribute('aria-activedescendant', id);
     });
 
     it('moves aria-selected/aria-activedescendant to the new item and clears the old one', () => {
@@ -192,14 +192,14 @@ describe('DomIterator', () => {
       iterator.next();
       const firstId = items[0].getAttribute('id');
 
-      expect(host).toHaveAttribute('aria-activedescendant', firstId as string);
+      expect(host).toHaveAttribute('aria-activedescendant', firstId);
 
       iterator.next();
       const secondId = items[1].getAttribute('id');
 
       expect(items[0]).not.toHaveAttribute('aria-selected');
       expect(items[1]).toHaveAttribute('aria-selected', 'true');
-      expect(host).toHaveAttribute('aria-activedescendant', secondId as string);
+      expect(host).toHaveAttribute('aria-activedescendant', secondId);
     });
 
     it('clears aria-selected and host aria-activedescendant on dropCursor', () => {
@@ -221,7 +221,7 @@ describe('DomIterator', () => {
 
       iterator.setCursor(0);
 
-      expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+      expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id'));
       expect(items[0]).toHaveAttribute('aria-selected', 'true');
 
       iterator.setActiveDescendantHost(null);
@@ -240,12 +240,12 @@ describe('DomIterator', () => {
 
       const id = items[1].getAttribute('id');
 
-      expect(hostA).toHaveAttribute('aria-activedescendant', id as string);
+      expect(hostA).toHaveAttribute('aria-activedescendant', id);
 
       iterator.setActiveDescendantHost(hostB);
 
       expect(hostA).not.toHaveAttribute('aria-activedescendant');
-      expect(hostB).toHaveAttribute('aria-activedescendant', id as string);
+      expect(hostB).toHaveAttribute('aria-activedescendant', id);
       expect(items[1]).toHaveAttribute('aria-selected', 'true');
     });
 
@@ -276,7 +276,7 @@ describe('DomIterator', () => {
         iterator.setCursor(0);
 
         expect(items[0].hasAttribute('aria-selected')).toBe(false);
-        expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+        expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id'));
       }
     );
 
@@ -354,12 +354,12 @@ describe('DomIterator', () => {
       const iterator = new DomIterator(items, focusedClass, host);
 
       iterator.setCursorToFirst();
-      expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id') as string);
+      expect(host).toHaveAttribute('aria-activedescendant', items[0].getAttribute('id'));
 
       iterator.setCursorToLast();
       const last = items[items.length - 1];
 
-      expect(host).toHaveAttribute('aria-activedescendant', last.getAttribute('id') as string);
+      expect(host).toHaveAttribute('aria-activedescendant', last.getAttribute('id'));
     });
   });
 

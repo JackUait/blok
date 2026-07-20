@@ -59,7 +59,7 @@ vi.mock('../../../src/blok', () => ({
         return Promise.resolve();
       });
 
-      instances.push(this as unknown as MockInstance);
+      instances.push(this);
     }
   },
 }));

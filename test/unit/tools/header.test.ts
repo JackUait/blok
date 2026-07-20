@@ -37,7 +37,7 @@ const createHeaderOptions = (
   data: Partial<HeaderData> = {},
   config: HeaderConfig = {}
 ): BlockToolConstructorOptions<HeaderData, HeaderConfig> => ({
-  data: { text: '', level: 2, ...data } as HeaderData,
+  data: { text: '', level: 2, ...data },
   config,
   api: createMockAPI(),
   readOnly: false,
@@ -478,7 +478,7 @@ describe('Header Tool - Custom Configurations', () => {
 
       it('starts open when isToggleable is true in readOnly mode', () => {
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true },
           config: {},
           api: createMockAPI(),
           readOnly: true,
@@ -573,7 +573,7 @@ describe('Header Tool - Custom Configurations', () => {
         const getChildren = api.blocks.getChildren as unknown as ReturnType<typeof vi.fn>;
         getChildren.mockReturnValue([]);
         const header = new Header({
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true },
           config: {},
           api,
           readOnly: false,
@@ -592,7 +592,7 @@ describe('Header Tool - Custom Configurations', () => {
         childHolder.textContent = 'Some body text';
         getChildren.mockReturnValue([{ holder: childHolder }]);
         const header = new Header({
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true },
           config: {},
           api,
           readOnly: false,
@@ -674,7 +674,7 @@ describe('Header Tool - Custom Configurations', () => {
         (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true },
           config: {},
           api: mockAPI,
           readOnly: false,
@@ -881,7 +881,7 @@ describe('Header Tool - Custom Configurations', () => {
         (mockAPI.blocks as unknown as Record<string, unknown>).getChildren = vi.fn().mockReturnValue(childBlocks);
 
         const options: BlockToolConstructorOptions<HeaderData, HeaderConfig> = {
-          data: { text: 'Toggle Heading', level: 2, isToggleable: true } as HeaderData,
+          data: { text: 'Toggle Heading', level: 2, isToggleable: true },
           config: {},
           api: mockAPI,
           readOnly: false,
@@ -1134,7 +1134,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
     })();
 
     const header = new Header({
-      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      data: { text: 'My Toggle', level: 2, isToggleable: true },
       config: {},
       api: mockAPI,
       readOnly: false,
@@ -1183,7 +1183,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
     })();
 
     const header = new Header({
-      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      data: { text: 'My Toggle', level: 2, isToggleable: true },
       config: {},
       api: mockAPI,
       readOnly: false,
@@ -1223,7 +1223,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
     } as unknown as API;
 
     const header = new Header({
-      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      data: { text: 'My Toggle', level: 2, isToggleable: true },
       config: {},
       api: mockAPI,
       readOnly: true,
@@ -1264,7 +1264,7 @@ describe('Header Tool - Toggle heading body placeholder click', () => {
 
     // No block id passed — use undefined cast to simulate missing block
     const header = new Header({
-      data: { text: 'My Toggle', level: 2, isToggleable: true } as HeaderData,
+      data: { text: 'My Toggle', level: 2, isToggleable: true },
       config: {},
       api: mockAPI,
       readOnly: false,
@@ -1320,7 +1320,7 @@ describe('Header Tool - setData() for undo/redo', () => {
     } as unknown as API;
 
     const header = new Header({
-      data: { text: 'Hello', level: 2, isToggleable: true, isOpen: true, ...data } as HeaderData,
+      data: { text: 'Hello', level: 2, isToggleable: true, isOpen: true, ...data },
       config: {},
       api,
       readOnly: false,

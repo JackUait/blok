@@ -2119,7 +2119,7 @@ describe('TableCellSelection', () => {
         observe(el: Element): void { observedElements.push(el); }
         unobserve(): void { /* no-op */ }
         disconnect(): void { disconnectCalls++; }
-      } as unknown as typeof ResizeObserver;
+      };
 
       // Re-create selection with the mocked ResizeObserver
       selection.destroy();
@@ -2178,7 +2178,7 @@ describe('TableCellSelection', () => {
       // Fire the resize observer callback
       const callback = resizeCallbacks[resizeCallbacks.length - 1];
 
-      callback([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+      callback([], {} as ResizeObserver);
 
       expect(overlay.style.height).not.toBe(initialHeight);
     });

@@ -19,7 +19,7 @@ const createColumnOptions = (
   api: API = createMockAPI(),
   readOnly = false
 ): BlockToolConstructorOptions<ColumnData> => ({
-  data: { ...data } as ColumnData,
+  data: { ...data },
   config: {},
   api,
   readOnly,

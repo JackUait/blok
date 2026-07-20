@@ -48,7 +48,7 @@ const createConstructableDouble = (): ConstructableDouble => {
   }
 
   return {
-    constructable: TestBlockTune as unknown as BlockTuneConstructable,
+    constructable: TestBlockTune,
     classRef: TestBlockTune,
     calls,
   };
@@ -97,7 +97,7 @@ describe('BlockTuneAdapter', () => {
 
   const createData = (): BlockTuneData => ({
     alignment: 'center',
-  }) as BlockTuneData;
+  });
 
   it('reports tune type metadata', () => {
     const { adapter } = setupAdapter();

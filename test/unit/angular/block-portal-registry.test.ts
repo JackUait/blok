@@ -1,5 +1,6 @@
 import {
   ApplicationRef,
+  ChangeDetectionStrategy,
   Component,
   EnvironmentInjector,
   ErrorHandler,
@@ -15,6 +16,7 @@ import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../pac
 import { createBlockPortalRegistry } from '../../../packages/angular/src/block-portal-registry';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   template: `<span class="view">{{ ctx.data().count }}</span>`,
 })
@@ -23,6 +25,7 @@ class CounterProbe {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   template: `<span>boom</span>`,
 })

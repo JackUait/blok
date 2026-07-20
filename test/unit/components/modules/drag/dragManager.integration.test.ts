@@ -10,7 +10,6 @@ import { DragController as DragManager } from "../../../../../src/components/mod
 import { EventsDispatcher } from "../../../../../src/components/utils/events";
 import type { BlokEventMap } from "../../../../../src/components/events";
 import type { BlokModules } from "../../../../../src/types-internal/blok-modules";
-import type { BlokConfig } from "../../../../../types";
 import type { Block } from "../../../../../src/components/block";
 import { DATA_ATTR } from "../../../../../src/components/constants";
 import * as tooltip from "../../../../../src/components/utils/tooltip";
@@ -216,7 +215,7 @@ const createDragManager = (
     ...overrides,
   } as BlokModules;
   const dragManager = new DragManager({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
@@ -654,7 +653,7 @@ describe("DragManager - Component Integration", () => {
             x: 40,
             y: 200,
             toJSON: () => ({}),
-          }) as DOMRect;
+          });
         return range;
       });
 
@@ -1914,10 +1913,10 @@ describe("DragManager - Component Integration", () => {
       ).mock.calls;
 
       const child_a_call = setBlockParentCalls.find(
-        ([block]) => (block as unknown as Block).id === "child-a",
+        ([block]) => (block).id === "child-a",
       );
       const child_b_call = setBlockParentCalls.find(
-        ([block]) => (block as unknown as Block).id === "child-b",
+        ([block]) => (block).id === "child-b",
       );
 
       // Called with their own parentId (toggle-1), not with the new drop parentId

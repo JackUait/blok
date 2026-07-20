@@ -436,7 +436,7 @@ describe('SelectionCore', () => {
 
   describe('getRect', () => {
     it('returns zero rect when selection is unavailable', () => {
-      const getSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue(null as unknown as Selection);
+      const getSelectionSpy = vi.spyOn(window, 'getSelection').mockReturnValue(null);
       const logSpy = vi.spyOn(utils, 'log').mockImplementation(() => undefined);
 
       const rect = SelectionCore.getRect();

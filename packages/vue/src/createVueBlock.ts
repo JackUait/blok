@@ -218,7 +218,7 @@ export function createVueBlock<Data = BlockToolData>(
 
     public save(): BlockToolData {
       // The complete, frozen, toRaw-clean mirror — never the DOM, never partial.
-      return this.mirror as BlockToolData;
+      return this.mirror;
     }
 
     public async setData(newData: BlockToolData): Promise<boolean> {

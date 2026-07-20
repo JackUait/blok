@@ -9,7 +9,7 @@ const parseSvg = (icon: string): SVGSVGElement => {
     throw new Error('invalid svg');
   }
 
-  return svg as unknown as SVGSVGElement;
+  return svg;
 };
 
 describe('IconFilePdf', () => {

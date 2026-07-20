@@ -395,7 +395,7 @@ describe('Flipper', () => {
     const focusedId = items[0].getAttribute('id');
 
     expect(focusedId).toBeTruthy();
-    expect(host).toHaveAttribute('aria-activedescendant', focusedId as string);
+    expect(host).toHaveAttribute('aria-activedescendant', focusedId);
 
     flipper.deactivate();
   });

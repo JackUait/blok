@@ -187,7 +187,7 @@ describe('CrossBlockSelection', () => {
       let capturedHandler: ((event: MouseEvent) => void) | undefined;
 
       onSpy.mockImplementation((_element, _event, handler) => {
-        capturedHandler = handler as (event: MouseEvent) => void;
+        capturedHandler = handler;
 
         return 'listener-id';
       });

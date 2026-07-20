@@ -177,7 +177,7 @@ const createToolConfig = (overrides: Partial<ToolConfigEntry> = {}): ToolConfigE
       config: {},
     },
     ...overrides,
-  } as ToolConfigEntry;
+  };
 };
 
 const createFactory = (

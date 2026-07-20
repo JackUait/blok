@@ -2828,7 +2828,7 @@ describe('KeyboardNavigation', () => {
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(null);
       vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(false);
 
-      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ parentId: 'table-block-1' });
       wrapBlockInTableCell(mockBlock);
 
       const hideBlockActions = vi.fn();
@@ -2853,7 +2853,7 @@ describe('KeyboardNavigation', () => {
     });
 
     it('does not close toolbar on ArrowLeft inside table cell', () => {
-      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ parentId: 'table-block-1' });
       wrapBlockInTableCell(mockBlock);
 
       const hideBlockActions = vi.fn();
@@ -2878,7 +2878,7 @@ describe('KeyboardNavigation', () => {
     });
 
     it('does not close all toolbars on ArrowLeft inside table cell when toolbar is open', () => {
-      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ parentId: 'table-block-1' });
       wrapBlockInTableCell(mockBlock);
 
       const closeAllToolbars = vi.fn();
@@ -2909,7 +2909,7 @@ describe('KeyboardNavigation', () => {
     });
 
     it('does not close toolbar on Backspace at boundary inside table cell', () => {
-      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ parentId: 'table-block-1' });
       wrapBlockInTableCell(mockBlock);
 
       const hideBlockActions = vi.fn();
@@ -2938,7 +2938,7 @@ describe('KeyboardNavigation', () => {
     });
 
     it('does not close toolbar on Delete at boundary inside table cell', () => {
-      const mockBlock = createBlock({ parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ parentId: 'table-block-1' });
       wrapBlockInTableCell(mockBlock);
 
       const hideBlockActions = vi.fn();
@@ -2972,7 +2972,7 @@ describe('KeyboardNavigation', () => {
         value: document.createElement('div'),
         writable: false,
       });
-      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' });
       wrapBlockInTableCell(mockBlock);
 
       const hideBlockActions = vi.fn();
@@ -3005,10 +3005,10 @@ describe('KeyboardNavigation', () => {
     });
 
     it('does not merge blocks when Delete is pressed at end of last input inside a table cell', () => {
-      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ id: 'current-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' });
       wrapBlockInTableCell(mockBlock);
 
-      const nextBlock = createBlock({ id: 'next-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const nextBlock = createBlock({ id: 'next-block', isEmpty: false, mergeable: true, parentId: 'table-block-1' });
       const mergeBlocks = vi.fn(() => Promise.resolve());
       const blok = createBlokModules({
         BlockManager: {
@@ -3048,8 +3048,8 @@ describe('KeyboardNavigation', () => {
     };
 
     it('MERGES blocks when Backspace is pressed with previous block in the SAME table cell', () => {
-      const previousBlock = createBlock({ id: 'prev-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
-      const mockBlock = createBlock({ id: 'current-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const previousBlock = createBlock({ id: 'prev-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' });
+      const mockBlock = createBlock({ id: 'current-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' });
       wrapBlocksInSameTableCell(previousBlock, mockBlock);
 
       const mergeBlocks = vi.fn(() => Promise.resolve());
@@ -3077,8 +3077,8 @@ describe('KeyboardNavigation', () => {
     });
 
     it('MERGES blocks when Delete is pressed with next block in the SAME table cell', () => {
-      const mockBlock = createBlock({ id: 'current-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
-      const nextBlock = createBlock({ id: 'next-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' } as unknown as Partial<Block>);
+      const mockBlock = createBlock({ id: 'current-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' });
+      const nextBlock = createBlock({ id: 'next-in-same-cell', isEmpty: false, mergeable: true, parentId: 'table-block-1' });
       wrapBlocksInSameTableCell(mockBlock, nextBlock);
 
       const mergeBlocks = vi.fn(() => Promise.resolve());

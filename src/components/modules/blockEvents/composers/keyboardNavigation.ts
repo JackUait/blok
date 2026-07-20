@@ -1060,8 +1060,8 @@ export class KeyboardNavigation extends BlockEventComposer {
     const fallbackInputCandidates: Array<HTMLElement | undefined | null> = [
       currentBlock?.inputs.find((input) => eventTarget !== null && input.contains(eventTarget)),
       currentBlock?.inputs.find((input) => activeElement !== null && input.contains(activeElement)),
-      eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
-      activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+      eventTarget?.closest(EDITABLE_INPUT_SELECTOR),
+      activeElement?.closest(EDITABLE_INPUT_SELECTOR),
     ];
     const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find(
       (candidate): candidate is HTMLElement => candidate instanceof HTMLElement
@@ -1258,8 +1258,8 @@ export class KeyboardNavigation extends BlockEventComposer {
     const fallbackInputCandidates: Array<HTMLElement | undefined | null> = [
       currentBlock?.inputs.find((input) => eventTarget !== null && input.contains(eventTarget)),
       currentBlock?.inputs.find((input) => activeElement !== null && input.contains(activeElement)),
-      eventTarget?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
-      activeElement?.closest(EDITABLE_INPUT_SELECTOR) as HTMLElement | null,
+      eventTarget?.closest(EDITABLE_INPUT_SELECTOR),
+      activeElement?.closest(EDITABLE_INPUT_SELECTOR),
     ];
     const caretInput = currentBlock?.currentInput ?? fallbackInputCandidates.find(
       (candidate): candidate is HTMLElement => candidate instanceof HTMLElement

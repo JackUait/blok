@@ -3,7 +3,6 @@ import { BlockManager } from '../../../../../src/components/modules/blockManager
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { BlokConfig } from '../../../../../types';
 import type { Block } from '../../../../../src/components/block';
 
 /**
@@ -17,7 +16,7 @@ import type { Block } from '../../../../../src/components/block';
  */
 
 const createModuleConfig = (): ModuleConfig => ({
-  config: { defaultBlock: 'paragraph' } as BlokConfig,
+  config: { defaultBlock: 'paragraph' },
   eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
 });
 
@@ -76,7 +75,7 @@ describe('BlockManager.convert — toggle children handling (Notion parity M-5)'
 
     setBlockParentSpy = vi
       .spyOn(blockManager, 'setBlockParent')
-      .mockImplementation(() => undefined) as unknown as ReturnType<typeof vi.fn>;
+      .mockImplementation(() => undefined);
   });
 
   afterEach(() => {

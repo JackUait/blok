@@ -11,7 +11,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockEvents } from '../../../../src/components/modules/blockEvents';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../types';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { Block } from '../../../../src/components/block';
 import { keyCodes } from '../../../../src/components/utils';
@@ -30,7 +29,7 @@ const KEY_CODE_TO_KEY_MAP: Record<number, string> = {
 
 const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents => {
   const blockEvents = new BlockEvents({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
@@ -124,10 +123,10 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
       (mergedState as Record<PropertyKey, unknown>)[moduleName] = {
         ...(defaultModule as unknown as Record<PropertyKey, unknown>),
         ...(moduleOverrides as Record<PropertyKey, unknown>),
-      } as unknown as BlokModules[typeof moduleName];
+      };
     } else if (moduleOverrides !== undefined) {
       (mergedState as Record<PropertyKey, unknown>)[moduleName] =
-        moduleOverrides as unknown as BlokModules[typeof moduleName];
+        moduleOverrides;
     }
   }
 

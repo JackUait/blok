@@ -39,7 +39,7 @@ function hasApplyShortcut(tool: unknown): tool is ShortcutApplicableTool {
   return typeof tool === 'object'
     && tool !== null
     && 'applyShortcut' in tool
-    && typeof (tool as { applyShortcut: unknown }).applyShortcut === 'function';
+    && typeof (tool).applyShortcut === 'function';
 }
 
 /**

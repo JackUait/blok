@@ -322,7 +322,9 @@ writeFileSync(
         sourceMap: false,
         noEmit: false,
         types: ['node'],
-        baseUrl: '.',
+        // No `baseUrl`: deprecated in TypeScript 6 (TS5101), removed in 7. The
+        // mappings below are "./"-prefixed, so they already resolve relative to
+        // this generated tsconfig's own directory (the staging dir).
         paths: {
           '@bloklabs/core': ['./blok-core.d.ts'],
           '@bloklabs/core/markdown': ['./blok-markdown.d.ts'],
@@ -348,7 +350,39 @@ execFileSync(
   { stdio: 'inherit', cwd: root }
 );
 
-// 6. Drop the staging dir; keep only the published APF output.
+// 6. Restore a root `index.d.ts` entry point.
+//    ng-packagr 20 emitted declarations at `dist/index.d.ts`; ng-packagr 22
+//    flattens them to `dist/types/<flat-module>.d.ts` and points `typings`
+//    there. That path is consumer-visible, so anyone resolving or deep-importing
+//    the old entry would break on upgrade. Re-export the flattened bundle from
+//    the historical location and keep `typings`/`exports` pointing at it.
+//    NOTE: this re-export stays inside dist/ — it must never reference `src/`
+//    (see the published-types law in CLAUDE.md).
+const angularPkgPath = path.resolve(destDir, 'package.json');
+const angularPkg = JSON.parse(readFileSync(angularPkgPath, 'utf8'));
+const flatTypes = angularPkg.typings ?? angularPkg.types;
+
+if (typeof flatTypes !== 'string') {
+  throw new Error(`build-angular: ng-packagr emitted no typings entry; got ${JSON.stringify(angularPkg.typings)}`);
+}
+
+const flatTypesSpecifier = `./${flatTypes.replace(/^\.\//, '').replace(/\.d\.ts$/, '')}`;
+
+writeFileSync(
+  path.resolve(destDir, 'index.d.ts'),
+  `export * from '${flatTypesSpecifier}';\n`,
+  'utf8'
+);
+
+angularPkg.typings = './index.d.ts';
+
+if (angularPkg.exports?.['.']) {
+  angularPkg.exports['.'].types = './index.d.ts';
+}
+
+writeFileSync(angularPkgPath, `${JSON.stringify(angularPkg, null, 2)}\n`, 'utf8');
+
+// 7. Drop the staging dir; keep only the published APF output.
 rmSync(stagingDir, { recursive: true, force: true });
 
 console.log(`Angular adapter built to ${path.relative(root, destDir)}`);

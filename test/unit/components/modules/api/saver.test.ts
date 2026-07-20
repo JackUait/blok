@@ -5,7 +5,7 @@ import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import * as utils from '../../../../../src/components/utils';
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { BlokConfig, OutputData } from '../../../../../types';
+import type { OutputData } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 
@@ -30,7 +30,7 @@ type BlokStubOverrides = {
 
 const createSaverApi = (overrides: BlokStubOverrides = {}): { saverApi: SaverAPI; blok: BlokStub } => {
   const moduleConfig: ModuleConfig = {
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   };
 

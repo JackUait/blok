@@ -134,7 +134,7 @@ const setupInline = (rawText: string, closingChar: string): {
     lastInput: input,
     inputs: [input],
     dispatchChange,
-  } as unknown as Partial<Block>);
+  });
   const blok = createBlokModules({
     BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
   });
@@ -188,7 +188,7 @@ const setupInlineFragmented = (textChunks: string[], closingChar: string): {
     lastInput: input,
     inputs: [input],
     dispatchChange,
-  } as unknown as Partial<Block>);
+  });
   const blok = createBlokModules({
     BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
   });
@@ -866,7 +866,7 @@ describe('MarkdownShortcuts', () => {
         firstInput: input,
         lastInput: input,
         inputs: [input],
-      } as unknown as Partial<Block>);
+      });
       const blok = createBlokModules({
         BlockManager: { currentBlock: mockBlock } as unknown as BlokModules['BlockManager'],
       });

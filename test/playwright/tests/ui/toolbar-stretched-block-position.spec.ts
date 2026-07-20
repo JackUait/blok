@@ -80,17 +80,17 @@ const DATABASE_BLOCKS: OutputData['blocks'] = [
       activeViewId: 'view-1',
     },
     content: ['row-1', 'row-2'],
-  } as unknown as OutputData['blocks'][number],
+  },
   {
     id: 'row-1',
     type: 'database-row',
     data: { position: 'a0', properties: { 'prop-title': 'Write documentation', 'prop-status': 'opt-backlog' } },
-  } as unknown as OutputData['blocks'][number],
+  },
   {
     id: 'row-2',
     type: 'database-row',
     data: { position: 'a1', properties: { 'prop-title': 'Add dark mode support', 'prop-status': 'opt-backlog' } },
-  } as unknown as OutputData['blocks'][number],
+  },
 ];
 
 test.describe('Toolbar position for stretched blocks (database)', () => {

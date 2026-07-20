@@ -25,7 +25,7 @@ const createParagraphOptions = (
   data: Partial<ParagraphData> = {},
   config: ParagraphConfig = {}
 ): BlockToolConstructorOptions<ParagraphData, ParagraphConfig> => ({
-  data: { text: '', ...data } as ParagraphData,
+  data: { text: '', ...data },
   config,
   api: createMockAPI(),
   readOnly: false,

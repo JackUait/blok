@@ -1,7 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// Mock @babel/register (loaded by src/blok.ts) to avoid requiring @babel/core at runtime
-vi.mock('@babel/register', () => ({}));
+import { describe, it, expect } from 'vitest';
 
 import { allTools } from '../../src/full';
 import { MarkerInlineTool } from '../../src/components/inline-tools/inline-tool-marker';

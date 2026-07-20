@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -28,6 +28,7 @@ import { BlokContentDirective } from '../../../packages/angular/src/blok-content
 import { provideBlok } from '../../../packages/angular/src/provide-blok';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokContentDirective],
   template: `<div blokContent [config]="config"></div>`,

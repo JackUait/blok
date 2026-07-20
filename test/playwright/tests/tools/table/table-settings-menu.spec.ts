@@ -56,7 +56,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         holder,
         tools: { table: { class: tableClass } },
         ...(initialData ? { data: initialData } : {}),
-      } as never);
+      });
 
       window.blokInstance = blok;
       await blok.isReady;
@@ -79,7 +79,7 @@ const seedTable = async (page: Page, tableData: Record<string, unknown>): Promis
           },
         },
       ],
-    } as OutputData,
+    },
   });
 
   await expect(page.locator(TABLE_SELECTOR)).toBeVisible();

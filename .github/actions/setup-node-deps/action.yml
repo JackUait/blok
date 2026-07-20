@@ -5,7 +5,7 @@ inputs:
   node-version:
     description: "Node.js version to use"
     required: false
-    default: "24"
+    default: "26.5.0"
 
 outputs:
   cache-hit:
@@ -15,9 +15,15 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # Runs against the runner's pre-installed Node (before setup-node switches
+    # versions), so the `yarn` shim it creates stays on PATH afterwards. Node 26
+    # no longer bundles Corepack, so install it if the runner image ever stops
+    # providing it — otherwise this whole action fails at its first step.
     - name: Enable Corepack
       shell: bash
-      run: corepack enable
+      run: |
+        corepack --version >/dev/null 2>&1 || npm install -g corepack@0.35.0
+        corepack enable
 
     - name: Setup Node.js
       id: setup-node

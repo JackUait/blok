@@ -31,7 +31,7 @@ const createOptions = (
   data: Partial<CalloutData> = {},
   overrides: { readOnly?: boolean } = {}
 ): BlockToolConstructorOptions<CalloutData, CalloutConfig> => ({
-  data: { emoji: '💡', textColor: null, backgroundColor: null, ...data } as CalloutData,
+  data: { emoji: '💡', textColor: null, backgroundColor: null, ...data },
   config: {},
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,

@@ -171,7 +171,7 @@ describe('Notifier utility', () => {
 
       setModuleExports({});
 
-      notifier.show({ message: 'Oops' } as NotifierOptions);
+      notifier.show({ message: 'Oops' });
 
       const loadingPromise = internals.getLoadingPromise();
 

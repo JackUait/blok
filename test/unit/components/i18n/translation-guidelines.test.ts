@@ -737,23 +737,23 @@ const findLedgerContractIssues = (ledger: string): string[] => {
       );
     }
 
-    if (row.finalStatus === 'first-pass-complete') {
-      if (digest.secondReviewer !== '—' || digest.secondDigest !== '—') {
-        issues.push(
-          `${digest.locale}: first-pass digest row must leave second-pass evidence unassigned`
-        );
-      }
+    const leavesSecondPassUnassigned =
+      digest.secondReviewer === '—' && digest.secondDigest === '—';
+    const matchesCompletedReview =
+      digest.secondReviewer === row.secondReviewer &&
+      digest.secondDigest === currentDigest;
+
+    if (row.finalStatus === 'first-pass-complete' && !leavesSecondPassUnassigned) {
+      issues.push(
+        `${digest.locale}: first-pass digest row must leave second-pass evidence unassigned`
+      );
     } else if (
-      ['second-pass-complete', 'verified'].includes(row.finalStatus)
+      ['second-pass-complete', 'verified'].includes(row.finalStatus) &&
+      !matchesCompletedReview
     ) {
-      if (
-        digest.secondReviewer !== row.secondReviewer ||
-        digest.secondDigest !== currentDigest
-      ) {
-        issues.push(
-          `${digest.locale}: second-pass evidence does not match the current completed review`
-        );
-      }
+      issues.push(
+        `${digest.locale}: second-pass evidence does not match the current completed review`
+      );
     }
   }
 
@@ -787,28 +787,29 @@ const findLedgerContractIssues = (ledger: string): string[] => {
 
     const hasCompletedPass = row.finalStatus !== 'pending';
 
-    if (hasCompletedPass) {
-      if (row.register.length === 0 || row.register === 'to-audit') {
-        issues.push(`${row.locale}: ${row.finalStatus} requires a register`);
-      }
+    if (hasCompletedPass && (row.register.length === 0 || row.register === 'to-audit')) {
+      issues.push(`${row.locale}: ${row.finalStatus} requires a register`);
+    }
 
-      if (!isAssignedReviewer(row.firstReviewer)) {
-        issues.push(
-          `${row.locale}: ${row.finalStatus} requires a first reviewer`
-        );
-      }
+    if (hasCompletedPass && !isAssignedReviewer(row.firstReviewer)) {
+      issues.push(
+        `${row.locale}: ${row.finalStatus} requires a first reviewer`
+      );
+    }
 
-      if (row.results.some(result => result !== 'pass')) {
-        issues.push(
-          `${row.locale}: ${row.finalStatus} requires all results to pass`
-        );
-      }
+    if (hasCompletedPass && row.results.some(result => result !== 'pass')) {
+      issues.push(
+        `${row.locale}: ${row.finalStatus} requires all results to pass`
+      );
+    }
 
-      if (localeFindings.some(finding => finding.status !== 'verified')) {
-        issues.push(
-          `${row.locale}: ${row.finalStatus} requires every locale finding to be verified`
-        );
-      }
+    if (
+      hasCompletedPass &&
+      localeFindings.some(finding => finding.status !== 'verified')
+    ) {
+      issues.push(
+        `${row.locale}: ${row.finalStatus} requires every locale finding to be verified`
+      );
     }
 
     if (
@@ -836,20 +837,24 @@ const findLedgerContractIssues = (ledger: string): string[] => {
       );
     }
 
-    if (row.results[2] === 'pass' && row.locale !== 'en') {
-      const messages = readLocale(row.locale).messages;
-      const exactEnglishKeys = Object.keys(english).filter(
-        key => messages[key] === english[key]
-      );
-      const retainedKeys = retentions
-        .filter(retention => retention.locale === row.locale)
-        .map(retention => retention.key);
-
-      if (!sameSortedValues(exactEnglishKeys, retainedKeys)) {
-        issues.push(
-          `${row.locale}: exact-English pass requires a complete retention inventory`
+    const auditsRetention = row.results[2] === 'pass' && row.locale !== 'en';
+    const auditedMessages = auditsRetention
+      ? readLocale(row.locale).messages
+      : null;
+    const exactEnglishKeys =
+      auditedMessages === null
+        ? []
+        : Object.keys(english).filter(
+          key => auditedMessages[key] === english[key]
         );
-      }
+    const retainedKeys = retentions
+      .filter(retention => retention.locale === row.locale)
+      .map(retention => retention.key);
+
+    if (auditsRetention && !sameSortedValues(exactEnglishKeys, retainedKeys)) {
+      issues.push(
+        `${row.locale}: exact-English pass requires a complete retention inventory`
+      );
     }
   }
 

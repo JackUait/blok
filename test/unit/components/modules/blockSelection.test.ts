@@ -151,7 +151,7 @@ const createBlockSelection = (overrides: ModuleOverrides = {}): BlockSelectionSe
   const mergedState = { ...defaults,
     ...overrides } as BlokModules;
   const blockSelection = new BlockSelection({
-    config: { sanitizer: {} } as BlokConfig,
+    config: { sanitizer: {} },
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 
@@ -1021,7 +1021,7 @@ describe('BlockSelection', () => {
       const { blockSelection, blocks } = createBlockSelection();
       Object.defineProperty(blocks[0], 'pluginsContent', {
         configurable: true,
-        get: () => ({ textContent: 'Sample text' }) as unknown as HTMLElement,
+        get: () => ({ textContent: 'Sample text' }),
       });
       const selectBlockSpy = vi.spyOn(blockSelection, 'selectBlock');
       const getSpy = vi.spyOn(SelectionUtils, 'get').mockReturnValue({

@@ -10,7 +10,7 @@ import type { OutputBlockData } from '../../../types';
 /**
  * Creates a mock API object for testing with custom dictionary
  */
-const createMockAPI = (dictionary: Record<string, string> = defaultDictionary as Record<string, string>): API =>
+const createMockAPI = (dictionary: Record<string, string> = defaultDictionary): API =>
   ({
     styles: {
       block: 'blok-block',
@@ -49,7 +49,7 @@ const createListOptions = (
   config: ListItemConfig = {},
   dictionary?: Record<string, string>
 ): BlockToolConstructorOptions<ListItemData, ListItemConfig> => ({
-  data: { text: '', style: 'unordered', ...data } as ListItemData,
+  data: { text: '', style: 'unordered', ...data },
   config,
   api: createMockAPI(dictionary),
   readOnly: false,
@@ -389,7 +389,7 @@ describe('Data Model Transform - List Compatibility', () => {
       typeof data === 'object' &&
       data !== null &&
       'text' in data &&
-      typeof (data as { text: unknown }).text === 'string' &&
+      typeof (data).text === 'string' &&
       'style' in data &&
       typeof (data as { style: unknown }).style === 'string'
     );
@@ -927,7 +927,7 @@ describe('List Tool - moved() marker refresh', () => {
     api.blocks.getBlocksCount = () => 4;
 
     const list = new List({
-      data: { text: '', style: 'unordered', depth: 0 } as ListItemData,
+      data: { text: '', style: 'unordered', depth: 0 },
       config: {},
       api,
       readOnly: false,
@@ -966,7 +966,7 @@ describe('List Tool - moved() marker refresh', () => {
     api.blocks.getBlocksCount = () => 2;
 
     const list = new List({
-      data: { text: 'item', style: 'ordered', depth: 0 } as ListItemData,
+      data: { text: 'item', style: 'ordered', depth: 0 },
       config: {},
       api,
       readOnly: false,

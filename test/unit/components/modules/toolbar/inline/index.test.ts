@@ -102,10 +102,13 @@ vi.mock('../../../../../../src/components/selection/index', () => {
  * The mock is a real class (satisfies `new` calls) whose constructor
  * delegates to `popoverFactory` — reassign that to control behavior.
  */
-const popoverHolder = vi.hoisted(() => {
+const popoverHolder = vi.hoisted<{
+  factory: () => Record<string, unknown>;
+  params: unknown;
+}>(() => {
   return {
     factory: (): Record<string, unknown> => ({}),
-    params: null as unknown,
+    params: null,
   };
 });
 

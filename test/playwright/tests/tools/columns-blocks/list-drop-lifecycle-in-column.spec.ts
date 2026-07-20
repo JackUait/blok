@@ -100,7 +100,7 @@ interface ListData {
 const listDataOf = (saved: OutputData, id: string): ListData => {
   const block = findBlock(saved, id);
 
-  return (block?.data ?? {}) as ListData;
+  return (block?.data ?? {});
 };
 
 /**
@@ -138,7 +138,7 @@ const buildFlatRoots = (): OutputData => ({
       },
     },
   ],
-} as OutputData);
+});
 
 /**
  * Drives the real pointer side-drop of `list1` onto the RIGHT edge of 'Target',

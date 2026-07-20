@@ -122,7 +122,7 @@ test.describe('Table inside a column', () => {
     // Container contract: the four cell paragraphs stay parented to the table and
     // appear under its content array, in order.
     expect(childrenOf(saved, 'table1')).toEqual(TABLE_CHILD_IDS);
-    expect((table as (OutputBlockData & { content?: string[] }) | undefined)?.content).toEqual(TABLE_CHILD_IDS);
+    expect((table)?.content).toEqual(TABLE_CHILD_IDS);
 
     // The right column keeps its own paragraph.
     expect(childrenOf(saved, 'c2')).toEqual(['c2p1']);

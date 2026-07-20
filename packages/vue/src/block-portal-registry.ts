@@ -52,7 +52,7 @@ export const createBlockPortalRegistry = (): BlockPortalRegistry => {
   const entries = reactive(new Map<string, BlockPortalEntry>());
 
   return {
-    entries: entries as ReadonlyMap<string, BlockPortalEntry>,
+    entries: entries,
     register(id: string, entry: BlockPortalEntry): void {
       // markRaw so the reactive Map (which must still track add/delete) does NOT
       // deep-proxy the entry — a proxied component DEFINITION or DOM host would

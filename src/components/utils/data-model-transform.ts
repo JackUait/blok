@@ -56,15 +56,6 @@ interface OldChecklistItem {
 type LegacyListItem = LegacyListItemObject | OldChecklistItem | string;
 
 /**
- * Legacy list data structure for data model transformation.
- */
-type LegacyListData = {
-  style: 'unordered' | 'ordered' | 'checklist';
-  items: LegacyListItem[];
-  start?: number;
-}
-
-/**
  * Map backgroundColor preset name back to legacy variant (collapse path only).
  */
 const BG_PRESET_TO_VARIANT: Record<string, string> = {
@@ -94,28 +85,28 @@ export interface DataFormatAnalysis {
  * Type guard for object with text property
  */
 const isObjectWithText = (data: unknown): data is { text: string } & Record<string, unknown> => {
-  return typeof data === 'object' && data !== null && 'text' in data && typeof (data as { text: unknown }).text === 'string';
+  return typeof data === 'object' && data !== null && 'text' in data && typeof (data).text === 'string';
 };
 
 /**
  * Type guard for object with checked property
  */
 const isObjectWithChecked = (data: unknown): data is { checked: boolean } & Record<string, unknown> => {
-  return typeof data === 'object' && data !== null && 'checked' in data && typeof (data as { checked: unknown }).checked === 'boolean';
+  return typeof data === 'object' && data !== null && 'checked' in data && typeof (data).checked === 'boolean';
 };
 
 /**
  * Type guard for object with style property
  */
 const isObjectWithStyle = (data: unknown): data is { style: string } & Record<string, unknown> => {
-  return typeof data === 'object' && data !== null && 'style' in data && typeof (data as { style: unknown }).style === 'string';
+  return typeof data === 'object' && data !== null && 'style' in data && typeof (data).style === 'string';
 };
 
 /**
  * Type guard for object with start property
  */
 const isObjectWithStart = (data: unknown): data is { start: number } & Record<string, unknown> => {
-  return typeof data === 'object' && data !== null && 'start' in data && typeof (data as { start: unknown }).start === 'number';
+  return typeof data === 'object' && data !== null && 'start' in data && typeof (data).start === 'number';
 };
 
 /**
@@ -311,7 +302,7 @@ const processRootListItem = (
       style,
       items: listItems,
       ...(style === 'ordered' && start !== undefined && start !== 1 ? { start } : {}),
-    } as LegacyListData,
+    },
     ...(block.tunes !== undefined ? { tunes: block.tunes } : {}),
     ...(nonListContent.length > 0 ? { content: nonListContent } : {}),
   };
@@ -1260,7 +1251,7 @@ export const reclaimDetachedTableCells = (blocks: OutputBlockData[]): OutputBloc
         });
       });
 
-      return { ...block, data: { ...(block.data), content: newContent } } as OutputBlockData;
+      return { ...block, data: { ...(block.data), content: newContent } };
     }
 
     return block;

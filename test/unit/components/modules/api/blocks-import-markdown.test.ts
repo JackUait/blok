@@ -4,7 +4,6 @@ import { BlocksAPI } from '../../../../../src/components/modules/api/blocks'
 import { EventsDispatcher } from '../../../../../src/components/utils/events'
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config'
-import type { BlokConfig } from '../../../../../types'
 import type { BlokEventMap } from '../../../../../src/components/events'
 
 /**
@@ -17,7 +16,7 @@ describe('BlocksAPI.methods.importMarkdown wiring', () => {
   const createBlocksApi = (): BlocksAPI => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>()
     const moduleConfig: ModuleConfig = {
-      config: { defaultBlock: 'paragraph' } as BlokConfig,
+      config: { defaultBlock: 'paragraph' },
       eventsDispatcher,
     }
 

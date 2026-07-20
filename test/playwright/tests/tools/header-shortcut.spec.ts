@@ -22,14 +22,14 @@ type BlockWithUnknownData = {
  * Type guard to check if block data has a 'level' property (for header blocks)
  */
 const hasLevelProperty = (data: unknown): data is { level: number } & Record<string, unknown> => {
-  return typeof data === 'object' && data !== null && 'level' in data && typeof (data as { level: unknown }).level === 'number';
+  return typeof data === 'object' && data !== null && 'level' in data && typeof (data).level === 'number';
 };
 
 /**
  * Type guard to check if block data has a 'text' property
  */
 const hasTextProperty = (data: unknown): data is { text: string } & Record<string, unknown> => {
-  return typeof data === 'object' && data !== null && 'text' in data && typeof (data as { text: unknown }).text === 'string';
+  return typeof data === 'object' && data !== null && 'text' in data && typeof (data).text === 'string';
 };
 
 /**

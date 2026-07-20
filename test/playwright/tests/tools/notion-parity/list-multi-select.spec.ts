@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import type { Blok, BlokConfig, OutputData } from '@/types';
+import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
 
 /**
@@ -42,7 +42,7 @@ const boot = async (page: Page, blocks: OutputData['blocks']): Promise<void> => 
       container.setAttribute('data-blok-testid', holder);
       document.body.appendChild(container);
 
-      const blok = new window.Blok({ holder, data: { blocks: seed } } as BlokConfig);
+      const blok = new window.Blok({ holder, data: { blocks: seed } });
 
       window.d = blok;
       await blok.isReady;
@@ -105,9 +105,9 @@ test.describe('list multi-select keyboard nesting (Notion parity)', () => {
   test('M-8: Shift+Tab outdents nested items and leaves root items in place', async ({ page }) => {
     // Seed 'a' at root with 'b' nested under it, and 'c' at root.
     await boot(page, [
-      { id: 'a', type: 'list', data: { style: 'unordered', text: 'a' } } as OutputData['blocks'][number],
-      { id: 'b', type: 'list', data: { style: 'unordered', text: 'b', depth: 1 }, parent: 'a' } as OutputData['blocks'][number],
-      { id: 'c', type: 'list', data: { style: 'unordered', text: 'c' } } as OutputData['blocks'][number],
+      { id: 'a', type: 'list', data: { style: 'unordered', text: 'a' } },
+      { id: 'b', type: 'list', data: { style: 'unordered', text: 'b', depth: 1 }, parent: 'a' },
+      { id: 'c', type: 'list', data: { style: 'unordered', text: 'c' } },
     ]);
 
     await expect.poll(() => layout(page)).toEqual(['a/root', 'b@1/nested', 'c/root']);

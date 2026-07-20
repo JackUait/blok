@@ -1,4 +1,4 @@
-import type { BlockId, BlockToolData, OutputBlockData, SanitizerConfig } from '../../../types';
+import type { BlockId, BlockToolData, OutputBlockData } from '../../../types';
 import type { StubData } from '../../tools/stub';
 import { Module } from '../__module';
 import type { Block } from '../block';
@@ -303,7 +303,7 @@ export class Renderer extends Module {
     const [sanitized] = sanitizeBlocks(
       [{ tool, data }],
       (name) => Tools.blockTools.get(name)?.sanitizeConfig,
-      this.config.sanitizer as SanitizerConfig
+      this.config.sanitizer
     );
 
     // URL-scheme safety must not depend on the tool declaring a sanitize

@@ -46,7 +46,7 @@ vi.mock('../../../src/blok', () => ({
 
       wrapper.setAttribute('data-blok-editor', 'true');
       config.holder.appendChild(wrapper);
-      instances.push(this as unknown as MockInstance);
+      instances.push(this);
     }
   },
 }));

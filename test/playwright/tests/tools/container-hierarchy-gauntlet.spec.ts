@@ -662,7 +662,7 @@ test.describe('Container hierarchy invariant gauntlet', () => {
         { id: 'p3', type: 'paragraph', data: { text: 'right' }, parent: 'c2' },
         { id: 'p2', type: 'paragraph', data: { text: 'after' } },
       ],
-    } as OutputData;
+    };
 
     await createBlok(page, initial);
 

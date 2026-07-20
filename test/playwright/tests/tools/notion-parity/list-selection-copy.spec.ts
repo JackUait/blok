@@ -112,7 +112,7 @@ const copyFromElement = async (locator: Locator): Promise<Record<string, string>
 const listData = (
   items: Array<{ text: string; checked?: boolean }>,
   style: 'unordered' | 'ordered' | 'checklist'
-): OutputData => ({
+): OutputData => (({
   blocks: items.map((item, index) => ({
     id: `list-${index}`,
     type: 'list',
@@ -122,15 +122,15 @@ const listData = (
       checked: item.checked ?? false,
     },
   })),
-} as unknown as OutputData);
+}));
 
-const paragraphData = (texts: string[]): OutputData => ({
+const paragraphData = (texts: string[]): OutputData => (({
   blocks: texts.map((text, index) => ({
     id: `p-${index}`,
     type: 'paragraph',
     data: { text },
   })),
-} as unknown as OutputData);
+}));
 
 /**
  * Select the inclusive range [0, blockCount-1] via a click + a Shift+Click (the

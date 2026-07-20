@@ -225,7 +225,7 @@ describe('Core', () => {
     vi.clearAllMocks();
 
     mockDomIsElement.mockReturnValue(true);
-    mockDomGet.mockImplementation((id: string) => ({ id }) as unknown as HTMLElement);
+    mockDomGet.mockImplementation((id: string) => ({ id }));
 
     mockIsObject.mockImplementation(
       (value: unknown): value is Record<string, unknown> =>
@@ -291,12 +291,12 @@ describe('Core', () => {
           return undefined;
         }
 
-        return { id } as unknown as HTMLElement;
+        return { id };
       });
 
       core.configuration = {
         holder: 'missing',
-      } as BlokConfig;
+      };
 
       expect(() => core.validate()).toThrow('element with ID «missing» is missing. Pass correct holder\'s ID.');
     });
@@ -308,7 +308,7 @@ describe('Core', () => {
 
       core.configuration = {
         holder: {} as unknown as HTMLElement,
-      } as BlokConfig;
+      };
 
       expect(() => core.validate()).toThrow('«holder» value must be an Element node');
     });

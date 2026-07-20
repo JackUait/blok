@@ -661,7 +661,7 @@ describe('table cell block order (WYSIWYG save-order regression)', () => {
       api: API,
       content: CellContent[][]
     ): BlockToolConstructorOptions<TableData, TableConfig> => ({
-      data: { withHeadings: false, withHeadingColumn: false, content } as TableData,
+      data: { withHeadings: false, withHeadingColumn: false, content },
       config: {},
       api,
       readOnly: false,

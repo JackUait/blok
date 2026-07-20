@@ -141,8 +141,6 @@ vi.mock('../../src/components/core', () => {
   };
 });
 
-// Mock @babel/register
-vi.mock('@babel/register', () => ({}));
 
 // Mock polyfills
 vi.mock('../../src/components/polyfills', () => ({}));
@@ -164,7 +162,7 @@ describe('Blok', () => {
     // Import the mocked modules to access the mock instances
     const coreModule = await import('../../src/components/core') as {
       Core: new (...args: unknown[]) => Core;
-      mockModuleInstances?: Partial<BlokModules>;
+      mockModuleInstances: Partial<BlokModules>;
     };
 
     const utilsModule = await import('../../src/components/utils') as {
@@ -178,7 +176,7 @@ describe('Blok', () => {
       mockDestroyTooltip?: ReturnType<typeof vi.fn>;
     };
 
-    mocks.mockModuleInstances = coreModule.mockModuleInstances as Partial<BlokModules>;
+    mocks.mockModuleInstances = coreModule.mockModuleInstances;
     mocks.mockIsObject = utilsModule.mockIsObject as ReturnType<typeof vi.fn>;
     mocks.mockIsFunction = utilsModule.mockIsFunction as ReturnType<typeof vi.fn>;
     mocks.mockDestroyTooltip = tooltipModule.mockDestroyTooltip as ReturnType<typeof vi.fn>;

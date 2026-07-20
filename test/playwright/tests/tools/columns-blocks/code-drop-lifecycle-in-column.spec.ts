@@ -28,7 +28,7 @@ interface CodeData {
   lineNumbers?: boolean;
 }
 
-const codeData = (block: OutputBlockData | undefined): CodeData => (block?.data ?? {}) as CodeData;
+const codeData = (block: OutputBlockData | undefined): CodeData => (block?.data ?? {});
 
 const list = (saved: OutputData): OutputBlockData | undefined =>
   saved.blocks.find((b) => b.type === 'column_list');

@@ -19,7 +19,6 @@ import { SanitizerConfigBuilder } from '../../../../src/components/modules/paste
 import { clean } from '../../../../src/components/utils/sanitizer';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 import type { ToolsCollection } from '../../../../src/components/tools/collection';
-import type { BlokConfig } from '../../../../types/configs/blok-config';
 import type { ListItemData } from '../../../../src/tools/list/types';
 
 const buildListTool = (): ListItem => {
@@ -69,7 +68,7 @@ describe('List pasteConfig sanitizer keeps checkbox inputs', () => {
   it('clean() with the List paste config preserves <input type="checkbox" checked> inside li innerHTML', () => {
     const builder = new SanitizerConfigBuilder(
       {} as unknown as ToolsCollection<BlockToolAdapter>,
-      {} as BlokConfig
+      {}
     );
     const toolConfig = builder.buildToolConfig({
       pasteConfig: ListItem.pasteConfig,

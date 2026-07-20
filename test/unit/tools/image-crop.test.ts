@@ -28,8 +28,8 @@ describe('renderImage with crop', () => {
 });
 
 import { ImageTool } from '../../../src/tools/image';
-import type { API, BlockAPI, BlockToolConstructorOptions } from '../../../types';
-import type { ImageConfig, ImageData } from '../../../types/tools/image';
+import type { API, BlockAPI } from '../../../types';
+import type { ImageData } from '../../../types/tools/image';
 
 const EN: Record<string, string> = {
   'tools.image.cropDialogLabel': 'Crop image',
@@ -48,10 +48,10 @@ const mockBlock = { id: 'b1', dispatchChange: () => {} } as unknown as BlockAPI;
 const createTool = (data: Partial<ImageData>): ImageTool => new ImageTool({
   api: mockApi,
   block: mockBlock,
-  config: {} as ImageConfig,
-  data: { url: 'x.png', ...data } as ImageData,
+  config: {},
+  data: { url: 'x.png', ...data },
   readOnly: false,
-} as BlockToolConstructorOptions<ImageData, ImageConfig>);
+});
 
 describe('ImageTool.save crop', () => {
   it('omits crop when absent', () => {
@@ -135,9 +135,9 @@ describe('ImageTool crop lifecycle', () => {
     const dispatch = vi.fn();
     const block = { id: 'b1', dispatchChange: dispatch } as unknown as BlockAPI;
     const tool = new ImageTool({
-      api: mockApi, block, config: {} as ImageConfig,
-      data: { url: 'x.png' } as ImageData, readOnly: false,
-    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+      api: mockApi, block, config: {},
+      data: { url: 'x.png' }, readOnly: false,
+    });
     const root = tool.render();
     document.body.appendChild(root);
 
@@ -169,10 +169,10 @@ describe('ImageTool crop lifecycle', () => {
   it('cancel button in modal restores without data change', () => {
     const block = { id: 'b1', dispatchChange: vi.fn() } as unknown as BlockAPI;
     const tool = new ImageTool({
-      api: mockApi, block, config: {} as ImageConfig,
-      data: { url: 'x.png', crop: { x: 5, y: 5, w: 90, h: 90 } } as ImageData,
+      api: mockApi, block, config: {},
+      data: { url: 'x.png', crop: { x: 5, y: 5, w: 90, h: 90 } },
       readOnly: false,
-    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+    });
     const root = tool.render();
     document.body.appendChild(root);
     const crop = root.querySelector<HTMLButtonElement>('[data-action="crop"]');
@@ -192,10 +192,10 @@ describe('ImageTool crop lifecycle', () => {
     // Expected width_new = 50 * 1.777 ≈ 88.89 (rounded to 2 decimals).
     const block = { id: 'b1', dispatchChange: vi.fn() } as unknown as BlockAPI;
     const tool = new ImageTool({
-      api: mockApi, block, config: {} as ImageConfig,
-      data: { url: 'x.png', width: 50, crop: { x: 0, y: 0, w: 100, h: 100 } } as ImageData,
+      api: mockApi, block, config: {},
+      data: { url: 'x.png', width: 50, crop: { x: 0, y: 0, w: 100, h: 100 } },
       readOnly: false,
-    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+    });
     const root = tool.render();
     document.body.appendChild(root);
     root.querySelector<HTMLButtonElement>('[data-action="crop"]')!.click();
@@ -212,9 +212,9 @@ describe('ImageTool crop lifecycle', () => {
   it('removed() while modal open tears down modal', () => {
     const block = { id: 'b1', dispatchChange: vi.fn() } as unknown as BlockAPI;
     const tool = new ImageTool({
-      api: mockApi, block, config: {} as ImageConfig,
-      data: { url: 'x.png' } as ImageData, readOnly: false,
-    } as BlockToolConstructorOptions<ImageData, ImageConfig>);
+      api: mockApi, block, config: {},
+      data: { url: 'x.png' }, readOnly: false,
+    });
     const root = tool.render();
     document.body.appendChild(root);
     root.querySelector<HTMLButtonElement>('[data-action="crop"]')!.click();

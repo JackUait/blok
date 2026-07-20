@@ -42,7 +42,7 @@ vi.mock('../../../src/blok', () => ({
       wrapper.setAttribute('data-testid', 'blok-editor-inner');
       config.holder.appendChild(wrapper);
       this.isReady = Promise.resolve();
-      instances.push(this as unknown as MockInstance);
+      instances.push(this);
     }
   },
 }));

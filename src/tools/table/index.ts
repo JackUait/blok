@@ -1035,7 +1035,7 @@ export class Table implements BlockTool {
       {
         ...this.model.snapshot(),
         ...newData,
-      } as TableData,
+      },
       this.config
     );
 

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import type { Blok, BlokConfig } from '@/types';
+import type { Blok } from '@/types';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
 
 /**
@@ -39,7 +39,7 @@ const bootTwo = async (page: Page): Promise<void> => {
       { type: 'paragraph', data: { text: 'one-A' } },
       { type: 'paragraph', data: { text: 'one-B' } },
       { type: 'paragraph', data: { text: 'one-C' } },
-    ] } } as BlokConfig);
+    ] } });
 
     window.b1 = b1;
     await b1.isReady;
@@ -48,7 +48,7 @@ const bootTwo = async (page: Page): Promise<void> => {
     const b2 = new window.Blok({ holder: 'ed2', data: { blocks: [
       { type: 'paragraph', data: { text: 'two-A' } },
       { type: 'paragraph', data: { text: 'two-B' } },
-    ] } } as BlokConfig);
+    ] } });
 
     window.b2 = b2;
     await b2.isReady;

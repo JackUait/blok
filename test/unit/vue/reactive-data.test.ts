@@ -10,7 +10,7 @@ import type { UseBlokConfig } from '../../../packages/vue/src/types';
 import type { OutputData } from '@/types';
 
 async function mountReady(initial: UseBlokConfig): Promise<{ config: UseBlokConfig }> {
-  const config = reactive({ ...initial }) as UseBlokConfig;
+  const config = reactive({ ...initial });
 
   const Harness = defineComponent({
     setup() {
@@ -38,20 +38,20 @@ describe('useBlok reactive data', () => {
   });
 
   it('does not render on initial mount (data seeded at construction)', async () => {
-    await mountReady({ data: { blocks: [] } as OutputData });
+    await mountReady({ data: { blocks: [] } });
 
     expect(blokRegistry.last!.render).not.toHaveBeenCalled();
   });
 
   it('renders new data reactively when content changes, without recreating', async () => {
     const { config } = await mountReady({
-      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] } as OutputData,
+      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] },
     });
     const instance = blokRegistry.last!;
 
     expect(instance.render).not.toHaveBeenCalled();
 
-    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] } as OutputData;
+    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] };
     await flushPromises();
 
     expect(blokRegistry.instances).toHaveLength(1);
@@ -63,11 +63,11 @@ describe('useBlok reactive data', () => {
 
   it('does not render when new data reference has identical content (deep-equal dedup)', async () => {
     const { config } = await mountReady({
-      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] } as OutputData,
+      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] },
     });
     const instance = blokRegistry.last!;
 
-    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] } as OutputData;
+    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] };
     await flushPromises();
 
     expect(instance.render).not.toHaveBeenCalled();
@@ -75,13 +75,13 @@ describe('useBlok reactive data', () => {
 
   it('serializes successive data changes in order', async () => {
     const { config } = await mountReady({
-      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: '1' } }] } as OutputData,
+      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: '1' } }] },
     });
     const instance = blokRegistry.last!;
 
-    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: '2' } }] } as OutputData;
+    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: '2' } }] };
     await flushPromises();
-    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: '3' } }] } as OutputData;
+    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: '3' } }] };
     await flushPromises();
 
     const lastArg = instance.render.mock.calls.at(-1)?.[0] as OutputData;
@@ -91,11 +91,11 @@ describe('useBlok reactive data', () => {
 
   it('passes a plain (non-reactive) object to render — no Vue proxy reaches core', async () => {
     const { config } = await mountReady({
-      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] } as OutputData,
+      data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] },
     });
     const instance = blokRegistry.last!;
 
-    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] } as OutputData;
+    config.data = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'b' } }] };
     await flushPromises();
 
     const { isReactive } = await import('vue');

@@ -113,7 +113,7 @@ describe('BaseToolAdapter', () => {
         isDefault: true,
         config: {
           [UserSettings.Shortcut]: 'CMD+ALT+2',
-        } as ToolOptions,
+        },
       });
 
       expect(tool.settings).toStrictEqual({
@@ -130,7 +130,7 @@ describe('BaseToolAdapter', () => {
             placeholder,
           },
           [UserSettings.Shortcut]: 'CMD+ALT+3',
-        } as ToolOptions,
+        },
       });
 
       expect(tool.settings).toStrictEqual({
@@ -210,7 +210,7 @@ describe('BaseToolAdapter', () => {
       const { tool } = createTool({
         config: {
           [UserSettings.Config]: {},
-        } as ToolOptions,
+        },
         constructable: createConstructable({
           [CommonInternalSettings.Shortcut]: constructableShortcut,
         }),

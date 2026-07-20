@@ -14,14 +14,14 @@ if (!window.requestIdleCallback) {
         didTimeout: false,
         timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
       });
-    }, 1) as unknown as number;
-  }) as unknown as typeof window.requestIdleCallback;
+    }, 1);
+  });
 }
 
 if (!window.cancelIdleCallback) {
   window.cancelIdleCallback = vi.fn((id: number) => {
     window.clearTimeout(id);
-  }) as unknown as typeof window.cancelIdleCallback;
+  });
 }
 
 // Polyfill document.adoptedStyleSheets for jsdom environment
@@ -35,5 +35,5 @@ if (!window.ResizeObserver) {
     observe = vi.fn();
     unobserve = vi.fn();
     disconnect = vi.fn();
-  } as unknown as typeof window.ResizeObserver;
+  };
 }

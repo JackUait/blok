@@ -91,8 +91,8 @@ describe('TableModel', () => {
     it('normalizes legacy string content to empty blocks arrays', () => {
       const data = makeData({
         content: [
-          ['hello', 'world'] as unknown as CellContent[],
-          [cell('b1'), 'legacy'] as unknown as CellContent[],
+          ['hello', 'world'],
+          [cell('b1'), 'legacy'],
         ],
       });
 
@@ -107,7 +107,7 @@ describe('TableModel', () => {
     });
 
     it('handles partial data with only some fields', () => {
-      const model = new TableModel({ withHeadings: true } as Partial<TableData> as TableData);
+      const model = new TableModel({ withHeadings: true });
 
       expect(model.rows).toBe(0);
       expect(model.cols).toBe(0);
@@ -1097,7 +1097,7 @@ describe('TableModel', () => {
       const model = new TableModel(makeData({ content: [[cell('old')]] }));
 
       model.replaceAll(makeData({
-        content: [['legacy'] as unknown as CellContent[]],
+        content: [['legacy']],
       }));
 
       const snap = model.snapshot();

@@ -41,7 +41,7 @@ const EVENT_TEST_CASES: EventTestCase[] = [
           index: 0,
         },
       },
-    }) as unknown as BlokEventMap[typeof BlockChanged],
+    }),
   },
   {
     name: BlockHovered,
@@ -49,31 +49,31 @@ const EVENT_TEST_CASES: EventTestCase[] = [
       block: {
         id: 'hovered-block',
       },
-    }) as unknown as BlokEventMap[typeof BlockHovered],
+    }),
   },
   {
     name: RedactorDomChanged,
     createPayload: () => ({
       mutations: [],
-    }) as BlokEventMap[typeof RedactorDomChanged],
+    }),
   },
   {
     name: FakeCursorAboutToBeToggled,
     createPayload: () => ({
       state: true,
-    }) as BlokEventMap[typeof FakeCursorAboutToBeToggled],
+    }),
   },
   {
     name: FakeCursorHaveBeenSet,
     createPayload: () => ({
       state: false,
-    }) as BlokEventMap[typeof FakeCursorHaveBeenSet],
+    }),
   },
   {
     name: BlokMobileLayoutToggled,
     createPayload: () => ({
       isEnabled: true,
-    }) as BlokEventMap[typeof BlokMobileLayoutToggled],
+    }),
   },
   {
     name: BlockSettingsOpened,

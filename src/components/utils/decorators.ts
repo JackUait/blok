@@ -92,15 +92,15 @@ const buildLegacyCacheableDescriptor = (
 
     descriptorRef.value = function (this: unknown, ...methodArgs: unknown[]): unknown {
       return ensureCacheValue(this as Record<string, unknown>, cacheKey, () => originalMethod.apply(this, methodArgs));
-    } as typeof originalMethod;
+    };
   }
 
   if (shouldWrapGetter && descriptorRef.get !== undefined) {
-    const originalGetter = descriptorRef.get as () => unknown;
+    const originalGetter = descriptorRef.get;
 
     descriptorRef.get = function (this: unknown): unknown {
       return ensureCacheValue(this as Record<string, unknown>, cacheKey, () => originalGetter.call(this));
-    } as typeof originalGetter;
+    };
   }
 
   if (shouldWrapSetter && descriptorRef.set !== undefined) {
@@ -108,8 +108,8 @@ const buildLegacyCacheableDescriptor = (
 
     descriptorRef.set = function (this: unknown, newValue: unknown): void {
       clearCacheValue(this as Record<string, unknown>, cacheKey);
-      (originalSetter as (this: unknown, value: unknown) => void).call(this, newValue);
-    } as typeof originalSetter;
+      (originalSetter).call(this, newValue);
+    };
   }
 
   if (!descriptor) {
@@ -118,7 +118,7 @@ const buildLegacyCacheableDescriptor = (
 
   Object.keys(descriptor).forEach(propertyName => {
     if (!(propertyName in descriptorRef)) {
-      Reflect.deleteProperty(descriptor, propertyName as keyof PropertyDescriptor);
+      Reflect.deleteProperty(descriptor, propertyName);
     }
   });
 
@@ -138,19 +138,19 @@ const applyStage3CacheableDecorator = (
   );
 
   if (context.kind === 'method' && typeof value === 'function') {
-    const originalMethod = value as (...methodArgs: unknown[]) => unknown;
+    const originalMethod = value;
 
     return function (this: Record<string, unknown>, ...methodArgs: unknown[]): unknown {
       return ensureCacheValue(this, cacheKey, () => originalMethod.apply(this, methodArgs));
-    } as typeof originalMethod;
+    };
   }
 
   if (context.kind === 'getter' && typeof value === 'function') {
-    const originalGetter = value as () => unknown;
+    const originalGetter = value;
 
     return function (this: Record<string, unknown>): unknown {
       return ensureCacheValue(this, cacheKey, () => originalGetter.call(this));
-    } as typeof originalGetter;
+    };
   }
 
   if (context.kind === 'accessor' && typeof value === 'object' && value !== null) {

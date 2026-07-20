@@ -99,7 +99,7 @@ const opts = (
   config: AudioConfig = {},
   block?: BlockAPI,
 ): BlockToolConstructorOptions<AudioData, AudioConfig> => ({
-  data: { url: '', ...data } as AudioData,
+  data: { url: '', ...data },
   config,
   api: createMockApi(),
   block: block ?? createMockBlock(),
@@ -153,8 +153,8 @@ describe('AudioTool', () => {
 
   it('validate() requires a non-empty url', () => {
     const tool = new AudioTool(opts());
-    expect(tool.validate({ url: '' } as AudioData)).toBe(false);
-    expect(tool.validate({ url: 'u' } as AudioData)).toBe(true);
+    expect(tool.validate({ url: '' })).toBe(false);
+    expect(tool.validate({ url: 'u' })).toBe(true);
   });
 
   it('toolbox uses the music icon and audio titleKey', () => {

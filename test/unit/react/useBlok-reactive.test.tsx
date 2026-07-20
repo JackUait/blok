@@ -51,7 +51,7 @@ vi.mock('../../../src/blok', () => ({
       } else {
         this.isReady = Promise.resolve();
       }
-      instances.push(this as unknown as MockInstance);
+      instances.push(this);
     }
   },
 }));
@@ -444,7 +444,7 @@ describe('useBlok reactive tool-level toolbox setting', () => {
         config: { canManage },
         ...(canManage ? {} : { toolbox: false as const }),
       },
-    }) as unknown as UseBlokConfig['tools'];
+    });
 
   it('applies a toolbox visibility flip via tools.update without recreating the editor', async () => {
     const { rerender } = render(<Harness config={{ tools: toolsFor(true) }} />);
@@ -467,7 +467,7 @@ describe('useBlok reactive tool-level toolbox setting', () => {
 
   it('does not call tools.update when the toolbox setting is unchanged (new object, same content)', async () => {
     const withEntry = (): UseBlokConfig['tools'] =>
-      ({ goods: { class: GoodsTool, toolbox: { title: 'Goods' } } }) as unknown as UseBlokConfig['tools'];
+      ({ goods: { class: GoodsTool, toolbox: { title: 'Goods' } } });
 
     const { rerender } = render(<Harness config={{ tools: withEntry() }} />);
     await act(async () => { await Promise.resolve(); });

@@ -60,7 +60,7 @@ export class ItalicInlineTool implements InlineTool {
     return {
       i: {},
       em: {},
-    } as SanitizerConfig;
+    };
   }
 
   /**

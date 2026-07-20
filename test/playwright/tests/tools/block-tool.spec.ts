@@ -598,9 +598,7 @@ test.describe('blockToolAdapter', () => {
   test.describe('prepare', () => {
     test('calls constructable prepare method', async () => {
       const options = createBlockToolOptions();
-      const constructable = options.constructable as typeof options.constructable & {
-        prepare?: (data: { toolName: string; config: ToolUserConfig }) => void;
-      };
+      const constructable = options.constructable;
       const prepareMock = createMock<[ { toolName: string; config: ToolUserConfig } ]>();
 
       constructable.prepare = prepareMock.fn;
@@ -640,9 +638,7 @@ test.describe('blockToolAdapter', () => {
   test.describe('reset', () => {
     test('calls constructable reset method', async () => {
       const options = createBlockToolOptions();
-      const constructable = options.constructable as typeof options.constructable & {
-        reset?: () => void;
-      };
+      const constructable = options.constructable;
       const resetMock = createMock();
 
       constructable.reset = resetMock.fn;

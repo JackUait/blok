@@ -64,7 +64,7 @@ const makeOptions = (
       [BLOK_TOOL_NAME_CONFIG_KEY]: 'descriptionColor',
       ...extraConfig,
     },
-  }) as unknown as InlineToolConstructorOptions;
+  });
 
 describe('createReactInlineTool', () => {
   beforeEach(() => {

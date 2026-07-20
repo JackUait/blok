@@ -41,38 +41,6 @@ type CreateBlokOptions = Pick<BlokConfig, 'readOnly' | 'placeholder'> & {
   tools?: Record<string, SerializableToolConfig>;
 };
 
-/**
- * Represents the Flipper instance with its public API.
- * This matches the type defined in flipper.spec.ts.
- */
-interface FlipperInstance {
-  isActivated: boolean;
-  activate(items?: HTMLElement[], cursorPosition?: number): void;
-  deactivate(): void;
-  hasFocus(): boolean;
-  focusFirst(): void;
-  focusNext(): void;
-  focusPrev(): void;
-  remove(): void;
-  onFlip(callback: () => void): void;
-  removeOnFlip(): void;
-}
-
-/**
- * Internal modules accessible via Blok's module property.
- * This matches the type defined in flipper.spec.ts to ensure compatibility
- * with the global Window interface declaration.
- */
-interface BlokInternalModules {
-  toolbar: {
-    blockSettings: {
-      flipper: FlipperInstance;
-    };
-    inlineToolbar: unknown;
-  };
-  [key: string]: unknown;
-}
-
 const READ_ONLY_INLINE_TOOL_SOURCE = `
 class ReadOnlyInlineTool {
   static isInline = true;
@@ -247,7 +215,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 
       const blok = new window.Blok(blokConfig);
 
-      window.blokInstance = blok as Blok & { module?: BlokInternalModules };
+      window.blokInstance = blok;
 
       await blok.isReady;
     },

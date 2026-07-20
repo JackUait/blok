@@ -99,7 +99,7 @@ function createPasteHarness(): {
    * values across the per-block sanitization step in this harness.
    */
   const toolSanitize: SanitizerConfig = {
-    mark: { style: true } as unknown as SanitizerConfig['mark'],
+    mark: { style: true },
     b: {},
     i: {},
     a: { href: true },

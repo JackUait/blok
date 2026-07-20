@@ -4,7 +4,6 @@ import { API } from '../../../../../src/components/modules/api'
 import { EventsDispatcher } from '../../../../../src/components/utils/events'
 
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config'
-import type { BlokConfig } from '../../../../../types'
 import type { BlokEventMap } from '../../../../../src/components/events'
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules'
 
@@ -70,7 +69,7 @@ const createBlokStub = (rectangleSelection: Record<string, unknown>): BlokModule
 const setupApi = (rectangleSelection = createRectangleSelectionStub()): { api: API; rectangleSelection: Record<string, unknown> } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>()
   const moduleConfig: ModuleConfig = {
-    config: { defaultBlock: 'paragraph' } as BlokConfig,
+    config: { defaultBlock: 'paragraph' },
     eventsDispatcher,
   }
   const api = new API(moduleConfig)

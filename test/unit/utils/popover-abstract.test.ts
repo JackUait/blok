@@ -530,7 +530,7 @@ describe('PopoverAbstract', () => {
         x: 10,
         y: 10,
         toJSON: () => ({}),
-      } as DOMRect);
+      });
 
       const announcersBefore = document.body.querySelectorAll('[aria-live]').length;
 
@@ -561,7 +561,7 @@ describe('PopoverAbstract', () => {
         x: 10,
         y: 10,
         toJSON: () => ({}),
-      } as DOMRect);
+      });
 
       popover.destroy();
 

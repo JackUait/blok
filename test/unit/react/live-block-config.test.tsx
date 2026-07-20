@@ -62,7 +62,7 @@ const makeBlockApi = (id = 'blk-1'): BlockAPI =>
 const makeApi = (): API => ({ blocks: { isPointerDragActive: false } } as unknown as API);
 
 const makeConfig = (canManageGoods: boolean, tag = 'v1'): UseBlokConfig =>
-  ({
+  (({
     tools: {
       goods: {
         class: GoodsTool,
@@ -73,7 +73,7 @@ const makeConfig = (canManageGoods: boolean, tag = 'v1'): UseBlokConfig =>
         },
       },
     },
-  } as unknown as UseBlokConfig);
+  }));
 
 async function flushReady(): Promise<void> {
   await act(async () => {

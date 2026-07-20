@@ -87,9 +87,13 @@ describe('useBlok live tool-config functions (no frozen identities, no recreatio
     // The hack-4 regression test: consumers may pass inline closures in tool
     // configs. The editor must always call the newest closure — without being
     // destroyed/recreated and without the consumer freezing identities.
-    const { rerender, unmount } = renderHook((props: { config: UseBlokConfig }) => useBlok(props.config), {
-      initialProps: { config: { tools: makeTools('v1') } },
-    });
+    const initialProps: { config: UseBlokConfig } = {
+      config: { tools: makeTools('v1') },
+    };
+    const { rerender, unmount } = renderHook(
+      (props: { config: UseBlokConfig }) => useBlok(props.config),
+      { initialProps }
+    );
 
     await flushReady();
 
@@ -112,9 +116,13 @@ describe('useBlok live tool-config functions (no frozen identities, no recreatio
   });
 
   it('delegation reaches functions NESTED inside config objects (uploader.uploadByFile)', async () => {
-    const { rerender, unmount } = renderHook((props: { config: UseBlokConfig }) => useBlok(props.config), {
-      initialProps: { config: { tools: makeTools('v1') } },
-    });
+    const initialProps: { config: UseBlokConfig } = {
+      config: { tools: makeTools('v1') },
+    };
+    const { rerender, unmount } = renderHook(
+      (props: { config: UseBlokConfig }) => useBlok(props.config),
+      { initialProps }
+    );
 
     await flushReady();
 
@@ -130,9 +138,13 @@ describe('useBlok live tool-config functions (no frozen identities, no recreatio
   });
 
   it('falls back to the construction-time function when the latest config drops it', async () => {
-    const { rerender, unmount } = renderHook((props: { config: UseBlokConfig }) => useBlok(props.config), {
-      initialProps: { config: { tools: makeTools('v1') } } as { config: UseBlokConfig },
-    });
+    const initialProps: { config: UseBlokConfig } = {
+      config: { tools: makeTools('v1') },
+    };
+    const { rerender, unmount } = renderHook(
+      (props: { config: UseBlokConfig }) => useBlok(props.config),
+      { initialProps }
+    );
 
     await flushReady();
 
@@ -141,7 +153,7 @@ describe('useBlok live tool-config functions (no frozen identities, no recreatio
     rerender({
       config: {
         tools: { uploader: { class: UploaderTool, config: { maxSize: 30 } } },
-      } as UseBlokConfig,
+      },
     });
 
     expect(constructed.onPick('x')).toBe('v1-pick-x');

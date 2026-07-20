@@ -58,7 +58,7 @@ export class LinkInlineTool implements InlineTool {
         target: true,
         rel: true,
       },
-    } as SanitizerConfig;
+    };
   }
 
   /**

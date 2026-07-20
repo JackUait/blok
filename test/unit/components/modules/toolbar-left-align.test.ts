@@ -19,7 +19,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import { Toolbar } from '../../../../src/components/modules/toolbar';
 import type { BlokEventMap } from '../../../../src/components/events';
-import type { BlokConfig } from '../../../../types';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../src/components/block';
 import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
@@ -33,7 +32,7 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
   content: HTMLDivElement;
 } {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
-  const toolbar = new Toolbar({ config: {} as BlokConfig, eventsDispatcher });
+  const toolbar = new Toolbar({ config: {}, eventsDispatcher });
 
   const wrapper = document.createElement('div');
   const content = document.createElement('div');
@@ -41,7 +40,7 @@ function createToolbar(blokOverrides: Partial<BlokModules> = {}): {
   const plusButton = document.createElement('button');
   const settingsToggler = document.createElement('button');
 
-  toolbar.nodes = { wrapper, content, actions, plusButton, settingsToggler } as unknown as typeof toolbar.nodes;
+  toolbar.nodes = { wrapper, content, actions, plusButton, settingsToggler };
 
   const priv = toolbar as unknown as Record<string, unknown>;
 
@@ -289,11 +288,11 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
       left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0,
       x: 0, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
     vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
       left: 153, top: 0, right: 0, bottom: 0, width: 720, height: 0,
       x: 153, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
 
     // Act
     toolbar.moveAndOpen(block);
@@ -466,14 +465,14 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
       left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0,
       x: 0, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
 
     // The block content element is visually offset 200px from the left edge
     // (e.g. in wide-mode the editor container has a left offset of 200px)
     vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
       left: 200, top: 0, right: 0, bottom: 0, width: 1208, height: 0,
       x: 200, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
 
     // actionsWidth = 51px; Math.max(200, 51) = 200
     const actions = toolbar.nodes.actions!;
@@ -551,13 +550,13 @@ describe('Toolbar moveAndOpen — leftAlignElement update', () => {
     vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
       left: 264, top: 100, right: 864, bottom: 124, width: 600, height: 24,
       x: 264, y: 100, toJSON: () => ({}),
-    } as DOMRect);
+    });
 
     // The block content fills the holder (no centering margin), same left edge.
     vi.spyOn(blockContent, 'getBoundingClientRect').mockReturnValue({
       left: 264, top: 100, right: 864, bottom: 124, width: 600, height: 24,
       x: 264, y: 100, toJSON: () => ({}),
-    } as DOMRect);
+    });
 
     // Act
     toolbar.moveAndOpen(block);

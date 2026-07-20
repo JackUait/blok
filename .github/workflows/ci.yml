@@ -146,13 +146,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Node is pinned to 24.14.1 because `playwright install` (< 1.60.0) hangs forever
-      # after the browser download on Node >= 24.16 (vendored-yauzl extract bug,
-      # microsoft/playwright#40998). Remove the pin after bumping @playwright/test to >= 1.60.0.
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
-        with:
-          node-version: 24.14.1
 
       - name: Setup Playwright Browsers
         uses: ./.github/actions/setup-playwright-browsers
@@ -264,13 +259,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Node is pinned to 24.14.1 because `playwright install` (< 1.60.0) hangs forever
-      # after the browser download on Node >= 24.16 (vendored-yauzl extract bug,
-      # microsoft/playwright#40998). Remove the pin after bumping @playwright/test to >= 1.60.0.
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
-        with:
-          node-version: 24.14.1
 
       # Storybook tests only run in chromium (see vitest.config.ts). Installing all
       # browsers triggered ~2h CDN-throttled downloads that never finished.

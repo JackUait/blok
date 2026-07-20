@@ -168,7 +168,7 @@ describe('encodeAvifWithVideoEncoder', () => {
     size = { width: 1920, height: 1080 },
     quality = 0.92,
   ): Promise<Blob | null> =>
-    encodeAvifWithVideoEncoder(bitmap as unknown as ImageBitmap, size, quality);
+    encodeAvifWithVideoEncoder(bitmap, size, quality);
 
   it('returns null when the browser has no VideoEncoder', async () => {
     delete (globalThis as Record<string, unknown>).VideoEncoder;

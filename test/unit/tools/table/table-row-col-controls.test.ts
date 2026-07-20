@@ -370,7 +370,7 @@ describe('TableRowColControls', () => {
         tbody.appendChild(tr);
       }
 
-      grid = table as unknown as HTMLElement;
+      grid = table;
       document.body.appendChild(grid);
 
       controls = new TableRowColControls({
@@ -473,7 +473,7 @@ describe('TableRowColControls', () => {
         originCellEl.getBoundingClientRect = vi.fn().mockReturnValue(mergedCellBCR);
       }
 
-      grid = table as unknown as HTMLElement;
+      grid = table;
       document.body.appendChild(grid);
 
       controls = new TableRowColControls({

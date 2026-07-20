@@ -70,7 +70,7 @@ const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): un
       typeof entry === 'function' ? { class: entry } : { ...(entry as Record<string, unknown>) };
 
     base.config = {
-      ...((base.config as Record<string, unknown> | undefined) ?? {}),
+      ...((base.config) ?? {}),
       [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry,
       [BLOK_TOOL_NAME_CONFIG_KEY]: name,
     };
@@ -286,7 +286,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       };
     }
 
-    const blok = new BlokRuntime(blokConfig) as unknown as Blok;
+    const blok = new BlokRuntime(blokConfig);
     state.editor = blok;
     // Remember what this editor was seeded with so the reactive-`data` effect can
     // tell a genuine post-construction change from the construction value itself.

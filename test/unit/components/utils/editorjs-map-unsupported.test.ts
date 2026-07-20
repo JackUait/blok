@@ -177,10 +177,10 @@ describe('editorjs map: previously-unsupported blocks (raw / warning / attaches)
 
   it('assigns an id to an id-less raw block (raw alone now triggers expansion)', () => {
     const out = runMigration([
-      { type: 'raw', data: { html: '<p>no id</p>' } } as OutputBlockData,
+      { type: 'raw', data: { html: '<p>no id</p>' } },
     ]);
 
-    expect(analyzeDataFormat([{ type: 'raw', data: { html: '<p>no id</p>' } } as OutputBlockData]).format).toBe('legacy');
+    expect(analyzeDataFormat([{ type: 'raw', data: { html: '<p>no id</p>' } }]).format).toBe('legacy');
     expect(out[0].type).toBe('code');
     expect(out[0].id).toBeTruthy();
   });

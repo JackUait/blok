@@ -359,7 +359,7 @@ const createBlocksApi = (options: {
     config: {
       defaultBlock: 'paragraph',
       ...(options.configOverrides ?? {}),
-    } as BlokConfig,
+    },
     eventsDispatcher,
   };
 
@@ -775,7 +775,7 @@ describe('BlocksAPI', () => {
       const el = document.createElement('div');
 
       el.getBoundingClientRect = () =>
-        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) } as DOMRect);
+        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) });
 
       document.querySelector = vi.fn((selector: string): Element | null => {
         if (selector === '[data-blok-id="Wioa6QcE52"]') {
@@ -783,7 +783,7 @@ describe('BlocksAPI', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
       const data: OutputData = {
         blocks: [{ id: 'Wioa6QcE52', type: 'paragraph', data: { text: 'target' } }],
@@ -808,7 +808,7 @@ describe('BlocksAPI', () => {
       const el = document.createElement('div');
 
       el.getBoundingClientRect = () =>
-        ({ top: 300, bottom: 300, left: 0, right: 0, width: 0, height: 0, x: 0, y: 300, toJSON: () => ({}) } as DOMRect);
+        ({ top: 300, bottom: 300, left: 0, right: 0, width: 0, height: 0, x: 0, y: 300, toJSON: () => ({}) });
 
       document.querySelector = vi.fn((selector: string): Element | null => {
         if (selector === '[data-blok-id="blockABC"]') {
@@ -816,7 +816,7 @@ describe('BlocksAPI', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
       const data: OutputData = {
         blocks: [{ id: 'blockABC', type: 'paragraph', data: { text: 'target' } }],
@@ -875,7 +875,7 @@ describe('BlocksAPI', () => {
       const el = document.createElement('div');
 
       el.getBoundingClientRect = () =>
-        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) } as DOMRect);
+        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) });
 
       document.querySelector = vi.fn((selector: string): Element | null => {
         if (selector === '[data-blok-id="Wioa6QcE52"]') {
@@ -883,7 +883,7 @@ describe('BlocksAPI', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
       const data: OutputData = {
         blocks: [{ id: 'Wioa6QcE52', type: 'paragraph', data: { text: 'target' } }],
@@ -911,7 +911,7 @@ describe('BlocksAPI', () => {
       const el = document.createElement('div');
 
       el.getBoundingClientRect = () =>
-        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) } as DOMRect);
+        ({ top: 400, bottom: 400, left: 0, right: 0, width: 0, height: 0, x: 0, y: 400, toJSON: () => ({}) });
 
       document.querySelector = vi.fn((selector: string): Element | null => {
         if (selector === '[data-blok-id="Wioa6QcE52"]') {
@@ -919,7 +919,7 @@ describe('BlocksAPI', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
       const data: OutputData = {
         blocks: [{ id: 'Wioa6QcE52', type: 'paragraph', data: { text: 'target' } }],
@@ -958,7 +958,7 @@ describe('BlocksAPI', () => {
       const el = document.createElement('div');
 
       el.getBoundingClientRect = () =>
-        ({ top: 250, bottom: 250, left: 0, right: 0, width: 0, height: 0, x: 0, y: 250, toJSON: () => ({}) } as DOMRect);
+        ({ top: 250, bottom: 250, left: 0, right: 0, width: 0, height: 0, x: 0, y: 250, toJSON: () => ({}) });
 
       document.querySelector = vi.fn((selector: string): Element | null => {
         if (selector === '[data-blok-id="orphanEl123"]') {
@@ -966,7 +966,7 @@ describe('BlocksAPI', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
       const data: OutputData = {
         blocks: [{ id: 'id-1', type: 'paragraph', data: { text: 'text' } }],
@@ -1204,7 +1204,7 @@ describe('BlocksAPI', () => {
             ...current.data,
             ...data,
           },
-        } as BlockStub;
+        };
       });
 
       const result = await blocksApi.update('to-update', newData);
@@ -1349,7 +1349,7 @@ describe('BlocksAPI', () => {
 
       const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
         id: 'new-block',
-      } as BlockStub);
+      });
 
       blocksApi.insert('header', { text: 'Hello' }, {}, 0);
 
@@ -1389,7 +1389,7 @@ describe('BlocksAPI', () => {
 
       const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
         id: 'new-block',
-      } as BlockStub);
+      });
 
       blocksApi.insert('table', { content: [] }, {}, 0);
 
@@ -1425,7 +1425,7 @@ describe('BlocksAPI', () => {
 
       const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
         id: 'new-block',
-      } as BlockStub);
+      });
 
       blocksApi.insert('header', { text: 'Hello' }, {}, 0);
 
@@ -1471,7 +1471,7 @@ describe('BlocksAPI', () => {
 
       const insertSpy = vi.spyOn(blockManager, 'insert').mockReturnValue({
         id: 'new-block',
-      } as BlockStub);
+      });
 
       blocksApi.insert('header', { text: 'Hello' });
 

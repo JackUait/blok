@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CaretAPI } from '../../../../../src/components/modules/api/caret';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
-import type { BlokConfig } from '../../../../../types';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlockAPI } from '../../../../../types/api';
@@ -41,7 +40,7 @@ const createBlock = (id: string): BlockAPI => ({
 const createCaretApi = (): { caretApi: CaretAPI; blok: BlokStub } => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher,
   };
 

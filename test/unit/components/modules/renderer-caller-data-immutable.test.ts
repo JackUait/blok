@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Blok } from '../../../../src/blok';
-import type { BlokConfig, OutputData } from '../../../../types';
+import type { OutputData } from '../../../../types';
 import type { Blocks } from '../../../../types/api';
 
 /**
@@ -112,7 +112,7 @@ describe('caller-owned document data immutability', () => {
       holder,
       tools: { plain: PLAIN_TOOL },
       data,
-    } as unknown as BlokConfig);
+    });
   };
 
   it('boots from deep-frozen caller data without throwing and leaves it untouched', async () => {

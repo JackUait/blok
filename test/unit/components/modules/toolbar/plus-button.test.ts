@@ -37,13 +37,13 @@ vi.mock('../../../../../src/components/utils', async (importOriginal) => {
   };
 });
 
-const emptyNodes = (): ToolbarNodes => ({
+const emptyNodes = (): ToolbarNodes => (({
   wrapper: undefined,
   content: undefined,
   actions: undefined,
   plusButton: undefined,
   settingsToggler: undefined,
-} as unknown as ToolbarNodes);
+}));
 
 describe('PlusButtonHandler', () => {
   let plusButtonHandler: PlusButtonHandler;

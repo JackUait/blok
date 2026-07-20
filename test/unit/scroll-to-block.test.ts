@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { BlokConfig } from '../../types';
 import type { Block } from '../../src/components/block';
 import type { BlokModules } from '../../src/types-internal/blok-modules';
 
@@ -95,7 +94,6 @@ vi.mock('../../src/components/core', () => {
   return { Core: MockCore };
 });
 
-vi.mock('@babel/register', () => ({}));
 vi.mock('../../src/components/polyfills', () => ({}));
 
 // Static import is fine after vi.mock calls due to Vitest's mock hoisting
@@ -113,7 +111,7 @@ function fakeEl(top: number): Element {
   const el = document.createElement('div');
 
   el.getBoundingClientRect = () =>
-    ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) } as DOMRect);
+    ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) });
 
   return el;
 }
@@ -191,9 +189,9 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -214,9 +212,9 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
-    const editor = new Blok({ scrollToBlock: { topOffset: 80 } } as BlokConfig);
+    const editor = new Blok({ scrollToBlock: { topOffset: 80 } });
 
     await editor.isReady;
 
@@ -229,7 +227,7 @@ describe('scroll-to-block', () => {
   it('does not scroll when hash is empty', async () => {
     setHash('');
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -245,7 +243,7 @@ describe('scroll-to-block', () => {
 
     // querySelector already returns null from the beforeEach default spy
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -274,9 +272,9 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -297,10 +295,10 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
     // No scrollToBlock in config
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -322,13 +320,13 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
     mockGetBlockById.mockImplementation((id: string) =>
       id === 'abc123XYZ0' ? fakeBlock : undefined
     );
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -345,7 +343,7 @@ describe('scroll-to-block', () => {
 
     // querySelector returns null by default (from beforeEach mock)
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     // isReady must resolve (with the editor instance) without throwing
     await expect(editor.isReady).resolves.toBe(editor);
@@ -368,13 +366,13 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
     mockGetBlockById.mockImplementation((id: string) =>
       id === 'childBlock1' ? fakeBlock : undefined
     );
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -395,11 +393,11 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
     // mockGetBlockById returns undefined by default (reset in beforeEach via vi.clearAllMocks)
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -418,7 +416,7 @@ describe('scroll-to-block', () => {
 
     // querySelector returns null by default (block not in DOM yet)
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -431,7 +429,7 @@ describe('scroll-to-block', () => {
   it('does not store pending hash when hash is empty', async () => {
     setHash('');
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -449,9 +447,9 @@ describe('scroll-to-block', () => {
       }
 
       return originalQuerySelector(selector);
-    }) as typeof document.querySelector;
+    });
 
-    const editor = new Blok({} as BlokConfig);
+    const editor = new Blok({});
 
     await editor.isReady;
 
@@ -477,9 +475,9 @@ describe('scroll-to-block', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
-      const editor = new Blok({} as BlokConfig);
+      const editor = new Blok({});
 
       await editor.isReady;
 
@@ -497,9 +495,9 @@ describe('scroll-to-block', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
-      const editor = new Blok({} as BlokConfig);
+      const editor = new Blok({});
 
       await editor.isReady;
 
@@ -525,9 +523,9 @@ describe('scroll-to-block', () => {
           }
 
           return originalQuerySelector(selector);
-        }) as typeof document.querySelector;
+        });
 
-        const editor = new Blok({} as BlokConfig);
+        const editor = new Blok({});
 
         await editor.isReady;
 
@@ -547,7 +545,7 @@ describe('scroll-to-block', () => {
 
       // querySelector returns null by default
 
-      const editor = new Blok({} as BlokConfig);
+      const editor = new Blok({});
 
       await editor.isReady;
 
@@ -566,9 +564,9 @@ describe('scroll-to-block', () => {
         }
 
         return originalQuerySelector(selector);
-      }) as typeof document.querySelector;
+      });
 
-      const editor = new Blok({} as BlokConfig);
+      const editor = new Blok({});
 
       await editor.isReady;
 
@@ -581,7 +579,7 @@ describe('scroll-to-block', () => {
 
       // querySelector returns null by default
 
-      const editor = new Blok({} as BlokConfig);
+      const editor = new Blok({});
 
       await editor.isReady;
 
@@ -591,7 +589,7 @@ describe('scroll-to-block', () => {
     it('does not throw on malformed percent-encoded hash', async () => {
       setHash('#abc%ZZdef');
 
-      const editor = new Blok({} as BlokConfig);
+      const editor = new Blok({});
 
       await expect(editor.isReady).resolves.toBe(editor);
     });

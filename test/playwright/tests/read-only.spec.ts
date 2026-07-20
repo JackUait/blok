@@ -177,7 +177,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         blokConfig.tools = resolvedTools;
       }
 
-      const blok = new window.Blok(blokConfig as BlokConfig);
+      const blok = new window.Blok(blokConfig);
 
       window.blokInstance = blok;
       await blok.isReady;

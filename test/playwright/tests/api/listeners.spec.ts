@@ -49,6 +49,8 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
 
+  const blokOptions: Record<string, unknown> = options;
+
   await page.evaluate(
     async (params: { holder: string; blokOptions: Record<string, unknown> }) => {
       const config = Object.assign(
@@ -63,7 +65,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
     },
     {
       holder: HOLDER_ID,
-      blokOptions: options as Record<string, unknown>,
+      blokOptions,
     }
   );
 };

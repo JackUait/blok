@@ -61,7 +61,7 @@ const createBlockMock = (options: {
 
 const createSaver = (options: CreateSaverOptions = {}): { saver: Saver } => {
   const config: BlokConfig = {
-    sanitizer: options.sanitizer ?? ({} as SanitizerConfig),
+    sanitizer: options.sanitizer ?? ({}),
   };
 
   const eventsDispatcher = {
@@ -81,7 +81,7 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver } => {
   };
 
   if (!toolConfigs[stubTool]) {
-    toolConfigs[stubTool] = {} as SanitizerConfig;
+    toolConfigs[stubTool] = {};
   }
 
   const blockTools = new Map<string, { sanitizeConfig?: SanitizerConfig }>(

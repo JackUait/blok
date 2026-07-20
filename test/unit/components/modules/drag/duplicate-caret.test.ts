@@ -11,7 +11,6 @@ import { DragController as DragManager } from '../../../../../src/components/mod
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../../types';
 import type { Block } from '../../../../../src/components/block';
 import * as tooltip from '../../../../../src/components/utils/tooltip';
 import * as announcer from '../../../../../src/components/utils/announcer';
@@ -137,7 +136,7 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
   } as BlokModules;
 
   const dragManager = new DragManager({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 

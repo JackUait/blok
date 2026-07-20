@@ -108,7 +108,7 @@ export const BlokEditor = forwardRef<Blok | null, BlokEditorProps>(
       }
     }
 
-    const editor = useBlok(config as UseBlokConfig, deps);
+    const editor = useBlok(config, deps);
 
     useImperativeHandle<Blok | null, Blok | null>(ref, () => editor, [editor]);
 

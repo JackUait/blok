@@ -34,7 +34,7 @@ describe('ListItemDepth', () => {
     return {
       id,
       holder,
-    } as Block;
+    };
   };
 
   beforeEach(() => {

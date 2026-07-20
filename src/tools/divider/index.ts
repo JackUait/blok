@@ -49,7 +49,7 @@ export class DividerTool implements BlockTool {
    * Return empty data — divider has no content
    */
   public save(): DividerData {
-    return {} as DividerData;
+    return {};
   }
 
   /**

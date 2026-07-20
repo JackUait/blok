@@ -82,7 +82,7 @@ function handleBuiltInNode(
   generateId: () => string,
 ): OutputBlockData[] | null | undefined {
   if (node.type === 'paragraph') {
-    return handleParagraph(node.children as Array<{ type: string; value?: string; children?: unknown[] }>, generateId);
+    return handleParagraph(node.children, generateId);
   }
 
   if (node.type === 'heading') {
@@ -191,7 +191,7 @@ function tryOnUnknownNode(
   node: RootContent,
 ): OutputBlockData[] | null {
   try {
-    return onUnknownNode(node as Nodes);
+    return onUnknownNode(node);
   } catch (e) {
     console.warn(`markdownToBlocks: onUnknownNode threw for node type "${node.type}"`, e);
 
@@ -216,12 +216,12 @@ function handleToolMap(
     const block: OutputBlockData = {
       id: generateId(),
       type: entry.tool,
-      data: entry.data(node as Nodes),
+      data: entry.data(node),
     };
 
     if (entry.children) {
       const childBlocks = entry.children(
-        node as Nodes,
+        node,
         (childNodes) => convertNodes(childNodes as RootContent[], config, 0, generateId),
       );
 

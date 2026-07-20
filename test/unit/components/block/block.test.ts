@@ -11,7 +11,6 @@ import type { BlockTuneData } from '@/types/block-tunes/block-tune-data';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import { FakeCursorAboutToBeToggled, FakeCursorHaveBeenSet, RedactorDomChanged } from '../../../../src/components/events';
-import type { RedactorDomChangedPayload } from '../../../../src/components/events/RedactorDomChanged';
 import { SelectionUtils } from '../../../../src/components/selection';
 
 interface MockToolInstance {
@@ -126,7 +125,7 @@ const createBlock = (options: CreateBlockOptions = {}): CreateBlockResult => {
   const toolInstance: MockToolInstance = {
     render: options.toolOverrides?.render ?? vi.fn((): HTMLElement => renderElement),
     save: options.toolOverrides?.save
-      ?? vi.fn(async (_el: HTMLElement): Promise<BlockToolData> => ({ text: 'saved' } as BlockToolData)),
+      ?? vi.fn(async (_el: HTMLElement): Promise<BlockToolData> => ({ text: 'saved' })),
     validate: options.toolOverrides?.validate ?? vi.fn(async (_data: BlockToolData): Promise<boolean> => true),
     renderSettings: options.renderSettings ?? options.toolOverrides?.renderSettings,
     merge: options.toolOverrides?.merge,
@@ -198,7 +197,7 @@ describe('Block', () => {
     it('throws when tool does not support merging', async () => {
       const { block } = createBlock();
 
-      await expect(block.mergeWith({} as BlockToolData)).rejects.toThrow('does not support merging');
+      await expect(block.mergeWith({})).rejects.toThrow('does not support merging');
     });
 
     it('delegates merge to tool when supported', async () => {
@@ -888,7 +887,7 @@ describe('Block', () => {
           attributeNamespace: null,
           oldValue: null,
         }],
-      } as RedactorDomChangedPayload);
+      });
 
       // With bindMutationWatchersImmediately=true, mutation should be detected
       expect(onMutationSpy).toHaveBeenCalledWith(block);
@@ -945,7 +944,7 @@ describe('Block', () => {
           attributeNamespace: null,
           oldValue: null,
         }],
-      } as RedactorDomChangedPayload);
+      });
 
       // With bindMutationWatchersImmediately=false, mutation may not be detected immediately
       // The mutation handler is bound via requestIdleCallback, so we need to wait
@@ -1241,7 +1240,7 @@ describe('Block', () => {
 
       // Verify mutations propagate before readonly
       const mockMutation = {
-        type: 'childList' as MutationRecordType,
+        type: 'childList',
         target: block.pluginsContent,
         addedNodes: [] as unknown as NodeList,
         removedNodes: [] as unknown as NodeList,
@@ -1278,7 +1277,7 @@ describe('Block', () => {
       block.on('didMutated', mutationHandler);
 
       const mockMutation = {
-        type: 'childList' as MutationRecordType,
+        type: 'childList',
         target: block.pluginsContent,
         addedNodes: [] as unknown as NodeList,
         removedNodes: [] as unknown as NodeList,
@@ -1345,7 +1344,7 @@ describe('Block', () => {
 
       // Verify the block's mutation state hasn't changed (still not watching)
       const mockMutation = {
-        type: 'childList' as MutationRecordType,
+        type: 'childList',
         target: block.pluginsContent,
         addedNodes: [] as unknown as NodeList,
         removedNodes: [] as unknown as NodeList,

@@ -1903,7 +1903,7 @@ describe('Paste module', () => {
       mocks.Tools.blockTools.set('paragraph', defaultTool);
       mocks.Tools.getAllInlineToolsSanitizeConfig.mockReturnValue({
         a: { href: true, target: true },
-      } as unknown as SanitizerConfig);
+      });
 
       await paste.prepare();
 
@@ -2139,7 +2139,8 @@ describe('Paste module', () => {
         length: 1,
         0: file,
         item: (index: number) => index === 0 ? file : null,
-      } as unknown as FileList, ['Files']);
+        [Symbol.iterator]: () => [file].values(),
+      }, ['Files']);
 
       const dataTransferWithoutFiles = new MockDataTransfer({}, { length: 0 } as FileList, ['text/plain']);
 
@@ -2222,7 +2223,7 @@ describe('Paste module', () => {
 
     it('returns undefined when finding tool for file with no matching tool', () => {
       const toolsCollection = new ToolsCollection<BlockToolAdapter>();
-      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+      const toolRegistry = new ToolRegistry(toolsCollection, {});
 
       const unknownFile = new File(['content'], 'unknown.xyz', { type: 'application/unknown' });
       expect(toolRegistry.findToolForFile(unknownFile)).toBeUndefined();
@@ -2242,7 +2243,7 @@ describe('Paste module', () => {
       } as unknown as BlockToolAdapter;
 
       const toolsCollection = new ToolsCollection<BlockToolAdapter>([['image', fileTool]]);
-      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+      const toolRegistry = new ToolRegistry(toolsCollection, {});
 
       await toolRegistry.processTools();
 
@@ -2269,7 +2270,7 @@ describe('Paste module', () => {
       } as unknown as BlockToolAdapter;
 
       const toolsCollection = new ToolsCollection<BlockToolAdapter>([['image', fileTool]]);
-      const toolRegistry = new ToolRegistry(toolsCollection, {} as BlokConfig);
+      const toolRegistry = new ToolRegistry(toolsCollection, {});
 
       await toolRegistry.processTools();
 
@@ -2402,7 +2403,7 @@ describe('Paste module', () => {
     beforeEach(() => {
       builder = new SanitizerConfigBuilder(
         new Map() as unknown as SanitizerConfigBuilder['tools'],
-        {} as SanitizerConfigBuilder['config']
+        {}
       );
     });
 

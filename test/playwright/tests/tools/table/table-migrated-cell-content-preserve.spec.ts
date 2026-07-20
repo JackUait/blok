@@ -165,7 +165,7 @@ const migratedTableData = (): OutputData => {
     data: { text },
   }));
 
-  return { blocks: [tableBlock, ...childBlocks] } as OutputData;
+  return { blocks: [tableBlock, ...childBlocks] };
 };
 
 // A migrated table mixing realistic shapes the deterministic converter emits:
@@ -196,7 +196,7 @@ const mixedTableData = (): OutputData => {
     { id: 'm4', type: 'paragraph', data: { text: 'Single two' } },
   ];
 
-  return { blocks: [tableBlock, ...childBlocks] } as OutputData;
+  return { blocks: [tableBlock, ...childBlocks] };
 };
 
 // A migrated table AFTER a pre-fix buggy save: one cell was emptied
@@ -237,7 +237,7 @@ const detachedMigratedTableData = (): OutputData => {
   // by its cell. Sits at root in document order after the table.
   const orphan = { id: 'cell-2-1', type: 'paragraph', data: { text: 'Цель статьи' } };
 
-  return { blocks: [tableBlock, ...intactChildren, orphan] } as OutputData;
+  return { blocks: [tableBlock, ...intactChildren, orphan] };
 };
 
 const saveBlok = (page: Page): Promise<OutputData> =>

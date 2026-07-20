@@ -288,8 +288,8 @@ export class ToggleItem implements BlockTool {
       typeof data === 'object' &&
       data !== null &&
       'event' in data &&
-      typeof (data as { event: unknown }).event === 'object' &&
-      (data as { event: unknown }).event !== null &&
+      typeof (data).event === 'object' &&
+      (data).event !== null &&
       'type' in (data as { event: { type: unknown } }).event &&
       typeof (data as { event: { type: unknown } }).event.type === 'string'
     );

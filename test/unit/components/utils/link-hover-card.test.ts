@@ -13,14 +13,14 @@ const makeRect = (top: number, bottom: number, left = 10, right = 110): DOMRect 
   x: left,
   y: top,
   toJSON: () => ({}),
-} as DOMRect);
+});
 
 const createAnchor = (href: string): HTMLAnchorElement => {
   const anchor = document.createElement('a');
 
   anchor.href = href;
   anchor.textContent = 'link text';
-  anchor.getBoundingClientRect = vi.fn(() => makeRect(20, 40)) as unknown as HTMLElement['getBoundingClientRect'];
+  anchor.getBoundingClientRect = vi.fn(() => makeRect(20, 40));
 
   document.body.appendChild(anchor);
 

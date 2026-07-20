@@ -6,7 +6,6 @@ import type { CellContent, TableData, TableConfig } from '../../../../src/tools/
 import { SanitizerConfigBuilder } from '../../../../src/components/modules/paste/sanitizer-config';
 import type { BlockToolAdapter } from '../../../../src/components/tools/block';
 import type { ToolsCollection } from '../../../../src/components/tools/collection';
-import type { BlokConfig } from '../../../../types/configs/blok-config';
 import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 const createMockAPI = (): API => {
@@ -52,7 +51,7 @@ const createTableOptions = (
   data: Partial<TableData> = {},
   config: TableConfig = {}
 ): BlockToolConstructorOptions<TableData, TableConfig> => ({
-  data: { withHeadings: false, withHeadingColumn: false, content: [], ...data } as TableData,
+  data: { withHeadings: false, withHeadingColumn: false, content: [], ...data },
   config,
   api: createMockAPI(),
   readOnly: false,
@@ -267,7 +266,7 @@ describe('Table pasteConfig sanitizer keeps span attributes', () => {
   it('clean() with the Table paste config preserves colspan/rowspan on td and th', () => {
     const builder = new SanitizerConfigBuilder(
       {} as unknown as ToolsCollection<BlockToolAdapter>,
-      {} as BlokConfig
+      {}
     );
     const toolConfig = builder.buildToolConfig({
       pasteConfig: Table.pasteConfig,

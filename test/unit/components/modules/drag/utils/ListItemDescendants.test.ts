@@ -23,7 +23,7 @@ describe('ListItemDescendants', () => {
     return {
       id,
       holder,
-    } as Block;
+    };
   };
 
   // Helper to create a non-list block carrying a flat list-nesting indent
@@ -35,7 +35,7 @@ describe('ListItemDescendants', () => {
     return {
       id,
       holder,
-    } as Block;
+    };
   };
 
   beforeEach(() => {

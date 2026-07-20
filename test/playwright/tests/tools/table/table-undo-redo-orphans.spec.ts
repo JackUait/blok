@@ -69,7 +69,7 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
       holder,
       data: initialData,
       tools: tableClass ? { table: { class: tableClass } } : undefined,
-    } as ConstructorParameters<typeof window.Blok>[0]);
+    });
 
     window.blokInstance = blok;
     await blok.isReady;

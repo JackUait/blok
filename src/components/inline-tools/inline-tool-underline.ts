@@ -50,7 +50,7 @@ export class UnderlineInlineTool implements InlineTool {
   public static get sanitize(): SanitizerConfig {
     return {
       u: {},
-    } as SanitizerConfig;
+    };
   }
 
   /**

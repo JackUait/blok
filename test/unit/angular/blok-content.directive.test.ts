@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -31,6 +31,7 @@ vi.mock('@bloklabs/core', () => ({ Blok: mock.MockBlok }));
 import { BlokContentDirective } from '../../../packages/angular/src/blok-content.directive';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokContentDirective],
   template: `<div blokContent [config]="config"></div>`,

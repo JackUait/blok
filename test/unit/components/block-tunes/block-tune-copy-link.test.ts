@@ -6,7 +6,7 @@ import { CopyLinkTune } from '../../../../src/components/block-tunes/block-tune-
 import type * as BrowserModule from '../../../../src/components/utils/browser';
 
 const osState = vi.hoisted(() => ({
-  os: { win: false, mac: true, x11: false, linux: false } as Record<string, boolean>,
+  os: { win: false, mac: true, x11: false, linux: false },
 }));
 
 vi.mock('../../../../src/components/utils/browser', async (importOriginal) => {

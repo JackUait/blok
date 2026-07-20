@@ -22,7 +22,7 @@ const parseSvg = (icon: string): SVGSVGElement => {
     throw new Error('invalid svg');
   }
 
-  return svg as unknown as SVGSVGElement;
+  return svg;
 };
 
 const paths = (icon: string): SVGPathElement[] => Array.from(parseSvg(icon).querySelectorAll('path'));

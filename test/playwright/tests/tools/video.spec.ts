@@ -105,7 +105,7 @@ test('uploads a video file via the picker and renders a player', async ({ page }
 test('fullscreen hides editor chrome and keeps only playback controls', async ({ page }) => {
   await createBlok(page, {
     blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, caption: 'My clip', alignment: 'center' } }],
-  } as OutputData);
+  });
 
   const videoBlock = page.locator(VIDEO_BLOCK_SELECTOR);
   await expect(videoBlock).toHaveAttribute('data-state', 'rendered');
@@ -144,7 +144,7 @@ test('fullscreen hides editor chrome and keeps only playback controls', async ({
 test('persists video data across save and reload', async ({ page }) => {
   await createBlok(page, {
     blocks: [{ type: 'video', data: { url: SAMPLE_VIDEO_URL, caption: 'My clip', alignment: 'center' } }],
-  } as OutputData);
+  });
 
   const videoBlock = page.locator(VIDEO_BLOCK_SELECTOR);
   await expect(videoBlock).toHaveAttribute('data-state', 'rendered');

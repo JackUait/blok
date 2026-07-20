@@ -3,7 +3,6 @@ import { InlineToolbarAPI } from '../../../../../src/components/modules/api/inli
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { ModuleConfig } from '../../../../../src/types-internal/module-config';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../../types';
 import type { BlokEventMap } from '../../../../../src/components/events';
 
 type InlineToolbarBlokMock = {
@@ -20,7 +19,7 @@ describe('InlineToolbarAPI', () => {
   const createInlineToolbarApi = (overrides?: Partial<InlineToolbarBlokMock>): void => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
     const moduleConfig: ModuleConfig = {
-      config: {} as BlokConfig,
+      config: {},
       eventsDispatcher,
     };
 

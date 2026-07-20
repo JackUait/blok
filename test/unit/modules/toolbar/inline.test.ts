@@ -377,7 +377,7 @@ describe('InlineToolbar', () => {
       } as DOMRect);
       vi.spyOn(SelectionUtils, 'range', 'get').mockReturnValue(selection.getRangeAt(0));
 
-      mockBlok.BlockManager.currentBlock = createMockBlock() as unknown as typeof mockBlok.BlockManager.currentBlock;
+      mockBlok.BlockManager.currentBlock = createMockBlock();
     });
 
     it('should close toolbar when needToClose is true', async () => {
@@ -624,7 +624,7 @@ describe('InlineToolbar', () => {
       const block = createMockBlock();
 
       block.tool.inlineTools = new Map([['modernTool', adapter]]);
-      mockBlok.BlockManager.currentBlock = block as unknown as typeof mockBlok.BlockManager.currentBlock;
+      mockBlok.BlockManager.currentBlock = block;
 
       // createToolsInstances is still available and sets up tools
       (inlineToolbar as unknown as { createToolsInstances: () => void }).createToolsInstances();

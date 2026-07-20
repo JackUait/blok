@@ -574,7 +574,7 @@ describe('createReactBlock (React authoring factory)', () => {
         <span className="edit">{data.count}</span>
       ),
       viewComponent: props => {
-        seenViewProps.push(props as unknown as Record<string, unknown>);
+        seenViewProps.push(props);
 
         return <span className="display">{props.data.count}</span>;
       },

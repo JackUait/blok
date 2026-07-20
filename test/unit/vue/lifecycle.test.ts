@@ -65,7 +65,7 @@ describe('useBlok lifecycle', () => {
   it('hands core a plain (non-reactive) config and data — no Vue proxy reaches core', () => {
     const data = reactive({ blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] });
 
-    mountUseBlok({ data: data as unknown as UseBlokConfig['data'], readOnly: true });
+    mountUseBlok({ data: data, readOnly: true });
 
     const passed = blokRegistry.last!.config as { data: unknown; readOnly: unknown };
 

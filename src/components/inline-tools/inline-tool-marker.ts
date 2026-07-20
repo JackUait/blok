@@ -130,7 +130,7 @@ export class MarkerInlineTool implements InlineTool {
 
         return style.length > 0 ? { style: true } : {};
       },
-    } as SanitizerConfig;
+    };
   }
 
   /**

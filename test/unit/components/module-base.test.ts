@@ -62,7 +62,7 @@ describe('Module base class', () => {
   it('throws when attempting to instantiate directly', () => {
     const createModuleInstance = (): Module =>
       new Module({
-        config: {} as BlokConfig,
+        config: {},
         eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
       });
 
@@ -117,7 +117,7 @@ describe('Module base class', () => {
 
     listeners.on.mockReturnValueOnce('listener-1').mockReturnValueOnce(undefined);
 
-    moduleInstance.overrideListeners(listeners as unknown as Listeners);
+    moduleInstance.overrideListeners(listeners);
 
     const handler = vi.fn();
     const element = document.createElement('button');

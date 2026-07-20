@@ -4,7 +4,6 @@ import { BlocksAPI } from '../../../src/components/modules/api/blocks';
 import { EventsDispatcher } from '../../../src/components/utils/events';
 
 import type { ModuleConfig } from '../../../src/types-internal/module-config';
-import type { BlokConfig } from '../../../types';
 import type { BlokEventMap } from '../../../src/components/events';
 import type { BlokModules } from '../../../src/types-internal/blok-modules';
 
@@ -107,7 +106,7 @@ const createBlocksApi = (): { blocksApi: BlocksAPI; blok: BlokStub; blockManager
   const moduleConfig: ModuleConfig = {
     config: {
       defaultBlock: 'paragraph',
-    } as BlokConfig,
+    },
     eventsDispatcher,
   };
 

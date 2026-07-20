@@ -20,7 +20,7 @@ const createOptions = (
   data: Partial<DividerData> = {},
   overrides: { readOnly?: boolean } = {}
 ): BlockToolConstructorOptions<DividerData> => ({
-  data: { ...data } as DividerData,
+  data: { ...data },
   config: {},
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,
@@ -98,7 +98,7 @@ describe('DividerTool', () => {
       const { DividerTool } = await import('../../../../src/tools/divider');
       const tool = new DividerTool(createOptions());
 
-      expect(tool.validate({} as DividerData)).toBe(true);
+      expect(tool.validate({})).toBe(true);
     });
   });
 

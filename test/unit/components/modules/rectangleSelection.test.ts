@@ -5,7 +5,6 @@ import { SelectionUtils } from '../../../../src/components/selection';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import type { BlokModules } from '../../../../src/types-internal/blok-modules';
-import type { BlokConfig } from '../../../../types';
 import type { Block as BlockType } from '../../../../src/components/block';
 import { announce } from '../../../../src/components/utils/announcer';
 
@@ -55,7 +54,7 @@ interface RectangleSelectionTestSetup {
 
 const createRectangleSelection = (overrides: PartialModules = {}): RectangleSelectionTestSetup => {
   const rectangleSelection = new RectangleSelection({
-    config: {} as BlokConfig,
+    config: {},
     eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
   });
 

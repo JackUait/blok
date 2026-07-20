@@ -328,7 +328,7 @@ test.describe('Toggle Tool', () => {
 
       expect(saved).toBeDefined();
 
-      await createBlok(page, saved as OutputData);
+      await createBlok(page, saved);
 
       const content = page.locator(TOGGLE_CONTENT_SELECTOR);
 

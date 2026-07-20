@@ -62,7 +62,7 @@ export class EquationInlineTool implements InlineTool {
       span: {
         [EQUATION_ATTR]: true,
       },
-    } as SanitizerConfig;
+    };
   }
 
   /**

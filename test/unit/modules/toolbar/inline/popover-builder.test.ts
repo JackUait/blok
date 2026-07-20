@@ -62,7 +62,7 @@ describe('InlinePopoverBuilder', () => {
     mockI18n = {
       t: vi.fn((key: string) => key),
       has: vi.fn(() => false),
-    } as unknown as typeof mockI18n;
+    };
 
     const getBlok = () => mockBlok;
     const getI18n = () => mockI18n as unknown as I18n;

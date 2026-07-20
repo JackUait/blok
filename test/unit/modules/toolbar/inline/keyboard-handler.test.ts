@@ -28,7 +28,7 @@ describe('InlineKeyboardHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    closeCallback = vi.fn() as unknown as () => void;
+    closeCallback = vi.fn();
 
     flipperMock = {
       hasFocus: vi.fn(() => false),

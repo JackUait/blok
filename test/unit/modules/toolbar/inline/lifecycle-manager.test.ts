@@ -19,7 +19,7 @@ describe('InlineLifecycleManager', () => {
           setTimeout(() => cb(), 0);
           return 1;
         }
-      ) as unknown as (cb: () => void, options?: { timeout: number }) => number;
+      );
     } else {
       vi.stubGlobal('window', {
         setTimeout,
@@ -31,7 +31,7 @@ describe('InlineLifecycleManager', () => {
       });
     }
 
-    initializeCallback = vi.fn() as unknown as () => void;
+    initializeCallback = vi.fn();
 
     mockBlok = {
       UI: {

@@ -293,7 +293,7 @@ export class Paste extends Module {
     const inlineSanitizeConfig = this.Blok.Tools.getAllInlineToolsSanitizeConfig();
     const structuralTagsConfig = Object.fromEntries(
       [...SAFE_STRUCTURAL_TAGS].map((tag) => [tag, {}])
-    ) as SanitizerConfig;
+    );
     /**
      * The whole-document first pass must always keep structural tags and tool
      * substitution tags — they exist so tools can receive their elements later
@@ -303,7 +303,7 @@ export class Paste extends Module {
      * still win for the tags it does specify.
      */
     const customConfig = composeSanitizerConfig(
-      {} as SanitizerConfig,
+      {},
       structuralTagsConfig,
       toolsTags,
       inlineSanitizeConfig,

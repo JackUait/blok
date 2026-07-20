@@ -35,7 +35,7 @@ describe('mountChildBlocks', () => {
       { holder: holderB },
     ];
 
-    mountChildBlocks(container, children as { holder: HTMLElement }[]);
+    mountChildBlocks(container, children);
 
     expect(container.children).toHaveLength(2);
     expect(container.contains(holderA)).toBe(true);

@@ -187,7 +187,7 @@ describe('InlineSelectionValidator', () => {
       mockBlock.tool.inlineTools.clear();
 
       mockBlok.BlockManager.currentBlock = mockBlock as unknown as typeof mockBlok.BlockManager.currentBlock;
-      (mockBlok.BlockManager.getBlock as ReturnType<typeof vi.fn>).mockReturnValue(mockBlock as never);
+      (mockBlok.BlockManager.getBlock as ReturnType<typeof vi.fn>).mockReturnValue(mockBlock);
 
       const selection = createMockSelection(textNode, false);
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(selection);
@@ -208,7 +208,7 @@ describe('InlineSelectionValidator', () => {
 
       const mockBlock = createMockBlock();
       mockBlok.BlockManager.currentBlock = mockBlock as unknown as typeof mockBlok.BlockManager.currentBlock;
-      (mockBlok.BlockManager.getBlock as ReturnType<typeof vi.fn>).mockReturnValue(mockBlock as never);
+      (mockBlok.BlockManager.getBlock as ReturnType<typeof vi.fn>).mockReturnValue(mockBlock);
 
       const selection = createMockSelection(textNode, false);
       vi.spyOn(SelectionUtils, 'get').mockReturnValue(selection);
@@ -228,7 +228,7 @@ describe('InlineSelectionValidator', () => {
 
       const mockBlock = createMockBlock();
       mockBlok.BlockManager.currentBlock = mockBlock as unknown as typeof mockBlok.BlockManager.currentBlock;
-      (mockBlok.BlockManager.getBlock as ReturnType<typeof vi.fn>).mockReturnValue(mockBlock as never);
+      (mockBlok.BlockManager.getBlock as ReturnType<typeof vi.fn>).mockReturnValue(mockBlock);
 
       // Create a new Blok mock with read-only enabled
       mockBlok = {

@@ -250,7 +250,7 @@ test.describe('Toggle Headings', () => {
       });
 
       // Reload with saved data
-      await createBlok(page, savedData as OutputData);
+      await createBlok(page, savedData);
 
       // Verify toggle heading preserved
       const header = page.getByRole('heading', { level: 3, name: 'Round Trip H3' });

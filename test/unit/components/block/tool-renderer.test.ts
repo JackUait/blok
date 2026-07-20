@@ -20,7 +20,7 @@ describe('ToolRenderer', () => {
     toolInstance = {
       render: vi.fn(() => mockRenderedElement),
       save: vi.fn(() => ({ text: 'content' })),
-    } as unknown as BlockTool;
+    };
 
     tunesManager = {
       wrapContent: vi.fn((content: HTMLElement) => content),

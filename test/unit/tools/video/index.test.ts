@@ -23,7 +23,7 @@ const createOptions = (
   config: VideoConfig = {},
   block?: BlockAPI
 ): BlockToolConstructorOptions<VideoData, VideoConfig> => ({
-  data: { url: '', ...data } as VideoData,
+  data: { url: '', ...data },
   config,
   api: createMockApi(),
   block: block ?? createMockBlock(),
@@ -102,8 +102,8 @@ describe('VideoTool — RENDERED state', () => {
 
   it('validate({ url: "" }) returns false, non-empty returns true', () => {
     const tool = new VideoTool(createOptions());
-    expect(tool.validate({ url: '' } as VideoData)).toBe(false);
-    expect(tool.validate({ url: 'https://x/y.mp4' } as VideoData)).toBe(true);
+    expect(tool.validate({ url: '' })).toBe(false);
+    expect(tool.validate({ url: 'https://x/y.mp4' })).toBe(true);
   });
 
   it('applies data-state / data-align / data-caption attributes on the root', () => {

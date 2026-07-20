@@ -60,7 +60,7 @@ const createRealEditorHarness = (
   const hierarchy = new BlockHierarchy(repository);
 
   for (const cfg of initialBlocks) {
-    blocksStore.push(createBlockStub(cfg) as unknown as Block);
+    blocksStore.push(createBlockStub(cfg));
   }
 
   const listeners = new Set<() => void>();
@@ -95,7 +95,7 @@ const createRealEditorHarness = (
       const stub = createBlockStub({ id, name: type ?? 'paragraph' });
       const insertAt = index !== undefined ? Math.min(index, blocksStore.length) : blocksStore.length;
 
-      blocksStore.insert(insertAt, stub as unknown as Block);
+      blocksStore.insert(insertAt, stub);
       notify();
 
       return { id: stub.id, name: stub.name, parentId: stub.parentId };
@@ -111,10 +111,10 @@ const createRealEditorHarness = (
         const id = cfg.id ?? `inserted-${insertSeq}`;
         const stub = createBlockStub({ id, name: cfg.type ?? 'paragraph', parentId: null });
 
-        blocksStore.insert(startAt + offset, stub as unknown as Block);
+        blocksStore.insert(startAt + offset, stub);
 
         if (cfg.parent !== null && cfg.parent !== undefined) {
-          hierarchy.setBlockParent(stub as unknown as Block, cfg.parent);
+          hierarchy.setBlockParent(stub, cfg.parent);
         }
 
         return { id };

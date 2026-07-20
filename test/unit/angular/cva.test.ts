@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -14,6 +14,7 @@ function doc(text: string): OutputData {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent, ReactiveFormsModule],
   template: `<blok-editor [formControl]="ctrl"></blok-editor>`,

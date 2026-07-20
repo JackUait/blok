@@ -437,7 +437,7 @@ export class CalloutTool implements BlockTool {
         textColor: null,
         backgroundColor: null,
         __importedText: stringToImport,
-      } as CalloutData),
+      }),
     };
   }
 

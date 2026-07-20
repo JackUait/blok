@@ -10,7 +10,7 @@ import type { UseBlokConfig } from '../../../packages/vue/src/types';
 import type { OutputData } from '@/types';
 
 async function mountReady(initial: UseBlokConfig): Promise<{ config: UseBlokConfig }> {
-  const config = reactive({ ...initial }) as UseBlokConfig;
+  const config = reactive({ ...initial });
 
   const Harness = defineComponent({
     setup() {

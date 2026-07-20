@@ -31,7 +31,7 @@ const createOptions = (
   config: ImageConfig = {},
   block?: BlockAPI
 ): BlockToolConstructorOptions<ImageData, ImageConfig> => ({
-  data: { url: '', ...data } as ImageData,
+  data: { url: '', ...data },
   config,
   api: createMockApi(),
   block: block ?? createMockBlock(),
@@ -82,12 +82,12 @@ describe('ImageTool — RENDERED state', () => {
 
   it('validate({ url: "" }) returns false', () => {
     const tool = new ImageTool(createOptions());
-    expect(tool.validate({ url: '' } as ImageData)).toBe(false);
+    expect(tool.validate({ url: '' })).toBe(false);
   });
 
   it('validate({ url: "https://..." }) returns true', () => {
     const tool = new ImageTool(createOptions());
-    expect(tool.validate({ url: 'https://x/y.png' } as ImageData)).toBe(true);
+    expect(tool.validate({ url: 'https://x/y.png' })).toBe(true);
   });
 });
 
@@ -385,10 +385,10 @@ describe('ImageTool — overlay actions', () => {
 
     vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
     vi.spyOn(figure, 'getBoundingClientRect').mockReturnValue({
       left: 220, top: 0, right: 580, bottom: 100, width: 360, height: 100, x: 220, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
 
     expect(tool.getContentOffset(figure)).toEqual({ left: 120 });
   });
@@ -407,10 +407,10 @@ describe('ImageTool — overlay actions', () => {
 
     vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
     vi.spyOn(figure, 'getBoundingClientRect').mockReturnValue({
       left: 100, top: 0, right: 700, bottom: 100, width: 600, height: 100, x: 100, y: 0, toJSON: () => ({}),
-    } as DOMRect);
+    });
 
     expect(tool.getContentOffset(figure)).toBeUndefined();
   });
@@ -1383,13 +1383,13 @@ describe('isTinyImage', () => {
 describe('applyAutoFull', () => {
   it('sets data-auto-full="true" on root when image is tiny', () => {
     const root = document.createElement('div');
-    applyAutoFull(root, { naturalWidth: 1400, naturalHeight: 80 } as HTMLImageElement, 1000);
+    applyAutoFull(root, { naturalWidth: 1400, naturalHeight: 80 }, 1000);
     expect(root.getAttribute('data-auto-full')).toBe('true');
   });
 
   it('does not set data-auto-full when image height is ample', () => {
     const root = document.createElement('div');
-    applyAutoFull(root, { naturalWidth: 1000, naturalHeight: 600 } as HTMLImageElement, 800);
+    applyAutoFull(root, { naturalWidth: 1000, naturalHeight: 600 }, 800);
     expect(root.getAttribute('data-auto-full')).toBeNull();
   });
 });
@@ -1405,7 +1405,7 @@ describe('ImageTool — compact toolbar when figure is narrow', () => {
       observe(): void {}
       unobserve(): void {}
       disconnect(): void {}
-    } as unknown as typeof ResizeObserver;
+    };
   });
   afterAll(() => {
     window.ResizeObserver = OriginalResizeObserver;
@@ -1420,7 +1420,7 @@ describe('ImageTool — compact toolbar when figure is narrow', () => {
     const overlay = root.querySelector<HTMLElement>('[data-role="image-overlay"]');
     if (!figure || !overlay) throw new Error('dom missing');
     Object.defineProperty(figure, 'clientWidth', { configurable: true, value: 200 });
-    for (const cb of callbacks) cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+    for (const cb of callbacks) cb([], {} as ResizeObserver);
     expect(overlay.getAttribute('data-compact')).toBe('true');
   });
 
@@ -1431,10 +1431,10 @@ describe('ImageTool — compact toolbar when figure is narrow', () => {
     const overlay = root.querySelector<HTMLElement>('[data-role="image-overlay"]');
     if (!figure || !overlay) throw new Error('dom missing');
     Object.defineProperty(figure, 'clientWidth', { configurable: true, value: 200 });
-    for (const cb of callbacks) cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+    for (const cb of callbacks) cb([], {} as ResizeObserver);
     expect(overlay.getAttribute('data-compact')).toBe('true');
     Object.defineProperty(figure, 'clientWidth', { configurable: true, value: 600 });
-    for (const cb of callbacks) cb([] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+    for (const cb of callbacks) cb([], {} as ResizeObserver);
     expect(overlay.getAttribute('data-compact')).toBeNull();
   });
 });

@@ -124,7 +124,7 @@ const createBlockStub = (options: {
       sanitizeConfig: {},
       conversionConfig: {},
       settings: {},
-    } as Record<string, unknown>,
+    },
     tunes: preservedTunes,
     mergeable: false,
     mergeWith: vi.fn(),
@@ -821,7 +821,7 @@ describe('BlockManager', () => {
       conversionConfig: {
         import: (text: string, config?: Record<string, unknown>) => ({
           text: text.toUpperCase(),
-          level: (config?.level as number) ?? 1,
+          level: (config?.level) ?? 1,
         }),
       },
     });
@@ -851,7 +851,7 @@ describe('BlockManager', () => {
 
     // Verify replace was called (without checking deep equality which causes pretty-format issues)
     expect(operationsReplaceSpy).toHaveBeenCalledTimes(1);
-    const callArgs = operationsReplaceSpy.mock.calls[0] as [Block, string, Record<string, unknown>];
+    const callArgs = operationsReplaceSpy.mock.calls[0];
     expect(callArgs[0]).toBe(blockToConvert);
     expect(callArgs[1]).toBe('header');
     expect(callArgs[2].text).toBe('<P>CONVERTED</P>');

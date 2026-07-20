@@ -37,7 +37,7 @@ const createPasteItem = (tool: string, text: string): PasteData => {
     tool,
     content,
     isBlock: true,
-    event: new CustomEvent('paste', { detail: { data: content } }) as unknown as PasteData['event'],
+    event: new CustomEvent('paste', { detail: { data: content } }),
   };
 };
 
@@ -93,7 +93,7 @@ const createInlinePasteItem = (tool: string, text: string): PasteData => {
     tool,
     content,
     isBlock: false,
-    event: new CustomEvent('paste', { detail: { data: content } }) as unknown as PasteData['event'],
+    event: new CustomEvent('paste', { detail: { data: content } }),
   };
 };
 

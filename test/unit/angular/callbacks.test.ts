@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, OutputBlockData, ResolvedTheme } from '@/types';
@@ -9,6 +9,7 @@ import { blokRegistry } from './_mock-blok';
 import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
   template: `<blok-editor
@@ -31,6 +32,7 @@ class WiredHost {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.Default,
   standalone: true,
   imports: [BlokEditorComponent],
   template: `<blok-editor></blok-editor>`,

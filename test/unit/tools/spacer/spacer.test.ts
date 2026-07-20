@@ -20,7 +20,7 @@ const createOptions = (
   data: Partial<SpacerData> = {},
   overrides: { readOnly?: boolean } = {}
 ): BlockToolConstructorOptions<SpacerData> => ({
-  data: { ...data } as SpacerData,
+  data: { ...data },
   config: {},
   api: createMockAPI(),
   readOnly: overrides.readOnly ?? false,
@@ -73,7 +73,7 @@ const stubLiveRect = (el: HTMLElement, box: () => Partial<DOMRect>): void => {
         { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) },
         doc,
         { top: (doc.top ?? 0) - pageScroll(), bottom: (doc.bottom ?? 0) - pageScroll() }
-      ) as DOMRect;
+      );
     },
   });
 };
@@ -391,7 +391,7 @@ describe('SpacerTool', () => {
       const { SpacerTool } = await import('../../../../src/tools/spacer');
       const tool = new SpacerTool(createOptions());
 
-      expect(tool.validate({} as SpacerData)).toBe(true);
+      expect(tool.validate({})).toBe(true);
     });
   });
 

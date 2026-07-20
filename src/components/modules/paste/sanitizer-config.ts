@@ -27,14 +27,14 @@ export class SanitizerConfigBuilder {
         tag.toLowerCase(),
         toolsTags[tag].sanitizationConfig ?? {},
       ])
-    ) as SanitizerConfig;
+    );
   }
 
   /**
    * Detect structural tags in HTML node.
    */
   public getStructuralTagsConfig(node: HTMLElement): SanitizerConfig {
-    const config: SanitizerConfig = {} as SanitizerConfig;
+    const config: SanitizerConfig = {};
     const nodesToProcess: Element[] = [ node ];
 
     while (nodesToProcess.length > 0) {

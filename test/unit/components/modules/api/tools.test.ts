@@ -21,7 +21,7 @@ const createToolsApi = (
 ): CreateToolsApiResult => {
   const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const moduleConfig: ModuleConfig = {
-    config: { ...configOverrides } as BlokConfig,
+    config: { ...configOverrides },
     eventsDispatcher,
   };
 

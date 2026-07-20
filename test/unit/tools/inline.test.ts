@@ -56,7 +56,7 @@ const createInlineToolOptions = (): InlineToolAdapterOptions => {
     isDefault: false,
     isInternal: false,
     defaultPlaceholder: 'Default placeholder',
-  } as InlineToolAdapterOptions;
+  };
 };
 
 describe('InlineToolAdapter', () => {

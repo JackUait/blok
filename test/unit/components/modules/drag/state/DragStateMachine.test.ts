@@ -27,9 +27,9 @@ describe('DragStateMachine', () => {
     stateMachine = new DragStateMachine();
 
     // Create mock blocks
-    mockBlock1 = { id: 'block-1' } as Block;
-    mockBlock2 = { id: 'block-2' } as Block;
-    mockBlock3 = { id: 'block-3' } as Block;
+    mockBlock1 = { id: 'block-1' };
+    mockBlock2 = { id: 'block-2' };
+    mockBlock3 = { id: 'block-3' };
   });
 
   describe('initial state', () => {

@@ -253,7 +253,7 @@ test.describe('blok Tools Api', () => {
       await createBlokWithTools(
         page,
         {
-          testTool: TestTool as unknown as BlockToolConstructable,
+          testTool: TestTool,
         },
         { globals: { ICON } }
       );
@@ -340,7 +340,7 @@ test.describe('blok Tools Api', () => {
       await createBlokWithTools(
         page,
         {
-          testTool: TestTool as unknown as BlockToolConstructable,
+          testTool: TestTool,
         },
         { globals: { ICON } }
       );
@@ -427,7 +427,7 @@ test.describe('blok Tools Api', () => {
       await createBlokWithTools(
         page,
         {
-          testTool: TestTool as unknown as BlockToolConstructable,
+          testTool: TestTool,
         },
         {
           globals: {

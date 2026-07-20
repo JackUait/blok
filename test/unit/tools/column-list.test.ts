@@ -19,7 +19,7 @@ const createColumnListOptions = (
   data: Partial<ColumnListData> = {},
   api: API = createMockAPI()
 ): BlockToolConstructorOptions<ColumnListData> => ({
-  data: { ...data } as ColumnListData,
+  data: { ...data },
   config: {},
   api,
   readOnly: false,

@@ -561,5 +561,5 @@ const createMockBlock = (id: string): Partial<Block> => {
     id,
     name: 'paragraph',
     holder: document.createElement('div'),
-  } as Block;
+  };
 }

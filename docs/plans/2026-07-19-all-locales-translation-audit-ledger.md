@@ -310,7 +310,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `et` | Estonian | Latin | ltr | neutral contemporary Estonian; concise imperatives for user actions; natural impersonal wording for system states and live-region announcements; sentence-case UI; established Estonian product, accessibility, and media terminology; count-neutral variable templates | `root-et_546_corrected_current_first` | `root-et_546_corrected_current_second` | pass | pass | pass | `F-et-001`–`F-et-055` | second-pass-complete |
 | `fa` | Persian (Farsi) | Arabic | rtl | neutral contemporary standard Iranian Persian; polite plural imperatives for instructions and recovery guidance; concise imperative or noun labels for compact controls; Persian punctuation and established Persian product, accessibility, and media terminology; conventional unchanged Latin brands, acronyms, formulas, and shortcut notation | `root-fa_546_lifecycle_replacement` | `root-fa_546_corrected_second` | pass | pass | pass | `F-fa-001`–`F-fa-053` | second-pass-complete |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
-| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-100` | pending |
+| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | `root-fil_42e_first_clean` | `root-fil_42e_second_fresh` | pass | pass | pass | `F-fil-001`–`F-fil-100` | second-pass-complete |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | `root-fil_2c9_proposal_challenge` | pass | pass | pass | `F-gu-001`–`F-gu-054` | second-pass-complete |
 | `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-he_9dc_first_fresh` | `root-he_9dc_second_fresh` | pass | pass | pass | `F-he-001`–`F-he-069` | second-pass-complete |
@@ -448,6 +448,7 @@ locale returns to `pending`.
 | `et` | `root-et_546_corrected_current_first` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` | `root-et_546_corrected_current_second` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` |
 | `fa` | `root-fa_546_lifecycle_replacement` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` | `root-fa_546_corrected_second` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` |
 | `fi` | `root-fi_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` | `root-fil_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` |
+| `fil` | `root-fil_42e_first_clean` | `sha256:42eec4aa3c9f28922ed204a8f37280b5c624b8fb399664d01f1ec008867ae5b3` | `root-fil_42e_second_fresh` | `sha256:42eec4aa3c9f28922ed204a8f37280b5c624b8fb399664d01f1ec008867ae5b3` |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
 | `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | `root-fil_2c9_proposal_challenge` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` |
 | `he` | `root-he_9dc_first_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` | `root-he_9dc_second_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` |
@@ -5976,6 +5977,53 @@ known warnings. `F-fil-100` is verified. Because the dictionary bytes changed,
 both prior complete reviews are invalid for completion credit: Filipino remains
 `pending` with no reviewed-dictionary digest, and two fresh full 546-entry
 reviews must restart at entry 1 on the corrected bytes.
+
+### Filipino 42e corrected-byte complete reviews — clean
+
+Fresh reviewer `root-fil_42e_first_clean` read all 546 English/Filipino pairs
+twice from entry 1 on raw Filipino SHA-256
+`42eec4aa3c9f28922ed204a8f37280b5c624b8fb399664d01f1ec008867ae5b3`.
+The review was isolated from tests, plans, Git metadata, other locales, prior
+Filipino evidence, and reviewer messages. Its immutable bundle is
+`/Users/jackuait/fil-42e-first-clean.PNp9DJ`. It records 546/546 accepted
+pairs, zero residuals, exact placeholder closure, all 50 current exact-English
+values individually justified, and caller consumption closed as 397 direct +
+122 dynamic + 27 without a current live caller. The complete matrix, source
+inventory, core manifest, sealed manifest, and final seal are respectively
+SHA-256
+`85320aacce0cc381c6fcfb8584844bab1858687070ca87b017b42d9f5d2dda5d`,
+`72036471b886a54e6ff7d74c714b3317f5ae98481b2e3027f85b63bfe97e1ac8`,
+`763eb1983fcf22c6f3983bfc14211b5d08a187ebc3151afa5d2a5b314fdcd8e4`,
+`b3c94fc9b4fe16325c8f28f2d250b412598a8d4f3547dc84225dddf67f5c186d`,
+and
+`996b0f258d983ea3417fa92b28dd3dbb1e53c380cd9d32c2c609c97327687d80`.
+Both stored validator replays are byte-identical at SHA-256
+`a12bdcc6010b63c9dd4facc1ee47a84444323d2ae06a9561f236304b34b33d39`.
+Root independently ran the sealed validator twice, reproduced both complete
+passes and the pinned source inventory, and verified every sealed checksum.
+
+Distinct reviewer `root-fil_42e_second_fresh` then independently repeated both
+complete 546-entry passes under the same clean-room exclusions and found zero
+material residuals. Its read-only bundle is
+`/private/tmp/blok-fil-second-independent-42eec4aa`. It reproduces the exact
+raw 398 literal + 121 finite + 27 registered partition and semantic 397
+literal + 122 finite + 25 registered-compatible + two no-route closure,
+including literal `toolNames.text`, finite
+`tools.video.seekValueText`, and only
+`blockSettings.convertWithChildrenWarning` and `tools.columns.turnInto` as
+no-route. The matrix, both byte-identical replays, payload checksum root, and
+seal are respectively SHA-256
+`8a1faf21d305a0ded976e33e96bf7eb1892c30e2d3e5ebd0f6966dbe0c612652`,
+`f7ffbfdfabd8e2a1491f9aa0ac910a856ded6bbb36f0b940bd200b0cedf29544`,
+`00854d5d98eca8a65f31e2c6ba0e7bc4dd06e9689bf283d4b9e8e5e21f095af5`,
+and
+`e0622301830513606e8b096a24c9cda4ef4af8a008106cf120a740eb83bdb2e8`.
+Root ran the sealed validator twice with byte-identical `PASS` output and
+verified all 13 payload checksums. Both reviewers independently accept the
+same 50 exact-English values already recorded by the current `R-fil-*`
+inventory. Filipino therefore earns structural, semantic/style, and
+exact-retention passes and is now `second-pass-complete` on the bound
+`42eec4aa…` bytes.
 
 ### Persian corrected-byte first pass and detached-UI direction finding
 

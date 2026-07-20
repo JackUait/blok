@@ -310,7 +310,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `et` | Estonian | Latin | ltr | neutral contemporary Estonian; concise imperatives for user actions; natural impersonal wording for system states and live-region announcements; sentence-case UI; established Estonian product, accessibility, and media terminology; count-neutral variable templates | `root-et_546_corrected_current_first` | `root-et_546_corrected_current_second` | pass | pass | pass | `F-et-001`–`F-et-055` | second-pass-complete |
 | `fa` | Persian (Farsi) | Arabic | rtl | neutral contemporary standard Iranian Persian; polite plural imperatives for instructions and recovery guidance; concise imperative or noun labels for compact controls; Persian punctuation and established Persian product, accessibility, and media terminology; conventional unchanged Latin brands, acronyms, formulas, and shortcut notation | `root-fa_546_lifecycle_replacement` | `root-fa_546_corrected_second` | pass | pass | pass | `F-fa-001`–`F-fa-053` | second-pass-complete |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
-| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-099` | pending |
+| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-fil-001`–`F-fil-099` | first-pass-complete |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | neutral contemporary Gujarati product UI; concise direct imperatives; natural localized technical loanwords; sentence-case UI; count-neutral variable templates; conventional unchanged shortcut, ratio, and acronym notation | `root-gu_corrected_4cd_first` | — | pass | pass | pass | `F-gu-001`–`F-gu-054` | first-pass-complete |
 | `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-dv_corrected_46c_second` | — | pass | pass | pass | `F-he-001`–`F-he-047` | first-pass-complete |
@@ -448,6 +448,7 @@ locale returns to `pending`.
 | `et` | `root-et_546_corrected_current_first` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` | `root-et_546_corrected_current_second` | `sha256:c5f3ff3bf5ddf3a3294300650dc7f098dde5248caf3757a7cd02e4140fd1d092` |
 | `fa` | `root-fa_546_lifecycle_replacement` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` | `root-fa_546_corrected_second` | `sha256:b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d` |
 | `fi` | `root-fi_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` | `root-fil_546_current_first` | `sha256:b83bc6326c38e743e773aa1b270f1fd255564fc783e58e3f60870f9be2fa375a` |
+| `fil` | `root-dv_corrected_46c_second` | `sha256:8240e764e995550e70707d56ce20c703113b359504af38db559e1bab0bd8af8d` | — | — |
 | `fr` | `root-czech_546_first_pass` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` | `root` | `sha256:23b1974182a03c2bb74b3e172ea772886349a0f0d97152e3ff966f11dfc3a696` |
 | `gu` | `root-gu_corrected_4cd_first` | `sha256:4cd1906ef970662b5fc6b90e26699016297ca1df11d79c9904656459b3acffb7` | — | — |
 | `he` | `root-dv_corrected_46c_second` | `sha256:91ca89a271bda90e01e7b0d8285f742de6a336f6a108e70654e7cd3f6ec89d7d` | — | — |
@@ -5656,6 +5657,46 @@ also pass with only the repository's known warnings. All 16 findings are
 verified. This correction invalidates the stopped review for completion credit,
 so both complete 546-entry reviews must restart at entry 1 on these corrected
 bytes.
+
+### Filipino 824 corrected-byte complete review 1 — clean
+
+Fresh reviewer `/root/dv_corrected_46c_second` independently reread all 546
+source-order English/Filipino pairs on raw dictionary SHA-256
+`8240e764e995550e70707d56ce20c703113b359504af38db559e1bab0bd8af8d`
+without consulting prior Filipino audit, proposal, ledger, or reviewer
+artifacts. The sealed bundle is
+`/tmp/blok-fil-8240e764-first-strict-fresh`; its complete matrix is bound at
+SHA-256
+`9394e9f68cbdbd14d7028d6aec438e69e26a31701337696a55b7378ed18263a3`;
+its empty residual artifact is bound at SHA-256
+`649a538b2afc870a395b805f76a82ee73749cd6cced272c079d311217ef96f41`;
+its lifecycle matrix is bound at SHA-256
+`7159af684b8aa00e8dea738c1591cb3885f2719457a5fa50596d20c43f203302`;
+its retention inventory is bound at SHA-256
+`97980a0fc0a9358fdca17bc5c3af310bd0206d2d49280ff71e2bedf6c419d3c7`;
+its placeholder closure is bound at SHA-256
+`99004f3b33ff1ef587b0b9c33e33e9a0d2edac76c3fe2969b067421710797815`;
+its caller evidence is bound at SHA-256
+`1ce8e3676a4cd7b05e2b9ed55e87e6968edaa206b0683017291f19ed647509cc`;
+its deterministic validator report is bound at SHA-256
+`7f55e0ba93875db817050edf4edd0ad459e2e01b8d82efe24cfdea31e2562dc2`;
+and its checksum manifest is bound at SHA-256
+`88ec9097a5ec0dfc522902025252a258cb2f440772528382a18fe41e288abe04`.
+
+The review reports 546 pass and zero fail, zero residual corrections, exact
+closure for all 38 placeholder-bearing values and all 54 source and target
+occurrences, all 50 exact-English values justified, and all 301 exact or
+Latin-technical values classified. It independently reproduces the uniform
+current-source lifecycle closure of 397 literal, 122 finite dynamic, 25
+registered-namespace-compatible, and two without a uniform route. Its matrix
+correctly treats literal-stored `tools.video.seekValueText` as finite dynamic
+because the caller consumes it through a local identifier. The review also
+independently accepts contemporary Taglish `ie-embed` as a coherent house-style
+variant rather than a residual. A root replay passes the sealed validator,
+every checksum, immutable file-state checks, the current dictionary digest,
+the translation checker, and all 182 focused retention tests. This exact-byte
+review earns first-pass credit only; a distinct complete second review is still
+required.
 
 ### Persian corrected-byte first pass and detached-UI direction finding
 

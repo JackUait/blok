@@ -156,6 +156,9 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.file.emptyLink',
     'tools.link.webLink',
     'notifier.ok',
+    // Placeholder-only swatch template; Estonian independently uses the same
+    // color-before-mode token order as the English source.
+    'tools.colorPicker.colorSwatchLabel',
   ]),
   // "OK" is the conventional compact confirmation label in Finnish UIs.
   fi: new Set(['notifier.ok']),
@@ -180,6 +183,11 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.kanbanBoard',
     'tools.database.defaultViewBoard',
     'searchTerms.layout',
+    // Established Filipino editor and preview terms confirmed by current
+    // Google product-language evidence.
+    'searchTerms.bullet',
+    'tools.file.previewRaw',
+    'tools.file.previewRender',
     // "Bookmark" is the standard loanword in Filipino UIs (Tagalog).
     'toolNames.bookmark',
     // "Link" (hyperlink) and "OK" are likewise the established English

@@ -227,6 +227,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   // "Oval" is the standard Croatian geometric noun, identical to English.
   hr: new Set(['tools.image.cropRatioOval']),
   // Placeholder-only swatch templates contain no English lexical material;
+  // Hungarian independently requires the same modifier-before-noun order.
+  hu: new Set([
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
+  ]),
+  // Placeholder-only swatch templates contain no English lexical material;
   // Armenian independently requires the same modifier-before-noun token order.
   hy: new Set([
     'tools.colorPicker.defaultSwatchLabel',

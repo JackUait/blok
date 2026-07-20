@@ -92,8 +92,8 @@
   "fil": {
     "a11y.atTop": "Hindi na mailipat pataas. Nasa pinakataas na.",
     "a11y.atBottom": "Hindi na mailipat pababa. Nasa pinakababa na.",
-    "a11y.movedUp": "Inilipat pataas sa posisyon {position} sa kabuuang {total}.",
-    "a11y.movedDown": "Inilipat pababa sa posisyon {position} sa kabuuang {total}."
+    "a11y.movedUp": "Inilipat pataas sa posisyon {position} sa kabuuang {total}",
+    "a11y.movedDown": "Inilipat pababa sa posisyon {position} sa kabuuang {total}"
   },
   "fr": {
     "a11y.atTop": "Impossible de monter davantage. Le haut de la liste est déjà atteint.",

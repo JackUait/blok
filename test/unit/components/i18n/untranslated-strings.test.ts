@@ -204,6 +204,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.image.altPlaceholder',
     'searchTerms.header',
     'searchTerms.heading',
+    // YouTube's Filipino player uses the exact two-word media-control label.
+    'tools.video.fullscreen',
     // "Link" (hyperlink) and "OK" are likewise the established English
     // loanwords in Filipino product UIs.
     'tools.link.webLink',

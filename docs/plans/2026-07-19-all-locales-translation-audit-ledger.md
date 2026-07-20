@@ -266,9 +266,9 @@ These rules prevent a machine or reviewer from retaining stale completion:
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `am` | Amharic | Ethiopic | ltr | neutral contemporary Ethiopian Amharic; concise singular imperatives for atomic commands; respectful plural imperatives for full instructions and recovery guidance; nouns or states for labels and announcements; Ethiopic sentence punctuation; Arabic numerals; established Latin brand, acronym, and keycap tokens | `root-amharic_546_current_first` | `root-hindi_546_current_second` | pass | pass | pass | `F-am-001`–`F-am-096` | second-pass-complete |
 | `ar` | Arabic | Arabic | rtl | neutral Modern Standard Arabic; concise direct actions; established Arabic product terminology; count-neutral variable templates; Arabic punctuation in prose | `root-arabic_546_current_first` | `root-amharic_546_current_first` | pass | pass | pass | `F-ar-001`–`F-ar-076`, `F-ar-078` | second-pass-complete |
-| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-az_546_corrected_current_first` | — | pass | pass | pass | `F-az-001`–`F-az-107` | first-pass-complete |
+| `az` | Azerbaijani | Latin | ltr | neutral contemporary Azerbaijan Azerbaijani in Latin script; concise singular or bare imperatives for compact controls; polite plural imperatives for full instructions and accessibility guidance; established Azerbaijani computing and media terminology; count-neutral numeral constructions | `root-az_546_corrected_current_first` | `root-bn_546_current_second_blind` | pass | pass | pass | `F-az-001`–`F-az-107` | second-pass-complete |
 | `bg` | Bulgarian | Cyrillic | ltr | neutral contemporary standard Bulgarian in Cyrillic and sentence case; concise singular imperatives for compact commands; polite plural imperatives for complete hints, recovery instructions, and accessibility guidance; conventional noun or state labels; established Bulgarian computing and media terminology; count-neutral label-before-number wording | `root-bg-546-first-final` | `root-bg-546-second-final` | pass | pass | pass | `F-bg-001`–`F-bg-098` | second-pass-complete |
-| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | `root-bn_546_corrected_current_first` | — | pass | pass | pass | `F-bn-001`–`F-bn-078` | first-pass-complete |
+| `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | `root-bn_546_corrected_current_first` | `root-bn_546_current_second_blind` | pass | pass | pass | `F-bn-001`–`F-bn-078` | second-pass-complete |
 | `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-hindi_546_current_second` | `root-amharic_546_current_first` | pass | pass | pass | `F-bs-001`–`F-bs-182` | second-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
 | `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-amharic_546_current_first` | `root-arabic_546_current_first` | pass | pass | pass | `F-da-001`–`F-da-088` | second-pass-complete |
@@ -280,7 +280,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `et` | Estonian | Latin | ltr | neutral contemporary Estonian; concise imperatives for user actions; natural impersonal wording for system states and live-region announcements; sentence-case UI; established Estonian product, accessibility, and media terminology; count-neutral variable templates | `root-et_546_corrected_current_first` | `root-et_546_corrected_current_second` | pass | pass | pass | `F-et-001`–`F-et-055` | second-pass-complete |
 | `fa` | Persian (Farsi) | Arabic | rtl | neutral contemporary standard Iranian Persian; polite plural imperatives for instructions and recovery guidance; concise imperative or noun labels for compact controls; Persian punctuation and established Persian product, accessibility, and media terminology; conventional unchanged Latin brands, acronyms, formulas, and shortcut notation | `root-fa_546_lifecycle_replacement` | `root-fa_546_corrected_second` | pass | pass | pass | `F-fa-001`–`F-fa-053` | second-pass-complete |
 | `fi` | Finnish | Latin | ltr | neutral contemporary Finnish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; lowercase search aliases | `root-fi_546_current_first` | `root-fil_546_current_first` | pass | pass | pass | `F-fi-001`–`F-fi-101` | second-pass-complete |
-| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-044` | pending |
+| `fil` | Filipino | Latin | ltr | neutral contemporary Filipino product UI; concise direct imperatives; natural Taglish for established computing and media terminology; sentence-case UI; count-neutral variable templates; conventional unchanged brands, acronyms, formulas, and shortcut notation | — | — | pending | pending | pending | `F-fil-001`–`F-fil-046` | pending |
 | `fr` | French | Latin | ltr | formal France French (`fr-FR`) in sentences; concise infinitive actions; sentence case; lowercase search aliases | `root-czech_546_first_pass` | `root` | pass | pass | pass | `F-fr-001`–`F-fr-134` | second-pass-complete |
 | `gu` | Gujarati | Gujarati | ltr | to-audit | — | — | pending | pending | pending | `F-gu-001`–`F-gu-002` | pending |
 | `he` | Hebrew | Hebrew | rtl | to-audit | — | — | pending | pending | pending | `F-he-001`–`F-he-002` | pending |
@@ -404,9 +404,9 @@ locale returns to `pending`.
 |---|---|---|---|---|
 | `am` | `root-amharic_546_current_first` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` | `root-hindi_546_current_second` | `sha256:70f88c820b1074d5c45766fc6076686419b40bf749308237e312c7b3b11bb8e4` |
 | `ar` | `root-arabic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` | `root-amharic_546_current_first` | `sha256:c68e81328beba4778b3cda19b88acffb93ba11a1bb0428f529db906e5111e8ab` |
-| `az` | `root-az_546_corrected_current_first` | `sha256:ab1bcdafd65e2b9d8910da99d04ef8233e52a8a604a27e8c30ed42ef89a6de7a` | — | — |
+| `az` | `root-az_546_corrected_current_first` | `sha256:ab1bcdafd65e2b9d8910da99d04ef8233e52a8a604a27e8c30ed42ef89a6de7a` | `root-bn_546_current_second_blind` | `sha256:ab1bcdafd65e2b9d8910da99d04ef8233e52a8a604a27e8c30ed42ef89a6de7a` |
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
-| `bn` | `root-bn_546_corrected_current_first` | `sha256:991d522f8e606b41af8409f1839a4871214ecd49854213e72a304030348fafc3` | — | — |
+| `bn` | `root-bn_546_corrected_current_first` | `sha256:991d522f8e606b41af8409f1839a4871214ecd49854213e72a304030348fafc3` | `root-bn_546_current_second_blind` | `sha256:991d522f8e606b41af8409f1839a4871214ecd49854213e72a304030348fafc3` |
 | `bs` | `root-hindi_546_current_second` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` | `root-amharic_546_current_first` | `sha256:cbc81566067a3622d34907c6586dd9bfa775cac668439fce7dc150a6d9e53ff3` |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
 | `da` | `root-amharic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` | `root-arabic_546_current_first` | `sha256:aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a` |
@@ -1360,8 +1360,31 @@ identities. The latest corrected plural category
 `tools.callout.emojiCategoryPeople=Smayliklər və insanlar` was explicitly
 rechecked in both its visible and accessible scope.
 
-Azerbaijani is therefore `first-pass-complete` on these exact bytes and still
-requires a distinct strict-blind second review.
+Azerbaijani is therefore `first-pass-complete` on these exact bytes.
+
+Two attempted second reviews independently found no copy residual but disclosed
+prior-evidence leakage before their formal blind seals; neither earns credit.
+Replacement reviewer `root-bn_546_current_second_blind` then restarted without
+opening any Azerbaijani ledger row, prior artifact, or sibling message. It
+accepted all 546 pairs and sealed the initial attestation at SHA-256
+`6614fb803e6f6d73a4de0739421335b6f0acdd1e154ac89bab87bd4c3bf609bf`.
+The final read-only matrix is bound at SHA-256
+`96c8b4fdb09f9f59f9536cfa58ea11d984aea03c7cae8811a7b17eb23102b520`;
+its read-only validator is bound at SHA-256
+`5b73be8f7b46ec40abb5b3474fe9af9be33dcd80d5284a7741c8efea93668468`
+and freshly passes.
+
+The replacement verifies all 107 finding-backed values, all 14 retentions, all
+38 placeholder-bearing values with 54 occurrences, and the exact 533+12+1
+lifecycle identities without a residual. An allowed test-only search displayed
+the Azerbaijani exact-string whitelist only after all 14 exact values had
+already been independently adjudicated; no finding or prior artifact was
+exposed, and the immutable attestation records the incident.
+
+Both credited reviews bind to raw Azerbaijani SHA-256
+`ab1bcdafd65e2b9d8910da99d04ef8233e52a8a604a27e8c30ed42ef89a6de7a`.
+Azerbaijani is therefore `second-pass-complete`; repository-wide terminal
+gates remain separate.
 
 ### Bulgarian (`bg`) — current second pass complete
 
@@ -1661,8 +1684,25 @@ and confirms the exact 533 consumed-or-built-compatible + 12 source-only + 1
 dormant lifecycle identities. The corrected ordinal `নম্বর` wording and the
 hyphen-attached seek-value suffix were explicitly rechallenged.
 
-Bengali is therefore `first-pass-complete` on these exact bytes and still
-requires a distinct strict-blind second review.
+Bengali is therefore `first-pass-complete` on these exact bytes.
+
+Distinct reviewer `root-bn_546_current_second_blind` then independently
+reread all 546 current pairs before opening any Bengali audit evidence and
+sealed the blind judgments at SHA-256
+`a2c0db648dcbc7a1d85391693dc848a38df1418d1579b2797f79a44b1fa5f4c1`.
+The final read-only matrix is bound at SHA-256
+`39d99df16b96fb686ead62dd2019c2c2d784030e7c3d0353593aa492a5700be1`;
+its read-only validator is bound at SHA-256
+`ab29ffba86659c0e7b369add9e80011979e97dd0b589993c48be226d0b312647`
+and freshly passes 13,772 assertions. The pass had no prior-evidence exposure,
+found no residual, and independently verifies all 78 finding-backed values,
+four exact-English retentions, 38 placeholder-bearing values with 54
+occurrences, and the exact 533+12+1 lifecycle identities.
+
+Both reviews bind to raw Bengali SHA-256
+`991d522f8e606b41af8409f1839a4871214ecd49854213e72a304030348fafc3`.
+Bengali is therefore `second-pass-complete`; repository-wide terminal gates
+remain separate.
 
 ### Bosnian (`bs`) — current second pass complete
 
@@ -4847,6 +4887,36 @@ dictionary is bound at SHA-256
 All four findings are verified; both complete reviews must restart at entry 1
 on this new digest.
 
+Fresh strict-blind reviewer `root-az_546_current_second_blind` then restarted
+at entry 1 on that digest and stopped on two further residuals. Its immutable
+pre-ledger seal is bound at SHA-256
+`c4f1256402c409f6bbfe5186b269ea59dd420390fc9a898658cfd1997c62a9b2`;
+the reconciled read-only matrix is bound at SHA-256
+`f2d901acef8b4177c5d0e668e4cfaad5d81d34c76f4c1747e0d23c83c6207f352`;
+and its read-only validator is bound at SHA-256
+`37c1d80581642c855c1a44215173d6837cc10feb2d0502cc9eb512e407267072`.
+The stopped pass nevertheless confirms all 546 identities, the exact
+533+12+1 lifecycle split, all 44 earlier findings, all 43 retentions, and all
+38 placeholder-bearing values with 54 occurrences.
+
+Independent challenger `root-fil_bookmark_error_challenge` kept both exact
+proposals and found no directly coupled omission. Its immutable challenge is
+bound at SHA-256
+`cfd7bb59df54adffc54bc460c130178adb1186e07784d5fd1d914dcb4481ec90`;
+the independent validator is bound at SHA-256
+`4aa30f4bad3be7495e35cc450a8d8c301853c5788820707ae77369d18b16e81c`
+and freshly passes. The challenge confirmed that `May guhit` is ambiguous
+while the placement-specific replacement distinguishes underline, and that
+Filipino software terminology uses the hyphenated loan verb `I-wrap` rather
+than physical-wrapping `Ibalot`. Findings `F-fil-045` and `F-fil-046` are
+recorded before the dictionary edit. Their reviewed-value expectations failed
+exactly while the other 3,077 guideline cases passed. After applying only the
+two challenged values, all 3,079 cases pass, both findings are verified, and
+the corrected raw Filipino dictionary is bound at SHA-256
+`afc865652fbe99315293aa78f5cf179113f8e44bfb0451841f39a6cd28874382`.
+Filipino remains `pending`; both complete reviews must restart at entry 1 on
+this new digest.
+
 ### Persian corrected-byte first pass and detached-UI direction finding
 
 Reviewer `root-fa_546_corrected_first` blindly inspected all 546 Persian
@@ -4917,6 +4987,52 @@ to raw dictionary SHA-256
 `b4a6134cdd4df5d377d5689f0141a35af0973a883a69081fa887b8679f2d612d`.
 Persian is therefore `second-pass-complete`; repository-wide terminal gates
 remain separate.
+
+### Dutch corrected-byte fresh first pass
+
+Reviewer `root-fil_bookmark_error_challenge` independently reread all 546
+current English/Dutch pairs on raw dictionary SHA-256
+`c80c94f26e68771133bcfde6cc54b2cfe2d2ab486a4b338ae833455a64fc1a05`.
+The blind judgments were sealed before opening any Dutch ledger evidence at
+SHA-256
+`0c3280809bca802c41ded196e7214bf03314b36f7605ec1497b36bbf7bc0db9c`.
+The final read-only matrix is bound at SHA-256
+`682dfb2633c199065c87150d4da313d26c83bd226f213cddd9a2e39817109340`;
+its read-only validator is bound at SHA-256
+`909b05104d404bc63f7b21832bc9488ac80cfe433ec2b946a92b012361b5c4c4`
+and freshly passes.
+
+The pass accepts every pair, verifies all 90 finding-backed values, all 24
+exact-English retentions, all 38 placeholder-bearing values with 54
+occurrences, and the exact 533 consumed-or-built-compatible + 12 source-only
++ 1 dormant lifecycle identities. Before sealing, a sibling status exposed
+only the language-independent lifecycle list; it exposed no Dutch finding,
+retention, value, or prior artifact. The reviewer independently validated
+those lifecycle identities against source and kept the Dutch copy review
+strictly blind. A documentation-only blind note for `tools.image.altButton`
+was corrected from keyboard Alt to alternative text without changing its
+valid `Alt` retention or verdict.
+
+Dutch was therefore provisionally `first-pass-complete` on these exact bytes.
+Distinct strict-blind reviewer `root-az_546_current_second_blind` subsequently
+stopped on two color-swatch composition residuals. Its immutable pre-ledger
+seal is bound at SHA-256
+`59a98ea150558216d4f97c58486fd1e2703c6ac5b66a22dfded24206e2f7d9df`;
+the reconciled read-only matrix is bound at SHA-256
+`079c2e7d875c5d3fd58d3fbd0b359441a3c2f3b94ce8179df8222206db916b1d`;
+and its read-only validator is bound at SHA-256
+`43a05251fa2e7467becbe8c46ba15f46ef0c9dca7a5e929f15a43ceeb43aa36a`
+and freshly passes. The reviewer sealed eight blind concerns before ledger
+access; six were overturned by current evidence, leaving
+`tools.colorPicker.defaultSwatchLabel={mode}: {default}` and
+`tools.colorPicker.colorSwatchLabel={mode}: {color}` as the exact proposed
+corrections. The stopped pass also verifies all 90 earlier findings, all 24
+retentions, all 38 placeholder-bearing values with 54 occurrences, and the
+exact 533+12+1 lifecycle identities.
+
+That stopped pass earns no credit and invalidates the provisional first pass.
+Dutch is `pending`; the two exact proposals require independent challenge
+before correction and a two-reviewer restart on new bytes.
 
 ## Findings
 
@@ -7577,6 +7693,8 @@ follows the global transition rule above.
 | `F-fil-042` | `fil` | `tools.bookmark.loading` | context / ongoing state / punctuation | `"Nilo-load ang preview"` | `"Nilo-load ang preview ng link…"` | The asynchronous bookmark unfurl replaces the whole placeholder while fetching metadata for a pasted URL. `ng link` restores the source object and distinguishes this state from other preview families; the ellipsis marks ongoing work. The independent challenge kept the exact proposal. | verified |
 | `F-fil-043` | `fil` | `tools.video.ctxStats` | terminology / caller context | `"Mga detalyadong stat"` | `"Mga istatistika ng pag-playback"` | The video context-menu action opens playback resolution, frame, buffer, and viewport measurements. The final names that domain and replaces vague `detalyadong` plus abbreviated English `stat` with established Filipino product terminology. | verified |
 | `F-fil-044` | `fil` | `tools.bookmark.error` | context / source completeness | `"Hindi ma-load ang preview"` | `"Hindi ma-load ang preview ng link"` | This terminal state is specifically a failed link-metadata unfurl. A separate independent challenge confirmed that adding `ng link` restores the omitted source qualifier without an ongoing-state ellipsis and does not conflict with the generic file-preview error. | verified |
+| `F-fil-045` | `fil` | `toolNames.strikethrough` | terminology / control clarity | `"May guhit"` | `"Guhit sa gitna"` | The compact inline control needs a distinct name for a line through text. `May guhit` is ambiguous (“has a line” or “striped”), while the placement-specific replacement contrasts with `Salungguhit`; official Filipino WordPress and LibreOffice terminology independently describes the through-text operation. | verified |
+| `F-fil-046` | `fil` | `tools.code.wrapLines` | terminology / source-only contract | `"Ibalot ang mga linya"` | `"I-wrap ang mga linya"` | `Ibalot` describes physical wrapping or packaging. Mozilla and LibreOffice Filipino software terminology use the hyphenated loan verb `I-wrap` for line/text wrapping. The source-only dictionary contract remains auditable even though the current code view unconditionally uses pre-wrap. | verified |
 | `F-nl-086` | `nl` | `tools.callout.emojiCategoryActivity` | category scope / number | `"Activiteit"` | `"Activiteiten"` | The heading groups many activities rather than naming one activity. The plural matches official Dutch emoji-gallery terminology and the collective/plural sibling categories. Sources: [Microsoft Support — Een emoji of GIF verzenden in Microsoft Teams (gratis)](https://support.microsoft.com/nl-NL/teams/free/chat-calling/send-an-emoji-or-gif-in-microsoft-teams-free). | verified |
 | `F-nl-087` | `nl` | `tools.image.previewControls` | accessibility / specificity | `"Voorbeeldbediening"` | `"Regelaars voor afbeeldingsvoorbeeld"` | The accessible group name must identify both the controls and their image-preview scope. `Regelaars` and `afbeeldingsvoorbeeld` are attested Dutch product terms; the current compact compound is generic and drops the image object. Sources: [W3C WAI-ARIA Authoring Practices — Providing Accessible Names and Descriptions](https://www.w3.org/WAI/ARIA/apg/practices/names-and-descriptions/); [Apple Support NL — Finder on Mac Pro](https://support.apple.com/nl-nl/guide/mac-pro/apddf030866a/mac); [Apple Support NL — Belichtings- en kleurinstellingen aanpassen](https://support.apple.com/nl-nl/guide/iphone/-iphebbd067ce/ios); [Microsoft Support NL — Het formaat van het Microsoft SwiftKey-toetsenbord wijzigen](https://support.microsoft.com/nl-nl/swiftkey-keyboard/how-to-resize-microsoft-swiftkey-keyboard); [Google Photos Help NL — Foto’s en video’s verwijderen en herstellen](https://support.google.com/photos/answer/6128850?co=GENIE.Platform%3DAndroid&hl=nl). | verified |
 | `F-nl-088` | `nl` | `tools.image.errorSourceOffline` | natural error copy | `"Het bronbestand is mogelijk verplaatst of offline."` | `"Het bronbestand is mogelijk verplaatst of niet beschikbaar."` | The caller only knows the remote source cannot be loaded; it does not establish a synchronized offline-file state. `niet beschikbaar` accurately describes the unavailable resource and is natural Dutch error copy. Sources: [Microsoft Support NL — Een verbindingsfout corrigeren](https://support.microsoft.com/nl-nl/excel/how-to-correct-a-connect-error); [Microsoft Support NL — De status Off-line bestand wordt onjuist weergegeven](https://support.microsoft.com/nl-nl/topic/de-status-off-line-bestand-wordt-onjuist-weergegeven-in-file-explorer-in-windows-3026cc25-2d68-1202-2d14-d20e63246a5a). | verified |

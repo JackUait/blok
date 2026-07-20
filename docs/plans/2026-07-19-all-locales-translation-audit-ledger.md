@@ -4791,7 +4791,7 @@ reviews must restart at entry 1 on these new bytes.
 
 ### Dhivehi a573 fresh full-audit spelling residual — remediated
 
-Fresh reviewer `root-dv_corrected_a573_first` restarted at entry 1 and reread
+Fresh reviewer `/root/dv_corrected_a573_first` restarted at entry 1 and reread
 all 546 English/Dhivehi pairs on raw dictionary SHA-256
 `a5735ad7aaef35116c938b341f6d5444a37df32bf3949dfac88960e7ca71df19`.
 The immutable source-order matrix is bound at SHA-256
@@ -4806,7 +4806,7 @@ references, 25 remaining keys compatible with the registered tool namespace,
 and two remaining keys without a uniform source route; it does not claim the
 historical finer split as source-derived.
 
-Distinct proposal-aware challenger `root-dv-a573-residual-challenge` accepted
+Distinct proposal-aware challenger `/root/dv_a573_residual_challenge` accepted
 all seven proposals without amendment or rejection after an exhaustive
 546-value coupled-family scan. Its sealed bundle is
 `/tmp/blok-dv-a573-residual-challenge-20260720T144628Z`; the exact correction
@@ -8093,7 +8093,7 @@ follows the global transition rule above.
 | `F-dv-058` | `dv` | `tools.database.propertyTypeNumber` | spelling / terminology consistency | `"ނަންބަރ"` | `"ނަންބަރު"` | The accepted spelling is the catalog’s consistent standalone form of the number property term. | verified |
 | `F-dv-059` | `dv` | `tools.video.seekValueText` | accessibility / placeholder relation / grammar | `"{total} ން {current}"` | `"{total} އިން {current}"` | The full ablative connector is required between the total and current time values. Dhivehi validly orders total before current, and both placeholders remain exact. | verified |
 | `F-dv-060` | `dv` | `tools.colorPicker.color.brown` | spelling / color terminology | `"މިށިކުލަ"` | `"މުށިކުލަ"` | Sealed Basfoiy and Radheef evidence supports `މުށިކުލަ`, while the current first vowel is unattested. The independent challenger accepted the spelling for the live shared brown swatch. | verified |
-| `F-dv-061` | `dv` | `tools.callout.colorBrown` | spelling / color-family consistency | `"މިށިކުލަ"` | `"މުށިކުލަ"` | The source-only legacy callout label shares the same brown-color concept and spelling family as the live swatch. The exhaustive coupled scan accepted its correction and found no third occurrence. | verified |
+| `F-dv-061` | `dv` | `tools.callout.colorBrown` | spelling / color-family consistency | `"މިށިކުލަ"` | `"މުށިކުލަ"` | The registered-namespace-compatible legacy callout label shares the same brown-color concept and spelling family as the live swatch. The exhaustive coupled scan accepted its correction and found no third occurrence. | verified |
 | `F-dv-062` | `dv` | `tools.image.errorUploadFailedTitle` | spelling / failure-family consistency | `"އަޕްލޯޑް ނާކަމިޔާބު"` | `"އަޕްލޯޑް ނާކާމިޔާބު"` | This image error title belongs to the same five-key upload-failure spelling family. Sealed official evidence and the independent challenge require the long-vowel form and found no coupled omission. | verified |
 | `F-fa-002` | `fa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"بازشوی خالی. برای افزودن بلوک‌ها کلیک کنید یا آن‌ها را اینجا رها کنید."` | `"بازشوی خالی. برای افزودن یک بلوک کلیک کنید یا بلوک‌ها را اینجا بکشید."` | The old click clause incorrectly refers to plural blocks and the drop clause uses release rather than drag. The replacement names singular `یک بلوک`, preserves ZWNJ plural, and follows Google's Persian [`کلیک کنید` and `بکشید`](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=fa) terminology. | verified |
 | `F-he-002` | `he` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"מתקפל ריק. לחץ או גרור בלוקים פנימה."` | `"מקטע מתקפל ריק. לחץ להוספת בלוק או גרור בלוקים לכאן."` | The earlier correction supplied the click-created singular block and plural drag destination. A fresh 546-entry reread independently found that the remaining adjective-as-noun opener was still unnatural; the challenged final adds the head noun `מקטע` while preserving the verified click/drag clause exactly. | verified |

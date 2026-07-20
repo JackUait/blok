@@ -44,6 +44,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'width',
   'onBeforeRender',
   'onBeforePaste',
+  'onEnter',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 
 export type BlokEditorConfigKey = (typeof BLOK_EDITOR_CONFIG_KEYS)[number];

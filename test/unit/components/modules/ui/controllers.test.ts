@@ -250,6 +250,76 @@ describe('KeyboardController', () => {
       expect(blok.Caret.setToBlock).toHaveBeenCalledWith(newBlock);
       expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(newBlock);
     });
+
+    it('suppresses the body-target block insert when config.onEnter returns true', () => {
+      const apiMethods = { blocks: {} };
+      const onEnter = vi.fn(() => true);
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { onEnter },
+        blokOverrides: { API: { methods: apiMethods } as unknown as BlokModules['API'] },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      Object.assign(blok.BlockSelection, { anyBlockSelected: false });
+      blok.BlockManager.currentBlockIndex = 1;
+      vi.spyOn(Selection, 'isSelectionExists', 'get').mockReturnValue(true);
+      vi.spyOn(Selection, 'isCollapsed', 'get').mockReturnValue(false);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(onEnter).toHaveBeenCalledTimes(1);
+      expect(onEnter).toHaveBeenCalledWith(event, apiMethods);
+      expect(blok.BlockManager.insert).not.toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('keeps the body-target block insert when config.onEnter returns undefined', () => {
+      const onEnter = vi.fn(() => undefined);
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { onEnter },
+        blokOverrides: { API: { methods: {} } as unknown as BlokModules['API'] },
+      });
+      const newBlock = { id: 'new' } as unknown as Block;
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      Object.assign(blok.BlockSelection, { anyBlockSelected: false });
+      blok.BlockManager.currentBlockIndex = 1;
+      vi.mocked(blok.BlockManager.insert).mockReturnValue(newBlock);
+      vi.spyOn(Selection, 'isSelectionExists', 'get').mockReturnValue(true);
+      vi.spyOn(Selection, 'isCollapsed', 'get').mockReturnValue(false);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(onEnter).toHaveBeenCalledTimes(1);
+      expect(blok.BlockManager.insert).toHaveBeenCalledTimes(1);
+    });
+
+    it('never calls config.onEnter for Shift+Enter on the body target', () => {
+      const onEnter = vi.fn(() => true);
+      const { controller, blok } = createKeyboardController({
+        configOverrides: { onEnter },
+        blokOverrides: { API: { methods: {} } as unknown as BlokModules['API'] },
+      });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      Object.assign(blok.BlockSelection, { anyBlockSelected: false });
+      blok.BlockManager.currentBlockIndex = 1;
+      vi.spyOn(Selection, 'isSelectionExists', 'get').mockReturnValue(true);
+      vi.spyOn(Selection, 'isCollapsed', 'get').mockReturnValue(false);
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, cancelable: true });
+      Object.defineProperty(event, 'target', { value: document.body });
+      document.dispatchEvent(event);
+
+      expect(onEnter).not.toHaveBeenCalled();
+    });
   });
 
   describe('Backspace/Delete handling', () => {

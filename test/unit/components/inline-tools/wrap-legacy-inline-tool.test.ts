@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { wrapLegacyInlineTool } from '../../../../src/components/inline-tools/wrap-legacy-inline-tool';
-import type { API, SanitizerConfig, ToolConfig } from '../../../../types';
+import type { API, SanitizerConfig, ToolConfig, wrapLegacyInlineTool as publishedWrapLegacyInlineTool } from '../../../../types';
 import type { PopoverItemDefaultBaseParams, PopoverItemChildren, PopoverItemHtmlParams } from '../../../../types/utils/popover';
 import { PopoverItemType } from '../../../../src/components/utils/popover';
 
@@ -92,6 +92,36 @@ class ActionsLegacyTool {
     this.clearCallCount += 1;
   }
 }
+
+/**
+ * Canonical unmodified Editor.js inline tool: checkState declares `void` and takes
+ * a non-nullable Selection — exactly what real-world tools ship. Must be accepted
+ * by wrapLegacyInlineTool with ZERO casts.
+ */
+class EditorJsCanonicalTool {
+  public static isInline = true;
+
+  public lastSelection: Selection | null = null;
+
+  public render(): HTMLElement {
+    return document.createElement('button');
+  }
+
+  public surround(range: Range): void {
+    range.collapse();
+  }
+
+  public checkState(selection: Selection): void {
+    this.lastSelection = selection;
+  }
+}
+
+/**
+ * The published declaration (types/index.d.ts) must not drift from the src interface:
+ * both have to admit the canonical Editor.js tool above. Type-only import — a runtime
+ * value import of the types entry fails under vitest.
+ */
+type PublishedLegacyCtor = Parameters<typeof publishedWrapLegacyInlineTool>[0];
 
 /**
  * Type guard narrowing a MenuConfig item to one that carries a `children` block.
@@ -302,6 +332,51 @@ describe('wrapLegacyInlineTool', () => {
     const config = instance.render() as PopoverItemDefaultBaseParams | { children: PopoverItemChildren };
 
     expect('children' in config).toBe(false);
+  });
+
+  it('accepts unmodified Editor.js-style tools (checkState(): void) with zero casts, in src and published types', () => {
+    // TYPE guard: both calls must compile without casts (the tsc pass over unit tests is the gate).
+    const WrappedCanonical = wrapLegacyInlineTool(EditorJsCanonicalTool);
+    const WrappedMinimal = wrapLegacyInlineTool(MinimalLegacyTool);
+
+    // Published-declaration pin: types/index.d.ts must admit the same canonical tool.
+    const publishedAcceptsCanonicalTool: typeof EditorJsCanonicalTool extends PublishedLegacyCtor ? true : false = true;
+
+    expect(publishedAcceptsCanonicalTool).toBe(true);
+    expect(typeof WrappedCanonical).toBe('function');
+    expect(typeof WrappedMinimal).toBe('function');
+  });
+
+  it('isActive() yields exactly false when the legacy checkState returns undefined', () => {
+    const Wrapped = wrapLegacyInlineTool(EditorJsCanonicalTool);
+    const instance = new Wrapped({ api: fakeApi, config: fakeConfig });
+    const config = instance.render() as PopoverItemDefaultBaseParams;
+
+    selectEditableText();
+
+    expect(() => (typeof config.isActive === 'function' ? config.isActive() : undefined)).not.toThrow();
+    expect(typeof config.isActive === 'function' && config.isActive()).toBe(false);
+  });
+
+  it('isActive() coerces a truthy non-boolean checkState return to true', () => {
+    class TruthyCheckStateTool {
+      public render(): HTMLElement {
+        return document.createElement('button');
+      }
+
+      public checkState(): boolean {
+        // Real-world tools lie about their return type; pins the Boolean() coercion.
+        return 'active' as unknown as boolean;
+      }
+    }
+
+    const Wrapped = wrapLegacyInlineTool(TruthyCheckStateTool);
+    const instance = new Wrapped({ api: fakeApi, config: fakeConfig });
+    const config = instance.render() as PopoverItemDefaultBaseParams;
+
+    selectEditableText();
+
+    expect(typeof config.isActive === 'function' && config.isActive()).toBe(true);
   });
 
   it('does not throw when only clear is implemented without renderActions (no children, no regression)', () => {

@@ -505,6 +505,21 @@ export class KeyboardController extends Controller {
      */
     if (!this.someToolbarOpened() && hasPointerToBlock && (event.target as HTMLElement).tagName === 'BODY') {
       /**
+       * Consumer-level Enter hook (`config.onEnter`) — same contract as the
+       * block-level Enter path in KeyboardNavigation.handleEnter. Never fires
+       * for Shift+Enter; returning true suppresses the default block insert
+       * while blok still prevents the browser's native newline.
+       */
+      const onEnter = this.config.onEnter;
+
+      if (!event.shiftKey && typeof onEnter === 'function' && onEnter(event, this.Blok.API.methods) === true) {
+        event.preventDefault();
+        this.Blok.BlockSelection.clearSelection(event);
+
+        return;
+      }
+
+      /**
        * Insert the default typed Block
        */
       const newBlock = this.Blok.BlockManager.insert();

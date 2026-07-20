@@ -10,6 +10,7 @@ import { BlockAPI } from '../../block/api';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { capitalize } from '../../utils';
 import { announce } from '../../utils/announcer';
+import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 
@@ -239,7 +240,9 @@ export class BlocksAPI extends Module {
 
     try {
       await this.Blok.BlockManager.clear();
-      await this.Blok.Renderer.render(data.blocks);
+      // The caller owns `data` (often frozen store state): deep-clone at this
+      // boundary so the editor never mutates or retains their objects.
+      await this.Blok.Renderer.render(cloneOutputBlocks(data.blocks));
     } finally {
       this.Blok.Renderer.markRenderEnd();
     }

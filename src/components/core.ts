@@ -7,6 +7,7 @@ import type { BlokEventMap } from './events';
 import { Modules } from './modules';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
+import { cloneOutputBlocks } from './utils/clone-output-blocks';
 import { EventsDispatcher } from './utils/events';
 
 /**
@@ -173,6 +174,17 @@ export class Core {
     this.config.tools = this.config.tools || {};
     this.config.i18n = this.config.i18n || {};
     this.config.data = this.config.data || { blocks: [] };
+
+    /**
+     * The caller owns `config.data` (often frozen store state): deep-clone it
+     * at this boundary so the editor never mutates or retains their objects.
+     */
+    if (Array.isArray(this.config.data.blocks)) {
+      this.config.data = {
+        ...this.config.data,
+        blocks: cloneOutputBlocks(this.config.data.blocks),
+      };
+    }
 
     this.config.onReady = this.config.onReady || ((): void => {});
 

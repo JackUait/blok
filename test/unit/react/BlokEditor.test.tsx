@@ -109,6 +109,33 @@ describe('BlokEditor', () => {
     expect(ref.current).toBe(instances[0] as unknown as Blok);
   });
 
+  it('fires onReady exactly once per instance under a StrictMode double-mount', async () => {
+    const onReady = vi.fn();
+    render(
+      <React.StrictMode>
+        <BlokEditor onReady={onReady} />
+      </React.StrictMode>
+    );
+    await act(async () => { await Promise.resolve(); });
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-fires onReady with the NEW instance when deps change (per-instance, not once-per-lifetime)', async () => {
+    const onReady = vi.fn();
+    const { rerender } = render(<BlokEditor deps={['a']} onReady={onReady} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(onReady.mock.calls[0][0]).toBe(instances[0] as unknown as Blok);
+
+    rerender(<BlokEditor deps={['b']} onReady={onReady} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(onReady).toHaveBeenCalledTimes(2);
+    expect(onReady.mock.calls[1][0]).toBe(instances[1] as unknown as Blok);
+  });
+
   it('forwards id to the container element', async () => {
     render(<BlokEditor id="editor-entry-point" data-testid="host" />);
     await act(async () => { await Promise.resolve(); });
@@ -219,5 +246,19 @@ describe('BlokEditor', () => {
     // and it did NOT leak onto the container element as an attribute
     const host = screen.getByTestId('host');
     expect(host.hasAttribute('onsave')).toBe(false);
+  });
+
+  it('routes onEnter to the editor config, not onto the container as an attribute', async () => {
+    // Typed prop: (event, api) => boolean is accepted by BlokEditor
+    const onEnter = vi.fn((_event: KeyboardEvent): boolean => true);
+    render(<BlokEditor data-testid="host" onEnter={onEnter} />);
+    await act(async () => { await Promise.resolve(); });
+
+    // onEnter reached useBlok → forwarded into the editor config (ref-wrapped)
+    expect(typeof instances[0]?.config.onEnter).toBe('function');
+
+    // and it did NOT leak onto the container element as an attribute
+    const host = screen.getByTestId('host');
+    expect(host.hasAttribute('onenter')).toBe(false);
   });
 });

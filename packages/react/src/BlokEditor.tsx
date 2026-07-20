@@ -56,8 +56,13 @@ export interface BlokEditorProps
   /** Test id forwarded to the editor container element (via data-testid). */
   'data-testid'?: string;
   /**
-   * Called once the editor is ready, with the live Blok instance. Fires after the
+   * Called with the live Blok instance once it is ready. Fires after the
    * forwarded ref is committed, so `ref.current` is also populated at this point.
+   *
+   * Contract: fires exactly once per editor instance. The editor is recreated
+   * only when `deps` change or the component remounts; `data` changes —
+   * including transitions to and from empty content — re-render in place and
+   * never recreate the editor or re-fire `onReady`.
    */
   onReady?: (editor: Blok) => void;
   /**
@@ -113,8 +118,15 @@ export const BlokEditor = forwardRef<Blok | null, BlokEditorProps>(
     // are reliably populated.
     const onReadyRef = useRef(onReady);
     onReadyRef.current = onReady;
+    // Hardening, not a bug fix: today this effect only re-runs when `editor`
+    // changes, but future React semantics (Fast Refresh, <Activity>) may re-run
+    // an effect with an unchanged value. Tracking the last-notified instance
+    // guarantees at-most-once per instance while keeping the per-instance
+    // re-fire on recreation (deps change / remount) intact.
+    const notifiedEditorRef = useRef<Blok | null>(null);
     useEffect(() => {
-      if (editor !== null) {
+      if (editor !== null && notifiedEditorRef.current !== editor) {
+        notifiedEditorRef.current = editor;
         onReadyRef.current?.(editor);
       }
     }, [editor]);

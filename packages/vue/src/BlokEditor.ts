@@ -61,6 +61,9 @@ export const BlokEditor = defineComponent({
     width: { type: String as PropType<EditorWidth>, default: undefined },
     onBeforeRender: { type: Function as PropType<BlokConfig['onBeforeRender']>, default: undefined },
     onBeforePaste: { type: Function as PropType<BlokConfig['onBeforePaste']>, default: undefined },
+    // Return-valued hook (the boolean is the "handled" signal), so it is a
+    // declared prop copied into the config — not an emit-mapped callback.
+    onEnter: { type: Function as PropType<BlokConfig['onEnter']>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */
     recreateKey: { type: null as unknown as PropType<unknown> },
   },

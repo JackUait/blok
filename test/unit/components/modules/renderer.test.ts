@@ -272,12 +272,34 @@ describe('Renderer module', () => {
     tools.available.set('image', {});
 
     const data = { url: 'https://example.com/pic.png', caption: '<figure>raw</figure>' };
+    const snapshot = structuredClone(data);
 
     await renderer.render([{ id: 'block-1', type: 'image', data }]);
 
     const composed = blockManager.composeBlock.mock.calls[0]?.[0] as { data: unknown };
 
-    expect(composed.data).toBe(data);
+    // Content stays intact (no tag stripping without a sanitize config), but
+    // the caller's object is never retained by reference nor mutated.
+    expect(composed.data).toEqual(snapshot);
+    expect(composed.data).not.toBe(data);
+    expect(data).toEqual(snapshot);
+  });
+
+  it('strips smuggled unsafe URL schemes even when the tool has no sanitize config', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('image', {});
+
+    // Entity-encoded newline decodes to "java\nscript:" — browsers strip the
+    // newline and execute. Scheme safety must not depend on the tool author.
+    const data = { caption: '<a href="java&#10;script:alert(1)">caption</a>' };
+
+    await renderer.render([{ id: 'block-1', type: 'image', data }]);
+
+    const composed = blockManager.composeBlock.mock.calls[0]?.[0] as unknown as { data: { caption: string } };
+
+    expect(composed.data.caption).not.toContain('href');
+    expect(composed.data.caption).toContain('caption');
   });
 
   it('replaces missing tools with stub blocks and logs a warning', async () => {

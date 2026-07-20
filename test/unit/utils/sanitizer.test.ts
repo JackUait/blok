@@ -1247,3 +1247,95 @@ describe('sanitizer', () => {
   });
 });
 
+
+describe('URL scheme hardening (whitespace smuggling)', () => {
+  /**
+   * Runs a paragraph text through sanitizeBlocks with an href-allowing rule
+   * and returns the sanitized text.
+   * @param text - HTML string to sanitize
+   */
+  const sanitizeAnchorText = (text: string): string => {
+    const sanitizeConfig: SanitizerConfig = {
+      text: {
+        a: {
+          href: true,
+        },
+        img: {
+          src: true,
+        },
+      } as unknown as SanitizerRule,
+    };
+
+    const [result] = sanitizeBlocks(
+      [ { tool: 'paragraph', data: { text } } ],
+      sanitizeConfig,
+      {}
+    );
+
+    return (result.data as { text: string }).text;
+  };
+
+  describe('smuggled and script-capable schemes are stripped', () => {
+    it.each([
+      [ 'newline inside javascript:', '<a href="java\nscript:alert(1)">Link</a>' ],
+      [ 'tab inside javascript:', '<a href="java\tscript:alert(1)">Link</a>' ],
+      [ 'mixed case with carriage return', '<a href="JaVa\rScRiPt:alert(1)">Link</a>' ],
+      [ 'vbscript:', '<a href="vbscript:msgbox(1)">Link</a>' ],
+      [ 'data: svg (script-capable) in href', '<a href="data:image/svg+xml,<svg onload=alert(1)/>">Link</a>' ],
+      [ 'data:text/html in href', '<a href="data:text/html,<script>alert(1)</script>">Link</a>' ],
+      [ 'blob: in href', '<a href="blob:https://evil.example/uuid">Link</a>' ],
+    ])('strips %s', (_label, text) => {
+      const sanitized = sanitizeAnchorText(text);
+
+      expect(sanitized).not.toContain('href');
+      expect(sanitized).toContain('Link');
+    });
+
+    it('strips data:image/svg+xml from src', () => {
+      const sanitized = sanitizeAnchorText('<img src="data:image/svg+xml,<svg onload=alert(1)/>">');
+
+      expect(sanitized).not.toContain('src');
+    });
+  });
+
+  describe('safe URLs survive', () => {
+    it.each([
+      [ 'https', '<a href="https://example.com/page">Link</a>' ],
+      [ 'mailto', '<a href="mailto:user@example.com">Link</a>' ],
+      [ 'relative', '<a href="/docs/page">Link</a>' ],
+      [ 'protocol-relative', '<a href="//example.com/page">Link</a>' ],
+      [ 'custom app scheme', '<a href="slack://open?team=T123">Link</a>' ],
+      [ 'ftp', '<a href="ftp://example.com/file.txt">Link</a>' ],
+    ])('keeps %s href', (_label, text) => {
+      const sanitized = sanitizeAnchorText(text);
+
+      expect(sanitized).toContain('href');
+    });
+
+    it('keeps raster data:image src', () => {
+      const src = 'data:image/png;base64,iVBORw0KGgo=';
+      const sanitized = sanitizeAnchorText(`<img src="${src}">`);
+
+      expect(sanitized).toContain('src');
+      expect(sanitized).toContain('image/png');
+    });
+  });
+
+  describe('property sweep: separators interleaved between every character pair', () => {
+    const scriptCapableSchemes = [ 'javascript:', 'vbscript:', 'data:text/html,x' ];
+    const separators = [ '\t', '\n', '\r' ];
+
+    scriptCapableSchemes.forEach((scheme) => {
+      separators.forEach((separator) => {
+        const printable = JSON.stringify(separator);
+
+        it(`strips ${scheme} interleaved with ${printable}`, () => {
+          const smuggled = scheme.split('').join(separator);
+          const sanitized = sanitizeAnchorText(`<a href="${smuggled}alert(1)">Link</a>`);
+
+          expect(sanitized).not.toContain('href');
+        });
+      });
+    });
+  });
+});

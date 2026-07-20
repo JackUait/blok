@@ -3,33 +3,25 @@
  * Re-exports all built-in tools for easy importing
  */
 
-import { HeaderConstructable, HeaderData, HeaderConfig } from './tools/header';
-import { ParagraphConstructable, ParagraphData, ParagraphConfig } from './tools/paragraph';
-import { ListConstructable, ListData, ListConfig, ListStyle } from './tools/list';
-import { TableConstructable, TableData, TableConfig, CellContent } from './tools/table';
-import { ToggleConstructable, ToggleData, ToggleConfig } from './tools/toggle';
-import { DividerConstructable, DividerData } from './tools/divider';
-import { SpacerConstructable, SpacerData } from './tools/spacer';
-import { CalloutConstructable, CalloutData, CalloutConfig } from './tools/callout';
-import { QuoteConstructable, QuoteData } from './tools/quote';
-import { ColumnListConstructable, ColumnListData } from './tools/column-list';
-import { ColumnConstructable, ColumnData } from './tools/column';
 import { BlockToolConstructable } from './tools/block-tool';
-import { DatabaseData, DatabaseConfig, DatabaseAdapter, DatabaseViewConfig, DatabaseRowData } from './tools/database';
-import { ImageData, ImageConfig, ImageUploader, ImageAlignment, ImageSize, ImageFrame, ImageCrop, ImageCropShape } from './tools/image';
 import { InlineToolConstructable } from './tools/inline-tool';
-import { ToolSettings } from './tools';
 
-// Block tools
-export const Paragraph: ParagraphConstructable;
-export const Header: HeaderConstructable;
-export const List: ListConstructable;
-export const Table: TableConstructable;
-export const Toggle: ToggleConstructable;
-export const Divider: DividerConstructable;
-export const Spacer: SpacerConstructable;
-export const Callout: CalloutConstructable;
-export const Quote: QuoteConstructable;
+// Block tools published as declare-classes: each name is both the runtime
+// value and the instance type, with a single construct signature so
+// `class Custom extends Tool {}` compiles (no TS2510).
+export { Paragraph, ParagraphConstructorOptions, ParagraphConstructable } from './tools/paragraph';
+export { Header, HeaderConstructorOptions, HeaderConstructable } from './tools/header';
+export { List, ListConstructorOptions, ListConstructable } from './tools/list';
+export { Table, TableConstructorOptions, TableConstructable } from './tools/table';
+export { Toggle, ToggleConstructorOptions, ToggleConstructable } from './tools/toggle';
+export { Divider, DividerConstructorOptions, DividerConstructable } from './tools/divider';
+export { Spacer, SpacerConstructorOptions, SpacerConstructable } from './tools/spacer';
+export { Callout, CalloutConstructorOptions, CalloutConstructable } from './tools/callout';
+export { Quote, QuoteConstructorOptions, QuoteConstructable } from './tools/quote';
+export { ColumnList, ColumnListConstructorOptions, ColumnListConstructable } from './tools/column-list';
+export { Column, ColumnConstructorOptions, ColumnConstructable } from './tools/column';
+
+// Block tools without dedicated declarations yet
 export const Database: BlockToolConstructable;
 export const DatabaseRow: BlockToolConstructable;  // DatabaseRowTool (block tool), distinct from DatabaseRow interface in types/tools/database.d.ts
 export const Image: BlockToolConstructable;
@@ -39,8 +31,6 @@ export const Video: BlockToolConstructable;
 export const Code: BlockToolConstructable;
 export const Embed: BlockToolConstructable;
 export const Bookmark: BlockToolConstructable;
-export const ColumnList: ColumnListConstructable;
-export const Column: ColumnConstructable;
 /**
  * Columns group manifest: a single registration handle that expands to the
  * `column_list` and `column` block tools. Register as `tools: { columns: Columns }`.

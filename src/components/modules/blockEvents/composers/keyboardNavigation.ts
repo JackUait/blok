@@ -1,3 +1,5 @@
+import type { BlokConfig } from '../../../../../types';
+import type { BlokModules } from '../../../../types-internal/blok-modules';
 import type { Block } from '../../../block';
 import { Flipper } from '../../../flipper';
 import { SelectionUtils } from '../../../selection';
@@ -35,6 +37,18 @@ const isBlockMovementShortcut = (event: KeyboardEvent, direction: 'up' | 'down')
  * - Block merging on Backspace/Delete when at boundaries
  */
 export class KeyboardNavigation extends BlockEventComposer {
+  /**
+   * @param Blok - Blok modules
+   * @param getOnEnter - resolves the consumer-level `config.onEnter` hook at
+   * call time (a getter, so the composer never holds a stale reference)
+   */
+  constructor(
+    Blok: BlokModules,
+    private readonly getOnEnter: () => BlokConfig['onEnter'] = () => undefined
+  ) {
+    super(Blok);
+  }
+
   /**
    * Determine if we're using RTL layout.
    * In RTL, right/left navigation is inverted.
@@ -314,6 +328,20 @@ export class KeyboardNavigation extends BlockEventComposer {
      * We don't need to lead soft line break in this case — new block should be created
      */
     if (event.shiftKey && !isIosDevice) {
+      return;
+    }
+
+    /**
+     * Consumer-level Enter hook (`config.onEnter`). Runs after the built-in
+     * escapes above (enableLineBreaks, flipper, Shift+Enter) so those behaviors
+     * stay untouched. Returning `true` means "handled": blok suppresses its
+     * default block split/create but still prevents the browser's native newline.
+     */
+    const onEnter = this.getOnEnter();
+
+    if (typeof onEnter === 'function' && onEnter(event, this.Blok.API.methods) === true) {
+      event.preventDefault();
+
       return;
     }
 

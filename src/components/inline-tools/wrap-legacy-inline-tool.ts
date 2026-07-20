@@ -20,8 +20,10 @@ interface LegacyInlineToolInstance {
 
   /**
    * Reports whether the formatting is active for the current selection.
+   * Real-world Editor.js tools often declare `void` (side-effect only) — the
+   * wrapper Boolean()-coerces the return, so `| void` keeps them type-compatible.
    */
-  checkState?(selection: Selection | null): boolean;
+  checkState?(selection?: Selection | null): boolean | void;
 
   /**
    * Returns a secondary UI element shown below the button while the tool is active

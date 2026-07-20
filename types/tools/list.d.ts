@@ -1,6 +1,8 @@
+import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MenuConfig } from './menu-config';
+import { ToolboxConfig } from './tool-settings';
 
 /**
  * List styles enum
@@ -55,10 +57,42 @@ export interface ListConfig {
 }
 
 /**
+ * List Tool constructor options
+ */
+export type ListConstructorOptions = BlockToolConstructorOptions<ListData, ListConfig>;
+
+/**
  * List Tool for the Blok Editor
  * Provides Ordered, Unordered, and Checklist Blocks
  */
-export interface List extends BlockTool {
+export declare class List implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Sanitizer rules description
+   */
+  static sanitize?: SanitizerConfig;
+
+  /**
+   * Paste substitutions configuration
+   */
+  static pasteConfig?: PasteConfig | false;
+
+  /**
+   * Rules that specified how this Tool can be converted into/from another Tool
+   */
+  static conversionConfig?: ConversionConfig;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  constructor(options: ListConstructorOptions);
+
   /**
    * Return Tool's view
    */
@@ -88,7 +122,8 @@ export interface List extends BlockTool {
 
 /**
  * List Tool constructor
+ * @deprecated Use `typeof List` and {@link ListConstructorOptions} instead
  */
 export interface ListConstructable extends BlockToolConstructable {
-  new(config: BlockToolConstructorOptions<ListData, ListConfig>): List;
+  new(config: ListConstructorOptions): List;
 }

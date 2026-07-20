@@ -3,6 +3,7 @@ import { render, act } from '@testing-library/react';
 import React from 'react';
 import { useBlok } from '../../../packages/react/src/useBlok';
 import { BlokContent } from '../../../packages/react/src/BlokContent';
+import { BlokEditor } from '../../../packages/react/src/BlokEditor';
 import type { UseBlokConfig } from '../../../packages/react/src/types';
 
 interface MockInstance {
@@ -282,6 +283,33 @@ describe('useBlok reactive data', () => {
     expect(instances[0].render).toHaveBeenCalledWith(updated);
   });
 
+  it('content → empty → content re-renders in place: one instance, one onReady, no recreation', async () => {
+    // Pins the contract the JSDoc promises: transitions to and from empty
+    // content are ordinary render() calls on the SAME instance — the editor is
+    // never recreated and onReady never re-fires for a data change.
+    const content = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+    const empty = { blocks: [] };
+    const onReady = vi.fn();
+
+    const { rerender } = render(<BlokEditor data={content} onReady={onReady} />);
+    await act(async () => { await flush(); });
+    expect(instances).toHaveLength(1);
+    expect(onReady).toHaveBeenCalledTimes(1);
+
+    rerender(<BlokEditor data={empty} onReady={onReady} />);
+    await act(async () => { await flush(); });
+    expect(instances).toHaveLength(1); // not recreated
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+    expect(instances[0].render).toHaveBeenLastCalledWith(empty);
+
+    rerender(<BlokEditor data={content} onReady={onReady} />);
+    await act(async () => { await flush(); });
+    expect(instances).toHaveLength(1); // still the same instance
+    expect(instances[0].render).toHaveBeenCalledTimes(2);
+    expect(instances[0].render).toHaveBeenLastCalledWith(content);
+    expect(onReady).toHaveBeenCalledTimes(1); // never re-fired
+  });
+
   it('serializes successive data changes in order', async () => {
     const v1 = { blocks: [{ id: '1', type: 'paragraph', data: { text: '1' } }] };
     const v2 = { blocks: [{ id: '1', type: 'paragraph', data: { text: '2' } }] };
@@ -295,5 +323,32 @@ describe('useBlok reactive data', () => {
     const calls = instances[0].render.mock.calls;
 
     expect(calls.at(-1)?.[0]).toEqual(v2);
+  });
+
+  it('accepts a deep-frozen data prop without throwing and never mutates it', async () => {
+    // Host apps pass data straight from frozen stores (Redux/Immer); the
+    // adapter and the editor must never write through to the prop object.
+    const deepFreeze = <T,>(value: T): T => {
+      if (value !== null && typeof value === 'object') {
+        Object.values(value as Record<string, unknown>).forEach(deepFreeze);
+        Object.freeze(value);
+      }
+      return value;
+    };
+
+    const v1 = deepFreeze({ blocks: [{ id: '1', type: 'paragraph', data: { text: 'one' } }] });
+    const v2 = deepFreeze({ blocks: [{ id: '1', type: 'paragraph', data: { text: 'two' } }] });
+    const v1Snapshot = structuredClone(v1);
+    const v2Snapshot = structuredClone(v2);
+
+    const { rerender } = render(<Harness config={{ data: v1 }} />);
+    await act(async () => { await flush(); });
+
+    rerender(<Harness config={{ data: v2 }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances[0].render).toHaveBeenCalledWith(v2);
+    expect(v1).toEqual(v1Snapshot);
+    expect(v2).toEqual(v2Snapshot);
   });
 });

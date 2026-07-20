@@ -1,4 +1,7 @@
-import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions, BlockToolData } from './block-tool';
+import { PasteConfig, SanitizerConfig } from '../configs';
+import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
+import { BlockToolData } from './block-tool-data';
+import { ToolboxConfig } from './tool-settings';
 
 /**
  * Cell content always contains block IDs.
@@ -41,10 +44,42 @@ export interface TableConfig {
 }
 
 /**
+ * Table Tool constructor options
+ */
+export type TableConstructorOptions = BlockToolConstructorOptions<TableData, TableConfig>;
+
+/**
  * Table Tool for the Blok Editor
  * Renders a 2D grid of block-based cells
  */
-export interface Table extends BlockTool {
+export declare class Table implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Sanitizer rules description
+   */
+  static sanitize?: SanitizerConfig;
+
+  /**
+   * Paste substitutions configuration
+   */
+  static pasteConfig?: PasteConfig | false;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  /**
+   * The table exclusively manages its own child (cell) blocks
+   */
+  static ownsChildren?: boolean;
+
+  constructor(options: TableConstructorOptions);
+
   /**
    * Return Tool's view
    */
@@ -63,7 +98,8 @@ export interface Table extends BlockTool {
 
 /**
  * Table Tool constructor
+ * @deprecated Use `typeof Table` and {@link TableConstructorOptions} instead
  */
 export interface TableConstructable extends BlockToolConstructable {
-  new(config: BlockToolConstructorOptions<TableData, TableConfig>): Table;
+  new(config: TableConstructorOptions): Table;
 }

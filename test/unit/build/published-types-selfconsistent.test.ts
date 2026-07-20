@@ -59,4 +59,12 @@ describe('published type declarations are self-consistent', () => {
   it('the bare-import entry type-checks cleanly under skipLibCheck:false', () => {
     expect(typeCheckErrors('types/index.d.ts')).toEqual([])
   }, 60_000)
+
+  it('the ./tools entry type-checks cleanly under skipLibCheck:false', () => {
+    expect(typeCheckErrors('types/tools-entry.d.ts')).toEqual([])
+  }, 60_000)
+
+  it('the ./full entry type-checks cleanly under skipLibCheck:false', () => {
+    expect(typeCheckErrors('types/full.d.ts')).toEqual([])
+  }, 60_000)
 })

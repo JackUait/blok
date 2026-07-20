@@ -225,6 +225,9 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       onChange: (...args: Parameters<NonNullable<UseBlokConfig['onChange']>>): void => {
         configRef.current.onChange?.(...args);
       },
+      // Forward the return value: it is the "handled" signal the core acts on.
+      onEnter: (...args: Parameters<NonNullable<UseBlokConfig['onEnter']>>): boolean | void =>
+        configRef.current.onEnter?.(...args),
     };
 
     // Only attach onSave when the consumer opted in: its mere presence makes the

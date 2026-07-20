@@ -243,6 +243,12 @@
           "default": "undefined",
           "description": "Fires once when the editor becomes ready, receiving the fully-initialized Blok instance"
         },
+        "onEnter": {
+          "option": "onEnter",
+          "type": "(event: KeyboardEvent, api: API) => boolean | void",
+          "default": "undefined",
+          "description": "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for Shift+Enter, tools with enableLineBreaks, or while a popover/toolbar owns Enter. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph."
+        },
         "autofocus": {
           "option": "autofocus",
           "type": "boolean",

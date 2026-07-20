@@ -4,7 +4,7 @@ import { Module } from '../__module';
 import type { Block } from '../block';
 import type { BlockToolAdapter } from '../tools/block';
 import { generateBlockId, log, logLabeled } from '../utils';
-import { sanitizeBlocks } from '../utils/sanitizer';
+import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../utils/sanitizer';
 import {
   analyzeDataFormat,
   expandToHierarchical,
@@ -288,8 +288,9 @@ export class Renderer extends Module {
   /**
    * Clean stored block data with the tool's sanitize config (plus the global
    * sanitizer) before it reaches the tool's render sink — mirror of the
-   * Saver's sanitizeExtractedData pass. Tools without a sanitize config get
-   * their data back unchanged (same as on save).
+   * Saver's sanitizeExtractedData pass. Tools without a sanitize config keep
+   * their markup unchanged (same as on save), but still get the unconditional
+   * URL-scheme safety pass.
    * @param tool - resolved tool name the block will be rendered with
    * @param data - stored block data
    */
@@ -302,7 +303,11 @@ export class Renderer extends Module {
       this.config.sanitizer as SanitizerConfig
     );
 
-    return sanitized.data;
+    // URL-scheme safety must not depend on the tool declaring a sanitize
+    // config: run the scheme-only pass unconditionally (tag allowlisting
+    // stays opt-in per tool). Also rebuilds the data containers, so stored
+    // caller-owned objects are never retained by reference.
+    return stripUnsafeUrlsDeep(sanitized.data);
   }
 
   /**

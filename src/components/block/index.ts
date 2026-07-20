@@ -287,7 +287,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.name = tool.name;
     this.id = validatedId;
     this.parentId = parentId ?? null;
-    this.contentIds = contentIds ?? [];
+    // Copy: contentIds is mutated in place (push/splice) by hierarchy ops and
+    // must never alias a caller-owned (possibly frozen) array.
+    this.contentIds = contentIds !== undefined ? [ ...contentIds ] : [];
     this.lastEditedAt = lastEditedAt ?? Date.now();
     this.lastEditedBy = lastEditedBy ?? null;
     this.settings = tool.settings;

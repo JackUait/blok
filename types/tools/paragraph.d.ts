@@ -1,4 +1,7 @@
-import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions, BlockToolData } from './block-tool';
+import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
+import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
+import { BlockToolData } from './block-tool-data';
+import { ToolboxConfig } from './tool-settings';
 
 /**
  * Paragraph Tool's input and output data format
@@ -37,10 +40,42 @@ export interface ParagraphConfig {
 }
 
 /**
+ * Paragraph Tool constructor options
+ */
+export type ParagraphConstructorOptions = BlockToolConstructorOptions<ParagraphData, ParagraphConfig>;
+
+/**
  * Paragraph Tool for the Blok Editor
  * Provides Text Block
  */
-export interface Paragraph extends BlockTool {
+export declare class Paragraph implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Sanitizer rules description
+   */
+  static sanitize?: SanitizerConfig;
+
+  /**
+   * Paste substitutions configuration
+   */
+  static pasteConfig?: PasteConfig | false;
+
+  /**
+   * Rules that specified how this Tool can be converted into/from another Tool
+   */
+  static conversionConfig?: ConversionConfig;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  constructor(options: ParagraphConstructorOptions);
+
   /**
    * Return Tool's view
    */
@@ -65,7 +100,8 @@ export interface Paragraph extends BlockTool {
 
 /**
  * Paragraph Tool constructor
+ * @deprecated Use `typeof Paragraph` and {@link ParagraphConstructorOptions} instead
  */
 export interface ParagraphConstructable extends BlockToolConstructable {
-  new(config: BlockToolConstructorOptions<ParagraphData, ParagraphConfig>): Paragraph;
+  new(config: ParagraphConstructorOptions): Paragraph;
 }

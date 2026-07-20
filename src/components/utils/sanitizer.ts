@@ -33,6 +33,7 @@ import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../typ
 import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
+import { isSafeRasterImageDataUrl, stripIgnoredUrlChars } from './sanitize-url';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
 
@@ -41,9 +42,20 @@ type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
  */
 type DeepData = string | Record<string, unknown> | Array<DeepData>;
 
-const UNSAFE_URL_PROTOCOL_PATTERN = /^\s*(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)/i;
-const UNSAFE_URL_ATTR_FALLBACK_PATTERN =
-  /\s*(?:href|src)\s*=\s*(?:"\s*(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)[^"]*"|'\s*(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)[^']*|(?:javascript\s*:|data\s*:\s*text\s*\/\s*html)[^ \t\r\n>]*)/gi;
+/**
+ * Script-capable schemes hard-stripped from href/src regardless of tool
+ * config. Deliberately NOT a full allowlist: unknown custom schemes
+ * (slack://, ftp:) in existing documents must keep working.
+ */
+const SCRIPT_CAPABLE_SCHEME_PATTERN = /^(?:javascript|vbscript):/i;
+const DATA_SCHEME_PATTERN = /^data:/i;
+const BLOB_SCHEME_PATTERN = /^blob:/i;
+
+/**
+ * Fallback (no-DOM) matcher for href/src attributes: captures the attribute
+ * name and its value so the value can be normalized before the scheme check.
+ */
+const URL_ATTR_FALLBACK_PATTERN = /\s*(href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/gi;
 
 /**
  * Sanitize Blocks
@@ -63,7 +75,9 @@ export const sanitizeBlocks = (
     const rules: DeepSanitizerRule = (toolConfig ?? {}) as SanitizerConfig;
 
     if (isObject(rules) && isEmpty(rules) && isEmpty(globalSanitizer)) {
-      return block;
+      // No rules to apply, but never hand the caller's object back by
+      // reference — downstream consumers must not retain caller-owned data.
+      return { ...block };
     }
 
     return {
@@ -228,15 +242,30 @@ const isRule = (config: DeepSanitizerRule): boolean => {
 };
 
 /**
- *
- * @param {string} value - HTML string to strip unsafe URLs from
+ * Check whether a URL resolves to a script-capable scheme once the characters
+ * browsers ignore during scheme resolution are removed — closes the
+ * whitespace-smuggling class ("java\nscript:", "v\tbscript:", …).
+ * @param value - raw attribute value
+ * @param attribute - attribute the value belongs to ('href' or 'src')
  */
-const hasUnsafeUrlProtocol = (value: string | null): boolean => {
+const hasUnsafeUrlProtocol = (value: string | null, attribute: string): boolean => {
   if (!value) {
     return false;
   }
 
-  return UNSAFE_URL_PROTOCOL_PATTERN.test(value);
+  const normalized = stripIgnoredUrlChars(value);
+
+  if (SCRIPT_CAPABLE_SCHEME_PATTERN.test(normalized)) {
+    return true;
+  }
+
+  if (DATA_SCHEME_PATTERN.test(normalized)) {
+    // Raster image data: URLs cannot carry script and stay valid in src;
+    // every other data: payload (text/html, svg+xml, …) can execute.
+    return !(attribute === 'src' && isSafeRasterImageDataUrl(normalized));
+  }
+
+  return attribute === 'href' && BLOB_SCHEME_PATTERN.test(normalized);
 };
 
 const stripUnsafeUrls = (value: string): string => {
@@ -255,7 +284,7 @@ const stripUnsafeUrls = (value: string): string => {
       ['href', 'src'].forEach((attribute) => {
         const attrValue = element.getAttribute(attribute);
 
-        if (hasUnsafeUrlProtocol(attrValue)) {
+        if (hasUnsafeUrlProtocol(attrValue, attribute)) {
           element.removeAttribute(attribute);
         }
       });
@@ -264,7 +293,47 @@ const stripUnsafeUrls = (value: string): string => {
     return template.innerHTML;
   }
 
-  return value.replace(UNSAFE_URL_ATTR_FALLBACK_PATTERN, '');
+  return value.replace(
+    URL_ATTR_FALLBACK_PATTERN,
+    (match, attribute: string, doubleQuoted?: string, singleQuoted?: string, unquoted?: string) => {
+      const url = doubleQuoted ?? singleQuoted ?? unquoted ?? '';
+
+      return hasUnsafeUrlProtocol(url, attribute.toLowerCase()) ? '' : match;
+    }
+  );
+};
+
+/**
+ * Applies the URL-scheme safety pass to every string in block data, rebuilding
+ * containers along the way. Used by the render path so scheme hardening never
+ * depends on the tool declaring a sanitize config (tag allowlisting stays
+ * opt-in per tool), and so caller-owned data is never retained by reference.
+ * @param data - stored block data
+ */
+export const stripUnsafeUrlsDeep = (data: BlockToolData): BlockToolData => {
+  return stripUnsafeUrlsDeepValue(data as DeepData) as BlockToolData;
+};
+
+const stripUnsafeUrlsDeepValue = (value: DeepData): DeepData => {
+  if (Array.isArray(value)) {
+    return value.map(stripUnsafeUrlsDeepValue);
+  }
+
+  if (isObject(value)) {
+    const result: Record<string, unknown> = {};
+
+    Object.entries(value).forEach(([key, item]) => {
+      result[key] = stripUnsafeUrlsDeepValue(item as DeepData);
+    });
+
+    return result;
+  }
+
+  if (isString(value)) {
+    return stripUnsafeUrls(value);
+  }
+
+  return value;
 };
 
 /**

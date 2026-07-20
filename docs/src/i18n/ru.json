@@ -243,6 +243,12 @@
           "default": "undefined",
           "description": "Срабатывает один раз, когда редактор становится готов, получая полностью инициализированный экземпляр Blok"
         },
+        "onEnter": {
+          "option": "onEnter",
+          "type": "(event: KeyboardEvent, api: API) => boolean | void",
+          "default": "undefined",
+          "description": "Срабатывает при нажатии Enter в блоке, прежде чем Blok разделит его или создаст новый. Верните true, чтобы пометить событие обработанным — Blok отменит своё разделение/создание блока (нативный перенос строки всё равно предотвращается). Не срабатывает для Shift+Enter, инструментов с enableLineBreaks и пока Enter принадлежит поповеру или тулбару. Подходит для чат-полей («Enter отправляет») — сочетайте с настройкой preserveBlank параграфа вместо наследования от Paragraph."
+        },
         "autofocus": {
           "option": "autofocus",
           "type": "boolean",

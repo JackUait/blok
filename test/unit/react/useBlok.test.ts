@@ -544,6 +544,38 @@ describe('useBlok', () => {
     expect(mockBlokInstances).toHaveLength(1);
   });
 
+  it('should use latest onEnter callback ref without recreating editor', async () => {
+    const onEnter1 = vi.fn(() => true);
+    const onEnter2 = vi.fn(() => true);
+
+    const { rerender } = renderHook(
+      ({ onEnter }: { onEnter: () => boolean }) => useBlok({ onEnter }),
+      { initialProps: { onEnter: onEnter1 } }
+    );
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onEnter: (...args: unknown[]) => unknown;
+    };
+
+    expect(typeof passedConfig.onEnter).toBe('function');
+
+    // Update to new callback
+    rerender({ onEnter: onEnter2 });
+
+    // Call the wrapper — should call onEnter2 (latest), not onEnter1,
+    // and forward its return value (the "handled" signal) to the core
+    expect(passedConfig.onEnter()).toBe(true);
+
+    expect(onEnter1).not.toHaveBeenCalled();
+    expect(onEnter2).toHaveBeenCalledTimes(1);
+
+    // Verify no editor recreation occurred
+    expect(MockBlokConstructor).toHaveBeenCalledTimes(1);
+    expect(mockBlokInstances).toHaveLength(1);
+  });
+
   it('does not pass an onSave callback to the editor config when the prop is omitted', async () => {
     renderHook(() => useBlok({}));
 

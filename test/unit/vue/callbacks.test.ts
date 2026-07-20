@@ -111,4 +111,17 @@ describe('BlokEditor callbacks + gating', () => {
     expect(onBeforePaste).toHaveBeenCalledWith('<b>dirty</b>');
     expect(result).toBe('<b>clean</b>');
   });
+
+  it('threads the onEnter prop return value into core', async () => {
+    const onEnter = vi.fn().mockReturnValue(true);
+
+    await mountEditor({ props: { onEnter } });
+
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    const api = { blocks: {} };
+    const result = (coreConfig().onEnter as (event: unknown, api: unknown) => unknown)(event, api);
+
+    expect(onEnter).toHaveBeenCalledWith(event, api);
+    expect(result).toBe(true);
+  });
 });

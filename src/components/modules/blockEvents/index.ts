@@ -59,7 +59,7 @@ export class BlockEvents extends Module {
    */
   private get keyboardNavigation(): KeyboardNavigation {
     if (!this._keyboardNavigation) {
-      this._keyboardNavigation = new KeyboardNavigation(this.Blok);
+      this._keyboardNavigation = new KeyboardNavigation(this.Blok, () => this.config.onEnter);
     }
     return this._keyboardNavigation;
   }

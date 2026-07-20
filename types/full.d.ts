@@ -19,7 +19,6 @@ export {
   Link,
   Marker,
   Convert,
-  Delete,
   defaultBlockTools,
   defaultInlineTools,
   HeaderData,
@@ -29,11 +28,11 @@ export {
   ListData,
   ListConfig,
   ListStyle,
-} from './tools';
+} from './tools-entry';
 
-import { ParagraphConstructable } from './tools/paragraph';
-import { HeaderConstructable } from './tools/header';
-import { ListConstructable } from './tools/list';
+import { Paragraph } from './tools/paragraph';
+import { Header } from './tools/header';
+import { List } from './tools/list';
 import { InlineToolConstructable } from './tools/inline-tool';
 
 /**
@@ -42,16 +41,16 @@ import { InlineToolConstructable } from './tools/inline-tool';
  */
 export const defaultTools: {
   readonly paragraph: {
-    readonly class: ParagraphConstructable;
+    readonly class: typeof Paragraph;
     readonly inlineToolbar: true;
     readonly config: { readonly preserveBlank: true };
   };
   readonly header: {
-    readonly class: HeaderConstructable;
+    readonly class: typeof Header;
     readonly inlineToolbar: true;
   };
   readonly list: {
-    readonly class: ListConstructable;
+    readonly class: typeof List;
     readonly inlineToolbar: true;
   };
 };
@@ -62,16 +61,16 @@ export const defaultTools: {
  */
 export const allTools: {
   readonly paragraph: {
-    readonly class: ParagraphConstructable;
+    readonly class: typeof Paragraph;
     readonly inlineToolbar: true;
     readonly config: { readonly preserveBlank: true };
   };
   readonly header: {
-    readonly class: HeaderConstructable;
+    readonly class: typeof Header;
     readonly inlineToolbar: true;
   };
   readonly list: {
-    readonly class: ListConstructable;
+    readonly class: typeof List;
     readonly inlineToolbar: true;
   };
   readonly bold: { readonly class: InlineToolConstructable };

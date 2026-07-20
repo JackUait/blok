@@ -25,6 +25,23 @@ const SAFE_HREF_SCHEME = /^(?:https?|mailto|tel|sms):/i;
 const SAFE_IMAGE_DATA = /^data:image\/(?:png|jpe?g|gif|webp|avif|bmp|x-icon|vnd\.microsoft\.icon)[;,]/i;
 
 /**
+ * Remove the characters a browser ignores when resolving a URL scheme, so
+ * scheme checks see the URL the way the browser will ("java\nscript:" →
+ * "javascript:"). Single source of truth for the ignored-character set.
+ */
+export function stripIgnoredUrlChars(url: string): string {
+  return url.replace(IGNORED_URL_CHARS, '');
+}
+
+/**
+ * True for data: URLs whose subtype is a script-free raster image
+ * (already normalized via {@link stripIgnoredUrlChars}).
+ */
+export function isSafeRasterImageDataUrl(url: string): boolean {
+  return SAFE_IMAGE_DATA.test(url);
+}
+
+/**
  * Return the explicit scheme of a URL (e.g. "javascript:"), or null when the
  * URL is relative, an anchor, or protocol-relative ("//host").
  */
@@ -40,7 +57,7 @@ function explicitScheme(url: string): string | null {
  * Relative, anchor, and protocol-relative URLs have no scheme to abuse and pass.
  */
 export function safeHref(url: string): string | null {
-  const stripped = url.replace(IGNORED_URL_CHARS, '');
+  const stripped = stripIgnoredUrlChars(url);
 
   if (explicitScheme(stripped) === null) {
     return url;
@@ -55,7 +72,7 @@ export function safeHref(url: string): string | null {
  * html data: URLs (which can execute script) and all script-capable schemes.
  */
 export function safeImageSrc(url: string): string | null {
-  const stripped = url.replace(IGNORED_URL_CHARS, '');
+  const stripped = stripIgnoredUrlChars(url);
 
   if (explicitScheme(stripped) === null) {
     return url;
@@ -73,7 +90,7 @@ export function safeImageSrc(url: string): string | null {
  * allowlist. Used to reject user-entered link targets before insertion.
  */
 export function hasUnsafeScheme(url: string): boolean {
-  const stripped = url.replace(IGNORED_URL_CHARS, '');
+  const stripped = stripIgnoredUrlChars(url);
 
   return explicitScheme(stripped) !== null && !SAFE_HREF_SCHEME.test(stripped);
 }

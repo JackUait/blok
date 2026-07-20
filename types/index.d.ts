@@ -207,7 +207,9 @@ export function wrapLegacyInlineTool(
   LegacyToolClass: new (options: InlineToolConstructorOptions) => {
     render(): HTMLElement | null | undefined;
     surround?(range: Range): void;
-    checkState?(selection: Selection | null): boolean;
+    // globalThis.Selection: the DOM type (window.getSelection()), not Blok's
+    // imported Selection API, which shadows the global name in this file.
+    checkState?(selection?: globalThis.Selection | null): boolean | void;
     renderActions?(): HTMLElement | null | undefined;
     clear?(): void;
   }

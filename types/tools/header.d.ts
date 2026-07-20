@@ -1,6 +1,8 @@
+import { ConversionConfig, PasteConfig, SanitizerConfig } from '../configs';
 import { BlockTool, BlockToolConstructable, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MenuConfig } from './menu-config';
+import { ToolboxConfig } from './tool-settings';
 
 /**
  * Header Tool's input and output data format
@@ -60,10 +62,42 @@ export interface HeaderConfig {
 }
 
 /**
+ * Header Tool constructor options
+ */
+export type HeaderConstructorOptions = BlockToolConstructorOptions<HeaderData, HeaderConfig>;
+
+/**
  * Header Tool for the Blok Editor
  * Provides Headings Blocks (H1-H6)
  */
-export interface Header extends BlockTool {
+export declare class Header implements BlockTool {
+  /**
+   * Tool's Toolbox settings
+   */
+  static toolbox?: ToolboxConfig;
+
+  /**
+   * Sanitizer rules description
+   */
+  static sanitize?: SanitizerConfig;
+
+  /**
+   * Paste substitutions configuration
+   */
+  static pasteConfig?: PasteConfig | false;
+
+  /**
+   * Rules that specified how this Tool can be converted into/from another Tool
+   */
+  static conversionConfig?: ConversionConfig;
+
+  /**
+   * Is Tool supports read-only mode
+   */
+  static isReadOnlySupported?: boolean;
+
+  constructor(options: HeaderConstructorOptions);
+
   /**
    * Return Tool's view
    */
@@ -98,7 +132,8 @@ export interface Header extends BlockTool {
 
 /**
  * Header Tool constructor
+ * @deprecated Use `typeof Header` and {@link HeaderConstructorOptions} instead
  */
 export interface HeaderConstructable extends BlockToolConstructable {
-  new(config: BlockToolConstructorOptions<HeaderData, HeaderConfig>): Header;
+  new(config: HeaderConstructorOptions): Header;
 }

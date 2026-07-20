@@ -19,7 +19,7 @@ const createI18nApi = (): { api: I18nAPI; i18nMock: { t: ReturnType<typeof vi.fn
 
   // Create mock I18n module
   const i18nMock = {
-    t: vi.fn((key: string) => key),
+    t: vi.fn((key: string, _vars?: Record<string, string | number>) => key),
     has: vi.fn(() => true),
     getLocale: vi.fn(() => 'en'),
   };
@@ -54,6 +54,22 @@ describe('I18nAPI', () => {
 
       expect(i18nMock.t).toHaveBeenCalledWith('missing.key');
       expect(result).toBe('missing.key');
+    });
+
+    it('forwards interpolation variables to the I18n module', () => {
+      const { api, i18nMock } = createI18nApi();
+      const vars = {
+        size: '10 MB',
+        total: 4,
+      };
+
+      api.methods.t('tools.image.emptyMaxSize', vars);
+
+      expect(i18nMock.t).toHaveBeenCalledWith(
+        'tools.image.emptyMaxSize',
+        vars
+      );
+      expect(i18nMock.t.mock.calls[0]?.[1]).toBe(vars);
     });
 
     it('returns memoized object on subsequent accesses', () => {

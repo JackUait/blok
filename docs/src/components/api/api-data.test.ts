@@ -423,6 +423,18 @@ describe("API_SECTIONS", () => {
       expect(section).toBeDefined();
       expect(section!.methods).toBeDefined();
     });
+
+    it("documents interpolation variables for i18n.t", () => {
+      const section = API_SECTIONS.find((s) => s.id === "i18n-api");
+      const method = section?.methods?.find(
+        (candidate) => candidate.name === "i18n.t(dictKey, vars?)",
+      );
+
+      expect(method).toBeDefined();
+      expect(method?.description).toContain("interpolat");
+      expect(method?.example).toContain("tools.image.emptyMaxSize");
+      expect(method?.example).toContain("{ size: '10 MB' }");
+    });
   });
 
   describe("UI API", () => {

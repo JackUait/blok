@@ -384,7 +384,7 @@ describe('ToolsFactory', () => {
      */
     const createI18nApiStub = (translations: Record<string, string>): ApiStub => {
       const i18n = {
-        t: vi.fn((key: string): string => {
+        t: vi.fn((key: string, _vars?: Record<string, string | number>): string => {
           return translations[key] ?? key;
         }),
         has: vi.fn((key: string): boolean => {
@@ -446,6 +446,43 @@ describe('ToolsFactory', () => {
       expect((apiStub.methods as { i18n: { t: ReturnType<typeof vi.fn> } }).i18n.t).toHaveBeenCalledWith('tools.table.Add row');
     });
 
+    it('forwards interpolation variables through the namespaced lookup', () => {
+      const toolName = 'image';
+      const translations = {
+        'tools.image.emptyMaxSize': 'Maximum size: {size}',
+      };
+      const apiStub = createI18nApiStub(translations);
+      const { factory } = createFactory(
+        {
+          [toolName]: createToolConfig(),
+        },
+        {},
+        apiStub
+      );
+      const vars = { size: '10 MB' };
+
+      factory.get(toolName);
+
+      const instanceApi = blockAdapterMockControl.instances.at(-1)?.options.api as {
+        i18n: {
+          t: (
+            key: string,
+            interpolationVars?: Record<string, string | number>
+          ) => string;
+        };
+      };
+
+      instanceApi.i18n.t('emptyMaxSize', vars);
+
+      expect(
+        (apiStub.methods as { i18n: { t: ReturnType<typeof vi.fn> } }).i18n.t
+      ).toHaveBeenCalledWith('tools.image.emptyMaxSize', vars);
+      expect(
+        (apiStub.methods as { i18n: { t: ReturnType<typeof vi.fn> } }).i18n.t
+          .mock.calls[0]?.[1]
+      ).toBe(vars);
+    });
+
     it('falls back to direct key when namespaced key not found', () => {
       const toolName = 'stub';
       const translations = {
@@ -470,6 +507,49 @@ describe('ToolsFactory', () => {
       const result = instanceApi.i18n.t('tools.stub.error');
 
       expect(result).toBe('Ошибка');
+      expect(
+        (apiStub.methods as { i18n: { t: ReturnType<typeof vi.fn> } }).i18n.t
+      ).toHaveBeenCalledWith('tools.stub.error');
+    });
+
+    it('forwards interpolation variables through the direct-key fallback', () => {
+      const toolName = 'video';
+      const translations = {
+        'tools.video.seekValueText': '{current} of {total}',
+      };
+      const apiStub = createI18nApiStub(translations);
+      const { factory } = createFactory(
+        {
+          [toolName]: createToolConfig(),
+        },
+        {},
+        apiStub
+      );
+      const vars = {
+        current: '0:42',
+        total: '3:05',
+      };
+
+      factory.get(toolName);
+
+      const instanceApi = blockAdapterMockControl.instances.at(-1)?.options.api as {
+        i18n: {
+          t: (
+            key: string,
+            interpolationVars?: Record<string, string | number>
+          ) => string;
+        };
+      };
+
+      instanceApi.i18n.t('tools.video.seekValueText', vars);
+
+      expect(
+        (apiStub.methods as { i18n: { t: ReturnType<typeof vi.fn> } }).i18n.t
+      ).toHaveBeenCalledWith('tools.video.seekValueText', vars);
+      expect(
+        (apiStub.methods as { i18n: { t: ReturnType<typeof vi.fn> } }).i18n.t
+          .mock.calls[0]?.[1]
+      ).toBe(vars);
     });
 
     it('returns original key when no translation exists at all', () => {

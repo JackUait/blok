@@ -4941,6 +4941,38 @@ semantics without finding a blocker. It independently reran the 132-case gate,
 scoped ESLint, full TypeScript check, and whitespace validation successfully.
 `F-global-008` is therefore verified; terminal locale gates remain separate.
 
+### Shared tool API interpolation remediation
+
+Independent complete Dhivehi and Filipino reviews found the same
+locale-independent caller defect: the core i18n module already interpolated
+optional string and number variables, but the tool-facing API module and its
+per-tool namespace wrapper discarded them. An AST-closed review identified
+exactly four affected live calls: `tools.image.emptyMaxSize`,
+`tools.video.emptyMaxSize`, `tools.audio.emptyMaxSize`, and
+`tools.video.seekValueText`. The first three could render a literal `{size}`;
+the accessible video scrubber could expose literal `{current}` and `{total}`.
+No dictionary correction could repair values lost at the caller boundary.
+
+`F-global-009` records the shared contract. Three red-first propagation cases
+failed while the other 16 focused API/factory cases passed; the new docs
+contract failed while its other 58 cases passed. The public `I18n` type now
+accepts optional `Record<string, string | number>` variables, the API module
+forwards the identical object to the core, and both the namespaced-hit and
+direct-fallback wrapper branches preserve that identity. Calls without
+variables retain their exact one-argument behavior. The public docs describe
+the optional parameter and show interpolation.
+
+After remediation, the focused API/factory gate passes 19/19, the docs API
+gate passes 59/59, the four affected tool-family files pass 256/256, and the
+complete i18n gate passes 3,938/3,938. Root and docs TypeScript checks, scoped
+ESLint, translation completeness/integrity/source coverage, docs translation
+checks, and whitespace validation also pass with only the repository's known
+translation warnings. Distinct reviewer
+`root-dhivehi_postfix_first_blind` independently inspected both forwarding
+boundaries, type and docs agreement, identity preservation, and one-argument
+compatibility, found no blocker or non-blocker, and freshly passed the 19-case
+focused gate. `F-global-009` is therefore verified.
+
 ### Filipino corrected-byte first-pass residual
 
 Reviewer `root-fil_546_corrected_first` blindly reviewed all 546 Filipino
@@ -8037,6 +8069,7 @@ follows the global transition rule above.
 | `F-global-007` | all non-English | detached editor UI direction contract | caller / portal ancestry / bidirectional layout / accessibility | Body- and Top-Layer-mounted tooltip, popover, and lightbox roots lose their owning editor ancestry; the isolation reset forces non-inline tooltip/popover direction to initial/LTR, while lightbox inherits the host body. Nested desktop submenus under an RTL inline popover are also reset to LTR. | On every open, resolve the effective owning editor direction and apply both semantic `dir` and inline-important CSS `direction` to every detached or reset UI root; refresh the tooltip singleton across mixed-direction editors and support explicit direction for virtual roots. | Two independent Chromium reproductions confirmed that the Persian dictionary and editor wrapper are correctly RTL while affected roots compute LTR; `dir` alone still loses to the reset. The frozen challenge identifies 25 direct and at least 59 built-in affected keys. Six regression tests failed before remediation. After the body-root fallback correction, a distinct reviewer found no blocker and passed 169/169 focused cases; the broader related unit gate passes 687/687, and Chromium passes the 29-test tooltip file with direct computed-direction verification. | verified |
 
 | `F-global-008` | all non-English | drag move destination contract | caller / accessibility / move indexing / structural integrity | Drop previews announced a raw pre-removal boundary instead of the first moved block's final position, producing overstated or impossible values; multiple execution also returned the raw slot and misordered supported non-contiguous or variable-width nested groups. Invalid descendant and stale targets could still display indicators, and side-drop source filtering could detach nested children. | Resolve one move contract from the live flat array, explicit sources, physical carried footprint, logical ancestry, target, and edge; use its final first index for previews and results, anchor execution to the live target, preserve nested/non-contiguous order, validate indicators in every mode, and keep nested children attached during side drops. | The frozen Estonian caller challenge records six exact numeric scenarios. Red-first unit and integration cases cover formula, execution, lifecycle, staleness, duplicate, physical/logical descendant, indicator, and horizontal source-filter contracts. A distinct read-only reviewer found no blocker and independently passed the 132-case focused gate, scoped ESLint, full TypeScript, and whitespace checks. | verified |
+| `F-global-009` | all non-English | tool API interpolation contract | caller / interpolation / public API / accessibility | The tool-facing API and per-tool namespace wrapper accept and forward only a dictionary key, so the live image, video, and audio callers can expose raw `{size}`, `{current}`, and `{total}` placeholders. | Accept optional `Record<string, string \| number>` interpolation variables in the public tool API and forward the same object unchanged through the API module and both namespace-wrapper branches; document and regression-test the contract. | Independent complete Dhivehi and Filipino audits found the same defect and an AST-closed caller review identified exactly four affected live calls. Three focused propagation assertions and one docs contract failed before remediation. After both boundaries began forwarding the identical object without changing one-argument calls, focused API/factory tests pass 19/19, docs API tests pass 59/59, four affected tool-family files pass 256/256, and the complete i18n gate passes 3,938/3,938. Type, scoped lint, translation, docs, and whitespace checks pass; distinct reviewer `root-dhivehi_postfix_first_blind` found no blocker or non-blocker and freshly passed the focused gate. | verified |
 
 ## Exact-English Retentions
 

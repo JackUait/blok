@@ -24,7 +24,14 @@ export class I18nAPI extends Module {
   public get methods(): I18n {
     if (this.cachedMethods === null) {
       this.cachedMethods = {
-        t: (dictKey: string): string => this.Blok.I18n.t(dictKey),
+        t: (
+          dictKey: string,
+          vars?: Record<string, string | number>
+        ): string => {
+          return vars === undefined
+            ? this.Blok.I18n.t(dictKey)
+            : this.Blok.I18n.t(dictKey, vars);
+        },
         has: (dictKey: string): boolean => this.Blok.I18n.has(dictKey),
         getEnglishTranslation: (key: string): string => this.Blok.I18n.getEnglishTranslation(key),
         getLocale: (): string => this.Blok.I18n.getLocale(),

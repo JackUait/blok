@@ -114,7 +114,10 @@ export class ToolsFactory {
     const namespace = `tools.${toolName}`;
 
     const namespacedI18n: I18n = {
-      t: (dictKey: string): string => {
+      t: (
+        dictKey: string,
+        vars?: Record<string, string | number>
+      ): string => {
         /**
          * Try namespaced key first for EditorJS compatibility.
          * External tools call t('Add row') expecting lookup of 'tools.table.Add row'.
@@ -122,14 +125,18 @@ export class ToolsFactory {
         const namespacedKey = `${namespace}.${dictKey}`;
 
         if (baseApi.i18n.has(namespacedKey)) {
-          return baseApi.i18n.t(namespacedKey);
+          return vars === undefined
+            ? baseApi.i18n.t(namespacedKey)
+            : baseApi.i18n.t(namespacedKey, vars);
         }
 
         /**
          * Fall back to direct key lookup for Blok internal tools.
          * Internal tools use fully-qualified keys like 'tools.stub.error'.
          */
-        return baseApi.i18n.t(dictKey);
+        return vars === undefined
+          ? baseApi.i18n.t(dictKey)
+          : baseApi.i18n.t(dictKey, vars);
       },
 
       has: (dictKey: string): boolean => {

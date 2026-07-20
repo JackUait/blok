@@ -1680,13 +1680,15 @@ await editor.readOnly.toggle(false);`,
     description: "Internationalization support for translating UI strings.",
     methods: [
       {
-        name: "i18n.t(dictKey)",
+        name: "i18n.t(dictKey, vars?)",
         returnType: "string",
-        description: "Translate a key from the global dictionary.",
+        description:
+          "Translate a key from the global dictionary, optionally interpolating string or number values.",
         example: `const text = editor.i18n.t('toolNames.text');
 console.log(text); // 'Text' (or translated string)
 
-const deleteText = editor.i18n.t('blockSettings.delete');`,
+const limit = editor.i18n.t('tools.image.emptyMaxSize', { size: '10 MB' });
+console.log(limit); // 'max 10 MB' (or translated string)`,
       },
       {
         name: "i18n.has(dictKey)",

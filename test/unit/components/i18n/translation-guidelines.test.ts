@@ -114,6 +114,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'tools.link.webLink catch-all labels',
   'detached editor UI direction contract',
   'drag move destination contract',
+  'tool API interpolation contract',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {

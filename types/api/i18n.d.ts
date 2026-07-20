@@ -7,9 +7,16 @@ export interface I18n {
    * Keys should be fully qualified (e.g., 'tools.link.addLink', 'blockSettings.delete').
    *
    * @param dictKey - Full translation key to look up
+   * @param vars - Optional string or number values to interpolate into placeholders
    * @returns Translated string, or the key itself if translation is missing
+   *
+   * @example
+   * api.i18n.t('tools.image.emptyMaxSize', { size: '10 MB' })
    */
-  t(dictKey: string): string;
+  t(
+    dictKey: string,
+    vars?: Record<string, string | number>
+  ): string;
 
   /**
    * Check if a translation exists for the given key.

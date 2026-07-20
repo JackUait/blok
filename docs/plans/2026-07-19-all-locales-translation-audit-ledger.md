@@ -271,7 +271,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `bn` | Bengali | Bengali | ltr | neutral contemporary Bengali; concise respectful imperatives for instructions; conventional compact action labels where established; Bengali sentence punctuation and static Bengali digits; established Latin brand, acronym, formula, and keycap tokens; native Bengali terminology where it is clearer than transliteration | — | — | pending | pending | pending | `F-bn-001`–`F-bn-076` | pending |
 | `bs` | Bosnian | Latin | ltr | Neutral contemporary Bosnian in Latin script; concise singular imperatives for compact commands; polite plural imperatives for complete instructions, hints, accessibility guidance, and recovery text; sentence-case noun/state labels; established Bosnian product/media terminology; count-neutral label-before-number templates; native punctuation and ellipsis. | `root-danish_546_first_pass` | — | pass | pass | pass | `F-bs-001`–`F-bs-181` | first-pass-complete |
 | `cs` | Czech | Latin | ltr | neutral contemporary Czech; polite plural imperatives in full instructions; concise infinitive actions; sentence case; established Czech product and accessibility terminology; count-neutral variable templates | `root-cs-546-first-final` | `root-cs-546-second-final` | pass | pass | pass | `F-cs-001`–`F-cs-122` | second-pass-complete |
-| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | `root-da-546-first-restart` | — | pass | pass | pass | `F-da-001`–`F-da-085` | first-pass-complete |
+| `da` | Danish | Latin | ltr | neutral contemporary Danish; concise direct imperatives for compact actions; polite direct instructions; sentence-case UI; lowercase search aliases; established Danish product, accessibility, and media terminology | — | — | pending | pending | pending | `F-da-001`–`F-da-088` | pending |
 | `de` | German | Latin | ltr | formal `Sie` in sentences; concise infinitive actions; German noun capitalization | `root-de-546-first-final` | `root-de-546-second-final` | pass | pass | pass | `F-de-001`–`F-de-089` | second-pass-complete |
 | `dv` | Dhivehi (Maldivian) | Thaana | rtl | to-audit | — | — | pending | pending | pending | `F-dv-001` | pending |
 | `el` | Greek | Greek | ltr | neutral contemporary Greek; formal plural imperatives for full instructions; concise noun or action labels for compact controls; sentence case; established Greek product, accessibility, and media terminology; count-neutral variable templates; unchanged standardized notation and acronyms | `root-czech_546_first_pass` | `root-danish_546_first_pass` | pass | pass | pass | `F-el-001`–`F-el-072` | second-pass-complete |
@@ -406,7 +406,6 @@ locale returns to `pending`.
 | `bg` | `root-bg-546-first-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` | `root-bg-546-second-final` | `sha256:01ed2d899630fdbba173e57d7464f6c4a968b00c4e80912b949bc123ae26076f` |
 | `bs` | `root-danish_546_first_pass` | `sha256:e20689ab09efb1018bdc55728d1158fc4e9b5422490c4d9511d741d9f39b52cc` | — | — |
 | `cs` | `root-cs-546-first-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` | `root-cs-546-second-final` | `sha256:afd8b24dd787ff72bb44d86570947399763914898fab2cff0f5d1f0f483f4807` |
-| `da` | `root-da-546-first-restart` | `sha256:ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f` | — | — |
 | `de` | `root-de-546-first-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` | `root-de-546-second-final` | `sha256:66f026e0dbaeb87769090c82bad7493432b601c617ab6dbeec8abbe19a0183b2` |
 | `el` | `root-czech_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` | `root-danish_546_first_pass` | `sha256:b29c10e22e85f4d8ac1fa6e14f1cf412f5b97b9276e954ebd250f2d9468eaa61` |
 | `en` | `root-en-546-first-final` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` | `root-en-546-second-independent` | `sha256:770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17` |
@@ -1540,7 +1539,7 @@ residual or documentation gap. The artifact is
 `6e5e4ae8553eaf21f6917ad19ba3e1e84d39c4569d3680608fbfb1642de11878`.
 Czech is `second-pass-complete`.
 
-### Danish (`da`) — corrected-byte first pass complete
+### Danish (`da`) — pending after second-pass residuals
 
 The current 545-entry corpus supersedes the historical 539-key review.
 Reviewer `codex-da-first-final-545` restarted at entry 1 on the final bytes
@@ -1620,7 +1619,39 @@ replayed in their actual callers; no residual survived. The artifact is
 `df586663ec0708a612bac05102a6782a8883c1709d70a2938fc3928978d2e9fc`.
 This pass binds to corrected raw dictionary SHA-256
 `ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f`;
-Danish is `first-pass-complete` pending a distinct complete second pass.
+that first-pass conclusion was subsequently invalidated by a distinct
+current-byte review.
+
+Reviewer `root` restarted at entry 1 and directly reread all 546
+English/Danish pairs in source order before consulting the earlier Danish
+artifacts or verdicts. Its complete attempted-second-pass classification was
+429 ordinary clean pairs, 85 independently upheld findings, the exact 29
+independently upheld English-equal retentions, and three residuals. A fresh
+2,073-assertion mechanical replay revalidated all 38 placeholder-bearing
+values with 54 occurrences, 44 aliases in 14 groups and 48 references, 117
+provider compositions, 20 block-color titles, three migrations, 80
+changed-English rows covering 78 keys, and the complete 533+12+1 caller
+partition.
+
+`F-da-086` replaces a settings label on the card's delete-action ellipsis
+with the standalone accessible name `Flere handlinger for kortet`.
+`F-da-087` describes the broken remote source as moved or no longer available
+instead of saying that the file itself is offline. `F-da-088` names the video
+range slider's playback position rather than giving it the imperative
+`Spol`. The earlier `a11y.blocksDuplicated` destination wording and
+`tools.image.navigationControls` group label were separately challenged and
+retained.
+
+The attempt binds to pre-correction Danish dictionary SHA-256
+`ae8b2ede5d6536726ab80a66bacdfc9a2aa9033499fc0d8953a740b22e1cb22f`.
+It deliberately earns no pass credit because it found residuals. The three
+focused expectations failed on exactly the recorded old values before
+remediation and all passed afterward; the database-board, broken-image, and
+video caller suites pass 349 tests. The corrected raw Danish dictionary
+matches the independently projected SHA-256
+`aa1691577b4e4e51e18a2adec65673437476d3b66358ec9e8f81c933046f2d3a`.
+Danish remains `pending` until two complete passes restart on these corrected
+bytes.
 
 ### Greek (`el`) — corrected bytes pending current-byte passes
 
@@ -4814,6 +4845,9 @@ follows the global transition rule above.
 | `F-da-083` | `da` | `tools.image.altEdit` | established product terminology / consistency | `"Redigér alt-tekst"` | `"Rediger alt-tekst"` | Microsoft’s Danish alternative-text UI uses unaccented `Rediger`, matching the existing callout, database, and link edit actions. | verified |
 | `F-da-084` | `da` | `tools.colorPicker.defaultSwatchLabel` | caller context / compound orthography | `"{default} {mode}"` | `"{default}{mode}"` | The newly live slash-menu caller exposed `Standard tekstfarve` and `Standard baggrund`; Danish uses `standard` as the first element of a [compound](https://ordnet.dk/ddo/ordbog/standard), so concatenating the preserved placeholders produces `Standardtekstfarve` and `Standardbaggrund`. | verified |
 | `F-da-085` | `da` | `toolNames.inlineCode` | tool distinction / established terminology | `"Kode"` | `"Inline-kode"` | `inline-tool-code.ts` renders the inline formatting title, while the separate code-block tool already uses `Kode`. Official Danish Notion guidance calls the text format [`inline-kode`](https://www.notion.com/da/help/writing-and-editing-basics), so the replacement preserves the caller distinction without changing the established block title. | verified |
+| `F-da-086` | `da` | `tools.database.cardMenuLabel` | accessibility / caller action-menu semantics | `"Kortindstillinger"` | `"Flere handlinger for kortet"` | The ellipsis button opens an action menu whose current item deletes the card; it does not open a settings surface. Microsoft’s Danish screen-reader guidance calls the equivalent ellipsis control [`Knappen Flere handlinger`](https://support.microsoft.com/da-dk/office/brug-en-sk%C3%A6rml%C3%A6ser-til-at-arbejde-med-filer-i-microsoft-365-appen-506364b2-e55b-4b45-adca-9ad22575aac9), and the object makes this standalone accessible name unambiguous. | verified |
+| `F-da-087` | `da` | `tools.image.errorSourceOffline` | natural error copy / resource availability | `"Kildefilen kan være flyttet eller offline."` | `"Kildefilen kan være flyttet eller ikke længere tilgængelig."` | The broken-image caller cannot know that a file itself is “offline”; it only knows that the remote source no longer loads. Microsoft’s Danish source-error guidance uses [`flyttet` and `ikke længere tilgængelig`](https://support.microsoft.com/da-dk/office/s%C3%A5dan-retter-du-fejlen-connect-fejl-584f7de9-b238-480c-8e8f-de0ba2c1aac9) for this exact moved-or-unavailable relationship. | verified |
+| `F-da-088` | `da` | `tools.video.seek` | accessibility / range-control state | `"Spol"` | `"Afspilningsposition"` | This is the accessible name of a range slider whose separate value text announces current and total time, not an imperative button. Google Drive’s Danish accessibility guidance names the function [`Afspilningsposition`](https://support.google.com/drive/answer/12169158?hl=da). | verified |
 | `F-de-073` | `de` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Formatierung löschen"` | Microsoft’s German editor UI uses the exact command [Formatierung löschen](https://support.microsoft.com/de-DE/PowerPoint/clear-all-text-formatting). | verified |
 | `F-de-074` | `de` | `blockSettings.clickAction` | caller composition / naturalness | `"Klicken"` | `"Mit einem Klick"` | The fragment is composed by the settings toggler with `openMenuAction`; the replacement produces the natural instruction `Mit einem Klick [oder ⌘/] das Menü öffnen`. | verified |
 | `F-de-075` | `de` | `blockSettings.openMenuAction` | caller composition / naturalness | `" zum Öffnen des Menüs"` | `" das Menü öffnen"` | The leading-space fragment must compose with `clickAction` and an optional shortcut; the current pair recreates the stilted wording already rejected by `F-de-002`. | verified |

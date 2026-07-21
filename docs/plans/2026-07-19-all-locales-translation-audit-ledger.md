@@ -317,7 +317,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | neutral contemporary Croatian; concise direct singular imperatives for actions and recovery instructions; sentence-case noun/state labels; count-neutral accessibility wording; established Croatian product/media terminology; conventional unchanged shortcut, ratio, and acronym notation | `root-hr_b4f_first_final_clean` | `root-hr_b4f_second_replacement` | pass | pass | pass | `F-hr-001`–`F-hr-052` | second-pass-complete |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-117` | pending |
-| `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-070` | pending |
+| `hy` | Armenian | Armenian | ltr | neutral contemporary Eastern Armenian; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or action labels for compact controls; Armenian punctuation and sentence case; established Armenian product, accessibility, and media terminology; count-neutral numeral constructions; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-hy_f65_clean_a` | `root-hy_f65_clean_b` | pass | pass | pass | `F-hy-001`–`F-hy-070` | second-pass-complete |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-061` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
@@ -454,6 +454,7 @@ locale returns to `pending`.
 | `he` | `root-he_9dc_first_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` | `root-he_9dc_second_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
 | `hr` | `root-hr_b4f_first_final_clean` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` | `root-hr_b4f_second_replacement` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` |
+| `hy` | `root-hy_f65_clean_a` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` | `root-hy_f65_clean_b` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
 ## 546-Key Recently-Used Label Migration
@@ -3076,6 +3077,67 @@ These attempted review, challenge, and remediation artifacts earn no
 complete-pass credit. Armenian remains `pending` with no digest row, and
 both fresh complete reviews must restart from English entry 1 on the new
 bytes.
+
+### Armenian f65 corrected-byte complete reviews — clean
+
+Fresh reviewer `root-hy_f65_clean_a` independently read all 546
+English/Armenian pairs in English insertion order on raw Armenian SHA-256
+`f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7`.
+Its immutable bundle is
+`/private/tmp/blok-hy-f65-review-alpha-20260721-z3q9`. The review accepts
+546/546 pairs with zero changes or residuals, preserves exact placeholders,
+edge whitespace, NFC, and all eight English-identical values, and freezes
+the exact 542-production-source plus two-catalog boundary. The matrix,
+lifecycle, exact-retention inventory, and byte-identical replay are
+respectively SHA-256
+`75d5a9d6e8f9d410cf26d26c86d2fc679191852ca7b6f885e1cacea60cd06e89`,
+`aab15d930beb1db282cc1e2fbd14ec604c066e90f0c89483e48537408363e53e`,
+`bf15441ecbb40d7bc0d005738b593f1675907a778334a392204808e54706b481`,
+and
+`bef52874ff016d417d33d17056887b3587ca8f08148429cca8d8a6a454a4be3d`.
+The manifest is SHA-256
+`fa8deaba25112319c5293a9f9ea1a0963c4ba33913cdeb6090a2598dec12c49e`.
+Because that original bundle omitted its collaboration-task identifier, the
+same reviewer added a separate immutable identity-only supplement at
+`/private/tmp/blok-hy-f65-review-alpha-identity-supplement-20260721-j8r4`.
+It binds canonical task path `/root/hy_f65_clean_a` and slash-safe ledger ID
+`root-hy_f65_clean_a` to the unchanged original manifest, catalog, matrix,
+lifecycle, exact-retention, residual, replay, and current-boundary hashes.
+The identity binding, supplement manifest, and seal file are respectively
+SHA-256
+`70a36a6188d792c3022764dccb84a8847c324c3599d0e07b0d695549be31eadf`,
+`5d559b5cbd06f923876920a3371a270ab7263581f1c4cce6099535e9b115741a`,
+and
+`f5b34a2e9c5f4da671b6e08ba2fd7892203635b476015a4d73517950b83588a0`.
+Root replay verified the original bundle unchanged and current live parity
+across all 544 boundary files.
+
+Distinct reviewer `root-hy_f65_clean_b` independently repeated the complete
+546-entry review on the same catalog and current boundary. Its immutable
+bundle is `/private/tmp/blok-hy-f65-review-beta-20260721-v6n1`; its validator
+passes 15,519/15,519 checks. The matrix, lifecycle, production inventory,
+exact-retention inventory, replay, manifest, and seal file are respectively
+SHA-256
+`f6f8d68459b86daf3cf744b396531b3a7c7e218186ae6665d25ab06c9b0ab5cf`,
+`eea03549abab91c53984ce0609d3343bd53a0d92c78bcf9ea67063f614a708f1`,
+`a9c4d19a4858e2c434637f42924eaf03ea489234d576a5d2dde58b1e1420db34`,
+`693bd8931b5d56b5bc892542b19abc297186cd27c15936f2c8809521b83d8b15`,
+`9e972f380d3f6c381b93ac625dbe33b051ead4226fdac513bbe165a13b1ebcb7`,
+`e1ed5e21340def37d1b294675e554621838802f739bb9b936b20698267da1b6f`,
+and
+`e25a5681bacf9c831da88e88d83b97bc2c262474f178b42aec621cb545533ccb`.
+
+Both reviewers discarded moving-boundary snapshots, required two identical
+whole-production polls, and then froze the same current five-file external
+source drift. Their independent impact records find no added or changed
+translation key, lookup, or reviewed caller role. Root reran both validators,
+verified all sealed checksums and immutable modes, reproduced 546/546 clean
+matrices, and confirmed the raw 398 literal + 121 finite + 27
+registered/no-raw-route and semantic 397 literal + 122 finite-dynamic + 25
+registered-compatible + two no-route lifecycle closure. Both reviews accept
+exactly the eight retentions recorded as `R-hy-001` through `R-hy-008`.
+Armenian therefore earns structural, semantic/style, and exact-retention
+passes and is now `second-pass-complete` on the bound `f65252a7…` bytes.
 
 ### Indonesian (`id`) — pending after current-byte residuals
 
@@ -9893,6 +9955,14 @@ locale and UI context.
 | `R-hr-007` | `hr` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Croatian media interfaces. | [Apple — Promjena omjera širine i visine](https://support.apple.com/hr-hr/guide/iphone/iph3dc593597/ios) |
 | `R-hr-008` | `hr` | `tools.image.cropRatioOval` | established cognate | `Oval` is the standard Croatian masculine noun for the geometric shape, so the concise crop-shape label is legitimately identical to English. | [Struna — oval](https://struna.ihjj.hr/naziv/oval/32564/) |
 | `R-hr-009` | `hr` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional unchanged technical acronym and the concise Croatian database-property label. | [WHATWG URL Standard](https://url.spec.whatwg.org/) |
+| `R-hy-001` | `hy` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than lexical English; changing the Command symbol or slash would misstate the executable chord shown in Armenian UI. | [Apple — Mac keyboard shortcuts](https://support.apple.com/102650) |
+| `R-hy-002` | `hy` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows/Linux shortcut notation rather than translatable prose; `Ctrl` and the slash name the literal keys the user presses. | [Microsoft — Keyboard shortcuts in Windows](https://support.microsoft.com/windows/keyboard-shortcuts-in-windows) |
+| `R-hy-003` | `hy` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholders and their separating space; localized Armenian substitutions supply all lexical content in the caller-required order. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-hy-004` | `hy` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only runtime placeholders and their separating space; localized Armenian color and mode values supply all lexical content. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-hy-005` | `hy` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
+| `R-hy-006` | `hy` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
+| `R-hy-007` | `hy` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
+| `R-hy-008` | `hy` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical initialism and the concise Armenian database-property label. | [WHATWG URL Standard](https://url.spec.whatwg.org/) |
 | `R-fil-001` | `fil` | `tools.link.webLink` | established loanword | `Link` is the established unchanged Filipino product term for a generic digital link. | [Google Business Profile Help — mga link](https://support.google.com/business/answer/3474050?hl=fil) |
 | `R-it-022` | `it` | `tools.link.webLink` | established loanword | `Link` is the established Italian computing noun and the natural generic label for the catch-all suggestion. | [Treccani — link](https://www.treccani.it/vocabolario/link/) |
 | `R-nl-023` | `nl` | `tools.link.webLink` | established loanword | `Link` is the standard concise Dutch product term and accurately labels every accepted link type. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |

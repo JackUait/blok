@@ -12,7 +12,7 @@ import type {
 import type { MenuConfig } from '../../../../types/tools/menu-config';
 import { IconCopy, IconGlobe, IconLinkCopy, IconReplace } from '../../../components/icons';
 import { setFieldValidity } from '../../../components/utils/field-validity';
-import { attachResizeHandle, type ResizeEdge } from '../../image/resizer';
+import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
 import { EMBED_SERVICES, matchEmbedService, isHttpUrl, isHttpsUrl, type EmbedKind } from '../registry';
 
@@ -538,7 +538,15 @@ export class Embed implements BlockTool {
     aspect.setAttribute('data-role', 'embed-aspect');
     aspect.style.position = 'relative';
     aspect.style.width = '100%';
-    aspect.style.aspectRatio = `${w} / ${h}`;
+
+    // Document-style providers (Google Docs/Sheets/Drive…) frame scrollable
+    // content, so their height is a user-adjustable pixel value rather than a
+    // proportion of the width.
+    if (this.isHeightResizable()) {
+      aspect.style.height = `${h}px`;
+    } else {
+      aspect.style.aspectRatio = `${w} / ${h}`;
+    }
 
     aspect.appendChild(this.buildIframe());
     figure.appendChild(aspect);
@@ -593,6 +601,41 @@ export class Embed implements BlockTool {
 
       this.resizeDetach.push(detach);
     }
+
+    if (this.isHeightResizable()) {
+      this.attachBottomResizeHandle(figure);
+    }
+  }
+
+  private isHeightResizable(): boolean {
+    return this.data.service !== undefined
+      && EMBED_SERVICES[this.data.service]?.resizableHeight === true;
+  }
+
+  private attachBottomResizeHandle(figure: HTMLElement): void {
+    const handle = document.createElement('div');
+
+    handle.setAttribute('data-role', 'resize-handle');
+    handle.setAttribute('data-edge', 'bottom');
+    figure.appendChild(handle);
+
+    const aspect = figure.querySelector<HTMLElement>('[data-role="embed-aspect"]');
+
+    const detach = attachHeightResizeHandle({
+      handle,
+      figure,
+      startHeight: () =>
+        aspect?.getBoundingClientRect().height || this.data.height || DEFAULT_HEIGHT,
+      onPreview: (heightPx) => {
+        aspect?.style.setProperty('height', `${heightPx}px`);
+      },
+      onCommit: (heightPx) => {
+        this.data.height = heightPx;
+        this.block.dispatchChange();
+      },
+    });
+
+    this.resizeDetach.push(detach);
   }
 
   /**

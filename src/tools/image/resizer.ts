@@ -112,6 +112,104 @@ interface DragState {
   minWidthPx: number | undefined;
 }
 
+/** Global vertical clamp for height-resizable embeds (document-style providers). */
+export const MIN_HEIGHT_PX = 200;
+export const MAX_HEIGHT_PX = 2000;
+
+export interface ComputeHeightInput {
+  /** Figure height in pixels at the moment the drag began. */
+  startHeight: number;
+  /** Pointer Y relative to viewport at the moment the drag began. */
+  startY: number;
+  /** Current pointer Y relative to viewport. */
+  currentY: number;
+  /** Per-source hard minimum in pixels; never lowers the global floor. */
+  minHeightPx?: number;
+  maxHeightPx?: number;
+}
+
+export interface HeightResult {
+  /** The clamped height in pixels. */
+  heightPx: number;
+  /** True when the drag wanted to shrink past the floor and was pinned there. */
+  clampedToMin: boolean;
+}
+
+/**
+ * Bottom-edge drag: height follows the pointer 1:1. Pixel-based (not percent)
+ * because a document embed's usable height is independent of container width.
+ */
+export function computeHeightResult(input: ComputeHeightInput): HeightResult {
+  const floor = Math.max(input.minHeightPx ?? MIN_HEIGHT_PX, MIN_HEIGHT_PX);
+  const ceiling = Math.min(input.maxHeightPx ?? MAX_HEIGHT_PX, MAX_HEIGHT_PX);
+  const raw = Math.round(input.startHeight + (input.currentY - input.startY));
+  const heightPx = Math.min(Math.max(raw, floor), ceiling);
+  return { heightPx, clampedToMin: raw < floor };
+}
+
+export interface AttachHeightResizeHandleOptions {
+  handle: HTMLElement;
+  /** Carries the `data-resize-blocked` cue while pinned at the floor. */
+  figure: HTMLElement;
+  /** Resolved at drag start so the live rendered height is the baseline. */
+  startHeight: () => number;
+  minHeightPx?: number;
+  maxHeightPx?: number;
+  onPreview(heightPx: number): void;
+  onCommit(heightPx: number): void;
+}
+
+export function attachHeightResizeHandle(opts: AttachHeightResizeHandleOptions): () => void {
+  const state = { active: false, startY: 0, startHeight: 0, lastHeight: undefined as number | undefined };
+
+  const onDown = (event: PointerEvent): void => {
+    state.active = true;
+    state.startY = event.clientY;
+    state.startHeight = opts.startHeight();
+    state.lastHeight = undefined;
+    opts.handle.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+
+  const onMove = (event: PointerEvent): void => {
+    if (!state.active) return;
+    const result = computeHeightResult({
+      startHeight: state.startHeight,
+      startY: state.startY,
+      currentY: event.clientY,
+      minHeightPx: opts.minHeightPx,
+      maxHeightPx: opts.maxHeightPx,
+    });
+    state.lastHeight = result.heightPx;
+    if (result.clampedToMin) {
+      opts.figure.setAttribute(RESIZE_BLOCKED_ATTR, 'true');
+    } else {
+      opts.figure.removeAttribute(RESIZE_BLOCKED_ATTR);
+    }
+    opts.onPreview(result.heightPx);
+  };
+
+  const onUp = (event: PointerEvent): void => {
+    if (!state.active) return;
+    state.active = false;
+    opts.figure.removeAttribute(RESIZE_BLOCKED_ATTR);
+    opts.handle.releasePointerCapture(event.pointerId);
+    if (state.lastHeight !== undefined) opts.onCommit(state.lastHeight);
+  };
+
+  opts.handle.addEventListener('pointerdown', onDown);
+  opts.handle.addEventListener('pointermove', onMove);
+  opts.handle.addEventListener('pointerup', onUp);
+  opts.handle.addEventListener('pointercancel', onUp);
+
+  return () => {
+    opts.handle.removeEventListener('pointerdown', onDown);
+    opts.handle.removeEventListener('pointermove', onMove);
+    opts.handle.removeEventListener('pointerup', onUp);
+    opts.handle.removeEventListener('pointercancel', onUp);
+  };
+}
+
 export function attachResizeHandle(opts: AttachResizeHandleOptions): () => void {
   const state: DragState = {
     active: false,

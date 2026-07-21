@@ -827,7 +827,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Embed',
     description:
-      'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s "Create embed". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL — only registry-matched URLs are ever embedded. Supports resizing, alignment (left/center/right), and an optional caption.',
+      'A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s "Create embed". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL — only registry-matched URLs are ever embedded. Supports resizing (document-style providers such as Google Docs, Sheets, Slides, Forms and Drive also get a bottom handle for adjusting the embed height), alignment (left/center/right), and an optional caption.',
     importExample: `import { Embed } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface EmbedData {
@@ -836,7 +836,7 @@ const editor = new Blok({
   embed: string;          // Resolved provider iframe URL
   kind?: 'iframe' | 'script'; // How the embed is rendered
   width?: number;         // Intrinsic width in pixels
-  height?: number;        // Intrinsic height in pixels
+  height?: number;        // Intrinsic height in pixels (user-adjustable for document-style providers)
   widthPercent?: number;  // Rendered width as % of the editor column (default 100)
   alignment?: 'left' | 'center' | 'right'; // Placement (default center)
   caption?: string;       // Caption HTML content

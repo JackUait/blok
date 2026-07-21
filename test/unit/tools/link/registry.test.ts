@@ -2677,4 +2677,24 @@ describe('link registry', () => {
       expect(EMBED_SERVICES.threads.minWidth).toBeUndefined();
     });
   });
+
+  describe('height-resizable services', () => {
+    it.each([
+      'googledrive',
+      'googledrivefolder',
+      'googledocspublished',
+      'googledocs',
+      'googlesheets',
+      'googleslides',
+      'googleforms',
+    ])('marks the Google document embed %s as height-resizable', (service) => {
+      expect(EMBED_SERVICES[service].resizableHeight).toBe(true);
+    });
+
+    it('keeps aspect-driven media providers height-locked', () => {
+      expect(EMBED_SERVICES.youtube.resizableHeight).toBeUndefined();
+      expect(EMBED_SERVICES.vimeo.resizableHeight).toBeUndefined();
+      expect(EMBED_SERVICES.spotify.resizableHeight).toBeUndefined();
+    });
+  });
 });

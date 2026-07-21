@@ -633,6 +633,132 @@ describe('Embed sizing & resize', () => {
   });
 });
 
+describe('Embed vertical resize (Google document embeds)', () => {
+  const googleData = (overrides: Partial<EmbedData> = {}): Partial<EmbedData> => ({
+    service: 'googledocs',
+    source: 'https://docs.google.com/document/d/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv/edit',
+    embed: 'https://docs.google.com/document/d/1A2b3C4d5E6f7G8h9I0jKLMNOPqrstuv/preview',
+    width: 580,
+    height: 480,
+    ...overrides,
+  });
+
+  const aspectOf = (root: HTMLElement): HTMLElement | null =>
+    root.querySelector('[data-role="embed-aspect"]');
+
+  const bottomHandleOf = (root: HTMLElement): HTMLElement | null =>
+    root.querySelector('[data-role="resize-handle"][data-edge="bottom"]');
+
+  const dragVertically = (handle: HTMLElement, fromY: number, toY: number): void => {
+    Object.assign(handle, {
+      setPointerCapture: (): void => undefined,
+      releasePointerCapture: (): void => undefined,
+    });
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientY: fromY, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientY: toY, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientY: toY, bubbles: true }));
+  };
+
+  it('renders a fixed pixel height instead of an aspect-ratio box', () => {
+    const tool = new Embed(createOptions(googleData()));
+
+    const aspect = aspectOf(tool.render());
+
+    expect(aspect?.style.height).toBe('480px');
+    expect(aspect?.style.aspectRatio).toBe('');
+  });
+
+  it('renders the saved custom height', () => {
+    const tool = new Embed(createOptions(googleData({ height: 720 })));
+
+    expect(aspectOf(tool.render())?.style.height).toBe('720px');
+  });
+
+  it('adds a bottom resize handle alongside the side handles', () => {
+    const tool = new Embed(createOptions(googleData()));
+    const root = tool.render();
+
+    expect(root.querySelectorAll('[data-role="resize-handle"]').length).toBe(3);
+    expect(bottomHandleOf(root)).not.toBeNull();
+  });
+
+  it('keeps aspect-locked providers (youtube) without a bottom handle', () => {
+    const tool = new Embed(createOptions(iframeData()));
+    const root = tool.render();
+
+    expect(bottomHandleOf(root)).toBeNull();
+    expect(aspectOf(root)?.style.aspectRatio).toBe('580 / 320');
+  });
+
+  it('persists a new height and notifies the block when the bottom handle is dragged', () => {
+    const dispatchChange = vi.fn();
+    const tool = new Embed(createOptions(googleData(), { dispatchChange }));
+    const root = tool.render();
+    const handle = bottomHandleOf(root);
+
+    if (!handle) {
+      throw new Error('bottom handle missing');
+    }
+
+    dragVertically(handle, 300, 500);
+
+    expect(aspectOf(root)?.style.height).toBe('680px');
+    expect(dispatchChange).toHaveBeenCalled();
+    expect(tool.save().height).toBe(680);
+  });
+
+  it('clamps a vertical drag at the floor and flags resize-blocked while pinned', () => {
+    const tool = new Embed(createOptions(googleData()));
+    const root = tool.render();
+    const figure = root.querySelector<HTMLElement>('[data-role="embed-figure"]');
+    const handle = bottomHandleOf(root);
+
+    if (!handle || !figure) {
+      throw new Error('bottom handle or figure missing');
+    }
+
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientY: 1000, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientY: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).toBe('true');
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientY: 0, bubbles: true }));
+
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
+    expect(tool.save().height).toBeGreaterThanOrEqual(200);
+    expect(tool.save().height).toBeLessThan(480);
+  });
+
+  it('omits the bottom handle in read-only mode', () => {
+    const tool = new Embed(createOptions(googleData(), { readOnly: true }));
+
+    expect(bottomHandleOf(tool.render())).toBeNull();
+  });
+
+  it('restores the bottom handle when exiting read-only via setReadOnly', () => {
+    const tool = new Embed(createOptions(googleData(), { readOnly: true }));
+    const root = tool.render();
+
+    tool.setReadOnly(false);
+
+    expect(bottomHandleOf(root)).not.toBeNull();
+    tool.setReadOnly(true);
+    expect(bottomHandleOf(root)).toBeNull();
+  });
+
+  it('keeps exactly three handles after an alignment change', () => {
+    const tool = new Embed(createOptions(googleData()));
+    const root = tool.render();
+
+    root.querySelector('[data-action="align-trigger"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    root.querySelector('[data-action="align-left"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(root.querySelectorAll('[data-role="resize-handle"]').length).toBe(3);
+  });
+});
+
 describe('Embed block toolbar anchoring', () => {
   it('getToolbarAnchorElement() returns the embed figure so the block toolbar centers at the embed top, not on the caption', () => {
     const tool = new Embed(createOptions(iframeData({ captionVisible: true })));

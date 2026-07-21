@@ -5,6 +5,10 @@ import {
   clampPercent,
   attachResizeHandle,
   alignmentFraction,
+  computeHeightResult,
+  attachHeightResizeHandle,
+  MIN_HEIGHT_PX,
+  MAX_HEIGHT_PX,
 } from '../../../../src/tools/image/resizer';
 
 describe('clampPercent', () => {
@@ -477,6 +481,122 @@ describe('attachResizeHandle', () => {
 
     expect(updates[updates.length - 1]).toBe(40);
     expect(committed).toBe(40);
+    detach();
+  });
+});
+
+describe('computeHeightResult', () => {
+  it('grows by the pointer delta when dragging down', () => {
+    expect(
+      computeHeightResult({ startHeight: 480, startY: 300, currentY: 500 })
+    ).toEqual({ heightPx: 680, clampedToMin: false });
+  });
+
+  it('shrinks by the pointer delta when dragging up', () => {
+    expect(
+      computeHeightResult({ startHeight: 480, startY: 500, currentY: 400 })
+    ).toEqual({ heightPx: 380, clampedToMin: false });
+  });
+
+  it('pins at the global floor and reports the clamp', () => {
+    expect(
+      computeHeightResult({ startHeight: 480, startY: 1000, currentY: 0 })
+    ).toEqual({ heightPx: MIN_HEIGHT_PX, clampedToMin: true });
+  });
+
+  it('raises the floor to a per-source minimum', () => {
+    expect(
+      computeHeightResult({ startHeight: 480, startY: 1000, currentY: 0, minHeightPx: 320 })
+    ).toEqual({ heightPx: 320, clampedToMin: true });
+  });
+
+  it('caps at the global ceiling', () => {
+    expect(
+      computeHeightResult({ startHeight: 480, startY: 0, currentY: 10000 }).heightPx
+    ).toBe(MAX_HEIGHT_PX);
+  });
+
+  it('rounds fractional pointer deltas to whole pixels', () => {
+    expect(
+      computeHeightResult({ startHeight: 480, startY: 0, currentY: 10.4 }).heightPx
+    ).toBe(490);
+  });
+});
+
+describe('attachHeightResizeHandle', () => {
+  const setup = (): { figure: HTMLElement; handle: HTMLElement } => {
+    const figure = document.createElement('figure');
+    const handle = document.createElement('div');
+
+    figure.appendChild(handle);
+    handle.setPointerCapture = (): void => undefined;
+    handle.releasePointerCapture = (): void => undefined;
+
+    return { figure, handle };
+  };
+
+  const drag = (handle: HTMLElement, fromY: number, toY: number): void => {
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientY: fromY, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientY: toY, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientY: toY, bubbles: true }));
+  };
+
+  it('previews and commits the dragged height', () => {
+    const { figure, handle } = setup();
+    const updates: number[] = [];
+    let committed: number | undefined;
+
+    const detach = attachHeightResizeHandle({
+      handle,
+      figure,
+      startHeight: () => 480,
+      onPreview: (px) => updates.push(px),
+      onCommit: (px) => { committed = px; },
+    });
+
+    drag(handle, 300, 500);
+
+    expect(updates[updates.length - 1]).toBe(680);
+    expect(committed).toBe(680);
+    detach();
+  });
+
+  it('marks the figure resize-blocked while pinned at the floor and clears it on release', () => {
+    const { figure, handle } = setup();
+
+    const detach = attachHeightResizeHandle({
+      handle,
+      figure,
+      startHeight: () => 480,
+      minHeightPx: 320,
+      onPreview: () => undefined,
+      onCommit: () => undefined,
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientY: 1000, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientY: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).toBe('true');
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientY: 0, bubbles: true }));
+    expect(figure.getAttribute('data-resize-blocked')).not.toBe('true');
+    detach();
+  });
+
+  it('does not commit when the pointer never moved', () => {
+    const { figure, handle } = setup();
+    let committed: number | undefined;
+
+    const detach = attachHeightResizeHandle({
+      handle,
+      figure,
+      startHeight: () => 480,
+      onPreview: () => undefined,
+      onCommit: (px) => { committed = px; },
+    });
+
+    handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientY: 300, bubbles: true }));
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientY: 300, bubbles: true }));
+
+    expect(committed).toBeUndefined();
     detach();
   });
 });

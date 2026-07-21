@@ -62,6 +62,13 @@ export interface EmbedService {
    * content rather than an oversized empty frame.
    */
   fixedWidth?: boolean;
+  /**
+   * Provider frames a scrollable document (Google Docs/Sheets/Drive…) rather
+   * than fixed-proportion media, so the embed height is user-adjustable: the
+   * figure renders at a fixed pixel height (`height`, or the user's saved
+   * value) instead of an aspect-ratio box, and gets a bottom resize handle.
+   */
+  resizableHeight?: boolean;
 }
 
 export interface EmbedMatch {
@@ -237,6 +244,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     minWidth: 320,
     height: 480,
+    resizableHeight: true,
   },
   googledrivefolder: {
     title: 'Google Drive',
@@ -246,6 +254,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     minWidth: 320,
     height: 480,
+    resizableHeight: true,
   },
   googledocspublished: {
     title: 'Google Docs',
@@ -257,6 +266,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     minWidth: 320,
     height: 480,
+    resizableHeight: true,
   },
   googledocs: {
     title: 'Google Docs',
@@ -267,6 +277,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     minWidth: 320,
     height: 480,
+    resizableHeight: true,
   },
   googlesheets: {
     title: 'Google Sheets',
@@ -282,6 +293,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     minWidth: 400,
     height: 480,
+    resizableHeight: true,
   },
   googleslides: {
     title: 'Google Slides',
@@ -293,6 +305,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     minWidth: 480,
     height: 480,
+    resizableHeight: true,
   },
   googleforms: {
     title: 'Google Forms',
@@ -304,6 +317,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     width: 580,
     minWidth: 400,
     height: 480,
+    resizableHeight: true,
   },
   drawio: {
     title: 'draw.io',

@@ -317,7 +317,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | neutral contemporary Croatian; concise direct singular imperatives for actions and recovery instructions; sentence-case noun/state labels; count-neutral accessibility wording; established Croatian product/media terminology; conventional unchanged shortcut, ratio, and acronym notation | `root-hr_b4f_first_final_clean` | `root-hr_b4f_second_replacement` | pass | pass | pass | `F-hr-001`–`F-hr-052` | second-pass-complete |
 | `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-117` | pending |
-| `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-069` | pending |
+| `hy` | Armenian | Armenian | ltr | to-audit | — | — | pending | pending | pending | `F-hy-001`–`F-hy-070` | pending |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-061` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
@@ -3024,6 +3024,58 @@ amendments, the expected catalog SHA-256 is
 `7001590ec20278cfba23e0cd7e88162797207a682cd9a545b1e7f95fad2adf41`,
 and the exact-English inventory remains eight entries. `F-hy-005` through
 `F-hy-069` record the resulting red-first remediation contract.
+
+Corrected-byte review attempts on the `7001590e…` catalog earn no completion
+credit. The alpha bundle used Armenian catalog insertion order rather than
+the required English order. The beta bundle at
+`/private/tmp/blok-hy-700-review-beta-20260721-k7m2` followed English order
+and the canonical lifecycle, but its zero-residual conclusion was superseded
+by the later confirmed finding below; its manifest is SHA-256
+`708d3e3eaae646a1ac8f0249926031d8607da534a74b86329ce1cad4473b3cc8`.
+The gamma bundle used English order but collapsed all 25
+registered-compatible keys into no-route, reducing the reviewable scope from
+544 to 519; its checksum manifest is SHA-256
+`482c082e8fb6fe2c671e7fa2b431d83a685cc3946a7090a13d7f93dbd1269d5d`.
+
+Fresh replacement reviewer `root/hy_700_clean_d` restored the exact semantic
+397 literal + 122 finite-dynamic + 25 registered-compatible + two no-route
+closure and reviewed all 546 pairs in English insertion order. Its immutable
+bundle is `/private/tmp/blok-hy-700-review-delta-20260721-w5p8`; the 546-row
+matrix, one-row residual artifact, and manifest are respectively SHA-256
+`3ab9b7e1add7724f448d4713c1896925f8fd72869b3f75210c17082d49c1c60f`,
+`dc425cc8e5d8b71a6330bc3e6dfe2ecceaf579089f67b4af07057c12b18f7403`,
+and
+`d9bc6adccb2b93a5f2139ed7f3050e8e4550a0784892db8976ef1b9292029d67`.
+The attempted pass found `tools.callout.addEmoji` still narrowed the
+corrected English “Add icon” action to an emoji. It earns no pass credit.
+
+Independent challenger `root/hy_add_icon_residual_review` accepted the exact
+`Ավելացնել պատկերակ` final. The challenge expressly overturns an older
+sealed rejection of the same transition: that rejection missed the
+deliberate English source change, the outer icon versus inner emoji
+vocabulary, the existing Armenian edit/remove-icon family, and the current
+Armenian government `Icon` → `Պատկերակ` standard. Its self-contained bundle
+is `/private/tmp/blok-hy-700-add-icon-challenge-20260721`; the one-row map is
+SHA-256
+`f05362f51a56f3c01e880a1dc4b590070a1e1d748637081ce5b2f95479eead41`.
+The predicted 34,922-byte catalog, 36-entry manifest, and final seal are
+respectively SHA-256
+`f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7`,
+`2910c17933f31b101b223d508ab01085ad53b57bdff6482a6bdbb85c5c5703d4`,
+and
+`a120f2c40cf732bad8e4aa40f25bca12d324c9c6e15177cbbd32ec287bfde8a2`.
+Root replay passed its frozen preimage validator, manifest, canonical
+lifecycle, exact-English 8 → 8 check, and immutable mode checks.
+
+Finding `F-hy-070` records the red-first contract. Before remediation,
+exactly that expectation failed and the other 3,597 guideline cases passed;
+applying only the sealed map produces a byte-identical catalog at the
+predicted `f65252a7…` hash and passes 3,598/3,598. The exact-retention test
+passes 182/182 and the complete nine-file i18n gate passes 4,315/4,315.
+These attempted review, challenge, and remediation artifacts earn no
+complete-pass credit. Armenian remains `pending` with no digest row, and
+both fresh complete reviews must restart from English entry 1 on the new
+bytes.
 
 ### Indonesian (`id`) — pending after current-byte residuals
 
@@ -9369,6 +9421,7 @@ follows the global transition rule above.
 | `F-hy-067` | `hy` | `tools.video.volume` | meaning\|a11y\|terminology | `"Ձայն"` | `"Ձայնի ուժգնություն"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
 | `F-hy-068` | `hy` | `tools.video.ctxStats` | caller-or-grammar-defect | `"Մանրամասն վիճակագրություն"` | `"Նվագարկման վիճակագրություն"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
 | `F-hy-069` | `hy` | `tools.audio.volume` | meaning\|a11y\|terminology | `"Ձայն"` | `"Ձայնի ուժգնություն"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
+| `F-hy-070` | `hy` | `tools.callout.addEmoji` | source synchronization / icon terminology | `"Ավելացնել էմոջի"` | `"Ավելացնել պատկերակ"` | English deliberately broadened the outer callout action from “Add emoji” to “Add icon”; the live button opens the symbol picker, and Armenian siblings already say `Խմբագրել պատկերակը` and `Հեռացնել պատկերակը`. The final preserves the outer icon versus inner emoji distinction and follows the current Armenian government standard [`Icon` → `Պատկերակ`](https://standards.hightech.gov.am/%D5%BF%D5%A5%D6%80%D5%B4%D5%AB%D5%B6%D5%B6%D5%A5%D6%80%D5%AB-%D6%81%D5%A1%D5%B6%D5%AF/). | verified |
 
 | `F-hu-005` | `hu` | `blockSettings.dragToMove` | native grammar and register | `"Húzza az áthelyezéshez"` | `"Húzással áthelyezheti a blokkot"` | The tooltip describes the gesture rather than an objectless command. “Húzással …” is idiomatic formal Hungarian and explicitly names the block being moved. | verified |
 | `F-hu-006` | `hu` | `toolbox.addBelow` | native grammar and register | `"Kattintson az alá szúráshoz"` | `"Kattintással új blokkot szúrhat be alá"` | This is a gesture legend. The instrumental “Kattintással” and finite “szúrhat be” form a natural instruction and preserve insertion below the current block. | verified |

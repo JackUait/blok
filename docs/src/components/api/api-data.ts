@@ -1185,18 +1185,14 @@ editor.selection.restore();`,
     badge: "Styles",
     title: "Styles API",
     description:
-      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are static per application — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. They are not, however, frozen at construction: `editor.tokens.set(tokens)` rewrites the injected stylesheet at runtime, which is what a host light/dark toggle needs — without it, flipping a token meant recreating the editor or hand-writing a global stylesheet targeting the portal scopes yourself. `set()` takes the complete token set (replace, not merge), mirroring `style.tokens`, so tokens omitted from the new palette stop applying and `{}` removes the stylesheet; `editor.tokens.get()` returns what is currently applied. The API is available synchronously after construction (calls before `isReady` are buffered and replayed), and the React/Vue/Angular adapters drive it reactively — pass `style={{ tokens }}` (React/Vue) or `[styleTokens]` (Angular) and changes sync in place without recreating the editor. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active, collapsing the gutter to 0 automatically. The same collapse applies with `hideToolbar: true` in the constructor config — the hover toolbar never opens and the wrapper carries `data-blok-toolbar-hidden`, so no gutter space is reserved. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The gutter override contract is guaranteed, not incidental: Blok declares the gutter default and both state collapses at zero specificity via `:where()` (enforced by a unit contract test), so a host declaration of the gutter tokens at any positive specificity always wins the cascade. Declare them on the wrapper element itself (e.g. `[data-blok-interface] { --blok-editor-gutter-start: 16px }`), not only on an ancestor — the read-only and toolbar-hidden collapses re-declare the tokens on the wrapper, and custom properties resolve from the nearest declaration, so an ancestor-level value loses to the collapse while a wrapper-level one survives it. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config. Blok also repaints native text selection inside the editor with `--blok-selection-inline` — override that token to recolor it, or pass `style.nativeSelection: true` (default `false`) to opt out entirely and fall back to the browser/host-defined selection colors (a token override cannot express CSS-wide keywords like `revert`, so reverting needs this flag). With the flag on, the wrapper carries `data-blok-native-selection`, Blok's `::selection` rules skip the editor, and the fake-background highlight (shown while a menu input holds focus) follows the UA `Highlight` color; popovers keep Blok's selection color. Background surfaces are public tokens too: most hover/light UI surfaces follow `--blok-bg-light`, media empty-state cards use `--blok-bg-secondary` (bordered by `--blok-border-secondary`), and the image/file loading skeletons and upload placeholders use `--blok-bg-tertiary`, which defaults to `--blok-bg-light` so it tracks the theme — recoloring the skeleton surface means overriding `--blok-bg-tertiary` directly, not overloading `--blok-bg-light` and dragging every other surface along with it. Block rhythm is public too: `--blok-block-padding-top`, `--blok-block-padding-bottom` and `--blok-block-padding-inline` drive the padding of every block tool wrapper (paragraph, heading, list, toggle, quote, callout). Each tool keeps its historical value as the fallback — 7px/7px/2px for most blocks, 0.2em vertical for quotes, 5px vertical for callouts — so one override retunes all blocks at once, which is exactly what a read-only host needs for tight inline-style rendering (previously only possible by overriding `[data-blok-tool]` internals). Note that non-default padding slightly shifts derived geometry such as the toggle-heading arrow offset, which follows `--blok-block-padding-top`.",
+      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are static per application — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. They are not, however, frozen at construction: `editor.tokens.set(tokens)` rewrites the injected stylesheet at runtime, which is what a host light/dark toggle needs — without it, flipping a token meant recreating the editor or hand-writing a global stylesheet targeting the portal scopes yourself. `set()` takes the complete token set (replace, not merge), mirroring `style.tokens`, so tokens omitted from the new palette stop applying and `{}` removes the stylesheet; `editor.tokens.get()` returns what is currently applied. The API is available synchronously after construction (calls before `isReady` are buffered and replayed), and the React/Vue/Angular adapters drive it reactively — pass `style={{ tokens }}` (React/Vue) or `[styleTokens]` (Angular) and changes sync in place without recreating the editor. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active, collapsing the gutter to 0 automatically. The same collapse applies with `hideToolbar: true` in the constructor config — the hover toolbar never opens and the wrapper carries `data-blok-toolbar-hidden`, so no gutter space is reserved. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The gutter override contract is guaranteed, not incidental: Blok declares the gutter default and both state collapses at zero specificity via `:where()` (enforced by a unit contract test), so a host declaration of the gutter tokens at any positive specificity always wins the cascade. Declare them on the wrapper element itself (e.g. `[data-blok-interface] { --blok-editor-gutter-start: 16px }`), not only on an ancestor — the read-only and toolbar-hidden collapses re-declare the tokens on the wrapper, and custom properties resolve from the nearest declaration, so an ancestor-level value loses to the collapse while a wrapper-level one survives it. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config. Blok also repaints native text selection inside the editor with `--blok-selection-inline` — override that token to recolor it, or pass `style.nativeSelection: true` (default `false`) to opt out entirely and fall back to the browser/host-defined selection colors (a token override cannot express CSS-wide keywords like `revert`, so reverting needs this flag). With the flag on, the wrapper carries `data-blok-native-selection`, Blok's `::selection` rules skip the editor, and the fake-background highlight (shown while a menu input holds focus) follows the UA `Highlight` color; popovers keep Blok's selection color. Background surfaces are public tokens too: most hover/light UI surfaces follow `--blok-bg-light`, media empty-state cards use `--blok-bg-secondary` (bordered by `--blok-border-secondary`), and the image/file loading skeletons and upload placeholders use `--blok-bg-tertiary`, which defaults to `--blok-bg-light` so it tracks the theme — recoloring the skeleton surface means overriding `--blok-bg-tertiary` directly, not overloading `--blok-bg-light` and dragging every other surface along with it. Like all palette-backed color tokens, the surface tokens are re-declared by Blok on the editor wrapper at zero specificity, so apply overrides via `style.tokens` / `editor.tokens.set()` or a CSS selector matching the wrapper (`[data-blok-interface]`) itself — a custom-property declaration on an ancestor container is shadowed by the wrapper's own declaration and silently does nothing (layout hooks such as `--blok-content-max-width` and the list, heading, embed, block-padding and placeholder-color tokens are instead read with fallbacks and never declared by Blok, which is why those DO inherit from any ancestor; the gutter tokens and `--blok-search-input-placeholder` are wrapper-declared like the palette, so they too need a wrapper-level rule). Also note the injected token stylesheets target Blok's scope attributes globally: with several editor instances on one page, each instance's `style.tokens` / `tokens.set()` stylesheet applies to ALL Blok UI on the page, not just its own instance (each is removed when its own instance is destroyed; where sets conflict between instances the stylesheet order in `<head>` — not application recency — decides, so give every instance one shared set instead of relying on conflict order) — scope per-instance differences with a CSS rule on each editor's own wrapper instead (body-mounted popover UI always follows the page-wide sheets). The sheets are injected at the start of `<head>`, so a host stylesheet rule of equal specificity — a plain `[data-blok-interface] { … }` — still beats `style.tokens` for the tokens it declares. Block rhythm is public too: `--blok-block-padding-top`, `--blok-block-padding-bottom` and `--blok-block-padding-inline` drive the padding of every block tool wrapper (paragraph, heading, list, toggle, quote, callout). Each tool keeps its historical value as the fallback — 7px/7px/2px for most blocks, 0.2em vertical for quotes, 5px vertical for callouts — so one override retunes all blocks at once, which is exactly what a read-only host needs for tight inline-style rendering (previously only possible by overriding `[data-blok-tool]` internals). Note that non-default padding slightly shifts derived geometry such as the toggle-heading arrow offset, which follows `--blok-block-padding-top`.",
     example: `// Customize the editor from your host app via CSS custom properties —
 // no need to target Blok's internal test IDs or data attributes.
+// The hooks below are read with fallbacks and never declared by Blok, so
+// they inherit from ANY ancestor — a plain container rule works:
 .my-editor-container {
   /* Cap the content column at a custom width (default: 720px) */
   --blok-content-max-width: 650px;
-
-  /* Blok reserves 56px automatically in edit mode for the floating +/⠿
-     block controls, collapsing to 0 in read-only. Override to resize it
-     or set 0px to remove it entirely: */
-  --blok-editor-gutter-start: 56px;
-  --blok-editor-gutter-end: 16px;
 
   /* Extra start padding on list blocks (default: 0px) */
   --blok-list-padding-start: 18px;
@@ -1216,9 +1212,6 @@ editor.selection.restore();`,
   --blok-block-padding-bottom: 0.2em;
   --blok-block-padding-inline: 0;
 
-  /* Placeholder color of popover search inputs */
-  --blok-search-input-placeholder: rgba(112, 118, 132, 0.8);
-
   /* Placeholder color of empty blocks (default: follows --blok-gray-text) */
   --blok-placeholder-color: rgba(112, 118, 132, 0.6);
 
@@ -1230,17 +1223,6 @@ editor.selection.restore();`,
 
   /* Space above embed blocks (default: 8px) */
   --blok-embed-margin-top: 16px;
-
-  /* Surface backgrounds. Most hover/light surfaces follow --blok-bg-light;
-     media empty-state cards use --blok-bg-secondary with
-     --blok-border-secondary; image/file loading skeletons and upload
-     placeholders use --blok-bg-tertiary, which defaults to --blok-bg-light.
-     Override the specific token you mean — no need to overload
-     --blok-bg-light to reach the skeleton surface: */
-  --blok-bg-light: #eff2f5;
-  --blok-bg-secondary: #f7f8fa;
-  --blok-border-secondary: rgba(55, 53, 47, 0.09);
-  --blok-bg-tertiary: #f0f0f0;
 }
 
 // Primary way to override theme tokens: style.tokens in the constructor
@@ -1252,6 +1234,21 @@ new Blok({
     tokens: {
       '--blok-selection': 'rgba(35, 131, 226, 0.28)',
       '--blok-popover-bg': '#1f1f1f',
+
+      // Surface backgrounds. Most hover/light surfaces follow
+      // --blok-bg-light; media empty-state cards use --blok-bg-secondary
+      // with --blok-border-secondary; image/file loading skeletons and
+      // upload placeholders use --blok-bg-tertiary, which defaults to
+      // --blok-bg-light. Override the specific token you mean — no need
+      // to overload --blok-bg-light to reach the skeleton surface.
+      // NOTE: palette-backed color tokens like these are re-declared by
+      // Blok on the editor wrapper itself, so set them here (or with a
+      // CSS selector matching the wrapper, as below) — a declaration on
+      // an ancestor container is shadowed and does nothing.
+      '--blok-bg-light': '#eff2f5',
+      '--blok-bg-secondary': '#f7f8fa',
+      '--blok-border-secondary': 'rgba(55, 53, 47, 0.09)',
+      '--blok-bg-tertiary': '#f0f0f0',
     },
   },
 });
@@ -1263,15 +1260,24 @@ new Blok({
 [data-blok-popover],
 [data-blok-top-layer] {
   --blok-popover-bg: #1a1a1a;
+
+  /* Placeholder color of popover search inputs — wrapper-declared by Blok
+     (like the palette) and consumed inside body-mounted popovers, so set
+     it here or via style.tokens, never on an ancestor container: */
+  --blok-search-input-placeholder: rgba(112, 118, 132, 0.8);
 }
 
-// The wrapper carries data-blok-readonly while read-only is active, and
-// the gutter collapses automatically then — no JS toggling of the token
-// needed. To opt back into the reserved gutter space while read-only
-// (e.g. you still show a static +/⠿ affordance), redeclare the token on
-// the wrapper itself (not the redactor, and not a plain container rule):
+// Blok reserves 56px of start gutter automatically in edit mode for the
+// floating +/⠿ block controls, collapsing to 0 in read-only (the wrapper
+// carries data-blok-readonly then) — no JS toggling of the token needed.
+// The gutter tokens are declared on the wrapper by Blok (default + state
+// collapses), so overrides MUST target the wrapper itself — an ancestor
+// container rule is shadowed and does nothing. Set any value, including
+// 0px to remove the gutter, or redeclare it to opt back into the
+// reserved space while read-only:
 .my-editor-container [data-blok-interface] {
   --blok-editor-gutter-start: 56px;
+  --blok-editor-gutter-end: 16px;
 }
 
 // Center the content column instead of left-aligning it (default: 'left')

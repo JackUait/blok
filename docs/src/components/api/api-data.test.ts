@@ -165,6 +165,22 @@ describe("API_SECTIONS", () => {
       expect(description).toContain("--blok-bg-light");
     });
 
+    it("documents that palette-backed color tokens are shadowed when set on an ancestor container (runtime-verified against the built bundle)", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("ancestor container is shadowed");
+    });
+
+    it("documents that injected token stylesheets apply to every Blok instance on the page (runtime-verified against the built bundle)", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("ALL Blok UI on the page");
+    });
+
     it("documents the block wrapper padding tokens for compact read-only rendering", () => {
       const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
       expect(stylesSection).toBeDefined();

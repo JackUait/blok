@@ -106,6 +106,57 @@ describe('buildTasks', () => {
       expect(task.timeoutMs, `${task.name} needs a timeout`).toBeGreaterThan(0);
     }
   });
+
+  it('test mode covers every step of the former serial `yarn build:test` chain', () => {
+    const tasks = byName(buildTasks({ mode: 'test' }));
+
+    expect(tasks.get('main')?.cmd).toBe('npx vite build --mode test');
+    expect(tasks.get('locales')?.cmd).toBe('node scripts/build-locales.mjs test');
+    expect(tasks.get('react-vendor')?.cmd).toBe('node scripts/build-react-vendor.mjs');
+    expect(tasks.get('vue-vendor')?.cmd).toBe('node scripts/build-vue-vendor.mjs');
+    expect(tasks.get('angular-vendor')?.cmd).toBe('node scripts/build-angular-vendor.mjs');
+    expect(buildTasks({ mode: 'test' })).toHaveLength(11);
+  });
+
+  it('test mode orders vendor writers after react-vendor, which rm -rfs the shared vendor dir', () => {
+    const tasks = byName(buildTasks({ mode: 'test' }));
+
+    expect(tasks.get('vue-vendor')?.deps).toContain('react-vendor');
+    expect(tasks.get('angular-vendor')?.deps).toContain('react-vendor');
+  });
+
+  it('test mode starts vendor bundles only after fonts, the sole src/ writer', () => {
+    // fonts regenerates src/styles/fonts.css; if a vendor artifact could
+    // predate it, the e2e freshness check would see src newer than the
+    // oldest artifact and rebuild on every run.
+    const tasks = byName(buildTasks({ mode: 'test' }));
+
+    expect(tasks.get('react-vendor')?.deps).toContain('fonts');
+  });
+
+  it('keeps the e2e vendor bundles and test-arg locales out of the production graph', () => {
+    const tasks = buildTasks({ mode: 'production' }) as GraphTask[];
+
+    expect(tasks.some((t) => t.name.includes('vendor'))).toBe(false);
+    expect(byName(tasks).get('locales')?.cmd).toBe('node scripts/build-locales.mjs');
+  });
+
+  it('runs build:test through the parallel orchestrator and keeps e2e scripts build-free', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(process.cwd(), 'package.json'), 'utf8')
+    ) as { scripts: Record<string, string> };
+
+    expect(manifest.scripts['build:test']).toBe('node scripts/build-all.mjs --mode test');
+
+    // The e2e scripts must NOT rebuild unconditionally — global-setup already
+    // performs a staleness-checked build, so a `yarn build:test &&` prefix
+    // just re-pays the full build on every invocation.
+    for (const [name, script] of Object.entries(manifest.scripts)) {
+      if (name === 'e2e' || name.startsWith('e2e:')) {
+        expect(script, `${name} must rely on global-setup's staleness-checked build`).not.toContain('build:test');
+      }
+    }
+  });
 });
 
 describe('preflightTasks', () => {

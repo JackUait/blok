@@ -87,5 +87,14 @@ const output = [
 ].join('\n');
 
 const outputPath = path.resolve(root, 'src/styles/fonts.css');
-fs.writeFileSync(outputPath, output, 'utf8');
-console.log(`✓ Generated ${outputPath} (${Math.round(output.length / 1024)} KB)`);
+
+// Skip the write when the content is unchanged: fonts.css lives inside src/,
+// which the e2e build-freshness check scans — a gratuitous mtime bump here
+// would mark the source tree as modified after every build and force a full
+// rebuild on every e2e run.
+if (fs.existsSync(outputPath) && fs.readFileSync(outputPath, 'utf8') === output) {
+  console.log(`✓ ${outputPath} already up to date`);
+} else {
+  fs.writeFileSync(outputPath, output, 'utf8');
+  console.log(`✓ Generated ${outputPath} (${Math.round(output.length / 1024)} KB)`);
+}

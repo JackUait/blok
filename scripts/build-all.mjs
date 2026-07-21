@@ -1,6 +1,7 @@
 /**
- * Parallel production build — runs the exact same steps as the former serial
- * `yarn build` chain, but as a dependency graph so independent builds overlap:
+ * Parallel build — runs the exact same steps as the former serial
+ * `yarn build` / `yarn build:test` chains, but as a dependency graph so
+ * independent builds overlap:
  *
  *   fonts ─→ main ─→ iife / umd / locales / angular   (dist/ writers: main
  *                                                       empties dist/, so they
@@ -8,6 +9,11 @@
  *   react, vue, cli                                    (own out dirs, core is
  *                                                       external — fully
  *                                                       independent)
+ *   react-vendor ─→ vue-vendor / angular-vendor       (test mode only:
+ *                                                       react-vendor rm -rf's
+ *                                                       the shared fixtures
+ *                                                       vendor dir, so the
+ *                                                       other writers wait)
  *
  * Every step gets a wall-clock timeout + one retry: under heavy machine load
  * a later vite build occasionally hangs silently forever (see
@@ -29,16 +35,31 @@ const BUILD_TIMEOUT_MS = Number(process.env.BLOK_BUILD_TIMEOUT_MS ?? 10 * 60 * 1
  * @returns {Array<{name: string, cmd: string, deps: string[], timeoutMs: number}>}
  */
 export function buildTasks({ mode = 'production', withCli = false } = {}) {
+  const isTest = mode === 'test';
   const tasks = [
     { name: 'fonts', cmd: 'node scripts/generate-fonts.mjs', deps: [] },
     { name: 'main', cmd: `npx vite build --mode ${mode}`, deps: ['fonts'] },
     { name: 'iife', cmd: `npx vite build --config vite.config.iife.mjs --mode ${mode}`, deps: ['main'] },
     { name: 'umd', cmd: `npx vite build --config vite.config.umd.mjs --mode ${mode}`, deps: ['main'] },
-    { name: 'locales', cmd: 'node scripts/build-locales.mjs', deps: ['main'] },
+    { name: 'locales', cmd: `node scripts/build-locales.mjs${isTest ? ' test' : ''}`, deps: ['main'] },
     { name: 'angular', cmd: 'node scripts/build-angular.mjs', deps: ['main'] },
     { name: 'react', cmd: 'yarn workspace @bloklabs/react build', deps: ['fonts'] },
     { name: 'vue', cmd: 'yarn workspace @bloklabs/vue build', deps: ['fonts'] },
   ];
+
+  if (isTest) {
+    // e2e fixture bundles. build-react-vendor.mjs rm -rf's the shared
+    // test/playwright/fixtures/vendor dir, so the other vendor writers
+    // (which only add files there) must wait for it. react-vendor itself
+    // waits for fonts — the only step that writes into src/ — so no build
+    // input can end up newer than the oldest artifact, which the e2e
+    // freshness check would read as permanently stale.
+    tasks.push(
+      { name: 'react-vendor', cmd: 'node scripts/build-react-vendor.mjs', deps: ['fonts'] },
+      { name: 'vue-vendor', cmd: 'node scripts/build-vue-vendor.mjs', deps: ['react-vendor'] },
+      { name: 'angular-vendor', cmd: 'node scripts/build-angular-vendor.mjs', deps: ['react-vendor'] },
+    );
+  }
 
   if (withCli) {
     tasks.push({ name: 'cli', cmd: 'node scripts/build-cli.mjs', deps: ['fonts'] });

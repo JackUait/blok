@@ -1,20 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, rmSync, writeFileSync, statSync } from 'node:fs';
+import { existsSync, rmSync, writeFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+
+import { isTestBuildFresh } from './build-freshness';
 
 const LOCK_FILE = '.playwright-build.lock';
 const LOCK_TIMEOUT_MS = 300_000; // 5 minutes max wait for build (handles slower CI runners)
-
-/**
- * Key source files that affect the build output
- * If any of these are newer than dist/, we need to rebuild
- */
-const SOURCE_FILES_TO_CHECK = [
-  'src',
-  'vite.config.mjs',
-  'package.json',
-  'tsconfig.json',
-];
 
 /**
  * Global setup for Playwright tests.
@@ -35,8 +26,8 @@ const globalSetup = async (): Promise<void> => {
     return;
   }
 
-  // Check if dist already exists and is up-to-date
-  if (hasBuildArtifacts(distPath) && areBuildArtifactsUpToDate(projectRoot, distPath)) {
+  // Check if every test artifact already exists and none is older than any input
+  if (isTestBuildFresh(projectRoot)) {
     console.log('Using existing build artifacts...');
     process.env.BLOK_BUILT = 'true';
     return;
@@ -54,7 +45,7 @@ const globalSetup = async (): Promise<void> => {
   if (!acquired) {
     // Another process is building, wait for it to complete
     console.log('Waiting for another process to complete build...');
-    await waitForBuild(distPath, lockPath);
+    await waitForBuild(projectRoot, lockPath);
     process.env.BLOK_BUILT = 'true';
     return;
   }
@@ -80,65 +71,6 @@ const globalSetup = async (): Promise<void> => {
     // Release lock
     releaseLock(lockPath);
   }
-};
-
-/**
- * Checks if the build artifacts exist.
- */
-const hasBuildArtifacts = (distPath: string): boolean => {
-  return existsSync(distPath) && existsSync(path.resolve(distPath, 'blok.mjs'));
-};
-
-/**
- * Gets the most recent modification time for a file or directory recursively.
- */
-const getMtime = (targetPath: string): number => {
-  if (!existsSync(targetPath)) {
-    return 0;
-  }
-
-  const stats = statSync(targetPath);
-
-  if (stats.isFile()) {
-    return stats.mtimeMs;
-  }
-
-  if (stats.isDirectory()) {
-    let maxMtime = stats.mtimeMs;
-    const entries = readdirSync(targetPath, { withFileTypes: true });
-
-    for (const entry of entries) {
-      // eslint-disable-next-line max-depth
-      if (entry.name === 'node_modules' || entry.name === '.git') {
-        continue;
-      }
-      const entryPath = path.resolve(targetPath, entry.name);
-      const entryMtime = getMtime(entryPath);
-      maxMtime = Math.max(maxMtime, entryMtime);
-    }
-
-    return maxMtime;
-  }
-
-  return 0;
-};
-
-/**
- * Checks if build artifacts are up-to-date with source files.
- */
-const areBuildArtifactsUpToDate = (projectRoot: string, distPath: string): boolean => {
-  const distMtime = getMtime(distPath);
-
-  for (const source of SOURCE_FILES_TO_CHECK) {
-    const sourcePath = path.resolve(projectRoot, source);
-    const sourceMtime = getMtime(sourcePath);
-
-    if (sourceMtime > distMtime) {
-      return false;
-    }
-  }
-
-  return true;
 };
 
 /**
@@ -207,31 +139,31 @@ const releaseLock = (lockPath: string): void => {
  * Checks if build completed after lock was released.
  * Throws if lock released but no artifacts found.
  */
-const checkBuildAfterLockRelease = async (distPath: string): Promise<boolean> => {
+const checkBuildAfterLockRelease = async (projectRoot: string): Promise<boolean> => {
   await sleep(100);
-  if (hasBuildArtifacts(distPath)) {
+  if (isTestBuildFresh(projectRoot)) {
     return true;
   }
-  // Lock released but no dist - build may have failed
-  throw new Error('Build lock released but no build artifacts found');
+  // Lock released but artifacts are missing/stale - build may have failed
+  throw new Error('Build lock released but no fresh build artifacts found');
 };
 
 /**
- * Waits for the build to complete by polling for dist directory
+ * Waits for the build to complete by polling for the full artifact set
  * or lock file removal.
  */
-const waitForBuild = async (distPath: string, lockPath: string): Promise<void> => {
+const waitForBuild = async (projectRoot: string, lockPath: string): Promise<void> => {
   const startTime = Date.now();
   const pollInterval = 500; // Check every 500ms
 
   while (Date.now() - startTime < LOCK_TIMEOUT_MS) {
-    if (hasBuildArtifacts(distPath)) {
+    if (isTestBuildFresh(projectRoot)) {
       return;
     }
 
     // Check if lock was released (build failed or completed)
     const lockReleased = !existsSync(lockPath);
-    if (lockReleased && await checkBuildAfterLockRelease(distPath)) {
+    if (lockReleased && await checkBuildAfterLockRelease(projectRoot)) {
       return;
     }
 

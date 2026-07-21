@@ -1,7 +1,19 @@
+import os from 'node:os';
+
 import './test/playwright/support/suppress-css-import';
 import { defineConfig } from '@playwright/test';
 
-const AMOUNT_OF_LOCAL_WORKERS = 3;
+// Local workers scale with the machine: leave headroom for the static file
+// server, browser helper processes and the OS. CI stays pinned at 3 — its
+// shard fan-out and 15-minute timeouts are balanced around that (and runners
+// only have ~2 cores anyway).
+const AMOUNT_OF_LOCAL_WORKERS = Math.max(3, os.cpus().length - 3);
+
+// Recording video + trace for every test costs real CPU per test and is
+// discarded on pass anyway (retain-on-failure). Locally there are no retries,
+// so pay that cost only when explicitly debugging: BLOK_E2E_ARTIFACTS=1.
+// Failures always keep a screenshot either way.
+const CAPTURE_RUN_ARTIFACTS = Boolean(process.env.CI) || process.env.BLOK_E2E_ARTIFACTS === '1';
 
 /**
  * Playwright Test Configuration - Browser Coverage Strategy
@@ -182,8 +194,8 @@ export default defineConfig({
   use: {
     headless: true,
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    trace: CAPTURE_RUN_ARTIFACTS ? 'retain-on-failure' : 'off',
+    video: CAPTURE_RUN_ARTIFACTS ? 'retain-on-failure' : 'off',
     testIdAttribute: 'data-blok-testid',
   },
   projects: [
@@ -200,7 +212,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx serve . -l 4444 --no-clipboard',
+    // --no-compression: serve would gzip ~2 MB of module-graph JS for every
+    // test's fresh browser context; on localhost that is pure CPU burn.
+    command: 'npx serve . -l 4444 --no-clipboard --no-compression',
     port: 4444,
     // Don't reuse existing server - it might be a Vite dev server which has
     // module resolution issues under concurrent test load

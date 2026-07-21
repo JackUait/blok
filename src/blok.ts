@@ -5,7 +5,7 @@
  */
 import '@babel/register';
 
-import type { BlokConfig, API, EditorWidth, Blok as PublicBlok } from '../types';
+import type { BlokConfig, API, EditorWidth, Tokens, Blok as PublicBlok } from '../types';
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
@@ -56,6 +56,12 @@ class Blok {
    * Defined as an instance getter in the constructor.
    */
   declare public readonly isRendered: boolean;
+
+  /**
+   * Runtime theme-tokens API. Assigned dynamically in the constructor
+   * (mirroring theme/width/placeholder), so declared here for the type.
+   */
+  declare public readonly tokens: Tokens;
 
   /**
    * Stores destroy method implementation.

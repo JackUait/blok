@@ -44,15 +44,22 @@ jobs:
           path: |
             node_modules/.cache/blok-eslint
             node_modules/.cache/blok-lint.tsbuildinfo
-          key: lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-${{ github.sha }}
+          # v2: v1 caches are poisoned — ESLint's cache persists per-file results
+          # INCLUDING errors, keyed only on that file's own content, so an error
+          # computed against broken types replays on every later run even after
+          # the types are fixed. Bump the version to abandon them.
+          key: lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-${{ github.sha }}
           restore-keys: |
-            lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-
+            lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-
 
       - name: Lint
         run: yarn lint
 
+      # Save only after a green lint: a failed run's ESLint cache carries the
+      # error entries, and restoring one replays those stale errors for every
+      # file whose content didn't change since the failure.
       - name: Save lint cache
-        if: always() && steps.lint-cache.outputs.cache-hit != 'true'
+        if: success() && steps.lint-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: |

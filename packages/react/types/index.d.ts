@@ -16,6 +16,8 @@ import type React from 'react';
  * - `theme` — calls `editor.theme.set(value)`
  * - `width` — calls `editor.width.set(value)`
  * - `placeholder` — calls `editor.placeholder.set(value)`
+ * - `style.tokens` — calls `editor.tokens.set(value)` (deep-equal–deduped;
+ *   replace semantics, so pass the complete token set on each change)
  * - `data` — re-renders via `editor.render(value)` when the content changes
  *   (deep-equal–deduped and serialized; seeds the initial content at creation)
  *

@@ -39,8 +39,11 @@ import type { BlokAngularConfig } from './types';
  * `BlokEditor`). Delegates instance lifecycle to an internal `BlokContentDirective`
  * and layers the typed reactive input/output API on top.
  *
- * Reactive inputs (`readOnly`, `theme`, `width`, `placeholder`, `autofocus`) are
- * synced in place after mount via effects; everything else seeds construction.
+ * Reactive inputs (`readOnly`, `theme`, `width`, `placeholder`, `autofocus`,
+ * `styleTokens`, `data`) are synced in place after mount via effects —
+ * `styleTokens` through `editor.tokens.set()` (replace semantics) and `data`
+ * through `editor.render()` (deep-equal–deduped); everything else seeds
+ * construction.
  *
  * Implementation note: classic `@Input()`/`@ViewChild()` decorators are used
  * (not signal `input()`/`viewChild()`) for JIT compatibility — see

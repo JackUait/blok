@@ -99,6 +99,20 @@ The adapters are separate packages that peer on `@bloklabs/core`, so versions st
 
 The IIFE build puts everything under the `BlokEditor` global.
 
+## Styling & theming
+
+Blok's chrome is customizable through public `--blok-*` CSS custom properties. Pass them as `style.tokens` in the constructor config (or swap them at runtime with `editor.tokens.set()`) to recolor popovers, surfaces, selection, headings, lists, and block rhythm — the full token list is in the [API reference](https://blokeditor.com).
+
+Layout hooks are CSS-only. The most commonly overridden one is the **editor gutter**: Blok reserves `--blok-editor-gutter-start: 56px` in edit mode for the floating +/⠿ block controls and collapses it automatically in read-only mode, so don't hand-roll wrapper padding for those controls. To change or remove it, declare the token on the wrapper element itself:
+
+```css
+[data-blok-interface] {
+  --blok-editor-gutter-start: 0px; /* or any width; --blok-editor-gutter-end also exists */
+}
+```
+
+Blok declares its defaults at zero specificity via `:where()`, so any host declaration wins. The gutter tokens are state-dependent and therefore rejected by `style.tokens` / `tokens.set()` — set them in CSS as above.
+
 ## Documentation
 
 Full docs live at [blokeditor.com](https://blokeditor.com): API reference, an interactive demo, usage guides, and a migration guide if you're coming from Editor.js.

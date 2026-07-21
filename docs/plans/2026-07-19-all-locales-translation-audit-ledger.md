@@ -318,7 +318,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hr` | Croatian | Latin | ltr | neutral contemporary Croatian; concise direct singular imperatives for actions and recovery instructions; sentence-case noun/state labels; count-neutral accessibility wording; established Croatian product/media terminology; conventional unchanged shortcut, ratio, and acronym notation | `root-hr_b4f_first_final_clean` | `root-hr_b4f_second_replacement` | pass | pass | pass | `F-hr-001`–`F-hr-052` | second-pass-complete |
 | `hu` | Hungarian | Latin | ltr | neutral contemporary Hungarian; polite third-person singular in complete instructions and recovery guidance; concise noun, verbal-noun, or direct action labels for compact controls; sentence-case UI; established Hungarian product, accessibility, and media terminology; count-neutral numeral and accessibility wording; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-hu_5c8_clean_b` | `root-hu_5c8_clean_a` | pass | pass | pass | `F-hu-001`–`F-hu-117` | second-pass-complete |
 | `hy` | Armenian | Armenian | ltr | neutral contemporary Eastern Armenian; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or action labels for compact controls; Armenian punctuation and sentence case; established Armenian product, accessibility, and media terminology; count-neutral numeral constructions; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-hy_f65_clean_a` | `root-hy_f65_clean_b` | pass | pass | pass | `F-hy-001`–`F-hy-070` | second-pass-complete |
-| `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-061` | pending |
+| `id` | Indonesian | Latin | ltr | neutral contemporary Indonesian; concise direct imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Indonesian product, accessibility, and media terminology; count-neutral templates; conventional unchanged shortcuts, ratios, acronyms, established loanwords, and product feature names | `root-id_ffd_clean_a` | `root-id_ffd_clean_b` | pass | pass | pass | `F-id-001`–`F-id-061` | second-pass-complete |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001`–`F-ka-004` | pending |
@@ -456,6 +456,7 @@ locale returns to `pending`.
 | `hr` | `root-hr_b4f_first_final_clean` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` | `root-hr_b4f_second_replacement` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` |
 | `hu` | `root-hu_5c8_clean_b` | `sha256:5c82c1096ac384222e9769fd2c70a2418179e71b14ff4afee3cd6618cc90e4f7` | `root-hu_5c8_clean_a` | `sha256:5c82c1096ac384222e9769fd2c70a2418179e71b14ff4afee3cd6618cc90e4f7` |
 | `hy` | `root-hy_f65_clean_a` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` | `root-hy_f65_clean_b` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` |
+| `id` | `root-id_ffd_clean_a` | `sha256:ffd92b9cb0170d29d52e648c4806afedc392c3395505b61a4a96c0358ff838ae` | `root-id_ffd_clean_b` | `sha256:ffd92b9cb0170d29d52e648c4806afedc392c3395505b61a4a96c0358ff838ae` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
 ## 546-Key Recently-Used Label Migration
@@ -3355,6 +3356,140 @@ nine-file i18n gate passes 4,311/4,311. These proposal, challenge, and
 remediation artifacts earn no complete-pass credit. Indonesian remains
 `pending` with no digest row; two fresh independent reviews must restart
 from English entry 1 on the new raw bytes.
+
+### Indonesian ffd corrected-byte complete reviews — clean
+
+Fresh reviewer `root-id_ffd_clean_a` independently read all 546
+English/Indonesian pairs in English insertion order on raw Indonesian
+SHA-256
+`ffd92b9cb0170d29d52e648c4806afedc392c3395505b61a4a96c0358ff838ae`.
+Its immutable bundle is
+`/private/tmp/blok-id-ffd-review-alpha-20260721-c4p7`. The review accepts
+546/546 pairs with zero changes or residuals, preserves all key, placeholder,
+edge-whitespace, NFC, control-character, register, arbitrary-count, and
+caller-role contracts, and independently accepts exactly 14
+English-identical values. Its matrix, lifecycle, exact-retention inventory,
+residual inventory, exact 544-file source inventory, canonical replay digest,
+manifest, and seal file are respectively SHA-256
+`c9b41950ea272f32826d83d5fb81d5facdb9afe9c6aae458ab0a40e3cd77659b`,
+`9e2baea311c39abd2e07414f37760e25d9a54df851e8e7c6115de44f51b41c07`,
+`564f03efcdfe25fd27fc5d2ddd13cf337448848730730195e400a0f3846d4d5e`,
+`37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570`,
+`d9b4cf26ca5f3c847dd715a4f44acd3a8e60aced92e7992344d2c4d9943f73e6`,
+`1b79f5abe5147def8dfad973219e27066e824853cd19a0483759b914de7ee677`,
+`a72127225b0483c8e6ed691e44b88e454a17b5b693b60f659e0634bb5bd1a1e2`,
+and
+`0cf62859c697e09f038714c9818803e2c9145cfa691ff7f0473d19f987abaa79`.
+On its original frozen source boundary, its validator passed 3,921/3,921
+checks.
+
+Because the original alpha bundle omitted the collaboration-task identifier,
+the same reviewer added a separate immutable identity-only supplement at
+`/private/tmp/blok-id-ffd-alpha-identity-20260721-hcy7xoow`. It binds
+canonical task path `/root/id_ffd_clean_a` and slash-safe ledger ID
+`root-id_ffd_clean_a` to every unchanged original evidence file, the exact
+then-live boundary, both deterministic replays, and the unchanged clean
+conclusion. The identity artifact, core binding, original-file inventory,
+validator, supplement manifest, and seal are respectively SHA-256
+`be715982db359db893ebee372e02cad96b3be5c98d0e878ae6700ea42965243f`,
+`50e2c76a352976b755d6007130b5d7d5cc88480b031634dd1c71ee1c1aaff743`,
+`9f621013dd190372e21ca8469a33f9429727f55f90157e4713ad353288871a83`,
+`9e1ab636c81bcb34df4f16195cbd67ed14c7479effa56927d67053dc4654da21`,
+`d754893ab462da8633e128035e56d3cc35f48881c0df134cd20c2eea843611bc`,
+and
+`36dbf6794a482d3b45d749343ba9254fe4a59d2bd0268762bf53c2e83be3a983`.
+Root previously reran the supplement validator at 1,225/1,225 and its bound
+original validator at 3,921/3,921, including manifest, seal, replay, then-live
+544/544 parity, and immutable mode checks.
+
+Before this ledger completion was committed, incoming dependency commit
+`f632151796bffe6c848480c5d6dba323508fb032` modified 47 of the 542
+production-source files without adding or removing a boundary path and
+without changing either catalog, translation lookup, finite construction,
+registry route, lifecycle class, caller role, or accessibility meaning. The
+original alpha and identity validators now correctly reject their frozen
+source inventory. The same reviewer therefore sealed a current-source
+supplement at
+`/private/tmp/blok-id-ffd-current-boundary-20260721-EdcW5mOf`. It binds the
+same identity and unchanged review artifacts to the exact 542-source plus
+two-catalog boundary at that commit, independently impact-reviews all 47
+changed paths, and preserves 546/546 judgments, the 14 exact retentions, and
+zero residuals or lifecycle changes. Its current inventory, drift inventory,
+changed-path impact evidence, current lifecycle evidence, judgment
+revalidation, manifest, seal, and validator are respectively SHA-256
+`303f10f248ba477bf57efdca940bf66eb3414b6bb1bd25f88748d00da0cac64f`,
+`0ffdac4b404dea493b4a3ba552f70648a2db426727ffd3e7e5a1d0878e443a8c`,
+`dea05dd1fc2b8d1ca81af94a9f488821a79b4b19aaf884304a9695a519e1bacb`,
+`2858aa794af268c2780d4dd1d34b6e979bb3cd395c5769687f742b057c4ded17`,
+`698822b0e0cb1799b93abc2b2658ede72250ac30a138bc4ad1e22a984c20593b`,
+`b5300e4b6898842a99c7afd9e3341f9ee7561288893532614b2e0ae38908145d`,
+`39ae800d8588c30f4e2c3042e2b9ca867a2ff352b28c6555e2566db5e056ccae`,
+and
+`384b12b6f8240d36bf896b56f69dfa95a81c486d5d8c868a86a25b63904d4b91`.
+Root reran its validator at 4,214/4,214, reproduced its sealed replay
+byte-for-byte, and verified its immutable directory, data, and script modes.
+
+Distinct reviewer `root-id_ffd_clean_b` independently repeated the complete
+546-entry review on the same catalog and embedded canonical task path
+`/root/id_ffd_clean_b` and slash-safe ledger ID `root-id_ffd_clean_b`
+directly in its sealed evidence. Its immutable bundle is
+`/private/tmp/blok-id-ffd-review-beta-20260721-jvRM`. The matrix, lifecycle,
+exact-retention inventory, residual inventory, production-boundary logical
+digest, complete-boundary logical digest, canonical replay digest, manifest,
+seal, and validator are respectively SHA-256
+`c83dc61597321c442b8b41e2b3f2c5f12719d1ac554fcea3f2efc6d79607533c`,
+`d896a7b5848d22b4cf8fbdbe0755728384441490fdb0370467cc16ed32c78fb4`,
+`18017e7f5db51279a71ef6c05fccf22aaa99f090ae558f47672a87ca0337428c`,
+`a407243385d0d38f898d90d2db435d14417dde8338a3fbfd92968ca70a6b8bd4`,
+`b7285cef60d9e746857f7b54ff945821de1a934eba12e8a442a2fe579357b0be`,
+`016cfbd03f21c0380c9634c0c3bdbffc6bb08c3a7228f3b9e45a0c4725b38ce6`,
+`118b82293b688f18a7e497ab3af09b163aac609811235509ef88138490945b90`,
+`5ded712ac1a3827305ecb5d0f3f092da667f91c74e0d33fe8d72166bac30ef4d`,
+`54de44bc19f075e362423b9b6f15dde3dcff375df9a57ec860f1711fcdcc6395`,
+and
+`48903af180858efea68b82cf4c13876cbea0758beeafd8b2fc512c0cf3ac8095`.
+Root previously reran its sealed-live, immutable-only, and replay-only modes
+against the then-current frozen 542-production-source plus two-catalog
+boundary; each passed with 546/546 accepted pairs, 14 exact retentions, and
+zero residuals.
+
+Reviewer B independently sealed its own current-source supplement at
+`/private/tmp/blok-id-ffd-review-beta-current-source-supplement-20260721-DRrA`.
+It binds the original review and reviewer identity to the same incoming
+commit, proves exact 544/544 live byte parity with zero added, zero removed,
+and 47 changed production paths, impact-reviews all 47, and records zero
+lifecycle or judgment invalidations. Its production and complete-boundary
+logical digests are respectively
+`a5112ec5ecdca4d065f598af945e218286adc6b49fd99bb93e91bbda189853e9`
+and
+`05b5716734dcb1a9519e223cfe5d8bbf4d5e3c4265e60683199a475b449184fb`.
+Its drift, changed-path impact evidence, current lifecycle evidence, route
+fingerprint, original binding, replay logical digest, manifest, seal, and
+validator are respectively SHA-256
+`42d3a73c15cfe882575bc88edab2feda50e0a4ddff70846968b656d7cb00e765`,
+`f6f68c141ae92a861fd99ab9f56c97b0070a23dc29bcfba2951fdcf724489f55`,
+`421a3774cf44a2cf7eedacce96238749a759fd022f62d915f5ad37e6e33f107e`,
+`3ee0c6758118e3fcebc86f07d753e4735d561bcc9df229730e7e81baf5db3d9f`,
+`4986ad631abd80012c0dc36f82d1d26862d0885045b655a9eea7254afcfba39d`,
+`f7692874324ccef9be4d28582c2192393df5c65d6d99b65a22a7911fa6484238`,
+`e52f955db5a0b47f74d06ec27756c8131aa27505240ab51a5685e0456e35bad5`,
+`318471cba65ba5b8b7ee4946af63be2a93d16c9564aba0d6666a95cfee78f7da`,
+and
+`67ac05ab699fad68d7973d2079ea2ccc7980c7e67a8606e73043307f97061a5e`.
+Root reran its sealed-live-original, content-only, immutable-only,
+original-only, and replay-only modes; all five pass with the unchanged
+546/546 conclusion, exactly 14 retentions, and zero residuals.
+
+Both reviewers reproduce the raw 398 literal + 121 finite + 27
+registered/no-raw-route and semantic 397 executable-literal + 122
+finite-dynamic + 25 registered-namespace-compatible + two exact-no-route
+lifecycle closure. They independently retain `toolNames.text` as literal,
+classify `tools.video.seekValueText` as finite, and identify only
+`blockSettings.convertWithChildrenWarning` and `tools.columns.turnInto` as
+exact no-route. Both accept exactly the 14 retentions recorded as
+`R-id-001` through `R-id-014`. Indonesian therefore earns structural,
+semantic/style, and exact-retention passes and is now
+`second-pass-complete` on the bound `ffd92b9c…` bytes.
 
 ### Hindi (`hi`) — current second pass complete
 
@@ -10090,6 +10225,20 @@ locale and UI context.
 | `R-hy-006` | `hy` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
 | `R-hy-007` | `hy` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
 | `R-hy-008` | `hy` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical initialism and the concise Armenian database-property label. | [WHATWG URL Standard](https://url.spec.whatwg.org/) |
+| `R-id-001` | `id` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than Indonesian prose; the Command symbol and slash name the literal executable chord. | [Apple — Pintasan keyboard Mac](https://support.apple.com/id-id/102650) |
+| `R-id-002` | `id` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is platform shortcut notation rather than Indonesian prose; official Indonesian Google Docs guidance retains the exact `Ctrl + /` chord on Windows and ChromeOS. | [Google Docs — Pintasan keyboard](https://support.google.com/docs/answer/179738?co=GENIE.Platform%3DDesktop&hl=id) |
+| `R-id-003` | `id` | `toolNames.video` | established loanword | `Video` is the standard Indonesian dictionary form and the natural concise media-tool label. | [KBBI — video](https://kbbi.kemendikdasmen.go.id/entri/video) |
+| `R-id-004` | `id` | `toolNames.audio` | established loanword | `Audio` is the standard Indonesian dictionary form and the natural concise media-tool label. | [KBBI — audio](https://kbbi.kemendikdasmen.go.id/entri/audio) |
+| `R-id-005` | `id` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text control abbreviation; Indonesian Microsoft UI uses `Teks Alt`, while the surrounding dialog supplies the full localized context. | [Microsoft — Menambahkan teks alternatif](https://support.microsoft.com/id-id/office/menambahkan-teks-alternatif-ke-bentuk-gambar-bagan-grafik-smartart-atau-objek-lainnya-44989b2a-903c-4d9a-b742-6a75b451c669) |
+| `R-id-006` | `id` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation used unchanged in Indonesian media controls. | [Apple — Mengubah rasio aspek kamera iPhone](https://support.apple.com/id-id/guide/iphone/iph3dc593597/26/ios/26) |
+| `R-id-007` | `id` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation used unchanged in Indonesian media controls. | [Apple — Mengubah rasio aspek kamera iPhone](https://support.apple.com/id-id/guide/iphone/iph3dc593597/26/ios/26) |
+| `R-id-008` | `id` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Indonesian media controls. | [Apple — Mengubah rasio aspek kamera iPhone](https://support.apple.com/id-id/guide/iphone/iph3dc593597/26/ios/26) |
+| `R-id-009` | `id` | `tools.image.cropRatioOval` | established loanword | `Oval` is the standard Indonesian geometric noun and the natural concise crop-shape label. | [KBBI — oval](https://kbbi.kemendikdasmen.go.id/entri/oval) |
+| `R-id-010` | `id` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional unchanged technical initialism in Indonesian database-column terminology. | [Microsoft — Tipe dan opsi kolom daftar](https://support.microsoft.com/id-ID/SharePoint/lists/data-and-lists/list-and-library-column-types-and-options) |
+| `R-id-011` | `id` | `tools.database.defaultStatusProperty` | established loanword | `Status` is an established Indonesian noun and the natural default database-property label. | [KBBI — status](https://kbbi.kemendikdasmen.go.id/entri/status) |
+| `R-id-012` | `id` | `tools.video.volume` | established loanword | `Volume` is an established Indonesian noun and the natural concise video-control label. | [KBBI — volume](https://kbbi.kemendikdasmen.go.id/entri/volume) |
+| `R-id-013` | `id` | `tools.video.pip` | established loanword | Indonesian Chrome guidance retains the feature name untranslated as `picture-in-picture`; the standardized feature specification supplies the canonical `Picture-in-Picture` casing used by this control. | [Google Chrome Help — Picture-in-Picture](https://support.google.com/chrome/answer/9692215?hl=id); [W3C — Picture-in-Picture](https://www.w3.org/TR/picture-in-picture/) |
+| `R-id-014` | `id` | `tools.audio.volume` | established loanword | `Volume` is an established Indonesian noun and the natural concise audio-control label. | [KBBI — volume](https://kbbi.kemendikdasmen.go.id/entri/volume) |
 | `R-fil-001` | `fil` | `tools.link.webLink` | established loanword | `Link` is the established unchanged Filipino product term for a generic digital link. | [Google Business Profile Help — mga link](https://support.google.com/business/answer/3474050?hl=fil) |
 | `R-it-022` | `it` | `tools.link.webLink` | established loanword | `Link` is the established Italian computing noun and the natural generic label for the catch-all suggestion. | [Treccani — link](https://www.treccani.it/vocabolario/link/) |
 | `R-nl-023` | `nl` | `tools.link.webLink` | established loanword | `Link` is the standard concise Dutch product term and accurately labels every accepted link type. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |

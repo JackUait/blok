@@ -320,7 +320,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `hy` | Armenian | Armenian | ltr | neutral contemporary Eastern Armenian; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or action labels for compact controls; Armenian punctuation and sentence case; established Armenian product, accessibility, and media terminology; count-neutral numeral constructions; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-hy_f65_clean_a` | `root-hy_f65_clean_b` | pass | pass | pass | `F-hy-001`–`F-hy-070` | second-pass-complete |
 | `id` | Indonesian | Latin | ltr | neutral contemporary Indonesian; concise direct imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Indonesian product, accessibility, and media terminology; count-neutral templates; conventional unchanged shortcuts, ratios, acronyms, established loanwords, and product feature names | `root-id_ffd_clean_a` | `root-id_ffd_clean_b` | pass | pass | pass | `F-id-001`–`F-id-061` | second-pass-complete |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
-| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | — | — | pending | pending | pending | `F-ja-001`, `F-ja-004`–`F-ja-093` | pending |
+| `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | `root-ja_629_final_review_a` | `root-ja_629_final_review_b` | pass | pass | pass | `F-ja-001`, `F-ja-004`–`F-ja-097` | second-pass-complete |
 | `ka` | Georgian | Georgian | ltr | to-audit | — | — | pending | pending | pending | `F-ka-001`–`F-ka-004` | pending |
 | `km` | Khmer | Khmer | ltr | to-audit | — | — | pending | pending | pending | `F-km-001`–`F-km-003` | pending |
 | `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001`–`F-kn-003` | pending |
@@ -458,6 +458,7 @@ locale returns to `pending`.
 | `hy` | `root-hy_f65_clean_a` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` | `root-hy_f65_clean_b` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` |
 | `id` | `root-id_ffd_clean_a` | `sha256:ffd92b9cb0170d29d52e648c4806afedc392c3395505b61a4a96c0358ff838ae` | `root-id_ffd_clean_b` | `sha256:ffd92b9cb0170d29d52e648c4806afedc392c3395505b61a4a96c0358ff838ae` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
+| `ja` | `root-ja_629_final_review_a` | `sha256:629ae52cff1868309e16940d0fd65f7879ce2f495c8fefa6b9018792d9c78943` | `root-ja_629_final_review_b` | `sha256:629ae52cff1868309e16940d0fd65f7879ce2f495c8fefa6b9018792d9c78943` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -3904,7 +3905,7 @@ bind to raw SHA-256
 `2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e`;
 Italian is therefore `second-pass-complete`.
 
-### Japanese (`ja`) — pending after seek-value residual
+### Japanese (`ja`) — second-pass-complete on corrected product-name boundary
 
 The baseline proposal review directly inspected all 546 English/Japanese
 pairs and the complete 533+12+1 caller/source-only/dormant partition. Its
@@ -4047,6 +4048,89 @@ is
 The attempted review earns no pass credit, and the accepted correction
 invalidates the earlier first-pass boundary. Japanese returns to `pending`;
 both complete passes must restart on the corrected bytes.
+
+Two fresh blind reviews then restarted at English entry 1 on raw Japanese
+SHA-256
+`62f44a0940208dc3b9954f6bf8d6736577bd37ef2ba529657e0276734e34318f`
+and directly read all 546 pairs and caller/register contexts. Reviewer
+`root-ja_62f_restart_a` reported no catalog residual; its sealed historical
+bundle is
+`/private/tmp/blok-ja-review-root-ja_62f_restart_a-d14bd861-v1`, with
+manifest SHA-256
+`0c40a19a8bbe9cc9b24226483750845ede162c22200dc12f3e8d6a7379989b7c`
+and a validator that passed 5,598 checks before the target advanced.
+Reviewer `root-ja_62f_restart_b` independently found one current-byte defect:
+`tools.audio.errorGoogleDrive` retained the English product spelling rather
+than Google's official Japanese `Google ドライブ`. Its sealed historical
+bundle is
+`/private/tmp/blok-ja-audit-root-ja_62f_restart_b-20260721T025236Z-89006deb`,
+with manifest SHA-256
+`cf19f7fdb0a9b846dc197ef657e9d3c45a9d517106b5abf5d714a6777e429b01`.
+The complete first review missed this confirmed defect, while applying
+`F-ja-094` changes the catalog bytes; neither attempted review earns pass
+credit.
+
+An independent provider-terminology challenge then traced the same official
+Google Japanese names through the paste-menu caller. The Japanese templates
+were already correct, but the caller substituted canonical English registry
+titles and rendered `Google Driveからドキュメントを埋め込む`,
+`Google Docsからドキュメントを埋め込む`,
+`Google Sheetsから表を埋め込む`, `Google Slidesからドキュメントを埋め込む`,
+and `Google Formsからフォームを埋め込む`. `F-ja-095` through
+`F-ja-097` retain the three correct catalog templates and record the runtime
+metadata correction to `Google ドライブ`, `Google ドキュメント`,
+`Google スプレッドシート`, `Google スライド`, and `Google フォーム`.
+The red phase failed 13 focused unit cases on the absent resolver and those
+five English outputs while 31 existing assertions passed; all 44 focused
+unit cases pass after locale-aware provider-title resolution. Because
+`F-ja-094` changes the Japanese dictionary and the provider correction
+changes the production-source boundary, both complete reviews must restart
+from entry 1 on the final corrected bytes and source inventory. The corrected
+raw Japanese SHA-256 is
+`629ae52cff1868309e16940d0fd65f7879ce2f495c8fefa6b9018792d9c78943`;
+the canonical 542-file production inventory serialization is
+`81558c49bda843841c6eefb3259c4ed78da8aec0779cad6012e4021e7b88d8a6`.
+
+Fresh reviewer `root-ja_629_final_review_a` then independently read all 546
+corrected English/Japanese pairs in English insertion order and reconciled
+every production caller/register path without consulting the prior audit
+ledger or reviewer evidence. The sealed bundle is
+`/private/tmp/blok-ja-final-review-a.zQUExE`; its 546-row matrix is bound at
+SHA-256
+`14a00da3a625b7cf718ef527cb38f3192e96fc0fa244cec7d6c1426b3418bc6c`,
+its lifecycle artifact at
+`7c0703b3ad88838ec6984fe6726067fa568e4c9edafd7fff7313105ad2c7cbb4`,
+its manifest at
+`a6e8ec3cc426f5417532e86af284451f129c5ab98fe8331b754b4f51e7416711`,
+and its seal at
+`f8f666c8988b6f4e208a2a98842e4207f1abb9e1d75ab8f9ad7a9ce1b313f685`.
+Root replayed the read-only validator twice with zero warnings. The review
+reports 546 pass and zero findings, the exact seven retentions, all 38
+placeholder-bearing rows and 54 occurrences, all nine count-render domains,
+the raw `398 + 121 + 27` and semantic `397 + 122 + 25 + 2` closures, and the
+complete Google provider alias, fallback, matching, and persistence contract.
+
+Distinct fresh reviewer `root-ja_629_final_review_b` independently repeated
+the complete 546-pair and caller/lifecycle audit on the same corrected bytes.
+Its sealed bundle is `/private/tmp/blok-ja-review-b.jIvMJr`; its 546-row
+matrix is bound at SHA-256
+`ee5aa5864838c0dfe0f9142c5f13c056336bbc7a592a7effc712610f87431495`,
+its manifest at
+`cf18e23281cfffb15b0d709427744ed1fa9741a608c3f0872030b17904f96db2`,
+and its seal at
+`7a6c90d44f2c159c061427e064192861edfac124effd10039c0bcc0b9c17e51a`.
+Root replayed both the bundle script and validator successfully; all 12
+manifest entries pass. This second review also reports 546 pass, zero
+findings, the same structural, placeholder, retention, count-domain,
+lifecycle, and provider-pipeline results, and only
+`blockSettings.convertWithChildrenWarning` and `tools.columns.turnInto` as
+exact no-route keys.
+
+The two independently generated bundles share exact 544-input inventory
+SHA-256
+`9c2ef49b7c79d4eef2dede82b8f68c05329eeffaf7fcfb21777e954641127498`.
+Both complete reviews therefore bind to identical current catalog and
+production-source bytes, and Japanese is `second-pass-complete`.
 
 ### Georgian (`ka`) — pending after current-byte residuals
 
@@ -8581,6 +8665,10 @@ follows the global transition rule above.
 | `F-ja-091` | `ja` | `blockSettings.orConjunction` | Japanese composition spacing / naturalness | `" または "` | `"または"` | This fragment is concatenated directly between `クリック` and the highlighted shortcut. Japanese does not insert source-language spaces around the conjunction or key token; the replacement renders the natural `クリックまたは⌘/…`. [Notion Japanese keyboard shortcuts](https://www.notion.com/ja/help/keyboard-shortcuts?slug=keyboard-shortcuts) follows space-less Japanese prose around shortcut tokens. | verified |
 | `F-ja-092` | `ja` | `blockSettings.openMenuAction` | Japanese particle spacing / naturalness | `" でメニューを開く"` | `"でメニューを開く"` | The caller appends this particle-led fragment directly after either `クリック` or the highlighted shortcut. Removing the English boundary space renders natural `クリックでメニューを開く` and `⌘/でメニューを開く`. | verified |
 | `F-ja-093` | `ja` | `a11y.blocksDuplicated` | accessibility / caller destination semantics | `"{count}個のブロックを{position}番目から複製しました"` | `"{count}個のブロックを複製しました。複製したブロックの開始位置は{position}番目です。"` | `DragA11y.announceDuplicateComplete` supplies the first newly duplicated block's destination index, not a source position. The replacement explicitly labels that destination while preserving both placeholders and using the standard Japanese position term [開始位置](https://support.apple.com/ja-jp/guide/logicpro/lgcpce0833d7/mac). | verified |
+| `F-ja-094` | `ja` | `tools.audio.errorGoogleDrive` | official product terminology / recovery copy | `"Google Drive の音声は直接再生できません。ファイルをダウンロードして、代わりにここへアップロードしてください。"` | `"Google ドライブの音声は直接再生できません。ファイルをダウンロードして、代わりにここへアップロードしてください。"` | The Google Drive upload-backend recovery path names the product directly. Google's official Japanese product name is [`Google ドライブ`](https://workspace.google.com/intl/ja/products/drive/), with the Japanese particle attached without an English boundary space. | verified |
+| `F-ja-095` | `ja` | `tools.linkPaste.embedDocument` | runtime provider-title localization / established product terminology | `"{provider}からドキュメントを埋め込む"` | `"{provider}からドキュメントを埋め込む"` | The Japanese template is correct and remains unchanged. Before remediation, `buildPasteMenuItems` substituted English registry titles and rendered `Google Driveからドキュメントを埋め込む`, `Google Docsからドキュメントを埋め込む`, and `Google Slidesからドキュメントを埋め込む`; locale-aware registry titles now render `Google ドライブからドキュメントを埋め込む`, `Google ドキュメントからドキュメントを埋め込む`, and `Google スライドからドキュメントを埋め込む`, matching [Google ドライブ](https://workspace.google.com/intl/ja/products/drive/), [Google ドキュメント](https://workspace.google.com/intl/ja/products/docs/), and [Google スライド](https://workspace.google.com/intl/ja/products/slides/). Focused caller tests cover every output. | verified |
+| `F-ja-096` | `ja` | `tools.linkPaste.embedTable` | runtime provider-title localization / established product terminology | `"{provider}から表を埋め込む"` | `"{provider}から表を埋め込む"` | The Japanese template is correct and remains unchanged. Before remediation, `buildPasteMenuItems` rendered `Google Sheetsから表を埋め込む`; the locale-aware registry title now renders `Google スプレッドシートから表を埋め込む`, matching [Google スプレッドシート](https://workspace.google.com/intl/ja/products/sheets/). A focused caller test covers the output. | verified |
+| `F-ja-097` | `ja` | `tools.linkPaste.embedForm` | runtime provider-title localization / established product terminology | `"{provider}からフォームを埋め込む"` | `"{provider}からフォームを埋め込む"` | The Japanese template is correct and remains unchanged. Before remediation, `buildPasteMenuItems` rendered `Google Formsからフォームを埋め込む`; the locale-aware registry title now renders `Google フォームからフォームを埋め込む`, matching [Google フォーム](https://workspace.google.com/intl/ja/products/forms/). A focused caller test covers the output. | verified |
 | `F-ka-001` | `ka` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"პირდაპირი დაფორმატების გასუფთავება"` | LibreOffice’s Georgian Writer UI uses this exact Clear Direct Formatting label in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ka/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-ka-002` | `ka` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"ტექსტი"` | `"ტექსტის ფერი"` | English changed from “Text” to “Text color,” while Georgian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Google’s Georgian product UI uses the exact term [`ტექსტის ფერი`](https://support.google.com/youtube/answer/16215842?co=GENIE.Platform%3DiOS&hl=ka). | verified |
 | `F-ka-003` | `ka` | `tools.paragraph.placeholder` | source completeness / omitted object | `"დაწერეთ რამე ან დააჭირეთ / ასარჩევად"` | `"დაწერეთ რამე ან დააჭირეთ / ხელსაწყოს ასარჩევად"` | The focus-only paragraph placeholder is a complete instruction, but the old purposive phrase ends at “press / to select” and omits the source object “a tool.” The replacement restores the genitive object using this dictionary’s established `ხელსაწყო` terminology, also used in [Google’s Georgian product UI](https://support.google.com/youtube/answer/9346683?hl=ka). | verified |

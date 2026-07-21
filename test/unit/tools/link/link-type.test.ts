@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { EMBED_SERVICES, matchEmbedService } from '../../../../src/tools/link/registry';
+import {
+  EMBED_SERVICES,
+  matchEmbedService,
+  resolveEmbedServiceTitle,
+} from '../../../../src/tools/link/registry';
 
 /**
  * The closed set of link-type categories a registry service may declare.
@@ -60,5 +64,23 @@ describe('embed service display metadata', () => {
 
     expect(match?.title).toBe('CodePen');
     expect(match?.type).toBe('code');
+  });
+
+  it.each([
+    ['googledrive', 'Google ドライブ'],
+    ['googledrivefolder', 'Google ドライブ'],
+    ['googledocspublished', 'Google ドキュメント'],
+    ['googledocs', 'Google ドキュメント'],
+    ['googlesheets', 'Google スプレッドシート'],
+    ['googleslides', 'Google スライド'],
+    ['googleforms', 'Google フォーム'],
+  ])('resolves the official Japanese title for %s', (serviceId, expected) => {
+    expect(resolveEmbedServiceTitle(EMBED_SERVICES[serviceId], 'ja')).toBe(expected);
+  });
+
+  it('keeps canonical titles when no localized title is available', () => {
+    expect(resolveEmbedServiceTitle(EMBED_SERVICES.googledrive)).toBe('Google Drive');
+    expect(resolveEmbedServiceTitle(EMBED_SERVICES.googledrive, 'en')).toBe('Google Drive');
+    expect(resolveEmbedServiceTitle(EMBED_SERVICES.youtube, 'ja')).toBe('YouTube');
   });
 });

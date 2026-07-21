@@ -10,6 +10,8 @@
  * params with `\S*`, because the paste pipeline only claims a pattern when the
  * match covers the entire pasted text (see PasteToolRegistry.findToolForPattern).
  */
+import type { SupportedLocale } from '../../../types/configs/i18n-config';
+
 export type EmbedKind = 'iframe' | 'script';
 
 /**
@@ -33,6 +35,8 @@ export type EmbedServiceType =
 export interface EmbedService {
   /** Official, consumer-facing provider name (e.g. "YouTube") shown in the paste UI. */
   title: string;
+  /** Sparse official localized provider names used only for display. */
+  localizedTitles?: Readonly<Partial<Record<SupportedLocale, string>>>;
   /** Link-type category of the provider's content. */
   type: EmbedServiceType;
   /** Claims a pasted URL and captures the remote id parts. */
@@ -82,7 +86,22 @@ export interface EmbedMatch {
   type: EmbedServiceType;
 }
 
+/**
+ * Resolves a provider's official display name for a locale while preserving the
+ * canonical registry title as the fallback.
+ */
+export function resolveEmbedServiceTitle(
+  service: Pick<EmbedService, 'title' | 'localizedTitles'>,
+  locale?: SupportedLocale
+): string {
+  return locale === undefined
+    ? service.title
+    : service.localizedTitles?.[locale] ?? service.title;
+}
+
 const REMOTE_ID_TEMPLATE = /<%=\s*remote_id\s*%>/;
+const GOOGLE_DRIVE_LOCALIZED_TITLES = { ja: 'Google ドライブ' } as const;
+const GOOGLE_DOCS_LOCALIZED_TITLES = { ja: 'Google ドキュメント' } as const;
 
 /**
  * Parses a YouTube `t=`/`start=` value from a URL tail into whole seconds.
@@ -237,6 +256,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   googledrive: {
     title: 'Google Drive',
+    localizedTitles: GOOGLE_DRIVE_LOCALIZED_TITLES,
     type: 'document',
     regex: /^(?:https?:\/\/)?drive\.google\.com\/(?:file\/(?:u\/\d+\/)?d\/([\w-]+)|open\?(?:.*&)?id=([\w-]+))\S*/,
     embedUrl: 'https://drive.google.com/file/d/<%= remote_id %>/preview',
@@ -248,6 +268,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   googledrivefolder: {
     title: 'Google Drive',
+    localizedTitles: GOOGLE_DRIVE_LOCALIZED_TITLES,
     type: 'document',
     regex: /^(?:https?:\/\/)?drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([\w-]+)\S*/,
     embedUrl: 'https://drive.google.com/embeddedfolderview?id=<%= remote_id %>#list',
@@ -258,6 +279,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   googledocspublished: {
     title: 'Google Docs',
+    localizedTitles: GOOGLE_DOCS_LOCALIZED_TITLES,
     type: 'document',
     // "Publish to the web" links carry a 2PACX token under d/e/ that is not a
     // document id: /preview 404s for them, Google's own embed code is /pub?embedded=true.
@@ -270,6 +292,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   googledocs: {
     title: 'Google Docs',
+    localizedTitles: GOOGLE_DOCS_LOCALIZED_TITLES,
     type: 'document',
     // (?!e\/) keeps published d/e/ links out of this entry regardless of registry order.
     regex: /^(?:https?:\/\/)?docs\.google\.com\/document\/(?:u\/\d+\/)?d\/(?!e\/)([\w-]+)\S*/,
@@ -281,6 +304,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   googlesheets: {
     title: 'Google Sheets',
+    localizedTitles: { ja: 'Google スプレッドシート' },
     type: 'table',
     // Branch 1 claims published d/e/<2PACX token> links (embedded via Google's own
     // pubhtml?widget=true&headers=false endpoint), branch 2 normal d/<fileId> links.
@@ -297,6 +321,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   googleslides: {
     title: 'Google Slides',
+    localizedTitles: { ja: 'Google スライド' },
     type: 'document',
     // Published links keep the literal e/ segment inside the id, so the same
     // /embed template serves both d/<id> and d/e/<2PACX token> URLs.
@@ -309,6 +334,7 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
   },
   googleforms: {
     title: 'Google Forms',
+    localizedTitles: { ja: 'Google フォーム' },
     type: 'form',
     // Legacy d/<editId>/viewform links work because Google 301s them to the
     // canonical d/e/ embed URL with the query string preserved.

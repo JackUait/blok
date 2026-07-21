@@ -463,7 +463,7 @@
   "tools.audio.uploading": "アップロード中…",
   "tools.audio.errorUploadFailed": "アップロードに失敗しました",
   "tools.audio.errorFileTooLarge": "音声ファイルが大きすぎます。{size}は上限の{max}を超えています。",
-  "tools.audio.errorGoogleDrive": "Google Drive の音声は直接再生できません。ファイルをダウンロードして、代わりにここへアップロードしてください。",
+  "tools.audio.errorGoogleDrive": "Google ドライブの音声は直接再生できません。ファイルをダウンロードして、代わりにここへアップロードしてください。",
   "tools.audio.errorOneDrive": "OneDrive の音声は直接再生できません。ファイルをダウンロードして、代わりにここへアップロードしてください。",
   "tools.audio.errorReplace": "置き換え",
   "tools.audio.titlePlaceholder": "曲名",

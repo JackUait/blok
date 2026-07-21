@@ -15,10 +15,16 @@ import {
   IconTable,
   IconVideo,
 } from '../../../components/icons';
-import { matchEmbedService, type EmbedServiceType } from '../registry';
+import {
+  EMBED_SERVICES,
+  matchEmbedService,
+  resolveEmbedServiceTitle,
+  type EmbedServiceType,
+} from '../registry';
 
 import type { PasteMenuActionType, PasteMenuOption } from './options';
 
+import type { SupportedLocale } from '../../../../types/configs/i18n-config';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 
 /**
@@ -26,6 +32,7 @@ import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
  */
 export interface PasteMenuI18n {
   t(key: string): string;
+  getLocale?(): SupportedLocale;
 }
 
 /**
@@ -96,11 +103,14 @@ export function buildPasteMenuItems(
     const { labelKey, icon } = presentationFor(type);
     const embedMatch = type === 'embed' && url !== undefined ? matchEmbedService(url) : null;
     const typed = embedMatch ? EMBED_TYPE_PRESENTATION[embedMatch.type] : null;
+    const providerTitle = embedMatch
+      ? resolveEmbedServiceTitle(EMBED_SERVICES[embedMatch.service], i18n.getLocale?.())
+      : null;
 
     return {
       name: `paste-menu-${type}`,
-      title: typed && embedMatch
-        ? i18n.t(typed.labelKey).replace('{provider}', embedMatch.title)
+      title: typed && providerTitle
+        ? i18n.t(typed.labelKey).replace('{provider}', providerTitle)
         : i18n.t(labelKey),
       icon: typed ? typed.icon : icon,
       closeOnActivate: true,

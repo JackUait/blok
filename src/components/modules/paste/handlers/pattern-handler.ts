@@ -32,7 +32,10 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
   ) {
     super(Blok, toolRegistry, sanitizerBuilder);
     this.config = config;
-    this.menu = menu ?? new PasteMenuController({ t: (key: string): string => Blok.I18n.t(key) });
+    this.menu = menu ?? new PasteMenuController({
+      t: (key: string): string => Blok.I18n.t(key),
+      getLocale: () => Blok.I18n.getLocale(),
+    });
   }
 
   canHandle(data: unknown): number {

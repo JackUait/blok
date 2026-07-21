@@ -128,6 +128,19 @@ describe('buildPasteMenuItems', () => {
       },
     };
 
+    const japaneseI18n: PasteMenuI18n = {
+      getLocale: () => 'ja',
+      t: (key: string): string => {
+        const templates: Record<string, string> = {
+          'tools.linkPaste.embedDocument': '{provider}からドキュメントを埋め込む',
+          'tools.linkPaste.embedTable': '{provider}から表を埋め込む',
+          'tools.linkPaste.embedForm': '{provider}からフォームを埋め込む',
+        };
+
+        return templates[key] ?? key;
+      },
+    };
+
     it('titles the embed item with the localized type template naming the provider', () => {
       const items = buildPasteMenuItems([{ type: 'embed' }], templateI18n, vi.fn(), youtubeUrl);
       const embed = asDefaultItem(items[0]);
@@ -208,6 +221,38 @@ describe('buildPasteMenuItems', () => {
       const [item] = buildPasteMenuItems(
         [{ type: 'embed' }],
         templateI18n,
+        vi.fn(),
+        url
+      );
+
+      expect(asDefaultItem(item).title).toBe(expected);
+    });
+
+    it.each([
+      [
+        'https://drive.google.com/file/d/file-id/view',
+        'Google ドライブからドキュメントを埋め込む',
+      ],
+      [
+        'https://docs.google.com/document/d/doc-id/edit',
+        'Google ドキュメントからドキュメントを埋め込む',
+      ],
+      [
+        'https://docs.google.com/spreadsheets/d/sheet-id/edit',
+        'Google スプレッドシートから表を埋め込む',
+      ],
+      [
+        'https://docs.google.com/presentation/d/slide-id/edit',
+        'Google スライドからドキュメントを埋め込む',
+      ],
+      [
+        'https://docs.google.com/forms/d/e/form-id/viewform',
+        'Google フォームからフォームを埋め込む',
+      ],
+    ])('uses the official Japanese provider title for %s', (url, expected) => {
+      const [item] = buildPasteMenuItems(
+        [{ type: 'embed' }],
+        japaneseI18n,
         vi.fn(),
         url
       );

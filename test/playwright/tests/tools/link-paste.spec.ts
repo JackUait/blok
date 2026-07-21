@@ -345,6 +345,19 @@ test.describe('Link paste', () => {
     );
   });
 
+  test('uses the official Japanese Google Drive name in the embed action', async ({ page }) => {
+    await createBlok(page, undefined, { i18n: { locale: 'ja' } });
+    const editable = firstEditable(page);
+
+    await editable.click();
+    await pasteText(editable, 'https://drive.google.com/file/d/file-id/view');
+
+    const embedItem = page.locator('[data-blok-item-name="paste-menu-embed"]');
+
+    await expect(embedItem).toBeVisible();
+    await expect(embedItem).toContainText('Google ドライブからドキュメントを埋め込む');
+  });
+
   test('a chosen embed stretches to full width with side resize handles', async ({ page }) => {
     await createBlok(page);
     const editable = firstEditable(page);

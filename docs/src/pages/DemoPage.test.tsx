@@ -2,7 +2,40 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../contexts/I18nContext';
-import { DemoPage } from './DemoPage';
+import { DemoPage, DemoContent } from './DemoPage';
+
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
+/**
+ * The real EditorWrapper cannot boot the editor under jsdom (it imports the
+ * built /dist bundles), so it never reports readiness. This mock renders the
+ * real component — every existing DOM assertion still holds — and additionally
+ * hands the page a stub editor instance, which is what the analytics wiring
+ * reacts to.
+ */
+const editorStub = vi.hoisted(() => ({
+  save: vi.fn(async () => ({ blocks: [] })),
+  clear: vi.fn(async () => undefined),
+  undo: vi.fn(async () => undefined),
+  redo: vi.fn(async () => undefined),
+}));
+
+vi.mock('../components/demo/EditorWrapper', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../components/demo/EditorWrapper')>();
+  const { useEffect } = await import('react');
+
+  const EditorWrapper: typeof actual.EditorWrapper = (props) => {
+    const { onEditorReady } = props;
+
+    useEffect(() => {
+      onEditorReady?.(editorStub);
+    }, [onEditorReady]);
+
+    return <actual.EditorWrapper {...props} />;
+  };
+
+  return { ...actual, EditorWrapper };
+});
 
 function renderDemoPage() {
   return render(
@@ -18,9 +51,11 @@ describe('DemoPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    (window as GtagWindow).gtag = vi.fn();
   });
 
   afterEach(() => {
+    delete (window as GtagWindow).gtag;
     vi.restoreAllMocks();
   });
 
@@ -209,6 +244,112 @@ describe('DemoPage', () => {
       await waitFor(() => {
         expect(container.querySelector('.blok-editor')).toHaveAttribute('data-blok-content-align', 'center');
       });
+    });
+  });
+
+  describe('analytics', () => {
+    const gtagCalls = (): unknown[][] => {
+      const gtag = (window as GtagWindow).gtag;
+      if (!vi.isMockFunction(gtag)) {
+        throw new Error('window.gtag is not stubbed');
+      }
+      return gtag.mock.calls;
+    };
+
+    const renderDemoContent = () =>
+      render(
+        <MemoryRouter>
+          <I18nProvider>
+            <DemoContent />
+          </I18nProvider>
+        </MemoryRouter>
+      );
+
+    it('tracks demo_editor_ready once when the playground editor boots', () => {
+      renderDemoPage();
+
+      const readyEvents = gtagCalls().filter((call) => call[1] === 'demo_editor_ready');
+      expect(readyEvents).toHaveLength(1);
+      expect(readyEvents[0]).toEqual(['event', 'demo_editor_ready', {}]);
+    });
+
+    it('tracks the undo control', () => {
+      renderDemoContent();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+
+      expect(gtagCalls()).toContainEqual(['event', 'demo_action', { action: 'undo' }]);
+    });
+
+    it('tracks the redo control', () => {
+      renderDemoContent();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
+
+      expect(gtagCalls()).toContainEqual(['event', 'demo_action', { action: 'redo' }]);
+    });
+
+    it('tracks the Get JSON control', () => {
+      renderDemoContent();
+
+      fireEvent.click(screen.getByTitle('Get JSON output'));
+
+      expect(gtagCalls()).toContainEqual(['event', 'demo_action', { action: 'save' }]);
+    });
+
+    it('tracks the clear control', () => {
+      renderDemoContent();
+
+      fireEvent.click(screen.getByTitle('Clear editor'));
+
+      expect(gtagCalls()).toContainEqual(['event', 'demo_action', { action: 'clear' }]);
+    });
+
+    it('tracks closing the JSON output panel', async () => {
+      renderDemoContent();
+
+      fireEvent.click(screen.getByTitle('Get JSON output'));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Close output panel' })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Close output panel' }));
+
+      expect(gtagCalls()).toContainEqual(['event', 'demo_action', { action: 'close_output' }]);
+    });
+
+    it('tracks settings-panel changes with the setting that changed', () => {
+      renderDemoPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+      fireEvent.click(screen.getByRole('switch', { name: 'Read-only mode' }));
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'demo_action',
+        { action: 'change_setting', setting: 'readOnly', value: 'true' },
+      ]);
+    });
+
+    it('omits free-text setting values from the tracked payload', () => {
+      renderDemoPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'First block placeholder' }), {
+        target: { value: 'Type here' },
+      });
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'demo_action',
+        { action: 'change_setting', setting: 'placeholder' },
+      ]);
+    });
+
+    it('does not fire a demo_action before any control is used', () => {
+      renderDemoContent();
+
+      expect(gtagCalls().filter((call) => call[1] === 'demo_action')).toHaveLength(0);
     });
   });
 

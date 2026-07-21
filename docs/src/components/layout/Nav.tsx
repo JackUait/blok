@@ -9,6 +9,7 @@ import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import type { NavLink } from "@/types/navigation";
 import { cn } from "@/lib/utils";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 interface NavProps {
   links: NavLink[];
@@ -337,7 +338,17 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
                       to={link.href}
                       className={itemClass}
                       tabIndex={menuOpen ? 0 : -1}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => {
+                        // External links are covered by the global outbound
+                        // tracker; only internal destinations are reported here.
+                        // The untranslated label keeps the GA dimension stable
+                        // across locales.
+                        trackEvent(ANALYTICS_EVENTS.navLinkClick, {
+                          label: link.label,
+                          to: link.href,
+                        });
+                        setMenuOpen(false);
+                      }}
                     >
                       {link.i18nKey ? t(link.i18nKey) : link.label}
                     </Link>

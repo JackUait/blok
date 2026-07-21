@@ -3,6 +3,7 @@ import { Check, Globe } from "lucide-react";
 import { useI18n } from "../../contexts/I18nContext";
 import type { Locale } from "../../i18n";
 import { cn } from "@/lib/utils";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 /* SVG Flag Icons - Clean, minimal style */
 const FlagIcon = ({ locale }: { locale: Locale }) => {
@@ -77,6 +78,10 @@ export const LanguageSelector = () => {
   }, []);
 
   const handleLocaleChange = (newLocale: Locale) => {
+    // Re-picking the active locale is a dismissal, not a language change.
+    if (newLocale !== locale) {
+      trackEvent(ANALYTICS_EVENTS.selectLanguage, { locale: newLocale });
+    }
     setLocale(newLocale);
     setIsOpen(false);
   };

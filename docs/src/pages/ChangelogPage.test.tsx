@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ChangelogPage from './ChangelogPage';
 import { I18nProvider } from '../contexts/I18nContext';
@@ -10,6 +10,8 @@ const en = enJson.changelog;
 const ru = ruJson.changelog;
 
 const STORAGE_KEY = 'blok-docs-locale';
+
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
 
 const renderChangelogPage = () =>
   render(
@@ -24,9 +26,11 @@ describe('ChangelogPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    (window as GtagWindow).gtag = vi.fn();
   });
 
   afterEach(() => {
+    delete (window as GtagWindow).gtag;
     vi.restoreAllMocks();
   });
 
@@ -200,6 +204,87 @@ describe('ChangelogPage', () => {
       await waitFor(() => {
         expect(screen.getByText('v1.0.0')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('analytics', () => {
+    const TWO_RELEASES = `# Changelog
+
+## [1.0.0](https://github.com/JackUait/blok/compare/v0.9.0...v1.0.0) (2024-01-01)
+
+### ✨ Features
+
+- Initial release
+
+## [0.9.1](https://github.com/JackUait/blok/compare/v0.9.0...v0.9.1) (2023-12-01)
+
+### 🐛 Bug Fixes
+
+- Fix a thing
+`;
+
+    const gtagCalls = (): unknown[][] => {
+      const gtag = (window as GtagWindow).gtag;
+      if (!vi.isMockFunction(gtag)) {
+        throw new Error('window.gtag is not stubbed');
+      }
+      return gtag.mock.calls;
+    };
+
+    it('tracks changelog_version_open when a release version is opened', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(TWO_RELEASES, { status: 200 })
+      );
+
+      renderChangelogPage();
+
+      await waitFor(() => {
+        expect(screen.getByText('v1.0.0')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('v1.0.0'));
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'changelog_version_open',
+        { version: '1.0.0', release_type: 'major' },
+      ]);
+    });
+
+    it('reports the version of the entry that was opened', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(TWO_RELEASES, { status: 200 })
+      );
+
+      renderChangelogPage();
+
+      await waitFor(() => {
+        expect(screen.getByText('v0.9.1')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('v0.9.1'));
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'changelog_version_open',
+        { version: '0.9.1', release_type: 'patch' },
+      ]);
+    });
+
+    it('does not fire the event before any release is opened', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(TWO_RELEASES, { status: 200 })
+      );
+
+      renderChangelogPage();
+
+      await waitFor(() => {
+        expect(screen.getByText('v1.0.0')).toBeInTheDocument();
+      });
+
+      expect(
+        gtagCalls().filter((call) => call[1] === 'changelog_version_open')
+      ).toHaveLength(0);
     });
   });
 });

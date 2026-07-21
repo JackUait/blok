@@ -2,6 +2,7 @@ import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "../../contexts/I18nContext";
 import { Button } from "@/components/ui/button";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 /**
  * Theme toggle button that cycles between light and dark modes.
@@ -13,12 +14,20 @@ export const ThemeToggle: React.FC = () => {
 
   const label = theme === "dark" ? t("theme.dark") : t("theme.light");
 
+  const handleClick = () => {
+    // Report the theme the reader is moving TO — that is the choice being made.
+    trackEvent(ANALYTICS_EVENTS.toggleTheme, {
+      theme: theme === "dark" ? "light" : "dark",
+    });
+    toggleTheme();
+  };
+
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon-sm"
-      onClick={toggleTheme}
+      onClick={handleClick}
       className="rounded-full text-foreground/80 hover:text-foreground"
       aria-label={`Toggle theme (current: ${label})`}
       title={label}

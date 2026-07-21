@@ -5,7 +5,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { Search } from './Search';
 import * as searchUtils from '@/utils/search';
+import { ANALYTICS_EVENTS } from '@/lib/analytics';
 import type { SearchResult } from '@/types/search';
+
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
+const gtagMock = vi.fn();
+
+const gtagCallsFor = (eventName: string): unknown[][] =>
+  gtagMock.mock.calls.filter(call => call[0] === 'event' && call[1] === eventName);
 
 const buildResults = (count: number, idPrefix = 'r'): SearchResult[] =>
   Array.from({ length: count }, (_, i) => ({
@@ -56,11 +64,13 @@ describe('Search', () => {
     vi.mocked(searchUtils.search).mockReset().mockImplementation(actual.search);
     vi.mocked(searchUtils.getSearchIndex).mockReset().mockImplementation(actual.getSearchIndex);
     localStorage.clear();
+    (window as GtagWindow).gtag = gtagMock;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    delete (window as GtagWindow).gtag;
   });
 
   it('should not render when open is false', () => {
@@ -500,6 +510,142 @@ describe('Search', () => {
       );
 
       expect(screen.getByPlaceholderText('Поиск по документации...')).toBeInTheDocument();
+    });
+  });
+
+  describe('analytics', () => {
+    const renderSearch = (open = true) =>
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={open} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+    it('tracks search_open exactly once when the dialog opens', () => {
+      const { rerender } = renderSearch();
+
+      expect(gtagCallsFor(ANALYTICS_EVENTS.searchOpen)).toHaveLength(1);
+
+      // A re-render with the same `open` value must not re-fire the event.
+      rerender(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open={true} onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+      expect(gtagCallsFor(ANALYTICS_EVENTS.searchOpen)).toHaveLength(1);
+    });
+
+    it('does not track search_open while the dialog is closed', () => {
+      renderSearch(false);
+
+      expect(gtagCallsFor(ANALYTICS_EVENTS.searchOpen)).toHaveLength(0);
+    });
+
+    it('tracks search_query once for the settled query, not per keystroke', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue(buildResults(3));
+
+      renderSearch();
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      fireEvent.change(input, { target: { value: 'Re' } });
+      fireEvent.change(input, { target: { value: 'Res' } });
+      fireEvent.change(input, { target: { value: 'Result' } });
+
+      await waitFor(
+        () => {
+          expect(gtagCallsFor(ANALYTICS_EVENTS.searchQuery)).toHaveLength(1);
+        },
+        { timeout: 3000 }
+      );
+
+      expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.searchQuery, {
+        query: 'result',
+        results_count: 3,
+      });
+    });
+
+    it('tracks search_no_results when a settled query yields nothing', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue([]);
+
+      renderSearch();
+
+      fireEvent.change(screen.getByPlaceholderText('Search docs...'), {
+        target: { value: 'zzzznothing' },
+      });
+
+      await waitFor(
+        () => {
+          expect(gtagMock).toHaveBeenCalledWith(
+            'event',
+            ANALYTICS_EVENTS.searchNoResults,
+            { query: 'zzzznothing' }
+          );
+        },
+        { timeout: 3000 }
+      );
+
+      expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.searchQuery, {
+        query: 'zzzznothing',
+        results_count: 0,
+      });
+    });
+
+    it('tracks search_result_select when a result is clicked', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue(buildResults(2));
+
+      renderSearch();
+
+      fireEvent.change(screen.getByPlaceholderText('Search docs...'), {
+        target: { value: 'Result' },
+      });
+
+      const button = await screen.findByRole(
+        'button',
+        { name: /Result 1/ },
+        { timeout: 3000 }
+      );
+      fireEvent.click(button);
+
+      expect(gtagMock).toHaveBeenCalledWith(
+        'event',
+        ANALYTICS_EVENTS.searchResultSelect,
+        {
+          query: 'result',
+          result_title: 'Result 1',
+          result_path: '/docs',
+          result_module: 'Core',
+          result_index: 1,
+        }
+      );
+    });
+
+    it('tracks search_result_select when a result is chosen with Enter', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue(buildResults(2));
+
+      renderSearch();
+
+      const input = screen.getByPlaceholderText('Search docs...');
+      fireEvent.change(input, { target: { value: 'Result' } });
+
+      await screen.findByRole('button', { name: /Result 0/ }, { timeout: 3000 });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(gtagMock).toHaveBeenCalledWith(
+        'event',
+        ANALYTICS_EVENTS.searchResultSelect,
+        {
+          query: 'result',
+          result_title: 'Result 0',
+          result_path: '/docs',
+          result_module: 'Core',
+          result_index: 0,
+        }
+      );
     });
   });
 });

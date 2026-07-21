@@ -21,15 +21,24 @@ const ActiveProbe = () => {
   return <span data-blok-testid="active-framework">{framework}</span>;
 };
 
+type GtagWindow = Window & typeof globalThis & { gtag?: (...args: unknown[]) => void };
+
+const gtagWindow = window as GtagWindow;
+
 describe('FrameworkToggle', () => {
+  let gtagSpy: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    gtagSpy = vi.fn();
+    gtagWindow.gtag = gtagSpy;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    delete gtagWindow.gtag;
   });
 
   it('renders a button for each supported framework', () => {
@@ -78,5 +87,35 @@ describe('FrameworkToggle', () => {
       'aria-pressed',
       'true',
     );
+  });
+
+  describe('analytics', () => {
+    it('tracks a framework selection with the framework id', async () => {
+      const user = userEvent.setup();
+      render(
+        <Providers>
+          <FrameworkToggle />
+        </Providers>,
+      );
+
+      await user.click(screen.getByRole('button', { name: /Angular/i }));
+
+      expect(gtagSpy).toHaveBeenCalledWith('event', 'select_framework', {
+        framework: 'angular',
+      });
+    });
+
+    it('does not track when the already active framework is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <Providers>
+          <FrameworkToggle />
+        </Providers>,
+      );
+
+      await user.click(screen.getByRole('button', { name: /JavaScript/i }));
+
+      expect(gtagSpy).not.toHaveBeenCalled();
+    });
   });
 });

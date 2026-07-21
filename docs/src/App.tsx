@@ -8,6 +8,8 @@ import { MigrationPage } from "./pages/MigrationPage";
 import { MigrationReferencePage } from "./pages/MigrationReferencePage";
 import ChangelogPage from "./pages/ChangelogPage";
 import { PageTransition } from "./components/common/PageTransition";
+import { usePageTracking } from "./hooks/usePageTracking";
+import { useOutboundLinkTracking } from "./hooks/useOutboundLinkTracking";
 
 // Tools moved into the general docs page; keep old /tools links working.
 const ToolsRedirect = () => {
@@ -142,6 +144,12 @@ const ScrollHandler = () => {
 
 const App = () => {
   const location = useLocation();
+
+  // Analytics: gtag is loaded in index.html with automatic page views off, so
+  // these two hooks are the site's only sources of page views and outbound
+  // link clicks.
+  usePageTracking();
+  useOutboundLinkTracking();
 
   // Take manual control of scroll restoration; we restore it ourselves in
   // ScrollHandler because native restoration is unreliable with progressively

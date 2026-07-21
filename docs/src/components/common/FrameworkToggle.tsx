@@ -5,6 +5,7 @@ import {
   type Framework,
 } from '../../contexts/FrameworkContext';
 import { cn } from '@/lib/utils';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics';
 
 /** Monochrome brand marks (simple-icons), drawn in `currentColor`. */
 const markProps = {
@@ -74,6 +75,14 @@ export const FrameworkToggle: React.FC = () => {
   const { t } = useI18n();
   const selectedIndex = FRAMEWORK_IDS.indexOf(framework);
 
+  const handleSelect = (next: Framework) => {
+    // Clicking the active segment is a no-op, so it is not a selection.
+    if (next !== framework) {
+      trackEvent(ANALYTICS_EVENTS.selectFramework, { framework: next });
+    }
+    setFramework(next);
+  };
+
   return (
     <div data-blok-testid="framework-toggle">
       <div className="mb-2 flex items-baseline justify-between gap-2 px-4">
@@ -110,7 +119,7 @@ export const FrameworkToggle: React.FC = () => {
                   : 'text-muted-foreground hover:text-foreground',
               )}
               style={isActive ? { color: meta.color } : undefined}
-              onClick={() => setFramework(meta.id)}
+              onClick={() => handleSelect(meta.id)}
               aria-pressed={isActive}
               aria-label={`${t('frameworkToggle.switchAriaPrefix')} ${meta.label}`}
               title={meta.label}

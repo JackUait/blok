@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { useI18n } from '../../contexts/I18nContext';
 import {
@@ -180,6 +181,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ left: false, right: false });
 
+  const hasPackageManagerToggle = Boolean(showPackageManagerToggle && packageName);
+
   // Compute the display code based on package manager selection
   const displayCode =
     showPackageManagerToggle && packageName
@@ -278,6 +281,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      trackEvent(ANALYTICS_EVENTS.copyCode, {
+        language,
+        // Only meaningful when the install-command toggle is on screen; omitted
+        // (dropped by trackEvent) for plain code blocks.
+        package_manager: hasPackageManagerToggle ? packageManager : undefined,
+      });
     }
   };
 

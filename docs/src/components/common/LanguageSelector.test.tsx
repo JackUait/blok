@@ -8,15 +8,24 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   <I18nProvider>{children}</I18nProvider>
 );
 
+type GtagWindow = Window & typeof globalThis & { gtag?: (...args: unknown[]) => void };
+
+const gtagWindow = window as GtagWindow;
+
 describe('LanguageSelector', () => {
+  let gtagSpy: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    gtagSpy = vi.fn();
+    gtagWindow.gtag = gtagSpy;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    delete gtagWindow.gtag;
   });
 
   it('should render language selector trigger', () => {
@@ -98,5 +107,27 @@ describe('LanguageSelector', () => {
     
     const englishOption = screen.getByRole('option', { name: /English/i });
     expect(englishOption).toHaveAttribute('aria-selected', 'true');
+  });
+
+  describe('analytics', () => {
+    it('should track the newly selected locale', () => {
+      render(<LanguageSelector />, { wrapper });
+
+      fireEvent.click(screen.getByRole('button', { expanded: false }));
+      fireEvent.click(screen.getByRole('option', { name: /Русский/i }));
+
+      expect(gtagSpy).toHaveBeenCalledWith('event', 'select_language', {
+        locale: 'ru',
+      });
+    });
+
+    it('should not track when the already active locale is re-selected', () => {
+      render(<LanguageSelector />, { wrapper });
+
+      fireEvent.click(screen.getByRole('button', { expanded: false }));
+      fireEvent.click(screen.getByRole('option', { name: /English/i }));
+
+      expect(gtagSpy).not.toHaveBeenCalled();
+    });
   });
 });

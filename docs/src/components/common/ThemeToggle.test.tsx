@@ -19,13 +19,22 @@ vi.mock('@/hooks/useTheme', () => ({
 // Import after mock
 import { useTheme } from '@/hooks/useTheme';
 
+type GtagWindow = Window & typeof globalThis & { gtag?: (...args: unknown[]) => void };
+
+const gtagWindow = window as GtagWindow;
+
 describe('ThemeToggle', () => {
+  let gtagSpy: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    gtagSpy = vi.fn();
+    gtagWindow.gtag = gtagSpy;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    delete gtagWindow.gtag;
   });
 
   describe('basic rendering', () => {
@@ -81,6 +90,70 @@ describe('ThemeToggle', () => {
 
       expect(mockToggleTheme).toHaveBeenCalledTimes(1);
       expect(button).toBeEnabled();
+    });
+  });
+
+  describe('analytics', () => {
+    it('should track the theme being switched to when toggling from light', () => {
+      vi.mocked(useTheme).mockReturnValue({
+        theme: 'light' as const,
+        resolvedTheme: 'light' as const,
+        setTheme: vi.fn(),
+        toggleTheme: mockToggleTheme,
+      });
+
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button'));
+
+      expect(gtagSpy).toHaveBeenCalledWith('event', 'toggle_theme', {
+        theme: 'dark',
+      });
+    });
+
+    it('should track the theme being switched to when toggling from dark', () => {
+      vi.mocked(useTheme).mockReturnValue({
+        theme: 'dark' as const,
+        resolvedTheme: 'dark' as const,
+        setTheme: vi.fn(),
+        toggleTheme: mockToggleTheme,
+      });
+
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button'));
+
+      expect(gtagSpy).toHaveBeenCalledWith('event', 'toggle_theme', {
+        theme: 'light',
+      });
+    });
+
+    it('should still toggle the theme when analytics is unavailable', () => {
+      delete gtagWindow.gtag;
+      vi.mocked(useTheme).mockReturnValue({
+        theme: 'light' as const,
+        resolvedTheme: 'light' as const,
+        setTheme: vi.fn(),
+        toggleTheme: mockToggleTheme,
+      });
+
+      render(
+        <I18nProvider>
+          <ThemeToggle />
+        </I18nProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button'));
+
+      expect(mockToggleTheme).toHaveBeenCalledTimes(1);
     });
   });
 

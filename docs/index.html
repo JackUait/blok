@@ -33,6 +33,30 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/android-chrome-192x192.png">
     <link rel="manifest" href="/site.webmanifest">
     <script>
+      // Keep local development out of the production property. This is gtag's
+      // official opt-out flag, so it must be set BEFORE the loader below runs;
+      // the tag still loads, it just stops sending. To check analytics locally,
+      // set window['ga-disable-G-P4F8SK0C03'] = false in the console.
+      if (['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+        window['ga-disable-G-P4F8SK0C03'] = true;
+      }
+    </script>
+    <!-- Google tag (gtag.js).
+         No integrity hash on purpose: gtag.js is a mutable endpoint Google
+         redeploys continuously, so any pinned SHA would break analytics for
+         every visitor on their next release. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-P4F8SK0C03"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      // send_page_view: false — this is a single-page app, so the router sends
+      // page views itself (src/hooks/usePageTracking.ts). Leaving the automatic
+      // one on would record only the entry URL and double-count it.
+      gtag('config', 'G-P4F8SK0C03', { send_page_view: false });
+    </script>
+    <script>
       // Immediately apply theme before page renders to prevent flash
       (function() {
         const STORAGE_KEY = 'blok-docs-theme';

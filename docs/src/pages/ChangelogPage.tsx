@@ -10,6 +10,7 @@ import { Typo } from "../components/common/Typo";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 // Category icons as SVG components - refined strokes
 const Icons = {
@@ -355,6 +356,12 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                       className="font-display text-2xl font-extrabold tracking-tight text-foreground transition-colors hover:text-primary"
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() =>
+                        trackEvent(ANALYTICS_EVENTS.changelogVersionOpen, {
+                          version: release.version,
+                          release_type: release.releaseType,
+                        })
+                      }
                     >
                       v{release.version}
                     </a>

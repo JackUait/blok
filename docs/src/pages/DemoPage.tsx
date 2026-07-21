@@ -11,6 +11,12 @@ import { ShortcutKeys } from '../components/common/KeyIcon';
 import { Typo } from '../components/common/Typo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics';
+
+/** Every playground control reports under one event, keyed by `action`. */
+const trackDemoAction = (action: string): void => {
+  trackEvent(ANALYTICS_EVENTS.demoAction, { action });
+};
 
 interface BlokEditor {
   save: () => Promise<unknown>;
@@ -46,9 +52,11 @@ function useDemoEditor() {
 
   const handleEditorReady = useCallback((editor: BlokEditor) => {
     editorRef.current = editor;
+    trackEvent(ANALYTICS_EVENTS.demoEditorReady);
   }, []);
 
   const handleSave = useCallback(async () => {
+    trackDemoAction('save');
     if (editorRef.current) {
       const data = await editorRef.current.save();
       setOutput(JSON.stringify(data, null, 2));
@@ -57,6 +65,7 @@ function useDemoEditor() {
   }, []);
 
   const handleClear = useCallback(async () => {
+    trackDemoAction('clear');
     if (editorRef.current) {
       await editorRef.current.clear();
       setOutput(t('demo.editorCleared'));
@@ -64,12 +73,14 @@ function useDemoEditor() {
   }, [t]);
 
   const handleUndo = useCallback(async () => {
+    trackDemoAction('undo');
     if (editorRef.current) {
       await editorRef.current.undo();
     }
   }, []);
 
   const handleRedo = useCallback(async () => {
+    trackDemoAction('redo');
     if (editorRef.current) {
       await editorRef.current.redo();
     }
@@ -173,7 +184,10 @@ const EditorCard: React.FC = () => {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => setShowOutput(false)}
+                    onClick={() => {
+                      trackDemoAction('close_output');
+                      setShowOutput(false);
+                    }}
                     title={t('demo.closeOutputTitle')}
                     aria-label={t('demo.closeOutputAriaLabel')}
                   >
@@ -280,10 +294,32 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
 export const DemoPage: React.FC = () => {
   const { t } = useI18n();
   const [editorSettings, setEditorSettings] = useState(loadEditorSettings);
+  // Mirrors the live settings so a change can be reported by name without
+  // running the diff inside a state updater (React re-invokes those).
+  const settingsRef = useRef(editorSettings);
 
   const handleSettingsChange = useCallback((settings: EditorSettings) => {
+    const previous = settingsRef.current;
+    const changed = (Object.keys(settings) as (keyof EditorSettings)[]).find(
+      (key) => previous[key] !== settings[key]
+    );
+
+    if (changed !== undefined) {
+      trackEvent(ANALYTICS_EVENTS.demoAction, {
+        action: 'change_setting',
+        setting: changed,
+        // The placeholder is free-form user text — report that it changed, never what to.
+        value: changed === 'placeholder' ? undefined : String(settings[changed]),
+      });
+    }
+
+    settingsRef.current = settings;
     setEditorSettings(settings);
     saveEditorSettings(settings);
+  }, []);
+
+  const handleEditorReady = useCallback(() => {
+    trackEvent(ANALYTICS_EVENTS.demoEditorReady);
   }, []);
 
   return (
@@ -304,7 +340,7 @@ export const DemoPage: React.FC = () => {
             data-blok-testid="demo-editor-container"
           >
             <div className="mx-auto w-full max-w-6xl px-6">
-              <EditorWrapper settings={editorSettings} />
+              <EditorWrapper settings={editorSettings} onEditorReady={handleEditorReady} />
             </div>
           </div>
           <SettingsPanel settings={editorSettings} onSettingsChange={handleSettingsChange} />

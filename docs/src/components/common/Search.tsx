@@ -13,6 +13,7 @@ import { ModuleIcon } from "./ModuleIcon";
 import { KindIcon } from "./KindIcon";
 import { Typo } from "./Typo";
 import { useI18n } from "../../contexts/I18nContext";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 interface SearchProps {
@@ -194,6 +195,13 @@ export const Search: React.FC<SearchProps> = ({
     if (open && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [open]);
+
+  // Analytics: one open event per open, not per render.
+  useEffect(() => {
+    if (!open) return;
+
+    trackEvent(ANALYTICS_EVENTS.searchOpen);
   }, [open]);
 
   // A11y: while open, hide the rest of the page from assistive tech and
@@ -408,16 +416,39 @@ export const Search: React.FC<SearchProps> = ({
 
     setResults(orderedResults);
     setSelectedIndex(0);
+
+    // Analytics fires on the SETTLED query only — this effect is keyed on the
+    // debounced value, so a burst of keystrokes reports one search, not one per
+    // character.
+    const normalizedQuery = debouncedQuery.trim().toLowerCase();
+
+    trackEvent(ANALYTICS_EVENTS.searchQuery, {
+      query: normalizedQuery,
+      results_count: orderedResults.length,
+    });
+
+    if (orderedResults.length === 0) {
+      trackEvent(ANALYTICS_EVENTS.searchNoResults, { query: normalizedQuery });
+    }
   }, [debouncedQuery]);
 
-  // Handle result click
+  // Handle result selection — the single path for both mouse click and the
+  // Enter key, so analytics can't drift between the two.
   const handleResultClick = useCallback(
-    (result: SearchResult) => {
+    (result: SearchResult, index: number) => {
+      trackEvent(ANALYTICS_EVENTS.searchResultSelect, {
+        query: debouncedQuery.trim().toLowerCase(),
+        result_title: result.title,
+        result_path: result.path,
+        result_module: result.module,
+        result_index: index,
+      });
+
       const url = result.hash ? `${result.path}#${result.hash}` : result.path;
       navigate(url);
       handleClose();
     },
-    [navigate, handleClose],
+    [navigate, handleClose, debouncedQuery],
   );
 
   // Handle keyboard navigation within results
@@ -453,7 +484,7 @@ export const Search: React.FC<SearchProps> = ({
         case "Enter":
           e.preventDefault();
           if (results[selectedIndex]) {
-            handleResultClick(results[selectedIndex]);
+            handleResultClick(results[selectedIndex], selectedIndex);
           }
           break;
       }
@@ -858,7 +889,7 @@ export const Search: React.FC<SearchProps> = ({
                               ? "bg-secondary"
                               : "hover:bg-secondary/60",
                           )}
-                          onClick={() => handleResultClick(result)}
+                          onClick={() => handleResultClick(result, index)}
                           type="button"
                           onMouseEnter={() => {
                             if (!isKeyboardNavMode) {

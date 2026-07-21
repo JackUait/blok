@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18n } from '../../contexts/I18nContext';
 import { cn } from "@/lib/utils";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 export type PackageManager = "yarn" | "npm" | "bun";
 
@@ -17,6 +18,10 @@ export const PackageManagerToggle: React.FC<PackageManagerToggleProps> = ({
   const { t } = useI18n();
 
   const handleClick = (manager: PackageManager) => {
+    // Re-clicking the active segment changes nothing, so it is not a selection.
+    if (manager !== selected) {
+      trackEvent(ANALYTICS_EVENTS.selectPackageManager, { manager });
+    }
     setSelected(manager);
     onChange?.(manager);
   };

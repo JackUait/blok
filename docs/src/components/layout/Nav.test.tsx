@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Nav } from './Nav';
@@ -27,10 +27,18 @@ const TestWrapper: React.FC<{ children: React.ReactNode; initialPath?: string }>
   </MemoryRouter>
 );
 
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
 describe('Nav', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    (window as GtagWindow).gtag = vi.fn();
+  });
+
+  afterEach(() => {
+    delete (window as GtagWindow).gtag;
+    vi.restoreAllMocks();
   });
 
   it('should render a nav element', () => {
@@ -207,6 +215,83 @@ describe('Nav', () => {
       </TestWrapper>
     );
     expect(screen.getByLabelText('Поиск (⌘K)')).toBeInTheDocument();
+  });
+
+  describe('analytics', () => {
+    const gtagCalls = (): unknown[][] => {
+      const gtag = (window as GtagWindow).gtag;
+      if (!vi.isMockFunction(gtag)) {
+        throw new Error('window.gtag is not stubbed');
+      }
+      return gtag.mock.calls;
+    };
+
+    it('tracks a nav_link_click when an internal menu link is clicked', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      fireEvent.click(screen.getByLabelText('Toggle menu'));
+      fireEvent.click(screen.getByRole('link', { name: 'Docs' }));
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'nav_link_click',
+        { label: 'Docs', to: '/docs' },
+      ]);
+    });
+
+    it('reports the destination of each internal link it tracks', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      fireEvent.click(screen.getByLabelText('Toggle menu'));
+      fireEvent.click(screen.getByRole('link', { name: 'Migration' }));
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'nav_link_click',
+        { label: 'Migration', to: '/migration' },
+      ]);
+    });
+
+    it('does not track external links (covered by the global outbound tracker)', () => {
+      render(
+        <TestWrapper>
+          <Nav links={mockLinks} />
+        </TestWrapper>
+      );
+
+      fireEvent.click(screen.getByLabelText('Toggle menu'));
+      fireEvent.click(screen.getByRole('link', { name: 'External' }));
+
+      const navEvents = gtagCalls().filter((call) => call[1] === 'nav_link_click');
+      expect(navEvents).toHaveLength(0);
+    });
+
+    it('uses the stable link label, not the translated one, as the analytics label', () => {
+      localStorage.setItem('blok-docs-locale', 'ru');
+
+      render(
+        <TestWrapper>
+          <Nav links={mockLinksWithI18nKeys} />
+        </TestWrapper>
+      );
+
+      fireEvent.click(screen.getByLabelText('Открыть меню навигации'));
+      fireEvent.click(screen.getByRole('link', { name: 'Документация' }));
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'nav_link_click',
+        { label: 'Docs', to: '/docs' },
+      ]);
+    });
   });
 
   describe('skip to content link', () => {

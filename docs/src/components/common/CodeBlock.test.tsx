@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { CodeBlock } from './CodeBlock';
 import { I18nProvider } from '../../contexts/I18nContext';
+import { ANALYTICS_EVENTS } from '@/lib/analytics';
 
 const {
   mockCodeToHtml,
@@ -36,9 +37,28 @@ vi.mock('shiki', () => ({
 const renderWithI18n = (ui: React.ReactElement) =>
   render(<I18nProvider>{ui}</I18nProvider>);
 
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
+const gtagMock = vi.fn();
+
+/** Install a clipboard whose writeText resolves (success) or rejects (failure). */
+const stubClipboard = (behavior: 'success' | 'failure'): void => {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      writeText: vi.fn(() =>
+        behavior === 'success'
+          ? Promise.resolve()
+          : Promise.reject(new Error('denied'))
+      ),
+    },
+  });
+};
+
 describe('CodeBlock', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (window as GtagWindow).gtag = gtagMock;
     mockCreateHighlighter.mockResolvedValue({
       codeToHtml: mockCodeToHtml,
       getLoadedLanguages: mockGetLoadedLanguages,
@@ -48,6 +68,8 @@ describe('CodeBlock', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    delete (window as GtagWindow).gtag;
+    Reflect.deleteProperty(navigator, 'clipboard');
   });
 
   // This test must run first - before the highlighter singleton is populated
@@ -165,6 +187,60 @@ describe('CodeBlock', () => {
     await waitFor(() => {
       expect(mockCodeToHtml).toHaveBeenCalledWith(
         'yarn add @bloklabs/core',
+        expect.anything()
+      );
+    });
+  });
+
+  describe('analytics', () => {
+    it('tracks a copy_code event with the language on a successful copy', async () => {
+      stubClipboard('success');
+      renderWithI18n(<CodeBlock code="const x = 1;" language="typescript" />);
+
+      fireEvent.click(screen.getByTestId('code-copy-button'));
+
+      await waitFor(() => {
+        expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
+          language: 'typescript',
+        });
+      });
+    });
+
+    it('includes the selected package manager when the toggle is shown', async () => {
+      stubClipboard('success');
+      renderWithI18n(
+        <CodeBlock
+          code="irrelevant"
+          language="bash"
+          showPackageManagerToggle
+          packageName="@bloklabs/core"
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('code-copy-button'));
+
+      await waitFor(() => {
+        expect(gtagMock).toHaveBeenCalledWith('event', ANALYTICS_EVENTS.copyCode, {
+          language: 'bash',
+          package_manager: 'yarn',
+        });
+      });
+    });
+
+    it('does not track a copy_code event when the copy fails', async () => {
+      stubClipboard('failure');
+      renderWithI18n(<CodeBlock code="const x = 1;" language="typescript" />);
+
+      fireEvent.click(screen.getByTestId('code-copy-button'));
+
+      // Let the rejected writeText + the sync fallback settle before asserting.
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(gtagMock).not.toHaveBeenCalledWith(
+        'event',
+        ANALYTICS_EVENTS.copyCode,
         expect.anything()
       );
     });

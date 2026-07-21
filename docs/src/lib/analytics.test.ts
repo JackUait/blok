@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -139,31 +139,50 @@ describe("analytics", () => {
   // LAW: the gtag loader lives in index.html because it must run before the
   // React bundle. If the snippet, the measurement id, or the manual page_view
   // wiring is dropped, every event above silently no-ops in production.
-  describe("index.html gtag snippet", () => {
-    const html = readFileSync(
-      resolve(
-        dirname(fileURLToPath(import.meta.url)),
-        "..",
-        "..",
-        "index.html",
-      ),
-      "utf-8",
-    );
+  describe("gtag loader snippet", () => {
+    // The loader must run before the app bundle, so it lives in whichever file
+    // owns the document <head>. That file depends on how the app is built:
+    // a Vite SPA uses index.html, React Router framework mode uses root.tsx.
+    // Resolve it by content rather than by name so a migration between the two
+    // can't silently drop the tag and leave this suite passing against a stale
+    // path.
+    const docsRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    const LOADER_URL = "https://www.googletagmanager.com/gtag/js";
+
+    const hosts = ["index.html", "src/root.tsx"]
+      .map((relative) => resolve(docsRoot, relative))
+      .filter((path) => existsSync(path))
+      .map((path) => ({ path, source: readFileSync(path, "utf-8") }))
+      .filter(({ source }) => source.includes(LOADER_URL));
+
+    it("has exactly one file loading gtag.js", () => {
+      // Two would load the tag twice and double-count every event — the likely
+      // failure mode midway through an entry-point migration.
+      expect(hosts.map(({ path }) => path)).toHaveLength(1);
+    });
 
     it("loads the gtag.js library for the configured measurement id", () => {
-      expect(html).toContain(
-        `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`,
-      );
-      expect(html).toContain(`gtag('config', '${GA_MEASUREMENT_ID}'`);
+      const [{ source }] = hosts;
+
+      // The id may be inlined (index.html) or interpolated from a local
+      // constant (root.tsx), so assert the id is declared and that the loader
+      // URL and config call are both present, rather than pinning one spelling.
+      expect(source).toContain(GA_MEASUREMENT_ID);
+      expect(source).toContain(`${LOADER_URL}?id=`);
+      expect(source).toContain("gtag('config'");
     });
 
     it("disables automatic page_view so the SPA router owns them", () => {
-      expect(html).toContain("send_page_view: false");
+      const [{ source }] = hosts;
+
+      expect(source).toContain("send_page_view: false");
     });
 
     it("opts localhost out so dev traffic never reaches the property", () => {
-      expect(html).toContain(`ga-disable-${GA_MEASUREMENT_ID}`);
-      expect(html).toContain("localhost");
+      const [{ source }] = hosts;
+
+      expect(source).toContain(`ga-disable-${GA_MEASUREMENT_ID}`);
+      expect(source).toContain("localhost");
     });
   });
 });

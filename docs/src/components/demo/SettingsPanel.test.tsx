@@ -21,16 +21,25 @@ function openPanel() {
   fireEvent.click(screen.getByRole('button', { name: 'Open editor settings' }));
 }
 
+type GtagWindow = Window & typeof globalThis & { gtag?: (...args: unknown[]) => void };
+
+const gtagWindow = window as GtagWindow;
+
 describe('SettingsPanel', () => {
+  let gtagSpy: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
+    gtagSpy = vi.fn();
+    gtagWindow.gtag = gtagSpy;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     document.documentElement.removeAttribute('data-theme');
+    delete gtagWindow.gtag;
   });
 
   describe('edge tab', () => {
@@ -299,6 +308,54 @@ describe('SettingsPanel', () => {
       const active = screen.getByRole('radio', { name: 'Narrow' });
       expect(active.className).not.toContain('bg-foreground');
       expect(active.className).toContain('text-background');
+    });
+  });
+
+  describe('analytics', () => {
+    it('tracks the theme switch with the demo settings source', () => {
+      renderPanel();
+
+      openPanel();
+      fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+
+      expect(gtagSpy).toHaveBeenCalledWith('event', 'toggle_theme', {
+        theme: 'dark',
+        source: 'demo_settings',
+      });
+    });
+
+    it('tracks switching back to light', () => {
+      renderPanel();
+
+      openPanel();
+      fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+      gtagSpy.mockClear();
+      fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
+
+      expect(gtagSpy).toHaveBeenCalledWith('event', 'toggle_theme', {
+        theme: 'light',
+        source: 'demo_settings',
+      });
+    });
+
+    it('fires nothing when the already-active theme is chosen again', () => {
+      renderPanel();
+
+      openPanel();
+      // The site starts on the light theme, so this is a no-op choice.
+      fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
+
+      expect(gtagSpy).not.toHaveBeenCalledWith('event', 'toggle_theme', expect.anything());
+    });
+
+    it('still applies the theme when analytics is unavailable', () => {
+      delete gtagWindow.gtag;
+      renderPanel();
+
+      openPanel();
+      fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+
+      expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     });
   });
 

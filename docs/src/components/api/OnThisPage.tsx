@@ -4,6 +4,12 @@ import { Typo } from '../common/Typo';
 import { useI18n } from '../../contexts/I18nContext';
 import type { ApiSection } from './api-data';
 import { generateMethodId, generatePropertyId, generateOptionId } from './api-anchors';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics';
+
+/** Hash-only jumps are invisible to page-view tracking, so record them here. */
+const trackSectionJump = (sectionId: string, surface: 'rail' | 'dropdown'): void => {
+  trackEvent(ANALYTICS_EVENTS.docsSectionJump, { section_id: sectionId, surface });
+};
 
 export interface OnThisPageItem {
   id: string;
@@ -62,6 +68,7 @@ export const OnThisPage: React.FC<{ section: ApiSection }> = ({ section }) => {
           <li key={it.id}>
             <a
               href={`#${it.id}`}
+              onClick={() => trackSectionJump(it.id, 'rail')}
               className={cn(
                 '-ml-px block border-l-2 border-transparent py-1 pl-3 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground',
                 activeId === it.id && 'border-primary font-semibold text-foreground',
@@ -166,7 +173,10 @@ export const OnThisPageDropdown: React.FC<{ section: ApiSection }> = ({ section 
                 href={`#${it.id}`}
                 role="option"
                 aria-selected={isActive}
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  trackSectionJump(it.id, 'dropdown');
+                  setIsOpen(false);
+                }}
                 className={cn(
                   'flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left font-mono text-sm transition-colors hover:bg-secondary',
                   isActive ? 'bg-secondary font-semibold text-foreground' : 'text-muted-foreground',

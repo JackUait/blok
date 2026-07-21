@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { FrameworkCards } from './FrameworkCards';
@@ -152,5 +152,63 @@ describe('FrameworkCards', () => {
     // description is, so assert the section still mounts under ru.
     expect(screen.getByTestId('frameworks-section')).toBeInTheDocument();
     expect(screen.getByText('React')).toBeInTheDocument();
+  });
+
+  // Expanding a row never changes the route, so the global page-view tracking
+  // cannot see it — it needs its own event.
+  describe('analytics', () => {
+    const gtagHost = (): Window & { gtag?: unknown } => window;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      gtagHost().gtag = vi.fn();
+    });
+
+    afterEach(() => {
+      delete gtagHost().gtag;
+      vi.restoreAllMocks();
+    });
+
+    const gtagCalls = (): unknown[][] => {
+      const gtag = gtagHost().gtag;
+      if (!vi.isMockFunction(gtag)) {
+        throw new Error('window.gtag was not stubbed');
+      }
+      return gtag.mock.calls;
+    };
+
+    // Scoped to the row so the trigger lookup stays cheap — an unscoped
+    // name-regex query over this whole accordion is what makes the slower tests
+    // in this file brush the default timeout.
+    const triggerIn = (id: string): HTMLElement =>
+      within(screen.getByTestId(`framework-card-${id}`)).getByRole('button', {
+        expanded: false,
+      });
+
+    it('reports the framework id when a row is expanded', () => {
+      renderCards();
+
+      fireEvent.click(triggerIn('react'));
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'framework_card_expand',
+        { framework: 'react' },
+      ]);
+    });
+
+    // Collapsing is not interest — it must stay silent, otherwise every open row
+    // is counted twice and the report reads as double the real engagement.
+    it('reports nothing when a row is collapsed again', () => {
+      renderCards();
+      const trigger = triggerIn('vue');
+
+      fireEvent.click(trigger);
+      expect(gtagCalls()).toHaveLength(1);
+
+      fireEvent.click(trigger);
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      expect(gtagCalls()).toHaveLength(1);
+    });
   });
 });

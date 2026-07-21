@@ -105,13 +105,22 @@ export const ANALYTICS_EVENTS = {
   selectLanguage: "select_language",
   toggleTheme: "toggle_theme",
 
+  // In-page navigation. Jumping to a heading only changes the hash, which
+  // usePageTracking deliberately ignores, so without this the sections readers
+  // actually seek out on long docs pages are invisible.
+  docsSectionJump: "docs_section_jump",
+
+  // Home page engagement — neither of these changes the route, so no page view
+  // would otherwise record them.
+  featureModalOpen: "feature_modal_open",
+  frameworkCardExpand: "framework_card_expand",
+
   // Demo playground
   demoEditorReady: "demo_editor_ready",
   demoAction: "demo_action",
 
   // Long-form pages
   changelogVersionOpen: "changelog_version_open",
-  migrationStepView: "migration_step_view",
 } as const;
 
 export type AnalyticsEventName =

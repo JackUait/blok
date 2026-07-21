@@ -11,6 +11,7 @@ import { FeatureModal, type FeatureDetail } from "./FeatureModal";
 import { EMBED_SERVICES, type EmbedService } from "./embed-services";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 // Repo root = the @bloklabs/core package; its version is the build-time fallback
 // for the live npm lookup below (vite's server.fs.allow includes "..").
 import rootPkg from "../../../../package.json";
@@ -2397,6 +2398,11 @@ export const Features: React.FC = () => {
   const secondaryFeatures = FEATURES.filter((f) => f.tier !== "primary");
 
   const handleFeatureClick = (feature: FeatureDetail) => {
+    // Opening the drawer does not change the route, so the global page-view
+    // tracking never sees it. `accent` is the feature's stable key (it is also
+    // its React key and its entry in TILE) — the title is translated, so using
+    // it would split one feature across locales in the report.
+    trackEvent(ANALYTICS_EVENTS.featureModalOpen, { feature: feature.accent });
     setSelectedFeature(feature);
   };
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, within, act, fireEvent } from '@testing-library/react';
 import { Features, EMBED_ROWS, LANGUAGE_COUNT, pickLocaleIndex } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -510,5 +510,61 @@ describe('Features', () => {
     );
     expect(screen.queryByText('Почему Blok')).not.toBeInTheDocument();
     expect(screen.getByText('Типизированный JSON, не HTML')).toBeInTheDocument();
+  });
+
+  // Opening a feature drawer never changes the route, so the global page-view
+  // tracking cannot see it — it needs its own event.
+  describe('analytics', () => {
+    const gtagHost = (): Window & { gtag?: unknown } => window;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      gtagHost().gtag = vi.fn();
+    });
+
+    afterEach(() => {
+      delete gtagHost().gtag;
+      vi.restoreAllMocks();
+    });
+
+    const gtagCalls = (): unknown[][] => {
+      const gtag = gtagHost().gtag;
+      if (!vi.isMockFunction(gtag)) {
+        throw new Error('window.gtag was not stubbed');
+      }
+      return gtag.mock.calls;
+    };
+
+    it('reports opening a feature drawer', () => {
+      renderFeatures();
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Learn more about tables' })
+      );
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'feature_modal_open',
+        { feature: 'cyan' },
+      ]);
+    });
+
+    // The dimension must stay comparable across locales, so it carries the
+    // feature's stable key rather than its translated title.
+    it('keeps the feature dimension stable when the locale changes', () => {
+      localStorage.setItem('blok-docs-locale', 'ru');
+      renderFeatures();
+
+      // Russian UI — same feature, so the same identifier must be reported.
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Подробнее о чистом JSON' })
+      );
+
+      expect(gtagCalls()).toContainEqual([
+        'event',
+        'feature_modal_open',
+        { feature: 'coral' },
+      ]);
+    });
   });
 });

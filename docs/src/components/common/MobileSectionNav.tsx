@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
 import { cn } from '@/lib/utils';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics';
 import type { SidebarSection } from '../common/Sidebar';
 
 interface MobileSectionNavProps {
@@ -59,6 +60,11 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
 
   const handleLinkClick = (sectionId: string): void => {
     setIsOpen(false);
+    // Jumping sections only changes the hash, which page-view tracking ignores.
+    trackEvent(ANALYTICS_EVENTS.docsSectionJump, {
+      section_id: sectionId,
+      surface: 'mobile_nav',
+    });
     if (onNavigate) {
       onNavigate(sectionId);
       return;

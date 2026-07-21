@@ -5,6 +5,7 @@ import { Typo } from '../common/Typo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics';
 import { DEFAULT_EDITOR_SETTINGS, type EditorSettings } from './editor-settings';
 
 interface SettingsPanelProps {
@@ -99,6 +100,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
   const patch = (partial: Partial<EditorSettings>) =>
     onSettingsChange({ ...settings, ...partial });
 
+  // The site theme can also be changed from the nav toggle, so the event carries
+  // a `source` — re-picking the active option is not a theme change and is not
+  // reported, otherwise the counts inflate on idle clicks.
+  const handleThemeChange = (next: Theme) => {
+    if (next === theme) {
+      return;
+    }
+    trackEvent(ANALYTICS_EVENTS.toggleTheme, { theme: next, source: 'demo_settings' });
+    setTheme(next);
+  };
+
   useEffect(() => {
     if (!open) {
       return;
@@ -185,7 +197,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
             { value: 'light', label: t('demo.settings.themeLight') },
             { value: 'dark', label: t('demo.settings.themeDark') },
           ]}
-          onChange={value => setTheme(value as Theme)}
+          onChange={value => handleThemeChange(value as Theme)}
         />
         <Segmented
           label={t('demo.settings.widthLabel')}

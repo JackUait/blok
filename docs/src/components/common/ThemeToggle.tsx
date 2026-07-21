@@ -16,8 +16,11 @@ export const ThemeToggle: React.FC = () => {
 
   const handleClick = () => {
     // Report the theme the reader is moving TO — that is the choice being made.
+    // `source` separates this from the demo settings panel, which can change the
+    // site theme too; without it the totals silently merge two different flows.
     trackEvent(ANALYTICS_EVENTS.toggleTheme, {
       theme: theme === "dark" ? "light" : "dark",
+      source: "nav",
     });
     toggleTheme();
   };

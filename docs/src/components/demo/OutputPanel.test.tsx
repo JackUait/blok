@@ -1,12 +1,35 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act, fireEvent } from '@testing-library/react';
 import { OutputPanel } from './OutputPanel';
 import { I18nProvider } from '../../contexts/I18nContext';
 
+type GtagWindow = Window & typeof globalThis & { gtag?: (...args: unknown[]) => void };
+
+const gtagWindow = window as GtagWindow;
+
+/** Replace the clipboard API so a copy can be made to succeed or fail on demand. */
+const stubClipboard = (writeText: () => Promise<void>): void => {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText },
+    configurable: true,
+    writable: true,
+  });
+};
+
+const clickCopy = async (): Promise<void> => {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('output-copy'));
+  });
+};
+
 describe('OutputPanel', () => {
+  let gtagSpy: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    gtagSpy = vi.fn();
+    gtagWindow.gtag = gtagSpy;
 
     // Mock the useCopyToClipboard hook
     vi.doMock('@/hooks/useCopyToClipboard', () => ({
@@ -19,6 +42,8 @@ describe('OutputPanel', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+    delete gtagWindow.gtag;
   });
 
   it('should render a div with output-panel class', () => {
@@ -103,6 +128,53 @@ describe('OutputPanel', () => {
     const copyButton = screen.getByTestId('output-copy');
     const copyText = within(copyButton).getByText('Copy');
     expect(copyText.tagName.toLowerCase()).toBe('span');
+  });
+
+  describe('analytics', () => {
+    it('tracks a successful copy of the JSON output', async () => {
+      stubClipboard(() => Promise.resolve());
+      render(<I18nProvider><OutputPanel output='{"key": "value"}' /></I18nProvider>);
+
+      await clickCopy();
+
+      expect(gtagSpy).toHaveBeenCalledWith('event', 'demo_action', {
+        action: 'copy_output',
+      });
+    });
+
+    it('fires nothing when the copy fails', async () => {
+      stubClipboard(() => Promise.reject(new Error('denied')));
+      Object.defineProperty(document, 'execCommand', {
+        value: () => false,
+        configurable: true,
+        writable: true,
+      });
+      render(<I18nProvider><OutputPanel output='{"key": "value"}' /></I18nProvider>);
+
+      await clickCopy();
+
+      expect(gtagSpy).not.toHaveBeenCalled();
+    });
+
+    it('fires nothing when there is no real output to copy', async () => {
+      stubClipboard(() => Promise.resolve());
+      render(<I18nProvider><OutputPanel output='Click "Get JSON" to see the output' /></I18nProvider>);
+
+      await clickCopy();
+
+      expect(gtagSpy).not.toHaveBeenCalled();
+    });
+
+    it('still copies when analytics is unavailable', async () => {
+      delete gtagWindow.gtag;
+      const writeText = vi.fn(() => Promise.resolve());
+      stubClipboard(writeText);
+      render(<I18nProvider><OutputPanel output='{"key": "value"}' /></I18nProvider>);
+
+      await clickCopy();
+
+      expect(writeText).toHaveBeenCalledWith('{"key": "value"}');
+    });
   });
 
   it('should show Copied! text when copied state is true', () => {

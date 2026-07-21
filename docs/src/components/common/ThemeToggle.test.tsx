@@ -112,6 +112,7 @@ describe('ThemeToggle', () => {
 
       expect(gtagSpy).toHaveBeenCalledWith('event', 'toggle_theme', {
         theme: 'dark',
+        source: 'nav',
       });
     });
 
@@ -133,6 +134,7 @@ describe('ThemeToggle', () => {
 
       expect(gtagSpy).toHaveBeenCalledWith('event', 'toggle_theme', {
         theme: 'light',
+        source: 'nav',
       });
     });
 

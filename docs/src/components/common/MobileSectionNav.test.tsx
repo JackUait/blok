@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MobileSectionNav } from './MobileSectionNav';
 import { I18nProvider } from '../../contexts/I18nContext';
@@ -18,9 +18,19 @@ const I18nWrapper = ({ children }: { children: React.ReactNode }) => (
   <I18nProvider>{children}</I18nProvider>
 );
 
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
+const gtagMock = vi.fn();
+
 describe('MobileSectionNav', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (window as GtagWindow).gtag = gtagMock;
+  });
+
+  afterEach(() => {
+    delete (window as GtagWindow).gtag;
+    vi.restoreAllMocks();
   });
 
   it('renders the trigger button', () => {
@@ -48,5 +58,19 @@ describe('MobileSectionNav', () => {
     fireEvent.click(screen.getByTestId('mobile-section-nav-trigger'));
     fireEvent.click(screen.getByTestId('mobile-section-nav-item-events-api'));
     expect(onNavigate).toHaveBeenCalledWith('events-api');
+  });
+
+  it('tracks a section jump when a dropdown item is chosen', () => {
+    render(<MobileSectionNav sections={MOCK_SECTIONS} activeSection="caret-api" />, {
+      wrapper: I18nWrapper,
+    });
+
+    fireEvent.click(screen.getByTestId('mobile-section-nav-trigger'));
+    fireEvent.click(screen.getByTestId('mobile-section-nav-item-events-api'));
+
+    expect(gtagMock).toHaveBeenCalledWith('event', 'docs_section_jump', {
+      section_id: 'events-api',
+      surface: 'mobile_nav',
+    });
   });
 });

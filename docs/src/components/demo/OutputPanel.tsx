@@ -3,6 +3,7 @@ import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
 import { cn } from "@/lib/utils";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 
 interface OutputPanelProps {
   output: string;
@@ -23,6 +24,7 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({ output }) => {
 
     const success = await copyToClipboard(output);
     if (success) {
+      trackEvent(ANALYTICS_EVENTS.demoAction, { action: 'copy_output' });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

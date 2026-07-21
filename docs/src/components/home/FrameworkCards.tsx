@@ -4,6 +4,7 @@ import { CodeBlock } from "../common/CodeBlock";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
 import { cn } from "@/lib/utils";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
 import { BLOK_VERSION } from "../../utils/constants";
 // Official brand artwork (devicon), used verbatim as image assets.
 import typescriptLogo from "../../assets/logos/typescript.svg";
@@ -245,6 +246,14 @@ export const FrameworkCards: React.FC = () => {
   );
 
   const toggle = (id: FrameworkEntry["id"]): void => {
+    // Expanding a row is the interest signal and never changes the route, so it
+    // needs its own event; collapsing is not interest and stays silent. The
+    // check reads the rendered state rather than sitting inside the updater
+    // below, which React may invoke more than once per click.
+    if (!openIds.has(id)) {
+      trackEvent(ANALYTICS_EVENTS.frameworkCardExpand, { framework: id });
+    }
+
     setOpenIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {

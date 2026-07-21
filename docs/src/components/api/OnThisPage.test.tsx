@@ -1,15 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { OnThisPage, OnThisPageDropdown, getOnThisPageItems } from './OnThisPage';
 import type { ApiSection } from './api-data';
 
+type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
+const gtagMock = vi.fn();
+
 beforeEach(() => {
   vi.clearAllMocks();
+  (window as GtagWindow).gtag = gtagMock;
   // jsdom lacks IntersectionObserver
   vi.stubGlobal('IntersectionObserver', class {
     observe() {} unobserve() {} disconnect() {}
   });
+});
+
+afterEach(() => {
+  delete (window as GtagWindow).gtag;
+  vi.restoreAllMocks();
 });
 
 const section: ApiSection = {
@@ -44,6 +54,17 @@ describe('OnThisPage', () => {
   it('contains scroll within the panel so it does not chain to the page', () => {
     render(<I18nProvider><OnThisPage section={section} /></I18nProvider>);
     expect(screen.getByTestId('on-this-page')).toHaveClass('overscroll-contain');
+  });
+
+  it('tracks a section jump with the raw anchor id when a rail link is clicked', () => {
+    render(<I18nProvider><OnThisPage section={section} /></I18nProvider>);
+
+    fireEvent.click(screen.getByRole('link', { name: 'setToBlock(index)' }));
+
+    expect(gtagMock).toHaveBeenCalledWith('event', 'docs_section_jump', {
+      section_id: 'caret-api-settoblock',
+      surface: 'rail',
+    });
   });
 });
 
@@ -81,5 +102,17 @@ describe('OnThisPageDropdown', () => {
       <I18nProvider><OnThisPageDropdown section={{ id: 'x', title: 'X' } as ApiSection} /></I18nProvider>,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('tracks a section jump tagged as the dropdown surface', () => {
+    render(<I18nProvider><OnThisPageDropdown section={section} /></I18nProvider>);
+
+    fireEvent.click(screen.getByTestId('on-this-page-dropdown-trigger'));
+    fireEvent.click(screen.getByRole('option', { name: 'setToBlock(index)' }));
+
+    expect(gtagMock).toHaveBeenCalledWith('event', 'docs_section_jump', {
+      section_id: 'caret-api-settoblock',
+      surface: 'dropdown',
+    });
   });
 });

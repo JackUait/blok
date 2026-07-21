@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0](https://github.com/JackUait/blok/compare/v1.2.6...v1.3.0) (2026-07-21)
+
+### Features
+
+- **API** — New public `editor.tokens` getter/setter for runtime `--blok-*` theme tokens, with replace semantics and pre-ready buffering (like `theme`/`width`/`placeholder`). Wired reactively through all three adapters: React `style.tokens`, Vue `style.tokens`, Angular `[styleTokens]`. `--blok-content-max-width` is now honored by database centring and toolbar control placement.
+- **Tools** — Custom-tool authoring fixes: `tools.update(name, { toolbox })` now flips a tool's toolbox entry at runtime (permission-style insert gating no longer requires recreating the editor), including its insertion shortcut; React `createReactBlock` accepts a `viewComponent` rendered while the editor is read-only; React toolbox icons may be React elements; `commit()` echo idempotency is now a documented public contract.
+- **Embed** — Google Docs/Sheets/Slides/Forms/Drive embeds render at a user-adjustable pixel height with a bottom resize handle (200–2000px), persisted to `data.height`. Aspect-ratio media providers (YouTube, Vimeo, …) are unchanged.
+
+### Bug Fixes
+
+- **CDN bundles** — `dist/blok.iife.js` and `dist/blok.umd.js` shipped **zero** generated Tailwind utilities since the v3→v4 migration, so every unpkg/jsDelivr consumer loaded an unstyled editor. Both configs now run the Tailwind plugin (+34KB gzip each), guarded by a dist-level assertion.
+- **Adapters** — Five root causes from a downstream audit: a stale controlled-`data` echo no longer clobbers the caret (bounded echo window instead of last-payload-only dedup); `equalsOutputData` compares block ids only when both sides carry one; React inline tools accept a `titleKey` for localization; the zero-specificity gutter default is a test-enforced public contract.
+- **Dependencies** — Seven phantom dependencies (bare imports resolving only via hoisting, including `@testing-library/jest-dom` used by the global unit setup) are now declared, with a law test preventing new ones.
+- **i18n** — Review passes completing Armenian, Croatian, Dhivehi, Filipino, Georgian, Gujarati, Hebrew, Hungarian, Indonesian, Japanese, Kannada and Khmer, plus tool interpolation variable forwarding.
+
+### Maintenance
+
+- Upgraded to Node 26, Angular 22 and TypeScript 6, then root-caused six defects the upgrade shipped green — most importantly the entire `unit-angular` vitest project loading zero tests (a fake green), and the docs test suite missing the Node 26 webstorage guard.
+- Local E2E suite runtime cut from ~47.5 min to ~10 min (parallel/skip-when-fresh `build:test`, shared page per worker), plus broad E2E stabilization.
+- Fixed ESLint cache poisoning that replayed stale errors in CI lint runs.
+
 ## [1.2.6](https://github.com/JackUait/blok/compare/v1.2.5...v1.2.6) (2026-07-20)
 
 ### Features

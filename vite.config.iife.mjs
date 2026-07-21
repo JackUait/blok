@@ -1,6 +1,7 @@
 // vite.config.iife.mjs
 import path from 'path';
 import { fileURLToPath } from 'url';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import scopeUtilitiesPlugin from './scripts/scope-utilities/vite-plugin-scope-utilities.mjs';
@@ -48,6 +49,13 @@ export default defineConfig(({ mode }) => {
 
     plugins: [
       jsonAsStringPlugin(),
+      // LOAD-BEARING: styles reach the bundle as a JS string
+      // (`main.css?inline` → UI.loadStyles), so nothing else compiles Tailwind.
+      // Without this the CDN bundle ships `@theme {...}` / `@tailwind
+      // utilities;` verbatim and renders completely unstyled. Must stay before
+      // scopeUtilitiesPlugin, which rewrites the generated utilities — same
+      // order as vite.config.mjs.
+      tailwindcss(),
       scopeUtilitiesPlugin(),
       cssInjectedByJsPlugin(),
     ],

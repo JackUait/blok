@@ -48,6 +48,19 @@ describe('Prism integration', () => {
     .map(l => l.id)
     .filter(id => HIGHLIGHTABLE_LANGUAGES.has(id) && id !== 'mermaid');
 
+  // Non-vacuity floor. `highlightableLangs` is an intersection of two constants;
+  // if either drifts (a renamed id, a filter that stops matching) the intersection
+  // becomes empty, `it.each` generates ZERO tests and this file still reports green
+  // because the sibling `returns null for plain text` test keeps the suite non-empty.
+  // The floor is deliberately well below the ~30 languages shipped today so adding
+  // or retiring one language does not break it — only a collapse does.
+  it('generates a case per highlightable language (guard: the list is not empty)', () => {
+    expect(
+      highlightableLangs.length,
+      'LANGUAGES x HIGHLIGHTABLE_LANGUAGES produced (almost) nothing — the per-language tokenization tests below silently stopped being generated'
+    ).toBeGreaterThan(20);
+  });
+
   it.each(highlightableLangs)('tokenizes %s with token spans', async (lang) => {
     const code = SNIPPETS[lang] ?? 'hello world test code 123';
     const result = await tokenizePrism(code, lang);

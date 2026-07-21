@@ -58,7 +58,22 @@ const extractImportMap = (html: string): Record<string, string> => {
 describe('React fixture import-map law', () => {
   // The adapter bundle is a build output; unit tests run after the build in CI
   // (the dist artifact is downloaded first) and after `yarn build` locally.
-  it.skipIf(!existsSync(adapterBundle))(
+  //
+  // This presence check is UNCONDITIONAL on purpose. It used to be an
+  // `it.skipIf(!existsSync(adapterBundle))` wrapped around the law below — which
+  // meant a missing bundle made the ONLY test in this file disappear and the file
+  // read as passed, so the law silently stopped guarding exactly when the build
+  // was broken. `test/unit/build/bundle-outputs.test.ts` already asserts the built
+  // react adapter unconditionally (`packages/react/dist/index.cjs`), so requiring a
+  // build here adds no new burden to a local run.
+  it('the built react adapter exists (unit tests run after the build)', () => {
+    expect(
+      existsSync(adapterBundle),
+      'packages/react/dist/index.mjs is missing — run `yarn build` first. Without it the import-map law below cannot run at all.'
+    ).toBe(true);
+  });
+
+  it(
     'every bare import of the built react adapter is mapped in every react fixture',
     () => {
       const bareImports = extractBareImports(readFileSync(adapterBundle, 'utf8'));

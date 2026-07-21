@@ -472,6 +472,21 @@ describe('locale values are translated (identical-to-en only when cognate)', () 
     ).toEqual([]);
   });
 
+  // Non-vacuity floor. `nonEnglish` comes from a directory scan whose entry filter
+  // swallows `statSync` errors, so a relocated/flattened locales tree yields `[]`
+  // and the per-locale `it.each` below generates ZERO tests. Unlike the
+  // completeness describe above (whose only member is an `it.each`, so Vitest
+  // fails it with "No test found in suite"), this describe has sibling tests that
+  // keep it non-empty — the disappearance would be completely silent.
+  // The floor is well under the ~70 locales shipped today: it catches a collapse,
+  // not the addition or removal of a single locale.
+  it('generates a case per non-English locale (guard: the scan is not empty)', () => {
+    expect(
+      nonEnglish.length,
+      `only ${nonEnglish.length} non-English locale(s) found under ${LOCALES_DIR} — the per-locale checks silently stopped being generated`
+    ).toBeGreaterThan(30);
+  });
+
   it.each(nonEnglish)(
     '%s has no unexpected identical-to-English values',
     locale => {

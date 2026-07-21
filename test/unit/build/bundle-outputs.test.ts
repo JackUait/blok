@@ -263,6 +263,42 @@ describe('UMD drop-in global output (Editor.js compatibility)', () => {
   })
 })
 
+describe('CDN bundles ship compiled Tailwind CSS', () => {
+  // CSS reaches every bundle as a JS string: src/components/modules/ui.ts does
+  // `import styles from '../../styles/main.css?inline'` and injects it as a
+  // single <style>. Only @tailwindcss/vite compiles that source. It lives in
+  // vite.config.mjs; for 3 months (iife) and 1 month (umd) it was missing from
+  // vite.config.iife.mjs / vite.config.umd.mjs, so those two CDN bundles shipped
+  // Tailwind v4 SOURCE SYNTAX verbatim to the browser — zero generated
+  // utilities, zero design tokens, a completely unstyled editor for every
+  // unpkg/jsDelivr consumer. Source-level laws cannot catch this (the source is
+  // fine); only a dist-level assertion can.
+  for (const bundle of ['blok.iife.js', 'blok.umd.js']) {
+    it(`${bundle} contains generated, scoped Tailwind utilities`, () => {
+      const code = readFileSync(resolve(dist, bundle), 'utf-8')
+
+      // `px-3` and `leading-snug` are used by the editor's own components;
+      // scopeUtilitiesPlugin rewrites every generated utility to the
+      // `:where([data-blok-interface], ...)` scoped form.
+      // Boolean assertions, not toContain: a failing toContain would print the
+      // entire multi-megabyte bundle as a diff.
+      expect(code.includes('.px-3:where(')).toBe(true)
+      // Theme tokens must be materialised too, not left as an @theme block.
+      expect(code.includes('--tw-leading')).toBe(true)
+    })
+
+    it(`${bundle} ships no uncompiled Tailwind source syntax`, () => {
+      const code = readFileSync(resolve(dist, bundle), 'utf-8')
+
+      // `@tailwind utilities;` is a dead v3 directive and `@theme {...}` is an
+      // unknown at-rule browsers discard whole — both mean the CSS was inlined
+      // but never compiled.
+      expect(code.includes('@tailwind utilities')).toBe(false)
+      expect(code.includes('@theme')).toBe(false)
+    })
+  }
+})
+
 describe('ESM outputs still present', () => {
   it('still produces blok.mjs', () => {
     expect(existsSync(resolve(dist, 'blok.mjs'))).toBe(true)

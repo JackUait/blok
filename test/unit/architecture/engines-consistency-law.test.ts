@@ -187,4 +187,26 @@ describe('engines consistency law', () => {
 
     expect(violations, violations.join('\n')).toEqual([]);
   });
+
+  // Non-vacuity guard. The test above returns early for a package with no runtime
+  // dependencies — legitimate today (the three adapters ship peerDependencies
+  // only), but it also means the law asserts NOTHING for those cases. If every
+  // published package lost its `dependencies` block, all four cases would pass
+  // green while checking nothing at all. Require at least one real exercise.
+  // Deliberately "not empty" rather than a pinned list: only `cli` qualifies right
+  // now, and packages gaining or losing runtime deps must not break this.
+  it('at least one published package actually exercises the law', () => {
+    const exercised = publishedPackages
+      .filter(({ dir }) => {
+        const manifest = readManifest(join(dir, 'package.json'));
+
+        return Object.keys(manifest.dependencies ?? {}).length > 0;
+      })
+      .map(({ name }) => name);
+
+    expect(
+      exercised,
+      'no published package declares runtime dependencies — the engines law above passed without checking anything'
+    ).not.toEqual([]);
+  });
 });

@@ -316,7 +316,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `he` | Hebrew | Hebrew | rtl | neutral contemporary Hebrew product UI; concise masculine-singular imperatives for compact actions and recovery instructions; sentence-case noun or state labels; explicit count-neutral accessibility announcements; natural RTL order around unchanged Latin brands, acronyms, and key names | `root-he_9dc_first_fresh` | `root-he_9dc_second_fresh` | pass | pass | pass | `F-he-001`–`F-he-069` | second-pass-complete |
 | `hi` | Hindi | Devanagari | ltr | neutral contemporary Hindi; respectful plural imperatives ending in `करें` for actions and instructions; concise sentence-case UI labels; established Hindi computing loanwords where clearer than forced Sanskritization; Devanagari punctuation and natural Hindi word order; unchanged Latin brands, formulas, acronyms, and keycap notation | `root-danish_546_first_pass` | `root-hindi_546_current_second` | pass | pass | pass | `F-hi-001`–`F-hi-086` | second-pass-complete |
 | `hr` | Croatian | Latin | ltr | neutral contemporary Croatian; concise direct singular imperatives for actions and recovery instructions; sentence-case noun/state labels; count-neutral accessibility wording; established Croatian product/media terminology; conventional unchanged shortcut, ratio, and acronym notation | `root-hr_b4f_first_final_clean` | `root-hr_b4f_second_replacement` | pass | pass | pass | `F-hr-001`–`F-hr-052` | second-pass-complete |
-| `hu` | Hungarian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-hu-001`–`F-hu-117` | pending |
+| `hu` | Hungarian | Latin | ltr | neutral contemporary Hungarian; polite third-person singular in complete instructions and recovery guidance; concise noun, verbal-noun, or direct action labels for compact controls; sentence-case UI; established Hungarian product, accessibility, and media terminology; count-neutral numeral and accessibility wording; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-hu_5c8_clean_b` | `root-hu_5c8_clean_a` | pass | pass | pass | `F-hu-001`–`F-hu-117` | second-pass-complete |
 | `hy` | Armenian | Armenian | ltr | neutral contemporary Eastern Armenian; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or action labels for compact controls; Armenian punctuation and sentence case; established Armenian product, accessibility, and media terminology; count-neutral numeral constructions; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-hy_f65_clean_a` | `root-hy_f65_clean_b` | pass | pass | pass | `F-hy-001`–`F-hy-070` | second-pass-complete |
 | `id` | Indonesian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-id-001`–`F-id-061` | pending |
 | `it` | Italian | Latin | ltr | neutral contemporary Italian; informal singular `tu` imperatives for instructions; concise imperatives for actions; sentence case | `root-czech_546_first_pass` | `root-it-546-second-final` | pass | pass | pass | `F-it-001`–`F-it-095` | second-pass-complete |
@@ -454,6 +454,7 @@ locale returns to `pending`.
 | `he` | `root-he_9dc_first_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` | `root-he_9dc_second_fresh` | `sha256:9dc2d5fe9229a1b4684a624c72fcefa389c8ddf9be10c1dd67b3b54c309f110d` |
 | `hi` | `root-danish_546_first_pass` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` | `root-hindi_546_current_second` | `sha256:e6c73a93ffe2e74c9e837ed41a772b9b38f630c5aef763e185b23760c47784e2` |
 | `hr` | `root-hr_b4f_first_final_clean` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` | `root-hr_b4f_second_replacement` | `sha256:b4ffda967cb3df34da19783cbf729342be0a55ff9848a70d961d1577cfd7a6e9` |
+| `hu` | `root-hu_5c8_clean_b` | `sha256:5c82c1096ac384222e9769fd2c70a2418179e71b14ff4afee3cd6618cc90e4f7` | `root-hu_5c8_clean_a` | `sha256:5c82c1096ac384222e9769fd2c70a2418179e71b14ff4afee3cd6618cc90e4f7` |
 | `hy` | `root-hy_f65_clean_a` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` | `root-hy_f65_clean_b` | `sha256:f65252a7e6556aea0c46a208e1e5f8a030e1c30cf695669c4942ccefaf452df7` |
 | `it` | `root-czech_546_first_pass` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` | `root-it-546-second-final` | `sha256:2d3350a10008c382b96383aaf4a56fa0cd64a26cd17b69b9234177494cb7fa4e` |
 
@@ -2967,6 +2968,123 @@ their known warnings. These review and remediation artifacts earn no
 complete-pass credit. Hungarian remains `pending` with no digest row, and
 both fresh complete reviews must restart from English entry 1 on the new
 bytes.
+
+### Hungarian 5c8 corrected-byte complete reviews — clean
+
+Fresh reviewer `root-hu_5c8_clean_b` independently read all 546
+English/Hungarian pairs in English insertion order on raw Hungarian SHA-256
+`5c82c1096ac384222e9769fd2c70a2418179e71b14ff4afee3cd6618cc90e4f7`.
+Its immutable bundle is
+`/private/tmp/blok-hu-5c8-review-beta-20260721-t8n3`. The review accepts
+546/546 pairs with zero changes or residuals, preserves every placeholder,
+edge-space, NFC, and control-character contract, and accepts exactly nine
+English-identical values. Its matrix, canonical lifecycle, exact-retention
+inventory, residual inventory, byte-identical replay, manifest, and seal file
+are respectively SHA-256
+`022068138a21390dadf9255901446fffdfc4ea646ec88bb5e3150218b5488c3d`,
+`0a30e68f91314aa1977b5308d3e76c4e016a2111997388c0b095bfae1bb65aa2`,
+`6ee5675ff6717e6662b3fec2283b8a69ec2d033d10b1da34680ded364359162d`,
+`7f3d302a23443d4a7d416442415c4bcff6dcdfa3fbc96c2663294bd8c9e97d81`,
+`fe2315748884737bc181ceaf4293081e2b6ebe62ce8d88b28e509d606948e903`,
+`d799c3dda69786b23ee1b0effd31d102ac7d2dd6e3d94d29e927745b13ebc899`,
+and
+`c35e7a815416c79eba3cd632f60dcfad574a9bbff0644bff7ed7d791f7fb6399`.
+
+After five production files changed outside the translation audit, the same
+reviewer froze an exact current-source supplement at
+`/private/tmp/blok-hu-5c8-review-beta-current-source-supplement-20260721-n7k5`.
+It proves zero added or removed boundary paths, byte-binds all five changed
+paths, and finds no translation key, lookup, lifecycle, or caller-role impact.
+The current 544-file inventory stream, changed-path stream, impact report,
+current replay, supplement manifest, and seal file are respectively SHA-256
+`1fa3ed347f1ead9769f2fd58a82a39846359663bee7a3bad4c50167d1a20c3d2`,
+`b9d2f5ca51c6de5914516fa081f9e1d53393829de7e26e66a9274b904ccb500e0`,
+`8d60b259904043f8c01ed0eaef285fe89fb4bbb8bc1dab64db90078a5b96bb2c`,
+`1a21d1065c667c6fd7eeda04dc170afa930b112f76939b4b17dcba1f0d844139`,
+`bda99737964d8637da79828bc96985026a62feebc8fb302dcb4fb66f8663e080`,
+and
+`f66f25e48339a26eb358cc5234723d219f3248ba1fbbfa30b6633c95f664b0ee`.
+Its live validator passes 51/51 checks and executes the unchanged original
+validator at 67/67.
+
+Because neither beta evidence root originally retained the collaboration-task
+identifier, the same reviewer added a separate immutable identity-only
+supplement at
+`/private/tmp/blok-hu-identity-attribution-20260721-cd37d59d4d42a5`.
+It binds canonical task path `/root/hu_5c8_clean_b` and slash-safe ledger ID
+`root-hu_5c8_clean_b` to both unchanged evidence roots, every critical
+artifact above, the current English and Hungarian catalog hashes, the exact
+544-file live boundary, and the unchanged 546/546 zero-residual conclusion.
+The identity binding, supplement manifest, seal file, and validator are
+respectively SHA-256
+`f1779903dafa3712abf1da7f8066f7734a8b0e451351aefb151a35d6325035e0`,
+`682e8cd8ec84790062623b58241d7a64004c554a37da1fe6955a7dc38b9ce0a1`,
+`7d14ac7dc0348e76bc306e7b93f88fb03f4827b91a0d550bd3991b6bb847414a`,
+and
+`55e2479af27733010a7f9c736dc1cb74fe8adbf02c45431bab25bde6a4fb27b5`.
+Its validator passes 29/29 checks, including fresh execution of the original
+67/67 and current-source 51/51 validators, manifest and seal verification,
+live-boundary parity, and immutable mode checks.
+
+Distinct reviewer `root-hu_5c8_clean_a` independently repeated the complete
+546-entry review on the same catalog. Its original immutable bundle is
+`/private/tmp/blok-hu-5c8-review-alpha-20260721-m4k7`; the 546/546 clean
+matrix, byte-identical replay, and original manifest are respectively SHA-256
+`ebd1ec61301e135d18ede24be40129145527e86eb53abe874f2bdbdde58b33bf`,
+`0019e974a83287e043ed84dd280b6c3b89a6cb20cb136e447669ec04188f49bf`,
+and
+`9dffac17839a8c3299dfce291904dde4d4d8e30b5a7b4ea1e07c8bb1df695a7b`.
+That original bundle has no standalone boundary credit: its 515-file source
+inventory included `src/components/constants/test-ids.ts`, omitted the
+production locale index and 27 other production files, and therefore did not
+match the canonical boundary. An earlier unsealed `p2r6` repair attempt is
+also permanently excluded.
+
+The same reviewer repaired that procedural defect without changing or
+replacing any linguistic judgment in the immutable V2 supplement at
+`/private/tmp/blok-hu-5c8-review-alpha-boundary-supplement-v2-20260721-r4h2`.
+It removes the test identifier, restores all 28 omitted production files,
+reconstructs exactly 542 production sources plus the two catalogs, and binds
+the unchanged original matrix and replay to current bytes. Its production
+index, complete boundary index, corrected lifecycle evidence, drift-impact
+record, and supplement manifest are respectively SHA-256
+`a51759e66c7ebf2c1caf29494d16fb4712e5b2c8acc1bf1f9e4afe77038310c3`,
+`18333eb1b241c60ab998e88b43e7d98031f058234bd393f74e6c4253a3cf2488`,
+`3e6d273746e0589101b4d0222828152dc9fef21e12353e754ef58febe30a157a`,
+`1f9136f828eb15cc0409896808009017469c1413a7357bc0ecfb70fb9d7fd2a4`,
+and
+`adf4ca1395bd7f18db5583966ff544d1b93fc3cc518a0f934abf7f603b6ac8a3`.
+The validator proves the original bundle remains at tree seal
+`bc25afbbc4bab945babd9be012df87ac80a858169ec9fc44129db7e1d41323c4`
+and passes against all 544 live boundary files.
+
+Because the alpha evidence roots likewise omitted the collaboration identity,
+the same reviewer added a separate immutable identity-only supplement at
+`/private/tmp/blok-hu-identity-attribution-20260721-b7r88t`. It binds
+canonical task path `/root/hu_5c8_clean_a` and slash-safe ledger ID
+`root-hu_5c8_clean_a` to the unchanged original and V2 evidence trees,
+explicitly marks the failed unsealed `p2r6` attempt ineligible, and rederives
+the exact live 542-production-source plus two-catalog boundary. The identity
+binding, supplement manifest, complete eligible-root seals, and validation
+transcript are respectively SHA-256
+`f41f423c6d1c221b6e8aaba6806063673fc81dd67ca2ac8a0446462cf59f52f4`,
+`0d201f4d4b5746f4b201d0854c459434ea12884f9cf166b5713b87c0791ecdb1`,
+`f17422d57cb2decf6492218791cfb293406b2107a456438dbfb0778a10fc01a9`,
+and
+`ae2afcd2dac233ba426297ba09850844c7a1bcc0040cf0e3362a551d2c1f900f`.
+Root reran its validator and reproduced unchanged original and V2 tree seals,
+live 544/544 byte parity, 546/546 passes, zero residuals, exact-nine
+retentions, exhaustive manifest closure, and immutable modes.
+
+Root reran both current-boundary validators after the source drift landed,
+verified every manifest, seal, replay, and immutable mode check, and
+reproduced the raw 398 literal + 121 finite + 27 registered/no-raw-route and
+semantic 397 executable-literal + 122 finite-dynamic + 25
+registered-namespace-compatible + two true-no-route lifecycle closure. Both
+reviewers independently accept exactly the nine retentions recorded as
+`R-hu-001` through `R-hu-009`. Hungarian therefore earns structural,
+semantic/style, and exact-retention passes and is now
+`second-pass-complete` on the bound `5c82c109…` bytes.
 
 ### Armenian (`hy`) — pending after current-byte residuals
 
@@ -9955,6 +10073,15 @@ locale and UI context.
 | `R-hr-007` | `hr` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation used unchanged in Croatian media interfaces. | [Apple — Promjena omjera širine i visine](https://support.apple.com/hr-hr/guide/iphone/iph3dc593597/ios) |
 | `R-hr-008` | `hr` | `tools.image.cropRatioOval` | established cognate | `Oval` is the standard Croatian masculine noun for the geometric shape, so the concise crop-shape label is legitimately identical to English. | [Struna — oval](https://struna.ihjj.hr/naziv/oval/32564/) |
 | `R-hr-009` | `hr` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional unchanged technical acronym and the concise Croatian database-property label. | [WHATWG URL Standard](https://url.spec.whatwg.org/) |
+| `R-hu-001` | `hu` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than Hungarian prose; the Command symbol and slash name the literal executable chord. | [Apple — A Mac billentyűparancsai](https://support.apple.com/hu-hu/102650) |
+| `R-hu-002` | `hu` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows/Linux shortcut notation rather than translatable prose; Hungarian Windows guidance retains the conventional `Ctrl` key label. | [Microsoft — A Windows billentyűparancsai](https://support.microsoft.com/hu-hu/windows/a-windows-billenty%C5%B1parancsai-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
+| `R-hu-003` | `hu` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholders and their separating space; localized Hungarian substitutions supply all lexical content in the caller-required order. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-hu-004` | `hu` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only runtime placeholders and their separating space; localized Hungarian color and mode values supply all lexical content. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-hu-005` | `hu` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text control abbreviation; the surrounding Hungarian dialog supplies the full `Helyettesítő szöveg` context. | [WHATWG — Images and alternative text](https://html.spec.whatwg.org/multipage/images.html#alt) and [Microsoft — Hungarian Localization Style Guide](https://aka.ms/hungarian-styleguide) |
+| `R-hu-006` | `hu` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
+| `R-hu-007` | `hu` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
+| `R-hu-008` | `hu` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and directly labels the fixed numeric crop ratio. | [W3C CSS Sizing — aspect ratios](https://www.w3.org/TR/css-sizing-4/#aspect-ratio) |
+| `R-hu-009` | `hu` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional unchanged technical initialism and the concise Hungarian database-property label. | [Microsoft — Hungarian Localization Style Guide](https://aka.ms/hungarian-styleguide) |
 | `R-hy-001` | `hy` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than lexical English; changing the Command symbol or slash would misstate the executable chord shown in Armenian UI. | [Apple — Mac keyboard shortcuts](https://support.apple.com/102650) |
 | `R-hy-002` | `hy` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows/Linux shortcut notation rather than translatable prose; `Ctrl` and the slash name the literal keys the user presses. | [Microsoft — Keyboard shortcuts in Windows](https://support.microsoft.com/windows/keyboard-shortcuts-in-windows) |
 | `R-hy-003` | `hy` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholders and their separating space; localized Armenian substitutions supply all lexical content in the caller-required order. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |

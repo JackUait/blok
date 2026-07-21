@@ -819,6 +819,7 @@ __metadata:
     "@tailwindcss/node": "npm:4.3.3"
     "@tailwindcss/vite": "npm:4.3.3"
     "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/jest-dom": "npm:^6.9.1"
     "@testing-library/react": "npm:^16.3.2"
     "@types/mdast": "npm:^4.0.4"
     "@types/node": "npm:26.1.1"
@@ -834,6 +835,7 @@ __metadata:
     cldr-annotations-full: "npm:^48.2.0"
     docx-preview: "npm:0.4.0"
     dompurify: "npm:^3.4.12"
+    esbuild: "npm:0.28.1"
     eslint: "npm:10.7.0"
     eslint-plugin-import: "npm:2.32.0"
     eslint-plugin-jest: "npm:29.15.4"
@@ -846,6 +848,7 @@ __metadata:
     eslint-plugin-tailwindcss: "npm:4.2.0"
     eslint-plugin-testing-library: "npm:^7.16.2"
     fractional-indexing: "npm:^4.0.0"
+    glob: "npm:13.0.0"
     html-janitor: "npm:2.0.4"
     husky: "npm:9.1.7"
     i18next: "npm:26.3.6"
@@ -859,14 +862,18 @@ __metadata:
     mermaid: "npm:11.16.0"
     micromark-extension-gfm: "npm:^3.0.0"
     micromark-extension-math: "npm:^3.1.0"
+    micromark-util-types: "npm:^2.0.2"
     music-metadata: "npm:^11.14.0"
     nanoid: "npm:6.0.0"
     ng-packagr: "npm:22.0.1"
     playwright: "npm:1.61.1"
     postcss: "npm:8.5.20"
+    postcss-selector-parser: "npm:7.1.1"
     prismjs: "npm:^1.30.0"
     react: "npm:^19.2.7"
     react-dom: "npm:^19.2.7"
+    rollup: "npm:4.62.2"
+    rollup-plugin-dts: "npm:6.4.1"
     rollup-plugin-license: "npm:3.7.1"
     rxjs: "npm:7.8.2"
     storybook: "npm:10.5.2"
@@ -8242,6 +8249,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"glob@npm:13.0.0, glob@npm:^13.0.0":
+  version: 13.0.0
+  resolution: "glob@npm:13.0.0"
+  dependencies:
+    minimatch: "npm:^10.1.1"
+    minipass: "npm:^7.1.2"
+    path-scurry: "npm:^2.0.0"
+  checksum: 10c0/8e2f5821f3f7c312dd102e23a15b80c79e0837a9872784293ba2e15ec73b3f3749a49a42a31bfcb4e52c84820a474e92331c2eebf18819d20308f5c33876630a
+  languageName: node
+  linkType: hard
+
 "glob@npm:^10.4.2":
   version: 10.5.0
   resolution: "glob@npm:10.5.0"
@@ -8255,17 +8273,6 @@ __metadata:
   bin:
     glob: dist/esm/bin.mjs
   checksum: 10c0/100705eddbde6323e7b35e1d1ac28bcb58322095bd8e63a7d0bef1a2cdafe0d0f7922a981b2b48369a4f8c1b077be5c171804534c3509dfe950dde15fbe6d828
-  languageName: node
-  linkType: hard
-
-"glob@npm:^13.0.0":
-  version: 13.0.0
-  resolution: "glob@npm:13.0.0"
-  dependencies:
-    minimatch: "npm:^10.1.1"
-    minipass: "npm:^7.1.2"
-    path-scurry: "npm:^2.0.0"
-  checksum: 10c0/8e2f5821f3f7c312dd102e23a15b80c79e0837a9872784293ba2e15ec73b3f3749a49a42a31bfcb4e52c84820a474e92331c2eebf18819d20308f5c33876630a
   languageName: node
   linkType: hard
 
@@ -10368,7 +10375,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"micromark-util-types@npm:^2.0.0":
+"micromark-util-types@npm:^2.0.0, micromark-util-types@npm:^2.0.2":
   version: 2.0.2
   resolution: "micromark-util-types@npm:2.0.2"
   checksum: 10c0/c8c15b96c858db781c4393f55feec10004bf7df95487636c9a9f7209e51002a5cca6a047c5d2a5dc669ff92da20e57aaa881e81a268d9ccadb647f9dce305298
@@ -11623,7 +11630,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss-selector-parser@npm:^7.0.0":
+"postcss-selector-parser@npm:7.1.1, postcss-selector-parser@npm:^7.0.0":
   version: 7.1.1
   resolution: "postcss-selector-parser@npm:7.1.1"
   dependencies:
@@ -12247,7 +12254,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup-plugin-dts@npm:^6.4.0":
+"rollup-plugin-dts@npm:6.4.1, rollup-plugin-dts@npm:^6.4.0":
   version: 6.4.1
   resolution: "rollup-plugin-dts@npm:6.4.1"
   dependencies:
@@ -12374,7 +12381,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup@npm:^4.24.0, rollup@npm:^4.43.0":
+"rollup@npm:4.62.2, rollup@npm:^4.24.0, rollup@npm:^4.43.0":
   version: 4.62.2
   resolution: "rollup@npm:4.62.2"
   dependencies:

@@ -6488,6 +6488,20 @@
   right: 8px;
 }
 
+[data-blok-tool="embed"] [data-role="resize-handle"][data-edge="bottom"] {
+  top: auto;
+  bottom: 8px;
+  left: 50%;
+  width: clamp(24px, 25%, 50px);
+  height: 6px;
+  cursor: ns-resize;
+  transform: translateX(-50%) scale(1);
+}
+
+[data-blok-tool="embed"] [data-role="resize-handle"][data-edge="bottom"]:hover, [data-blok-tool="embed"] [data-role="resize-handle"][data-edge="bottom"]:active {
+  transform: translateX(-50%) scale(1.15);
+}
+
 [data-blok-tool="embed"] [data-role="embed-figure"]:hover [data-role="resize-handle"], [data-blok-tool="embed"][data-selected="true"] [data-role="resize-handle"], [data-blok-tool="embed"][data-settings-open="true"] [data-role="resize-handle"] {
   opacity: 1;
 }

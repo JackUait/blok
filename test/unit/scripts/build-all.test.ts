@@ -42,7 +42,7 @@ describe('lint script', () => {
     );
   });
 
-  it('restores and saves native lint caches in CI even when lint fails', () => {
+  it('restores native lint caches in CI and saves them only after a green run', () => {
     const workflow = readFileSync(
       join(process.cwd(), '.github/workflows/ci.yml'),
       'utf8'
@@ -53,7 +53,10 @@ describe('lint script', () => {
     expect(workflow).toContain('node_modules/.cache/blok-lint.tsbuildinfo');
     expect(workflow).toContain('restore-keys:');
     expect(workflow).toContain('uses: actions/cache/save@v4');
-    expect(workflow).toContain("if: always() && steps.lint-cache.outputs.cache-hit != 'true'");
+    // ESLint's cache persists per-file results INCLUDING errors, keyed only on
+    // each file's own content — a cache saved from a red run replays stale
+    // typed-lint errors on every later run, so saving must be gated on green.
+    expect(workflow).toContain("if: success() && steps.lint-cache.outputs.cache-hit != 'true'");
     expect(workflow).toContain('key: ${{ steps.lint-cache.outputs.cache-primary-key }}');
   });
 });

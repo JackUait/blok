@@ -425,8 +425,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // (plus a doc comment) so read-only hosts get tight inline rendering
     // without blanket-overriding [data-blok-tool]. Bumps the multiplier
     // to 1.409.
+    // 2026-07-21: embed adjustable height — embed.css gained the
+    // [data-edge="bottom"] resize-handle rules (rotated pill + ns-resize
+    // cursor + hover/active scale) for height-resizable document embeds
+    // (~0.5KB, landed in feat(embed) 0447dd89 without its ledger entry).
+    // Bumps the multiplier to 1.411.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.409);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.411);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

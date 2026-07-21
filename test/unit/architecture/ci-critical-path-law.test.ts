@@ -204,15 +204,19 @@ describe('CI critical-path law', () => {
         uses: 'actions/cache/restore@v4',
         with: {
           path: lintCachePaths,
-          key: "lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-${{ github.sha }}",
+          // v2: v1 caches are poisoned — ESLint's cache persists errored
+          // per-file results keyed only on that file's own content, so errors
+          // computed against broken types replay forever via restore-keys.
+          key: "lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-${{ github.sha }}",
           'restore-keys':
-            "lint-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-\n",
+            "lint-v2-${{ runner.os }}-${{ hashFiles('yarn.lock', 'eslint.config.mjs', 'tsconfig.json') }}-\n",
         },
       },
       { name: 'Lint', run: 'yarn lint' },
       {
         name: 'Save lint cache',
-        if: "always() && steps.lint-cache.outputs.cache-hit != 'true'",
+        // success() only: a red run's ESLint cache carries the error entries.
+        if: "success() && steps.lint-cache.outputs.cache-hit != 'true'",
         uses: 'actions/cache/save@v4',
         with: {
           path: lintCachePaths,

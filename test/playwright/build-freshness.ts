@@ -24,12 +24,17 @@ export const REQUIRED_TEST_ARTIFACTS: string[] = [
 /**
  * Every source tree and config that shapes the test bundles. A file newer
  * than the oldest artifact anywhere in these trees means a rebuild.
+ *
+ * `packages` is watched whole rather than as `packages/<name>/src` picks:
+ * each adapter bundle is also shaped by its own `vite.config.mjs`,
+ * `package.json` and `tsconfig*.json`, and a hand-picked list drifts every
+ * time a package grows a new build-affecting file. Build OUTPUT inside the
+ * tree (`dist`) is skipped by the walker, so a finished build never marks
+ * itself stale.
  */
 export const BUILD_INPUTS: string[] = [
   'src',
-  'packages/react/src',
-  'packages/vue/src',
-  'packages/angular/src',
+  'packages',
   'scripts',
   'vite.config.mjs',
   'vite.config.iife.mjs',
@@ -40,7 +45,19 @@ export const BUILD_INPUTS: string[] = [
 ];
 
 /**
- * Most recent modification time in a file or directory tree.
+ * Directory names that never hold build inputs — `dist` is build output
+ * (skipping it is what lets `packages` be watched as one tree).
+ */
+const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist']);
+
+/**
+ * Most recent modification time of any FILE in a file or directory tree.
+ *
+ * Directory mtimes are deliberately ignored: a directory's mtime bumps when
+ * an entry is added or removed, so writing `packages/angular/dist` would
+ * bump `packages/angular` and make the tree read as permanently stale even
+ * though only build output changed. Every added file carries its own fresh
+ * mtime, so nothing is lost except detection of a pure deletion.
  */
 const getMtime = (targetPath: string): number => {
   if (!existsSync(targetPath)) {
@@ -54,12 +71,12 @@ const getMtime = (targetPath: string): number => {
   }
 
   if (stats.isDirectory()) {
-    let maxMtime = stats.mtimeMs;
+    let maxMtime = 0;
     const entries = readdirSync(targetPath, { withFileTypes: true });
 
     for (const entry of entries) {
       // eslint-disable-next-line max-depth
-      if (entry.name === 'node_modules' || entry.name === '.git') {
+      if (IGNORED_DIRS.has(entry.name)) {
         continue;
       }
       maxMtime = Math.max(maxMtime, getMtime(path.resolve(targetPath, entry.name)));

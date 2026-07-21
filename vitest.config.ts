@@ -5,27 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
 import angular from '@analogjs/vite-plugin-angular';
+import { enableJsdomWebStorageGuard } from './scripts/jsdom-webstorage-guard.mjs';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 const cliPkg = JSON.parse(readFileSync(path.resolve(dirname, 'packages/cli/package.json'), 'utf-8')) as { version: string };
 
-// Node 26 enables Web Storage by default, and its built-in `localStorage` global
-// shadows the one jsdom installs. `--localstorage-file` is never provided, so
-// Node's own is `undefined` and every `localStorage.*` call in a jsdom test
-// throws "Cannot read properties of undefined" — frequently surfacing as an
-// unrelated-looking teardown error, because construction already failed earlier.
-// Disabling Node's implementation lets jsdom's through.
-//
-// This goes through NODE_OPTIONS rather than `poolOptions.*.execArgv`: the
-// threads pool runs workers via worker_threads, which rejects execArgv entries
-// that affect the process, so the flag was silently dropped there. Setting it
-// here covers every pool, plus direct `vitest` and IDE runs (which a NODE_OPTIONS
-// prefix on the package.json `test` script would miss).
-// jsdom 29 does NOT remove the need for this.
-const WEBSTORAGE_OFF = '--no-experimental-webstorage';
-
-if (!(process.env.NODE_OPTIONS ?? '').includes(WEBSTORAGE_OFF)) {
-  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS ?? ''} ${WEBSTORAGE_OFF}`.trim();
-}
+// Lets jsdom's Web Storage through on Node 26+. Shared with docs/vitest.config.ts —
+// see scripts/jsdom-webstorage-guard.mjs for the full mechanism. The helper is
+// version-gated: the raw flag is *rejected* by Node 20 ("not allowed in
+// NODE_OPTIONS") and kills every worker at startup, which the inline copy this
+// replaced did not account for while engines.node still claims ">=20.19.0".
+// Must run at config-module evaluation, before the pool spawns any worker.
+enableJsdomWebStorageGuard();
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
@@ -62,13 +52,18 @@ export default defineConfig({
       },
       {
         extends: true,
-        // Angular compiler (JIT) for the adapter unit tests. NOTE: under this
-        // repo's Vite 8 / Vitest 4, @analogjs/vite-plugin-angular's AOT (ngtsc)
-        // emit does not populate its file map, so signal-based
-        // input()/output()/model()/viewChild() do not get compiled. The adapter
-        // therefore uses classic @Input()/@Output()/@ViewChild() decorators
-        // (which JIT compiles correctly) with internal signal()/effect() for
-        // reactivity — same public template API, JIT-compatible.
+        // Angular compiler for the adapter unit tests. NOTE: the plugin runs in
+        // JIT mode under vitest (`jit = isTest`), and the signal-based
+        // input()/output()/model()/viewChild() APIs are AOT-only — the JIT
+        // compiler does not lower them. The adapter therefore uses classic
+        // @Input()/@Output()/@ViewChild() decorators with internal
+        // signal()/effect() for reactivity — same public template API.
+        //
+        // (An earlier version of this comment blamed ngtsc's file map not being
+        // populated. That was a symptom of tsconfig.spec.json inheriting
+        // `noEmit: true`, which starved the plugin's emit-based compile path and
+        // killed this whole project — fixed there, not here. The JIT constraint
+        // above is the real, still-standing reason.)
         plugins: [angular({ tsconfig: path.resolve(dirname, 'tsconfig.spec.json') })],
         test: {
           name: 'unit-angular',

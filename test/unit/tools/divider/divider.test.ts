@@ -77,7 +77,11 @@ describe('DividerTool', () => {
       const hr = el.querySelector('hr')!;
 
       expect(hr.className).toContain('border-t');
-      expect(hr.className).toContain('border-border-primary');
+      // `border-border-primary` used to be asserted here, but there is no
+      // `--color-border-primary` in the theme so it compiled to ZERO CSS — the
+      // assertion was green while the rule had no border colour. See
+      // test/unit/styles/tailwind-class-emits-law.test.ts.
+      expect(hr.className).toContain('border-(--blok-border-primary)');
     });
   });
 

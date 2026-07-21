@@ -82,7 +82,7 @@ export type CodeViewMode = 'code' | 'preview' | 'split';
 // CSS — view mode segmented control
 export const VIEW_MODE_CONTAINER_STYLES = 'flex items-center rounded-lg border border-border-secondary p-0.5 gap-0.5';
 export const VIEW_MODE_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors flex items-center justify-center';
-export const VIEW_MODE_BUTTON_ACTIVE_STYLES = 'p-1 rounded cursor-pointer bg-item-hover-bg border-0 text-primary transition-colors flex items-center justify-center';
+export const VIEW_MODE_BUTTON_ACTIVE_STYLES = 'p-1 rounded cursor-pointer bg-item-hover-bg border-0 text-text-primary transition-colors flex items-center justify-center';
 
 // CSS — split container
 export const SPLIT_CONTAINER_STYLES = 'flex flex-col overflow-hidden';

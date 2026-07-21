@@ -8,6 +8,19 @@
     "experimentalDecorators": false,
     "emitDecoratorMetadata": false,
     "jsx": "preserve",
+    // MUST stay false (the root config sets `noEmit: true` because it is a
+    // type-check-only program). @analogjs/vite-plugin-angular feeds THIS file to
+    // `compilerCli.readConfiguration()` and compiles through
+    // `ts.createEmitAndSemanticDiagnosticsBuilderProgram(...).emit(...)`; TypeScript
+    // skips emit entirely under `noEmit`, so the plugin's fileEmitter returns
+    // undefined for every file, raw `@Component`-decorated TS reaches Node, and every
+    // suite dies with "SyntaxError: Invalid or unexpected token". Nothing is written
+    // to disk during tests — the plugin supplies its own writeFile callbacks, and it
+    // passes `outDir: undefined`, so `outDir` below only contains stray bare
+    // `tsc -p tsconfig.spec.json` runs (`yarn lint:angular` passes --noEmit on the CLI,
+    // which still wins over this).
+    "noEmit": false,
+    "outDir": "node_modules/.cache/ng-spec-emit",
     // vitest/globals = describe/it/expect in specs; node kept for safety.
     "types": ["vitest/globals", "node"],
     // Resolve the public `@bloklabs/core` specifier (used by the adapter for the

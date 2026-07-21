@@ -1,8 +1,18 @@
 import { defineConfig } from 'vitest/config';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// Lives outside docs/ on purpose: the root vitest config needs the same guard,
+// and duplicating it is what left docs/ unguarded through the Node 26 upgrade.
+// Vite bundles this config file and follows the relative specifier, so the
+// package boundary (docs has its own yarn.lock/node_modules) is not a problem —
+// no new dependency is introduced. docs' `tsc` never sees this file: neither
+// tsconfig.json (`include: ["src"]`) nor tsconfig.node.json includes it.
+import { enableJsdomWebStorageGuard } from '../scripts/jsdom-webstorage-guard.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Must run at config-module evaluation, before the pool spawns any worker.
+enableJsdomWebStorageGuard();
 
 export default defineConfig({
   test: {

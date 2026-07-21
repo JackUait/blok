@@ -1285,7 +1285,16 @@ export default defineConfig(
         whitelist: ['blok-.*'],
       }],
       'tailwindcss/no-contradicting-classname': 'error', // Keep: catches bugs (conflicting classes)
-      'tailwindcss/no-unnecessary-arbitrary-value': 'error', // Prefer p-4 over p-[16px]
+      // OFF on purpose — this rule ships bugs. Its autofix treats a bare-number
+      // utility as equivalent to the arbitrary value it replaces, but Tailwind v4
+      // bare numbers are *spacing multiples* (0.25rem grid), so:
+      //   - `leading-[1.4]` -> `leading-1.4` is off-grid, matches no utility, and
+      //     emits ZERO CSS. It silently dropped the notifier's line-height (fixed
+      //     in f6321517's wake; see test/unit/styles/tailwind-class-emits-law.test.ts).
+      //   - `max-w-[140px]` -> `max-w-35` converts px to rem, which is only
+      //     equivalent when the host's root font-size is 16px.
+      // Downgrading to 'warn' would not help: `eslint --fix` fixes warnings too.
+      'tailwindcss/no-unnecessary-arbitrary-value': 'off',
     },
   },
 

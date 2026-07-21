@@ -278,7 +278,9 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
 
   const content = document.createElement('div');
   content.className = twMerge(
-    'flex-1 outline-hidden leading-normal',
+    // Literal 1.5, not `leading-normal`: that resolves to the --leading-normal
+    // theme token, which a host can redefine.
+    'flex-1 outline-hidden leading-[1.5]',
     data.checked ? 'line-through opacity-60' : '',
     ...getPlaceholderClasses('always')
   );

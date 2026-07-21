@@ -38,7 +38,16 @@ export class DividerTool implements BlockTool {
     const hr = document.createElement('hr');
 
     hr.setAttribute('data-blok-divider', '');
-    hr.className = twMerge('border-t', 'border-border-primary', 'border-b-0', 'border-l-0', 'border-r-0');
+    // There is no `--color-border-primary` in the theme (only `-secondary`), so
+    // `border-border-primary` emitted nothing and the rule fell back to
+    // currentColor. Reference the underlying token directly.
+    hr.className = twMerge(
+      'border-t',
+      'border-(--blok-border-primary)',
+      'border-b-0',
+      'border-l-0',
+      'border-r-0'
+    );
     wrapper.appendChild(hr);
     this.element = wrapper;
 

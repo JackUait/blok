@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/angular",
-  "version": "1.2.6",
+  "version": "1.3.0",
   "description": "Angular bindings for the Blok editor (APF partial-Ivy bundle)",
   "license": "Apache-2.0",
   "author": "JackUait",

@@ -254,6 +254,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ]),
   // "OK" is the conventional compact confirmation label in Japanese UIs.
   ja: new Set(['notifier.ok']),
+  // Placeholder-only swatch templates contain no English lexical material;
+  // Georgian independently requires the same modifier-before-noun order.
+  ka: new Set([
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
+  ]),
   // This placeholder-only template follows Latvian modifier-before-noun order.
   lv: new Set(['tools.colorPicker.defaultSwatchLabel']),
   // "grid" is a common search keyword loanword for the table tool in Malay UIs;

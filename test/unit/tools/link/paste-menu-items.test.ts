@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import georgianDictionary from '../../../../src/components/i18n/locales/ka/messages.json';
 import { buildPasteMenuItems, type PasteMenuI18n } from '../../../../src/tools/link/paste-menu/items';
 import type { PasteMenuOption } from '../../../../src/tools/link/paste-menu/options';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';
@@ -140,6 +141,11 @@ describe('buildPasteMenuItems', () => {
         return templates[key] ?? key;
       },
     };
+    const georgianI18n: PasteMenuI18n = {
+      getLocale: () => 'ka',
+      t: (key: string): string =>
+        (georgianDictionary as Record<string, string>)[key] ?? key,
+    };
 
     it('titles the embed item with the localized type template naming the provider', () => {
       const items = buildPasteMenuItems([{ type: 'embed' }], templateI18n, vi.fn(), youtubeUrl);
@@ -253,6 +259,34 @@ describe('buildPasteMenuItems', () => {
       const [item] = buildPasteMenuItems(
         [{ type: 'embed' }],
         japaneseI18n,
+        vi.fn(),
+        url
+      );
+
+      expect(asDefaultItem(item).title).toBe(expected);
+    });
+
+    it.each([
+      [
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        'YouTube: ვიდეოს ჩაშენება',
+      ],
+      [
+        'https://vimeo.com/123456789',
+        'Vimeo: ვიდეოს ჩაშენება',
+      ],
+      [
+        'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC',
+        'Spotify: აუდიოს ჩაშენება',
+      ],
+      [
+        'https://www.figma.com/design/KEY123/My-File',
+        'Figma: დიზაინის ჩაშენება',
+      ],
+    ])('composes the Georgian title for %s without a provider suffix', (url, expected) => {
+      const [item] = buildPasteMenuItems(
+        [{ type: 'embed' }],
+        georgianI18n,
         vi.fn(),
         url
       );

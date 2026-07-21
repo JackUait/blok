@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import georgianDictionary from '../../../../src/components/i18n/locales/ka/messages.json';
 import { uploadErrorMessage } from '../../../../src/components/utils/upload-error-message';
 
 const KEYS = { tooLarge: 'tools.image.errorFileTooLarge', generic: 'tools.image.errorUploadFailed' };
@@ -13,6 +14,9 @@ const t = (key: string, vars?: Record<string, string | number>): string => {
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (m, name: string) => (vars[name] !== undefined ? String(vars[name]) : m));
 };
+
+const georgianT = (key: string): string =>
+  (georgianDictionary as Record<string, string>)[key] ?? key;
 
 describe('uploadErrorMessage', () => {
   it('builds a human-readable message for FILE_TOO_LARGE with formatted sizes', () => {
@@ -31,6 +35,26 @@ describe('uploadErrorMessage', () => {
       KEYS
     );
     expect(msg).toBe('Image is too large. 3.5 MB exceeds the 5.0 MB limit.');
+  });
+
+  it.each([
+    ['tools.image.errorFileTooLarge', 'სურათი'],
+    ['tools.file.errorFileTooLarge', 'ფაილი'],
+    ['tools.video.errorFileTooLarge', 'ვიდეო'],
+    ['tools.audio.errorFileTooLarge', 'აუდიო'],
+  ])('renders caller-safe Georgian size labels for %s', (tooLarge, noun) => {
+    const msg = uploadErrorMessage(
+      {
+        code: 'FILE_TOO_LARGE',
+        detail: `${Math.round(3.5 * 1024 * 1024)} > ${5 * 1024 * 1024}`,
+      },
+      georgianT,
+      { tooLarge, generic: 'tools.image.errorUploadFailed' }
+    );
+
+    expect(msg).toBe(
+      `${noun} ძალიან დიდია. ზომა: 3.5 MB; ლიმიტი: 5.0 MB.`
+    );
   });
 
   it('falls back to the generic message when the detail is unparseable', () => {

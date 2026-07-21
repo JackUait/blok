@@ -1,9 +1,14 @@
 import type { I18n } from '../../../../types/api';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import georgianDictionary from '../../../../src/components/i18n/locales/ka/messages.json';
 import { TableAddControls } from '../../../../src/tools/table/table-add-controls';
 import { simulateMousemove, simulateMouseleave } from '../../../helpers/simulate';
 
 const mockI18n: I18n = { t: (key: string) => key } as I18n;
+const georgianI18n: I18n = {
+  t: (key: string): string =>
+    (georgianDictionary as Record<string, string>)[key] ?? key,
+} as I18n;
 
 const mockOnHover = vi.fn();
 const mockHide = vi.fn();
@@ -1337,6 +1342,29 @@ describe('TableAddControls', () => {
       expect(mockCreateTooltipContent).toHaveBeenCalledWith([
         'tools.table.clickToAddColumn',
         'tools.table.dragToAddRemoveColumns',
+      ]);
+    });
+
+    it('distinguishes Georgian drag instructions from the paired click actions', () => {
+      ({ wrapper, grid } = createGridAndWrapper(2, 2));
+
+      new TableAddControls({
+        wrapper,
+        grid,
+        i18n: georgianI18n,
+        onAddRow: vi.fn(),
+        onAddColumn: vi.fn(),
+        getTableSize: vi.fn(() => ({ rows: 2, cols: 2 })),
+        ...defaultDragCallbacks(),
+      });
+
+      expect(mockCreateTooltipContent).toHaveBeenNthCalledWith(1, [
+        'დააწკაპუნეთ ახალი სტრიქონის დასამატებლად',
+        'ჩავლებით გადაიტანეთ სტრიქონების დასამატებლად ან წასაშლელად',
+      ]);
+      expect(mockCreateTooltipContent).toHaveBeenNthCalledWith(2, [
+        'დააწკაპუნეთ ახალი სვეტის დასამატებლად',
+        'ჩავლებით გადაიტანეთ სვეტების დასამატებლად ან წასაშლელად',
       ]);
     });
 

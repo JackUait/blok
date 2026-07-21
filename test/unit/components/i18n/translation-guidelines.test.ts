@@ -206,6 +206,23 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'notifier.ok': 'OK',
 };
 
+const GEORGIAN_CALLER_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.lastEditedBy': 'ბოლო რედაქტორი: {name}',
+  'a11y.blocksMoved': 'გადატანილია {count} ბლოკი. ახალი პოზიცია: {position}.',
+  'a11y.blocksDuplicated':
+    'დუბლირებულია {count} ბლოკი. ასლების საწყისი პოზიცია: {position}.',
+  'tools.image.resetZoom': 'მასშტაბის საწყისზე დაბრუნება',
+  'tools.image.cropReset': 'საწყისზე დაბრუნება',
+  'tools.image.errorFileTooLarge':
+    'სურათი ძალიან დიდია. ზომა: {size}; ლიმიტი: {max}.',
+  'tools.file.errorFileTooLarge':
+    'ფაილი ძალიან დიდია. ზომა: {size}; ლიმიტი: {max}.',
+  'tools.video.errorFileTooLarge':
+    'ვიდეო ძალიან დიდია. ზომა: {size}; ლიმიტი: {max}.',
+  'tools.audio.errorFileTooLarge':
+    'აუდიო ძალიან დიდია. ზომა: {size}; ლიმიტი: {max}.',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -881,6 +898,18 @@ describe('translation guideline corpus integrity', () => {
     expect(translationGuidelines).not.toContain(
       'English title-cases UI labels'
     );
+  });
+
+  it('uses caller-safe Georgian interpolation and action labels', () => {
+    const messages = readLocale('ka').messages;
+    const actual = Object.fromEntries(
+      Object.keys(GEORGIAN_CALLER_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(GEORGIAN_CALLER_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

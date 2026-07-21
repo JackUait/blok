@@ -117,6 +117,8 @@ const GLOBAL_FINDING_KEYS = new Set([
   'tool API interpolation contract',
   'lifecycle coverage taxonomy',
   'media URL upload status contract',
+  'tools.video.toggleTimeDisplay',
+  'tools.video.ctxStats',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
@@ -325,6 +327,119 @@ const KHMER_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
     'បានស្ទួនប្លុកនៅទីតាំង {position} នៃ {total}',
   'a11y.blocksDuplicated':
     'បានស្ទួនប្លុក {count} ចាប់ពីទីតាំង {position}',
+};
+
+const KANNADA_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'ಫಾರ್ಮ್ಯಾಟಿಂಗ್ ತೆರವುಗೊಳಿಸಿ',
+  'tools.marker.textColor': 'ಪಠ್ಯದ ಬಣ್ಣ',
+  'tools.toggle.bodyPlaceholder':
+    'ಖಾಲಿ ಟಾಗಲ್. ಬ್ಲಾಕ್ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ ಅಥವಾ ಬ್ಲಾಕ್‌ಗಳನ್ನು ಇಲ್ಲಿಗೆ ಎಳೆಯಿರಿ.',
+  'a11y.allBlocksSelected':
+    'ಎಲ್ಲಾ ಬ್ಲಾಕ್‌ಗಳು ಆಯ್ಕೆಯಾಗಿವೆ. ಒಟ್ಟು: {count}.',
+  'a11y.blockDuplicated':
+    'ಬ್ಲಾಕ್ ಅನ್ನು ಒಟ್ಟು {total} ರಲ್ಲಿ {position}ನೇ ಸ್ಥಾನದಲ್ಲಿ ನಕಲು ಮಾಡಲಾಗಿದೆ',
+  'a11y.blockMoved':
+    'ಬ್ಲಾಕ್ ಅನ್ನು ಒಟ್ಟು {total} ರಲ್ಲಿ {position}ನೇ ಸ್ಥಾನಕ್ಕೆ ಸರಿಸಲಾಗಿದೆ',
+  'a11y.blocksDuplicated':
+    '{position}ನೇ ಸ್ಥಾನದಿಂದ ಆರಂಭಿಸಿ {count} ಬ್ಲಾಕ್‌ಗಳನ್ನು ನಕಲು ಮಾಡಲಾಗಿದೆ',
+  'a11y.blocksMoved':
+    '{count} ಬ್ಲಾಕ್‌ಗಳನ್ನು {position}ನೇ ಸ್ಥಾನಕ್ಕೆ ಸರಿಸಲಾಗಿದೆ',
+  'a11y.dragHandle':
+    'ಬ್ಲಾಕ್ ಸರಿಸಲು ಎಳೆಯಿರಿ ಅಥವಾ ಮೆನು ತೆರೆಯಲು ಕ್ಲಿಕ್ ಮಾಡಿ',
+  'a11y.dropCreateColumnLeft': 'ಎಡಭಾಗದಲ್ಲಿ ಕಾಲಮ್ ರಚಿಸಲಾಗುವುದು',
+  'a11y.dropCreateColumnRight': 'ಬಲಭಾಗದಲ್ಲಿ ಕಾಲಮ್ ರಚಿಸಲಾಗುವುದು',
+  'a11y.dropPosition':
+    'ಒಟ್ಟು {total} ರಲ್ಲಿ {position}ನೇ ಸ್ಥಾನದಲ್ಲಿ ಬಿಡಲಾಗುವುದು',
+  'a11y.searchResults': 'ಹುಡುಕಾಟ ಫಲಿತಾಂಶಗಳ ಸಂಖ್ಯೆ: {count}',
+  'blockSettings.clickAction': 'ಒಂದು ಕ್ಲಿಕ್',
+  'blockSettings.convertWithChildrenWarning':
+    'ಒಳಗಿನ ಬ್ಲಾಕ್‌ಗಳು: {count}. ಈ ಬ್ಲಾಕ್ ಅನ್ನು ಪರಿವರ್ತಿಸಿದರೆ ಒಳಗಿನ ವಿಷಯವು ಮೇಲ್ಮಟ್ಟಕ್ಕೆ ಸರಿಯುತ್ತದೆ. ಮುಂದುವರಿಸುವುದೇ?',
+  'blockSettings.openMenuAction': ' ಮೂಲಕ ಮೆನು ತೆರೆಯಿರಿ',
+  'searchTerms.columns': 'ಕಾಲಮ್‌ಗಳು',
+  'toolNames.columns': 'ಕಾಲಮ್‌ಗಳು',
+  'tools.audio.alignmentCenter': 'ಕೇಂದ್ರಕ್ಕೆ ಹೊಂದಿಸಿ',
+  'tools.audio.alignmentLeft': 'ಎಡಕ್ಕೆ ಹೊಂದಿಸಿ',
+  'tools.audio.alignmentRight': 'ಬಲಕ್ಕೆ ಹೊಂದಿಸಿ',
+  'tools.audio.emptyOrDropHere': 'ಅಥವಾ ಆಡಿಯೊ ಫೈಲ್ ಅನ್ನು ಇಲ್ಲಿ ಬಿಡಿ',
+  'tools.audio.errorFileTooLarge':
+    'ಆಡಿಯೊ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ. ಗಾತ್ರ: {size}. ಗರಿಷ್ಠ ಮಿತಿ: {max}.',
+  'tools.audio.pause': 'ವಿರಾಮಗೊಳಿಸಿ',
+  'tools.bookmark.error': 'ಲಿಂಕ್ ಮುನ್ನೋಟ ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ',
+  'tools.bookmark.loading': 'ಲಿಂಕ್ ಮುನ್ನೋಟ ಲೋಡ್ ಆಗುತ್ತಿದೆ…',
+  'tools.callout.addEmoji': 'ಐಕಾನ್ ಸೇರಿಸಿ',
+  'tools.callout.emojiSearchResults':
+    'ಹೊಂದಾಣಿಕೆಯ ಎಮೋಜಿಗಳ ಸಂಖ್ಯೆ: {count}',
+  'tools.callout.filterEmojis': 'ಎಮೋಜಿಗಳನ್ನು ಹುಡುಕಿ…',
+  'tools.callout.pickRandom': 'ಯಾದೃಚ್ಛಿಕ ಎಮೋಜಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ',
+  'tools.code.searchLanguage': 'ಭಾಷೆಗಳನ್ನು ಹುಡುಕಿ…',
+  'tools.code.wrapLines': 'ಸಾಲುಗಳನ್ನು ಸುತ್ತಿಸಿ',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.columns.col2': '2 ಕಾಲಮ್‌ಗಳು',
+  'tools.columns.col3': '3 ಕಾಲಮ್‌ಗಳು',
+  'tools.columns.col4': '4 ಕಾಲಮ್‌ಗಳು',
+  'tools.columns.col5': '5 ಕಾಲಮ್‌ಗಳು',
+  'tools.database.close': 'ಮುಚ್ಚಿ',
+  'tools.database.duplicateView': 'ನಕಲು ಮಾಡಿ',
+  'tools.database.viewTypeListDescription':
+    'ಐಟಂಗಳನ್ನು ಸರಳ ಪಟ್ಟಿಯಲ್ಲಿ ತೋರಿಸಿ',
+  'tools.embed.empty': 'ಎಂಬೆಡ್ ಲಿಂಕ್ ಇಲ್ಲ',
+  'tools.file.errorFileTooLarge':
+    'ಫೈಲ್ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ. ಗಾತ್ರ: {size}. ಗರಿಷ್ಠ ಮಿತಿ: {max}.',
+  'tools.file.previewRaw': 'ಮೂಲ',
+  'tools.file.previewRender': 'ಮುನ್ನೋಟ',
+  'tools.file.toggleCaption': 'ಶೀರ್ಷಿಕೆಯನ್ನು ತೋರಿಸಿ ಅಥವಾ ಮರೆಮಾಡಿ',
+  'tools.image.altDescription':
+    'ನೋಡಲು ಸಾಧ್ಯವಾಗದವರಿಗಾಗಿ ಈ ಚಿತ್ರವನ್ನು ವಿವರಿಸಿ.',
+  'tools.image.altEdit': 'ಪರ್ಯಾಯ ಪಠ್ಯವನ್ನು ಸಂಪಾದಿಸಿ',
+  'tools.image.altPlaceholder': 'ಪರ್ಯಾಯ ಪಠ್ಯ',
+  'tools.image.downloadOriginal': 'ಮೂಲ ಚಿತ್ರವನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ',
+  'tools.image.errorDefaultMessage':
+    'ಈ URL ನಿಂದ ಚಿತ್ರವನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ. ಬೇರೆ ಮೂಲವನ್ನು ಪ್ರಯತ್ನಿಸಿ ಅಥವಾ ಫೈಲ್ ಅನ್ನು ಮತ್ತೆ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.',
+  'tools.image.errorFileTooLarge':
+    'ಚಿತ್ರ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ. ಗಾತ್ರ: {size}. ಗರಿಷ್ಠ ಮಿತಿ: {max}.',
+  'tools.image.errorRetry': 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ',
+  'tools.image.previewControls': 'ಚಿತ್ರದ ಮುನ್ನೋಟ ನಿಯಂತ್ರಣಗಳು',
+  'tools.image.resetZoom': 'ಝೂಮ್ ಮರುಹೊಂದಿಸಿ',
+  'tools.image.toggleCaption': 'ಶೀರ್ಷಿಕೆಯನ್ನು ತೋರಿಸಿ ಅಥವಾ ಮರೆಮಾಡಿ',
+  'tools.image.viewFullscreen': 'ಪೂರ್ಣ ಪರದೆಯಲ್ಲಿ ವೀಕ್ಷಿಸಿ',
+  'tools.image.zoomIn': 'ಝೂಮ್ ಇನ್',
+  'tools.image.zoomOut': 'ಝೂಮ್ ಔಟ್',
+  'tools.link.linkTitle': 'ಲಿಂಕ್ ಪಠ್ಯ',
+  'tools.paragraph.placeholder':
+    'ಏನಾದರೂ ಬರೆಯಿರಿ ಅಥವಾ ಪರಿಕರವನ್ನು ಆಯ್ಕೆಮಾಡಲು / ಒತ್ತಿ',
+  'tools.table.clearSelection': 'ವಿಷಯವನ್ನು ತೆರವುಗೊಳಿಸಿ',
+  'tools.table.clickToAddColumn': 'ಹೊಸ ಕಾಲಮ್ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ',
+  'tools.table.copySelection': 'ನಕಲಿಸಿ',
+  'tools.table.dragToAddRemoveColumns':
+    'ಕಾಲಮ್‌ಗಳನ್ನು ಸೇರಿಸಲು ಅಥವಾ ತೆಗೆಯಲು ಎಳೆಯಿರಿ',
+  'tools.table.headerColumn': 'ಹೆಡರ್ ಕಾಲಮ್',
+  'tools.table.insertColumnLeft': 'ಎಡಕ್ಕೆ ಕಾಲಮ್ ಸೇರಿಸಿ',
+  'tools.table.insertColumnRight': 'ಬಲಕ್ಕೆ ಕಾಲಮ್ ಸೇರಿಸಿ',
+  'tools.table.placement': 'ಹೊಂದಾಣಿಕೆ',
+  'tools.table.placementBottomCenter': 'ಕೆಳಗಿನ ಮಧ್ಯ',
+  'tools.table.placementBottomLeft': 'ಕೆಳಗಿನ ಎಡ',
+  'tools.table.placementBottomRight': 'ಕೆಳಗಿನ ಬಲ',
+  'tools.table.placementMiddleLeft': 'ಮಧ್ಯದ ಎಡ',
+  'tools.table.placementMiddleRight': 'ಮಧ್ಯದ ಬಲ',
+  'tools.table.placementTopCenter': 'ಮೇಲಿನ ಮಧ್ಯ',
+  'tools.table.placementTopLeft': 'ಮೇಲಿನ ಎಡ',
+  'tools.table.placementTopRight': 'ಮೇಲಿನ ಬಲ',
+  'tools.toggle.ariaLabelCollapse': 'ಕುಗ್ಗಿಸಿ',
+  'tools.toggle.ariaLabelExpand': 'ವಿಸ್ತರಿಸಿ',
+  'tools.video.alignmentCenter': 'ಕೇಂದ್ರಕ್ಕೆ ಹೊಂದಿಸಿ',
+  'tools.video.alignmentLeft': 'ಎಡಕ್ಕೆ ಹೊಂದಿಸಿ',
+  'tools.video.alignmentRight': 'ಬಲಕ್ಕೆ ಹೊಂದಿಸಿ',
+  'tools.video.ctxCopyUrlAtTime':
+    'ಪ್ರಸ್ತುತ ಪ್ಲೇಬ್ಯಾಕ್ ಸಮಯವನ್ನು ಒಳಗೊಂಡ ವೀಡಿಯೊ URL ಅನ್ನು ನಕಲಿಸಿ',
+  'tools.video.ctxStats': 'ಪ್ಲೇಬ್ಯಾಕ್ ಅಂಕಿಅಂಶಗಳು',
+  'tools.video.errorFileTooLarge':
+    'ವೀಡಿಯೊ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ. ಗಾತ್ರ: {size}. ಗರಿಷ್ಠ ಮಿತಿ: {max}.',
+  'tools.video.pause': 'ವಿರಾಮಗೊಳಿಸಿ',
+  'tools.video.seek': 'ವೀಡಿಯೊ ಸ್ಥಾನ',
+  'tools.video.toggleCaption': 'ಶೀರ್ಷಿಕೆಯನ್ನು ತೋರಿಸಿ ಅಥವಾ ಮರೆಮಾಡಿ',
+  'tools.video.toggleTimeDisplay':
+    'ಕಳೆದ ಸಮಯ ಮತ್ತು ಉಳಿದ ಸಮಯದ ನಡುವೆ ಬದಲಿಸಿ',
 };
 
 const EMOJI_CATEGORY_SCOPE_KEYS = [
@@ -1026,6 +1141,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(KHMER_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Kannada correction oracle', () => {
+    const messages = readLocale('kn').messages;
+    const actual = Object.fromEntries(
+      Object.keys(KANNADA_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(KANNADA_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

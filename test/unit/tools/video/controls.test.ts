@@ -184,6 +184,11 @@ describe('video controls — M12 slider a11y + i18n', () => {
     expect(time.textContent).toContain('-3:00');
   });
 
+  it('uses the canonical English fallback for the time-display control', () => {
+    expect(q(h.controls, '[data-role="time"]').getAttribute('aria-label'))
+      .toBe('Switch between elapsed and remaining time');
+  });
+
   it('i18n-translates the control labels when an I18n instance is provided', () => {
     const other = mount({
       i18n: fakeI18n({
@@ -1786,6 +1791,11 @@ describe('video controls — context menu + stats', () => {
     expect(stats.hidden).toBe(false);
     expect(stats.textContent).toContain('1920×1080');
     expect(stats.textContent).toContain('3 / 300');
+  });
+
+  it('uses the canonical English fallback for the playback statistics item', () => {
+    expect(q(h.controls, '[data-action="stats"]').textContent)
+      .toBe('Playback statistics');
   });
 
   it('detaches the document menu listeners on destroy', () => {

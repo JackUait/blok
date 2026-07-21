@@ -214,7 +214,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   time.type = 'button';
   time.className = 'blok-video-controls__time';
   time.setAttribute('data-role', 'time');
-  time.setAttribute('aria-label', i18nLabel('toggleTimeDisplay', 'Toggle time display'));
+  time.setAttribute('aria-label', i18nLabel('toggleTimeDisplay', 'Switch between elapsed and remaining time'));
   time.textContent = '0:00 / 0:00';
 
   const muteToggle = button('mute-toggle', i18nLabel('mute', 'Mute'), IconPlayerVolume);
@@ -1256,7 +1256,7 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   ctxLoop.setAttribute('role', 'menuitemcheckbox');
   const ctxCopy = ctxItem('copy-url', i18nLabel('ctxCopyUrl', 'Copy video URL'));
   const ctxCopyAt = ctxItem('copy-url-at-time', i18nLabel('ctxCopyUrlAtTime', 'Copy video URL at current time'));
-  const ctxStats = ctxItem('stats', i18nLabel('ctxStats', 'Stats for nerds'));
+  const ctxStats = ctxItem('stats', i18nLabel('ctxStats', 'Playback statistics'));
   ctxMenu.append(ctxLoop, ctxCopy, ctxCopyAt, ctxStats);
   root.appendChild(ctxMenu);
 

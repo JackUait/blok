@@ -213,6 +213,67 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     });
   });
 
+  describe('surface background tokens (public theming contract)', () => {
+    /*
+     * A consumer integration audit found a host overloading --blok-bg-light
+     * purely because it cascades into --blok-bg-tertiary — the media
+     * skeleton/upload-placeholder surface — which at the time was an
+     * undocumented audit-appeasement alias. These pins promote the surface
+     * family (--blok-bg-light, --blok-bg-secondary, --blok-border-secondary,
+     * --blok-bg-tertiary) to a public contract: hosts override the specific
+     * token they mean, and the tertiary surface keeps tracking bg-light by
+     * default in both themes.
+     */
+    const SURFACE_TOKEN_DECLARATION = /--blok-(?:bg-light|bg-secondary|border-secondary|bg-tertiary)\s*:/;
+
+    it('declares --blok-bg-tertiary as an alias of --blok-bg-light so it tracks the theme by default', () => {
+      expect(css).toMatch(/--blok-bg-tertiary:\s*var\(--blok-bg-light\)/);
+    });
+
+    it('redeclares --blok-bg-light in both dark palettes so the tertiary alias resolves per-theme', () => {
+      const darkDeclarations = [...css.matchAll(/--blok-bg-light:\s*rgba\(255, 255, 255, 0\.08\)/g)];
+
+      expect(darkDeclarations.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('declares --blok-bg-secondary and --blok-border-secondary in the light palette and both dark palettes', () => {
+      expect([...css.matchAll(/--blok-bg-secondary:\s*[^;]+;/g)].length).toBeGreaterThanOrEqual(3);
+      expect([...css.matchAll(/--blok-border-secondary:\s*[^;]+;/g)].length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('keeps EVERY Blok-side surface-token declaration at zero specificity (public contract)', () => {
+      // Same guarantee as the gutter tokens: a host declaration at any
+      // positive specificity — including the (0,1,0) stylesheet injected by
+      // style.tokens / editor.tokens.set() — must always beat Blok's own
+      // palette values. Reading the tokens via var() is unrestricted.
+      const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+      const declaringSelectors: string[] = [];
+
+      for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const [, selector, body] = match;
+
+        if (SURFACE_TOKEN_DECLARATION.test(body)) {
+          declaringSelectors.push(selector.trim());
+        }
+      }
+
+      expect(declaringSelectors.length).toBeGreaterThanOrEqual(3);
+      for (const selector of declaringSelectors) {
+        for (const part of selector.split(',')) {
+          expect(part.trim(), `surface token declared with a non-zero-specificity selector: "${selector}"`).toMatch(
+            /^:where\(.*\)$/
+          );
+        }
+      }
+    });
+
+    it('drives the image and file skeleton/placeholder surfaces through --blok-bg-tertiary', () => {
+      const consumers = [...css.matchAll(/background:\s*var\(--blok-bg-tertiary\)/g)];
+
+      expect(consumers.length).toBeGreaterThanOrEqual(8);
+    });
+  });
+
   describe('heading typography tokens', () => {
     const LEVELS: Array<[number, string, string]> = [
       // [level, font-size fallback, margin-top fallback]

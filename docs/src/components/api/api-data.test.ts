@@ -146,6 +146,25 @@ describe("API_SECTIONS", () => {
       expect(example).toContain("--blok-embed-margin-top");
     });
 
+    it("documents the surface background tokens so hosts never overload --blok-bg-light to reach the skeleton surface", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // A consumer audit found a host overloading --blok-bg-light purely
+      // because it cascades into the (then-undocumented) --blok-bg-tertiary
+      // skeleton/upload-placeholder surface. The surface family must be
+      // documented so hosts set the specific token instead.
+      const example = stylesSection!.example ?? "";
+      expect(example).toContain("--blok-bg-light");
+      expect(example).toContain("--blok-bg-secondary");
+      expect(example).toContain("--blok-border-secondary");
+      expect(example).toContain("--blok-bg-tertiary");
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("--blok-bg-tertiary");
+      expect(description).toContain("--blok-bg-light");
+    });
+
     it("documents the block wrapper padding tokens for compact read-only rendering", () => {
       const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
       expect(stylesSection).toBeDefined();

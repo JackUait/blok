@@ -398,11 +398,17 @@
   --blok-line-height-option: 1.3;
 
   /*
-    Generic surface / accent hooks consumed with a fallback by plugin-owned
-    CSS (image lightbox, crop editor). Declared here so the var-resolution
-    audit sees them as valid tokens.
+    Generic accent hook consumed with a fallback by plugin-owned CSS
+    (image lightbox, crop editor). Declared here so the var-resolution
+    audit sees it as a valid token.
   */
   --blok-accent: var(--blok-color-accent);
+
+  /*
+    PUBLIC hook (docs-site Styles API): media skeleton/upload-placeholder
+    surface; tracks --blok-bg-light. Pinned by
+    host-customization-tokens.test.ts.
+  */
   --blok-bg-tertiary: var(--blok-bg-light);
 
   /* Image lightbox chrome (dark, independent of page theme). */

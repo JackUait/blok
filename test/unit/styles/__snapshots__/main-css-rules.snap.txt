@@ -4234,6 +4234,14 @@
   flex-shrink: 0;
 }
 
+.blok-image-uploading__header--status-only .blok-image-uploading__label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .blok-image-uploading__filename {
   font-size: 12.5px;
   color: var(--blok-text-tertiary);

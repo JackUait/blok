@@ -182,6 +182,28 @@ describe('AudioTool', () => {
     expect(createObjectURL).not.toHaveBeenCalled();
   });
 
+  it('shows a URL upload status once without inventing a filename', async () => {
+    const tool = new AudioTool({
+      ...opts({ url: '' }),
+      api: createMockApi({
+        'tools.image.uploadingLabel': 'Localized file upload',
+        'tools.audio.uploading': 'Localized audio URL upload…',
+      }),
+    });
+    const root = tool.render();
+    const uploader = uploaderInstances.at(-1);
+    if (!uploader) throw new Error('uploader instance not captured');
+    uploader.handleUrl.mockImplementation(() => new Promise(() => undefined));
+
+    tool.onPaste({ type: 'pattern', detail: { data: 'https://x/y.mp3' } } as never);
+    await Promise.resolve();
+
+    expect(root.getAttribute('data-state')).toBe('loading');
+    expect(root.querySelector('.blok-image-uploading__label')?.textContent)
+      .toBe('Localized audio URL upload…');
+    expect(root.querySelector('[data-role="filename"]')).toBeNull();
+  });
+
   it('shows a Google Drive-specific error when the link needs an upload backend', async () => {
     const { AudioUploadError } = await import('../../../../src/tools/audio/uploader');
     const tool = new AudioTool(opts({ url: '' }, { sources: 'url' }));

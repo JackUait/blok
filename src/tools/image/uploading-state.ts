@@ -3,7 +3,7 @@ import type { I18nInstance } from '../../components/utils/tools';
 import { tr } from './i18n';
 
 export interface UploadingStateOptions {
-  fileName: string;
+  fileName: string | null;
   sizeLabel?: string;
   statusLabel?: string;
   onCancel?(): void;
@@ -36,12 +36,6 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
   label.className = 'blok-image-uploading__label';
   label.textContent = opts.statusLabel ?? tr(opts.i18n, 'tools.image.uploadingLabel');
 
-  const name = document.createElement('span');
-  name.className = 'blok-image-uploading__filename';
-  name.setAttribute('data-role', 'filename');
-  name.textContent = opts.fileName;
-  name.title = opts.fileName;
-
   const cancel = document.createElement('button');
   cancel.type = 'button';
   cancel.className = 'blok-image-uploading__cancel';
@@ -52,7 +46,18 @@ export function renderUploadingState(opts: UploadingStateOptions): UploadingStat
     opts.onCancel?.();
   });
 
-  header.append(label, name, cancel);
+  header.appendChild(label);
+  if (opts.fileName !== null) {
+    const name = document.createElement('span');
+    name.className = 'blok-image-uploading__filename';
+    name.setAttribute('data-role', 'filename');
+    name.textContent = opts.fileName;
+    name.title = opts.fileName;
+    header.appendChild(name);
+  } else {
+    header.classList.add('blok-image-uploading__header--status-only');
+  }
+  header.appendChild(cancel);
 
   const panel = document.createElement('div');
   panel.className = 'blok-image-uploading__panel';

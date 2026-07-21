@@ -116,6 +116,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'drag move destination contract',
   'tool API interpolation contract',
   'lifecycle coverage taxonomy',
+  'media URL upload status contract',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
@@ -223,6 +224,109 @@ const GEORGIAN_CALLER_EXPECTATIONS: Readonly<Record<string, string>> = {
     'აუდიო ძალიან დიდია. ზომა: {size}; ლიმიტი: {max}.',
 };
 
+const KHMER_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'popover.convertTo': 'បំប្លែងទៅជា',
+  'tools.paragraph.placeholder':
+    'សរសេរអ្វីមួយ ឬចុច / ដើម្បីជ្រើសរើសឧបករណ៍',
+  'tools.table.clearSelection': 'លុបមាតិកា',
+  'tools.table.placement': 'ការតម្រឹម',
+  'a11y.searchResults': 'លទ្ធផលស្វែងរក៖ {count}',
+  'tools.columns.col2': 'ជួរឈរ ២',
+  'tools.columns.col3': 'ជួរឈរ ៣',
+  'tools.columns.col4': 'ជួរឈរ ៤',
+  'tools.columns.col5': 'ជួរឈរ ៥',
+  'tools.callout.addEmoji': 'បន្ថែមរូបតំណាង',
+  'tools.callout.filterEmojis': 'ស្វែងរករូបអារម្មណ៍…',
+  'tools.callout.pickRandom': 'ជ្រើសរើសរូបអារម្មណ៍ដោយចៃដន្យ',
+  'tools.database.addColumn': 'បន្ថែមជួរឈរ',
+  'tools.database.renameColumn': 'ប្ដូរឈ្មោះជួរឈរ',
+  'tools.database.deleteColumn': 'លុបជួរឈរ',
+  'tools.database.columnTitlePlaceholder': 'ជួរឈរ',
+  'tools.database.addRow': 'បន្ថែមជួរដេក',
+  'tools.database.newRow': 'ជួរដេកថ្មី',
+  'tools.database.openRow': 'បើកជួរដេក',
+  'tools.database.deleteRow': 'លុបជួរដេក',
+  'blockSettings.blocksSelected': 'ប្លុក {count}',
+  'tools.link.linkTitle': 'អត្ថបទតំណ',
+  'tools.image.converting': 'កំពុងបំប្លែង…',
+  'tools.file.previewRaw': 'ប្រភព',
+  'tools.file.previewRender': 'មើលជាមុន',
+  'tools.embed.empty': 'គ្មានតំណសម្រាប់បង្កប់',
+  'tools.embed.captionPlaceholder': 'សរសេរចំណងជើងរង…',
+  'tools.video.toggleTimeDisplay':
+    'ប្ដូររវាងពេលវេលាដែលបានកន្លងផុត និងពេលវេលាដែលនៅសល់',
+  'tools.callout.emojiSearchResults': 'រូបអារម្មណ៍ដែលត្រូវគ្នា៖ {count}',
+  'toolNames.board': 'ក្ដារ',
+  'searchTerms.accordion': 'ផ្ទាំងបិទបើក',
+  'searchTerms.grid': 'ក្រឡាចត្រង្គ',
+  'tools.callout.emojiCategoryPeople': 'មុខញញឹម និងមនុស្ស',
+  'tools.image.altDescription':
+    'ពិពណ៌នារូបភាពនេះសម្រាប់អ្នកដែលមិនអាចមើលឃើញវា។',
+  'tools.bookmark.loading': 'កំពុងផ្ទុកការមើលតំណជាមុន…',
+  'tools.bookmark.error': 'មិនអាចផ្ទុកការមើលតំណជាមុនបានទេ',
+  'tools.video.ctxStats': 'ស្ថិតិការចាក់',
+  'a11y.allBlocksSelected':
+    'បានជ្រើសរើសប្លុកទាំងអស់។ សរុប៖ {count}',
+  'tools.code.searchLanguage': 'ស្វែងរកភាសា…',
+  'tools.link.jumpToSection': 'រំលងទៅផ្នែក',
+  'tools.image.resetZoom': 'កំណត់កម្រិតពង្រីកឡើងវិញ',
+  'tools.video.alignmentLeft': 'តម្រឹមឆ្វេង',
+  'tools.video.alignmentCenter': 'តម្រឹមកណ្ដាល',
+  'tools.video.alignmentRight': 'តម្រឹមស្ដាំ',
+  'tools.audio.alignmentLeft': 'តម្រឹមឆ្វេង',
+  'tools.audio.alignmentCenter': 'តម្រឹមកណ្ដាល',
+  'tools.audio.alignmentRight': 'តម្រឹមស្ដាំ',
+  'tools.database.duplicateView': 'ស្ទួន',
+  'tools.image.uploading': 'កំពុងបង្ហោះ…',
+  'tools.image.uploadingLabel': 'កំពុងបង្ហោះ',
+  'tools.image.cancelUpload': 'បោះបង់ការបង្ហោះ',
+  'tools.image.uploadProgress': 'វឌ្ឍនភាពនៃការបង្ហោះ',
+  'tools.image.errorUploadFailed': 'ការបង្ហោះបានបរាជ័យ',
+  'tools.image.errorUploadFailedTitle': 'ការបង្ហោះបានបរាជ័យ',
+  'tools.image.errorDefaultMessage':
+    'មិនអាចផ្ទុករូបភាពពី URL នេះបានទេ។ សូមសាកល្បងប្រភពផ្សេង ឬបង្ហោះឯកសារឡើងវិញ។',
+  'tools.image.emptyUpload': 'បង្ហោះ',
+  'tools.image.emptyDropToUpload': 'ទម្លាក់ដើម្បីបង្ហោះ',
+  'tools.file.emptyUpload': 'បង្ហោះ',
+  'tools.file.emptyDropToUpload': 'ទម្លាក់ដើម្បីបង្ហោះ',
+  'tools.file.uploading': 'កំពុងបង្ហោះ…',
+  'tools.file.cancelUpload': 'បោះបង់ការបង្ហោះ',
+  'tools.file.uploadProgress': 'វឌ្ឍនភាពនៃការបង្ហោះ',
+  'tools.file.errorUploadFailed': 'ការបង្ហោះបានបរាជ័យ',
+  'tools.video.uploading': 'កំពុងបង្ហោះ…',
+  'tools.video.errorUploadFailed': 'ការបង្ហោះបានបរាជ័យ',
+  'tools.video.emptyUpload': 'បង្ហោះ',
+  'tools.video.emptyDropToUpload': 'ទម្លាក់ដើម្បីបង្ហោះ',
+  'tools.audio.uploading': 'កំពុងបង្ហោះ…',
+  'tools.audio.errorUploadFailed': 'ការបង្ហោះបានបរាជ័យ',
+  'tools.audio.errorGoogleDrive':
+    'អូឌីយ៉ូពី Google Drive មិនអាចចាក់ដោយផ្ទាល់បានទេ។ សូមទាញយកឯកសារ រួចបង្ហោះវានៅទីនេះជំនួសវិញ។',
+  'tools.audio.errorOneDrive':
+    'អូឌីយ៉ូពី OneDrive មិនអាចចាក់ដោយផ្ទាល់បានទេ។ សូមទាញយកឯកសារ រួចបង្ហោះវានៅទីនេះជំនួសវិញ។',
+  'tools.audio.emptyUpload': 'បង្ហោះ',
+  'tools.audio.emptyDropToUpload': 'ទម្លាក់ដើម្បីបង្ហោះ',
+  'tools.audio.coverUpload': 'បង្ហោះ',
+  'tools.audio.coverDropToUpload': 'ទម្លាក់ដើម្បីបង្ហោះ',
+  'tools.callout.noEmojisFound': 'រកមិនឃើញរូបអារម្មណ៍ទេ',
+  'tools.table.insertColumnRight': 'បញ្ចូលជួរឈរខាងស្ដាំ',
+  'a11y.dropCreateColumnRight': 'នឹងបង្កើតជួរឈរនៅខាងស្ដាំ',
+  'tools.table.placementTopCenter': 'ខាងលើកណ្ដាល',
+  'tools.table.placementMiddleLeft': 'កណ្ដាលឆ្វេង',
+  'tools.table.placementMiddleCenter': 'កណ្ដាល',
+  'tools.table.placementMiddleRight': 'កណ្ដាលស្ដាំ',
+  'tools.table.placementBottomCenter': 'ខាងក្រោមកណ្ដាល',
+  'tools.database.propertyTypeSelect': 'ជម្រើស',
+  'tools.database.propertyTypeMultiSelect': 'ជម្រើសច្រើន',
+  'tools.image.exitFullscreen': 'ចាកចេញពីអេក្រង់ពេញ',
+  'tools.video.fullscreen': 'អេក្រង់ពេញ',
+  'tools.video.fullscreenExit': 'ចាកចេញពីអេក្រង់ពេញ',
+  'tools.table.mergeCells': 'បញ្ចូលក្រឡាចូលគ្នា',
+  'a11y.blockDuplicated':
+    'បានស្ទួនប្លុកនៅទីតាំង {position} នៃ {total}',
+  'a11y.blocksDuplicated':
+    'បានស្ទួនប្លុក {count} ចាប់ពីទីតាំង {position}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -265,7 +369,7 @@ const LOCALIZED_EMOJI_CATEGORY_SCOPE = {
   it: ['Faccine e persone', 'Animali e natura', 'Cibi e bevande', 'Viaggi e luoghi'],
   ja: ['スマイリーと人々', '動物と自然', '食べ物と飲み物', '旅行と場所'],
   ka: ['სიცილაკები და ადამიანები', 'ცხოველები და ბუნება', 'საჭმელი და სასმელი', 'მოგზაურობა და ადგილები'],
-  km: ['រូបសញ្ញាសើច និងមនុស្ស', 'សត្វ និងធម្មជាតិ', 'អាហារ និងភេសជ្ជៈ', 'ការធ្វើដំណើរ និងទីកន្លែង'],
+  km: ['មុខញញឹម និងមនុស្ស', 'សត្វ និងធម្មជាតិ', 'អាហារ និងភេសជ្ជៈ', 'ការធ្វើដំណើរ និងទីកន្លែង'],
   kn: ['ಸ್ಮೈಲಿಗಳು ಮತ್ತು ಜನರು', 'ಪ್ರಾಣಿಗಳು ಮತ್ತು ಪ್ರಕೃತಿ', 'ಆಹಾರ ಮತ್ತು ಪಾನೀಯಗಳು', 'ಪ್ರಯಾಣ ಮತ್ತು ಸ್ಥಳಗಳು'],
   ko: ['스마일리 및 사람', '동물 및 자연', '음식 및 음료', '여행 및 장소'],
   ku: ['ڕووخساری زەردەخەنە و خەڵک', 'ئاژەڵ و سروشت', 'خواردن و خواردنەوە', 'گەشت و شوێنەکان'],
@@ -910,6 +1014,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(GEORGIAN_CALLER_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Khmer correction oracle', () => {
+    const messages = readLocale('km').messages;
+    const actual = Object.fromEntries(
+      Object.keys(KHMER_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(KHMER_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

@@ -189,6 +189,30 @@ describe('VideoTool — onPaste', () => {
     expect(root.querySelector('video')?.getAttribute('src')).toBe('https://x/y.mp4');
   });
 
+  it('shows a URL upload status once without inventing a filename', async () => {
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);
+    const tool = new VideoTool({
+      ...createOptions({}, { uploader: { uploadByUrl } }),
+      api: createMockApi({
+        'tools.image.uploadingLabel': 'Localized file upload',
+        'tools.video.uploading': 'Localized video URL upload…',
+      }),
+    });
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = 'https://x/y.mp4';
+
+    root.querySelector<HTMLButtonElement>('[data-action="submit-url"]')?.click();
+    await Promise.resolve();
+
+    expect(root.getAttribute('data-state')).toBe('loading');
+    expect(root.querySelector('.blok-image-uploading__label')?.textContent)
+      .toBe('Localized video URL upload…');
+    expect(root.querySelector('[data-role="filename"]')).toBeNull();
+  });
+
   it('with sources "url" ignores a pasted file (no upload)', async () => {
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake');
     const tool = new VideoTool(createOptions({}, { sources: 'url' }));

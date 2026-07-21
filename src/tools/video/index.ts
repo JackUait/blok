@@ -333,10 +333,14 @@ export class VideoTool implements BlockTool {
 
   private renderLoading(): void {
     if (!this.root) return;
+    const statusLabel = this.lastFileName === null
+      ? tr(this.api.i18n, 'tools.video.uploading', 'Uploading…')
+      : undefined;
     this.uploadingEl = renderUploadingState({
-      fileName: this.lastFileName ?? tr(this.api.i18n, 'tools.video.uploading', 'Uploading…'),
+      fileName: this.lastFileName,
       onCancel: () => this.transitionToEmpty(),
       i18n: this.api.i18n,
+      ...(statusLabel !== undefined ? { statusLabel } : {}),
     });
     this.root.appendChild(this.uploadingEl);
   }

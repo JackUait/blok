@@ -718,11 +718,18 @@ export class ImageTool implements BlockTool {
 
   private renderLoading(): void {
     if (!this.root) return;
+    const convertingLabel = this.converting
+      ? this.api.i18n.t('tools.image.converting')
+      : undefined;
+    const urlUploadLabel = !this.converting && this.lastFileName === null
+      ? this.api.i18n.t('tools.image.uploading')
+      : undefined;
+    const statusLabel = convertingLabel ?? urlUploadLabel;
     const el = renderUploadingState({
-      fileName: this.lastFileName ?? this.api.i18n.t('tools.image.uploading'),
+      fileName: this.lastFileName,
       onCancel: () => this.transitionToEmpty(),
       i18n: this.api.i18n,
-      ...(this.converting ? { statusLabel: this.api.i18n.t('tools.image.converting') } : {}),
+      ...(statusLabel !== undefined ? { statusLabel } : {}),
     });
     this.uploadingEl = el;
     this.root.appendChild(el);

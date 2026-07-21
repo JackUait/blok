@@ -16,6 +16,14 @@ describe('renderUploadingState', () => {
     expect(fill.style.width).toBe('0%');
   });
 
+  it('omits the filename when a URL upload has no local file name', () => {
+    const el = renderUploadingState({ fileName: null, statusLabel: 'Uploading…' });
+    const label = el.querySelector('.blok-image-uploading__label');
+
+    expect(label?.textContent).toBe('Uploading…');
+    expect(el.querySelector('[data-role="filename"]')).toBeNull();
+  });
+
   it('updates pct text, fill width, and size text on setProgress', () => {
     const el = renderUploadingState({ fileName: 'photo.png' });
     el.setProgress(42, '1.3 MB / 3.1 MB');

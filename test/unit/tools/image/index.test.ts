@@ -970,6 +970,29 @@ describe('ImageTool — upload progression', () => {
     expect(root.getAttribute('data-state')).toBe('rendered');
   });
 
+  it('shows a URL upload status once without inventing a filename', async () => {
+    const uploadByUrl = (): Promise<{ url: string }> => new Promise(() => undefined);
+    const tool = new ImageTool({
+      ...createOptions({}, { uploader: { uploadByUrl } }),
+      api: createMockApi({
+        'tools.image.uploading': 'Localized URL upload…',
+        'tools.image.uploadingLabel': 'Localized file upload',
+      }),
+    });
+    const root = tool.render();
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = 'https://x/p.png';
+
+    root.querySelector<HTMLButtonElement>('[data-action="submit-url"]')?.click();
+    await Promise.resolve();
+
+    expect(root.getAttribute('data-state')).toBe('loading');
+    expect(root.querySelector('.blok-image-uploading__label')?.textContent).toBe('Localized URL upload…');
+    expect(root.querySelector('[data-role="filename"]')).toBeNull();
+  });
+
   it('cancel button during upload returns to empty state', async () => {
     const tool = new ImageTool(createOptions(
       {},

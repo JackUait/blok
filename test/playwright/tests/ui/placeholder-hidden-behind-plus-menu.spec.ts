@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { Blok, OutputData } from '../../../../types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * Regression for BUG #18 — placeholder stays visible behind the + (plus) menu.
@@ -97,7 +97,7 @@ test.describe('placeholder hidden behind + menu (BUG #18)', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('hides the empty paragraph placeholder while the toolbox is open', async ({ page }) => {

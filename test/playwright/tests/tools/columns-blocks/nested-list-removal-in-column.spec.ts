@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { createBlok, saveBlok, findBlock, childrenOf, editParagraphLikeText, ensureBlokBundleBuilt, TEST_PAGE_URL } from './_helpers';
+import { createBlok, saveBlok, findBlock, childrenOf, editParagraphLikeText, ensureBlokBundleBuilt} from './_helpers';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 /**
  * A nested column_list living INSIDE a column of an outer column_list. When the
@@ -96,7 +96,7 @@ test.beforeAll(() => {
 
 test.describe('Nested column_list removal inside a column', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('deleting a nested column_list empties its enclosing column, collapsing the whole layout', async ({ page }) => {

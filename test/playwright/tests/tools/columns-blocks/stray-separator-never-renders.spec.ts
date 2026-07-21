@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
 } from './_helpers';
 
@@ -87,7 +86,7 @@ test.beforeAll(async () => {
 });
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
   await createBlok(page, twoColumnFixture());
 });
 

@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 declare global {
   interface Window {
@@ -89,7 +89,7 @@ const openBlockSettings = async (page: Page): Promise<void> => {
 
 test.describe('Block settings edit metadata footer', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('shows "Last edited by <user>" after editing a block with user configured', async ({ page }) => {

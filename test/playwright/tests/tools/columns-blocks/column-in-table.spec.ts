@@ -1,8 +1,8 @@
  
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { createBlok, ensureBlokBundleBuilt, TEST_PAGE_URL } from './_helpers';
+import { createBlok, ensureBlokBundleBuilt} from './_helpers';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 /**
  * Columns must never be creatable INSIDE a table cell. A column_list nested in a
@@ -46,7 +46,7 @@ test.describe('Columns are restricted inside a table cell', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 /**
  * Notion-parity coverage for MULTI-SELECT list keyboard nesting (findings M-9 / M-8):
@@ -27,7 +27,7 @@ declare global {
 const HOLDER_ID = 'blok';
 
 const boot = async (page: Page, blocks: OutputData['blocks']): Promise<void> => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await page.evaluate(
     async ({ holder, seed }) => {

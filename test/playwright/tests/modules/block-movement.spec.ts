@@ -7,12 +7,12 @@
  * 4. Boundary conditions are handled (first block can't move up, last can't move down)
  * 5. Undo/redo works correctly after block movement
  */
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { MODIFIER_KEY } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 
@@ -127,7 +127,7 @@ test.describe('block movement shortcuts', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

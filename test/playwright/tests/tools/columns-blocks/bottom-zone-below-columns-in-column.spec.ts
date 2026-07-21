@@ -1,11 +1,10 @@
-import { expect, test } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   createBlok,
   ensureBlokBundleBuilt,
   findBlock,
   saveBlok,
-  TEST_PAGE_URL,
 } from './_helpers';
 
 /**
@@ -40,7 +39,7 @@ test.beforeAll(() => {
 test.describe('Clicking below a trailing column layout', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

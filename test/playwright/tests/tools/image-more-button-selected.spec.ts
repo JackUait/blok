@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const IMAGE_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="image"]`;
@@ -47,7 +47,7 @@ const createBlok = async (page: Page, data?: OutputData): Promise<void> => {
 };
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
 });
 
 test('image "more" button shows selected state while its menu is open', async ({ page }) => {

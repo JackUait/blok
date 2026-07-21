@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * Regression suite for code block paste behavior.
@@ -91,7 +91,7 @@ const getBlockCount = (page: Page): Promise<number> =>
 
 test.describe('Code block paste regression', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('pasting plain text into a code block does not create new blocks below it', async ({ page }) => {

@@ -1,8 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
 } from './_helpers';
@@ -35,7 +34,7 @@ test.beforeAll(() => ensureBlokBundleBuilt());
 
 test('create columns via toolbox, undo, redo — columns stay parented, never doubled', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await createBlok(page, { blocks: [{ id: 'p0', type: 'paragraph', data: { text: '' } }] });
 

@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { createBlok, ensureBlokBundleBuilt, TEST_PAGE_URL } from './_helpers';
+import { createBlok, ensureBlokBundleBuilt} from './_helpers';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 test.describe('keyboard column resize', () => {
   test.beforeAll(() => {
@@ -7,7 +7,7 @@ test.describe('keyboard column resize', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
     await page.setViewportSize({ width: 1024, height: 800 });
   });

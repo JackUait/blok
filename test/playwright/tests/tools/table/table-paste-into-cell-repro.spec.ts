@@ -6,14 +6,13 @@
  * 2. No orphaned block IDs remain in the table's contentIds after paste
  */
 
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
-const TEST_PAGE_URL = 'http://localhost:4444/test/playwright/fixtures/test.html';
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
 const CELL_SELECTOR = '[data-blok-table-cell]';
 
@@ -176,7 +175,7 @@ async function waitForPasteComplete(page: Page, expectedText: string): Promise<v
 
 test.describe('Paste into existing table cell — content integrity', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

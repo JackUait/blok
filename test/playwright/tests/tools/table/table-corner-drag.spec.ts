@@ -1,11 +1,11 @@
  
 // E2E tests for the table corner drag handle
 
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const CELL_SELECTOR = '[data-blok-table-cell]';
@@ -181,7 +181,7 @@ test.describe('Table Corner Drag Handle', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

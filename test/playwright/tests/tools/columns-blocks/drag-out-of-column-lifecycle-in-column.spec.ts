@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
   reloadFromSave,
@@ -221,7 +220,7 @@ test.beforeAll(() => {
 test.describe('Dragging a block OUT of a column back to root', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('LEAF DRAG-OUT: a header dragged out of its column lands at root in model and live DOM', async ({ page }) => {

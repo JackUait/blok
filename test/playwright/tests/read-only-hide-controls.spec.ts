@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { BlokConfig } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { expect, gotoTestPage, test } from './helpers/shared-page';
 import {
   BLOK_INTERFACE_SELECTOR,
   INLINE_TOOLBAR_INTERFACE_SELECTOR
@@ -185,7 +185,7 @@ test.describe('read-only hideControls', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

@@ -1,8 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BlockChanged } from '../../../../src/components/events/BlockChanged';
 import { BlockHovered } from '../../../../src/components/events/BlockHovered';
 import { RedactorDomChanged } from '../../../../src/components/events/RedactorDomChanged';
@@ -13,6 +12,7 @@ import { BlockSettingsOpened } from '../../../../src/components/events/BlockSett
 import { BlockSettingsClosed } from '../../../../src/components/events/BlockSettingsClosed';
 import type { BlokEventMap } from '../../../../src/components/events';
 import { BlockChangedMutationType } from '../../../../types/events/block/BlockChanged';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 declare global {
   interface Window {
@@ -146,7 +146,7 @@ const subscribeEmitAndUnsubscribe = async (
 };
 
 const TEST_PAGE_VISIT = async (page: Page): Promise<void> => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
 };
 
 const eventsDispatcherExists = async (page: Page): Promise<boolean> => {

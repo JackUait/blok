@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   createBlok,
   saveBlok,
@@ -8,7 +8,6 @@ import {
   findBlock,
   childrenOf,
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
 } from './_helpers';
 
 /**
@@ -124,7 +123,7 @@ test.describe('Inline toolbar + convert-to inside a column', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('Bold applied to a selection inside a column persists and the block keeps its column parent', async ({ page }) => {

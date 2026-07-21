@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 declare global {
   interface Window {
@@ -79,7 +79,7 @@ test.describe('Database board view — pill title inline editing', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('clicking the column title replaces it with a focused input', async ({ page }) => {

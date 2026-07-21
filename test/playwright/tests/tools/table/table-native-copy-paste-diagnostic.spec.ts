@@ -5,10 +5,10 @@
  * This is a debugging/investigation test — not a permanent regression test.
  */
 /* eslint-disable playwright/no-wait-for-timeout, max-depth */
-import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 const TABLE_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="table"]`;
@@ -72,7 +72,7 @@ test.describe('Native copy paste diagnostic', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof (window as unknown as { Blok: unknown }).Blok === 'function');
   });
 

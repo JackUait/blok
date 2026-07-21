@@ -1,10 +1,10 @@
  
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const LIST_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="list"]`;
@@ -53,7 +53,7 @@ test.describe('list tool regression: getBlockIndex for reliable index lookup', (
   test.beforeAll(ensureBlokBundleBuilt);
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   /**

@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const SETTINGS_BUTTON = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
@@ -28,7 +28,7 @@ const TWO_PARAGRAPHS: OutputData = {
  * multi-select block-settings header is translated rather than hard-coded.
  */
 const createLocalizedBlok = async (page: Page, locale: string, data: OutputData): Promise<void> => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await page.evaluate(
     async ({ holder, initialData, loc }) => {

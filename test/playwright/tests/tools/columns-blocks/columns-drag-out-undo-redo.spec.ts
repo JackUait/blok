@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
 } from './_helpers';
 
@@ -110,7 +109,7 @@ test.beforeAll(() => ensureBlokBundleBuilt());
 test('drag a column child out, edit elsewhere, undo/redo — no stranded holders', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1100, height: 900 });
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await createBlok(page, fixture());
   await expect(page.locator('[data-blok-column]')).toHaveCount(2);

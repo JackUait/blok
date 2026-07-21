@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 declare global {
   interface Window {
@@ -85,7 +85,7 @@ test.describe('scroll to block on hash', () => {
   });
 
   test('scrolls to the target block when URL contains a hash matching a block ID', async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
 
     // Set the hash before creating the editor so it reads it during isReady
@@ -112,7 +112,7 @@ test.describe('scroll to block on hash', () => {
   });
 
   test('does not scroll when hash is absent', async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     // No hash set, no min-height needed
     await createEditorWithData(page, { blocks: SCROLL_TEST_BLOCKS });
 
@@ -122,7 +122,7 @@ test.describe('scroll to block on hash', () => {
 
   test('topOffset is respected: scroll position is offset by the configured amount', async ({ page }) => {
     // --- Run 1: topOffset = 0 ---
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
     await page.evaluate((hash) => {
       window.history.replaceState(null, '', '#' + hash);
@@ -134,7 +134,7 @@ test.describe('scroll to block on hash', () => {
     const scrollYWithoutOffset = await page.evaluate(() => window.scrollY);
 
     // --- Run 2: topOffset = 80 ---
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
     await page.evaluate((hash) => {
       window.history.replaceState(null, '', '#' + hash);
@@ -157,7 +157,7 @@ test.describe('scroll to block on hash', () => {
     // `api.blocks.render()` after isReady. The target block is not in the DOM
     // when the hash is read, so the scroll must be deferred and retried once
     // blocks.render() finishes.
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
 
     await page.evaluate((hash) => {
@@ -216,7 +216,7 @@ test.describe('scroll to block on hash', () => {
   });
 
   test('briefly applies and removes blok-block--target highlight class on hash arrival', async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
 
     await page.evaluate((hash) => {
@@ -234,7 +234,7 @@ test.describe('scroll to block on hash', () => {
   });
 
   test('visually selects (highlights) the target block after scrolling', async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.addStyleTag({ content: 'body { min-height: 3000px; }' });
 
     await page.evaluate((hash) => {

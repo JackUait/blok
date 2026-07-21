@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import type { OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const DIST_BUNDLE_PATH = path.resolve(__dirname, '../../../dist/editorjs.umd.js');
 
@@ -117,7 +117,7 @@ test.describe('api.toolbar', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await createBlok(page, blokDataMock);
   });
 

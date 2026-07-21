@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * Regression: code block's inner <code> (inside <pre>) inherited the inline-code
@@ -74,7 +74,7 @@ const readBlockCodeStyles = async (page: Page) => {
 
 test.describe('Code block — no double background', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('inner <code> inside <pre> has transparent background (inline-code style does not leak)', async ({ page }) => {

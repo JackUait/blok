@@ -1,11 +1,11 @@
 // spec: specs/plan.md (Row and Column Grip Controls — Notion parity menu)
 // seed: test/playwright/tests/tools/table/table-grips.spec.ts
 
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const ROW_GRIP_ATTR = 'data-blok-table-grip-row';
@@ -146,7 +146,7 @@ test.describe('Table grip menu — color, duplicate, clear', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

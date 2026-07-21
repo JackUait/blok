@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   createBlok,
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   saveBlok,
   findBlock,
   childrenOf,
@@ -67,7 +66,7 @@ test.describe('turn selection into columns', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
     await page.setViewportSize({ width: 1024, height: 800 });
   });

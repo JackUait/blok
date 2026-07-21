@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
 import { validateHierarchy } from '../../../../src/components/utils/hierarchy-invariant';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * Operation gauntlet: exercise a long sequence of mutations inside a container
@@ -106,7 +106,7 @@ const simulatePaste = async (page: Page, opts: { html?: string; text?: string })
 };
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
 });
 
 test.describe('Container hierarchy invariant gauntlet', () => {

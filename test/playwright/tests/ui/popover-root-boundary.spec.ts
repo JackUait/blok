@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 declare global {
   interface Window {
@@ -231,7 +231,7 @@ test.describe('root popover boundary', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });

@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
 } from './columns-blocks/_helpers';
@@ -31,7 +30,7 @@ const getSpacerHeight = async (page: Page): Promise<number> => {
 
 test.describe('Spacer block', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('inserting from the slash menu creates a visible spacer block', async ({ page }) => {

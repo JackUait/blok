@@ -1,8 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
   reloadFromSave,
@@ -33,7 +32,7 @@ const dividerInColumnFixture: OutputData = {
 
 test.describe('Divider inside a column', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('renders inside the first column', async ({ page }) => {

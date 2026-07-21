@@ -1,13 +1,12 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   childrenOf,
   createBlok,
   ensureBlokBundleBuilt,
   findBlock,
   saveBlok,
-  TEST_PAGE_URL,
 } from './_helpers';
 
 /**
@@ -59,7 +58,7 @@ test.beforeAll(() => {
 
 test.describe('Backspace/Delete merge at column boundaries', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('Backspace at start of the first block in the LEFT column does not merge across the column boundary', async ({ page }) => {

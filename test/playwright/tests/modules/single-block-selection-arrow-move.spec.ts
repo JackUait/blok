@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '../../../../types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"][data-blok-component="paragraph"]`;
@@ -45,7 +45,7 @@ const createBlok = async (page: Page, texts: string[]): Promise<void> => {
 
 test.describe('modules/single-block-selection-arrow-move', () => {
   test.beforeAll(() => ensureBlokBundleBuilt());
-  test.beforeEach(async ({ page }) => { await page.goto(TEST_PAGE_URL); });
+  test.beforeEach(async ({ page }) => { await gotoTestPage(page); });
 
   test('plain ArrowDown moves a single-block selection (entered via Cmd+A stage 2) to the next block', async ({ page }) => {
     await createBlok(page, ['One', 'Two', 'Three']);

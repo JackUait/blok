@@ -2,11 +2,11 @@
 // Regression: color picker should open when hovering the Color item (not clicking)
 // and should be positioned to the right of the pill popover.
 
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 type SerializableToolConfig = {
@@ -194,7 +194,7 @@ test.describe('Cell color picker hover behavior', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

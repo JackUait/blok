@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   resetBlok,
   saveBlok,
   findBlock,
@@ -274,7 +273,7 @@ test.describe('Database drop lifecycle in a column', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('DROP: side-dropping a root database beside a block wraps both into columns and the database keeps its rows', async ({ page }) => {

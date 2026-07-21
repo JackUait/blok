@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
   findBlock,
@@ -166,7 +165,7 @@ test.beforeAll(() => {
 test.describe('Duplicate / undo / redo after dropping a block into a column', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

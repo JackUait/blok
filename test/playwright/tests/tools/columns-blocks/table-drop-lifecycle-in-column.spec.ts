@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData, OutputBlockData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
   reloadFromSave,
@@ -185,7 +184,7 @@ test.beforeAll(() => {
 test.describe('Table block: full live-drag lifecycle in a column', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('DROP: side-dropping a root table beside a block wraps both into columns and the table keeps its cell subtree', async ({ page }) => {

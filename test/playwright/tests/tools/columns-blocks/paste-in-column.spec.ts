@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
-import { createBlok, saveBlok, reloadFromSave, findBlock, childrenOf, ensureBlokBundleBuilt, TEST_PAGE_URL } from './_helpers';
+import { createBlok, saveBlok, reloadFromSave, findBlock, childrenOf, ensureBlokBundleBuilt} from './_helpers';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 /**
  * TDD bug-hunt: pasting multi-block content into a paragraph that lives inside a
@@ -68,7 +68,7 @@ const TWO_COLUMN_LAYOUT = {
 
 test.describe('Pasting multi-block content into a column', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

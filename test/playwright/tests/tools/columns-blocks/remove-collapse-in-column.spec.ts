@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { createBlok, saveBlok, findBlock, childrenOf, ensureBlokBundleBuilt, TEST_PAGE_URL } from './_helpers';
+import { createBlok, saveBlok, findBlock, childrenOf, ensureBlokBundleBuilt} from './_helpers';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 /**
  * Live removal of nested blocks until a column empties / the column_list
@@ -51,7 +51,7 @@ test.beforeAll(() => {
 
 test.describe('Removing blocks until a column empties / the list collapses', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('removing the last block of one column in a 2-column list collapses the column and unwraps the list', async ({ page }) => {

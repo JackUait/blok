@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { TOOLTIP_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, test } from '@playwright/test';
 
 const HOLDER_ID = 'blok';
 

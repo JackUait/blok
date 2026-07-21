@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const PARAGRAPH_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="paragraph"] [contenteditable]`;
@@ -79,7 +79,7 @@ const selectText = async (locator: Locator, text: string): Promise<void> => {
  */
 test.describe('colored mark must not render a spurious UA highlight', () => {
   test.beforeAll(() => { ensureBlokBundleBuilt(); });
-  test.beforeEach(async ({ page }) => { await page.goto(TEST_PAGE_URL); });
+  test.beforeEach(async ({ page }) => { await gotoTestPage(page); });
 
   test('a text-color-only <mark> has a transparent background at rest', async ({ page }) => {
     await createBlokWithBlocks(page, [

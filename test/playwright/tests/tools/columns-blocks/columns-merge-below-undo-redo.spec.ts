@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
 } from './_helpers';
@@ -71,7 +70,7 @@ test.beforeAll(() => ensureBlokBundleBuilt());
 
 test('backspace-merge below columns then undo/redo keeps columns intact', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await createBlok(page, fixture());
   await expect(page.locator('[data-blok-column]')).toHaveCount(2);

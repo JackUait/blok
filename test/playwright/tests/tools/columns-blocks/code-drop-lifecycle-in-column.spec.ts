@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData, OutputBlockData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
   reloadFromSave,
@@ -163,7 +162,7 @@ test.beforeAll(() => {
 test.describe('Code block drop lifecycle inside a column', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('DROP: side-dropping a root code block beside a paragraph wraps both into columns with code in the 2nd', async ({ page }) => {

@@ -1,13 +1,12 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   childrenOf,
   ensureBlokBundleBuilt,
   findBlock,
   resetBlok,
   saveBlok,
-  TEST_PAGE_URL,
 } from './_helpers';
 
 declare global {
@@ -128,7 +127,7 @@ test.describe('Database inside a column', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('renders inside the first column', async ({ page }) => {

@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
+import { expect, gotoTestPage, test } from './helpers/shared-page';
 
 /**
  * Block move & duplicate shortcuts must work in EVERY editor on the page, from a
@@ -22,7 +22,7 @@ declare global {
 }
 
 const bootTwo = async (page: Page): Promise<void> => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
   await page.evaluate(async () => {
     const mk = (id: string): void => {

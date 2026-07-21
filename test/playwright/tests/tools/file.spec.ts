@@ -1,11 +1,11 @@
 // test/playwright/tests/tools/file.spec.ts
 
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 // Playwright runs from the repo root, so resolve fixtures relative to cwd.
 const OFFICE_FIXTURES = join(process.cwd(), 'test/playwright/fixtures/office');
@@ -69,7 +69,7 @@ const createBlokWithFile = async (page: Page, data?: OutputData): Promise<void> 
 };
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
 });
 
 // ---------------------------------------------------------------------------

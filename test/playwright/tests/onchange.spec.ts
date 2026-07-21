@@ -1,14 +1,14 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { modificationsObserverBatchTimeout, BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { BlockAddedMutationType } from '../../../types/events/block/BlockAdded';
 import { BlockChangedMutationType } from '../../../types/events/block/BlockChanged';
 import { BlockMovedMutationType } from '../../../types/events/block/BlockMoved';
 import { BlockRemovedMutationType } from '../../../types/events/block/BlockRemoved';
+import { expect, gotoTestPage, test } from './helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -304,7 +304,7 @@ test.describe('onChange callback', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

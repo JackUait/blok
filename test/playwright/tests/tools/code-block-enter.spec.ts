@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * Regression suite for pressing Enter inside a code block.
@@ -149,7 +149,7 @@ const focusCodeAtOffset = async (page: Page, offset: number): Promise<void> => {
 
 test.describe('Code block Enter regression', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('Enter in the middle of code inserts a newline in place, no extra block', async ({ page }) => {
@@ -289,7 +289,7 @@ test.describe('Code block Enter regression', () => {
 
 test.describe('Code block Enter — highlighted languages', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('Enter inserts newline in a Prism-highlighted block (no stale-dispose revert)', async ({ page }) => {
@@ -354,7 +354,7 @@ test.describe('Code block Enter — highlighted languages', () => {
 
 test.describe('Code block Enter — auto-indent and bracket expansion', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('Enter preserves leading spaces of the current line', async ({ page }) => {

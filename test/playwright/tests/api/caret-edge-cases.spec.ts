@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok-';
 
@@ -70,7 +70,7 @@ test.describe('caret edge cases - NBSP and boundary detection', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('handles NBSP character at start of block', async ({ page }) => {
@@ -248,7 +248,7 @@ test.describe('caret edge cases - Nested elements', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('handles deeply nested formatting', async ({ page }) => {
@@ -366,7 +366,7 @@ test.describe('caret edge cases - Multi-line content', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('handles soft breaks in text', async ({ page }) => {
@@ -472,7 +472,7 @@ test.describe('caret edge cases - Special characters', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('handles unicode punctuation', async ({ page }) => {
@@ -606,7 +606,7 @@ test.describe('caret edge cases - Empty and whitespace-only content', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('handles completely empty block', async ({ page }) => {

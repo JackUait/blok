@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * The popover scrollbar must behave IDENTICALLY on every platform. Native
@@ -108,7 +108,7 @@ test.describe('popover scrollbar — identical across platforms', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 
@@ -135,7 +135,7 @@ test.describe('popover scrollbar — identical across platforms', () => {
    * runs on Linux in CI where the classic bar is the real default.
    */
   test('the hiding rules collapse the scrollbar lane to zero on every engine', async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
 
     const lanes = await measureScrollbarLanes(page);
 
@@ -151,7 +151,7 @@ test.describe('popover scrollbar — identical across platforms', () => {
     // in CI, where the previous test's hidden===0 becomes the meaningful check.
     test.skip(browserName === 'firefox', 'cannot force a classic scrollbar in Firefox under macOS overlay');
 
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
 
     const lanes = await measureScrollbarLanes(page);
 

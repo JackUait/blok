@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * Generic container-block paste-ejection regression suite.
@@ -84,7 +84,7 @@ const simulatePaste = async (page: Page, opts: { html?: string; text?: string })
 };
 
 test.beforeEach(async ({ page }) => {
-  await page.goto(TEST_PAGE_URL);
+  await gotoTestPage(page);
 });
 
 test.describe('Container paste regression: no ejection on save (toggle, toggleable header)', () => {

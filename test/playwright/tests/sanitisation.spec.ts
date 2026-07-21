@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from './helpers/ensure-build';
+import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
+import { expect, gotoTestPage, test } from './helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const INITIAL_BLOCK_ID = 'sanitisation-initial-block';
@@ -253,7 +253,7 @@ test.describe('sanitizing', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

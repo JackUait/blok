@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData } from '@/types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL, createBlok, saveBlok, findBlock } from './_helpers';
+import { ensureBlokBundleBuilt,  createBlok, saveBlok, findBlock } from './_helpers';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 /**
  * FAMILY GUARD — a block dropped in the empty "below the columns" dead space must
@@ -139,7 +139,7 @@ test.beforeAll(() => {
 test.describe('Dropping in the dead space below columns always lands at root (family guard)', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 900 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

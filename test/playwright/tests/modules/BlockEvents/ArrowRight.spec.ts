@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '../../../../../types';
 import type { OutputData } from '../../../../../types';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
@@ -186,7 +186,7 @@ test.describe('arrow right keydown', () => {
 
   test.beforeEach(async ({ page }) => {
     page.on('console', msg => console.log(msg.text()));
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
     await page.addStyleTag({ content: '[data-blok-tool="paragraph"] { white-space: pre-wrap !important; }' });
   });

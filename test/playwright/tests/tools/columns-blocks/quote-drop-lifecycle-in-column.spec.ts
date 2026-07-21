@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   ensureBlokBundleBuilt,
-  TEST_PAGE_URL,
   createBlok,
   saveBlok,
   reloadFromSave,
@@ -154,7 +153,7 @@ test.beforeAll(() => {
 test.describe('Quote drop lifecycle inside a column', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('side-dropping a root quote beside a block wraps both into columns with the quote in the second column', async ({ page }) => {

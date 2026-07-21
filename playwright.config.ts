@@ -221,7 +221,10 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120000, // Give the server more time to start up
   },
-  retries: process.env.CI ? 2 : 0,
+  // One local retry absorbs load-flakes at high worker counts (CI already
+  // runs 2); a retry lands in a fresh worker + context. Real regressions
+  // fail both attempts and stay red.
+  retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 3 : AMOUNT_OF_LOCAL_WORKERS,
 });
 

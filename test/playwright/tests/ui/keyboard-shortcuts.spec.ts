@@ -1,12 +1,12 @@
  
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import path from 'node:path';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import type { BlockToolConstructable, InlineToolConstructable } from '@/types/tools';
 import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const BLOK_BUNDLE_PATH = path.resolve(__dirname, '../../../../dist/editorjs.umd.js');
 
@@ -267,7 +267,7 @@ test.describe('keyboard shortcuts', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('activates custom block tool via configured shortcut', async ({ page }) => {

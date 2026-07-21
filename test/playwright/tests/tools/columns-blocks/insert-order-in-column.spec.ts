@@ -1,13 +1,12 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import type { OutputData } from '@/types';
+import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import {
   childrenOf,
   createBlok,
   ensureBlokBundleBuilt,
   reloadFromSave,
   saveBlok,
-  TEST_PAGE_URL,
 } from './_helpers';
 
 /**
@@ -87,7 +86,7 @@ test.beforeAll(() => {
 test.describe('Insert order inside a column with existing content', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 800 });
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
     await page.waitForFunction(() => typeof window.Blok === 'function');
   });
 

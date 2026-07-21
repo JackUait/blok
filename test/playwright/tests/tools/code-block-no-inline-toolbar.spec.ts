@@ -1,4 +1,3 @@
-import { expect, test } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
@@ -6,7 +5,8 @@ import {
   BLOK_INTERFACE_SELECTOR,
   INLINE_TOOLBAR_INTERFACE_SELECTOR
 } from '../../../../src/components/constants';
-import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 /**
  * Inline toolbar must not appear when the user selects text inside a code
@@ -109,7 +109,7 @@ const selectRangeInElement = async (locator: Locator, start: number, end: number
 
 test.describe('Code block — no inline toolbar', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(TEST_PAGE_URL);
+    await gotoTestPage(page);
   });
 
   test('inline toolbar does not appear when selecting text inside code block', async ({ page }) => {

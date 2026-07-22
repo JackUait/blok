@@ -154,6 +154,7 @@ const createApiStub = (): API => ({
   sanitizer: {} as API['sanitizer'],
   saver: {} as API['saver'],
   selection: {} as API['selection'],
+  marks: {} as API['marks'],
   styles: {} as API['styles'],
   toolbar: {} as API['toolbar'],
   inlineToolbar: {} as API['inlineToolbar'],

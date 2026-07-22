@@ -21,8 +21,10 @@ vi.mock('../../../src/blok', () => ({
   },
 }));
 
-import { createReactInlineTool } from '../../../packages/react/src/createReactInlineTool';
+import { createReactInlineTool, useInlineTool } from '../../../packages/react/src/createReactInlineTool';
 import type { ReactInlineToolRenderProps } from '../../../packages/react/src/createReactInlineTool';
+import type { API, SanitizerConfig } from '../../../types';
+import type { MarkSpec } from '../../../types/api/marks';
 import {
   createBlockPortalRegistry,
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
@@ -346,5 +348,219 @@ describe('useBlok wiring for react inline tools', () => {
     expect(tools.vanilla.config?.[BLOK_PORTAL_REGISTRY_CONFIG_KEY]).toBeUndefined();
 
     unmount();
+  });
+
+  describe('editor API access and mark derivation', () => {
+    const descriptionMark: MarkSpec = { tag: 'span', className: 'hl-description' };
+
+    /** A minimal api stub exposing only the marks surface the adapter derives from. */
+    const makeApiStub = (): { api: API; marks: { has: ReturnType<typeof vi.fn>; toggle: ReturnType<typeof vi.fn>; apply: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn>; read: ReturnType<typeof vi.fn> } } => {
+      const marks = {
+        has: vi.fn(() => false),
+        toggle: vi.fn(() => true),
+        apply: vi.fn(() => []),
+        remove: vi.fn(() => []),
+        read: vi.fn(() => null),
+      };
+
+      return { api: { marks } as unknown as API, marks };
+    };
+
+    const selectText = (text: string): Range => {
+      const host = document.createElement('div');
+
+      host.textContent = text;
+      document.body.appendChild(host);
+
+      const range = document.createRange();
+
+      range.selectNodeContents(host);
+
+      const selection = window.getSelection();
+
+      if (!selection) {
+        throw new Error('jsdom returned no selection');
+      }
+
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      return range;
+    };
+
+    it('passes the editor api as the second argument to surround and checkState', () => {
+      const surround = vi.fn<(range: Range, api: API | undefined) => void>();
+      const checkState = vi.fn<(selection: Selection | null, api: API | undefined) => boolean>(() => true);
+      const { api } = makeApiStub();
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: ColorIcon,
+        surround,
+        checkState,
+      });
+      const tool = new Tool({ api, config: {} });
+      const item = firstItem(tool.render() as MenuConfig);
+
+      selectText('with api');
+      item.onActivate?.({});
+      item.isActive?.();
+
+      expect(surround).toHaveBeenCalledTimes(1);
+      expect(surround.mock.calls[0][1]).toBe(api);
+      expect(checkState).toHaveBeenCalledTimes(1);
+      expect(checkState.mock.calls[0][1]).toBe(api);
+    });
+
+    it('derives onActivate from the mark spec via api.marks.toggle', () => {
+      const { api, marks } = makeApiStub();
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: ColorIcon,
+        mark: descriptionMark,
+      });
+      const tool = new Tool({ api, config: {} });
+      const item = firstItem(tool.render() as MenuConfig);
+
+      selectText('toggle me');
+      item.onActivate?.({});
+
+      expect(marks.toggle).toHaveBeenCalledTimes(1);
+      expect(marks.toggle.mock.calls[0][0]).toBe(descriptionMark);
+    });
+
+    it('derives isActive from the mark spec via api.marks.has', () => {
+      const { api, marks } = makeApiStub();
+
+      marks.has.mockReturnValue(true);
+
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: ColorIcon,
+        mark: descriptionMark,
+      });
+      const tool = new Tool({ api, config: {} });
+      const item = firstItem(tool.render() as MenuConfig);
+
+      expect(item.isActive?.()).toBe(true);
+      expect(marks.has.mock.calls[0][0]).toBe(descriptionMark);
+    });
+
+    it('lets an explicit surround and checkState take precedence over the mark derivation', () => {
+      const surround = vi.fn();
+      const checkState = vi.fn(() => false);
+      const { api, marks } = makeApiStub();
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: ColorIcon,
+        mark: descriptionMark,
+        surround,
+        checkState,
+      });
+      const tool = new Tool({ api, config: {} });
+      const item = firstItem(tool.render() as MenuConfig);
+
+      selectText('explicit wins');
+      item.onActivate?.({});
+      item.isActive?.();
+
+      expect(surround).toHaveBeenCalledTimes(1);
+      expect(checkState).toHaveBeenCalledTimes(1);
+      expect(marks.toggle).not.toHaveBeenCalled();
+      expect(marks.has).not.toHaveBeenCalled();
+    });
+
+    it('derives the static sanitize config from the mark spec', () => {
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: ColorIcon,
+        mark: descriptionMark,
+      });
+
+      const sanitize = Tool.sanitize;
+
+      expect(sanitize).toBeDefined();
+      expect(typeof (sanitize as SanitizerConfig)['span']).toBe('function');
+    });
+
+    it('prefers an explicit sanitize over the derived one', () => {
+      const explicit: SanitizerConfig = { span: { class: true } };
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: ColorIcon,
+        mark: descriptionMark,
+        sanitize: explicit,
+      });
+
+      expect(Tool.sanitize).toBe(explicit);
+    });
+
+    it('stays inert when the editor api has no marks surface (older core)', () => {
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: ColorIcon,
+        mark: descriptionMark,
+      });
+      const tool = new Tool({ api: {} as never, config: {} });
+      const item = firstItem(tool.render() as MenuConfig);
+
+      selectText('no marks api');
+      expect(() => item.onActivate?.({})).not.toThrow();
+      expect(item.isActive?.()).toBe(false);
+    });
+
+    it('exposes active, config, api and bound mark operations through useInlineTool()', () => {
+      const { api, marks } = makeApiStub();
+
+      function SwatchPanel(): ReactElement {
+        const handle = useInlineTool<{ tone: string }>();
+
+        return (
+          <button
+            data-testid="swatch"
+            data-has-api={handle.api ? 'true' : 'false'}
+            data-swatch-active={handle.active ? 'true' : 'false'}
+            onClick={(): void => {
+              handle.mark?.toggle();
+            }}
+          >
+            {handle.config.tone ?? ''}
+          </button>
+        );
+      }
+
+      const registry = createBlockPortalRegistry();
+      const Tool = createReactInlineTool({
+        type: 'descriptionColor',
+        component: SwatchPanel,
+        mark: descriptionMark,
+      });
+      const tool = new Tool({
+        api,
+        config: {
+          [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry,
+          [BLOK_TOOL_NAME_CONFIG_KEY]: 'descriptionColor',
+          tone: 'warm',
+        },
+      });
+
+      const item = firstItem(tool.render() as MenuConfig);
+
+      document.body.appendChild(item.icon as HTMLElement);
+      render(<BlockPortalHost registry={registry} />);
+
+      const swatch = (item.icon as HTMLElement).querySelector<HTMLButtonElement>('[data-testid="swatch"]');
+
+      expect(swatch).not.toBeNull();
+      expect(swatch?.getAttribute('data-has-api')).toBe('true');
+      expect(swatch?.getAttribute('data-swatch-active')).toBe('false');
+      expect(swatch?.textContent).toBe('warm');
+
+      act(() => {
+        swatch?.click();
+      });
+
+      expect(marks.toggle).toHaveBeenCalledTimes(1);
+      expect(marks.toggle.mock.calls[0][0]).toBe(descriptionMark);
+    });
   });
 });

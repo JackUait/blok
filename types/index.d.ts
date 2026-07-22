@@ -19,6 +19,7 @@ import {
   History,
   InlineToolbar,
   Listeners,
+  Marks,
   Notifier,
   ReadOnly,
   Sanitizer,
@@ -122,6 +123,10 @@ export {
   History,
   InlineToolbar,
   Listeners,
+  Marks,
+  MarkSnapshot,
+  MarkSpec,
+  MarkValue,
   Notifier,
   ReadOnly,
   Sanitizer,
@@ -173,6 +178,8 @@ export interface API {
   sanitizer: Sanitizer;
   saver: Saver;
   selection: Selection;
+  /** Range-aware inline-mark operations (see {@link Marks}). */
+  marks: Marks;
   styles: Styles;
   toolbar: Toolbar;
   inlineToolbar: InlineToolbar;
@@ -237,6 +244,16 @@ export function isEmptyOutputData(data: OutputData | LooseOutputData | null | un
  * @param configs - sanitize configs in composition order
  */
 export function composeBaseSanitizeConfig(configs: SanitizerConfig[]): SanitizerConfig;
+
+/**
+ * Derive an inline tool's sanitizer rule from its MarkSpec: allowlists the
+ * spec's tag, strips style properties and classes the spec does not declare,
+ * and keeps declared attributes. Function-form values are handled by property
+ * NAME (names are always known even when values are dynamic), so dynamic
+ * values can never be silently dropped on save.
+ * @param spec - mark description
+ */
+export function markSanitizerConfig<State = void>(spec: MarkSpec<State>): SanitizerConfig;
 
 /**
  * Config accepted by {@link defineBlokSchema}. Only `tools`, `inlineToolbar`

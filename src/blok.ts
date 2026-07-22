@@ -682,6 +682,12 @@ export default Blok;
 export { wrapLegacyInlineTool } from './components/inline-tools/wrap-legacy-inline-tool';
 
 /**
+ * Derive an inline tool's sanitizer rule from its MarkSpec — the same
+ * derivation the framework adapters use for spec-declared marks.
+ */
+export { markSanitizerConfig } from './components/marks/mark-engine';
+
+/**
  * Typed event-name constants for editor lifecycle events observable via
  * `blok.events.on(...)`. Prefer these over raw strings to avoid typos and
  * get typed payloads (see {@link BlokEditorEventMap}).

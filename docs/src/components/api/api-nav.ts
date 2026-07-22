@@ -3,7 +3,7 @@
 export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }> = [
   { key: 'gettingStarted', moduleIds: ['quick-start', 'tutorial', 'concepts', 'custom-block-tool'] },
   { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api', 'view-api'] },
-  { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'styles-api', 'history-api'] },
+  { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'marks-api', 'styles-api', 'history-api'] },
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api'] },
   { key: 'extending', moduleIds: ['tools-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api'] },
   { key: 'dataTypes', moduleIds: ['output-data', 'block-data'] },
@@ -33,6 +33,7 @@ export const MODULE_LABELS_EN: Record<string, string> = {
   'block-api': 'BlockAPI',
   'caret-api': 'Caret',
   'selection-api': 'Selection',
+  'marks-api': 'Marks',
   'styles-api': 'Styles',
   'history-api': 'History',
   'toolbar-api': 'Toolbar',

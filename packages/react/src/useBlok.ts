@@ -435,7 +435,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     }
   }, [editor, readOnlyEnabled, readOnlyHideControls, readOnlyIsObjectForm]);
 
-  // Reactive: hideToolbar. `toolbar.setHidden` writes `config.hideToolbar`
+  // Reactive: hideToolbar — `toolbar.setHidden` writes `config.hideToolbar`
   // (read live by the toolbar's open guards) AND toggles the wrapper's
   // toolbar-hidden attribute (the CSS hook that collapses the gutter), so a
   // prop flip takes effect in place. Guarded on `undefined` so a consumer who
@@ -448,7 +448,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     editor.toolbar.setHidden(hideToolbar);
   }, [editor, hideToolbar]);
 
-  // Reactive: inlineToolbar. `tools.setInlineToolbar` re-assigns every block
+  // Reactive: inlineToolbar — `tools.setInlineToolbar` re-assigns every block
   // tool's inline set and invalidates sanitize caches, so the change lands on
   // the next selection without a re-render. The dep is a content serialization
   // (boolean | string[]) so a re-created array literal with the same entries

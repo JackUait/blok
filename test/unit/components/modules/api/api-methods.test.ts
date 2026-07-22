@@ -54,6 +54,7 @@ const createBlokStub = (rectangleSelection: Record<string, unknown>): BlokModule
     SanitizerAPI: emptyMethods,
     SaverAPI: emptyMethods,
     SelectionAPI: emptyMethods,
+    MarksAPI: emptyMethods,
     StylesAPI: { classes: {} },
     ToolbarAPI: emptyMethods,
     InlineToolbarAPI: emptyMethods,

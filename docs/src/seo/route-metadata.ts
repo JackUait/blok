@@ -173,6 +173,12 @@ const MODULE_COPY: Record<string, Copy> = {
       'Read and manipulate the current selection, including selections that span more than one block.',
     h1: 'Selection API: read and set the selection',
   },
+  'marks-api': {
+    title: 'Blok Marks API — Range-Aware Inline Formatting',
+    description:
+      'Apply, read, and toggle inline marks across the whole selection with editor.marks — range-aware splitting, in-place updates, and derived sanitizer rules.',
+    h1: 'Marks API: range-aware inline formatting',
+  },
   'styles-api': {
     title: 'Blok Styles API — CSS class names',
     description:

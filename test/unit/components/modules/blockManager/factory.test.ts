@@ -107,6 +107,14 @@ const createMockAPIMethods = (): APIInterface => ({
     save: vi.fn(),
     restore: vi.fn(),
   },
+  marks: {
+    has: vi.fn(),
+    find: vi.fn(),
+    read: vi.fn(),
+    apply: vi.fn(),
+    remove: vi.fn(),
+    toggle: vi.fn(),
+  },
   styles: {
     block: 'blok-block',
     inlineToolButton: 'blok-inline-tool-button',

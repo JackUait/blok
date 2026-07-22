@@ -3,16 +3,12 @@ import type {
   InlineToolConstructorOptions,
   SanitizerConfig
 } from '../../../types';
-import type { I18n, InlineToolbar } from '../../../types/api';
+import type { I18n, InlineToolbar, MarkSpec } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { IconMarker } from '../icons';
+import { applyMark, findMark, hasMark, removeMark } from '../marks/mark-engine';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
-import { isMarkTag, findMarkElement } from './utils/marker-dom-utils';
-import {
-  isRangeFormatted,
-  collectFormattingAncestors,
-} from './utils/formatting-range-utils';
 import { createColorPicker } from '../shared/color-picker';
 import type { ColorPickerHandle } from '../shared/color-picker';
 import { colorVarName } from '../shared/color-presets';
@@ -25,12 +21,19 @@ import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../utils/defa
 type ColorMode = 'color' | 'background-color';
 
 /**
- * The opposite color mode key for checking remaining styles
+ * The two marker modes as mark-engine specs. Same family (both plain <mark>),
+ * so text colour and background compose on one element instead of nesting.
  */
-const OPPOSITE_MODE: Record<ColorMode, ColorMode> = {
-  'color': 'background-color',
-  'background-color': 'color',
+const MARKER_SPECS: Record<ColorMode, MarkSpec<string>> = {
+  'color': { tag: 'mark', style: { color: (value: string): string => value } },
+  'background-color': { tag: 'mark', style: { 'background-color': (value: string): string => value } },
 };
+
+/**
+ * Family-level spec matching ANY <mark>, whichever mode(s) it carries —
+ * used for active-state detection and colour reads.
+ */
+const ANY_MARK: MarkSpec = { tag: 'mark' };
 
 /**
  * Marker Color Inline Tool
@@ -223,7 +226,7 @@ export class MarkerInlineTool implements InlineTool {
         }
 
         const range = selection.getRangeAt(0);
-        const formatted = isRangeFormatted(range, isMarkTag, { ignoreWhitespace: true });
+        const formatted = hasMark(ANY_MARK, range);
 
         if (formatted) {
           const colors = this.detectBothSelectionColors(range);
@@ -285,66 +288,25 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     const resolvedValue = this.resolveToVar(value, mode);
+    const applied = applyMark(MARKER_SPECS[mode], resolvedValue, range);
 
     /**
-     * Check if the entire selection is already inside a single mark element
+     * Marker-specific normalization the generic engine does not own:
+     * a text-coloured <mark> needs an explicit transparent background to
+     * override the browser's default yellow highlight. The engine's splits
+     * leave siblings (before/after segments) and nested marks that kept only
+     * a text colour — normalize the whole neighbourhood, not just the
+     * returned wrappers.
      */
-    const existingMark = this.findContainingMark(range);
+    for (const mark of applied) {
+      this.ensureTransparentBg(mark);
 
-    if (existingMark) {
-      /**
-       * If the selection covers the entire mark content, update in-place
-       */
-      const markRange = document.createRange();
+      const scope = mark.parentElement ?? mark;
 
-      markRange.selectNodeContents(existingMark);
-
-      const coversAll =
-        range.compareBoundaryPoints(Range.START_TO_START, markRange) <= 0 &&
-        range.compareBoundaryPoints(Range.END_TO_END, markRange) >= 0;
-
-      if (coversAll) {
-        existingMark.style.setProperty(mode, resolvedValue);
-        this.ensureTransparentBg(existingMark);
-
-        return;
+      for (const neighbour of Array.from(scope.querySelectorAll<HTMLElement>('mark'))) {
+        this.ensureTransparentBg(neighbour);
       }
-
-      /**
-       * Partial selection: split the mark around the selection
-       * so the new color applies only to the selected text
-       */
-      this.splitMarkAroundRange(existingMark, range, mode, resolvedValue);
-
-      return;
     }
-
-    /**
-     * Split any marks that extend beyond the selection boundaries
-     * so removeNestedMarkStyle only processes the portion within the range
-     */
-    this.splitMarksAtBoundaries(range);
-
-    /**
-     * Remove any nested marks with the same mode before wrapping
-     */
-    this.removeNestedMarkStyle(range, mode);
-
-    const mark = document.createElement('mark');
-
-    mark.style.setProperty(mode, resolvedValue);
-    this.ensureTransparentBg(mark);
-    mark.appendChild(range.extractContents());
-    range.insertNode(mark);
-
-    /**
-     * Select the newly inserted mark contents
-     */
-    selection.removeAllRanges();
-    const newRange = document.createRange();
-
-    newRange.selectNodeContents(mark);
-    selection.addRange(newRange);
   }
 
   /**
@@ -361,78 +323,14 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     const range = selection.getRangeAt(0);
+    const survivors = removeMark(MARKER_SPECS[mode], range);
 
     /**
-     * Capture range anchors before DOM mutations so we can restore the selection
-     * after marks are unwrapped (browsers may collapse selection on DOM changes)
+     * Marks that kept the other mode still need the UA-yellow override when
+     * only a text colour remains
      */
-    const startContainer = range.startContainer;
-    const startOffset = range.startOffset;
-    const endContainer = range.endContainer;
-    const endOffset = range.endOffset;
-
-    /**
-     * Also capture the selected text and a surviving parent node so we
-     * can fall back to offset-based restoration when anchors become stale.
-     * The commonAncestorContainer may itself be the mark element being removed,
-     * so walk up to find a parent that will survive the unwrap.
-     */
-    const selectedText = range.toString();
-    const ancestor = range.commonAncestorContainer;
-    const ancestorEl = ancestor.nodeType === Node.ELEMENT_NODE
-      ? ancestor as HTMLElement
-      : ancestor.parentElement;
-    const survivingParent = ancestorEl?.closest('mark')
-      ? ancestorEl.closest('mark')?.parentElement ?? ancestorEl
-      : ancestorEl;
-
-    /**
-     * Split any marks that extend beyond the selection boundaries so that
-     * the removal only affects the selected portion, not the entire mark.
-     * (Mirrors the same call in applyColor().)
-     */
-    this.splitMarksAtBoundaries(range);
-
-    const markAncestors = collectFormattingAncestors(range, isMarkTag);
-
-    for (const mark of markAncestors) {
-      mark.style.removeProperty(mode);
-
-      const oppositeMode = OPPOSITE_MODE[mode];
-      const oppositeValue = mark.style.getPropertyValue(oppositeMode);
-      const hasOtherStyle = oppositeValue !== '' && oppositeValue !== 'transparent';
-
-      if (!hasOtherStyle) {
-        this.unwrapElement(mark);
-      } else {
-        this.ensureTransparentBg(mark);
-      }
-    }
-
-    /**
-     * Re-establish the selection after DOM mutations.
-     * When the range was anchored to text nodes (moved, not cloned by unwrapElement),
-     * the original anchors remain valid. When the range was anchored to the mark
-     * element itself (e.g. via selectNodeContents), the node is now detached.
-     * Check connectivity before attempting restoration; fall back to text-offset
-     * restoration when anchors are stale.
-     */
-    const startConnected = startContainer.isConnected;
-    const endConnected = endContainer.isConnected;
-
-    if (startConnected && endConnected) {
-      try {
-        const restoredRange = document.createRange();
-
-        restoredRange.setStart(startContainer, startOffset);
-        restoredRange.setEnd(endContainer, endOffset);
-        selection.removeAllRanges();
-        selection.addRange(restoredRange);
-      } catch {
-        this.restoreSelectionByText(selection, survivingParent, selectedText);
-      }
-    } else {
-      this.restoreSelectionByText(selection, survivingParent, selectedText);
+    for (const mark of survivors) {
+      this.ensureTransparentBg(mark);
     }
   }
 
@@ -532,7 +430,7 @@ export class MarkerInlineTool implements InlineTool {
    * @param range - The selection range to inspect
    */
   private detectBothSelectionColors(range: Range): { text: string | null; bg: string | null } {
-    const mark = findMarkElement(range.startContainer);
+    const mark = findMark(ANY_MARK, range.startContainer);
 
     if (!mark) {
       return { text: null, bg: null };
@@ -563,7 +461,7 @@ export class MarkerInlineTool implements InlineTool {
     }
 
     const range = selection.getRangeAt(0);
-    const mark = findMarkElement(range.startContainer);
+    const mark = findMark(ANY_MARK, range.startContainer);
 
     if (!mark) {
       return { text: null, bg: null };
@@ -598,307 +496,6 @@ export class MarkerInlineTool implements InlineTool {
       this.selection.restore();
       this.selection.clearSaved();
     }
-  }
-
-  /**
-   * Find a single mark element that fully contains the range
-   * @param range - The range to check
-   */
-  private findContainingMark(range: Range): HTMLElement | null {
-    const startMark = findMarkElement(range.startContainer);
-    const endMark = findMarkElement(range.endContainer);
-
-    if (startMark && startMark === endMark) {
-      return startMark;
-    }
-
-    return null;
-  }
-
-  /**
-   * Remove a specific style property from nested mark elements within a range
-   * @param range - The range to process
-   * @param mode - The style property to remove
-   */
-  private removeNestedMarkStyle(range: Range, mode: ColorMode): void {
-    const liveMarks = collectFormattingAncestors(range, isMarkTag);
-
-    for (const mark of liveMarks) {
-      mark.style.removeProperty(mode);
-
-      const oppositeMode = OPPOSITE_MODE[mode];
-      const oppositeValue = mark.style.getPropertyValue(oppositeMode);
-      const hasOtherStyle = oppositeValue !== '' && oppositeValue !== 'transparent';
-
-      if (!hasOtherStyle) {
-        this.unwrapElement(mark);
-      } else {
-        this.ensureTransparentBg(mark);
-      }
-    }
-  }
-
-  /**
-   * Split a mark element around a range so only the selected portion gets the new style.
-   * Produces up to three segments: before (original style), selected (new style), after (original style).
-   * @param mark - The existing mark element to split
-   * @param range - The selection range within the mark
-   * @param mode - The style property to set on the selected portion
-   * @param value - The CSS value for the style property
-   */
-  private splitMarkAroundRange(mark: HTMLElement, range: Range, mode: ColorMode, value: string): void {
-    const parent = mark.parentNode;
-
-    if (!parent) {
-      return;
-    }
-
-    const beforeRange = document.createRange();
-
-    beforeRange.setStart(mark, 0);
-    beforeRange.setEnd(range.startContainer, range.startOffset);
-
-    const afterRange = document.createRange();
-
-    afterRange.setStart(range.endContainer, range.endOffset);
-    afterRange.setEnd(mark, mark.childNodes.length);
-
-    const beforeContents = beforeRange.extractContents();
-    const selectedContents = range.extractContents();
-    const afterContents = afterRange.extractContents();
-
-    const newMark = document.createElement('mark');
-
-    newMark.style.cssText = mark.style.cssText;
-    newMark.style.setProperty(mode, value);
-    this.ensureTransparentBg(newMark);
-    newMark.appendChild(selectedContents);
-
-    const fragment = document.createDocumentFragment();
-
-    if (beforeContents.textContent) {
-      const beforeMark = document.createElement('mark');
-
-      beforeMark.style.cssText = mark.style.cssText;
-      this.ensureTransparentBg(beforeMark);
-      beforeMark.appendChild(beforeContents);
-      fragment.appendChild(beforeMark);
-    }
-
-    fragment.appendChild(newMark);
-
-    if (afterContents.textContent) {
-      const afterMark = document.createElement('mark');
-
-      afterMark.style.cssText = mark.style.cssText;
-      this.ensureTransparentBg(afterMark);
-      afterMark.appendChild(afterContents);
-      fragment.appendChild(afterMark);
-    }
-
-    parent.replaceChild(fragment, mark);
-
-    const selection = window.getSelection();
-
-    if (selection) {
-      selection.removeAllRanges();
-
-      const newRange = document.createRange();
-
-      newRange.selectNodeContents(newMark);
-      selection.addRange(newRange);
-    }
-  }
-
-  /**
-   * Split mark elements at range boundaries so that marks extending
-   * beyond the selection are separated into inside/outside portions.
-   * This preserves mark styling on text outside the selection range.
-   * @param range - The selection range
-   */
-  private splitMarksAtBoundaries(range: Range): void {
-    const marks = collectFormattingAncestors(range, isMarkTag);
-
-    for (const mark of marks) {
-      const markRange = document.createRange();
-
-      markRange.selectNodeContents(mark);
-
-      const rangeStartsBeforeMark = range.compareBoundaryPoints(Range.START_TO_START, markRange) <= 0;
-      const rangeEndsAfterMark = range.compareBoundaryPoints(Range.END_TO_END, markRange) >= 0;
-
-      if (rangeStartsBeforeMark && rangeEndsAfterMark) {
-        /**
-         * Range fully contains the mark — no split needed
-         */
-        continue;
-      }
-
-      if (!mark.parentNode) {
-        continue;
-      }
-
-      /**
-       * Split at the end boundary first (to avoid invalidating start offsets)
-       */
-      if (!rangeEndsAfterMark) {
-        this.extractTrailingMark(mark, range.endContainer, range.endOffset);
-      }
-
-      /**
-       * Split at the start boundary
-       */
-      if (!rangeStartsBeforeMark) {
-        this.extractLeadingMark(mark, range.startContainer, range.startOffset);
-      }
-    }
-  }
-
-  /**
-   * Extract content after a boundary point from a mark into a new sibling mark.
-   * @param mark - The mark to split
-   * @param boundaryNode - The node at the boundary
-   * @param boundaryOffset - The offset at the boundary
-   */
-  private extractTrailingMark(mark: HTMLElement, boundaryNode: Node, boundaryOffset: number): void {
-    const trailingRange = document.createRange();
-
-    trailingRange.setStart(boundaryNode, boundaryOffset);
-    trailingRange.setEnd(mark, mark.childNodes.length);
-
-    const contents = trailingRange.extractContents();
-
-    if (!contents.textContent) {
-      return;
-    }
-
-    const trailingMark = document.createElement('mark');
-
-    trailingMark.style.cssText = mark.style.cssText;
-    trailingMark.appendChild(contents);
-    mark.after(trailingMark);
-  }
-
-  /**
-   * Extract content before a boundary point from a mark into a new sibling mark.
-   * @param mark - The mark to split
-   * @param boundaryNode - The node at the boundary
-   * @param boundaryOffset - The offset at the boundary
-   */
-  private extractLeadingMark(mark: HTMLElement, boundaryNode: Node, boundaryOffset: number): void {
-    const leadingRange = document.createRange();
-
-    leadingRange.setStart(mark, 0);
-    leadingRange.setEnd(boundaryNode, boundaryOffset);
-
-    const contents = leadingRange.extractContents();
-
-    if (!contents.textContent) {
-      return;
-    }
-
-    const leadingMark = document.createElement('mark');
-
-    leadingMark.style.cssText = mark.style.cssText;
-    leadingMark.appendChild(contents);
-    mark.before(leadingMark);
-  }
-
-  /**
-   * Restore selection by finding the selected text within a surviving parent.
-   * Used as a fallback when range anchors become stale after DOM mutations.
-   * @param selection - The window selection to restore
-   * @param parent - A parent element that survived the DOM mutation
-   * @param text - The text content that was selected before mutation
-   */
-  private restoreSelectionByText(
-    selection: Selection,
-    parent: HTMLElement | null,
-    text: string
-  ): void {
-    if (!parent || text.length === 0) {
-      return;
-    }
-
-    const fullText = parent.textContent ?? '';
-    const startIdx = fullText.indexOf(text);
-
-    if (startIdx === -1) {
-      return;
-    }
-
-    const endIdx = startIdx + text.length;
-
-    /**
-     * Walk text nodes to find the nodes and offsets corresponding
-     * to the character positions in the parent's textContent
-     */
-    const { startNode, startNodeOffset, endNode, endNodeOffset } = this.findTextBoundaries(parent, startIdx, endIdx);
-
-    if (startNode && endNode) {
-      const restoredRange = document.createRange();
-
-      restoredRange.setStart(startNode, startNodeOffset);
-      restoredRange.setEnd(endNode, endNodeOffset);
-      selection.removeAllRanges();
-      selection.addRange(restoredRange);
-    }
-  }
-
-  /**
-   * Walk text nodes within a parent to find the nodes and offsets
-   * corresponding to character positions in the parent's textContent.
-   * @param parent - The parent element to walk
-   * @param startIdx - The start character index
-   * @param endIdx - The end character index
-   * @returns An object with the start/end nodes and their offsets
-   */
-  private findTextBoundaries(
-    parent: HTMLElement,
-    startIdx: number,
-    endIdx: number
-  ): { startNode: Text | null; startNodeOffset: number; endNode: Text | null; endNodeOffset: number } {
-    const walker = document.createTreeWalker(parent, NodeFilter.SHOW_TEXT);
-    const result = { startNode: null as Text | null, startNodeOffset: 0, endNode: null as Text | null, endNodeOffset: 0 };
-    const charCounter = { value: 0 };
-
-    while (walker.nextNode()) {
-      const node = walker.currentNode as Text;
-      const nodeLength = node.textContent?.length ?? 0;
-
-      if (result.startNode === null && charCounter.value + nodeLength > startIdx) {
-        result.startNode = node;
-        result.startNodeOffset = startIdx - charCounter.value;
-      }
-
-      if (charCounter.value + nodeLength >= endIdx) {
-        result.endNode = node;
-        result.endNodeOffset = endIdx - charCounter.value;
-        break;
-      }
-
-      charCounter.value += nodeLength;
-    }
-
-    return result;
-  }
-
-  /**
-   * Unwrap an element, moving its children to its parent
-   * @param element - Element to unwrap
-   */
-  private unwrapElement(element: HTMLElement): void {
-    const parent = element.parentNode;
-
-    if (!parent) {
-      return;
-    }
-
-    while (element.firstChild) {
-      parent.insertBefore(element.firstChild, element);
-    }
-
-    parent.removeChild(element);
   }
 
   /**

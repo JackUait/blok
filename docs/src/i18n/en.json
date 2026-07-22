@@ -73,6 +73,7 @@
       "history": "History",
       "saver": "Saver",
       "selection": "Selection",
+      "marks": "Marks",
       "styles": "Styles",
       "toolbar": "Toolbar",
       "inlineToolbar": "InlineToolbar",
@@ -560,6 +561,33 @@
         }
       }
     },
+    "marksApi": {
+      "title": "Marks API",
+      "badge": "Marks",
+      "description": "Range-aware inline-mark operations for building inline formatting tools. Where selection.findParentTag only inspects the selection's anchor node, api.marks operates on the WHOLE range: has answers \"is every text node in the selection covered\", apply and remove split partially-covered wrappers at the range boundaries, update fully-covering wrappers in place, and restore the selection afterwards — and apply extends the range over trailing whitespace browsers exclude from double-click selections. A mark is described declaratively by a MarkSpec (tag, className, attributes, style). String values are static and participate in the mark's identity; function-form values are resolved from the state passed to apply/toggle and are deliberately EXCLUDED from identity — that is what makes a colour picker ONE mark updating in place rather than N mutually-cancelling marks. Two specs sharing tag, classNames and static attributes belong to the same family and compose on a single element — e.g. a text-colour spec and a background-colour spec both on one <mark>. Every method defaults to the live selection's first range when no range is passed. The core export markSanitizerConfig(spec) derives the sanitizer rule a mark produces — allowlist the spec's tag, strip style properties and classes the spec does not declare, keep declared attributes, with function-form values handled by property name so dynamic values are never dropped on save. The React adapter's createReactInlineTool applies the same derivation automatically when a tool declares a mark spec.",
+      "methods": {
+        "marks": {
+          "has": {
+            "note": "The range-aware replacement for the `findParentTag` activity check — a selection that only partly carries the mark reports false, so your toolbar icon cannot lie."
+          },
+          "find": {
+            "note": "Ancestor lookup by spec — like `findParentTag`, but matching classNames and static attributes/styles, not just the tag name."
+          },
+          "read": {
+            "note": "Drive your tool's UI from the document: preselect the current colour in a picker before the user changes it."
+          },
+          "apply": {
+            "note": "Idempotent per family: re-applying with new state updates the SAME wrapper in place — that is what makes a colour picker one mark instead of nested cancelling wrappers."
+          },
+          "remove": {
+            "note": "Only the spec's own properties are removed — a wrapper shared with another mark of the family survives with the rest intact."
+          },
+          "toggle": {
+            "note": "The one-liner behind simple toggle tools; pair with `has()` for the active state."
+          }
+        }
+      }
+    },
     "stylesApi": {
       "title": "Styles API",
       "badge": "Styles",
@@ -929,7 +957,7 @@
       },
       "inlineTool": {
         "title": "Inline tools as components",
-        "body": "`createReactInlineTool` does the same for inline (selection) tools. The toolbar icon is a React component rendered through your app's tree — it receives an `active` prop reflecting the current selection, and the editor mounts and unmounts it for you, so no hand-rolled `createRoot` and no leaked roots. `surround` applies the formatting to the live selection's range; `checkState` reports whether it is active."
+        "body": "`createReactInlineTool` does the same for inline (selection) tools. The toolbar icon is a React component rendered through your app's tree — it receives an `active` prop reflecting the current selection, and the editor mounts and unmounts it for you, so no hand-rolled `createRoot` and no leaked roots. Declare a `mark` spec and the tool is complete: `surround` (toggle), `checkState` (whole-range coverage) and `sanitize` are derived from it, running through the editor's range-aware mark engine (`api.marks`). Explicit `surround`/`checkState` still win when you need bespoke behaviour — both receive the editor `api` as a second argument — and nested swatches or popovers reach the tool through `useInlineTool()` instead of prop-drilling."
       },
       "further": {
         "title": "Going further",

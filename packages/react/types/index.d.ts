@@ -2,6 +2,7 @@ import type { BlokConfig, BlockToolData, OutputBlockData, OutputData, LooseOutpu
 import type { BlocksToHtmlOptions } from '@bloklabs/core/view';
 import type { BlockAPI, BlockToolConstructable, ToolboxConfigEntry } from '@bloklabs/core';
 import type { InlineToolConstructable, SanitizerConfig } from '@bloklabs/core';
+import type { API, MarkSnapshot, MarkSpec } from '@bloklabs/core';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from '@bloklabs/core';
 import type { BlockTuneData } from '@bloklabs/core';
 import type { MarkdownImportConfig } from '@bloklabs/core/markdown';
@@ -682,8 +683,47 @@ export interface ReactInlineToolRenderProps<Config = Record<string, unknown>> {
   config: Readonly<Partial<Config>>;
 }
 
+/** The spec's mark operations, bound to the live selection via `api.marks`. */
+export interface InlineToolMarkOps<State = void> {
+  /** Whether the whole selection currently carries the mark. */
+  has(): boolean;
+  /** Toggle the mark on the selection; returns true when now applied. */
+  toggle(state?: State): boolean;
+  /** Apply (or update in place) the mark on the selection. */
+  apply(state?: State): HTMLElement[];
+  /** Remove the mark from the selection. */
+  remove(): HTMLElement[];
+  /** Read the mark's current declared values at the selection. */
+  read(): MarkSnapshot | null;
+}
+
+/**
+ * Everything a React inline tool's component (and any component nested in it —
+ * swatches, popovers) can reach via {@link useInlineTool} without prop-drilling.
+ */
+export interface InlineToolHandle<Config = Record<string, unknown>, State = void> {
+  /** Live active state, same value as the component's `active` prop. */
+  active: boolean;
+  /** The tool's config, same value as the component's `config` prop. */
+  config: Readonly<Partial<Config>>;
+  /** The editor API handed to the tool's constructor (undefined outside core). */
+  api: API | undefined;
+  /**
+   * Operations bound to the spec's `mark` — null when the spec declares no
+   * mark or the editor api provides no `marks` surface.
+   */
+  mark: InlineToolMarkOps<State> | null;
+}
+
+/**
+ * Reach the enclosing React inline tool from any component inside its
+ * portaled UI: live `active` state, the tool `config`, the editor `api`, and
+ * the spec's mark operations bound to the live selection.
+ */
+export declare function useInlineTool<Config = Record<string, unknown>, State = void>(): InlineToolHandle<Config, State>;
+
 /** Spec for {@link createReactInlineTool}. */
-export interface CreateReactInlineToolSpec<Config = Record<string, unknown>> {
+export interface CreateReactInlineToolSpec<Config = Record<string, unknown>, State = void> {
   /** Tool type name — the MenuConfig item name (fallback when the tools-map key is unavailable). */
   type: string;
   /** Optional toolbar item title (shown in overflow/search contexts). */
@@ -697,13 +737,32 @@ export interface CreateReactInlineToolSpec<Config = Record<string, unknown>> {
   titleKey?: string;
   /** The component rendered as the tool's toolbar icon/UI. */
   component: React.ComponentType<ReactInlineToolRenderProps<Config>>;
-  /** Applies/removes the formatting on the LIVE selection's range (captured at activation time). */
-  surround?: (range: Range) => void;
-  /** Reports whether the formatting is active for the given selection. */
-  checkState?: (selection: Selection | null) => boolean;
+  /**
+   * Declarative description of the wrapper this tool produces. When present,
+   * `surround` (toggle), `checkState` (whole-range coverage) and `sanitize`
+   * are derived from it — range-aware splitting, adjacent-run semantics and
+   * the trailing-whitespace fix come from the editor's mark engine
+   * (`api.marks`) with no DOM plumbing in the tool.
+   */
+  mark?: MarkSpec<State>;
+  /**
+   * Applies/removes the formatting on the LIVE selection's range (captured at
+   * activation time). Receives the editor API as its second argument.
+   * Takes precedence over the `mark` derivation.
+   */
+  surround?: (range: Range, api: API | undefined) => void;
+  /**
+   * Reports whether the formatting is active for the given selection.
+   * Receives the editor API as its second argument.
+   * Takes precedence over the `mark` derivation.
+   */
+  checkState?: (selection: Selection | null, api: API | undefined) => boolean;
   /** Keyboard shortcut (e.g. `CMD+SHIFT+C`). */
   shortcut?: string;
-  /** Inline sanitizer config declaring the markup this tool produces. */
+  /**
+   * Inline sanitizer config declaring the markup this tool produces.
+   * Defaults to the config derived from `mark` when one is declared.
+   */
   sanitize?: SanitizerConfig;
   /** Whether the tool stays available in read-only mode. */
   isReadOnlySupported?: boolean;
@@ -725,13 +784,12 @@ export interface CreateReactInlineToolSpec<Config = Record<string, unknown>> {
  *   type: 'descriptionColor',
  *   title: 'Text color',
  *   component: ({ active }) => <FontColorIcon active={active} />,
- *   surround: (range) => applyColor(range),
- *   checkState: (selection) => hasColor(selection),
+ *   mark: { tag: 'span', className: 'hl-description' },
  * });
  * ```
  */
-export declare function createReactInlineTool<Config = Record<string, unknown>>(
-  spec: CreateReactInlineToolSpec<Config>
+export declare function createReactInlineTool<Config = Record<string, unknown>, State = void>(
+  spec: CreateReactInlineToolSpec<Config, State>
 ): InlineToolConstructable;
 
 /**

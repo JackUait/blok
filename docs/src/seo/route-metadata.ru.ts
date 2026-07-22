@@ -122,6 +122,12 @@ export const RU_COPY: Record<string, RouteCopy> = {
       'Чтение и изменение текущего выделения, включая выделения, которые охватывают сразу несколько блоков документа.',
     h1: 'Selection API: чтение и установка выделения',
   },
+  '/docs/marks-api': {
+    title: 'Marks API Blok — строчные метки по всему диапазону',
+    description:
+      'Строчные метки по всему выделению через editor.marks: apply, read и toggle с разрезанием частичных обёрток, обновлением на месте и правилами санитайзера.',
+    h1: 'Marks API: строчное форматирование по всему выделению',
+  },
   '/docs/styles-api': {
     title: 'Styles API — CSS-классы редактора Blok',
     description:

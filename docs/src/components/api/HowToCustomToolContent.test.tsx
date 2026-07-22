@@ -104,6 +104,27 @@ describe('HowToCustomToolContent', () => {
       expect(code).toContain('surround');
       expect(code).toContain('checkState');
     });
+
+    it('documents the declarative mark spec with derived surround/checkState/sanitize', () => {
+      const { container } = renderHowTo('react');
+      const code = container.textContent ?? '';
+      // A single-class toggle is just a mark spec — nothing else to write.
+      expect(code).toContain("mark: { tag: 'span', className: 'my-highlight' }");
+      // The body copy states that the three tool hooks are derived from it.
+      expect(code).toContain('sanitize');
+      expect(code).toContain('derived');
+      // Operations run through the editor's range-aware mark engine.
+      expect(code).toContain('api.marks');
+    });
+
+    it('documents useInlineTool() for nested UI and the api second argument', () => {
+      const { container } = renderHowTo('react');
+      const code = container.textContent ?? '';
+      expect(code).toContain('useInlineTool');
+      // surround/checkState now receive the editor api as a second argument.
+      expect(code).toContain('(range, api)');
+      expect(code).toContain('(selection, api)');
+    });
   });
 
   it('does not draw its own bordered/card box around the Going further panel (a divider separates it instead)', () => {

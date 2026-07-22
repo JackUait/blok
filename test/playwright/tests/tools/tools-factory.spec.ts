@@ -46,6 +46,7 @@ const apiMethodsStub: ToolApiMethods = {
   sanitizer: {} as ToolApiMethods['sanitizer'],
   saver: {} as ToolApiMethods['saver'],
   selection: {} as ToolApiMethods['selection'],
+  marks: {} as ToolApiMethods['marks'],
   styles: {} as ToolApiMethods['styles'],
   toolbar: {} as ToolApiMethods['toolbar'],
   inlineToolbar: {} as ToolApiMethods['inlineToolbar'],

@@ -6,6 +6,7 @@ import { I18nAPI } from './api/i18n';
 import { API } from './api/index';
 import { InlineToolbarAPI } from './api/inlineToolbar';
 import { ListenersAPI } from './api/listeners';
+import { MarksAPI } from './api/marks';
 import { NotifierAPI } from './api/notifier';
 import { ReadOnlyAPI } from './api/readonly';
 import { SanitizerAPI } from './api/sanitizer';
@@ -53,6 +54,7 @@ export const Modules = {
   API,
   InlineToolbarAPI,
   ListenersAPI,
+  MarksAPI,
   NotifierAPI,
   ReadOnlyAPI,
   SanitizerAPI,

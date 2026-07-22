@@ -7,6 +7,7 @@ import { I18nAPI } from '../components/modules/api/i18n';
 import { API } from '../components/modules/api/index';
 import { InlineToolbarAPI } from '../components/modules/api/inlineToolbar';
 import { ListenersAPI } from '../components/modules/api/listeners';
+import { MarksAPI } from '../components/modules/api/marks';
 import { NotifierAPI } from '../components/modules/api/notifier';
 import { ReadOnlyAPI } from '../components/modules/api/readonly';
 import { SanitizerAPI } from '../components/modules/api/sanitizer';
@@ -55,6 +56,7 @@ export interface BlokModules {
   API: API,
   InlineToolbarAPI: InlineToolbarAPI,
   ListenersAPI: ListenersAPI,
+  MarksAPI: MarksAPI,
   NotifierAPI: NotifierAPI,
   ReadOnlyAPI: ReadOnlyAPI,
   SanitizerAPI: SanitizerAPI,

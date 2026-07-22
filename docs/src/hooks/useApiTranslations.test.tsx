@@ -229,7 +229,7 @@ describe('useApiTranslations sidebar groups', () => {
       'Framework adapters', 'Block Tools', 'Inline Tools',
     ]);
     expect(result.current.sidebarSections[2].links.map((l) => l.id))
-      .toEqual(['caret-api', 'selection-api', 'styles-api', 'history-api']);
+      .toEqual(['caret-api', 'selection-api', 'marks-api', 'styles-api', 'history-api']);
   });
 
   it('lists built-in tools under the tool groups (deduped, routable)', () => {

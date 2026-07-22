@@ -135,7 +135,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 
 /** Dynamic property setters remain exact review points, never silent escapes. */
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
-  'components/inline-tools/inline-tool-marker.ts': 'Copies allowlisted inline style properties and CSS custom properties during marker splitting.',
+  'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/utils/color-migration.ts': 'Writes a validated CSS custom-property name during legacy color migration.',
   'components/utils/notifier/draw.ts': 'Writes notifier CSS custom properties selected by the notifier layout implementation.',
   'components/utils/popover/popover-desktop.ts': 'Writes named popover CSS variables; physical top/left placement stays inventoried separately.',

@@ -18,10 +18,12 @@ export type {
   PropSchema,
   PropSchemaEntry,
 } from './createReactBlock';
-export { createReactInlineTool } from './createReactInlineTool';
+export { createReactInlineTool, useInlineTool } from './createReactInlineTool';
 export type {
   CreateReactInlineToolSpec,
   ReactInlineToolRenderProps,
+  InlineToolHandle,
+  InlineToolMarkOps,
 } from './createReactInlineTool';
 export {
   createBlockPortalRegistry,

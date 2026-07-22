@@ -9,6 +9,7 @@
  * the core instead of bundling (and thus duplicating) it.
  */
 export * from './components/utils/blocks-api';
+export { markSanitizerConfig } from './components/marks/mark-engine';
 export * from './components/utils/blocks-tree';
 export * from './components/utils/readonly-config';
 export * from './shared/deep-equal';

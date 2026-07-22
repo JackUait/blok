@@ -29,6 +29,7 @@ export class API extends Module {
       sanitizer: this.Blok.SanitizerAPI.methods,
       saver: this.Blok.SaverAPI.methods,
       selection: this.Blok.SelectionAPI.methods,
+      marks: this.Blok.MarksAPI.methods,
       styles: this.Blok.StylesAPI.classes,
       toolbar: this.Blok.ToolbarAPI.methods,
       inlineToolbar: this.Blok.InlineToolbarAPI.methods,

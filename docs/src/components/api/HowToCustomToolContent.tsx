@@ -176,27 +176,60 @@ export const CalloutTool = createAngularBlock<{ text: string }>({
 
 // React-only: inline (selection) tools authored as components. Other adapters
 // don't ship an inline-tool factory yet, so the section renders only for react.
-const INLINE_TOOL_AUTHORING_CODE = `import { createReactInlineTool } from '@bloklabs/react';
+const INLINE_TOOL_AUTHORING_CODE = `import { createReactInlineTool, useInlineTool } from '@bloklabs/react';
 
-export const TextColor = createReactInlineTool({
-  type: 'textColor',
-  title: 'Text color',
-  // i18n: the toolbar label resolves via toolNames.textColor in your
+// A single-class toggle is just a mark spec. surround (toggle), checkState
+// (whole-range coverage) and sanitize are all derived from it, running
+// through the editor's range-aware mark engine (api.marks) — partial
+// wrappers are split at the selection boundaries, fully-covering wrappers
+// update in place, and the selection is restored.
+export const Highlight = createReactInlineTool({
+  type: 'highlight',
+  title: 'Highlight',
+  // i18n: the toolbar label resolves via toolNames.highlight in your
   // i18n.messages — no reliance on the legacy capitalized-name fallback.
-  titleKey: 'textColor',
-  shortcut: 'CMD+SHIFT+C',
+  titleKey: 'highlight',
+  shortcut: 'CMD+SHIFT+H',
   // The toolbar icon is a real React component — theme providers and
   // styled-components reach it; the editor unmounts it when the toolbar
   // closes, so there is nothing to clean up by hand.
-  component: ({ active }) => <FontColorIcon active={active} />,
-  // Applies the formatting to the live selection's range.
-  surround: (range) => applyColor(range),
-  // Drives the \`active\` prop the icon receives.
-  checkState: (selection) => hasColor(selection),
-  sanitize: { span: { style: true } },
+  component: ({ active }) => <HighlightIcon active={active} />,
+  mark: { tag: 'span', className: 'my-highlight' },
 });
 
-// Register like any tool: tools: { textColor: TextColor }`;
+// Function-form values are excluded from the mark's identity, so a colour
+// picker is ONE mark updating in place — not N mutually-cancelling marks.
+const colorMark = {
+  tag: 'mark',
+  style: { color: (state: { color: string }) => state.color },
+};
+
+// Nested UI (swatches, popovers) reaches the tool via useInlineTool() —
+// live active state, the tool config, the editor api, and the spec's mark
+// operations bound to the live selection — no prop-drilling.
+const Swatch = ({ color }: { color: string }) => {
+  const { mark } = useInlineTool<Record<string, never>, { color: string }>();
+
+  return <button onClick={() => mark?.apply({ color })} />;
+};
+
+export const TextColor = createReactInlineTool({
+  type: 'textColor',
+  titleKey: 'textColor',
+  component: ({ active }) => (
+    <ColorMenu active={active}>
+      {PALETTE.map((color) => <Swatch key={color} color={color} />)}
+    </ColorMenu>
+  ),
+  mark: colorMark,
+});
+
+// Need bespoke behaviour instead? Explicit surround/checkState win over the
+// mark derivation, and both receive the editor api as a second argument:
+//   surround: (range, api) => api?.marks.toggle(colorMark, { color: '#d97706' }),
+//   checkState: (selection, api) => api?.marks.has(colorMark) ?? false,
+
+// Register like any tool: tools: { highlight: Highlight, textColor: TextColor }`;
 
 interface HowToStep {
   key: string;

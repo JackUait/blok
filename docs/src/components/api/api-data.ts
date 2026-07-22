@@ -1189,6 +1189,209 @@ editor.selection.restore();`,
     ],
   },
   {
+    id: "marks-api",
+    badge: "Marks",
+    title: "Marks API",
+    lastUpdated: "2026-07-22",
+    description:
+      "Range-aware inline-mark operations for building inline formatting tools. Where selection.findParentTag only inspects the selection's anchor node, api.marks operates on the WHOLE range: has answers \"is every text node in the selection covered\", apply and remove split partially-covered wrappers at the range boundaries, update fully-covering wrappers in place, and restore the selection afterwards — and apply extends the range over trailing whitespace browsers exclude from double-click selections. A mark is described declaratively by a MarkSpec (tag, className, attributes, style). String values are static and participate in the mark's identity; function-form values are resolved from the state passed to apply/toggle and are deliberately EXCLUDED from identity — that is what makes a colour picker ONE mark updating in place rather than N mutually-cancelling marks. Two specs sharing tag, classNames and static attributes belong to the same family and compose on a single element — e.g. a text-colour spec and a background-colour spec both on one <mark>. Every method defaults to the live selection's first range when no range is passed. The core export markSanitizerConfig(spec) derives the sanitizer rule a mark produces — allowlist the spec's tag, strip style properties and classes the spec does not declare, keep declared attributes, with function-form values handled by property name so dynamic values are never dropped on save. The React adapter's createReactInlineTool applies the same derivation automatically when a tool declares a mark spec.",
+    example: `// One spec = one mark. Static values (tag, className, attribute/style
+// strings) form the mark's identity; function-form values do not.
+const textColor = {
+  tag: 'mark',
+  style: { color: (state) => state.color },
+};
+const bgColor = {
+  tag: 'mark',
+  style: { 'background-color': (state) => state.color },
+};
+
+// Range-aware: splits partially-covered wrappers at the boundaries,
+// updates fully-covering wrappers in place, restores the selection
+editor.marks.apply(textColor, { color: '#2563eb' });
+
+// Same family (same tag, no conflicting statics) → composes on ONE element
+editor.marks.apply(bgColor, { color: '#fef3c7' });
+// → <mark style="color: #2563eb; background-color: #fef3c7">…</mark>
+
+// Derive the sanitizer rule the mark produces for a vanilla inline tool
+import { markSanitizerConfig } from '@bloklabs/core';
+
+class TextColorTool {
+  static get sanitize() {
+    return markSanitizerConfig(textColor);
+  }
+}`,
+    methods: [
+      {
+        name: "marks.has(spec, range?)",
+        returnType: "boolean",
+        description:
+          "Whether every text node in the range is inside a wrapper matching the spec — whitespace-only text nodes are ignored, and at a collapsed caret the caret's ancestors are checked. Unlike selection.findParentTag (anchor node only), a selection that only partially carries the mark reports false.",
+        params: [
+          {
+            name: "spec",
+            type: "MarkSpec",
+            required: true,
+            description: "Declarative mark description: tag plus optional className, attributes, and style.",
+          },
+          {
+            name: "range",
+            type: "Range",
+            required: false,
+            default: "current selection",
+            description: "Range to check; defaults to the live selection's first range.",
+          },
+        ],
+        example: `const highlight = { tag: 'span', className: 'my-highlight' };
+
+// True only when the WHOLE selection is covered — a half-highlighted
+// selection reports false, so a toolbar icon cannot lie
+const active = editor.marks.has(highlight);`,
+      },
+      {
+        name: "marks.find(spec, from?)",
+        returnType: "HTMLElement | null",
+        description:
+          "Nearest ancestor element matching the spec, starting from the given node (or the current selection's start container). Matching respects the full spec — tag, classNames, and static attribute/style values — not just the tag name.",
+        params: [
+          {
+            name: "spec",
+            type: "MarkSpec",
+            required: true,
+            description: "Declarative mark description: tag plus optional className, attributes, and style.",
+          },
+          {
+            name: "from",
+            type: "Node",
+            required: false,
+            default: "selection start container",
+            description: "Node to start the upward search from; defaults to the current selection's start container.",
+          },
+        ],
+        example: `const wrapper = editor.marks.find({ tag: 'mark' });
+
+if (wrapper) {
+  editor.selection.expandToTag(wrapper);
+}`,
+      },
+      {
+        name: "marks.read(spec, range?)",
+        returnType: "MarkSnapshot | null",
+        description:
+          "Read the current values of the spec's declared properties from the wrapper at the range start. Returns null when the range is not inside a matching wrapper. The snapshot carries the matched element plus its declared style properties and attributes — unset and transparent-valued style properties are omitted.",
+        params: [
+          {
+            name: "spec",
+            type: "MarkSpec",
+            required: true,
+            description: "Declarative mark description: tag plus optional className, attributes, and style.",
+          },
+          {
+            name: "range",
+            type: "Range",
+            required: false,
+            default: "current selection",
+            description: "Range to read from; defaults to the live selection's first range.",
+          },
+        ],
+        example: `const colorMark = {
+  tag: 'mark',
+  style: { color: (state) => state.color },
+};
+
+// Preselect the current colour in a picker UI
+const snapshot = editor.marks.read(colorMark);
+const current = snapshot?.style['color']; // e.g. 'rgb(37, 99, 235)'`,
+      },
+      {
+        name: "marks.apply(spec, state?, range?)",
+        returnType: "HTMLElement[]",
+        description:
+          "Wrap the range in the mark, or update matching wrappers in place. Splits partially-covered same-family wrappers at the range boundaries, extends the range over trailing whitespace browsers exclude from double-click selections, and leaves the new contents selected. Returns the created or updated wrapper elements.",
+        params: [
+          {
+            name: "spec",
+            type: "MarkSpec",
+            required: true,
+            description: "Declarative mark description: tag plus optional className, attributes, and style.",
+          },
+          {
+            name: "state",
+            type: "State",
+            required: false,
+            description: "Value passed to the spec's function-form attribute/style properties.",
+          },
+          {
+            name: "range",
+            type: "Range",
+            required: false,
+            default: "current selection",
+            description: "Range to format; defaults to the live selection's first range.",
+          },
+        ],
+        example: `editor.marks.apply(colorMark, { color: '#d97706' });
+
+// Same identity → the SAME wrapper is updated in place, not nested
+editor.marks.apply(colorMark, { color: '#2563eb' });`,
+      },
+      {
+        name: "marks.remove(spec, range?)",
+        returnType: "HTMLElement[]",
+        description:
+          "Remove the spec's declared properties and classes from wrappers in the range, unwrapping wrappers left bare. Partially-covered wrappers are split so text outside the range keeps its formatting, and the selection is restored. Returns the wrappers that survived because they still carry other properties.",
+        params: [
+          {
+            name: "spec",
+            type: "MarkSpec",
+            required: true,
+            description: "Declarative mark description: tag plus optional className, attributes, and style.",
+          },
+          {
+            name: "range",
+            type: "Range",
+            required: false,
+            default: "current selection",
+            description: "Range to deformat; defaults to the live selection's first range.",
+          },
+        ],
+        example: `editor.marks.remove(colorMark);
+// A <mark> that also carried a background-colour spec survives
+// with only the colour stripped`,
+      },
+      {
+        name: "marks.toggle(spec, state?, range?)",
+        returnType: "boolean",
+        description:
+          "remove when the range already carries the mark, apply otherwise. Returns the resulting state: true when the mark is now applied.",
+        params: [
+          {
+            name: "spec",
+            type: "MarkSpec",
+            required: true,
+            description: "Declarative mark description: tag plus optional className, attributes, and style.",
+          },
+          {
+            name: "state",
+            type: "State",
+            required: false,
+            description: "Value passed to the spec's function-form attribute/style properties.",
+          },
+          {
+            name: "range",
+            type: "Range",
+            required: false,
+            default: "current selection",
+            description: "Range to toggle; defaults to the live selection's first range.",
+          },
+        ],
+        example: `const highlight = { tag: 'span', className: 'my-highlight' };
+
+const nowApplied = editor.marks.toggle(highlight);`,
+      },
+    ],
+  },
+  {
     id: "styles-api",
     badge: "Styles",
     title: "Styles API",

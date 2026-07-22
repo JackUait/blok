@@ -24,6 +24,7 @@ describe("API_SECTIONS", () => {
       "history-api",
       "saver-api",
       "selection-api",
+      "marks-api",
       "styles-api",
       "toolbar-api",
       "inline-toolbar-api",

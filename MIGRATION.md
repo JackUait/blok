@@ -486,6 +486,61 @@ class MarkerTool implements InlineTool {
 | `renderActions()` / `clear()` | **removed** — no direct equivalent; use `MenuConfig` `children` for nested items |
 | `static get isInline()` / `static get title()` | still apply (plus optional `titleKey` for i18n) |
 
+#### Mark-shaped tools — skip the DOM plumbing entirely (`api.marks`)
+
+If your inline tool wraps text in one element (a highlight `<span>`, a colour
+`<mark>`, a comment anchor), you no longer need to write any range logic.
+Describe the wrapper as a `MarkSpec` and drive it through `api.marks`
+(`has` / `find` / `read` / `apply` / `remove` / `toggle`, all range-aware):
+
+```typescript
+class HighlightTool {
+  static isInline = true;
+  static title = 'Highlight';
+  static sanitize = markSanitizerConfig(HIGHLIGHT); // derived, stays in sync
+
+  constructor({ api }) {
+    this.api = api;
+  }
+
+  render() {
+    return {
+      icon: '<svg>…</svg>',
+      name: 'highlight',
+      onActivate: () => this.api.marks.toggle(HIGHLIGHT),
+      isActive: () => this.api.marks.has(HIGHLIGHT),
+    };
+  }
+}
+
+const HIGHLIGHT = { tag: 'span', className: 'my-highlight' };
+```
+
+(React consumers get the same thing as a single spec field:
+`createReactInlineTool({ …, mark: { tag: 'span', className: 'my-highlight' } })`.)
+
+**Behavioural note when porting hand-rolled range code onto `api.marks`.** The
+engine is *more correct* than typical hand-rolled implementations on
+selections that span a wrapper boundary — expect these deltas:
+
+Before (typical hand-rolled tool):
+
+- A selection covering half a wrapper plus outside text unwrapped or re-wrapped
+  the WHOLE wrapper (formatting outside the selection was lost).
+- Toggling "off" on a partially covered wrapper removed the whole run.
+- `Ctrl+A` selections silently dropped trailing spaces from the formatted run
+  (Chromium/WebKit place the range end before trailing whitespace).
+
+After (`api.marks`):
+
+- Partially covered wrappers are split at the selection boundaries; text
+  outside the selection keeps its formatting.
+- `apply` extends the range over browser-excluded trailing whitespace, so the
+  visible selection and the formatted run agree.
+- Two specs sharing a wrapper family (same tag/classes, different declared
+  style property — e.g. text colour and background) compose on ONE element
+  instead of nesting or cancelling each other.
+
 ---
 
 ## Saved Content / Data Migration

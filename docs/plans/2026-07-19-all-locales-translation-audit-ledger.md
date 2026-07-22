@@ -335,7 +335,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `mr` | Marathi | Devanagari | ltr | neutral contemporary Marathi in Devanagari; respectful direct imperatives for actions, instructions, and recovery guidance; concise noun, state, or action labels for compact controls; established Marathi product, accessibility, table, and media terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mr_final_cleanroom_linguistic` | `root-mr_final_cleanroom_callers` | pass | pass | pass | `F-mr-001`–`F-mr-087` | second-pass-complete |
 | `ms` | Malay | Latin | ltr | neutral contemporary Malaysian Malay; concise direct imperatives for compact actions and complete grammatical instructions; sentence-case noun/state labels; established Malay product, accessibility, table, and media terminology; count-neutral label-before-value templates; conventional unchanged shortcut, ratio, acronym, and established loanword notation | `root-ms_final_linguistic` | `root-ms_final_callers` | pass | pass | pass | `F-ms-001`–`F-ms-107` | second-pass-complete |
 | `my` | Burmese (Myanmar) | Myanmar | ltr | neutral contemporary Burmese in Myanmar script; concise direct commands for compact actions; polite complete instructions and accessibility announcements; sentence-case noun/state labels; established Burmese product, accessibility, media, and browser terminology; natural classifier-bearing runtime count relations; conventional unchanged shortcut, ratio, placeholder-only, `Alt`, `URL`, and `OK` notation | `root-my_final_linguistic` | `root-my_final_callers` | pass | pass | pass | `F-my-001`–`F-my-115` | second-pass-complete |
-| `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001`–`F-ne-002` | pending |
+| `ne` | Nepali | Devanagari | ltr | neutral contemporary Nepali in Devanagari; polite honorific imperatives and finite questions for complete instructions, confirmations, recovery guidance, and accessibility announcements; concise sentence-case noun or action labels; established Nepali product, accessibility, media, and database terminology; count-neutral runtime templates; conventional unchanged shortcut, ratio, placeholder-only, `Alt`, and `URL` notation | `root-ne_final_linguistic` | `root-ne_final_callers` | pass | pass | pass | `F-ne-001`–`F-ne-135` | second-pass-complete |
 | `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | — | — | pending | pending | pending | `F-nl-001`–`F-nl-092` | pending |
 | `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-no-001`–`F-no-085` | pending |
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001`–`F-pa-002` | pending |
@@ -473,6 +473,7 @@ locale returns to `pending`.
 | `mr` | `root-mr_final_cleanroom_linguistic` | `sha256:27951ac4e8691091bb26429e21ecf7174051afa3e2804e8f3039a0427fb6c2e6` | `root-mr_final_cleanroom_callers` | `sha256:27951ac4e8691091bb26429e21ecf7174051afa3e2804e8f3039a0427fb6c2e6` |
 | `ms` | `root-ms_final_linguistic` | `sha256:4a13d12d865b69ec9f597850808123903ab15278eabd9ef982523ba2cb66b63a` | `root-ms_final_callers` | `sha256:4a13d12d865b69ec9f597850808123903ab15278eabd9ef982523ba2cb66b63a` |
 | `my` | `root-my_final_linguistic` | `sha256:114c397afed8e7ab2bb12f2aad010c70b1d6dc23a4ec7eb855ebd440b19cf6b3` | `root-my_final_callers` | `sha256:114c397afed8e7ab2bb12f2aad010c70b1d6dc23a4ec7eb855ebd440b19cf6b3` |
+| `ne` | `root-ne_final_linguistic` | `sha256:cddbe748034d929a3c0d6df7ae5a1de4ab5ab2d1254d94c967d446e4708c9ce6` | `root-ne_final_callers` | `sha256:cddbe748034d929a3c0d6df7ae5a1de4ab5ab2d1254d94c967d446e4708c9ce6` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -5246,6 +5247,118 @@ skipped, and one unmodified table-paste case exceeded its five-second timeout
 under load. That exact case passed in 2.41 seconds on immediate isolation, and
 its complete file passed all eight tests, confirming contention rather than a
 Burmese regression. Burmese is `second-pass-complete`.
+
+### Nepali (`ne`) — second-pass complete
+
+The historical preload added the official LibreOffice clear-format command
+`ढाँचा खाली गर्नुहोस्` in `F-ne-001`. The coordinated toggle migration then
+added the complete two-action sentence in `F-ne-002`; this fresh audit retained
+that sentence but replaced its ungrammatical standalone infinitive `मोड्ने`
+with the established product noun `टगल`. Those bytes formed the exhaustive
+review input at raw Nepali SHA-256
+`30ac43ef732cd5e93d9aba158d3a6f5818a8d5d0c8c4a3345b6781e8adeb9775`;
+earlier historical review claims earn no credit toward the current pass.
+
+Three independent read-only candidates restarted at entry 1 and inspected all
+546 English/Nepali pairs. Their artifacts,
+`/tmp/blok-ne-audit-a-20260722.json`,
+`/tmp/blok-ne-audit-b-20260722.json`, and
+`/tmp/blok-ne-audit-c-20260722.json`, proposed 116, 99, and 122 candidates and
+have SHA-256 values
+`16100d56d955e8636fc95d7a31b3890511123b14b1fb4d486795a8bf6c1cc39e`,
+`88f8b0773f4a28af5270ffe37f48eddbc9430651d45f931b5e4076518a2ea934`,
+and `0a82cef536028f18e039cc17472b796cdb47b3f21f7b9611414705a89466dad8`.
+
+The A/B union contained 135 keys, including 80 shared proposals and 30
+conflicting values. Its reconciliation selected 119 corrections and retained
+16 candidates in `/tmp/blok-ne-reconcile-ab-20260722.json`, SHA-256
+`782af13c866da058a910f2eae0f80ee57e31febac5e3617fe41a2e42eeb9769f`.
+The skeptical A/B/C reconciliation considered 156 keys with 49 value
+conflicts, selected 129 proposals plus two amendments, and rejected 25; its
+131-entry correction map is `/tmp/blok-ne-reconcile-abc-20260722.json`,
+SHA-256
+`430cda43e5160ac16faf4ecfdfb076a2b721e8c10f135c4b12b3dc8efc926d87`.
+
+Two independent adversarial challenges then reread the entire projected
+catalog. The terminology challenge dispositioned all 156 union keys and found
+that the source-only confirmation’s clipped `जारी राख्ने?` violated the
+selected polite finite-question register. Both challenges independently found
+two omissions outside the union: the adjacent live submit and validation
+strings still used `एम्बेड` after the same form and all provider actions had
+been normalized to official `इम्बेड`. Their artifacts,
+`/tmp/blok-ne-terminology-challenge-20260722.json` and
+`/tmp/blok-ne-caller-exact-challenge-20260722.json`, have SHA-256 values
+`1d0fe7d0da55500cb6ed5d0eefb2a7f4506a52cf70ca665506009ac9a12d09d0`
+and `dab72ede56564e6349aa0b8c109f38de6ba579c3c55388feb4d55a2d435f6b1d`.
+
+The final tie-break rechecked every input hash, actual caller, conflict,
+placeholder relation, alias, and exact-English identity. It accepted 134
+corrections and recorded exactly three deviations from A/B/C: the complete
+honorific question `जारी राख्नुहुन्छ?` and the two live `इम्बेड` repairs. Its
+artifact, `/tmp/blok-ne-final-tiebreak-20260722.json`, has SHA-256
+`5655bf9aa5146857515e23e9568574925211c3807665a084b8c1836b094d6ae6`
+and projected the exact final catalog SHA-256
+`cddbe748034d929a3c0d6df7ae5a1de4ab5ab2d1254d94c967d446e4708c9ce6`.
+
+The final 135-value oracle contains historical `F-ne-001` plus all 134 final
+corrections, including the revised `F-ne-002`. Before remediation the focused
+oracle failed against the untouched baseline; after replacement, the same
+expectations pass without weakening. The corrections repair the segmented menu
+tooltip, complete polite instructions and questions, count-neutral live-region
+announcements, source and object scope, copy/paste terminology, toggle and list
+names, image spelling, caption and alternative-text controls, upload/drop
+instructions, media playback semantics, database roles, checkbox states,
+direction labels, placeholder composition, and the complete embed flow.
+
+Primary evidence includes AOSP’s official Nepali
+[system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-ne/strings.xml),
+Chromium’s official Nepali
+[product resources](https://chromium.googlesource.com/chromium/src/+/main/chrome/app/resources/generated_resources_ne.xtb),
+LibreOffice’s official Nepali
+[UI translations](https://raw.githubusercontent.com/LibreOffice/translations/master/source/ne/officecfg/registry/data/org/openoffice/Office/UI.po)
+and [list guidance](https://help.libreoffice.org/latest/ne/text/swriter/guide/auto_numbering.html),
+YouTube’s Nepali documentation for
+[toggle controls](https://support.google.com/youtube/answer/10788593?co=GENIE.Platform%3DAndroid&hl=ne)
+and [embedded content](https://support.google.com/youtube/answer/171780?hl=ne),
+and Google’s Nepali
+[finite continuation actions](https://support.google.com/accounts/answer/7103338?hl=ne).
+
+Both final reviewers independently restarted from entry 1 on the corrected
+bytes. `root-ne_final_linguistic` and `root-ne_final_callers` each inspected
+546/546 pairs and rehashed before approval. Their canonical IDs are
+`/root/ne_final_linguistic` and `/root/ne_final_callers`; their artifacts,
+`/tmp/blok-ne-final-linguistic-20260722.json` and
+`/tmp/blok-ne-final-callers-20260722.json`, have SHA-256 values
+`4994bb5bbaaa83d8ed3f37b6361c3afeb991ed3c11d4e0570383a07776484693`
+and `b8bcdd952be35c684b2dea65f4a78ffe761d450f846dd89763b7be273f1fa404`.
+Both approve the corrected catalog with zero mandatory defects, optional
+defects, or blockers. They bind English SHA-256
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+the unchanged guideline SHA-256
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`,
+and current guideline-test SHA-256
+`bec452b484f245b3ac694d04f4edba0d2c9eb5c45b9f9da95b8de64faea6121b`.
+
+The final dictionary has exact 546/546 key-set parity, preserves its established
+insertion order, and has no duplicate keys, empty values, boundary-whitespace
+defects, NFC defects, or forbidden controls. The only join control is the valid
+Devanagari U+200D in `र्‍याप`. All 38 placeholder-bearing rows and 54
+occurrences preserve the English token multisets, and all 44 localized aliases
+remain unique. Its only nine English-identical values are the documented
+`R-ne-001`–`R-ne-009` shortcut, placeholder-only, `Alt`, aspect-ratio, and
+`URL` retentions. The independently reproduced caller census accounts for 401
+literal or statically anchored keys, 118 finite dynamic or registered keys, and
+27 retained no-current-static-caller contracts, totaling 546 with zero
+uncovered entries.
+
+Caller inspection leaves `F-global-014` and `F-global-020` open for the
+coordinated six-key all-dictionary migration. Neither bypass misclassifies a
+Nepali value, but both continue to block terminal repository verification. The
+focused Nepali oracle, complete 4,919-test guideline/index gate, complete
+5,639-test i18n suite, 89-test checker regression suite, live catalog checker,
+scoped ESLint gate, whitespace validation, and 1,333-test bounded caller gate
+across 44 directly affected files pass on the final bytes. Nepali is
+`second-pass-complete`.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -10802,7 +10915,7 @@ follows the global transition rule above.
 | `F-ml-094` | `ml` | `tools.database.checkboxChecked` | accessibility / checkbox-state semantics | `"തിരഞ്ഞെടുത്തു"` | `"പരിശോധിച്ചത്"` | The read-only checkbox exposes checked state, not row selection; the reviewed platform state term preserves that distinction. | verified |
 | `F-ml-095` | `ml` | `tools.database.checkboxUnchecked` | accessibility / checkbox-state semantics | `"തിരഞ്ഞെടുത്തിട്ടില്ല"` | `"പരിശോധിക്കാത്തത്"` | The read-only checkbox exposes checked state, not row selection; the reviewed platform state term preserves that distinction. | verified |
 | `F-mr-002` | `mr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / state and action clarity | `"रिकामा संकुचित ब्लॉक. क्लिक करा किंवा आत ब्लॉक टाका."` | `"रिकामा टॉगल. ब्लॉक जोडण्यासाठी क्लिक करा किंवा ब्लॉक येथे ओढा."` | [`toggle-lifecycle.ts`](../../src/tools/toggle/toggle-lifecycle.ts) shows this message only while the toggle is open and empty, so `संकुचित ब्लॉक` falsely described a collapsed block. The replacement uses the established `टॉगल` product term and states both click-to-add and drag-here actions while preserving the official Android Marathi [`ओढा`](https://support.google.com/android/answer/9346420?hl=mr) drag term. | verified |
-| `F-ne-002` | `ne` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"खाली मोड्ने। ब्लकहरू भित्र क्लिक गर्नुहोस् वा तान्नुहोस्।"` | `"खाली मोड्ने। ब्लक थप्न क्लिक गर्नुहोस् वा ब्लकहरू यहाँ तान्नुहोस्।"` | The old plural object incorrectly applies to clicking and omits the created block. The replacement contrasts singular `ब्लक` with plural `ब्लकहरू`, retains formal imperatives, and follows Google Nepali's product register. [Google YouTube Help](https://support.google.com/youtube/answer/112085?hl=ne). | verified |
+| `F-ne-002` | `ne` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / terminology / action clarity | `"खाली मोड्ने। ब्लकहरू भित्र क्लिक गर्नुहोस् वा तान्नुहोस्।"` | `"खाली टगल। ब्लक थप्न क्लिक गर्नुहोस् वा ब्लकहरू यहाँ तान्नुहोस्।"` | The previously verified sentence still distinguishes clicking to add one block from dragging blocks here. The fresh audit changes only the standalone control noun: `मोड्ने` is an infinitival “to fold,” while official Nepali product UI uses `टगल`. [YouTube Help — toggle UI](https://support.google.com/youtube/answer/10788593?co=GENIE.Platform%3DAndroid&hl=ne). | verified |
 | `F-pa-002` | `pa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ਖਾਲੀ ਟੌਗਲ। ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਅੰਦਰ ਖਿੱਚੋ।"` | `"ਖਾਲੀ ਟੌਗਲ। ਬਲਾਕ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਇੱਥੇ ਖਿੱਚੋ।"` | The replacement restores the singular click result, preserves plural oblique-object `ਬਲਾਕਾਂ ਨੂੰ`, and makes the drag destination explicit using established Punjabi product phrasing. [Google YouTube Help](https://support.google.com/youtube/answer/171780?hl=pa). | verified |
 | `F-si-002` | `si` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"හිස් හැකිලෙන කොටස. ක්ලික් කරන්න හෝ කොටස් ඇතුළට ඇදගෙන දමන්න."` | `"හිස් හැකිලෙන කොටස. කොටසක් එක් කිරීමට ක්ලික් කරන්න හෝ කොටස් මෙතැනට ඇදගෙන දමන්න."` | The replacement supplies indefinite singular `කොටසක්` for click-to-add, plural `කොටස්` for dragged items, and directional `මෙතැනට` while retaining the established drag-and-drop collocation. [Google YouTube Help](https://support.google.com/youtube/answer/10191533?hl=si). | verified |
 | `F-ta-002` | `ta` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"காலி மடிப்பு. தொகுதிகளை உள்ளே கிளிக் செய்யவும் அல்லது இழுக்கவும்."` | `"காலி மடிப்பு. ஒரு தொகுதியைச் சேர்க்க கிளிக் செய்யவும் அல்லது தொகுதிகளை இங்கே இழுக்கவும்."` | The old plural object incorrectly scopes over clicking. The replacement uses precise singular accusative and sandhi for the added block, plural accusative for dragged blocks, and formal UI imperatives attested in [Google Tamil product help](https://support.google.com/docs/answer/179740?co=GENIE.Platform%3DDesktop&hl=ta). | verified |
@@ -12040,6 +12153,139 @@ follows the global transition rule above.
 | `F-my-113` | `my` | `tools.video.toggleTimeDisplay` | changed english sync | `"အချိန်ပြသမှုကို ပြောင်းရန်"` | `"ကုန်လွန်ချိန်နှင့် ကျန်ရှိချိန်ကို အပြန်အလှန် ပြရန်"` | This explicitly names elapsed and remaining time for the accessible toggle. | verified |
 | `F-my-114` | `my` | `tools.video.ctxCopyUrlAtTime` | media action precision | `"လက်ရှိအချိန်ရှိ ဗီဒီယို URL ကူးရန်"` | `"လက်ရှိဖွင့်ချိန်ပါသော ဗီဒီယို URL ကို ကူးရန်"` | Tie the timestamp to current playback and state that the copied URL includes it. | verified |
 | `F-my-115` | `my` | `tools.video.ctxStats` | changed english sync | `"အသေးစိတ်စာရင်းအင်း"` | `"ဗီဒီယိုဖွင့်ခြင်းဆိုင်ရာ စာရင်းအင်းများ"` | Combine reviewer C’s explicit video-playback scope with reviewer A’s natural plural statistics noun. | verified |
+| `F-ne-003` | `ne` | `blockSettings.clickAction` | runtime composition / word order | `"क्लिक गर्नुहोस्"` | `"मेनु खोल्न क्लिक गर्नुहोस्"` | Accept as one atomic three-fragment repair: the click branch now states the menu purpose before the caller inserts the alternative shortcut. | verified |
+| `F-ne-004` | `ne` | `blockSettings.orConjunction` | runtime composition / word order | `" वा किबोर्ड सर्टकट "` | `" वा "` | Accept as one atomic three-fragment repair; the highlighted shortcut already supplies the object, so only a spaced conjunction is needed. | verified |
+| `F-ne-005` | `ne` | `blockSettings.openMenuAction` | runtime composition / word order | `" मेनु खोल्न"` | `" थिच्नुहोस्"` | Accept as one atomic three-fragment repair; this boundary-spaced suffix supplies the finite press verb after the inserted shortcut. | verified |
+| `F-ne-006` | `ne` | `blockSettings.convertWithChildrenWarning` | confirmation grammar | `"नेस्टेड ब्लक: {count}। यो ब्लक रूपान्तरण गर्दा नेस्टेड सामग्री शीर्ष तहमा सारिनेछ। जारी राख्ने?"` | `"नेस्टेड ब्लक: {count}। यो ब्लक रूपान्तरण गर्दा नेस्टेड सामग्री शीर्ष तहमा सारिनेछ। जारी राख्नुहुन्छ?"` | The source-only जारी राख्ने? is an incomplete informal infinitival fragment and violates the selected complete polite-question register. Use finite honorific जारी राख्नुहुन्छ?. | verified |
+| `F-ne-007` | `ne` | `popover.convertTo` | semantics / source coverage | `"रूपान्तरण गर्नुहोस्"` | `"यसमा रूपान्तरण गर्नुहोस्"` | Accept after caller and terminology review: Restores the destination relation omitted from “Convert to.” | verified |
+| `F-ne-008` | `ne` | `toolNames.link` | terminology consistency | `"लिंक"` | `"लिङ्क"` | Accept the reviewed लिङ्क spelling consistently for the same user-visible link concept. | verified |
+| `F-ne-009` | `ne` | `toolNames.bold` | established product terminology | `"मोटो"` | `"बाक्लो"` | Select बाक्लो, the official LibreOffice Nepali Bold command; reject the competing loan बोल्ड and the current physical-thickness term मोटो. | verified |
+| `F-ne-010` | `ne` | `toolNames.bulletedList` | list terminology | `"बिन्दु सूची"` | `"गोलिचिन्ह सूची"` | Select गोलिचिन्ह सूची, matching LibreOffice Nepali’s established bullet-list family and avoiding the vague current “point list”. | verified |
+| `F-ne-011` | `ne` | `toolNames.numberedList` | list terminology | `"अंक सूची"` | `"क्रमाङ्कित सूची"` | Accept after caller and terminology review: अंक सूची means a list of digits rather than a list whose items are numbered. क्रमाङ्कित सूची names the list format. | verified |
+| `F-ne-012` | `ne` | `toolNames.toggleList` | established toggle terminology | `"मोड्ने सूची"` | `"टगल सूची"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-013` | `ne` | `tools.link.addLink` | terminology consistency | `"लिंक थप्नुहोस्"` | `"लिङ्क थप्नुहोस्"` | Accept the reviewed लिङ्क spelling consistently for the same user-visible link concept. | verified |
+| `F-ne-014` | `ne` | `tools.link.invalidLink` | terminology consistency | `"अमान्य लिंक"` | `"अमान्य लिङ्क"` | Accept the reviewed लिङ्क spelling consistently for the same user-visible link concept. | verified |
+| `F-ne-015` | `ne` | `tools.marker.textColor` | semantic omission | `"पाठ"` | `"पाठको रङ"` | Accept after caller and terminology review: The current value says only “Text” and drops the color axis, so composed swatch labels cannot distinguish text color from background color. | verified |
+| `F-ne-016` | `ne` | `tools.colorPicker.defaultSwatchLabel` | placeholder composition / word order | `"{mode} {default}"` | `"{default} {mode}"` | Select Nepali modifier order {default} {mode}; after caller substitution it yields पूर्वनिर्धारित पाठको रङ. Its projected identity with English is placeholder-only, not untranslated text. | verified |
+| `F-ne-017` | `ne` | `tools.colorPicker.colorSwatchLabel` | placeholder composition / word order | `"{mode} {color}"` | `"{color} {mode}"` | Select Nepali modifier order {color} {mode}; after caller substitution it yields रातो पाठको रङ. Its projected identity with English is placeholder-only. | verified |
+| `F-ne-018` | `ne` | `tools.header.toggleHeading` | established toggle terminology | `"मोड्ने शीर्षक"` | `"टगल शीर्षक"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-019` | `ne` | `tools.header.toggleHeading1` | established toggle terminology | `"मोड्ने शीर्षक १"` | `"टगल शीर्षक १"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-020` | `ne` | `tools.header.toggleHeading2` | established toggle terminology | `"मोड्ने शीर्षक २"` | `"टगल शीर्षक २"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-021` | `ne` | `tools.header.toggleHeading3` | established toggle terminology | `"मोड्ने शीर्षक ३"` | `"टगल शीर्षक ३"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-022` | `ne` | `tools.header.toggleHeading4` | established toggle terminology | `"मोड्ने शीर्षक ४"` | `"टगल शीर्षक ४"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-023` | `ne` | `tools.header.toggleHeading5` | established toggle terminology | `"मोड्ने शीर्षक ५"` | `"टगल शीर्षक ५"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-024` | `ne` | `tools.header.toggleHeading6` | established toggle terminology | `"मोड्ने शीर्षक ६"` | `"टगल शीर्षक ६"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-025` | `ne` | `tools.toggle.placeholder` | established toggle terminology | `"मोड्ने"` | `"टगल"` | Accept the attested product noun टगल; the current मोड्ने is a verb and is awkward as a standalone tool or placeholder noun. | verified |
+| `F-ne-026` | `ne` | `tools.table.clearSelection` | changed-English synchronization | `"खाली गर्नुहोस्"` | `"सामग्री खाली गर्नुहोस्"` | Accept after caller and terminology review: The source now says “Clear contents.” The current generic “Clear” omits the object and can be confused with clearing selection state. | verified |
+| `F-ne-027` | `ne` | `tools.table.copySelection` | action grammar | `"प्रतिलिपि"` | `"प्रतिलिपि गर्नुहोस्"` | Repair the bare noun into a finite copy command while retaining the catalog’s established native प्रतिलिपि terminology. | verified |
+| `F-ne-028` | `ne` | `tools.table.headerColumn` | table terminology | `"शीर्ष स्तम्भ"` | `"हेडर स्तम्भ"` | Select हेडर स्तम्भ: official Nepali office-product usage attests हेडर for the structural role, whereas the current शीर्ष can mean merely top. | verified |
+| `F-ne-029` | `ne` | `tools.table.headerRow` | table terminology | `"शीर्ष पङ्क्ति"` | `"हेडर पङ्क्ति"` | Select हेडर पङ्क्ति: official Nepali office-product usage attests हेडर for the structural role, whereas the current शीर्ष can mean merely top. | verified |
+| `F-ne-030` | `ne` | `tools.table.placement` | changed-English synchronization | `"स्थान"` | `"पङ्क्तिबद्धता"` | Accept after caller and terminology review: The picker heading’s source is now “Alignment.” स्थान means location and omits the alignment operation represented by the nine controls. | verified |
+| `F-ne-031` | `ne` | `tools.table.placementTopLeft` | naturalness / directional terminology | `"माथि बायाँ"` | `"माथिल्लो बायाँ"` | Accept the compact adjectival upper/lower position form, attested in Google Nepali interface directions and more exact than above/below wording. | verified |
+| `F-ne-032` | `ne` | `tools.table.placementTopCenter` | naturalness / directional terminology | `"माथि केन्द्र"` | `"माथिल्लो केन्द्र"` | Accept the compact adjectival upper/lower position form, attested in Google Nepali interface directions and more exact than above/below wording. | verified |
+| `F-ne-033` | `ne` | `tools.table.placementTopRight` | naturalness / directional terminology | `"माथि दायाँ"` | `"माथिल्लो दायाँ"` | Accept the compact adjectival upper/lower position form, attested in Google Nepali interface directions and more exact than above/below wording. | verified |
+| `F-ne-034` | `ne` | `tools.table.placementBottomLeft` | naturalness / directional terminology | `"तल बायाँ"` | `"तल्लो बायाँ"` | Accept the compact adjectival upper/lower position form, attested in Google Nepali interface directions and more exact than above/below wording. | verified |
+| `F-ne-035` | `ne` | `tools.table.placementBottomCenter` | naturalness / directional terminology | `"तल केन्द्र"` | `"तल्लो केन्द्र"` | Accept the compact adjectival upper/lower position form, attested in Google Nepali interface directions and more exact than above/below wording. | verified |
+| `F-ne-036` | `ne` | `tools.table.placementBottomRight` | naturalness / directional terminology | `"तल दायाँ"` | `"तल्लो दायाँ"` | Accept the compact adjectival upper/lower position form, attested in Google Nepali interface directions and more exact than above/below wording. | verified |
+| `F-ne-037` | `ne` | `blockSettings.copyLink` | terminology consistency | `"ब्लकको लिंक प्रतिलिपि गर्नुहोस्"` | `"ब्लकको लिङ्क प्रतिलिपि गर्नुहोस्"` | Accept the reviewed लिङ्क spelling consistently for the same user-visible link concept. | verified |
+| `F-ne-038` | `ne` | `a11y.dragHandle` | accessibility / action clarity | `"ब्लक सार्न तान्नुहोस् वा मेनुको लागि क्लिक गर्नुहोस्"` | `"ब्लक सार्न तान्नुहोस् वा मेनु खोल्न क्लिक गर्नुहोस्"` | Accept after caller and terminology review: मेनुको लागि क्लिक गर्नुहोस् is an unnatural purpose fragment. The replacement names the click result explicitly for screen-reader users. | verified |
+| `F-ne-039` | `ne` | `a11y.dragStarted` | accessibility / sentence completeness | `"ब्लक तान्दै"` | `"ब्लक तानिँदै छ"` | Accept after caller and terminology review: The current ब्लक तान्दै lacks an expressed agent or passive auxiliary. The replacement is a complete live-region status: “The block is being dragged.” | verified |
+| `F-ne-040` | `ne` | `a11y.dragStartedMultiple` | accessibility / count neutrality | `"{count} ब्लकहरू तान्दै"` | `"तानिँदै गरेका ब्लकहरूको सङ्ख्या: {count}"` | Select the count-neutral label-before-number form with plural genitive; it remains grammatical for every runtime {count}. | verified |
+| `F-ne-041` | `ne` | `a11y.dropCancelled` | accessibility / grammar | `"तान्ने रद्द भयो"` | `"तान्ने कार्य रद्द भयो"` | Accept after caller and terminology review: तान्ने रद्द भयो is not a well-formed nominal phrase. Naming the drag action produces a natural cancellation announcement. | verified |
+| `F-ne-042` | `ne` | `a11y.blocksMoved` | accessibility / count neutrality | `"{count} ब्लकहरू स्थान {position} मा सारियो"` | `"स्थान {position} मा सारिएका ब्लकहरूको सङ्ख्या: {count}"` | Amend the proposals to combine an explicit destination relation with the natural plural genitive and a count-neutral label-before-number structure. | verified |
+| `F-ne-043` | `ne` | `a11y.blocksDuplicated` | accessibility / source completeness | `"{count} ब्लकहरू स्थान {position} देखि नक्कल गरियो"` | `"स्थान {position} बाट सुरु हुने गरी नक्कल गरिएका ब्लकहरूको सङ्ख्या: {count}"` | Amend the proposals to preserve “starting at position” explicitly while using a natural plural genitive and count-neutral label-before-number structure. | verified |
+| `F-ne-044` | `ne` | `a11y.searchResults` | accessibility / semantic omission | `"{count} परिणामहरू"` | `"खोज परिणामहरूको सङ्ख्या: {count}"` | Select the explicit search-result count relation so a screen reader does not announce an unexplained generic result count. | verified |
+| `F-ne-045` | `ne` | `a11y.allBlocksSelected` | accessibility / count relation | `"सबै ब्लक चयन गरियो, {count} ब्लक"` | `"सबै ब्लकहरू चयन गरिए। जम्मा: {count}।"` | Select the complete two-sentence announcement with plural agreement, explicit total, and terminal punctuation. | verified |
+| `F-ne-046` | `ne` | `a11y.blocksSelected` | accessibility / count neutrality | `"{count} ब्लक चयन गरियो"` | `"चयन गरिएका ब्लकहरूको सङ्ख्या: {count}"` | Select the count-neutral label-before-number form with plural genitive for arbitrary runtime counts. | verified |
+| `F-ne-047` | `ne` | `a11y.navigationModeEntered` | accessibility / semantic clarity | `"नेभिगेसन मोड। ब्लकहरू बीच सार्न एरो कुञ्जीहरू, सम्पादन गर्न Enter, बाहिर निस्कन Escape प्रयोग गर्नुहोस्।"` | `"नेभिगेसन मोड। ब्लकहरूबीच जान एरो कुञ्जीहरू, सम्पादन गर्न Enter र बाहिर निस्कन Escape प्रयोग गर्नुहोस्।"` | Accept after caller and terminology review: Arrow keys move focus between blocks, not the blocks; “जान” removes the ambiguity. | verified |
+| `F-ne-048` | `ne` | `a11y.navigationPosition` | accessibility / placeholder relation | `"{tool}, {total} मध्ये {position}"` | `"{tool}, कुल {total} मध्ये स्थान {position}"` | Accept after caller and terminology review: Explicit कुल and स्थान labels make the position-versus-total relation unambiguous when spoken by a screen reader. | verified |
+| `F-ne-049` | `ne` | `searchTerms.header` | search alias accuracy | `"शीर्ष"` | `"हेडर"` | Accept after caller and terminology review: Names the actual searchable tool concept rather than an underspecified or unrelated literal sense. | verified |
+| `F-ne-050` | `ne` | `tools.callout.addEmoji` | changed-English synchronization | `"इमोजी थप्नुहोस्"` | `"आइकन थप्नुहोस्"` | Accept after caller and terminology review: The source and caller now add an icon, not necessarily an emoji. The neighboring edit/remove controls already use आइकन. | verified |
+| `F-ne-051` | `ne` | `tools.callout.filterEmojis` | changed-English synchronization | `"फिल्टर…"` | `"इमोजी खोज्नुहोस्…"` | Accept after caller and terminology review: The input is a search field. फिल्टर… neither names the emoji object nor gives the current “Search emojis…” prompt. | verified |
+| `F-ne-052` | `ne` | `tools.callout.pickRandom` | action completeness | `"अनियमित"` | `"अनियमित इमोजी छान्नुहोस्"` | Accept after caller and terminology review: अनियमित is only the adjective “random.” The button needs the complete “pick a random emoji” action. | verified |
+| `F-ne-053` | `ne` | `tools.callout.emojiCategorySymbols` | grammar / UI consistency | `"चिन्ह"` | `"चिन्हहरू"` | Accept the plural collection heading, matching the multiple items in the category and neighboring category labels. | verified |
+| `F-ne-054` | `ne` | `tools.callout.emojiCategoryFlags` | grammar / UI consistency | `"झण्डा"` | `"झण्डाहरू"` | Accept the plural collection heading, matching the multiple items in the category and neighboring category labels. | verified |
+| `F-ne-055` | `ne` | `tools.quote.size` | grammar / naturalness | `"उद्धरण आकार"` | `"उद्धरणको आकार"` | Accept after caller and terminology review: Supplies the Nepali genitive relation between object and property. | verified |
+| `F-ne-056` | `ne` | `toolNames.inlineCode` | tool distinction | `"कोड"` | `"इनलाइन कोड"` | Accept after caller and terminology review: The inline formatter and the separate code-block tool currently expose the identical कोड title. The two-word title preserves their distinct caller roles. | verified |
+| `F-ne-057` | `ne` | `tools.code.searchLanguage` | grammar / punctuation | `"भाषा खोज्नुहोस्..."` | `"भाषाहरू खोज्नुहोस्…"` | Accept after caller and terminology review: Use the plural object from the source and the catalog’s single ellipsis character instead of three ASCII periods. | verified |
+| `F-ne-058` | `ne` | `tools.code.sideBySide` | layout semantics | `"एकैसाथ"` | `"छेउछाउमा"` | Accept after caller and terminology review: एकैसाथ means “at the same time” and does not describe the split layout. छेउछाउमा conveys side-by-side placement. | verified |
+| `F-ne-059` | `ne` | `searchTerms.pre` | search alias relevance | `"पूर्व"` | `"पूर्वढाँचाबद्ध पाठ"` | Select पूर्वढाँचाबद्ध पाठ, which names preformatted text explicitly and reuses the catalog’s established ढाँचा formatting family. | verified |
+| `F-ne-060` | `ne` | `toolNames.image` | Nepali orthography | `"तस्विर"` | `"तस्बिर"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-061` | `ne` | `tools.link.linkTitle` | changed-English synchronization | `"लिङ्क शीर्षक"` | `"लिङ्कको पाठ"` | Accept after caller and terminology review: The field is for the visible link text, not a link title. The current value translates the superseded concept. | verified |
+| `F-ne-062` | `ne` | `tools.image.caption` | established media terminology | `"क्याप्शन"` | `"क्याप्सन"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-063` | `ne` | `tools.image.toggleCaption` | stateful action / changed-English synchronization | `"क्याप्शन टगल गर्नुहोस्"` | `"क्याप्सन देखाउनुहोस् वा लुकाउनुहोस्"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-064` | `ne` | `tools.image.captionPlaceholder` | established media terminology | `"क्याप्शन लेख्नुहोस्…"` | `"क्याप्सन लेख्नुहोस्…"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-065` | `ne` | `tools.image.replace` | Nepali orthography | `"तस्विर बदल्नुहोस्"` | `"तस्बिर बदल्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-066` | `ne` | `tools.image.downloadOriginal` | action and object completeness | `"मूल डाउनलोड"` | `"मूल तस्बिर डाउनलोड गर्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-067` | `ne` | `tools.image.copyUrl` | established clipboard terminology | `"URL कपी गर्नुहोस्"` | `"URL को प्रतिलिपि गर्नुहोस्"` | Accept the complete native Copy URL command, consistent with Android Nepali’s URL-copy terminology and this catalog’s प्रतिलिपि family. | verified |
+| `F-ne-068` | `ne` | `tools.image.altEdit` | accessibility terminology | `"alt पाठ सम्पादन गर्नुहोस्"` | `"वैकल्पिक पाठ सम्पादन गर्नुहोस्"` | Accept after caller and terminology review: Replace the mixed lowercase Latin “alt” label with a self-contained Nepali alternative-text action. | verified |
+| `F-ne-069` | `ne` | `tools.image.altDescription` | changed-English synchronization / accessibility | `"यस तस्विरको वर्णन गर्न alt पाठ थप्नुहोस्। यसले तपाईंको पृष्ठ दृष्टिविहीन वा अन्धा मानिसहरूका लागि बढी पहुँचयोग्य बनाउँछ।"` | `"यो तस्बिर देख्न नसक्ने व्यक्तिहरूका लागि यसको वर्णन गर्नुहोस्।"` | Select the concise current-source sentence with व्यक्तिहरू; it removes obsolete page-level claims and remains audience-centered. | verified |
+| `F-ne-070` | `ne` | `tools.image.altPlaceholder` | accessibility terminology | `"Alt पाठ"` | `"वैकल्पिक पाठ"` | Accept after caller and terminology review: Use a clear Nepali label for alternative text rather than a mixed Latin abbreviation. | verified |
+| `F-ne-071` | `ne` | `tools.image.preview` | Nepali orthography | `"तस्विर पूर्वावलोकन"` | `"तस्बिरको पूर्वावलोकन"` | Select the natural genitive तस्बिरको पूर्वावलोकन while also correcting the recurring तस्विर misspelling. | verified |
+| `F-ne-072` | `ne` | `tools.image.previewControls` | accessibility / object scope | `"पूर्वावलोकन नियन्त्रणहरू"` | `"तस्बिर पूर्वावलोकनका नियन्त्रणहरू"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-073` | `ne` | `tools.image.navigationControls` | Nepali orthography | `"तस्विर नेभिगेसन"` | `"तस्बिर नेभिगेसन"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-074` | `ne` | `tools.image.previousImage` | Nepali orthography | `"अघिल्लो तस्विर"` | `"अघिल्लो तस्बिर"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-075` | `ne` | `tools.image.nextImage` | Nepali orthography | `"अर्को तस्विर"` | `"अर्को तस्बिर"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-076` | `ne` | `tools.image.errorFileTooLarge` | Nepali orthography | `"तस्विर धेरै ठूलो छ। {size} ले {max} सीमा नाघेको छ।"` | `"तस्बिर धेरै ठूलो छ। {size} ले {max} सीमा नाघेको छ।"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-077` | `ne` | `tools.image.errorUnavailable` | Nepali orthography | `"तस्विर उपलब्ध छैन"` | `"तस्बिर उपलब्ध छैन"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-078` | `ne` | `tools.image.errorImageFailedToLoad` | Nepali orthography | `"तस्विर लोड गर्न सकिएन"` | `"तस्बिर लोड गर्न सकिएन"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-079` | `ne` | `tools.image.errorDefaultTitle` | Nepali orthography | `"तस्विर लोड गर्न सकिएन"` | `"तस्बिर लोड गर्न सकिएन"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-080` | `ne` | `tools.image.errorDefaultMessage` | changed-English synchronization / recovery guidance | `"URL ले त्रुटि फिर्ता गर्‍यो। फरक स्रोत प्रयास गर्नुहोस् वा फाइल पुनः अपलोड गर्नुहोस्।"` | `"यो URL बाट तस्बिर लोड गर्न सकिएन। फरक स्रोत प्रयोग गर्नुहोस् वा फाइल फेरि अपलोड गर्नुहोस्।"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-081` | `ne` | `tools.image.emptyAddImage` | Nepali orthography | `"तस्विर थप्नुहोस्"` | `"तस्बिर थप्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-082` | `ne` | `tools.image.emptyOrDropHere` | Nepali orthography | `"वा यहाँ तस्विर छोड्नुहोस्"` | `"वा यहाँ तस्बिर छोड्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-083` | `ne` | `tools.image.emptyDropToUpload` | drag-and-drop action clarity | `"अपलोड गर्न छोड्नुहोस्"` | `"अपलोड गर्न यहाँ छोड्नुहोस्"` | Accept the explicit destination “here” so छोड्नुहोस् cannot be misread as leave/quit in the active drop target. | verified |
+| `F-ne-084` | `ne` | `tools.image.emptyUrlPlaceholder` | Nepali orthography | `"तस्विर URL टाँस्नुहोस्…"` | `"तस्बिरको URL टाँस्नुहोस्…"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-085` | `ne` | `tools.image.emptyUrlAria` | Nepali orthography | `"तस्विर URL"` | `"तस्बिरको URL"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-086` | `ne` | `tools.image.emptySourceAria` | Nepali orthography | `"तस्विर स्रोत"` | `"तस्बिरको स्रोत"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-087` | `ne` | `tools.image.cropDialogLabel` | Nepali orthography | `"तस्विर क्रप गर्नुहोस्"` | `"तस्बिर क्रप गर्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-088` | `ne` | `tools.file.emptyDropToUpload` | drag-and-drop action clarity | `"अपलोड गर्न छोड्नुहोस्"` | `"अपलोड गर्न यहाँ छोड्नुहोस्"` | Accept the explicit destination “here” so छोड्नुहोस् cannot be misread as leave/quit in the active drop target. | verified |
+| `F-ne-089` | `ne` | `tools.file.toggleCaption` | stateful action / changed-English synchronization | `"क्याप्शन टगल गर्नुहोस्"` | `"क्याप्सन देखाउनुहोस् वा लुकाउनुहोस्"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-090` | `ne` | `tools.file.captionPlaceholder` | established media terminology | `"क्याप्शन लेख्नुहोस्…"` | `"क्याप्सन लेख्नुहोस्…"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-091` | `ne` | `tools.file.copyUrl` | established clipboard terminology | `"URL कपी गर्नुहोस्"` | `"URL को प्रतिलिपि गर्नुहोस्"` | Accept the complete native Copy URL command, consistent with Android Nepali’s URL-copy terminology and this catalog’s प्रतिलिपि family. | verified |
+| `F-ne-092` | `ne` | `tools.video.alignmentLeft` | accessible action completeness | `"बायाँ"` | `"बायाँ पङ्क्तिबद्ध गर्नुहोस्"` | Accept the finite alignment command; the current value names only a direction and omits the action performed by the menu item. | verified |
+| `F-ne-093` | `ne` | `tools.video.alignmentCenter` | accessible action completeness | `"केन्द्र"` | `"केन्द्रमा पङ्क्तिबद्ध गर्नुहोस्"` | Accept the finite alignment command; the current value names only a direction and omits the action performed by the menu item. | verified |
+| `F-ne-094` | `ne` | `tools.video.alignmentRight` | accessible action completeness | `"दायाँ"` | `"दायाँ पङ्क्तिबद्ध गर्नुहोस्"` | Accept the finite alignment command; the current value names only a direction and omits the action performed by the menu item. | verified |
+| `F-ne-095` | `ne` | `tools.video.caption` | established media terminology | `"क्याप्शन"` | `"क्याप्सन"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-096` | `ne` | `tools.video.captionPlaceholder` | established media terminology | `"क्याप्शन लेख्नुहोस्…"` | `"क्याप्सन लेख्नुहोस्…"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-097` | `ne` | `tools.video.toggleCaption` | stateful action / changed-English synchronization | `"क्याप्शन टगल गर्नुहोस्"` | `"क्याप्सन देखाउनुहोस् वा लुकाउनुहोस्"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-098` | `ne` | `tools.video.copyUrl` | established clipboard terminology | `"URL कपी गर्नुहोस्"` | `"URL को प्रतिलिपि गर्नुहोस्"` | Accept the complete native Copy URL command, consistent with Android Nepali’s URL-copy terminology and this catalog’s प्रतिलिपि family. | verified |
+| `F-ne-099` | `ne` | `tools.video.emptyDropToUpload` | drag-and-drop action clarity | `"अपलोड गर्न छोड्नुहोस्"` | `"अपलोड गर्न यहाँ छोड्नुहोस्"` | Accept the explicit destination “here” so छोड्नुहोस् cannot be misread as leave/quit in the active drop target. | verified |
+| `F-ne-100` | `ne` | `tools.audio.alignmentLeft` | accessible action completeness | `"बायाँ"` | `"बायाँ पङ्क्तिबद्ध गर्नुहोस्"` | Accept the finite alignment command; the current value names only a direction and omits the action performed by the menu item. | verified |
+| `F-ne-101` | `ne` | `tools.audio.alignmentCenter` | accessible action completeness | `"केन्द्र"` | `"केन्द्रमा पङ्क्तिबद्ध गर्नुहोस्"` | Accept the finite alignment command; the current value names only a direction and omits the action performed by the menu item. | verified |
+| `F-ne-102` | `ne` | `tools.audio.alignmentRight` | accessible action completeness | `"दायाँ"` | `"दायाँ पङ्क्तिबद्ध गर्नुहोस्"` | Accept the finite alignment command; the current value names only a direction and omits the action performed by the menu item. | verified |
+| `F-ne-103` | `ne` | `tools.audio.caption` | established media terminology | `"क्याप्शन"` | `"क्याप्सन"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-104` | `ne` | `tools.audio.captionPlaceholder` | established media terminology | `"क्याप्शन लेख्नुहोस्…"` | `"क्याप्सन लेख्नुहोस्…"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-105` | `ne` | `tools.audio.copyUrl` | established clipboard terminology | `"URL कपी गर्नुहोस्"` | `"URL को प्रतिलिपि गर्नुहोस्"` | Accept the complete native Copy URL command, consistent with Android Nepali’s URL-copy terminology and this catalog’s प्रतिलिपि family. | verified |
+| `F-ne-106` | `ne` | `tools.audio.emptyOrDropHere` | source completeness | `"वा यहाँ अडियो छोड्नुहोस्"` | `"वा यहाँ अडियो फाइल छोड्नुहोस्"` | Accept after caller and terminology review: The drop target accepts an audio file. The current value says only audio and drops the file object explicitly carried by the source. | verified |
+| `F-ne-107` | `ne` | `tools.audio.emptyDropToUpload` | drag-and-drop action clarity | `"अपलोड गर्न छोड्नुहोस्"` | `"अपलोड गर्न यहाँ छोड्नुहोस्"` | Accept the explicit destination “here” so छोड्नुहोस् cannot be misread as leave/quit in the active drop target. | verified |
+| `F-ne-108` | `ne` | `tools.audio.coverSet` | Nepali orthography | `"कभर तस्विर सेट गर्नुहोस्"` | `"कभर तस्बिर सेट गर्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-109` | `ne` | `tools.audio.coverErrorType` | Nepali orthography | `"तस्विर फाइल छान्नुहोस्"` | `"तस्बिर फाइल छान्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-110` | `ne` | `tools.audio.coverErrorTooLarge` | Nepali orthography | `"तस्विर धेरै ठूलो छ"` | `"तस्बिर धेरै ठूलो छ"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-111` | `ne` | `tools.audio.coverOrDropHere` | Nepali orthography | `"वा यहाँ तस्विर छोड्नुहोस्"` | `"वा यहाँ तस्बिर छोड्नुहोस्"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-112` | `ne` | `tools.audio.coverDropToUpload` | drag-and-drop action clarity | `"अपलोड गर्न छोड्नुहोस्"` | `"अपलोड गर्न यहाँ छोड्नुहोस्"` | Accept after caller and terminology review: Add the explicit drop destination to avoid the “leave/quit” reading. | verified |
+| `F-ne-113` | `ne` | `tools.audio.coverUrlPlaceholder` | Nepali orthography | `"तस्विर URL टाँस्नुहोस्…"` | `"तस्बिरको URL टाँस्नुहोस्…"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-114` | `ne` | `tools.audio.coverUrlAria` | Nepali orthography | `"तस्विर URL"` | `"तस्बिरको URL"` | Accept the standard तस्बिर orthography attested throughout Google Nepali product content; the current तस्विर form is nonstandard. | verified |
+| `F-ne-115` | `ne` | `tools.audio.coverSourceAria` | accessibility / object scope | `"तस्विर स्रोत"` | `"कभरको स्रोत"` | Accept after caller and terminology review: The source is Cover source; the current misspelled “image source” loses the cover-specific relationship. | verified |
+| `F-ne-116` | `ne` | `tools.database.duplicateView` | action grammar | `"नक्कल"` | `"नक्कल बनाउनुहोस्"` | Accept after caller and terminology review: The view menu performs a duplicate action. The current bare noun नक्कल is inconsistent with the complete duplicate commands elsewhere in the catalog. | verified |
+| `F-ne-117` | `ne` | `tools.database.viewTypeBoardDescription` | database semantics / grammar | `"वस्तुहरू स्तम्भमा देखाउनुहोस्"` | `"वस्तुहरू स्तम्भहरूमा देखाउनुहोस्"` | Accept after caller and terminology review: Restores the caller’s exact view, property, field-type, or duplicate-action concept. | verified |
+| `F-ne-118` | `ne` | `tools.database.viewTypeListDescription` | changed-English synchronization | `"साधारण रैखिक दृश्य"` | `"वस्तुहरू साधारण सूचीमा देखाउनुहोस्"` | Accept after caller and terminology review: The source describes showing items in a simple list. साधारण रैखिक दृश्य merely says “simple linear view” and omits both the items and action. | verified |
+| `F-ne-119` | `ne` | `tools.database.propertyTypeHeading` | grammar | `"गुण प्रकार"` | `"गुणको प्रकार"` | Accept after caller and terminology review: The heading needs the genitive relation “type of property”; गुण प्रकार is an incomplete compound in this UI context. | verified |
+| `F-ne-120` | `ne` | `tools.database.propertyTypeSelect` | property-type semantics | `"छान्नुहोस्"` | `"छनोट"` | Accept after caller and terminology review: This menu lists property-type nouns alongside Text, Number, Date, and Checkbox. The imperative छान्नुहोस् is an action, while छनोट names the Select property type. | verified |
+| `F-ne-121` | `ne` | `tools.bookmark.loading` | status completeness / punctuation | `"लिङ्क पूर्वावलोकन लोड हुँदै"` | `"लिङ्क पूर्वावलोकन लोड हुँदैछ…"` | Accept after caller and terminology review: The current status lacks the finite auxiliary and the source ellipsis. The replacement is a complete ongoing loading announcement. | verified |
+| `F-ne-122` | `ne` | `tools.embed.empty` | changed-English synchronization | `"इम्बेड गर्न लिङ्क टाँस्नुहोस्"` | `"इम्बेड गर्ने लिङ्क छैन"` | Select the factual empty state इम्बेड गर्ने लिङ्क छैन; the current value incorrectly duplicates the separate paste instruction. | verified |
+| `F-ne-123` | `ne` | `tools.embed.captionPlaceholder` | established media terminology | `"क्याप्शन लेख्नुहोस्…"` | `"क्याप्सन लेख्नुहोस्…"` | Accept YouTube Nepali’s established क्याप्सन spelling; for toggle controls, the final wording also states the visible show/hide outcomes. | verified |
+| `F-ne-124` | `ne` | `tools.embed.urlPlaceholder` | terminology consistency | `"एम्बेड गर्न लिङ्क टाँस्नुहोस्…"` | `"इम्बेड गर्न लिङ्क टाँस्नुहोस्…"` | Accept after caller and terminology review: Normalize एम्बेड to the established इम्बेड form used by the surrounding embed flow and official Nepali YouTube guidance. | verified |
+| `F-ne-125` | `ne` | `tools.embed.urlSubmit` | embed terminology / live-flow consistency | `"लिङ्क एम्बेड गर्नुहोस्"` | `"लिङ्क इम्बेड गर्नुहोस्"` | The reconciliation normalizes tools.embed.urlPlaceholder from एम्बेड to official YouTube Nepali इम्बेड but leaves this adjacent submit action in the old spelling. Normalize the same user-visible embed concept across the single form. | verified |
+| `F-ne-126` | `ne` | `tools.embed.invalidUrl` | embed terminology / live-flow consistency | `"त्यो लिङ्क एम्बेड गर्न मिल्दैन"` | `"त्यो लिङ्क इम्बेड गर्न मिल्दैन"` | The reconciliation normalizes tools.embed.urlPlaceholder from एम्बेड to official YouTube Nepali इम्बेड but leaves this adjacent validation error in the old spelling. Normalize the same user-visible embed concept across the single form. | verified |
+| `F-ne-127` | `ne` | `tools.linkPaste.mention` | action grammar | `"उल्लेख"` | `"उल्लेख गर्नुहोस्"` | Accept after caller and terminology review: This paste-menu title is an action. The current bare noun उल्लेख does not tell the user what selecting it will do. | verified |
+| `F-ne-128` | `ne` | `tools.video.seek` | media semantics / accessibility | `"खोज्नुहोस्"` | `"प्लेब्याकको स्थान"` | Accept after caller and terminology review: खोज्नुहोस् means “search.” This range input controls playback position, so its accessible name must identify that media function. | verified |
+| `F-ne-129` | `ne` | `tools.video.seekValueText` | accessibility / placeholder relation | `"{total} मध्ये {current}"` | `"हालको समय: {current}। कुल अवधि: {total}।"` | Select two explicitly labelled sentences so screen readers distinguish current playback time from total duration. | verified |
+| `F-ne-130` | `ne` | `tools.video.toggleTimeDisplay` | changed-English synchronization / media action | `"समय प्रदर्शन टगल गर्नुहोस्"` | `"बितेको समय र बाँकी समयबीच बदल्नुहोस्"` | Select the wording that explicitly names both elapsed time and remaining time rather than exposing generic toggle jargon. | verified |
+| `F-ne-131` | `ne` | `tools.video.ctxCopyUrlAtTime` | media semantics / action precision | `"हालको समयमा भिडियो URL प्रतिलिपि गर्नुहोस्"` | `"हालको प्लेब्याक समयमा भिडियो URL प्रतिलिपि गर्नुहोस्"` | Select “current playback time” to avoid the current wall-clock reading and preserve the URL-at-time behavior. | verified |
+| `F-ne-132` | `ne` | `tools.video.ctxStats` | changed-English synchronization / media terminology | `"विस्तृत तथ्याङ्क"` | `"प्लेब्याक तथ्याङ्क"` | Accept after caller and terminology review: The context item opens playback statistics. विस्तृत तथ्याङ्क means only “detailed statistics” and drops the media domain. | verified |
+| `F-ne-133` | `ne` | `tools.callout.emojiSearchResults` | accessibility / count neutrality | `"{count} इमोजी फेला परे"` | `"मिल्ने इमोजीहरूको सङ्ख्या: {count}"` | Select the count-neutral label-before-number form that explicitly reports the number of matching emojis. | verified |
+| `F-ne-134` | `ne` | `tools.database.checkboxChecked` | accessibility / checkbox state | `"चयन गरिएको"` | `"जाँच गरिएको"` | Accept Android Nepali’s exact checked/unchecked state terminology; row-selection wording describes the wrong state. | verified |
+| `F-ne-135` | `ne` | `tools.database.checkboxUnchecked` | accessibility / checkbox state | `"चयन नगरिएको"` | `"जाँच गरिएको छैन"` | Accept Android Nepali’s exact checked/unchecked state terminology; row-selection wording describes the wrong state. | verified |
 
 ## Exact-English Retentions
 
@@ -12557,3 +12803,12 @@ locale and UI context.
 | `R-my-008` | `my` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-my-009` | `my` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in official Burmese product terminology. | [AOSP Burmese system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-my/strings.xml) |
 | `R-my-010` | `my` | `notifier.ok` | established loanword | `OK` is the conventional compact acknowledgement label retained in official Burmese software strings. | [AOSP Burmese system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-my/strings.xml) |
+| `R-ne-001` | `ne` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating it would alter the executable shortcut. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-ne-002` | `ne` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord rather than translatable prose. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-ne-003` | `ne` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholder tokens and spacing; localized substitutions independently require this Nepali modifier order. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-ne-004` | `ne` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only runtime placeholder tokens and spacing; localized substitutions independently require this Nepali modifier order. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-ne-005` | `ne` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the surrounding Nepali dialog supplies the full localized concept. | [AOSP Nepali system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-ne/strings.xml) |
+| `R-ne-006` | `ne` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ne-007` | `ne` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ne-008` | `ne` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ne-009` | `ne` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in official Nepali product terminology. | [AOSP Nepali system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-ne/strings.xml) |

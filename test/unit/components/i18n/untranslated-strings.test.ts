@@ -277,6 +277,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.colorSwatchLabel',
     'notifier.ok',
   ]),
+  // Placeholder-only swatch templates contain no English lexical material;
+  // Nepali independently requires the same modifier-before-noun order.
+  ne: new Set([
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
+  ]),
   nl: new Set([
     'toolNames.link',
     'toolNames.database',

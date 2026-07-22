@@ -9,7 +9,7 @@
  * Output: src/tools/callout/emoji-picker/locales/{locale}.json
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,6 +48,8 @@ const BLOK_LOCALES = [
 ];
 
 const CLDR_LOCALE_OVERRIDES = {
+  // Blok's legacy `ku` locale is Sorani; CLDR's `ku` data is Kurmanji.
+  ku: 'ckb',
   'zh-TW': 'zh-Hant',
 };
 
@@ -55,7 +57,8 @@ const CLDR_LOCALE_OVERRIDES = {
 /*  3. Process each locale                                            */
 /* ------------------------------------------------------------------ */
 
-const OUTPUT_DIR = join(ROOT, 'src/tools/callout/emoji-picker/locales');
+const OUTPUT_DIR = process.env.BLOK_EMOJI_LOCALE_OUTPUT_DIR ??
+  join(ROOT, 'src/tools/callout/emoji-picker/locales');
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
 
@@ -63,6 +66,7 @@ const report = [];
 
 for (const locale of BLOK_LOCALES) {
   const cldrLocale = CLDR_LOCALE_OVERRIDES[locale] ?? locale;
+  const outPath = join(OUTPUT_DIR, `${locale}.json`);
   const cldrPath = join(
     ROOT,
     'node_modules/cldr-annotations-full/annotations',
@@ -75,6 +79,7 @@ for (const locale of BLOK_LOCALES) {
   try {
     cldrData = JSON.parse(readFileSync(cldrPath, 'utf-8'));
   } catch {
+    rmSync(outPath, { force: true });
     report.push({ locale, cldrLocale, entries: 0, note: 'MISSING CLDR data' });
     continue;
   }
@@ -82,6 +87,7 @@ for (const locale of BLOK_LOCALES) {
   const annotations = cldrData.annotations?.annotations;
 
   if (!annotations) {
+    rmSync(outPath, { force: true });
     report.push({ locale, cldrLocale, entries: 0, note: 'no annotations key' });
     continue;
   }
@@ -108,9 +114,10 @@ for (const locale of BLOK_LOCALES) {
   const count = Object.keys(output).length;
 
   if (count > 0) {
-    const outPath = join(OUTPUT_DIR, `${locale}.json`);
-
     writeFileSync(outPath, JSON.stringify(output), 'utf-8');
+  } else {
+    // Do not leave a stale file from a previous or incorrectly mapped build.
+    rmSync(outPath, { force: true });
   }
 
   report.push({ locale, cldrLocale, entries: count });

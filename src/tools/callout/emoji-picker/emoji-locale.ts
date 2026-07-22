@@ -21,7 +21,8 @@ const cache = new Map<string, EmojiLocaleData>();
 
 /**
  * Dynamic importers for each locale JSON file.
- * 66 non-English locale files; English needs no data, while CLDR lacks dv and yi.
+ * 65 non-English locale files; English needs no data, CLDR lacks dv and yi,
+ * and its `ku` annotations are Kurmanji rather than this product's Sorani.
  */
 const importers: Record<string, () => Promise<{ default: EmojiLocaleData }>> = {
   am: () => import('./locales/am.json'),
@@ -53,7 +54,6 @@ const importers: Record<string, () => Promise<{ default: EmojiLocaleData }>> = {
   km: () => import('./locales/km.json'),
   kn: () => import('./locales/kn.json'),
   ko: () => import('./locales/ko.json'),
-  ku: () => import('./locales/ku.json'),
   lo: () => import('./locales/lo.json'),
   lt: () => import('./locales/lt.json'),
   lv: () => import('./locales/lv.json'),

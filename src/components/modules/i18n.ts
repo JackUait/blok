@@ -328,6 +328,13 @@ export class I18n extends Module {
     // Try base language (e.g., 'en-US' -> 'en')
     const baseLang = normalized.split('-')[0];
 
+    // `ku` is Blok's legacy public code for its Sorani/Central Kurdish catalog.
+    // Browsers use the canonical `ckb` tag, so normalize that tag before the
+    // generic supported-language fallback.
+    if (baseLang === 'ckb') {
+      return 'ku';
+    }
+
     if (baseLang !== undefined && this.isLocaleSupported(baseLang)) {
       return baseLang;
     }

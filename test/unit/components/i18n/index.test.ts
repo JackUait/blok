@@ -499,5 +499,28 @@ describe('I18n Module', () => {
 
       expect(i18n.getLocale()).toBe('fr');
     });
+
+    it.each(['ckb', 'ckb-IQ'])(
+      'maps the standard Central Kurdish tag %s to the legacy Sorani catalog',
+      async (languageTag) => {
+        Object.defineProperty(global, 'navigator', {
+          value: {
+            languages: [languageTag, 'en'],
+            language: languageTag,
+          },
+          configurable: true,
+        });
+
+        const i18n = createI18nModule({
+          i18n: { locale: 'auto' },
+        });
+
+        await i18n.prepare();
+
+        expect(i18n.getLocale()).toBe('ku');
+        expect(i18n.getDirectionForLocale('ku')).toBe('rtl');
+        expect(i18n.t('blockSettings.clickAction')).toBe('کلیک بکە');
+      }
+    );
   });
 });

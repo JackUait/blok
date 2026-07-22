@@ -122,6 +122,9 @@ const GLOBAL_FINDING_KEYS = new Set([
   'tools.video playback-statistics detail templates',
   'mobile popover back-button localization contract',
   'read-only settings tooltip whole-message contract',
+  'segmented tooltip shortcut direction contract',
+  'Central Kurdish browser-tag alias contract',
+  'Sorani emoji metadata dialect contract',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
@@ -443,6 +446,78 @@ const KANNADA_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.toggleCaption': 'ಶೀರ್ಷಿಕೆಯನ್ನು ತೋರಿಸಿ ಅಥವಾ ಮರೆಮಾಡಿ',
   'tools.video.toggleTimeDisplay':
     'ಕಳೆದ ಸಮಯ ಮತ್ತು ಉಳಿದ ಸಮಯದ ನಡುವೆ ಬದಲಿಸಿ',
+};
+
+const SORANI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.orConjunction': ' یان ',
+  'blockSettings.openMenuAction': ' دابگرە بۆ کردنەوەی مێنیو',
+  'tools.table.textSize': 'قەبارەی دەق',
+  'tools.table.compactText': 'دەقی چڕ',
+  'tools.table.comfortableText': 'دەقی فراوان',
+  'a11y.searchResults': 'ئەنجامەکانی گەڕان: {count}',
+  'a11y.allBlocksSelected':
+    'هەموو بلۆکەکان هەڵبژێردران. کۆی گشتی: {count}',
+  'a11y.blocksSelected': '{count} بلۆک هەڵبژێردرا',
+  'a11y.navigationModeEntered':
+    'دۆخی ڕێدۆزی. بۆ جووڵان لە نێوان بلۆکەکاندا کلیلەکانی ئاراستە بەکاربهێنە، Enter بۆ دەستکاری و Escape بۆ دەرچوون.',
+  'a11y.navigationModeExited': 'لە دۆخی ڕێدۆزی دەرچوو',
+  'a11y.navigationPosition': '{tool}، {position} لە {total}',
+  'a11y.navigatedToBlock': 'چوو بۆ بلۆک',
+  'a11y.dropCreateColumnLeft': 'ستوونێک لە لای چەپ دروست دەکرێت',
+  'a11y.dropCreateColumnRight': 'ستوونێک لە لای ڕاست دروست دەکرێت',
+  'a11y.blockToolbar': 'شریتی ئامرازەکانی بلۆک',
+  'a11y.textFormatting': 'شێوەپێدانی دەق',
+  'tools.video.autoplay': 'لێدانی خۆکار',
+  'tools.video.loop': 'دووبارە لێدانەوە',
+  'tools.video.hideControls': 'کۆنترۆڵەکان بشارەوە',
+  'tools.audio.loop': 'دووبارە لێدانەوە',
+  'popover.convertTo': 'گۆڕین بۆ',
+  'tools.marker.textColor': 'ڕەنگی دەق',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder':
+    'شتێک بنووسە یان / دابگرە بۆ هەڵبژاردنی ئامرازێک',
+  'tools.table.clearSelection': 'ناوەڕۆک پاک بکەرەوە',
+  'tools.table.placement': 'ڕیزبەندی',
+  'a11y.insertBlock': 'بلۆک زیاد بکە',
+  'a11y.blocksDuplicated':
+    '{count} بلۆک کۆپی کران، لە شوێنی {position}ەوە',
+  'toolNames.strikethrough': 'هێڵ بەسەرداهاتوو',
+  'toolNames.clearFormat': 'شێوەپێدانی ڕاستەوخۆ پاک بکەرەوە',
+  'tools.columns.turnInto': 'گۆڕین بۆ ستوونەکان',
+  'searchTerms.collapsible': 'شیاوی داشکاندن',
+  'tools.callout.addEmoji': 'ئایکۆن زیاد بکە',
+  'tools.callout.removeEmoji': 'ئایکۆن بسڕەوە',
+  'tools.callout.filterEmojis': 'بەدوای ئیمۆجییەکاندا بگەڕێ…',
+  'tools.callout.noEmojisFound': 'هیچ ئیمۆجییەک نەدۆزرایەوە',
+  'tools.callout.pickRandom': 'ئیمۆجییەکی هەڕەمەکی هەڵبژێرە',
+  'tools.code.searchLanguage': 'بەدوای زمانەکاندا بگەڕێ…',
+  'tools.code.sideBySide': 'لە تەنیشت یەکدا',
+  'tools.link.linkTitle': 'دەقی بەستەر',
+  'tools.image.sizeMedium': 'مامناوەند',
+  'tools.image.errorDefaultTitle': 'نەتوانرا وێنەکە بار بکرێت',
+  'tools.image.errorDefaultMessage':
+    'نەتوانرا وێنەکە لەو URLەوە بار بکرێت. سەرچاوەیەکی تر تاقی بکەرەوە یان فایلەکە دووبارە بار بکە.',
+  'tools.image.errorRetry': 'دووبارە هەوڵ بدە',
+  'tools.file.previewRaw': 'سەرچاوە',
+  'tools.file.previewLoading': 'پێشبینین بار دەکرێت…',
+  'tools.file.previewError': 'نەتوانرا پێشبینین بار بکرێت',
+  'tools.audio.emptyAddAudio': 'دەنگێک زیاد بکە',
+  'tools.audio.emptyOrDropHere': 'یان فایلێکی دەنگی لێرە دابنێ',
+  'tools.audio.coverSourceAria': 'سەرچاوەی بەرگ',
+  'tools.database.duplicateView': 'دووبارەکردنەوە',
+  'tools.database.viewTypeListDescription':
+    'بڕگەکان لە لیستێکی سادەدا پیشان بدە',
+  'tools.database.propertyTypeMultiSelect': 'هەڵبژاردنی چەندانە',
+  'tools.database.defaultStatusInProgress': 'لە بەڕێوەچووندایە',
+  'tools.bookmark.loading': 'پێشبینینی بەستەر بار دەکرێت…',
+  'tools.bookmark.error': 'نەتوانرا پێشبینینی بەستەر بار بکرێت',
+  'tools.embed.empty': 'هیچ بەستەرێک بۆ جێگیرکردن نییە',
+  'tools.video.toggleTimeDisplay':
+    'پیشاندان لە نێوان کاتی تێپەڕیو و کاتی ماوەدا بگۆڕە',
+  'tools.video.volume': 'ئاستی دەنگ',
+  'tools.audio.volume': 'ئاستی دەنگ',
+  'tools.video.ctxStats': 'ئاماری لێدان',
 };
 
 const EMOJI_CATEGORY_SCOPE_KEYS = [
@@ -1156,6 +1231,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(KANNADA_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Sorani correction oracle', () => {
+    const messages = readLocale('ku').messages;
+    const actual = Object.fromEntries(
+      Object.keys(SORANI_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(SORANI_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

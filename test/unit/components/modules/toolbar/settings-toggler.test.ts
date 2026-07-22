@@ -134,7 +134,7 @@ describe('SettingsTogglerHandler', () => {
         [
           { text: 'blockSettings.clickAction', highlight: true },
           { text: 'blockSettings.orConjunction', highlight: false },
-          { text: 'blockSettings.menuShortcutMac', highlight: true },
+          { text: 'blockSettings.menuShortcutMac', highlight: true, direction: 'ltr' },
           { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);
@@ -159,7 +159,7 @@ describe('SettingsTogglerHandler', () => {
         [
           { text: 'blockSettings.clickAction', highlight: true },
           { text: 'blockSettings.orConjunction', highlight: false },
-          { text: 'blockSettings.menuShortcutWin', highlight: true },
+          { text: 'blockSettings.menuShortcutWin', highlight: true, direction: 'ltr' },
           { text: 'blockSettings.openMenuAction', highlight: false },
         ],
       ]);

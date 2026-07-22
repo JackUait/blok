@@ -43,6 +43,13 @@ describe('emoji-locale', () => {
     expect(data).toBeNull();
   });
 
+  it('falls back to English instead of loading Kurmanji metadata for Sorani', async () => {
+    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const data = await loadEmojiLocale('ku');
+
+    expect(data).toBeNull();
+  });
+
   it('loadEmojiLocale returns null for unsupported locale', async () => {
     const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
     const data = await loadEmojiLocale('xx');

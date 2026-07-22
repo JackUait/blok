@@ -7,6 +7,8 @@ import { Dom as $ } from '../../dom';
 export interface TooltipSegment {
   text: string;
   highlight: boolean;
+  /** Isolates direction-sensitive tokens such as keyboard shortcuts. */
+  direction?: 'ltr' | 'rtl' | 'auto';
 }
 
 /**
@@ -46,12 +48,19 @@ export const createTooltipContent = function(lines: TooltipLine[]): HTMLElement 
     const lineEl = $.make('div');
 
     if (Array.isArray(line)) {
-      // Segment-based line: render each segment as a span (highlighted) or text node
+      // Segment-based line: render highlighted or direction-isolated segments as spans.
       line.forEach((segment) => {
-        if (segment.highlight) {
+        if (segment.highlight || segment.direction !== undefined) {
           const span = $.make('span', null, { textContent: segment.text });
 
-          applyHighlight(span);
+          if (segment.direction !== undefined) {
+            span.dir = segment.direction;
+          }
+
+          if (segment.highlight) {
+            applyHighlight(span);
+          }
+
           lineEl.appendChild(span);
         } else {
           lineEl.appendChild(document.createTextNode(segment.text));

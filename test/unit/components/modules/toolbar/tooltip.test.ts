@@ -169,6 +169,18 @@ describe('createTooltipContent', () => {
       expect((childNodes[3] as Text).nodeValue).toBe(' to open menu');
     });
 
+    it('isolates a segment with an explicit text direction', () => {
+      const result = createTooltipContent([
+        [{ text: 'Ctrl+/', highlight: true, direction: 'ltr' }],
+      ]);
+
+      const line = result.children[0] as HTMLElement;
+      const shortcut = line.children[0] as HTMLElement;
+
+      expect(shortcut).toHaveAttribute('dir', 'ltr');
+      expect(shortcut).toHaveTextContent('Ctrl+/');
+    });
+
     it('renders a line with no highlighted segments as plain text', () => {
       const result = createTooltipContent([
         [{ text: 'plain text', highlight: false }],

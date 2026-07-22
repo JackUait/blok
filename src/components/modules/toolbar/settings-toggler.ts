@@ -8,7 +8,7 @@ import { hide, onHover } from '../../utils/tooltip';
 import { twJoin } from '../../utils/tw';
 
 import type { ClickDragHandler } from './click-handler';
-import { createTooltipContent } from './tooltip';
+import { createTooltipContent, type TooltipLine } from './tooltip';
 import type { ToolbarNodes } from './types';
 
 
@@ -255,14 +255,14 @@ export class SettingsTogglerHandler {
       ? blok.I18n.t('blockSettings.menuShortcutWin')
       : blok.I18n.t('blockSettings.menuShortcutMac');
 
-    const lines = blok.ReadOnly.isEnabled
+    const lines: TooltipLine[] = blok.ReadOnly.isEnabled
       ? [blok.I18n.t('blockSettings.clickToOpenMenu')]
       : [
         blok.I18n.t('blockSettings.dragToMove'),
         [
           clickAction,
           { text: blok.I18n.t('blockSettings.orConjunction'), highlight: false },
-          { text: shortcut, highlight: true },
+          { text: shortcut, highlight: true, direction: 'ltr' },
           openMenuAction,
         ],
       ];

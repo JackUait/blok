@@ -381,12 +381,18 @@
  * CSS inheritance: this wrapper sits closer to the redactor than any host
  * container that set the tokens further out, and inheritance resolves from
  * the nearest ancestor regardless of selector specificity.
- * A host that wants a gutter to persist in read-only mode declares the
- * token on the wrapper itself at >= (0,1,1) (one level closer than this
- * rule's (0,0,0)), e.g.
+ * A host that wants a gutter to persist declares the token on the wrapper
+ * itself at >= (0,1,1) (one level closer than this rule's (0,0,0)), e.g.
  * `.host [data-blok-interface] { --blok-editor-gutter-start: 56px }`.
+ *
+ * NOTE: plain read-only ([data-blok-readonly]) deliberately keeps the
+ * gutter. The block-hover copy-link control still renders there, and
+ * readOnly.set() flips modes in place — collapsing on read-only made the
+ * whole document jump sideways on every toggle. Only chromeless read-only
+ * (readOnly: { hideControls: true }, stamped as data-blok-controls-hidden
+ * by UI.toggleReadOnly) has a genuinely dead gutter.
  */
-:where([data-blok-readonly]) {
+:where([data-blok-controls-hidden]) {
   --blok-editor-gutter-start: 0px;
   --blok-editor-gutter-end: 0px;
 }

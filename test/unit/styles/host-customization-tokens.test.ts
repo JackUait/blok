@@ -104,12 +104,24 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       );
     });
 
-    it('auto-collapses the gutter in read-only mode by redeclaring the gutter tokens', () => {
-      const body = findRuleBody(css, ':where([data-blok-readonly])');
+    it('auto-collapses the gutter when controls are hidden (readOnly.hideControls)', () => {
+      const body = findRuleBody(css, ':where([data-blok-controls-hidden])');
 
       expect(body).not.toBeNull();
       expect(body).toMatch(/--blok-editor-gutter-start:\s*0px/);
       expect(body).toMatch(/--blok-editor-gutter-end:\s*0px/);
+    });
+
+    it('does NOT collapse the gutter on plain read-only (in-place mode flips must not shift layout)', () => {
+      // Plain read-only still shows the block-hover copy-link control, which
+      // lives in the gutter — and readOnly.set() flips modes in place, so a
+      // gutter collapse here makes the whole document jump sideways on every
+      // toggle. Collapse is reserved for states where the gutter is truly
+      // dead space: data-blok-toolbar-hidden and data-blok-controls-hidden.
+      const body = findRuleBody(css, ':where([data-blok-readonly])');
+      const gutterInReadonly = body !== null && /--blok-editor-gutter-(start|end)/.test(body);
+
+      expect(gutterInReadonly).toBe(false);
     });
 
     it('auto-collapses the gutter when the toolbar is hidden via config.hideToolbar', () => {

@@ -65,9 +65,15 @@ export const DATA_ATTR = {
   /** Editor or element is empty */
   empty: 'data-blok-empty',
   /** Present on the editor wrapper while read-only mode is active.
-   *  Public styling hook — lets hosts (and Blok's own CSS, e.g. the
-   *  gutter auto-collapse) key rules off the editing state without JS. */
+   *  Public styling hook — lets hosts key rules off the editing state
+   *  without JS. Deliberately does NOT collapse the gutter: plain
+   *  read-only still shows the block-hover copy-link control there, and
+   *  in-place readOnly.set() flips must not shift the layout. */
   readonly: 'data-blok-readonly',
+  /** Present on the editor wrapper while read-only mode hides ALL editor
+   *  controls (readOnly: { hideControls: true }). Public styling hook —
+   *  drives the gutter auto-collapse for genuinely chromeless read-only. */
+  controlsHidden: 'data-blok-controls-hidden',
   /** Present on the editor wrapper when config.hideToolbar is true.
    *  Public styling hook — drives the gutter auto-collapse (the gutter
    *  exists solely to house the toolbar's +/⠿ controls). */

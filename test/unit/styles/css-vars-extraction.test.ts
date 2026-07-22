@@ -341,12 +341,12 @@ describe('editor gutter default', () => {
     );
   });
 
-  it('declares the default before the read-only collapse so read-only still wins', () => {
+  it('declares the default before the controls-hidden collapse so the collapse still wins', () => {
     const defaultIdx = css.search(/:where\(\[data-blok-interface\]\)\s*\{[^}]*--blok-editor-gutter-start:\s*56px/);
-    const readonlyIdx = css.search(/:where\(\[data-blok-readonly\]\)\s*\{[^}]*--blok-editor-gutter-start:\s*0px/);
+    const controlsHiddenIdx = css.search(/:where\(\[data-blok-controls-hidden\]\)\s*\{[^}]*--blok-editor-gutter-start:\s*0px/);
     expect(defaultIdx).toBeGreaterThan(-1);
-    expect(readonlyIdx).toBeGreaterThan(-1);
-    expect(defaultIdx).toBeLessThan(readonlyIdx);
+    expect(controlsHiddenIdx).toBeGreaterThan(-1);
+    expect(defaultIdx).toBeLessThan(controlsHiddenIdx);
   });
 });
 

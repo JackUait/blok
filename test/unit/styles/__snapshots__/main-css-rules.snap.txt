@@ -1849,7 +1849,7 @@
   --blok-editor-gutter-start: 56px;
 }
 
-:where([data-blok-readonly]) {
+:where([data-blok-controls-hidden]) {
   --blok-editor-gutter-start: 0px;
   --blok-editor-gutter-end: 0px;
 }

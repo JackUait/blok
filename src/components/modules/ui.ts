@@ -312,10 +312,22 @@ export class UI extends Module<UINodes> {
    */
   public toggleReadOnly(readOnlyEnabled: boolean): void {
     /**
-     * Expose the read-only state in the DOM as a public styling hook
-     * (drives the gutter auto-collapse and any host CSS).
+     * Expose the read-only state in the DOM as a public styling hook.
      */
     this.nodes.wrapper?.toggleAttribute(DATA_ATTR.readonly, readOnlyEnabled);
+
+    /**
+     * Chromeless read-only (readOnly: { hideControls: true }) is the state
+     * that collapses the gutter — plain read-only keeps it, both for the
+     * block-hover copy-link control that lives there and so in-place
+     * readOnly.set() mode flips never shift the document sideways.
+     * Re-stamped on every toggle because set(state, { hideControls })
+     * rewrites config.readOnly before delegating here.
+     */
+    this.nodes.wrapper?.toggleAttribute(
+      DATA_ATTR.controlsHidden,
+      readOnlyEnabled && this.Blok.ReadOnly.isControlsHidden
+    );
 
     /**
      * Collapse the bottom zone in read-only mode. Its only purpose is to act as

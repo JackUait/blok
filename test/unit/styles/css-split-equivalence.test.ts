@@ -430,8 +430,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // cursor + hover/active scale) for height-resizable document embeds
     // (~0.5KB, landed in feat(embed) 0447dd89 without its ledger entry).
     // Bumps the multiplier to 1.411.
+    // 2026-07-22: gutter collapse retargeted from plain read-only to
+    // chromeless read-only — the [data-blok-readonly] token collapse became
+    // [data-blok-controls-hidden] with an expanded doc comment explaining
+    // why plain read-only keeps its gutter (in-place readOnly.set() flips
+    // must not shift layout; the copy-link hover control lives there).
+    // Bumps the multiplier to 1.412.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.411);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.412);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -1273,6 +1273,133 @@ const MARATHI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.database.checkboxUnchecked': 'तपासले नाही',
 };
 
+const MALAY_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.dragToMove': 'Seret untuk mengalihkan',
+  'blockSettings.clickToOpenMenu': 'Klik untuk membuka menu',
+  'blockSettings.openMenuAction': ' untuk membuka menu',
+  'toolbox.addBelow': 'Klik untuk menambah di bawah',
+  'toolNames.italic': 'Huruf condong',
+  'toolNames.bulletedList': 'Senarai berbulet',
+  'toolNames.todoList': 'Senarai semak',
+  'tools.marker.textColor': 'Warna teks',
+  'tools.paragraph.placeholder':
+    'Tulis sesuatu atau tekan / untuk memilih alat',
+  'tools.toggle.bodyPlaceholder':
+    'Togol kosong. Klik untuk tambah satu blok atau seret blok ke sini.',
+  'tools.table.clearSelection': 'Kosongkan kandungan',
+  'tools.table.mergeCells': 'Gabungkan sel',
+  'tools.table.splitCell': 'Pisahkan sel',
+  'tools.table.clickToAddRow': 'Klik untuk menambah baris baharu',
+  'tools.table.dragToAddRemoveRows':
+    'Seret untuk menambah atau mengalih keluar baris',
+  'tools.table.clickToAddColumn': 'Klik untuk menambah lajur baharu',
+  'tools.table.dragToAddRemoveColumns':
+    'Seret untuk menambah atau mengalih keluar lajur',
+  'tools.table.placement': 'Penjajaran',
+  'tools.table.placementTopLeft': 'Kiri atas',
+  'tools.table.placementTopCenter': 'Tengah atas',
+  'tools.table.placementTopRight': 'Kanan atas',
+  'tools.table.placementMiddleLeft': 'Kiri tengah',
+  'tools.table.placementMiddleRight': 'Kanan tengah',
+  'tools.table.placementBottomLeft': 'Kiri bawah',
+  'tools.table.placementBottomCenter': 'Tengah bawah',
+  'tools.table.placementBottomRight': 'Kanan bawah',
+  'blockSettings.lastEdited': 'Kali terakhir disunting',
+  'blockSettings.lastEditedBy': 'Kali terakhir disunting oleh {name}',
+  'a11y.dragHandle':
+    'Seret untuk mengalihkan blok atau klik untuk membuka menu',
+  'a11y.dropPosition':
+    'Akan dilepaskan pada kedudukan {position} daripada {total}',
+  'a11y.blockMoved':
+    'Blok dialihkan ke kedudukan {position} daripada {total}',
+  'a11y.blocksMoved': '{count} blok dialihkan ke kedudukan {position}',
+  'a11y.blockDuplicated':
+    'Blok digandakan pada kedudukan {position} daripada {total}',
+  'a11y.blocksDuplicated':
+    '{count} blok digandakan bermula pada kedudukan {position}',
+  'a11y.atTop':
+    'Tidak dapat dialihkan ke atas. Blok sudah berada di kedudukan paling atas.',
+  'a11y.atBottom':
+    'Tidak dapat dialihkan ke bawah. Blok sudah berada di kedudukan paling bawah.',
+  'a11y.searchResults': 'Hasil carian: {count}',
+  'a11y.allBlocksSelected': 'Semua blok dipilih. Jumlah: {count}.',
+  'a11y.navigationModeExited': 'Telah keluar daripada mod navigasi',
+  'a11y.navigatedToBlock': 'Telah beralih ke blok',
+  'toolNames.underline': 'Garis bawah',
+  'toolNames.strikethrough': 'Garis batal',
+  'toolNames.clearFormat': 'Kosongkan format teks',
+  'toolNames.divider': 'Pemisah',
+  'searchTerms.layout': 'susun atur',
+  'searchTerms.collapsible': 'teks boleh kuncup',
+  'searchTerms.bullet': 'bulet',
+  'searchTerms.unordered': 'tidak bernombor',
+  'searchTerms.ordered': 'bernombor',
+  'tools.callout.addEmoji': 'Tambah ikon',
+  'tools.callout.editIcon': 'Sunting ikon',
+  'tools.callout.removeEmoji': 'Alih keluar ikon',
+  'tools.callout.filterEmojis': 'Cari emoji…',
+  'tools.callout.pickRandom': 'Pilih emoji rawak',
+  'tools.callout.skinTone': 'Ton kulit',
+  'tools.code.searchLanguage': 'Cari bahasa…',
+  'searchTerms.snippet': 'coretan kod',
+  'searchTerms.pre': 'teks praformat',
+  'blockSettings.copyLinkSuccess': 'Pautan disalin ke papan keratan',
+  'blockSettings.copyLinkError': 'Tidak dapat menyalin pautan ke blok',
+  'tools.link.linkTitle': 'Teks pautan',
+  'tools.image.toggleCaption': 'Tunjukkan atau sembunyikan kapsyen',
+  'tools.image.exitFullscreen': 'Keluar daripada skrin penuh',
+  'tools.image.downloadOriginal': 'Muat turun imej asal',
+  'tools.image.altDescription':
+    'Terangkan imej ini untuk orang yang tidak dapat melihatnya.',
+  'tools.image.resetZoom': 'Tetapkan semula zum',
+  'tools.image.errorSourceOffline':
+    'Fail sumber mungkin telah dipindahkan atau tidak dapat dicapai.',
+  'tools.image.errorDefaultMessage':
+    'Imej tidak dapat dimuatkan daripada URL ini. Cuba sumber lain atau muat naik fail sekali lagi.',
+  'tools.image.emptyDropToUpload': 'Lepaskan untuk memuat naik',
+  'tools.image.cropReset': 'Tetapkan semula',
+  'tools.file.emptyDropToUpload': 'Lepaskan untuk memuat naik',
+  'tools.file.toggleCaption': 'Tunjukkan atau sembunyikan kapsyen',
+  'tools.file.previewRender': 'Pratonton',
+  'tools.video.alignmentLeft': 'Jajar kiri',
+  'tools.video.alignmentCenter': 'Jajar tengah',
+  'tools.video.alignmentRight': 'Jajar kanan',
+  'tools.video.toggleCaption': 'Tunjukkan atau sembunyikan kapsyen',
+  'tools.video.autoplay': 'Automain',
+  'tools.video.emptyDropToUpload': 'Lepaskan untuk memuat naik',
+  'tools.audio.alignmentLeft': 'Jajar kiri',
+  'tools.audio.alignmentCenter': 'Jajar tengah',
+  'tools.audio.alignmentRight': 'Jajar kanan',
+  'tools.audio.titlePlaceholder': 'Tajuk trek',
+  'tools.audio.emptyOrDropHere': 'atau lepaskan fail audio di sini',
+  'tools.audio.emptyDropToUpload': 'Lepaskan untuk memuat naik',
+  'tools.audio.coverDropToUpload': 'Lepaskan untuk memuat naik',
+  'tools.audio.coverSourceAria': 'Sumber imej kulit album',
+  'tools.database.viewTypeListDescription':
+    'Tunjukkan item dalam senarai ringkas',
+  'tools.database.propertyTypeSelect': 'Pilihan',
+  'tools.database.propertyTypeMultiSelect': 'Berbilang pilihan',
+  'tools.database.defaultStatusInProgress': 'Dalam proses',
+  'tools.bookmark.loading': 'Memuatkan pratonton pautan…',
+  'tools.embed.empty': 'Tiada pautan untuk dibenamkan',
+  'tools.embed.openOriginal': 'Buka kandungan asal',
+  'tools.embed.urlSubmit': 'Benamkan pautan',
+  'tools.embed.invalidUrl': 'Pautan itu tidak boleh dibenamkan',
+  'tools.video.seek': 'Kedudukan main balik',
+  'tools.video.toggleTimeDisplay':
+    'Tukar antara masa berlalu dengan masa berbaki',
+  'tools.video.fullscreenExit': 'Keluar daripada skrin penuh',
+  'tools.video.speedIncrease': 'Tingkatkan kelajuan main balik',
+  'tools.video.theaterExit': 'Keluar daripada mod teater',
+  'tools.video.ctxCopyUrlAtTime':
+    'Salin URL video pada masa main balik semasa',
+  'tools.video.ctxStats': 'Statistik main balik',
+  'tools.audio.speedIncrease': 'Tingkatkan kelajuan main balik',
+  'tools.callout.emojiSearchResults': 'Padanan emoji: {count}',
+  'tools.database.checkboxChecked': 'Ditandai',
+  'tools.database.checkboxUnchecked': 'Tidak ditandai',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -2084,6 +2211,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(MARATHI_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Malay correction oracle', () => {
+    const messages = readLocale('ms').messages;
+    const actual = Object.fromEntries(
+      Object.keys(MALAY_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(MALAY_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

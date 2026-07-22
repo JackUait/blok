@@ -228,8 +228,8 @@
     "a11y.movedDown": "खाली हलवण्याची क्रिया पूर्ण झाली. स्थान: {position}; एकूण: {total}."
   },
   "ms": {
-    "a11y.atTop": "Tidak boleh dialih ke atas. Kedudukan semasa sudah paling atas.",
-    "a11y.atBottom": "Tidak boleh dialih ke bawah. Kedudukan semasa sudah paling bawah.",
+    "a11y.atTop": "Tidak dapat dialihkan ke atas. Blok sudah berada di kedudukan paling atas.",
+    "a11y.atBottom": "Tidak dapat dialihkan ke bawah. Blok sudah berada di kedudukan paling bawah.",
     "a11y.movedUp": "Pemindahan ke atas selesai. Kedudukan: {position} daripada {total}.",
     "a11y.movedDown": "Pemindahan ke bawah selesai. Kedudukan: {position} daripada {total}."
   },

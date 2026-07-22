@@ -193,6 +193,13 @@ export const extendRangeToTrailingWhitespace = (range: Range): void => {
   }
 
   // endContainer is an element node (the common case for Ctrl+A on loaded content).
+  // Only the select-all shape qualifies: the range must end AFTER the last child.
+  // A range stopping short of it covers just part of the element, and walking to
+  // the deepest last text node would swallow every sibling in between.
+  if (range.endOffset < endContainer.childNodes.length) {
+    return;
+  }
+
   // Walk to the deepest last text node within it to find any trailing whitespace.
   const lastTextNode = findDeepestLastTextNode(endContainer);
 

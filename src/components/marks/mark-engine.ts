@@ -778,7 +778,15 @@ export const toggleMarkAtCaret = <State>(spec: MarkSpec<State>, state: State | u
 
     const zwspRange = document.createRange();
 
-    zwspRange.selectNode(zwsp);
+    /**
+     * Bound the range INSIDE the zero-width space rather than selecting the
+     * node: `selectNode` would put the boundaries on the parent element, and
+     * removeMark's trailing-whitespace extension walks an element-bounded
+     * range out to the parent's last text node — swallowing everything
+     * between the caret and the end of a wrapper whose text ends with a space
+     */
+    zwspRange.setStart(zwsp, 0);
+    zwspRange.setEnd(zwsp, zwsp.length);
     removeMark(spec, zwspRange);
     placeCaretAt(zwsp, 1);
 

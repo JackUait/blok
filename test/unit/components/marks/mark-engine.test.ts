@@ -687,6 +687,21 @@ describe('mark-engine', () => {
       expect(container.textContent).toBe('hello world ');
     });
 
+    it('does not extend an element-bounded range that stops short of the last child', () => {
+      setContent('<strong>aa</strong><strong>bb </strong>');
+
+      const range = document.createRange();
+
+      /** Selection covering only the first wrapper, anchored on the container */
+      range.setStart(container, 0);
+      range.setEnd(container, 1);
+
+      selectRange(range);
+      removeMark(boldSpec, range);
+
+      expect(container.innerHTML).toBe('aa<strong>bb </strong>');
+    });
+
     it('emits sanitizer rules for the canonical tag and every alias', () => {
       const config = markSanitizerConfig(boldSpec);
 
@@ -749,6 +764,26 @@ describe('mark-engine', () => {
 
       expect(selection?.isCollapsed).toBe(true);
       expect(selection?.anchorNode?.parentElement?.closest('.hl-description')).toBeNull();
+    });
+
+    it('keeps the text after the caret formatted when the wrapper ends with whitespace', () => {
+      setContent('<span class="hl-description">hello </span>');
+
+      const textNode = container.querySelector('span')?.firstChild;
+
+      if (!textNode) {
+        throw new Error('fixture text node missing');
+      }
+
+      const caret = rangeOver(textNode, 2, 2);
+
+      selectRange(caret);
+
+      toggleMarkAtCaret(classSpec, undefined, caret);
+
+      const wrappers = Array.from(container.querySelectorAll('span.hl-description'));
+
+      expect(wrappers.map((w) => w.textContent)).toEqual(['he', 'llo ']);
     });
   });
 });

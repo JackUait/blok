@@ -1875,6 +1875,101 @@ const NORWEGIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
     'Kildefilen kan ha blitt flyttet eller være utilgjengelig.',
 };
 
+const PUNJABI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'ਫਾਰਮੈਟਿੰਗ ਸਾਫ਼ ਕਰੋ',
+  'tools.toggle.bodyPlaceholder':
+    'ਖਾਲੀ ਟੌਗਲ। ਬਲਾਕ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਇੱਥੇ ਖਿੱਚੋ।',
+  'blockSettings.clickAction': 'ਮੀਨੂ ਖੋਲ੍ਹਣ ਲਈ ਕਲਿੱਕ ਕਰੋ',
+  'blockSettings.orConjunction': ' ਜਾਂ ',
+  'blockSettings.openMenuAction': ' ਦਬਾਓ',
+  'blockSettings.convertWithChildrenWarning':
+    'ਅੰਦਰਲੇ ਬਲਾਕ: {count}। ਇਸ ਬਲਾਕ ਨੂੰ ਬਦਲਣ ਨਾਲ ਅੰਦਰਲੀ ਸਮੱਗਰੀ ਸਿਖਰਲੇ ਪੱਧਰ \'ਤੇ ਚਲੀ ਜਾਵੇਗੀ। ਜਾਰੀ ਰੱਖਣਾ ਹੈ?',
+  'toolNames.bold': 'ਗੂੜ੍ਹਾ',
+  'toolNames.numberedList': 'ਗਿਣਤੀ ਵਾਲੀ ਸੂਚੀ',
+  'tools.marker.textColor': 'ਲਿਖਤ ਦਾ ਰੰਗ',
+  'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
+  'tools.colorPicker.colorSwatchLabel': '{color} {mode}',
+  'tools.paragraph.placeholder':
+    'ਕੁਝ ਲਿਖੋ ਜਾਂ ਟੂਲ ਚੁਣਨ ਲਈ / ਦਬਾਓ',
+  'tools.table.clearSelection': 'ਸਮੱਗਰੀ ਹਟਾਓ',
+  'tools.table.copySelection': 'ਕਾਪੀ ਕਰੋ',
+  'tools.table.placement': 'ਇਕਸਾਰਤਾ',
+  'a11y.dropCancelled': 'ਖਿੱਚਣਾ ਰੱਦ ਕੀਤਾ ਗਿਆ',
+  'a11y.searchResults': 'ਖੋਜ ਨਤੀਜੇ: {count}',
+  'a11y.allBlocksSelected': 'ਸਾਰੇ ਬਲਾਕ ਚੁਣੇ ਗਏ। ਕੁੱਲ: {count}।',
+  'a11y.navigationModeEntered':
+    'ਨੈਵੀਗੇਸ਼ਨ ਮੋਡ। ਬਲਾਕਾਂ ਵਿਚਕਾਰ ਜਾਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ ਵਰਤੋ, ਸੋਧਣ ਲਈ Enter ਅਤੇ ਬਾਹਰ ਨਿਕਲਣ ਲਈ Escape ਦਬਾਓ।',
+  'toolNames.underline': 'ਰੇਖਾਂਕਿਤ',
+  'toolNames.strikethrough': 'ਵਿੰਨ੍ਹੋ',
+  'toolNames.database': 'ਡਾਟਾਬੇਸ',
+  'tools.callout.addEmoji': 'ਆਈਕਨ ਜੋੜੋ',
+  'tools.callout.filterEmojis': 'ਇਮੋਜੀ ਖੋਜੋ…',
+  'tools.callout.pickRandom': 'ਬੇਤਰਤੀਬ ਇਮੋਜੀ ਚੁਣੋ',
+  'tools.quote.size': 'ਹਵਾਲੇ ਦਾ ਆਕਾਰ',
+  'tools.code.wrapLines': 'ਲਾਈਨਾਂ ਸਮੇਟੋ',
+  'tools.code.searchLanguage': 'ਭਾਸ਼ਾਵਾਂ ਖੋਜੋ…',
+  'tools.link.linkTitle': 'ਲਿੰਕ ਦੀ ਲਿਖਤ',
+  'tools.image.toggleCaption': 'ਕੈਪਸ਼ਨ ਦਿਖਾਓ ਜਾਂ ਲੁਕਾਓ',
+  'tools.image.exitFullscreen': 'ਪੂਰੀ ਸਕ੍ਰੀਨ ਤੋਂ ਬਾਹਰ ਆਓ',
+  'tools.image.downloadOriginal': 'ਮੂਲ ਤਸਵੀਰ ਡਾਊਨਲੋਡ ਕਰੋ',
+  'tools.image.uploadProgress': 'ਅੱਪਲੋਡ ਦੀ ਪ੍ਰਗਤੀ',
+  'tools.image.altDescription':
+    'ਜਿਹੜੇ ਲੋਕ ਇਸ ਤਸਵੀਰ ਨੂੰ ਨਹੀਂ ਦੇਖ ਸਕਦੇ, ਉਨ੍ਹਾਂ ਲਈ ਇਸ ਦਾ ਵਰਣਨ ਕਰੋ।',
+  'tools.image.preview': 'ਤਸਵੀਰ ਦੀ ਝਲਕ',
+  'tools.image.previewControls': 'ਤਸਵੀਰ ਦੀ ਝਲਕ ਦੇ ਕੰਟਰੋਲ',
+  'tools.image.resetZoom': 'ਜ਼ੂਮ ਮੁੜ-ਸੈੱਟ ਕਰੋ',
+  'tools.image.errorFileTooLarge':
+    'ਤਸਵੀਰ ਬਹੁਤ ਵੱਡੀ ਹੈ। ਆਕਾਰ: {size}; ਸੀਮਾ: {max}।',
+  'tools.image.errorRetry': 'ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ',
+  'tools.image.errorDefaultMessage':
+    'ਇਸ URL ਤੋਂ ਤਸਵੀਰ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ। ਕੋਈ ਵੱਖਰਾ ਸਰੋਤ ਅਜ਼ਮਾਓ ਜਾਂ ਫ਼ਾਈਲ ਦੁਬਾਰਾ ਅੱਪਲੋਡ ਕਰੋ।',
+  'tools.image.emptyChooseFile': 'ਫ਼ਾਈਲ ਚੁਣੋ',
+  'tools.image.cropAspectRatio': 'ਕਰੌਪ ਦਾ ਆਕਾਰ',
+  'tools.image.cropReset': 'ਮੁੜ-ਸੈੱਟ ਕਰੋ',
+  'tools.file.emptyDropHint': 'ਜਾਂ ਫ਼ਾਈਲ ਇੱਥੇ ਛੱਡੋ',
+  'tools.file.uploadProgress': 'ਅੱਪਲੋਡ ਦੀ ਪ੍ਰਗਤੀ',
+  'tools.file.toggleCaption': 'ਕੈਪਸ਼ਨ ਦਿਖਾਓ ਜਾਂ ਲੁਕਾਓ',
+  'tools.file.errorFileTooLarge':
+    'ਫ਼ਾਈਲ ਬਹੁਤ ਵੱਡੀ ਹੈ। ਆਕਾਰ: {size}; ਸੀਮਾ: {max}।',
+  'tools.file.previewRaw': 'ਸਰੋਤ',
+  'tools.video.alignmentLeft': 'ਖੱਬੇ ਇਕਸਾਰ ਕਰੋ',
+  'tools.video.alignmentCenter': 'ਕੇਂਦਰ ਵਿੱਚ ਇਕਸਾਰ ਕਰੋ',
+  'tools.video.alignmentRight': 'ਸੱਜੇ ਇਕਸਾਰ ਕਰੋ',
+  'tools.video.toggleCaption': 'ਕੈਪਸ਼ਨ ਦਿਖਾਓ ਜਾਂ ਲੁਕਾਓ',
+  'tools.video.errorFileTooLarge':
+    'ਵੀਡੀਓ ਬਹੁਤ ਵੱਡਾ ਹੈ। ਆਕਾਰ: {size}; ਸੀਮਾ: {max}।',
+  'tools.video.emptyChooseFile': 'ਫ਼ਾਈਲ ਚੁਣੋ',
+  'tools.audio.alignmentLeft': 'ਖੱਬੇ ਇਕਸਾਰ ਕਰੋ',
+  'tools.audio.alignmentCenter': 'ਕੇਂਦਰ ਵਿੱਚ ਇਕਸਾਰ ਕਰੋ',
+  'tools.audio.alignmentRight': 'ਸੱਜੇ ਇਕਸਾਰ ਕਰੋ',
+  'tools.audio.errorFileTooLarge':
+    'ਆਡੀਓ ਬਹੁਤ ਵੱਡਾ ਹੈ। ਆਕਾਰ: {size}; ਸੀਮਾ: {max}।',
+  'tools.audio.emptyChooseFile': 'ਫ਼ਾਈਲ ਚੁਣੋ',
+  'tools.audio.emptyOrDropHere': 'ਜਾਂ ਇੱਥੇ ਆਡੀਓ ਫ਼ਾਈਲ ਛੱਡੋ',
+  'tools.audio.coverChooseFile': 'ਫ਼ਾਈਲ ਚੁਣੋ',
+  'tools.audio.coverSourceAria': 'ਕਵਰ ਦਾ ਸਰੋਤ',
+  'tools.database.duplicateView': 'ਨਕਲ ਬਣਾਓ',
+  'tools.database.viewTypeListDescription':
+    'ਆਈਟਮਾਂ ਨੂੰ ਸਧਾਰਨ ਸੂਚੀ ਵਿੱਚ ਦਿਖਾਓ',
+  'tools.database.propertyTypeHeading': 'ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਕਿਸਮ',
+  'tools.database.propertyTypeSelect': 'ਚੋਣ',
+  'tools.bookmark.loading': 'ਲਿੰਕ ਦੀ ਝਲਕ ਲੋਡ ਹੋ ਰਹੀ ਹੈ…',
+  'tools.bookmark.error': 'ਲਿੰਕ ਦੀ ਝਲਕ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ',
+  'tools.embed.empty': 'ਕੋਈ ਇੰਬੈੱਡ ਲਿੰਕ ਨਹੀਂ',
+  'tools.linkPaste.mention': 'ਜ਼ਿਕਰ ਕਰੋ',
+  'tools.video.seek': 'ਪਲੇਬੈਕ ਦੀ ਸਥਿਤੀ',
+  'tools.video.toggleTimeDisplay':
+    'ਬੀਤੇ ਅਤੇ ਬਾਕੀ ਸਮੇਂ ਵਿਚਕਾਰ ਬਦਲੋ',
+  'tools.video.fullscreenExit': 'ਪੂਰੀ ਸਕ੍ਰੀਨ ਤੋਂ ਬਾਹਰ ਆਓ',
+  'tools.video.theaterExit': 'ਥੀਏਟਰ ਮੋਡ ਤੋਂ ਬਾਹਰ ਆਓ',
+  'tools.video.ctxCopyUrlAtTime':
+    'ਮੌਜੂਦਾ ਪਲੇਬੈਕ ਸਮੇਂ ਦਾ ਵੀਡੀਓ URL ਕਾਪੀ ਕਰੋ',
+  'tools.video.ctxStats': 'ਪਲੇਬੈਕ ਦੇ ਅੰਕੜੇ',
+  'tools.callout.emojiSearchResults': 'ਮਿਲਦੇ ਇਮੋਜੀ: {count}',
+  'tools.database.checkboxChecked': 'ਨਿਸ਼ਾਨਬੱਧ ਕੀਤਾ ਗਿਆ',
+  'tools.database.checkboxUnchecked': 'ਨਿਸ਼ਾਨਬੱਧ ਨਹੀਂ ਕੀਤਾ ਗਿਆ',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -2746,6 +2841,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(NORWEGIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Punjabi correction oracle', () => {
+    const messages = readLocale('pa').messages;
+    const actual = Object.fromEntries(
+      Object.keys(PUNJABI_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(PUNJABI_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

@@ -308,6 +308,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.colorSwatchLabel',
     'notifier.ok',
   ]),
+  // Placeholder-only swatch templates contain no English lexical material;
+  // Punjabi independently requires the same modifier-before-noun order.
+  pa: new Set([
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
+  ]),
   pl: new Set([
     'toolNames.link',
     'tools.image.emptyLink',

@@ -329,7 +329,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `lo` | Lao | Lao | ltr | neutral contemporary Lao product UI; concise direct actions and noun/state labels; complete accessibility announcements and recovery guidance; Lao script and standard orthography; native punctuation and ellipsis; established Lao product/media terminology; count-neutral runtime templates; conventional unchanged shortcuts, ratios, and acronyms | `root-lo_final_cleanroom_a` | `root-lo_final_cleanroom_b` | pass | pass | pass | `F-lo-001`–`F-lo-039` | second-pass-complete |
 | `lt` | Lithuanian | Latin | ltr | neutral contemporary Lithuanian product UI; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Lithuanian product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, and acronym notation | `root-lt_546_first_audit-final_cleanroom_e` | `root-lt_546_first_audit-final_cleanroom_f` | pass | pass | pass | `F-lt-001`–`F-lt-070` | second-pass-complete |
 | `lv` | Latvian | Latin | ltr | neutral contemporary Latvian product UI; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Latvian product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, acronym, and established media-loanword notation | `root-lv_final_cleanroom_h` | `root-lv_final_cleanroom_i` | pass | pass | pass | `F-lv-001`–`F-lv-095` | second-pass-complete |
-| `mk` | Macedonian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mk-001`–`F-mk-002` | pending |
+| `mk` | Macedonian | Cyrillic | ltr | neutral contemporary Macedonian product UI in Cyrillic; concise singular imperatives for compact actions; polite plural imperatives for complete instructions, recovery guidance, and accessibility actions; sentence-case noun and state labels; established Macedonian product, accessibility, media, and browser terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mk_final_cleanroom_c` | `root-mk_cleanroom_a` | pass | pass | pass | `F-mk-001`–`F-mk-102` | second-pass-complete |
 | `ml` | Malayalam | Malayalam | ltr | to-audit | — | — | pending | pending | pending | `F-ml-001`–`F-ml-003` | pending |
 | `mn` | Mongolian (current Cyrillic wording) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mn-001`–`F-mn-002` | pending |
 | `mr` | Marathi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-mr-001`–`F-mr-002` | pending |
@@ -467,6 +467,7 @@ locale returns to `pending`.
 | `lo` | `root-lo_final_cleanroom_a` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` | `root-lo_final_cleanroom_b` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` |
 | `lt` | `root-lt_546_first_audit-final_cleanroom_e` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` | `root-lt_546_first_audit-final_cleanroom_f` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` |
 | `lv` | `root-lv_final_cleanroom_h` | `sha256:5aa63b9d519a8c61fef2196b8fd9f5fc211a9e3d7e00fdee112019f6c26159cb` | `root-lv_final_cleanroom_i` | `sha256:5aa63b9d519a8c61fef2196b8fd9f5fc211a9e3d7e00fdee112019f6c26159cb` |
+| `mk` | `root-mk_final_cleanroom_c` | `sha256:dd2ef6168942c287fc7f9f3e2fd70fd413085e49a9dcfa63ebe01aec64866671` | `root-mk_cleanroom_a` | `sha256:dd2ef6168942c287fc7f9f3e2fd70fd413085e49a9dcfa63ebe01aec64866671` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -4752,6 +4753,80 @@ guideline/index gate, complete i18n unit suite, and directly affected caller
 suites all pass on the final bytes. The completed history contains exactly 95
 unique verified locale/key findings in `F-lv-001`–`F-lv-095`.
 Latvian is `second-pass-complete`.
+
+### Macedonian (`mk`) — second-pass complete
+
+The exhaustive current-byte Macedonian audit began at raw SHA-256
+`0bd4a842bfbd8cf5691f80425f75eab3c879cd64c3e1604060e7de68a4025d25`
+after the pre-existing `F-mk-001`–`F-mk-002` corrections. The root reviewer
+and three independent read-only candidate reviews each covered all 546
+English/Macedonian pairs in English insertion order. They converged on 100
+additional meaning, changed-English, caller-role, accessibility,
+count-neutrality, terminology, grammar, punctuation, and media-workflow
+defects, including the 23-label upload family and five incomplete drag/drop
+hints. Focused terminology and media adjudicators resolved the remaining
+exact-wording questions against caller behavior and primary Macedonian
+product sources.
+
+The frozen 102-value Macedonian oracle matched the two earlier reviewed
+values and failed red on exactly all 100 old current-byte values before
+`F-mk-003`–`F-mk-102` were applied. It then passed without weakening any
+expectation. That first candidate reached raw SHA-256
+`5d0e99fa461ecde18442f3c392d6c0da3b9d30a78ddd1593e8372cce0111d8fb`.
+
+Reviewer `root-mk_final_cleanroom_c` independently restarted at English entry
+1, reread all 546 final pairs, rehashed before and after, made no edits, and
+reported zero actionable residuals. Reviewer `root-mk_cleanroom_a` likewise
+reread all 546 final pairs and initially challenged the clear-format label and
+12 provider-specific embed actions. Exact primary UI evidence resolved all 13
+without a catalog change: LibreOffice maps `Clear formatting` to
+`Избриши форматирање`, while YouTube's Macedonian Embed feature uses the
+command `Вметни`. The reviewer withdrew every challenge and revalidated the
+unchanged candidate digest. The complete i18n suite then exposed one
+caller-level interaction: intermediate `searchTerms.heading = наслов`
+duplicated `searchTerms.title` within the same header-tool search group. The
+oracle failed red on that one intermediate value before `наслов на дел` was
+applied; all 130 search-quality checks then passed. `F-mk-024` consolidates
+the original `поднаслов` directly to this final wording. The evidence reset
+rule discarded both candidate-digest passes.
+
+The final raw Macedonian SHA-256 is
+`dd2ef6168942c287fc7f9f3e2fd70fd413085e49a9dcfa63ebe01aec64866671`.
+Reviewers `root-mk_final_cleanroom_c` and `root-mk_cleanroom_a` each restarted
+at English entry 1 and independently reread all 546 final pairs. Both rehashed
+before and after, made no edits, verified all 44 localized search aliases as
+useful and unique, and accepted the same final digest with zero residual
+semantic, grammatical, terminology, register, accessibility, count,
+placeholder, or source-synchronization defects.
+
+The final dictionary retains exact 546/546 key parity, no duplicate keys or
+empty values, all 38 placeholder-bearing rows and 54 placeholder occurrences
+with exact English token multisets, valid NFC normalization, and no forbidden
+control or bidi-control characters. Its only seven English-identical values
+are the documented `R-mk-001`–`R-mk-007` shortcut, `Alt`, aspect-ratio, and
+`URL` retentions. The mechanically reproducible lifecycle remains 397
+executable literals, 122 finite-dynamic keys, 25
+registered-namespace-compatible keys, and two exact catalog-only keys, with
+all 117 provider compositions accounted for.
+
+Caller inspection leaves `F-global-014` and `F-global-020` open for one
+coordinated 546-to-552 all-dictionary migration. The former covers five raw
+English playback-statistics labels and the latter the raw database
+tab-overflow count label. Neither bypass misclassifies a Macedonian catalog
+value, but both continue to block terminal repository verification.
+
+English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+the unchanged guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`,
+and the guideline/index test is
+`3efc36dea00b8efc1b8cacb2f0b722c44996e3e4b454b7c947b89c0075a8e1fc`.
+The focused 102-value oracle, complete 4,265-test guideline/index gate,
+complete 4,985-test i18n suite, 89-test checker regression suite, live catalog
+checker, scoped ESLint gate, and 1,891-test directly affected caller gate across
+43 files pass on the final bytes. The completed history contains exactly 102
+unique verified locale/key findings in `F-mk-001`–`F-mk-102`. Macedonian is
+`second-pass-complete`.
 
 ### Malayalam (`ml`) — pending after first-pass residual
 
@@ -9986,6 +10061,106 @@ follows the global transition rule above.
 | `F-lv-094` | `lv` | `tools.database.defaultStatusDone` | workflow-status terminology | `"Gatavs"` | `"Pabeigts"` | This is the canonical database workflow status beside `Nav sākts` and `Procesā`, not a completion button; Microsoft Latvian uses [`Pabeigts`](https://learn.microsoft.com/lv-lv/dynamics365/field-service/work-order-status-booking-status) for the completed status. | verified |
 | `F-lv-095` | `lv` | `tools.linkPaste.mention` | caller action / grammatical form | `"Pieminējums"` | `"Pieminēt"` | The paste-menu item performs an action beside `Paturēt kā saiti`, `Izveidot grāmatzīmi`, and `Iegult saturu`; the infinitive matches that caller role, while `Pieminējums` names the resulting noun. Microsoft Latvian likewise uses the verb [`pieminēt`](https://support.microsoft.com/lv-lv/teams/free/chat-calling/use-mentions-to-get-someone-s-attention-in-microsoft-teams-free) for this action. | verified |
 | `F-mk-002` | `mk` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Празен расклоплив блок. Кликнете или испуштете блокови внатре."` | `"Празен расклоплив блок. Кликнете за да додадете блок или повлечете блокови овде."` | The old wording conflates clicking with dropping and omits the created block. LibreOffice Macedonian uses the exact [`Кликнете … за да додадете`](https://help.libreoffice.org/latest/mk/text/simpress/02/13060000.html) construction. | verified |
+| `F-mk-003` | `mk` | `blockSettings.convertWithChildrenWarning` | accessibility / count-neutral grammar / source semantics | `"Овој блок содржи {count} вгнездени блокови. При конвертирање тие ќе бидат преместени на највисокото ниво. Продолжи?"` | `"Вгнездени блокови: {count}. Претворањето на овој блок ќе ја премести вгнездената содржина на највисоко ниво. Продолжете?"` | Label-before-count wording is safe for every runtime number, the singular source subject remains the nested content rather than an invented plural pronoun, and the question uses the locale's polite instructional register. | verified |
+| `F-mk-004` | `mk` | `tools.marker.textColor` | changed-English synchronization / meaning | `"Текст"` | `"Боја на текстот"` | The source is Text color; the old value omitted the color axis and duplicated the generic text label. | verified |
+| `F-mk-005` | `mk` | `tools.colorPicker.defaultSwatchLabel` | caller composition / placeholder grammar | `"{mode} {default}"` | `"{mode}: {default}"` | The picker composes an axis and runtime default label; the colon makes that relation grammatical while preserving both named placeholders. | verified |
+| `F-mk-006` | `mk` | `tools.colorPicker.colorSwatchLabel` | caller composition / placeholder grammar | `"{mode} {color}"` | `"{mode}: {color}"` | The coupled non-default template uses the same grammatical axis/value boundary and preserves both runtime tokens. | verified |
+| `F-mk-007` | `mk` | `tools.paragraph.placeholder` | changed-English synchronization / omitted object | `"Напишете нешто или притиснете / за избор"` | `"Напишете нешто или притиснете / за да изберете алатка"` | The old prompt omitted what the slash key selects; the replacement restores the tool object and complete action. | verified |
+| `F-mk-008` | `mk` | `tools.table.clearSelection` | caller scope / action clarity | `"Исчисти"` | `"Исчисти ја содржината"` | The action clears selected cell contents rather than deleting cells, rows, or columns; naming the content removes that ambiguity. | verified |
+| `F-mk-009` | `mk` | `tools.table.headerColumn` | table terminology / grammar | `"Колона-наслов"` | `"Заглавна колона"` | The old hyphenated calque is unnatural; the replacement is the normal Macedonian label for a header column. | verified |
+| `F-mk-010` | `mk` | `tools.table.headerRow` | table terminology / grammar | `"Ред-наслов"` | `"Заглавен ред"` | The replacement uses the natural header-row construction and agrees grammatically with `ред`. | verified |
+| `F-mk-011` | `mk` | `tools.table.placement` | source semantics / table terminology | `"Позиција"` | `"Порамнување"` | The control selects cell-content alignment, not an arbitrary position; the replacement matches the nine alignment choices it labels. | verified |
+| `F-mk-012` | `mk` | `a11y.dragHandle` | accessibility / action completeness | `"Повлечете за преместување на блок или кликнете за мени"` | `"Повлечете за да го преместите блокот или кликнете за да го отворите менито"` | The accessible handle label now states both complete actions and their objects instead of two clipped noun phrases. | verified |
+| `F-mk-013` | `mk` | `a11y.dragStartedMultiple` | accessibility / count-neutral grammar | `"Се влечат {count} блокови"` | `"Блокови што се влечат: {count}"` | Moving the arbitrary count after a label avoids a fixed plural construction that is unsafe when the runtime value is 1. | verified |
+| `F-mk-014` | `mk` | `a11y.blocksMoved` | accessibility / count-neutral grammar | `"{count} блокови се преместени на позиција {position}"` | `"Преместени блокови: {count}. Позиција: {position}."` | Separate label/value clauses preserve both placeholders without forcing arbitrary-count agreement. | verified |
+| `F-mk-015` | `mk` | `a11y.blocksDuplicated` | accessibility / count-neutral grammar | `"{count} блокови се дуплирани почнувајќи од позиција {position}"` | `"Дуплирани блокови: {count}. Почетна позиција: {position}."` | Count-neutral clauses retain the duplication result and explicitly identify the starting position. | verified |
+| `F-mk-016` | `mk` | `a11y.searchResults` | accessibility / omitted scope / count safety | `"{count} резултати"` | `"Резултати од пребарувањето: {count}"` | The old announcement omitted the search scope; label-before-count wording is safe for every result count. | verified |
+| `F-mk-017` | `mk` | `a11y.allBlocksSelected` | accessibility / source synchronization / count safety | `"Избрани се сите блокови, {count} блокови"` | `"Избрани се сите блокови. Вкупно: {count}."` | The replacement restores the source's separate total clause and avoids repeating a count-sensitive noun. | verified |
+| `F-mk-018` | `mk` | `a11y.blocksSelected` | accessibility / count-neutral grammar | `"Избрани се {count} блокови"` | `"Избрани блокови: {count}"` | The label-before-number announcement remains grammatical for an arbitrary selected-block count. | verified |
+| `F-mk-019` | `mk` | `a11y.navigatedToBlock` | accessibility / interaction semantics | `"Придвижено до блок"` | `"Преминавте на блокот"` | The caller scrolls, selects, and highlights a navigated block; the replacement is natural navigation feedback without falsely claiming DOM focus moved. | verified |
+| `F-mk-020` | `mk` | `a11y.dropCreateColumnLeft` | accessibility / grammatical subject | `"Ќе создаде колона лево"` | `"Ќе се создаде колона од левата страна"` | Reflexive passive wording supplies a complete preview announcement without inventing an actor. | verified |
+| `F-mk-021` | `mk` | `a11y.dropCreateColumnRight` | accessibility / grammatical subject | `"Ќе создаде колона десно"` | `"Ќе се создаде колона од десната страна"` | The right-side counterpart uses the same complete passive preview construction. | verified |
+| `F-mk-022` | `mk` | `toolNames.spacer` | caller semantics / terminology | `"Растојание"` | `"Празен простор"` | The tool creates a resizable blank vertical region, not an abstract measured distance. | verified |
+| `F-mk-023` | `mk` | `tools.spacer.resizeAriaLabel` | accessibility / referent clarity | `"Промени ги димензиите на растојанието"` | `"Промени ја големината на празниот простор"` | “Dimensions of the distance” is unnatural; the replacement names the visible blank spacer whose size the handle changes. | verified |
+| `F-mk-024` | `mk` | `searchTerms.heading` | search recall / meaning / group uniqueness | `"поднаслов"` | `"наслов на дел"` | The old alias means only subheading and is narrower than the heading tool; `наслов на дел` is an accurate section-heading synonym that remains distinct from the same group's `наслов` and `заглавие` aliases. | verified |
+| `F-mk-025` | `mk` | `tools.callout.addEmoji` | changed-English synchronization | `"Додај емоџи"` | `"Додај икона"` | The source control now adds a general icon, so retaining Emoji mislabeled the expanded feature. | verified |
+| `F-mk-026` | `mk` | `tools.callout.filterEmojis` | action and object completeness | `"Филтер…"` | `"Пребарај емоџија…"` | The input performs emoji search rather than exposing a generic filter; the replacement names both action and object. | verified |
+| `F-mk-027` | `mk` | `tools.callout.pickRandom` | action and object completeness | `"Случајно"` | `"Избери емоџи по случаен избор"` | The old adverb did not tell the user what the button does; the replacement expresses the full random-pick action. | verified |
+| `F-mk-028` | `mk` | `tools.callout.colorTeal` | grammatical agreement / color terminology | `"Тиркизна"` | `"Тиркизно"` | The neuter standalone color form matches the implicit color noun and all neighboring Macedonian color labels. | verified |
+| `F-mk-029` | `mk` | `tools.code.searchLanguage` | number / punctuation | `"Пребарај јазик..."` | `"Пребарај јазици…"` | The searchable list contains multiple languages; the replacement restores the plural source object and the catalog's Unicode ellipsis. | verified |
+| `F-mk-030` | `mk` | `tools.code.sideBySide` | caller role / grammatical neutrality | `"Една до друга"` | `"Напоредно"` | The split-view mode has no stated feminine referents; the adverbial label avoids unsupported gender agreement. | verified |
+| `F-mk-031` | `mk` | `searchTerms.pre` | search discoverability / transliteration | `"пре"` | `"претформатиран"` | The raw English `pre` alias is already added separately by the caller; a Macedonian preformatted-text term adds discoverability instead of duplicating it. | verified |
+| `F-mk-032` | `mk` | `blockSettings.copyLinkSuccess` | changed-English synchronization / destination | `"Врската е копирана"` | `"Врската е копирана во таблата со исечоци"` | The replacement restores the omitted clipboard destination using LibreOffice's official Macedonian [`таблата со исечоци`](https://help.libreoffice.org/latest/mk/text/shared/guide/copytext2application.html) terminology. | verified |
+| `F-mk-033` | `mk` | `blockSettings.copyLinkError` | changed-English synchronization / target | `"Врската не може да се копира"` | `"Не може да се копира врската до блокот"` | The failure concerns the link to a block; the old generic wording omitted that target. | verified |
+| `F-mk-034` | `mk` | `tools.link.emailAddress` | source precision | `"Е-пошта"` | `"Адреса на е-пошта"` | The field expects an email address, not email as a communication medium. | verified |
+| `F-mk-035` | `mk` | `tools.link.urlCopied` | clipboard terminology / source scope | `"Врската е копирана во клипборд"` | `"Врската е копирана во таблата со исечоци"` | The replacement normalizes the clipboard destination to established official Macedonian product terminology. | verified |
+| `F-mk-036` | `mk` | `tools.link.linkTitle` | source semantics | `"Наслов на врската"` | `"Текст на врската"` | The input edits visible link text, not a separate title attribute. | verified |
+| `F-mk-037` | `mk` | `tools.code.autoDetected` | terminology / ambiguity | `"авто"` | `"автоматски"` | The unclipped adverb clearly labels automatic language detection and avoids the ambiguous car-related loan fragment. | verified |
+| `F-mk-038` | `mk` | `tools.image.toggleCaption` | toggle semantics / accessibility | `"Прикажи опис"` | `"Прикажи или скриј опис"` | A static toggle label must remain correct in both visible and hidden states; the explicit alternatives are screen-reader-safe. | verified |
+| `F-mk-039` | `mk` | `tools.image.viewFullscreen` | action completeness | `"На цел екран"` | `"Прикажи на цел екран"` | The replacement makes the full-screen image command an explicit action rather than a location fragment. | verified |
+| `F-mk-040` | `mk` | `tools.image.moreOptions` | changed-English synchronization | `"Повеќе"` | `"Повеќе опции"` | The old value omitted the options object; the replacement matches the complete control label. | verified |
+| `F-mk-041` | `mk` | `tools.image.uploading` | established upload terminology | `"Подигање…"` | `"Се прикачува…"` | `Подигање` literally denotes lifting; the replacement uses Google's established Macedonian upload family [`прикачување`](https://support.google.com/gemini/answer/14903178?co=GENIE.Platform%3DDesktop&hl=mk). | verified |
+| `F-mk-042` | `mk` | `tools.image.uploadingLabel` | established upload terminology | `"Подигање"` | `"Прикачување"` | The accessible progress label now uses the same established upload noun as the surrounding image workflow. | verified |
+| `F-mk-043` | `mk` | `tools.image.cancelUpload` | established upload terminology | `"Откажи подигање"` | `"Откажи го прикачувањето"` | The cancel action now names the upload operation with the established definite noun. | verified |
+| `F-mk-044` | `mk` | `tools.image.uploadProgress` | established upload terminology | `"Напредок на подигање"` | `"Напредок на прикачувањето"` | The progress label is normalized to the established upload noun. | verified |
+| `F-mk-045` | `mk` | `tools.image.altDescription` | accessibility / source synchronization | `"Додајте опис на сликата. Тоа ја прави страницата подостапна за лица со оштетен вид."` | `"Опишете ја оваа слика за лицата што не можат да ја видат."` | The replacement directly follows the changed source purpose without inventing a page-level accessibility claim or narrowing users to one impairment. | verified |
+| `F-mk-046` | `mk` | `tools.image.previewControls` | accessibility / referent scope | `"Контроли за преглед"` | `"Контроли за преглед на сликата"` | The ARIA group controls image preview; naming the image distinguishes it from file and code preview controls. | verified |
+| `F-mk-047` | `mk` | `tools.image.navigationControls` | accessibility / relation | `"Навигација на слики"` | `"Навигација низ сликите"` | The group navigates through previous and next images; the replacement states that relation naturally. | verified |
+| `F-mk-048` | `mk` | `tools.image.errorUploadFailed` | established upload terminology | `"Подигањето не успеа"` | `"Прикачувањето не успеа"` | The error now matches the established upload term and the already-correct peer title. | verified |
+| `F-mk-049` | `mk` | `tools.image.errorDefaultMessage` | changed-English synchronization / error accuracy | `"Серверот врати грешка. Обидете се со друг извор или подигнете ја датотеката повторно."` | `"Сликата не може да се вчита од овој URL. Обидете се со друг извор или повторно прикачете ја датотеката."` | The old copy invented a server cause; the replacement restores the URL load failure and both recovery choices. | verified |
+| `F-mk-050` | `mk` | `tools.image.emptyUpload` | established upload terminology | `"Подигни"` | `"Прикачи"` | The compact image-source action now uses the established Macedonian Upload command. | verified |
+| `F-mk-051` | `mk` | `tools.image.emptyOrDropHere` | drag/drop action completeness | `"или повлечете слика овде"` | `"или повлечете и пуштете слика овде"` | The old hint expressed drag but omitted drop; LibreOffice establishes the Macedonian pair [`повлечи и пушти`](https://help.libreoffice.org/latest/mk/text/shared/guide/dragdrop.html). | verified |
+| `F-mk-052` | `mk` | `tools.image.emptyDropToUpload` | drop overlay / upload terminology | `"Пуштете за подигнување"` | `"Пуштете за прикачување"` | The drop overlay retains the polite imperative and replaces the literal lifting noun with the established upload term. | verified |
+| `F-mk-053` | `mk` | `tools.image.cropAspectRatio` | caller semantics / crop terminology | `"Форма на сечење"` | `"Облик на исечокот"` | The ARIA group selects the resulting crop shape, not a manner of cutting. | verified |
+| `F-mk-054` | `mk` | `tools.file.emptyUpload` | established upload terminology | `"Подигни"` | `"Прикачи"` | The compact file-source action is normalized to the established Upload command. | verified |
+| `F-mk-055` | `mk` | `tools.file.emptyDropHint` | drag/drop action completeness | `"или повлечете датотека овде"` | `"или повлечете и пуштете датотека овде"` | The file hint now states both stages of the drag-and-drop action. | verified |
+| `F-mk-056` | `mk` | `tools.file.emptyDropToUpload` | drop overlay / upload terminology | `"Пуштете за подигнување"` | `"Пуштете за прикачување"` | The file overlay uses the established upload noun while retaining polite instructional register. | verified |
+| `F-mk-057` | `mk` | `tools.file.uploading` | established upload terminology | `"Подигање…"` | `"Се прикачува…"` | The transient file state is normalized to the established upload verb. | verified |
+| `F-mk-058` | `mk` | `tools.file.cancelUpload` | established upload terminology | `"Откажи подигање"` | `"Откажи го прикачувањето"` | The file cancel action now names the upload operation naturally and consistently. | verified |
+| `F-mk-059` | `mk` | `tools.file.uploadProgress` | established upload terminology | `"Напредок на подигање"` | `"Напредок на прикачувањето"` | The file progress label is normalized to the established upload noun. | verified |
+| `F-mk-060` | `mk` | `tools.file.toggleCaption` | toggle semantics / accessibility | `"Прикажи опис"` | `"Прикажи или скриј опис"` | The file-caption toggle label remains accurate in both states and explicitly exposes both actions. | verified |
+| `F-mk-061` | `mk` | `tools.file.errorUploadFailed` | established upload terminology | `"Подигањето не успеа"` | `"Прикачувањето не успеа"` | The file error is normalized to the established upload noun. | verified |
+| `F-mk-062` | `mk` | `tools.file.previewRaw` | file-preview semantics | `"Код"` | `"Извор"` | The tab exposes raw file source that need not be program code; the replacement preserves the broader source meaning. | verified |
+| `F-mk-063` | `mk` | `tools.file.previewOpenInNewTab` | browser terminology | `"Отвори во нов таб"` | `"Отвори во нова картичка"` | Google Macedonian uses [`нова картичка`](https://support.google.com/youtube/answer/9162845?hl=mk) for a new browser tab; the replacement removes the avoidable loan. | verified |
+| `F-mk-064` | `mk` | `tools.video.alignmentLeft` | action-label semantics | `"Лево"` | `"Порамни лево"` | The menu item performs alignment rather than naming a side; the imperative restores the action. | verified |
+| `F-mk-065` | `mk` | `tools.video.alignmentCenter` | action-label semantics | `"Средина"` | `"Порамни во средина"` | The menu item now states the center-alignment action. | verified |
+| `F-mk-066` | `mk` | `tools.video.alignmentRight` | action-label semantics | `"Десно"` | `"Порамни десно"` | The menu item now states the right-alignment action. | verified |
+| `F-mk-067` | `mk` | `tools.video.toggleCaption` | toggle semantics / accessibility | `"Прикажи опис"` | `"Прикажи или скриј опис"` | The video-caption toggle remains correct whether the caption is currently visible or hidden. | verified |
+| `F-mk-068` | `mk` | `tools.video.moreOptions` | changed-English synchronization | `"Повеќе"` | `"Повеќе опции"` | The replacement restores the omitted options object in the complete source label. | verified |
+| `F-mk-069` | `mk` | `tools.video.uploading` | established upload terminology | `"Подигање…"` | `"Се прикачува…"` | The video progress state is normalized to the established upload verb. | verified |
+| `F-mk-070` | `mk` | `tools.video.errorUploadFailed` | established upload terminology | `"Подигањето не успеа"` | `"Прикачувањето не успеа"` | The video error is normalized to the established upload noun. | verified |
+| `F-mk-071` | `mk` | `tools.video.emptyUpload` | established upload terminology | `"Подигни"` | `"Прикачи"` | The compact video-source action now uses the established Upload command. | verified |
+| `F-mk-072` | `mk` | `tools.video.emptyOrDropHere` | drag/drop action completeness | `"или повлечете видео овде"` | `"или повлечете и пуштете видео овде"` | The video hint now explicitly includes the drop action after dragging. | verified |
+| `F-mk-073` | `mk` | `tools.video.emptyDropToUpload` | drop overlay / upload terminology | `"Пуштете за подигнување"` | `"Пуштете за прикачување"` | The video overlay combines the correct polite drop imperative with established upload terminology. | verified |
+| `F-mk-074` | `mk` | `tools.audio.alignmentLeft` | action-label semantics | `"Лево"` | `"Порамни лево"` | The audio menu item now states the left-alignment action. | verified |
+| `F-mk-075` | `mk` | `tools.audio.alignmentCenter` | action-label semantics | `"Средина"` | `"Порамни во средина"` | The audio menu item now states the center-alignment action. | verified |
+| `F-mk-076` | `mk` | `tools.audio.alignmentRight` | action-label semantics | `"Десно"` | `"Порамни десно"` | The audio menu item now states the right-alignment action. | verified |
+| `F-mk-077` | `mk` | `tools.audio.uploading` | established upload terminology | `"Подигање…"` | `"Се прикачува…"` | The audio progress state is normalized to the established upload verb. | verified |
+| `F-mk-078` | `mk` | `tools.audio.errorUploadFailed` | established upload terminology | `"Подигањето не успеа"` | `"Прикачувањето не успеа"` | The audio error is normalized to the established upload noun. | verified |
+| `F-mk-079` | `mk` | `tools.audio.titlePlaceholder` | media scope / terminology | `"Наслов на песната"` | `"Наслов на аудиозаписот"` | “Song title” wrongly excludes podcasts and other audio; Google Macedonian uses [`аудиозапис`](https://support.google.com/youtube/answer/94316?hl=mk) for a generic audio track. | verified |
+| `F-mk-080` | `mk` | `tools.audio.emptyUpload` | established upload terminology | `"Подигни"` | `"Прикачи"` | The compact audio-source action now uses the established Upload command. | verified |
+| `F-mk-081` | `mk` | `tools.audio.emptyOrDropHere` | drag/drop action completeness / media scope | `"или повлечете аудио овде"` | `"или повлечете и пуштете аудиодатотека овде"` | The replacement names the audio file and explicitly completes the drag-and-drop action. | verified |
+| `F-mk-082` | `mk` | `tools.audio.emptyDropToUpload` | drop overlay / upload terminology | `"Пуштете за подигнување"` | `"Пуштете за прикачување"` | The audio overlay uses the correct polite drop instruction and established upload noun. | verified |
+| `F-mk-083` | `mk` | `tools.audio.coverUpload` | established upload terminology | `"Подигни"` | `"Прикачи"` | The compact cover-source action now uses the established Upload command. | verified |
+| `F-mk-084` | `mk` | `tools.audio.coverOrDropHere` | drag/drop action completeness | `"или повлечете слика овде"` | `"или повлечете и пуштете слика овде"` | The cover-image hint now states both drag and drop. | verified |
+| `F-mk-085` | `mk` | `tools.audio.coverDropToUpload` | drop overlay / upload terminology | `"Пуштете за подигнување"` | `"Пуштете за прикачување"` | The cover overlay retains polite register and uses established upload terminology. | verified |
+| `F-mk-086` | `mk` | `tools.audio.coverSourceAria` | accessibility / referent scope | `"Извор на слика"` | `"Извор на омотот"` | The ARIA tablist selects the cover source; the old generic image label lost that specific referent. | verified |
+| `F-mk-087` | `mk` | `tools.database.viewTypeList` | terminology consistency | `"Листа"` | `"Список"` | `Список` is the locale's established list term across tool names, placeholders, and search aliases. | verified |
+| `F-mk-088` | `mk` | `tools.database.viewTypeListDescription` | source synchronization / action completeness | `"Едноставен линеарен приказ"` | `"Прикажи ги ставките во едноставен список"` | The old noun phrase omitted the show action, items, and list referent; the replacement restores all three. | verified |
+| `F-mk-089` | `mk` | `tools.database.listView` | accessibility / omitted scope | `"Листа"` | `"Приказ како список"` | The ARIA wrapper labels a list view, not merely a list; the replacement restores the view concept. | verified |
+| `F-mk-090` | `mk` | `tools.database.cardDetails` | panel scope | `"Картичка"` | `"Детали за картичката"` | The panel exposes a card's details; the old value named only the card. | verified |
+| `F-mk-091` | `mk` | `tools.database.defaultStatusDone` | workflow-status terminology | `"Готово"` | `"Завршено"` | This is a task status beside Not started and In progress, not a Done button; `Завршено` denotes completed work. | verified |
+| `F-mk-092` | `mk` | `tools.bookmark.loading` | source scope / loading punctuation | `"Се вчитува преглед"` | `"Се вчитува прегледот на врската…"` | The transient state now names the link preview and uses an ellipsis to signal ongoing work. | verified |
+| `F-mk-093` | `mk` | `tools.bookmark.error` | error scope | `"Прегледот не може да се вчита"` | `"Не може да се вчита прегледот на врската"` | The replacement identifies the failed preview as belonging to the link rather than another media type. | verified |
+| `F-mk-094` | `mk` | `tools.embed.empty` | empty-state semantics | `"Залепете врска за вградување"` | `"Нема врска за вградување"` | The source reports absence of an embed link; the old value incorrectly duplicated the separate paste instruction. | verified |
+| `F-mk-095` | `mk` | `tools.linkPaste.embed` | grammatical completeness / caller action | `"Создај вградување"` | `"Создај вградена содржина"` | The old abstract nominalization is awkward as a paste-menu action; the replacement naturally describes creating embedded content. | verified |
+| `F-mk-096` | `mk` | `tools.linkPaste.mention` | caller action / grammatical form | `"Спомнување"` | `"Спомни"` | The paste-menu entry performs an action beside Keep, Create, and Embed commands; the imperative replaces the result noun. | verified |
+| `F-mk-097` | `mk` | `tools.video.toggleTimeDisplay` | changed-English synchronization / media semantics | `"Вклучи/исклучи приказ на време"` | `"Префрли меѓу изминатото и преостанатото време"` | The control switches between two time displays rather than turning a display on or off; the replacement names both states. | verified |
+| `F-mk-098` | `mk` | `tools.video.theater` | established media terminology | `"Режим на кино"` | `"Театарски режим"` | The replacement is the established direct player-mode term; Samsung Macedonian uses the exact [`Театарски режим`](https://www.samsung.com/mk/support/mobile-devices/samsung-galaxy-watch-does-not-make-or-play-sounds/). | verified |
+| `F-mk-099` | `mk` | `tools.video.theaterExit` | terminology consistency / definiteness | `"Излези од режим на кино"` | `"Излези од театарскиот режим"` | The exit command now matches the corrected mode name and uses the definite form natural for the active mode. | verified |
+| `F-mk-100` | `mk` | `tools.video.ctxCopyUrlAtTime` | playback-position semantics | `"Копирај URL на видеото во моменталното време"` | `"Копирај URL на видеото на тековната позиција"` | The copied URL records a playback position, not wall-clock time. | verified |
+| `F-mk-101` | `mk` | `tools.video.ctxStats` | changed-English synchronization / playback domain | `"Статистика за напредни"` | `"Статистика за репродукцијата"` | The old phrase is incomplete and nonsensical; the replacement restores the source's playback-statistics meaning. | verified |
+| `F-mk-102` | `mk` | `tools.callout.emojiSearchResults` | accessibility / count-neutral grammar | `"Пронајдени се {count} емоџиња"` | `"Совпаѓања со емоџи: {count}"` | The result-count label preserves Emoji matches and places the arbitrary count after a colon without forcing disputed plural agreement. | verified |
 | `F-ro-002` | `ro` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Bloc reductibil gol. Faceți clic sau trageți blocuri înăuntru."` | `"Bloc reductibil gol. Faceți clic pentru a adăuga un bloc sau trageți blocuri aici."` | The replacement preserves the formal register while explicitly naming the click result and drag destination, following established Romanian [product wording](https://docs.oracle.com/cloud/help/ro/content-cloud/CECMC/GUID-4046476C-3D87-4685-AAEB-9902DF815060.htm). | verified |
 | `F-sk-002` | `sk` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Prázdny prepínač. Kliknite alebo presuňte bloky dovnútra."` | `"Prázdny prepínač. Kliknutím pridáte blok alebo sem presuňte bloky."` | The replacement uses established Slovak product patterns to distinguish adding one block by click from moving blocks into the drop target. [Microsoft Slovak](https://support.microsoft.com/sk-sk/office/pou%C5%BE%C3%ADvanie-webovej-%C4%8Dasti-naj%C4%8Dastej%C5%A1ie-ot%C3%A1zky-v-sharepointe-fd499cde-5db8-419d-a00a-bf87a43c79fb). | verified |
 | `F-sl-002` | `sl` | `tools.toggle.bodyPlaceholder` | shared-caller scope / changed-English synchronization | `"Prazen preklopni seznam. Kliknite ali spustite bloke vanj."` | `"Prazen preklopni blok. Kliknite za dodajanje bloka ali povlecite bloke sem."` | `seznam` mislabels the toggle-heading provider that shares this prompt, while the old actions omit click-to-create. Provider-neutral `blok` and established [`povlecite`](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=sl) cover both callers and actions. | verified |
@@ -11196,6 +11371,13 @@ locale and UI context.
 | `R-lv-010` | `lv` | `tools.video.emptyUrlAria` | established loanword | `Video URL` combines the standard Latvian media loanword with the international technical acronym in a compact input label. | [`video/empty-state.ts`](../../src/tools/video/empty-state.ts) |
 | `R-lv-011` | `lv` | `tools.audio.emptyUrlAria` | established loanword | `Audio URL` combines the standard Latvian media loanword with the international technical acronym in a compact input label. | [`audio/empty-state.ts`](../../src/tools/audio/empty-state.ts) |
 | `R-lv-012` | `lv` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
+| `R-mk-001` | `mk` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating it would alter the executable shortcut. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-mk-002` | `mk` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord; Macedonian product instructions conventionally preserve the `Ctrl` key name. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-mk-003` | `mk` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the surrounding dialog supplies the full Macedonian explanation. | [`ui.ts` image-tool button](../../src/tools/image/ui.ts) |
+| `R-mk-004` | `mk` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-mk-005` | `mk` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-mk-006` | `mk` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-mk-007` | `mk` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-nl-001` | `nl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Dutch Apple guidance retains the `⌘` platform symbol. | [Apple — Mac-toetscombinaties](https://support.apple.com/nl-nl/102650) |
 | `R-nl-002` | `nl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Dutch Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Sneltoetsen in Windows](https://support.microsoft.com/nl-nl/windows/sneltoetsen-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-nl-003` | `nl` | `toolNames.link` | established loanword | `Link` is the standard concise Dutch web term and the natural toolbox label. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |

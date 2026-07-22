@@ -771,6 +771,133 @@ const LATVIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.embed.captionPlaceholder': 'Ievadiet parakstu…',
 };
 
+const MACEDONIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'Избриши форматирање',
+  'tools.toggle.bodyPlaceholder':
+    'Празен расклоплив блок. Кликнете за да додадете блок или повлечете блокови овде.',
+  'blockSettings.convertWithChildrenWarning':
+    'Вгнездени блокови: {count}. Претворањето на овој блок ќе ја премести вгнездената содржина на највисоко ниво. Продолжете?',
+  'tools.marker.textColor': 'Боја на текстот',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder':
+    'Напишете нешто или притиснете / за да изберете алатка',
+  'tools.table.clearSelection': 'Исчисти ја содржината',
+  'tools.table.headerColumn': 'Заглавна колона',
+  'tools.table.headerRow': 'Заглавен ред',
+  'tools.table.placement': 'Порамнување',
+  'a11y.dragHandle':
+    'Повлечете за да го преместите блокот или кликнете за да го отворите менито',
+  'a11y.dragStartedMultiple': 'Блокови што се влечат: {count}',
+  'a11y.blocksMoved':
+    'Преместени блокови: {count}. Позиција: {position}.',
+  'a11y.blocksDuplicated':
+    'Дуплирани блокови: {count}. Почетна позиција: {position}.',
+  'a11y.searchResults': 'Резултати од пребарувањето: {count}',
+  'a11y.allBlocksSelected': 'Избрани се сите блокови. Вкупно: {count}.',
+  'a11y.blocksSelected': 'Избрани блокови: {count}',
+  'a11y.navigatedToBlock': 'Преминавте на блокот',
+  'a11y.dropCreateColumnLeft':
+    'Ќе се создаде колона од левата страна',
+  'a11y.dropCreateColumnRight':
+    'Ќе се создаде колона од десната страна',
+  'toolNames.spacer': 'Празен простор',
+  'tools.spacer.resizeAriaLabel':
+    'Промени ја големината на празниот простор',
+  'searchTerms.heading': 'наслов на дел',
+  'tools.callout.addEmoji': 'Додај икона',
+  'tools.callout.filterEmojis': 'Пребарај емоџија…',
+  'tools.callout.pickRandom': 'Избери емоџи по случаен избор',
+  'tools.callout.colorTeal': 'Тиркизно',
+  'tools.code.searchLanguage': 'Пребарај јазици…',
+  'tools.code.sideBySide': 'Напоредно',
+  'searchTerms.pre': 'претформатиран',
+  'blockSettings.copyLinkSuccess':
+    'Врската е копирана во таблата со исечоци',
+  'blockSettings.copyLinkError':
+    'Не може да се копира врската до блокот',
+  'tools.link.emailAddress': 'Адреса на е-пошта',
+  'tools.link.urlCopied': 'Врската е копирана во таблата со исечоци',
+  'tools.link.linkTitle': 'Текст на врската',
+  'tools.code.autoDetected': 'автоматски',
+  'tools.image.toggleCaption': 'Прикажи или скриј опис',
+  'tools.image.viewFullscreen': 'Прикажи на цел екран',
+  'tools.image.moreOptions': 'Повеќе опции',
+  'tools.image.uploading': 'Се прикачува…',
+  'tools.image.uploadingLabel': 'Прикачување',
+  'tools.image.cancelUpload': 'Откажи го прикачувањето',
+  'tools.image.uploadProgress': 'Напредок на прикачувањето',
+  'tools.image.altDescription':
+    'Опишете ја оваа слика за лицата што не можат да ја видат.',
+  'tools.image.previewControls': 'Контроли за преглед на сликата',
+  'tools.image.navigationControls': 'Навигација низ сликите',
+  'tools.image.errorUploadFailed': 'Прикачувањето не успеа',
+  'tools.image.errorDefaultMessage':
+    'Сликата не може да се вчита од овој URL. Обидете се со друг извор или повторно прикачете ја датотеката.',
+  'tools.image.emptyUpload': 'Прикачи',
+  'tools.image.emptyOrDropHere':
+    'или повлечете и пуштете слика овде',
+  'tools.image.emptyDropToUpload': 'Пуштете за прикачување',
+  'tools.image.cropAspectRatio': 'Облик на исечокот',
+  'tools.file.emptyUpload': 'Прикачи',
+  'tools.file.emptyDropHint':
+    'или повлечете и пуштете датотека овде',
+  'tools.file.emptyDropToUpload': 'Пуштете за прикачување',
+  'tools.file.uploading': 'Се прикачува…',
+  'tools.file.cancelUpload': 'Откажи го прикачувањето',
+  'tools.file.uploadProgress': 'Напредок на прикачувањето',
+  'tools.file.toggleCaption': 'Прикажи или скриј опис',
+  'tools.file.errorUploadFailed': 'Прикачувањето не успеа',
+  'tools.file.previewRaw': 'Извор',
+  'tools.file.previewOpenInNewTab': 'Отвори во нова картичка',
+  'tools.video.alignmentLeft': 'Порамни лево',
+  'tools.video.alignmentCenter': 'Порамни во средина',
+  'tools.video.alignmentRight': 'Порамни десно',
+  'tools.video.toggleCaption': 'Прикажи или скриј опис',
+  'tools.video.moreOptions': 'Повеќе опции',
+  'tools.video.uploading': 'Се прикачува…',
+  'tools.video.emptyUpload': 'Прикачи',
+  'tools.video.emptyDropToUpload': 'Пуштете за прикачување',
+  'tools.video.errorUploadFailed': 'Прикачувањето не успеа',
+  'tools.video.emptyOrDropHere':
+    'или повлечете и пуштете видео овде',
+  'tools.audio.alignmentLeft': 'Порамни лево',
+  'tools.audio.alignmentCenter': 'Порамни во средина',
+  'tools.audio.alignmentRight': 'Порамни десно',
+  'tools.audio.uploading': 'Се прикачува…',
+  'tools.audio.errorUploadFailed': 'Прикачувањето не успеа',
+  'tools.audio.titlePlaceholder': 'Наслов на аудиозаписот',
+  'tools.audio.emptyUpload': 'Прикачи',
+  'tools.audio.emptyOrDropHere':
+    'или повлечете и пуштете аудиодатотека овде',
+  'tools.audio.emptyDropToUpload': 'Пуштете за прикачување',
+  'tools.audio.coverUpload': 'Прикачи',
+  'tools.audio.coverOrDropHere':
+    'или повлечете и пуштете слика овде',
+  'tools.audio.coverDropToUpload': 'Пуштете за прикачување',
+  'tools.audio.coverSourceAria': 'Извор на омотот',
+  'tools.database.viewTypeList': 'Список',
+  'tools.database.viewTypeListDescription':
+    'Прикажи ги ставките во едноставен список',
+  'tools.database.listView': 'Приказ како список',
+  'tools.database.cardDetails': 'Детали за картичката',
+  'tools.database.defaultStatusDone': 'Завршено',
+  'tools.bookmark.loading': 'Се вчитува прегледот на врската…',
+  'tools.bookmark.error': 'Не може да се вчита прегледот на врската',
+  'tools.embed.empty': 'Нема врска за вградување',
+  'tools.linkPaste.embed': 'Создај вградена содржина',
+  'tools.linkPaste.mention': 'Спомни',
+  'tools.video.toggleTimeDisplay':
+    'Префрли меѓу изминатото и преостанатото време',
+  'tools.video.theater': 'Театарски режим',
+  'tools.video.theaterExit': 'Излези од театарскиот режим',
+  'tools.video.ctxCopyUrlAtTime':
+    'Копирај URL на видеото на тековната позиција',
+  'tools.video.ctxStats': 'Статистика за репродукцијата',
+  'tools.callout.emojiSearchResults':
+    'Совпаѓања со емоџи: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -1530,6 +1657,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(LATVIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Macedonian correction oracle', () => {
+    const messages = readLocale('mk').messages;
+    const actual = Object.fromEntries(
+      Object.keys(MACEDONIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(MACEDONIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

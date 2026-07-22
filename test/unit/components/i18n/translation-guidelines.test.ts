@@ -1771,6 +1771,110 @@ const DUTCH_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
 };
 
+const NORWEGIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.convertWithChildrenWarning':
+    'Nestede blokker: {count}. Når denne blokken konverteres, flyttes det nestede innholdet til øverste nivå. Vil du fortsette?',
+  'toolbox.optionAddAbove': 'Tilvalg-klikk for å legge til ovenfor',
+  'tools.marker.textColor': 'Tekstfarge',
+  'tools.paragraph.placeholder':
+    'Skriv noe, eller trykk på / for å velge et verktøy',
+  'tools.toggle.placeholder': 'Sammenleggbar liste',
+  'tools.toggle.bodyPlaceholder':
+    'Tom sammenleggbar blokk. Klikk for å legge til en blokk, eller dra blokker hit.',
+  'tools.table.clearSelection': 'Fjern innhold',
+  'tools.table.comfortableText': 'Luftig tekst',
+  'tools.table.placement': 'Justering',
+  'a11y.dragHandle':
+    'Dra for å flytte blokken, eller klikk for å åpne menyen',
+  'a11y.atTop': 'Kan ikke flyttes opp. Øverste posisjon er allerede nådd.',
+  'a11y.atBottom': 'Kan ikke flyttes ned. Nederste posisjon er allerede nådd.',
+  'a11y.searchResults': 'Søkeresultater: {count}',
+  'a11y.allBlocksSelected': 'Alle blokker er valgt. Totalt: {count}',
+  'a11y.navigationModeExited': 'Navigasjonsmodus avsluttet',
+  'a11y.navigatedToBlock': 'Navigert til blokken',
+  'a11y.dropCreateColumnLeft':
+    'En kolonne opprettes til venstre når du slipper',
+  'a11y.dropCreateColumnRight':
+    'En kolonne opprettes til høyre når du slipper',
+  'searchTerms.header': 'rubrikk',
+  'searchTerms.unordered': 'uordnet',
+  'searchTerms.ordered': 'ordnet',
+  'tools.callout.addEmoji': 'Legg til ikon',
+  'tools.callout.filterEmojis': 'Søk etter emojier…',
+  'tools.callout.pickRandom': 'Velg en tilfeldig emoji',
+  'tools.callout.skinTone': 'Hudtone',
+  'toolNames.equation': 'Ligning',
+  'tools.equation.placeholder': 'Skriv inn en LaTeX-formel…',
+  'tools.code.searchLanguage': 'Søk etter språk…',
+  'tools.link.linkTitle': 'Lenketekst',
+  'tools.image.exitFullscreen': 'Avslutt fullskjerm',
+  'tools.image.converting': 'Konverterer…',
+  'tools.image.altDescription':
+    'Beskriv dette bildet for personer som ikke kan se det.',
+  'tools.image.errorFileTooLarge':
+    'Bildet er for stort. {size} overskrider grensen på {max}.',
+  'tools.image.errorDefaultMessage':
+    'Bildet kunne ikke lastes inn fra denne URL-en. Prøv en annen kilde eller last opp filen på nytt.',
+  'tools.file.errorFileTooLarge':
+    'Filen er for stor. {size} overskrider grensen på {max}.',
+  'tools.file.previewRender': 'Forhåndsvisning',
+  'tools.video.alignmentLeft': 'Venstrejuster',
+  'tools.video.alignmentCenter': 'Midtstill',
+  'tools.video.alignmentRight': 'Høyrejuster',
+  'tools.video.hideControls': 'Skjul avspillingskontroller',
+  'tools.video.errorFileTooLarge':
+    'Videoen er for stor. {size} overskrider grensen på {max}.',
+  'tools.video.emptyAddVideo': 'Legg til en video',
+  'tools.video.emptyOrDropHere': 'eller slipp en video her',
+  'tools.audio.alignmentLeft': 'Venstrejuster',
+  'tools.audio.alignmentCenter': 'Midtstill',
+  'tools.audio.alignmentRight': 'Høyrejuster',
+  'tools.audio.errorFileTooLarge':
+    'Lydfilen er for stor. {size} overskrider grensen på {max}.',
+  'tools.audio.errorGoogleDrive':
+    'Lyd fra Google Drive kan ikke spilles av direkte. Last ned filen og last den opp her i stedet.',
+  'tools.audio.errorOneDrive':
+    'Lyd fra OneDrive kan ikke spilles av direkte. Last ned filen og last den opp her i stedet.',
+  'tools.audio.titlePlaceholder': 'Tittel',
+  'tools.audio.emptyAddAudio': 'Legg til lyd',
+  'tools.audio.emptyOrDropHere': 'eller slipp en lydfil her',
+  'tools.audio.coverChange': 'Endre omslagsbilde',
+  'tools.audio.coverSet': 'Angi omslagsbilde',
+  'tools.audio.coverRemove': 'Fjern omslagsbilde',
+  'tools.audio.coverErrorType': 'Velg en bildefil',
+  'tools.audio.coverErrorTooLarge': 'Bildet er for stort',
+  'tools.audio.coverAdd': 'Legg til et omslagsbilde',
+  'tools.audio.coverSourceAria': 'Kilde til omslagsbilde',
+  'tools.database.viewTypeBoardDescription': 'Vis elementer i kolonner',
+  'tools.database.viewTypeListDescription': 'Vis elementer i en enkel liste',
+  'tools.bookmark.loading': 'Laster inn forhåndsvisning av lenke…',
+  'tools.embed.empty': 'Ingen innebygd lenke',
+  'tools.video.seek': 'Avspillingsposisjon',
+  'tools.video.toggleTimeDisplay': 'Veksle mellom avspilt og gjenstående tid',
+  'tools.video.speedDecrease': 'Senk avspillingshastigheten',
+  'tools.video.speedIncrease': 'Øk avspillingshastigheten',
+  'tools.video.speedPresets': 'Forhåndsinnstilte hastigheter',
+  'tools.video.pip': 'Bilde i bilde',
+  'tools.video.ctxCopyUrlAtTime':
+    'Kopier video-URL ved gjeldende avspillingsposisjon',
+  'tools.video.ctxStats': 'Avspillingsstatistikk',
+  'tools.audio.speedDecrease': 'Senk avspillingshastigheten',
+  'tools.audio.speedIncrease': 'Øk avspillingshastigheten',
+  'tools.callout.emojiSearchResults': 'Emojitreff: {count}',
+  'toolNames.clearFormat': 'Fjern formatering',
+  'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
+  'tools.colorPicker.colorSwatchLabel': '{color} {mode}',
+  'tools.file.previewRaw': 'Kilde',
+  'tools.linkPaste.mention': 'Omtal',
+  'tools.callout.emojiCategoryActivity': 'Aktiviteter',
+  'tools.image.previewControls': 'Kontroller for forhåndsvisning av bilde',
+  'toolNames.inlineCode': 'Innebygd kode',
+  'searchTerms.number': 'nummerering',
+  'tools.image.navigationControls': 'Navigering mellom bilder',
+  'tools.image.errorSourceOffline':
+    'Kildefilen kan ha blitt flyttet eller være utilgjengelig.',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -2630,6 +2734,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(DUTCH_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Norwegian correction oracle', () => {
+    const messages = readLocale('no').messages;
+    const actual = Object.fromEntries(
+      Object.keys(NORWEGIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(NORWEGIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

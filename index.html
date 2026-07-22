@@ -901,6 +901,12 @@
           <input type="checkbox" id="toggle-autofocus" class="peer sr-only" checked>
           <span class="pill-toggle"></span>
         </label>
+        <label class="settings-row">
+          <span class="settings-row-label">RTL</span>
+          <kbd class="settings-kbd">⌥T</kbd>
+          <input type="checkbox" id="toggle-rtl" class="peer sr-only">
+          <span class="pill-toggle"></span>
+        </label>
         <div class="settings-row" style="cursor: default;">
           <span class="settings-row-label">Notification position</span>
           <kbd class="settings-kbd">⌥N</kbd>
@@ -954,6 +960,7 @@
       readOnly: false,
       darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       autofocus: true,
+      rtl: false,
       notifierPosition: 'bottom-center',
       tools: {
         paragraph: true,
@@ -1928,6 +1935,7 @@
         tools,
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
+        i18n: { direction: state.rtl ? 'rtl' : 'ltr' },
         style: { contentAlign: 'center' },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
@@ -2090,6 +2098,7 @@
         KeyR: () => document.getElementById('toggle-readonly').click(),
         KeyD: () => document.getElementById('toggle-dark').click(),
         KeyF: () => document.getElementById('toggle-autofocus').click(),
+        KeyT: () => document.getElementById('toggle-rtl').click(),
         KeyN: () => {
           const sel = document.getElementById('select-notifier-position');
           const next = (sel.selectedIndex + 1) % sel.options.length;
@@ -2122,6 +2131,7 @@
     const toggleReadonly = document.getElementById('toggle-readonly');
     const toggleDark = document.getElementById('toggle-dark');
     const toggleAutofocus = document.getElementById('toggle-autofocus');
+    const toggleRtl = document.getElementById('toggle-rtl');
 
     /**
      * Applies or removes dark mode on the page and Blok theme.
@@ -2194,6 +2204,12 @@
 
     toggleAutofocus.addEventListener('change', () => {
       state.autofocus = toggleAutofocus.checked;
+    });
+
+    toggleRtl.addEventListener('change', async () => {
+      state.rtl = toggleRtl.checked;
+      // Live update — no reinit needed, config.i18n.direction is reactive
+      await blok.i18n.update({ direction: state.rtl ? 'rtl' : 'ltr' });
     });
 
     const selectNotifierPosition = document.getElementById('select-notifier-position');

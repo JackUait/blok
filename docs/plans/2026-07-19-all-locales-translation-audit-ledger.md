@@ -332,7 +332,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `mk` | Macedonian | Cyrillic | ltr | neutral contemporary Macedonian product UI in Cyrillic; concise singular imperatives for compact actions; polite plural imperatives for complete instructions, recovery guidance, and accessibility actions; sentence-case noun and state labels; established Macedonian product, accessibility, media, and browser terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mk_final_cleanroom_c` | `root-mk_cleanroom_a` | pass | pass | pass | `F-mk-001`–`F-mk-102` | second-pass-complete |
 | `ml` | Malayalam | Malayalam | ltr | neutral contemporary Malayalam product UI; concise direct imperatives for actions and complete instructions; sentence-case noun and state labels; established Malayalam product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-ml_full_audit_a` | `root-ml_full_audit_c` | pass | pass | pass | `F-ml-001`–`F-ml-095` | second-pass-complete |
 | `mn` | Mongolian | Cyrillic | ltr | neutral contemporary Mongolian in Cyrillic; polite `-на уу` instructions and recovery guidance; concise infinitive, action, noun, or state labels for compact controls; established Mongolian product, accessibility, table, media, and browser terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mn_final_cleanroom_a` | `root-mn_final_cleanroom_b` | pass | pass | pass | `F-mn-001`–`F-mn-122` | second-pass-complete |
-| `mr` | Marathi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-mr-001`–`F-mr-002` | pending |
+| `mr` | Marathi | Devanagari | ltr | neutral contemporary Marathi in Devanagari; respectful direct imperatives for actions, instructions, and recovery guidance; concise noun, state, or action labels for compact controls; established Marathi product, accessibility, table, and media terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mr_final_cleanroom_linguistic` | `root-mr_final_cleanroom_callers` | pass | pass | pass | `F-mr-001`–`F-mr-087` | second-pass-complete |
 | `ms` | Malay | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ms-001`–`F-ms-002` | pending |
 | `my` | Burmese (Myanmar) | Myanmar | ltr | to-audit | — | — | pending | pending | pending | `F-my-001`–`F-my-002` | pending |
 | `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001`–`F-ne-002` | pending |
@@ -470,6 +470,7 @@ locale returns to `pending`.
 | `mk` | `root-mk_final_cleanroom_c` | `sha256:dd2ef6168942c287fc7f9f3e2fd70fd413085e49a9dcfa63ebe01aec64866671` | `root-mk_cleanroom_a` | `sha256:dd2ef6168942c287fc7f9f3e2fd70fd413085e49a9dcfa63ebe01aec64866671` |
 | `ml` | `root-ml_full_audit_a` | `sha256:65365e43413fbde0d415a9dd5d0716dbc23bb3ee0138efa389fe6a26ee11636a` | `root-ml_full_audit_c` | `sha256:65365e43413fbde0d415a9dd5d0716dbc23bb3ee0138efa389fe6a26ee11636a` |
 | `mn` | `root-mn_final_cleanroom_a` | `sha256:da5064b24991a256a0bdac1f7714036c4b35452cd9391e1634f85bd0879086fa` | `root-mn_final_cleanroom_b` | `sha256:da5064b24991a256a0bdac1f7714036c4b35452cd9391e1634f85bd0879086fa` |
+| `mr` | `root-mr_final_cleanroom_linguistic` | `sha256:27951ac4e8691091bb26429e21ecf7174051afa3e2804e8f3039a0427fb6c2e6` | `root-mr_final_cleanroom_callers` | `sha256:27951ac4e8691091bb26429e21ecf7174051afa3e2804e8f3039a0427fb6c2e6` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -5012,6 +5013,115 @@ checker, scoped ESLint gate, and 1,480-test directly affected caller gate
 across 47 files pass on the final bytes. The completed history contains
 exactly 122 unique verified locale/key findings in `F-mn-001`–`F-mn-122`.
 Mongolian is `second-pass-complete`.
+
+### Marathi (`mr`) — second-pass complete
+
+The historical preload added `toolNames.clearFormat` as
+`मजकूर फॉरमॅटिंग साफ करणे` in `F-mr-001`. The coordinated toggle migration
+then changed `tools.toggle.bodyPlaceholder` in `F-mr-002` to state both
+click-to-add and drag-here actions. Those bytes formed the exhaustive-review
+input whose raw Marathi SHA-256 was
+`689e9172097fc6ef10ac39b7e3f4ff4be2770a5e47709eb27c1b2fd0584536dc`;
+the interrupted historical stages earn no credit toward the current pass.
+
+Three independent read-only candidates restarted at English entry 1 and
+inspected all 546 English/Marathi pairs in insertion order. Their artifacts,
+`/tmp/blok-mr-audit-a-20260722.json`,
+`/tmp/blok-mr-audit-b-20260722.json`, and
+`/tmp/blok-mr-audit-c-20260722.json`, proposed 77, 60, and 73 candidates and
+have SHA-256 values
+`7aac49e3ad547abe7df2278db966ca0779900f71535ffe935cb855fffc43e324`,
+`96ce85aa1fefafd9eb7fa5dcc1487ec95bed5ca064f570bb0dbe71b890f4654b`,
+and
+`67939be902192ada99bfd8dee335c4bb0b947b459defa0b09772dde81927e459`.
+The complete union contained 96 keys. A consensus reconciliation selected 67
+changes and 29 retentions; a distinct terminology arbitration accepted 66 of
+its 67 disputed keys; and a skeptical full-union reconciliation selected 84
+changes and 12 retentions. Their artifact SHA-256 values are respectively
+`d442de8f532cc93a50bda03d29460b8d88cb2b089e3194170b881e947b7fc397`,
+`f6be1b1f979abd52ea7646ac12c4b3882be33cc630d90839e8160ba6f9a28c90`,
+and
+`f142c362c9c63c478afa098e919323ea0bac6d721a7bc03673c1aa59fd8cc998`.
+
+Root retained the skeptical pass's 84 change dispositions while resolving
+exact wording against callers and primary Marathi terminology. A separate
+source check found the out-of-union `tools.video.pip` defect, bringing the
+first remediation set to 85 values. The 87-entry oracle also included both
+historical findings. Before remediation it failed on exactly those 85 values
+while `F-mr-001` and the then-current `F-mr-002` matched; after replacement,
+the same oracle passed without weakening an expectation. The final clean-room
+restart then found that `F-mr-002` still called the open, empty toggle a
+collapsed block. Its expectation failed on that one value before
+`रिकामा टॉगल` replaced `रिकामा संकुचित ब्लॉक`, and passed afterward.
+The finished catalog therefore contains 86 value replacements and exactly 87
+unique verified findings in `F-mr-001`–`F-mr-087`.
+
+The segmented settings tooltip now composes as
+`मेनू उघडण्यासाठी क्लिक करा किंवा ⌘/ दाबा`, with the literal shortcut
+kept as an isolated LTR segment. The toggle family consistently uses the
+established `टॉगल` product term, while the body placeholder is shown only for
+an open toggle with no children and now names that state correctly. Table
+controls distinguish content clearing, semantic header rows and columns,
+regular text size, and cell-content alignment. Runtime accessibility messages
+use explicit labels for arbitrary search counts, duplicate positions, totals,
+and checkbox states.
+
+Source synchronization restores complete callout actions, visible link-text
+semantics, image alternative-text guidance, image and file preview control
+scope, read-only embed state, continuing-state ellipses, media alignment
+actions, playback position, elapsed-versus-total time, playback statistics,
+and matching-emoji results. Compact controls retain established loanwords only
+where supported; false friends such as search-for-seek and selected-for-checked
+were removed. The final seven English-identical values are the documented
+`R-mr-001`–`R-mr-007` shortcut, `Alt`, aspect-ratio, and `URL` retentions.
+
+Primary product evidence supports the exact Google Docs
+[clear-format command](https://support.google.com/docs/answer/179738?hl=mr)
+and [text-color term](https://support.google.com/docs/answer/13267978?hl=mr),
+Google Accessibility's [`ऑल्ट टेक्स्ट`](https://support.google.com/accessibility/answer/6199477?hl=mr)
+feature label, Google Chat's
+[toggle, block-quote, and line-wrap terminology](https://support.google.com/chat/answer/7649118?hl=mr),
+AOSP's [expand and checked-state strings](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/core/res/res/values-mr/strings.xml),
+YouTube's [autoplay label](https://support.google.com/youtube/answer/6327615?hl=mr),
+and YouTube TV's native
+[`चित्रात-चित्र`](https://support.google.com/youtubetv/answer/9175324?hl=mr)
+feature name.
+
+Both final reviewers independently restarted from entry 1 on the corrected
+bytes. `root-mr_final_cleanroom_linguistic` and
+`root-mr_final_cleanroom_callers` each reread 546/546 pairs and rehashed before
+approval. Both accepted raw Marathi SHA-256
+`27951ac4e8691091bb26429e21ecf7174051afa3e2804e8f3039a0427fb6c2e6`
+with zero residual semantic, grammatical, terminology, register,
+accessibility, count, placeholder, search, source-synchronization, or optional
+style findings. They explicitly re-challenged and accepted the corrected open
+toggle sentence, segmented tooltip, `आशय` content family, header labels,
+middle-side alignment forms, alternative-text terminology, playback
+announcements, Picture-in-Picture label, and checkbox states.
+
+The final dictionary retains exact 546/546 key-set parity, preserves its
+baseline order, has no duplicate keys or empty values, and preserves all 38
+placeholder-bearing rows and 54 placeholder occurrences with exact English
+token multisets. Every value is valid NFC with no forbidden control or bidi
+characters. All 44 localized search aliases remain useful and unique after
+normalization. The mechanically reproducible lifecycle remains 397 executable
+literals, 122 finite-dynamic keys, 25 registered-namespace-compatible keys,
+and two exact catalog-only keys, with all 117 provider compositions accounted
+for.
+
+Caller inspection leaves `F-global-014` and `F-global-020` open for the
+coordinated 546-to-552 all-dictionary migration. Neither bypass misclassifies
+a Marathi value, but both continue to block terminal repository verification.
+English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+the unchanged guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`,
+and the guideline/index test is
+`51e12f104afa84943779c30089d6df51a6da67c12d11b4a1b58aaec39df75455`.
+The focused Marathi oracle, complete 4,565-test guideline/index gate,
+complete 5,285-test i18n suite, 89-test checker regression suite, live catalog
+checker, scoped ESLint gate, and 1,918-test directly affected caller gate pass
+on the final bytes. Marathi is `second-pass-complete`.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -10567,7 +10677,7 @@ follows the global transition rule above.
 | `F-ml-093` | `ml` | `tools.callout.emojiSearchResults` | accessibility / count-neutral grammar | `"{count} ഇമോജികൾ കണ്ടെത്തി"` | `"ഇമോജി പൊരുത്തങ്ങൾ: {count}"` | The label restores emoji-match semantics and places the arbitrary result count after a count-neutral phrase. | verified |
 | `F-ml-094` | `ml` | `tools.database.checkboxChecked` | accessibility / checkbox-state semantics | `"തിരഞ്ഞെടുത്തു"` | `"പരിശോധിച്ചത്"` | The read-only checkbox exposes checked state, not row selection; the reviewed platform state term preserves that distinction. | verified |
 | `F-ml-095` | `ml` | `tools.database.checkboxUnchecked` | accessibility / checkbox-state semantics | `"തിരഞ്ഞെടുത്തിട്ടില്ല"` | `"പരിശോധിക്കാത്തത്"` | The read-only checkbox exposes checked state, not row selection; the reviewed platform state term preserves that distinction. | verified |
-| `F-mr-002` | `mr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"रिकामा संकुचित ब्लॉक. क्लिक करा किंवा आत ब्लॉक टाका."` | `"रिकामा संकुचित ब्लॉक. ब्लॉक जोडण्यासाठी क्लिक करा किंवा ब्लॉक येथे ओढा."` | The old copy says only click or put inside. The replacement states click-to-add and drag-here while preserving the locale's number-invariant `ब्लॉक` and official Android Marathi [`ओढा`](https://support.google.com/android/answer/9346420?hl=mr) drag term. | verified |
+| `F-mr-002` | `mr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / state and action clarity | `"रिकामा संकुचित ब्लॉक. क्लिक करा किंवा आत ब्लॉक टाका."` | `"रिकामा टॉगल. ब्लॉक जोडण्यासाठी क्लिक करा किंवा ब्लॉक येथे ओढा."` | [`toggle-lifecycle.ts`](../../src/tools/toggle/toggle-lifecycle.ts) shows this message only while the toggle is open and empty, so `संकुचित ब्लॉक` falsely described a collapsed block. The replacement uses the established `टॉगल` product term and states both click-to-add and drag-here actions while preserving the official Android Marathi [`ओढा`](https://support.google.com/android/answer/9346420?hl=mr) drag term. | verified |
 | `F-ne-002` | `ne` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"खाली मोड्ने। ब्लकहरू भित्र क्लिक गर्नुहोस् वा तान्नुहोस्।"` | `"खाली मोड्ने। ब्लक थप्न क्लिक गर्नुहोस् वा ब्लकहरू यहाँ तान्नुहोस्।"` | The old plural object incorrectly applies to clicking and omits the created block. The replacement contrasts singular `ब्लक` with plural `ब्लकहरू`, retains formal imperatives, and follows Google Nepali's product register. [Google YouTube Help](https://support.google.com/youtube/answer/112085?hl=ne). | verified |
 | `F-pa-002` | `pa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ਖਾਲੀ ਟੌਗਲ। ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਅੰਦਰ ਖਿੱਚੋ।"` | `"ਖਾਲੀ ਟੌਗਲ। ਬਲਾਕ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਇੱਥੇ ਖਿੱਚੋ।"` | The replacement restores the singular click result, preserves plural oblique-object `ਬਲਾਕਾਂ ਨੂੰ`, and makes the drag destination explicit using established Punjabi product phrasing. [Google YouTube Help](https://support.google.com/youtube/answer/171780?hl=pa). | verified |
 | `F-si-002` | `si` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"හිස් හැකිලෙන කොටස. ක්ලික් කරන්න හෝ කොටස් ඇතුළට ඇදගෙන දමන්න."` | `"හිස් හැකිලෙන කොටස. කොටසක් එක් කිරීමට ක්ලික් කරන්න හෝ කොටස් මෙතැනට ඇදගෙන දමන්න."` | The replacement supplies indefinite singular `කොටසක්` for click-to-add, plural `කොටස්` for dragged items, and directional `මෙතැනට` while retaining the established drag-and-drop collocation. [Google YouTube Help](https://support.google.com/youtube/answer/10191533?hl=si). | verified |
@@ -11503,6 +11613,92 @@ follows the global transition rule above.
 | `F-id-060` | `id` | `tools.video.ctxStats` | semantic | `"Statistik lengkap"` | `"Statistik pemutaran"` | “Playback” berarti pemutaran; “lengkap” berarti complete dan bukan padanan makna sumber. Label dipakai oleh kontrol media atau menu konteks dan harus menamai tindakan playback secara spesifik. [Sumber primer](https://support.google.com/youtube/answer/3037019?hl=id-ID). | verified |
 | `F-id-061` | `id` | `tools.audio.speedIncrease` | naturalness | `"Tambah kecepatan pemutaran"` | `"Tingkatkan kecepatan pemutaran"` | “Tingkatkan” ialah verba idiomatis untuk menaikkan nilai; “Tambah kecepatan” terasa mekanis. Label dipakai oleh kontrol media atau menu konteks dan harus menamai tindakan playback secara spesifik. [Sumber primer](https://support.microsoft.com/id-ID/accessibility/clipchamp/use-a-screen-reader-to-navigate-microsoft-clipchamp-s-homepage-and-video-player). | verified |
 
+| `F-mr-003` | `mr` | `blockSettings.clickAction` | caller composition | `"क्लिक करा"` | `"मेनू उघडण्यासाठी क्लिक करा"` | The highlighted click branch must be a complete alternative in the segmented tooltip. Together with the other two final fragments it reads “मेनू उघडण्यासाठी क्लिक करा किंवा ⌘/ दाबा”. | verified |
+| `F-mr-004` | `mr` | `blockSettings.orConjunction` | caller composition | `" किंवा कीबोर्ड शॉर्टकट "` | `" किंवा "` | The concrete shortcut is the next highlighted segment, so repeating “कीबोर्ड शॉर्टकट” is redundant. The intentional edge spaces are retained for direct concatenation. | verified |
+| `F-mr-005` | `mr` | `blockSettings.openMenuAction` | caller composition | `" मेनू उघडण्यासाठी"` | `" दाबा"` | This suffix follows the runtime shortcut and supplies its required imperative. The menu-opening purpose has already moved to the click branch. | verified |
+| `F-mr-006` | `mr` | `toolNames.toggleList` | tool-type semantics | `"संकुचित यादी"` | `"टॉगल यादी"` | This is the persistent toolbox type, not the block’s current collapsed state. Google’s Marathi UI already uses टॉगल for an expand/collapse control, making the short product label preferable to “संकुचित यादी”. | verified |
+| `F-mr-007` | `mr` | `tools.marker.textColor` | semantic completeness | `"मजकूर"` | `"मजकुराचा रंग"` | The shared picker needs the complete text-color axis, and Google’s Marathi editor uses this exact term. | verified |
+| `F-mr-008` | `mr` | `tools.colorPicker.defaultSwatchLabel` | placeholder composition | `"{mode} {default}"` | `"{mode}: {default}"` | The caller substitutes an axis and state into an accessible swatch name. A colon gives the spoken label/value boundary while preserving both placeholders. | verified |
+| `F-mr-009` | `mr` | `tools.colorPicker.colorSwatchLabel` | placeholder composition | `"{mode} {color}"` | `"{mode}: {color}"` | The caller substitutes an axis and color into an accessible swatch name. A colon gives the spoken label/value boundary while preserving both placeholders. | verified |
+| `F-mr-010` | `mr` | `tools.header.toggleHeading` | tool-type semantics | `"संकुचित शीर्षक"` | `"टॉगल शीर्षक"` | This compatibility label names a toggleable heading type, not a heading currently in the collapsed state. | verified |
+| `F-mr-011` | `mr` | `tools.header.toggleHeading1` | tool-type semantics | `"संकुचित शीर्षक 1"` | `"टॉगल शीर्षक 1"` | The toolbox entry always names the level-1 toggle-heading type; its label must not vary with the current open/closed state. | verified |
+| `F-mr-012` | `mr` | `tools.header.toggleHeading2` | tool-type semantics | `"संकुचित शीर्षक 2"` | `"टॉगल शीर्षक 2"` | The toolbox entry always names the level-2 toggle-heading type; its label must not vary with the current open/closed state. | verified |
+| `F-mr-013` | `mr` | `tools.header.toggleHeading3` | tool-type semantics | `"संकुचित शीर्षक 3"` | `"टॉगल शीर्षक 3"` | The toolbox entry always names the level-3 toggle-heading type; its label must not vary with the current open/closed state. | verified |
+| `F-mr-014` | `mr` | `tools.header.toggleHeading4` | tool-type semantics | `"संकुचित शीर्षक 4"` | `"टॉगल शीर्षक 4"` | The toolbox entry always names the level-4 toggle-heading type; its label must not vary with the current open/closed state. | verified |
+| `F-mr-015` | `mr` | `tools.header.toggleHeading5` | tool-type semantics | `"संकुचित शीर्षक 5"` | `"टॉगल शीर्षक 5"` | The toolbox entry always names the level-5 toggle-heading type; its label must not vary with the current open/closed state. | verified |
+| `F-mr-016` | `mr` | `tools.header.toggleHeading6` | tool-type semantics | `"संकुचित शीर्षक 6"` | `"टॉगल शीर्षक 6"` | The toolbox entry always names the level-6 toggle-heading type; its label must not vary with the current open/closed state. | verified |
+| `F-mr-017` | `mr` | `tools.toggle.placeholder` | placeholder semantics | `"संकुचित यादी"` | `"टॉगल"` | The caller renders this as the editable title placeholder of one Toggle block. The current value incorrectly presents a collapsed-list state and disagrees with the source’s compact type label. | verified |
+| `F-mr-018` | `mr` | `tools.toggle.ariaLabelExpand` | official accessibility terminology | `"विस्तारित करा"` | `"विस्तृत करा"` | Use AOSP Marathi’s exact accessibility action, paired with the existing संकुचित करा. | verified |
+| `F-mr-019` | `mr` | `tools.table.clearSelection` | semantic completeness | `"साफ करा"` | `"आशय साफ करा"` | Both callers clear selected cell contents, not the selection or formatting. आशय is the established broad content noun in the cited Google Marathi product copy and is more precise than bare “साफ करा”. | verified |
+| `F-mr-020` | `mr` | `tools.table.headerColumn` | table terminology | `"शीर्ष स्तंभ"` | `"हेडर स्तंभ"` | The option toggles header semantics on the first column; शीर्ष means only “top”. Google’s current Marathi editor uses हेडर for this structural table role. The competing शीर्षलेख evidence describes a column header, a different relation. | verified |
+| `F-mr-021` | `mr` | `tools.table.headerRow` | table terminology | `"शीर्ष पंक्ती"` | `"हेडर पंक्ती"` | The option toggles a semantic header row, and Google’s Marathi screen-reader instructions use the exact phrase हेडर पंक्ती. | verified |
+| `F-mr-022` | `mr` | `tools.table.comfortableText` | caller-role semantics | `"आरामदायक मजकूर"` | `"सामान्य मजकूर"` | The caller switches from compact table type to the regular editor text size. The literal “आरामदायक मजकूर” describes reading comfort rather than the density/size mode. | verified |
+| `F-mr-023` | `mr` | `tools.table.placement` | semantic accuracy | `"स्थान"` | `"संरेखन"` | This opens a 3×3 cell-content alignment picker; स्थान means location and announces the wrong setting. | verified |
+| `F-mr-024` | `mr` | `tools.table.placementMiddleLeft` | grammar | `"मध्य डावीकडे"` | `"मध्यभागी डावीकडे"` | The visible 3×3 position label needs the locative मध्यभागी, consistent with the center entry in the same family. | verified |
+| `F-mr-025` | `mr` | `tools.table.placementMiddleRight` | grammar | `"मध्य उजवीकडे"` | `"मध्यभागी उजवीकडे"` | The visible 3×3 position label needs the locative मध्यभागी, consistent with the center entry in the same family. | verified |
+| `F-mr-026` | `mr` | `a11y.blockDuplicated` | screen-reader grammar | `"ब्लॉक {total} पैकी {position} स्थानावर प्रत काढली"` | `"ब्लॉकची प्रत तयार झाली. स्थान: {position}. एकूण: {total}."` | The live region announces the completed new copy. The genitive relation and separately labeled destination/total remove the old word-order ambiguity while preserving both tokens. | verified |
+| `F-mr-027` | `mr` | `a11y.blocksDuplicated` | screen-reader grammar | `"{count} ब्लॉक {position} स्थानापासून प्रत काढल्या"` | `"{count} ब्लॉकच्या प्रती तयार झाल्या. सुरुवातीचे स्थान: {position}."` | The caller supplies the first duplicate’s destination. The replacement fixes the missing blocks-to-copies relation and labels that starting position. | verified |
+| `F-mr-028` | `mr` | `a11y.searchResults` | screen-reader semantic completeness | `"{count} परिणाम"` | `"शोध परिणाम: {count}"` | The shared live region must identify the count as search results. Google Marathi uses the compact compound `शोध परिणाम`; placing the arbitrary count after a label stays count-neutral without unnecessary sentence punctuation. | verified |
+| `F-mr-029` | `mr` | `a11y.allBlocksSelected` | screen-reader semantic completeness | `"सर्व ब्लॉक निवडले, {count} ब्लॉक"` | `"सर्व ब्लॉक निवडले. एकूण: {count}."` | The announcement must state both terminal selection and total count without the old comma splice and tautological repeated noun. | verified |
+| `F-mr-030` | `mr` | `a11y.dropCreateColumnLeft` | screen-reader grammar | `"डावीकडे स्तंभ तयार करेल"` | `"डावीकडे स्तंभ तयार केला जाईल"` | This prospective drop announcement has no acting subject; passive future naturally states the result that will occur. | verified |
+| `F-mr-031` | `mr` | `a11y.dropCreateColumnRight` | screen-reader grammar | `"उजवीकडे स्तंभ तयार करेल"` | `"उजवीकडे स्तंभ तयार केला जाईल"` | This prospective drop announcement has no acting subject; passive future naturally states the result that will occur. | verified |
+| `F-mr-032` | `mr` | `searchTerms.header` | search alias accuracy | `"शीर्ष"` | `"हेडर"` | The hidden alias must find the header/heading concept; शीर्ष means top. हेडर is established in the cited Marathi editor UI. | verified |
+| `F-mr-033` | `mr` | `searchTerms.collapsible` | search alias naturalness | `"संकोचनीय"` | `"संकुचित करता येणारे"` | The hidden alias should describe interactive content that can be collapsed; संकोचनीय means contractible/compressible and is not idiomatic UI Marathi. | verified |
+| `F-mr-034` | `mr` | `searchTerms.number` | search-alias-scope | `"अंक"` | `"क्रमांक"` | `अंक` means an individual digit. `क्रमांक` names the number or ordinal concept users associate with a numbered-list search and follows the exact source alias more closely than a process noun. | verified |
+| `F-mr-035` | `mr` | `searchTerms.expand` | official accessibility terminology | `"विस्तारित करा"` | `"विस्तृत करा"` | Align the search alias with AOSP Marathi’s exact Expand accessibility action. | verified |
+| `F-mr-036` | `mr` | `searchTerms.warning` | official UI terminology | `"सावधानता"` | `"चेतावणी"` | चेतावणी is the attested UI noun for a warning; सावधानता denotes caution as a quality. | verified |
+| `F-mr-037` | `mr` | `searchTerms.blockquote` | search alias terminology | `"ब्लॉक अवतरण"` | `"ब्लॉक कोट"` | Use Google Chat’s exact Marathi feature term rather than the unnatural reversed calque ब्लॉक अवतरण. | verified |
+| `F-mr-038` | `mr` | `tools.callout.addEmoji` | changed-English synchronization | `"इमोजी जोडा"` | `"चिन्ह जोडा"` | The corrected source and caller say Add icon, and sibling edit/remove actions already use चिन्ह. | verified |
+| `F-mr-039` | `mr` | `tools.callout.filterEmojis` | input purpose | `"फिल्टर…"` | `"इमोजी शोधा…"` | This is the emoji searchbox placeholder/name, so bare “फिल्टर…” omits both purpose and object. | verified |
+| `F-mr-040` | `mr` | `tools.callout.pickRandom` | button action completeness | `"यादृच्छिक"` | `"यादृच्छिक इमोजी निवडा"` | The dice button needs an action and object; the current adjective alone does not name what it does. | verified |
+| `F-mr-041` | `mr` | `tools.quote.size` | grammar | `"अवतरण आकार"` | `"अवतरणाचा आकार"` | The visible settings label needs the genitive relation “size of the quote”. | verified |
+| `F-mr-042` | `mr` | `tools.code.wrapLines` | official UI terminology | `"ओळी गुंडाळा"` | `"ओळी रॅप करा"` | The current literal wording suggests physically rolling lines. Google’s Marathi product copy uses रॅपिंग for code-line wrapping; this source-only compatibility key should use that established term. | verified |
+| `F-mr-043` | `mr` | `tools.code.searchLanguage` | typography | `"भाषा शोधा..."` | `"भाषा शोधा…"` | Use the catalog’s U+2026 continuing-action ellipsis in the live language-search placeholder. | verified |
+| `F-mr-044` | `mr` | `searchTerms.snippet` | search alias grammar | `"कोड तुकडा"` | `"कोडचा तुकडा"` | The code-search alias needs the genitive relation for a snippet/piece of code. | verified |
+| `F-mr-045` | `mr` | `searchTerms.pre` | search alias semantic error | `"पूर्व"` | `"पूर्वस्वरूपित मजकूर"` | `पूर्व` means previous. `पूर्वस्वरूपित मजकूर` explicitly names preformatted text and remains discoverable by its distinctive first word. | verified |
+| `F-mr-046` | `mr` | `tools.link.linkTitle` | changed-English synchronization | `"दुव्याचे शीर्षक"` | `"दुव्याचा मजकूर"` | The field edits visible link text, not title metadata; the Marathi must follow the corrected source and actual form role. | verified |
+| `F-mr-047` | `mr` | `tools.code.autoDetected` | label completeness | `"स्वयं"` | `"स्वयंचलित"` | This is a compact secondary label for an automatically detected language. स्वयं means “self” and is incomplete as an adjective. | verified |
+| `F-mr-048` | `mr` | `tools.image.toggleCaption` | accessibility action clarity | `"कॅप्शन टॉगल करा"` | `"कॅप्शन दाखवा किंवा लपवा"` | The two-state image/embed action controls caption visibility; naming both outcomes is clearer than exposing the implementation verb टॉगल. | verified |
+| `F-mr-049` | `mr` | `tools.image.exitFullscreen` | button action completeness | `"पूर्ण स्क्रीनमधून बाहेर"` | `"पूर्ण स्क्रीनमधून बाहेर पडा"` | The toolbar button needs the missing respectful exit imperative; the current fragment ends at “outside”. | verified |
+| `F-mr-050` | `mr` | `tools.image.downloadOriginal` | button action completeness | `"मूळ डाउनलोड"` | `"मूळ प्रतिमा डाउनलोड करा"` | The image action needs both its original-image object and a complete imperative. | verified |
+| `F-mr-051` | `mr` | `tools.image.uploadProgress` | accessibility-grammar | `"अपलोड प्रगती"` | `"अपलोडची प्रगती"` | The progressbar accessible name needs the natural genitive relation between the upload and its progress. | verified |
+| `F-mr-052` | `mr` | `tools.image.altEdit` | official accessibility terminology | `"alt मजकूर संपादित करा"` | `"ऑल्ट टेक्स्ट संपादित करा"` | Google’s Marathi accessibility UI uses ऑल्ट टेक्स्ट as the feature name. पर्यायी मजकूर appears as an explanatory generic noun, not the compact dialog/action label. | verified |
+| `F-mr-053` | `mr` | `tools.image.altDescription` | changed-English synchronization | `"ही प्रतिमा वर्णन करण्यासाठी alt मजकूर जोडा. यामुळे तुमचे पृष्ठ दृष्टिहीन किंवा अंध लोकांसाठी अधिक सुलभ होते."` | `"ही प्रतिमा पाहू न शकणाऱ्या लोकांसाठी तिचे वर्णन करा."` | Match the current concise, audience-centered source and remove the obsolete page-wide benefit claim. | verified |
+| `F-mr-054` | `mr` | `tools.image.altPlaceholder` | official accessibility terminology | `"Alt मजकूर"` | `"ऑल्ट टेक्स्ट"` | Use Google’s exact localized UI feature name in the field; keep bare Alt only for the separate compact trigger button. | verified |
+| `F-mr-055` | `mr` | `tools.image.previewControls` | aria-label specificity | `"पूर्वावलोकन नियंत्रणे"` | `"प्रतिमा पूर्वावलोकनासाठीची नियंत्रणे"` | This toolbar aria-label must identify the controls as belonging to the image preview. The genitive/purpose construction avoids an awkward bare noun stack. | verified |
+| `F-mr-056` | `mr` | `tools.image.navigationControls` | accessibility-relationship | `"प्रतिमा नेव्हिगेशन"` | `"प्रतिमांमधील नेव्हिगेशन"` | The group contains previous/next controls for navigating between gallery images, not navigation within one image. | verified |
+| `F-mr-057` | `mr` | `tools.image.errorSourceOffline` | natural-error-copy | `"स्रोत फाइल हलवली गेली असावी किंवा ऑफलाइन असावी."` | `"स्रोत फाइल हलवली गेली असावी किंवा उपलब्ध नसावी."` | A file itself is not naturally described as offline in Marathi; it may have moved or be unavailable from its source. | verified |
+| `F-mr-058` | `mr` | `tools.image.errorDefaultMessage` | changed-English synchronization | `"URL ने त्रुटी परत केली. वेगळा स्रोत वापरून पहा किंवा फाइल पुन्हा अपलोड करा."` | `"या URL वरून प्रतिमा लोड करता आली नाही. वेगळा स्रोत वापरून पहा किंवा फाइल पुन्हा अपलोड करा."` | Report the observed image-load failure instead of claiming the URL returned an error, while preserving both recovery paths. | verified |
+| `F-mr-059` | `mr` | `tools.image.cropAspectRatio` | grammar | `"क्रॉप आकार"` | `"क्रॉपचा आकार"` | The crop-shape radiogroup label needs the genitive relation instead of a clipped noun stack. | verified |
+| `F-mr-060` | `mr` | `tools.file.uploadProgress` | accessibility-grammar | `"अपलोड प्रगती"` | `"अपलोडची प्रगती"` | The file progressbar accessible name needs the same natural genitive relation as the image uploader. | verified |
+| `F-mr-061` | `mr` | `tools.file.toggleCaption` | accessibility action clarity | `"कॅप्शन टॉगल करा"` | `"कॅप्शन दाखवा किंवा लपवा"` | The two-state file action controls caption visibility; naming both outcomes is clear and user-facing. | verified |
+| `F-mr-062` | `mr` | `tools.file.previewRaw` | tab-role terminology | `"मूळ"` | `"स्रोत"` | The tab shows source text opposite rendered Preview; मूळ means original and can imply a version or file rather than source mode. | verified |
+| `F-mr-063` | `mr` | `tools.file.previewBackToContent` | changed-English synchronization | `"मजकुराकडे परत जा"` | `"आशयावर परत जा"` | The Markdown footnote backlink returns to rendered content broader than plain text. Official Google Marathi uses the `आशयावर परत` construction for returning to content. | verified |
+| `F-mr-064` | `mr` | `tools.video.alignmentLeft` | menu action semantics | `"डावे"` | `"डावीकडे संरेखित करा"` | The video settings item performs an alignment action; the old bare adjective names only a side. | verified |
+| `F-mr-065` | `mr` | `tools.video.alignmentCenter` | menu action semantics | `"मध्य"` | `"मध्यभागी संरेखित करा"` | The video settings item performs center alignment and needs a complete action label. | verified |
+| `F-mr-066` | `mr` | `tools.video.alignmentRight` | menu action semantics | `"उजवे"` | `"उजवीकडे संरेखित करा"` | The video settings item performs an alignment action; the old bare adjective names only a side. | verified |
+| `F-mr-067` | `mr` | `tools.video.toggleCaption` | accessibility action clarity | `"कॅप्शन टॉगल करा"` | `"कॅप्शन दाखवा किंवा लपवा"` | The two-state video action controls caption visibility and should state both outcomes. | verified |
+| `F-mr-068` | `mr` | `tools.video.autoplay` | product terminology | `"स्वयंचलित प्ले"` | `"ऑटोप्ले"` | Use YouTube’s established Marathi feature label instead of the awkward hybrid “स्वयंचलित प्ले”. | verified |
+| `F-mr-069` | `mr` | `tools.audio.alignmentLeft` | menu action semantics | `"डावे"` | `"डावीकडे संरेखित करा"` | The audio settings item performs an alignment action; the old bare adjective names only a side. | verified |
+| `F-mr-070` | `mr` | `tools.audio.alignmentCenter` | menu action semantics | `"मध्य"` | `"मध्यभागी संरेखित करा"` | The audio settings item performs center alignment and needs a complete action label. | verified |
+| `F-mr-071` | `mr` | `tools.audio.alignmentRight` | menu action semantics | `"उजवे"` | `"उजवीकडे संरेखित करा"` | The audio settings item performs an alignment action; the old bare adjective names only a side. | verified |
+| `F-mr-072` | `mr` | `tools.audio.emptyOrDropHere` | changed-English synchronization | `"किंवा येथे ऑडिओ ड्रॉप करा"` | `"किंवा येथे ऑडिओ फाइल ड्रॉप करा"` | The drop target accepts an audio file; restoring फाइल preserves the source object and the established empty-state word order. | verified |
+| `F-mr-073` | `mr` | `tools.audio.coverSourceAria` | aria-label specificity | `"प्रतिमा स्रोत"` | `"कव्हर प्रतिमेचा स्रोत"` | The group labels the audio cover-image source picker, not a generic image source; the explicit genitive phrase identifies the controlled object. | verified |
+| `F-mr-074` | `mr` | `tools.database.viewTypeListDescription` | changed-English synchronization | `"साधे रेषीय दृश्य"` | `"आयटम साध्या यादीत दाखवा"` | The view picker describes an action and result—showing items in a simple list—not an abstract “linear view”. | verified |
+| `F-mr-075` | `mr` | `tools.database.propertyTypeSelect` | caller-role semantics | `"निवडा"` | `"निवड"` | This is a property-type noun beside Text, Number, Date, and Checkbox; निवडा is an imperative command. | verified |
+| `F-mr-076` | `mr` | `tools.bookmark.loading` | status typography | `"लिंक पूर्वावलोकन लोड होत आहे"` | `"लिंक पूर्वावलोकन लोड होत आहे…"` | Restore the source ellipsis for this visible continuing loading state. | verified |
+| `F-mr-077` | `mr` | `tools.embed.empty` | changed-English semantic contradiction | `"एम्बेड करण्यासाठी लिंक पेस्ट करा"` | `"एम्बेड लिंक नाही"` | This string appears only in a read-only embed with no link, where pasting is impossible. It must report absence and retain the link terminology used throughout the embed family. | verified |
+| `F-mr-078` | `mr` | `tools.video.seek` | media-control false friend | `"शोधा"` | `"प्लेबॅक स्थान"` | The range slider adjusts playback position; `शोधा` means Search. Official YouTube Marathi uses the compact product phrase `प्लेबॅक स्थान`. | verified |
+| `F-mr-079` | `mr` | `tools.video.seekValueText` | screen-reader media semantics | `"{total} पैकी {current}"` | `"गेलेला वेळ: {current}. एकूण कालावधी: {total}."` | The caller interpolates M:SS elapsed position and total duration, not an ordinal pair. Explicit elapsed and total-duration labels preserve both tokens and prevent a wall-clock or item-count reading. | verified |
+| `F-mr-080` | `mr` | `tools.video.toggleTimeDisplay` | changed-English semantic completeness | `"वेळ प्रदर्शन टॉगल करा"` | `"गेलेला आणि उरलेला वेळ आलटून पालटून दाखवा"` | The accessible button name must identify the elapsed and remaining display modes. This native action wording avoids the opaque implementation verb टॉगल/स्विच. | verified |
+| `F-mr-081` | `mr` | `tools.video.speedPresets` | grammar | `"गती प्रीसेट"` | `"गतीचे प्रीसेट"` | The genitive fixes the clipped noun stack, while `प्रीसेट` is established Marathi product terminology for ready-made settings and remains concise for this control group. | verified |
+| `F-mr-082` | `mr` | `tools.video.pip` | product terminology | `"पिक्चर-इन-पिक्चर"` | `"चित्रात-चित्र"` | The button directly controls Picture-in-Picture. Official YouTube Marathi repeatedly names that feature `चित्रात-चित्र`, so native product terminology replaces the avoidable English transliteration. | verified |
+| `F-mr-083` | `mr` | `tools.video.ctxCopyUrlAtTime` | media-control ambiguity | `"सध्याच्या वेळेतील व्हिडिओ URL कॉपी करा"` | `"सध्याच्या प्लेबॅक वेळेसह व्हिडिओ URL कॉपी करा"` | The context action appends the current playback timestamp, not the wall-clock time. | verified |
+| `F-mr-084` | `mr` | `tools.video.ctxStats` | changed-English synchronization | `"तपशीलवार आकडेवारी"` | `"प्लेबॅकची आकडेवारी"` | The context action opens playback statistics; the current value invents “detailed” and drops the media domain. | verified |
+| `F-mr-085` | `mr` | `tools.callout.emojiSearchResults` | screen-reader search semantics | `"{count} इमोजी सापडले"` | `"जुळणारे इमोजी: {count}"` | The live region reports matching emoji rather than merely saying some were found. A label-before-count template remains natural for every runtime value and needs no terminal punctuation. | verified |
+| `F-mr-086` | `mr` | `tools.database.checkboxChecked` | official accessibility terminology | `"निवडले"` | `"तपासले"` | The visually hidden text exposes checkbox state, not row/item selection. AOSP Marathi’s exact checked-state term is तपासले. | verified |
+| `F-mr-087` | `mr` | `tools.database.checkboxUnchecked` | official accessibility terminology | `"निवडलेले नाही"` | `"तपासले नाही"` | The visually hidden text exposes checkbox state, not selection. AOSP Marathi’s exact not-checked term is तपासले नाही. | verified |
+
 ## Exact-English Retentions
 
 Record every non-English value that is exactly identical to English. The only
@@ -11990,3 +12186,10 @@ locale and UI context.
 | `R-fil-049` | `fil` | `searchTerms.header` | established loanword | Lowercase `header` is established contemporary Filipino/Taglish technical vocabulary and is a familiar live search alias beside the localized display title `Pamagat`. | [Microsoft Filipino style guide](https://aka.ms/filipino-styleguide) |
 | `R-fil-050` | `fil` | `searchTerms.heading` | established loanword | Lowercase `heading` is established contemporary Filipino/Taglish editor vocabulary and is a familiar live search alias beside the localized display title `Pamagat`. | [Microsoft Filipino style guide](https://aka.ms/filipino-styleguide) |
 | `R-fil-051` | `fil` | `tools.video.fullscreen` | established loanword | `Full screen` is the exact established Filipino media-control label and pairs naturally with localized exit action `Lumabas sa full screen`. | [YouTube Help — Filipino full-screen controls](https://support.google.com/youtube/answer/72689?co=GENIE.Platform%3DDesktop&hl=fil) |
+| `R-mr-001` | `mr` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating it would alter the executable shortcut. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-mr-002` | `mr` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord; `Ctrl` is conventionally retained in Marathi key combinations. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-mr-003` | `mr` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the surrounding dialog supplies the full Marathi `ऑल्ट टेक्स्ट` concept. | [`ui.ts` image-tool button](../../src/tools/image/ui.ts) |
+| `R-mr-004` | `mr` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-mr-005` | `mr` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-mr-006` | `mr` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-mr-007` | `mr` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |

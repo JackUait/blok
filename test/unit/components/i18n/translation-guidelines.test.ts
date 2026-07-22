@@ -1173,6 +1173,106 @@ const MONGOLIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'Тохирох эможи: {count}',
 };
 
+const MARATHI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.clickAction': 'मेनू उघडण्यासाठी क्लिक करा',
+  'blockSettings.orConjunction': ' किंवा ',
+  'blockSettings.openMenuAction': ' दाबा',
+  'toolNames.toggleList': 'टॉगल यादी',
+  'tools.marker.textColor': 'मजकुराचा रंग',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.header.toggleHeading': 'टॉगल शीर्षक',
+  'tools.header.toggleHeading1': 'टॉगल शीर्षक 1',
+  'tools.header.toggleHeading2': 'टॉगल शीर्षक 2',
+  'tools.header.toggleHeading3': 'टॉगल शीर्षक 3',
+  'tools.header.toggleHeading4': 'टॉगल शीर्षक 4',
+  'tools.header.toggleHeading5': 'टॉगल शीर्षक 5',
+  'tools.header.toggleHeading6': 'टॉगल शीर्षक 6',
+  'tools.toggle.placeholder': 'टॉगल',
+  'tools.toggle.bodyPlaceholder':
+    'रिकामा टॉगल. ब्लॉक जोडण्यासाठी क्लिक करा किंवा ब्लॉक येथे ओढा.',
+  'tools.toggle.ariaLabelExpand': 'विस्तृत करा',
+  'tools.table.clearSelection': 'आशय साफ करा',
+  'tools.table.headerColumn': 'हेडर स्तंभ',
+  'tools.table.headerRow': 'हेडर पंक्ती',
+  'tools.table.comfortableText': 'सामान्य मजकूर',
+  'tools.table.placement': 'संरेखन',
+  'tools.table.placementMiddleLeft': 'मध्यभागी डावीकडे',
+  'tools.table.placementMiddleRight': 'मध्यभागी उजवीकडे',
+  'a11y.blockDuplicated':
+    'ब्लॉकची प्रत तयार झाली. स्थान: {position}. एकूण: {total}.',
+  'a11y.blocksDuplicated':
+    '{count} ब्लॉकच्या प्रती तयार झाल्या. सुरुवातीचे स्थान: {position}.',
+  'a11y.searchResults': 'शोध परिणाम: {count}',
+  'a11y.allBlocksSelected': 'सर्व ब्लॉक निवडले. एकूण: {count}.',
+  'a11y.dropCreateColumnLeft': 'डावीकडे स्तंभ तयार केला जाईल',
+  'a11y.dropCreateColumnRight': 'उजवीकडे स्तंभ तयार केला जाईल',
+  'toolNames.clearFormat': 'मजकूर फॉरमॅटिंग साफ करणे',
+  'searchTerms.header': 'हेडर',
+  'searchTerms.collapsible': 'संकुचित करता येणारे',
+  'searchTerms.number': 'क्रमांक',
+  'searchTerms.expand': 'विस्तृत करा',
+  'searchTerms.warning': 'चेतावणी',
+  'searchTerms.blockquote': 'ब्लॉक कोट',
+  'tools.callout.addEmoji': 'चिन्ह जोडा',
+  'tools.callout.filterEmojis': 'इमोजी शोधा…',
+  'tools.callout.pickRandom': 'यादृच्छिक इमोजी निवडा',
+  'tools.quote.size': 'अवतरणाचा आकार',
+  'tools.code.wrapLines': 'ओळी रॅप करा',
+  'tools.code.searchLanguage': 'भाषा शोधा…',
+  'searchTerms.snippet': 'कोडचा तुकडा',
+  'searchTerms.pre': 'पूर्वस्वरूपित मजकूर',
+  'tools.link.linkTitle': 'दुव्याचा मजकूर',
+  'tools.code.autoDetected': 'स्वयंचलित',
+  'tools.image.toggleCaption': 'कॅप्शन दाखवा किंवा लपवा',
+  'tools.image.exitFullscreen': 'पूर्ण स्क्रीनमधून बाहेर पडा',
+  'tools.image.downloadOriginal': 'मूळ प्रतिमा डाउनलोड करा',
+  'tools.image.uploadProgress': 'अपलोडची प्रगती',
+  'tools.image.altEdit': 'ऑल्ट टेक्स्ट संपादित करा',
+  'tools.image.altDescription':
+    'ही प्रतिमा पाहू न शकणाऱ्या लोकांसाठी तिचे वर्णन करा.',
+  'tools.image.altPlaceholder': 'ऑल्ट टेक्स्ट',
+  'tools.image.previewControls':
+    'प्रतिमा पूर्वावलोकनासाठीची नियंत्रणे',
+  'tools.image.navigationControls': 'प्रतिमांमधील नेव्हिगेशन',
+  'tools.image.errorSourceOffline':
+    'स्रोत फाइल हलवली गेली असावी किंवा उपलब्ध नसावी.',
+  'tools.image.errorDefaultMessage':
+    'या URL वरून प्रतिमा लोड करता आली नाही. वेगळा स्रोत वापरून पहा किंवा फाइल पुन्हा अपलोड करा.',
+  'tools.image.cropAspectRatio': 'क्रॉपचा आकार',
+  'tools.file.uploadProgress': 'अपलोडची प्रगती',
+  'tools.file.toggleCaption': 'कॅप्शन दाखवा किंवा लपवा',
+  'tools.file.previewRaw': 'स्रोत',
+  'tools.file.previewBackToContent': 'आशयावर परत जा',
+  'tools.video.alignmentLeft': 'डावीकडे संरेखित करा',
+  'tools.video.alignmentCenter': 'मध्यभागी संरेखित करा',
+  'tools.video.alignmentRight': 'उजवीकडे संरेखित करा',
+  'tools.video.toggleCaption': 'कॅप्शन दाखवा किंवा लपवा',
+  'tools.video.autoplay': 'ऑटोप्ले',
+  'tools.audio.alignmentLeft': 'डावीकडे संरेखित करा',
+  'tools.audio.alignmentCenter': 'मध्यभागी संरेखित करा',
+  'tools.audio.alignmentRight': 'उजवीकडे संरेखित करा',
+  'tools.audio.emptyOrDropHere': 'किंवा येथे ऑडिओ फाइल ड्रॉप करा',
+  'tools.audio.coverSourceAria': 'कव्हर प्रतिमेचा स्रोत',
+  'tools.database.viewTypeListDescription': 'आयटम साध्या यादीत दाखवा',
+  'tools.database.propertyTypeSelect': 'निवड',
+  'tools.bookmark.loading': 'लिंक पूर्वावलोकन लोड होत आहे…',
+  'tools.embed.empty': 'एम्बेड लिंक नाही',
+  'tools.video.seek': 'प्लेबॅक स्थान',
+  'tools.video.seekValueText':
+    'गेलेला वेळ: {current}. एकूण कालावधी: {total}.',
+  'tools.video.toggleTimeDisplay':
+    'गेलेला आणि उरलेला वेळ आलटून पालटून दाखवा',
+  'tools.video.speedPresets': 'गतीचे प्रीसेट',
+  'tools.video.pip': 'चित्रात-चित्र',
+  'tools.video.ctxCopyUrlAtTime':
+    'सध्याच्या प्लेबॅक वेळेसह व्हिडिओ URL कॉपी करा',
+  'tools.video.ctxStats': 'प्लेबॅकची आकडेवारी',
+  'tools.callout.emojiSearchResults': 'जुळणारे इमोजी: {count}',
+  'tools.database.checkboxChecked': 'तपासले',
+  'tools.database.checkboxUnchecked': 'तपासले नाही',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -1972,6 +2072,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(MONGOLIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Marathi correction oracle', () => {
+    const messages = readLocale('mr').messages;
+    const actual = Object.fromEntries(
+      Object.keys(MARATHI_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(MARATHI_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

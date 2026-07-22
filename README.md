@@ -12,6 +12,14 @@ The difference from a normal `contenteditable` setup is the data. A `contentedit
 
 It's headless on purpose. Blok ships the editing engine and a set of tools; it does not impose a chrome or a theme. You wire it into your own UI.
 
+<p align="center">
+  <a href="https://blokeditor.com/demo" target="_blank" rel="noopener noreferrer">
+    <img width="90%" alt="The Blok editor: a heading, a bulleted list, a toggle and a to-do list, with the add and drag handles shown beside the hovered block" src="./static/editor-screenshot.png">
+  </a>
+</p>
+
+<p align="center"><a href="https://blokeditor.com/demo">Try the live demo →</a></p>
+
 ## What's in the box
 
 | Feature | What you get |
@@ -120,6 +128,17 @@ Full docs live at [blokeditor.com](https://blokeditor.com): API reference, an in
 ## Community
 
 There's a Telegram channel at [t.me/that_ai_guy](https://t.me/that_ai_guy) for updates and questions about Blok and related projects.
+
+## Contributing
+
+Contributions are welcome — issues, discussions and pull requests alike. Read [CONTRIBUTING.md](./CONTRIBUTING.md) first: it covers proposing a change before you build it, the code style, and the test and docs expectations for a PR.
+
+```bash
+yarn install
+yarn serve   # dev playground
+yarn test    # unit tests
+yarn lint    # ESLint + TypeScript
+```
 
 ## License & Attribution
 

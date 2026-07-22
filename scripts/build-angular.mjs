@@ -382,6 +382,12 @@ if (angularPkg.exports?.['.']) {
 
 writeFileSync(angularPkgPath, `${JSON.stringify(angularPkg, null, 2)}\n`, 'utf8');
 
+// npm auto-includes a README only from the directory it packs, and this package packs
+// from destDir (see FAMILY in scripts/release-manifest.mjs) — not from packages/angular.
+// Without this copy the source README is never published and the npm page renders empty,
+// which is how @bloklabs/angular shipped 1.3.0.
+cpSync(path.resolve(root, 'packages/angular/README.md'), path.resolve(destDir, 'README.md'));
+
 // 7. Drop the staging dir; keep only the published APF output.
 rmSync(stagingDir, { recursive: true, force: true });
 

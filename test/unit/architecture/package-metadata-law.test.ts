@@ -20,10 +20,12 @@ import { describe, expect, it } from 'vitest';
  *
  * Deliberately zero-dependency: readable in a no-install context like the other law tests.
  *
- * KNOWN GAP: @bloklabs/angular publishes from `packages/angular/dist` (see FAMILY in
- * scripts/release-manifest.mjs), and neither ng-packagr nor scripts/build-angular.mjs copies
- * a README into that directory — so the README this law checks does NOT reach the angular
- * tarball until the build stages it. Verified with `npm pack --dry-run` in both directories.
+ * A README in the SOURCE directory is not the same as a README in the tarball. Every package
+ * but Angular packs from its own directory, so the two coincide; @bloklabs/angular packs from
+ * the ng-packagr output at `packages/angular/dist` (see FAMILY in scripts/release-manifest.mjs),
+ * and nothing copied a README there. The source README satisfied the clause below while the
+ * published page stayed empty — the exact failure this law was written to catch, passing.
+ * The pack-dir clause closes that hole.
  */
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -50,6 +52,11 @@ const EDITOR_KEYWORDS = [
 interface PublishedPackage {
   /** Directory relative to the repo root. */
   dir: string;
+  /**
+   * Directory npm actually packs, mirrored from FAMILY in scripts/release-manifest.mjs.
+   * Equal to `dir` for every package but Angular, which packs its ng-packagr output.
+   */
+  packDir: string;
   name: string;
   /** Keywords this manifest must carry, on top of anything else it lists. */
   requiredKeywords: string[];
@@ -63,30 +70,35 @@ interface PublishedPackage {
 const publishedPackages: PublishedPackage[] = [
   {
     dir: '.',
+    packDir: '.',
     name: '@bloklabs/core',
     requiredKeywords: [ ...EDITOR_KEYWORDS, 'react', 'vue', 'angular' ],
     requiresReadme: false,
   },
   {
     dir: 'packages/react',
+    packDir: 'packages/react',
     name: '@bloklabs/react',
     requiredKeywords: [ ...EDITOR_KEYWORDS, 'react', 'react-component' ],
     requiresReadme: true,
   },
   {
     dir: 'packages/vue',
+    packDir: 'packages/vue',
     name: '@bloklabs/vue',
     requiredKeywords: [ ...EDITOR_KEYWORDS, 'vue', 'vue3' ],
     requiresReadme: true,
   },
   {
     dir: 'packages/angular',
+    packDir: 'packages/angular/dist',
     name: '@bloklabs/angular',
     requiredKeywords: [ ...EDITOR_KEYWORDS, 'angular' ],
     requiresReadme: true,
   },
   {
     dir: 'packages/cli',
+    packDir: 'packages/cli',
     // Not the editor — a converter — so it carries the migration vocabulary instead of
     // "contenteditable"/"wysiwyg", which would be keyword spam on a CLI page.
     name: '@bloklabs/cli',
@@ -146,6 +158,40 @@ describe('package metadata law', () => {
       );
       expect(readme, `${name} README has no fenced code sample`).toContain('```');
       expect(readme, `${name} README does not link to the docs site`).toContain(`${HOMEPAGE}/docs`);
+    }
+  );
+
+  it('the pack directories still match the release manifest', async () => {
+    const { FAMILY } = (await import('../../../scripts/release-manifest.mjs')) as {
+      FAMILY: { npmName: string; packDir: string }[];
+    };
+
+    const drifted = publishedPackages.filter(
+      (pkg) => FAMILY.find((entry) => entry.npmName === pkg.name)?.packDir !== pkg.packDir
+    );
+
+    expect(drifted.map((pkg) => pkg.name), 'packDir here no longer matches FAMILY').toEqual([]);
+  });
+
+  it.each(publishedPackages.filter((pkg) => pkg.requiresReadme && pkg.packDir !== pkg.dir))(
+    '$name stages its README into the directory it packs from',
+    ({ dir, packDir, name }) => {
+      // A generated pack dir only holds what the build script puts there. Assert against the
+      // script rather than the built output, so a clean checkout catches the omission too.
+      const script = readFileSync(join(repoRoot, 'scripts/build-angular.mjs'), 'utf-8');
+
+      expect(
+        script,
+        `nothing copies ${dir}/README.md into ${packDir}, so ${name}'s npm page renders empty`
+      ).toMatch(/README\.md/);
+
+      // When the build HAS run, the file must actually be there.
+      if (existsSync(join(repoRoot, packDir))) {
+        expect(
+          existsSync(join(repoRoot, packDir, 'README.md')),
+          `${packDir} was built without a README`
+        ).toBe(true);
+      }
     }
   );
 

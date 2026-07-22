@@ -120,6 +120,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'tools.video.toggleTimeDisplay',
   'tools.video.ctxStats',
   'tools.video playback-statistics detail templates',
+  'tools.database tab-overflow count template',
   'mobile popover back-button localization contract',
   'read-only settings tooltip whole-message contract',
   'segmented tooltip shortcut direction contract',
@@ -518,6 +519,58 @@ const SORANI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.volume': 'ئاستی دەنگ',
   'tools.audio.volume': 'ئاستی دەنگ',
   'tools.video.ctxStats': 'ئاماری لێدان',
+};
+
+const LAO_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'ລ້າງຮູບແບບໂດຍກົງ',
+  'tools.marker.textColor': 'ສີຂໍ້ຄວາມ',
+  'tools.toggle.bodyPlaceholder':
+    'ພັບເປົ່າ. ຄລິກເພື່ອເພີ່ມບລັອກ ຫຼື ລາກບລັອກເຂົ້າມາ.',
+  'tools.table.clearSelection': 'ລຶບເນື້ອຫາ',
+  'tools.table.placement': 'ການຈັດວາງ',
+  'a11y.searchResults': 'ຜົນການຄົ້ນຫາ: {count}',
+  'tools.callout.addEmoji': 'ເພີ່ມໄອຄອນ',
+  'tools.callout.filterEmojis': 'ຄົ້ນຫາອີໂມຈິ…',
+  'tools.callout.pickRandom': 'ເລືອກອີໂມຈິແບບສຸ່ມ',
+  'tools.code.searchLanguage': 'ຄົ້ນຫາພາສາ…',
+  'tools.link.linkTitle': 'ຂໍ້ຄວາມລິ້ງ',
+  'tools.image.altDescription':
+    'ອະທິບາຍຮູບນີ້ສຳລັບຜູ້ທີ່ເບິ່ງບໍ່ເຫັນ.',
+  'tools.image.previewControls':
+    'ຕົວຄວບຄຸມການເບິ່ງຕົວຢ່າງຮູບ',
+  'tools.image.zoomOut': 'ຊູມອອກ',
+  'tools.image.errorFileTooLarge':
+    'ຮູບໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}.',
+  'tools.image.errorUnavailable': 'ຮູບບໍ່ພ້ອມໃຊ້ງານ',
+  'tools.image.errorUploadFailedTitle': 'ອັບໂຫຼດບໍ່ສຳເລັດ',
+  'tools.image.errorImageFailedToLoad': 'ບໍ່ສາມາດໂຫຼດຮູບໄດ້',
+  'tools.image.errorDefaultMessage':
+    'ບໍ່ສາມາດໂຫຼດຮູບຈາກ URL ນີ້ໄດ້. ລອງໃຊ້ແຫຼ່ງອື່ນ ຫຼື ອັບໂຫຼດໄຟລ໌ອີກຄັ້ງ.',
+  'tools.file.previewRaw': 'ຕົ້ນສະບັບ',
+  'tools.file.previewRender': 'ເບິ່ງຕົວຢ່າງ',
+  'tools.file.errorFileTooLarge':
+    'ໄຟລ໌ໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}.',
+  'tools.audio.titlePlaceholder': 'ຊື່ແທຣັກ',
+  'tools.audio.emptyOrDropHere': 'ຫຼື ປ່ອຍໄຟລ໌ສຽງໃສ່ນີ້',
+  'tools.audio.coverSourceAria': 'ແຫຼ່ງຮູບປົກ',
+  'tools.audio.errorFileTooLarge':
+    'ສຽງໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}.',
+  'tools.database.viewTypeListDescription':
+    'ສະແດງລາຍການເປັນລາຍຊື່ແບບງ່າຍ',
+  'tools.bookmark.loading': 'ກຳລັງໂຫຼດຕົວຢ່າງລິ້ງ…',
+  'tools.bookmark.error': 'ບໍ່ສາມາດໂຫຼດຕົວຢ່າງລິ້ງໄດ້',
+  'tools.embed.empty': 'ບໍ່ມີລິ້ງສຳລັບຝັງ',
+  'tools.video.toggleTimeDisplay':
+    'ສະຫຼັບລະຫວ່າງເວລາທີ່ຜ່ານໄປ ແລະ ເວລາທີ່ເຫຼືອ',
+  'tools.video.ctxStats': 'ສະຖິຕິການຫຼິ້ນ',
+  'tools.video.errorFileTooLarge':
+    'ວິດີໂອໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}.',
+  'tools.linkPaste.embedCode': 'ຝັງໂຄດຈາກ {provider}',
+  'toolNames.quote': 'ຄຳອ້າງອີງ',
+  'searchTerms.quote': 'ຄຳອ້າງອີງ',
+  'searchTerms.blockquote': 'ບລັອກຄຳອ້າງອີງ',
+  'searchTerms.citation': 'ການອ້າງອີງ',
+  'tools.quote.placeholder': 'ຄຳອ້າງອີງ',
 };
 
 const EMOJI_CATEGORY_SCOPE_KEYS = [
@@ -1243,6 +1296,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(SORANI_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Lao correction oracle', () => {
+    const messages = readLocale('lo').messages;
+    const actual = Object.fromEntries(
+      Object.keys(LAO_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(LAO_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

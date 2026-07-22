@@ -326,7 +326,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `kn` | Kannada | Kannada | ltr | neutral contemporary Kannada product UI; polite imperatives ending in `-ಿ` for actions and instructions; sentence-case noun/state labels; native Kannada product and accessibility terminology; count-neutral label-before-number templates and ordinal `-ನೇ` positions; established technical loanwords; conventional unchanged shortcuts, ratios, and acronyms | `root-kn_final_retry_a` | `root-kn_final_retry_b` | pass | pass | pass | `F-kn-001`–`F-kn-089` | second-pass-complete |
 | `ko` | Korean | Hangul | ltr | neutral contemporary Korean product UI; concise noun/state labels and direct imperatives; polite complete instructions and accessibility announcements; standard Korean spacing and ellipsis; pronunciation-sensitive particles around runtime tokens; established Korean product and media terminology; conventional unchanged shortcuts, ratios, and the `URL` acronym | `root-kn_final_retry_a` | `root-kn_final_retry_b` | pass | pass | pass | `F-ko-001`–`F-ko-045` | second-pass-complete |
 | `ku` | Sorani (Central Kurdish) | Arabic | rtl | neutral contemporary Sorani/Central Kurdish in Arabic script and RTL; concise direct imperatives and noun/state labels; complete accessibility announcements; Sorani punctuation and orthographic spacing; count-neutral runtime templates; isolated Latin shortcuts and established technical tokens | `root-ku_546_first_audit` | `root-ku_546_first_audit-sorani_language_cleanroom` | pass | pass | pass | `F-ku-001`–`F-ku-033`, `F-ku-035`–`F-ku-065` | second-pass-complete |
-| `lo` | Lao | Lao | ltr | to-audit | — | — | pending | pending | pending | `F-lo-001`–`F-lo-003` | pending |
+| `lo` | Lao | Lao | ltr | neutral contemporary Lao product UI; concise direct actions and noun/state labels; complete accessibility announcements and recovery guidance; Lao script and standard orthography; native punctuation and ellipsis; established Lao product/media terminology; count-neutral runtime templates; conventional unchanged shortcuts, ratios, and acronyms | `root-lo_final_cleanroom_a` | `root-lo_final_cleanroom_b` | pass | pass | pass | `F-lo-001`–`F-lo-039` | second-pass-complete |
 | `lt` | Lithuanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lt-001`–`F-lt-003` | pending |
 | `lv` | Latvian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lv-001`–`F-lv-004` | pending |
 | `mk` | Macedonian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mk-001`–`F-mk-002` | pending |
@@ -464,6 +464,7 @@ locale returns to `pending`.
 | `kn` | `root-kn_final_retry_a` | `sha256:07424e25df13aafe76196874b6fb48d494aff87bd880e0481f61972406499d8a` | `root-kn_final_retry_b` | `sha256:07424e25df13aafe76196874b6fb48d494aff87bd880e0481f61972406499d8a` |
 | `ko` | `root-kn_final_retry_a` | `sha256:b7a946396d0ef9c0550df9891567c54ba28768757a46591138807625de6a886a` | `root-kn_final_retry_b` | `sha256:b7a946396d0ef9c0550df9891567c54ba28768757a46591138807625de6a886a` |
 | `ku` | `root-ku_546_first_audit` | `sha256:61ac2c424591554459a241ad7bac03664383b173560d416a0422c60776a83dae` | `root-ku_546_first_audit-sorani_language_cleanroom` | `sha256:61ac2c424591554459a241ad7bac03664383b173560d416a0422c60776a83dae` |
+| `lo` | `root-lo_final_cleanroom_a` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` | `root-lo_final_cleanroom_b` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -4549,40 +4550,64 @@ errors, and whitespace checks also pass. The separate
 and continues to block terminal repository verification. Sorani Kurdish is
 `second-pass-complete`.
 
-### Lao (`lo`) — pending after current-byte residuals
+### Lao (`lo`) — second-pass complete
 
-Reviewer `root-amharic_546_current_first` directly read all 546 English/Lao
-pairs in English insertion order before consulting prior Lao evidence. The
-attempted first pass identified its first genuine residual at entry 28.
-English changed from `Text` to `Text color`, but Lao retained the
-former-source `ຂໍ້ຄວາມ`. The shared picker renders this value directly as
-its text-color section title and composes it into every swatch label.
-`F-lo-002` restores the established Lao product term `ສີຂໍ້ຄວາມ`.
+The current-byte Lao audit began at raw SHA-256
+`babb327bf435a021e78c3b8afd72891eb0a2345829e0c58c408e55dde91eeb74`
+after the pre-existing `F-lo-001`–`F-lo-003` corrections. Three independent
+546-entry reads converged on 29 additional meaning, changed-English,
+accessibility, caller-scope, terminology, orthography, and punctuation
+defects. The frozen 32-value oracle failed red on all 29 old values before
+`F-lo-004`–`F-lo-032` were applied, then passed on corrected raw SHA-256
+`d91c7187b0a4159b0d1ae9b8c0fb8b39d62238f9daa09bdba5a5d0acd81d99d6`.
 
-The attempted pass binds to pre-correction raw Lao SHA-256
-`ab0e88d7fded5f771c5e28bcf1e8caa498bca302af75dec5b60351223e4c2578`.
-The focused expectation failed on exactly `ຂໍ້ຄວາມ` before remediation and
-passes afterward. The corrected raw Lao SHA-256 is
-`ef6090708c0af2f7be1b29401eeb2d0dd1a4966a2bde34dce44295eb00d33b8d`.
-The attempted review earns no pass credit; both complete passes must start
-from entry 1 on the corrected bytes.
+Two fresh corrected-byte clean-room reviews then exposed seven remaining
+defects: the image-preview control group lacked its image scope, the zoom-out
+command used a generic decrease verb, the unavailable-image state asserted
+nonexistence, and all four formatted media-size errors omitted their sentence
+boundaries. Independent caller adjudication retained the existing
+`F-lo-001` value `ລ້າງຮູບແບບໂດຍກົງ`
+as the closest Clear Direct Formatting tooltip match and selected
+LibreOffice’s exact Lao zoom command
+`ຊູມອອກ`.
+The seven-value oracle extension failed red on precisely
+`F-lo-033`–`F-lo-039` and passed after remediation. The final raw Lao
+SHA-256 is
+`af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b`.
 
-Reviewer `root-hindi_546_current_second` then restarted at English entry 1
-on the corrected English/Lao bytes without consulting prior Lao evidence.
-The attempted first pass stopped on its first confirmed residual at entry
-61. Both toggle providers render `tools.toggle.bodyPlaceholder` as a
-clickable empty-body prompt whose click inserts and focuses a child block,
-but the old Lao wording omits the source result “to add a block.”
-`F-lo-003` restores that result with the established explicit-purpose
-construction `ເພື່ອເພີ່ມບລັອກ`.
+Reviewers `root-lo_final_cleanroom_a` and `root-lo_final_cleanroom_b` each
+restarted at English entry 1 and independently reread all 546 final pairs
+against their callers and the selected register. Both accepted the same final
+digest with no residual semantic, grammatical, terminology, register,
+punctuation, accessibility, placeholder, or source-synchronization defect.
+The completed history contains exactly 39 unique locale/key findings in
+`F-lo-001`–`F-lo-039`.
 
-The stopped review binds to pre-correction raw Lao SHA-256
-`ef6090708c0af2f7be1b29401eeb2d0dd1a4966a2bde34dce44295eb00d33b8d`.
-The focused expectation failed on exactly the incomplete prompt before
-remediation and passes afterward. The corrected raw Lao SHA-256 is
-`babb327bf435a021e78c3b8afd72891eb0a2345829e0c58c408e55dde91eeb74`.
-The attempted review earns no pass credit; both complete passes must restart
-from entry 1 on the corrected bytes.
+The final dictionary retains exact 546/546 key parity, no duplicate keys or
+empty values, all 38 placeholder-bearing rows and 54 placeholder occurrences
+with exact English multisets, valid NFC normalization, and no forbidden
+control or bidi-control characters. Its only seven English-identical values
+are the documented `R-lo-001`–`R-lo-007` shortcuts, `Alt` token, aspect
+ratios, and `URL`. The mechanically reproducible lifecycle remains 397
+executable literals, 122 finite-dynamic keys, 25
+registered-namespace-compatible keys, and two exact catalog-only keys, with
+all 117 provider compositions accounted for.
+
+Caller inspection also exposed `F-global-020`: the database tab-overflow
+control still writes `${hiddenCount} more...` as raw English in
+`src/tools/database/database-tab-bar.ts`. It remains open for one coordinated
+546-to-552 all-dictionary migration with the five playback-statistics keys
+already tracked by `F-global-014`. Neither global bypass misclassifies a Lao
+catalog value, but both continue to block terminal repository verification.
+
+English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+and the guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`.
+The complete guideline/index gate passes 4,050/4,050, all 69 dictionaries pass
+completeness and integrity at 546/546, and the checker suite passes 89/89 on
+the final bytes. The seven directly affected media/upload caller files pass
+330/330. Lao is `second-pass-complete`.
 
 ### Lithuanian (`lt`) — pending after current-byte residuals
 
@@ -9054,6 +9079,42 @@ follows the global transition rule above.
 | `F-lo-001` | `lo` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"ລ້າງຮູບແບບໂດຍກົງ"` | LibreOffice’s Lao UI supplies this exact Clear Direct Formatting command in its [official localization source](https://raw.githubusercontent.com/LibreOffice/translations/master/source/lo/officecfg/registry/data/org/openoffice/Office/UI.po). | verified |
 | `F-lo-002` | `lo` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"ຂໍ້ຄວາມ"` | `"ສີຂໍ້ຄວາມ"` | English changed from “Text” to “Text color,” while Lao retained the former source meaning. The shared picker renders this directly as its text-color section title and composes it into every swatch label; LibreOffice’s Lao UI uses [`ສີຂໍ້ຄວາມ`](https://help.libreoffice.org/latest/lo/text/scalc/01/12040100.html) opposite the background-color axis. | verified |
 | `F-lo-003` | `lo` | `tools.toggle.bodyPlaceholder` | source completeness / omitted click result | `"ພັບເປົ່າ. ຄລິກ ຫຼື ລາກບລັອກເຂົ້າມາ."` | `"ພັບເປົ່າ. ຄລິກເພື່ອເພີ່ມບລັອກ ຫຼື ລາກບລັອກເຂົ້າມາ."` | Both toggle providers expose this as a clickable empty-body prompt whose click inserts and focuses a child block. The old wording says only “Click or drag blocks here” and omits what clicking does; the replacement restores “to add a block” using the same explicit purpose construction found in [Google’s Lao UI instructions](https://support.google.com/youtube/answer/9011078?hl=lo). | verified |
+| `F-lo-004` | `lo` | `tools.table.clearSelection` | changed-English synchronization / destructive-action scope | `"ລ້າງ"` | `"ລຶບເນື້ອຫາ"` | Both table callers remove selected cell contents while preserving the cells and formatting. The replacement names that object explicitly, matching LibreOffice’s Lao [Clear Contents](https://help.libreoffice.org/latest/lo/text/scalc/01/02150000.html) distinction. | verified |
+| `F-lo-005` | `lo` | `tools.table.placement` | changed-English synchronization / alignment terminology | `"ຕຳແໜ່ງ"` | `"ການຈັດວາງ"` | The caller is a 3×3 cell-content alignment selector, not a generic location field. The replacement matches this catalog’s established `tools.image.alignment` terminology. | verified |
+| `F-lo-006` | `lo` | `a11y.searchResults` | accessibility / source completeness / count neutrality | `"{count} ຜົນລັບ"` | `"ຜົນການຄົ້ນຫາ: {count}"` | The live-region message must identify the announced number as search results. Label-before-count wording remains grammatical for every runtime value without changing `{count}`. | verified |
+| `F-lo-007` | `lo` | `tools.callout.addEmoji` | changed-English synchronization / icon semantics | `"ເພີ່ມອີໂມຈິ"` | `"ເພີ່ມໄອຄອນ"` | English changed from “Add emoji” to “Add icon,” and the control manages the callout icon shared with the adjacent edit- and remove-icon actions. | verified |
+| `F-lo-008` | `lo` | `tools.callout.filterEmojis` | accessible search scope / punctuation | `"ຄົ້ນຫາ…"` | `"ຄົ້ນຫາອີໂມຈິ…"` | This value is both the picker search placeholder and its accessible label. The replacement identifies the searched object and preserves the native ellipsis. | verified |
+| `F-lo-009` | `lo` | `tools.callout.pickRandom` | accessibility / action completeness | `"ສຸ່ມ"` | `"ເລືອກອີໂມຈິແບບສຸ່ມ"` | The button and accessible label perform “Pick a random emoji”; the old adjective “Random” omitted both the action and its object. | verified |
+| `F-lo-010` | `lo` | `tools.code.searchLanguage` | punctuation / catalog consistency | `"ຄົ້ນຫາພາສາ..."` | `"ຄົ້ນຫາພາສາ…"` | The search placeholder now uses the catalog’s established single-character Unicode ellipsis instead of three ASCII periods. | verified |
+| `F-lo-011` | `lo` | `tools.link.linkTitle` | changed-English synchronization / field semantics | `"ຫົວຂໍ້ລິ້ງ"` | `"ຂໍ້ຄວາມລິ້ງ"` | The input edits the anchor’s visible Link text, not a link title attribute. The replacement restores the current source and caller semantics. | verified |
+| `F-lo-012` | `lo` | `tools.image.altDescription` | changed-English synchronization / accessibility copy | `"ເພີ່ມຂໍ້ຄວາມທົດແທນເພື່ອອະທິບາຍຮູບນີ້. ເຮັດໃຫ້ໜ້າເຂົ້າເຖິງໄດ້ງ່າຍຂຶ້ນສຳລັບຜູ້ທີ່ມີບັນຫາສາຍຕາ."` | `"ອະທິບາຍຮູບນີ້ສຳລັບຜູ້ທີ່ເບິ່ງບໍ່ເຫັນ."` | Lao retained superseded verbose copy that overclaimed page-wide accessibility and used deficit framing. The replacement follows the current concise, user-centered instruction. | verified |
+| `F-lo-013` | `lo` | `tools.image.errorUploadFailedTitle` | orthography / terminology consistency | `"ອັບໂຫລດບໍ່ສຳເລັດ"` | `"ອັບໂຫຼດບໍ່ສຳເລັດ"` | The correction restores the standard Lao spelling `ໂຫຼດ`, already used consistently by the surrounding upload and download messages. | verified |
+| `F-lo-014` | `lo` | `tools.image.errorImageFailedToLoad` | orthography / terminology consistency | `"ບໍ່ສາມາດໂຫລດຮູບໄດ້"` | `"ບໍ່ສາມາດໂຫຼດຮູບໄດ້"` | The image-load error now uses the same standard `ໂຫຼດ` spelling as the rest of the media family. | verified |
+| `F-lo-015` | `lo` | `tools.image.errorDefaultMessage` | changed-English synchronization / recovery completeness | `"URL ສົ່ງຂໍ້ຜິດພາດ. ລອງແຫຼ່ງອື່ນ ຫຼື ອັບໂຫຼດໄຟລ໌ໃໝ່."` | `"ບໍ່ສາມາດໂຫຼດຮູບຈາກ URL ນີ້ໄດ້. ລອງໃຊ້ແຫຼ່ງອື່ນ ຫຼື ອັບໂຫຼດໄຟລ໌ອີກຄັ້ງ."` | The failure is that the image could not be loaded from this URL, not that the URL itself “sent an error.” The replacement preserves both recovery paths explicitly. | verified |
+| `F-lo-016` | `lo` | `tools.file.previewRaw` | changed-English synchronization / preview-mode semantics | `"ໂຄ້ດ"` | `"ຕົ້ນສະບັບ"` | The tab exposes the underlying Source text, which is not necessarily program code. The neutral source label matches every supported previewable file. | verified |
+| `F-lo-017` | `lo` | `tools.file.previewRender` | changed-English synchronization / preview-mode semantics | `"ສະແດງຜົນ"` | `"ເບິ່ງຕົວຢ່າງ"` | The paired tab displays a rendered Preview rather than naming the implementation action “render.” The replacement also matches the surrounding file-preview terminology. | verified |
+| `F-lo-018` | `lo` | `tools.audio.titlePlaceholder` | changed-English synchronization / media terminology | `"ຊື່ເພງ"` | `"ຊື່ແທຣັກ"` | The metadata field accepts any audio track, including speech and other non-song audio. The replacement restores the broader Track title scope used by [YouTube’s Lao product copy](https://support.google.com/youtube/answer/12504220?hl=lo). | verified |
+| `F-lo-019` | `lo` | `tools.audio.emptyOrDropHere` | changed-English synchronization / file scope | `"ຫຼື ປ່ອຍສຽງໃສ່ນີ້"` | `"ຫຼື ປ່ອຍໄຟລ໌ສຽງໃສ່ນີ້"` | The drop target accepts an audio file, not abstract sound. The replacement restores the file object stated by the source and upload caller. | verified |
+| `F-lo-020` | `lo` | `tools.audio.coverSourceAria` | accessibility / control scope | `"ແຫຼ່ງຮູບ"` | `"ແຫຼ່ງຮູບປົກ"` | The accessible tablist controls the audio cover-image source specifically. The replacement distinguishes cover art from an arbitrary image source. | verified |
+| `F-lo-021` | `lo` | `tools.database.viewTypeListDescription` | changed-English synchronization / option completeness | `"ມຸມມອງລາຍການແບບງ່າຍ"` | `"ສະແດງລາຍການເປັນລາຍຊື່ແບບງ່າຍ"` | Lao retained the former “simple list view” wording. The replacement states the current behavior “Show items in a simple list,” including both the action and its object. | verified |
+| `F-lo-022` | `lo` | `tools.bookmark.loading` | changed-English synchronization / preview scope / punctuation | `"ກຳລັງໂຫຼດຕົວຢ່າງ"` | `"ກຳລັງໂຫຼດຕົວຢ່າງລິ້ງ…"` | The state loads a link preview specifically. The replacement restores that object and the ongoing-state ellipsis. | verified |
+| `F-lo-023` | `lo` | `tools.bookmark.error` | changed-English synchronization / preview scope | `"ບໍ່ສາມາດໂຫຼດຕົວຢ່າງໄດ້"` | `"ບໍ່ສາມາດໂຫຼດຕົວຢ່າງລິ້ງໄດ້"` | The error concerns a link preview, not an unspecified preview. Naming the link keeps the message clear outside its immediate visual context. | verified |
+| `F-lo-024` | `lo` | `tools.embed.empty` | caller state / changed-English synchronization | `"ວາງລິ້ງເພື່ອຝັງ"` | `"ບໍ່ມີລິ້ງສຳລັບຝັງ"` | The caller renders this in a read-only empty embed where pasting is impossible. The replacement states the current “No embed link” condition instead of issuing an unavailable command. | verified |
+| `F-lo-025` | `lo` | `tools.video.toggleTimeDisplay` | accessibility / state specificity | `"ສະຫຼັບການສະແດງເວລາ"` | `"ສະຫຼັບລະຫວ່າງເວລາທີ່ຜ່ານໄປ ແລະ ເວລາທີ່ເຫຼືອ"` | The accessible action switches between elapsed and remaining time. The old generic label omitted both states that distinguish the control’s behavior. | verified |
+| `F-lo-026` | `lo` | `tools.video.ctxStats` | changed-English synchronization / playback domain | `"ສະຖິຕິລະອຽດ"` | `"ສະຖິຕິການຫຼິ້ນ"` | The context-menu item opens playback statistics. “Detailed statistics” dropped the media-playback domain supplied by the current source and caller. | verified |
+| `F-lo-027` | `lo` | `tools.linkPaste.embedCode` | orthography / terminology consistency | `"ຝັງໂຄ້ດຈາກ {provider}"` | `"ຝັງໂຄດຈາກ {provider}"` | The correction uses the catalog’s established Lao spelling `ໂຄດ` while preserving the provider placeholder and its composition. | verified |
+| `F-lo-028` | `lo` | `toolNames.quote` | terminology / grammatical role | `"ອ້າງອິງ"` | `"ຄຳອ້າງອີງ"` | The toolbox requires a noun label meaning a quotation, not the bare cite/reference action. The replacement follows established Lao quotation terminology. | verified |
+| `F-lo-029` | `lo` | `searchTerms.quote` | search terminology / family consistency | `"ອ້າງອິງ"` | `"ຄຳອ້າງອີງ"` | The search alias now names a quotation explicitly and matches the corrected tool name, rather than exposing an ambiguous reference action. | verified |
+| `F-lo-030` | `lo` | `searchTerms.blockquote` | search terminology / compound completeness | `"ບລັອກອ້າງອິງ"` | `"ບລັອກຄຳອ້າງອີງ"` | The compound now identifies a block quotation by retaining the quotation noun `ຄຳອ້າງອີງ`. | verified |
+| `F-lo-031` | `lo` | `searchTerms.citation` | search terminology / meaning | `"ເອກະສານອ້າງອິງ"` | `"ການອ້າງອີງ"` | The alias means citation, not a reference document. The replacement names the act or result of citing and remains distinct from the quote aliases. | verified |
+| `F-lo-032` | `lo` | `tools.quote.placeholder` | terminology / placeholder role | `"ອ້າງອິງ"` | `"ຄຳອ້າງອີງ"` | The empty quote block prompts for quotation content, so the explicit quotation noun is required instead of an ambiguous cite action. | verified |
+| `F-lo-033` | `lo` | `tools.image.previewControls` | accessibility / group-name specificity | `"ຕົວຄວບຄຸມຕົວຢ່າງ"` | `"ຕົວຄວບຄຸມການເບິ່ງຕົວຢ່າງຮູບ"` | This ARIA label names the grouped controls for an image preview. The old wording omitted the image object and compressed “preview” into an unclear modifier. | verified |
+| `F-lo-034` | `lo` | `tools.image.zoomOut` | caller semantics / established zoom terminology | `"ຫຼຸດ"` | `"ຊູມອອກ"` | The minus-icon command changes viewport zoom rather than generically decreasing a value or resizing the image. LibreOffice’s Lao UI uses the exact command [`ຊູມອອກ`](https://help.libreoffice.org/latest/lo/text/sdraw/04/01020000.html). | verified |
+| `F-lo-035` | `lo` | `tools.image.errorUnavailable` | error-state accuracy / naturalness | `"ຮູບບໍ່ມີ"` | `"ຮູບບໍ່ພ້ອມໃຊ້ງານ"` | A failed source may be temporarily or otherwise unavailable; the caller does not establish that the image does not exist. The replacement states the observable availability condition. | verified |
+| `F-lo-036` | `lo` | `tools.image.errorFileTooLarge` | punctuation / runtime-placeholder composition | `"ຮູບໃຫຍ່ເກີນໄປ {size} ເກີນຂີດຈຳກັດ {max}"` | `"ຮູບໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}."` | The source contains two complete sentences. Sentence and terminal punctuation prevent the error state from running directly into the formatted `{size}` and `{max}` values. | verified |
+| `F-lo-037` | `lo` | `tools.file.errorFileTooLarge` | punctuation / runtime-placeholder composition | `"ໄຟລ໌ໃຫຍ່ເກີນໄປ {size} ເກີນຂີດຈຳກັດ {max}"` | `"ໄຟລ໌ໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}."` | The file error now preserves the source’s two-sentence boundary and terminal punctuation without changing either formatted-size placeholder. | verified |
+| `F-lo-038` | `lo` | `tools.video.errorFileTooLarge` | punctuation / runtime-placeholder composition | `"ວິດີໂອໃຫຍ່ເກີນໄປ {size} ເກີນຂີດຈຳກັດ {max}"` | `"ວິດີໂອໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}."` | The video error now preserves the source’s two complete sentences while retaining the exact `{size}` and `{max}` multiset. | verified |
+| `F-lo-039` | `lo` | `tools.audio.errorFileTooLarge` | punctuation / runtime-placeholder composition | `"ສຽງໃຫຍ່ເກີນໄປ {size} ເກີນຂີດຈຳກັດ {max}"` | `"ສຽງໃຫຍ່ເກີນໄປ. {size} ເກີນຂີດຈຳກັດ {max}."` | The audio error now preserves the source’s two complete sentences while retaining the exact `{size}` and `{max}` multiset. | verified |
 | `F-lt-001` | `lt` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Valyti formatavimą"` | Microsoft’s Lithuanian editor UI uses the exact concise command [Valyti formatavimą](https://support.microsoft.com/lt-LT/PowerPoint/clear-all-text-formatting). | verified |
 | `F-lt-002` | `lt` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"Tekstas"` | `"Teksto spalva"` | English changed from “Text” to “Text color,” while Lithuanian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Microsoft’s Lithuanian editor documentation uses the exact label [`Teksto spalva`](https://support.microsoft.com/lt-lt/office/teksto-spalvos-keitimas-99b47f41-4e14-4551-a09d-820a004d1cde). | verified |
 | `F-lt-003` | `lt` | `tools.toggle.bodyPlaceholder` | source completeness / omitted click result | `"Tuščias sutraukiamas blokas. Spustelėkite arba nuvilkite blokus į vidų."` | `"Tuščias sutraukiamas blokas. Spustelėkite, kad pridėtumėte bloką, arba nuvilkite blokus į vidų."` | Both toggle providers expose this as a clickable empty-body prompt whose click inserts and focuses a child block. The old wording omits what clicking does; the replacement restores “to add a block” with the same imperative-purpose construction used in [Microsoft’s Lithuanian UI prose](https://support.microsoft.com/lt-lt/office/skaidr%C4%97s-%C5%BEymel%C4%97-ir-saitas-su-ja-i%C5%A1-kitur-pateiktyje-f4d4b309-90ef-4df0-bd1c-f75e47bbd71a). | verified |
@@ -10418,6 +10479,8 @@ follows the global transition rule above.
 | `F-global-018` | all non-English | Central Kurdish browser-tag alias contract | locale negotiation / standards compatibility / legacy code | The repository registers its Sorani/Central Kurdish catalog under legacy public code `ku`, while browsers report the standard Central Kurdish tag `ckb`; automatic detection of `ckb` or `ckb-IQ` therefore fell through to English. | Normalize the `ckb` base language to the existing `ku` catalog during locale resolution, preserving the public registry, type surface, dictionary count, and RTL direction contract. | Parameterized red-first tests received `en` for both `ckb` and `ckb-IQ`. After the alias was added, both resolve to `ku`, retain RTL direction, and return Sorani catalog text without changing any dictionary key set. | verified |
 | `F-global-019` | all non-English | Sorani emoji metadata dialect contract | generated data / locale identity / safe fallback | The emoji build treated Blok's Sorani `ku` code as CLDR `ku`, generating 51 emoji records and 126 Latin-script Kurmanji strings that the Sorani picker loaded as localized metadata. | Map the legacy product code to CLDR `ckb`, remove any stale output when that source has no annotations, and omit the Sorani importer so the picker uses its established English metadata fallback rather than a different Kurdish variety. | A red-first loader test received the Kurmanji object instead of `null`. A separate temp-output generator regression then failed red because the missing-annotations branch preserved a seeded stale `ku.json`; every missing or zero-data branch now removes that artifact and the regression passes. The importer remains absent, so focused locale/emoji checks confirm the safe English fallback while the 546-entry Sorani UI catalog remains unaffected. | verified |
 
+| `F-global-020` | all non-English | tools.database tab-overflow count template | caller / hard-coded English / visible database navigation | `DatabaseTabBar.handleOverflow()` assigns `` `${hiddenCount} more...` `` directly to the overflow control. | Coordinate a 546-to-552 migration with `F-global-014`: add one `{count}`-bearing, count-neutral tab-overflow template to all 69 dictionaries and resolve the label exclusively through database-tool i18n. | Source inspection reproduced the bypass at `src/tools/database/database-tab-bar.ts:350`; the existing overflow tests assert the raw English label and no catalog key covers it. Adding this sixth pending live key independently would invalidate key parity and every completed dictionary digest, so the combined migration remains open and blocks terminal repository verification. | open |
+
 | `F-hy-005` | `hy` | `toolbox.typeToSearch` | caller-or-grammar-defect | `"Մուտքագրեք որոնման համար"` | `"Մուտքագրեք՝ որոնելու համար"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
 | `F-hy-006` | `hy` | `toolNames.bulletedList` | meaning\|terminology | `"Նշանավոր ցուցակ"` | `"Պարբերանշված ցուցակ"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
 | `F-hy-007` | `hy` | `toolNames.numberedList` | grammar\|role\|terminology | `"Համարակալ ցուցակ"` | `"Համարակալված ցուցակ"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
@@ -10877,6 +10940,13 @@ locale and UI context.
 | `R-ku-005` | `ku` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset inside the otherwise Sorani picker. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-ku-006` | `ku` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset inside the otherwise Sorani picker. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-ku-007` | `ku` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label used alongside Sorani labels. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
+| `R-lo-001` | `lo` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating or spelling it out would alter the executable shortcut. | [Apple — Mac keyboard shortcuts](https://support.apple.com/102650); [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-lo-002` | `lo` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord; translating or reordering its characters would describe a different shortcut. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-lo-003` | `lo` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the adjacent Lao dialog supplies the complete `ຂໍ້ຄວາມທົດແທນ` wording. | [`ui.ts` image-tool button](../../src/tools/image/ui.ts) |
+| `R-lo-004` | `lo` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lo-005` | `lo` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lo-006` | `lo` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lo-007` | `lo` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label used alongside the otherwise Lao property labels. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-lv-001` | `lv` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only invariant runtime interpolation tokens; Latvian modifier-before-noun order independently requires this sequence and renders `Noklusējuma teksta krāsa` and `Noklusējuma fons`. | [Microsoft Learn — Data table control in Power Apps](https://learn.microsoft.com/lv-lv/power-apps/maker/canvas-apps/controls/control-data-table) |
 | `R-nl-001` | `nl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Dutch Apple guidance retains the `⌘` platform symbol. | [Apple — Mac-toetscombinaties](https://support.apple.com/nl-nl/102650) |
 | `R-nl-002` | `nl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Dutch Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Sneltoetsen in Windows](https://support.microsoft.com/nl-nl/windows/sneltoetsen-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |

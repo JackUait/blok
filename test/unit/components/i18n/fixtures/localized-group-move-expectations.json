@@ -272,8 +272,8 @@
   "ps": {
     "a11y.atTop": "پورته لېږدول ممکن نه دي. اوسنی ځای لا دمخه تر ټولو پورته دی.",
     "a11y.atBottom": "ښکته لېږدول ممکن نه دي. اوسنی ځای لا دمخه تر ټولو ښکته دی.",
-    "a11y.movedUp": "پورته خوځښت بشپړ شو. ځای: {position} له {total} څخه.",
-    "a11y.movedDown": "ښکته خوځښت بشپړ شو. ځای: {position} له {total} څخه."
+    "a11y.movedUp": "پورته ولېږدول شو. ځای: له {total} څخه {position}.",
+    "a11y.movedDown": "لاندې ولېږدول شو. ځای: له {total} څخه {position}."
   },
   "pt": {
     "a11y.atTop": "Não é possível mover para cima. Já no topo.",

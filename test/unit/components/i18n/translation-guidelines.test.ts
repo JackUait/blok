@@ -1656,6 +1656,121 @@ const NEPALI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.database.checkboxUnchecked': 'जाँच गरिएको छैन',
 };
 
+const DUTCH_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.clickToOpenMenu': 'Klik om het menu te openen',
+  'blockSettings.openMenuAction': ' om het menu te openen',
+  'blockSettings.convertWithChildrenWarning':
+    'Geneste blokken: {count}. Door dit blok om te zetten, wordt de geneste inhoud naar het hoogste niveau verplaatst. Doorgaan?',
+  'toolbox.optionAddAbove': '⌥-klik om erboven in te voegen',
+  'toolbox.ctrlAddAbove': 'Ctrl-klik om erboven in te voegen',
+  'tools.marker.textColor': 'Tekstkleur',
+  'tools.paragraph.placeholder':
+    'Schrijf iets of druk op / om een blok te kiezen',
+  'tools.toggle.bodyPlaceholder':
+    'Lege inklaplijst. Klik om een blok toe te voegen of sleep blokken hierheen.',
+  'tools.table.clearSelection': 'Inhoud wissen',
+  'tools.table.placement': 'Uitlijning',
+  'a11y.dragHandle':
+    'Sleep om het blok te verplaatsen of klik om het menu te openen',
+  'a11y.atTop':
+    'Omhoog verplaatsen is niet mogelijk. De bovenste positie is al bereikt.',
+  'a11y.atBottom':
+    'Omlaag verplaatsen is niet mogelijk. De onderste positie is al bereikt.',
+  'a11y.searchResults': 'Zoekresultaten: {count}',
+  'a11y.allBlocksSelected': 'Alle blokken geselecteerd. Totaal: {count}',
+  'a11y.navigationModeEntered':
+    'Navigatiemodus. Gebruik de pijltoetsen om tussen blokken te navigeren. Druk op Enter om te bewerken en op Escape om af te sluiten.',
+  'a11y.navigatedToBlock': 'Naar het blok genavigeerd',
+  'a11y.dropCreateColumnLeft': 'Bij loslaten wordt links een kolom gemaakt',
+  'a11y.dropCreateColumnRight':
+    'Bij loslaten wordt rechts een kolom gemaakt',
+  'tools.columns.resizeAriaLabel': 'Kolombreedte aanpassen',
+  'toolNames.callout': 'Markering',
+  'tools.callout.placeholder': 'Markering',
+  'tools.callout.calloutEmojiCategory': 'Markering',
+  'tools.callout.addEmoji': 'Pictogram toevoegen',
+  'tools.callout.filterEmojis': 'Emoji\'s zoeken…',
+  'tools.callout.pickRandom': 'Willekeurige emoji kiezen',
+  'toolNames.equation': 'Vergelijking',
+  'tools.equation.placeholder': 'Voer een LaTeX-formule in…',
+  'tools.code.searchLanguage': 'Talen zoeken…',
+  'tools.link.linkTitle': 'Linktekst',
+  'tools.image.sizeMedium': 'Middelgroot',
+  'tools.image.converting': 'Converteren…',
+  'tools.image.altDescription':
+    'Beschrijf de afbeelding voor mensen die deze niet kunnen zien.',
+  'tools.image.errorFileTooLarge':
+    'De afbeelding is te groot. {size} overschrijdt de limiet van {max}.',
+  'tools.image.errorDefaultMessage':
+    'De afbeelding kon niet via deze URL worden geladen. Probeer een andere bron of upload het bestand opnieuw.',
+  'tools.file.errorFileTooLarge':
+    'Het bestand is te groot. {size} overschrijdt de limiet van {max}.',
+  'tools.video.alignmentLeft': 'Links uitlijnen',
+  'tools.video.alignmentCenter': 'Centreren',
+  'tools.video.alignmentRight': 'Rechts uitlijnen',
+  'tools.video.errorFileTooLarge':
+    'De video is te groot. {size} overschrijdt de limiet van {max}.',
+  'tools.audio.alignmentLeft': 'Links uitlijnen',
+  'tools.audio.alignmentCenter': 'Centreren',
+  'tools.audio.alignmentRight': 'Rechts uitlijnen',
+  'tools.audio.errorFileTooLarge':
+    'Het audiobestand is te groot. {size} overschrijdt de limiet van {max}.',
+  'tools.audio.errorGoogleDrive':
+    'Audio uit Google Drive kan niet rechtstreeks worden afgespeeld. Download het bestand en upload het in plaats daarvan hier.',
+  'tools.audio.errorOneDrive':
+    'Audio uit OneDrive kan niet rechtstreeks worden afgespeeld. Download het bestand en upload het in plaats daarvan hier.',
+  'tools.audio.titlePlaceholder': 'Titel',
+  'tools.audio.artistPlaceholder': 'Artiest',
+  'tools.audio.emptyOrDropHere': 'of sleep een audiobestand hierheen',
+  'tools.audio.coverChange': 'Illustratie wijzigen',
+  'tools.audio.coverSet': 'Illustratie instellen',
+  'tools.audio.coverRemove': 'Illustratie verwijderen',
+  'tools.audio.coverErrorType': 'Kies een afbeeldingsbestand',
+  'tools.audio.coverErrorTooLarge': 'De afbeelding is te groot',
+  'tools.audio.coverAdd': 'Illustratie toevoegen',
+  'tools.audio.coverSourceAria': 'Bron van illustratie',
+  'tools.database.viewTypeListDescription':
+    'Items in een eenvoudige lijst weergeven',
+  'tools.bookmark.loading': 'Linkvoorbeeld laden…',
+  'tools.embed.empty': 'Geen ingesloten link',
+  'tools.video.seek': 'Afspeelpositie',
+  'tools.video.toggleTimeDisplay':
+    'Wisselen tussen verstreken en resterende tijd',
+  'tools.video.speedPresets': 'Vooraf ingestelde snelheden',
+  'tools.video.pip': 'Beeld in beeld',
+  'tools.video.ctxCopyUrlAtTime':
+    'Video-URL vanaf de huidige afspeelpositie kopiëren',
+  'tools.video.ctxStats': 'Afspeelstatistieken',
+  'tools.callout.emojiSearchResults': 'Emojiresultaten: {count}',
+  'toolNames.clearFormat': 'Opmaak wissen',
+  'tools.table.headerColumn': 'Koptekstkolom',
+  'tools.table.headerRow': 'Koptekstrij',
+  'tools.table.placementTopLeft': 'Linksboven',
+  'tools.table.placementTopCenter': 'Midden boven',
+  'tools.table.placementTopRight': 'Rechtsboven',
+  'tools.table.placementMiddleLeft': 'Linksmidden',
+  'tools.table.placementMiddleRight': 'Rechtsmidden',
+  'tools.table.placementBottomLeft': 'Linksonder',
+  'tools.table.placementBottomCenter': 'Middenonder',
+  'tools.table.placementBottomRight': 'Rechtsonder',
+  'toolNames.inlineCode': 'Inlinecode',
+  'tools.image.errorRetry': 'Opnieuw proberen',
+  'tools.database.propertyTypeSelect': 'Selecteren',
+  'tools.database.propertyTypeMultiSelect': 'Meerdere selecteren',
+  'tools.linkPaste.mention': 'Vermelden',
+  'tools.file.previewRender': 'Voorbeeld',
+  'tools.video.theater': 'Theatermodus',
+  'tools.video.theaterExit': 'Theatermodus sluiten',
+  'tools.callout.emojiCategoryActivity': 'Activiteiten',
+  'tools.image.previewControls': 'Regelaars voor afbeeldingsvoorbeeld',
+  'tools.image.errorSourceOffline':
+    'Het bronbestand is mogelijk verplaatst of niet beschikbaar.',
+  'searchTerms.header': 'tussenkop',
+  'searchTerms.number': 'nummering',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -2503,6 +2618,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(NEPALI_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Dutch correction oracle', () => {
+    const messages = readLocale('nl').messages;
+    const actual = Object.fromEntries(
+      Object.keys(DUTCH_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(DUTCH_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

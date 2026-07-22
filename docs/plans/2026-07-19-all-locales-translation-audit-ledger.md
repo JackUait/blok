@@ -336,7 +336,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ms` | Malay | Latin | ltr | neutral contemporary Malaysian Malay; concise direct imperatives for compact actions and complete grammatical instructions; sentence-case noun/state labels; established Malay product, accessibility, table, and media terminology; count-neutral label-before-value templates; conventional unchanged shortcut, ratio, acronym, and established loanword notation | `root-ms_final_linguistic` | `root-ms_final_callers` | pass | pass | pass | `F-ms-001`–`F-ms-107` | second-pass-complete |
 | `my` | Burmese (Myanmar) | Myanmar | ltr | neutral contemporary Burmese in Myanmar script; concise direct commands for compact actions; polite complete instructions and accessibility announcements; sentence-case noun/state labels; established Burmese product, accessibility, media, and browser terminology; natural classifier-bearing runtime count relations; conventional unchanged shortcut, ratio, placeholder-only, `Alt`, `URL`, and `OK` notation | `root-my_final_linguistic` | `root-my_final_callers` | pass | pass | pass | `F-my-001`–`F-my-115` | second-pass-complete |
 | `ne` | Nepali | Devanagari | ltr | neutral contemporary Nepali in Devanagari; polite honorific imperatives and finite questions for complete instructions, confirmations, recovery guidance, and accessibility announcements; concise sentence-case noun or action labels; established Nepali product, accessibility, media, and database terminology; count-neutral runtime templates; conventional unchanged shortcut, ratio, placeholder-only, `Alt`, and `URL` notation | `root-ne_final_linguistic` | `root-ne_final_callers` | pass | pass | pass | `F-ne-001`–`F-ne-135` | second-pass-complete |
-| `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | — | — | pending | pending | pending | `F-nl-001`–`F-nl-092` | pending |
+| `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | `root-nl_current_audit_a` | `root-nl_current_audit_b` | pass | pass | pass | `F-nl-001`–`F-nl-092` | second-pass-complete |
 | `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-no-001`–`F-no-085` | pending |
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | to-audit | — | — | pending | pending | pending | `F-pa-001`–`F-pa-002` | pending |
 | `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-pl-001`–`F-pl-126` | pending |
@@ -474,6 +474,7 @@ locale returns to `pending`.
 | `ms` | `root-ms_final_linguistic` | `sha256:4a13d12d865b69ec9f597850808123903ab15278eabd9ef982523ba2cb66b63a` | `root-ms_final_callers` | `sha256:4a13d12d865b69ec9f597850808123903ab15278eabd9ef982523ba2cb66b63a` |
 | `my` | `root-my_final_linguistic` | `sha256:114c397afed8e7ab2bb12f2aad010c70b1d6dc23a4ec7eb855ebd440b19cf6b3` | `root-my_final_callers` | `sha256:114c397afed8e7ab2bb12f2aad010c70b1d6dc23a4ec7eb855ebd440b19cf6b3` |
 | `ne` | `root-ne_final_linguistic` | `sha256:cddbe748034d929a3c0d6df7ae5a1de4ab5ab2d1254d94c967d446e4708c9ce6` | `root-ne_final_callers` | `sha256:cddbe748034d929a3c0d6df7ae5a1de4ab5ab2d1254d94c967d446e4708c9ce6` |
+| `nl` | `root-nl_current_audit_a` | `sha256:7981988bcd25118f0b20bc1de640fea534e8ab5440bebb51cab1659ba4b9a977` | `root-nl_current_audit_b` | `sha256:7981988bcd25118f0b20bc1de640fea534e8ab5440bebb51cab1659ba4b9a977` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -7767,6 +7768,46 @@ corrected raw Dutch dictionary is bound at SHA-256
 `7981988bcd25118f0b20bc1de640fea534e8ab5440bebb51cab1659ba4b9a977`.
 Dutch remains `pending`; both complete reviews must restart at entry 1 on this
 new digest.
+
+### Dutch (`nl`) — current 546-key second pass complete
+
+Fresh reviewers `root-nl_current_audit_a` and `root-nl_current_audit_b`
+independently restarted at entry 1 and accepted all 546 current English/Dutch
+pairs on raw dictionary SHA-256
+`7981988bcd25118f0b20bc1de640fea534e8ab5440bebb51cab1659ba4b9a977`.
+Their exhaustive read-only artifacts are bound at SHA-256
+`fdc8beaa2d218747561aebeff1186cb786ded7f91016ef6aeb63f74b3de65485`
+and
+`15070fd396b47f49db1dd2b89e146a7b031d2cf984de46af8fcb8ff50c7930a0`.
+Both reviews found zero mandatory or optional corrections, independently
+re-challenged and upheld all 92 historical findings, supported all 24
+exact-English retentions, and reported no blockers.
+
+The current catalog has 546 unique non-empty keys, 38 placeholder-bearing
+values with 54 occurrences, 44 unique normalized search aliases, no duplicate
+keys, key-set differences, placeholder mismatches, normalization defects, or
+forbidden control characters. Both reviewers reproduced the source-backed
+caller census of 397 executable literal-or-constant keys, 122 dynamically
+registered keys, and 27 retained keys without a current static caller, with no
+uncovered key. The English source and guideline inputs are respectively bound
+at SHA-256
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`
+and
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`.
+
+The 92-row finding extraction is independently bound at SHA-256
+`e530959d9b45469e9c5eb6ec0db58c3ed71bdb4e40dcc1b615675cd08a60d279`;
+it proves 92 unique finding IDs and keys match the current catalog byte for
+byte. The corresponding executable Dutch correction oracle is in
+`translation-guidelines.test.ts`, whose current bytes are bound at SHA-256
+`3e786635cb84d9b554ce48bf33eb7e786d115459a92a303028555a909951552f`.
+Its focused test passes 1/1; the full guideline file passes 4,920/4,920, the
+nine-file i18n gate passes 5,640/5,640, the checker regressions pass 89/89, and
+the translation completeness, integrity, source-coverage, and encoding command
+passes with only the catalogued identical-value warnings. Scoped ESLint also
+passes. No Dutch catalog edit was required. Global `F-global-014` and
+`F-global-020` remain coordinated follow-up work and do not invalidate this
+locale-level second-pass transition.
 
 ## Findings
 

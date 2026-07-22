@@ -898,6 +898,132 @@ const MACEDONIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
     'Совпаѓања со емоџи: {count}',
 };
 
+const MALAYALAM_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.clickAction': 'മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക',
+  'blockSettings.orConjunction': ' അല്ലെങ്കിൽ ',
+  'blockSettings.openMenuAction': ' അമർത്തുക',
+  'tools.marker.textColor': 'ടെക്സ്റ്റ് നിറം',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.colorPicker.color.gray': 'ചാരനിറം',
+  'tools.colorPicker.color.purple': 'പർപ്പിൾ',
+  'tools.paragraph.placeholder':
+    'എന്തെങ്കിലും എഴുതുക അല്ലെങ്കിൽ ഒരു ടൂൾ തിരഞ്ഞെടുക്കാൻ / അമർത്തുക',
+  'tools.toggle.bodyPlaceholder':
+    'ഒഴിഞ്ഞ ടോഗിൾ. ഒരു ബ്ലോക്ക് ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ ബ്ലോക്കുകൾ ഇവിടേക്ക് വലിച്ചിടുക.',
+  'tools.table.clearSelection': 'ഉള്ളടക്കം മായ്ക്കുക',
+  'tools.table.duplicateColumn': 'പകർപ്പുണ്ടാക്കുക',
+  'tools.table.duplicateRow': 'പകർപ്പുണ്ടാക്കുക',
+  'tools.table.dragToAddRemoveRows':
+    'വരികൾ ചേർക്കാനോ നീക്കം ചെയ്യാനോ വലിച്ചിടുക',
+  'tools.table.dragToAddRemoveColumns':
+    'കോളങ്ങൾ ചേർക്കാനോ നീക്കം ചെയ്യാനോ വലിച്ചിടുക',
+  'blockSettings.duplicate': 'പകർപ്പുണ്ടാക്കുക',
+  'blockSettings.lastEditedBy': 'അവസാനം തിരുത്തിയത്: {name}',
+  'a11y.dragHandle':
+    'ബ്ലോക്ക് നീക്കാൻ വലിച്ചിടുക അല്ലെങ്കിൽ മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക',
+  'a11y.dragStartedMultiple': 'വലിച്ചിടുന്ന ബ്ലോക്കുകളുടെ എണ്ണം: {count}',
+  'a11y.dropPosition': 'ഇടുന്ന സ്ഥാനം: {position}. ആകെ: {total}.',
+  'a11y.blockMoved':
+    'ബ്ലോക്ക് നീക്കി. സ്ഥാനം: {position}. ആകെ: {total}.',
+  'a11y.blocksMoved':
+    'നീക്കിയ ബ്ലോക്കുകളുടെ എണ്ണം: {count}. സ്ഥാനം: {position}.',
+  'a11y.blockDuplicated':
+    'ബ്ലോക്ക് പകർത്തി. സ്ഥാനം: {position}. ആകെ: {total}.',
+  'a11y.blocksDuplicated':
+    'പകർത്തിയ ബ്ലോക്കുകളുടെ എണ്ണം: {count}. ആരംഭ സ്ഥാനം: {position}.',
+  'a11y.searchResults': 'തിരയൽ ഫലങ്ങളുടെ എണ്ണം: {count}',
+  'a11y.textFormatting': 'ടെക്സ്റ്റ് ഫോർമാറ്റിംഗ്',
+  'a11y.allBlocksSelected':
+    'എല്ലാ ബ്ലോക്കുകളും തിരഞ്ഞെടുത്തു. ആകെ: {count}.',
+  'a11y.blocksSelected': 'തിരഞ്ഞെടുത്ത ബ്ലോക്കുകളുടെ എണ്ണം: {count}',
+  'a11y.navigationModeEntered':
+    'നാവിഗേഷൻ മോഡ്. ബ്ലോക്കുകൾക്കിടയിൽ നീങ്ങാൻ അമ്പടയാള കീകൾ, എഡിറ്റ് ചെയ്യാൻ Enter, പുറത്തുകടക്കാൻ Escape എന്നിവ ഉപയോഗിക്കുക.',
+  'toolNames.clearFormat': 'ഫോർമാറ്റിംഗ് മായ്ക്കുക',
+  'toolNames.columns': 'കോളങ്ങൾ',
+  'tools.columns.col2': '2 കോളങ്ങൾ',
+  'tools.columns.col3': '3 കോളങ്ങൾ',
+  'tools.columns.col4': '4 കോളങ്ങൾ',
+  'tools.columns.col5': '5 കോളങ്ങൾ',
+  'tools.columns.resizeAriaLabel': 'കോളങ്ങളുടെ വലുപ്പം മാറ്റുക',
+  'tools.columns.turnInto': 'കോളങ്ങളാക്കി മാറ്റുക',
+  'searchTerms.columns': 'കോളങ്ങൾ',
+  'tools.callout.addEmoji': 'ഐക്കൺ ചേർക്കുക',
+  'tools.callout.filterEmojis': 'ഇമോജികൾ തിരയുക…',
+  'tools.callout.pickRandom':
+    'ക്രമരഹിതമായ ഒരു ഇമോജി തിരഞ്ഞെടുക്കുക',
+  'tools.callout.colorGray': 'ചാരനിറം',
+  'tools.callout.colorPurple': 'പർപ്പിൾ',
+  'tools.table.placement': 'അലൈൻമെന്റ്',
+  'tools.code.searchLanguage': 'ഭാഷകൾ തിരയുക…',
+  'searchTerms.snippet': 'കോഡ് ഭാഗം',
+  'blockSettings.blocksSelected': 'തിരഞ്ഞെടുത്ത ബ്ലോക്കുകൾ: {count}',
+  'tools.link.linkText': 'ടെക്സ്റ്റ്',
+  'tools.link.linkTitle': 'ലിങ്ക് ടെക്സ്റ്റ്',
+  'tools.code.autoDetected': 'സ്വയമേവ',
+  'tools.image.alignmentLeftAria': 'ഇടത്തേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.image.alignmentCenterAria': 'മധ്യത്തിലേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.image.alignmentRightAria': 'വലത്തേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.image.sizeFull': 'പൂർണ്ണം',
+  'tools.image.toggleCaption':
+    'അടിക്കുറിപ്പ് കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക',
+  'tools.image.altDescription':
+    'ഈ ചിത്രം കാണാൻ കഴിയാത്തവർക്കായി വിവരിക്കുക.',
+  'tools.image.previewControls': 'ചിത്ര പ്രിവ്യൂ നിയന്ത്രണങ്ങൾ',
+  'tools.image.errorDefaultMessage':
+    'ഈ URL-ൽ നിന്ന് ചിത്രം ലോഡ് ചെയ്യാനായില്ല. മറ്റൊരു ഉറവിടം പരീക്ഷിക്കുക അല്ലെങ്കിൽ ഫയൽ വീണ്ടും അപ്‌ലോഡ് ചെയ്യുക.',
+  'tools.image.emptyOrDropHere':
+    'അല്ലെങ്കിൽ ഒരു ചിത്രം ഇവിടേക്ക് വലിച്ചിടുക',
+  'tools.image.emptyUrlPlaceholder':
+    'ഒരു ചിത്രത്തിന്റെ URL ഒട്ടിക്കുക…',
+  'tools.image.emptyUrlAria': 'ചിത്രത്തിന്റെ URL',
+  'tools.database.viewTypeList': 'ലിസ്റ്റ്',
+  'tools.database.viewTypeBoardDescription':
+    'ഇനങ്ങൾ കോളങ്ങളിൽ കാണിക്കുക',
+  'tools.database.viewTypeListDescription':
+    'ഇനങ്ങൾ ഒരു ലളിതമായ ലിസ്റ്റിൽ കാണിക്കുക',
+  'tools.database.listView': 'ലിസ്റ്റ് കാഴ്ച',
+  'tools.bookmark.loading': 'ലിങ്ക് പ്രിവ്യൂ ലോഡ് ചെയ്യുന്നു…',
+  'tools.bookmark.error': 'ലിങ്ക് പ്രിവ്യൂ ലോഡ് ചെയ്യാനായില്ല',
+  'tools.embed.empty': 'എംബെഡ് ലിങ്ക് ഇല്ല',
+  'tools.embed.replace': 'മാറ്റുക',
+  'tools.linkPaste.mention': 'പരാമർശിക്കുക',
+  'tools.file.emptyDropHint':
+    'അല്ലെങ്കിൽ ഒരു ഫയൽ ഇവിടേക്ക് വലിച്ചിടുക',
+  'tools.file.toggleCaption':
+    'അടിക്കുറിപ്പ് കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക',
+  'tools.file.previewRender': 'പ്രിവ്യൂ',
+  'tools.video.alignmentLeft': 'ഇടത്തേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.video.alignmentCenter': 'മധ്യത്തിലേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.video.alignmentRight': 'വലത്തേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.video.toggleCaption':
+    'അടിക്കുറിപ്പ് കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക',
+  'tools.video.autoplay': 'സ്വയമേവ പ്ലേ ചെയ്യൽ',
+  'tools.video.emptyOrDropHere':
+    'അല്ലെങ്കിൽ ഒരു വീഡിയോ ഇവിടേക്ക് വലിച്ചിടുക',
+  'tools.audio.alignmentLeft': 'ഇടത്തേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.audio.alignmentCenter': 'മധ്യത്തിലേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.audio.alignmentRight': 'വലത്തേക്ക് അലൈൻ ചെയ്യുക',
+  'tools.audio.emptyOrDropHere':
+    'അല്ലെങ്കിൽ ഒരു ഓഡിയോ ഫയൽ ഇവിടേക്ക് വലിച്ചിടുക',
+  'tools.audio.coverOrDropHere':
+    'അല്ലെങ്കിൽ ഒരു ചിത്രം ഇവിടേക്ക് വലിച്ചിടുക',
+  'tools.audio.coverUrlPlaceholder':
+    'ഒരു ചിത്രത്തിന്റെ URL ഒട്ടിക്കുക…',
+  'tools.audio.coverUrlAria': 'ചിത്രത്തിന്റെ URL',
+  'tools.audio.coverSourceAria': 'കവർ ഉറവിടം',
+  'tools.video.seek': 'പ്ലേബാക്ക് സ്ഥാനം',
+  'tools.video.seekValueText': 'നിലവിൽ: {current}; ആകെ: {total}',
+  'tools.video.toggleTimeDisplay':
+    'കഴിഞ്ഞ സമയത്തിനും ശേഷിക്കുന്ന സമയത്തിനും ഇടയിൽ മാറുക',
+  'tools.video.ctxCopyUrlAtTime':
+    'നിലവിലെ പ്ലേബാക്ക് സ്ഥാനത്തിലുള്ള വീഡിയോ URL പകർത്തുക',
+  'tools.video.ctxStats': 'പ്ലേബാക്ക് സ്ഥിതിവിവരക്കണക്കുകൾ',
+  'tools.callout.emojiSearchResults': 'ഇമോജി പൊരുത്തങ്ങൾ: {count}',
+  'tools.database.checkboxChecked': 'പരിശോധിച്ചത്',
+  'tools.database.checkboxUnchecked': 'പരിശോധിക്കാത്തത്',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -1003,9 +1129,13 @@ const isMarkdownCellDelimiter = (
   character: string,
   currentCell: string
 ): boolean => {
+  if (character !== '|') {
+    return false;
+  }
+
   const trailingBackslashCount = currentCell.match(/\\+$/u)?.[0].length ?? 0;
 
-  return character === '|' && trailingBackslashCount % 2 === 0;
+  return trailingBackslashCount % 2 === 0;
 };
 
 const parseMarkdownRow = (line: string): string[] => {
@@ -1669,6 +1799,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(MACEDONIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Malayalam correction oracle', () => {
+    const messages = readLocale('ml').messages;
+    const actual = Object.fromEntries(
+      Object.keys(MALAYALAM_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(MALAYALAM_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

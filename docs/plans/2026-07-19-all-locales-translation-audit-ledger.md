@@ -330,7 +330,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `lt` | Lithuanian | Latin | ltr | neutral contemporary Lithuanian product UI; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Lithuanian product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, and acronym notation | `root-lt_546_first_audit-final_cleanroom_e` | `root-lt_546_first_audit-final_cleanroom_f` | pass | pass | pass | `F-lt-001`–`F-lt-070` | second-pass-complete |
 | `lv` | Latvian | Latin | ltr | neutral contemporary Latvian product UI; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Latvian product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, acronym, and established media-loanword notation | `root-lv_final_cleanroom_h` | `root-lv_final_cleanroom_i` | pass | pass | pass | `F-lv-001`–`F-lv-095` | second-pass-complete |
 | `mk` | Macedonian | Cyrillic | ltr | neutral contemporary Macedonian product UI in Cyrillic; concise singular imperatives for compact actions; polite plural imperatives for complete instructions, recovery guidance, and accessibility actions; sentence-case noun and state labels; established Macedonian product, accessibility, media, and browser terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mk_final_cleanroom_c` | `root-mk_cleanroom_a` | pass | pass | pass | `F-mk-001`–`F-mk-102` | second-pass-complete |
-| `ml` | Malayalam | Malayalam | ltr | to-audit | — | — | pending | pending | pending | `F-ml-001`–`F-ml-003` | pending |
+| `ml` | Malayalam | Malayalam | ltr | neutral contemporary Malayalam product UI; concise direct imperatives for actions and complete instructions; sentence-case noun and state labels; established Malayalam product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-ml_full_audit_a` | `root-ml_full_audit_c` | pass | pass | pass | `F-ml-001`–`F-ml-095` | second-pass-complete |
 | `mn` | Mongolian (current Cyrillic wording) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mn-001`–`F-mn-002` | pending |
 | `mr` | Marathi | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-mr-001`–`F-mr-002` | pending |
 | `ms` | Malay | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ms-001`–`F-ms-002` | pending |
@@ -468,6 +468,7 @@ locale returns to `pending`.
 | `lt` | `root-lt_546_first_audit-final_cleanroom_e` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` | `root-lt_546_first_audit-final_cleanroom_f` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` |
 | `lv` | `root-lv_final_cleanroom_h` | `sha256:5aa63b9d519a8c61fef2196b8fd9f5fc211a9e3d7e00fdee112019f6c26159cb` | `root-lv_final_cleanroom_i` | `sha256:5aa63b9d519a8c61fef2196b8fd9f5fc211a9e3d7e00fdee112019f6c26159cb` |
 | `mk` | `root-mk_final_cleanroom_c` | `sha256:dd2ef6168942c287fc7f9f3e2fd70fd413085e49a9dcfa63ebe01aec64866671` | `root-mk_cleanroom_a` | `sha256:dd2ef6168942c287fc7f9f3e2fd70fd413085e49a9dcfa63ebe01aec64866671` |
+| `ml` | `root-ml_full_audit_a` | `sha256:65365e43413fbde0d415a9dd5d0716dbc23bb3ee0138efa389fe6a26ee11636a` | `root-ml_full_audit_c` | `sha256:65365e43413fbde0d415a9dd5d0716dbc23bb3ee0138efa389fe6a26ee11636a` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -4828,24 +4829,96 @@ checker, scoped ESLint gate, and 1,891-test directly affected caller gate across
 unique verified locale/key findings in `F-mk-001`–`F-mk-102`. Macedonian is
 `second-pass-complete`.
 
-### Malayalam (`ml`) — pending after first-pass residual
+### Malayalam (`ml`) — second-pass complete
 
-Reviewer `root-amharic_546_current_first` directly read all 546
-English/Malayalam pairs in English insertion order before consulting prior
-Malayalam evidence. The attempted first pass identified its first genuine
-residual at entry 28. English changed from `Text` to `Text color`, but
-Malayalam retained the former-source `ടെക്സ്റ്റ്`. The shared picker renders
-this value directly as its text-color section title beside the background
-axis and composes it into every swatch label. `F-ml-002` restores the
-established product label `ടെക്സ്റ്റ് നിറം`.
+The historical preload added `toolNames.clearFormat` as
+`ഫോർമാറ്റിംഗ് മായ്ക്കുക` in `F-ml-001`. A later source-synchronization pass
+found that `tools.marker.textColor` still meant only Text after English became
+Text color; `F-ml-002` restored `ടെക്സ്റ്റ് നിറം`. The coordinated toggle
+migration then applied `F-ml-003`, distinguishing the one block added by a
+click from the plural blocks dragged to the empty toggle. Those stages bound
+the raw Malayalam dictionary successively to
+`ebfc2ca53eb095b45790d8ad54c04e21c8a73f555dd06fb286a680fe5d6313e4`,
+`1896e2a997fb6910650be7de10f66ca792673a1b00e722070e09d423c0138961`,
+and the exhaustive-review input
+`18677478f72d0a9343aaf18536b38aa82bd313b468ae21342dfaee0607334f01`.
+The interrupted historical passes earn no credit toward the final result.
 
-The attempted pass binds to pre-correction raw Malayalam SHA-256
-`ebfc2ca53eb095b45790d8ad54c04e21c8a73f555dd06fb286a680fe5d6313e4`.
-The focused expectation failed on exactly `ടെക്സ്റ്റ്` before remediation
-and passes afterward. The corrected raw Malayalam SHA-256 is
-`1896e2a997fb6910650be7de10f66ca792673a1b00e722070e09d423c0138961`.
-The attempted review earns no pass credit; both complete passes must start
-from entry 1 on the corrected bytes.
+Three read-only clean-room candidates and the primary reviewer restarted at
+English entry 1 and directly inspected all 546 English/Malayalam pairs in
+insertion order. They checked semantics, grammar, register, terminology,
+source changes, complete accessibility names, arbitrary count and position
+composition, all media and database states, every provider embed template,
+all 44 search aliases, and all English-identical values. The independently
+adjudicated oracle contains exactly 95 reviewed entries. Before remediation
+its focused test failed on exactly the 92 still-defective values while the
+three prior corrections matched; after `F-ml-004`–`F-ml-095` were applied,
+the same oracle passed without weakening an expectation.
+
+The correction set makes the segmented settings tooltip compose as
+`മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ ⌘/ അമർത്തുക`, with the literal
+shortcut kept as an isolated LTR segment. Runtime accessibility announcements
+now use count-neutral labels for counts, positions, and totals. The column
+family consistently uses `കോളം`, while list views use `ലിസ്റ്റ്` and remain
+distinct from tables. Complete actions replace duplicate nouns, direction-only
+alignment labels, and toggle jargon. The source-synchronization changes also
+restore full slash-command, callout, link-text, image-error, link-preview,
+embed-empty-state, playback-position, elapsed-versus-remaining-time, playback
+statistics, and emoji-match meanings. Native image URL phrases use the
+possessive `ചിത്രത്തിന്റെ URL`; media and file technical compounds retain
+their natural attributive form.
+
+Terminology was checked against primary product evidence. Apple Malayalam
+guidance supports `കോളങ്ങൾ`, list-view, alignment, duplicate-action, and
+`പർപ്പിൾ` usage. Google Malayalam product help supports `വലിച്ചിടുക`,
+`നീക്കം ചെയ്യുക`, `പ്ലേബാക്ക് സ്ഥാനം`, `പ്ലേബാക്ക് സ്ഥിതിവിവരക്കണക്കുകൾ`,
+and the retained established `എംബെഡ്` family. A final challenge proposed
+loanword checkbox states, but official
+[AOSP Malayalam accessibility strings](https://android.googlesource.com/platform/frameworks/base/%2B/f233e0a787c2805de4e9c9c1e695b30e7d49b974/core/res/res/values-ml/strings.xml#1181)
+use the exact checked and unchecked values `പരിശോധിച്ചത്` and
+`പരിശോധിക്കാത്തത്` while separately translating selected as
+`തിരഞ്ഞെടുത്തു`; the reviewer withdrew both challenges.
+
+Both final reviewers independently restarted from entry 1 on the corrected
+bytes. `root-ml_full_audit_a` and `root-ml_full_audit_c` each reread 546/546
+pairs and rehashed before and after. Both accepted raw Malayalam SHA-256
+`65365e43413fbde0d415a9dd5d0716dbc23bb3ee0138efa389fe6a26ee11636a`
+with zero residual semantic, grammatical, terminology, register,
+accessibility, count, placeholder, search, or source-synchronization defects.
+They explicitly re-challenged and retained the established `എംബെഡ്` loan
+family, `ഫയൽ URL`/`വീഡിയോ URL`/`ഓഡിയോ URL` technical compounds, the active
+drop-target instruction `അപ്‌ലോഡ് ചെയ്യാൻ ഇടുക`, and the conventional
+hyphenated `പിക്ചർ-ഇൻ-പിക്ചർ` feature name.
+
+The final dictionary retains exact 546/546 key parity, no duplicate keys or
+empty values, all 38 placeholder-bearing rows and 54 placeholder occurrences
+with exact English token multisets, valid NFC normalization, and no forbidden
+control or bidi-control characters. All 44 localized search aliases remain
+useful and unique after normalization. Its only seven English-identical
+values are the documented `R-ml-001`–`R-ml-007` shortcut, `Alt`, aspect-ratio,
+and `URL` retentions. The mechanically reproducible lifecycle remains 397
+executable literals, 122 finite-dynamic keys, 25 registered-namespace-
+compatible keys, and two exact catalog-only keys, with all 117 provider
+compositions accounted for.
+
+Caller inspection leaves `F-global-014` and `F-global-020` open for the
+coordinated 546-to-552 all-dictionary migration. Neither bypass
+misclassifies a Malayalam value, but both continue to block terminal
+repository verification. English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+the unchanged guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`,
+and the guideline/index test is
+`38f36a6860e407b5a25afd68eed5598dc3b6f85541f32395fe58e5c97d3b584f`.
+The focused 95-value oracle, complete 4,358-test guideline/index gate,
+complete 5,078-test i18n suite, 89-test checker regression suite, live catalog
+checker, scoped ESLint gate, and 1,810-test directly affected caller gate across
+43 files pass on the final bytes. The growing ledger also exposed a quadratic
+Markdown-cell scan in the guideline test helper: delimiter detection now checks
+trailing escapes only for pipe characters, reducing the two synthetic contract
+cases from timeout to approximately 0.6–0.8 seconds while preserving their
+behavior. The completed history contains exactly 95 unique verified locale/key
+findings in `F-ml-001`–`F-ml-095`. Malayalam is `second-pass-complete`.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -10309,6 +10382,98 @@ follows the global transition rule above.
 | `F-kn-088` | `kn` | `tools.audio.pause` | media semantics / accessible action | `"ವಿರಾಮ"` | `"ವಿರಾಮಗೊಳಿಸಿ"` | The play-toggle exposes this as an accessible action, so the verb replaces the pause noun. | verified |
 | `F-kn-089` | `kn` | `tools.callout.emojiSearchResults` | accessibility / count safety | `"{count} ಎಮೋಜಿಗಳು ಕಂಡುಬಂದಿವೆ"` | `"ಹೊಂದಾಣಿಕೆಯ ಎಮೋಜಿಗಳ ಸಂಖ್ಯೆ: {count}"` | The positive-result branch includes one match; a label-before-number form is count-safe and restores the matching-emoji scope. | verified |
 | `F-ml-003` | `ml` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ഒഴിഞ്ഞ ടോഗിൾ. ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ ബ്ലോക്കുകൾ ഉള്ളിലേക്ക് ഇടുക."` | `"ഒഴിഞ്ഞ ടോഗിൾ. ഒരു ബ്ലോക്ക് ചേർക്കാൻ ക്ലിക്ക് ചെയ്യുക അല്ലെങ്കിൽ ബ്ലോക്കുകൾ ഇവിടേക്ക് വലിച്ചിടുക."` | The replacement names the explicit singular click result, plural drag object, and destination while retaining formal Malayalam UI imperatives attested in [Google's product help](https://support.google.com/youtube/answer/112085?hl=ml). | verified |
+| `F-ml-004` | `ml` | `tools.colorPicker.defaultSwatchLabel` | accessibility / composed-label punctuation | `"{mode} {default}"` | `"{mode}: {default}"` | The picker interpolates this template as one accessible swatch label; the colon now gives the runtime mode and value an explicit, readable relation. | verified |
+| `F-ml-005` | `ml` | `tools.colorPicker.colorSwatchLabel` | accessibility / composed-label punctuation | `"{mode} {color}"` | `"{mode}: {color}"` | The picker interpolates this template as one accessible swatch label; the colon now gives the runtime mode and value an explicit, readable relation. | verified |
+| `F-ml-006` | `ml` | `tools.colorPicker.color.gray` | color semantics / terminology | `"ചാരം"` | `"ചാരനിറം"` | The reviewed product color name distinguishes gray from ash and purple from the narrower violet hue, consistently across both palettes. | verified |
+| `F-ml-007` | `ml` | `tools.colorPicker.color.purple` | color semantics / terminology | `"വയലറ്റ്"` | `"പർപ്പിൾ"` | The reviewed product color name distinguishes gray from ash and purple from the narrower violet hue, consistently across both palettes. | verified |
+| `F-ml-008` | `ml` | `tools.paragraph.placeholder` | source completeness / instruction clarity | `"എന്തെങ്കിലും എഴുതുക അല്ലെങ്കിൽ തിരഞ്ഞെടുക്കാൻ / അമർത്തുക"` | `"എന്തെങ്കിലും എഴുതുക അല്ലെങ്കിൽ ഒരു ടൂൾ തിരഞ്ഞെടുക്കാൻ / അമർത്തുക"` | The instruction now restores the omitted tool object for the slash-command action. | verified |
+| `F-ml-009` | `ml` | `tools.table.clearSelection` | changed-English synchronization / action scope | `"മായ്ക്കുക"` | `"ഉള്ളടക്കം മായ്ക്കുക"` | The command clears selected cell contents, so the replacement restores the current source object rather than promising an unrestricted clear. | verified |
+| `F-ml-010` | `ml` | `tools.table.duplicateColumn` | action role / grammar | `"തനിപ്പകർപ്പ്"` | `"പകർപ്പുണ്ടാക്കുക"` | This menu item executes duplication; the imperative replaces a noun meaning a duplicate copy. | verified |
+| `F-ml-011` | `ml` | `tools.table.duplicateRow` | action role / grammar | `"തനിപ്പകർപ്പ്"` | `"പകർപ്പുണ്ടാക്കുക"` | This menu item executes duplication; the imperative replaces a noun meaning a duplicate copy. | verified |
+| `F-ml-012` | `ml` | `tools.table.dragToAddRemoveRows` | action semantics / remove-versus-move | `"വരികൾ ചേർക്കാനോ നീക്കാനോ വലിച്ചിടുക"` | `"വരികൾ ചേർക്കാനോ നീക്കം ചെയ്യാനോ വലിച്ചിടുക"` | The reviewed verb means remove, avoiding the prior wording that could mean move while preserving the drag instruction. | verified |
+| `F-ml-013` | `ml` | `tools.table.dragToAddRemoveColumns` | action semantics / remove-versus-move | `"കോളങ്ങൾ ചേർക്കാനോ നീക്കാനോ വലിച്ചിടുക"` | `"കോളങ്ങൾ ചേർക്കാനോ നീക്കം ചെയ്യാനോ വലിച്ചിടുക"` | The reviewed verb means remove, avoiding the prior wording that could mean move while preserving the drag instruction. | verified |
+| `F-ml-014` | `ml` | `blockSettings.duplicate` | action role / grammar | `"തനിപ്പകർപ്പ്"` | `"പകർപ്പുണ്ടാക്കുക"` | This menu item executes duplication; the imperative replaces a noun meaning a duplicate copy. | verified |
+| `F-ml-015` | `ml` | `blockSettings.lastEditedBy` | placeholder attribution / grammar | `"{name} അവസാനം തിരുത്തിയത്"` | `"അവസാനം തിരുത്തിയത്: {name}"` | Label-first punctuation makes {name} unambiguously the editor rather than the object that was edited. | verified |
+| `F-ml-016` | `ml` | `a11y.dragHandle` | accessibility / action clarity | `"ബ്ലോക്ക് നീക്കാൻ വലിച്ചിടുക അല്ലെങ്കിൽ മെനുവിന് ക്ലിക്ക് ചെയ്യുക"` | `"ബ്ലോക്ക് നീക്കാൻ വലിച്ചിടുക അല്ലെങ്കിൽ മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക"` | The accessible instruction now states that clicking opens the menu instead of using an unidiomatic menu dative. | verified |
+| `F-ml-017` | `ml` | `a11y.dragStartedMultiple` | accessibility / count-neutral runtime grammar | `"{count} ബ്ലോക്കുകൾ വലിച്ചിടുന്നു"` | `"വലിച്ചിടുന്ന ബ്ലോക്കുകളുടെ എണ്ണം: {count}"` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-018` | `ml` | `a11y.dropPosition` | accessibility / count-neutral runtime grammar | `"{total} ൽ {position} സ്ഥാനത്ത് ഇടും"` | `"ഇടുന്ന സ്ഥാനം: {position}. ആകെ: {total}."` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-019` | `ml` | `a11y.blockMoved` | accessibility / count-neutral runtime grammar | `"ബ്ലോക്ക് {total} ൽ {position} സ്ഥാനത്തേക്ക് നീക്കി"` | `"ബ്ലോക്ക് നീക്കി. സ്ഥാനം: {position}. ആകെ: {total}."` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-020` | `ml` | `a11y.blocksMoved` | accessibility / count-neutral runtime grammar | `"{count} ബ്ലോക്കുകൾ {position} സ്ഥാനത്തേക്ക് നീക്കി"` | `"നീക്കിയ ബ്ലോക്കുകളുടെ എണ്ണം: {count}. സ്ഥാനം: {position}."` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-021` | `ml` | `a11y.blockDuplicated` | accessibility / count-neutral runtime grammar | `"ബ്ലോക്ക് {total} ൽ {position} സ്ഥാനത്ത് പകർത്തി"` | `"ബ്ലോക്ക് പകർത്തി. സ്ഥാനം: {position}. ആകെ: {total}."` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-022` | `ml` | `a11y.blocksDuplicated` | accessibility / count-neutral runtime grammar | `"{count} ബ്ലോക്കുകൾ {position} സ്ഥാനം മുതൽ പകർത്തി"` | `"പകർത്തിയ ബ്ലോക്കുകളുടെ എണ്ണം: {count}. ആരംഭ സ്ഥാനം: {position}."` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-023` | `ml` | `a11y.searchResults` | accessibility / count-neutral runtime grammar | `"{count} ഫലങ്ങൾ"` | `"തിരയൽ ഫലങ്ങളുടെ എണ്ണം: {count}"` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-024` | `ml` | `a11y.textFormatting` | orthography / terminology consistency | `"ടെക്‌സ്റ്റ് ഫോർമാറ്റിംഗ്"` | `"ടെക്സ്റ്റ് ഫോർമാറ്റിംഗ്"` | The replacement normalizes the established Malayalam spelling of the catalog’s text term. | verified |
+| `F-ml-025` | `ml` | `a11y.allBlocksSelected` | accessibility / count-neutral runtime grammar | `"എല്ലാ ബ്ലോക്കുകളും തിരഞ്ഞെടുത്തു, {count} ബ്ലോക്കുകൾ"` | `"എല്ലാ ബ്ലോക്കുകളും തിരഞ്ഞെടുത്തു. ആകെ: {count}."` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-026` | `ml` | `a11y.blocksSelected` | accessibility / count-neutral runtime grammar | `"{count} ബ്ലോക്കുകൾ തിരഞ്ഞെടുത്തു"` | `"തിരഞ്ഞെടുത്ത ബ്ലോക്കുകളുടെ എണ്ണം: {count}"` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-027` | `ml` | `a11y.navigationModeEntered` | accessibility / key terminology | `"നാവിഗേഷൻ മോഡ്. ബ്ലോക്കുകൾക്കിടയിൽ നീങ്ങാൻ ആരോ കീകൾ, എഡിറ്റ് ചെയ്യാൻ Enter, പുറത്തുകടക്കാൻ Escape ഉപയോഗിക്കുക."` | `"നാവിഗേഷൻ മോഡ്. ബ്ലോക്കുകൾക്കിടയിൽ നീങ്ങാൻ അമ്പടയാള കീകൾ, എഡിറ്റ് ചെയ്യാൻ Enter, പുറത്തുകടക്കാൻ Escape എന്നിവ ഉപയോഗിക്കുക."` | The replacement explicitly names arrow keys; the former word can mean an indefinite person and made the keyboard instruction ambiguous. | verified |
+| `F-ml-028` | `ml` | `blockSettings.clickAction` | caller composition / grammatical word order | `"ക്ലിക്ക് ചെയ്യുക"` | `"മെനു തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക"` | The caller concatenates these locale fragments around an isolated LTR shortcut; the reviewed trio now renders the click and press alternatives naturally. | verified |
+| `F-ml-029` | `ml` | `blockSettings.orConjunction` | caller composition / grammatical word order | `" അല്ലെങ്കിൽ കീബോർഡ് കുറുക്കുവഴി "` | `" അല്ലെങ്കിൽ "` | The caller concatenates these locale fragments around an isolated LTR shortcut; the reviewed trio now renders the click and press alternatives naturally. | verified |
+| `F-ml-030` | `ml` | `blockSettings.openMenuAction` | caller composition / grammatical word order | `" മെനു തുറക്കാൻ"` | `" അമർത്തുക"` | The caller concatenates these locale fragments around an isolated LTR shortcut; the reviewed trio now renders the click and press alternatives naturally. | verified |
+| `F-ml-031` | `ml` | `toolNames.columns` | column terminology / consistency | `"നിരകൾ"` | `"കോളങ്ങൾ"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-032` | `ml` | `tools.columns.col2` | column terminology / consistency | `"2 നിരകൾ"` | `"2 കോളങ്ങൾ"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-033` | `ml` | `tools.columns.col3` | column terminology / consistency | `"3 നിരകൾ"` | `"3 കോളങ്ങൾ"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-034` | `ml` | `tools.columns.col4` | column terminology / consistency | `"4 നിരകൾ"` | `"4 കോളങ്ങൾ"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-035` | `ml` | `tools.columns.col5` | column terminology / consistency | `"5 നിരകൾ"` | `"5 കോളങ്ങൾ"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-036` | `ml` | `tools.columns.resizeAriaLabel` | column terminology / consistency | `"നിരകളുടെ വലുപ്പം മാറ്റുക"` | `"കോളങ്ങളുടെ വലുപ്പം മാറ്റുക"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-037` | `ml` | `tools.columns.turnInto` | column terminology / consistency | `"നിരകളാക്കി മാറ്റുക"` | `"കോളങ്ങളാക്കി മാറ്റുക"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-038` | `ml` | `searchTerms.columns` | column terminology / consistency | `"നിരകൾ"` | `"കോളങ്ങൾ"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-039` | `ml` | `tools.callout.addEmoji` | changed-English synchronization / accessible action | `"ഇമോജി ചേർക്കുക"` | `"ഐക്കൺ ചേർക്കുക"` | The control now names the current source object and complete action instead of an obsolete emoji label, generic filter, or adjective fragment. | verified |
+| `F-ml-040` | `ml` | `tools.callout.filterEmojis` | changed-English synchronization / accessible action | `"ഫിൽറ്റർ…"` | `"ഇമോജികൾ തിരയുക…"` | The control now names the current source object and complete action instead of an obsolete emoji label, generic filter, or adjective fragment. | verified |
+| `F-ml-041` | `ml` | `tools.callout.pickRandom` | changed-English synchronization / accessible action | `"ക്രമരഹിതം"` | `"ക്രമരഹിതമായ ഒരു ഇമോജി തിരഞ്ഞെടുക്കുക"` | The control now names the current source object and complete action instead of an obsolete emoji label, generic filter, or adjective fragment. | verified |
+| `F-ml-042` | `ml` | `tools.callout.colorGray` | color semantics / terminology | `"ചാരം"` | `"ചാരനിറം"` | The reviewed product color name distinguishes gray from ash and purple from the narrower violet hue, consistently across both palettes. | verified |
+| `F-ml-043` | `ml` | `tools.callout.colorPurple` | color semantics / terminology | `"വയലറ്റ്"` | `"പർപ്പിൾ"` | The reviewed product color name distinguishes gray from ash and purple from the narrower violet hue, consistently across both palettes. | verified |
+| `F-ml-044` | `ml` | `tools.table.placement` | changed-English synchronization / control semantics | `"സ്ഥാനം"` | `"അലൈൻമെന്റ്"` | The menu controls cell alignment, so the specific alignment label replaces generic position. | verified |
+| `F-ml-045` | `ml` | `tools.code.searchLanguage` | source synchronization / punctuation | `"ഭാഷ തിരയുക..."` | `"ഭാഷകൾ തിരയുക…"` | The accessible search label restores the plural language scope and the catalog’s Unicode ellipsis. | verified |
+| `F-ml-046` | `ml` | `searchTerms.snippet` | orthography / search quality | `"കോഡ്ഭാഗം"` | `"കോഡ് ഭാഗം"` | Standard compound spacing improves the Malayalam search alias while retaining its unique snippet meaning. | verified |
+| `F-ml-047` | `ml` | `blockSettings.blocksSelected` | accessibility / count-neutral runtime grammar | `"{count} ബ്ലോക്കുകൾ"` | `"തിരഞ്ഞെടുത്ത ബ്ലോക്കുകൾ: {count}"` | Label-before-value clauses preserve every caller placeholder and remain grammatical for arbitrary counts, positions, and totals. | verified |
+| `F-ml-048` | `ml` | `tools.link.linkText` | orthography / terminology consistency | `"ടെക്‌സ്റ്റ്"` | `"ടെക്സ്റ്റ്"` | The replacement normalizes the established Malayalam spelling of the catalog’s text term. | verified |
+| `F-ml-049` | `ml` | `tools.link.linkTitle` | changed-English synchronization / link semantics | `"ലിങ്ക് ശീർഷകം"` | `"ലിങ്ക് ടെക്സ്റ്റ്"` | English changed from Link title to Link text; the replacement now labels the editable visible link text. | verified |
+| `F-ml-050` | `ml` | `tools.code.autoDetected` | automatic-state terminology | `"സ്വയം"` | `"സ്വയമേവ"` | The reviewed adverb means automatically; the former word meant self and did not describe detection mode. | verified |
+| `F-ml-051` | `ml` | `tools.image.alignmentLeftAria` | accessible action / media consistency | `"ഇടത്ത് അലൈൻ"` | `"ഇടത്തേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-052` | `ml` | `tools.image.alignmentCenterAria` | accessible action / media consistency | `"മധ്യത്ത് അലൈൻ"` | `"മധ്യത്തിലേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-053` | `ml` | `tools.image.alignmentRightAria` | accessible action / media consistency | `"വലത്ത് അലൈൻ"` | `"വലത്തേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-054` | `ml` | `tools.image.sizeFull` | orthography / product label | `"പൂർണം"` | `"പൂർണ്ണം"` | The replacement corrects the standard spelling of the full-size option. | verified |
+| `F-ml-055` | `ml` | `tools.image.toggleCaption` | accessible action / jargon removal | `"അടിക്കുറിപ്പ് ടോഗിൾ"` | `"അടിക്കുറിപ്പ് കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക"` | The stateful control now explains its two visibility actions instead of exposing toggle jargon. | verified |
+| `F-ml-056` | `ml` | `tools.image.altDescription` | changed-English synchronization / accessibility | `"ഈ ചിത്രം വിവരിക്കാൻ alt ടെക്സ്റ്റ് ചേർക്കുക. ഇത് നിങ്ങളുടെ പേജിനെ കാഴ്ചക്കുറവുള്ളവർക്കോ കാഴ്ചയില്ലാത്തവർക്കോ കൂടുതൽ ആക്സസ്സബിളാക്കുന്നു."` | `"ഈ ചിത്രം കാണാൻ കഴിയാത്തവർക്കായി വിവരിക്കുക."` | The concise instruction matches the current source and directly explains that the description serves people who cannot see the image. | verified |
+| `F-ml-057` | `ml` | `tools.image.previewControls` | accessibility / object scope | `"പ്രിവ്യൂ നിയന്ത്രണങ്ങൾ"` | `"ചിത്ര പ്രിവ്യൂ നിയന്ത്രണങ്ങൾ"` | The accessible group label now restores the image scope rather than announcing generic preview controls. | verified |
+| `F-ml-058` | `ml` | `tools.image.errorDefaultMessage` | error semantics / source synchronization | `"URL ഒരു പിശക് നൽകി. മറ്റൊരു ഉറവിടം പരീക്ഷിക്കുക അല്ലെങ്കിൽ ഫയൽ വീണ്ടും അപ്‌ലോഡ് ചെയ്യുക."` | `"ഈ URL-ൽ നിന്ന് ചിത്രം ലോഡ് ചെയ്യാനായില്ല. മറ്റൊരു ഉറവിടം പരീക്ഷിക്കുക അല്ലെങ്കിൽ ഫയൽ വീണ്ടും അപ്‌ലോഡ് ചെയ്യുക."` | The fallback now reports the actual image-load failure from the URL and preserves both recovery actions without inventing a URL-generated error. | verified |
+| `F-ml-059` | `ml` | `tools.image.emptyOrDropHere` | drag-and-drop action / source completeness | `"അല്ലെങ്കിൽ ഇവിടെ ചിത്രം ഇടുക"` | `"അല്ലെങ്കിൽ ഒരു ചിത്രം ഇവിടേക്ക് വലിച്ചിടുക"` | The empty-state hint now names the dragged object and destination and uses the established Malayalam drag action. | verified |
+| `F-ml-060` | `ml` | `tools.image.emptyUrlPlaceholder` | grammar / URL object relation | `"ചിത്രം URL ഒട്ടിക്കുക…"` | `"ഒരു ചിത്രത്തിന്റെ URL ഒട്ടിക്കുക…"` | The native image noun now takes the required possessive form before URL; the placeholder also restores the indefinite image relation. | verified |
+| `F-ml-061` | `ml` | `tools.image.emptyUrlAria` | grammar / URL object relation | `"ചിത്രം URL"` | `"ചിത്രത്തിന്റെ URL"` | The native image noun now takes the required possessive form before URL; the placeholder also restores the indefinite image relation. | verified |
+| `F-ml-062` | `ml` | `tools.database.viewTypeList` | list-versus-table semantics | `"പട്ടിക"` | `"ലിസ്റ്റ്"` | The replacement consistently names a simple list rather than a table or an abstract linear view and restores the complete show-items description. | verified |
+| `F-ml-063` | `ml` | `tools.database.viewTypeBoardDescription` | column terminology / consistency | `"ഇനങ്ങൾ നിരകളിൽ കാണിക്കുക"` | `"ഇനങ്ങൾ കോളങ്ങളിൽ കാണിക്കുക"` | The replacement uses the established Malayalam column term instead of a row-or-line term, consistently across tools, search, resize, conversion, and board help. | verified |
+| `F-ml-064` | `ml` | `tools.database.viewTypeListDescription` | list-versus-table semantics | `"ലളിതമായ രേഖീയ കാഴ്ച"` | `"ഇനങ്ങൾ ഒരു ലളിതമായ ലിസ്റ്റിൽ കാണിക്കുക"` | The replacement consistently names a simple list rather than a table or an abstract linear view and restores the complete show-items description. | verified |
+| `F-ml-065` | `ml` | `tools.database.listView` | list-versus-table semantics | `"പട്ടിക കാഴ്ച"` | `"ലിസ്റ്റ് കാഴ്ച"` | The replacement consistently names a simple list rather than a table or an abstract linear view and restores the complete show-items description. | verified |
+| `F-ml-066` | `ml` | `tools.bookmark.loading` | changed-English synchronization / preview scope | `"പ്രിവ്യൂ ലോഡ് ചെയ്യുന്നു"` | `"ലിങ്ക് പ്രിവ്യൂ ലോഡ് ചെയ്യുന്നു…"` | The message now identifies the link preview explicitly; the loading state also restores the progress ellipsis. | verified |
+| `F-ml-067` | `ml` | `tools.bookmark.error` | changed-English synchronization / preview scope | `"പ്രിവ്യൂ ലോഡ് ചെയ്യാനായില്ല"` | `"ലിങ്ക് പ്രിവ്യൂ ലോഡ് ചെയ്യാനായില്ല"` | The message now identifies the link preview explicitly; the loading state also restores the progress ellipsis. | verified |
+| `F-ml-068` | `ml` | `tools.embed.empty` | caller state / changed-English synchronization | `"എംബെഡ് ചെയ്യാൻ ലിങ്ക് ഒട്ടിക്കുക"` | `"എംബെഡ് ലിങ്ക് ഇല്ല"` | This read-only empty state cannot accept pasting; it now reports that no embed link exists. | verified |
+| `F-ml-069` | `ml` | `tools.embed.replace` | action semantics / verb choice | `"മാറ്റിവെക്കുക"` | `"മാറ്റുക"` | The concise action now means replace; the former verb can mean set aside or postpone. | verified |
+| `F-ml-070` | `ml` | `tools.linkPaste.mention` | action role / grammar | `"പരാമർശം"` | `"പരാമർശിക്കുക"` | The link-paste option is an action, so the imperative replaces the mention noun. | verified |
+| `F-ml-071` | `ml` | `tools.file.emptyDropHint` | drag-and-drop action / source completeness | `"അല്ലെങ്കിൽ ഇവിടെ ഫയൽ ഇടുക"` | `"അല്ലെങ്കിൽ ഒരു ഫയൽ ഇവിടേക്ക് വലിച്ചിടുക"` | The empty-state hint now names the dragged object and destination and uses the established Malayalam drag action. | verified |
+| `F-ml-072` | `ml` | `tools.file.toggleCaption` | accessible action / jargon removal | `"അടിക്കുറിപ്പ് ടോഗിൾ"` | `"അടിക്കുറിപ്പ് കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക"` | The stateful control now explains its two visibility actions instead of exposing toggle jargon. | verified |
+| `F-ml-073` | `ml` | `tools.file.previewRender` | changed-English synchronization / preview mode | `"കാഴ്ച"` | `"പ്രിവ്യൂ"` | The rendered pane is the Preview mode; the replacement matches the established product preview term. | verified |
+| `F-ml-074` | `ml` | `tools.video.alignmentLeft` | accessible action / media consistency | `"ഇടത്"` | `"ഇടത്തേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-075` | `ml` | `tools.video.alignmentCenter` | accessible action / media consistency | `"മധ്യം"` | `"മധ്യത്തിലേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-076` | `ml` | `tools.video.alignmentRight` | accessible action / media consistency | `"വലത്"` | `"വലത്തേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-077` | `ml` | `tools.video.toggleCaption` | accessible action / jargon removal | `"അടിക്കുറിപ്പ് ടോഗിൾ"` | `"അടിക്കുറിപ്പ് കാണിക്കുക അല്ലെങ്കിൽ മറയ്ക്കുക"` | The stateful control now explains its two visibility actions instead of exposing toggle jargon. | verified |
+| `F-ml-078` | `ml` | `tools.video.autoplay` | automatic-play terminology | `"സ്വയം പ്ലേ"` | `"സ്വയമേവ പ്ലേ ചെയ്യൽ"` | The established automatic adverb replaces self, yielding the standard Malayalam autoplay setting name. | verified |
+| `F-ml-079` | `ml` | `tools.video.emptyOrDropHere` | drag-and-drop action / source completeness | `"അല്ലെങ്കിൽ ഇവിടെ വീഡിയോ ഇടുക"` | `"അല്ലെങ്കിൽ ഒരു വീഡിയോ ഇവിടേക്ക് വലിച്ചിടുക"` | The empty-state hint now names the dragged object and destination and uses the established Malayalam drag action. | verified |
+| `F-ml-080` | `ml` | `tools.audio.alignmentLeft` | accessible action / media consistency | `"ഇടത്"` | `"ഇടത്തേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-081` | `ml` | `tools.audio.alignmentCenter` | accessible action / media consistency | `"മധ്യം"` | `"മധ്യത്തിലേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-082` | `ml` | `tools.audio.alignmentRight` | accessible action / media consistency | `"വലത്"` | `"വലത്തേക്ക് അലൈൻ ചെയ്യുക"` | The control performs alignment, so the directional noun or fragment is replaced by a complete alignment action consistent with the surrounding media terminology. | verified |
+| `F-ml-083` | `ml` | `tools.audio.emptyOrDropHere` | drag-and-drop action / source completeness | `"അല്ലെങ്കിൽ ഇവിടെ ഓഡിയോ ഇടുക"` | `"അല്ലെങ്കിൽ ഒരു ഓഡിയോ ഫയൽ ഇവിടേക്ക് വലിച്ചിടുക"` | The empty-state hint now names the dragged object and destination and uses the established Malayalam drag action. | verified |
+| `F-ml-084` | `ml` | `tools.audio.coverOrDropHere` | drag-and-drop action / source completeness | `"അല്ലെങ്കിൽ ഇവിടെ ചിത്രം ഇടുക"` | `"അല്ലെങ്കിൽ ഒരു ചിത്രം ഇവിടേക്ക് വലിച്ചിടുക"` | The empty-state hint now names the dragged object and destination and uses the established Malayalam drag action. | verified |
+| `F-ml-085` | `ml` | `tools.audio.coverUrlPlaceholder` | grammar / URL object relation | `"ചിത്രം URL ഒട്ടിക്കുക…"` | `"ഒരു ചിത്രത്തിന്റെ URL ഒട്ടിക്കുക…"` | The native image noun now takes the required possessive form before URL; the placeholder also restores the indefinite image relation. | verified |
+| `F-ml-086` | `ml` | `tools.audio.coverUrlAria` | grammar / URL object relation | `"ചിത്രം URL"` | `"ചിത്രത്തിന്റെ URL"` | The native image noun now takes the required possessive form before URL; the placeholder also restores the indefinite image relation. | verified |
+| `F-ml-087` | `ml` | `tools.audio.coverSourceAria` | accessibility / object scope | `"ചിത്ര ഉറവിടം"` | `"കവർ ഉറവിടം"` | The source selector controls cover artwork specifically, so the accessible label now names the cover rather than a generic image. | verified |
+| `F-ml-088` | `ml` | `tools.video.seek` | media semantics / accessible control | `"അന്വേഷിക്കുക"` | `"പ്ലേബാക്ക് സ്ഥാനം"` | The range input controls playback position; the former word meant investigate or search. | verified |
+| `F-ml-089` | `ml` | `tools.video.seekValueText` | accessibility / placeholder relation | `"{total} ൽ {current}"` | `"നിലവിൽ: {current}; ആകെ: {total}"` | Explicit current and total labels preserve the caller’s two formatted time values without ambiguous reversed order. | verified |
+| `F-ml-090` | `ml` | `tools.video.toggleTimeDisplay` | changed-English synchronization / media action | `"സമയ പ്രദർശനം ടോഗിൾ ചെയ്യുക"` | `"കഴിഞ്ഞ സമയത്തിനും ശേഷിക്കുന്ന സമയത്തിനും ഇടയിൽ മാറുക"` | The accessible action now states the actual elapsed and remaining time modes instead of generic toggle jargon. | verified |
+| `F-ml-091` | `ml` | `tools.video.ctxCopyUrlAtTime` | media semantics / action precision | `"നിലവിലെ സമയത്തെ വീഡിയോ URL പകർത്തുക"` | `"നിലവിലെ പ്ലേബാക്ക് സ്ഥാനത്തിലുള്ള വീഡിയോ URL പകർത്തുക"` | The caller appends the playback timestamp; naming playback position prevents a wall-clock-time reading. | verified |
+| `F-ml-092` | `ml` | `tools.video.ctxStats` | changed-English synchronization / media domain | `"വിശദമായ സ്ഥിതിവിവരക്കണക്കുകൾ"` | `"പ്ലേബാക്ക് സ്ഥിതിവിവരക്കണക്കുകൾ"` | The context command opens playback statistics, so the replacement restores the current source domain. | verified |
+| `F-ml-093` | `ml` | `tools.callout.emojiSearchResults` | accessibility / count-neutral grammar | `"{count} ഇമോജികൾ കണ്ടെത്തി"` | `"ഇമോജി പൊരുത്തങ്ങൾ: {count}"` | The label restores emoji-match semantics and places the arbitrary result count after a count-neutral phrase. | verified |
+| `F-ml-094` | `ml` | `tools.database.checkboxChecked` | accessibility / checkbox-state semantics | `"തിരഞ്ഞെടുത്തു"` | `"പരിശോധിച്ചത്"` | The read-only checkbox exposes checked state, not row selection; the reviewed platform state term preserves that distinction. | verified |
+| `F-ml-095` | `ml` | `tools.database.checkboxUnchecked` | accessibility / checkbox-state semantics | `"തിരഞ്ഞെടുത്തിട്ടില്ല"` | `"പരിശോധിക്കാത്തത്"` | The read-only checkbox exposes checked state, not row selection; the reviewed platform state term preserves that distinction. | verified |
 | `F-mr-002` | `mr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"रिकामा संकुचित ब्लॉक. क्लिक करा किंवा आत ब्लॉक टाका."` | `"रिकामा संकुचित ब्लॉक. ब्लॉक जोडण्यासाठी क्लिक करा किंवा ब्लॉक येथे ओढा."` | The old copy says only click or put inside. The replacement states click-to-add and drag-here while preserving the locale's number-invariant `ब्लॉक` and official Android Marathi [`ओढा`](https://support.google.com/android/answer/9346420?hl=mr) drag term. | verified |
 | `F-ne-002` | `ne` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"खाली मोड्ने। ब्लकहरू भित्र क्लिक गर्नुहोस् वा तान्नुहोस्।"` | `"खाली मोड्ने। ब्लक थप्न क्लिक गर्नुहोस् वा ब्लकहरू यहाँ तान्नुहोस्।"` | The old plural object incorrectly applies to clicking and omits the created block. The replacement contrasts singular `ब्लक` with plural `ब्लकहरू`, retains formal imperatives, and follows Google Nepali's product register. [Google YouTube Help](https://support.google.com/youtube/answer/112085?hl=ne). | verified |
 | `F-pa-002` | `pa` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"ਖਾਲੀ ਟੌਗਲ। ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਅੰਦਰ ਖਿੱਚੋ।"` | `"ਖਾਲੀ ਟੌਗਲ। ਬਲਾਕ ਜੋੜਨ ਲਈ ਕਲਿੱਕ ਕਰੋ ਜਾਂ ਬਲਾਕਾਂ ਨੂੰ ਇੱਥੇ ਖਿੱਚੋ।"` | The replacement restores the singular click result, preserves plural oblique-object `ਬਲਾਕਾਂ ਨੂੰ`, and makes the drag destination explicit using established Punjabi product phrasing. [Google YouTube Help](https://support.google.com/youtube/answer/171780?hl=pa). | verified |
@@ -11378,6 +11543,13 @@ locale and UI context.
 | `R-mk-005` | `mk` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-mk-006` | `mk` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-mk-007` | `mk` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
+| `R-ml-001` | `ml` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating it would alter the executable shortcut. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-ml-002` | `ml` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord; Malayalam product instructions conventionally retain the `Ctrl` key name. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-ml-003` | `ml` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the surrounding dialog supplies the Malayalam description. | [`ui.ts` image-tool button](../../src/tools/image/ui.ts) |
+| `R-ml-004` | `ml` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ml-005` | `ml` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ml-006` | `ml` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ml-007` | `ml` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-nl-001` | `nl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Dutch Apple guidance retains the `⌘` platform symbol. | [Apple — Mac-toetscombinaties](https://support.apple.com/nl-nl/102650) |
 | `R-nl-002` | `nl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Dutch Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Sneltoetsen in Windows](https://support.microsoft.com/nl-nl/windows/sneltoetsen-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-nl-003` | `nl` | `toolNames.link` | established loanword | `Link` is the standard concise Dutch web term and the natural toolbox label. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |

@@ -20,6 +20,7 @@ import {
   InlineToolbar,
   Listeners,
   Marks,
+  MarkSpec,
   Notifier,
   ReadOnly,
   Sanitizer,

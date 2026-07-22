@@ -745,7 +745,7 @@ describe('golden harness: sanitize composition end-to-end', () => {
       public static isInline = true;
       public static title = 'Superscript';
 
-      public static get sanitize(): Record<string, object> {
+      public static get sanitize(): Record<string, Record<string, never>> {
         return { sup: {} };
       }
 
@@ -761,7 +761,7 @@ describe('golden harness: sanitize composition end-to-end', () => {
 
     core = new Core({
       holder,
-      tools: tools as never,
+      tools,
       data: { blocks: [{ id: 'sp1', type: 'paragraph', data: { text: 'E = mc<sup>2</sup>' } }] },
     });
     await core.isReady;

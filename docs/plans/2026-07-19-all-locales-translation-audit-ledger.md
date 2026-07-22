@@ -339,7 +339,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | `root-nl_current_audit_a` | `root-nl_current_audit_b` | pass | pass | pass | `F-nl-001`–`F-nl-092` | second-pass-complete |
 | `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | `root-no_current_audit_a` | `root-no_current_audit_b` | pass | pass | pass | `F-no-001`–`F-no-085` | second-pass-complete |
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | neutral contemporary Punjabi in Gurmukhi; concise polite imperatives for actions and complete instructions; sentence-case noun and state labels; native or established Punjabi product, accessibility, media, table, and database terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, placeholder-only, `Alt`, and `URL` notation | `root-pa_final_linguistic` | `root-pa_final_callers` | pass | pass | pass | `F-pa-001`–`F-pa-079` | second-pass-complete |
-| `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | — | — | pending | pending | pending | `F-pl-001`–`F-pl-126` | pending |
+| `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | `root-pl_current_linguistic` | `root-pl_current_callers` | pass | pass | pass | `F-pl-001`–`F-pl-129` | second-pass-complete |
 | `ps` | Pashto | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ps-001`–`F-ps-002` | pending |
 | `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | — | — | pending | pending | pending | `F-pt-001`–`F-pt-085` | pending |
 | `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001`–`F-ro-002` | pending |
@@ -477,6 +477,7 @@ locale returns to `pending`.
 | `nl` | `root-nl_current_audit_a` | `sha256:7981988bcd25118f0b20bc1de640fea534e8ab5440bebb51cab1659ba4b9a977` | `root-nl_current_audit_b` | `sha256:7981988bcd25118f0b20bc1de640fea534e8ab5440bebb51cab1659ba4b9a977` |
 | `no` | `root-no_current_audit_a` | `sha256:099829a6c5cf18fcf90a79f22deb5f2b614326e4642f2a4e26d2eff85c8de4a1` | `root-no_current_audit_b` | `sha256:099829a6c5cf18fcf90a79f22deb5f2b614326e4642f2a4e26d2eff85c8de4a1` |
 | `pa` | `root-pa_final_linguistic` | `sha256:012818e76cfb1fa5021d1821f6934790290c5b23d853b5b3dcbe77528326bce4` | `root-pa_final_callers` | `sha256:012818e76cfb1fa5021d1821f6934790290c5b23d853b5b3dcbe77528326bce4` |
+| `pl` | `root-pl_current_linguistic` | `sha256:e091ee300cf80cb8ebd662405496469803b876743e5edc8d1df49f70ad391f71` | `root-pl_current_callers` | `sha256:e091ee300cf80cb8ebd662405496469803b876743e5edc8d1df49f70ad391f71` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -7912,6 +7913,56 @@ ESLint also passes.
 Global `F-global-014` and `F-global-020` remain coordinated follow-up work and
 do not invalidate this locale-level second-pass transition.
 
+### Polish (`pl`) — current 546-key second pass complete
+
+Fresh linguistic and caller-structure reviews restarted at entry 1 on raw
+Polish dictionary SHA-256
+`5e1babd49c7ede4dc4edf3fbf7247819a0641d4f02a4d88c22de9e4b3f3a65cc`.
+Their exhaustive 546-pair artifacts are bound at SHA-256
+`57610dbd8b6032c759d29c7a6ed5d50b3280b745e789cd023cecc6e5d75b6866`
+and
+`b09bf92cbdea82679fa621dbba155482c5a092476f7b6be7e8d651d80f75c5ba`.
+Both upheld `F-pl-001` through `F-pl-126`; a separate historical-finding and
+retention challenge, bound at SHA-256
+`aa654db13f6fa2d70310c032c5a204a8e183fcad30eee52b2ae106792f9421cf`,
+independently upheld all 126 findings, accepted all 17 exact-English values,
+and identified only the missing `notifier.ok` retention row.
+
+The linguistic review raised the crop-shape agreement correction
+`Dowolne` to `Dowolny`. The caller review raised the search alias correction
+`numer` to `numerowanie` and the leading-comma correction for
+`blockSettings.openMenuAction`. An independent three-proposal reconciliation,
+bound at SHA-256
+`b8334c4c7119910ab0f607b65d90d59c9074bd13dc57faa6b93466cb2df6932c`,
+accepted all three without amendment. Its live probes confirmed the composed
+macOS and Windows tooltips, the crop-group grammatical context, and a search
+score increase from zero to 100 for `numerowanie`. The aggregate oracle and
+the three new expectations first failed on exactly the old values, then passed
+after those three corrections. The final raw dictionary is bound at SHA-256
+`e091ee300cf80cb8ebd662405496469803b876743e5edc8d1df49f70ad391f71`.
+
+Distinct corrected-byte reviewers then reread all 546 pairs. Their final
+linguistic and caller-structure artifacts are bound at SHA-256
+`3382c542dc565db6655054fa3f3d856f67d2ca2735c98f359d150fe2ba5efc7d`
+and
+`ce980b4343662f5c263f6aedf37469fe2ac6e6d9fa255f7a3b8f31bf0249ac28`.
+Both accepted every pair, upheld `F-pl-001` through `F-pl-129`, supported the
+exhaustive `R-pl-001` through `R-pl-017` inventory, and reported zero residuals
+or blockers. They revalidated all 38 placeholder-bearing keys and 54
+placeholder occurrences, unique non-empty key parity, UTF-8 and NFC integrity,
+boundary whitespace, LTR behavior, and the complete 397 literal + 122
+finite-dynamic + 25 namespace-compatible + two source-only caller lifecycle.
+
+The executable 129-key Polish correction oracle is in
+`translation-guidelines.test.ts`, whose bytes are bound at SHA-256
+`9e684a9f1f9a3df0ec3f67aa43e5b48b48a5b5bf1189eac46768f9ca63c3d54e`.
+Its focused test passes; the full guideline file passes 5,003/5,003, the
+nine-file i18n gate passes 5,723/5,723, the checker regressions pass 89/89,
+and the translation completeness, integrity, source-coverage, and encoding
+command passes with only the 17 catalogued identical-value warnings. Scoped
+ESLint also passes. Global `F-global-014` and `F-global-020` remain coordinated
+follow-up work and do not invalidate this locale-level second-pass transition.
+
 ## Findings
 
 Add one row for every structural, semantic, style, register, terminology,
@@ -12510,6 +12561,10 @@ follows the global transition rule above.
 | `F-pa-078` | `pa` | `tools.image.errorRetry` | action grammar / button label | `"ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼"` | `"ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ"` | The live image-error control is a button that performs the retry action, but the current value is only a noun phrase. Android DocumentsUI's official Punjabi `button_retry` string uses the exact complete imperative `ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ`. [AOSP DocumentsUI Punjabi](https://android.googlesource.com/platform/packages/apps/DocumentsUI/+/b7ebcec0f793f26eaffe9dc04d39d1932919e8d5/res/values-pa/strings.xml). | verified |
 | `F-pa-079` | `pa` | `tools.bookmark.error` | grammar / preview terminology consistency | `"ਲਿੰਕ ਝਲਕ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ"` | `"ਲਿੰਕ ਦੀ ਝਲਕ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ"` | The live bookmark error names a preview belonging to the link. The fresh corrected-byte pass requires the Punjabi genitive relation, matching the adjacent corrected loading state `ਲਿੰਕ ਦੀ ਝਲਕ ਲੋਡ ਹੋ ਰਹੀ ਹੈ…` and authoritative Punjabi preview constructions. [Google YouTube Punjabi — video previews](https://support.google.com/youtube/answer/7074781?hl=pa). | verified |
 
+| `F-pl-127` | `pl` | `tools.image.cropRatioFree` | grammar / adjective agreement | `"Dowolne"` | `"Dowolny"` | The live radio group is labelled `Kształt przycięcia`; its elided head `kształt` is masculine singular, so the standalone adjective must be masculine `Dowolny`. The current neuter/plural form survived from the former plural `Proporcje` label. [Wielki słownik języka polskiego PAN — dowolny](https://wsjp.pl/haslo/podglad/21661/dowolny/4062101/interpretacja), [Microsoft Polish — `Dowolny kształt`](https://support.microsoft.com/pl-PL/Windows/Apps/use-snipping-tool-to-capture-screenshots). | verified |
+| `F-pl-128` | `pl` | `searchTerms.number` | search intent / terminology | `"numer"` | `"numerowanie"` | This alias is registered only for the numbered-list entry. The exact Polish feature term raises the live query `numerowanie` from no match to an exact match while `numer` remains matched through the localized title `Lista numerowana`; Microsoft Polish uses `Numerowanie` for this command. [Microsoft Polish — numbered lists](https://support.microsoft.com/pl-pl/topic/tworzenie-listy-punktowanej-lub-numerowanej-a43daa30-1e9e-49ba-99f8-7177d1d750a4). | verified |
+| `F-pl-129` | `pl` | `blockSettings.openMenuAction` | fragment composition / punctuation | `" aby otworzyć menu"` | `", aby otworzyć menu"` | The tooltip renderer concatenates fragments without separators. The current values produce `Kliknij lub naciśnij Ctrl+/ aby otworzyć menu`; the leading comma yields the required Polish purpose-clause boundary in both Windows and macOS compositions while preserving one following space. [Rada Języka Polskiego PAN — official punctuation rules](https://rjp.pan.pl/app/uploads/2026/02/2_zalacznik_do_komunikatu-Zasady_pisowni_29-05.pdf). | verified |
+
 ## Exact-English Retentions
 
 Record every non-English value that is exactly identical to English. The only
@@ -12925,6 +12980,7 @@ locale and UI context.
 | `R-it-022` | `it` | `tools.link.webLink` | established loanword | `Link` is the established Italian computing noun and the natural generic label for the catch-all suggestion. | [Treccani — link](https://www.treccani.it/vocabolario/link/) |
 | `R-nl-023` | `nl` | `tools.link.webLink` | established loanword | `Link` is the standard concise Dutch product term and accurately labels every accepted link type. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |
 | `R-pl-016` | `pl` | `tools.link.webLink` | established loanword | `Link` is the standard unchanged Polish computing noun and the natural generic suggestion label. | [Microsoft — Dostosowywanie immersywnego wydarzenia](https://support.microsoft.com/pl-PL/teams/meetings/customize-an-immersive-event-in-microsoft-teams) |
+| `R-pl-017` | `pl` | `notifier.ok` | established loanword | `OK` is the conventional unchanged Polish confirmation-button label and the natural compact acknowledgement in the built-in prompt dialog. | [Apple Poland — mandatory update `OK` button](https://support.apple.com/pl-pl/109324) |
 | `R-pt-019` | `pt` | `tools.link.webLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese product term and is generic across the caller's destination types. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
 | `R-ro-001` | `ro` | `tools.link.webLink` | established loanword | `Link` is an established Romanian IT/UI noun used for web, email, FTP, document, and internal-page destinations. | [Microsoft — Crearea sau editarea unui hyperlink](https://support.microsoft.com/ro-RO/Word/create-or-edit-a-hyperlink) |
 | `R-et-002` | `et` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is platform shortcut notation, not English prose; the Command symbol remains unchanged in Estonian macOS guidance. | [Apple — Maci klaviatuuri otseteed](https://support.apple.com/en-us/102650) |

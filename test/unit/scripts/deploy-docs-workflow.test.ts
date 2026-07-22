@@ -30,7 +30,7 @@ describe('docs deployment workflow', () => {
     });
   });
 
-  it('deploys on published releases, manual runs, and master pushes', () => {
+  it('deploys on published releases, manual runs, and main pushes', () => {
     expect(workflow.on.release).toEqual({ types: ['published'] });
     expect(workflow.on).toHaveProperty('workflow_dispatch');
   });
@@ -44,7 +44,7 @@ describe('docs deployment workflow', () => {
       '${{ !cancelled()'
       + " && needs.docs-tests.result == 'success'"
       + " && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')"
-      + " && (github.event_name != 'push' || github.ref == 'refs/heads/master') }}",
+      + " && (github.event_name != 'push' || github.ref == 'refs/heads/main') }}",
     );
   });
 

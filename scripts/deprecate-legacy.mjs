@@ -14,9 +14,9 @@ import { execFileSync } from 'child_process';
 
 const MESSAGE_BY_PACKAGE = {
   '@jackuait/blok':
-    'Renamed to @bloklabs/core (adapters: @bloklabs/react, @bloklabs/vue, @bloklabs/angular) — see https://github.com/JackUait/blok/blob/master/CHANGELOG.md',
+    'Renamed to @bloklabs/core (adapters: @bloklabs/react, @bloklabs/vue, @bloklabs/angular) — see https://github.com/JackUait/blok/blob/main/CHANGELOG.md',
   '@jackuait/blok-cli':
-    'Renamed to @bloklabs/cli — see https://github.com/JackUait/blok/blob/master/CHANGELOG.md',
+    'Renamed to @bloklabs/cli — see https://github.com/JackUait/blok/blob/main/CHANGELOG.md',
 };
 
 const confirmed = process.argv.includes('--yes');

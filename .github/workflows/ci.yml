@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["master"]
+    branches: ["main"]
   pull_request:
     branches: ["**"]
 
@@ -226,7 +226,7 @@ jobs:
 
   merge-reports:
     name: Merge E2E Reports
-    if: ${{ !cancelled() && github.ref != 'refs/heads/master' }}
+    if: ${{ !cancelled() && github.ref != 'refs/heads/main' }}
     needs: [e2e-tests]
     runs-on: ubuntu-latest
     steps:

@@ -2,7 +2,7 @@ name: Push to mirror
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     tags: ['v*']
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
           # (skip/update) commands instead.
           git fetch mirror "+refs/tags/*:refs/tags/mirror/*" || true
           # Push from the remote-tracking ref (always present with fetch-depth: 0), so this works
-          # on both branch-push (local master checked out) and tag-push (detached HEAD) events.
-          # Avoids --mirror, which deletes the mirror's master when no local master exists.
-          git push mirror "+refs/remotes/origin/master:refs/heads/master"
+          # on both branch-push (local main checked out) and tag-push (detached HEAD) events.
+          # Avoids --mirror, which deletes the mirror's main when no local main exists.
+          git push mirror "+refs/remotes/origin/main:refs/heads/main"
           git push mirror "+refs/tags/*:refs/tags/*"

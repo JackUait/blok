@@ -114,7 +114,7 @@ describe('MigrationCard', () => {
 
     const link = screen.getByRole('link', { name: /View Codemod/i });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', 'https://github.com/jackuait/blok/tree/master/codemod');
+    expect(link).toHaveAttribute('href', 'https://github.com/jackuait/blok/tree/main/codemod');
   });
 
   it('should have migration-content div', () => {

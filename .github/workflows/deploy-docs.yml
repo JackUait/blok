@@ -63,14 +63,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docs-tests, verify-release]
     timeout-minutes: 15
-    # Deploy on releases, manual runs, and docs pushes to master. A skipped
+    # Deploy on releases, manual runs, and docs pushes to main. A skipped
     # `needs` job skips its dependents by default, so a docs-only deploy (where
     # verify-release never runs) has to accept 'skipped' explicitly.
     if: >-
       ${{ !cancelled()
       && needs.docs-tests.result == 'success'
       && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')
-      && (github.event_name != 'push' || github.ref == 'refs/heads/master') }}
+      && (github.event_name != 'push' || github.ref == 'refs/heads/main') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

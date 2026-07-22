@@ -114,7 +114,7 @@ export const Footer: React.FC = () => {
                 {t("footer.discussions")}
               </a>
               <a
-                href="https://github.com/JackUait/blok/blob/master/CONTRIBUTING.md"
+                href="https://github.com/JackUait/blok/blob/main/CONTRIBUTING.md"
                 className={linkClass}
                 target="_blank"
                 rel="noopener noreferrer"

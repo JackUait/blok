@@ -56,7 +56,7 @@ export const MigrationCard: React.FC = () => {
                 </Button>
                 <Button variant="outline" size="lg" asChild className="group/codemod w-full sm:w-auto">
                   <a
-                    href="https://github.com/jackuait/blok/tree/master/codemod"
+                    href="https://github.com/jackuait/blok/tree/main/codemod"
                     target="_blank"
                     rel="noopener noreferrer"
                   >

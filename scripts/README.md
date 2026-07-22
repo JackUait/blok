@@ -99,7 +99,7 @@ These scripts are integrated into GitHub Actions workflows:
   - Compares with baseline on PRs
   - Generates performance reports
   - Posts PR comments with regression analysis
-  - Updates baseline on master
+  - Updates baseline on main
   - Generates historical dashboard
 
 - **Release workflow** ([`.github/workflows/release.yml`](../.github/workflows/release.yml))

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Queries recent GitHub Actions CI runs via `gh` and reports per-job timing statistics.
-// Usage: node scripts/ci-timing-probe.mjs [--workflow ci.yml] [--branch master] [--limit 5]
+// Usage: node scripts/ci-timing-probe.mjs [--workflow ci.yml] [--branch main] [--limit 5]
 import { execFileSync } from 'node:child_process';
 
 const args = new Map();
 for (let i = 2; i < process.argv.length; i += 2) args.set(process.argv[i], process.argv[i + 1]);
 const workflow = args.get('--workflow') ?? 'ci.yml';
-const branch = args.get('--branch') ?? 'master';
+const branch = args.get('--branch') ?? 'main';
 const limit = Number(args.get('--limit') ?? 5);
 
 const runs = JSON.parse(execFileSync('gh', [

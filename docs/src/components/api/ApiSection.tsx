@@ -236,7 +236,7 @@ const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
           </span>
         )}
         <a
-          href={`${REPO_URL}/blob/master/${getEditPath(section)}`}
+          href={`${REPO_URL}/blob/main/${getEditPath(section)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"

@@ -367,7 +367,7 @@ describe('CI critical-path law', () => {
 
     expect(merge.name).toBe('Merge E2E Reports');
     expect(merge.if).toBe(
-      "${{ !cancelled() && github.ref != 'refs/heads/master' }}",
+      "${{ !cancelled() && github.ref != 'refs/heads/main' }}",
     );
     expect(merge.needs).toEqual(['e2e-tests']);
     expect(merge['runs-on']).toBe('ubuntu-latest');

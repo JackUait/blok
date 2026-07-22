@@ -5,16 +5,23 @@ import { MigrationCard } from './MigrationCard';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 // Mock Shiki to avoid async highlighting issues in tests
-vi.mock('shiki', () => ({
-  createHighlighter: vi.fn(() =>
+vi.mock('shiki/core', () => ({
+  createHighlighterCore: vi.fn(() =>
     Promise.resolve({
       getLoadedLanguages: () => ['bash'],
       codeToHtml: (code: string) =>
         `<pre class="shiki"><code>${code}</code></pre>`,
-      loadLanguage: vi.fn(),
     })
   ),
 }));
+
+vi.mock('shiki/engine/oniguruma', () => ({
+  createOnigurumaEngine: vi.fn(() => Promise.resolve({})),
+}));
+
+// The oniguruma engine is stubbed above, so the 622 KB inlined wasm module it
+// would otherwise pull into every test run is dead weight.
+vi.mock('shiki/wasm', () => ({ default: {} }));
 
 describe('MigrationCard', () => {
   afterEach(() => {
@@ -147,9 +154,8 @@ describe('MigrationCard', () => {
   });
 
   it('should render Russian strings when locale is ru', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
     render(
-      <I18nProvider>
+      <I18nProvider locale="ru">
         <MemoryRouter>
           <MigrationCard />
         </MemoryRouter>

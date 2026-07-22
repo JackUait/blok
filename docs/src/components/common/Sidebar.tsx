@@ -1,5 +1,5 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from './Link';
 import { cn } from '@/lib/utils';
 
 export interface SidebarLink {

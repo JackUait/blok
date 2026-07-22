@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';
@@ -9,6 +9,7 @@ import { ApiModuleBody } from '../components/api/ApiModuleBody';
 import { ApiIndexRedirect } from '../components/api/ApiIndexRedirect';
 import { useApiTranslations } from '../hooks/useApiTranslations';
 import { useI18n } from '../contexts/I18nContext';
+import { splitLocalePath } from '../seo/locales';
 import { NAV_LINKS } from '../utils/constants';
 
 /** The API documentation body — sidebar + per-module content — without page chrome. */
@@ -16,10 +17,13 @@ export const ApiContent: React.FC = () => {
   const { locale } = useI18n();
   const { apiSections, sidebarSections } = useApiTranslations();
   const location = useLocation();
-  const navigate = useNavigate();
 
-  // Active module id from the path: /docs/<id> -> <id>; /docs -> quick-start
-  const activeModule = location.pathname.split('/')[2] || 'quick-start';
+  // Active module id from the path: /docs/<id> -> <id>. Bare /docs is the hub,
+  // which is no module — nothing in the nav is current and there is no TOC.
+  // Split the LOCALE-STRIPPED path: on `/ru/docs/caret-api` segment 2 is "docs",
+  // which matched no module and left every Russian reference page with a fully
+  // collapsed sidebar, no aria-current and no "On this page".
+  const activeModule = splitLocalePath(location.pathname).path.split('/')[2] ?? '';
   const activeSection = apiSections.find((s) => s.id === activeModule);
 
   return (
@@ -47,7 +51,7 @@ export const ApiContent: React.FC = () => {
             key={`mobile-nav-${locale}`}
             sections={sidebarSections}
             activeSection={activeModule}
-            onNavigate={(id) => navigate(`/docs/${id}`)}
+            buildHref={(id) => `/docs/${id}`}
           />
         </div>
         {/* Between lg and xl (1024–1279px) there's no room for the persistent

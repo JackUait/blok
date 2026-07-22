@@ -93,6 +93,21 @@ jobs:
       - name: Copy CHANGELOG into docs output
         run: cp CHANGELOG.md docs/dist/CHANGELOG.md
 
+      # A prerender regression is invisible from a green build: the files are
+      # still emitted, they are just empty shells again, and every crawler that
+      # does not run JavaScript sees a blank page. Probe one real page for
+      # rendered markup, and check the two files that make the site crawlable
+      # at all — before anything is published, not after.
+      - name: Verify deploy artifact
+        run: |
+          set -euo pipefail
+          page=docs/dist/client/docs/quick-start/index.html
+          test -f "$page"
+          grep -q '<h1' "$page"
+          grep -q 'Blok' "$page"
+          test -s docs/dist/client/robots.txt
+          test -s docs/dist/client/sitemap.xml
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -108,6 +123,12 @@ jobs:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
     needs: build
+    # A skip propagates through the whole `needs` chain, not just one link:
+    # `verify-release` is skipped on a docs push, `build` overrides that for
+    # itself and goes green — and `deploy` is skipped anyway. Every docs deploy
+    # between ungating the build and this line built the site, verified the
+    # artifact, and published nothing.
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     permissions:
       pages: write
       id-token: write

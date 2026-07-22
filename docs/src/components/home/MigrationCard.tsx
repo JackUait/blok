@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "../common/Link";
 import { SectionReveal } from "../common/SectionReveal";
 import { HalftoneDots } from "../common/HalftoneDots";
 import { useI18n } from "../../contexts/I18nContext";

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Check, Globe } from "lucide-react";
-import { useI18n } from "../../contexts/I18nContext";
+import { useI18n, useLocalePath } from "../../contexts/I18nContext";
 import type { Locale } from "../../i18n";
 import { cn } from "@/lib/utils";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
@@ -50,6 +51,7 @@ const FlagIcon = ({ locale }: { locale: Locale }) => {
 
 export const LanguageSelector = () => {
   const { locale, setLocale, localeNames, t } = useI18n();
+  const localePath = useLocalePath();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +84,8 @@ export const LanguageSelector = () => {
     if (newLocale !== locale) {
       trackEvent(ANALYTICS_EVENTS.selectLanguage, { locale: newLocale });
     }
+    // The locale itself comes from the URL the link navigates to; this only
+    // records the preference the site root reads.
     setLocale(newLocale);
     setIsOpen(false);
   };
@@ -97,7 +101,7 @@ export const LanguageSelector = () => {
         )}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        aria-haspopup="listbox"
+        aria-haspopup="menu"
         aria-label={`${t("languageSelector.label")}: ${localeNames[locale]}`}
         type="button"
       >
@@ -111,23 +115,26 @@ export const LanguageSelector = () => {
             ? "pointer-events-auto scale-100 opacity-100"
             : "pointer-events-none scale-95 opacity-0",
         )}
-        role="listbox"
+        role="menu"
         aria-label={t("languageSelector.selectLanguage")}
         aria-hidden={!isOpen}
       >
         {locales.map((loc) => {
           const active = loc === locale;
           return (
-            <button
+            // A real link, not a handler: this is the only path by which a
+            // crawler reaches the other locale tree at all.
+            <Link
               key={loc}
+              to={localePath(loc)}
+              hrefLang={loc}
               className={cn(
                 "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-secondary",
                 active && "text-foreground",
               )}
               onClick={() => handleLocaleChange(loc)}
-              role="option"
-              aria-selected={active}
-              type="button"
+              role="menuitem"
+              aria-current={active ? "true" : undefined}
               tabIndex={isOpen ? 0 : -1}
             >
               <span className="flex shrink-0 items-center">
@@ -141,7 +148,7 @@ export const LanguageSelector = () => {
                 )}
                 strokeWidth={2.5}
               />
-            </button>
+            </Link>
           );
         })}
       </div>

@@ -5,15 +5,20 @@ import type { ToolSection as ToolSectionType } from './tools-data';
 import { useI18n } from '../../contexts/I18nContext';
 import { useFramework } from '../../contexts/FrameworkContext';
 import { adaptExample } from '../common/framework-adapt';
+import { getRouteMetadata } from '../../seo/route-metadata';
 
 interface ToolSectionProps {
   section: ToolSectionType;
 }
 
 export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { framework } = useFramework();
   const usage = adaptExample(section.usageExample, framework);
+  // See ApiSection: the descriptive H1 lives in route-metadata.ts and is
+  // English-only, so other locales keep the translated tool name.
+  const heading =
+    (locale === 'en' ? getRouteMetadata(`/docs/${section.id}`)?.h1 : undefined) ?? section.title;
 
   return (
     <section
@@ -24,7 +29,7 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
     >
       <div className="mb-8">
         <h1 className="scroll-mt-24 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-          {section.title}
+          <Typo>{heading}</Typo>
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
           <Typo>{section.description}</Typo>

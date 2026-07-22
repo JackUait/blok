@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { Link } from "../common/Link";
 import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";
 import { ThemeToggle } from "../common/ThemeToggle";
@@ -7,6 +8,7 @@ import { GitHubLink } from "../common/GitHubLink";
 import { LanguageSelector } from "../common/LanguageSelector";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
+import { splitLocalePath } from "../../seo/locales";
 import type { NavLink } from "@/types/navigation";
 import { cn } from "@/lib/utils";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics";
@@ -39,9 +41,11 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
   const menuRef = useRef<HTMLDivElement>(null);
   const searchTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // Determine active link based on current location
+  // Determine active link based on current location. NAV_LINKS carry English
+  // addresses, so the comparison runs against the locale-stripped path —
+  // otherwise nothing in the header is ever current inside `/ru/**`.
   const linksWithActive = useMemo(() => {
-    const path = location.pathname;
+    const path = splitLocalePath(location.pathname).path;
 
     return links.map((link) => {
       if (link.external) return link;

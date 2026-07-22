@@ -1,38 +1,38 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
-import { CodeBlock } from './CodeBlock';
+import { CodeBlock, SUPPORTED_LANGUAGES } from './CodeBlock';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { ANALYTICS_EVENTS } from '@/lib/analytics';
 
-const {
-  mockCodeToHtml,
-  mockGetLoadedLanguages,
-  mockLoadLanguage,
-  mockCreateHighlighter,
-} = vi.hoisted(() => {
-  const mockCodeToHtml = vi.fn(
-    (code: string) => `<pre class="shiki"><code>${code}</code></pre>`
-  );
-  const mockGetLoadedLanguages = vi.fn(() => ['bash', 'typescript']);
-  const mockLoadLanguage = vi.fn(() => Promise.resolve());
-  const mockCreateHighlighter = vi.fn(() =>
-    Promise.resolve({
-      codeToHtml: mockCodeToHtml,
-      getLoadedLanguages: mockGetLoadedLanguages,
-      loadLanguage: mockLoadLanguage,
-    })
-  );
-  return {
-    mockCodeToHtml,
-    mockGetLoadedLanguages,
-    mockLoadLanguage,
-    mockCreateHighlighter,
-  };
-});
+const { mockCodeToHtml, mockGetLoadedLanguages, mockCreateHighlighter } =
+  vi.hoisted(() => {
+    const mockCodeToHtml = vi.fn(
+      (code: string) => `<pre class="shiki"><code>${code}</code></pre>`
+    );
+    const mockGetLoadedLanguages = vi.fn(() => ['bash', 'typescript']);
+    const mockCreateHighlighter = vi.fn(() =>
+      Promise.resolve({
+        codeToHtml: mockCodeToHtml,
+        getLoadedLanguages: mockGetLoadedLanguages,
+      })
+    );
+    return { mockCodeToHtml, mockGetLoadedLanguages, mockCreateHighlighter };
+  });
 
-vi.mock('shiki', () => ({
-  createHighlighter: mockCreateHighlighter,
+// The component builds its highlighter from shiki's core entry plus explicitly
+// imported grammars, so the themes and langs it passes are resolved modules
+// rather than the bundle's string ids.
+vi.mock('shiki/core', () => ({
+  createHighlighterCore: mockCreateHighlighter,
 }));
+
+vi.mock('shiki/engine/oniguruma', () => ({
+  createOnigurumaEngine: vi.fn(() => Promise.resolve({})),
+}));
+
+// The oniguruma engine is stubbed above, so the 622 KB inlined wasm module it
+// would otherwise pull into every test run is dead weight.
+vi.mock('shiki/wasm', () => ({ default: {} }));
 
 const renderWithI18n = (ui: React.ReactElement) =>
   render(<I18nProvider>{ui}</I18nProvider>);
@@ -62,7 +62,6 @@ describe('CodeBlock', () => {
     mockCreateHighlighter.mockResolvedValue({
       codeToHtml: mockCodeToHtml,
       getLoadedLanguages: mockGetLoadedLanguages,
-      loadLanguage: mockLoadLanguage,
     });
   });
 
@@ -73,15 +72,23 @@ describe('CodeBlock', () => {
   });
 
   // This test must run first - before the highlighter singleton is populated
-  it('calls createHighlighter with correct themes', async () => {
+  it('creates the highlighter with two themes and one grammar per supported language', async () => {
     renderWithI18n(<CodeBlock code="hello" language="bash" />);
     await waitFor(() => {
       expect(mockCreateHighlighter).toHaveBeenCalledWith(
         expect.objectContaining({
-          themes: expect.arrayContaining(['vitesse-dark', 'one-light']),
+          themes: expect.arrayContaining([expect.anything(), expect.anything()]),
+          langs: expect.arrayContaining([expect.anything()]),
         })
       );
     });
+
+    const options = mockCreateHighlighter.mock.calls[0][0] as {
+      themes: unknown[];
+      langs: unknown[];
+    };
+    expect(options.themes).toHaveLength(2);
+    expect(options.langs).toHaveLength(SUPPORTED_LANGUAGES.length);
   });
 
   it('renders with initial plain-text fallback immediately', () => {

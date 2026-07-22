@@ -1,5 +1,5 @@
 // docs/src/components/api/Breadcrumbs.tsx
-import { Link } from 'react-router-dom';
+import { Link } from '../common/Link';
 import { useI18n } from '../../contexts/I18nContext';
 import { useApiTranslations } from '../../hooks/useApiTranslations';
 import { Typo } from '../common/Typo';

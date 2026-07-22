@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "tsc && react-router build && cp dist/client/404/index.html dist/client/404.html",
+    "build": "tsc && react-router build && cp dist/client/404/index.html dist/client/404.html && node scripts/generate-seo-artifacts.mjs",
     "preview": "vite preview --outDir dist/client",
     "lint": "tsc --noEmit",
     "test": "vitest run",

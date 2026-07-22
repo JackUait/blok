@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../common/Link';
 import { useI18n } from '../../contexts/I18nContext';
 import { Typo } from '../common/Typo';
 import { Button } from '@/components/ui/button';

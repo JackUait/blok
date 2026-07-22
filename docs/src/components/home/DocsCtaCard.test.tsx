@@ -80,9 +80,8 @@ describe('DocsCtaCard', () => {
   });
 
   it('should render Russian strings when locale is ru', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
     render(
-      <I18nProvider>
+      <I18nProvider locale="ru">
         <MemoryRouter>
           <DocsCtaCard />
         </MemoryRouter>

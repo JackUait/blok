@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Transition, Variants } from "framer-motion";
 
 interface PageTransitionProps {
@@ -27,10 +27,21 @@ const pageTransition: Transition = {
   duration: 0.2,
 };
 
+// The first route of a session is the one baked into the prerendered HTML.
+// Mounting it at opacity 0 would blank the page until hydration finishes and
+// would disqualify it as an LCP candidate, so only later navigations animate in.
+let hasRenderedFirstRoute = false;
+
 export const PageTransition = ({ children }: PageTransitionProps) => {
+  const [animateOnMount] = useState(() => hasRenderedFirstRoute);
+
+  useEffect(() => {
+    hasRenderedFirstRoute = true;
+  }, []);
+
   return (
     <motion.div
-      initial="initial"
+      initial={animateOnMount ? "initial" : false}
       animate="animate"
       exit="exit"
       variants={pageVariants}

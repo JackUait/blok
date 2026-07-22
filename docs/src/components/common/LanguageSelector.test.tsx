@@ -1,12 +1,28 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import type { Locale } from '../../i18n';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { LanguageSelector } from './LanguageSelector';
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <I18nProvider>{children}</I18nProvider>
+  <MemoryRouter>
+    <I18nProvider>{children}</I18nProvider>
+  </MemoryRouter>
 );
+
+/** The locale lives in the URL, so a test picks a tree by rendering at a path. */
+const renderAt = (path: string, locale: Locale) =>
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <I18nProvider locale={locale}>
+        <LanguageSelector />
+      </I18nProvider>
+    </MemoryRouter>,
+  );
+
+const openMenu = () => fireEvent.click(screen.getByRole('button', { expanded: false }));
 
 type GtagWindow = Window & typeof globalThis & { gtag?: (...args: unknown[]) => void };
 
@@ -42,7 +58,7 @@ describe('LanguageSelector', () => {
     const trigger = screen.getByRole('button', { expanded: false });
     fireEvent.click(trigger);
     
-    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
     expect(screen.getByText('English')).toBeInTheDocument();
     expect(screen.getByText('Русский')).toBeInTheDocument();
   });
@@ -55,7 +71,7 @@ describe('LanguageSelector', () => {
     fireEvent.click(trigger);
     
     // Select Russian
-    const russianOption = screen.getByRole('option', { name: /Русский/i });
+    const russianOption = screen.getByRole('menuitem', { name: /Русский/i });
     fireEvent.click(russianOption);
     
     // Verify locale changed
@@ -69,12 +85,12 @@ describe('LanguageSelector', () => {
     const trigger = screen.getByRole('button', { expanded: false });
     fireEvent.click(trigger);
     
-    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
     
     // Press Escape
     fireEvent.keyDown(document, { key: 'Escape' });
     
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('should close dropdown when clicking outside', () => {
@@ -90,23 +106,57 @@ describe('LanguageSelector', () => {
     const trigger = screen.getByRole('button', { expanded: false });
     fireEvent.click(trigger);
     
-    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
     
     // Click outside
     fireEvent.mouseDown(screen.getByTestId('outside'));
     
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('should mark current locale as selected', () => {
+  it('should mark current locale as current', () => {
     render(<LanguageSelector />, { wrapper });
-    
-    // Open dropdown
-    const trigger = screen.getByRole('button', { expanded: false });
-    fireEvent.click(trigger);
-    
-    const englishOption = screen.getByRole('option', { name: /English/i });
-    expect(englishOption).toHaveAttribute('aria-selected', 'true');
+
+    openMenu();
+
+    expect(screen.getByRole('menuitem', { name: /English/i })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  describe('as crawlable links', () => {
+    it('points each option at the same page in that locale', () => {
+      renderAt('/docs/table', 'en');
+      openMenu();
+
+      expect(screen.getByRole('menuitem', { name: /English/i })).toHaveAttribute(
+        'href',
+        '/docs/table',
+      );
+      expect(screen.getByRole('menuitem', { name: /Русский/i })).toHaveAttribute(
+        'href',
+        '/ru/docs/table',
+      );
+    });
+
+    it('points back out of the Russian tree from a Russian page', () => {
+      renderAt('/ru/docs/table', 'ru');
+      openMenu();
+
+      expect(screen.getByRole('menuitem', { name: /English/i })).toHaveAttribute(
+        'href',
+        '/docs/table',
+      );
+    });
+
+    it('declares the language of each target so the link is an hreflang signal', () => {
+      renderAt('/', 'en');
+      openMenu();
+
+      expect(screen.getByRole('menuitem', { name: /Русский/i })).toHaveAttribute('hreflang', 'ru');
+      expect(screen.getByRole('menuitem', { name: /Русский/i })).toHaveAttribute('href', '/ru');
+    });
   });
 
   describe('analytics', () => {
@@ -114,7 +164,7 @@ describe('LanguageSelector', () => {
       render(<LanguageSelector />, { wrapper });
 
       fireEvent.click(screen.getByRole('button', { expanded: false }));
-      fireEvent.click(screen.getByRole('option', { name: /Русский/i }));
+      fireEvent.click(screen.getByRole('menuitem', { name: /Русский/i }));
 
       expect(gtagSpy).toHaveBeenCalledWith('event', 'select_language', {
         locale: 'ru',
@@ -125,7 +175,7 @@ describe('LanguageSelector', () => {
       render(<LanguageSelector />, { wrapper });
 
       fireEvent.click(screen.getByRole('button', { expanded: false }));
-      fireEvent.click(screen.getByRole('option', { name: /English/i }));
+      fireEvent.click(screen.getByRole('menuitem', { name: /English/i }));
 
       expect(gtagSpy).not.toHaveBeenCalled();
     });

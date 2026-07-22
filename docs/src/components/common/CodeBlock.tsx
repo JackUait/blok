@@ -3,12 +3,8 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { useI18n } from '../../contexts/I18nContext';
-import {
-  createHighlighter,
-  type Highlighter,
-  type BundledLanguage,
-  type SpecialLanguage,
-} from "shiki";
+import { createHighlighterCore, type HighlighterCore } from "shiki/core";
+import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import {
   PackageManagerToggle,
   type PackageManager,
@@ -48,87 +44,80 @@ const getInstallCommand = (
 
 // Singleton highlighter instance
 const highlighterState = {
-  instance: null as Highlighter | null,
-  initPromise: null as Promise<Highlighter> | null,
+  instance: null as HighlighterCore | null,
+  initPromise: null as Promise<HighlighterCore> | null,
 };
 
-const getHighlighterInstance = (): Highlighter | null =>
+const getHighlighterInstance = (): HighlighterCore | null =>
   highlighterState.instance;
-const setHighlighterInstance = (instance: Highlighter | null): void => {
+const setHighlighterInstance = (instance: HighlighterCore | null): void => {
   highlighterState.instance = instance;
 };
-const getInitPromise = (): Promise<Highlighter> | null =>
+const getInitPromise = (): Promise<HighlighterCore> | null =>
   highlighterState.initPromise;
-const setInitPromise = (promise: Promise<Highlighter> | null): void => {
+const setInitPromise = (promise: Promise<HighlighterCore> | null): void => {
   highlighterState.initPromise = promise;
 };
 
-const supportedLangs: (BundledLanguage | SpecialLanguage)[] = [
-  "javascript",
-  "typescript",
-  "tsx",
-  "jsx",
-  "vue",
+/**
+ * Every language the docs render, and nothing else. Grammars are imported one
+ * by one instead of through the `shiki` bundle entry, which would put all ~200
+ * of them in the build (emacs-lisp alone is 780 KB) for the eight we use.
+ * `CodeBlock.languages.test.ts` keeps this list and the docs in sync.
+ */
+export const SUPPORTED_LANGUAGES = [
   "bash",
-  "sh",
-  "json",
-  "css",
   "html",
-  "markdown",
-  "md",
-  "python",
-];
+  "javascript",
+  "json",
+  "jsx",
+  "tsx",
+  "typescript",
+  "vue",
+] as const;
 
 // Display names for languages
 const languageDisplayNames: Record<string, string> = {
-  javascript: "JavaScript",
-  typescript: "TypeScript",
-  tsx: "TSX",
-  jsx: "JSX",
-  vue: "Vue",
   bash: "Terminal",
-  sh: "Shell",
-  json: "JSON",
-  css: "CSS",
   html: "HTML",
-  markdown: "Markdown",
-  md: "Markdown",
-  python: "Python",
+  javascript: "JavaScript",
+  json: "JSON",
+  jsx: "JSX",
+  tsx: "TSX",
+  typescript: "TypeScript",
+  vue: "Vue",
 };
 
-const loadLanguageIfNeeded = async (
-  highlighter: Highlighter,
-  lang: string,
-): Promise<void> => {
-  const langKey = lang.toLowerCase() as BundledLanguage | SpecialLanguage;
-  const isLangLoaded = highlighter.getLoadedLanguages().includes(langKey);
-
-  if (isLangLoaded) {
-    return;
-  }
-
-  try {
-    await highlighter.loadLanguage(langKey);
-  } catch {
-    // Language not available, will use plaintext
-  }
-};
-
-const getHighlighter = async (lang: string): Promise<Highlighter> => {
+const getHighlighter = async (): Promise<HighlighterCore> => {
   const highlighterInstance = getHighlighterInstance();
 
   if (highlighterInstance) {
-    await loadLanguageIfNeeded(highlighterInstance, lang);
     return highlighterInstance;
   }
 
   const initPromise = getInitPromise();
   if (!initPromise) {
-    // Initialize with only the languages we need
     // Using vitesse-dark for dark mode (excellent property highlighting) and one-light for light mode
-    const newInitPromise = createHighlighter({
-      themes: ["vitesse-dark", "one-light"],
-      langs: supportedLangs,
+    const newInitPromise = createHighlighterCore({
+      themes: [
+        () => import("shiki/themes/vitesse-dark.mjs"),
+        () => import("shiki/themes/one-light.mjs"),
+      ],
+      // Listed one by one on purpose: a templated specifier is not statically
+      // analysable, so the bundler would fall back to shipping every grammar.
+      // Wrapped in thunks so the grammar modules are pulled in by shiki itself
+      // rather than by building this options object.
+      langs: [
+        () => import("shiki/langs/bash.mjs"),
+        () => import("shiki/langs/html.mjs"),
+        () => import("shiki/langs/javascript.mjs"),
+        () => import("shiki/langs/json.mjs"),
+        () => import("shiki/langs/jsx.mjs"),
+        () => import("shiki/langs/tsx.mjs"),
+        () => import("shiki/langs/typescript.mjs"),
+        () => import("shiki/langs/vue.mjs"),
+      ],
+      engine: createOnigurumaEngine(import("shiki/wasm")),
     }).then((highlighter) => {
       setHighlighterInstance(highlighter);
       return highlighter;
@@ -224,10 +213,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   useEffect(() => {
     const highlight = async () => {
       try {
-        const highlighter = await getHighlighter(language);
-        const langKey = language.toLowerCase() as
-          | BundledLanguage
-          | SpecialLanguage;
+        const highlighter = await getHighlighter();
+        const langKey = language.toLowerCase();
         const lang = highlighter.getLoadedLanguages().includes(langKey)
           ? langKey
           : "plaintext";

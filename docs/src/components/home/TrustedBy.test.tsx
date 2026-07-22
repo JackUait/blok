@@ -4,9 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { TrustedBy } from './TrustedBy';
 import { I18nProvider } from '../../contexts/I18nContext';
 
-const renderTrustedBy = () =>
+const renderTrustedBy = (locale: 'en' | 'ru' = 'en') =>
   render(
-    <I18nProvider>
+    <I18nProvider locale={locale}>
       <MemoryRouter>
         <TrustedBy />
       </MemoryRouter>
@@ -92,8 +92,7 @@ describe('TrustedBy', () => {
   });
 
   it('should render Russian strings when locale is ru', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
-    renderTrustedBy();
+    renderTrustedBy('ru');
     expect(
       screen.getByRole('heading', { name: /Компании, которые нам доверяют/i })
     ).toBeInTheDocument();

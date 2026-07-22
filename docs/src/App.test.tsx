@@ -15,6 +15,25 @@ import MigrationReferenceRoute from './routes/migration-reference';
 import ChangelogRoute from './routes/changelog';
 import NotFoundRoute from './routes/not-found';
 
+// Routing here walks pages full of CodeBlocks. Stub the highlighter so the
+// oniguruma wasm and eight grammar modules stay out of the run — loading them
+// for real pushed single renders past the 5s test timeout and starved the
+// sibling workers (mirrors HomePage.test / FrameworkCards.test).
+vi.mock('shiki/core', () => ({
+  createHighlighterCore: vi.fn(() =>
+    Promise.resolve({
+      getLoadedLanguages: () => ['bash', 'typescript', 'tsx', 'vue', 'html'],
+      codeToHtml: (code: string) => `<pre class="shiki"><code>${code}</code></pre>`,
+    })
+  ),
+}));
+
+vi.mock('shiki/engine/oniguruma', () => ({
+  createOnigurumaEngine: vi.fn(() => Promise.resolve({})),
+}));
+
+vi.mock('shiki/wasm', () => ({ default: {} }));
+
 vi.mock('framer-motion', () => {
   // Strip motion-only props so they don't leak onto the DOM element.
   const MOTION_PROPS = new Set([
@@ -156,8 +175,17 @@ describe('App', () => {
 
     // Only the Caret module is rendered — Selection API must not be present.
     // "Caret API" also now appears in the breadcrumb trail, so scope to the
-    // page's h1 rather than asserting on the bare text.
-    expect(screen.getByRole('heading', { level: 1, name: 'Caret API' })).toBeInTheDocument();
+    // page's h1 rather than asserting on the bare text. The h1 is the route's
+    // SEO heading (see src/seo/route-metadata.ts), not the bare module name,
+    // and it renders through the widow guard that joins the last two words with
+    // a non-breaking space — which getByRole's name matcher does not normalize.
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: (name: string) =>
+          name.replace(/\u00a0/g, ' ') === 'Caret API: move, focus, and set cursor position',
+      })
+    ).toBeInTheDocument();
     expect(screen.queryByText('Selection API')).toBeNull();
   });
 

@@ -154,6 +154,35 @@ describe('Sidebar', () => {
       expect(region).toHaveAttribute('hidden');
     });
 
+    it('keeps a collapsed group\'s links in the DOM so a crawler still sees them', () => {
+      // Below `lg` the whole sidebar is display:none and most groups are
+      // collapsed — but it is the docs' link graph. Collapsing must stay a CSS
+      // concern: the moment a group's links are conditionally rendered instead,
+      // every page in it drops out of a mobile-first crawl.
+      render(
+        <MemoryRouter>
+          <Sidebar
+            sections={MOCK_SECTIONS}
+            activeSection="core"
+            variant="api"
+            linkMode="route"
+            buildHref={(id) => `/docs/${id}`}
+          />
+        </MemoryRouter>,
+        { wrapper: I18nWrapper },
+      );
+
+      const collapsed = screen.getByRole('button', { name: /API Modules/i });
+      expect(collapsed).toHaveAttribute('aria-expanded', 'false');
+
+      for (const id of ['blocks-api', 'caret-api', 'events-api', 'quick-start']) {
+        expect(screen.getByTestId(`api-sidebar-link-${id}`)).toHaveAttribute(
+          'href',
+          `/docs/${id}`,
+        );
+      }
+    });
+
     it('expands a collapsed group when its header is clicked', () => {
       renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
 

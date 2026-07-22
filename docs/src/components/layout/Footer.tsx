@@ -1,6 +1,11 @@
-import { Link } from "react-router-dom";
+// Two kinds of link on this page: the column links stay inside the reader's
+// locale tree (../common/Link), while the language switch deliberately crosses
+// into the other one and already carries a fully-qualified address, so it uses
+// react-router's Link directly — mapping it again would produce `/ru/ru/…`.
+import { Link as CrossLocaleLink } from "react-router-dom";
 import { Globe } from "lucide-react";
-import { useI18n } from "../../contexts/I18nContext";
+import { useI18n, useLocalePath } from "../../contexts/I18nContext";
+import { Link } from "../common/Link";
 import { Typo } from "../common/Typo";
 
 const GitHubIcon = () => (
@@ -17,6 +22,7 @@ const TelegramIcon = () => (
 
 export const Footer: React.FC = () => {
   const { t, locale, setLocale, localeNames } = useI18n();
+  const localePath = useLocalePath();
 
   // Airbnb-style column link: dark text, simple underline grown from the left
   // on hover (width can't be transitioned on text-decoration, so it's a
@@ -152,15 +158,19 @@ export const Footer: React.FC = () => {
           </p>
 
           <div className="flex items-center gap-6">
-            <button
-              type="button"
+            {/* A real link, so the other locale tree is reachable by a crawler
+                and by anyone middle-clicking it. The click only records the
+                preference; the navigation does the switching. */}
+            <CrossLocaleLink
+              to={localePath(otherLocale)}
+              hrefLang={otherLocale}
               onClick={() => setLocale(otherLocale)}
               className={`flex items-center gap-2 font-medium text-foreground ${inlineLinkClass}`}
-              aria-label={`${t("languageSelector.label")}: ${localeNames[locale]}`}
+              aria-label={`${t("languageSelector.label")}: ${localeNames[otherLocale]}`}
             >
               <Globe className="size-[18px]" strokeWidth={1.75} aria-hidden="true" />
-              {localeNames[locale]}
-            </button>
+              {localeNames[otherLocale]}
+            </CrossLocaleLink>
 
             <span className="h-4 w-px bg-border" aria-hidden="true" />
 

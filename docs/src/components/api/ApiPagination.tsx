@@ -1,6 +1,6 @@
 // docs/src/components/api/ApiPagination.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../common/Link';
 import { useI18n } from '../../contexts/I18nContext';
 import { Typo } from '../common/Typo';
 import { MODULE_ORDER } from './api-nav';

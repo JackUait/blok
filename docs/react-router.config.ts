@@ -1,5 +1,6 @@
 import type { Config } from '@react-router/dev/config';
 import { PRERENDER_PATHS } from './src/prerender-paths';
+import { localizedPrerenderPaths } from './src/seo/locales';
 
 export default {
   appDirectory: 'src',
@@ -8,5 +9,7 @@ export default {
   // body instead of the redirect stub's empty 404.
   ssr: false,
   buildDirectory: 'dist',
-  prerender: () => PRERENDER_PATHS,
+  // Both locale trees: `/docs/table` and `/ru/docs/table` are separate URLs and
+  // therefore separate files.
+  prerender: () => localizedPrerenderPaths(PRERENDER_PATHS),
 } satisfies Config;

@@ -6,6 +6,7 @@ import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ToolSection } from './ToolSection';
 import type { ToolSection as ToolSectionType } from './tools-data';
+import { ROUTE_METADATA } from '../../seo/route-metadata';
 
 const mockSection: ToolSectionType = {
   id: 'test-tool',
@@ -93,5 +94,21 @@ describe('ToolSection', () => {
     renderSection(noConfig);
     // The config heading should not be present
     expect(screen.queryByText('Configuration')).not.toBeInTheDocument();
+  });
+
+  describe('SEO heading copy', () => {
+    it('renders the route metadata h1 instead of the bare tool name', () => {
+      renderSection({ ...mockSection, id: 'table', title: 'Table' });
+
+      const heading = screen.getByRole('heading', { level: 1 });
+      expect(heading).toHaveTextContent(ROUTE_METADATA['/docs/table'].h1);
+      expect(heading).not.toHaveTextContent(/^Table$/);
+    });
+
+    it('falls back to the tool title when the route has no metadata', () => {
+      renderSection(mockSection);
+
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Test Tool');
+    });
   });
 });

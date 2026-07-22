@@ -5,8 +5,8 @@ import { I18nProvider } from '../../contexts/I18nContext';
 
 const NBSP = ' ';
 
-const renderTypo = (ui: React.ReactNode) =>
-  render(<I18nProvider>{ui}</I18nProvider>);
+const renderTypo = (ui: React.ReactNode, locale: 'en' | 'ru' = 'en') =>
+  render(<I18nProvider locale={locale}>{ui}</I18nProvider>);
 
 describe('Typo', () => {
   afterEach(() => {
@@ -19,8 +19,7 @@ describe('Typo', () => {
   });
 
   it('applies Russian typography when the active locale is Russian', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
-    const { container } = renderTypo(<Typo>в блоке текста</Typo>);
+    const { container } = renderTypo(<Typo>в блоке текста</Typo>, 'ru');
     expect(container.textContent).toBe(`в${NBSP}блоке текста`);
   });
 

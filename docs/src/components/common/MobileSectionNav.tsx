@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Link } from './Link';
 import { useI18n } from '../../contexts/I18nContext';
 import { cn } from '@/lib/utils';
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics';
@@ -7,13 +8,19 @@ import type { SidebarSection } from '../common/Sidebar';
 interface MobileSectionNavProps {
   sections: SidebarSection[];
   activeSection: string;
-  onNavigate?: (id: string) => void;
+  /**
+   * Maps a section id to the route that serves it. When given, items render as
+   * router links; otherwise they are in-page anchors that scroll to the id.
+   * Either way they are real `<a href>`, which is the only form a crawler
+   * follows — below `lg` this dropdown is the sole docs navigation on screen.
+   */
+  buildHref?: (id: string) => string;
 }
 
 export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
   sections,
   activeSection,
-  onNavigate,
+  buildHref,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useI18n();
@@ -58,19 +65,22 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
     }
   }, [isOpen]);
 
-  const handleLinkClick = (sectionId: string): void => {
+  const handleLinkClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    sectionId: string,
+  ): void => {
     setIsOpen(false);
     // Jumping sections only changes the hash, which page-view tracking ignores.
     trackEvent(ANALYTICS_EVENTS.docsSectionJump, {
       section_id: sectionId,
       surface: 'mobile_nav',
     });
-    if (onNavigate) {
-      onNavigate(sectionId);
-      return;
-    }
+    if (buildHref) return;
+    // Anchor mode: the browser's own hash jump is instant, so take it over and
+    // scroll smoothly instead — the href stays as the crawlable address.
     const element = document.getElementById(sectionId);
     if (element) {
+      event.preventDefault();
       window.history.pushState(null, '', `#${sectionId}`);
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -135,21 +145,12 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
               </div>
               {section.links.map((link) => {
                 const isActive = activeSection === link.id;
-                return (
-                  <button
-                    key={link.id}
-                    className={cn(
-                      "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-secondary",
-                      isActive
-                        ? "active bg-secondary text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                    onClick={() => handleLinkClick(link.id)}
-                    role="option"
-                    aria-selected={isActive}
-                    type="button"
-                    data-blok-testid={`mobile-section-nav-item-${link.id}`}
-                  >
+                const itemClass = cn(
+                  "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-secondary",
+                  isActive ? "active bg-secondary text-foreground" : "text-muted-foreground",
+                );
+                const itemContent = (
+                  <>
                     <span
                       className={cn(
                         "size-1.5 shrink-0 rounded-full",
@@ -157,7 +158,24 @@ export const MobileSectionNav: React.FC<MobileSectionNavProps> = ({
                       )}
                     />
                     {link.label}
-                  </button>
+                  </>
+                );
+                const itemProps = {
+                  className: itemClass,
+                  onClick: (event: React.MouseEvent<HTMLAnchorElement>) =>
+                    handleLinkClick(event, link.id),
+                  role: 'option',
+                  'aria-selected': isActive,
+                  'data-blok-testid': `mobile-section-nav-item-${link.id}`,
+                };
+                return buildHref ? (
+                  <Link key={link.id} to={buildHref(link.id)} {...itemProps}>
+                    {itemContent}
+                  </Link>
+                ) : (
+                  <a key={link.id} href={`#${link.id}`} {...itemProps}>
+                    {itemContent}
+                  </a>
                 );
               })}
             </div>

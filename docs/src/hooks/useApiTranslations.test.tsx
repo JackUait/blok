@@ -1,11 +1,17 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { I18nProvider, useI18n } from '../contexts/I18nContext';
+import { I18nProvider } from '../contexts/I18nContext';
 import { useApiTranslations } from './useApiTranslations';
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <I18nProvider>{children}</I18nProvider>
+);
+
+// The locale is route state now, so a Russian test renders under the Russian
+// provider rather than flipping a shared preference between two hook renders.
+const ruWrapper = ({ children }: { children: ReactNode }) => (
+  <I18nProvider locale="ru">{children}</I18nProvider>
 );
 
 describe('useApiTranslations', () => {
@@ -28,15 +34,9 @@ describe('useApiTranslations', () => {
   });
 
   it('should return translated API sections in Russian when locale is changed', () => {
-    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
-    renderHook(() => useApiTranslations(), { wrapper });
-    
-    act(() => {
-      i18nResult.current.setLocale('ru');
+    const { result: updatedResult } = renderHook(() => useApiTranslations(), {
+      wrapper: ruWrapper,
     });
-    
-    // Re-render to get updated translations
-    const { result: updatedResult } = renderHook(() => useApiTranslations(), { wrapper });
     
     const quickStart = updatedResult.current.apiSections.find(s => s.id === 'quick-start');
     expect(quickStart?.title).toBe('Быстрый старт');
@@ -86,10 +86,7 @@ describe('useApiTranslations', () => {
   });
 
   it('should translate core section method descriptions in Russian', () => {
-    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
-    act(() => { i18nResult.current.setLocale('ru'); });
-
-    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const { result } = renderHook(() => useApiTranslations(), { wrapper: ruWrapper });
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const saveMethod = coreSection?.methods?.find(m => m.name === 'save()');
@@ -109,10 +106,7 @@ describe('useApiTranslations', () => {
   });
 
   it('should translate core section property descriptions in Russian', () => {
-    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
-    act(() => { i18nResult.current.setLocale('ru'); });
-
-    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const { result } = renderHook(() => useApiTranslations(), { wrapper: ruWrapper });
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const isReadyProp = coreSection?.properties?.find(p => p.name === 'isReady');
@@ -123,10 +117,7 @@ describe('useApiTranslations', () => {
   });
 
   it('should translate configuration section table row descriptions in Russian', () => {
-    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
-    act(() => { i18nResult.current.setLocale('ru'); });
-
-    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const { result } = renderHook(() => useApiTranslations(), { wrapper: ruWrapper });
     const configSection = result.current.apiSections.find(s => s.id === 'config');
 
     const holderRow = configSection?.table?.find(r => r.option === 'holder');
@@ -147,9 +138,7 @@ describe('useApiTranslations', () => {
     expect(enSave?.note).toBeDefined();
     expect((enSave?.note ?? '').length).toBeGreaterThan(0);
 
-    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
-    act(() => { i18nResult.current.setLocale('ru'); });
-    const { result: ruResult } = renderHook(() => useApiTranslations(), { wrapper });
+    const { result: ruResult } = renderHook(() => useApiTranslations(), { wrapper: ruWrapper });
     const ruSave = ruResult.current.apiSections
       .find((s) => s.id === 'core')
       ?.methods?.find((m) => m.name === 'save()');
@@ -174,10 +163,7 @@ describe('useApiTranslations', () => {
   });
 
   it('should translate method param descriptions in Russian, keeping name/type/required structural', () => {
-    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
-    act(() => { i18nResult.current.setLocale('ru'); });
-
-    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const { result } = renderHook(() => useApiTranslations(), { wrapper: ruWrapper });
     const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
     const insertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.insert('));
 
@@ -198,10 +184,7 @@ describe('useApiTranslations', () => {
   });
 
   it('should translate method error condition/resolution in Russian, keeping the literal message untranslated', () => {
-    const { result: i18nResult } = renderHook(() => useI18n(), { wrapper });
-    act(() => { i18nResult.current.setLocale('ru'); });
-
-    const { result } = renderHook(() => useApiTranslations(), { wrapper });
+    const { result } = renderHook(() => useApiTranslations(), { wrapper: ruWrapper });
     const blocksApiSection = result.current.apiSections.find(s => s.id === 'blocks-api');
     const convertMethod = blocksApiSection?.methods?.find(m => m.name.startsWith('blocks.convert('));
 

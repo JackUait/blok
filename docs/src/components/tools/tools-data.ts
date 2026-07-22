@@ -1448,6 +1448,15 @@ export const DOCUMENTED_INLINE_TOOL_KEYS = new Set(
   TOOL_SECTIONS.filter((s) => s.type === 'inline').map((s) => s.id)
 );
 
+// The URL each documented tool has to be reachable at. Being documented is not
+// the same as being discoverable: test/unit/architecture/docs-seo-surface-law.test.ts
+// requires every path here to have route metadata AND a sitemap URL, so a new
+// tool cannot ship as a page nothing links to and no crawler is told about.
+// (Deduplicated: TOOL_SECTIONS carries a repeated id, matching the sidebar.)
+export const DOCUMENTED_TOOL_ROUTE_PATHS = [
+  ...new Set(TOOL_SECTIONS.map((s) => `/docs/${s.id}`)),
+];
+
 // Sidebar section structure used by the Tools page
 export interface ToolsSidebarSection {
   title: string;

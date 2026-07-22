@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
-import { Links, Meta, Outlet, Scripts } from 'react-router-dom';
+import { Links, Meta, Outlet, Scripts, useLocation } from 'react-router-dom';
 import App from './App';
-import { I18nProvider } from './contexts/I18nContext';
+import { I18nProvider, StoredLocaleRedirect, useRouteLocale } from './contexts/I18nContext';
 import { FrameworkProvider } from './contexts/FrameworkContext';
+import { buildMetaDescriptors } from './seo/meta-descriptors';
+import { HTML_LANG, splitLocalePath } from './seo/locales';
 import stylesheet from './index.css?url';
 
 const GA_MEASUREMENT_ID = 'G-P4F8SK0C03';
@@ -59,34 +61,48 @@ export const links = () => [
   { rel: 'manifest', href: '/site.webmanifest' },
 ];
 
-/** Site-wide default; per-route modules override it with their own `meta`. */
-export const meta = () => [{ title: 'Blok — Block-Based Rich Text Editor' }];
+/**
+ * Every route's head tags. React Router uses the closest ancestor's `meta` when
+ * a leaf route exports none, so this one function serves all 65 routes from the
+ * single `src/seo/route-metadata.ts` source; `routes/not-found.tsx` exports its
+ * own and overrides it.
+ */
+export const meta = ({ location }: { location: { pathname: string } }) =>
+  buildMetaDescriptors(location.pathname);
 
-export const Layout = ({ children }: { children: ReactNode }) => (
-  <html lang="en">
-    <head>
-      <meta charSet="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <Meta />
-      <Links />
-      <script dangerouslySetInnerHTML={{ __html: GTAG_OPT_OUT }} />
-      {/* No integrity hash on purpose: gtag.js is a mutable endpoint Google
-          redeploys continuously, so any pinned SHA would break analytics for
-          every visitor on their next release. */}
-      <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
-      <script dangerouslySetInnerHTML={{ __html: GTAG_INIT }} />
-      <script dangerouslySetInnerHTML={{ __html: THEME_FLASH }} />
-    </head>
-    <body>
-      {children}
-      <Scripts />
-    </body>
-  </html>
-);
+export const Layout = ({ children }: { children: ReactNode }) => {
+  // Written here, not by an effect: prerendering renders this file to HTML and
+  // never runs effects, so a runtime mutation would leave every Russian file
+  // claiming lang="en".
+  const { locale } = splitLocalePath(useLocation().pathname);
+
+  return (
+    <html lang={HTML_LANG[locale]}>
+      <head>
+        <meta charSet="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <Meta />
+        <Links />
+        <script dangerouslySetInnerHTML={{ __html: GTAG_OPT_OUT }} />
+        {/* No integrity hash on purpose: gtag.js is a mutable endpoint Google
+            redeploys continuously, so any pinned SHA would break analytics for
+            every visitor on their next release. */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+        <script dangerouslySetInnerHTML={{ __html: GTAG_INIT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_FLASH }} />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+};
 
 const Root = () => (
-  <I18nProvider>
+  <I18nProvider locale={useRouteLocale()}>
     <FrameworkProvider>
+      <StoredLocaleRedirect />
       <App>
         <Outlet />
       </App>

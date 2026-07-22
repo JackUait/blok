@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { MobileSectionNav } from './MobileSectionNav';
 import { I18nProvider } from '../../contexts/I18nContext';
 import type { SidebarSection } from './Sidebar';
@@ -49,15 +50,48 @@ describe('MobileSectionNav', () => {
     expect(screen.getByTestId('mobile-section-nav-dropdown')).toBeInTheDocument();
   });
 
-  it('calls onNavigate instead of scrolling when provided', async () => {
-    const onNavigate = vi.fn();
+  it('renders dropdown items as router links when buildHref is provided', () => {
+    // The mobile nav is the only docs navigation a mobile-first crawl can see,
+    // so its items have to be real anchors rather than handler-driven buttons.
     render(
-      <MobileSectionNav sections={MOCK_SECTIONS} activeSection="caret-api" onNavigate={onNavigate} />,
+      <MemoryRouter>
+        <MobileSectionNav
+          sections={MOCK_SECTIONS}
+          activeSection="caret-api"
+          buildHref={(id) => `/docs/${id}`}
+        />
+      </MemoryRouter>,
       { wrapper: I18nWrapper },
     );
     fireEvent.click(screen.getByTestId('mobile-section-nav-trigger'));
+    expect(screen.getByTestId('mobile-section-nav-item-events-api')).toHaveAttribute(
+      'href',
+      '/docs/events-api',
+    );
+    expect(screen.getByTestId('mobile-section-nav-item-caret-api')).toHaveAttribute(
+      'href',
+      '/docs/caret-api',
+    );
+  });
+
+  it('renders in-page anchors when no buildHref is provided', () => {
+    render(<MobileSectionNav sections={MOCK_SECTIONS} activeSection="caret-api" />, {
+      wrapper: I18nWrapper,
+    });
+    fireEvent.click(screen.getByTestId('mobile-section-nav-trigger'));
+    expect(screen.getByTestId('mobile-section-nav-item-events-api')).toHaveAttribute(
+      'href',
+      '#events-api',
+    );
+  });
+
+  it('closes the dropdown when an item is chosen', () => {
+    render(<MobileSectionNav sections={MOCK_SECTIONS} activeSection="caret-api" />, {
+      wrapper: I18nWrapper,
+    });
+    fireEvent.click(screen.getByTestId('mobile-section-nav-trigger'));
     fireEvent.click(screen.getByTestId('mobile-section-nav-item-events-api'));
-    expect(onNavigate).toHaveBeenCalledWith('events-api');
+    expect(screen.queryByTestId('mobile-section-nav-dropdown')).not.toBeInTheDocument();
   });
 
   it('tracks a section jump when a dropdown item is chosen', () => {

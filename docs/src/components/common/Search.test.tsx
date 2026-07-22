@@ -266,13 +266,13 @@ describe('Search', () => {
       const input = screen.getByPlaceholderText('Search docs...');
       fireEvent.change(input, { target: { value: 'result' } });
 
-      const resultButtons = await waitFor(() => {
-        const buttons = screen.getAllByRole('button', { name: /Result \d/ });
-        expect(buttons.length).toBeGreaterThan(0);
-        return buttons;
+      const resultLinks = await waitFor(() => {
+        const links = screen.getAllByRole('link', { name: /Result \d/ });
+        expect(links.length).toBeGreaterThan(0);
+        return links;
       });
 
-      const lastResult = resultButtons[resultButtons.length - 1];
+      const lastResult = resultLinks[resultLinks.length - 1];
       lastResult.focus();
       expect(lastResult).toHaveFocus();
 
@@ -314,11 +314,8 @@ describe('Search', () => {
       const input = screen.getByPlaceholderText('Search docs...');
       fireEvent.change(input, { target: { value: 'result' } });
 
-      const resultButton = await waitFor(() => {
-        const button = screen.getByRole('button', { name: /Result 0/ });
-        return button;
-      });
-      fireEvent.click(resultButton);
+      const resultLink = await waitFor(() => screen.getByRole('link', { name: /Result 0/ }));
+      fireEvent.click(resultLink);
 
       await waitFor(
         () => {
@@ -391,11 +388,10 @@ describe('Search', () => {
         [2, 'результата'],
         [5, 'результатов'],
       ])('shows "%i %s" for the matching count', async (count, expectedWord) => {
-        localStorage.setItem('blok-docs-locale', 'ru');
         vi.mocked(searchUtils.search).mockReturnValue(buildResults(count));
 
         render(
-          <I18nProvider>
+          <I18nProvider locale="ru">
             <MemoryRouter>
               <Search open={true} onClose={vi.fn()} />
             </MemoryRouter>
@@ -499,10 +495,8 @@ describe('Search', () => {
 
   describe('locale switching', () => {
     it('shows Russian placeholder when locale is ru', () => {
-      localStorage.setItem('blok-docs-locale', 'ru');
-
       render(
-        <I18nProvider>
+        <I18nProvider locale="ru">
           <MemoryRouter>
             <Search open={true} onClose={vi.fn()} />
           </MemoryRouter>
@@ -604,12 +598,12 @@ describe('Search', () => {
         target: { value: 'Result' },
       });
 
-      const button = await screen.findByRole(
-        'button',
+      const link = await screen.findByRole(
+        'link',
         { name: /Result 1/ },
         { timeout: 3000 }
       );
-      fireEvent.click(button);
+      fireEvent.click(link);
 
       expect(gtagMock).toHaveBeenCalledWith(
         'event',
@@ -632,7 +626,7 @@ describe('Search', () => {
       const input = screen.getByPlaceholderText('Search docs...');
       fireEvent.change(input, { target: { value: 'Result' } });
 
-      await screen.findByRole('button', { name: /Result 0/ }, { timeout: 3000 });
+      await screen.findByRole('link', { name: /Result 0/ }, { timeout: 3000 });
       fireEvent.keyDown(input, { key: 'Enter' });
 
       expect(gtagMock).toHaveBeenCalledWith(
@@ -646,6 +640,42 @@ describe('Search', () => {
           result_index: 0,
         }
       );
+    });
+  });
+  describe('crawlable results', () => {
+    const renderSearch = () =>
+      render(
+        <I18nProvider>
+          <MemoryRouter>
+            <Search open onClose={vi.fn()} />
+          </MemoryRouter>
+        </I18nProvider>
+      );
+
+    it('renders each result as a real anchor carrying its destination', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue(buildResults(2));
+
+      renderSearch();
+      fireEvent.change(screen.getByPlaceholderText('Search docs...'), {
+        target: { value: 'Result' },
+      });
+
+      const link = await screen.findByRole('link', { name: /Result 1/ }, { timeout: 3000 });
+      expect(link).toHaveAttribute('href', '/docs#r-1');
+    });
+
+    it('omits the hash from the href when a result has none', async () => {
+      vi.mocked(searchUtils.search).mockReturnValue([
+        { ...buildResults(1)[0], hash: undefined },
+      ]);
+
+      renderSearch();
+      fireEvent.change(screen.getByPlaceholderText('Search docs...'), {
+        target: { value: 'Result' },
+      });
+
+      const link = await screen.findByRole('link', { name: /Result 0/ }, { timeout: 3000 });
+      expect(link).toHaveAttribute('href', '/docs');
     });
   });
 });

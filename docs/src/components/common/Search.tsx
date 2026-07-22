@@ -7,12 +7,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { Link } from "./Link";
 import { search, getSearchIndex } from "@/utils/search";
 import type { SearchResult } from "@/types/search";
 import { ModuleIcon } from "./ModuleIcon";
 import { KindIcon } from "./KindIcon";
 import { Typo } from "./Typo";
-import { useI18n } from "../../contexts/I18nContext";
+import { useI18n, useLocalizedHref } from "../../contexts/I18nContext";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,10 @@ interface SearchProps {
 
 const SEARCH_SHORTCUT = "k";
 const SEARCH_DEBOUNCE_MS = 150;
+
+/** The address a result points at — its page, plus the in-page anchor if any. */
+const resultHref = (result: SearchResult): string =>
+  result.hash ? `${result.path}#${result.hash}` : result.path;
 
 // Keycap chip — mirrors the ⌘K kbd in the search input.
 const KEYCAP_CLASS =
@@ -168,6 +173,7 @@ export const Search: React.FC<SearchProps> = ({
   triggerRef,
 }) => {
   const navigate = useNavigate();
+  const localizedHref = useLocalizedHref();
   const { t, locale } = useI18n();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -432,9 +438,11 @@ export const Search: React.FC<SearchProps> = ({
     }
   }, [debouncedQuery]);
 
-  // Handle result selection — the single path for both mouse click and the
-  // Enter key, so analytics can't drift between the two.
-  const handleResultClick = useCallback(
+  // Report + dismiss, shared by the mouse and the Enter key so analytics can't
+  // drift between the two. Navigation is deliberately NOT here: a click is
+  // carried by the result's own <a href>, which is what makes the palette's
+  // destinations discoverable at all.
+  const trackResultSelect = useCallback(
     (result: SearchResult, index: number) => {
       trackEvent(ANALYTICS_EVENTS.searchResultSelect, {
         query: debouncedQuery.trim().toLowerCase(),
@@ -443,12 +451,20 @@ export const Search: React.FC<SearchProps> = ({
         result_module: result.module,
         result_index: index,
       });
-
-      const url = result.hash ? `${result.path}#${result.hash}` : result.path;
-      navigate(url);
       handleClose();
     },
-    [navigate, handleClose, debouncedQuery],
+    [handleClose, debouncedQuery],
+  );
+
+  // Enter has no anchor to follow, so it navigates itself — through the same
+  // locale mapping the rendered <Link> uses, or Enter would leave the Russian
+  // tree while a click on the same row stayed in it.
+  const handleResultEnter = useCallback(
+    (result: SearchResult, index: number) => {
+      trackResultSelect(result, index);
+      navigate(localizedHref(resultHref(result)));
+    },
+    [navigate, localizedHref, trackResultSelect],
   );
 
   // Handle keyboard navigation within results
@@ -484,12 +500,12 @@ export const Search: React.FC<SearchProps> = ({
         case "Enter":
           e.preventDefault();
           if (results[selectedIndex]) {
-            handleResultClick(results[selectedIndex], selectedIndex);
+            handleResultEnter(results[selectedIndex], selectedIndex);
           }
           break;
       }
     },
-    [results, selectedIndex, handleResultClick],
+    [results, selectedIndex, handleResultEnter],
   );
 
   // Scroll a buffer element into view within the results container
@@ -882,15 +898,15 @@ export const Search: React.FC<SearchProps> = ({
                             <span>{result.module}</span>
                           </div>
                         )}
-                        <button
+                        <Link
+                          to={resultHref(result)}
                           className={cn(
                             "group flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
                             isSelected
                               ? "bg-secondary"
                               : "hover:bg-secondary/60",
                           )}
-                          onClick={() => handleResultClick(result, index)}
-                          type="button"
+                          onClick={() => trackResultSelect(result, index)}
                           onMouseEnter={() => {
                             if (!isKeyboardNavMode) {
                               setSelectedIndex(index);
@@ -960,7 +976,7 @@ export const Search: React.FC<SearchProps> = ({
                               strokeLinejoin="round"
                             />
                           </svg>
-                        </button>
+                        </Link>
                       </div>
                     );
                   })}

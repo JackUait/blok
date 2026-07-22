@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Nav } from '../components/layout/Nav';
@@ -11,10 +11,18 @@ import { WhyBlok } from '../components/home/WhyBlok';
 import { MigrationCard } from '../components/home/MigrationCard';
 import { TrustedBy } from '../components/home/TrustedBy';
 import { DocsCtaCard } from '../components/home/DocsCtaCard';
-import { DemoContent } from './DemoPage';
-import { MigrationContent } from './MigrationPage';
-import { ChangelogContent } from './ChangelogPage';
 import { NAV_LINKS } from '../utils/constants';
+
+// The three panel bodies are only reachable behind ?view=, and each drags in a
+// page's worth of code (the editor bundle, the migration sections, the whole
+// changelog). Keep them out of the landing view's chunk.
+const DemoContent = lazy(async () => ({ default: (await import('./DemoPage')).DemoContent }));
+const MigrationContent = lazy(async () => ({
+  default: (await import('./MigrationPage')).MigrationContent,
+}));
+const ChangelogContent = lazy(async () => ({
+  default: (await import('./ChangelogPage')).ChangelogContent,
+}));
 
 /** Views openable from the category bar, excluding the default landing view. */
 const PANEL_VIEWS = HOME_CATEGORIES.map((c) => c.view).filter(
@@ -23,6 +31,21 @@ const PANEL_VIEWS = HOME_CATEGORIES.map((c) => c.view).filter(
 
 const isPanelView = (value: string | null): value is Exclude<HomeView, 'getStarted'> =>
   value !== null && (PANEL_VIEWS as string[]).includes(value);
+
+/**
+ * Only the lazy panels get a boundary, and never the landing view. React defers
+ * any Suspense boundary larger than `progressiveChunkSize` (12.8 KB) into a
+ * segment appended at the end of the document — whether or not it ever
+ * suspends. Wrapping the whole switch therefore emitted `/` and `/ru` as a hero,
+ * this fallback, and a footer, with the entire landing body parked in a
+ * `<div hidden>` that only JavaScript un-hides. `?view=` panels are not
+ * prerendered, so a boundary around those costs nothing.
+ */
+const LazyPanel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Suspense fallback={<div className="min-h-[60vh]" data-blok-testid="home-panel-loading" />}>
+    {children}
+  </Suspense>
+);
 
 export const HomePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,11 +109,23 @@ export const HomePage: React.FC = () => {
       case 'docs':
         return <DocsCtaCard />;
       case 'playground':
-        return <DemoContent inline />;
+        return (
+          <LazyPanel>
+            <DemoContent inline />
+          </LazyPanel>
+        );
       case 'migration':
-        return <MigrationContent inline />;
+        return (
+          <LazyPanel>
+            <MigrationContent inline />
+          </LazyPanel>
+        );
       case 'changelog':
-        return <ChangelogContent inline />;
+        return (
+          <LazyPanel>
+            <ChangelogContent inline />
+          </LazyPanel>
+        );
       default:
         return (
           <>

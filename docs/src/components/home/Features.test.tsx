@@ -3,9 +3,9 @@ import { render, screen, within, act, fireEvent } from '@testing-library/react';
 import { Features, EMBED_ROWS, LANGUAGE_COUNT, pickLocaleIndex } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
 
-const renderFeatures = () =>
+const renderFeatures = (locale: 'en' | 'ru' = 'en') =>
   render(
-    <I18nProvider>
+    <I18nProvider locale={locale}>
       <Features />
     </I18nProvider>
   );
@@ -502,12 +502,7 @@ describe('Features', () => {
   });
 
   it('should render Russian strings when locale is ru', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
-    render(
-      <I18nProvider>
-        <Features />
-      </I18nProvider>
-    );
+    renderFeatures('ru');
     expect(screen.queryByText('Почему Blok')).not.toBeInTheDocument();
     expect(screen.getByText('Типизированный JSON, не HTML')).toBeInTheDocument();
   });
@@ -552,8 +547,7 @@ describe('Features', () => {
     // The dimension must stay comparable across locales, so it carries the
     // feature's stable key rather than its translated title.
     it('keeps the feature dimension stable when the locale changes', () => {
-      localStorage.setItem('blok-docs-locale', 'ru');
-      renderFeatures();
+      renderFeatures('ru');
 
       // Russian UI — same feature, so the same identifier must be reported.
       fireEvent.click(

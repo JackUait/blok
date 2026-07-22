@@ -6,6 +6,7 @@ import { ApiSection } from './ApiSection';
 import type { ApiSection as ApiSectionType } from './api-data';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
+import { ROUTE_METADATA } from '../../seo/route-metadata';
 
 /**
  * ApiSection reads the active framework, which now lives in the URL, so a router
@@ -534,6 +535,26 @@ describe('ApiSection', () => {
 
       expect(screen.queryByText('Was this page helpful?')).not.toBeInTheDocument();
       expect(screen.queryByTestId('api-feedback')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('SEO heading copy', () => {
+    it('renders the route metadata h1 instead of the bare module name', () => {
+      render(
+        <Providers>
+          <ApiSection section={{ ...mockSection, id: 'caret-api', title: 'Caret API' }} />
+        </Providers>,
+      );
+
+      const heading = screen.getByRole('heading', { level: 1 });
+      expect(heading).toHaveTextContent(ROUTE_METADATA['/docs/caret-api'].h1);
+      expect(heading).not.toHaveTextContent(/^Caret API$/);
+    });
+
+    it('falls back to the section title when the route has no metadata', () => {
+      render(<Providers><ApiSection section={mockSection} /></Providers>);
+
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Test Section');
     });
   });
 });

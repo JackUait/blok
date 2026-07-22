@@ -6,10 +6,12 @@ import { ApiPagination } from './ApiPagination';
 import { ToolSection } from '../tools/ToolSection';
 import { useApiTranslations } from '../../hooks/useApiTranslations';
 import { useToolsTranslations } from '../../hooks/useToolsTranslations';
+import { useLocalizedHref } from '../../contexts/I18nContext';
 
 export const ApiModuleBody: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
   const { hash } = useLocation();
+  const localizedHref = useLocalizedHref();
   const { apiSections, sidebarSections } = useApiTranslations();
   const { toolSections } = useToolsTranslations();
   const section = apiSections.find((s) => s.id === moduleId);
@@ -36,7 +38,7 @@ export const ApiModuleBody: React.FC = () => {
   }, [moduleId, hash]);
 
   if (!section && !tool) {
-    return <Navigate to="/docs/quick-start" replace />;
+    return <Navigate to={localizedHref('/docs/quick-start')} replace />;
   }
 
   // Translated labels, keyed by id across every group, so the pagination

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "../common/Link";
 import { CategoryIcon } from "../common/CategoryIcon";
 import { SectionReveal } from "../common/SectionReveal";
 import { useI18n } from "../../contexts/I18nContext";
@@ -17,14 +18,21 @@ interface Category {
   view: HomeView;
   /** CategoryIcon glyph name */
   icon: string;
+  /**
+   * The standalone route serving the same content as the inline panel. A plain
+   * click still swaps the panel in place, but the address has to be on the
+   * element: crawlers discover pages only through `<a href>`, and without it
+   * the homepage exposed no path into the docs at all.
+   */
+  href: string;
 }
 
 export const HOME_CATEGORIES: Category[] = [
-  { view: "getStarted", icon: "guide" },
-  { view: "docs", icon: "page" },
-  { view: "playground", icon: "block" },
-  { view: "migration", icon: "history" },
-  { view: "changelog", icon: "events" },
+  { view: "getStarted", icon: "guide", href: "/" },
+  { view: "docs", icon: "page", href: "/docs" },
+  { view: "playground", icon: "block", href: "/demo" },
+  { view: "migration", icon: "history", href: "/migration" },
+  { view: "changelog", icon: "events", href: "/changelog" },
 ];
 
 interface CategoryBarProps {
@@ -47,7 +55,7 @@ interface CategoryBarProps {
 export const CategoryBar: React.FC<CategoryBarProps> = ({ activeView, onSelect }) => {
   const { t } = useI18n();
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const activeRef = useRef<HTMLButtonElement>(null);
+  const activeRef = useRef<HTMLAnchorElement>(null);
   const [edges, setEdges] = useState({ start: false, end: false });
 
   const items = useMemo(
@@ -134,11 +142,18 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({ activeView, onSelect }
           className="flex snap-x scroll-px-4 gap-2 overflow-x-auto overscroll-x-contain px-4 py-3 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden"
         >
           {items.map((item) => (
-            <button
+            <Link
               key={item.view}
+              to={item.href}
               ref={item.active ? activeRef : undefined}
-              type="button"
-              onClick={() => onSelect(item.view)}
+              // A plain left click opens the panel in place — the category
+              // strip filters rather than routes. Modified clicks fall through
+              // untouched so the browser can open the real route in a new tab.
+              onClick={(event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                onSelect(item.view);
+              }}
               className={cn(
                 "group flex shrink-0 snap-start cursor-pointer items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]",
                 item.active
@@ -160,13 +175,13 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({ activeView, onSelect }
                     }
                   : undefined
               }
-              aria-pressed={item.active}
+              aria-current={item.active ? "page" : undefined}
             >
               <span className="shrink-0" aria-hidden="true">
                 <CategoryIcon category={item.icon} size={18} />
               </span>
               <span className="whitespace-nowrap">{item.label}</span>
-            </button>
+            </Link>
           ))}
         </div>
       </div>

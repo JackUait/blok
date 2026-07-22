@@ -9,8 +9,6 @@ import ruJson from '../i18n/ru.json';
 const en = enJson.changelog;
 const ru = ruJson.changelog;
 
-const STORAGE_KEY = 'blok-docs-locale';
-
 type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
 
 // The page reads the changelog through a build-time `?raw` import, so the test
@@ -34,10 +32,10 @@ const FIXTURE_CHANGELOG = vi.hoisted(
 
 vi.mock('../../../CHANGELOG.md?raw', () => ({ default: FIXTURE_CHANGELOG }));
 
-const renderChangelogPage = () =>
+const renderChangelogPage = (locale: 'en' | 'ru' = 'en') =>
   render(
     <MemoryRouter>
-      <I18nProvider>
+      <I18nProvider locale={locale}>
         <ChangelogPage />
       </I18nProvider>
     </MemoryRouter>
@@ -86,25 +84,19 @@ describe('ChangelogPage', () => {
     });
 
     it('renders the hero title in Russian when locale is ru', () => {
-      localStorage.setItem(STORAGE_KEY, 'ru');
-
-      renderChangelogPage();
+      renderChangelogPage('ru');
 
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ru.title);
     });
 
     it('renders the Russian badge when locale is ru', () => {
-      localStorage.setItem(STORAGE_KEY, 'ru');
-
-      renderChangelogPage();
+      renderChangelogPage('ru');
 
       expect(screen.getByText(ru.badge)).toBeInTheDocument();
     });
 
     it('renders the Russian description when locale is ru', () => {
-      localStorage.setItem(STORAGE_KEY, 'ru');
-
-      renderChangelogPage();
+      renderChangelogPage('ru');
 
       expect(screen.getByText(ru.description)).toBeInTheDocument();
     });

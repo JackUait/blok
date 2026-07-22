@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "../common/Link";
 import { useI18n } from "../../contexts/I18nContext";
 import { Typo } from "../common/Typo";
 import { MIGRATION_MOVE_STEPS, CODEMOD_DRY_RUN_COMMAND } from "./migration-data";

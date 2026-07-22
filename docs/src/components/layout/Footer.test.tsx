@@ -1,16 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { Locale } from '../../i18n';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { Footer } from './Footer';
 
-const renderFooter = () =>
+/** The locale is part of the address now, so a test picks a tree by its path. */
+const renderFooter = (locale: Locale = 'en', path = '/') =>
   render(
-    <I18nProvider>
-      <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
+      <I18nProvider locale={locale}>
         <Footer />
-      </MemoryRouter>
-    </I18nProvider>
+      </I18nProvider>
+    </MemoryRouter>
   );
 
 describe('Footer', () => {
@@ -113,11 +115,48 @@ describe('Footer', () => {
   });
 
   it('should render translated strings when locale is Russian', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
-    renderFooter();
+    renderFooter('ru', '/ru');
     expect(screen.getByText('Документация')).toBeInTheDocument();
     expect(screen.getByText('Быстрый старт')).toBeInTheDocument();
     expect(screen.getByText('Справочник API')).toBeInTheDocument();
     expect(screen.getByText('Руководство по миграции')).toBeInTheDocument();
+  });
+
+  // The column links are written as English addresses. Rendered verbatim they
+  // dropped a Russian reader back into the English tree on every click.
+  it('keeps the documentation column inside the reader’s locale tree', () => {
+    renderFooter('ru', '/ru/docs/table');
+
+    expect(screen.getByRole('link', { name: 'Справочник API' })).toHaveAttribute('href', '/ru/docs');
+    expect(screen.getByRole('link', { name: 'Руководство по миграции' })).toHaveAttribute(
+      'href',
+      '/ru/migration',
+    );
+  });
+
+  describe('language switch', () => {
+    it('is a link to the same page in the other locale, not a button', () => {
+      renderFooter('en', '/docs/table');
+
+      const link = screen.getByRole('link', { name: /Русский/i });
+      expect(link).toHaveAttribute('href', '/ru/docs/table');
+      expect(link).toHaveAttribute('hreflang', 'ru');
+    });
+
+    it('links back out of the Russian tree from a Russian page', () => {
+      renderFooter('ru', '/ru/docs/table');
+
+      const link = screen.getByRole('link', { name: /English/i });
+      expect(link).toHaveAttribute('href', '/docs/table');
+      expect(link).toHaveAttribute('hreflang', 'en');
+    });
+
+    it('records the choice so the site root can honour it later', () => {
+      renderFooter('en', '/');
+
+      fireEvent.click(screen.getByRole('link', { name: /Русский/i }));
+
+      expect(localStorage.getItem('blok-docs-locale')).toBe('ru');
+    });
   });
 });

@@ -18,12 +18,13 @@ const mockLinksWithI18nKeys: NavLink[] = [
   { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },
 ];
 
-const TestWrapper: React.FC<{ children: React.ReactNode; initialPath?: string }> = ({
-  children,
-  initialPath = '/',
-}) => (
+const TestWrapper: React.FC<{
+  children: React.ReactNode;
+  initialPath?: string;
+  locale?: 'en' | 'ru';
+}> = ({ children, initialPath = '/', locale = 'en' }) => (
   <MemoryRouter initialEntries={[initialPath]}>
-    <I18nProvider>{children}</I18nProvider>
+    <I18nProvider locale={locale}>{children}</I18nProvider>
   </MemoryRouter>
 );
 
@@ -161,10 +162,8 @@ describe('Nav', () => {
   });
 
   it('should render translated labels when locale is Russian and i18nKey is provided', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
-
-    render(
-      <TestWrapper>
+render(
+      <TestWrapper locale="ru">
         <Nav links={mockLinksWithI18nKeys} />
       </TestWrapper>
     );
@@ -175,10 +174,8 @@ describe('Nav', () => {
   });
 
   it('should render English labels when locale is English and i18nKey is provided', () => {
-    localStorage.setItem('blok-docs-locale', 'en');
-
-    render(
-      <TestWrapper>
+render(
+      <TestWrapper locale="en">
         <Nav links={mockLinksWithI18nKeys} />
       </TestWrapper>
     );
@@ -198,9 +195,8 @@ describe('Nav', () => {
   });
 
   it('should render translated toggle menu label when locale is Russian', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
-    render(
-      <TestWrapper>
+render(
+      <TestWrapper locale="ru">
         <Nav links={mockLinks} />
       </TestWrapper>
     );
@@ -208,9 +204,8 @@ describe('Nav', () => {
   });
 
   it('should render translated search aria-label when locale is Russian', () => {
-    localStorage.setItem('blok-docs-locale', 'ru');
-    render(
-      <TestWrapper>
+render(
+      <TestWrapper locale="ru">
         <Nav links={mockLinks} />
       </TestWrapper>
     );
@@ -275,10 +270,8 @@ describe('Nav', () => {
     });
 
     it('uses the stable link label, not the translated one, as the analytics label', () => {
-      localStorage.setItem('blok-docs-locale', 'ru');
-
-      render(
-        <TestWrapper>
+  render(
+        <TestWrapper locale="ru">
           <Nav links={mockLinksWithI18nKeys} />
         </TestWrapper>
       );

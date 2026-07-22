@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "../components/common/Link";
 import { useMemo } from "react";
 // Inlined at build time so the changelog prose lands in the prerendered HTML.
 import CHANGELOG_MARKDOWN from "../../../CHANGELOG.md?raw";

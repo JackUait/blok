@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "../common/Link";
 import { CodeBlock } from "../common/CodeBlock";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";

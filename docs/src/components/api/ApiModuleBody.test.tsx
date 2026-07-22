@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ApiModuleBody } from './ApiModuleBody';
+import { ROUTE_METADATA } from '../../seo/route-metadata';
 
 const renderAt = (entry: string) =>
   render(
@@ -31,9 +32,11 @@ describe('ApiModuleBody', () => {
 
   it('renders the matching section only', () => {
     renderAt('/docs/caret-api');
-    // "Caret API" also appears in the breadcrumb trail now, so scope to the
-    // page's h1 rather than asserting on the bare text.
-    expect(screen.getByRole('heading', { level: 1, name: 'Caret API' })).toBeInTheDocument();
+    // The h1 is the descriptive route-metadata copy, not the bare module name;
+    // "Caret API" itself still appears in the breadcrumb trail.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      ROUTE_METADATA['/docs/caret-api'].h1,
+    );
     expect(screen.queryByText('Selection API')).toBeNull();
     expect(screen.getByTestId('api-pagination')).toBeInTheDocument();
   });

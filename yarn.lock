@@ -866,6 +866,7 @@ __metadata:
     music-metadata: "npm:^11.14.0"
     nanoid: "npm:6.0.0"
     ng-packagr: "npm:22.0.1"
+    parse5: "npm:^8.0.0"
     playwright: "npm:1.61.1"
     postcss: "npm:8.5.20"
     postcss-selector-parser: "npm:7.1.1"

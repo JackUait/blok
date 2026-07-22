@@ -22,6 +22,9 @@
       "markdown": [
         "./types/markdown.d.ts"
       ],
+      "view": [
+        "./types/view.d.ts"
+      ],
       "icons": [
         "./types/icons.d.ts"
       ]
@@ -51,6 +54,11 @@
       "types": "./types/markdown.d.ts",
       "import": "./dist/markdown.mjs",
       "require": "./dist/markdown.cjs"
+    },
+    "./view": {
+      "types": "./types/view.d.ts",
+      "import": "./dist/view.mjs",
+      "require": "./dist/view.cjs"
     },
     "./adapters": {
       "import": "./dist/adapters.mjs",
@@ -246,6 +254,7 @@
     "music-metadata": "^11.14.0",
     "nanoid": "6.0.0",
     "ng-packagr": "22.0.1",
+    "parse5": "^8.0.0",
     "playwright": "1.61.1",
     "postcss": "8.5.20",
     "postcss-selector-parser": "7.1.1",

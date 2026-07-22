@@ -23,6 +23,7 @@
       "@/types": [ "./types/", "./docs/src/types" ],
       "@bloklabs/core": [ "./types/index.d.ts" ],
       "@bloklabs/core/markdown": [ "./types/markdown.d.ts" ],
+      "@bloklabs/core/view": [ "./types/view.d.ts" ],
       "@bloklabs/core/adapters": [ "./src/adapters.ts" ],
       "@/types/*": [ "./types/*", "./docs/src/types/*" ],
       "@/*": [ "./docs/src/*" ],

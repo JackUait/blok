@@ -39,6 +39,7 @@ describe("API_SECTIONS", () => {
       "block-data",
       "blok-editor",
       "use-blocks",
+      "view-api",
     ];
 
     const actualIds = API_SECTIONS.map((s) => s.id);

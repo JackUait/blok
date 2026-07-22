@@ -2411,6 +2411,171 @@ if (saved) {
       },
     ],
   },
+  {
+    id: "view-api",
+    badge: "Core",
+    title: "View renderer",
+    lastUpdated: "2026-07-22",
+    description:
+      "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them. For React, @bloklabs/react ships <BlokView> and useBlokView, which replace <BlokEditor readOnly> at display-only call sites.",
+    example: `// schema.ts — pure and module-scope-safe; share it between editor and server
+import { defineBlokSchema } from '@bloklabs/core/view';
+import { Header, Paragraph, List } from '@bloklabs/core/tools';
+
+export const schema = defineBlokSchema({
+  tools: { paragraph: Paragraph, header: Header, list: List },
+});
+
+// Editing side (browser)
+import Blok from '@bloklabs/core';
+const editor = new Blok({ holder: 'editor', ...schema.editorConfig });
+
+// Display side — Node, a worker, an RSC, or the browser; no DOM needed
+import { blocksToHtml, blocksToPlainText } from '@bloklabs/core/view';
+const html = blocksToHtml(savedData, { schema: schema.viewSchema });
+const preview = blocksToPlainText(savedData).slice(0, 160);`,
+    methods: [
+      {
+        name: "blocksToHtml(data, options?)",
+        returnType: "string",
+        description:
+          "Render a saved document to semantic HTML — synchronous and DOM-free, so it is safe in Node, workers, and React Server Components. Every inline-content field is sanitized against the composed allowlist before interpolation, and the URL scheme policy is identical to the editor's. Returns '' for empty or malformed documents (nullish input is tolerated).",
+        params: [
+          {
+            name: "data",
+            type: "OutputData | LooseOutputData | null | undefined",
+            required: true,
+            description: "Saved document, in the strict save() shape or the loose wire shape.",
+          },
+          {
+            name: "options.schema",
+            type: "BlokViewSchema",
+            required: false,
+            description:
+              "viewSchema from defineBlokSchema. Its per-tool sanitize allowlist merges over the default inline allowlist, so documents display under the composition that produced them.",
+          },
+          {
+            name: "options.renderers",
+            type: "Record<string, (data, ctx) => string>",
+            required: false,
+            description:
+              "Custom per-tool renderers; a renderer wins over the built-in emitter for its tool name. ctx provides sanitizeInline (sanitize an inline-HTML string), renderBlocks (render an arbitrary block array), plainText (plain text of an HTML string), and renderChildren (render the current block's structural children) so custom output composes safely with the rest of the document.",
+          },
+          {
+            name: "options.onUnknownBlock",
+            type: "'skip' | 'comment'",
+            required: false,
+            default: "'skip'",
+            description:
+              "What to do with a block whose tool has no renderer: drop it silently, or leave an HTML comment marker in the output.",
+          },
+        ],
+        example: `import { blocksToHtml } from '@bloklabs/core/view';
+
+const html = blocksToHtml(savedData, {
+  schema: schema.viewSchema,
+  onUnknownBlock: 'comment',
+  renderers: {
+    // Wins over the built-in paragraph emitter
+    paragraph: (data, ctx) =>
+      \`<p class="lead">\${ctx.sanitizeInline(String(data.text ?? ''))}</p>\`,
+  },
+});`,
+      },
+      {
+        name: "blocksToPlainText(data, options?)",
+        returnType: "string",
+        description:
+          "Extract the plain text of a saved document — blocks are separated by \\n\\n, list items by \\n, table cells by \\t. Synchronous and DOM-free, same options as blocksToHtml. Ideal for previews, search indexing, and character counts.",
+        example: `import { blocksToPlainText } from '@bloklabs/core/view';
+
+// A 160-character preview for a card or meta description
+const preview = blocksToPlainText(savedData).slice(0, 160);`,
+      },
+      {
+        name: "defineBlokSchema(config)",
+        returnType: "{ editorConfig, viewSchema }",
+        description:
+          "Resolve a tools/inlineToolbar/tunes config into one shared schema. Pure and module-scope-safe: call it at module scope and import the result everywhere. Spread editorConfig into new Blok(...) and pass viewSchema to the view functions — this guarantees documents are displayed under the SAME sanitize composition that produced them, instead of two configs drifting apart. Options that don't participate in schema resolution (link, i18n, data, …) pass through editorConfig untouched.",
+        example: `import { defineBlokSchema, blocksToHtml } from '@bloklabs/core/view';
+import { Header, Paragraph } from '@bloklabs/core/tools';
+
+const schema = defineBlokSchema({
+  tools: { paragraph: Paragraph, header: Header },
+});
+
+const editor = new Blok({ holder: 'editor', ...schema.editorConfig });
+const html = blocksToHtml(savedData, { schema: schema.viewSchema });`,
+      },
+      {
+        name: "blocksToViewNodes(data, options?)",
+        returnType: "ViewNode[]",
+        description:
+          "Render to a framework-agnostic JSON tree instead of an HTML string: each node is { tag, attrs, children } or { text }, with the same options and sanitization pipeline as blocksToHtml. This is what the React bindings map to real elements. Experimental — the shape is not frozen until a second framework adapter consumes it, so it may change in a minor release.",
+        example: `import { blocksToViewNodes } from '@bloklabs/core/view';
+
+const nodes = blocksToViewNodes(savedData);
+// → [{ tag: 'p', attrs: {}, children: [{ text: 'Hello' }] }]`,
+      },
+      {
+        name: "BlokView",
+        returnType: "ReactNode",
+        description:
+          "The React display component from @bloklabs/react: renders a saved document inside a single <div> wrapper — no editor instance, no chrome, no async, no effects, and never dangerouslySetInnerHTML (content is mapped from the sanitized view tree to real React elements). Use it instead of <BlokEditor readOnly> at display-only call sites: it costs no editor bundle, has no ready latch, and renders identically under SSR.",
+        params: [
+          {
+            name: "data",
+            type: "OutputData | LooseOutputData | null | undefined",
+            required: true,
+            description: "Saved document to display (nullish tolerated).",
+          },
+          {
+            name: "schema",
+            type: "BlokViewSchema",
+            required: false,
+            description: "viewSchema from defineBlokSchema — display under the composition that produced the document.",
+          },
+          {
+            name: "renderers",
+            type: "Record<string, (data, ctx) => string>",
+            required: false,
+            description: "Custom per-tool renderers; win over the built-ins.",
+          },
+          {
+            name: "onUnknownBlock",
+            type: "'skip' | 'comment'",
+            required: false,
+            default: "'skip'",
+            description: "Unknown-tool policy ('comment' markers are dropped in the React tree).",
+          },
+          {
+            name: "className",
+            type: "string",
+            required: false,
+            description: "Class for the single wrapper div.",
+          },
+        ],
+        example: `import { BlokView } from '@bloklabs/react';
+import { schema } from './schema';
+
+export function Article({ saved }: { saved: OutputData }) {
+  return <BlokView data={saved} schema={schema.viewSchema} className="prose" />;
+}`,
+      },
+      {
+        name: "useBlokView(data, options?)",
+        returnType: "ReactNode",
+        description:
+          "The wrapper-free form of BlokView: returns a Fragment of the block elements with no extra <div>, for slots where a wrapper is invalid or unwanted — checkbox labels, table cells, headings. Synchronous and effect-free (SSR-safe), memoized on the data reference and the individual option values. Same options as blocksToHtml.",
+        example: `import { useBlokView } from '@bloklabs/react';
+
+function RowLabel({ saved }: { saved: OutputData }) {
+  const content = useBlokView(saved, { schema: schema.viewSchema });
+  return <label>{content}</label>;
+}`,
+      },
+    ],
+  },
 ];
 
 export interface SidebarSection {

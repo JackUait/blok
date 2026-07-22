@@ -2,7 +2,7 @@
 
 export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }> = [
   { key: 'gettingStarted', moduleIds: ['quick-start', 'tutorial', 'concepts', 'custom-block-tool'] },
-  { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api'] },
+  { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api', 'view-api'] },
   { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'styles-api', 'history-api'] },
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api'] },
   { key: 'extending', moduleIds: ['tools-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api'] },
@@ -47,6 +47,7 @@ export const MODULE_LABELS_EN: Record<string, string> = {
   'readonly-api': 'ReadOnly',
   'i18n-api': 'I18n',
   'saver-api': 'Saver',
+  'view-api': 'View renderer',
   'output-data': 'OutputData',
   'block-data': 'BlockData',
   'blok-editor': 'BlokEditor component',

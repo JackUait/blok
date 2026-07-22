@@ -14,7 +14,7 @@ export default defineConfig({
     },
     rollupOptions: {
       // The core and the framework are peers — never bundled into the adapter.
-      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@bloklabs/core', '@bloklabs/core/adapters'],
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@bloklabs/core', '@bloklabs/core/adapters', '@bloklabs/core/view'],
       output: [
         { format: 'es', entryFileNames: 'index.mjs' },
         { format: 'cjs', entryFileNames: 'index.cjs' },
@@ -25,6 +25,7 @@ export default defineConfig({
     // Type-resolution only: rollup `external` wins for emitted specifiers.
     alias: {
       '@/types': path.resolve(dirname, '../../types'),
+      '@bloklabs/core/view': path.resolve(dirname, '../../src/view/index.ts'),
       '@bloklabs/core/adapters': path.resolve(dirname, '../../src/adapters.ts'),
       '@bloklabs/core': path.resolve(dirname, '../../src/blok.ts'),
     },

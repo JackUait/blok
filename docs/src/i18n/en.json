@@ -90,7 +90,8 @@
       "tutorial": "Build your first editor",
       "customBlockTool": "Create a custom block tool",
       "blokEditor": "BlokEditor component",
-      "useBlocks": "useBlocks"
+      "useBlocks": "useBlocks",
+      "viewApi": "View renderer"
     },
     "quickStart": {
       "title": "Quick Start",
@@ -756,6 +757,11 @@
       "title": "useBlocks",
       "badge": "Adapters",
       "description": "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters: the useBlocks(editor) hook in @bloklabs/react, the useBlocks(editor) composable in @bloklabs/vue, and injectBlocks() in @bloklabs/angular. Reads re-render reactively as the document changes; writers are atomic (one undo step) and safe to call before the editor is ready (they no-op). Returned BlockNode objects ({ id, type, parentId, contentIds }) are fresh-snapshot volatile — read them now, don't stash them in dep arrays."
+    },
+    "viewApi": {
+      "title": "View renderer",
+      "badge": "Core",
+      "description": "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them. For React, @bloklabs/react ships <BlokView> and useBlokView, which replace <BlokEditor readOnly> at display-only call sites."
     },
     "pagination": {
       "label": "Pagination",

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import * as ReactApi from '../../../packages/react/src/index';
+import * as ReactApi from '../src/index';
+
+// This suite lives in the package's own vitest project (not test/unit/react)
+// because the index imports the `@bloklabs/core/view` subpath, which the root
+// vitest alias map cannot resolve — see packages/react/vitest.config.ts.
 
 describe('@bloklabs/react exports', () => {
   it('exports useBlok, BlokContent, and BlokEditor', () => {
@@ -19,6 +23,11 @@ describe('@bloklabs/react exports', () => {
 
   it('exports the inline-tool-authoring surface (createReactInlineTool)', () => {
     expect(typeof ReactApi.createReactInlineTool).toBe('function');
+  });
+
+  it('exports the synchronous view surface (BlokView + useBlokView)', () => {
+    expect(typeof ReactApi.BlokView).toBe('function');
+    expect(typeof ReactApi.useBlokView).toBe('function');
   });
 
   it('exports the block-authoring surface (createReactBlock + portal host)', () => {

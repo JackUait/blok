@@ -32,24 +32,17 @@ import HTMLJanitor from 'html-janitor';
 import type { BlockToolData, SanitizerConfig, SanitizerRule } from '../../../types';
 import type { TagConfig, ToolSanitizerConfig } from '../../../types/configs/sanitizer-config';
 import type { SavedData } from '../../../types/data-formats';
+import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
+import { hasUnsafeUrlProtocol } from '../../shared/url-policy';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
-import { isSafeRasterImageDataUrl, stripIgnoredUrlChars } from './sanitize-url';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
 
 /**
- * Sentinel marking a block-data field as plaintext rather than HTML.
- *
- * Sanitization is an HTML parse: it entity-encodes bare `<`/`&` and deletes
- * text that looks like a stray end tag. That is correct for rich-text fields
- * and destructive for fields storing literal source text (a code block's
- * `code`). Declaring the field PLAINTEXT skips both janitor and the URL-scheme
- * pass, so the value round-trips byte-identical.
- *
- * A plain string (not a Symbol) so it survives JSON and structuredClone —
- * tool sanitize configs are a public surface hosts may serialize.
+ * Re-exported from the pure shared module so existing imports keep working;
+ * see {@link module:src/shared/sanitize-rules} for the definitions.
  */
-export const PLAINTEXT = 'plaintext';
+export { isSafeAttribute, PLAINTEXT };
 
 /**
  * Whether a resolved rule declares its field as plaintext.
@@ -63,15 +56,6 @@ const isPlaintextRule = (rule: DeepSanitizerRule): boolean => {
  * Recursive type for data that can contain nested arrays
  */
 type DeepData = string | Record<string, unknown> | Array<DeepData>;
-
-/**
- * Script-capable schemes hard-stripped from href/src regardless of tool
- * config. Deliberately NOT a full allowlist: unknown custom schemes
- * (slack://, ftp:) in existing documents must keep working.
- */
-const SCRIPT_CAPABLE_SCHEME_PATTERN = /^(?:javascript|vbscript):/i;
-const DATA_SCHEME_PATTERN = /^data:/i;
-const BLOB_SCHEME_PATTERN = /^blob:/i;
 
 /**
  * Fallback (no-DOM) matcher for href/src attributes: captures the attribute
@@ -281,33 +265,6 @@ const isRule = (config: DeepSanitizerRule): boolean => {
   return isObject(config) || isBoolean(config) || isFunction(config) || isPlaintextRule(config);
 };
 
-/**
- * Check whether a URL resolves to a script-capable scheme once the characters
- * browsers ignore during scheme resolution are removed — closes the
- * whitespace-smuggling class ("java\nscript:", "v\tbscript:", …).
- * @param value - raw attribute value
- * @param attribute - attribute the value belongs to ('href' or 'src')
- */
-const hasUnsafeUrlProtocol = (value: string | null, attribute: string): boolean => {
-  if (!value) {
-    return false;
-  }
-
-  const normalized = stripIgnoredUrlChars(value);
-
-  if (SCRIPT_CAPABLE_SCHEME_PATTERN.test(normalized)) {
-    return true;
-  }
-
-  if (DATA_SCHEME_PATTERN.test(normalized)) {
-    // Raster image data: URLs cannot carry script and stay valid in src;
-    // every other data: payload (text/html, svg+xml, …) can execute.
-    return !(attribute === 'src' && isSafeRasterImageDataUrl(normalized));
-  }
-
-  return attribute === 'href' && BLOB_SCHEME_PATTERN.test(normalized);
-};
-
 const stripUnsafeUrls = (value: string): string => {
   if (!value || value.indexOf('<') === -1) {
     return value;
@@ -433,14 +390,6 @@ const wrapFunctionRule = (rule: SanitizerFunctionRule): SanitizerFunctionRule =>
 
     return result;
   };
-};
-
-const SAFE_ATTRIBUTES = new Set(['class', 'id', 'title', 'role', 'dir', 'lang']);
-
-const isSafeAttribute = (attribute: string): boolean => {
-  const lowerName = attribute.toLowerCase();
-
-  return lowerName.startsWith('data-') || lowerName.startsWith('aria-') || SAFE_ATTRIBUTES.has(lowerName);
 };
 
 const preserveExistingAttributesRule: SanitizerFunctionRule = (element) => {

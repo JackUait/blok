@@ -234,6 +234,10 @@ describe('CJS bundle outputs', () => {
     expect(existsSync(resolve(dist, 'markdown.cjs'))).toBe(true)
   })
 
+  it('produces view.cjs', () => {
+    expect(existsSync(resolve(dist, 'view.cjs'))).toBe(true)
+  })
+
   it('produces icons.cjs', () => {
     expect(existsSync(resolve(dist, 'icons.cjs'))).toBe(true)
   })
@@ -304,6 +308,10 @@ describe('ESM outputs still present', () => {
     expect(existsSync(resolve(dist, 'blok.mjs'))).toBe(true)
   })
 
+  it('produces view.mjs', () => {
+    expect(existsSync(resolve(dist, 'view.mjs'))).toBe(true)
+  })
+
   it('still produces full.mjs', () => {
     expect(existsSync(resolve(dist, 'full.mjs'))).toBe(true)
   })
@@ -339,6 +347,13 @@ describe('package.json exports include require conditions', () => {
 
   it('"./markdown" export has "require" condition', () => {
     expect((packageJson.exports['./markdown'] as Record<string, string>)['require']).toBe('./dist/markdown.cjs')
+  })
+
+  it('"./view" export has "import", "require", and "types" conditions', () => {
+    const viewExport = packageJson.exports['./view'] as Record<string, string>
+    expect(viewExport['import']).toBe('./dist/view.mjs')
+    expect(viewExport['require']).toBe('./dist/view.cjs')
+    expect(viewExport['types']).toBe('./types/view.d.ts')
   })
 
   it('"./icons" export has "import", "require", and "types" conditions', () => {

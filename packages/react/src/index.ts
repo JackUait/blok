@@ -5,6 +5,9 @@ export { BlokProvider, useBlokDefaults } from './provide-blok';
 export type { UseBlokConfig, BlokContentProps } from './types';
 export type { BlokEditorProps } from './BlokEditor';
 export { useBlocks } from './useBlocks';
+export { BlokView } from './BlokView';
+export type { BlokViewProps } from './BlokView';
+export { useBlokView } from './useBlokView';
 export { createReactBlock } from './createReactBlock';
 export type {
   CreateReactBlockSpec,

@@ -8,8 +8,9 @@ import {
   BlokConfig,
   I18nConfig,
   I18nDictionary,
+  SanitizerConfig,
 } from './configs';
-import { InlineToolConstructable, InlineToolConstructorOptions } from './tools';
+import { InlineToolConstructable, InlineToolConstructorOptions, ToolConstructable, ToolSettings } from './tools';
 
 import {
   Blocks,
@@ -224,6 +225,61 @@ export function equalsOutputData(
  * @param data - document to inspect
  */
 export function isEmptyOutputData(data: OutputData | LooseOutputData | null | undefined): boolean;
+
+/**
+ * Composes a base sanitizer config from a list of per-tool sanitize configs
+ * using the exact merge semantics of the editor's `baseSanitizeConfig`:
+ * a later-wins `Object.assign` fold (inline tools first, then tunes).
+ * Function rules are carried by reference; rules for the same tag are
+ * replaced, never deep-merged.
+ * @param configs - sanitize configs in composition order
+ */
+export function composeBaseSanitizeConfig(configs: SanitizerConfig[]): SanitizerConfig;
+
+/**
+ * Config accepted by {@link defineBlokSchema}. Only `tools`, `inlineToolbar`
+ * and `tunes` participate in schema resolution; everything else is passed
+ * through untouched via `editorConfig`.
+ */
+export type BlokSchemaConfig = BlokConfig;
+
+/**
+ * A tool resolved from the user config: its constructable plus the Blok-level
+ * settings that accompanied it (everything except `class`).
+ */
+export interface ResolvedSchemaTool {
+  toolClass: ToolConstructable;
+  settings: Omit<ToolSettings, 'class'>;
+}
+
+/**
+ * The view side of a defined schema: the composed base sanitize allowlist and
+ * the resolved tool map, for consumption by the view renderer.
+ */
+export interface BlokViewSchema {
+  baseSanitize: SanitizerConfig;
+  tools: { [toolName: string]: ResolvedSchemaTool };
+}
+
+/**
+ * Result of {@link defineBlokSchema}.
+ */
+export interface DefinedBlokSchema<Config extends BlokSchemaConfig = BlokSchemaConfig> {
+  editorConfig: Config;
+  viewSchema: BlokViewSchema;
+}
+
+/**
+ * Resolves the composed base sanitize allowlist and tool map for a Blok
+ * configuration WITHOUT instantiating an editor. Pure, synchronous and
+ * module-scope-safe (no DOM access), so it can run in Node/RSC contexts.
+ *
+ * Spread `editorConfig` into `new Blok({...})` and hand `viewSchema` to the
+ * view renderer: both sides then share the exact same allowlist composition,
+ * so a viewer can never silently strip marks the editor wrote.
+ * @param config - subset of BlokConfig ({ tools, inlineToolbar, tunes, link, i18n, ... })
+ */
+export function defineBlokSchema<Config extends BlokSchemaConfig>(config: Config): DefinedBlokSchema<Config>;
 
 /**
  * Compatibility shim for migrating Editor.js custom inline tools.

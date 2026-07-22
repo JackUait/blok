@@ -5,8 +5,12 @@ import { vi } from 'vitest';
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
 
+// Guard for test files that opt into the node environment
+// (e.g. the DOM-free view sanitizer tests) — no window to polyfill there.
+const hasDom = typeof window !== 'undefined';
+
 // Polyfill requestIdleCallback for jsdom environment
-if (!window.requestIdleCallback) {
+if (hasDom && !window.requestIdleCallback) {
   window.requestIdleCallback = vi.fn((cb: IdleRequestCallback) => {
     const start = Date.now();
     return window.setTimeout(() => {
@@ -18,19 +22,19 @@ if (!window.requestIdleCallback) {
   });
 }
 
-if (!window.cancelIdleCallback) {
+if (hasDom && !window.cancelIdleCallback) {
   window.cancelIdleCallback = vi.fn((id: number) => {
     window.clearTimeout(id);
   });
 }
 
 // Polyfill document.adoptedStyleSheets for jsdom environment
-if (!document.adoptedStyleSheets) {
+if (hasDom && !document.adoptedStyleSheets) {
   document.adoptedStyleSheets = [];
 }
 
 // Polyfill ResizeObserver for jsdom environment
-if (!window.ResizeObserver) {
+if (hasDom && !window.ResizeObserver) {
   window.ResizeObserver = class ResizeObserver {
     observe = vi.fn();
     unobserve = vi.fn();

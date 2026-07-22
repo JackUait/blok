@@ -95,6 +95,13 @@ jobs:
       - name: Run Unit Tests
         run: yarn test --shard=${{ matrix.shard }}
 
+      - name: Run @bloklabs/react Unit Tests
+        # The react package has its own vitest config (root vitest cannot
+        # resolve the @bloklabs/core/view subpath through the root alias), so
+        # its suite runs separately. One shard is enough — it is not sharded.
+        if: matrix.shard == '1/2'
+        run: yarn workspace @bloklabs/react test
+
   validate-spec-coverage:
     name: Validate Spec File Coverage
     runs-on: ubuntu-latest

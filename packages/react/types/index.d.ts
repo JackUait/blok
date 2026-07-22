@@ -1,4 +1,5 @@
-import type { BlokConfig, BlockToolData, OutputBlockData, OutputData } from '@bloklabs/core';
+import type { BlokConfig, BlockToolData, OutputBlockData, OutputData, LooseOutputData } from '@bloklabs/core';
+import type { BlocksToHtmlOptions } from '@bloklabs/core/view';
 import type { BlockAPI, BlockToolConstructable, ToolboxConfigEntry } from '@bloklabs/core';
 import type { InlineToolConstructable, SanitizerConfig } from '@bloklabs/core';
 import type { Blok, EditorWidth, BlockRenderedPayload, BlocksRenderedPayload } from '@bloklabs/core';
@@ -785,3 +786,49 @@ export interface BlockPortalHostProps {
  * for advanced setups that manage the registry themselves.
  */
 export declare function BlockPortalHost(props: BlockPortalHostProps): React.ReactElement;
+
+/**
+ * Props for {@link BlokView}.
+ *
+ * @experimental Built on the `@experimental` view tree of
+ * `@bloklabs/core/view` — not frozen until a second framework adapter
+ * consumes it.
+ */
+export interface BlokViewProps {
+  /** Saved document to display (strict or loose wire shape; nullish tolerated). */
+  data: OutputData | LooseOutputData | null | undefined;
+  /** View schema from `defineBlokSchema` — display under the composition that produced the document. */
+  schema?: BlocksToHtmlOptions['schema'];
+  /** Custom per-tool renderers; win over built-ins. */
+  renderers?: BlocksToHtmlOptions['renderers'];
+  /** Unknown-tool policy (default 'skip'). */
+  onUnknownBlock?: BlocksToHtmlOptions['onUnknownBlock'];
+  /** Class for the single wrapper div. */
+  className?: string;
+}
+
+/**
+ * Display a saved Blok document synchronously — one `<div>` wrapper, no
+ * editor chrome, no ids, no async, no effects. Content is mapped from the
+ * sanitized view tree to real React elements, so it renders identically
+ * under SSR.
+ *
+ * @experimental Not frozen until a second framework adapter consumes the
+ * underlying view tree.
+ */
+export declare function BlokView(props: BlokViewProps): React.ReactNode;
+
+/**
+ * Render a saved Blok document to React elements with NO wrapper element —
+ * a Fragment of the block elements, for placement inside labels, table
+ * cells, and other slots where an extra `<div>` is invalid or unwanted.
+ * Synchronous, effect-free (SSR-safe), memoized on the data reference and
+ * the individual option values.
+ *
+ * @experimental Not frozen until a second framework adapter consumes the
+ * underlying view tree.
+ */
+export declare function useBlokView(
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: BlocksToHtmlOptions
+): React.ReactNode;

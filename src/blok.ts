@@ -694,3 +694,11 @@ export { BlockRendered, BlocksRendered } from './components/events';
  * `data → render → onSave → data` echo round-trip or emptiness gating.
  */
 export { equalsOutputData, isEmptyOutputData } from './shared/output-data';
+
+/**
+ * Single source of truth for the sanitize-allowlist composition. Editors and
+ * the view renderer both consume `defineBlokSchema`, so a document can never
+ * be displayed under a different allowlist than the one that produced it.
+ */
+export { composeBaseSanitizeConfig, defineBlokSchema } from './shared/sanitize-schema';
+export type { BlokSchemaConfig, BlokViewSchema, DefinedBlokSchema, ResolvedSchemaTool } from './shared/sanitize-schema';

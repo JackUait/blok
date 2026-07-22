@@ -1,3 +1,4 @@
+import { composeBaseSanitizeConfig } from '../../shared/sanitize-schema';
 import { isEmpty, isObject } from '../utils';
 
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
@@ -350,15 +351,10 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
       return this._baseSanitizeConfig;
     }
 
-    const baseConfig = {};
-
-    Array
-      .from(this.inlineTools.values())
-      .forEach(tool => Object.assign(baseConfig, tool.sanitizeConfig));
-
-    Array
-      .from(this.tunes.values())
-      .forEach(tune => Object.assign(baseConfig, tune.sanitizeConfig));
+    const baseConfig = composeBaseSanitizeConfig([
+      ...Array.from(this.inlineTools.values()).map(tool => tool.sanitizeConfig),
+      ...Array.from(this.tunes.values()).map(tune => tune.sanitizeConfig),
+    ]);
 
     this._baseSanitizeConfig = baseConfig;
 

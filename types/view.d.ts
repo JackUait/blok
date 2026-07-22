@@ -1,0 +1,132 @@
+import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData } from './data-formats/output-data';
+import type { PlaintextRule, SanitizerConfig } from './configs/sanitizer-config';
+import type { BlokViewSchema } from './index';
+
+/**
+ * Hand-authored declarations for the `@bloklabs/core/view` subpath — the
+ * synchronous, DOM-free view renderer (`src/view/index.ts`).
+ *
+ * These signatures mirror the implementation. They must stay self-contained —
+ * do NOT re-export from `../src/...` (that drags raw implementation source into
+ * every consumer's `tsc` program; see
+ * `test/unit/architecture/published-types-no-src-refs.test.ts`).
+ */
+
+/**
+ * Services handed to a custom block renderer so it composes safely with the
+ * sanitization contract and the rest of the document.
+ */
+export interface ViewRenderContext {
+  /** Sanitize an inline-HTML string against the composed allowlist. */
+  sanitizeInline(html: string): string;
+  /** Render an arbitrary array of blocks (children resolve against the document). */
+  renderBlocks(blocks: Array<OutputBlockData | LooseOutputBlockData>): string;
+  /** Plain text of an HTML string (entity-decoded, `<br>` → newline). */
+  plainText(html: string): string;
+  /** Render the current block's structural children. */
+  renderChildren(): string;
+}
+
+/**
+ * A custom per-tool renderer: `(data, ctx) => html`. Wins over the built-in
+ * emitter for its tool name.
+ */
+export type ViewBlockRenderer = (data: Record<string, unknown>, ctx: ViewRenderContext) => string;
+
+/**
+ * Options for {@link blocksToHtml} / {@link blocksToPlainText}.
+ */
+export interface BlocksToHtmlOptions {
+  /** View schema from `defineBlokSchema`; its baseSanitize merges over the default inline allowlist. */
+  schema?: BlokViewSchema;
+  /** Custom per-tool renderers; win over built-ins. */
+  renderers?: Record<string, ViewBlockRenderer>;
+  /** Unknown-tool policy (default 'skip'). */
+  onUnknownBlock?: 'skip' | 'comment';
+}
+
+/**
+ * Render a saved Blok document to semantic HTML — synchronous and DOM-free
+ * (usable in Node, workers, and RSC). Every inline-content field is sanitized
+ * against the composed allowlist before interpolation.
+ *
+ * @param data - saved document (strict or loose wire shape; nullish tolerated)
+ * @param options - schema, custom renderers, unknown-block policy
+ * @returns HTML string ('' for empty/malformed documents)
+ */
+export declare function blocksToHtml(
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: BlocksToHtmlOptions
+): string;
+
+/**
+ * Extract the plain text of a saved Blok document — synchronous and DOM-free.
+ * Blocks are separated by `\n\n`, list items by `\n`, table cells by `\t`.
+ *
+ * @param data - saved document (strict or loose wire shape; nullish tolerated)
+ * @param options - same options as {@link blocksToHtml}
+ * @returns plain text ('' for empty/malformed documents)
+ */
+export declare function blocksToPlainText(
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: BlocksToHtmlOptions
+): string;
+
+/**
+ * An element in the view tree: lowercase tag name, sanitized attributes as a
+ * plain string record, ordered children.
+ *
+ * @experimental Not frozen until a second framework adapter consumes it.
+ */
+export interface ViewElementNode {
+  tag: string;
+  attrs: Record<string, string>;
+  children: ViewNode[];
+}
+
+/**
+ * A text node in the view tree (entity-decoded).
+ *
+ * @experimental Not frozen until a second framework adapter consumes it.
+ */
+export interface ViewTextNode {
+  text: string;
+}
+
+/**
+ * One node of the framework-agnostic view tree produced by
+ * {@link blocksToViewNodes}. HTML comments (e.g. `onUnknownBlock: 'comment'`
+ * markers) have no representation and are dropped.
+ *
+ * @experimental Not frozen until a second framework adapter consumes it.
+ */
+export type ViewNode = ViewElementNode | ViewTextNode;
+
+/**
+ * Render a saved Blok document to a framework-agnostic JSON tree,
+ * synchronously and DOM-free. Same options and sanitization pipeline as
+ * {@link blocksToHtml}.
+ *
+ * @experimental Not frozen until a second framework adapter consumes it —
+ * the shape may change in a minor release.
+ * @param data - saved document (strict or loose wire shape; nullish tolerated)
+ * @param options - same options as {@link blocksToHtml}
+ * @returns view nodes ([] for empty/malformed documents)
+ */
+export declare function blocksToViewNodes(
+  data: OutputData | LooseOutputData | null | undefined,
+  options?: BlocksToHtmlOptions
+): ViewNode[];
+
+/**
+ * Sanitize an HTML fragment against a sanitizer config without a DOM
+ * (parse5-backed; matches the editor's html-janitor semantics).
+ *
+ * @param html - HTML fragment
+ * @param config - tag → rule allowlist, or the `'plaintext'` sentinel
+ * @returns sanitized HTML string
+ */
+export declare function sanitizeHtmlFragment(html: string, config: SanitizerConfig | PlaintextRule): string;
+
+export { defineBlokSchema, composeBaseSanitizeConfig } from './index';
+export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchemaTool } from './index';

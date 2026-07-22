@@ -119,6 +119,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'media URL upload status contract',
   'tools.video.toggleTimeDisplay',
   'tools.video.ctxStats',
+  'tools.video playback-statistics detail templates',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {

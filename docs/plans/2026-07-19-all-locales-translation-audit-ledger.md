@@ -323,7 +323,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ja` | Japanese | Han, Hiragana, Katakana | ltr | neutral contemporary Japanese; concise action labels and noun/state controls; polite complete instructions, accessibility announcements, and recovery copy; Japanese punctuation and counter spacing; established Japanese product, key, media, and accessibility terminology | `root-ja_629_final_review_a` | `root-ja_629_final_review_b` | pass | pass | pass | `F-ja-001`, `F-ja-004`–`F-ja-097` | second-pass-complete |
 | `ka` | Georgian | Georgian | ltr | neutral contemporary Georgian; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Georgian product, accessibility, and media terminology; total-first or suffix-free label boundaries for runtime numbers and arbitrary values; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-ka_b0a_blind_review_a` | `root-ka_b0a_blind_review_b` | pass | pass | pass | `F-ka-001`–`F-ka-085` | second-pass-complete |
 | `km` | Khmer | Khmer | ltr | neutral contemporary Khmer; concise direct action labels and noun/state controls; complete polite instructions and accessibility announcements; established Khmer product, media, upload, emoji, table, and database terminology; label-before-number or noun-before-number runtime boundaries; conventional unchanged shortcut, ratio, and acronym notation | `root-km_83b732_blind_a` | `root-km_83b732_blind_b` | pass | pass | pass | `F-km-001`–`F-km-094` | second-pass-complete |
-| `kn` | Kannada | Kannada | ltr | to-audit | — | — | pending | pending | pending | `F-kn-001`–`F-kn-089` | pending |
+| `kn` | Kannada | Kannada | ltr | neutral contemporary Kannada product UI; polite imperatives ending in `-ಿ` for actions and instructions; sentence-case noun/state labels; native Kannada product and accessibility terminology; count-neutral label-before-number templates and ordinal `-ನೇ` positions; established technical loanwords; conventional unchanged shortcuts, ratios, and acronyms | `root-kn_final_retry_a` | `root-kn_final_retry_b` | pass | pass | pass | `F-kn-001`–`F-kn-089` | second-pass-complete |
 | `ko` | Korean | Hangul | ltr | to-audit | — | — | pending | pending | pending | `F-ko-001`–`F-ko-003` | pending |
 | `ku` | Sorani (Central Kurdish) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ku-001`–`F-ku-003` | pending |
 | `lo` | Lao | Lao | ltr | to-audit | — | — | pending | pending | pending | `F-lo-001`–`F-lo-003` | pending |
@@ -461,6 +461,7 @@ locale returns to `pending`.
 | `ja` | `root-ja_629_final_review_a` | `sha256:629ae52cff1868309e16940d0fd65f7879ce2f495c8fefa6b9018792d9c78943` | `root-ja_629_final_review_b` | `sha256:629ae52cff1868309e16940d0fd65f7879ce2f495c8fefa6b9018792d9c78943` |
 | `ka` | `root-ka_b0a_blind_review_a` | `sha256:4e5ba005ef100f9708e1af5edc059d4981c01205bac4a356596fe6abd9adaa2a` | `root-ka_b0a_blind_review_b` | `sha256:4e5ba005ef100f9708e1af5edc059d4981c01205bac4a356596fe6abd9adaa2a` |
 | `km` | `root-km_83b732_blind_a` | `sha256:83b732d9742076c8234b507233ba05d1629d80044f0e95d236d88ca2d920dd8d` | `root-km_83b732_blind_b` | `sha256:83b732d9742076c8234b507233ba05d1629d80044f0e95d236d88ca2d920dd8d` |
+| `kn` | `root-kn_final_retry_a` | `sha256:07424e25df13aafe76196874b6fb48d494aff87bd880e0481f61972406499d8a` | `root-kn_final_retry_b` | `sha256:07424e25df13aafe76196874b6fb48d494aff87bd880e0481f61972406499d8a` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -4355,24 +4356,83 @@ artifact-manifest SHA-256
 Root independently verified every listed artifact and reran both validators;
 both exited zero on the final bytes. Khmer is `second-pass-complete`.
 
-### Kannada (`kn`) — pending after first-pass residual
+### Kannada (`kn`) — second pass complete
 
-Reviewer `root-amharic_546_current_first` directly read all 546
-English/Kannada pairs in English insertion order before consulting prior
-Kannada evidence. The attempted first pass identified its first genuine
-residual at entry 28. English changed from `Text` to `Text color`, but
-Kannada retained the former-source `ಪಠ್ಯ`. The shared picker renders this
-value directly as its text-color section title beside the background axis
-and composes it into every swatch label. `F-kn-002` restores the established
-Kannada product term `ಪಠ್ಯದ ಬಣ್ಣ`.
+The exhaustive correction cycle started from raw Kannada SHA-256
+`4ea8f2a8351d39872fb94db72ef60622a17336d552481a73b56b1563205087c6`.
+Two independent discovery reads inspected all 546 English/Kannada pairs and
+their callers before adjudication. The source and terminology challenges then
+resolved tooltip-fragment composition, count-neutral accessibility
+announcements, ordinal positions, table alignment and column terminology,
+callout search actions, alternative-text copy, file-preview modes, media
+actions, and changed-English dependencies. Reviewer
+`root-kn_4ea8_proposal_challenge` rejected speculative churn to valid seek,
+navigation, dismiss, and cloud-drive wording while accepting or amending the
+definite families. Findings `F-kn-004`–`F-kn-089` record the 86 resulting
+value corrections; together with the three earlier verified findings, the
+exact Kannada oracle now binds all 89 reviewed values.
 
-The attempted pass binds to pre-correction raw Kannada SHA-256
-`76550bedd0e28515ba5421f1cc9a01e065386a1716cd43e8594e5071ea980c68`.
-The focused expectation failed on exactly `ಪಠ್ಯ` before remediation and
-passes afterward. The corrected raw Kannada SHA-256 is
-`97f913fe4b1143eb21c9343274ca5d96557a187b14b2c53dab8a2e55041d34b3`.
-The attempted review earns no pass credit; both complete passes must start
-from entry 1 on the corrected bytes.
+The oracle and two DOM-level video fallback cases were introduced red-first.
+They failed on the uncorrected dictionary and the stale `Toggle time display`
+and `Stats for nerds` literals, then passed after the 86 catalog corrections
+and the source fallbacks were synchronized to `Switch between elapsed and
+remaining time` and `Playback statistics`. Those source defects remain
+recorded as verified `F-global-012` and `F-global-013`. Commit
+`926c1ef89c597dbc569650d7d5d73e72ab5b30b0` contains the correction set. Its
+canonical 542-file production serialization is
+`8566c83e24026dbe8253cd3467c695e35dc11bce43ad6c588f5858ee6894079d`.
+
+Fresh first reviewer `root-kn_final_retry_a` restarted at pair 1 without the
+ledger, executable oracle, Git history/diff, or earlier reports. It read all
+546 pairs and found zero definite catalog residuals. Its immutable bundle is
+`/private/tmp/blok-kn-final-LTixs6`; root verified every checksum in
+`MANIFEST.sha256`, whose SHA-256 is
+`390a862a081f7b15f38e5b7732538ae2768dba9c1d41ac93e2d04da8113118bf`.
+The reviewer did find one separate source-level bypass: the localized
+playback-statistics command opens a body whose four field templates and
+unavailable state are still hard-coded English. Root reproduced the caller
+path, and the distinct reviewer independently confirmed that none of the 546
+current catalog entries represents those fields. `F-global-014` therefore
+remains open for a coordinated 546-to-551 catalog migration across all 69
+dictionaries. Under the ledger contract, that global defect does not
+misclassify an existing Kannada entry or block first-/second-pass locale
+completion, but it blocks terminal repository verification.
+
+Second reviewer `root-kn_final_retry_b` independently completed and froze its
+own 546-pair semantic pass before an accidental collaboration-status response
+exposed a sibling report. It quarantined that response, returned zero definite
+catalog residuals, and then separately performed the required first-pass diff
+review of all 86 Kannada changes, both fallback changes, and their focused
+tests. Its evidence bundle is
+`/private/tmp/blok-kn-final-retry-b-20260722T042426+0300`; root replayed
+`shasum -a 256 -c SHA256SUMS` successfully, and the checksum manifest SHA-256
+is `cdfc88ce8159b3c0123d914bb9540a8bdc7fe4f4ed2a204a1be4852b7ad998db`.
+The reviewer subsequently confirmed `F-global-014` as global source debt and
+not a Kannada-pair correction.
+
+The final dictionary retains all 546 keys and only non-empty string values.
+All 38 placeholder-bearing rows and 54 placeholder occurrences match English
+exactly; NFC, edge-whitespace, C0/DEL, bidi-control, and unresolved-
+interpolation checks have zero defects. The seven exact-English values are the
+documented `R-kn-001`–`R-kn-007` shortcuts, `Alt`, aspect ratios, and `URL`.
+The source-derived lifecycle remains 397 executable literals + 122 finite
+dynamics + 25 registered-namespace-compatible keys + two exact catalog-only
+keys, with all 117 provider compositions accounted for. Current raw Kannada
+SHA-256 is
+`07424e25df13aafe76196874b6fb48d494aff87bd880e0481f61972406499d8a`;
+English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+and the unchanged guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`.
+On the current source tree, whose only post-correction production drift is the
+unrelated `src/styles/colors.css`, the same 542-file serialization is
+`a5540d97df225e98fab13707bbaa1896889fa011bc6938c6e56d078a8345a3d4`.
+
+The final guideline/ledger contract passes 3,863/3,863, the widened current
+i18n/video gate passes 4,808/4,808 across 13 files, and the second reviewer’s
+independent two-file gate passes 4,024/4,024. Scoped ESLint, full TypeScript,
+translation completeness, docs translation, catalog integrity, source-key
+coverage, and whitespace checks pass. Kannada is `second-pass-complete`.
 
 ### Korean (`ko`) — pending after first-pass residual
 
@@ -10171,6 +10231,7 @@ follows the global transition rule above.
 | `F-global-011` | all non-English | media URL upload status contract | caller / localized status composition / false filename | Image, video, and audio URL flows deliberately cleared `lastFileName`, then replaced it with each tool’s localized uploading message before calling the shared image upload renderer. The renderer independently emitted `tools.image.uploadingLabel`, so users saw two localized status messages and the second was incorrectly exposed as a filename. | Let the shared renderer accept a null filename and omit the filename node in that state; pass the existing tool-specific localized URL-upload message through `statusLabel` exactly once, while retaining the generic status plus the real filename for file uploads. Constrain a status-only localized label so it cannot displace the cancel control in narrow column layouts. | Root traced all three URL entry points to the same renderer and compared the separate file-tool renderer’s null-filename contract. Four red-first regressions failed on the retained filename node and wrong generic status across the renderer and real image, video, and audio URL flows. A fifth red-first CSS contract captured the localized narrow-card overflow found during code review; Chromium rechecks at 109 px and 134 px keep the cancel control fully visible. The focused runtime/layout gate passes all 206 tests, including the existing real-filename upload case. | verified |
 | `F-global-012` | all non-English | `tools.video.toggleTimeDisplay` | caller / fallback drift / accessibility | When `attachControls()` received no i18n instance or a missing key, the executable fallback still exposed obsolete `Toggle time display`, while the canonical English catalog states `Switch between elapsed and remaining time`. | Make the literal fallback byte-for-byte equal to the current English catalog so the optional-i18n seam cannot lose the elapsed/remaining distinction. | A source-architecture challenge traced the exact fallback path through `tr()`. A DOM-level regression failed red on the stale label and passed after the literal correction; the focused Kannada/guideline and video-controls gate passes 3,938/3,938. | verified |
 | `F-global-013` | all non-English | `tools.video.ctxStats` | caller / fallback drift / neutral terminology | When `attachControls()` received no i18n instance or a missing key, the executable context-menu fallback still exposed obsolete `Stats for nerds`, while the canonical English catalog states `Playback statistics`. | Make the literal fallback byte-for-byte equal to the current English catalog so the optional-i18n seam cannot reintroduce prohibited slang. | A source-architecture challenge traced the exact fallback path through `tr()`. A DOM-level regression failed red on the stale label and passed after the literal correction; the focused Kannada/guideline and video-controls gate passes 3,938/3,938. | verified |
+| `F-global-014` | all non-English | tools.video playback-statistics detail templates | caller / hard-coded English / visible statistics | The localized `Playback statistics` menu item opens an overlay whose `Resolution`, `Dropped frames`, `Buffer health`, `Viewport`, and unavailable-state text are inserted as raw English by `renderStats()`, bypassing i18n in all 68 non-English locales. | Coordinate a 546-to-551 catalog migration across all 69 dictionaries: add four whole-line statistic templates with value placeholders plus one unavailable-state value, then render the overlay exclusively through the tool i18n API so each locale controls word order, punctuation, and the seconds unit. | Independent Kannada clean-room review traced the bypass at `src/tools/video/controls.ts:1270-1280`; root reproduced it, and a distinct reviewer confirmed that no existing catalog entry covers these fields. Adding the five live English keys immediately would invalidate key parity and every completed raw-dictionary digest under reset rules 1 and 2, so this finding remains open for the coordinated migration and blocks terminal repository verification without misclassifying the defect as Kannada catalog residue. | open |
 
 | `F-hy-005` | `hy` | `toolbox.typeToSearch` | caller-or-grammar-defect | `"Մուտքագրեք որոնման համար"` | `"Մուտքագրեք՝ որոնելու համար"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
 | `F-hy-006` | `hy` | `toolNames.bulletedList` | meaning\|terminology | `"Նշանավոր ցուցակ"` | `"Պարբերանշված ցուցակ"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |

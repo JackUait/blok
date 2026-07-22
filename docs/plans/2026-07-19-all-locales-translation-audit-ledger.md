@@ -328,7 +328,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ku` | Sorani (Central Kurdish) | Arabic | rtl | neutral contemporary Sorani/Central Kurdish in Arabic script and RTL; concise direct imperatives and noun/state labels; complete accessibility announcements; Sorani punctuation and orthographic spacing; count-neutral runtime templates; isolated Latin shortcuts and established technical tokens | `root-ku_546_first_audit` | `root-ku_546_first_audit-sorani_language_cleanroom` | pass | pass | pass | `F-ku-001`–`F-ku-033`, `F-ku-035`–`F-ku-065` | second-pass-complete |
 | `lo` | Lao | Lao | ltr | neutral contemporary Lao product UI; concise direct actions and noun/state labels; complete accessibility announcements and recovery guidance; Lao script and standard orthography; native punctuation and ellipsis; established Lao product/media terminology; count-neutral runtime templates; conventional unchanged shortcuts, ratios, and acronyms | `root-lo_final_cleanroom_a` | `root-lo_final_cleanroom_b` | pass | pass | pass | `F-lo-001`–`F-lo-039` | second-pass-complete |
 | `lt` | Lithuanian | Latin | ltr | neutral contemporary Lithuanian product UI; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Lithuanian product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, and acronym notation | `root-lt_546_first_audit-final_cleanroom_e` | `root-lt_546_first_audit-final_cleanroom_f` | pass | pass | pass | `F-lt-001`–`F-lt-070` | second-pass-complete |
-| `lv` | Latvian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lv-001`–`F-lv-004` | pending |
+| `lv` | Latvian | Latin | ltr | neutral contemporary Latvian product UI; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Latvian product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, acronym, and established media-loanword notation | `root-lv_final_cleanroom_h` | `root-lv_final_cleanroom_i` | pass | pass | pass | `F-lv-001`–`F-lv-095` | second-pass-complete |
 | `mk` | Macedonian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mk-001`–`F-mk-002` | pending |
 | `ml` | Malayalam | Malayalam | ltr | to-audit | — | — | pending | pending | pending | `F-ml-001`–`F-ml-003` | pending |
 | `mn` | Mongolian (current Cyrillic wording) | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mn-001`–`F-mn-002` | pending |
@@ -466,6 +466,7 @@ locale returns to `pending`.
 | `ku` | `root-ku_546_first_audit` | `sha256:61ac2c424591554459a241ad7bac03664383b173560d416a0422c60776a83dae` | `root-ku_546_first_audit-sorani_language_cleanroom` | `sha256:61ac2c424591554459a241ad7bac03664383b173560d416a0422c60776a83dae` |
 | `lo` | `root-lo_final_cleanroom_a` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` | `root-lo_final_cleanroom_b` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` |
 | `lt` | `root-lt_546_first_audit-final_cleanroom_e` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` | `root-lt_546_first_audit-final_cleanroom_f` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` |
+| `lv` | `root-lv_final_cleanroom_h` | `sha256:5aa63b9d519a8c61fef2196b8fd9f5fc211a9e3d7e00fdee112019f6c26159cb` | `root-lv_final_cleanroom_i` | `sha256:5aa63b9d519a8c61fef2196b8fd9f5fc211a9e3d7e00fdee112019f6c26159cb` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -4673,41 +4674,84 @@ final bytes. The completed history contains exactly 70 unique locale/key
 findings in `F-lt-001`–`F-lt-070`. Lithuanian is
 `second-pass-complete`.
 
-### Latvian (`lv`) — pending after current-byte residuals
+### Latvian (`lv`) — second-pass complete
 
-Reviewer `root` started at English entry 1 and read the clean current
-English/Latvian pairs in insertion order without consulting prior Latvian
-evidence. The attempted first pass stopped on the first genuine residual at
-entry 28. English changed from `Text` to `Text color`, but Latvian retained
-the former-source `Teksts`. The shared picker renders this value directly as
-its text-color section title beside the background axis and composes it into
-every swatch label. `F-lv-002` restores the established Latvian product label
-`Teksta krāsa`.
+The exhaustive current-byte Latvian audit began at raw SHA-256
+`e706fe0d4686ba829bbbdfedfc3094519e011962dce4c70178c9a04cd3bf3627`
+after the pre-existing `F-lv-001`–`F-lv-004` corrections. The root reviewer
+and two clean independent candidate reads directly covered all 546 pairs and
+converged on 74 additional meaning, changed-English, caller-composition,
+accessibility, terminology, grammar, count-neutrality, punctuation, and
+copied-media defects. A separate semantic report that later exposed
+out-of-scope locale material remained advisory and earned no pass credit. The
+frozen 78-value Latvian oracle matched the four prior corrections and failed
+red on all 74 old current-byte values before `F-lv-005`–`F-lv-078` were
+applied.
 
-The attempted pass binds to pre-correction raw Latvian SHA-256
-`129ccf40819ed413d84253cb65026772ef9c324032c99a98571006bedd0828b9`.
-The focused expectation failed on exactly `Teksts` before remediation and
-passes afterward. The corrected raw Latvian SHA-256 is
-`70b4384a5aa87413d86bdd505853936540f7a78ec354520da3165e23e3518c17`.
-The attempted review earns no pass credit; both complete passes must start
-from entry 1 on the corrected bytes.
+The first corrected candidate reached raw SHA-256
+`36d849d960e1e7c3a810209c5649b1322fdc060b6f1ec6feb7de29259de2aa74`,
+and the focused oracle passed. Two attempted final clean-room reads then each
+covered all 546 pairs and surfaced 18 additional current-value residuals:
+collapsible-list and heading terminology, an incomplete toggle placeholder,
+one inconsistent caption prompt, a count-unsafe drag announcement, five
+nonparallel media drop hints, and a workflow-status label. Neither attempted
+review earned pass credit. A focused isolated adjudicator confirmed the
+disputed toggle and caption set, while exact caller and authoritative-source
+inspection confirmed the remaining seven. The oracle grew to 94 unique keys,
+failed red on exactly those 18 old values, and passed after remediation.
+`F-lv-059` records the original audio hint directly against its final wording
+because its intermediate candidate was never committed. The ledger's unique
+locale/key contract likewise consolidates the two committed toggle-body
+corrections into `F-lv-004`, from the original wording directly to the final
+`sakļaujams` wording.
 
-Reviewer `root-amharic_546_current_first` then restarted at English entry 1
-and directly read all 546 corrected English/Latvian pairs before consulting
-prior Latvian evidence. The attempted first pass stopped on its first
-genuine residual at entry 31. The shared color-picker caller substitutes the
-default label and lowercased color axis into
-`tools.colorPicker.defaultSwatchLabel`, but the old template renders the
-reversed `Teksta krāsa Noklusējuma` and `Fons Noklusējuma`. `F-lv-003`
-restores the attested modifier-first Latvian order.
+The next candidate reached raw SHA-256
+`e10b7b508ebc0a7cabca388f6ed3ff01b8cd0023c755c8ea61dc292b302d91d6`.
+Two clean complete reads accepted those bytes, but a separate isolated
+replacement challenged three late values. Focused caller and terminology
+adjudication retained `Ērts teksts` as the established compact/comfortable
+density pair and retained the imperfect verb `Velk bloku` for an ongoing
+live-region state, while confirming that the paste-menu action required
+`Pieminēt` rather than the noun `Pieminējums`. That accepted correction reset
+all digest evidence again. The 95-key oracle exposed exactly the old mention
+value and passed after `F-lv-095` was applied.
 
-The stopped review binds to pre-correction raw Latvian SHA-256
-`70b4384a5aa87413d86bdd505853936540f7a78ec354520da3165e23e3518c17`.
-The focused expectation failed on exactly `{mode} {default}` before
-remediation and passes afterward. The corrected raw Latvian SHA-256 is
-`df59f353166729f4e3e4814aa48fc312900ac8f148b1b8d444e3cf853267799d`.
-The attempted review earns no pass credit; both complete passes must restart
-from entry 1 on the corrected bytes.
+The final raw Latvian SHA-256 is
+`5aa63b9d519a8c61fef2196b8fd9f5fc211a9e3d7e00fdee112019f6c26159cb`.
+Reviewers `root-lv_final_cleanroom_h` and `root-lv_final_cleanroom_i` each
+restarted at English entry 1 and independently reread all 546 final pairs.
+Both rehashed before and after, made no edits, remained isolated from prior
+reports and every other locale, and accepted the same final digest with zero
+residual semantic, grammatical, terminology, register, punctuation,
+accessibility, placeholder, or source-synchronization defects. Earlier
+otherwise-zero reviews that exposed unrelated Slovak tool-locale metadata or
+a prior agent report were discarded and earn no review credit.
+
+The final dictionary retains exact 546/546 key parity, no duplicate keys or
+empty values, all 38 placeholder-bearing rows and 54 placeholder occurrences
+with exact English multisets, valid NFC normalization, and no forbidden
+control or bidi-control characters. Its only 12 English-identical values are
+the documented `R-lv-001`–`R-lv-012` shortcut, placeholder-only, established
+media-loanword, `Alt`, aspect-ratio, and `URL` retentions. The mechanically
+reproducible lifecycle remains 397 executable literals, 122 finite-dynamic
+keys, 25 registered-namespace-compatible keys, and two exact catalog-only
+keys, with all 117 provider compositions accounted for.
+
+Caller inspection leaves `F-global-014` and `F-global-020` open for one
+coordinated 546-to-552 all-dictionary migration. The former covers five raw
+English playback-statistics labels and the latter the raw database
+tab-overflow count label. Neither bypass misclassifies a Latvian catalog
+value, but both continue to block terminal repository verification.
+
+English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+and the guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`.
+The focused Latvian oracle, full catalog checker, checker regression suite,
+guideline/index gate, complete i18n unit suite, and directly affected caller
+suites all pass on the final bytes. The completed history contains exactly 95
+unique verified locale/key findings in `F-lv-001`–`F-lv-095`.
+Latvian is `second-pass-complete`.
 
 ### Malayalam (`ml`) — pending after first-pass residual
 
@@ -9849,7 +9893,98 @@ follows the global transition rule above.
 | `F-hr-051` | `hr` | `tools.video.ctxStats` | media terminology / accessibility | `"Detaljna statistika"` | `"Statistika reprodukcije"` | The item opens an overlay of playback metrics. The proposal restores the subject instead of adding unsupported “detailed” semantics. | verified |
 | `F-hr-052` | `hr` | `tools.callout.emojiSearchResults` | accessibility / count clarity | `"Pronađeno {count} emojija"` | `"Broj podudarnih emojija: {count}"` | The count-invariant direction is correct, but “Podudaranja emojija” is a stiff genitive calque. “Broj podudarnih emojija” is natural Croatian and preserves the match meaning. | verified |
 | `F-hu-004` | `hu` | `tools.toggle.bodyPlaceholder` | terminology / consistency / caller role | `"Üres lenyíló. Kattintson egy blokk hozzáadásához, vagy húzzon ide blokkokat."` | `"Üres összecsukható lista. Kattintson egy blokk hozzáadásához, vagy húzzon ide blokkokat."` | `Összecsukható` is the established Hungarian product term for content users expand and collapse; it aligns with the caller’s `Kibontás` and `Összecsukás` actions without suggesting a dropdown widget. | verified |
-| `F-lv-004` | `lv` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / grammar / action clarity | `"Tukšs pārslēdzamais bloks. Noklikšķiniet vai nometiet blokus iekšpusē."` | `"Tukšs pārslēdzams bloks. Noklikšķiniet, lai pievienotu bloku, vai velciet blokus šeit."` | The replacement separates click-to-add from drag-here and fixes mixed adjective definiteness for a first-mentioned indefinite block. Microsoft Latvian uses the same [click-to-add construction](https://support.microsoft.com/lv-lv/office/viettura-pievieno%C5%A1ana-redi%C4%A3%C4%93%C5%A1ana-vai-no%C5%86em%C5%A1ana-slaida-izk%C4%81rtojum%C4%81-a8d93d28-66cb-43fd-9f9d-e12d0a7a1f06). | verified |
+| `F-lv-004` | `lv` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / grammar / action clarity / terminology | `"Tukšs pārslēdzamais bloks. Noklikšķiniet vai nometiet blokus iekšpusē."` | `"Tukšs sakļaujams bloks. Noklikšķiniet, lai pievienotu bloku, vai velciet blokus šeit."` | The final wording separates click-to-add from drag-here, fixes mixed adjective definiteness, and uses the established `sakļaujams` term for content that can be collapsed and expanded. Microsoft Latvian uses the same [click-to-add construction](https://support.microsoft.com/lv-lv/office/viettura-pievieno%C5%A1ana-redi%C4%A3%C4%93%C5%A1ana-vai-no%C5%86em%C5%A1ana-slaida-izk%C4%81rtojum%C4%81-a8d93d28-66cb-43fd-9f9d-e12d0a7a1f06) and exact [`Sakļaujams virsraksts`](https://support.microsoft.com/lv-lv/word/collapse-or-expand-parts-of-a-document) terminology. | verified |
+| `F-lv-005` | `lv` | `blockSettings.openMenuAction` | tooltip composition / punctuation | `" lai atvērtu izvēlni"` | `", lai atvērtu izvēlni"` | The caller appends this fragment after a literal shortcut; the leading comma produces a grammatical purpose clause in the assembled tooltip. | verified |
+| `F-lv-006` | `lv` | `toolbox.optionAddAbove` | instruction clarity / modifier-key action | `"Option-klikšķis pievieno augšā"` | `"Turiet nospiestu taustiņu Option un noklikšķiniet, lai pievienotu augstāk"` | The replacement explicitly tells users to hold Option while clicking and uses the relative direction “above.” | verified |
+| `F-lv-007` | `lv` | `toolbox.ctrlAddAbove` | instruction clarity / modifier-key action | `"Ctrl-klikšķis pievieno augšā"` | `"Turiet nospiestu taustiņu Ctrl un noklikšķiniet, lai pievienotu augstāk"` | The replacement explicitly tells users to hold Ctrl while clicking and preserves the relative insertion direction. | verified |
+| `F-lv-008` | `lv` | `tools.colorPicker.colorSwatchLabel` | accessibility / runtime-token boundary | `"{mode} {color}"` | `"{mode}: {color}"` | A colon separates the localized color axis from the runtime color name while preserving both placeholders. | verified |
+| `F-lv-009` | `lv` | `tools.paragraph.placeholder` | source completeness / grammar | `"Rakstiet kaut ko vai nospiediet / lai izvēlētos"` | `"Rakstiet kaut ko vai nospiediet /, lai izvēlētos rīku"` | The replacement restores the omitted tool object and the comma required before the purpose clause. | verified |
+| `F-lv-010` | `lv` | `tools.table.clearSelection` | caller semantics / destructive-action scope | `"Notīrīt"` | `"Notīrīt saturu"` | The command clears selected cell contents while preserving the cells and formatting, so the object must be explicit. | verified |
+| `F-lv-011` | `lv` | `tools.table.headerColumn` | established table terminology | `"Virsraksta kolonna"` | `"Galvenes kolonna"` | The toggle creates a header column; official Latvian office terminology uses `galvene` for a table header. | verified |
+| `F-lv-012` | `lv` | `tools.table.headerRow` | established table terminology | `"Virsraksta rinda"` | `"Galvenes rinda"` | The toggle creates a header row, conventionally named `Galvenes rinda` in Latvian table UI. | verified |
+| `F-lv-013` | `lv` | `tools.table.insertRowAbove` | spatial terminology | `"Ievietot rindu augšā"` | `"Ievietot rindu virs"` | The row is inserted above the current row, not at an absolute top position. | verified |
+| `F-lv-014` | `lv` | `tools.table.insertRowBelow` | spatial terminology | `"Ievietot rindu apakšā"` | `"Ievietot rindu zem"` | The row is inserted below the current row, not at an absolute bottom position. | verified |
+| `F-lv-015` | `lv` | `tools.table.placement` | established UI terminology | `"Novietojums"` | `"Līdzinājums"` | The caller is a nine-position content-alignment selector, for which Latvian product UI uses `Līdzinājums`. | verified |
+| `F-lv-016` | `lv` | `a11y.dragHandle` | accessibility / instruction completeness | `"Velciet, lai pārvietotu bloku, vai noklikšķiniet izvēlnei"` | `"Velciet, lai pārvietotu bloku, vai noklikšķiniet, lai atvērtu izvēlni"` | The replacement supplies a complete click-to-open instruction instead of the compressed and ungrammatical menu fragment. | verified |
+| `F-lv-017` | `lv` | `a11y.dragStartedMultiple` | accessibility / count-neutral grammar | `"Velk {count} blokus"` | `"Velkamo bloku skaits: {count}"` | Label-before-count wording remains grammatical for every runtime count while preserving `{count}`. | verified |
+| `F-lv-018` | `lv` | `a11y.blocksMoved` | accessibility / count-neutral grammar | `"{count} bloki pārvietoti uz pozīciju {position}"` | `"Pārvietoto bloku skaits: {count}. Pozīcija: {position}."` | Two count-neutral clauses identify both the moved-block count and destination without brittle numeral agreement. | verified |
+| `F-lv-019` | `lv` | `a11y.blockDuplicated` | orthography | `"Bloks dublicēts pozīcijā {position} no {total}"` | `"Bloks dublēts pozīcijā {position} no {total}"` | The replacement corrects the misspelling `dublicēts` to standard Latvian `dublēts` without changing either placeholder. | verified |
+| `F-lv-020` | `lv` | `a11y.blocksDuplicated` | accessibility / count neutrality | `"{count} bloki dublicēti sākot no pozīcijas {position}"` | `"Dublēto bloku skaits: {count}. Sākuma pozīcija: {position}."` | The replacement fixes the spelling, remains count-neutral, and identifies the duplicate run’s starting position explicitly. | verified |
+| `F-lv-021` | `lv` | `a11y.searchResults` | accessibility / source completeness | `"{count} rezultāti"` | `"Meklēšanas rezultātu skaits: {count}"` | The announcement now identifies the number as search results and remains grammatical for arbitrary counts. | verified |
+| `F-lv-022` | `lv` | `a11y.allBlocksSelected` | accessibility / sentence boundary | `"Atlasīti visi bloki, {count} bloki"` | `"Atlasīti visi bloki. Kopā: {count}."` | A complete selection announcement followed by an explicit total replaces the old comma-spliced repetition. | verified |
+| `F-lv-023` | `lv` | `a11y.blocksSelected` | accessibility / count-neutral grammar | `"Atlasīti {count} bloki"` | `"Atlasīto bloku skaits: {count}"` | Label-before-count wording avoids fixed plural agreement and composes safely with every runtime value. | verified |
+| `F-lv-024` | `lv` | `a11y.navigationModeEntered` | accessibility / instruction grammar | `"Navigācijas režīms. Izmantojiet bulttaustiņus, lai pārvietotos starp blokiem, Enter, lai rediģētu, Escape, lai izietu."` | `"Navigācijas režīms. Izmantojiet bulttaustiņus, lai pārvietotos starp blokiem, taustiņu Enter, lai rediģētu, un taustiņu Escape, lai izietu."` | Naming Enter and Escape as keys and adding the conjunction produces one complete, natural instruction. | verified |
+| `F-lv-025` | `lv` | `a11y.navigationModeExited` | accessibility / state announcement | `"Iziets no navigācijas režīma"` | `"Navigācijas režīms izslēgts"` | The replacement states the resulting mode state directly instead of using an awkward impersonal exit construction. | verified |
+| `F-lv-026` | `lv` | `a11y.navigatedToBlock` | accessibility / focus semantics | `"Pārvietots uz bloku"` | `"Fokuss pārvietots uz bloku"` | Keyboard navigation moves focus, not an unspecified object; naming focus makes the announcement unambiguous. | verified |
+| `F-lv-027` | `lv` | `tools.columns.turnInto` | action terminology / naturalness | `"Konvertēt kolonnās"` | `"Pārvērst par kolonnām"` | `Pārvērst` expresses changing the selected blocks into columns more naturally than the technical conversion loanword. | verified |
+| `F-lv-028` | `lv` | `searchTerms.unordered` | search terminology / list semantics | `"nesakārtots"` | `"nenumurēts"` | An unordered list is unnumbered, not necessarily unsorted; the replacement matches the rendered list distinction. | verified |
+| `F-lv-029` | `lv` | `tools.callout.addEmoji` | changed-English synchronization / icon scope | `"Pievienot emocijzīmi"` | `"Pievienot ikonu"` | The control adds the callout icon, whose picker may use emoji; the broader icon label restores the current source role. | verified |
+| `F-lv-030` | `lv` | `tools.callout.filterEmojis` | accessibility / search scope | `"Meklēt…"` | `"Meklēt emocijzīmes…"` | This value is both the picker placeholder and accessible label, so the searched object must remain explicit. | verified |
+| `F-lv-031` | `lv` | `tools.callout.pickRandom` | action completeness | `"Nejauši"` | `"Izvēlēties nejaušu emocijzīmi"` | The icon-only button needs a complete action and object rather than the adverb “randomly” alone. | verified |
+| `F-lv-032` | `lv` | `toolNames.equation` | source synchronization / tool terminology | `"Formula"` | `"Vienādojums"` | The toolbox item creates an Equation block; `Formula` describes possible input but does not preserve the tool’s specific name. | verified |
+| `F-lv-033` | `lv` | `tools.code.wrapLines` | orthography | `"Aplauzīt rindas"` | `"Aplauzt rindas"` | The replacement uses the correct Latvian infinitive `aplauzt` for wrapping lines. | verified |
+| `F-lv-034` | `lv` | `tools.code.searchLanguage` | plurality / typography | `"Meklēt valodu..."` | `"Meklēt valodas…"` | The picker searches multiple languages, and the replacement uses the catalog’s typographic ellipsis. | verified |
+| `F-lv-035` | `lv` | `blockSettings.copyLinkSuccess` | feedback scope / clipboard terminology | `"Saite ir nokopēta"` | `"Saite nokopēta starpliktuvē"` | The success message now states the clipboard destination performed by the caller. | verified |
+| `F-lv-036` | `lv` | `blockSettings.copyLinkError` | error scope | `"Saiti neizdevās nokopēt"` | `"Neizdevās nokopēt saiti uz bloku"` | The failed operation copies a deep link to the current block, not an unspecified link. | verified |
+| `F-lv-037` | `lv` | `tools.link.linkTitle` | form-field semantics | `"Saites nosaukums"` | `"Saites teksts"` | The field edits visible anchor text rather than a link name or title attribute. | verified |
+| `F-lv-038` | `lv` | `tools.image.toggleCaption` | toggle action completeness | `"Rādīt parakstu"` | `"Rādīt vai paslēpt parakstu"` | The pressed toggle both shows and hides the caption; the old label described only one state transition. | verified |
+| `F-lv-039` | `lv` | `tools.image.viewFullscreen` | action completeness | `"Pilnekrāna režīms"` | `"Skatīt pilnekrāna režīmā"` | The button initiates viewing rather than merely naming the display mode. | verified |
+| `F-lv-040` | `lv` | `tools.image.moreOptions` | control specificity | `"Vairāk"` | `"Papildu opcijas"` | The ellipsis button opens an options menu; `Papildu opcijas` is the established complete Latvian UI label. | verified |
+| `F-lv-041` | `lv` | `tools.image.altEdit` | accessibility terminology | `"Rediģēt alt tekstu"` | `"Rediģēt alternatīvo tekstu"` | The replacement uses the established full Latvian term for alternative text instead of an English abbreviation hybrid. | verified |
+| `F-lv-042` | `lv` | `tools.image.altDescription` | source synchronization / accessibility copy | `"Pievienojiet attēla aprakstu. Tas padara lapu pieejamāku cilvēkiem ar redzes traucējumiem."` | `"Aprakstiet šo attēlu cilvēkiem, kuri to neredz."` | The replacement follows the current concise, audience-focused instruction and removes the superseded page-wide accessibility claim. | verified |
+| `F-lv-043` | `lv` | `tools.image.altPlaceholder` | accessibility terminology | `"Alt teksts"` | `"Alternatīvais teksts"` | The placeholder now uses the standard unabbreviated Latvian accessibility term. | verified |
+| `F-lv-044` | `lv` | `tools.image.previewControls` | accessibility / group-name specificity | `"Priekšskatījuma vadīklas"` | `"Attēla priekšskatījuma vadīklas"` | This ARIA label names controls for an image preview; restoring the image object keeps it clear out of visual context. | verified |
+| `F-lv-045` | `lv` | `tools.image.resetZoom` | established zoom terminology | `"Atiestatīt mērogu"` | `"Atiestatīt tālummaiņu"` | The control resets viewport zoom, and official Latvian product UI uses `Atiestatīt tālummaiņu` for that action. | verified |
+| `F-lv-046` | `lv` | `tools.image.errorDefaultMessage` | source synchronization / error accuracy | `"Serveris atgrieza kļūdu. Izmēģiniet citu avotu vai augšupielādējiet failu vēlreiz."` | `"Attēlu neizdevās ielādēt no šī URL. Izmēģiniet citu avotu vai augšupielādējiet failu vēlreiz."` | The caller knows image loading failed from the URL, not that a server returned an error; both recovery paths remain explicit. | verified |
+| `F-lv-047` | `lv` | `tools.image.cropRatioFree` | grammatical agreement | `"Brīvs"` | `"Brīva"` | The preset modifies the feminine crop `forma`, so the adjective must use feminine agreement. | verified |
+| `F-lv-048` | `lv` | `tools.file.toggleCaption` | toggle action completeness | `"Rādīt parakstu"` | `"Rādīt vai paslēpt parakstu"` | The setting toggles caption visibility in both directions, while the old label described only showing it. | verified |
+| `F-lv-049` | `lv` | `tools.file.previewRaw` | file-preview semantics | `"Kods"` | `"Avots"` | The tab exposes raw source content that need not be program code, so the neutral source label fits every supported file. | verified |
+| `F-lv-050` | `lv` | `tools.file.previewRender` | preview terminology | `"Skats"` | `"Priekšskatījums"` | The paired tab displays the rendered Preview; the replacement matches the surrounding file-preview terminology. | verified |
+| `F-lv-051` | `lv` | `tools.video.alignmentLeft` | action-label consistency | `"Pa kreisi"` | `"Līdzināt pa kreisi"` | The menu item performs an align-left action rather than merely describing a location. | verified |
+| `F-lv-052` | `lv` | `tools.video.alignmentCenter` | action-label consistency | `"Centrā"` | `"Centrēt"` | The menu item performs a centering action, so the action verb replaces the static location label. | verified |
+| `F-lv-053` | `lv` | `tools.video.alignmentRight` | action-label consistency | `"Pa labi"` | `"Līdzināt pa labi"` | The menu item performs an align-right action rather than merely describing a location. | verified |
+| `F-lv-054` | `lv` | `tools.video.toggleCaption` | toggle action completeness | `"Rādīt parakstu"` | `"Rādīt vai paslēpt parakstu"` | The source contract toggles caption visibility in both directions; the complete label names both outcomes. | verified |
+| `F-lv-055` | `lv` | `tools.video.moreOptions` | control specificity | `"Vairāk"` | `"Papildu opcijas"` | The control opens a video-options menu, so the established complete label replaces the vague “More.” | verified |
+| `F-lv-056` | `lv` | `tools.audio.alignmentLeft` | action-label consistency | `"Pa kreisi"` | `"Līdzināt pa kreisi"` | The menu item performs an align-left action rather than naming a location. | verified |
+| `F-lv-057` | `lv` | `tools.audio.alignmentCenter` | action-label consistency | `"Centrā"` | `"Centrēt"` | The menu item performs a centering action, matching the corresponding video control. | verified |
+| `F-lv-058` | `lv` | `tools.audio.alignmentRight` | action-label consistency | `"Pa labi"` | `"Līdzināt pa labi"` | The menu item performs an align-right action rather than naming a location. | verified |
+| `F-lv-059` | `lv` | `tools.audio.emptyOrDropHere` | changed-English synchronization / file scope / caller composition | `"vai nometiet audio šeit"` | `"vai nomest audiofailu šeit"` | The drop target accepts an audio file, not abstract audio, and the caller places this hint after the infinitive `Izvēlēties failu`; the final wording restores the source object and keeps both coordinated actions infinitive. | verified |
+| `F-lv-060` | `lv` | `tools.audio.coverSourceAria` | accessibility / control scope | `"Attēla avots"` | `"Vāka avots"` | The accessible source selector controls cover art specifically, not an arbitrary image. | verified |
+| `F-lv-061` | `lv` | `tools.database.viewTypeListDescription` | changed-English synchronization / source completeness | `"Vienkāršs lineārs skats"` | `"Rādīt vienumus vienkāršā sarakstā"` | The replacement states the current behavior, including the show action, items, and simple-list presentation. | verified |
+| `F-lv-062` | `lv` | `tools.database.listView` | accessibility / view-mode terminology | `"Saraksts"` | `"Saraksta skats"` | This label names the list view mode and its ARIA list container, not merely the list object. | verified |
+| `F-lv-063` | `lv` | `tools.database.cardDetails` | panel scope | `"Kartīte"` | `"Kartītes informācija"` | The panel exposes a card’s details rather than simply naming the card. | verified |
+| `F-lv-064` | `lv` | `tools.bookmark.loading` | source scope / loading punctuation | `"Notiek priekšskatījuma ielāde"` | `"Notiek saites priekšskatījuma ielāde…"` | The transient state loads a link preview specifically; the replacement restores that object and the progress ellipsis. | verified |
+| `F-lv-065` | `lv` | `tools.bookmark.error` | error scope | `"Neizdevās ielādēt priekšskatījumu"` | `"Neizdevās ielādēt saites priekšskatījumu"` | The failure concerns a link preview, so the object must remain explicit outside immediate visual context. | verified |
+| `F-lv-066` | `lv` | `tools.embed.empty` | caller state / source synchronization | `"Ielīmējiet saiti, lai to iegultu"` | `"Nav saites iegulšanai"` | The caller renders a read-only empty embed where pasting is impossible; the replacement states the actual missing-link condition. | verified |
+| `F-lv-067` | `lv` | `tools.linkPaste.embed` | embedding terminology / action semantics | `"Izveidot iegultni"` | `"Iegult saturu"` | Latvian product terminology uses the verb `iegult`; the menu action embeds content rather than creating an `iegultne`. | verified |
+| `F-lv-068` | `lv` | `notifier.dismiss` | accessibility / action scope | `"Aizvērt"` | `"Aizvērt paziņojumu"` | Naming the notification gives the standalone dismiss control an unambiguous accessible action. | verified |
+| `F-lv-069` | `lv` | `tools.video.seek` | media-control semantics | `"Pārtīt"` | `"Atskaņošanas pozīcija"` | This is the playback-position range slider’s accessible label, not a rewind command. | verified |
+| `F-lv-070` | `lv` | `tools.video.toggleTimeDisplay` | accessibility / state specificity | `"Pārslēgt laika rādījumu"` | `"Pārslēgt laika rādījumu starp aizritējušo un atlikušo laiku"` | The accessible action now names the elapsed and remaining states between which the control switches. | verified |
+| `F-lv-071` | `lv` | `tools.video.fullscreen` | mode terminology | `"Pilnekrāns"` | `"Pilnekrāna režīms"` | The replacement supplies the established full Latvian name for full-screen mode. | verified |
+| `F-lv-072` | `lv` | `tools.video.fullscreenExit` | terminology consistency | `"Iziet no pilnekrāna"` | `"Iziet no pilnekrāna režīma"` | The exit action now uses the complete name of the paired full-screen mode. | verified |
+| `F-lv-073` | `lv` | `tools.video.speedPresets` | established product terminology | `"Ātruma sākotnējie iestatījumi"` | `"Ātruma priekšiestatījumi"` | `Priekšiestatījumi` is the standard concise Latvian term for selectable presets. | verified |
+| `F-lv-074` | `lv` | `tools.video.ctxCopyUrlAtTime` | media semantics / action precision | `"Kopēt video URL pašreizējā laikā"` | `"Kopēt video URL pašreizējā atskaņošanas pozīcijā"` | The copied URL carries the current playback position; the old wording could mean wall-clock time. | verified |
+| `F-lv-075` | `lv` | `tools.video.ctxStats` | changed-English synchronization / playback domain | `"Statistika zinātkārajiem"` | `"Atskaņošanas statistika"` | The context-menu item opens playback statistics, so the replacement restores the source’s media domain. | verified |
+| `F-lv-076` | `lv` | `tools.callout.emojiSearchResults` | accessibility / count-neutral grammar | `"Atrastas {count} emocijzīmes"` | `"Atbilstošo emocijzīmju skaits: {count}"` | Label-before-count wording avoids fixed numeral agreement and identifies the number as matching emoji results. | verified |
+| `F-lv-077` | `lv` | `tools.database.checkboxChecked` | grammatical agreement / state semantics | `"Atzīmēts"` | `"Atzīmēta"` | The hidden state text agrees with the implicit feminine noun `izvēles rūtiņa`. | verified |
+| `F-lv-078` | `lv` | `tools.database.checkboxUnchecked` | grammatical agreement / state semantics | `"Nav atzīmēts"` | `"Neatzīmēta"` | The concise state adjective agrees with the implicit feminine noun `izvēles rūtiņa`. | verified |
+| `F-lv-079` | `lv` | `toolNames.toggleList` | established collapsible-content terminology | `"Pārslēdzams saraksts"` | `"Sakļaujams saraksts"` | The tool expands and collapses nested content rather than switching between alternatives; a Latvian government UI manual uses the exact term [`sakļaujams saraksts`](https://www.vid.gov.lv/sites/vid/files/media_file/emdas_ltt_09_ltrg_01_u_2017.pdf). | verified |
+| `F-lv-080` | `lv` | `tools.header.toggleHeading` | established collapsible-heading terminology | `"Pārslēdzams virsraksts"` | `"Sakļaujams virsraksts"` | Microsoft Latvian uses the exact product term [`Sakļaujams virsraksts`](https://support.microsoft.com/lv-lv/word/collapse-or-expand-parts-of-a-document) for a heading whose subordinate content can be collapsed and expanded. | verified |
+| `F-lv-081` | `lv` | `tools.header.toggleHeading1` | established collapsible-heading terminology | `"Pārslēdzams virsraksts 1"` | `"Sakļaujams virsraksts 1"` | The level-specific toolbox entry has the same collapsible-heading behavior and therefore uses the same established Latvian term. | verified |
+| `F-lv-082` | `lv` | `tools.header.toggleHeading2` | established collapsible-heading terminology | `"Pārslēdzams virsraksts 2"` | `"Sakļaujams virsraksts 2"` | The level-specific toolbox entry has the same collapsible-heading behavior and therefore uses the same established Latvian term. | verified |
+| `F-lv-083` | `lv` | `tools.header.toggleHeading3` | established collapsible-heading terminology | `"Pārslēdzams virsraksts 3"` | `"Sakļaujams virsraksts 3"` | The level-specific toolbox entry has the same collapsible-heading behavior and therefore uses the same established Latvian term. | verified |
+| `F-lv-084` | `lv` | `tools.header.toggleHeading4` | established collapsible-heading terminology | `"Pārslēdzams virsraksts 4"` | `"Sakļaujams virsraksts 4"` | The level-specific toolbox entry has the same collapsible-heading behavior and therefore uses the same established Latvian term. | verified |
+| `F-lv-085` | `lv` | `tools.header.toggleHeading5` | established collapsible-heading terminology | `"Pārslēdzams virsraksts 5"` | `"Sakļaujams virsraksts 5"` | The level-specific toolbox entry has the same collapsible-heading behavior and therefore uses the same established Latvian term. | verified |
+| `F-lv-086` | `lv` | `tools.header.toggleHeading6` | established collapsible-heading terminology | `"Pārslēdzams virsraksts 6"` | `"Sakļaujams virsraksts 6"` | The level-specific toolbox entry has the same collapsible-heading behavior and therefore uses the same established Latvian term. | verified |
+| `F-lv-087` | `lv` | `tools.toggle.placeholder` | caller role / grammatical completeness / terminology | `"Pārslēdzams"` | `"Sakļaujams saraksts"` | The editable empty-title placeholder appears without an implied head noun; the complete label is grammatical on its own and matches the tool's established collapsible-list name. | verified |
+| `F-lv-088` | `lv` | `tools.embed.captionPlaceholder` | cross-tool consistency / input terminology | `"Ierakstiet parakstu…"` | `"Ievadiet parakstu…"` | The embed caller exposes the same editable caption prompt as image, file, video, and audio; the replacement removes the unexplained singleton verb and matches all four peer controls. | verified |
+| `F-lv-089` | `lv` | `a11y.dropPosition` | accessibility / count-neutral grammar | `"Tiks nomests pozīcijā {position} no {total}"` | `"Nomešanas pozīcija: {position} no {total}"` | The caller announces targets for both single- and multi-block moves or duplications, so the masculine-singular participle is unsafe; the noun phrase stays neutral for every dragged selection. | verified |
+| `F-lv-090` | `lv` | `tools.image.emptyOrDropHere` | caller composition / parallel grammar | `"vai nometiet attēlu šeit"` | `"vai nomest attēlu šeit"` | The shared media caller renders this immediately after the infinitive action `Izvēlēties failu`; a second infinitive produces the grammatical coordinated phrase `Izvēlēties failu vai nomest attēlu šeit`. | verified |
+| `F-lv-091` | `lv` | `tools.file.emptyDropHint` | caller composition / parallel grammar | `"vai nometiet failu šeit"` | `"vai nomest failu šeit"` | The shared media caller renders this immediately after the infinitive action `Izvēlēties failu`; the replacement keeps both coordinated file actions in the same form. | verified |
+| `F-lv-092` | `lv` | `tools.video.emptyOrDropHere` | caller composition / parallel grammar | `"vai nometiet video šeit"` | `"vai nomest video šeit"` | The shared media caller renders this immediately after the infinitive action `Izvēlēties failu`; the replacement keeps both coordinated video actions in the same form. | verified |
+| `F-lv-093` | `lv` | `tools.audio.coverOrDropHere` | caller composition / parallel grammar | `"vai nometiet attēlu šeit"` | `"vai nomest attēlu šeit"` | The audio-cover picker renders this immediately after the infinitive action `Izvēlēties failu`; the replacement keeps both coordinated cover-image actions in the same form. | verified |
+| `F-lv-094` | `lv` | `tools.database.defaultStatusDone` | workflow-status terminology | `"Gatavs"` | `"Pabeigts"` | This is the canonical database workflow status beside `Nav sākts` and `Procesā`, not a completion button; Microsoft Latvian uses [`Pabeigts`](https://learn.microsoft.com/lv-lv/dynamics365/field-service/work-order-status-booking-status) for the completed status. | verified |
+| `F-lv-095` | `lv` | `tools.linkPaste.mention` | caller action / grammatical form | `"Pieminējums"` | `"Pieminēt"` | The paste-menu item performs an action beside `Paturēt kā saiti`, `Izveidot grāmatzīmi`, and `Iegult saturu`; the infinitive matches that caller role, while `Pieminējums` names the resulting noun. Microsoft Latvian likewise uses the verb [`pieminēt`](https://support.microsoft.com/lv-lv/teams/free/chat-calling/use-mentions-to-get-someone-s-attention-in-microsoft-teams-free) for this action. | verified |
 | `F-mk-002` | `mk` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Празен расклоплив блок. Кликнете или испуштете блокови внатре."` | `"Празен расклоплив блок. Кликнете за да додадете блок или повлечете блокови овде."` | The old wording conflates clicking with dropping and omits the created block. LibreOffice Macedonian uses the exact [`Кликнете … за да додадете`](https://help.libreoffice.org/latest/mk/text/simpress/02/13060000.html) construction. | verified |
 | `F-ro-002` | `ro` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Bloc reductibil gol. Faceți clic sau trageți blocuri înăuntru."` | `"Bloc reductibil gol. Faceți clic pentru a adăuga un bloc sau trageți blocuri aici."` | The replacement preserves the formal register while explicitly naming the click result and drag destination, following established Romanian [product wording](https://docs.oracle.com/cloud/help/ro/content-cloud/CECMC/GUID-4046476C-3D87-4685-AAEB-9902DF815060.htm). | verified |
 | `F-sk-002` | `sk` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Prázdny prepínač. Kliknite alebo presuňte bloky dovnútra."` | `"Prázdny prepínač. Kliknutím pridáte blok alebo sem presuňte bloky."` | The replacement uses established Slovak product patterns to distinguish adding one block by click from moving blocks into the drop target. [Microsoft Slovak](https://support.microsoft.com/sk-sk/office/pou%C5%BE%C3%ADvanie-webovej-%C4%8Dasti-naj%C4%8Dastej%C5%A1ie-ot%C3%A1zky-v-sharepointe-fd499cde-5db8-419d-a00a-bf87a43c79fb). | verified |
@@ -11050,6 +11185,17 @@ locale and UI context.
 | `R-lt-006` | `lt` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-lt-007` | `lt` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label used alongside the otherwise Lithuanian property labels. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-lv-001` | `lv` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only invariant runtime interpolation tokens; Latvian modifier-before-noun order independently requires this sequence and renders `Noklusējuma teksta krāsa` and `Noklusējuma fons`. | [Microsoft Learn — Data table control in Power Apps](https://learn.microsoft.com/lv-lv/power-apps/maker/canvas-apps/controls/control-data-table) |
+| `R-lv-002` | `lv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating it would alter the executable shortcut. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-lv-003` | `lv` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord; Latvian product instructions conventionally preserve `Ctrl` in shortcut notation. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-lv-004` | `lv` | `toolNames.video` | established loanword | `Video` is the standard unchanged Latvian media term and the natural concise toolbox label. | [`video/i18n.ts`](../../src/tools/video/i18n.ts) |
+| `R-lv-005` | `lv` | `toolNames.audio` | established loanword | `Audio` is the standard unchanged Latvian media term and the natural concise toolbox label. | [`audio/i18n.ts`](../../src/tools/audio/i18n.ts) |
+| `R-lv-006` | `lv` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the surrounding dialog supplies full Latvian terminology. | [`ui.ts` image-tool button](../../src/tools/image/ui.ts) |
+| `R-lv-007` | `lv` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lv-008` | `lv` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lv-009` | `lv` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lv-010` | `lv` | `tools.video.emptyUrlAria` | established loanword | `Video URL` combines the standard Latvian media loanword with the international technical acronym in a compact input label. | [`video/empty-state.ts`](../../src/tools/video/empty-state.ts) |
+| `R-lv-011` | `lv` | `tools.audio.emptyUrlAria` | established loanword | `Audio URL` combines the standard Latvian media loanword with the international technical acronym in a compact input label. | [`audio/empty-state.ts`](../../src/tools/audio/empty-state.ts) |
+| `R-lv-012` | `lv` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-nl-001` | `nl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Dutch Apple guidance retains the `⌘` platform symbol. | [Apple — Mac-toetscombinaties](https://support.apple.com/nl-nl/102650) |
 | `R-nl-002` | `nl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Dutch Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Sneltoetsen in Windows](https://support.microsoft.com/nl-nl/windows/sneltoetsen-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
 | `R-nl-003` | `nl` | `toolNames.link` | established loanword | `Link` is the standard concise Dutch web term and the natural toolbox label. | [Notion — Afbeeldingen, bestanden en media](https://www.notion.com/nl/help/images-files-and-media) |

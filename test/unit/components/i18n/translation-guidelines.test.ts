@@ -658,6 +658,119 @@ const LITHUANIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'Atitinkančių jaustukų: {count}',
 };
 
+const LATVIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'Notīrīt formatējumu',
+  'toolNames.toggleList': 'Sakļaujams saraksts',
+  'tools.marker.textColor': 'Teksta krāsa',
+  'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
+  'tools.header.toggleHeading': 'Sakļaujams virsraksts',
+  'tools.header.toggleHeading1': 'Sakļaujams virsraksts 1',
+  'tools.header.toggleHeading2': 'Sakļaujams virsraksts 2',
+  'tools.header.toggleHeading3': 'Sakļaujams virsraksts 3',
+  'tools.header.toggleHeading4': 'Sakļaujams virsraksts 4',
+  'tools.header.toggleHeading5': 'Sakļaujams virsraksts 5',
+  'tools.header.toggleHeading6': 'Sakļaujams virsraksts 6',
+  'tools.toggle.placeholder': 'Sakļaujams saraksts',
+  'tools.toggle.bodyPlaceholder':
+    'Tukšs sakļaujams bloks. Noklikšķiniet, lai pievienotu bloku, vai velciet blokus šeit.',
+  'blockSettings.openMenuAction': ', lai atvērtu izvēlni',
+  'toolbox.optionAddAbove':
+    'Turiet nospiestu taustiņu Option un noklikšķiniet, lai pievienotu augstāk',
+  'toolbox.ctrlAddAbove':
+    'Turiet nospiestu taustiņu Ctrl un noklikšķiniet, lai pievienotu augstāk',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder':
+    'Rakstiet kaut ko vai nospiediet /, lai izvēlētos rīku',
+  'tools.table.clearSelection': 'Notīrīt saturu',
+  'tools.table.headerColumn': 'Galvenes kolonna',
+  'tools.table.headerRow': 'Galvenes rinda',
+  'tools.table.insertRowAbove': 'Ievietot rindu virs',
+  'tools.table.insertRowBelow': 'Ievietot rindu zem',
+  'tools.table.placement': 'Līdzinājums',
+  'a11y.dragHandle':
+    'Velciet, lai pārvietotu bloku, vai noklikšķiniet, lai atvērtu izvēlni',
+  'a11y.dragStartedMultiple': 'Velkamo bloku skaits: {count}',
+  'a11y.blocksMoved':
+    'Pārvietoto bloku skaits: {count}. Pozīcija: {position}.',
+  'a11y.blockDuplicated':
+    'Bloks dublēts pozīcijā {position} no {total}',
+  'a11y.blocksDuplicated':
+    'Dublēto bloku skaits: {count}. Sākuma pozīcija: {position}.',
+  'a11y.searchResults': 'Meklēšanas rezultātu skaits: {count}',
+  'a11y.allBlocksSelected': 'Atlasīti visi bloki. Kopā: {count}.',
+  'a11y.blocksSelected': 'Atlasīto bloku skaits: {count}',
+  'a11y.navigationModeEntered':
+    'Navigācijas režīms. Izmantojiet bulttaustiņus, lai pārvietotos starp blokiem, taustiņu Enter, lai rediģētu, un taustiņu Escape, lai izietu.',
+  'a11y.navigationModeExited': 'Navigācijas režīms izslēgts',
+  'a11y.navigatedToBlock': 'Fokuss pārvietots uz bloku',
+  'a11y.dropPosition': 'Nomešanas pozīcija: {position} no {total}',
+  'tools.columns.turnInto': 'Pārvērst par kolonnām',
+  'searchTerms.unordered': 'nenumurēts',
+  'tools.callout.addEmoji': 'Pievienot ikonu',
+  'tools.callout.filterEmojis': 'Meklēt emocijzīmes…',
+  'tools.callout.pickRandom': 'Izvēlēties nejaušu emocijzīmi',
+  'toolNames.equation': 'Vienādojums',
+  'tools.code.wrapLines': 'Aplauzt rindas',
+  'tools.code.searchLanguage': 'Meklēt valodas…',
+  'blockSettings.copyLinkSuccess': 'Saite nokopēta starpliktuvē',
+  'blockSettings.copyLinkError': 'Neizdevās nokopēt saiti uz bloku',
+  'tools.link.linkTitle': 'Saites teksts',
+  'tools.image.toggleCaption': 'Rādīt vai paslēpt parakstu',
+  'tools.image.viewFullscreen': 'Skatīt pilnekrāna režīmā',
+  'tools.image.moreOptions': 'Papildu opcijas',
+  'tools.image.altEdit': 'Rediģēt alternatīvo tekstu',
+  'tools.image.altDescription':
+    'Aprakstiet šo attēlu cilvēkiem, kuri to neredz.',
+  'tools.image.altPlaceholder': 'Alternatīvais teksts',
+  'tools.image.previewControls': 'Attēla priekšskatījuma vadīklas',
+  'tools.image.resetZoom': 'Atiestatīt tālummaiņu',
+  'tools.image.errorDefaultMessage':
+    'Attēlu neizdevās ielādēt no šī URL. Izmēģiniet citu avotu vai augšupielādējiet failu vēlreiz.',
+  'tools.image.cropRatioFree': 'Brīva',
+  'tools.image.emptyOrDropHere': 'vai nomest attēlu šeit',
+  'tools.file.toggleCaption': 'Rādīt vai paslēpt parakstu',
+  'tools.file.previewRaw': 'Avots',
+  'tools.file.previewRender': 'Priekšskatījums',
+  'tools.file.emptyDropHint': 'vai nomest failu šeit',
+  'tools.video.alignmentLeft': 'Līdzināt pa kreisi',
+  'tools.video.alignmentCenter': 'Centrēt',
+  'tools.video.alignmentRight': 'Līdzināt pa labi',
+  'tools.video.toggleCaption': 'Rādīt vai paslēpt parakstu',
+  'tools.video.moreOptions': 'Papildu opcijas',
+  'tools.audio.alignmentLeft': 'Līdzināt pa kreisi',
+  'tools.audio.alignmentCenter': 'Centrēt',
+  'tools.audio.alignmentRight': 'Līdzināt pa labi',
+  'tools.audio.emptyOrDropHere': 'vai nomest audiofailu šeit',
+  'tools.audio.coverSourceAria': 'Vāka avots',
+  'tools.database.viewTypeListDescription':
+    'Rādīt vienumus vienkāršā sarakstā',
+  'tools.database.listView': 'Saraksta skats',
+  'tools.database.cardDetails': 'Kartītes informācija',
+  'tools.bookmark.loading': 'Notiek saites priekšskatījuma ielāde…',
+  'tools.bookmark.error': 'Neizdevās ielādēt saites priekšskatījumu',
+  'tools.embed.empty': 'Nav saites iegulšanai',
+  'tools.linkPaste.embed': 'Iegult saturu',
+  'tools.linkPaste.mention': 'Pieminēt',
+  'notifier.dismiss': 'Aizvērt paziņojumu',
+  'tools.video.seek': 'Atskaņošanas pozīcija',
+  'tools.video.toggleTimeDisplay':
+    'Pārslēgt laika rādījumu starp aizritējušo un atlikušo laiku',
+  'tools.video.fullscreen': 'Pilnekrāna režīms',
+  'tools.video.fullscreenExit': 'Iziet no pilnekrāna režīma',
+  'tools.video.speedPresets': 'Ātruma priekšiestatījumi',
+  'tools.video.ctxCopyUrlAtTime':
+    'Kopēt video URL pašreizējā atskaņošanas pozīcijā',
+  'tools.video.ctxStats': 'Atskaņošanas statistika',
+  'tools.video.emptyOrDropHere': 'vai nomest video šeit',
+  'tools.audio.coverOrDropHere': 'vai nomest attēlu šeit',
+  'tools.callout.emojiSearchResults':
+    'Atbilstošo emocijzīmju skaits: {count}',
+  'tools.database.checkboxChecked': 'Atzīmēta',
+  'tools.database.checkboxUnchecked': 'Neatzīmēta',
+  'tools.database.defaultStatusDone': 'Pabeigts',
+  'tools.embed.captionPlaceholder': 'Ievadiet parakstu…',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -1405,6 +1518,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(LITHUANIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Latvian correction oracle', () => {
+    const messages = readLocale('lv').messages;
+    const actual = Object.fromEntries(
+      Object.keys(LATVIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(LATVIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

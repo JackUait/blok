@@ -13,6 +13,10 @@ describe('@bloklabs/vue exports', () => {
     expect(VueApi.BLOK_DEFAULT_CONFIG).toBeDefined();
   });
 
+  it('exports useBlokReady', () => {
+    expect(typeof VueApi.useBlokReady).toBe('function');
+  });
+
   it('mounts under jsdom via @vue/test-utils (harness smoke)', () => {
     // BlokContent with no editor renders an empty container div without
     // touching the core — proves mount() works in the existing `unit` project.

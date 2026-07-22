@@ -12,6 +12,7 @@ describe('@bloklabs/angular exports', () => {
   it('exports the block-authoring surface', () => {
     expect(typeof AngularApi.createAngularBlock).toBe('function');
     expect(typeof AngularApi.injectBlocks).toBe('function');
+    expect(typeof AngularApi.injectBlokReady).toBe('function');
     expect(AngularApi.BLOK_BLOCK_CONTEXT).toBeDefined();
   });
 });

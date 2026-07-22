@@ -352,6 +352,34 @@ export interface PendingBlok {
   tokens: Tokens;
 }
 
+/** How deep a readiness query looks: boot completion, or content in the DOM. */
+export type ReadySettleOn = 'ready' | 'rendered';
+
+/**
+ * Narrows a readiness query to a DOM subtree and a readiness depth.
+ *
+ * An instance that has not finished booting *and* whose wrapper is not
+ * attached to the document counts in every scope: it may still turn out to
+ * live inside `within` (framework adapters build the editor holder detached
+ * and append it later). Over-waiting is safe; under-waiting is a bug.
+ */
+export interface ReadyScopeOptions {
+  /** Only count instances whose wrapper lives inside this element. */
+  within?: Element | null;
+  /** Readiness depth. Defaults to `'ready'`. */
+  settleOn?: ReadySettleOn;
+}
+
+/** Synchronous readiness snapshot for a scope. */
+export interface ReadyStateSnapshot {
+  /** Instances matching the scope. */
+  total: number;
+  /** Matching instances that are not settled yet. */
+  pending: number;
+  /** True when nothing in the scope is pending (an empty scope is settled). */
+  ready: boolean;
+}
+
 /**
  * Main Blok class
  */
@@ -368,16 +396,38 @@ export class Blok {
   public readonly isRendered: boolean;
 
   /**
-   * Resolves once every Blok instance constructed so far has finished booting
-   * (each instance's `isReady` has settled — rejections count as settled).
+   * Resolves once every Blok instance in scope has finished booting (each
+   * instance's `isReady` has settled — rejections count as settled).
    * Collective-readiness signal for pages hosting several instances (e.g. a
    * list of read-only editors plus a composer): await it before autofocusing
    * or measuring layout, instead of hand-aggregating per-instance `onReady`
-   * callbacks. Instances constructed while the returned promise is pending
-   * extend the wait; instances constructed after it resolves are not covered —
-   * call again for a fresh aggregate.
+   * callbacks.
+   *
+   * Pass `within` to restrict the wait to instances mounted inside a DOM
+   * subtree you own, and `settleOn: 'rendered'` to extend readiness from
+   * construction to content-in-the-DOM (which also covers post-boot
+   * re-renders). An empty scope resolves immediately.
+   *
+   * Instances that appear while the returned promise is pending extend the
+   * wait; instances constructed after it resolves are not covered — call again
+   * for a fresh aggregate, or use `subscribeReady()` for a live signal.
    */
-  public static whenAllReady(): Promise<void>;
+  public static whenAllReady(options?: ReadyScopeOptions): Promise<void>;
+
+  /**
+   * Synchronous readiness snapshot for a scope: how many instances match, how
+   * many are still pending, and whether the scope is settled. An empty scope
+   * reports `ready: true`.
+   */
+  public static readyState(options?: ReadyScopeOptions): ReadyStateSnapshot;
+
+  /**
+   * Subscribes to readiness changes across all instances (construction, boot,
+   * render-state flip, destroy) and returns an unsubscribe function. The
+   * listener takes no arguments — re-read `Blok.readyState(scope)` when it
+   * fires. Pairs with `useSyncExternalStore` and other store adapters.
+   */
+  public static subscribeReady(listener: () => void): () => void;
 
   public blocks: Blocks;
   public caret: Caret;

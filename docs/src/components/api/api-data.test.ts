@@ -40,6 +40,7 @@ describe("API_SECTIONS", () => {
       "block-data",
       "blok-editor",
       "use-blocks",
+      "use-blok-ready",
       "view-api",
     ];
 

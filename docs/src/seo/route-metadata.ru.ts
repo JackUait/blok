@@ -230,6 +230,12 @@ export const RU_COPY: Record<string, RouteCopy> = {
       'Чтение и изменение блоков из React через useBlocks: вставка, перенос и перенос целого поддерева блоков.',
     h1: 'useBlocks(): работа с блоками из React',
   },
+  '/docs/use-blok-ready': {
+    title: 'Хук useBlokReady — готовность редакторов в области',
+    description:
+      'Дождитесь, пока редакторы Blok внутри одного контейнера отрисуются, с помощью useBlokReady: с областью видимости, реактивно и безопасно для пустых списков.',
+    h1: 'useBlokReady(): готовность редакторов в области',
+  },
   '/docs/view-api': {
     title: 'View-рендерер Blok — HTML из JSON без редактора',
     description:

@@ -19,8 +19,12 @@ vi.mock('../../src/components/utils/tooltip', () => ({
 // so tests control exactly when every instance settles.
 vi.mock('../../src/components/core', () => {
   const coreDeferreds: Array<{ resolve: () => void; reject: (error: Error) => void }> = [];
+  const coreWrappers: HTMLElement[] = [];
 
-  const createModuleInstances = (): Partial<BlokModules> => ({
+  const createModuleInstances = (wrapper: HTMLElement): Partial<BlokModules> => ({
+    UI: {
+      nodes: { wrapper },
+    } as unknown as BlokModules['UI'],
     API: {
       methods: {
         blocks: {
@@ -62,7 +66,10 @@ vi.mock('../../src/components/core', () => {
      * Registers a manually-controllable deferred for this instance.
      */
     constructor() {
-      this.moduleInstances = createModuleInstances();
+      const wrapper = document.createElement('div');
+
+      coreWrappers.push(wrapper);
+      this.moduleInstances = createModuleInstances(wrapper);
 
       let resolve!: () => void;
       let reject!: (error: Error) => void;
@@ -79,6 +86,7 @@ vi.mock('../../src/components/core', () => {
   return {
     Core: MockCore,
     coreDeferreds,
+    coreWrappers,
   };
 });
 
@@ -125,26 +133,55 @@ const hasSettled = async (promise: Promise<unknown>): Promise<boolean> => {
 
 describe('Blok.whenAllReady', () => {
   let coreDeferreds: CoreDeferred[];
+  let coreWrappers: HTMLElement[];
+  let instances: Blok[];
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
     const coreModule = await import('../../src/components/core') as unknown as {
       coreDeferreds: CoreDeferred[];
+      coreWrappers: HTMLElement[];
     };
 
     coreDeferreds = coreModule.coreDeferreds;
+    coreWrappers = coreModule.coreWrappers;
+    instances = [];
   });
 
   afterEach(async () => {
     // Drain the module-level registry: settle every constructed instance so
     // the pending counter never leaks between tests.
     coreDeferreds.forEach((deferred) => deferred.resolve());
+    await flushMicrotasks();
+    // destroy() strips the instance's own fields, so an already-destroyed
+    // instance no longer carries the method.
+    instances.forEach((instance) => {
+      if (typeof instance.destroy === 'function') {
+        instance.destroy();
+      }
+    });
     coreDeferreds.length = 0;
+    coreWrappers.length = 0;
+    document.body.innerHTML = '';
     await flushMicrotasks();
 
     vi.restoreAllMocks();
   });
+
+  /**
+   * Constructs an instance tracked for teardown, with its wrapper attached to
+   * the given scope so DOM-containment filtering can be exercised.
+   * @param scope - element the instance's wrapper is appended to
+   */
+  const createInstanceWithin = (scope: Element): Blok => {
+    const instance = new Blok();
+
+    instances.push(instance);
+    scope.appendChild(coreWrappers[coreWrappers.length - 1]);
+
+    return instance;
+  };
 
   it('resolves immediately when no instances are booting', async () => {
     await expect(Blok.whenAllReady()).resolves.toBeUndefined();
@@ -274,5 +311,190 @@ describe('Blok.whenAllReady', () => {
     expect(order).toEqual(['onReady', 'whenAllReady']);
 
     await blok.isReady;
+  });
+
+  describe('scoped waits', () => {
+    it('ignores instances mounted outside the given scope', async () => {
+      const scope = document.createElement('div');
+      const outside = document.createElement('div');
+
+      document.body.append(scope, outside);
+
+      const inside = createInstanceWithin(scope);
+
+      createInstanceWithin(outside);
+
+      const aggregate = Blok.whenAllReady({ within: scope });
+
+      // The out-of-scope instance is still booting; the scoped wait must not
+      // care about it.
+      coreDeferreds[0].resolve();
+      await flushMicrotasks();
+
+      expect(await hasSettled(aggregate)).toBe(true);
+      expect(await hasSettled(Blok.whenAllReady())).toBe(false);
+
+      await inside.isReady;
+    });
+
+    it('an unbooted instance with an unattached wrapper counts in every scope', async () => {
+      const scope = document.createElement('div');
+
+      document.body.append(scope);
+
+      // Detached holder — exactly what the React adapter builds before
+      // BlokContent adopts it. Over-waiting is safe; under-waiting is the bug.
+      const detached = new Blok();
+
+      instances.push(detached);
+
+      expect(Blok.readyState({ within: scope }).ready).toBe(false);
+
+      coreDeferreds[0].resolve();
+      await flushMicrotasks();
+
+      // Once booted, the instance is no longer a scope candidate.
+      expect(Blok.readyState({ within: scope }).ready).toBe(true);
+    });
+
+    it('counts only in-scope instances in the snapshot', async () => {
+      const scope = document.createElement('div');
+      const outside = document.createElement('div');
+
+      document.body.append(scope, outside);
+
+      createInstanceWithin(scope);
+      createInstanceWithin(scope);
+      createInstanceWithin(outside);
+
+      coreDeferreds.forEach((deferred) => deferred.resolve());
+      await flushMicrotasks();
+
+      createInstanceWithin(scope);
+
+      expect(Blok.readyState({ within: scope })).toEqual({
+        total: 3,
+        pending: 1,
+        ready: false,
+      });
+    });
+
+    it('resolves immediately for a scope holding no instances', async () => {
+      const scope = document.createElement('div');
+
+      document.body.append(scope);
+
+      createInstanceWithin(document.body);
+
+      await expect(Blok.whenAllReady({ within: scope })).resolves.toBeUndefined();
+    });
+  });
+
+  describe('settleOn: rendered', () => {
+    it('stays pending until the wrapper carries the rendered attribute', async () => {
+      const scope = document.createElement('div');
+
+      document.body.append(scope);
+
+      const instance = createInstanceWithin(scope);
+      const wrapper = coreWrappers[0];
+
+      coreDeferreds[0].resolve();
+      await flushMicrotasks();
+
+      expect(Blok.readyState({ settleOn: 'rendered' }).ready).toBe(false);
+
+      const aggregate = Blok.whenAllReady({ within: scope, settleOn: 'rendered' });
+
+      expect(await hasSettled(aggregate)).toBe(false);
+
+      wrapper.setAttribute('data-blok-rendered', '');
+      await flushMicrotasks();
+
+      expect(await hasSettled(aggregate)).toBe(true);
+
+      await instance.isReady;
+    });
+
+    it('re-arms when a post-boot re-render clears the rendered attribute', async () => {
+      const scope = document.createElement('div');
+
+      document.body.append(scope);
+
+      createInstanceWithin(scope);
+
+      const wrapper = coreWrappers[0];
+
+      coreDeferreds[0].resolve();
+      await flushMicrotasks();
+      wrapper.setAttribute('data-blok-rendered', '');
+
+      expect(Blok.readyState({ within: scope, settleOn: 'rendered' }).ready).toBe(true);
+
+      // A data-prop change re-renders the editor: readiness must go back to
+      // pending instead of staying latched from boot.
+      wrapper.removeAttribute('data-blok-rendered');
+
+      expect(Blok.readyState({ within: scope, settleOn: 'rendered' }).ready).toBe(false);
+
+      const aggregate = Blok.whenAllReady({ within: scope, settleOn: 'rendered' });
+
+      expect(await hasSettled(aggregate)).toBe(false);
+
+      wrapper.setAttribute('data-blok-rendered', '');
+      await flushMicrotasks();
+
+      expect(await hasSettled(aggregate)).toBe(true);
+    });
+  });
+
+  describe('subscribeReady', () => {
+    it('notifies subscribers on construction, boot and render-state changes', async () => {
+      const scope = document.createElement('div');
+
+      document.body.append(scope);
+
+      const listener = vi.fn();
+      const unsubscribe = Blok.subscribeReady(listener);
+
+      createInstanceWithin(scope);
+      await flushMicrotasks();
+      expect(listener).toHaveBeenCalled();
+
+      listener.mockClear();
+      coreDeferreds[0].resolve();
+      await flushMicrotasks();
+      expect(listener).toHaveBeenCalled();
+
+      listener.mockClear();
+      coreWrappers[0].setAttribute('data-blok-rendered', '');
+      await flushMicrotasks();
+      expect(listener).toHaveBeenCalled();
+
+      listener.mockClear();
+      unsubscribe();
+      createInstanceWithin(scope);
+      await flushMicrotasks();
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('destroy', () => {
+    it('drops the instance from the registry', async () => {
+      const scope = document.createElement('div');
+
+      document.body.append(scope);
+
+      const instance = createInstanceWithin(scope);
+
+      coreDeferreds[0].resolve();
+      await flushMicrotasks();
+
+      expect(Blok.readyState({ within: scope }).total).toBe(1);
+
+      instance.destroy();
+
+      expect(Blok.readyState({ within: scope }).total).toBe(0);
+    });
   });
 });

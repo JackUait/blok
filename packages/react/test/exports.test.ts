@@ -21,6 +21,10 @@ describe('@bloklabs/react exports', () => {
     expect(typeof ReactApi.useBlocks).toBe('function');
   });
 
+  it('exports useBlokReady', () => {
+    expect(typeof ReactApi.useBlokReady).toBe('function');
+  });
+
   it('exports the inline-tool-authoring surface (createReactInlineTool)', () => {
     expect(typeof ReactApi.createReactInlineTool).toBe('function');
   });

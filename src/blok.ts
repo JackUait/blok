@@ -6,7 +6,15 @@ import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
 import { getBlokVersion, isObject, isFunction } from './components/utils';
 import { announce } from './components/utils/announcer';
-import { registerPendingInstance, whenAllReady } from './components/utils/ready-registry';
+import {
+  readyState,
+  registerInstance,
+  subscribeReady,
+  unregisterInstance,
+  whenAllReady,
+  type ReadyScopeOptions,
+  type ReadyStateSnapshot,
+} from './components/utils/ready-registry';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
@@ -83,8 +91,8 @@ class Blok {
   public static DATA_ATTR = DATA_ATTR;
 
   /**
-   * Resolves once every Blok instance constructed so far has finished booting
-   * (each instance's `isReady` has settled — rejections count as settled, so a
+   * Resolves once every Blok instance in scope has finished booting (each
+   * instance's `isReady` has settled — rejections count as settled, so a
    * failed boot never wedges the aggregate).
    *
    * Collective-readiness signal for pages hosting several instances (e.g. a
@@ -92,14 +100,42 @@ class Blok {
    * autofocusing or measuring layout, instead of hand-aggregating per-instance
    * `onReady` callbacks.
    *
-   * Instances constructed while the returned promise is pending extend the
-   * wait. Instances constructed *after* it resolves are not covered — call
-   * `whenAllReady()` again for a fresh aggregate (in React, a parent effect
-   * runs after its children's effects, so children's editors are already
-   * registered when the parent calls this).
+   * Pass `within` to restrict the wait to instances mounted inside a DOM
+   * subtree you own — an unrelated editor elsewhere on the page then cannot
+   * hold your gate closed. Pass `settleOn: 'rendered'` to extend readiness
+   * from *construction* to *content in the DOM*, which also covers post-boot
+   * re-renders (`render(data)`); the default `'ready'` only covers boot.
+   *
+   * An empty scope resolves immediately. Instances that appear while the
+   * returned promise is pending extend the wait; instances constructed after
+   * it resolves are not covered — call again for a fresh aggregate, or use
+   * `subscribeReady()` for a live signal.
+   * @param options - optional DOM scope and readiness depth
    */
-  public static whenAllReady(): Promise<void> {
-    return whenAllReady();
+  public static whenAllReady(options?: ReadyScopeOptions): Promise<void> {
+    return whenAllReady(options);
+  }
+
+  /**
+   * Synchronous readiness snapshot for a scope: how many instances match, how
+   * many are still pending, and whether the scope is settled. An empty scope
+   * reports `ready: true`.
+   * @param options - optional DOM scope and readiness depth
+   */
+  public static readyState(options?: ReadyScopeOptions): ReadyStateSnapshot {
+    return readyState(options);
+  }
+
+  /**
+   * Subscribes to readiness changes across all instances (construction, boot,
+   * render-state flip, destroy) and returns an unsubscribe function. The
+   * listener takes no arguments — re-read `Blok.readyState(scope)` when it
+   * fires. Pair with `useSyncExternalStore` or any store adapter to drive UI
+   * off editor readiness instead of a one-shot latch.
+   * @param listener - called after every readiness change
+   */
+  public static subscribeReady(listener: () => void): () => void {
+    return subscribeReady(listener);
   }
 
   /**
@@ -135,12 +171,14 @@ class Blok {
      * this needs no await/callback, so consumers coordinating several editor
      * instances (e.g. a comments list) can poll mount state synchronously.
      */
-    Object.defineProperty(this, 'isRendered', {
-      get: (): boolean => {
-        const ui = blok.moduleInstances?.UI as { nodes?: { wrapper?: HTMLElement } } | undefined;
+    const getWrapper = (): HTMLElement | undefined => {
+      const ui = blok.moduleInstances?.UI as { nodes?: { wrapper?: HTMLElement } } | undefined;
 
-        return ui?.nodes?.wrapper?.hasAttribute(DATA_ATTR.rendered) ?? false;
-      },
+      return ui?.nodes?.wrapper;
+    };
+
+    Object.defineProperty(this, 'isRendered', {
+      get: (): boolean => getWrapper()?.hasAttribute(DATA_ATTR.rendered) ?? false,
       enumerable: true,
       configurable: true,
     });
@@ -436,7 +474,7 @@ class Blok {
      * isReady assignment, so a synchronous constructor throw above cannot
      * leak a pending count.
      */
-    const settleReadyRegistry = registerPendingInstance();
+    const settleReadyRegistry = registerInstance(this, getWrapper);
 
     this.isReady.then(settleReadyRegistry, settleReadyRegistry);
   }
@@ -448,6 +486,10 @@ class Blok {
   public exportAPI(blok: Core): void {
     const fieldsToExport = [ 'configuration' ];
     const destroy = (): void => {
+      // Drop this instance from the readiness registry first, so aggregates
+      // scoped to a subtree stop counting an editor that is going away.
+      unregisterInstance(this);
+
       // Mark all modules as destroyed first so any in-flight async work stops gracefully
       Object.values(blok.moduleInstances)
         .forEach((moduleInstance) => {

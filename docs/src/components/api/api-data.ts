@@ -172,18 +172,40 @@ await editor.clear();`,
 editor.destroy();`,
       },
       {
-        name: "whenAllReady()",
+        name: "whenAllReady(options?)",
         returnType: "Promise<void>",
         description:
-          "Static method — resolves once every Blok instance constructed so far has finished booting (each instance's `isReady` has settled; rejections count as settled). A collective-readiness signal for pages hosting several instances, replacing hand-aggregated per-instance `onReady` callbacks. Instances constructed while the promise is pending extend the wait; instances constructed after it resolves are not covered — call again for a fresh aggregate.",
+          "Static method — resolves once every Blok instance in scope has finished booting (each instance's `isReady` has settled; rejections count as settled). A collective-readiness signal for pages hosting several instances, replacing hand-aggregated per-instance `onReady` callbacks. Pass `within` (an Element) to count only instances mounted inside a subtree you own, so an unrelated editor elsewhere on the page cannot hold your gate closed. Pass `settleOn: 'rendered'` to extend readiness from construction to content-in-the-DOM, which also covers post-boot re-renders from `render(data)`. An empty scope resolves immediately. Instances that appear while the promise is pending extend the wait; instances constructed after it resolves are not covered — call again, or use `subscribeReady()` for a live signal.",
         example: `// A comments list: N read-only bodies + a composer.
-// Wait for every instance before autofocusing.
-await Blok.whenAllReady();
-composer.focus();
+// Wait only for the editors inside this list.
+await Blok.whenAllReady({
+  within: listElement,
+  settleOn: 'rendered',
+});
+composer.focus();`,
+      },
+      {
+        name: "readyState(options?)",
+        returnType: "{ total: number; pending: number; ready: boolean }",
+        description:
+          "Static method — synchronous readiness snapshot for a scope: how many instances match `within`, how many are still pending at the requested `settleOn` depth, and whether the scope is settled. An empty scope reports `ready: true`, so no \"nothing to wait for\" special case is needed.",
+        example: `const { pending, ready } = Blok.readyState({ within: listElement });
 
-// In React, a parent's effect runs after its children's
-// effects, so the children's editors are already registered
-// when the parent calls whenAllReady().`,
+if (!ready) {
+  showSkeleton(pending);
+}`,
+      },
+      {
+        name: "subscribeReady(listener)",
+        returnType: "() => void",
+        description:
+          "Static method — subscribes to readiness changes across all instances (construction, boot, render-state flip, destroy) and returns an unsubscribe function. The listener takes no arguments: re-read `Blok.readyState(scope)` when it fires. Pairs with `useSyncExternalStore` and other store adapters, giving a live signal instead of a one-shot latch.",
+        example: `const unsubscribe = Blok.subscribeReady(() => {
+  setReady(Blok.readyState({ within: listElement }).ready);
+});
+
+// later
+unsubscribe();`,
       },
     ],
     properties: [
@@ -2717,6 +2739,73 @@ if (saved) {
         example: `if (!blocks.isSyncingFromYjs()) {
   blocks.update(nodeId, { text: cleaned });
 }`,
+      },
+    ],
+  },
+  {
+    id: "use-blok-ready",
+    badge: "Adapters",
+    title: "useBlokReady",
+    lastUpdated: "2026-07-22",
+    description:
+      "Live readiness of the Blok editors inside a DOM subtree, as a boolean you can render from — the useBlokReady(options) hook in @bloklabs/react, the useBlokReady(options) composable in @bloklabs/vue (returns a ref), and injectBlokReady(options) in @bloklabs/angular (returns a signal). All three wrap the same core registry behind Blok.readyState() and Blok.subscribeReady(), so they cannot drift. It answers the question a comments list or a form actually has: are MY editors ready? Scope it with the ref you already hold on the container, so an unrelated editor elsewhere on the page cannot hold your gate closed. It is a live signal, not a one-shot latch: an editor mounted later re-closes the gate, and with settleOn: 'rendered' so does every re-render from a changed data prop. A scope holding no editors is ready, so the empty-list case needs no special-casing. It starts false and takes its first real reading once the scope element is attached (React: the mount effect; Vue: onMounted; Angular: afterNextRender), and a scope you asked for that has not resolved yet reports false rather than silently falling back to the whole page — over-waiting is safe, under-waiting is a bug.",
+    example: `import { useRef } from 'react';
+import { BlokEditor, useBlokReady } from '@bloklabs/react';
+
+export function Comments({ comments }) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // True once every editor inside listRef has its content in the DOM.
+  // Re-arms whenever a comment's data changes and it re-renders.
+  const ready = useBlokReady({ within: listRef, settleOn: 'rendered' });
+
+  return (
+    <>
+      <div ref={listRef}>
+        {comments.map((c) => (
+          <BlokEditor key={c.id} data={c.body} readOnly />
+        ))}
+      </div>
+      {!ready && <Skeleton />}
+      <Composer autoFocus={ready} />
+    </>
+  );
+}
+
+// Vue — a ref:
+// const list = ref<HTMLElement | null>(null);
+// const ready = useBlokReady({ within: list, settleOn: 'rendered' });
+
+// Angular — a signal, from an injection context:
+// @ViewChild('list', { static: true }) listRef!: ElementRef<HTMLElement>;
+// readonly ready = injectBlokReady({
+//   within: () => this.listRef?.nativeElement ?? null,
+//   settleOn: 'rendered',
+// });`,
+    methods: [
+      {
+        name: "useBlokReady(options?)",
+        returnType: "boolean",
+        description:
+          "True when every Blok editor in scope is settled. Re-evaluates on every readiness change (construction, boot, render-state flip, destroy) and unsubscribes on unmount.",
+        params: [
+          {
+            name: "options.within",
+            type: "RefObject<Element | null> | Element | null",
+            required: false,
+            description:
+              "Restrict the wait to editors mounted inside this element. A ref is re-read on every readiness change, so one that attaches after the first render is picked up. Omit it to observe every editor on the page.",
+          },
+          {
+            name: "options.settleOn",
+            type: "'ready' | 'rendered'",
+            required: false,
+            default: "'ready'",
+            description:
+              "'ready' settles when each editor has finished booting. 'rendered' also waits for its content to be in the DOM, which re-arms on every post-boot re-render.",
+          },
+        ],
+        example: `const ready = useBlokReady({ within: listRef, settleOn: 'rendered' });`,
       },
     ],
   },

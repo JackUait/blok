@@ -444,6 +444,48 @@ export interface UseBlocksApi {
  */
 export declare function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi;
 
+/** Options accepted by {@link useBlokReady}. */
+export interface UseBlokReadyOptions {
+  /**
+   * Restrict the wait to editors mounted inside this element. Accepts the
+   * template ref you already hold on the container (or a getter); it is
+   * re-read on every readiness change, so a ref that fills in on mount is
+   * picked up.
+   *
+   * Omit it to observe every editor on the page. Passing it while it still
+   * resolves to null reports NOT ready — an unresolved scope must never fall
+   * back to the page-global one.
+   */
+  within?: MaybeRefOrGetter<Element | null | undefined>;
+  /**
+   * `'ready'` (default) settles when each editor has finished booting.
+   * `'rendered'` also waits for its content to be in the DOM and re-arms on
+   * every post-boot re-render.
+   */
+  settleOn?: 'ready' | 'rendered';
+}
+
+/**
+ * Composable exposing the live readiness of the Blok editors in a DOM scope as
+ * a boolean ref. Mirrors React's `useBlokReady` and Angular's
+ * `injectBlokReady` — all three wrap the same core registry, so they cannot
+ * drift.
+ *
+ * The ref starts `false` and takes its first real reading on mount, once the
+ * template ref has filled in. Editors mounted later re-close the gate, and with
+ * `settleOn: 'rendered'` so does every re-render. A scope holding no editors is
+ * ready.
+ *
+ * @param options - scope and readiness depth
+ *
+ * @example
+ * ```ts
+ * const list = ref<HTMLElement | null>(null);
+ * const ready = useBlokReady({ within: list, settleOn: 'rendered' });
+ * ```
+ */
+export declare function useBlokReady(options?: UseBlokReadyOptions): Readonly<ShallowRef<boolean>>;
+
 /** One field of a {@link CreateVueBlockSpec.propSchema}. */
 export interface PropSchemaEntry {
   default: unknown;

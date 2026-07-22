@@ -550,6 +550,43 @@ export interface UseBlocksApi {
 export declare function useBlocks(editor: Blok | null): UseBlocksApi;
 
 // ---------------------------------------------------------------------------
+// Scoped readiness (useBlokReady)
+// ---------------------------------------------------------------------------
+
+/** Options accepted by {@link useBlokReady}. */
+export interface UseBlokReadyOptions {
+  /**
+   * Restrict the wait to editors mounted inside this element. Accepts the ref
+   * you already hold on the container; it is re-read on every readiness
+   * change, so a ref that attaches after the first render is picked up.
+   *
+   * Omit it to observe every editor on the page.
+   */
+  within?: React.RefObject<Element | null> | Element | null;
+  /**
+   * `'ready'` (default) settles when each editor has finished booting.
+   * `'rendered'` also waits for its content to be in the DOM and re-arms on
+   * every post-boot re-render.
+   */
+  settleOn?: 'ready' | 'rendered';
+}
+
+/**
+ * Live readiness of the Blok editors in a DOM scope.
+ *
+ * Returns `false` until every editor inside `within` is settled, and keeps
+ * following the scope afterwards: editors mounted later re-close the gate, and
+ * with `settleOn: 'rendered'` so does each re-render. A scope holding no
+ * editors is ready, so callers need no "nothing to wait for" special case.
+ *
+ * The first render always reports `false` — the scope element is not attached
+ * yet, and over-waiting is safe while under-waiting is a bug.
+ *
+ * @param options - scope and readiness depth
+ */
+export declare function useBlokReady(options?: UseBlokReadyOptions): boolean;
+
+// ---------------------------------------------------------------------------
 // Block authoring (createReactBlock + portal host)
 // ---------------------------------------------------------------------------
 

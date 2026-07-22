@@ -281,6 +281,12 @@ const MODULE_COPY: Record<string, Copy> = {
       'Read and mutate blocks from React with useBlocks, including insert, move, and subtree relocation.',
     h1: 'useBlocks(): read and mutate blocks from React',
   },
+  'use-blok-ready': {
+    title: 'useBlokReady Hook — Scoped Editor Readiness in React',
+    description:
+      'Wait for the Blok editors inside one container to finish rendering, with useBlokReady — scoped, reactive, and safe for empty lists.',
+    h1: 'useBlokReady(): scoped editor readiness',
+  },
   'view-api': {
     title: 'Blok View Renderer — Saved JSON to HTML, No Editor',
     description:

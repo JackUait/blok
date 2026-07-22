@@ -15,6 +15,7 @@ import {
 } from "../common/framework-snippets";
 import { adaptExample } from "../common/framework-adapt";
 import { getRouteMetadata } from "../../seo/route-metadata";
+import { localizedPath } from "../../seo/locales";
 import { generatePropertyId, generateOptionId } from "./api-anchors";
 import { renderInline } from "./inline-code";
 import type { ApiSection as ApiSectionType } from "./api-data";
@@ -215,10 +216,10 @@ const QuickStartContent: React.FC = () => {
 const SectionHeader: React.FC<{ section: ApiSectionType }> = ({ section }) => {
   const { t, locale } = useI18n();
   // route-metadata.ts owns the real H1 copy ("Caret API: move, focus, and set
-  // cursor position" rather than the bare module name), but only in English —
-  // other locales keep their translated section title until /ru/** lands.
-  const heading =
-    (locale === 'en' ? getRouteMetadata(`/docs/${section.id}`)?.h1 : undefined) ?? section.title;
+  // cursor position" rather than the bare module name). getRouteMetadata reads
+  // the locale off the path, so it must be asked in the reader's own tree —
+  // an unprefixed path always answers in English.
+  const heading = getRouteMetadata(localizedPath(`/docs/${section.id}`, locale))?.h1 ?? section.title;
 
   return (
     <div className="flex flex-col gap-3">

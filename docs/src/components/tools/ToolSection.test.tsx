@@ -6,7 +6,8 @@ import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ToolSection } from './ToolSection';
 import type { ToolSection as ToolSectionType } from './tools-data';
-import { ROUTE_METADATA } from '../../seo/route-metadata';
+import { ROUTE_METADATA, getRouteMetadata } from '../../seo/route-metadata';
+import { applyTypography } from '../../utils/typography';
 
 const mockSection: ToolSectionType = {
   id: 'test-tool',
@@ -35,6 +36,34 @@ const renderSection = (section: ToolSectionType) =>
   );
 
 describe('ToolSection', () => {
+  it('heads a ru page with the localized H1, not the bare section title', () => {
+    // getRouteMetadata resolves the locale from the path, so an unprefixed
+    // `/docs/table` always returns English — which is why this used to be gated
+    // off for every non-en locale. The gate outlived /ru/**: the ru JSON-LD
+    // headline already carries the descriptive Russian copy, so leaving the
+    // visible H1 on the bare section title made structured data contradict the
+    // page it describes, which Google treats as a violation.
+    const metadata = getRouteMetadata('/ru/docs/table');
+
+    if (metadata === undefined) {
+      throw new Error('ru copy for /docs/table is missing — this test would prove nothing');
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/ru/docs/table']}>
+        <I18nProvider locale="ru">
+          <FrameworkProvider>
+            <ToolSection section={{ ...mockSection, id: 'table', title: 'Таблица' }} />
+          </FrameworkProvider>
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    // <Typo> inserts locale-aware non-breaking spaces, so compare against the
+    // form the component legitimately renders.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(applyTypography(metadata.h1, 'ru'));
+  });
+
   it('renders the section with testid', () => {
     renderSection(mockSection);
     expect(screen.getByTestId('tools-section-test-tool')).toBeInTheDocument();

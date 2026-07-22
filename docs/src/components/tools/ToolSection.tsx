@@ -6,6 +6,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useFramework } from '../../contexts/FrameworkContext';
 import { adaptExample } from '../common/framework-adapt';
 import { getRouteMetadata } from '../../seo/route-metadata';
+import { localizedPath } from '../../seo/locales';
 
 interface ToolSectionProps {
   section: ToolSectionType;
@@ -15,10 +16,9 @@ export const ToolSection: React.FC<ToolSectionProps> = ({ section }) => {
   const { t, locale } = useI18n();
   const { framework } = useFramework();
   const usage = adaptExample(section.usageExample, framework);
-  // See ApiSection: the descriptive H1 lives in route-metadata.ts and is
-  // English-only, so other locales keep the translated tool name.
-  const heading =
-    (locale === 'en' ? getRouteMetadata(`/docs/${section.id}`)?.h1 : undefined) ?? section.title;
+  // See ApiSection: the descriptive H1 lives in route-metadata.ts, which keys
+  // off the locale in the path — so ask it in the reader's own tree.
+  const heading = getRouteMetadata(localizedPath(`/docs/${section.id}`, locale))?.h1 ?? section.title;
 
   return (
     <section

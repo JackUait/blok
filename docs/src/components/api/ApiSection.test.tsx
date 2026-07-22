@@ -6,7 +6,8 @@ import { ApiSection } from './ApiSection';
 import type { ApiSection as ApiSectionType } from './api-data';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
-import { ROUTE_METADATA } from '../../seo/route-metadata';
+import { ROUTE_METADATA, getRouteMetadata } from '../../seo/route-metadata';
+import { applyTypography } from '../../utils/typography';
 
 /**
  * ApiSection reads the active framework, which now lives in the URL, so a router
@@ -79,6 +80,31 @@ const mockQuickStartSection: ApiSectionType = {
 };
 
 describe('ApiSection', () => {
+  it('heads a ru page with the localized H1, not the bare section title', () => {
+    // Same gate, same reason as ToolSection: an unprefixed path always resolves
+    // to English, so every non-en locale fell back to the plain module name
+    // while its JSON-LD headline advertised the descriptive Russian copy.
+    const metadata = getRouteMetadata('/ru/docs/caret-api');
+
+    if (metadata === undefined) {
+      throw new Error('ru copy for /docs/caret-api is missing — this test would prove nothing');
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/ru/docs/caret-api']}>
+        <I18nProvider locale="ru">
+          <FrameworkProvider>
+            <ApiSection section={{ ...mockSection, id: 'caret-api', title: 'Caret API' }} />
+          </FrameworkProvider>
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    // <Typo> inserts locale-aware non-breaking spaces, so compare against the
+    // form the component legitimately renders.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(applyTypography(metadata.h1, 'ru'));
+  });
+
   it('should render the title', () => {
     render(<Providers><ApiSection section={mockSection} /></Providers>);
 

@@ -334,7 +334,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `mn` | Mongolian | Cyrillic | ltr | neutral contemporary Mongolian in Cyrillic; polite `-на уу` instructions and recovery guidance; concise infinitive, action, noun, or state labels for compact controls; established Mongolian product, accessibility, table, media, and browser terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mn_final_cleanroom_a` | `root-mn_final_cleanroom_b` | pass | pass | pass | `F-mn-001`–`F-mn-122` | second-pass-complete |
 | `mr` | Marathi | Devanagari | ltr | neutral contemporary Marathi in Devanagari; respectful direct imperatives for actions, instructions, and recovery guidance; concise noun, state, or action labels for compact controls; established Marathi product, accessibility, table, and media terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-mr_final_cleanroom_linguistic` | `root-mr_final_cleanroom_callers` | pass | pass | pass | `F-mr-001`–`F-mr-087` | second-pass-complete |
 | `ms` | Malay | Latin | ltr | neutral contemporary Malaysian Malay; concise direct imperatives for compact actions and complete grammatical instructions; sentence-case noun/state labels; established Malay product, accessibility, table, and media terminology; count-neutral label-before-value templates; conventional unchanged shortcut, ratio, acronym, and established loanword notation | `root-ms_final_linguistic` | `root-ms_final_callers` | pass | pass | pass | `F-ms-001`–`F-ms-107` | second-pass-complete |
-| `my` | Burmese (Myanmar) | Myanmar | ltr | to-audit | — | — | pending | pending | pending | `F-my-001`–`F-my-002` | pending |
+| `my` | Burmese (Myanmar) | Myanmar | ltr | neutral contemporary Burmese in Myanmar script; concise direct commands for compact actions; polite complete instructions and accessibility announcements; sentence-case noun/state labels; established Burmese product, accessibility, media, and browser terminology; natural classifier-bearing runtime count relations; conventional unchanged shortcut, ratio, placeholder-only, `Alt`, `URL`, and `OK` notation | `root-my_final_linguistic` | `root-my_final_callers` | pass | pass | pass | `F-my-001`–`F-my-115` | second-pass-complete |
 | `ne` | Nepali | Devanagari | ltr | to-audit | — | — | pending | pending | pending | `F-ne-001`–`F-ne-002` | pending |
 | `nl` | Dutch | Latin | ltr | neutral Netherlands Dutch; informal `je` in full instructions and confirmations; concise infinitive actions and direct imperatives; sentence case; standard Dutch compounds and punctuation | — | — | pending | pending | pending | `F-nl-001`–`F-nl-092` | pending |
 | `no` | Norwegian (current Bokmål wording) | Latin | ltr | neutral contemporary Bokmål; informal singular `du` in full instructions and confirmations; concise imperatives for actions; sentence case; lowercase search aliases | — | — | pending | pending | pending | `F-no-001`–`F-no-085` | pending |
@@ -472,6 +472,7 @@ locale returns to `pending`.
 | `mn` | `root-mn_final_cleanroom_a` | `sha256:da5064b24991a256a0bdac1f7714036c4b35452cd9391e1634f85bd0879086fa` | `root-mn_final_cleanroom_b` | `sha256:da5064b24991a256a0bdac1f7714036c4b35452cd9391e1634f85bd0879086fa` |
 | `mr` | `root-mr_final_cleanroom_linguistic` | `sha256:27951ac4e8691091bb26429e21ecf7174051afa3e2804e8f3039a0427fb6c2e6` | `root-mr_final_cleanroom_callers` | `sha256:27951ac4e8691091bb26429e21ecf7174051afa3e2804e8f3039a0427fb6c2e6` |
 | `ms` | `root-ms_final_linguistic` | `sha256:4a13d12d865b69ec9f597850808123903ab15278eabd9ef982523ba2cb66b63a` | `root-ms_final_callers` | `sha256:4a13d12d865b69ec9f597850808123903ab15278eabd9ef982523ba2cb66b63a` |
+| `my` | `root-my_final_linguistic` | `sha256:114c397afed8e7ab2bb12f2aad010c70b1d6dc23a4ec7eb855ebd440b19cf6b3` | `root-my_final_callers` | `sha256:114c397afed8e7ab2bb12f2aad010c70b1d6dc23a4ec7eb855ebd440b19cf6b3` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -5143,6 +5144,108 @@ Both final reviewers independently restarted from entry 1 on the corrected bytes
 The final dictionary retains exact 546/546 key-set parity, preserves its baseline insertion order, has no duplicate keys or empty values, and preserves all 38 placeholder-bearing rows and 54 placeholder occurrences with exact English token multisets. Every value is valid NFC with no forbidden control or bidi-control characters. All 44 localized search aliases remain useful and unique after normalization. Its only 12 English-identical values are the documented `R-ms-001`–`R-ms-012` shortcut, established-loanword, `Alt`, aspect-ratio, `URL`, and `OK` retentions. The mechanically reproducible lifecycle remains 397 executable literals, 122 finite-dynamic keys, 25 registered-namespace-compatible keys, and two exact catalog-only keys, with all 117 provider compositions accounted for.
 
 Caller inspection leaves `F-global-014` and `F-global-020` open for the coordinated 546-to-552 all-dictionary migration. Neither bypass misclassifies a Malay value, but both continue to block terminal repository verification. English remains `770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`, the unchanged guideline remains `ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`, and the guideline/index test is `5ff7612616b8dc474d3b6f4970e5585c63824fa7df95f6570dabb086741f0952`. The focused Malay oracle, complete 4,671-test guideline/index gate, complete 5,391-test i18n suite, 89-test checker regression suite, live catalog checker, scoped ESLint gate, and 4,913-test directly affected caller gate pass on the final bytes; four contention timeouts in the broad run passed on bounded serial isolation. The completed history contains exactly 107 unique verified locale/key findings in `F-ms-001`–`F-ms-107`. Malay is `second-pass-complete`.
+
+### Burmese (`my`) — second-pass complete
+
+The historical preload added `toolNames.clearFormat` as
+`ဖော်မတ်ချခြင်းကို ရှင်းလင်းရန်` in `F-my-001`, and the coordinated toggle
+migration changed `tools.toggle.bodyPlaceholder` in `F-my-002` to distinguish
+clicking to add one block from dragging blocks to the empty toggle. Both
+verified findings remain part of the locale history. Those bytes formed the
+exhaustive-review input at raw Burmese SHA-256
+`3d89b2e89d18c4517deb5816602005a650b43820cd6c907f1a9b2a27972476df`;
+earlier review fragments earn no credit toward the current pass.
+
+Three independent read-only candidates restarted at entry 1 and inspected all
+546 English/Burmese pairs in insertion order. Their artifacts,
+`/tmp/blok-my-audit-a-20260722.json`,
+`/tmp/blok-my-audit-b-20260722.json`, and
+`/tmp/blok-my-audit-c-20260722.json`, proposed 73, 81, and 103 candidates and
+have SHA-256 values
+`6a5693ba08c40d5238fed2080698f2d838f9bcefed2cdfb8bac3b89554008b5d`,
+`28aafc0a5f0e7ef347c09d52cb2f7a7180d79d03a71ff529b8f573c05d6e4ab2`,
+and `7fa2fd55df7b75889b5720d6883d66b0144b02290424db0ded0d54b0e9beff36`.
+
+The A/B union contained 97 keys; its reconciliation selected 90 corrections
+and seven retentions in `/tmp/blok-my-reconcile-ab-20260722.json`, SHA-256
+`4c70973e5e42f2c856bca0f8faa029f7820c891e9fe999840f1af346a570575e`.
+The skeptical A/B/C reconciliation considered 126 keys and selected 111
+proposals plus one amended correction, rejecting 14; its 112-entry correction
+map is `/tmp/blok-my-reconcile-abc-20260722.json`, SHA-256
+`aec1a99d9aca05074d329c9a3ef03d6b4ef0fcc475901614edce2863db3ace7b`.
+A separate terminology challenge reviewed all 126 decisions and recorded 45
+deviations in `/tmp/blok-my-terminology-challenge-20260722.json`, SHA-256
+`cca2751f556b216df043dcd7676e0938b0c70cd5fb5b8830c2cff142d4464b11`.
+Root did not accept that artifact mechanically: it undercounted the projected
+exact-English inventory as eight instead of ten and asserted a vertical-first
+direction convention despite Chromium’s official horizontal-first
+`ညာဘက်အပေါ်ထောင့်` evidence. The final tie-break independently adjudicated all
+45 challenged decisions, selected 25 A/B/C values, six challenge values, 12
+current values, and two amended values, and recorded eight justified deviations
+from A/B/C in `/tmp/blok-my-tiebreak-20260722.json`, SHA-256
+`6374fd339dc1a11cb91ce81f884637a8e1ecb1ae5254847835c976a5ba152fb1`.
+
+The final 115-entry Burmese oracle contains the two historical findings and
+113 replacements from the review baseline. Before remediation the focused
+oracle failed on the changed values; after replacement the same expectations
+pass without weakening. The corrections repair caller-composed menu fragments,
+complete action and recovery instructions, natural classifier-bearing runtime
+counts, clipboard and checkbox states, accessible movement and navigation
+announcements, source/upload distinctions, image alternative-text controls,
+media playback labels, database roles, and concise but complete status copy.
+They also retain Burmese word order and sentence punctuation instead of
+copying English syntax.
+
+Primary terminology evidence includes AOSP’s official Burmese
+[system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-my/strings.xml),
+Chromium’s official Burmese
+[product resources](https://chromium.googlesource.com/chromium/src/+/main/chrome/app/resources/generated_resources_my.xtb),
+YouTube’s Burmese documentation for
+[autoplay](https://support.google.com/youtube/answer/6327615?hl=my),
+[embedding](https://support.google.com/youtube/answer/171780?hl=my), and
+[timeline controls](https://support.google.com/youtube/answer/15824265?hl=my),
+and Mozilla’s [Burmese localization style guide](https://mozilla-l10n.github.io/styleguides/my/).
+
+Both final reviewers independently restarted from entry 1 on the corrected
+bytes. `root-my_final_linguistic` and `root-my_final_callers` each reread
+546/546 pairs and rehashed before approval. Their canonical IDs are
+`/root/my_final_linguistic` and `/root/my_final_callers`; their artifacts,
+`/tmp/blok-my-final-linguistic-20260722.json` and
+`/tmp/blok-my-final-callers-20260722.json`, have SHA-256 values
+`0f7130b422e39831b428c4018a81df488f7d48c23e0f3a8db2d34ee1ea4e1750`
+and `fd84c18f2e285dc95825939d53e81390c2f1d71692ee48ddd74d2b6c3f710a79`.
+Both approve raw Burmese SHA-256
+`114c397afed8e7ab2bb12f2aad010c70b1d6dc23a4ec7eb855ebd440b19cf6b3`
+with zero mandatory defects, optional defects, or blockers. The caller review’s
+provenance binds the unchanged guideline SHA-256
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`
+and the current guideline-test SHA-256
+`46de7c18ce3fd6c482291c76919cc5b3a6232d968687763afaf65da9b7f53e99`.
+
+The final dictionary has exact 546/546 key-set parity, preserves its established
+insertion order, and has no duplicate keys, empty values, boundary-whitespace
+defects, NFC defects, or forbidden control characters. All 38
+placeholder-bearing rows and 54 placeholder occurrences preserve the English
+token multisets. All 44 localized search aliases remain unique. Its only ten
+English-identical values are the documented `R-my-001`–`R-my-010` shortcut,
+placeholder-only, `Alt`, aspect-ratio, `URL`, and `OK` retentions. The exhaustive
+caller census accounts for 401 concrete literal references, 118 finite dynamic
+or registered constructions, and 27 retained keys with no current static
+caller, totaling 546 with zero uncovered entries.
+
+Caller inspection leaves `F-global-014` and `F-global-020` open for the
+coordinated six-key all-dictionary migration. Neither bypass misclassifies a
+Burmese value, but both continue to block terminal repository verification.
+English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`.
+The focused Burmese oracle, complete 4,785-test guideline/index gate, complete
+5,505-test i18n suite, 89-test checker regression suite, live catalog checker,
+scoped ESLint gate, and whitespace validation pass on the final bytes. The
+broad component/tool caller run executed 16,583 tests: 16,581 passed, one was
+skipped, and one unmodified table-paste case exceeded its five-second timeout
+under load. That exact case passed in 2.41 seconds on immediate isolation, and
+its complete file passed all eight tests, confirming contention rather than a
+Burmese regression. Burmese is `second-pass-complete`.
 
 ### Dutch (`nl`) — current 539-key second pass complete
 
@@ -11824,6 +11927,119 @@ follows the global transition rule above.
 | `F-ms-105` | `ms` | `tools.callout.emojiSearchResults` | screen-reader search semantics | `"{count} emoji ditemui"` | `"Padanan emoji: {count}"` | The live region reports the number of matching emoji; label-before-count wording stays grammatical for every runtime value. | verified |
 | `F-ms-106` | `ms` | `tools.database.checkboxChecked` | official accessibility terminology | `"Ditanda"` | `"Ditandai"` | The hidden label exposes checkbox state, not item selection; AOSP Malay uses “Ditandai” for checked. | verified |
 | `F-ms-107` | `ms` | `tools.database.checkboxUnchecked` | official accessibility terminology | `"Tidak ditanda"` | `"Tidak ditandai"` | The hidden label exposes checkbox state, not item selection; AOSP Malay uses “Tidak ditandai” for not checked. | verified |
+| `F-my-003` | `my` | `blockSettings.clickAction` | caller composition | `"နှိပ်ပါ"` | `"မီနူးကို ဖွင့်ရန် နှိပ်ပါ"` | The explicit object marker ကို makes the first tooltip branch grammatical and unambiguous; with the unchanged adjacent fragments the rendered sentence remains complete around the highlighted shortcut. | verified |
+| `F-my-004` | `my` | `blockSettings.orConjunction` | caller composition | `" သို့မဟုတ် ကီးဘုတ်ဖြတ်လမ်း "` | `" သို့မဟုတ် "` | All reviewers agree on the boundary-preserving plain conjunction; it must ship with the two adjacent fragments. | verified |
+| `F-my-005` | `my` | `blockSettings.openMenuAction` | caller composition | `" မီနူးဖွင့်ရန်"` | `" ကို နှိပ်ပါ"` | Reviewer A is the only candidate that completes the shortcut branch without redundantly reopening the menu purpose already moved into clickAction. | verified |
+| `F-my-006` | `my` | `popover.search` | register / grammar | `"လုပ်ဆောင်ချက်တစ်ခု ရှာဖွေရန်…"` | `"လုပ်ဆောင်ချက်တစ်ခုကို ရှာပါ…"` | The direct prompt with the object marker is the most grammatical complete search-field instruction. | verified |
+| `F-my-007` | `my` | `tools.marker.textColor` | changed english sync | `"စာသား"` | `"စာသားအရောင်"` | The current value says only “Text” and drops the color axis, so the shared picker does not distinguish text color from background. | verified |
+| `F-my-008` | `my` | `tools.colorPicker.defaultSwatchLabel` | caller composition | `"{mode} {default}"` | `"{default} {mode}"` | The shared picker substitutes “မူလ” and the lowercased axis. Burmese modifiers precede the noun phrase; this yields “မူလ စာသားအရောင်” rather than the inverted “စာသားအရောင် မူလ”. | verified |
+| `F-my-009` | `my` | `tools.colorPicker.colorSwatchLabel` | caller composition | `"{mode} {color}"` | `"{color} {mode}"` | The shared picker composes an accessible color-plus-axis label. Color-first order yields the natural “အနီရောင် စာသားအရောင်” and preserves both placeholders. | verified |
+| `F-my-010` | `my` | `tools.toggle.ariaLabelCollapse` | orthography | `"ခေါ်သိမ်းရန်"` | `"ခေါက်သိမ်းရန်"` | “ခေါ်သိမ်း” is a lexical typo; the established collapse verb is “ခေါက်သိမ်း”. The same correction is required in the corresponding search alias. | verified |
+| `F-my-011` | `my` | `tools.table.clearSelection` | changed english sync | `"ရှင်းလင်းရန်"` | `"အကြောင်းအရာများကို ရှင်းလင်းရန်"` | The handler clears selected cell contents, not the selection itself. The current bare “Clear” omits the destructive object restored by the English source. | verified |
+| `F-my-012` | `my` | `tools.table.placement` | ui role | `"တည်နေရာ"` | `"တန်းညှိခြင်း"` | Use the catalog-established alignment term rather than the generic adjustment term. | verified |
+| `F-my-013` | `my` | `tools.table.placementTopLeft` | natural word order | `"အပေါ် ဘယ်"` | `"ဘယ်ဘက်အပေါ်"` | Direction-before-vertical order is attested in official Burmese Google UI and is applied consistently across the grid. | verified |
+| `F-my-014` | `my` | `tools.table.placementTopCenter` | natural word order | `"အပေါ် အလယ်"` | `"အလယ်အပေါ်"` | Keep one horizontal-before-vertical ordering system across all nine placement labels. | verified |
+| `F-my-015` | `my` | `tools.table.placementTopRight` | natural word order | `"အပေါ် ညာ"` | `"ညာဘက်အပေါ်"` | Direction-before-vertical order is directly attested by official Burmese Google UI. | verified |
+| `F-my-016` | `my` | `tools.table.placementMiddleLeft` | natural word order | `"အလယ် ဘယ်"` | `"ဘယ်ဘက်အလယ်"` | The direction-first compound is the natural counterpart of left-middle in the 3×3 alignment grid. | verified |
+| `F-my-017` | `my` | `tools.table.placementMiddleRight` | natural word order | `"အလယ် ညာ"` | `"ညာဘက်အလယ်"` | The direction-first compound is the natural counterpart of right-middle in the 3×3 alignment grid. | verified |
+| `F-my-018` | `my` | `tools.table.placementBottomLeft` | natural word order | `"အောက် ဘယ်"` | `"ဘယ်ဘက်အောက်"` | The direction-first compound is the natural counterpart of bottom-left in the 3×3 alignment grid. | verified |
+| `F-my-019` | `my` | `tools.table.placementBottomCenter` | natural word order | `"အောက် အလယ်"` | `"အလယ်အောက်"` | The direction-first compound is consistent with Burmese UI location order across the grid. | verified |
+| `F-my-020` | `my` | `tools.table.placementBottomRight` | natural word order | `"အောက် ညာ"` | `"ညာဘက်အောက်"` | The direction-first compound is the natural counterpart of bottom-right in the 3×3 alignment grid. | verified |
+| `F-my-021` | `my` | `a11y.dragHandle` | accessibility / action clarity | `"ဘလောက်ရွှေ့ရန် ဆွဲယူပါ သို့မဟုတ် မီနူးအတွက် နှိပ်ပါ"` | `"ဘလောက်ရွှေ့ရန် ဆွဲယူပါ သို့မဟုတ် မီနူးဖွင့်ရန် နှိပ်ပါ"` | A complete instruction should say the click opens the menu; မီနူးအတွက် is vague. | verified |
+| `F-my-022` | `my` | `a11y.dropPosition` | accessibility numeric relation | `"{total} တွင် အနေအထား {position} ၌ ချမည်"` | `"စုစုပေါင်း {total} ခုအနက် အနေအထား {position} တွင် ချပါမည်"` | The classifier and အနက် express the spoken position-of-total relation directly; the runtime values are numeric block counts, so the classifier is licensed. | verified |
+| `F-my-023` | `my` | `a11y.dropCancelled` | accessibility complete predicate | `"ဆွဲယူမှု ပယ်ဖျက်ပြီး"` | `"ဆွဲယူမှုကို ပယ်ဖျက်ပြီးပါပြီ"` | The complete polite status aligns with neighboring Burmese live-region completion announcements. | verified |
+| `F-my-024` | `my` | `a11y.blockMoved` | accessibility numeric relation | `"ဘလောက်ကို {total} တွင် အနေအထား {position} သို့ ရွှေ့ပြီး"` | `"ဘလောက်ကို စုစုပေါင်း {total} ခုအနက် အနေအထား {position} သို့ ရွှေ့ပြီးပါပြီ"` | A single relational sentence is clearer to a screen reader than a completed-action sentence followed by a detached total label. | verified |
+| `F-my-025` | `my` | `a11y.blocksMoved` | accessibility complete predicate | `"ဘလောက် {count} ခုကို အနေအထား {position} သို့ ရွှေ့ပြီး"` | `"ဘလောက် {count} ခုကို အနေအထား {position} သို့ ရွှေ့ပြီးပါပြီ။"` | The current announcement ends in the clipped auxiliary “ပြီး”. The complete polite predicate is clearer when spoken and preserves both placeholders. | verified |
+| `F-my-026` | `my` | `a11y.blockDuplicated` | accessibility numeric relation | `"ဘလောက်ကို {total} တွင် အနေအထား {position} ၌ ပွားပြီး"` | `"ဘလောက်ကို စုစုပေါင်း {total} ခုအနက် အနေအထား {position} တွင် မိတ္တူပွားပြီးပါပြီ"` | The classifier and အနက် preserve the exact position-of-total relation in one standalone announcement. | verified |
+| `F-my-027` | `my` | `a11y.blocksDuplicated` | accessibility complete predicate | `"ဘလောက် {count} ခုကို အနေအထား {position} မှစ၍ ပွားပြီး"` | `"ဘလောက် {count} ခုကို အနေအထား {position} မှစ၍ မိတ္တူပွားပြီးပါပြီ။"` | The replacement retains the “starting at” relation but completes the spoken predicate instead of ending in clipped “ပြီး”. | verified |
+| `F-my-028` | `my` | `a11y.searchResults` | changed english sync | `"ရလဒ် {count} ခု"` | `"ရှာဖွေမှုရလဒ် {count} ခု"` | This preserves the native classifier while restoring the missing search context. | verified |
+| `F-my-029` | `my` | `a11y.allBlocksSelected` | accessibility sentence boundary | `"ဘလောက်အားလုံး ရွေးထားသည်၊ ဘလောက် {count} ခု"` | `"ဘလောက်အားလုံးကို ရွေးထားသည်။ စုစုပေါင်း {count} ခု"` | ခု supplies the natural classifier for the numeric block count instead of leaving a bare total value. | verified |
+| `F-my-030` | `my` | `a11y.navigationPosition` | accessibility numeric relation | `"{tool}၊ {total} ၏ {position}"` | `"{tool}၊ စုစုပေါင်း {total} ခုအနက် အနေအထား {position}"` | The relational clause preserves “position of total” as one utterance and uses an appropriate generic item classifier. | verified |
+| `F-my-031` | `my` | `tools.columns.resizeAriaLabel` | action grammar / accessibility | `"ကော်လံများ အရွယ်အစား ချိန်ညှိ"` | `"ကော်လံများ၏ အရွယ်အစားကို ချိန်ညှိရန်"` | Supply natural object marking and a complete action ending. | verified |
+| `F-my-032` | `my` | `tools.spacer.resizeAriaLabel` | action grammar / accessibility | `"နေရာလွတ် အရွယ်အစား ချိန်ညှိ"` | `"နေရာလွတ်၏ အရွယ်အစားကို ချိန်ညှိရန်"` | Supply natural object marking and a complete action ending. | verified |
+| `F-my-033` | `my` | `tools.columns.turnInto` | action grammar / accessibility | `"ကော်လံများ အဖြစ်ပြောင်းလဲ"` | `"ကော်လံများအဖြစ် ပြောင်းရန်"` | Convert-menu action: the current bare ပြောင်းလဲ is incomplete; ပြောင်းရန် supplies the action form and fixes spacing. | verified |
+| `F-my-034` | `my` | `searchTerms.separator` | search alias semantics | `"ခြားနားချက်"` | `"ခွဲခြားမျဉ်း"` | A separator line is the most caller-relevant noun for discovery of the divider tool and remains distinct from its sibling aliases. | verified |
+| `F-my-035` | `my` | `searchTerms.delimiter` | search alias mistranslation | `"အနားသတ်"` | `"ပိုင်းခြားသင်္ကေတ"` | The symbol noun is a precise delimiter query and remains distinct after normalization. | verified |
+| `F-my-036` | `my` | `searchTerms.splitter` | search alias mistranslation | `"ပိုင်းခြားသည်"` | `"အပိုင်းခွဲကိရိယာ"` | ပိုင်းခြားသည် is a finite verb, not a search noun; the proposal names the splitting tool. | verified |
+| `F-my-037` | `my` | `searchTerms.collapse` | orthography | `"ခေါ်သိမ်း"` | `"ခေါက်သိမ်း"` | This repeats the same “ခေါ်သိမ်း” typo as the collapse aria label; fixing it makes collapse searches discover the toggle tool. | verified |
+| `F-my-038` | `my` | `searchTerms.grid` | terminology / transliteration | `"ဂရစ်"` | `"ဇယားကွက်"` | ဂရစ် is avoidable phonetic transliteration; ဇယားကွက် is the descriptive Burmese grid term. | verified |
+| `F-my-039` | `my` | `searchTerms.tip` | search alias grammar / semantics | `"အကြံပြု"` | `"အကြံပြုချက်"` | အကြံပြု is verb/adjective; the searchable noun is အကြံပြုချက်. | verified |
+| `F-my-040` | `my` | `searchTerms.blockquote` | orthography semantics | `"ဘလော့ကိုးကားချက်"` | `"ဘလောက်ကိုးကားချက်"` | The minimal spelling repair preserves a useful technical search synonym and removes the unintended “blog” reading. | verified |
+| `F-my-041` | `my` | `searchTerms.citation` | search alias grammar / semantics | `"ကိုးညွှန်း"` | `"ကိုးကားအညွှန်း"` | Use a natural, distinct citation/reference noun. | verified |
+| `F-my-042` | `my` | `tools.callout.addEmoji` | changed english sync | `"အီမိုဂျီထည့်"` | `"အိုင်ကွန် ထည့်ရန်"` | Restore the current English icon concept and retain the catalog’s compact infinitive action register. | verified |
+| `F-my-043` | `my` | `tools.callout.filterEmojis` | search action clarity | `"ရှာဖွေ…"` | `"အီမိုဂျီများကို ရှာပါ…"` | The direct prompt names its emoji object and supplies the object marker. | verified |
+| `F-my-044` | `my` | `tools.callout.pickRandom` | action completeness | `"ကျပန်း"` | `"အီမိုဂျီတစ်ခုကို ကျပန်းရွေးရန်"` | This supplies the omitted action and one-emoji object with explicit object marking. | verified |
+| `F-my-045` | `my` | `tools.code.copied` | completion status / official clipboard terminology | `"ကူးပြီး!"` | `"မိတ္တူကူးပြီးပါပြီ!"` | The current status is clipped. This uses Android's exact completed-copy predicate and preserves the source exclamation mark; it is more explicit than the challenge's generic ကူးယူ. | verified |
+| `F-my-046` | `my` | `tools.code.searchLanguage` | punctuation | `"ဘာသာစကားရှာရန်..."` | `"ဘာသာစကားများကို ရှာပါ…"` | Use a direct plural-object prompt and the catalog-standard single ellipsis character. | verified |
+| `F-my-047` | `my` | `searchTerms.pre` | search alias semantics | `"ကြို"` | `"ကြိုတင်ဖော်မတ်ချထားသော စာသား"` | The complete preformatted-text noun is more searchable than bare “before”; spacing follows normal readable phrase boundaries. | verified |
+| `F-my-048` | `my` | `tools.link.linkTitle` | changed english sync | `"လင့်ခ်ခေါင်းစဉ်"` | `"လင့်ခ်စာသား"` | This input edits visible link text, not a link title or title attribute. The replacement restores the current source scope. | verified |
+| `F-my-049` | `my` | `tools.image.toggleCaption` | image action / accessibility grammar | `"စာတန်း ဖွင့်/ပိတ်"` | `"စာတန်းကို ပြပါ သို့မဟုတ် ဖျောက်ပါ"` | The direct show/hide instruction is explicit for both visible menu and accessibility use. | verified |
+| `F-my-050` | `my` | `tools.image.downloadOriginal` | action object clarity | `"မူရင်းဒေါင်းလုဒ်"` | `"မူရင်းပုံကို ဒေါင်းလုဒ်လုပ်ရန်"` | The current noun stack “original download” is not a natural command and omits the image object. Official Burmese Google UI uses “ဒေါင်းလုဒ်လုပ်ရန်” for the download action. | verified |
+| `F-my-051` | `my` | `tools.image.cancelUpload` | upload action semantics | `"အပ်လုဒ်ရပ်ဆိုင်း"` | `"အပ်လုဒ်ကို ပယ်ဖျက်ရန်"` | Cancellation is more exact than a verb that can imply suspension or pause. | verified |
+| `F-my-052` | `my` | `tools.image.altDescription` | changed english sync | `"ဤပုံကို ဖော်ပြသော အစားထိုးစာသားထည့်ပါ။ ၎င်းက မျက်စိချို့ယွင်းသူများအတွက် စာမျက်နှာကို ပိုအသုံးပြုနိုင်စေသည်။"` | `"ပုံကို မမြင်နိုင်သူများအတွက် ဤပုံကို ဖော်ပြပါ။"` | The concise direct sentence matches the current inclusive English source and removes an obsolete extra claim. | verified |
+| `F-my-053` | `my` | `tools.image.previewControls` | accessibility scope | `"ကြိုကြည့်ထိန်းချုပ်မှုများ"` | `"ပုံအစမ်းကြည့်ရှုမှု ထိန်းချုပ်ခလုတ်များ"` | The accessible group label needs the image scope stated by the source. | verified |
+| `F-my-054` | `my` | `tools.image.navigationControls` | accessibility naturalness | `"ပုံ ကြည့်ရှုရွှေ့ခြင်း"` | `"ပုံများကြား လမ်းညွှန်မှု"` | “Navigation between images” precisely describes the previous/next control group. | verified |
+| `F-my-055` | `my` | `tools.image.errorSourceOffline` | error naturalness | `"မူရင်းဖိုင်သည် ပြောင်းရွှေ့သွားခြင်း သို့မဟုတ် အော့ဖ်လိုင်းဖြစ်နိုင်သည်။"` | `"ရင်းမြစ်ဖိုင်ကို ရွှေ့ထားခြင်း သို့မဟုတ် အွန်လိုင်းတွင် မရနိုင်ခြင်း ဖြစ်နိုင်သည်။"` | Use the established source term and describe online unavailability naturally rather than saying a file itself is offline. | verified |
+| `F-my-056` | `my` | `tools.image.errorDefaultMessage` | changed english sync | `"URL သည် အမှားပြန်ပို့သည်။ အခြားမူရင်းကိုသုံးပါ သို့မဟုတ် ဖိုင်ပြန်တင်ပါ။"` | `"ဤ URL မှ ပုံကို ဖွင့်၍မရပါ။ အခြားရင်းမြစ်တစ်ခုကို စမ်းသုံးပါ သို့မဟုတ် ဖိုင်ကို ပြန်အပ်လုဒ်တင်ပါ။"` | The hybrid keeps ABC's precise load failure and try-use recovery while adopting the catalog's established အပ်လုဒ်တင် verb and an explicit different-source unit. | verified |
+| `F-my-057` | `my` | `tools.image.emptyOrDropHere` | dropzone / paste terminology | `"သို့မဟုတ် ပုံကိုဤနေရာချပါ"` | `"သို့မဟုတ် ပုံကို ဤနေရာတွင် လွှတ်ချပါ"` | The explicit drop verb and normal locative boundaries repair the malformed current hint. | verified |
+| `F-my-058` | `my` | `tools.image.emptyUrlPlaceholder` | established ui terminology | `"ပုံ URL ပါစတ်ပါ…"` | `"ပုံ URL ကို ကူးထည့်ပါ…"` | “ပါစတ်” is an avoidable English transliteration. AOSP’s Burmese UI uses “ကူးထည့်” for Paste, already used elsewhere in this catalog. | verified |
+| `F-my-059` | `my` | `tools.image.emptySourceAria` | accessibility terminology | `"ပုံမူရင်း"` | `"ပုံရင်းမြစ်"` | This tablist labels the choice between upload and link sources. “မူရင်း” means original; official Burmese technical prose uses “ရင်းမြစ်” for source. | verified |
+| `F-my-060` | `my` | `tools.file.emptyDropHint` | dropzone / paste terminology | `"သို့မဟုတ် ဖိုင်ကိုဤနေရာချပါ"` | `"သို့မဟုတ် ဖိုင်ကို ဤနေရာတွင် လွှတ်ချပါ"` | Use an explicit drop verb and normal Burmese boundaries; replace malformed ပါစတ် transliteration with official ကူးထည့် paste terminology. | verified |
+| `F-my-061` | `my` | `tools.file.emptySourceAria` | accessibility terminology | `"ဖိုင်မူရင်း"` | `"ဖိုင်ရင်းမြစ်"` | The tablist chooses a file source. “မူရင်း” means original, while “ရင်းမြစ်” is the established source term. | verified |
+| `F-my-062` | `my` | `tools.file.emptyUrlPlaceholder` | established ui terminology | `"ဖိုင် URL ပါစတ်ပါ…"` | `"ဖိုင် URL ကို ကူးထည့်ပါ…"` | Replace avoidable “ပါစတ်” transliteration with AOSP’s established Burmese Paste action “ကူးထည့်”. | verified |
+| `F-my-063` | `my` | `tools.file.cancelUpload` | upload action semantics | `"အပ်လုဒ်ရပ်ဆိုင်း"` | `"အပ်လုဒ်ကို ပယ်ဖျက်ရန်"` | Cancel command: ရပ်ဆိုင်း can mean suspend/pause; ပယ်ဖျက် states cancellation unambiguously. | verified |
+| `F-my-064` | `my` | `tools.file.toggleCaption` | toggle / changed-English semantics | `"စာတန်း ဖွင့်/ပိတ်"` | `"စာတန်းကို ပြပါ သို့မဟုတ် ဖျောက်ပါ"` | Caption-visibility action: slash “ဖွင့်/ပိတ်” is ambiguous state shorthand; proposal explicitly says show or hide the caption. | verified |
+| `F-my-065` | `my` | `tools.file.previewRaw` | changed english sync | `"မူရင်းစာသား"` | `"ရင်းမြစ်"` | This tab is the source view opposite Preview; the source noun is exact and does not over-narrow it to text. | verified |
+| `F-my-066` | `my` | `tools.file.previewRender` | changed english sync | `"ပြသချက်"` | `"အစမ်းကြည့်ရှုမှု"` | “ပြသချက်” means a display/rendering, while this segmented control is explicitly the Preview tab. The proposed term matches the surrounding file-preview labels. | verified |
+| `F-my-067` | `my` | `tools.video.alignmentLeft` | action label | `"ဘယ်"` | `"ဘယ်ဘက်ညှိ"` | Mirror the catalog’s existing image alignment action label exactly. | verified |
+| `F-my-068` | `my` | `tools.video.alignmentCenter` | action label | `"အလယ်"` | `"အလယ်ညှိ"` | Mirror the catalog’s existing image alignment action label exactly. | verified |
+| `F-my-069` | `my` | `tools.video.alignmentRight` | action label | `"ညာ"` | `"ညာဘက်ညှိ"` | Mirror the catalog’s existing image alignment action label exactly. | verified |
+| `F-my-070` | `my` | `tools.video.toggleCaption` | media settings action semantics | `"စာတန်း ဖွင့်/ပိတ်"` | `"စာတန်းကို ပြပါ သို့မဟုတ် ဖျောက်ပါ"` | Caption-visibility action: slash “ဖွင့်/ပိတ်” is ambiguous state shorthand; proposal explicitly says show or hide the caption. | verified |
+| `F-my-071` | `my` | `tools.video.emptyOrDropHere` | dropzone / paste terminology | `"သို့မဟုတ် ဗီဒီယိုကိုဤနေရာချပါ"` | `"သို့မဟုတ် ဗီဒီယိုကို ဤနေရာတွင် လွှတ်ချပါ"` | Use an explicit drop verb and normal Burmese boundaries; replace malformed ပါစတ် transliteration with official ကူးထည့် paste terminology. | verified |
+| `F-my-072` | `my` | `tools.video.emptyUrlPlaceholder` | established ui terminology | `"ဗီဒီယို URL ပါစတ်ပါ…"` | `"ဗီဒီယို URL ကို ကူးထည့်ပါ…"` | Replace avoidable “ပါစတ်” transliteration with AOSP’s established Burmese Paste action “ကူးထည့်”. | verified |
+| `F-my-073` | `my` | `tools.video.emptySourceAria` | accessibility terminology | `"ဗီဒီယိုမူရင်း"` | `"ဗီဒီယိုရင်းမြစ်"` | The source-selector tablist needs “ရင်းမြစ်” (source), not “မူရင်း” (original). | verified |
+| `F-my-074` | `my` | `tools.audio.alignmentLeft` | action label | `"ဘယ်"` | `"ဘယ်ဘက်ညှိ"` | Mirror the catalog’s existing image alignment action label exactly. | verified |
+| `F-my-075` | `my` | `tools.audio.alignmentCenter` | action label | `"အလယ်"` | `"အလယ်ညှိ"` | Mirror the catalog’s existing image alignment action label exactly. | verified |
+| `F-my-076` | `my` | `tools.audio.alignmentRight` | action label | `"ညာ"` | `"ညာဘက်ညှိ"` | Mirror the catalog’s existing image alignment action label exactly. | verified |
+| `F-my-077` | `my` | `tools.audio.titlePlaceholder` | media scope | `"သီချင်းအမည်"` | `"အသံဖိုင်ခေါင်းစဉ်"` | “သီချင်းအမည်” narrows arbitrary audio (speech, podcasts, recordings) to songs. The replacement names the audio-file title without assuming music. | verified |
+| `F-my-078` | `my` | `tools.audio.emptyOrDropHere` | media scope grammar | `"သို့မဟုတ် အသံကိုဤနေရာချပါ"` | `"သို့မဟုတ် အသံဖိုင်ကို ဤနေရာတွင် လွှတ်ချပါ"` | The caller accepts an audio file; restore that object and use an explicit, grammatical drop instruction. | verified |
+| `F-my-079` | `my` | `tools.audio.emptyUrlPlaceholder` | established ui terminology | `"အသံ URL ပါစတ်ပါ…"` | `"အသံ URL ကို ကူးထည့်ပါ…"` | Replace avoidable “ပါစတ်” transliteration with AOSP’s established Burmese Paste action “ကူးထည့်”. | verified |
+| `F-my-080` | `my` | `tools.audio.emptySourceAria` | accessibility terminology | `"အသံမူရင်း"` | `"အသံရင်းမြစ်"` | The source-selector tablist needs “ရင်းမြစ်” (source), not “မူရင်း” (original). | verified |
+| `F-my-081` | `my` | `tools.audio.coverOrDropHere` | dropzone / paste terminology | `"သို့မဟုတ် ပုံကိုဤနေရာချပါ"` | `"သို့မဟုတ် ပုံကို ဤနေရာတွင် လွှတ်ချပါ"` | Use an explicit drop verb and normal Burmese boundaries; replace malformed ပါစတ် transliteration with official ကူးထည့် paste terminology. | verified |
+| `F-my-082` | `my` | `tools.audio.coverUrlPlaceholder` | established ui terminology | `"ပုံ URL ပါစတ်ပါ…"` | `"ပုံ URL ကို ကူးထည့်ပါ…"` | Replace avoidable “ပါစတ်” transliteration with AOSP’s established Burmese Paste action “ကူးထည့်”. | verified |
+| `F-my-083` | `my` | `tools.audio.coverSourceAria` | accessibility object scope | `"ပုံမူရင်း"` | `"အဖုံးပုံရင်းမြစ်"` | Name both the audio-cover object and its source selector role. | verified |
+| `F-my-084` | `my` | `tools.database.viewTypeListDescription` | changed english sync | `"ရိုးရှင်းသော စာရင်းပုံစံ"` | `"အကြောင်းအရာများကို ရိုးရှင်းသော စာရင်းတွင် ပြရန်"` | The locative form matches the sibling board description and restores both the items and show action. | verified |
+| `F-my-085` | `my` | `tools.database.propertyTypeHeading` | established ui terminology | `"ဝိသေသအမျိုးအစား"` | `"ဂုဏ်သတ္တိအမျိုးအစား"` | “ဝိသေသ” is chiefly the grammatical/adjectival notion of attribute and is unnatural as a database UI heading. Official Burmese Google technical UI uses “ဂုဏ်သတ္တိ” for property. | verified |
+| `F-my-086` | `my` | `tools.database.propertyTypeNumber` | terminology / ui role | `"ဂဏန်း"` | `"ကိန်းဂဏန်း"` | ဂဏန်း most narrowly means a digit; ကိန်းဂဏန်း identifies the numeric property type. | verified |
+| `F-my-087` | `my` | `tools.database.propertyTypeSelect` | database label / changed-English semantics | `"ရွေးချယ်"` | `"ရွေးချယ်မှု"` | Property-type noun, not a select command; ရွေးချယ်မှု supplies the nominal form. | verified |
+| `F-my-088` | `my` | `tools.database.propertyTypeMultiSelect` | database label / changed-English semantics | `"အများအပြားရွေးချယ်"` | `"အများအပြားရွေးချယ်မှု"` | Property-type noun; adding မှု yields “multiple selection,” not a bare command. | verified |
+| `F-my-089` | `my` | `toolNames.bookmark` | terminology / transliteration | `"ဘွတ်မတ်"` | `"စာညှပ်"` | Use the established native bookmark noun instead of avoidable transliteration, then apply it consistently to the bookmark family. | verified |
+| `F-my-090` | `my` | `toolNames.embed` | established embed terminology / provider templates | `"ထည့်သွင်းမှု"` | `"မြှုပ်သွင်းမှု"` | Official Burmese YouTube terminology distinguishes embedded media with မြှုပ်သွင်း rather than generic insertion. | verified |
+| `F-my-091` | `my` | `tools.bookmark.empty` | object scope | `"မှတ်သားချက်ဖန်တီးရန် လင့်ခ်ကို ကူးထည့်ပါ"` | `"စာညှပ်တစ်ခု ဖန်တီးရန် လင့်ခ်ကို ကူးထည့်ပါ"` | Use the same native bookmark noun as the corrected tool name; the current note/remark noun is semantically wrong. | verified |
+| `F-my-092` | `my` | `tools.bookmark.loading` | status grammar punctuation | `"လင့်ခ် အစမ်းကြည့်ရှုမှု ဖွင့်နေသည်"` | `"လင့်ခ်အစမ်းကြည့်ရှုမှုကို တင်နေသည်…"` | တင်နေသည် states loading rather than opening and restores the progress ellipsis. | verified |
+| `F-my-093` | `my` | `tools.embed.empty` | readonly caller contract | `"ထည့်သွင်းရန် လင့်ခ်ကို ကူးထည့်ပါ"` | `"မြှုပ်သွင်းရန် လင့်ခ်မရှိပါ"` | This read-only empty state reports absence; it must not issue an impossible paste instruction, and it should use the embed term. | verified |
+| `F-my-094` | `my` | `tools.embed.urlPlaceholder` | established embed terminology / provider templates | `"ထည့်သွင်းရန် လင့်ခ်ကို ကူးထည့်ပါ…"` | `"မြှုပ်သွင်းရန် လင့်ခ်ကို ကူးထည့်ပါ…"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-095` | `my` | `tools.embed.urlSubmit` | established embed terminology / provider templates | `"လင့်ခ် ထည့်သွင်းရန်"` | `"လင့်ခ်ကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-096` | `my` | `tools.embed.invalidUrl` | established embed terminology / provider templates | `"ထိုလင့်ခ်ကို ထည့်သွင်း၍မရပါ"` | `"ထိုလင့်ခ်ကို မြှုပ်သွင်း၍မရပါ"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-097` | `my` | `tools.linkPaste.bookmark` | object scope | `"မှတ်သားချက် ဖန်တီးရန်"` | `"စာညှပ် ဖန်တီးရန်"` | Paste-conversion menu creates a bookmark, not a note; follows corrected native terminology. | verified |
+| `F-my-098` | `my` | `tools.linkPaste.embed` | established embed terminology / provider templates | `"ထည့်သွင်းမှု ဖန်တီးရန်"` | `"မြှုပ်သွင်းမှု ဖန်တီးရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-099` | `my` | `tools.linkPaste.embedVideo` | established embed terminology / provider templates | `"{provider} မှ ဗီဒီယို ထည့်သွင်းရန်"` | `"{provider} မှ ဗီဒီယိုကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-100` | `my` | `tools.linkPaste.embedAudio` | established embed terminology / provider templates | `"{provider} မှ အသံ ထည့်သွင်းရန်"` | `"{provider} မှ အသံကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-101` | `my` | `tools.linkPaste.embedImage` | established embed terminology / provider templates | `"{provider} မှ ပုံ ထည့်သွင်းရန်"` | `"{provider} မှ ပုံကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-102` | `my` | `tools.linkPaste.embedSocial` | established embed terminology / provider templates | `"{provider} မှ ပို့စ် ထည့်သွင်းရန်"` | `"{provider} မှ ပို့စ်ကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-103` | `my` | `tools.linkPaste.embedDocument` | established embed terminology / provider templates | `"{provider} မှ စာရွက်စာတမ်း ထည့်သွင်းရန်"` | `"{provider} မှ စာရွက်စာတမ်းကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-104` | `my` | `tools.linkPaste.embedTable` | established embed terminology / provider templates | `"{provider} မှ ဇယား ထည့်သွင်းရန်"` | `"{provider} မှ ဇယားကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-105` | `my` | `tools.linkPaste.embedForm` | established embed terminology / provider templates | `"{provider} မှ ဖောင် ထည့်သွင်းရန်"` | `"{provider} မှ ဖောင်ကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-106` | `my` | `tools.linkPaste.embedCode` | established embed terminology / provider templates | `"{provider} မှ ကုဒ် ထည့်သွင်းရန်"` | `"{provider} မှ ကုဒ်ကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-107` | `my` | `tools.linkPaste.embedDesign` | established embed terminology / provider templates | `"{provider} မှ ဒီဇိုင်း ထည့်သွင်းရန်"` | `"{provider} မှ ဒီဇိုင်းကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-108` | `my` | `tools.linkPaste.embedChart` | established embed terminology / provider templates | `"{provider} မှ ကားချပ် ထည့်သွင်းရန်"` | `"{provider} မှ ကားချပ်ကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-109` | `my` | `tools.linkPaste.embedMap` | established embed terminology / provider templates | `"{provider} မှ မြေပုံ ထည့်သွင်းရန်"` | `"{provider} မှ မြေပုံကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-110` | `my` | `tools.linkPaste.embedCalendar` | established embed terminology / provider templates | `"{provider} မှ ပြက္ခဒိန် ထည့်သွင်းရန်"` | `"{provider} မှ ပြက္ခဒိန်ကို မြှုပ်သွင်းရန်"` | Generic “insert” can mean inserting a hyperlink. Official Burmese YouTube uses မြှုပ်သွင်း for embedded media; preserve {provider} and add natural object marking. | verified |
+| `F-my-111` | `my` | `tools.linkPaste.mention` | terminology / semantic accuracy | `"အမည်ခေါ်ခြင်း"` | `"အမည်ဖော်ပြခြင်း"` | အမည်ခေါ်ခြင်း can read as name-calling; အမည်ဖော်ပြခြင်း expresses a UI mention. | verified |
+| `F-my-112` | `my` | `tools.video.seek` | media control semantics | `"ရှာဖွေရန်"` | `"ဗီဒီယိုအချိန်မှတ်တမ်း"` | Official Burmese YouTube terminology names the playback timeline and avoids misannouncing this slider as Search. | verified |
+| `F-my-113` | `my` | `tools.video.toggleTimeDisplay` | changed english sync | `"အချိန်ပြသမှုကို ပြောင်းရန်"` | `"ကုန်လွန်ချိန်နှင့် ကျန်ရှိချိန်ကို အပြန်အလှန် ပြရန်"` | This explicitly names elapsed and remaining time for the accessible toggle. | verified |
+| `F-my-114` | `my` | `tools.video.ctxCopyUrlAtTime` | media action precision | `"လက်ရှိအချိန်ရှိ ဗီဒီယို URL ကူးရန်"` | `"လက်ရှိဖွင့်ချိန်ပါသော ဗီဒီယို URL ကို ကူးရန်"` | Tie the timestamp to current playback and state that the copied URL includes it. | verified |
+| `F-my-115` | `my` | `tools.video.ctxStats` | changed english sync | `"အသေးစိတ်စာရင်းအင်း"` | `"ဗီဒီယိုဖွင့်ခြင်းဆိုင်ရာ စာရင်းအင်းများ"` | Combine reviewer C’s explicit video-playback scope with reviewer A’s natural plural statistics noun. | verified |
 
 ## Exact-English Retentions
 
@@ -12331,3 +12547,13 @@ locale and UI context.
 | `R-ms-010` | `ms` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in official Malay product copy. | [Google Search Help — URL terminology](https://support.google.com/websearch/answer/118238?co=GENIE.Platform%3DDesktop&hl=ms) |
 | `R-ms-011` | `ms` | `tools.database.defaultStatusProperty` | established loanword | `Status` is an established Malay product/database label and needs no forced paraphrase. | [Google Search Help — status terminology](https://support.google.com/websearch/answer/12719076?hl=ms) |
 | `R-ms-012` | `ms` | `notifier.ok` | established loanword | `OK` is the conventional compact acknowledgement label in Malay software interfaces. | [Google Accessibility Help — OK label](https://support.google.com/accessibility/answer/90559?hl=ms) |
+| `R-my-001` | `my` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating it would alter the executable shortcut. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-my-002` | `my` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord rather than translatable prose. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-my-003` | `my` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only runtime placeholder tokens and spacing; it has no English lexical material to translate. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-my-004` | `my` | `tools.colorPicker.colorSwatchLabel` | universal notation | `{color} {mode}` contains only runtime placeholder tokens and spacing; it has no English lexical material to translate. | [`formatSwatchLabel` runtime composition](../../src/components/shared/color-picker.ts) |
+| `R-my-005` | `my` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the surrounding Burmese dialog supplies the full localized concept. | [`ui.ts` image-tool button](../../src/tools/image/ui.ts) |
+| `R-my-006` | `my` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-my-007` | `my` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-my-008` | `my` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-my-009` | `my` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional technical acronym retained unchanged in official Burmese product terminology. | [AOSP Burmese system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-my/strings.xml) |
+| `R-my-010` | `my` | `notifier.ok` | established loanword | `OK` is the conventional compact acknowledgement label retained in official Burmese software strings. | [AOSP Burmese system strings](https://android.googlesource.com/platform/frameworks/base/+/HEAD/core/res/res/values-my/strings.xml) |

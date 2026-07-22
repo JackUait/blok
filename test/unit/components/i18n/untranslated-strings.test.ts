@@ -269,8 +269,14 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'searchTerms.grid',
     'notifier.ok',
   ]),
+  // Placeholder-only swatch templates contain no English lexical material;
+  // Burmese independently requires the same modifier-before-noun order.
   // "OK" is the conventional compact confirmation label in Burmese UIs.
-  my: new Set(['notifier.ok']),
+  my: new Set([
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
+    'notifier.ok',
+  ]),
   nl: new Set([
     'toolNames.link',
     'toolNames.database',

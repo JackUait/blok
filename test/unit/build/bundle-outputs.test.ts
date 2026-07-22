@@ -303,6 +303,26 @@ describe('CDN bundles ship compiled Tailwind CSS', () => {
   }
 })
 
+describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
+  // parse5 is bundled ONLY into the ./view entry (see the source-level law in
+  // test/unit/architecture/view-entry-law.test.ts). This is the dist-level
+  // half of that contract: a vite entry/chunk change that splices the view
+  // graph into an editor bundle would ship parse5 to every editor consumer.
+  // Fingerprint: parse5's tokenizer error codes are stable string literals
+  // that survive minification.
+  const PARSE5_FINGERPRINT = 'control-character-in-input-stream'
+
+  it('view.mjs actually contains parse5 (fingerprint non-vacuity)', () => {
+    expect(readFileSync(resolve(dist, 'view.mjs'), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(true)
+  })
+
+  for (const bundle of ['blok.mjs', 'full.mjs', 'tools.mjs', 'adapters.mjs', 'blok.cjs', 'blok.iife.js', 'blok.umd.js']) {
+    it(`${bundle} ships no parse5`, () => {
+      expect(readFileSync(resolve(dist, bundle), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(false)
+    })
+  }
+})
+
 describe('ESM outputs still present', () => {
   it('still produces blok.mjs', () => {
     expect(existsSync(resolve(dist, 'blok.mjs'))).toBe(true)

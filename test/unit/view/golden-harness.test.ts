@@ -733,6 +733,51 @@ describe('golden harness: sanitize composition end-to-end', () => {
     expect(view).toBe(editor);
     expect(editor).toContain('<b>bold</b>');
   }, 60_000);
+
+  it('custom inline tool round-trip: content SAVED by a real editor renders through blocksToHtml under the same schema', async () => {
+    /**
+     * A consumer-registered inline tool whose sanitize tag is NOT in the
+     * default inline map (the DescriptionColor scenario the design motivated):
+     * the tag must survive the editor's save AND the view's display when both
+     * resolve from one defineBlokSchema — "one map edit away" closed for real.
+     */
+    class SupInlineTool {
+      public static isInline = true;
+      public static title = 'Superscript';
+
+      public static get sanitize(): Record<string, object> {
+        return { sup: {} };
+      }
+
+      public render(): HTMLElement {
+        return document.createElement('button');
+      }
+    }
+
+    const tools = {
+      paragraph: { class: Paragraph, inlineToolbar: true },
+      sup: { class: SupInlineTool },
+    };
+
+    core = new Core({
+      holder,
+      tools: tools as never,
+      data: { blocks: [{ id: 'sp1', type: 'paragraph', data: { text: 'E = mc<sup>2</sup>' } }] },
+    });
+    await core.isReady;
+
+    const saved = await core.moduleInstances.Saver.save();
+
+    expect(saved).toBeDefined();
+    expect(saved?.blocks[0]?.data.text).toContain('<sup>2</sup>');
+
+    const schema = defineBlokSchema({ tools: tools as never }).viewSchema;
+    const viewHtml = blocksToHtml(saved, { schema });
+
+    expect(viewHtml).toBe('<p>E = mc<sup>2</sup></p>');
+    /** Without the schema, the default inline map strips the custom tag — the schema is load-bearing. */
+    expect(blocksToHtml(saved)).toBe('<p>E = mc2</p>');
+  }, 60_000);
 });
 
 describe('golden harness: negative controls (the comparison is not vacuous)', () => {

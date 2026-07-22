@@ -1901,7 +1901,7 @@ editor.tools.update('goodsList', { toolbox: { title: 'Goods List' } });`,
         name: "tools.setInlineToolbar(config)",
         returnType: "void",
         description:
-          "Runtime setter for the global `inlineToolbar` config. Re-assigns inline tools for every block tool and recomposes the memoized sanitize configs — so paste-time sanitization follows the new set immediately, and the inline toolbar reflects it on the next selection. Tool-scoped `inlineToolbar` settings (arrays and opt-outs) stay authoritative. Pass `true` for all inline tools, `false` for none, or an ordered list of inline tool names.",
+          "Runtime setter for the global `inlineToolbar` config. Re-assigns inline tools for every block tool and recomposes the memoized sanitize configs — so paste-time sanitization follows the new set immediately, and the inline toolbar reflects it on the next selection. Tool-scoped `inlineToolbar` settings (arrays and opt-outs) stay authoritative. Pass `true` for all inline tools, `false` for none, or an ordered list of inline tool names. If you render saved content through @bloklabs/core/view, note that a viewSchema is composed from the inlineToolbar value it was defined with — after a runtime setInlineToolbar involving custom inline tools, recompose it with defineBlokSchema before calling blocksToHtml.",
         params: [
           {
             name: "config",
@@ -2521,7 +2521,7 @@ if (saved) {
     title: "View renderer",
     lastUpdated: "2026-07-22",
     description:
-      "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them. For React, @bloklabs/react ships <BlokView> and useBlokView, which replace <BlokEditor readOnly> at display-only call sites.",
+      "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them (if you later change the inline-tool set at runtime via tools.setInlineToolbar, recompose the schema so the view keeps up). For React, @bloklabs/react ships <BlokView> and useBlokView, which replace <BlokEditor readOnly> at display-only call sites.",
     example: `// schema.ts — pure and module-scope-safe; share it between editor and server
 import { defineBlokSchema } from '@bloklabs/core/view';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';
@@ -2600,7 +2600,7 @@ const preview = blocksToPlainText(savedData).slice(0, 160);`,
         name: "defineBlokSchema(config)",
         returnType: "{ editorConfig, viewSchema }",
         description:
-          "Resolve a tools/inlineToolbar/tunes config into one shared schema. Pure and module-scope-safe: call it at module scope and import the result everywhere. Spread editorConfig into new Blok(...) and pass viewSchema to the view functions — this guarantees documents are displayed under the SAME sanitize composition that produced them, instead of two configs drifting apart. Options that don't participate in schema resolution (link, i18n, data, …) pass through editorConfig untouched.",
+          "Resolve a tools/inlineToolbar/tunes config into one shared schema. Pure and module-scope-safe: call it at module scope and import the result everywhere. Spread editorConfig into new Blok(...) and pass viewSchema to the view functions — this guarantees documents are displayed under the SAME sanitize composition that produced them, instead of two configs drifting apart. The guarantee is per composition: if you change the inline-tool set at runtime with tools.setInlineToolbar, recompose the schema from the current config. Options that don't participate in schema resolution (link, i18n, data, …) pass through editorConfig untouched.",
         example: `import { defineBlokSchema, blocksToHtml } from '@bloklabs/core/view';
 import { Header, Paragraph } from '@bloklabs/core/tools';
 

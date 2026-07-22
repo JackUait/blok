@@ -345,11 +345,21 @@ describe('baseSanitizeConfig delegation law', () => {
     const fs = await import('node:fs');
     const path = await import('node:path');
 
-    const source = fs.readFileSync(
-      path.resolve(__dirname, '../../../src/components/tools/block.ts'),
-      'utf-8'
+    const source = fs
+      .readFileSync(path.resolve(__dirname, '../../../src/components/tools/block.ts'), 'utf-8')
+      // Comments must not satisfy the law — only a real call inside the getter.
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+
+    const getterMatch = source.match(
+      /get baseSanitizeConfig\(\)[^{]*\{([\s\S]*?)\n {2}\}/
     );
 
-    expect(source).toContain('composeBaseSanitizeConfig(');
+    expect(getterMatch).not.toBeNull();
+    // The merge itself must run through the shared composition function — the
+    // single source of truth defineBlokSchema also uses. A hand-rolled
+    // Object.assign fold here would re-fork the composition semantics.
+    expect(getterMatch?.[1]).toContain('composeBaseSanitizeConfig(');
+    expect(getterMatch?.[1]).not.toContain('Object.assign');
   });
 });

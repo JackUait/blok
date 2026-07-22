@@ -60,6 +60,16 @@ const ADAPTER_SYNC_SURFACES: Record<string, string> = {
 };
 
 /**
+ * Removes comments so a setter mention in a docblock or inline comment cannot
+ * satisfy an adapter fingerprint — only real code counts. (The Angular class
+ * docblock literally contains `editor.toolbar.setHidden()` as prose; without
+ * this, deleting the effect would keep the law green.)
+ * @param source - adapter source text
+ */
+const stripComments = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+/**
  * Extracts the top-level optional field names declared in the BlokState
  * interface of the published config types.
  * @returns declared BlokState keys, in declaration order
@@ -163,7 +173,7 @@ describe('reactive config contract law', () => {
 
   it('every framework adapter calls every BlokState setter (parity)', () => {
     const missing = Object.entries(ADAPTER_SYNC_SURFACES).flatMap(([adapter, surfacePath]) => {
-      const source = readFileSync(resolve(__dirname, '../../../', surfacePath), 'utf-8');
+      const source = stripComments(readFileSync(resolve(__dirname, '../../../', surfacePath), 'utf-8'));
 
       return Object.entries(REACTIVE_CONTRACT)
         .filter(([, { adapterCall }]) => !adapterCall.test(source))

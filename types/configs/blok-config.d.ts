@@ -127,9 +127,11 @@ export interface BlokState {
 }
 
 /**
- * Editor options that are fixed for the instance's life (mount-time only).
- * Changing any of these requires recreating the editor. The live counterpart
- * is {@link BlokState}; `BlokConfig = BlokMountOptions & BlokState`.
+ * Editor options consumed at mount time. Changing one of these through the
+ * config requires recreating the editor — though a few have dedicated runtime
+ * APIs of their own (`placeholder.set`, `blocks.render` for `data`,
+ * `tokens.set` for `style.tokens`). Options whose config value itself is live
+ * belong in {@link BlokState} instead; `BlokConfig = BlokMountOptions & BlokState`.
  */
 export interface BlokMountOptions {
   /**

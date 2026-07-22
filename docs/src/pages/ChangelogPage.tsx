@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
+// Inlined at build time so the changelog prose lands in the prerendered HTML.
+import CHANGELOG_MARKDOWN from "../../../CHANGELOG.md?raw";
 import { Nav } from "../components/layout/Nav";
 import { Footer } from "../components/layout/Footer";
 import { parseChangelog } from "../utils/changelog-parser";
@@ -242,62 +244,10 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
     'mx-auto max-w-3xl px-6 pb-24 text-center',
     inline ? 'pt-10' : 'pt-16 sm:pt-24',
   );
-  const [releases, setReleases] = useState<Release[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadChangelog = async () => {
-      try {
-        const response = await fetch("/CHANGELOG.md");
-        if (!response.ok) {
-          throw new Error(
-            `Failed to load CHANGELOG.md: ${response.statusText}`,
-          );
-        }
-        const changelogContent = await response.text();
-        const parsed = parseChangelog(changelogContent);
-        setReleases(parsed);
-      } catch (err) {
-        console.error("Error loading changelog:", err);
-        setError(err instanceof Error ? err.message : t('common.unknownError'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void loadChangelog();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className={headerClass}>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold tracking-wide text-primary uppercase">
-          <span className="size-3.5 [&>svg]:size-full" aria-hidden="true">
-            <Icons.clock />
-          </span>
-          <Typo>{t('changelog.badge')}</Typo>
-        </span>
-        <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-          {t('changelog.title')}
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">{t('changelog.loading')}</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={headerClass}>
-        <h1 className="font-display text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-          {t('changelog.title')}
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          <Typo>{t('changelog.errorLoading')}</Typo> {error}
-        </p>
-      </div>
-    );
-  }
+  // Parsed from the build-time import, not fetched: prerendering runs no
+  // effects, so a runtime fetch would freeze this route's HTML at its loading
+  // state and ship the site's largest prose asset to crawlers as "Loading…".
+  const releases: Release[] = useMemo(() => parseChangelog(CHANGELOG_MARKDOWN), []);
 
   const badgeVariantFor = (
     category: string,

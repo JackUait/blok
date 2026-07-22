@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ChangelogPage from './ChangelogPage';
 import { I18nProvider } from '../contexts/I18nContext';
@@ -12,6 +12,27 @@ const ru = ruJson.changelog;
 const STORAGE_KEY = 'blok-docs-locale';
 
 type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
+
+// The page reads the changelog through a build-time `?raw` import, so the test
+// substitutes the source file rather than stubbing a network response.
+const FIXTURE_CHANGELOG = vi.hoisted(
+  () => `# Changelog
+
+## [1.0.0](https://github.com/JackUait/blok/compare/v0.9.1...v1.0.0) (2024-01-01)
+
+### ✨ Features
+
+- Initial release
+
+## [0.9.1](https://github.com/JackUait/blok/compare/v0.9.0...v0.9.1) (2023-12-01)
+
+### 🐛 Bug Fixes
+
+- Fix a thing
+`,
+);
+
+vi.mock('../../../CHANGELOG.md?raw', () => ({ default: FIXTURE_CHANGELOG }));
 
 const renderChangelogPage = () =>
   render(
@@ -34,195 +55,68 @@ describe('ChangelogPage', () => {
     vi.restoreAllMocks();
   });
 
-  describe('loading state', () => {
-    it('renders loading text while fetch is in flight', () => {
-      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => undefined));
+  describe('content', () => {
+    it('renders release entries without any network request', () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
       renderChangelogPage();
 
-      expect(screen.getByText(en.loading)).toBeInTheDocument();
+      // Prerendering runs no effects: a fetched changelog would freeze this
+      // route's HTML at its loading state and ship no prose to crawlers.
+      expect(screen.getByText('v1.0.0')).toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it('renders the title and badge in loading state', () => {
-      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => undefined));
-
+    it('renders the hero title in English by default', () => {
       renderChangelogPage();
 
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(en.title);
+    });
+
+    it('renders the badge in English by default', () => {
+      renderChangelogPage();
+
       expect(screen.getByText(en.badge)).toBeInTheDocument();
     });
 
-    it('renders Russian loading text when locale is ru', () => {
+    it('renders the description in English by default', () => {
+      renderChangelogPage();
+
+      expect(screen.getByText(en.description)).toBeInTheDocument();
+    });
+
+    it('renders the hero title in Russian when locale is ru', () => {
       localStorage.setItem(STORAGE_KEY, 'ru');
-      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => undefined));
 
       renderChangelogPage();
 
-      expect(screen.getByText(ru.loading)).toBeInTheDocument();
-    });
-  });
-
-  describe('error state', () => {
-    it('renders error message when fetch fails with network error', async () => {
-      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network failure'));
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText(en.errorLoading, { exact: false })).toBeInTheDocument();
-      });
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ru.title);
     });
 
-    it('renders error message when server returns non-ok response', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(null, { status: 404, statusText: 'Not Found' })
-      );
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText(en.errorLoading, { exact: false })).toBeInTheDocument();
-      });
-    });
-
-    it('renders Russian error prefix when locale is ru and fetch fails', async () => {
+    it('renders the Russian badge when locale is ru', () => {
       localStorage.setItem(STORAGE_KEY, 'ru');
-      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network failure'));
 
       renderChangelogPage();
 
-      await waitFor(() => {
-        expect(screen.getByText(ru.errorLoading, { exact: false })).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('success state', () => {
-    const MINIMAL_CHANGELOG = `# Changelog
-
-## [1.0.0](https://github.com/JackUait/blok/compare/v0.0.1...v1.0.0) (2024-01-01)
-
-### ✨ Features
-
-- Initial release
-`;
-
-    it('renders the hero title in English by default', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(en.title);
-      });
+      expect(screen.getByText(ru.badge)).toBeInTheDocument();
     });
 
-    it('renders the badge in English by default', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText(en.badge)).toBeInTheDocument();
-      });
-    });
-
-    it('renders the description in English by default', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText(en.description)).toBeInTheDocument();
-      });
-    });
-
-    it('renders the hero title in Russian when locale is ru', async () => {
+    it('renders the Russian description when locale is ru', () => {
       localStorage.setItem(STORAGE_KEY, 'ru');
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
 
       renderChangelogPage();
 
-      await waitFor(() => {
-        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ru.title);
-      });
+      expect(screen.getByText(ru.description)).toBeInTheDocument();
     });
 
-    it('renders the Russian badge when locale is ru', async () => {
-      localStorage.setItem(STORAGE_KEY, 'ru');
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
-
+    it('renders the Nav component', () => {
       renderChangelogPage();
 
-      await waitFor(() => {
-        expect(screen.getByText(ru.badge)).toBeInTheDocument();
-      });
-    });
-
-    it('renders the Russian description when locale is ru', async () => {
-      localStorage.setItem(STORAGE_KEY, 'ru');
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText(ru.description)).toBeInTheDocument();
-      });
-    });
-
-    it('renders the Nav component', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('nav')).toBeInTheDocument();
-      });
-    });
-
-    it('renders release entries from CHANGELOG.md', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(MINIMAL_CHANGELOG, { status: 200 })
-      );
-
-      renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText('v1.0.0')).toBeInTheDocument();
-      });
+      expect(screen.getByTestId('nav')).toBeInTheDocument();
     });
   });
 
   describe('analytics', () => {
-    const TWO_RELEASES = `# Changelog
-
-## [1.0.0](https://github.com/JackUait/blok/compare/v0.9.0...v1.0.0) (2024-01-01)
-
-### ✨ Features
-
-- Initial release
-
-## [0.9.1](https://github.com/JackUait/blok/compare/v0.9.0...v0.9.1) (2023-12-01)
-
-### 🐛 Bug Fixes
-
-- Fix a thing
-`;
-
     const gtagCalls = (): unknown[][] => {
       const gtag = (window as GtagWindow).gtag;
       if (!vi.isMockFunction(gtag)) {
@@ -231,16 +125,8 @@ describe('ChangelogPage', () => {
       return gtag.mock.calls;
     };
 
-    it('tracks changelog_version_open when a release version is opened', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(TWO_RELEASES, { status: 200 })
-      );
-
+    it('tracks changelog_version_open when a release version is opened', () => {
       renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText('v1.0.0')).toBeInTheDocument();
-      });
 
       fireEvent.click(screen.getByText('v1.0.0'));
 
@@ -251,16 +137,8 @@ describe('ChangelogPage', () => {
       ]);
     });
 
-    it('reports the version of the entry that was opened', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(TWO_RELEASES, { status: 200 })
-      );
-
+    it('reports the version of the entry that was opened', () => {
       renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText('v0.9.1')).toBeInTheDocument();
-      });
 
       fireEvent.click(screen.getByText('v0.9.1'));
 
@@ -271,16 +149,8 @@ describe('ChangelogPage', () => {
       ]);
     });
 
-    it('does not fire the event before any release is opened', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(TWO_RELEASES, { status: 200 })
-      );
-
+    it('does not fire the event before any release is opened', () => {
       renderChangelogPage();
-
-      await waitFor(() => {
-        expect(screen.getByText('v1.0.0')).toBeInTheDocument();
-      });
 
       expect(
         gtagCalls().filter((call) => call[1] === 'changelog_version_open')

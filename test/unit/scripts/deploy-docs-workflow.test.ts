@@ -30,15 +30,22 @@ describe('docs deployment workflow', () => {
     });
   });
 
-  it('uses published package releases as its only deployment event', () => {
+  it('deploys on published releases, manual runs, and master pushes', () => {
     expect(workflow.on.release).toEqual({ types: ['published'] });
-    expect(workflow.on).not.toHaveProperty('workflow_dispatch');
+    expect(workflow.on).toHaveProperty('workflow_dispatch');
   });
 
-  it('restricts the Pages build to published release events', () => {
+  it('skips release verification for docs-only deployments', () => {
     expect(workflow.jobs['verify-release'].if).toBe("github.event_name == 'release'");
-    expect(workflow.jobs.build.if).toBe("github.event_name == 'release'");
     expect(workflow.jobs.build.needs).toEqual(['docs-tests', 'verify-release']);
+    // A skipped `needs` job skips its dependents unless the dependent's own `if`
+    // accepts that result, so the build must treat a skipped verify-release as OK.
+    expect(workflow.jobs.build.if).toBe(
+      '${{ !cancelled()'
+      + " && needs.docs-tests.result == 'success'"
+      + " && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')"
+      + " && (github.event_name != 'push' || github.ref == 'refs/heads/master') }}",
+    );
   });
 
   it('verifies the package family before building the docs release', () => {
@@ -54,12 +61,25 @@ describe('docs deployment workflow', () => {
     });
   });
 
-  it('builds the source selected by the published release tag', () => {
+  it('builds the release tag for releases and the triggering ref otherwise', () => {
     const checkout = workflow.jobs.build.steps?.find(
       (step) => step.uses === 'actions/checkout@v4',
     );
 
-    expect(checkout?.with?.ref).toBe('${{ github.event.release.tag_name }}');
+    expect(checkout?.with?.ref).toBe(
+      "${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}",
+    );
+  });
+
+  it('publishes the docs build without the library dist', () => {
+    const runSteps = workflow.jobs.build.steps?.filter((step) => typeof step.run === 'string') ?? [];
+
+    // The demo's `/dist/react.mjs` and `/dist/tools.mjs` imports are bundled into
+    // the docs output at build time; nothing fetches /dist from the origin, so
+    // copying the library dist only inflates the Pages artifact.
+    expect(runSteps.some((step) => step.run?.includes('docs/dist/dist'))).toBe(false);
+    // The changelog page fetches /CHANGELOG.md at runtime — that copy stays.
+    expect(runSteps.map((step) => step.run)).toContain('cp CHANGELOG.md docs/dist/CHANGELOG.md');
   });
 
   it('deploys only the release-gated build artifact', () => {

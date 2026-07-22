@@ -82,3 +82,6 @@ skills-lock.json
 /.angular-build/
 
 .superpowers/
+
+# React Router typegen cache (generated)
+docs/.react-router/

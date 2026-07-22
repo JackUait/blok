@@ -1,7 +1,9 @@
 {
-  "name": "Your Website",
-  "short_name": "Website",
-  "description": "Description of your website",
+  "name": "Blok — Block-Based Rich Text Editor",
+  "short_name": "Blok",
+  "description": "A production-ready, extensible rich text editor that brings Notion-like block-based editing to your app. Clean JSON output, never HTML.",
+  "start_url": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -14,7 +16,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#e14b6e",
   "background_color": "#ffffff",
   "display": "standalone"
 }

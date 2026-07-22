@@ -2,10 +2,18 @@ import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import App from './App';
 import { I18nProvider } from './contexts/I18nContext';
 import { FrameworkProvider } from './contexts/FrameworkContext';
+import HomeRoute from './routes/home';
+import DemoRoute from './routes/demo';
+import ApiRoute from './routes/api';
+import ToolsRoute from './routes/tools';
+import MigrationRoute from './routes/migration';
+import MigrationReferenceRoute from './routes/migration-reference';
+import ChangelogRoute from './routes/changelog';
+import NotFoundRoute from './routes/not-found';
 
 vi.mock('framer-motion', () => {
   // Strip motion-only props so they don't leak onto the DOM element.
@@ -65,6 +73,34 @@ vi.mock('framer-motion', () => {
   };
 });
 
+/**
+ * Mirrors src/routes.ts, which the framework build turns into file-based route
+ * modules; root.tsx passes the router's <Outlet /> to <App> the same way this
+ * passes <Routes>. Drift between the two is caught by the build, which fails
+ * when a prerendered path matches no route.
+ */
+const renderAt = (path: string) =>
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <I18nProvider>
+        <FrameworkProvider>
+          <App>
+            <Routes>
+              <Route path="/" element={<HomeRoute />} />
+              <Route path="/demo" element={<DemoRoute />} />
+              <Route path="/docs/*" element={<ApiRoute />} />
+              <Route path="/tools" element={<ToolsRoute />} />
+              <Route path="/migration" element={<MigrationRoute />} />
+              <Route path="/migration/reference" element={<MigrationReferenceRoute />} />
+              <Route path="/changelog" element={<ChangelogRoute />} />
+              <Route path="*" element={<NotFoundRoute />} />
+            </Routes>
+          </App>
+        </FrameworkProvider>
+      </I18nProvider>
+    </MemoryRouter>
+  );
+
 describe('App', () => {
   let scrollIntoViewMock: ReturnType<typeof vi.fn>;
   let originalHistory: History;
@@ -100,15 +136,7 @@ describe('App', () => {
   });
 
   it('should render HomePage for root path', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     // HomePage renders Hero component with specific text content
     const heading = screen.getByRole('heading', { name: /block-based editors/i });
@@ -116,15 +144,7 @@ describe('App', () => {
   });
 
   it('should render ApiPage for /docs path', () => {
-    render(
-      <MemoryRouter initialEntries={['/docs']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/docs');
 
     // ApiPage has a sidebar with data-blok-testid
     const apiSidebar = screen.getByTestId('api-sidebar');
@@ -132,15 +152,7 @@ describe('App', () => {
   });
 
   it('renders a single API module page at /docs/caret-api', () => {
-    render(
-      <MemoryRouter initialEntries={['/docs/caret-api']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/docs/caret-api');
 
     // Only the Caret module is rendered — Selection API must not be present.
     // "Caret API" also now appears in the breadcrumb trail, so scope to the
@@ -150,15 +162,7 @@ describe('App', () => {
   });
 
   it('should render without crashing', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     // App should render children - verify by checking HomePage content is present
     const heading = screen.getByRole('heading', { name: /block-based editors/i });
@@ -179,15 +183,7 @@ describe('App', () => {
       configurable: true,
     });
 
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     // The app takes manual control because native restoration is unreliable
     // when content renders progressively (animations, lazy sections).
@@ -198,15 +194,7 @@ describe('App', () => {
     // Simulate a previous visit to "/" that was scrolled to y=500
     sessionStorage.setItem('blok-docs:scroll:/', '500');
 
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 500, left: 0, behavior: 'instant' });
   });
@@ -215,15 +203,7 @@ describe('App', () => {
     sessionStorage.setItem('blok-docs:scroll:/', '100');
     sessionStorage.setItem('blok-docs:scroll:/docs', '700');
 
-    render(
-      <MemoryRouter initialEntries={['/docs']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/docs');
 
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 700, left: 0, behavior: 'instant' });
     expect(window.scrollTo).not.toHaveBeenCalledWith({ top: 100, left: 0, behavior: 'instant' });
@@ -232,15 +212,7 @@ describe('App', () => {
   it('jumps to the top instantly (no scroll animation) when navigating to a different page', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter initialEntries={['/docs/caret-api']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/docs/caret-api');
 
     (window.scrollTo as ReturnType<typeof vi.fn>).mockClear();
 
@@ -250,29 +222,13 @@ describe('App', () => {
   });
 
   it('should not restore when there is no saved position (stay at top)', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     expect(window.scrollTo).not.toHaveBeenCalled();
   });
 
   it('should save the current scroll position when the page is hidden (pagehide)', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     Object.defineProperty(window, 'scrollY', {
       value: 880,
@@ -285,15 +241,7 @@ describe('App', () => {
   });
 
   it('should save the current scroll position for the current path while scrolling', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     Object.defineProperty(window, 'scrollY', {
       value: 320,
@@ -309,15 +257,7 @@ describe('App', () => {
     // A previous visit was deep on the page.
     sessionStorage.setItem('blok-docs:scroll:/', '2000');
 
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <I18nProvider>
-          <FrameworkProvider>
-            <App />
-          </FrameworkProvider>
-        </I18nProvider>
-      </MemoryRouter>
-    );
+    renderAt('/');
 
     // While the page is still short, the browser clamps our restore scrollTo and
     // fires a scroll event reporting a much smaller offset. That must NOT clobber

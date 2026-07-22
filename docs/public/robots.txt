@@ -1,0 +1,42 @@
+# https://blokeditor.com/robots.txt
+#
+# Everything on this property is public documentation and is open to every
+# crawler, including AI training and AI-answer crawlers.
+#
+# Nothing under /assets/ is disallowed on purpose: Googlebot and Applebot are
+# the only crawlers that execute JavaScript, and this is a client-rendered SPA,
+# so blocking its JS/CSS bundles would stop them rendering any page at all.
+
+User-agent: *
+Allow: /
+
+# --- AI answer engines / retrieval crawlers (explicit opt-in) ---
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://blokeditor.com/sitemap.xml

@@ -1,22 +1,9 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import { HomePage } from "./pages/HomePage";
-import { DemoPage } from "./pages/DemoPage";
-import { ApiPage } from "./pages/ApiPage";
-import { MigrationPage } from "./pages/MigrationPage";
-import { MigrationReferencePage } from "./pages/MigrationReferencePage";
-import ChangelogPage from "./pages/ChangelogPage";
 import { PageTransition } from "./components/common/PageTransition";
 import { usePageTracking } from "./hooks/usePageTracking";
 import { useOutboundLinkTracking } from "./hooks/useOutboundLinkTracking";
-
-// Tools moved into the general docs page; keep old /tools links working.
-const ToolsRedirect = () => {
-  const { hash } = useLocation();
-  const id = hash.replace(/^#/, "");
-  return <Navigate to={id ? `/docs/${id}` : "/docs/paragraph"} replace />;
-};
 
 const SCROLL_STORAGE_PREFIX = "blok-docs:scroll:";
 
@@ -142,10 +129,15 @@ const ScrollHandler = () => {
   return null;
 };
 
-const App = () => {
+/**
+ * Chrome shared by every route: analytics, scroll handling and the page
+ * transition. The route element itself arrives as `children` — root.tsx passes
+ * the router's <Outlet />, so the route table lives in src/routes.ts.
+ */
+const App = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
 
-  // Analytics: gtag is loaded in index.html with automatic page views off, so
+  // Analytics: gtag is loaded in root.tsx with automatic page views off, so
   // these two hooks are the site's only sources of page views and outbound
   // link clicks.
   usePageTracking();
@@ -166,15 +158,7 @@ const App = () => {
     <>
       <ScrollHandler />
       <AnimatePresence mode="wait">
-        <Routes location={location} key={routeKey}>
-          <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
-          <Route path="/demo" element={<PageTransition><DemoPage /></PageTransition>} />
-          <Route path="/docs/*" element={<PageTransition><ApiPage /></PageTransition>} />
-          <Route path="/tools" element={<ToolsRedirect />} />
-          <Route path="/migration" element={<PageTransition><MigrationPage /></PageTransition>} />
-          <Route path="/migration/reference" element={<PageTransition><MigrationReferencePage /></PageTransition>} />
-          <Route path="/changelog" element={<PageTransition><ChangelogPage /></PageTransition>} />
-        </Routes>
+        <PageTransition key={routeKey}>{children}</PageTransition>
       </AnimatePresence>
     </>
   );

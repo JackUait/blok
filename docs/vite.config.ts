@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,12 +13,23 @@ const externalDistPlugin = (): Plugin => {
   const parentDistDir = resolve(__dirname, "..", "dist");
   const parentPackagesDir = resolve(__dirname, "..", "packages");
   const reactAdapterEntry = resolve(parentPackagesDir, "react", "dist", "index.mjs");
-  const docsIndexHtml = resolve(__dirname, "index.html");
+  const docsAppRoot = resolve(__dirname, "src", "root.tsx");
 
   return {
     name: "external-dist",
     enforce: "pre",
     async resolveId(id, importer) {
+      // The editor bundles are loaded from a `useEffect`, which never runs while
+      // prerendering, so the prerender build must not pull 30+ MB of editor into
+      // its server bundle just to throw it away. Vite 8 builds the client and the
+      // prerender ("ssr") environment separately, and only the client one is
+      // configured below — externalise here instead, where the environment is
+      // known, so a missing `environments.ssr` entry can't silently re-bundle it.
+      const isEditorBundle =
+        id.startsWith("/dist/") || id === "@bloklabs/core" || id === "@bloklabs/core/adapters";
+      if (this.environment.name !== "client" && isEditorBundle) {
+        return { id, external: true };
+      }
       // The workspace adapter bundle lives OUTSIDE the docs project, so its bare
       // `react`/`react-dom` imports would resolve from the repo-root
       // node_modules — a second physical React alongside docs/node_modules/react.
@@ -31,7 +42,7 @@ const externalDistPlugin = (): Plugin => {
         importer?.startsWith(parentPackagesDir) &&
         (id === "react" || id === "react-dom" || id.startsWith("react/") || id.startsWith("react-dom/"))
       ) {
-        return this.resolve(id, docsIndexHtml, { skipSelf: true });
+        return this.resolve(id, docsAppRoot, { skipSelf: true });
       }
       // The React adapter moved to its own workspace package; the root build no
       // longer emits dist/react.mjs. Keep the /dist/react.mjs import stable for
@@ -136,10 +147,11 @@ const externalDistPlugin = (): Plugin => {
 };
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), externalDistPlugin()],
+  // reactRouter() owns the build: it emits one HTML file per prerendered route
+  // (react-router.config.ts) instead of a single SPA shell, and brings its own
+  // React fast-refresh transform, so @vitejs/plugin-react must not be added too.
+  plugins: [tailwindcss(), reactRouter(), externalDistPlugin()],
   build: {
-    outDir: "dist",
-    emptyOutDir: true,
     rollupOptions: {
       external: ["/dist/full.mjs"],
     },

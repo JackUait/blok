@@ -8,6 +8,7 @@ on:
       - "CHANGELOG.md"
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,6 +34,9 @@ jobs:
       - name: Run docs tests
         run: cd docs && npm test
 
+  # Checks that the npm package family matching the release tag is published, so
+  # the docs never advertise a version nobody can install. That question is
+  # meaningless for a docs-only deploy, hence the release-only gate.
   verify-release:
     name: Verify Package Family Release
     runs-on: ubuntu-latest
@@ -59,12 +63,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docs-tests, verify-release]
     timeout-minutes: 15
-    if: github.event_name == 'release'
+    # Deploy on releases, manual runs, and docs pushes to master. A skipped
+    # `needs` job skips its dependents by default, so a docs-only deploy (where
+    # verify-release never runs) has to accept 'skipped' explicitly.
+    if: >-
+      ${{ !cancelled()
+      && needs.docs-tests.result == 'success'
+      && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')
+      && (github.event_name != 'push' || github.ref == 'refs/heads/master') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -75,19 +86,23 @@ jobs:
       - name: Build docs
         run: cd docs && yarn build
 
-      - name: Copy Blok library into docs output
-        run: mkdir -p docs/dist/dist && cp -r dist/. docs/dist/dist/
-
+      # The library is NOT copied into the artifact: the demo's `/dist/react.mjs`
+      # and `/dist/tools.mjs` imports are resolved and bundled at build time by
+      # docs/vite.config.ts's external-dist plugin, so the deployed site never
+      # requests /dist from its own origin — the copy was 47 MB of dead weight.
       - name: Copy CHANGELOG into docs output
         run: cp CHANGELOG.md docs/dist/CHANGELOG.md
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      # React Router's framework build splits its output into dist/client (the
+      # prerendered HTML + assets) and dist/server; only the client half is the
+      # site, so the artifact root moved one level down.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/dist/
+          path: docs/dist/client/
 
   deploy:
     name: Deploy to GitHub Pages

@@ -298,6 +298,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         trigger: trigger || this.nodes.wrapper,
         items,
         messages: {
+          back: this.Blok.I18n.t('a11y.back'),
           nothingFound: this.Blok.I18n.t('popover.nothingFound'),
           search: this.Blok.I18n.t('popover.search'),
           actions: this.Blok.I18n.t('popover.actions'),

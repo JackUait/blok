@@ -256,6 +256,9 @@ export type PopoverPositionUpdate =
  * Texts used inside popover
  */
 export interface PopoverMessages {
+  /** Accessible label for the mobile nested-page back button */
+  back?: string;
+
   /** Text displayed when search has no results */
   nothingFound?: string;
 

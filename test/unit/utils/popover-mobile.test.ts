@@ -10,7 +10,6 @@ import { PopoverItemDefault } from '../../../src/components/utils/popover/compon
 import { PopoverMobile } from '../../../src/components/utils/popover/popover-mobile';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
-import { LightweightI18n } from '../../../src/components/i18n/lightweight-i18n';
 
 interface MockScrollLockerInstance {
   lock: ReturnType<typeof vi.fn>;
@@ -567,7 +566,11 @@ describe('PopoverMobile', () => {
 
   describe('accessibility labelling', () => {
     it('passes a localized back-button label to the header', () => {
-      const { popover } = createPopover();
+      const { popover } = createPopover({
+        messages: {
+          back: '뒤로',
+        },
+      });
       const popoverPrivate = getPrivateApi(popover);
       const parentItem = new PopoverItemDefault({
         title: 'Parent',
@@ -577,9 +580,25 @@ describe('PopoverMobile', () => {
 
       popoverPrivate.showNestedItems(parentItem);
 
-      const expectedLabel = new LightweightI18n().t('a11y.back');
+      expect(popoverHeaderMock.instances[0].params.backButtonLabel).toBe('뒤로');
+    });
 
-      expect(popoverHeaderMock.instances[0].params.backButtonLabel).toBe(expectedLabel);
+    it('falls back to English when the optional back-button label is explicitly undefined', () => {
+      const { popover } = createPopover({
+        messages: {
+          back: undefined,
+        },
+      });
+      const popoverPrivate = getPrivateApi(popover);
+      const parentItem = new PopoverItemDefault({
+        title: 'Parent',
+        children: { items: [ { title: 'Child',
+          onActivate: vi.fn() } ] },
+      });
+
+      popoverPrivate.showNestedItems(parentItem);
+
+      expect(popoverHeaderMock.instances[0].params.backButtonLabel).toBe('Back');
     });
 
     it('points the items menu aria-labelledby at the header title id on a nested page', () => {

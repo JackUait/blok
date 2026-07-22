@@ -587,6 +587,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       trigger: this.triggerElement || this.nodes.toolbox,
       leftAlignElement: this.leftAlignElement,
       messages: {
+        back: this.i18n.t('a11y.back'),
         nothingFound: this.i18nLabels.nothingFound,
         search: this.i18nLabels.filter,
         actions: this.i18n.t('popover.actions'),

@@ -51,6 +51,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
    * Messages that will be displayed in popover
    */
   protected messages: PopoverMessages = {
+    back: 'Back',
     nothingFound: 'Nothing found',
     search: 'Search',
     actions: 'Actions',
@@ -74,6 +75,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       this.messages = {
         ...this.messages,
         ...params.messages,
+        back: params.messages.back ?? this.messages.back,
       };
     }
 

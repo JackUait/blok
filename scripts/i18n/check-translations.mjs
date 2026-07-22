@@ -25,6 +25,9 @@ const BOUNDARY_WHITESPACE_EXCEPTIONS_BY_LOCALE = {
     'blockSettings.orConjunction',
     'blockSettings.openMenuAction',
   ]),
+  ko: new Set([
+    'blockSettings.openMenuAction',
+  ]),
 };
 
 /**

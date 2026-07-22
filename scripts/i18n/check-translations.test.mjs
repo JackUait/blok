@@ -21,6 +21,7 @@ import {
   extractPlaceholders,
   findDuplicateJsonKeys,
   findLocaleIntegrityIssues,
+  getBoundaryWhitespaceExceptions,
   scanSourceKeys,
   detectDoubleEncoding,
   findUntranslatedKeys,
@@ -288,6 +289,13 @@ describe('findLocaleIntegrityIssues', () => {
         { boundaryWhitespaceExceptions: new Set(['message.key']) }
       ),
       []
+    );
+  });
+
+  it('keeps the Korean shortcut-particle fragment exempt from English boundary spacing', () => {
+    assert.deepEqual(
+      [...getBoundaryWhitespaceExceptions('ko')],
+      ['blockSettings.openMenuAction']
     );
   });
 

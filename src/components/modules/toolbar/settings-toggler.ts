@@ -256,7 +256,7 @@ export class SettingsTogglerHandler {
       : blok.I18n.t('blockSettings.menuShortcutMac');
 
     const lines = blok.ReadOnly.isEnabled
-      ? [[clickAction, openMenuAction]]
+      ? [blok.I18n.t('blockSettings.clickToOpenMenu')]
       : [
         blok.I18n.t('blockSettings.dragToMove'),
         [

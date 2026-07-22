@@ -2827,11 +2827,13 @@ describe('Toolbox', () => {
 
       const messages = lastPopoverParams.value.messages as {
         actions?: string;
+        back?: string;
         searchResults?: string;
       } | undefined;
 
       // mockI18n.t echoes the key back
       expect(messages?.actions).toBe('popover.actions');
+      expect(messages?.back).toBe('a11y.back');
       expect(messages?.searchResults).toBe('a11y.searchResults');
     });
 

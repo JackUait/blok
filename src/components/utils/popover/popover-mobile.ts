@@ -2,7 +2,6 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { Dom } from '../../dom';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
-import { LightweightI18n } from '../../i18n/lightweight-i18n';
 import { ScrollLocker } from '../scroll-locker';
 import { twMerge } from '../tw';
 
@@ -53,14 +52,6 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    * the sheet navigates into or out of a nested "page".
    */
   private flipper: Flipper;
-
-  /**
-   * English-only i18n used to label the header back button. Non-English
-   * locales are loaded lazily elsewhere; the sheet is a self-contained util
-   * with no access to the editor's I18n module, so it resolves the label from
-   * the lightweight dictionary.
-   */
-  private i18n = new LightweightI18n();
 
   /**
    * Element that had DOM focus before the sheet opened (usually the
@@ -311,7 +302,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     if (shouldRenderHeader) {
       this.header = new PopoverHeader({
         text: title,
-        backButtonLabel: this.i18n.t('a11y.back'),
+        backButtonLabel: this.messages.back,
         onBackButtonClick: () => {
           this.history.pop();
 

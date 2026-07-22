@@ -324,7 +324,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ka` | Georgian | Georgian | ltr | neutral contemporary Georgian; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Georgian product, accessibility, and media terminology; total-first or suffix-free label boundaries for runtime numbers and arbitrary values; conventional unchanged shortcut, ratio, placeholder-only, and acronym notation | `root-ka_b0a_blind_review_a` | `root-ka_b0a_blind_review_b` | pass | pass | pass | `F-ka-001`–`F-ka-085` | second-pass-complete |
 | `km` | Khmer | Khmer | ltr | neutral contemporary Khmer; concise direct action labels and noun/state controls; complete polite instructions and accessibility announcements; established Khmer product, media, upload, emoji, table, and database terminology; label-before-number or noun-before-number runtime boundaries; conventional unchanged shortcut, ratio, and acronym notation | `root-km_83b732_blind_a` | `root-km_83b732_blind_b` | pass | pass | pass | `F-km-001`–`F-km-094` | second-pass-complete |
 | `kn` | Kannada | Kannada | ltr | neutral contemporary Kannada product UI; polite imperatives ending in `-ಿ` for actions and instructions; sentence-case noun/state labels; native Kannada product and accessibility terminology; count-neutral label-before-number templates and ordinal `-ನೇ` positions; established technical loanwords; conventional unchanged shortcuts, ratios, and acronyms | `root-kn_final_retry_a` | `root-kn_final_retry_b` | pass | pass | pass | `F-kn-001`–`F-kn-089` | second-pass-complete |
-| `ko` | Korean | Hangul | ltr | to-audit | — | — | pending | pending | pending | `F-ko-001`–`F-ko-003` | pending |
+| `ko` | Korean | Hangul | ltr | neutral contemporary Korean product UI; concise noun/state labels and direct imperatives; polite complete instructions and accessibility announcements; standard Korean spacing and ellipsis; pronunciation-sensitive particles around runtime tokens; established Korean product and media terminology; conventional unchanged shortcuts, ratios, and the `URL` acronym | `root-kn_final_retry_a` | `root-kn_final_retry_b` | pass | pass | pass | `F-ko-001`–`F-ko-045` | second-pass-complete |
 | `ku` | Sorani (Central Kurdish) | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-ku-001`–`F-ku-003` | pending |
 | `lo` | Lao | Lao | ltr | to-audit | — | — | pending | pending | pending | `F-lo-001`–`F-lo-003` | pending |
 | `lt` | Lithuanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lt-001`–`F-lt-003` | pending |
@@ -462,6 +462,7 @@ locale returns to `pending`.
 | `ka` | `root-ka_b0a_blind_review_a` | `sha256:4e5ba005ef100f9708e1af5edc059d4981c01205bac4a356596fe6abd9adaa2a` | `root-ka_b0a_blind_review_b` | `sha256:4e5ba005ef100f9708e1af5edc059d4981c01205bac4a356596fe6abd9adaa2a` |
 | `km` | `root-km_83b732_blind_a` | `sha256:83b732d9742076c8234b507233ba05d1629d80044f0e95d236d88ca2d920dd8d` | `root-km_83b732_blind_b` | `sha256:83b732d9742076c8234b507233ba05d1629d80044f0e95d236d88ca2d920dd8d` |
 | `kn` | `root-kn_final_retry_a` | `sha256:07424e25df13aafe76196874b6fb48d494aff87bd880e0481f61972406499d8a` | `root-kn_final_retry_b` | `sha256:07424e25df13aafe76196874b6fb48d494aff87bd880e0481f61972406499d8a` |
+| `ko` | `root-kn_final_retry_a` | `sha256:b7a946396d0ef9c0550df9891567c54ba28768757a46591138807625de6a886a` | `root-kn_final_retry_b` | `sha256:b7a946396d0ef9c0550df9891567c54ba28768757a46591138807625de6a886a` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -4434,24 +4435,65 @@ independent two-file gate passes 4,024/4,024. Scoped ESLint, full TypeScript,
 translation completeness, docs translation, catalog integrity, source-key
 coverage, and whitespace checks pass. Kannada is `second-pass-complete`.
 
-### Korean (`ko`) — pending after first-pass residual
+### Korean (`ko`) — second pass complete
 
-Reviewer `root-amharic_546_current_first` directly read all 546
-English/Korean pairs in English insertion order before consulting prior
-Korean evidence. The attempted first pass identified its first genuine
-residual at entry 28. English changed from `Text` to `Text color`, but Korean
-retained the former-source `텍스트`. The shared picker renders this value
-directly as its text-color section title beside the background axis and
-composes it into every swatch label. `F-ko-002` restores the established
-Korean product term `텍스트 색상`.
+The exhaustive correction cycle started from raw Korean SHA-256
+`276075f3821d75d5b703b5baebe1d9f8b5f7ea4c764de175fdca01c8725f0185`.
+On top of the three earlier verified findings, a complete semantic and caller
+review produced the 42 value corrections recorded as `F-ko-004`–`F-ko-045`.
+They synchronize changed English, repair upload and preview instructions,
+distinguish media states from actions, normalize Korean spacing and product
+terminology, and preserve natural runtime composition. The final shortcut
+fragment deliberately begins with the pronunciation-selected object particle
+`를`, so the editable tooltips render as `⌘/를 사용해` and
+`Ctrl+/를 사용해`; the checker now carries a tested Korean boundary-spacing
+exception for that exact fragment.
 
-The attempted pass binds to pre-correction raw Korean SHA-256
-`ccc2028e48635a28b3e3eed13f0969ef29079578b5efbb81c2a4559431f8b0d9`.
-The focused expectation failed on exactly `텍스트` before remediation and
-passes afterward. The corrected raw Korean SHA-256 is
-`282a5fbe379e8057a2d4d1bd33f2761a6926f03b141b7b331e969e8a7467e146`.
-The attempted review earns no pass credit; both complete passes must start
-from entry 1 on the corrected bytes.
+Two source-level defects discovered through the Korean caller review were
+fixed independently of the catalog. `F-global-015` injects the active
+`a11y.back` label into both mobile-popover entry points, removes the private
+English-only lookup, and preserves the English fallback when the optional
+message is omitted or explicitly `undefined`. `F-global-016` renders the
+existing complete `blockSettings.clickToOpenMenu` message in read-only mode
+instead of rebuilding it from morphology-sensitive fragments; editable Mac
+and Windows shortcut composition remains segmented for highlighting. The
+regressions were introduced red-first and pass after the source changes.
+
+Reviewer `root-kn_final_retry_a` restarted at pair 1 on the final bytes and
+read all 546 English/Korean pairs without using the ledger or Git diff as an
+oracle. Reviewer `root-kn_final_retry_b` independently reread all 546 pairs,
+then checked every one of the 42 catalog changes against its caller. Both
+returned zero definite Korean catalog residuals and bound their verdicts to
+raw Korean SHA-256
+`b7a946396d0ef9c0550df9891567c54ba28768757a46591138807625de6a886a`.
+Both also reproduced the complete read-only tooltip and the two valid editable
+outputs.
+
+The final dictionary retains all 546 keys and only non-empty string values.
+All 38 placeholder-bearing rows preserve the English placeholder multisets;
+missing, extra, duplicate, non-NFC, control, bidi-control, and unresolved-
+interpolation defects are zero. The only edge-whitespace value is the
+intentional conjunction fragment. The six exact-English values are precisely
+the documented `R-ko-001`–`R-ko-006` shortcuts, aspect ratios, and `URL`.
+The source-derived lifecycle remains 397 executable literals + 122 finite
+dynamics + 25 registered-namespace-compatible keys + two exact catalog-only
+keys, with all 117 provider compositions accounted for. English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+and the unchanged guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`.
+The staged canonical 542-file production serialization for this seal is
+`097d0f3e19ec43a58dd18001a12dad6f4a7f7de9e7a24ba7f682afc593d0aa6e`.
+
+The final guideline/ledger contract passes 3,905/3,905, translation
+completeness and integrity pass for all 69 dictionaries at 546/546, the
+checker suite passes 89/89, and the five-file focused source gate passes
+341/341. The public popover declaration TypeScript check, scoped ESLint with
+zero errors, and whitespace checks pass. The separately verified
+`F-global-014` playback-statistics source bypass remains open at
+`src/tools/video/controls.ts` raw SHA-256
+`aee56cc0b0438ba6de18f34c979adb2c7583c705ccfc17a3df6fd6df2ff8b873`;
+it does not misclassify an existing Korean catalog entry, but it still blocks
+terminal repository verification. Korean is `second-pass-complete`.
 
 ### Sorani Kurdish (`ku`) — pending after first-pass residual
 
@@ -10003,6 +10045,48 @@ follows the global transition rule above.
 | `F-km-093` | `km` | `tools.video.fullscreenExit` | product terminology / accessibility | `"ចាកចេញពីពេញអេក្រង់"` | `"ចាកចេញពីអេក្រង់ពេញ"` | The alternating video control’s ARIA label now supplies the established full-screen noun phrase as the exit verb’s object and matches the image exit control. | verified |
 | `F-km-094` | `km` | `tools.table.mergeCells` | action grammar / established table terminology | `"បញ្ចូលរួមក្រឡា"` | `"បញ្ចូលក្រឡាចូលគ្នា"` | The selected-cells context-menu command now uses the natural merge construction attested exactly by [Collabora Khmer’s Merge Cells UI](https://help.collaboraoffice.com/22.05/km/text/shared/01/05100100.html) and LibreOffice Khmer table help. | verified |
 | `F-ko-003` | `ko` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"빈 토글입니다. 블록을 클릭하거나 안으로 드롭하세요."` | `"빈 토글입니다. 클릭하여 블록을 추가하거나 블록을 여기로 드래그하세요."` | The old Korean copy tells users to click a block and uses drop rather than drag. The replacement states click-to-add and active drag-here under one natural polite imperative; bare `블록` is number-neutral in both clauses. | verified |
+| `F-ko-004` | `ko` | `blockSettings.openMenuAction` | tooltip composition / pronunciation-based particle | `" 하여 메뉴 열기"` | `"를 사용해 메뉴 열기"` | The editable tooltip appends this fragment after Mac or Windows shortcuts ending in `/`, pronounced vowel-final `슬래시`; Korean therefore requires object particle `를`, yielding `⌘/를 사용해` and `Ctrl+/를 사용해`. Read-only mode now uses the existing complete sentence instead of this fragment. [National Institute of Korean Language — pronunciation-based particle selection](https://www.korean.go.kr/front/onlineQna/onlineQnaView.do?mn_id=261&pageIndex=1&qna_seq=317037) | verified |
+| `F-ko-005` | `ko` | `tools.colorPicker.defaultSwatchLabel` | accessibility / composed-label grammar | `"{mode} {default}"` | `"{mode}: {default}"` | The shared formatter inserts the localized color axis and default state; a colon makes that label–value relation unambiguous for every mode. | verified |
+| `F-ko-006` | `ko` | `tools.colorPicker.colorSwatchLabel` | accessibility / composed-label grammar | `"{mode} {color}"` | `"{mode}: {color}"` | The shared formatter inserts the localized axis and color name; a colon prevents an ungrammatical bare noun sequence while preserving both placeholders. | verified |
+| `F-ko-007` | `ko` | `tools.table.clearSelection` | caller semantics / action clarity | `"지우기"` | `"내용 지우기"` | Both callers clear selected cell contents rather than deleting a row, column, or selection; the explicit object prevents destructive-action ambiguity. | verified |
+| `F-ko-008` | `ko` | `a11y.dropPosition` | accessibility / prospective state | `"{total}개 중 {position}번째로 이동"` | `"놓을 위치: 총 {total}개 중 {position}번째"` | The live region announces a prospective drop target before the move occurs; the old wording reads as a completed movement. | verified |
+| `F-ko-009` | `ko` | `a11y.allBlocksSelected` | accessibility / sentence grammar | `"모든 블록 선택됨, {count}개 블록"` | `"모든 블록이 선택되었습니다. 총 {count}개입니다."` | The replacement is a complete polite screen-reader announcement and states the total without the old comma-spliced fragment. | verified |
+| `F-ko-010` | `ko` | `tools.callout.addEmoji` | changed-English synchronization / control role | `"이모지 추가"` | `"아이콘 추가"` | The control adds the callout icon, and the surrounding edit/remove actions already use `아이콘`; the replacement restores the broader current source role. | verified |
+| `F-ko-011` | `ko` | `tools.callout.filterEmojis` | search scope / accessibility | `"검색…"` | `"이모지 검색…"` | This value is both the emoji searchbox placeholder and accessible label, so the searched object must remain explicit outside visual picker context. | verified |
+| `F-ko-012` | `ko` | `tools.callout.pickRandom` | accessible action / object scope | `"무작위"` | `"무작위 이모지 선택"` | The icon-only dice button needs a complete action and object rather than the adjective “random” alone. | verified |
+| `F-ko-013` | `ko` | `tools.code.previewTab` | orthography / preview-family consistency | `"미리보기"` | `"미리 보기"` | The code view-mode button uses the standard Korean noun spacing and now matches every other reviewed preview label in the catalog. | verified |
+| `F-ko-014` | `ko` | `tools.code.searchLanguage` | punctuation | `"언어 검색..."` | `"언어 검색…"` | The replacement uses the catalog’s native ellipsis and removes its only remaining ASCII three-dot search suffix. | verified |
+| `F-ko-015` | `ko` | `tools.link.linkTitle` | field semantics | `"링크 제목"` | `"링크 텍스트"` | The field edits visible anchor text, not title metadata, so the label must identify link text. | verified |
+| `F-ko-016` | `ko` | `tools.image.errorDefaultMessage` | error semantics / recovery copy | `"URL에서 오류가 반환되었습니다. 다른 원본을 시도하거나 파일을 다시 업로드하세요."` | `"이 URL에서 이미지를 불러올 수 없습니다. 다른 URL을 사용하거나 파일을 다시 업로드하세요."` | The caller knows image loading failed, not that a URL “returned” an error; `다른 URL` gives the concrete alternative to re-uploading. | verified |
+| `F-ko-017` | `ko` | `tools.image.errorFileTooLarge` | runtime size composition / particle safety | `"이미지가 너무 큽니다. {size}이(가) {max} 제한을 초과합니다."` | `"이미지가 너무 큽니다. 현재 크기: {size}. 최대 크기: {max}."` | Explicit labels avoid exposing unresolved `이(가)` after arbitrary formatted sizes and remain natural for every unit. | verified |
+| `F-ko-018` | `ko` | `tools.image.emptyDropToUpload` | drag-overlay grammar | `"놓아서 업로드"` | `"업로드하려면 여기에 놓으세요"` | The visible drag overlay now uses a complete natural imperative instead of an awkward connective fragment. | verified |
+| `F-ko-019` | `ko` | `tools.image.emptySourceAria` | accessibility / tablist role | `"이미지 원본"` | `"이미지 추가 방법"` | This names a tablist of Upload and Link methods, not the image’s provenance; the replacement describes the actual accessible role. | verified |
+| `F-ko-020` | `ko` | `tools.file.previewRender` | orthography / mode semantics | `"미리보기"` | `"미리 보기"` | The rendered-preview mode and group label now use standard Korean spacing and match adjacent preview strings. | verified |
+| `F-ko-021` | `ko` | `tools.file.emptyDropToUpload` | drag-overlay grammar | `"놓아서 업로드"` | `"업로드하려면 여기에 놓으세요"` | The visible drag overlay now uses a complete natural imperative instead of an awkward connective fragment. | verified |
+| `F-ko-022` | `ko` | `tools.file.emptySourceAria` | accessibility / tablist role | `"파일 원본"` | `"파일 추가 방법"` | This labels the Upload/Link method tablist rather than an original-file control, so `추가 방법` restores the caller’s role. | verified |
+| `F-ko-023` | `ko` | `tools.file.errorFileTooLarge` | runtime size composition / particle safety | `"파일이 너무 큽니다. {size}이(가) {max} 제한을 초과합니다."` | `"파일이 너무 큽니다. 현재 크기: {size}. 최대 크기: {max}."` | Label-before-value wording removes the unresolved runtime particle and clearly identifies actual and maximum sizes. | verified |
+| `F-ko-024` | `ko` | `tools.video.emptyDropToUpload` | drag-overlay grammar | `"놓아서 업로드"` | `"업로드하려면 여기에 놓으세요"` | The video drag overlay now uses a complete natural upload instruction. | verified |
+| `F-ko-025` | `ko` | `tools.video.emptySourceAria` | accessibility / tablist role | `"동영상 원본"` | `"동영상 추가 방법"` | The accessible name describes ways to add a video rather than mislabeling the Upload/Link tablist as video provenance. | verified |
+| `F-ko-026` | `ko` | `tools.video.errorFileTooLarge` | runtime size composition / particle safety | `"동영상이 너무 큽니다. {size}이(가) {max} 제한을 초과합니다."` | `"동영상이 너무 큽니다. 현재 크기: {size}. 최대 크기: {max}."` | Label-before-value wording remains grammatical for arbitrary formatted sizes and restores an explicit maximum. | verified |
+| `F-ko-027` | `ko` | `tools.audio.emptyOrDropHere` | grammar / object scope | `"또는 이곳에 오디오을 놓으세요"` | `"또는 오디오 파일을 여기에 놓으세요"` | The replacement fixes the invalid `오디오을` particle and restores the dropped file object in natural Korean order. | verified |
+| `F-ko-028` | `ko` | `tools.audio.emptyDropToUpload` | drag-overlay grammar | `"놓아서 업로드"` | `"업로드하려면 여기에 놓으세요"` | The audio drag overlay now uses a complete natural upload instruction. | verified |
+| `F-ko-029` | `ko` | `tools.audio.emptySourceAria` | accessibility / tablist role | `"오디오 원본"` | `"오디오 추가 방법"` | The accessible tablist offers Upload and Link methods; it does not identify an original audio source. | verified |
+| `F-ko-030` | `ko` | `tools.audio.errorFileTooLarge` | runtime size composition / particle safety | `"오디오가 너무 큽니다. {size}이(가) {max} 제한을 초과합니다."` | `"오디오가 너무 큽니다. 현재 크기: {size}. 최대 크기: {max}."` | Label-before-value wording avoids unresolved runtime particles and remains stable across every size unit. | verified |
+| `F-ko-031` | `ko` | `tools.audio.errorGoogleDrive` | recovery-copy scope / word order | `"Google Drive의 오디오는 직접 재생할 수 없습니다. 파일을 다운로드한 후 대신 여기에 업로드하세요."` | `"Google Drive의 오디오는 직접 재생할 수 없습니다. 대신 파일을 다운로드한 다음 여기에 업로드하세요."` | Moving `대신` to the alternative workflow’s front makes its scope clear and removes the old implication that only the upload location is the substitute. | verified |
+| `F-ko-032` | `ko` | `tools.audio.errorOneDrive` | recovery-copy scope / word order | `"OneDrive의 오디오는 직접 재생할 수 없습니다. 파일을 다운로드한 후 대신 여기에 업로드하세요."` | `"OneDrive의 오디오는 직접 재생할 수 없습니다. 대신 파일을 다운로드한 다음 여기에 업로드하세요."` | The revised placement makes downloading and uploading one explicit alternative workflow. | verified |
+| `F-ko-033` | `ko` | `tools.audio.coverSourceAria` | accessibility / tablist scope | `"이미지 원본"` | `"커버 이미지 추가 방법"` | The cover picker’s tablist offers ways to add cover art; the replacement identifies both that object and the control role. | verified |
+| `F-ko-034` | `ko` | `tools.audio.coverDropToUpload` | drag-overlay grammar | `"놓아서 업로드"` | `"업로드하려면 여기에 놓으세요"` | The cover-image drag overlay now uses the same complete natural upload imperative as the other media tools. | verified |
+| `F-ko-035` | `ko` | `tools.database.viewTypeListDescription` | changed-English synchronization / explanatory copy | `"간단한 목록형 뷰"` | `"항목을 간단한 목록으로 표시"` | The option description now states the current “Show items in a simple list” behavior in natural Korean rather than a jargon-heavy noun fragment. | verified |
+| `F-ko-036` | `ko` | `tools.bookmark.loading` | changed-English synchronization / preview scope | `"미리보기 불러오는 중"` | `"링크 미리 보기를 불러오는 중…"` | The loading state restores the link object, standard preview spacing, the object particle, and the ongoing-state ellipsis. | verified |
+| `F-ko-037` | `ko` | `tools.bookmark.error` | changed-English synchronization / preview scope | `"미리보기를 불러올 수 없습니다"` | `"링크 미리 보기를 불러올 수 없습니다"` | The error now names the link-preview object explicitly and uses standard Korean spacing. | verified |
+| `F-ko-038` | `ko` | `tools.embed.empty` | caller state / source synchronization | `"임베드할 링크 붙여넣기"` | `"임베드 링크 없음"` | The caller renders a read-only empty message where pasting is impossible; the replacement states that no embed link exists. | verified |
+| `F-ko-039` | `ko` | `tools.video.toggleTimeDisplay` | accessibility / state specificity | `"시간 표시 전환"` | `"경과 시간과 남은 시간 간 전환"` | The accessible action now names the two actual display modes rather than announcing a vague time-display toggle. | verified |
+| `F-ko-040` | `ko` | `tools.video.theater` | established product terminology | `"시어터 모드"` | `"영화관 모드"` | `영화관 모드` is the established Korean video-player term used by YouTube; the replacement removes the unnecessary transliteration. | verified |
+| `F-ko-041` | `ko` | `tools.video.theaterExit` | established product terminology / family consistency | `"시어터 모드 종료"` | `"영화관 모드 종료"` | The exit action now uses the same established Korean theater-mode name as its paired entry action. | verified |
+| `F-ko-042` | `ko` | `tools.video.ctxCopyUrlAtTime` | media semantics / action precision | `"현재 시간의 동영상 URL 복사"` | `"현재 재생 시점의 동영상 URL 복사"` | `현재 시간` can mean wall-clock time; `재생 시점` identifies the timestamp appended by this caller. | verified |
+| `F-ko-043` | `ko` | `tools.video.ctxStats` | changed-English synchronization / domain | `"통계 정보"` | `"재생 통계"` | The context-menu item opens playback statistics, so the label must restore the source’s media domain. | verified |
+| `F-ko-044` | `ko` | `tools.video.on` | state semantics / media control | `"켜기"` | `"켬"` | The loop row displays the current state, not an action; `켬` is standard compact Korean UI state terminology. | verified |
+| `F-ko-045` | `ko` | `tools.video.off` | state semantics / media control | `"끄기"` | `"끔"` | The loop row displays the current state, so the compact state label replaces the old turn-off action. | verified |
 | `F-mn-002` | `mn` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"Хоосон эвхмэл хэсэг. Дотор нь блок дарж эсвэл чирж оруулна уу."` | `"Хоосон эвхмэл хэсэг. Блок нэмэхийн тулд дарна уу эсвэл блокуудыг энд чирнэ үү."` | The old Mongolian wording ambiguously tells users to press a block inside. The replacement contrasts singular `Блок` for creation with plural accusative `блокуудыг` for dragging and keeps the polite instruction register. | verified |
 | `F-ms-002` | `ms` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"Togol kosong. Klik atau seret blok ke dalam."` | `"Togol kosong. Klik untuk tambah satu blok atau seret blok ke sini."` | The old Malay copy never states the click result. `satu blok` fixes that result at one, while number-neutral drag object `blok`, directional `ke sini`, and terse imperatives match the locale's product register and established [`Seret`](https://support.google.com/chrome/answer/188842?co=GENIE.Platform%3DAndroid&hl=ms) terminology. | verified |
 | `F-my-002` | `my` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / number / action clarity | `"ဗလာ ခေါက်စာ။ နှိပ်ပါ သို့မဟုတ် ဘလောက်များကို ထဲသို့ ဆွဲချပါ။"` | `"ဗလာ ခေါက်စာ။ ဘလောက်တစ်ခုထည့်ရန် နှိပ်ပါ သို့မဟုတ် ဘလောက်များကို ဤနေရာသို့ ဆွဲယူပါ။"` | The replacement explicitly distinguishes singular `တစ်ခု` for the click-created block from plural-object `များကို` for active dragging, adds the destination, and retains established Burmese shared-toggle terminology. | verified |
@@ -10232,6 +10316,8 @@ follows the global transition rule above.
 | `F-global-012` | all non-English | `tools.video.toggleTimeDisplay` | caller / fallback drift / accessibility | When `attachControls()` received no i18n instance or a missing key, the executable fallback still exposed obsolete `Toggle time display`, while the canonical English catalog states `Switch between elapsed and remaining time`. | Make the literal fallback byte-for-byte equal to the current English catalog so the optional-i18n seam cannot lose the elapsed/remaining distinction. | A source-architecture challenge traced the exact fallback path through `tr()`. A DOM-level regression failed red on the stale label and passed after the literal correction; the focused Kannada/guideline and video-controls gate passes 3,938/3,938. | verified |
 | `F-global-013` | all non-English | `tools.video.ctxStats` | caller / fallback drift / neutral terminology | When `attachControls()` received no i18n instance or a missing key, the executable context-menu fallback still exposed obsolete `Stats for nerds`, while the canonical English catalog states `Playback statistics`. | Make the literal fallback byte-for-byte equal to the current English catalog so the optional-i18n seam cannot reintroduce prohibited slang. | A source-architecture challenge traced the exact fallback path through `tr()`. A DOM-level regression failed red on the stale label and passed after the literal correction; the focused Kannada/guideline and video-controls gate passes 3,938/3,938. | verified |
 | `F-global-014` | all non-English | tools.video playback-statistics detail templates | caller / hard-coded English / visible statistics | The localized `Playback statistics` menu item opens an overlay whose `Resolution`, `Dropped frames`, `Buffer health`, `Viewport`, and unavailable-state text are inserted as raw English by `renderStats()`, bypassing i18n in all 68 non-English locales. | Coordinate a 546-to-551 catalog migration across all 69 dictionaries: add four whole-line statistic templates with value placeholders plus one unavailable-state value, then render the overlay exclusively through the tool i18n API so each locale controls word order, punctuation, and the seconds unit. | Independent Kannada clean-room review traced the bypass at `src/tools/video/controls.ts:1270-1280`; root reproduced it, and a distinct reviewer confirmed that no existing catalog entry covers these fields. Adding the five live English keys immediately would invalidate key parity and every completed raw-dictionary digest under reset rules 1 and 2, so this finding remains open for the coordinated migration and blocks terminal repository verification without misclassifying the defect as Kannada catalog residue. | open |
+| `F-global-015` | all non-English | mobile popover back-button localization contract | caller / dependency injection / accessible label | `PopoverMobile` constructed an English-only `LightweightI18n` and resolved `a11y.back` from it, so every nested mobile popover page announced `Back` even when the active dictionary supplied a localized label. | Add a `back` popover message with an English public fallback, inject the active `a11y.back` value from both editor-owned mobile popover entry points, and render the nested-page header exclusively from the injected message. | A header-construction regression supplied Korean `뒤로` and failed red with received `Back`; separate block-settings and toolbox assertions failed red because neither caller supplied the message, and a review-added case failed red when explicit `undefined` erased the fallback. After removing the private English lookup, plumbing both callers, and normalizing the optional label, all three focused files pass 163/163 tests. | verified |
+| `F-global-016` | all non-English | read-only settings tooltip whole-message contract | caller / fragment composition / localized word order | The read-only settings tooltip rebuilt `Click to open the menu` from `clickAction` and `openMenuAction`, even though the catalog already supplies the complete `blockSettings.clickToOpenMenu` message. Fragment order and morphology are not independently safe across locales; Korean rendered the visibly broken `클릭 하여 메뉴 열기`. | Render the existing whole localized `blockSettings.clickToOpenMenu` message in read-only mode, while retaining the shortcut-specific segmented line only in editable mode where highlighting requires it. | Two focused regressions failed red because both initial read-only rendering and a live read-only toggle still received the two fragments instead of the whole message. The source now selects the complete existing key for that branch without changing any catalog key set. Independent review confirmed both editable platform branches remain unchanged; the settings gate passes 17/17 and the guideline contract passes 3,863/3,863 with its 10-second timeout. | verified |
 
 | `F-hy-005` | `hy` | `toolbox.typeToSearch` | caller-or-grammar-defect | `"Մուտքագրեք որոնման համար"` | `"Մուտքագրեք՝ որոնելու համար"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
 | `F-hy-006` | `hy` | `toolNames.bulletedList` | meaning\|terminology | `"Նշանավոր ցուցակ"` | `"Պարբերանշված ցուցակ"` | The clean full-catalog challenge and independent patch review accepted this correction for the documented caller or compatibility contract. | verified |
@@ -10679,6 +10765,12 @@ locale and UI context.
 | `R-kn-005` | `kn` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-kn-006` | `kn` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-kn-007` | `kn` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label in Kannada product copy. | [Google Kannada product documentation](https://support.google.com/youtube/answer/57741?hl=kn); [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
+| `R-ko-001` | `ko` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; Korean Apple guidance preserves the Command symbol in shortcut notation. | [Apple Korea — Mac keyboard shortcuts](https://support.apple.com/ko-kr/102650); [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-ko-002` | `ko` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord; translating or respelling it would alter the executable shortcut shown by the caller. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-ko-003` | `ko` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ko-004` | `ko` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ko-005` | `ko` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-ko-006` | `ko` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact property-type label in Korean product copy. | [YouTube Help Korea — URL terminology](https://support.google.com/youtube/answer/57741?hl=ko-KO); [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-lv-001` | `lv` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only invariant runtime interpolation tokens; Latvian modifier-before-noun order independently requires this sequence and renders `Noklusējuma teksta krāsa` and `Noklusējuma fons`. | [Microsoft Learn — Data table control in Power Apps](https://learn.microsoft.com/lv-lv/power-apps/maker/canvas-apps/controls/control-data-table) |
 | `R-nl-001` | `nl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Dutch Apple guidance retains the `⌘` platform symbol. | [Apple — Mac-toetscombinaties](https://support.apple.com/nl-nl/102650) |
 | `R-nl-002` | `nl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Dutch Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Sneltoetsen in Windows](https://support.microsoft.com/nl-nl/windows/sneltoetsen-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |

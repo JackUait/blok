@@ -120,6 +120,8 @@ const GLOBAL_FINDING_KEYS = new Set([
   'tools.video.toggleTimeDisplay',
   'tools.video.ctxStats',
   'tools.video playback-statistics detail templates',
+  'mobile popover back-button localization contract',
+  'read-only settings tooltip whole-message contract',
 ]);
 
 const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {

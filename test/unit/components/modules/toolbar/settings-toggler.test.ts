@@ -183,10 +183,7 @@ describe('SettingsTogglerHandler', () => {
       settingsTogglerHandler.make(emptyNodes());
 
       expect(createTooltipContent).toHaveBeenCalledWith([
-        [
-          { text: 'blockSettings.clickAction', highlight: true },
-          { text: 'blockSettings.openMenuAction', highlight: false },
-        ],
+        'blockSettings.clickToOpenMenu',
       ]);
     });
 
@@ -203,10 +200,7 @@ describe('SettingsTogglerHandler', () => {
       settingsTogglerHandler.refreshTooltip();
 
       expect(createTooltipContent).toHaveBeenCalledWith([
-        [
-          { text: 'blockSettings.clickAction', highlight: true },
-          { text: 'blockSettings.openMenuAction', highlight: false },
-        ],
+        'blockSettings.clickToOpenMenu',
       ]);
       expect(onHover).toHaveBeenCalledWith(settingsToggler, 'tooltip content', { delay: 500 });
     });

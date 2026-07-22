@@ -19,16 +19,24 @@
     "blok",
     "cli",
     "html-to-json",
+    "block-editor",
+    "rich-text-editor",
     "editorjs",
+    "editorjs-migration",
     "migration",
+    "json",
     "rich-text"
   ],
   "author": "JackUait",
   "license": "Apache-2.0",
+  "homepage": "https://blokeditor.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JackUait/blok.git",
     "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/JackUait/blok/issues"
   },
   "dependencies": {
     "jsdom": "29.1.1"

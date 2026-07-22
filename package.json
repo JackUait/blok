@@ -87,12 +87,26 @@
   },
   "keywords": [
     "blok",
+    "block-editor",
+    "rich-text-editor",
+    "wysiwyg",
+    "editor",
     "text editor",
     "rich text editor",
+    "block-based",
     "block-based editor",
+    "notion",
+    "notion-like",
     "notion-like editor",
+    "headless",
     "headless editor",
-    "extensible editor"
+    "contenteditable",
+    "json",
+    "typescript",
+    "extensible editor",
+    "react",
+    "vue",
+    "angular"
   ],
   "sideEffects": [
     "./src/components/polyfills.ts",
@@ -150,9 +164,13 @@
     "CodeX (the author of initial solution)"
   ],
   "license": "Apache-2.0",
+  "homepage": "https://blokeditor.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JackUait/blok.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JackUait/blok/issues"
   },
   "devDependencies": {
     "@aiden0z/pptx-renderer": "1.2.4",

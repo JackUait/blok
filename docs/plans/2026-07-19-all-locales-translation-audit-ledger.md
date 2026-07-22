@@ -343,7 +343,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ps` | Pashto | Arabic | rtl | neutral contemporary Pashto in Arabic script and RTL; concise polite imperatives for actions and complete instructions; sentence-case noun and state labels; standard Pashto orthography and natural genitive constructions; established Pashto product, accessibility, media, table, and database terminology; count-neutral label-before-value templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-ps_final_linguistic` | `root-ps_final_callers` | pass | pass | pass | `F-ps-001`–`F-ps-202` | second-pass-complete |
 | `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | `root-pt_final_linguistic` | `root-pt_final_callers` | pass | pass | pass | `F-pt-001`–`F-pt-085` | second-pass-complete |
 | `ro` | Romanian | Latin | ltr | neutral contemporary Romanian; polite plural imperatives for complete instructions, help text, and recovery guidance; concise singular imperatives or established nouns for compact controls; sentence-case UI; established Romanian editing, accessibility, database, and media terminology; count-neutral runtime templates; conventional unchanged shortcut, ratio, acronym, cognate, and established loanword notation | `root-ro_current_linguistic` | `root-ro_current_callers` | pass | pass | pass | `F-ro-001`–`F-ro-119` | second-pass-complete |
-| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | — | — | pending | pending | pending | `F-ru-001`–`F-ru-127` | pending |
+| `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | `root-ru_current_linguistic` | `root-ru_current_callers` | pass | pass | pass | `F-ru-001`–`F-ru-127` | second-pass-complete |
 | `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001`–`F-sd-002` | pending |
 | `si` | Sinhala | Sinhala | ltr | to-audit | — | — | pending | pending | pending | `F-si-001`–`F-si-002` | pending |
 | `sk` | Slovak | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sk-001`–`F-sk-002` | pending |
@@ -481,6 +481,7 @@ locale returns to `pending`.
 | `ps` | `root-ps_final_linguistic` | `sha256:f8532d9ff3a4530c20a4e0027a1b007a6aa0dfaee82682060cfad4c460e1de71` | `root-ps_final_callers` | `sha256:f8532d9ff3a4530c20a4e0027a1b007a6aa0dfaee82682060cfad4c460e1de71` |
 | `pt` | `root-pt_final_linguistic` | `sha256:6f281eea9bd964b4480987210124542cd2eb6f4b694338e7e244f6fd5c588320` | `root-pt_final_callers` | `sha256:6f281eea9bd964b4480987210124542cd2eb6f4b694338e7e244f6fd5c588320` |
 | `ro` | `root-ro_current_linguistic` | `sha256:4592065596312ed7e7b9a5e32976c0dcf1ffaf59c561523b04739672964e84e6` | `root-ro_current_callers` | `sha256:4592065596312ed7e7b9a5e32976c0dcf1ffaf59c561523b04739672964e84e6` |
+| `ru` | `root-ru_current_linguistic` | `sha256:38d1570d460ca5571e38b04a486a16ba786419ae15b6de2e84013d91b45c073c` | `root-ru_current_callers` | `sha256:38d1570d460ca5571e38b04a486a16ba786419ae15b6de2e84013d91b45c073c` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -8128,6 +8129,39 @@ all pass on the corrected bytes. The live checker reports exactly the 22
 catalogued Romanian identical-value warnings. Global
 `F-global-014` and `F-global-020` remain coordinated follow-up work and do
 not invalidate this locale-level second-pass transition.
+
+### Russian (`ru`) — current 546-key second pass complete
+
+Fresh linguistic and caller-structure reviews restarted at entry 1 on Russian
+dictionary SHA-256
+`38d1570d460ca5571e38b04a486a16ba786419ae15b6de2e84013d91b45c073c`.
+Their exhaustive sealed artifacts are bound at SHA-256
+`56d668f6e21dcd5b8050d509e79c044153b4677f5dc6e038d02157d3a91b6451`
+and
+`da5f4c329d98171535406470e285b3941c0b150f211a3f5464efd75f9dae635a`.
+Both independently reread all 546 English/Russian pairs before exchanging
+proposal maps. Each found zero mandatory residual corrections, so the
+projected catalog is byte-identical to the reviewed input.
+
+Both reviewers independently challenged and upheld all 127 historical findings
+from `F-ru-001` through `F-ru-127`. The new 127-key executable aggregate
+oracle exactly matches the current catalog, while the existing per-finding
+cases continue to bind every corrected value individually. The reviewers also
+classified all 539 translated values and all seven exact-English identities,
+supporting the complete `R-ru-001` through `R-ru-007` retention inventory.
+
+The passes revalidated all 38 placeholder-bearing keys and 54 placeholder
+occurrences, 14 search groups and 44 unique aliases, unique key parity, UTF-8
+and NFC integrity, boundary whitespace, RTL-control absence, 117 provider
+compositions, 20 color compositions, and the complete 397 literal + 122
+finite-dynamic + 25 registered-namespace-compatible + two source-only caller
+lifecycle. The nine-file i18n gate passes 6,044/6,044, including the complete
+5,324-case guideline corpus. The live checker, 89 checker regressions, focused
+127-finding gate, and scoped corpus checks pass with exactly the seven
+catalogued Russian identical-value warnings. Global `F-global-014` and
+`F-global-020` remain
+coordinated follow-up work and do not invalidate this locale-level second-pass
+transition.
 
 ## Findings
 
